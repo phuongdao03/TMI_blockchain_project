@@ -1,0 +1,36 @@
+{
+  "name": "tmi-blockchain-certificate-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TMI Group blockchain-verifiable digital asset certificate platform",
+  "engines": {
+    "node": "24.18.0",
+    "npm": "11.16.0"
+  },
+  "packageManager": "npm@11.16.0",
+  "scripts": {
+    "bootstrap": "npm ci",
+    "format": "npm run format:root && npm run format:backend",
+    "format:root": "prettier --write .",
+    "format:backend": "python -m ruff format backend",
+    "format:check": "npm run format:check:root && npm run format:check:backend",
+    "format:check:root": "prettier --check .",
+    "format:check:backend": "python -m ruff format backend --check",
+    "lint": "npm run lint:root && npm run lint:frontend && npm run lint:backend",
+    "lint:root": "npm run format:check:root",
+    "lint:frontend": "npm --prefix frontend run lint",
+    "lint:backend": "python -m ruff check backend",
+    "typecheck": "npm run typecheck:frontend && npm run typecheck:backend",
+    "typecheck:frontend": "npm --prefix frontend run typecheck",
+    "typecheck:backend": "cd backend && python -m mypy app",
+    "test": "npm run test:root && npm run test:frontend && npm run test:backend",
+    "test:root": "node --test tests/repository-structure.test.mjs",
+    "test:frontend": "npm --prefix frontend run test",
+    "test:backend": "python -m pytest backend/app/tests"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3"
+  }
+}

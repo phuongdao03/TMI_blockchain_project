@@ -1,0 +1,176 @@
+x-app-service: &app-service
+  env_file:
+    - ${PRODUCTION_ENV_FILE:-.env.production}
+  image: ${REGISTRY}/${IMAGE_PREFIX}-backend:${IMAGE_TAG}
+  networks:
+    - application
+  read_only: true
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=128m
+  user: "10001:10001"
+  volumes:
+    - ../contracts/artifacts:/contracts/artifacts:ro
+
+services:
+  backend:
+    <<: *app-service
+    command:
+      [
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--no-server-header",
+        "--workers",
+        "2",
+      ]
+    depends_on:
+      redis:
+        condition: service_healthy
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=2)",
+        ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  frontend:
+    image: ${REGISTRY}/${IMAGE_PREFIX}-frontend:${IMAGE_TAG}
+    networks:
+      - application
+    read_only: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    user: "1000:1000"
+    expose:
+      - "3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  worker:
+    <<: *app-service
+    command:
+      [
+        "celery",
+        "--app",
+        "app.workers.celery_app",
+        "worker",
+        "--loglevel=INFO",
+        "--concurrency=2",
+      ]
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  scheduler:
+    <<: *app-service
+    command:
+      [
+        "celery",
+        "--app",
+        "app.workers.celery_app",
+        "beat",
+        "--loglevel=INFO",
+        "--pidfile=/tmp/celerybeat.pid",
+        "--schedule=/tmp/celerybeat-schedule",
+      ]
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:8.4.0-alpine
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${REDIS_PASSWORD}",
+      ]
+    env_file:
+      - ${PRODUCTION_ENV_FILE:-.env.production}
+    healthcheck:
+      test: ["CMD-SHELL", 'redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - application
+    read_only: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    user: "999:999"
+    volumes:
+      - redis_data:/data
+
+  nginx:
+    image: nginxinc/nginx-unprivileged:1.29.4-alpine
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+    healthcheck:
+      test:
+        ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:8080/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - application
+    ports:
+      - "80:8080"
+      - "443:8443"
+    read_only: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+      - /var/cache/nginx:rw,noexec,nosuid,size=32m
+      - /var/run:rw,noexec,nosuid,size=8m
+    user: "101:101"
+    volumes:
+      - ./nginx/production.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ${TLS_CERTIFICATE_DIR}:/etc/letsencrypt:ro
+
+networks:
+  application:
+    driver: bridge
+
+volumes:
+  redis_data:

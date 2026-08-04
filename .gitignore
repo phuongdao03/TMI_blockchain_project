@@ -1,0 +1,47 @@
+# Environment and secrets
+.env*
+!.env.example
+*.key
+*.pem
+*.p12
+
+# Dependencies and virtual environments
+node_modules/
+.tools/
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+.venv/
+venv/
+
+# Build and test output
+.next/
+.next*/
+.next-e2e-*/
+.next-build-*/
+*.tsbuildinfo
+contracts/artifacts/
+contracts/deployments/
+dist/
+build/
+coverage/
+htmlcov/
+.coverage
+.pytest_cache/
+.pytest-tmp-*/
+.runtime/
+.tmp/
+.mypy_cache/
+.ruff_cache/
+test-results/
+test-results-*/
+playwright-report/
+__pycache__/
+*.py[cod]
+
+# Tool and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

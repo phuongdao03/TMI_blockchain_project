@@ -1,0 +1,15 @@
+.git/
+node_modules/
+plan_tasks_detailed/
+**/.next*/
+**/test-results/
+**/.pytest-tmp-*/
+**/test-runtime-*/
+.tmp/
+dist/
+build/
+coverage/
+.pytest_cache/
+.pytest-tmp-*/
+.runtime/
+package-lock.json

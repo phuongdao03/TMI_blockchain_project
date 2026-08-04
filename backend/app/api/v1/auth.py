@@ -1,0 +1,551 @@
+from typing import Any
+from uuid import UUID
+
+from fastapi import APIRouter, Header, Query, Request, Response, status
+from fastapi.responses import RedirectResponse
+
+from app.core.config import Settings
+from app.core.schemas import ErrorEnvelope, ResponseMeta, SuccessEnvelope
+from app.modules.auth.dependencies import (
+    CsrfProtectedPrincipalDependency,
+    CurrentPrincipalDependency,
+    OAuthRuntimeDependency,
+    PasswordResetServiceDependency,
+    RegistrationServiceDependency,
+    SessionServiceDependency,
+    SettingsDependency,
+)
+from app.modules.auth.errors import (
+    OAuthCodeInvalidError,
+    OAuthStateInvalidError,
+    UnauthenticatedError,
+)
+from app.modules.auth.oauth import (
+    create_oauth_attempt,
+    resolve_oauth_next,
+    validate_oauth_next,
+)
+from app.modules.auth.schemas import (
+    AuthSessionData,
+    AuthStatusData,
+    AuthUserData,
+    EmailVerifiedData,
+    ForgotPasswordRequest,
+    LoginData,
+    LoginRequest,
+    OAuthLinkStartRequest,
+    OAuthStartData,
+    OAuthStartRequest,
+    PasswordResetAcceptedData,
+    PasswordResetData,
+    RegisterRequest,
+    RegistrationAcceptedData,
+    ResetPasswordRequest,
+    VerifyEmailRequest,
+)
+from app.modules.auth.session_service import ClientMetadata, IssuedSession
+
+router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+
+ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    422: {
+        "description": "Request validation failed.",
+        "model": ErrorEnvelope,
+    },
+    429: {
+        "description": "Registration rate limit exceeded.",
+        "model": ErrorEnvelope,
+    },
+    503: {
+        "description": "A required dependency is unavailable.",
+        "model": ErrorEnvelope,
+    },
+}
+
+AUTH_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    401: {
+        "description": "Authentication failed or is required.",
+        "model": ErrorEnvelope,
+    },
+    403: {
+        "description": "CSRF validation failed.",
+        "model": ErrorEnvelope,
+    },
+    422: ERROR_RESPONSES[422],
+    429: {
+        "description": "Authentication rate limit exceeded.",
+        "model": ErrorEnvelope,
+    },
+    503: ERROR_RESPONSES[503],
+}
+
+OAUTH_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    400: {"description": "OAuth request was invalid.", "model": ErrorEnvelope},
+    401: AUTH_ERROR_RESPONSES[401],
+    403: AUTH_ERROR_RESPONSES[403],
+    409: {
+        "description": "The account requires an authenticated link.",
+        "model": ErrorEnvelope,
+    },
+    422: ERROR_RESPONSES[422],
+    429: {"description": "OAuth rate limit exceeded.", "model": ErrorEnvelope},
+    503: ERROR_RESPONSES[503],
+}
+
+
+def _client_metadata(request: Request, device_name: str | None) -> ClientMetadata:
+    return ClientMetadata(
+        client_ip=request.client.host if request.client is not None else "unknown",
+        user_agent=request.headers.get("user-agent"),
+        device_name=device_name,
+    )
+
+
+def _set_auth_cookies(
+    response: Response,
+    issued: IssuedSession,
+    settings: Settings,
+) -> None:
+    secure = settings.app_env != "local"
+    response.set_cookie(
+        key=settings.auth_access_cookie_name,
+        value=issued.access_token,
+        max_age=settings.auth_access_ttl_seconds,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        path="/",
+    )
+    response.set_cookie(
+        key=settings.auth_refresh_cookie_name,
+        value=issued.refresh_token,
+        max_age=settings.auth_refresh_ttl_seconds,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        path="/",
+    )
+    response.set_cookie(
+        key=settings.auth_csrf_cookie_name,
+        value=issued.csrf_token,
+        max_age=settings.auth_refresh_ttl_seconds,
+        httponly=False,
+        secure=secure,
+        samesite="lax",
+        path="/",
+    )
+
+
+def _clear_auth_cookies(response: Response, settings: Settings) -> None:
+    secure = settings.app_env != "local"
+    for cookie_name in (
+        settings.auth_access_cookie_name,
+        settings.auth_refresh_cookie_name,
+        settings.auth_csrf_cookie_name,
+    ):
+        response.delete_cookie(
+            key=cookie_name,
+            httponly=cookie_name != settings.auth_csrf_cookie_name,
+            secure=secure,
+            samesite="lax",
+            path="/",
+        )
+
+
+def _oauth_redirect_url(settings: Settings, next_path: str) -> str:
+    safe_next = validate_oauth_next(next_path)
+    return f"{settings.app_base_url.rstrip('/')}{safe_next}"
+
+
+@router.post(
+    "/register",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=SuccessEnvelope[RegistrationAcceptedData],
+    responses=ERROR_RESPONSES,
+)
+async def register(
+    payload: RegisterRequest,
+    request: Request,
+    service: RegistrationServiceDependency,
+) -> SuccessEnvelope[RegistrationAcceptedData]:
+    client_ip = request.client.host if request.client is not None else "unknown"
+    await service.register(
+        email=str(payload.email),
+        password=payload.password.get_secret_value(),
+        client_ip=client_ip,
+        account_type=payload.account_type,
+    )
+    return SuccessEnvelope(
+        data=RegistrationAcceptedData(
+            message=(
+                "If the address can be registered, verification instructions "
+                "will be sent."
+            )
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/oauth/google/start",
+    response_model=SuccessEnvelope[OAuthStartData],
+    responses=OAUTH_ERROR_RESPONSES,
+)
+async def start_google_oauth(
+    payload: OAuthStartRequest,
+    request: Request,
+    runtime: OAuthRuntimeDependency,
+) -> SuccessEnvelope[OAuthStartData]:
+    client_ip = request.client.host if request.client is not None else "unknown"
+    await runtime.rate_limiter.check(client_ip)
+    attempt = create_oauth_attempt(
+        payload.account_type,
+        payload.next_path or "/dashboard",
+    )
+    await runtime.state_store.save(attempt)
+    return SuccessEnvelope(
+        data=OAuthStartData(
+            authorizationUrl=runtime.provider.authorization_url(attempt)
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/oauth/google/link/start",
+    response_model=SuccessEnvelope[OAuthStartData],
+    responses={
+        400: OAUTH_ERROR_RESPONSES[400],
+        401: AUTH_ERROR_RESPONSES[401],
+        403: AUTH_ERROR_RESPONSES[403],
+        422: OAUTH_ERROR_RESPONSES[422],
+        429: OAUTH_ERROR_RESPONSES[429],
+        503: OAUTH_ERROR_RESPONSES[503],
+    },
+)
+async def start_google_link(
+    payload: OAuthLinkStartRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    runtime: OAuthRuntimeDependency,
+) -> SuccessEnvelope[OAuthStartData]:
+    client_ip = request.client.host if request.client is not None else "unknown"
+    await runtime.rate_limiter.check(client_ip)
+    attempt = create_oauth_attempt(
+        "PUBLIC_USER",
+        payload.next_path or "/dashboard",
+        purpose="link",
+        user_id=str(principal.user_id),
+    )
+    await runtime.state_store.save(attempt)
+    return SuccessEnvelope(
+        data=OAuthStartData(
+            authorizationUrl=runtime.provider.authorization_url(attempt)
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
+    "/oauth/google/callback",
+    status_code=status.HTTP_303_SEE_OTHER,
+    responses=OAUTH_ERROR_RESPONSES,
+)
+async def google_oauth_callback(
+    request: Request,
+    runtime: OAuthRuntimeDependency,
+    session_service: SessionServiceDependency,
+    settings: SettingsDependency,
+    code: str | None = Query(default=None, max_length=4_096),
+    state: str | None = Query(default=None, max_length=512),
+    error: str | None = Query(default=None, max_length=128),
+) -> RedirectResponse:
+    if state is None:
+        raise OAuthStateInvalidError()
+    attempt = await runtime.state_store.consume(state)
+    if attempt is None:
+        raise OAuthStateInvalidError()
+    if error is not None or code is None:
+        raise OAuthCodeInvalidError()
+
+    if attempt.purpose == "link":
+        access_token = request.cookies.get(settings.auth_access_cookie_name)
+        if access_token is None:
+            raise UnauthenticatedError()
+        principal = await session_service.authenticate_access(access_token)
+        try:
+            linked_user_id = UUID(attempt.user_id or "")
+        except ValueError as exc:
+            raise OAuthStateInvalidError() from exc
+        if principal.user_id != linked_user_id:
+            raise OAuthStateInvalidError()
+
+    id_token = await runtime.provider.exchange_code(code)
+    claims = await runtime.provider.validate_id_token(
+        id_token,
+        expected_nonce=attempt.nonce,
+    )
+    completion = await runtime.account_service.complete(
+        claims=claims,
+        attempt=attempt,
+        metadata=_client_metadata(request, "Google OAuth"),
+    )
+    principal = await session_service.authenticate_access(
+        completion.issued.access_token
+    )
+    redirect = RedirectResponse(
+        url=_oauth_redirect_url(
+            settings,
+            resolve_oauth_next(attempt.next_path, principal.roles),
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+    _set_auth_cookies(redirect, completion.issued, settings)
+    return redirect
+
+
+@router.post(
+    "/verify-email",
+    response_model=SuccessEnvelope[EmailVerifiedData],
+    responses={
+        400: {
+            "description": "Verification token is invalid or expired.",
+            "model": ErrorEnvelope,
+        },
+        422: ERROR_RESPONSES[422],
+    },
+)
+async def verify_email(
+    payload: VerifyEmailRequest,
+    request: Request,
+    service: RegistrationServiceDependency,
+) -> SuccessEnvelope[EmailVerifiedData]:
+    await service.verify_email(payload.token)
+    return SuccessEnvelope(
+        data=EmailVerifiedData(status="verified"),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/login",
+    response_model=SuccessEnvelope[LoginData],
+    responses=AUTH_ERROR_RESPONSES,
+)
+async def login(
+    payload: LoginRequest,
+    request: Request,
+    response: Response,
+    service: SessionServiceDependency,
+    settings: SettingsDependency,
+) -> SuccessEnvelope[LoginData]:
+    issued = await service.login(
+        email=str(payload.email),
+        password=payload.password.get_secret_value(),
+        metadata=_client_metadata(request, payload.device_name),
+    )
+    principal = await service.authenticate_access(issued.access_token)
+    _set_auth_cookies(response, issued, settings)
+    return SuccessEnvelope(
+        data=LoginData(
+            user=AuthUserData(
+                id=principal.user_id,
+                email=principal.email,
+                roles=principal.roles,
+                accountType=principal.account_type,
+            )
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/refresh",
+    response_model=SuccessEnvelope[AuthStatusData],
+    responses=AUTH_ERROR_RESPONSES,
+)
+async def refresh(
+    request: Request,
+    response: Response,
+    service: SessionServiceDependency,
+    settings: SettingsDependency,
+    csrf_header: str | None = Header(default=None, alias="X-CSRF-Token"),
+) -> SuccessEnvelope[AuthStatusData]:
+    refresh_token = request.cookies.get(settings.auth_refresh_cookie_name)
+    if refresh_token is None:
+        from app.modules.auth.errors import UnauthenticatedError
+
+        raise UnauthenticatedError()
+    issued = await service.refresh(
+        refresh_token=refresh_token,
+        csrf_cookie=request.cookies.get(settings.auth_csrf_cookie_name),
+        csrf_header=csrf_header,
+        metadata=_client_metadata(request, None),
+    )
+    _set_auth_cookies(response, issued, settings)
+    return SuccessEnvelope(
+        data=AuthStatusData(status="refreshed"),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/logout",
+    response_model=SuccessEnvelope[AuthStatusData],
+    responses=AUTH_ERROR_RESPONSES,
+)
+async def logout(
+    request: Request,
+    response: Response,
+    service: SessionServiceDependency,
+    settings: SettingsDependency,
+    csrf_header: str | None = Header(default=None, alias="X-CSRF-Token"),
+) -> SuccessEnvelope[AuthStatusData]:
+    refresh_token = request.cookies.get(settings.auth_refresh_cookie_name)
+    if refresh_token is None:
+        from app.modules.auth.errors import UnauthenticatedError
+
+        raise UnauthenticatedError()
+    await service.logout(
+        refresh_token=refresh_token,
+        csrf_cookie=request.cookies.get(settings.auth_csrf_cookie_name),
+        csrf_header=csrf_header,
+    )
+    _clear_auth_cookies(response, settings)
+    return SuccessEnvelope(
+        data=AuthStatusData(status="logged_out"),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
+    "/me",
+    response_model=SuccessEnvelope[AuthUserData],
+    responses={401: AUTH_ERROR_RESPONSES[401]},
+)
+async def me(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+) -> SuccessEnvelope[AuthUserData]:
+    return SuccessEnvelope(
+        data=AuthUserData(
+            id=principal.user_id,
+            email=principal.email,
+            roles=principal.roles,
+            accountType=principal.account_type,
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
+    "/sessions",
+    response_model=SuccessEnvelope[list[AuthSessionData]],
+    responses={401: AUTH_ERROR_RESPONSES[401]},
+)
+async def list_sessions(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: SessionServiceDependency,
+) -> SuccessEnvelope[list[AuthSessionData]]:
+    sessions = await service.list_sessions(principal)
+    return SuccessEnvelope(
+        data=[
+            AuthSessionData(
+                id=item.id,
+                device_name=item.device_name,
+                user_agent=item.user_agent,
+                created_at=item.created_at,
+                expires_at=item.expires_at,
+                is_current=item.is_current,
+            )
+            for item in sessions
+        ],
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.delete(
+    "/sessions/{session_id}",
+    response_model=SuccessEnvelope[AuthStatusData],
+    responses={
+        401: AUTH_ERROR_RESPONSES[401],
+        403: AUTH_ERROR_RESPONSES[403],
+        404: {
+            "description": "Session was not found.",
+            "model": ErrorEnvelope,
+        },
+    },
+)
+async def revoke_session(
+    session_id: UUID,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: SessionServiceDependency,
+    settings: SettingsDependency,
+    csrf_header: str | None = Header(default=None, alias="X-CSRF-Token"),
+) -> SuccessEnvelope[AuthStatusData]:
+    await service.revoke_session(
+        principal=principal,
+        target_session_id=session_id,
+        csrf_cookie=request.cookies.get(settings.auth_csrf_cookie_name),
+        csrf_header=csrf_header,
+    )
+    return SuccessEnvelope(
+        data=AuthStatusData(status="revoked"),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/forgot-password",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=SuccessEnvelope[PasswordResetAcceptedData],
+    responses={
+        422: ERROR_RESPONSES[422],
+        429: AUTH_ERROR_RESPONSES[429],
+        503: ERROR_RESPONSES[503],
+    },
+)
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    request: Request,
+    service: PasswordResetServiceDependency,
+) -> SuccessEnvelope[PasswordResetAcceptedData]:
+    client_ip = request.client.host if request.client is not None else "unknown"
+    await service.request_reset(email=str(payload.email), client_ip=client_ip)
+    return SuccessEnvelope(
+        data=PasswordResetAcceptedData(
+            message=("If the address exists, password reset instructions will be sent.")
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/reset-password",
+    response_model=SuccessEnvelope[PasswordResetData],
+    responses={
+        400: {
+            "description": "Password reset token is invalid or expired.",
+            "model": ErrorEnvelope,
+        },
+        422: ERROR_RESPONSES[422],
+    },
+)
+async def reset_password(
+    payload: ResetPasswordRequest,
+    request: Request,
+    response: Response,
+    service: PasswordResetServiceDependency,
+    settings: SettingsDependency,
+) -> SuccessEnvelope[PasswordResetData]:
+    await service.reset_password(
+        token=payload.token,
+        new_password=payload.new_password.get_secret_value(),
+    )
+    _clear_auth_cookies(response, settings)
+    return SuccessEnvelope(
+        data=PasswordResetData(status="password_reset"),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )

@@ -1,0 +1,283 @@
+x-backend-service: &backend-service
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+    target: runtime
+  environment:
+    ANVIL_RPC_URL: http://anvil:8545
+    APP_ENV: local
+    APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+    DATABASE_DIRECT_URL: ${DATABASE_DIRECT_URL:-}
+    DATABASE_URL: ${DATABASE_URL:-}
+    AUTH_OUTBOX_ENCRYPTION_KEY: ${AUTH_OUTBOX_ENCRYPTION_KEY:-}
+    PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY:-}
+    AUTH_OUTBOX_KEY_ID: ${AUTH_OUTBOX_KEY_ID:-auth-registration-v1}
+    AUTH_VERIFICATION_TTL_SECONDS: ${AUTH_VERIFICATION_TTL_SECONDS:-86400}
+    AUTH_REGISTRATION_IP_LIMIT: ${AUTH_REGISTRATION_IP_LIMIT:-20}
+    AUTH_REGISTRATION_EMAIL_LIMIT: ${AUTH_REGISTRATION_EMAIL_LIMIT:-5}
+    AUTH_REGISTRATION_RATE_WINDOW_SECONDS: ${AUTH_REGISTRATION_RATE_WINDOW_SECONDS:-900}
+    JWT_SECRET: ${JWT_SECRET:-}
+    AUTH_CSRF_SECRET: ${AUTH_CSRF_SECRET:-}
+    AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-tmi-platform}
+    AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-tmi-web}
+    AUTH_ACCESS_TTL_SECONDS: ${AUTH_ACCESS_TTL_SECONDS:-900}
+    AUTH_REFRESH_TTL_SECONDS: ${AUTH_REFRESH_TTL_SECONDS:-2592000}
+    AUTH_ACCESS_COOKIE_NAME: ${AUTH_ACCESS_COOKIE_NAME:-tmi_access}
+    AUTH_REFRESH_COOKIE_NAME: ${AUTH_REFRESH_COOKIE_NAME:-tmi_refresh}
+    AUTH_CSRF_COOKIE_NAME: ${AUTH_CSRF_COOKIE_NAME:-tmi_csrf}
+    AUTH_LOGIN_IP_LIMIT: ${AUTH_LOGIN_IP_LIMIT:-20}
+    AUTH_LOGIN_EMAIL_LIMIT: ${AUTH_LOGIN_EMAIL_LIMIT:-10}
+    AUTH_LOGIN_RATE_WINDOW_SECONDS: ${AUTH_LOGIN_RATE_WINDOW_SECONDS:-900}
+    AUTH_PASSWORD_RESET_TTL_SECONDS: ${AUTH_PASSWORD_RESET_TTL_SECONDS:-3600}
+    AUTH_PASSWORD_RESET_IP_LIMIT: ${AUTH_PASSWORD_RESET_IP_LIMIT:-10}
+    AUTH_PASSWORD_RESET_EMAIL_LIMIT: ${AUTH_PASSWORD_RESET_EMAIL_LIMIT:-3}
+    AUTH_PASSWORD_RESET_RATE_WINDOW_SECONDS: ${AUTH_PASSWORD_RESET_RATE_WINDOW_SECONDS:-900}
+    CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+    CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+    CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+    MEDIA_SIGNATURE_TTL_SECONDS: ${MEDIA_SIGNATURE_TTL_SECONDS:-3600}
+    MEDIA_DELIVERY_TTL_SECONDS: ${MEDIA_DELIVERY_TTL_SECONDS:-300}
+    MEDIA_AVATAR_MAX_BYTES: ${MEDIA_AVATAR_MAX_BYTES:-5242880}
+    MEDIA_EVIDENCE_MAX_BYTES: ${MEDIA_EVIDENCE_MAX_BYTES:-20971520}
+    MEDIA_PROVIDER_TIMEOUT_SECONDS: ${MEDIA_PROVIDER_TIMEOUT_SECONDS:-5}
+    PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+    PAYMENT_AMOUNT_MINOR: ${PAYMENT_AMOUNT_MINOR:-1000000}
+    PAYMENT_CURRENCY: ${PAYMENT_CURRENCY:-VND}
+    PAYMENT_ORDER_TTL_SECONDS: ${PAYMENT_ORDER_TTL_SECONDS:-900}
+    PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-}
+    PAYMENT_WEBHOOK_TOLERANCE_SECONDS: ${PAYMENT_WEBHOOK_TOLERANCE_SECONDS:-300}
+    PAYMENT_CHECKOUT_BASE_URL: ${PAYMENT_CHECKOUT_BASE_URL:-http://localhost:3000/thanh-toan/mock}
+    BLOCKCHAIN_NETWORK: ${BLOCKCHAIN_NETWORK:-local}
+    BLOCKCHAIN_CHAIN_ID: ${BLOCKCHAIN_CHAIN_ID:-31337}
+    BLOCKCHAIN_RPC_URL: ${BLOCKCHAIN_RPC_URL:-http://anvil:8545}
+    CERTIFICATE_CONTRACT_ADDRESS: ${CERTIFICATE_CONTRACT_ADDRESS:-}
+    BLOCKCHAIN_CONTRACT_ABI_PATH: /contracts/artifacts/CertificateRegistry.abi.json
+    BLOCKCHAIN_SIGNER_PRIVATE_KEY: ${BLOCKCHAIN_SIGNER_PRIVATE_KEY:-}
+    BLOCKCHAIN_REQUIRED_CONFIRMATIONS: ${BLOCKCHAIN_REQUIRED_CONFIRMATIONS:-1}
+    BLOCKCHAIN_NONCE_LOCK_TTL_SECONDS: ${BLOCKCHAIN_NONCE_LOCK_TTL_SECONDS:-30}
+    BLOCKCHAIN_EXPLORER_BASE_URL: ${BLOCKCHAIN_EXPLORER_BASE_URL:-}
+    PUBLIC_RATE_LIMIT: ${PUBLIC_RATE_LIMIT:-120}
+    PUBLIC_RATE_WINDOW_SECONDS: ${PUBLIC_RATE_WINDOW_SECONDS:-60}
+    PUBLIC_VERIFICATION_CACHE_TTL_SECONDS: ${PUBLIC_VERIFICATION_CACHE_TTL_SECONDS:-30}
+    CERTIFICATE_VALIDITY_DAYS: ${CERTIFICATE_VALIDITY_DAYS:-365}
+    CERTIFICATE_TEMPLATE_VERSION: ${CERTIFICATE_TEMPLATE_VERSION:-certificate-red-gold-v1}
+    LOG_LEVEL: INFO
+    REDIS_URL: redis://redis:6379/0
+  networks:
+    - application
+  read_only: true
+  restart: unless-stopped
+  tmpfs:
+    - /tmp
+  user: "10001:10001"
+  volumes:
+    - ./backend:/app:ro
+    - ./contracts/artifacts:/contracts/artifacts:ro
+
+services:
+  anvil:
+    command:
+      - anvil
+      - --host
+      - 0.0.0.0
+    entrypoint: []
+    healthcheck:
+      test:
+        - CMD
+        - cast
+        - block-number
+        - --rpc-url
+        - http://127.0.0.1:8545
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    image: ghcr.io/foundry-rs/foundry:v1.7.1
+    networks:
+      - application
+    ports:
+      - "8545:8545"
+    read_only: true
+    restart: unless-stopped
+    tmpfs:
+      - /tmp
+    user: "1000:1000"
+
+  backend:
+    <<: *backend-service
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+    depends_on:
+      anvil:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen("http://127.0.0.1:8000/ready", timeout=2)
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    command:
+      - npm
+      - run
+      - dev
+      - --
+      - --hostname
+      - 0.0.0.0
+    environment:
+      API_BASE_URL: http://backend:8000
+      NPM_CONFIG_CACHE: /tmp/npm-cache
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          fetch("http://127.0.0.1:3000").then( response =>
+          process.exit(response.ok ? 0 : 1) ).catch(() => process.exit(1))
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+    networks:
+      - application
+    ports:
+      - "3000:3000"
+    profiles:
+      - frontend
+    read_only: true
+    restart: unless-stopped
+    tmpfs:
+      - /tmp
+    user: "1000:1000"
+    volumes:
+      - ./frontend/src:/app/src:ro
+    working_dir: /app
+
+  nginx:
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --spider
+        - http://127.0.0.1:8080/health
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    image: nginxinc/nginx-unprivileged:1.29.4-alpine
+    networks:
+      - application
+    ports:
+      - "8080:8080"
+    profiles:
+      - frontend
+    read_only: true
+    restart: unless-stopped
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    user: "101:101"
+    volumes:
+      - ./infrastructure/nginx/local.conf:/etc/nginx/conf.d/default.conf:ro
+
+  redis:
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    image: redis:8.4.0-alpine
+    networks:
+      - application
+    read_only: true
+    restart: unless-stopped
+    user: "999:999"
+    volumes:
+      - redis_data:/data
+
+  scheduler:
+    <<: *backend-service
+    command:
+      - celery
+      - --app
+      - app.workers.celery_app
+      - beat
+      - --loglevel=INFO
+      - --pidfile=/tmp/celerybeat.pid
+      - --schedule=/tmp/celerybeat-schedule
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - test -s /tmp/celerybeat.pid && kill -0 "$$(cat /tmp/celerybeat.pid)"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  worker:
+    <<: *backend-service
+    command:
+      - celery
+      - --app
+      - app.workers.celery_app
+      - worker
+      - --loglevel=INFO
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - celery --app app.workers.celery_app inspect ping --destination
+          "celery@$${HOSTNAME}"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  application:
+    driver: bridge
+
+volumes:
+  redis_data:

@@ -1,0 +1,194 @@
+from typing import cast
+from uuid import UUID
+
+from sqlalchemy import exists, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.modules.dossiers.models import (
+    Category,
+    Dossier,
+    DossierEvidence,
+    DossierStatus,
+    DossierStatusHistory,
+    DossierVersion,
+)
+from app.modules.media.models import MediaAsset
+from app.modules.organizations.models import (
+    MembershipStatus,
+    OrganizationMember,
+)
+
+
+class DossierRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    def add(self, dossier: Dossier) -> None:
+        self._session.add(dossier)
+
+    def add_evidence(self, evidence: DossierEvidence) -> None:
+        self._session.add(evidence)
+
+    def add_version(self, version: DossierVersion) -> None:
+        self._session.add(version)
+
+    def add_status_history(self, history: DossierStatusHistory) -> None:
+        self._session.add(history)
+
+    async def remove_evidence(self, evidence: DossierEvidence) -> None:
+        await self._session.delete(evidence)
+
+    async def get_evidence(
+        self,
+        dossier_id: UUID,
+        evidence_id: UUID,
+        *,
+        for_update: bool = False,
+    ) -> DossierEvidence | None:
+        statement = select(DossierEvidence).where(
+            DossierEvidence.id == evidence_id,
+            DossierEvidence.dossier_id == dossier_id,
+        )
+        if for_update:
+            statement = statement.with_for_update().execution_options(
+                populate_existing=True
+            )
+        return cast(
+            DossierEvidence | None,
+            await self._session.scalar(statement),
+        )
+
+    async def list_draft_evidences(
+        self,
+        dossier_id: UUID,
+    ) -> tuple[tuple[DossierEvidence, MediaAsset], ...]:
+        return await self.list_evidences(dossier_id, version_id=None)
+
+    async def list_evidences(
+        self,
+        dossier_id: UUID,
+        *,
+        version_id: UUID | None,
+    ) -> tuple[tuple[DossierEvidence, MediaAsset], ...]:
+        version_criterion = (
+            DossierEvidence.dossier_version_id.is_(None)
+            if version_id is None
+            else DossierEvidence.dossier_version_id == version_id
+        )
+        rows = await self._session.execute(
+            select(DossierEvidence, MediaAsset)
+            .join(MediaAsset, MediaAsset.id == DossierEvidence.media_asset_id)
+            .where(
+                DossierEvidence.dossier_id == dossier_id,
+                version_criterion,
+            )
+            .order_by(
+                DossierEvidence.display_order,
+                DossierEvidence.id,
+            )
+        )
+        return tuple(rows.tuples().all())
+
+    async def get_version(
+        self,
+        dossier_id: UUID,
+        version_no: int,
+    ) -> DossierVersion | None:
+        return cast(
+            DossierVersion | None,
+            await self._session.scalar(
+                select(DossierVersion).where(
+                    DossierVersion.dossier_id == dossier_id,
+                    DossierVersion.version_no == version_no,
+                )
+            ),
+        )
+
+    async def list_versions(
+        self,
+        dossier_id: UUID,
+    ) -> tuple[DossierVersion, ...]:
+        rows = await self._session.scalars(
+            select(DossierVersion)
+            .where(DossierVersion.dossier_id == dossier_id)
+            .order_by(DossierVersion.version_no.desc())
+        )
+        return tuple(rows.all())
+
+    async def list_status_history(
+        self,
+        dossier_id: UUID,
+    ) -> tuple[DossierStatusHistory, ...]:
+        rows = await self._session.scalars(
+            select(DossierStatusHistory)
+            .where(DossierStatusHistory.dossier_id == dossier_id)
+            .order_by(
+                DossierStatusHistory.created_at,
+                DossierStatusHistory.id,
+            )
+        )
+        return tuple(rows.all())
+
+    async def get_category(self, category_id: UUID) -> Category | None:
+        return cast(
+            Category | None,
+            await self._session.scalar(
+                select(Category).where(
+                    Category.id == category_id,
+                    Category.is_active.is_(True),
+                )
+            ),
+        )
+
+    async def get_by_id(
+        self,
+        dossier_id: UUID,
+        *,
+        for_update: bool = False,
+    ) -> Dossier | None:
+        statement = select(Dossier).where(
+            Dossier.id == dossier_id,
+            Dossier.deleted_at.is_(None),
+        )
+        if for_update:
+            statement = statement.with_for_update().execution_options(
+                populate_existing=True
+            )
+        return cast(Dossier | None, await self._session.scalar(statement))
+
+    async def list_accessible(
+        self,
+        user_id: UUID,
+        *,
+        status: DossierStatus | None,
+        category_id: UUID | None,
+        offset: int,
+        limit: int,
+    ) -> tuple[tuple[Dossier, ...], int]:
+        organization_access = exists(
+            select(OrganizationMember.organization_id).where(
+                OrganizationMember.organization_id == Dossier.organization_id,
+                OrganizationMember.user_id == user_id,
+                OrganizationMember.status == MembershipStatus.ACTIVE,
+            )
+        )
+        criteria = [
+            Dossier.deleted_at.is_(None),
+            or_(Dossier.owner_user_id == user_id, organization_access),
+        ]
+        if status is not None:
+            criteria.append(Dossier.status == status)
+        if category_id is not None:
+            criteria.append(Dossier.category_id == category_id)
+
+        total = await self._session.scalar(
+            select(func.count()).select_from(Dossier).where(*criteria)
+        )
+        rows = await self._session.scalars(
+            select(Dossier)
+            .where(*criteria)
+            .order_by(Dossier.created_at.desc(), Dossier.id.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return tuple(rows.all()), int(total or 0)

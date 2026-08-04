@@ -1,0 +1,217 @@
+name: Delivery
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Immutable image tag approved for production
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: delivery-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12.8
+          cache: pip
+      - run: npm ci
+      - run: npm --prefix frontend ci
+      - run: npm --prefix contracts ci
+      - run: python -m pip install --disable-pip-version-check -e "backend[dev]"
+      - name: Lint and formatting
+        run: |
+          npm run format:check
+          npm --prefix frontend run lint
+          python -m ruff check backend
+      - name: Type checks
+        run: |
+          npm --prefix frontend run typecheck
+          cd backend && python -m mypy app
+      - name: Unit and integration tests
+        run: |
+          node --test tests/*.test.mjs
+          npm --prefix frontend run test
+          python -m pytest backend/app/tests
+      - name: Production frontend build
+        run: npm --prefix frontend run build
+      - name: Dependency security audit
+        run: |
+          npm audit --audit-level=high
+          npm --prefix frontend audit --audit-level=high
+          npm --prefix contracts audit --audit-level=high
+      - name: Pinned contract tests
+        run:
+          docker run --rm -v "$PWD/contracts:/workspace" -w /workspace
+          ghcr.io/foundry-rs/foundry:v1.7.1 forge test
+
+  e2e:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix frontend ci
+      - run: frontend/node_modules/.bin/playwright install --with-deps chromium
+      - run: npm --prefix frontend run test:e2e -- --project=desktop-chrome
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-failure-${{ github.run_id }}
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          retention-days: 7
+
+  public-security:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12.8
+          cache: pip
+      - run: python -m pip install --disable-pip-version-check -e "backend[dev]"
+      - name: Public visibility and leakage release gate
+        run: >-
+          python -m pytest
+          backend/app/tests/test_public_catalog_security_gate.py
+          backend/app/tests/test_public_seo.py
+          backend/app/tests/test_public_catalog_cache.py
+          backend/app/tests/test_public_media_service.py
+          backend/app/tests/test_full_text_search_repository.py
+          backend/app/tests/test_search_autocomplete.py
+          backend/app/tests/test_search_discovery.py
+
+  migration:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_DB: tmi_ci
+          POSTGRES_USER: tmi_ci
+          POSTGRES_PASSWORD: tmi-ci-ephemeral-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tmi_ci -d tmi_ci" --health-interval 5s
+          --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_DIRECT_URL: postgresql+asyncpg://tmi_ci:tmi-ci-ephemeral-only@localhost:5432/tmi_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12.8
+          cache: pip
+      - run: python -m pip install --disable-pip-version-check -e "backend[dev]"
+      - name: Reversible migration gate
+        working-directory: backend
+        run: |
+          alembic upgrade head
+          alembic downgrade -1
+          alembic upgrade head
+
+  images:
+    if: github.event_name != 'pull_request'
+    needs: [quality, e2e, migration, public-security]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticate registry
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run:
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "${{ github.actor }}"
+          --password-stdin
+      - name: Build and push immutable images
+        env:
+          REGISTRY: ghcr.io/${{ github.repository_owner }}
+          TAG: ${{ github.event.inputs.image_tag || github.sha }}
+        run: |
+          docker build --pull -t "$REGISTRY/tmi-certificate-backend:$TAG" backend
+          docker build --pull -t "$REGISTRY/tmi-certificate-frontend:$TAG" frontend
+          docker run -d --rm --name tmi-backend-smoke -p 18000:8000 "$REGISTRY/tmi-certificate-backend:$TAG"
+          docker run -d --rm --name tmi-frontend-smoke -p 13000:3000 "$REGISTRY/tmi-certificate-frontend:$TAG"
+          trap 'docker stop tmi-backend-smoke tmi-frontend-smoke >/dev/null 2>&1 || true' EXIT
+          for attempt in {1..20}; do curl --fail --silent http://127.0.0.1:18000/health && break; sleep 2; done
+          for attempt in {1..20}; do curl --fail --silent http://127.0.0.1:13000/ && break; sleep 2; done
+          curl --fail --silent http://127.0.0.1:18000/health >/dev/null
+          curl --fail --silent http://127.0.0.1:13000/ >/dev/null
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.68.2 image --exit-code 1 --severity HIGH,CRITICAL "$REGISTRY/tmi-certificate-backend:$TAG"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.68.2 image --exit-code 1 --severity HIGH,CRITICAL "$REGISTRY/tmi-certificate-frontend:$TAG"
+          docker push "$REGISTRY/tmi-certificate-backend:$TAG"
+          docker push "$REGISTRY/tmi-certificate-frontend:$TAG"
+      - name: Create rollback artifact
+        run:
+          tar -czf rollback-bundle.tgz infrastructure/compose.production.yaml
+          infrastructure/nginx/production.conf.template infrastructure/scripts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rollback-${{ github.event.inputs.image_tag || github.sha }}
+          path: rollback-bundle.tgz
+          retention-days: 30
+
+  deploy-staging:
+    if: github.event_name == 'push'
+    needs: images
+    runs-on: ubuntu-24.04
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy immutable staging release
+        env:
+          DEPLOY_HOST: ${{ secrets.STAGING_DEPLOY_HOST }}
+          DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_SSH_KEY }}
+          DEPLOY_USER: ${{ secrets.STAGING_DEPLOY_USER }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd /opt/tmi-platform && infrastructure/scripts/deploy.sh '$IMAGE_TAG'"
+
+  deploy-production:
+    if: github.event_name == 'workflow_dispatch'
+    needs: images
+    runs-on: ubuntu-24.04
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy manually approved production release
+        env:
+          DEPLOY_HOST: ${{ secrets.PRODUCTION_DEPLOY_HOST }}
+          DEPLOY_KEY: ${{ secrets.PRODUCTION_DEPLOY_SSH_KEY }}
+          DEPLOY_USER: ${{ secrets.PRODUCTION_DEPLOY_USER }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd /opt/tmi-platform && infrastructure/scripts/deploy.sh '$IMAGE_TAG'"

@@ -1,0 +1,1 @@
+"""Community voting bounded context."""

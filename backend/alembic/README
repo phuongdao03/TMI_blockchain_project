@@ -1,0 +1,2 @@
+Alembic uses DATABASE_DIRECT_URL for migrations. Runtime repositories use the
+separate pooled DATABASE_URL through app.db.session.

@@ -1,0 +1,79 @@
+version: 1
+defaults:
+  evaluation_interval: 60s
+  labels:
+    service: tmi-platform
+  telemetry_redaction:
+    deny_fields:
+      [password, token, otp, private_key, authorization, cookie, payload]
+
+alerts:
+  - name: api_error_rate
+    signal: http_5xx_ratio
+    condition: greater_than
+    threshold: 0.02
+    window: 5m
+    severity: page
+    route: platform-on-call
+    runbook: docs/runbooks/incident-response.md#api-errors
+  - name: queue_backlog
+    signal: celery_queue_oldest_message_seconds
+    condition: greater_than
+    threshold: 300
+    window: 10m
+    severity: page
+    route: platform-on-call
+    runbook: docs/runbooks/incident-response.md#queue-backlog
+  - name: database_pool_exhaustion
+    signal: database_pool_utilization_ratio
+    condition: greater_than
+    threshold: 0.9
+    window: 5m
+    severity: page
+    route: platform-on-call
+    runbook: docs/runbooks/incident-response.md#database
+  - name: payment_webhook_failure
+    signal: payment_webhook_failure_count
+    condition: greater_than
+    threshold: 3
+    window: 10m
+    severity: page
+    route: finance-and-platform
+    runbook: docs/runbooks/incident-response.md#payment-webhook
+  - name: blockchain_pending_age
+    signal: blockchain_oldest_pending_seconds
+    condition: greater_than
+    threshold: 900
+    window: 10m
+    severity: page
+    route: blockchain-and-platform
+    runbook: docs/runbooks/incident-response.md#blockchain
+  - name: wallet_balance
+    signal: signer_wallet_native_balance
+    condition: less_than
+    threshold: 0.05
+    window: 5m
+    severity: ticket
+    route: blockchain-operations
+    runbook: docs/runbooks/incident-response.md#wallet-balance
+
+dashboards:
+  - name: platform-overview
+    panels:
+      [request_rate, http_5xx_ratio, p50_latency, p95_latency, active_sessions]
+  - name: workflow-operations
+    panels:
+      [
+        dossier_funnel,
+        overdue_reviews,
+        payment_webhook_failure_count,
+        blockchain_oldest_pending_seconds,
+      ]
+  - name: infrastructure
+    panels:
+      [
+        database_pool_utilization_ratio,
+        celery_queue_oldest_message_seconds,
+        cpu_utilization,
+        memory_utilization,
+      ]
