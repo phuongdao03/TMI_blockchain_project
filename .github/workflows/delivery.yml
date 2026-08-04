@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: 24.18.0
           cache: npm
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: 3.12.8
           cache: pip
@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: 3.12.8
           cache: pip
@@ -121,7 +121,7 @@ jobs:
       DATABASE_DIRECT_URL: postgresql+asyncpg://tmi_ci:tmi-ci-ephemeral-only@localhost:5432/tmi_ci
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: 3.12.8
           cache: pip
