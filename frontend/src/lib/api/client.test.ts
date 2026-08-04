@@ -246,12 +246,21 @@ describe("ranking API client", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       response({
         success: true,
-        data: { snapshot: {}, items: [], pagination: { page: 2, pageSize: 10, total: 0 } },
+        data: {
+          snapshot: {},
+          items: [],
+          pagination: { page: 2, pageSize: 10, total: 0 },
+        },
         meta: { request_id: "ranking-request" },
       }),
     );
 
-    await rankingApi.public("heritage campaign", { page: 2, pageSize: 10, version: 3, categoryId: "category-1" });
+    await rankingApi.public("heritage campaign", {
+      page: 2,
+      pageSize: 10,
+      version: 3,
+      categoryId: "category-1",
+    });
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "/api/v1/public/campaigns/heritage%20campaign/ranking?page=2&pageSize=10&version=3&categoryId=category-1",

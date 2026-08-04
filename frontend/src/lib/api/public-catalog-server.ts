@@ -33,7 +33,9 @@ export async function loadPublicCatalogInitialData(
       ? ((await worksResponse.json()) as PublicCatalogPage)
       : undefined;
     const featured = featuredResponse?.ok
-      ? ((await featuredResponse.json()) as SuccessEnvelope<PublicCatalogWork[]>)
+      ? ((await featuredResponse.json()) as SuccessEnvelope<
+          PublicCatalogWork[]
+        >)
       : undefined;
     return {
       works: works?.success && Array.isArray(works.data) ? works : undefined,

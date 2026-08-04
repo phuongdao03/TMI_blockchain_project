@@ -1,7 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, BadgeCheck, LoaderCircle, ShieldCheck } from "lucide-react";
+import {
+  ArrowUpRight,
+  BadgeCheck,
+  LoaderCircle,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
 
 import { certificateApi } from "@/lib/api/client";
@@ -37,9 +42,12 @@ export function CertificateList({ page }: { page: number }) {
     return (
       <div className="rounded-3xl border border-dashed bg-white px-6 py-16 text-center">
         <ShieldCheck className="mx-auto size-10 text-primary-700" />
-        <h2 className="mt-4 text-xl font-bold">Chưa có chứng thư được phát hành</h2>
+        <h2 className="mt-4 text-xl font-bold">
+          Chưa có chứng thư được phát hành
+        </h2>
         <p className="mt-2 text-sm text-neutral-500">
-          Chứng thư sẽ xuất hiện sau khi hồ sơ được thanh toán và neo blockchain.
+          Chứng thư sẽ xuất hiện sau khi hồ sơ được thanh toán và neo
+          blockchain.
         </p>
       </div>
     );

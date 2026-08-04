@@ -26,13 +26,21 @@ export function CampaignList() {
             </h1>
           </div>
           <p className="border-l border-gold-300/40 pl-5 text-sm leading-7 text-slate-300">
-            Mỗi tài khoản đã xác minh bình chọn theo quota của chiến dịch. Kết quả
-            công khai không tiết lộ danh tính người tham gia.
+            Mỗi tài khoản đã xác minh bình chọn theo quota của chiến dịch. Kết
+            quả công khai không tiết lộ danh tính người tham gia.
           </p>
         </div>
 
-        {campaigns.isPending ? <p className="py-16" role="status">Đang tải chiến dịch...</p> : null}
-        {campaigns.isError ? <p className="py-16 text-red-300" role="alert">Chưa thể tải chiến dịch bình chọn.</p> : null}
+        {campaigns.isPending ? (
+          <p className="py-16" role="status">
+            Đang tải chiến dịch...
+          </p>
+        ) : null}
+        {campaigns.isError ? (
+          <p className="py-16 text-red-300" role="alert">
+            Chưa thể tải chiến dịch bình chọn.
+          </p>
+        ) : null}
         {campaigns.data?.data.length === 0 ? (
           <div className="my-12 rounded-3xl border border-dashed border-white/20 p-12 text-center text-slate-300">
             Chưa có chiến dịch công khai.
@@ -49,10 +57,16 @@ export function CampaignList() {
                 <span className="grid size-12 place-items-center rounded-2xl bg-gold-300 text-ink-950">
                   <Trophy className="size-5" />
                 </span>
-                <span className="text-xs font-black text-slate-500">0{index + 1}</span>
+                <span className="text-xs font-black text-slate-500">
+                  0{index + 1}
+                </span>
               </div>
-              <h2 className="mt-10 text-2xl font-black sm:text-3xl">{campaign.name}</h2>
-              <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-400">{campaign.description}</p>
+              <h2 className="mt-10 text-2xl font-black sm:text-3xl">
+                {campaign.name}
+              </h2>
+              <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-400">
+                {campaign.description}
+              </p>
               <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-5 text-sm">
                 <span className="flex items-center gap-2 text-slate-300">
                   <CalendarDays className="size-4 text-gold-300" />

@@ -19,7 +19,8 @@ export default async function CertificatesPage({
           Chứng thư đã phát hành
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
-          Quản lý bản PDF riêng tư và kiểm tra bằng chứng blockchain của tài sản.
+          Quản lý bản PDF riêng tư và kiểm tra bằng chứng blockchain của tài
+          sản.
         </p>
       </header>
       <CertificateList page={page} />

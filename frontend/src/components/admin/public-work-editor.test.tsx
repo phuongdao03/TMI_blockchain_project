@@ -94,7 +94,10 @@ beforeEach(() => {
   vi.mocked(publicWorkAdminApi.tags).mockResolvedValue([]);
   vi.mocked(publicWorkAdminApi.media).mockResolvedValue([]);
   vi.mocked(publicWorkAdminApi.assignTags).mockResolvedValue(undefined);
-  vi.mocked(publicWorkAdminApi.update).mockResolvedValue({ ...work, version: 3 });
+  vi.mocked(publicWorkAdminApi.update).mockResolvedValue({
+    ...work,
+    version: 3,
+  });
   vi.mocked(publicWorkAdminApi.preview).mockResolvedValue({
     slug: work.slug,
     title: work.title,
@@ -114,19 +117,25 @@ describe("PublicWorkEditor", () => {
     const user = userEvent.setup();
     render(<PublicWorkEditor />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: /Bản mẫu công khai/ }));
+    await user.click(
+      await screen.findByRole("button", { name: /Bản mẫu công khai/ }),
+    );
     const title = await screen.findByLabelText("Tiêu đề công khai");
     await user.clear(title);
     await user.type(title, "x");
     await user.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
-    expect(await screen.findByText("Tiêu đề cần ít nhất 3 ký tự.")).toBeTruthy();
+    expect(
+      await screen.findByText("Tiêu đề cần ít nhất 3 ký tự."),
+    ).toBeTruthy();
     expect(publicWorkAdminApi.update).not.toHaveBeenCalled();
 
     await user.clear(title);
     await user.type(title, "Tác phẩm đã biên tập");
     await user.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
     await waitFor(() => expect(publicWorkAdminApi.update).toHaveBeenCalled());
-    expect(vi.mocked(publicWorkAdminApi.update).mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      vi.mocked(publicWorkAdminApi.update).mock.calls[0]?.[1],
+    ).toMatchObject({
       expectedVersion: 2,
       title: "Tác phẩm đã biên tập",
     });
@@ -135,7 +144,9 @@ describe("PublicWorkEditor", () => {
   it("warns on unsaved changes and renders only the preview projection", async () => {
     const user = userEvent.setup();
     render(<PublicWorkEditor />, { wrapper });
-    await user.click(await screen.findByRole("button", { name: /Bản mẫu công khai/ }));
+    await user.click(
+      await screen.findByRole("button", { name: /Bản mẫu công khai/ }),
+    );
     const title = await screen.findByLabelText("Tiêu đề công khai");
     await user.type(title, " mới");
 
@@ -155,7 +166,9 @@ describe("PublicWorkEditor", () => {
     );
     const user = userEvent.setup();
     render(<PublicWorkEditor />, { wrapper });
-    await user.click(await screen.findByRole("button", { name: /Bản mẫu công khai/ }));
+    await user.click(
+      await screen.findByRole("button", { name: /Bản mẫu công khai/ }),
+    );
     const title = await screen.findByLabelText("Tiêu đề công khai");
     await user.type(title, " mới");
     await user.click(screen.getByRole("button", { name: "Lưu thay đổi" }));

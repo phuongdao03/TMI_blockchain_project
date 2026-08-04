@@ -72,7 +72,9 @@ export function PublicWorkCard({
 
       <div className="flex flex-1 flex-col p-5 sm:p-6">
         <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
-          <span className="font-mono">{String(position).padStart(2, "0")} / TMI</span>
+          <span className="font-mono">
+            {String(position).padStart(2, "0")} / TMI
+          </span>
           <time dateTime={work.publishedAt}>
             {new Intl.DateTimeFormat("vi-VN", {
               month: "2-digit",

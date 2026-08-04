@@ -16,9 +16,7 @@ import { loginSchema, type LoginValues } from "@/lib/auth/schemas";
 import { resolveDefaultWorkspace } from "@/lib/auth/role-workspaces";
 
 function safeDestination(value: string | undefined, fallback: string): string {
-  return value?.startsWith("/") && !value.startsWith("//")
-    ? value
-    : fallback;
+  return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
 }
 
 export function LoginForm({ next }: { next?: string }) {
@@ -43,7 +41,9 @@ export function LoginForm({ next }: { next?: string }) {
         "Trình duyệt web",
       );
       queryClient.setQueryData(["auth", "me"], result.user);
-      router.replace(safeDestination(next, resolveDefaultWorkspace(result.user.roles)));
+      router.replace(
+        safeDestination(next, resolveDefaultWorkspace(result.user.roles)),
+      );
       router.refresh();
     } catch (error) {
       setSubmitError(
@@ -74,39 +74,42 @@ export function LoginForm({ next }: { next?: string }) {
           <span className="h-px flex-1 bg-white/10" />
         </div>
         <form className="space-y-5" noValidate onSubmit={onSubmit}>
-        {submitError ? (
-          <p
-            className="rounded-lg border border-error bg-primary-50 p-3 text-sm font-medium text-error"
-            role="alert"
-          >
-            {submitError}
-          </p>
-        ) : null}
-        <FormField
-          autoComplete="email"
-          error={errors.email?.message}
-          label="Email"
-          type="email"
-          {...register("email")}
-        />
-        <div className="space-y-2">
-          <FormField
-            autoComplete="current-password"
-            error={errors.password?.message}
-            label="Mật khẩu"
-            type="password"
-            {...register("password")}
-          />
-          <div className="text-right">
-            <AuthLink href="/forgot-password">Quên mật khẩu?</AuthLink>
-          </div>
-        </div>
-        <Button className="w-full" disabled={isSubmitting} type="submit">
-          {isSubmitting ? (
-            <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
+          {submitError ? (
+            <p
+              className="rounded-lg border border-error bg-primary-50 p-3 text-sm font-medium text-error"
+              role="alert"
+            >
+              {submitError}
+            </p>
           ) : null}
-          {isSubmitting ? "Đang đăng nhập…" : "Đăng nhập"}
-        </Button>
+          <FormField
+            autoComplete="email"
+            error={errors.email?.message}
+            label="Email"
+            type="email"
+            {...register("email")}
+          />
+          <div className="space-y-2">
+            <FormField
+              autoComplete="current-password"
+              error={errors.password?.message}
+              label="Mật khẩu"
+              type="password"
+              {...register("password")}
+            />
+            <div className="text-right">
+              <AuthLink href="/forgot-password">Quên mật khẩu?</AuthLink>
+            </div>
+          </div>
+          <Button className="w-full" disabled={isSubmitting} type="submit">
+            {isSubmitting ? (
+              <LoaderCircle
+                aria-hidden="true"
+                className="size-5 animate-spin"
+              />
+            ) : null}
+            {isSubmitting ? "Đang đăng nhập…" : "Đăng nhập"}
+          </Button>
         </form>
       </div>
     </AuthCard>

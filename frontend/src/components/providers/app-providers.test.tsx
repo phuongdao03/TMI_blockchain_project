@@ -18,13 +18,21 @@ beforeEach(() => {
 
 describe("AppProviders", () => {
   it("does not bootstrap a private session on the public search route", async () => {
-    const view = render(<AppProviders><p>Public search</p></AppProviders>);
+    const view = render(
+      <AppProviders>
+        <p>Public search</p>
+      </AppProviders>,
+    );
     expect(screen.getByText("Public search")).toBeTruthy();
     await Promise.resolve();
     expect(authApi.currentUser).not.toHaveBeenCalled();
 
     pathname = "/dashboard";
-    view.rerender(<AppProviders><p>Dashboard</p></AppProviders>);
+    view.rerender(
+      <AppProviders>
+        <p>Dashboard</p>
+      </AppProviders>,
+    );
     await waitFor(() => expect(authApi.currentUser).toHaveBeenCalledTimes(1));
   });
 });

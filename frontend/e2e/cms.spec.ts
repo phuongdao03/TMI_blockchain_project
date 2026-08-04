@@ -33,13 +33,13 @@ test("content admin creates, previews and publishes a sanitized post", async ({
 test("content admin previews and publishes a public work", async ({ page }) => {
   await page.goto("/login");
   await page.getByRole("textbox", { name: "Email" }).fill("owner@tmigroup.vn");
-  await page
-    .getByLabel(/khẩu/i)
-    .fill("correct horse battery staple");
+  await page.getByLabel(/khẩu/i).fill("correct horse battery staple");
   await page.getByRole("button", { name: /Đăng nhập/i }).click();
 
   await page.getByRole("button", { name: /Di sản số TMI/ }).click();
-  await expect(page.getByLabel("Tiêu đề công khai")).toHaveValue("Di sản số TMI");
+  await expect(page.getByLabel("Tiêu đề công khai")).toHaveValue(
+    "Di sản số TMI",
+  );
   await page.getByRole("button", { name: "Xem trước" }).click();
   await expect(page.getByText(/Tác phẩm số đã hoàn tất/)).toBeVisible();
   await page.getByRole("button", { name: "Đóng xem trước" }).click();

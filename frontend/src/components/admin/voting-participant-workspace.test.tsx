@@ -54,7 +54,9 @@ const participant = {
 };
 
 function wrapper({ children }: { children: ReactNode }) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
@@ -85,7 +87,12 @@ beforeEach(() => {
         publishedAt: "2026-08-01T00:00:00Z",
       },
     ],
-    meta: { requestId: "search-1", nextCursor: null, durationMs: 2, version: "v1" },
+    meta: {
+      requestId: "search-1",
+      nextCursor: null,
+      durationMs: 2,
+      version: "v1",
+    },
   });
   vi.mocked(votingCampaignAdminApi.bulkAdd).mockResolvedValue([]);
   vi.mocked(votingCampaignAdminApi.transition).mockResolvedValue({
@@ -101,9 +108,14 @@ describe("VotingParticipantWorkspace", () => {
 
     expect(await screen.findByText("Tác phẩm hiện tại")).toBeTruthy();
     await user.type(screen.getByLabelText("Lý do thao tác"), "Đã kiểm tra");
-    await user.type(screen.getByLabelText("Tìm tác phẩm công khai"), "Tác phẩm");
+    await user.type(
+      screen.getByLabelText("Tìm tác phẩm công khai"),
+      "Tác phẩm",
+    );
     await user.click(screen.getByRole("button", { name: "Tìm kiếm" }));
-    await user.click(await screen.findByRole("checkbox", { name: "Chọn Tác phẩm mới" }));
+    await user.click(
+      await screen.findByRole("checkbox", { name: "Chọn Tác phẩm mới" }),
+    );
     await user.click(screen.getByRole("button", { name: "Thêm 1 tác phẩm" }));
     await waitFor(() =>
       expect(votingCampaignAdminApi.bulkAdd).toHaveBeenCalledWith(
@@ -113,7 +125,9 @@ describe("VotingParticipantWorkspace", () => {
       ),
     );
 
-    await user.click(screen.getByRole("button", { name: "Duyệt Tác phẩm hiện tại" }));
+    await user.click(
+      screen.getByRole("button", { name: "Duyệt Tác phẩm hiện tại" }),
+    );
     expect(votingCampaignAdminApi.transition).toHaveBeenCalledWith(
       campaign.id,
       participant.id,

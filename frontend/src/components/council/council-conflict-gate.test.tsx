@@ -13,20 +13,14 @@ describe("CouncilConflictGate", () => {
     await user.click(
       screen.getByRole("button", { name: "Tôi có xung đột lợi ích" }),
     );
-    await user.click(
-      screen.getByRole("button", { name: "Xác nhận xung đột" }),
-    );
-    expect(
-      screen.getByText("Vui lòng mô tả xung đột lợi ích."),
-    ).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Xác nhận xung đột" }));
+    expect(screen.getByText("Vui lòng mô tả xung đột lợi ích.")).toBeDefined();
 
     await user.type(
       screen.getByLabelText("Lý do xung đột"),
       "Có quan hệ tài chính trực tiếp với chủ hồ sơ.",
     );
-    await user.click(
-      screen.getByRole("button", { name: "Xác nhận xung đột" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Xác nhận xung đột" }));
     expect(declare).toHaveBeenCalledWith({
       hasConflict: true,
       reason: "Có quan hệ tài chính trực tiếp với chủ hồ sơ.",

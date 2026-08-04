@@ -7,12 +7,8 @@ describe("RoleDashboardOverview", () => {
   it("renders browse-only discovery actions for a public user", () => {
     render(<RoleDashboardOverview persona="PUBLIC" />);
 
-    expect(
-      screen.getByRole("link", { name: /Tìm tài sản số/i }),
-    ).toBeDefined();
-    expect(
-      screen.queryByRole("link", { name: /Tạo hồ sơ mới/i }),
-    ).toBeNull();
+    expect(screen.getByRole("link", { name: /Tìm tài sản số/i })).toBeDefined();
+    expect(screen.queryByRole("link", { name: /Tạo hồ sơ mới/i })).toBeNull();
   });
 
   it.each([
@@ -20,12 +16,19 @@ describe("RoleDashboardOverview", () => {
     ["COUNCIL", "Phiên xét duyệt Hội đồng", "Mở phiên Hội đồng"],
     ["ADMIN", "Điều hành nền tảng", "Mở bảng vận hành"],
     ["SUPER_ADMIN", "Điều hành toàn hệ thống", "Mở bảng điều hành"],
-  ] as const)("renders the permitted landing actions for %s", (persona, title, action) => {
-    render(<RoleDashboardOverview persona={persona} />);
+  ] as const)(
+    "renders the permitted landing actions for %s",
+    (persona, title, action) => {
+      render(<RoleDashboardOverview persona={persona} />);
 
-    expect(screen.getByRole("heading", { level: 1, name: title })).toBeDefined();
-    expect(screen.getByRole("link", { name: new RegExp(action) })).toBeDefined();
-  });
+      expect(
+        screen.getByRole("heading", { level: 1, name: title }),
+      ).toBeDefined();
+      expect(
+        screen.getByRole("link", { name: new RegExp(action) }),
+      ).toBeDefined();
+    },
+  );
 
   it("does not expose operations controls to a content-only admin", () => {
     render(<RoleDashboardOverview persona="ADMIN" roles={["CONTENT_ADMIN"]} />);

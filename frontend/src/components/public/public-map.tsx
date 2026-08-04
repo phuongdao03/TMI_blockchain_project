@@ -12,7 +12,9 @@ export function PublicMap({ category }: { category?: string }) {
     queryFn: () => publicApi.map(category),
   });
   if (query.isPending) {
-    return <LoaderCircle className="mx-auto mt-24 size-7 animate-spin text-gold-300" />;
+    return (
+      <LoaderCircle className="mx-auto mt-24 size-7 animate-spin text-gold-300" />
+    );
   }
   return (
     <div className="grid min-h-[38rem] overflow-hidden rounded-3xl border border-white/10 bg-ink-900 lg:grid-cols-[1fr_22rem]">
@@ -45,12 +47,20 @@ export function PublicMap({ category }: { category?: string }) {
         )}
       </div>
       <aside className="border-t border-white/10 p-5 lg:border-l lg:border-t-0">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gold-300">Danh sách điểm</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gold-300">
+          Danh sách điểm
+        </p>
         <div className="mt-5 space-y-2">
           {query.data?.map((marker) => (
-            <Link className="block rounded-xl border border-white/10 p-4 hover:bg-white/5" href={`/tai-san/${marker.slug}`} key={marker.slug}>
+            <Link
+              className="block rounded-xl border border-white/10 p-4 hover:bg-white/5"
+              href={`/tai-san/${marker.slug}`}
+              key={marker.slug}
+            >
               <p className="font-bold">{marker.title}</p>
-              <p className="mt-1 text-xs text-slate-500">{marker.categoryName}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {marker.categoryName}
+              </p>
             </Link>
           ))}
         </div>

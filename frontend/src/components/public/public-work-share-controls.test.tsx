@@ -54,7 +54,8 @@ describe("PublicWorkShareControls", () => {
     render(<PublicWorkShareControls detail={detail} />);
 
     const copyButton = screen.getAllByRole("button")[1];
-    if (copyButton === undefined) throw new Error("Copy-link button is missing.");
+    if (copyButton === undefined)
+      throw new Error("Copy-link button is missing.");
     fireEvent.click(copyButton);
 
     await waitFor(() => {

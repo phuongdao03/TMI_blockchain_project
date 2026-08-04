@@ -40,7 +40,10 @@ export function FeaturedAssets() {
           <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-400">
             {asset.summary}
           </p>
-          <Link className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-white" href={`/tai-san/${asset.slug}`}>
+          <Link
+            className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-white"
+            href={`/tai-san/${asset.slug}`}
+          >
             Xem bằng chứng <ArrowUpRight className="size-4" />
           </Link>
         </article>

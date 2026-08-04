@@ -28,7 +28,8 @@ export const loadPublicWork = cache(
       }
       if (response.status === 404) return { kind: "not_found" };
       if (!response.ok) return { kind: "unavailable" };
-      const payload = (await response.json()) as SuccessEnvelope<PublicWorkDetail>;
+      const payload =
+        (await response.json()) as SuccessEnvelope<PublicWorkDetail>;
       return payload.success
         ? { kind: "detail", detail: payload.data }
         : { kind: "unavailable" };

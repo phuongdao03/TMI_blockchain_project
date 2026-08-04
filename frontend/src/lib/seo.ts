@@ -6,7 +6,8 @@ export type SitemapEntry = {
 export function canonicalSiteUrl(value = process.env.APP_BASE_URL): URL {
   try {
     const url = new URL(value ?? "http://localhost:3000");
-    if (!['http:', 'https:'].includes(url.protocol)) throw new Error("protocol");
+    if (!["http:", "https:"].includes(url.protocol))
+      throw new Error("protocol");
     return new URL(url.origin);
   } catch {
     return new URL("http://localhost:3000");
@@ -42,9 +43,7 @@ export function sitemapUrlSetXml(
       .map(
         ({ url, lastModified }) =>
           `<url><loc>${escapeXml(url.href)}</loc>${
-            lastModified
-              ? `<lastmod>${escapeXml(lastModified)}</lastmod>`
-              : ""
+            lastModified ? `<lastmod>${escapeXml(lastModified)}</lastmod>` : ""
           }</url>`,
       )
       .join("")}</urlset>`,
@@ -54,7 +53,8 @@ export function sitemapUrlSetXml(
 export function xmlResponse(body: string): Response {
   return new Response(body, {
     headers: {
-      "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=60",
+      "Cache-Control":
+        "public, max-age=0, s-maxage=300, stale-while-revalidate=60",
       "Content-Type": "application/xml; charset=utf-8",
       "X-Content-Type-Options": "nosniff",
     },

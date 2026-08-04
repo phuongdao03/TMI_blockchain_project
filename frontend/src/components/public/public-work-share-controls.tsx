@@ -26,7 +26,9 @@ export function PublicWorkShareControls({
   const canonicalUrl = () =>
     canonicalBrowserWorkUrl(detail.canonicalSlug, window.location.origin);
   const recordShare = (channel: "NATIVE" | "COPY_LINK") => {
-    void publicApi.recordShare(detail.canonicalSlug, channel).catch(() => undefined);
+    void publicApi
+      .recordShare(detail.canonicalSlug, channel)
+      .catch(() => undefined);
   };
 
   const share = async () => {
@@ -172,7 +174,10 @@ function QrDialog({
             <p className="text-xs font-bold tracking-[0.18em] text-gold-300 uppercase">
               Liên kết công khai
             </p>
-            <h2 className="mt-2 text-2xl font-bold text-white" id="public-work-qr-title">
+            <h2
+              className="mt-2 text-2xl font-bold text-white"
+              id="public-work-qr-title"
+            >
               Quét để mở tác phẩm
             </h2>
           </div>
@@ -196,7 +201,8 @@ function QrDialog({
           />
         </div>
         <p className="mt-5 text-sm leading-6 text-slate-400">
-          QR chỉ chứa địa chỉ chính thức của tác phẩm, không chứa token hay dữ liệu hồ sơ riêng tư.
+          QR chỉ chứa địa chỉ chính thức của tác phẩm, không chứa token hay dữ
+          liệu hồ sơ riêng tư.
         </p>
         <a
           className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-bold text-ink-950"

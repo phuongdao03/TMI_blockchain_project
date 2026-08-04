@@ -24,13 +24,22 @@ describe("VoteHistory", () => {
   it("renders only server-approved actions", async () => {
     vi.mocked(votingApi.myVotes).mockResolvedValue({
       success: true,
-      data: [{
-        voteId: "vote-1", campaignId: "campaign-1",
-        campaignName: "Bình chọn tháng 8", campaignSlug: "binh-chon-thang-8",
-        workId: "work-1", workTitle: "Di sản số Việt", workSlug: "di-san-so-viet",
-        status: "VALID", createdAt: "2026-08-03T08:00:00Z", revokedAt: null,
-        canChange: true, canRevoke: false,
-      }],
+      data: [
+        {
+          voteId: "vote-1",
+          campaignId: "campaign-1",
+          campaignName: "Bình chọn tháng 8",
+          campaignSlug: "binh-chon-thang-8",
+          workId: "work-1",
+          workTitle: "Di sản số Việt",
+          workSlug: "di-san-so-viet",
+          status: "VALID",
+          createdAt: "2026-08-03T08:00:00Z",
+          revokedAt: null,
+          canChange: true,
+          canRevoke: false,
+        },
+      ],
       meta: { page: 1, pageSize: 20, total: 1 },
     });
     renderHistory();
@@ -41,7 +50,9 @@ describe("VoteHistory", () => {
 
   it("shows an explicit empty state", async () => {
     vi.mocked(votingApi.myVotes).mockResolvedValue({
-      success: true, data: [], meta: { page: 1, pageSize: 20, total: 0 },
+      success: true,
+      data: [],
+      meta: { page: 1, pageSize: 20, total: 0 },
     });
     renderHistory();
     expect(await screen.findByText("Bạn chưa bình chọn")).toBeTruthy();

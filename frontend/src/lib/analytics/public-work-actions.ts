@@ -11,6 +11,8 @@ export const PUBLIC_WORK_ACTION_EVENT = "tmi:public-work-action";
 export function emitPublicWorkAction(detail: PublicWorkActionEvent): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
-    new CustomEvent<PublicWorkActionEvent>(PUBLIC_WORK_ACTION_EVENT, { detail }),
+    new CustomEvent<PublicWorkActionEvent>(PUBLIC_WORK_ACTION_EVENT, {
+      detail,
+    }),
   );
 }

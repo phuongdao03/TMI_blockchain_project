@@ -5,7 +5,11 @@ export type PublicCatalogEvent =
     }
   | {
       name: "catalog_work_opened";
-      properties: { slug: string; position: number; source: "featured" | "list" };
+      properties: {
+        slug: string;
+        position: number;
+        source: "featured" | "list";
+      };
     }
   | {
       name: "catalog_page_changed";

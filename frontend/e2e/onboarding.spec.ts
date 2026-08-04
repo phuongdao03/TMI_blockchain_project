@@ -8,12 +8,8 @@ test("onboarding exposes safe account intents and keyboard-accessible OAuth", as
   await expect(
     page.getByRole("radio", { name: /Khám phá công khai/i }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("radio", { name: /Cá nhân/i }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("radio", { name: /Tổ chức/i }),
-  ).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Cá nhân/i })).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Tổ chức/i })).toBeVisible();
 
   const googleButton = page.getByRole("button", {
     name: "Tiếp tục với Google",
@@ -24,5 +20,7 @@ test("onboarding exposes safe account intents and keyboard-accessible OAuth", as
   await page.keyboard.press("Tab");
   await expect(page.getByRole("textbox", { name: "Email" })).toBeFocused();
 
-  expect(await page.evaluate(() => document.body.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(
+    await page.evaluate(() => document.body.scrollWidth <= window.innerWidth),
+  ).toBe(true);
 });

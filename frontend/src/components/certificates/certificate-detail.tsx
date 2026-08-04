@@ -1,7 +1,12 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Download, ExternalLink, LoaderCircle, ShieldCheck } from "lucide-react";
+import {
+  Download,
+  ExternalLink,
+  LoaderCircle,
+  ShieldCheck,
+} from "lucide-react";
 
 import { certificateApi } from "@/lib/api/client";
 
@@ -54,8 +59,12 @@ export function CertificateDetail({ id }: { id: string }) {
               ["Số xác nhận", String(certificate.confirmations)],
             ].map(([label, value]) => (
               <div className="border-b pb-4" key={label}>
-                <dt className="text-xs font-bold uppercase tracking-wider text-neutral-400">{label}</dt>
-                <dd className="mt-2 break-all font-mono text-neutral-800">{value}</dd>
+                <dt className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                  {label}
+                </dt>
+                <dd className="mt-2 break-all font-mono text-neutral-800">
+                  {value}
+                </dd>
               </div>
             ))}
           </dl>
@@ -71,7 +80,11 @@ export function CertificateDetail({ id }: { id: string }) {
             onClick={() => download.mutate()}
             type="button"
           >
-            {download.isPending ? <LoaderCircle className="size-4 animate-spin" /> : <Download className="size-4" />}
+            {download.isPending ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : (
+              <Download className="size-4" />
+            )}
             Tải PDF bảo mật
           </button>
           <a

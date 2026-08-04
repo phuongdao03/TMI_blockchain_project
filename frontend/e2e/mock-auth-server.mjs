@@ -267,29 +267,33 @@ const server = createServer(async (request, response) => {
     return;
   }
   if (request.method === "GET" && path === "/api/v1/public/search") {
-    send(response, 200, JSON.stringify({
-      success: true,
-      data: [
-        {
-          id: catalogWork.id,
-          slug: catalogWork.slug,
-          title: catalogWork.title,
-          shortDescription: catalogWork.shortDescription,
-          authorDisplayName: catalogWork.authorDisplayName,
-          categoryName: catalogWork.categoryName,
-          categorySlug: catalogWork.categorySlug,
-          certificateNumber: "TMI-2026-7EAEC2D2C99A",
-          certificateStatus: "ACTIVE",
-          publishedAt: catalogWork.publishedAt,
+    send(
+      response,
+      200,
+      JSON.stringify({
+        success: true,
+        data: [
+          {
+            id: catalogWork.id,
+            slug: catalogWork.slug,
+            title: catalogWork.title,
+            shortDescription: catalogWork.shortDescription,
+            authorDisplayName: catalogWork.authorDisplayName,
+            categoryName: catalogWork.categoryName,
+            categorySlug: catalogWork.categorySlug,
+            certificateNumber: "TMI-2026-7EAEC2D2C99A",
+            certificateStatus: "ACTIVE",
+            publishedAt: catalogWork.publishedAt,
+          },
+        ],
+        meta: {
+          requestId: "e2e-search-request",
+          nextCursor: "e2e-next-cursor",
+          durationMs: 14,
+          version: "search-v1",
         },
-      ],
-      meta: {
-        requestId: "e2e-search-request",
-        nextCursor: "e2e-next-cursor",
-        durationMs: 14,
-        version: "search-v1",
-      },
-    }));
+      }),
+    );
     return;
   }
   if (request.method === "GET" && path === "/api/v1/public/works/featured") {

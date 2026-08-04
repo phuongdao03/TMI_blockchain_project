@@ -20,7 +20,8 @@ export function resolveDefaultWorkspace(roles: readonly string[]): string {
   if (roles.includes("CONTENT_ADMIN")) return "/admin/noi-dung";
   if (roles.includes("FINANCE_ADMIN")) return "/admin/dashboard";
   if (roles.includes("BLOCKCHAIN_ADMIN")) return "/admin/dashboard";
-  if (hasAnyRole(roles, ["COUNCIL_SECRETARY", "COUNCIL_MEMBER"])) return "/hoi-dong";
+  if (hasAnyRole(roles, ["COUNCIL_SECRETARY", "COUNCIL_MEMBER"]))
+    return "/hoi-dong";
   if (roles.includes("REVIEWER")) return "/tham-dinh";
   return "/dashboard";
 }
@@ -30,11 +31,7 @@ export function resolveWorkspacePersona(
 ): WorkspacePersona {
   if (roles.includes("SUPER_ADMIN")) return "SUPER_ADMIN";
   if (
-    hasAnyRole(roles, [
-      "CONTENT_ADMIN",
-      "FINANCE_ADMIN",
-      "BLOCKCHAIN_ADMIN",
-    ])
+    hasAnyRole(roles, ["CONTENT_ADMIN", "FINANCE_ADMIN", "BLOCKCHAIN_ADMIN"])
   ) {
     return "ADMIN";
   }

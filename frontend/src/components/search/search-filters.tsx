@@ -20,14 +20,22 @@ export function SearchFilters({
       <FacetGroup label="Danh mục">
         <FacetLink
           active={!parameters.category}
-          href={searchHref({ ...parameters, category: undefined, cursor: undefined })}
+          href={searchHref({
+            ...parameters,
+            category: undefined,
+            cursor: undefined,
+          })}
           label="Tất cả danh mục"
         />
         {facets?.categories.map((item) => (
           <FacetLink
             active={parameters.category === item.slug}
             count={item.count}
-            href={searchHref({ ...parameters, category: item.slug, cursor: undefined })}
+            href={searchHref({
+              ...parameters,
+              category: item.slug,
+              cursor: undefined,
+            })}
             key={item.slug}
             label={item.label}
           />
@@ -51,7 +59,9 @@ export function SearchFilters({
           );
         })}
         {!facets?.tags.length ? (
-          <p className="text-sm leading-6 text-slate-500">Chưa có chủ đề trong tập kết quả này.</p>
+          <p className="text-sm leading-6 text-slate-500">
+            Chưa có chủ đề trong tập kết quả này.
+          </p>
         ) : null}
       </FacetGroup>
 
@@ -59,33 +69,81 @@ export function SearchFilters({
         <HiddenSearchState parameters={parameters} />
         <label className="block text-sm font-semibold text-slate-300">
           Cách khớp chủ đề
-          <select className={controlClass} defaultValue={parameters.tagsMode} name="tagsMode">
+          <select
+            className={controlClass}
+            defaultValue={parameters.tagsMode}
+            name="tagsMode"
+          >
             <option value="any">Khớp một chủ đề</option>
             <option value="all">Khớp tất cả chủ đề</option>
           </select>
         </label>
         <label className="block text-sm font-semibold text-slate-300">
           Tổ chức
-          <input className={controlClass} defaultValue={parameters.organization} maxLength={160} name="organization" placeholder="Mã tổ chức" />
+          <input
+            className={controlClass}
+            defaultValue={parameters.organization}
+            maxLength={160}
+            name="organization"
+            placeholder="Mã tổ chức"
+          />
         </label>
         <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm font-semibold text-slate-300">Từ ngày<input className={controlClass} defaultValue={parameters.publishedFrom} name="publishedFrom" type="date" /></label>
-          <label className="text-sm font-semibold text-slate-300">Đến ngày<input className={controlClass} defaultValue={parameters.publishedTo} name="publishedTo" type="date" /></label>
+          <label className="text-sm font-semibold text-slate-300">
+            Từ ngày
+            <input
+              className={controlClass}
+              defaultValue={parameters.publishedFrom}
+              name="publishedFrom"
+              type="date"
+            />
+          </label>
+          <label className="text-sm font-semibold text-slate-300">
+            Đến ngày
+            <input
+              className={controlClass}
+              defaultValue={parameters.publishedTo}
+              name="publishedTo"
+              type="date"
+            />
+          </label>
         </div>
         <label className="block text-sm font-semibold text-slate-300">
           Bằng chứng blockchain
-          <select className={controlClass} defaultValue={parameters.hasBlockchainProof === undefined ? "" : String(parameters.hasBlockchainProof)} name="hasBlockchainProof">
-            <option value="">Tất cả</option><option value="true">Đã có bằng chứng</option><option value="false">Chưa có bằng chứng</option>
+          <select
+            className={controlClass}
+            defaultValue={
+              parameters.hasBlockchainProof === undefined
+                ? ""
+                : String(parameters.hasBlockchainProof)
+            }
+            name="hasBlockchainProof"
+          >
+            <option value="">Tất cả</option>
+            <option value="true">Đã có bằng chứng</option>
+            <option value="false">Chưa có bằng chứng</option>
           </select>
         </label>
         <label className="block text-sm font-semibold text-slate-300">
           Trạng thái chứng thư
-          <select className={controlClass} defaultValue={parameters.certificateStatus ?? ""} name="certificateStatus">
-            <option value="">Tất cả</option><option value="ACTIVE">Còn hiệu lực</option><option value="EXPIRED">Hết hạn</option><option value="REVOKED">Đã thu hồi</option>
+          <select
+            className={controlClass}
+            defaultValue={parameters.certificateStatus ?? ""}
+            name="certificateStatus"
+          >
+            <option value="">Tất cả</option>
+            <option value="ACTIVE">Còn hiệu lực</option>
+            <option value="EXPIRED">Hết hạn</option>
+            <option value="REVOKED">Đã thu hồi</option>
           </select>
         </label>
-        <Button className="w-full" type="submit">Áp dụng bộ lọc</Button>
-        <Link className="flex min-h-11 items-center justify-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-white" href="/tim-kiem">
+        <Button className="w-full" type="submit">
+          Áp dụng bộ lọc
+        </Button>
+        <Link
+          className="flex min-h-11 items-center justify-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-white"
+          href="/tim-kiem"
+        >
           <RotateCcw aria-hidden="true" className="size-4" /> Xóa tất cả
         </Link>
       </form>
@@ -94,13 +152,67 @@ export function SearchFilters({
 }
 
 function HiddenSearchState({ parameters }: { parameters: SearchParameters }) {
-  return <>{parameters.q ? <input name="q" type="hidden" value={parameters.q} /> : null}{parameters.category ? <input name="category" type="hidden" value={parameters.category} /> : null}{parameters.tags.length ? <input name="tags" type="hidden" value={parameters.tags.join(",")} /> : null}<input name="sort" type="hidden" value={parameters.sort} /></>;
+  return (
+    <>
+      {parameters.q ? (
+        <input name="q" type="hidden" value={parameters.q} />
+      ) : null}
+      {parameters.category ? (
+        <input name="category" type="hidden" value={parameters.category} />
+      ) : null}
+      {parameters.tags.length ? (
+        <input name="tags" type="hidden" value={parameters.tags.join(",")} />
+      ) : null}
+      <input name="sort" type="hidden" value={parameters.sort} />
+    </>
+  );
 }
 
-function FacetGroup({ children, label }: { children: React.ReactNode; label: string }) {
-  return <fieldset><legend className="mb-3 text-xs font-bold tracking-[0.16em] text-slate-500 uppercase">{label}</legend><div className="space-y-1">{children}</div></fieldset>;
+function FacetGroup({
+  children,
+  label,
+}: {
+  children: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <fieldset>
+      <legend className="mb-3 text-xs font-bold tracking-[0.16em] text-slate-500 uppercase">
+        {label}
+      </legend>
+      <div className="space-y-1">{children}</div>
+    </fieldset>
+  );
 }
 
-function FacetLink({ active, count, href, label }: { active: boolean; count?: number; href: string; label: string }) {
-  return <Link aria-current={active ? "true" : undefined} className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm text-slate-300 transition hover:bg-white/[0.05] hover:text-white aria-current:bg-gold-300/10 aria-current:text-gold-200" href={href}>{active ? <Check aria-hidden="true" className="size-4 text-gold-300" /> : <span className="size-4" />}<span className="min-w-0 flex-1 truncate">{label}</span>{count !== undefined ? <span className="font-mono text-xs tabular-nums text-slate-600">{count}</span> : null}</Link>;
+function FacetLink({
+  active,
+  count,
+  href,
+  label,
+}: {
+  active: boolean;
+  count?: number;
+  href: string;
+  label: string;
+}) {
+  return (
+    <Link
+      aria-current={active ? "true" : undefined}
+      className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm text-slate-300 transition hover:bg-white/[0.05] hover:text-white aria-current:bg-gold-300/10 aria-current:text-gold-200"
+      href={href}
+    >
+      {active ? (
+        <Check aria-hidden="true" className="size-4 text-gold-300" />
+      ) : (
+        <span className="size-4" />
+      )}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {count !== undefined ? (
+        <span className="font-mono text-xs tabular-nums text-slate-600">
+          {count}
+        </span>
+      ) : null}
+    </Link>
+  );
 }

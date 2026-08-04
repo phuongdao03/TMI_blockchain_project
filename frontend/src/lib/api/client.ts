@@ -364,7 +364,9 @@ export const votingApi = {
   },
   eligibility(campaignId: string, workId?: string) {
     const query = workId ? `?workId=${encodeURIComponent(workId)}` : "";
-    return request<VotingEligibility>(`/campaigns/${campaignId}/eligibility${query}`);
+    return request<VotingEligibility>(
+      `/campaigns/${campaignId}/eligibility${query}`,
+    );
   },
   createVote(campaignId: string, workId: string, idempotencyKey: string) {
     return request<VoteMutationResult>(
@@ -378,11 +380,14 @@ export const votingApi = {
     targetWorkId: string,
     idempotencyKey: string,
   ) {
-    return request<VoteMutationResult>(`/campaigns/${campaignId}/votes/change`, {
-      method: "POST",
-      headers: { "Idempotency-Key": idempotencyKey },
-      body: JSON.stringify({ sourceVoteId, targetWorkId }),
-    });
+    return request<VoteMutationResult>(
+      `/campaigns/${campaignId}/votes/change`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ sourceVoteId, targetWorkId }),
+      },
+    );
   },
   revokeVote(campaignId: string, workId: string, idempotencyKey: string) {
     return request<VoteMutationResult>(
@@ -391,7 +396,9 @@ export const votingApi = {
     );
   },
   myVotes(page = 1, campaignId?: string) {
-    const filter = campaignId ? `&campaignId=${encodeURIComponent(campaignId)}` : "";
+    const filter = campaignId
+      ? `&campaignId=${encodeURIComponent(campaignId)}`
+      : "";
     return requestPaginated<VoteHistoryItem[]>(
       `/me/votes?page=${page}&pageSize=20${filter}`,
     );
@@ -401,13 +408,19 @@ export const votingApi = {
 export const rankingApi = {
   public(
     campaignSlug: string,
-    options: { page?: number; pageSize?: number; version?: number; categoryId?: string } = {},
+    options: {
+      page?: number;
+      pageSize?: number;
+      version?: number;
+      categoryId?: string;
+    } = {},
   ) {
     const parameters = new URLSearchParams({
       page: String(options.page ?? 1),
       pageSize: String(options.pageSize ?? 20),
     });
-    if (options.version !== undefined) parameters.set("version", String(options.version));
+    if (options.version !== undefined)
+      parameters.set("version", String(options.version));
     if (options.categoryId) parameters.set("categoryId", options.categoryId);
     return request<PublicRankingData>(
       `/public/campaigns/${encodeURIComponent(campaignSlug)}/ranking?${parameters.toString()}`,
@@ -1033,10 +1046,7 @@ export const votingCampaignAdminApi = {
       "/admin/voting/campaigns?page=1&pageSize=100",
     );
   },
-  participants(
-    campaignId: string,
-    status?: CampaignParticipantStatus,
-  ) {
+  participants(campaignId: string, status?: CampaignParticipantStatus) {
     const parameters = new URLSearchParams({ page: "1", pageSize: "100" });
     if (status) parameters.set("status", status);
     return requestPaginated<CampaignParticipant[]>(

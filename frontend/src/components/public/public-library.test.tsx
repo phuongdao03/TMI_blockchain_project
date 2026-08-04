@@ -110,9 +110,13 @@ describe("PublicLibrary", () => {
         }),
       ),
     );
-    expect((screen.getByLabelText("Tìm tác phẩm") as HTMLInputElement).value).toBe("di sản");
+    expect(
+      (screen.getByLabelText("Tìm tác phẩm") as HTMLInputElement).value,
+    ).toBe("di sản");
     await waitFor(() =>
-      expect((screen.getByLabelText("Danh mục") as HTMLSelectElement).value).toBe("nghe-thuat-so"),
+      expect(
+        (screen.getByLabelText("Danh mục") as HTMLSelectElement).value,
+      ).toBe("nghe-thuat-so"),
     );
     const previousHref = screen
       .getByRole("link", { name: /Trang trước/ })
@@ -130,8 +134,12 @@ describe("PublicLibrary", () => {
     render(<PublicLibrary page={1} query="không tồn tại" sort="newest" />, {
       wrapper,
     });
-    expect(await screen.findByText("Chưa tìm thấy tác phẩm phù hợp")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Xóa bộ lọc" }).getAttribute("href")).toBe("/thu-vien");
+    expect(
+      await screen.findByText("Chưa tìm thấy tác phẩm phù hợp"),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "Xóa bộ lọc" }).getAttribute("href"),
+    ).toBe("/thu-vien");
   });
 
   it("retries an API error without losing filters", async () => {
@@ -143,7 +151,9 @@ describe("PublicLibrary", () => {
         meta: { page: 1, pageSize: 12, total: 1 },
       });
     const user = userEvent.setup();
-    render(<PublicLibrary page={1} query="di sản" sort="newest" />, { wrapper });
+    render(<PublicLibrary page={1} query="di sản" sort="newest" />, {
+      wrapper,
+    });
     await user.click(await screen.findByRole("button", { name: "Thử lại" }));
     expect(await screen.findByText("Di sản số")).toBeTruthy();
     expect(publicApi.works).toHaveBeenCalledTimes(2);
@@ -151,7 +161,9 @@ describe("PublicLibrary", () => {
 
   it("moves keyboard focus into the mobile filter and closes on Escape", async () => {
     const user = userEvent.setup();
-    render(<PublicLibrary page={1} query="di sản" sort="newest" />, { wrapper });
+    render(<PublicLibrary page={1} query="di sản" sort="newest" />, {
+      wrapper,
+    });
     await user.click(screen.getByRole("button", { name: /Bộ lọc/ }));
     const close = screen.getByRole("button", { name: "Đóng bộ lọc" });
     await waitFor(() => expect(document.activeElement).toBe(close));

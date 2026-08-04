@@ -4,10 +4,7 @@ import { CouncilConflictGate } from "@/components/council/council-conflict-gate"
 import { CouncilResultPanel } from "@/components/council/council-result-panel";
 import { CouncilVoteDialog } from "@/components/council/council-vote-dialog";
 import { Card } from "@/components/ui/card";
-import type {
-  CouncilCaseDetail,
-  CouncilVoteChoice,
-} from "@/lib/api/types";
+import type { CouncilCaseDetail, CouncilVoteChoice } from "@/lib/api/types";
 
 export function CouncilCasePanel({
   canVote,
@@ -72,10 +69,7 @@ export function CouncilCasePanel({
               </div>
             </div>
           ) : canVote && detail.myConflict ? (
-            <CouncilVoteDialog
-              isPending={isVotePending}
-              onVote={onVote}
-            />
+            <CouncilVoteDialog isPending={isVotePending} onVote={onVote} />
           ) : canVote ? (
             <CouncilConflictGate
               isPending={isConflictPending}

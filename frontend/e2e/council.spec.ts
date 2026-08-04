@@ -53,9 +53,7 @@ test("council member attends, declares conflict, votes and sees result", async (
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Xác nhận tham dự" }).click();
-  await expect(
-    page.getByText("1/1 tham dự · quorum 1"),
-  ).toBeVisible();
+  await expect(page.getByText("1/1 tham dự · quorum 1")).toBeVisible();
   await page.getByRole("button", { name: "Mở biểu quyết" }).click();
   await expect(
     page.getByRole("heading", { name: "Xác nhận xung đột lợi ích" }),
@@ -67,9 +65,7 @@ test("council member attends, declares conflict, votes and sees result", async (
   await page
     .getByLabel("Lý do biểu quyết")
     .fill("Hồ sơ đáp ứng đầy đủ tiêu chí của Hội đồng.");
-  await page
-    .getByRole("button", { name: "Kiểm tra phiếu biểu quyết" })
-    .click();
+  await page.getByRole("button", { name: "Kiểm tra phiếu biểu quyết" }).click();
   await expect(
     page.getByRole("heading", { name: "Xác nhận phiếu biểu quyết" }),
   ).toBeVisible();

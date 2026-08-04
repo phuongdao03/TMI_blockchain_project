@@ -1,11 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  Hash,
-  LoaderCircle,
-} from "lucide-react";
+import { ArrowLeft, Hash, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 
 import { CouncilCasePanel } from "@/components/council/council-case-panel";
@@ -29,7 +25,9 @@ export function CouncilWorkspace({ sessionId }: { sessionId: string }) {
   });
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: councilKeys.detail(sessionId) }),
+      queryClient.invalidateQueries({
+        queryKey: councilKeys.detail(sessionId),
+      }),
       queryClient.invalidateQueries({ queryKey: councilKeys.lists() }),
     ]);
   };
@@ -39,7 +37,9 @@ export function CouncilWorkspace({ sessionId }: { sessionId: string }) {
   });
   const lifecycle = useMutation({
     mutationFn: (action: "open" | "close") =>
-      action === "open" ? councilApi.open(sessionId) : councilApi.close(sessionId),
+      action === "open"
+        ? councilApi.open(sessionId)
+        : councilApi.close(sessionId),
     onSuccess: refresh,
   });
   const conflict = useMutation({
@@ -120,7 +120,8 @@ export function CouncilWorkspace({ sessionId }: { sessionId: string }) {
           className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800"
           role="alert"
         >
-          Thao tác không thành công. Vui lòng kiểm tra trạng thái phiên và thử lại.
+          Thao tác không thành công. Vui lòng kiểm tra trạng thái phiên và thử
+          lại.
         </p>
       ) : null}
       <div className="grid gap-5">

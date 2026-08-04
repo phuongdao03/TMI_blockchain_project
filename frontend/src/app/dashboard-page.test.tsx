@@ -73,9 +73,7 @@ describe("dashboard overview", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Khám phá TMI" }),
     ).toBeDefined();
-    expect(
-      screen.queryByRole("link", { name: "Tạo hồ sơ mới" }),
-    ).toBeNull();
+    expect(screen.queryByRole("link", { name: "Tạo hồ sơ mới" })).toBeNull();
     expect(listMock).not.toHaveBeenCalled();
   });
 });

@@ -51,19 +51,28 @@ export default async function LibraryPage({
 
   return (
     <main className="relative isolate overflow-hidden">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[34rem] bg-[radial-gradient(circle_at_78%_8%,rgba(212,167,44,.12),transparent_24rem),radial-gradient(circle_at_10%_30%,rgba(220,38,38,.14),transparent_28rem)]" />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[34rem] bg-[radial-gradient(circle_at_78%_8%,rgba(212,167,44,.12),transparent_24rem),radial-gradient(circle_at_10%_30%,rgba(220,38,38,.14),transparent_28rem)]"
+      />
       <div className="mx-auto min-h-[calc(100dvh-5rem)] max-w-[90rem] px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
         <header className="grid gap-8 border-b border-white/10 pb-12 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-end">
           <div>
-            <p className="text-xs font-bold tracking-[0.24em] text-gold-300 uppercase">TMI public catalog</p>
+            <p className="text-xs font-bold tracking-[0.24em] text-gold-300 uppercase">
+              TMI public catalog
+            </p>
             <h1 className="mt-5 max-w-5xl text-4xl font-bold tracking-[-0.045em] text-white sm:text-6xl lg:text-7xl">
               Di sản được công bố.
-              <span className="block text-slate-500">Giá trị được nhìn thấy.</span>
+              <span className="block text-slate-500">
+                Giá trị được nhìn thấy.
+              </span>
             </h1>
           </div>
           <div className="border-l border-gold-300/40 pl-5">
             <p className="text-sm leading-7 text-slate-400">
-              Mỗi tác phẩm trong catalog là một projection công khai đã qua kiểm soát nội dung. Dữ liệu hồ sơ nội bộ và media nguồn luôn được tách biệt.
+              Mỗi tác phẩm trong catalog là một projection công khai đã qua kiểm
+              soát nội dung. Dữ liệu hồ sơ nội bộ và media nguồn luôn được tách
+              biệt.
             </p>
           </div>
         </header>
@@ -75,7 +84,10 @@ export default async function LibraryPage({
   );
 }
 
-function clean(value: string | undefined, maxLength: number): string | undefined {
+function clean(
+  value: string | undefined,
+  maxLength: number,
+): string | undefined {
   const normalized = value?.trim().slice(0, maxLength);
   return normalized || undefined;
 }

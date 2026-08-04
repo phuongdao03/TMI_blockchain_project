@@ -22,7 +22,9 @@ export function SearchAutocomplete({
   const router = useRouter();
   const listId = useId();
   const [query, setQuery] = useState(defaultValue);
-  const [suggestions, setSuggestions] = useState<SearchAutocompleteSuggestion[]>([]);
+  const [suggestions, setSuggestions] = useState<
+    SearchAutocompleteSuggestion[]
+  >([]);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,12 +40,16 @@ export function SearchAutocomplete({
       setLoading(true);
       setFailed(false);
       try {
-        const result = await publicApi.autocomplete(normalized, controller.signal);
+        const result = await publicApi.autocomplete(
+          normalized,
+          controller.signal,
+        );
         setSuggestions(result);
         setActiveIndex(-1);
         setOpen(true);
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (error instanceof DOMException && error.name === "AbortError")
+          return;
         setSuggestions([]);
         setFailed(true);
         setOpen(true);
@@ -68,7 +74,11 @@ export function SearchAutocomplete({
       setActiveIndex(-1);
       return;
     }
-    if (!suggestions.length || !["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) return;
+    if (
+      !suggestions.length ||
+      !["ArrowDown", "ArrowUp", "Enter"].includes(event.key)
+    )
+      return;
     if (event.key === "Enter" && activeIndex >= 0) {
       const selected = suggestions[activeIndex];
       if (selected) {
@@ -91,10 +101,17 @@ export function SearchAutocomplete({
 
   return (
     <div className="relative min-w-0 flex-1">
-      <label htmlFor={`${listId}-input`} className="sr-only">Tìm tác phẩm</label>
-      <Search aria-hidden="true" className="pointer-events-none absolute top-4 left-4 z-10 size-4 text-slate-500" />
+      <label htmlFor={`${listId}-input`} className="sr-only">
+        Tìm tác phẩm
+      </label>
+      <Search
+        aria-hidden="true"
+        className="pointer-events-none absolute top-4 left-4 z-10 size-4 text-slate-500"
+      />
       <input
-        aria-activedescendant={activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined}
+        aria-activedescendant={
+          activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined
+        }
         aria-autocomplete="list"
         aria-controls={listId}
         aria-expanded={open}
@@ -121,12 +138,20 @@ export function SearchAutocomplete({
         value={query}
       />
       <span aria-live="polite" className="sr-only">
-        {loading ? "Đang tìm gợi ý" : open ? `${suggestions.length} gợi ý tìm kiếm` : ""}
+        {loading
+          ? "Đang tìm gợi ý"
+          : open
+            ? `${suggestions.length} gợi ý tìm kiếm`
+            : ""}
       </span>
       {open ? (
         <div className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl border border-white/10 bg-ink-900 shadow-2xl shadow-black/40">
-          {loading ? <AutocompleteLoading /> : failed ? (
-            <p className="px-4 py-4 text-sm text-slate-400" role="status">Chưa thể tải gợi ý. Bạn vẫn có thể nhấn Enter để tìm kiếm.</p>
+          {loading ? (
+            <AutocompleteLoading />
+          ) : failed ? (
+            <p className="px-4 py-4 text-sm text-slate-400" role="status">
+              Chưa thể tải gợi ý. Bạn vẫn có thể nhấn Enter để tìm kiếm.
+            </p>
           ) : suggestions.length ? (
             <ul aria-label="Gợi ý tìm kiếm" id={listId} role="listbox">
               {suggestions.map((item, index) => (
@@ -142,15 +167,23 @@ export function SearchAutocomplete({
                   role="option"
                 >
                   <SuggestionIcon kind={item.kind} />
-                  <span className="min-w-0 flex-1 truncate font-medium">{item.label}</span>
-                  <span className="text-[0.68rem] font-semibold tracking-[0.12em] text-slate-500 uppercase group-aria-selected:text-gold-300">{kindLabel(item.kind)}</span>
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {item.label}
+                  </span>
+                  <span className="text-[0.68rem] font-semibold tracking-[0.12em] text-slate-500 uppercase group-aria-selected:text-gold-300">
+                    {kindLabel(item.kind)}
+                  </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="px-4 py-4 text-sm text-slate-400" role="status">Không có gợi ý công khai phù hợp.</p>
+            <p className="px-4 py-4 text-sm text-slate-400" role="status">
+              Không có gợi ý công khai phù hợp.
+            </p>
           )}
-          <p className="border-t border-white/[0.06] px-4 py-2 text-[0.7rem] text-slate-600">↑↓ để di chuyển · Enter để chọn · Esc để đóng</p>
+          <p className="border-t border-white/[0.06] px-4 py-2 text-[0.7rem] text-slate-600">
+            ↑↓ để di chuyển · Enter để chọn · Esc để đóng
+          </p>
         </div>
       ) : null}
     </div>
@@ -158,16 +191,33 @@ export function SearchAutocomplete({
 }
 
 function AutocompleteLoading() {
-  return <div aria-label="Đang tải gợi ý" className="space-y-px p-2">{[0, 1, 2].map((item) => <div className="h-11 animate-pulse rounded-lg bg-white/[0.05]" key={item} />)}</div>;
+  return (
+    <div aria-label="Đang tải gợi ý" className="space-y-px p-2">
+      {[0, 1, 2].map((item) => (
+        <div
+          className="h-11 animate-pulse rounded-lg bg-white/[0.05]"
+          key={item}
+        />
+      ))}
+    </div>
+  );
 }
 
 function SuggestionIcon({ kind }: { kind: SearchAutocompleteKind }) {
   const Icon = kind === "category" ? FolderTree : kind === "tag" ? Tag : Search;
-  return <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white/[0.05] text-gold-300"><Icon aria-hidden="true" className="size-4" /></span>;
+  return (
+    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white/[0.05] text-gold-300">
+      <Icon aria-hidden="true" className="size-4" />
+    </span>
+  );
 }
 
 function kindLabel(kind: SearchAutocompleteKind) {
-  return kind === "work" ? "Tác phẩm" : kind === "category" ? "Danh mục" : "Chủ đề";
+  return kind === "work"
+    ? "Tác phẩm"
+    : kind === "category"
+      ? "Danh mục"
+      : "Chủ đề";
 }
 
 function suggestionHref(item: SearchAutocompleteSuggestion) {

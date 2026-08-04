@@ -12,10 +12,7 @@ import {
 import Link from "next/link";
 
 import { councilApi } from "@/lib/api/client";
-import type {
-  CouncilListFilters,
-  CouncilSessionStatus,
-} from "@/lib/api/types";
+import type { CouncilListFilters, CouncilSessionStatus } from "@/lib/api/types";
 import { councilKeys } from "@/lib/council/query-keys";
 import { cn } from "@/lib/utils";
 

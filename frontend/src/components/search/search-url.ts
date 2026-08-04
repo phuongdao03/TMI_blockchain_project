@@ -6,8 +6,10 @@ export function searchHref(parameters: SearchParameters): string {
   if (parameters.category) query.set("category", parameters.category);
   if (parameters.tags.length) query.set("tags", parameters.tags.join(","));
   if (parameters.tagsMode !== "any") query.set("tagsMode", parameters.tagsMode);
-  if (parameters.organization) query.set("organization", parameters.organization);
-  if (parameters.publishedFrom) query.set("publishedFrom", parameters.publishedFrom);
+  if (parameters.organization)
+    query.set("organization", parameters.organization);
+  if (parameters.publishedFrom)
+    query.set("publishedFrom", parameters.publishedFrom);
   if (parameters.publishedTo) query.set("publishedTo", parameters.publishedTo);
   if (parameters.hasBlockchainProof !== undefined) {
     query.set("hasBlockchainProof", String(parameters.hasBlockchainProof));

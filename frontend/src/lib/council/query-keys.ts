@@ -6,6 +6,5 @@ export const councilKeys = {
   list: (filters: CouncilListFilters) =>
     [...councilKeys.lists(), filters] as const,
   details: () => [...councilKeys.all, "detail"] as const,
-  detail: (sessionId: string) =>
-    [...councilKeys.details(), sessionId] as const,
+  detail: (sessionId: string) => [...councilKeys.details(), sessionId] as const,
 };

@@ -61,7 +61,10 @@ export function PublicContentReportDialog({
             <p className="text-xs font-bold tracking-[0.18em] text-primary-400 uppercase">
               Kiểm soát cộng đồng
             </p>
-            <h2 className="mt-2 text-2xl font-bold text-white" id="content-report-title">
+            <h2
+              className="mt-2 text-2xl font-bold text-white"
+              id="content-report-title"
+            >
               Báo cáo nội dung
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-400">
@@ -84,7 +87,8 @@ export function PublicContentReportDialog({
             <CheckCircle2 className="size-7 text-emerald-300" />
             <h3 className="mt-3 font-bold text-white">Đã tiếp nhận báo cáo</h3>
             <p className="mt-2 text-sm leading-6 text-slate-400">
-              Mã báo cáo: <span className="font-mono">{submit.data.id}</span>. Danh tính người báo cáo không được hiển thị công khai.
+              Mã báo cáo: <span className="font-mono">{submit.data.id}</span>.
+              Danh tính người báo cáo không được hiển thị công khai.
             </p>
             <Button className="mt-5" onClick={onClose} type="button">
               Hoàn tất
@@ -102,11 +106,15 @@ export function PublicContentReportDialog({
               Lý do <span className="text-primary-400">*</span>
               <select
                 className="mt-2 min-h-12 w-full rounded-xl border border-white/15 bg-ink-950 px-4 text-white outline-none focus:border-gold-300"
-                onChange={(event) => setReason(event.target.value as ContentReportReason)}
+                onChange={(event) =>
+                  setReason(event.target.value as ContentReportReason)
+                }
                 value={reason}
               >
                 {reasons.map((item) => (
-                  <option key={item.value} value={item.value}>{item.label}</option>
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
                 ))}
               </select>
             </label>
@@ -132,19 +140,29 @@ export function PublicContentReportDialog({
               />
             </label>
             {submit.isError ? (
-              <p className="flex items-start gap-2 text-sm text-red-300" role="alert">
+              <p
+                className="flex items-start gap-2 text-sm text-red-300"
+                role="alert"
+              >
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                {submit.error instanceof ApiError && submit.error.code === "CONTENT_REPORT_DUPLICATE"
+                {submit.error instanceof ApiError &&
+                submit.error.code === "CONTENT_REPORT_DUPLICATE"
                   ? "Báo cáo tương tự đã được tiếp nhận trong hôm nay."
                   : "Chưa thể gửi báo cáo. Vui lòng kiểm tra thông tin và thử lại."}
               </p>
             ) : null}
-            <Button className="w-full" disabled={submit.isPending} type="submit">
+            <Button
+              className="w-full"
+              disabled={submit.isPending}
+              type="submit"
+            >
               <Send className="size-4" />
               {submit.isPending ? "Đang gửi…" : "Gửi báo cáo"}
             </Button>
             <p className="text-xs leading-5 text-slate-500">
-              Hệ thống áp dụng giới hạn tần suất, chống trùng và có thể yêu cầu CAPTCHA theo mức rủi ro. Email được mã hóa và không xuất hiện trên trang công khai.
+              Hệ thống áp dụng giới hạn tần suất, chống trùng và có thể yêu cầu
+              CAPTCHA theo mức rủi ro. Email được mã hóa và không xuất hiện trên
+              trang công khai.
             </p>
           </form>
         )}

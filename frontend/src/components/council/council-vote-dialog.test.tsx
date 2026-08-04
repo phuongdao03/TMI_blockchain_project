@@ -10,9 +10,7 @@ describe("CouncilVoteDialog", () => {
     const vote = vi.fn().mockResolvedValue(undefined);
     render(<CouncilVoteDialog isPending={false} onVote={vote} />);
 
-    await user.click(
-      screen.getByRole("button", { name: "Biểu quyết hồ sơ" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Biểu quyết hồ sơ" }));
     await user.click(screen.getByRole("button", { name: "Phê duyệt" }));
     await user.click(
       screen.getByRole("button", { name: "Kiểm tra phiếu biểu quyết" }),

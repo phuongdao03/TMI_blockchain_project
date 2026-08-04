@@ -15,13 +15,21 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 vi.mock("@/components/search/search-autocomplete", () => ({
-  SearchAutocomplete: ({ defaultValue, name }: { defaultValue?: string; name?: string }) => (
+  SearchAutocomplete: ({
+    defaultValue,
+    name,
+  }: {
+    defaultValue?: string;
+    name?: string;
+  }) => (
     <input aria-label="Tìm tác phẩm" defaultValue={defaultValue} name={name} />
   ),
 }));
 
 function wrapper({ children }: { children: ReactNode }) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
@@ -81,7 +89,9 @@ describe("SearchResultsPage", () => {
       expect.any(AbortSignal),
     );
 
-    const clearCategory = screen.getByRole("link", { name: /Bỏ danh mục Mỹ thuật/ });
+    const clearCategory = screen.getByRole("link", {
+      name: /Bỏ danh mục Mỹ thuật/,
+    });
     expect(clearCategory.getAttribute("href")).toContain("q=s%C6%A1n+m%C3%A0i");
     expect(clearCategory.getAttribute("href")).not.toContain("category=");
     const next = screen.getByRole("link", { name: "Trang tiếp" });
@@ -120,16 +130,22 @@ describe("SearchResultsPage", () => {
     const user = userEvent.setup();
     render(
       <SearchResultsPage
-        parameters={{ q: "di sản", tags: [], tagsMode: "any", sort: "relevance" }}
+        parameters={{
+          q: "di sản",
+          tags: [],
+          tagsMode: "any",
+          sort: "relevance",
+        }}
       />,
       { wrapper },
     );
 
     await user.click(await screen.findByRole("button", { name: "Thử lại" }));
-    expect(await screen.findByText("Chưa có kết quả công khai phù hợp")).toBeTruthy();
-    expect(screen.getByRole("textbox", { name: "Tìm tác phẩm" })).toHaveProperty(
-      "value",
-      "di sản",
-    );
+    expect(
+      await screen.findByText("Chưa có kết quả công khai phù hợp"),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("textbox", { name: "Tìm tác phẩm" }),
+    ).toHaveProperty("value", "di sản");
   });
 });

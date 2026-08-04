@@ -31,18 +31,24 @@ export function VoteHistory() {
           Lịch sử bình chọn
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-          Theo dõi lựa chọn hiện tại và toàn bộ thay đổi của riêng bạn. Danh tính
-          người bình chọn không xuất hiện trên bảng công khai.
+          Theo dõi lựa chọn hiện tại và toàn bộ thay đổi của riêng bạn. Danh
+          tính người bình chọn không xuất hiện trên bảng công khai.
         </p>
       </header>
 
       {history.isPending ? (
-        <div className="rounded-2xl border border-neutral-200 bg-white p-8" role="status">
+        <div
+          className="rounded-2xl border border-neutral-200 bg-white p-8"
+          role="status"
+        >
           Đang tải lịch sử bình chọn...
         </div>
       ) : null}
       {history.isError ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800" role="alert">
+        <div
+          className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800"
+          role="alert"
+        >
           Chưa thể tải lịch sử. Vui lòng thử lại sau.
         </div>
       ) : null}
@@ -53,7 +59,10 @@ export function VoteHistory() {
           <p className="mt-2 text-sm text-neutral-500">
             Các lựa chọn của bạn sẽ được ghi nhận minh bạch tại đây.
           </p>
-          <Link className="mt-5 inline-flex font-bold text-primary-700" href="/binh-chon">
+          <Link
+            className="mt-5 inline-flex font-bold text-primary-700"
+            href="/binh-chon"
+          >
             Khám phá chiến dịch
           </Link>
         </div>
@@ -70,7 +79,9 @@ export function VoteHistory() {
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-primary-700">
                   {item.campaignName}
                 </p>
-                <h2 className="mt-2 text-xl font-black text-ink-950">{item.workTitle}</h2>
+                <h2 className="mt-2 text-xl font-black text-ink-950">
+                  {item.workTitle}
+                </h2>
                 <time className="mt-2 block text-sm text-neutral-500">
                   {new Date(item.createdAt).toLocaleString("vi-VN")}
                 </time>

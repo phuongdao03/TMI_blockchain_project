@@ -1,9 +1,6 @@
 import { BadgeCheck, CircleMinus, ShieldAlert } from "lucide-react";
 
-import type {
-  CouncilCaseResult,
-  CouncilVoteChoice,
-} from "@/lib/api/types";
+import type { CouncilCaseResult, CouncilVoteChoice } from "@/lib/api/types";
 
 const decisionLabels = {
   APPROVE: "Phê duyệt hồ sơ",
@@ -18,11 +15,7 @@ const voteLabels: Record<CouncilVoteChoice, string> = {
   ABSTAIN: "Không biểu quyết",
 };
 
-export function CouncilResultPanel({
-  result,
-}: {
-  result: CouncilCaseResult;
-}) {
+export function CouncilResultPanel({ result }: { result: CouncilCaseResult }) {
   return (
     <section
       aria-labelledby={`result-${result.caseId}`}
