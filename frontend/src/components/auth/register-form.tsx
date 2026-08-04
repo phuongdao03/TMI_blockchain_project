@@ -72,8 +72,13 @@ export function RegisterForm() {
           ) : null}
           <fieldset>
             <legend className="mb-3 font-mono text-[0.65rem] font-medium tracking-[0.1em] text-[#e7bdb7] uppercase">
-              Bạn muốn sử dụng nền tảng theo cách nào
+              Chọn cách bắt đầu
             </legend>
+            <p className="mb-3 max-w-2xl text-sm leading-6 text-[#a8a3a1]">
+              Nếu bạn chỉ muốn xem và bình chọn, hãy giữ lựa chọn khám phá công
+              khai. Khi sẵn sàng gửi tài sản, bạn có thể nâng cấp chính tài khoản
+              này mà không cần đăng ký lại.
+            </p>
             <div className="grid gap-2 sm:grid-cols-3">
               {(
                 [
