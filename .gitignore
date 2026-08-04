@@ -15,6 +15,7 @@ contracts/broadcast/
 venv/
 
 # Build and test output
+/tests/
 .next/
 .next*/
 .next-e2e-*/
