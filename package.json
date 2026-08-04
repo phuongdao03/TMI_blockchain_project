@@ -29,7 +29,7 @@
     "test:backend": "python -m pytest backend/app/tests"
   },
   "devDependencies": {
-    "@types/node": "24.10.1",
+    "@types/node": "26.1.2",
     "prettier": "3.6.2",
     "typescript": "5.9.3"
   }
