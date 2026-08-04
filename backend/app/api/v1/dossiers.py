@@ -48,7 +48,10 @@ PRIVATE_RESPONSES: dict[int | str, dict[str, Any]] = {
     401: {"description": "Authentication is required.", "model": ErrorEnvelope},
     403: {"description": "Dossier access is forbidden.", "model": ErrorEnvelope},
     404: {"description": "Dossier or category not found.", "model": ErrorEnvelope},
-    409: {"description": "Dossier state conflict.", "model": ErrorEnvelope},
+    409: {
+        "description": "Dossier state conflict or incomplete applicant profile.",
+        "model": ErrorEnvelope,
+    },
     422: {"description": "Request validation failed.", "model": ErrorEnvelope},
 }
 

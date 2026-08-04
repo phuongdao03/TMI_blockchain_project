@@ -60,9 +60,13 @@ export function ApplicantUpgradeCard({
       </div>
 
       {completed ? (
-        <p className="mt-6 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800" role="status">
-          Đã mở không gian gửi tài sản. Bạn có thể bắt đầu tạo hồ sơ.
-        </p>
+        <div className="mt-6 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800" role="status">
+          <p className="font-bold">Đã mở không gian gửi tài sản.</p>
+          <p className="mt-1">Hoàn thiện họ tên trong hồ sơ tài khoản trước khi tạo hồ sơ xác lập.</p>
+          <a className="mt-3 inline-block font-bold underline" href="/tai-khoan">
+            Mở cài đặt tài khoản
+          </a>
+        </div>
       ) : (
         <>
           <fieldset className="mt-6 grid gap-3 sm:grid-cols-2">

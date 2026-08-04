@@ -19,6 +19,15 @@ class DossierForbiddenError(DomainError):
         )
 
 
+class ApplicantProfileIncompleteError(DomainError):
+    def __init__(self) -> None:
+        super().__init__(
+            code="APPLICANT_PROFILE_INCOMPLETE",
+            message="Complete your applicant profile before creating a dossier.",
+            status_code=409,
+        )
+
+
 class DossierInvalidStateError(DomainError):
     def __init__(self, message: str = "Dossier is not in the required state.") -> None:
         super().__init__(

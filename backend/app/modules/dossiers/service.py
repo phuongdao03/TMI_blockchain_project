@@ -6,9 +6,11 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.auth.models import AccountType
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.canonical import snapshot_sha256
 from app.modules.dossiers.errors import (
+    ApplicantProfileIncompleteError,
     DossierForbiddenError,
     DossierInvalidStateError,
     DossierNotFoundError,
@@ -45,11 +47,15 @@ from app.modules.organizations.models import (
     OrganizationStatus,
 )
 from app.modules.organizations.repository import OrganizationRepository
+from app.modules.users.repository import UserProfileRepository
 
 logger = logging.getLogger(__name__)
 
 EDITABLE_STATUSES = frozenset({DossierStatus.DRAFT, DossierStatus.NEEDS_SUPPLEMENT})
 DOSSIER_MUTATION_ROLES = frozenset({"APPLICANT", "ORG_MANAGER"})
+APPLICANT_ACCOUNT_TYPES = frozenset(
+    {AccountType.INDIVIDUAL_APPLICANT, AccountType.ORGANIZATION_APPLICANT}
+)
 
 
 class DossierService:
@@ -63,6 +69,7 @@ class DossierService:
         self._session = session
         self._repository = DossierRepository(session)
         self._organizations = OrganizationRepository(session)
+        self._profiles = UserProfileRepository(session)
         self._media = MediaAssetRepository(session)
         self._workflow = DossierWorkflowService(self._repository)
         self._clock = clock or (lambda: datetime.now(UTC))
@@ -76,6 +83,7 @@ class DossierService:
         self._require_mutation_role(principal)
         title = self._required_title(payload.title)
         async with self._session.begin():
+            await self._require_applicant_profile(principal)
             await self._require_category(payload.category_id)
             if payload.organization_id is not None:
                 await self._require_organization_manager(
@@ -683,6 +691,16 @@ class DossierService:
     def _require_mutation_role(principal: AuthPrincipal) -> None:
         if not DOSSIER_MUTATION_ROLES.intersection(principal.roles):
             raise DossierForbiddenError()
+
+    async def _require_applicant_profile(self, principal: AuthPrincipal) -> None:
+        if (
+            "APPLICANT" not in principal.roles
+            or principal.account_type not in APPLICANT_ACCOUNT_TYPES
+        ):
+            return
+        profile = await self._profiles.get_profile(principal.user_id)
+        if profile is None or not profile.full_name or not profile.full_name.strip():
+            raise ApplicantProfileIncompleteError()
 
     @staticmethod
     def _require_editable(dossier: Dossier) -> None:

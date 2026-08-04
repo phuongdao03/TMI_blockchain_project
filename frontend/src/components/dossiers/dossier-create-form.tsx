@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
-import { dossierApi } from "@/lib/api/client";
+import { ApiError, dossierApi } from "@/lib/api/client";
 import { dossierKeys } from "@/lib/dossiers/query-keys";
 
 export const DIGITAL_ASSET_CATEGORY_ID = "4d28db19-1507-5a45-a50d-cd0aa83029ec";
@@ -143,12 +143,23 @@ export function DossierCreateForm() {
       </section>
 
       {create.error ? (
-        <p
+        <div
           className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800"
           role="alert"
         >
-          Không thể tạo hồ sơ. Vui lòng kiểm tra dữ liệu và thử lại.
-        </p>
+          <p>
+            {create.error instanceof ApiError &&
+            create.error.code === "APPLICANT_PROFILE_INCOMPLETE"
+              ? create.error.message
+              : "Không thể tạo hồ sơ. Vui lòng kiểm tra dữ liệu và thử lại."}
+          </p>
+          {create.error instanceof ApiError &&
+          create.error.code === "APPLICANT_PROFILE_INCOMPLETE" ? (
+            <a className="mt-2 inline-block font-bold underline" href="/tai-khoan">
+              Hoàn thiện hồ sơ tài khoản
+            </a>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">

@@ -72,4 +72,27 @@ describe("layout shells", () => {
       screen.queryByRole("link", { name: "Quản trị nội dung" }),
     ).toBeNull();
   });
+
+  it("keeps public discovery links visible for an authenticated public user", () => {
+    render(
+      <AuthUserProvider
+        user={{
+          id: "user-2",
+          email: "reader@tmigroup.vn",
+          roles: [],
+          accountType: "PUBLIC_USER",
+        }}
+      >
+        <DashboardShell>
+          <h1>KhÃ¡m phÃ¡</h1>
+        </DashboardShell>
+      </AuthUserProvider>,
+    );
+
+    const links = screen.getAllByRole("link");
+    for (const href of ["/dashboard", "/tim-kiem", "/thu-vien", "/ban-do"]) {
+      expect(links.some((link) => link.getAttribute("href") === href)).toBe(true);
+    }
+    expect(links.some((link) => link.getAttribute("href") === "/ho-so")).toBe(false);
+  });
 });

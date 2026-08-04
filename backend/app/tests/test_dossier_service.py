@@ -11,9 +11,10 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.db.base import Base
-from app.modules.auth.models import User, UserStatus
+from app.modules.auth.models import AccountType, User, UserStatus
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.errors import (
+    ApplicantProfileIncompleteError,
     DossierForbiddenError,
     DossierInvalidStateError,
     DossierNotFoundError,
@@ -32,6 +33,7 @@ from app.modules.organizations.models import (
     Organization,
     OrganizationMember,
 )
+from app.modules.users.models import UserProfile
 
 CATEGORY_ID = UUID("4d28db19-1507-5a45-a50d-cd0aa83029ec")
 NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
@@ -156,6 +158,47 @@ def test_owner_can_create_list_update_and_soft_delete_draft() -> None:
             assert dossier is not None
             assert dossier.deleted_at is not None
             assert dossier.deleted_at.replace(tzinfo=UTC) == NOW
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_applicant_must_complete_profile_before_creating_dossier() -> None:
+    async def exercise() -> None:
+        service, session_factory, engine, users, _ = await _build_service()
+        principal = AuthPrincipal(
+            user_id=users["owner"].id,
+            session_id=uuid4(),
+            email=users["owner"].email,
+            roles=("APPLICANT",),
+            account_type=AccountType.INDIVIDUAL_APPLICANT,
+        )
+
+        with pytest.raises(ApplicantProfileIncompleteError):
+            await service.create_dossier(
+                principal,
+                CreateDossier(
+                    category_id=CATEGORY_ID,
+                    title="Profile incomplete",
+                ),
+            )
+
+        async with session_factory() as session:
+            session.add(
+                UserProfile(
+                    user_id=users["owner"].id,
+                    full_name="Applicant owner",
+                )
+            )
+            await session.commit()
+
+        created = await service.create_dossier(
+            principal,
+            CreateDossier(category_id=CATEGORY_ID, title="Profile complete"),
+        )
+        assert created.title == "Profile complete"
 
         await service.close()
         await engine.dispose()

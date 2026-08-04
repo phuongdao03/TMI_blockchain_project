@@ -31,25 +31,21 @@ const dashboardLinks = [
     href: "/dashboard",
     label: "Khám phá TMI",
     icon: LayoutDashboard,
-    roles: ["PUBLIC_USER"],
   },
   {
     href: "/tim-kiem",
     label: "Tìm tài sản số",
     icon: Search,
-    roles: ["PUBLIC_USER"],
   },
   {
     href: "/thu-vien",
     label: "Thư viện chứng thư",
     icon: BookOpenText,
-    roles: ["PUBLIC_USER"],
   },
   {
     href: "/ban-do",
     label: "Bản đồ xác lập",
     icon: Map,
-    roles: ["PUBLIC_USER"],
   },
   {
     href: "/admin/tim-kiem",
