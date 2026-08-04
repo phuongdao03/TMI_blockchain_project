@@ -15,6 +15,12 @@ class RegisterRequest(BaseModel):
     account_type: AccountType = Field(alias="accountType")
 
 
+class ApplicantUpgradeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    account_type: AccountType = Field(alias="accountType")
+
+
 class VerifyEmailRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

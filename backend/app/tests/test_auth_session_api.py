@@ -8,9 +8,13 @@ from app.core.config import Settings
 from app.core.health import HealthService
 from app.main import create_application
 from app.modules.auth.dependencies import (
+    get_applicant_upgrade_service,
+    get_csrf_protected_principal,
     get_current_principal,
     get_session_service,
 )
+from app.modules.auth.models import AccountType
+from app.modules.auth.onboarding import ApplicantUpgradeResult
 from app.modules.auth.session_service import (
     AuthPrincipal,
     ClientMetadata,
@@ -102,6 +106,21 @@ class StubSessionService:
         )
 
 
+class StubApplicantUpgradeService:
+    async def upgrade(
+        self,
+        principal: AuthPrincipal,
+        *,
+        account_type: AccountType,
+    ) -> ApplicantUpgradeResult:
+        return ApplicantUpgradeResult(
+            user_id=principal.user_id,
+            email=principal.email,
+            account_type=account_type,
+            roles=("APPLICANT",),
+        )
+
+
 async def _request(
     method: str,
     path: str,
@@ -110,6 +129,7 @@ async def _request(
     json: dict[str, str] | None = None,
     cookies: dict[str, str] | None = None,
     headers: dict[str, str] | None = None,
+    upgrade_service: StubApplicantUpgradeService | None = None,
 ) -> httpx.Response:
     settings = Settings.model_validate(
         {
@@ -125,6 +145,13 @@ async def _request(
     )
     app.dependency_overrides[get_session_service] = lambda: service
     app.dependency_overrides[get_current_principal] = lambda: service.principal
+    app.dependency_overrides[get_csrf_protected_principal] = (
+        lambda: service.principal
+    )
+    if upgrade_service is not None:
+        app.dependency_overrides[get_applicant_upgrade_service] = (
+            lambda: upgrade_service
+        )
     transport = httpx.ASGITransport(app=app)
     async with app.router.lifespan_context(app):
         async with httpx.AsyncClient(
@@ -234,3 +261,24 @@ def test_refresh_logout_and_revoke_session_use_cookie_csrf_contract() -> None:
     assert service.revoked_session_id == service.session_id
     assert service.logged_out is True
     assert "Max-Age=0" in logout_response.headers["set-cookie"]
+
+
+def test_applicant_upgrade_api_returns_updated_account_scope() -> None:
+    service = StubSessionService()
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/api/v1/auth/applicant-upgrade",
+            service,
+            json={"accountType": "INDIVIDUAL_APPLICANT"},
+            upgrade_service=StubApplicantUpgradeService(),
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"] == {
+        "id": str(service.user_id),
+        "email": "owner@tmigroup.vn",
+        "roles": ["APPLICANT"],
+        "accountType": "INDIVIDUAL_APPLICANT",
+    }

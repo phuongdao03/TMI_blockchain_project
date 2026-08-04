@@ -47,6 +47,15 @@ class UnauthenticatedError(DomainError):
         )
 
 
+class ApplicantUpgradeNotAllowedError(DomainError):
+    def __init__(self) -> None:
+        super().__init__(
+            code="APPLICANT_UPGRADE_NOT_ALLOWED",
+            message="This account cannot be upgraded to an applicant account.",
+            status_code=409,
+        )
+
+
 class CsrfValidationError(DomainError):
     def __init__(self) -> None:
         super().__init__(

@@ -12,6 +12,8 @@ import {
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ApplicantUpgradeCard } from "@/components/dashboard/applicant-upgrade-card";
+import type { AccountType, AuthUser } from "@/lib/api/types";
 import type { WorkspacePersona } from "@/lib/auth/role-workspaces";
 
 type RoleWorkspacePersona = Exclude<WorkspacePersona, "APPLICANT">;
@@ -193,9 +195,13 @@ function ActionGrid({ actions }: { actions: Action[] }) {
 export function RoleDashboardOverview({
   persona,
   roles = [],
+  accountType,
+  onUpgraded,
 }: {
   persona: RoleWorkspacePersona;
   roles?: readonly string[];
+  accountType?: AccountType | null;
+  onUpgraded?: (user: AuthUser) => void;
 }) {
   const isPublic = persona === "PUBLIC";
   const workspace =
@@ -242,6 +248,10 @@ export function RoleDashboardOverview({
             hồ sơ, hãy đăng ký đúng loại tài khoản người nộp.
           </CardContent>
         </Card>
+      ) : null}
+
+      {isPublic && accountType === "PUBLIC_USER" ? (
+        <ApplicantUpgradeCard onUpgraded={onUpgraded} />
       ) : null}
 
       <ActionGrid actions={actions} />

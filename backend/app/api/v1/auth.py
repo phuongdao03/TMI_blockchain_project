@@ -7,6 +7,7 @@ from fastapi.responses import RedirectResponse
 from app.core.config import Settings
 from app.core.schemas import ErrorEnvelope, ResponseMeta, SuccessEnvelope
 from app.modules.auth.dependencies import (
+    ApplicantUpgradeServiceDependency,
     CsrfProtectedPrincipalDependency,
     CurrentPrincipalDependency,
     OAuthRuntimeDependency,
@@ -26,6 +27,7 @@ from app.modules.auth.oauth import (
     validate_oauth_next,
 )
 from app.modules.auth.schemas import (
+    ApplicantUpgradeRequest,
     AuthSessionData,
     AuthStatusData,
     AuthUserData,
@@ -181,6 +183,40 @@ async def register(
                 "If the address can be registered, verification instructions "
                 "will be sent."
             )
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/applicant-upgrade",
+    response_model=SuccessEnvelope[AuthUserData],
+    responses={
+        401: AUTH_ERROR_RESPONSES[401],
+        403: AUTH_ERROR_RESPONSES[403],
+        409: {
+            "description": "The account cannot be upgraded.",
+            "model": ErrorEnvelope,
+        },
+        422: ERROR_RESPONSES[422],
+    },
+)
+async def upgrade_to_applicant(
+    payload: ApplicantUpgradeRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: ApplicantUpgradeServiceDependency,
+) -> SuccessEnvelope[AuthUserData]:
+    result = await service.upgrade(
+        principal,
+        account_type=payload.account_type,
+    )
+    return SuccessEnvelope(
+        data=AuthUserData(
+            id=result.user_id,
+            email=result.email,
+            roles=result.roles,
+            accountType=result.account_type,
         ),
         meta=ResponseMeta(request_id=request.state.request_id),
     )

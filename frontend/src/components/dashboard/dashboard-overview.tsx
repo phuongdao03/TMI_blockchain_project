@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   BadgeCheck,
@@ -23,6 +23,7 @@ import { dossierKeys } from "@/lib/dossiers/query-keys";
 
 export function DashboardOverview() {
   const user = useAuthUser();
+  const queryClient = useQueryClient();
   const persona = resolveWorkspacePersona(user?.roles ?? []);
   const isApplicant = persona === "APPLICANT";
   const filters = { page: 1, pageSize: 5 } as const;
@@ -32,7 +33,16 @@ export function DashboardOverview() {
     enabled: isApplicant,
   });
   if (!isApplicant) {
-    return <RoleDashboardOverview persona={persona} roles={user?.roles} />;
+    return (
+      <RoleDashboardOverview
+        accountType={user?.accountType}
+        onUpgraded={(upgradedUser) =>
+          queryClient.setQueryData(["auth", "me"], upgradedUser)
+        }
+        persona={persona}
+        roles={user?.roles}
+      />
+    );
   }
   const total = dossiers.data?.meta.total ?? 0;
   const submitted =

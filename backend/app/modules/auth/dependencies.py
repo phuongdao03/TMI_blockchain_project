@@ -13,6 +13,7 @@ from app.modules.auth.errors import CsrfValidationError, OAuthProviderUnavailabl
 from app.modules.auth.oauth import RedisOAuthRateLimiter, RedisOAuthStateStore
 from app.modules.auth.oauth_provider import GoogleOIDCProvider
 from app.modules.auth.oauth_service import OAuthRuntime, OAuthService
+from app.modules.auth.onboarding import ApplicantUpgradeService
 from app.modules.auth.password_reset_service import PasswordResetService
 from app.modules.auth.rate_limit import (
     RedisAuthRateLimiter,
@@ -62,6 +63,18 @@ async def get_registration_service(
 RegistrationServiceDependency = Annotated[
     RegistrationService,
     Depends(get_registration_service),
+]
+
+
+async def get_applicant_upgrade_service(
+    session: SessionDependency,
+) -> AsyncIterator[ApplicantUpgradeService]:
+    yield ApplicantUpgradeService(session=session)
+
+
+ApplicantUpgradeServiceDependency = Annotated[
+    ApplicantUpgradeService,
+    Depends(get_applicant_upgrade_service),
 ]
 
 

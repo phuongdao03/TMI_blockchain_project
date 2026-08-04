@@ -227,6 +227,12 @@ export const authApi = {
       body: JSON.stringify({ accountType, ...(next ? { next } : {}) }),
     });
   },
+  upgradeToApplicant(accountType: Exclude<AccountType, "PUBLIC_USER">) {
+    return request<AuthUser>("/auth/applicant-upgrade", {
+      method: "POST",
+      body: JSON.stringify({ accountType }),
+    });
+  },
   verifyEmail(token: string) {
     return request<StatusData>("/auth/verify-email", {
       method: "POST",

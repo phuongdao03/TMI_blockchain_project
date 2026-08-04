@@ -86,6 +86,32 @@ describe("auth API client", () => {
     await expect(authApi.currentUser()).resolves.toBeNull();
     expect(fetchMock).toHaveBeenCalledOnce();
   });
+
+  it("upgrades a public account through the CSRF-protected onboarding API", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      response({
+        success: true,
+        data: {
+          id: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
+          email: "viewer@tmigroup.vn",
+          roles: ["APPLICANT"],
+          accountType: "INDIVIDUAL_APPLICANT",
+        },
+        meta: { request_id: "request-upgrade" },
+      }),
+    );
+
+    await expect(
+      authApi.upgradeToApplicant("INDIVIDUAL_APPLICANT"),
+    ).resolves.toMatchObject({ accountType: "INDIVIDUAL_APPLICANT" });
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("/api/v1/auth/applicant-upgrade");
+    expect(init?.method).toBe("POST");
+    expect(init?.body).toBe(
+      JSON.stringify({ accountType: "INDIVIDUAL_APPLICANT" }),
+    );
+    expect(new Headers(init?.headers).get("X-CSRF-Token")).toBe("csrf-value");
+  });
 });
 
 describe("account API client", () => {
