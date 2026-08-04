@@ -15,11 +15,17 @@ inventory and contract artifacts. They contain no wallet private key.
 ## Daily validation
 
 1. Download the backup bundle to an isolated restore host.
-2. Run `infrastructure/scripts/validate-backup.sh <directory>`.
-3. Confirm checksum, JSON parsing and contract archive checks all pass.
-4. Record bundle timestamp, validator output and retention expiry without
+2. Run `infrastructure/scripts/validate-backup.sh <directory>`; the bundle must
+   contain `manifest.sha256`, `certificate-metadata.json`,
+   `cloudinary-inventory.json` and `contract-artifacts.tar.gz`.
+3. Run `infrastructure/scripts/check-backup-age.sh <backup-root> 26` from the
+   backup scheduler. It validates the newest bundle and returns exit code 70
+   when the newest valid bundle is older than 26 hours.
+4. Confirm checksum, JSON parsing and contract archive checks all pass.
+5. Record bundle timestamp, validator output and retention expiry without
    recording secrets.
-5. Alert when the newest valid bundle exceeds 26 hours.
+6. The `backup_freshness` alert pages platform on-call when the age signal
+   exceeds 93,600 seconds for 15 minutes.
 
 ## Quarterly restore drill
 

@@ -61,6 +61,14 @@ active incident without the key-rotation procedure and dual approval.
 Confirm the expected network and wallet address, then fund through the approved
 treasury process. Treat unexpected balance movement as SEV-1.
 
+## Backup freshness
+
+Run `infrastructure/scripts/check-backup-age.sh <backup-root> 26` on the
+isolated operations host. Exit code 70 means the newest bundle is stale; exit
+code 65 means no valid bundle was found or validation failed. Open a SEV-2
+incident, preserve the last valid bundle, and repair the scheduler before
+starting a restore drill. Do not copy secrets into the incident record.
+
 ## Resolution
 
 Verify critical user journeys, keep enhanced monitoring for one hour, publish a

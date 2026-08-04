@@ -104,6 +104,7 @@ test("monitoring and recovery configs contain actionable signals", async () => {
     "payment_webhook_failure",
     "blockchain_pending_age",
     "wallet_balance",
+    "backup_freshness",
   ]) {
     assert.ok(alerts.includes(signal), `missing alert signal: ${signal}`);
   }

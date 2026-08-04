@@ -56,6 +56,14 @@ alerts:
     severity: ticket
     route: blockchain-operations
     runbook: docs/runbooks/incident-response.md#wallet-balance
+  - name: backup_freshness
+    signal: backup_newest_valid_age_seconds
+    condition: greater_than
+    threshold: 93600
+    window: 15m
+    severity: page
+    route: platform-on-call
+    runbook: docs/runbooks/backup-and-restore.md#daily-validation
 
 dashboards:
   - name: platform-overview
@@ -74,6 +82,7 @@ dashboards:
       [
         database_pool_utilization_ratio,
         celery_queue_oldest_message_seconds,
+        backup_newest_valid_age_seconds,
         cpu_utilization,
         memory_utilization,
       ]
