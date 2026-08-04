@@ -74,7 +74,7 @@ jobs:
       - run: npm --prefix frontend ci
       - run: frontend/node_modules/.bin/playwright install --with-deps chromium
       - run: npm --prefix frontend run test:e2e -- --project=desktop-chrome
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-failure-${{ github.run_id }}
@@ -170,7 +170,7 @@ jobs:
         run:
           tar -czf rollback-bundle.tgz infrastructure/compose.production.yaml
           infrastructure/nginx/production.conf.template infrastructure/scripts
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rollback-${{ github.event.inputs.image_tag || github.sha }}
           path: rollback-bundle.tgz
