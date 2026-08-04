@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { BrandMark } from "@/components/layout/brand-mark";
 
 const sections = [
+  { prefix: "/lich-su-hoat-dong", label: "Lịch sử hoạt động" },
   { prefix: "/lich-su-binh-chon", label: "Lịch sử bình chọn" },
   { prefix: "/admin/binh-chon", label: "Quản lý bình chọn" },
   { prefix: "/admin/bao-cao", label: "Báo cáo nội dung" },

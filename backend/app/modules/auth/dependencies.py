@@ -9,7 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.db.session import get_session
-from app.modules.auth.errors import CsrfValidationError, OAuthProviderUnavailableError
+from app.modules.auth.errors import (
+    CsrfValidationError,
+    OAuthProviderUnavailableError,
+    UnauthenticatedError,
+)
 from app.modules.auth.oauth import RedisOAuthRateLimiter, RedisOAuthStateStore
 from app.modules.auth.oauth_provider import GoogleOIDCProvider
 from app.modules.auth.oauth_service import OAuthRuntime, OAuthService
@@ -181,9 +185,28 @@ async def get_current_principal(
     return await service.authenticate_access(access_token)
 
 
+async def get_optional_current_principal(
+    request: Request,
+    service: SessionServiceDependency,
+    settings: SettingsDependency,
+) -> AuthPrincipal | None:
+    access_token = request.cookies.get(settings.auth_access_cookie_name)
+    if access_token is None:
+        return None
+    try:
+        return await service.authenticate_access(access_token)
+    except UnauthenticatedError:
+        return None
+
+
 CurrentPrincipalDependency = Annotated[
     AuthPrincipal,
     Depends(get_current_principal),
+]
+
+OptionalCurrentPrincipalDependency = Annotated[
+    AuthPrincipal | None,
+    Depends(get_optional_current_principal),
 ]
 
 

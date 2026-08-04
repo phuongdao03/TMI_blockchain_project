@@ -226,6 +226,7 @@ class Settings(BaseSettings):
         max_length=64,
     )
     engagement_visitor_hmac_secret: SecretStr | None = None
+    engagement_activity_retention_days: int = Field(default=365, ge=30, le=3_650)
     voting_user_rate_limit: int = Field(default=20, ge=1, le=10_000)
     voting_ip_rate_limit: int = Field(default=100, ge=1, le=50_000)
     voting_rate_window_seconds: int = Field(default=60, ge=1, le=3_600)

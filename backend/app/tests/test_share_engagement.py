@@ -1,7 +1,7 @@
 import asyncio
 from datetime import date
 from typing import cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings
 from app.core.errors import DomainError
 from app.main import create_application
+from app.modules.auth.dependencies import get_optional_current_principal
+from app.modules.auth.session_service import AuthPrincipal
 from app.modules.engagement.errors import EngagementRateLimitedError
 from app.modules.engagement.redis import RedisShareDeduplicator
 from app.modules.engagement.service import EngagementService
@@ -75,6 +77,20 @@ class FakeShares:
         return self.accepted
 
 
+class FakeActivity:
+    def __init__(self) -> None:
+        self.events: list[tuple[UUID, UUID, str]] = []
+
+    async def record_share(
+        self,
+        *,
+        user_id: UUID,
+        public_work_id: UUID,
+        channel: str,
+    ) -> None:
+        self.events.append((user_id, public_work_id, channel))
+
+
 def test_share_service_counts_once_per_accepted_channel_intent() -> None:
     repository = FakeRepository()
     shares = FakeShares(accepted=True)
@@ -97,6 +113,56 @@ def test_share_service_counts_once_per_accepted_channel_intent() -> None:
     )
     assert shares.calls == [("visitor", str(WORK_ID), "NATIVE")]
     assert len(repository.shares) == 1
+
+
+def test_anonymous_share_does_not_create_private_activity() -> None:
+    activity = FakeActivity()
+    service = EngagementService(
+        cast(AsyncSession, FakeSession()),
+        repository=FakeRepository(),
+        views=cast(object, FakeShares(True)),
+        shares=FakeShares(True),
+        activity=activity,
+    )
+
+    assert (
+        asyncio.run(
+            service.record_share(
+                slug="public-work",
+                visitor="visitor",
+                channel="NATIVE",
+            )
+        )
+        is True
+    )
+    assert activity.events == []
+
+
+def test_authenticated_share_creates_private_activity_for_that_user() -> None:
+    activity = FakeActivity()
+    user_id = UUID("50000000-0000-0000-0000-000000000099")
+    service = EngagementService(
+        cast(AsyncSession, FakeSession()),
+        repository=FakeRepository(),
+        views=cast(object, FakeShares(True)),
+        shares=FakeShares(True),
+        activity=activity,
+    )
+
+    assert asyncio.run(
+        service.record_share(
+            slug="public-work",
+            visitor="visitor",
+            channel="COPY_LINK",
+            principal=AuthPrincipal(
+                user_id=user_id,
+                session_id=uuid4(),
+                email="member@example.test",
+                roles=("MEMBER",),
+            ),
+        )
+    )
+    assert activity.events == [(user_id, WORK_ID, "COPY_LINK")]
 
 
 def test_share_service_hides_inaccessible_work_and_skips_duplicates() -> None:
@@ -168,6 +234,7 @@ def test_share_api_validates_channel_and_returns_accepted_envelope() -> None:
         settings=Settings(engagement_visitor_hmac_secret=SecretStr("s" * 32))
     )
     app.dependency_overrides[get_engagement_service] = StubEngagementService
+    app.dependency_overrides[get_optional_current_principal] = lambda: None
     app.dependency_overrides[enforce_public_rate_limit] = lambda: None
     app.dependency_overrides[enforce_public_engagement_rate_limit] = lambda: None
     try:

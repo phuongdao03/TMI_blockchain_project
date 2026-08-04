@@ -97,6 +97,36 @@ class PublicWorkFavorite(Base):
     )
 
 
+class PublicWorkShareEvent(Base):
+    __tablename__ = "public_work_share_events"
+    __table_args__ = (
+        Index(
+            "ix_public_work_share_events_user_created",
+            "user_id",
+            "created_at",
+            "id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    public_work_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("public_works.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    channel: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
 class PublicShareLink(Base):
     __tablename__ = "public_share_links"
     __table_args__ = (

@@ -7,13 +7,18 @@ from app.core.schemas import (
     ErrorEnvelope,
     ListResponseMeta,
     PaginatedSuccessEnvelope,
+    ResponseMeta,
+    SuccessEnvelope,
 )
 from app.modules.auth.dependencies import (
     CsrfProtectedPrincipalDependency,
     CurrentPrincipalDependency,
 )
-from app.modules.engagement.dependencies import FavoriteServiceDependency
-from app.modules.engagement.schemas import FavoriteData
+from app.modules.engagement.dependencies import (
+    ActivityServiceDependency,
+    FavoriteServiceDependency,
+)
+from app.modules.engagement.schemas import ActivityData, ActivityPageData, FavoriteData
 from app.modules.public.publication_dependencies import PublicQrCodeServiceDependency
 
 router = APIRouter(prefix="/api/v1", tags=["engagement"])
@@ -103,6 +108,30 @@ async def list_favorites(
     )
 
 
+@router.get(
+    "/me/activity",
+    response_model=SuccessEnvelope[ActivityPageData],
+    responses={401: PRIVATE_RESPONSES[401], 422: PRIVATE_RESPONSES[422]},
+)
+async def list_activity(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: ActivityServiceDependency,
+    cursor: Annotated[str | None, Query(min_length=1, max_length=512)] = None,
+    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=50)] = 20,
+) -> SuccessEnvelope[ActivityPageData]:
+    rows, next_cursor = await service.list_for_user(
+        principal,
+        cursor=cursor,
+        limit=page_size,
+    )
+    return SuccessEnvelope(
+        data=ActivityPageData(
+            items=[ActivityData.model_validate(row) for row in rows],
+            next_cursor=next_cursor,
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
 @router.delete(
     "/admin/public/works/{work_id}/share-link",
     status_code=status.HTTP_204_NO_CONTENT,

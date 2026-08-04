@@ -1,9 +1,11 @@
 from datetime import UTC, date, datetime
-from typing import Protocol
+from typing import Protocol, cast
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.auth.session_service import AuthPrincipal
+from app.modules.engagement.activity_repository import ActivityRepository
 from app.modules.engagement.errors import EngagementUnavailableError
 from app.modules.engagement.repository import EngagementRepository
 from app.modules.public.errors import PublicWorkNotFoundError
@@ -41,6 +43,16 @@ class EngagementRepositoryPort(Protocol):
     ) -> bool: ...
 
 
+class ShareActivityPort(Protocol):
+    async def record_share(
+        self,
+        *,
+        user_id: UUID,
+        public_work_id: UUID,
+        channel: str,
+    ) -> None: ...
+
+
 class EngagementService:
     def __init__(
         self,
@@ -49,6 +61,7 @@ class EngagementService:
         views: ViewDeduplicator,
         shares: ShareDeduplicator | None = None,
         repository: EngagementRepositoryPort | None = None,
+        activity: ShareActivityPort | None = None,
     ) -> None:
         self._session = session
         self._repository: EngagementRepositoryPort = repository or EngagementRepository(
@@ -56,6 +69,10 @@ class EngagementService:
         )
         self._views = views
         self._shares = shares
+        self._activity = cast(
+            ShareActivityPort,
+            activity or ActivityRepository(session),
+        )
 
     async def record_view(self, *, slug: str, visitor: str) -> bool:
         async with self._session.begin():
@@ -82,6 +99,7 @@ class EngagementService:
         slug: str,
         visitor: str,
         channel: str,
+        principal: AuthPrincipal | None = None,
     ) -> bool:
         if self._shares is None:
             raise EngagementUnavailableError()
@@ -102,4 +120,10 @@ class EngagementService:
             )
             if not incremented:
                 raise PublicWorkNotFoundError()
+            if principal is not None:
+                await self._activity.record_share(
+                    user_id=principal.user_id,
+                    public_work_id=public_work_id,
+                    channel=channel,
+                )
             return True

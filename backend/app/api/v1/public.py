@@ -21,7 +21,10 @@ from app.core.schemas import (
     ResponseMeta,
     SuccessEnvelope,
 )
-from app.modules.auth.dependencies import OptionalCsrfPrincipalDependency
+from app.modules.auth.dependencies import (
+    OptionalCsrfPrincipalDependency,
+    OptionalCurrentPrincipalDependency,
+)
 from app.modules.engagement.errors import EngagementUnavailableError
 from app.modules.engagement.schemas import (
     ShareActionAcceptedData,
@@ -141,11 +144,13 @@ async def record_public_work_share(
     request: Request,
     response: Response,
     service: EngagementServiceDependency,
+    principal: OptionalCurrentPrincipalDependency,
 ) -> SuccessEnvelope[ShareActionAcceptedData]:
     accepted = await service.record_share(
         slug=slug,
         visitor=_engagement_visitor(request, response),
         channel=payload.channel.value,
+        principal=principal,
     )
     return SuccessEnvelope(
         data=ShareActionAcceptedData(accepted=accepted),

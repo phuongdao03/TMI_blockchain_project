@@ -10,6 +10,24 @@ export interface ListResponseMeta {
   total: number;
 }
 
+export type ActivityKind = "FAVORITE" | "SHARE";
+
+export interface ActivityItem {
+  activityId: string;
+  kind: ActivityKind;
+  publicWorkId: string;
+  slug: string;
+  title: string;
+  shortDescription: string;
+  channel: "NATIVE" | "COPY_LINK" | null;
+  createdAt: string;
+}
+
+export interface ActivityPage {
+  items: ActivityItem[];
+  nextCursor: string | null;
+}
+
 export interface SuccessEnvelope<Data> {
   success: true;
   data: Data;

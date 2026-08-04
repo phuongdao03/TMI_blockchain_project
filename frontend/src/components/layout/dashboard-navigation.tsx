@@ -10,6 +10,7 @@ import {
   FileCheck2,
   FolderKanban,
   Flag,
+  History,
   Landmark,
   LayoutDashboard,
   Map,
@@ -117,6 +118,7 @@ const dashboardLinks = [
   { href: "/thong-bao", label: "Thông báo", icon: Bell },
   { href: "/tai-khoan", label: "Cài đặt", icon: Settings },
   { href: "/lich-su-binh-chon", label: "Lịch sử bình chọn", icon: Vote },
+  { href: "/lich-su-hoat-dong", label: "Lịch sử hoạt động", icon: History },
 ] as const;
 
 export function DashboardNavigation({

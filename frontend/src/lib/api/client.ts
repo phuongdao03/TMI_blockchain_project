@@ -1,5 +1,6 @@
 import type {
   AccountType,
+  ActivityPage,
   AuditLogItem,
   AuthUser,
   CmsBanner,
@@ -874,6 +875,14 @@ export const searchAnalyticsApi = {
     });
     if (filters.category) parameters.set("category", filters.category);
     return `${API_ROOT}/admin/search/analytics/export?${parameters.toString()}`;
+  },
+};
+
+export const activityApi = {
+  list(cursor?: string, pageSize = 20) {
+    const parameters = new URLSearchParams({ pageSize: String(pageSize) });
+    if (cursor) parameters.set("cursor", cursor);
+    return request<ActivityPage>(`/me/activity?${parameters.toString()}`);
   },
 };
 
