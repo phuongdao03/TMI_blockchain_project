@@ -1,0 +1,68 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: Deployment environment to roll back
+        required: true
+        type: choice
+        options: [staging, production]
+      image_tag:
+        description: Previously published immutable image tag to deploy
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  rollback-staging:
+    if: inputs.target_environment == 'staging'
+    runs-on: ubuntu-24.04
+    environment: staging
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    steps:
+      - name: Roll back staging application images
+        env:
+          DEPLOY_HOST: ${{ secrets.STAGING_DEPLOY_HOST }}
+          DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
+          DEPLOY_USER: ${{ secrets.STAGING_DEPLOY_USER }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+          GHCR_USERNAME: ${{ github.repository_owner }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+          ssh_options="-i ~/.ssh/id_ed25519 -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          printf '%s' "$GHCR_PULL_TOKEN" | ssh $ssh_options "$DEPLOY_USER@$DEPLOY_HOST" "docker login ghcr.io --username '$GHCR_USERNAME' --password-stdin && cd /opt/tmi-platform && bash infrastructure/scripts/rollback.sh '$IMAGE_TAG'"
+
+  rollback-production:
+    if: inputs.target_environment == 'production'
+    runs-on: ubuntu-24.04
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - name: Roll back production application images
+        env:
+          DEPLOY_HOST: ${{ secrets.PRODUCTION_DEPLOY_HOST }}
+          DEPLOY_KEY: ${{ secrets.PRODUCTION_DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+          DEPLOY_USER: ${{ secrets.PRODUCTION_DEPLOY_USER }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+          GHCR_USERNAME: ${{ github.repository_owner }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+          ssh_options="-i ~/.ssh/id_ed25519 -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          printf '%s' "$GHCR_PULL_TOKEN" | ssh $ssh_options "$DEPLOY_USER@$DEPLOY_HOST" "docker login ghcr.io --username '$GHCR_USERNAME' --password-stdin && cd /opt/tmi-platform && bash infrastructure/scripts/rollback.sh '$IMAGE_TAG'"

@@ -1,6 +1,7 @@
 # Environment and secrets
 .env*
 !.env.example
+!infrastructure/.env.production.example
 *.key
 *.pem
 *.p12

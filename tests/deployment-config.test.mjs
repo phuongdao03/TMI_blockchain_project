@@ -64,6 +64,30 @@ test("CI has quality, migration, image, staging and manual production gates", as
   }
   assert.match(workflow, /environment: production/);
   assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /STAGING_SSH_KNOWN_HOSTS/);
+  assert.match(workflow, /PRODUCTION_SSH_KNOWN_HOSTS/);
+  assert.match(workflow, /GHCR_PULL_TOKEN/);
+  assert.match(workflow, /StrictHostKeyChecking=yes/);
+  assert.match(workflow, /rsync -az/);
+});
+
+test("deployment scripts wait for healthy services and preserve an image rollback path", async () => {
+  const [deploy, rollback, releaseLibrary, rollbackWorkflow] =
+    await Promise.all([
+      read("infrastructure/scripts/deploy.sh"),
+      read("infrastructure/scripts/rollback.sh"),
+      read("infrastructure/scripts/release-lib.sh"),
+      read(".github/workflows/rollback.yml"),
+    ]);
+
+  for (const script of [deploy, rollback]) {
+    assert.match(script, /flock/);
+    assert.match(script, /previous-image-tag/);
+  }
+  assert.match(releaseLibrary, /--wait-timeout/);
+  assert.match(deploy, /AUTO_ROLLBACK_ON_FAILURE/);
+  assert.match(rollbackWorkflow, /workflow_dispatch:/);
+  assert.match(rollbackWorkflow, /GHCR_PULL_TOKEN/);
 });
 
 test("monitoring and recovery configs contain actionable signals", async () => {

@@ -134,7 +134,7 @@ jobs:
           alembic upgrade head
 
   images:
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'push'
     needs: [quality, e2e, migration, public-security]
     runs-on: ubuntu-24.04
     permissions:
@@ -151,7 +151,7 @@ jobs:
       - name: Build and push immutable images
         env:
           REGISTRY: ghcr.io/${{ github.repository_owner }}
-          TAG: ${{ github.event.inputs.image_tag || github.sha }}
+          TAG: ${{ github.sha }}
         run: |
           docker build --pull -t "$REGISTRY/tmi-certificate-backend:$TAG" backend
           docker build --pull -t "$REGISTRY/tmi-certificate-frontend:$TAG" frontend
@@ -181,37 +181,58 @@ jobs:
     needs: images
     runs-on: ubuntu-24.04
     environment: staging
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - name: Deploy immutable staging release
         env:
           DEPLOY_HOST: ${{ secrets.STAGING_DEPLOY_HOST }}
           DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
           DEPLOY_USER: ${{ secrets.STAGING_DEPLOY_USER }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+          GHCR_USERNAME: ${{ github.repository_owner }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
-          ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd /opt/tmi-platform && infrastructure/scripts/deploy.sh '$IMAGE_TAG'"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          ssh_options="-i ~/.ssh/id_ed25519 -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          rsync -az -e "ssh $ssh_options" infrastructure/ "$DEPLOY_USER@$DEPLOY_HOST:/opt/tmi-platform/infrastructure/"
+          rsync -az -e "ssh $ssh_options" contracts/artifacts/ "$DEPLOY_USER@$DEPLOY_HOST:/opt/tmi-platform/contracts/artifacts/"
+          printf '%s' "$GHCR_PULL_TOKEN" | ssh $ssh_options "$DEPLOY_USER@$DEPLOY_HOST" "docker login ghcr.io --username '$GHCR_USERNAME' --password-stdin && cd /opt/tmi-platform && bash infrastructure/scripts/deploy.sh '$IMAGE_TAG'"
 
   deploy-production:
     if: github.event_name == 'workflow_dispatch'
-    needs: images
     runs-on: ubuntu-24.04
     environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.image_tag }}
       - name: Deploy manually approved production release
         env:
           DEPLOY_HOST: ${{ secrets.PRODUCTION_DEPLOY_HOST }}
           DEPLOY_KEY: ${{ secrets.PRODUCTION_DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
           DEPLOY_USER: ${{ secrets.PRODUCTION_DEPLOY_USER }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+          GHCR_USERNAME: ${{ github.repository_owner }}
           IMAGE_TAG: ${{ inputs.image_tag }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
-          ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd /opt/tmi-platform && infrastructure/scripts/deploy.sh '$IMAGE_TAG'"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          ssh_options="-i ~/.ssh/id_ed25519 -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          rsync -az -e "ssh $ssh_options" infrastructure/ "$DEPLOY_USER@$DEPLOY_HOST:/opt/tmi-platform/infrastructure/"
+          rsync -az -e "ssh $ssh_options" contracts/artifacts/ "$DEPLOY_USER@$DEPLOY_HOST:/opt/tmi-platform/contracts/artifacts/"
+          printf '%s' "$GHCR_PULL_TOKEN" | ssh $ssh_options "$DEPLOY_USER@$DEPLOY_HOST" "docker login ghcr.io --username '$GHCR_USERNAME' --password-stdin && cd /opt/tmi-platform && bash infrastructure/scripts/deploy.sh '$IMAGE_TAG'"
