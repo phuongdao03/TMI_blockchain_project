@@ -11,5 +11,6 @@ build/
 coverage/
 .pytest_cache/
 .pytest-tmp-*/
-.runtime/
+/.runtime/
+/.runtime/**
 package-lock.json

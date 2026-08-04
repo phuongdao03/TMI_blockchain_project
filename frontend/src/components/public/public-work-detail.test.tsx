@@ -29,6 +29,7 @@ vi.mock("@/lib/api/client", () => {
   return {
     ApiError: TestApiError,
     publicApi: {
+      recordShare: vi.fn(),
       recordView: vi.fn(),
       reportWork: vi.fn(),
       verifyNumber: vi.fn(),
@@ -77,6 +78,7 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 beforeEach(() => {
+  vi.mocked(publicApi.recordShare).mockResolvedValue({ accepted: true });
   vi.mocked(publicApi.recordView).mockResolvedValue(undefined);
   vi.mocked(publicApi.work).mockResolvedValue(detail);
   vi.mocked(publicApi.verifyNumber).mockResolvedValue({
@@ -157,7 +159,9 @@ describe("PublicWorkDetailPage", () => {
     );
     focusManager.setFocused(false);
     focusManager.setFocused(true);
-    expect(await screen.findByText("Tác phẩm không còn công khai")).toBeTruthy();
+    expect(
+      await screen.findByText("Tác phẩm không còn công khai"),
+    ).toBeTruthy();
   });
 
   it("emits typed QR/report hook events", async () => {
@@ -185,10 +189,21 @@ describe("PublicWorkDetailPage", () => {
       wrapper,
     });
     await user.click(screen.getByRole("button", { name: "Báo cáo" }));
-    expect(screen.getByRole("dialog", { name: "Báo cáo nội dung" })).toBeTruthy();
-    await user.selectOptions(screen.getByLabelText(/Lý do/), "INCORRECT_INFORMATION");
-    await user.type(screen.getByLabelText("Mô tả bổ sung"), "Thông tin cần được kiểm tra.");
-    await user.type(screen.getByLabelText(/Email liên hệ/), "reporter@example.test");
+    expect(
+      screen.getByRole("dialog", { name: "Báo cáo nội dung" }),
+    ).toBeTruthy();
+    await user.selectOptions(
+      screen.getByLabelText(/Lý do/),
+      "INCORRECT_INFORMATION",
+    );
+    await user.type(
+      screen.getByLabelText("Mô tả bổ sung"),
+      "Thông tin cần được kiểm tra.",
+    );
+    await user.type(
+      screen.getByLabelText(/Email liên hệ/),
+      "reporter@example.test",
+    );
     await user.click(screen.getByRole("button", { name: "Gửi báo cáo" }));
     await waitFor(() =>
       expect(publicApi.reportWork).toHaveBeenCalledWith(detail.id, {
@@ -215,7 +230,9 @@ describe("PublicWorkDetailPage", () => {
     expect(writeText).toHaveBeenCalledWith(
       "http://localhost:3000/tai-san/di-san-so",
     );
-    expect(await screen.findByText("Đã sao chép liên kết chính thức.")).toBeTruthy();
+    expect(
+      await screen.findByText("Đã sao chép liên kết chính thức."),
+    ).toBeTruthy();
   });
 
   it("opens an accessible downloadable QR dialog", async () => {
@@ -229,12 +246,14 @@ describe("PublicWorkDetailPage", () => {
     expect(screen.getByRole("button", { name: "Đóng mã QR" })).toBe(
       document.activeElement,
     );
-    expect(screen.getByRole("img", { name: /Mã QR mở tác phẩm/ }).getAttribute("src")).toContain(
-      "/api/v1/public/works/di-san-so/qr",
-    );
-    expect(screen.getByRole("link", { name: "Tải mã QR" }).getAttribute("href")).toBe(
-      "/api/v1/public/works/di-san-so/qr",
-    );
+    expect(
+      screen
+        .getByRole("img", { name: /Mã QR mở tác phẩm/ })
+        .getAttribute("src"),
+    ).toContain("/api/v1/public/works/di-san-so/qr");
+    expect(
+      screen.getByRole("link", { name: "Tải mã QR" }).getAttribute("href"),
+    ).toBe("/api/v1/public/works/di-san-so/qr");
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
   });

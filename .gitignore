@@ -14,14 +14,12 @@ contracts/broadcast/
 .venv/
 venv/
 
-# Build and test output
-/tests/
+# Build output
 .next/
 .next*/
 .next-e2e-*/
 .next-build-*/
 *.tsbuildinfo
-contracts/artifacts/
 contracts/deployments/
 dist/
 build/

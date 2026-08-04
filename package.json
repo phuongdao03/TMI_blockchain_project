@@ -11,10 +11,10 @@
   "scripts": {
     "bootstrap": "npm ci",
     "format": "npm run format:root && npm run format:backend",
-    "format:root": "prettier --write .",
+    "format:root": "prettier --write --ignore-unknown .github contracts frontend infrastructure tests README.md compose.yaml package.json .env.example .editorconfig .gitattributes .gitignore .node-version .npmrc .nvmrc .prettierignore .prettierrc.json .python-version",
     "format:backend": "python -m ruff format backend",
     "format:check": "npm run format:check:root && npm run format:check:backend",
-    "format:check:root": "prettier --check .",
+    "format:check:root": "prettier --check --ignore-unknown .github contracts frontend infrastructure tests README.md compose.yaml package.json .env.example .editorconfig .gitattributes .gitignore .node-version .npmrc .nvmrc .prettierignore .prettierrc.json .python-version",
     "format:check:backend": "python -m ruff format backend --check",
     "lint": "npm run lint:root && npm run lint:frontend && npm run lint:backend",
     "lint:root": "npm run format:check:root",
