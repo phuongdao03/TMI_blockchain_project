@@ -64,6 +64,50 @@ class PublicWorkEngagementDaily(UtcTimestampMixin, Base):
     )
 
 
+class EngagementAnalyticsSnapshot(Base):
+    __tablename__ = "engagement_analytics_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "metric_date",
+            name="uq_engagement_analytics_snapshots_metric_date",
+        ),
+        CheckConstraint(
+            "unique_views >= 0",
+            name="engagement_snapshot_unique_views_non_negative",
+        ),
+        CheckConstraint(
+            "share_events >= 0",
+            name="engagement_snapshot_share_events_non_negative",
+        ),
+        CheckConstraint(
+            "qr_scans >= 0",
+            name="engagement_snapshot_qr_scans_non_negative",
+        ),
+        CheckConstraint(
+            "report_requests >= 0",
+            name="engagement_snapshot_report_requests_non_negative",
+        ),
+        CheckConstraint(
+            "favorite_events >= 0",
+            name="engagement_snapshot_favorite_events_non_negative",
+        ),
+        Index("ix_engagement_analytics_snapshots_metric_date", "metric_date"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    metric_date: Mapped[date] = mapped_column(Date, nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    unique_views: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    share_events: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    qr_scans: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    report_requests: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    favorite_events: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+
 class PublicWorkFavorite(Base):
     __tablename__ = "public_work_favorites"
     __table_args__ = (

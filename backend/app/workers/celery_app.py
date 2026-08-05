@@ -18,6 +18,7 @@ celery_app = Celery(
         "app.workers.trending_tasks",
         "app.workers.search_history_tasks",
         "app.workers.search_discovery_tasks",
+        "app.workers.engagement_tasks",
         "app.workers.voting_lifecycle_tasks",
         "app.workers.voting_aggregate_tasks",
     ],
@@ -87,6 +88,12 @@ celery_app.conf.update(
         "generate-trending-snapshot": {
             "task": "app.workers.trending_tasks.generate_trending_snapshot",
             "schedule": 3600.0,
+        },
+        "generate-daily-engagement-snapshot": {
+            "task": (
+                "app.workers.engagement_tasks.generate_daily_engagement_snapshot"
+            ),
+            "schedule": 86400.0,
         },
     },
 )
