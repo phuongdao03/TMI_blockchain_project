@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
@@ -8,6 +9,8 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
+    Numeric,
     String,
     UniqueConstraint,
     Uuid,
@@ -106,6 +109,74 @@ class EngagementAnalyticsSnapshot(Base):
     qr_scans: Mapped[int] = mapped_column(BigInteger, nullable=False)
     report_requests: Mapped[int] = mapped_column(BigInteger, nullable=False)
     favorite_events: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+
+class EngagementVelocitySnapshot(Base):
+    __tablename__ = "engagement_velocity_snapshots"
+    __table_args__ = (
+        CheckConstraint("window_end >= window_start", name="velocity_window_valid"),
+        CheckConstraint(
+            "candidate_count >= 0", name="velocity_candidate_count_non_negative"
+        ),
+        CheckConstraint("total_score >= 0", name="velocity_total_score_non_negative"),
+        UniqueConstraint(
+            "window_start",
+            "window_end",
+            name="uq_engagement_velocity_snapshots_window",
+        ),
+        Index("ix_engagement_velocity_snapshots_window_end", "window_end"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    window_start: Mapped[date] = mapped_column(Date, nullable=False)
+    window_end: Mapped[date] = mapped_column(Date, nullable=False)
+    formula_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    candidate_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    total_score: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class EngagementVelocitySnapshotItem(Base):
+    __tablename__ = "engagement_velocity_snapshot_items"
+    __table_args__ = (
+        CheckConstraint("rank > 0", name="velocity_rank_positive"),
+        CheckConstraint("display_order > 0", name="velocity_display_order_positive"),
+        CheckConstraint("score >= 0", name="velocity_score_non_negative"),
+        UniqueConstraint(
+            "snapshot_id",
+            "display_order",
+            name="uq_engagement_velocity_snapshot_items_display_order",
+        ),
+        Index(
+            "ix_engagement_velocity_snapshot_items_snapshot_rank",
+            "snapshot_id",
+            "rank",
+            "display_order",
+        ),
+    )
+
+    snapshot_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("engagement_velocity_snapshots.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    public_work_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("public_works.id", ondelete="RESTRICT"),
+        primary_key=True,
+    )
+    category_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("categories.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    score: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class PublicWorkFavorite(Base):
