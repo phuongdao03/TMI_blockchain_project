@@ -97,6 +97,8 @@ journeys, container builds and immutable release artifacts.
 
 - Copy `.env.example` only for local development.
 - Use environment-scoped secret management for staging and production.
+- Enable automatic staging deployment only after provisioning the protected
+  `staging` environment and setting `STAGING_DEPLOY_ENABLED=true`.
 - Never commit `.env` files, private keys, provider credentials, service-account
   files, certificates or generated evidence.
 - Production configuration fails closed when encryption, MFA, payment or managed

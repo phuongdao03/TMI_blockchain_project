@@ -261,7 +261,7 @@ jobs:
           retention-days: 30
 
   deploy-staging:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && vars.STAGING_DEPLOY_ENABLED == 'true'
     needs: images
     runs-on: ubuntu-24.04
     environment: staging

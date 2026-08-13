@@ -81,6 +81,7 @@ test("CI has quality, migration, image, staging and manual production gates", as
   }
   assert.match(workflow, /environment: production/);
   assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /vars\.STAGING_DEPLOY_ENABLED == 'true'/);
   assert.match(workflow, /STAGING_SSH_KNOWN_HOSTS/);
   assert.match(workflow, /PRODUCTION_SSH_KNOWN_HOSTS/);
   assert.match(workflow, /GHCR_PULL_TOKEN/);
