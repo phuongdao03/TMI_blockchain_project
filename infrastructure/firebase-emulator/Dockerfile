@@ -1,9 +1,10 @@
-FROM node:24.18.0-bookworm-slim
+FROM node:24.18.0-alpine3.24
 
 ENV FIREBASE_TOOLS_DISABLE_UPDATE_CHECK=true \
     XDG_CONFIG_HOME=/tmp/firebase
 
-RUN npm install --global firebase-tools@15.24.0
+RUN npm install --global firebase-tools@15.26.0 \
+    && rm -rf /usr/local/lib/node_modules/npm
 
 WORKDIR /workspace
 COPY --chown=node:node firebase.json .firebaserc ./

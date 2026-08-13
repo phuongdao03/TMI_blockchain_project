@@ -1,4 +1,4 @@
-FROM node:24.18.0-bookworm-slim AS dependencies
+FROM node:24.18.0-alpine3.24 AS dependencies
 
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
@@ -7,7 +7,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 
-FROM node:24.18.0-bookworm-slim AS development
+FROM node:24.18.0-alpine3.24 AS development
 
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=development
@@ -21,7 +21,7 @@ EXPOSE 3000
 CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
 
 
-FROM node:24.18.0-bookworm-slim AS builder
+FROM node:24.18.0-alpine3.24 AS builder
 
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production
@@ -32,13 +32,17 @@ COPY . .
 RUN npm run build
 
 
-FROM node:24.18.0-bookworm-slim AS runner
+FROM node:24.18.0-alpine3.24 AS runner
 
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     PORT=3000
 WORKDIR /app
+
+# The standalone server only needs the Node runtime. Exclude npm and its
+# package-management dependency tree from the production attack surface.
+RUN rm -rf /usr/local/lib/node_modules/npm
 
 COPY --from=builder --chown=node:node /app/public ./public
 COPY --from=builder --chown=node:node /app/.next/standalone ./

@@ -40,7 +40,7 @@ jobs:
           cache: npm
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.12.8
+          python-version: 3.12.13
           cache: pip
       - run: npm ci
       - run: npm --prefix frontend ci
@@ -110,7 +110,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.12.8
+          python-version: 3.12.13
           cache: pip
       - run: python -m pip install --disable-pip-version-check -e "backend[dev]"
       - name: Public visibility and leakage release gate
@@ -144,7 +144,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.12.8
+          python-version: 3.12.13
           cache: pip
       - run: python -m pip install --disable-pip-version-check -e "backend[dev]"
       - name: Reversible migration gate
@@ -164,7 +164,7 @@ jobs:
           cache: npm
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.12.8
+          python-version: 3.12.13
           cache: pip
       - run: npm ci
       - run: python -m pip install --disable-pip-version-check -e "backend[dev]"
@@ -190,7 +190,7 @@ jobs:
           cache: npm
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.12.8
+          python-version: 3.12.13
           cache: pip
       - run: npm ci
       - run: npm --prefix frontend ci

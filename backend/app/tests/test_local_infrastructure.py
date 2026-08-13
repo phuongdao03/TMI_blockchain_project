@@ -156,7 +156,7 @@ def test_backend_image_runs_as_non_root() -> None:
     dockerfile = (PROJECT_ROOT / "backend" / "Dockerfile").read_text(encoding="utf-8")
 
     assert "USER 10001:10001" in dockerfile
-    assert "python:3.12.8-slim-bookworm" in dockerfile
+    assert "python:3.12.13-alpine3.24" in dockerfile
 
 
 def test_celery_uses_redis_and_json_serialization() -> None:

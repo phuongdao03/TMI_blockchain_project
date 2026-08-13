@@ -1,4 +1,4 @@
-FROM python:3.12.8-slim-bookworm AS builder
+FROM python:3.12.13-alpine3.24 AS builder
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1
@@ -11,14 +11,14 @@ COPY app ./app
 RUN python -m pip wheel --wheel-dir /wheels .
 
 
-FROM python:3.12.8-slim-bookworm AS runtime
+FROM python:3.12.13-alpine3.24 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH=/home/app/.local/bin:$PATH
 
-RUN groupadd --gid 10001 app \
-    && useradd --no-log-init --uid 10001 --gid 10001 --create-home app
+RUN addgroup -g 10001 -S app \
+    && adduser -u 10001 -S -D -G app app
 
 WORKDIR /app
 

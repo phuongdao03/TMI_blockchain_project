@@ -51,7 +51,7 @@ blockchain access are enforced behind backend service boundaries.
 
 - Node.js `24.18.0`
 - npm `11.16.0`
-- Python `3.12.8`
+- Python `3.12.13`
 - Docker Engine with Compose
 
 Install the pinned root tooling and create a local environment file:

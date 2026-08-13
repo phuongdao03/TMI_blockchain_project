@@ -43,7 +43,7 @@ test("enables strict checks for TypeScript and Python", () => {
 
   assert.equal(tsconfig.compilerOptions.strict, true);
   assert.equal(tsconfig.compilerOptions.noEmit, true);
-  assert.match(pyproject, /requires-python = "==3\.12\.8"/);
+  assert.match(pyproject, /requires-python = "==3\.12\.13"/);
   assert.match(pyproject, /\[tool\.mypy\][\s\S]*strict = true/);
   assert.match(pyproject, /\[tool\.ruff\][\s\S]*target-version = "py312"/);
 });
