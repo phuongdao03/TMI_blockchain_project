@@ -124,6 +124,8 @@ export const documentProofScenarios = Object.freeze([
     arguments: [
       "run",
       "--rm",
+      "--user",
+      "root",
       "--entrypoint",
       "forge",
       "-v",
@@ -258,6 +260,16 @@ async function runScenario(scenario, temporaryRoot) {
     });
   } catch (error) {
     exitCode = Number.isInteger(error?.code) ? error.code : 1;
+    const output = [error?.stdout, error?.stderr]
+      .filter((value) => typeof value === "string" && value.trim())
+      .join("\n")
+      .trim();
+    if (output) {
+      const boundedOutput = output.slice(-8_192);
+      process.stderr.write(
+        `[document-proof:${scenario.id}] failed\n${boundedOutput}\n`,
+      );
+    }
   }
   return {
     id: scenario.id,

@@ -52,7 +52,9 @@ test("reviewer acknowledges conflict gate, reviews evidence and submits 5T", asy
 
   await page.getByRole("button", { name: "Tôi không có xung đột" }).click();
   await expect(page.getByText("Bằng chứng phiên bản đã khóa")).toBeVisible();
-  await expect(page.getByText("Giấy xác nhận quyền sở hữu")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Giấy xác nhận quyền sở hữu" }),
+  ).toBeVisible();
 
   const popupPromise = page.waitForEvent("popup");
   await page.getByRole("button", { name: "Xem bằng chứng" }).click();

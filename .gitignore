@@ -41,7 +41,7 @@ htmlcov/
 test-results/
 test-results-*/
 playwright-report/
-document-proof-production-evidence/
+document-proof-production-evidence*/
 __pycache__/
 *.py[cod]
 

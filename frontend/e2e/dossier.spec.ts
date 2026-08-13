@@ -65,7 +65,7 @@ test("applicant creates, uploads evidence and submits an immutable dossier", asy
       "base64",
     ),
   });
-  await page.getByRole("button", { name: "Tải lên" }).click();
+  await page.getByRole("button", { name: "Tải lên", exact: true }).click();
   await expect(page.getByText("Bản gốc nhận diện")).toBeVisible();
 
   await page.getByRole("button", { name: /Kiểm tra & nộp/ }).click();

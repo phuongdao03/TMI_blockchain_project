@@ -114,7 +114,7 @@ const initialDurableJob = {
 };
 let durableJob = { ...initialDurableJob };
 const publicWorkId = "d255dbf5-bb3e-449d-8bf0-9572cc642cac";
-let publicWork = {
+const initialPublicWork = {
   id: publicWorkId,
   dossierId,
   certificateId: "7eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
@@ -136,6 +136,7 @@ let publicWork = {
   version: 1,
   checklist: [{ code: "TITLE_REQUIRED", passed: true }],
 };
+let publicWork = { ...initialPublicWork };
 
 function envelope(data) {
   return JSON.stringify({
@@ -801,6 +802,12 @@ const server = createServer(async (request, response) => {
     paymentOrder = null;
     paymentStatusReads = 0;
     paymentScenario = "paid";
+    send(response, 200, envelope({ status: "reset" }));
+    return;
+  }
+  if (request.method === "POST" && path === "/api/e2e/reset-cms") {
+    publicWork = { ...initialPublicWork };
+    cmsPosts = [];
     send(response, 200, envelope({ status: "reset" }));
     return;
   }
@@ -1860,12 +1867,7 @@ const server = createServer(async (request, response) => {
       send(response, failure.status, failure.body);
       return;
     }
-    publicWork = {
-      ...publicWork,
-      publicationStatus: "DRAFT",
-      publishedAt: null,
-      version: 1,
-    };
+    publicWork = { ...initialPublicWork };
     send(response, 200, envelope({ user }), {
       "Set-Cookie": [
         "tmi_access=e2e-access; Path=/; HttpOnly; SameSite=Lax",

@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeEach(async ({ request }) => {
+  await request.post("http://127.0.0.1:4010/api/e2e/reset-cms");
+});
+
 test("content admin creates, previews and publishes a sanitized post", async ({
   page,
 }) => {
@@ -10,7 +14,7 @@ test("content admin creates, previews and publishes a sanitized post", async ({
     .fill("correct horse battery staple");
   await page.getByRole("button", { name: /Đăng nhập|ÄÄƒng nháº­p/ }).click();
 
-  await expect(page).toHaveURL(/\/admin\/noi-dung$/);
+  await expect(page).toHaveURL(/\/admin\/content$/);
   await page.locator("nav").getByRole("button").nth(1).click();
   await expect(
     page.getByRole("heading", { name: "Trung tâm nội dung" }),

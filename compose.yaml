@@ -158,7 +158,9 @@ services:
     networks:
       - application
     profiles: ["tools"]
-    user: "1000:1000"
+    # Ephemeral tooling writes Foundry build and deployment artifacts to the
+    # bind mount. GitHub-hosted workspaces are not writable by the image UID.
+    user: root
     volumes:
       - ./contracts:/contracts
     working_dir: /contracts

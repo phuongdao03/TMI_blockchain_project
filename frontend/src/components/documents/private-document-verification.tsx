@@ -69,7 +69,7 @@ export function PrivateDocumentVerification({ mediaId }: { mediaId: string }) {
 
   const copy = verification.data ? statusCopy[verification.data.status] : null;
   return (
-    <div className="sm:col-span-full">
+    <div className="col-span-full min-w-0">
       <div className="flex flex-wrap items-center gap-3 border-t border-neutral-100 pt-3">
         <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-lg border border-neutral-200 px-3 text-xs font-bold text-neutral-700 hover:bg-neutral-50">
           <ShieldCheck aria-hidden="true" className="size-4" />

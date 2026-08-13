@@ -69,9 +69,9 @@ jobs:
           npm --prefix contracts audit --audit-level=high
       - name: Pinned contract tests
         run: |
-          docker run --rm --entrypoint forge -v "$PWD/contracts:/workspace" -w /workspace ghcr.io/foundry-rs/foundry:v1.7.1 fmt --check
-          docker run --rm --entrypoint forge -v "$PWD/contracts:/workspace" -w /workspace ghcr.io/foundry-rs/foundry:v1.7.1 build --force
-          docker run --rm --entrypoint forge -v "$PWD/contracts:/workspace" -w /workspace ghcr.io/foundry-rs/foundry:v1.7.1 test --fuzz-runs 256
+          docker run --rm --user root --entrypoint forge -v "$PWD/contracts:/workspace" -w /workspace ghcr.io/foundry-rs/foundry:v1.7.1 fmt --check
+          docker run --rm --user root --entrypoint forge -v "$PWD/contracts:/workspace" -w /workspace ghcr.io/foundry-rs/foundry:v1.7.1 build --force
+          docker run --rm --user root --entrypoint forge -v "$PWD/contracts:/workspace" -w /workspace ghcr.io/foundry-rs/foundry:v1.7.1 test --fuzz-runs 256
           node --test contracts/scripts/export-artifacts.test.mjs
       - name: Anvil contract release smoke
         run: bash contracts/scripts/smoke-anvil.sh

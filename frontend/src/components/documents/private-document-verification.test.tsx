@@ -23,6 +23,17 @@ function renderVerification(mediaId: string) {
 }
 
 describe("PrivateDocumentVerification", () => {
+  it("occupies the full evidence grid width on narrow screens", () => {
+    const { container } = renderVerification("media-id");
+
+    expect(
+      container.firstElementChild?.classList.contains("col-span-full"),
+    ).toBe(true);
+    expect(container.firstElementChild?.classList.contains("min-w-0")).toBe(
+      true,
+    );
+  });
+
   it("explains a matching private document without exposing proof internals", async () => {
     verifyDocument.mockResolvedValue({
       status: "MATCH",
