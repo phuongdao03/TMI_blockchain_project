@@ -1,68 +1,112 @@
-# TMI Blockchain Certificate Platform
+# TMI Certificate Platform
 
-Monorepo for the TMI Group blockchain-verifiable digital asset certificate
-platform.
+[![Delivery](https://github.com/phuongdao03/TMI_blockchain_project/actions/workflows/delivery.yml/badge.svg)](https://github.com/phuongdao03/TMI_blockchain_project/actions/workflows/delivery.yml)
+[![Contract release](https://github.com/phuongdao03/TMI_blockchain_project/actions/workflows/contract-release.yml/badge.svg)](https://github.com/phuongdao03/TMI_blockchain_project/actions/workflows/contract-release.yml)
 
-## Repository layout
+TMI Certificate is a digital-asset registration and certificate platform for
+submitting evidence, conducting controlled reviews, issuing verifiable
+certificates and independently checking document integrity.
 
-- `frontend/` — Next.js web application (initialized in TASK-0005).
-- `backend/` — FastAPI modular monolith and workers (initialized in TASK-0003).
-- `contracts/` — Solidity contracts and deployment artifacts.
-- `infrastructure/` — Local and production infrastructure configuration.
+The platform uses blockchain as an immutable proof layer. Private documents,
+personal data and operational records remain in access-controlled application
+storage.
 
-Frontend code must communicate with the backend API; it must never access the
-database or blockchain directly. Backend modules use repository interfaces for
-data access and services for use-case orchestration.
+## Capabilities
 
-## Prerequisites
+- Public asset discovery and certificate verification.
+- Applicant dossier creation, evidence submission and progress tracking.
+- Reviewer and council workflows with conflict-of-interest controls.
+- Internal account provisioning through invitations and enforced MFA.
+- Payment checkout, webhook verification and reconciliation.
+- Versioned certificates, revocation and exact document-hash verification.
+- Auditable operations, durable background jobs and recovery tooling.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Browser[Next.js web application] --> API[FastAPI application]
+    API --> PostgreSQL[(PostgreSQL)]
+    API --> Redis[(Redis)]
+    API --> Storage[Object storage]
+    API --> Queue[Durable job queue]
+    Queue --> Workers[Background workers]
+    Workers --> Chain[Blockchain proof layer]
+    Workers --> Providers[External providers]
+```
+
+| Area              | Technology                            | Responsibility                                         |
+| ----------------- | ------------------------------------- | ------------------------------------------------------ |
+| `frontend/`       | Next.js, React, TypeScript            | Public, applicant and operations experiences           |
+| `backend/`        | FastAPI, SQLAlchemy, Celery           | API, authorization, workflows and workers              |
+| `contracts/`      | Solidity, Foundry                     | Certificate and document-proof commitments             |
+| `infrastructure/` | Docker Compose, Nginx, GitHub Actions | Local stack, delivery, rollback and operational checks |
+
+The browser communicates only with the backend API. Database, provider and
+blockchain access are enforced behind backend service boundaries.
+
+## Local development
+
+### Requirements
 
 - Node.js `24.18.0`
 - npm `11.16.0`
 - Python `3.12.8`
+- Docker Engine with Compose
 
-The exact versions are recorded in `.nvmrc`, `.node-version`, `.python-version`,
-and `package.json`.
+Install the pinned root tooling and create a local environment file:
 
-## Local setup
-
-Install the pinned root tooling from a clean checkout:
-
-```bash
+```powershell
 npm ci
+Copy-Item .env.example .env
 ```
 
-Run the repository quality gates:
+Start the complete local stack on Windows:
 
-```bash
+```powershell
+npm run local:bootstrap
+```
+
+The application is available at:
+
+- Web: `http://localhost:3000`
+- API readiness: `http://localhost:8000/ready`
+- Mail preview: `http://localhost:8025`
+
+Run the end-to-end local smoke check or stop the stack:
+
+```powershell
+npm run local:smoke
+npm run local:down
+```
+
+## Quality gates
+
+```powershell
+npm run format:check
 npm run lint
 npm run typecheck
 npm test
+npm run gate:document-proof
 ```
 
-Use `npm run format` to apply formatting.
+Delivery workflows additionally enforce secret scanning, migrations, browser
+journeys, container builds and immutable release artifacts.
 
-## Local containers
+## Configuration and security
 
-Copy the environment contract, then start the currently executable local stack:
+- Copy `.env.example` only for local development.
+- Use environment-scoped secret management for staging and production.
+- Never commit `.env` files, private keys, provider credentials, service-account
+  files, certificates or generated evidence.
+- Production configuration fails closed when encryption, MFA, payment or managed
+  blockchain-signer requirements are absent.
 
-```bash
-cp .env.example .env
-docker compose up --build
-```
+Report suspected vulnerabilities through a private GitHub Security Advisory. Do
+not disclose security issues in public discussions or issues.
 
-This starts the backend API, Celery worker and scheduler, Redis, and Anvil.
-Check container state with `docker compose ps`; the backend is ready when
-`http://localhost:8000/ready` returns HTTP 200. Stop and remove containers with
-`docker compose down`.
+## Project status
 
-The `frontend` and `nginx` services are isolated in the `frontend` profile until
-TASK-0005 creates the Next.js application. After that task:
-
-```bash
-docker compose --profile frontend up --build
-```
-
-Local hot reload is enabled only for the application source bind mounts.
-
-Never commit `.env` files, private keys, certificates, tokens, or generated
-build output.
+The repository is under active development. Local and automated quality gates
+are available; production deployment requires separately approved provider,
+infrastructure and operational-readiness evidence.
