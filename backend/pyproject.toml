@@ -37,7 +37,7 @@ dev = [
   "ruff==0.16.0",
   "types-PyYAML==6.0.12.20260518",
   "types-qrcode==8.2.0.20260518",
-  "types-reportlab==4.5.1.20260712",
+  "types-reportlab==4.5.1.20260728",
 ]
 
 [tool.hatch.build.targets.wheel]
