@@ -196,10 +196,7 @@ def test_admin_assigns_active_reviewers_and_emits_encrypted_events() -> None:
             )
             assert assignment_count == 2
             assert event_count == 2
-            assert (
-                await session.scalar(select(func.count()).select_from(AuditLog))
-                == 1
-            )
+            assert await session.scalar(select(func.count()).select_from(AuditLog)) == 1
 
         await service.close()
         await engine.dispose()
@@ -231,13 +228,9 @@ def test_assignment_and_outbox_roll_back_when_audit_fails(
                 == 0
             )
             assert (
-                await session.scalar(select(func.count()).select_from(OutboxEvent))
-                == 0
+                await session.scalar(select(func.count()).select_from(OutboxEvent)) == 0
             )
-            assert (
-                await session.scalar(select(func.count()).select_from(AuditLog))
-                == 0
-            )
+            assert await session.scalar(select(func.count()).select_from(AuditLog)) == 0
 
         await service.close()
         await engine.dispose()

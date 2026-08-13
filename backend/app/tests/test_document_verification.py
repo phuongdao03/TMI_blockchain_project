@@ -75,9 +75,7 @@ def _principal(user_id: UUID | None = None) -> AuthPrincipal:
 def _reference(*, owner_user_id: UUID | None = None) -> DocumentProofReference:
     claim_id = uuid4()
     recorded_at = datetime(2026, 8, 12, 8, 0, tzinfo=UTC)
-    expected_sha256 = (
-        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
-    )
+    expected_sha256 = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
     proof = build_document_evidence_commitment(
         document_claim_id=claim_id,
         document_sha256=expected_sha256,

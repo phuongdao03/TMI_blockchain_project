@@ -279,9 +279,9 @@ def test_signed_upload_completion_delivery_and_delete() -> None:
             assert asset.deleted_at.replace(tzinfo=UTC) == NOW
             audit_actions = (
                 await session.scalars(
-                    select(AuditLog.action).where(
-                        AuditLog.resource_id == str(issued.media_id)
-                    ).order_by(AuditLog.created_at)
+                    select(AuditLog.action)
+                    .where(AuditLog.resource_id == str(issued.media_id))
+                    .order_by(AuditLog.created_at)
                 )
             ).all()
             assert audit_actions == [

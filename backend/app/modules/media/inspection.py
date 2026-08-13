@@ -191,9 +191,7 @@ class MediaInspectionPolicy:
     @staticmethod
     def _mpeg_audio(content: bytes) -> bool:
         return content.startswith(b"ID3") or (
-            len(content) >= 2
-            and content[0] == 0xFF
-            and content[1] & 0xE0 == 0xE0
+            len(content) >= 2 and content[0] == 0xFF and content[1] & 0xE0 == 0xE0
         )
 
     @staticmethod

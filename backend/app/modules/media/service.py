@@ -436,9 +436,7 @@ class MediaService:
         suffixes = [suffix.lower() for suffix in PurePath(intent.filename).suffixes]
         if not suffixes or suffixes[-1] not in policy.extensions:
             raise MediaValidationError("Filename extension does not match MIME type.")
-        if any(
-            suffix in _DANGEROUS_INNER_EXTENSIONS for suffix in suffixes[:-1]
-        ):
+        if any(suffix in _DANGEROUS_INNER_EXTENSIONS for suffix in suffixes[:-1]):
             raise MediaValidationError("Filename is not allowed.")
         return policy
 

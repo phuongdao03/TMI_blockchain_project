@@ -199,8 +199,7 @@ class StaffInvitationService:
                 invitation = await self._session.scalar(
                     select(StaffInvitation)
                     .where(
-                        StaffInvitation.token_hash
-                        == hash_verification_token(raw_token)
+                        StaffInvitation.token_hash == hash_verification_token(raw_token)
                     )
                     .with_for_update()
                 )
@@ -239,9 +238,7 @@ class StaffInvitationService:
                         last_login_at=now,
                     )
                 )
-                self._auth.add_user_role(
-                    UserRole(user_id=user.id, role_id=role.id)
-                )
+                self._auth.add_user_role(UserRole(user_id=user.id, role_id=role.id))
                 if invitation.organization_id is not None:
                     self._session.add(
                         OrganizationMember(

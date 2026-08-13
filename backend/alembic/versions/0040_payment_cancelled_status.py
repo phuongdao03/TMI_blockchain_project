@@ -50,8 +50,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute(
         sa.text(
-            "UPDATE payment_orders SET status = 'FAILED' "
-            "WHERE status = 'CANCELLED'"
+            "UPDATE payment_orders SET status = 'FAILED' WHERE status = 'CANCELLED'"
         )
     )
     with op.batch_alter_table("payment_orders") as batch:

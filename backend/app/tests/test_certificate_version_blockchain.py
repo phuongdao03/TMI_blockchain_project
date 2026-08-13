@@ -291,8 +291,7 @@ def test_update_anchor_is_idempotent_and_promotes_only_after_confirmation() -> N
             request_audits = (
                 await check.scalars(
                     select(AuditLog).where(
-                        AuditLog.action
-                        == "blockchain.certificate_update.requested"
+                        AuditLog.action == "blockchain.certificate_update.requested"
                     )
                 )
             ).all()
@@ -368,8 +367,7 @@ def test_revocation_becomes_effective_only_after_confirmation() -> None:
             request_audits = (
                 await check.scalars(
                     select(AuditLog).where(
-                        AuditLog.action
-                        == "blockchain.certificate_revocation.requested"
+                        AuditLog.action == "blockchain.certificate_revocation.requested"
                     )
                 )
             ).all()

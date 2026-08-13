@@ -4,6 +4,10 @@ set -euo pipefail
 repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repository_root"
 
+# Compose validates required variables for every service, even when only the
+# local Anvil services are selected. Keep this smoke test self-contained.
+export PAYMENT_PROVIDER="${PAYMENT_PROVIDER:-mock}"
+
 cleanup() {
   docker compose stop anvil >/dev/null 2>&1 || true
 }

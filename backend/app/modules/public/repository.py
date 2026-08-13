@@ -127,8 +127,7 @@ class PublicRepository:
                         CertificateVersionStatus.REVOKED,
                     )
                 ),
-                BlockchainTransaction.status
-                == BlockchainTransactionStatus.CONFIRMED,
+                BlockchainTransaction.status == BlockchainTransactionStatus.CONFIRMED,
             )
             .order_by(CertificateVersion.version_no.desc())
         )
@@ -187,9 +186,7 @@ class PublicRepository:
             ),
             dossier_code=dossier.code,
             block_number=(
-                transaction.receipt_block_number
-                if transaction is not None
-                else None
+                transaction.receipt_block_number if transaction is not None else None
             ),
         )
 

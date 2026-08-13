@@ -38,18 +38,13 @@ def test_staff_accounts_can_only_be_provisioned_through_invitations() -> None:
     assert "post" in paths["/api/v1/admin/staff-invitations"]
     assert "post" in paths["/api/v1/auth/staff-invitations/accept"]
     assert "post" in paths["/api/v1/auth/staff-mfa/recovery/authorize"]
-    assert "post" in paths[
-        "/api/v1/admin/staff-accounts/{user_id}/mfa-recovery"
-    ]
-    assert "post" in paths[
-        "/api/v1/admin/staff-accounts/{user_id}/privileged-actions"
-    ]
-    assert "get" in paths[
-        "/api/v1/admin/staff-accounts/privileged-actions/pending"
-    ]
-    assert "post" in paths[
-        "/api/v1/admin/staff-accounts/privileged-actions/{action_id}/approve"
-    ]
+    assert "post" in paths["/api/v1/admin/staff-accounts/{user_id}/mfa-recovery"]
+    assert "post" in paths["/api/v1/admin/staff-accounts/{user_id}/privileged-actions"]
+    assert "get" in paths["/api/v1/admin/staff-accounts/privileged-actions/pending"]
+    assert (
+        "post"
+        in paths["/api/v1/admin/staff-accounts/privileged-actions/{action_id}/approve"]
+    )
 
 
 def _admin() -> AuthPrincipal:
@@ -113,9 +108,7 @@ def test_invitation_is_single_use_email_bound_and_idempotently_resendable(
             assert stored.email == "reviewer@example.com"
             assert "LocalOnly" not in stored.token_hash
             event = await session.scalar(
-                select(OutboxEvent).where(
-                    OutboxEvent.aggregate_id == invitation.id
-                )
+                select(OutboxEvent).where(OutboxEvent.aggregate_id == invitation.id)
             )
             assert event is not None
             payload = cipher.decrypt(
@@ -263,9 +256,7 @@ def test_invitation_is_single_use_email_bound_and_idempotently_resendable(
                 user_agent="test",
             )
             expired_event = await session.scalar(
-                select(OutboxEvent).where(
-                    OutboxEvent.aggregate_id == expired.id
-                )
+                select(OutboxEvent).where(OutboxEvent.aggregate_id == expired.id)
             )
             assert expired_event is not None
             expired_token = json.loads(
@@ -304,9 +295,7 @@ def test_invitation_is_single_use_email_bound_and_idempotently_resendable(
 )
 def test_concurrent_acceptance_creates_exactly_one_staff_account() -> None:
     async def scenario() -> None:
-        engine = create_async_engine(
-            os.environ["STAFF_INVITATION_POSTGRES_TEST_URL"]
-        )
+        engine = create_async_engine(os.environ["STAFF_INVITATION_POSTGRES_TEST_URL"])
         factory = async_sessionmaker(engine, expire_on_commit=False)
         email = f"concurrent-{uuid4().hex}@example.com"
         cipher = OutboxPayloadCipher.from_base64(
@@ -342,9 +331,7 @@ def test_concurrent_acceptance_creates_exactly_one_staff_account() -> None:
                 )
                 invitation_id = invitation.id
                 event = await session.scalar(
-                    select(OutboxEvent).where(
-                        OutboxEvent.aggregate_id == invitation.id
-                    )
+                    select(OutboxEvent).where(OutboxEvent.aggregate_id == invitation.id)
                 )
                 assert event is not None
                 token = json.loads(

@@ -278,11 +278,16 @@ def test_private_encryption_retry_reuses_ciphertext_after_delete_failure() -> No
             status=UserStatus.ACTIVE,
         )
         media = MediaAsset(
-            id=uuid4(), owner_user_id=owner.id,
-            cloudinary_public_id="private/retry-staging", cloudinary_version=1,
-            resource_type="image", access_mode="authenticated",
-            original_filename="retry.png", mime_type="image/png",
-            bytes=len(PNG), confidentiality=MediaConfidentiality.PRIVATE,
+            id=uuid4(),
+            owner_user_id=owner.id,
+            cloudinary_public_id="private/retry-staging",
+            cloudinary_version=1,
+            resource_type="image",
+            access_mode="authenticated",
+            original_filename="retry.png",
+            mime_type="image/png",
+            bytes=len(PNG),
+            confidentiality=MediaConfidentiality.PRIVATE,
             status=MediaStatus.QUARANTINED,
         )
         async with sessions() as session:
@@ -296,9 +301,12 @@ def test_private_encryption_retry_reuses_ciphertext_after_delete_failure() -> No
 
         async with sessions() as session:
             service = MediaInspectionService(
-                session=session, gateway=gateway,
-                scanner=StubScanner(MalwareScanResult.clean()), max_attempts=3,
-                encryption_keyring=keyring, private_encryption_required=True,
+                session=session,
+                gateway=gateway,
+                scanner=StubScanner(MalwareScanResult.clean()),
+                max_attempts=3,
+                encryption_keyring=keyring,
+                private_encryption_required=True,
                 clock=lambda: NOW,
             )
             with pytest.raises(InspectionUnavailableError):
@@ -311,9 +319,12 @@ def test_private_encryption_retry_reuses_ciphertext_after_delete_failure() -> No
 
         async with sessions() as session:
             service = MediaInspectionService(
-                session=session, gateway=gateway,
-                scanner=StubScanner(MalwareScanResult.clean()), max_attempts=3,
-                encryption_keyring=keyring, private_encryption_required=True,
+                session=session,
+                gateway=gateway,
+                scanner=StubScanner(MalwareScanResult.clean()),
+                max_attempts=3,
+                encryption_keyring=keyring,
+                private_encryption_required=True,
                 clock=lambda: NOW,
             )
             await service.inspect(media.id)
@@ -461,18 +472,28 @@ def test_malware_is_permanently_rejected_and_scanner_outage_stays_quarantined() 
             status=UserStatus.ACTIVE,
         )
         infected = MediaAsset(
-            id=uuid4(), owner_user_id=owner.id,
-            cloudinary_public_id="private/infected", cloudinary_version=1,
-            resource_type="image", access_mode="authenticated",
-            original_filename="infected.png", mime_type="image/png",
-            bytes=len(PNG), status=MediaStatus.QUARANTINED,
+            id=uuid4(),
+            owner_user_id=owner.id,
+            cloudinary_public_id="private/infected",
+            cloudinary_version=1,
+            resource_type="image",
+            access_mode="authenticated",
+            original_filename="infected.png",
+            mime_type="image/png",
+            bytes=len(PNG),
+            status=MediaStatus.QUARANTINED,
         )
         unavailable = MediaAsset(
-            id=uuid4(), owner_user_id=owner.id,
-            cloudinary_public_id="private/unavailable", cloudinary_version=1,
-            resource_type="image", access_mode="authenticated",
-            original_filename="retry.png", mime_type="image/png",
-            bytes=len(PNG), status=MediaStatus.QUARANTINED,
+            id=uuid4(),
+            owner_user_id=owner.id,
+            cloudinary_public_id="private/unavailable",
+            cloudinary_version=1,
+            resource_type="image",
+            access_mode="authenticated",
+            original_filename="retry.png",
+            mime_type="image/png",
+            bytes=len(PNG),
+            status=MediaStatus.QUARANTINED,
         )
         async with sessions() as session:
             session.add_all((owner, infected, unavailable))

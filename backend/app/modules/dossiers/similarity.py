@@ -75,6 +75,5 @@ def _character_ngrams(value: str, *, size: int = 3) -> frozenset[str]:
         return frozenset()
     padded = f"  {value}  "
     return frozenset(
-        padded[index : index + size]
-        for index in range(len(padded) - size + 1)
+        padded[index : index + size] for index in range(len(padded) - size + 1)
     )

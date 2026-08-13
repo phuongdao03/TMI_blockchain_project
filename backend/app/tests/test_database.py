@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import DateTime
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import Mapped, mapped_column
@@ -93,7 +94,6 @@ def test_baseline_migration_upgrades_and_downgrades(
     monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://runtime.invalid/app")
     monkeypatch.setenv("DATABASE_DIRECT_URL", direct_url)
     get_settings.cache_clear()
-
     config = Config(BACKEND_ROOT / "alembic.ini")
     command.upgrade(config, "0001_baseline")
 
@@ -112,3 +112,14 @@ def test_baseline_migration_upgrades_and_downgrades(
     assert revisions == []
 
     get_settings.cache_clear()
+
+
+def test_revision_ids_fit_alembic_version_column() -> None:
+    config = Config(BACKEND_ROOT / "alembic.ini")
+    revisions = ScriptDirectory.from_config(config).walk_revisions()
+
+    oversized = [
+        revision.revision for revision in revisions if len(revision.revision) > 32
+    ]
+
+    assert oversized == []

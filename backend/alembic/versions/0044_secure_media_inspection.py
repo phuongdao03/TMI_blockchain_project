@@ -55,8 +55,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute(
         sa.text(
-            "UPDATE media_assets SET status = 'QUARANTINED' "
-            "WHERE status = 'REJECTED'"
+            "UPDATE media_assets SET status = 'QUARANTINED' WHERE status = 'REJECTED'"
         )
     )
     with op.batch_alter_table("media_assets") as batch_op:

@@ -80,9 +80,10 @@ class CertificateVersionService:
                     raise CertificateConflictError(
                         "Only an active certificate can be corrected."
                     )
-                if await self._certificates.get_open_version_request(
-                    certificate_id
-                ) is not None:
+                if (
+                    await self._certificates.get_open_version_request(certificate_id)
+                    is not None
+                ):
                     raise CertificateConflictError(
                         "A certificate correction is already being processed."
                     )
@@ -225,9 +226,7 @@ class CertificateVersionService:
                 )
             if version.requested_by == principal.user_id:
                 raise CertificateForbiddenError()
-            was_pending = (
-                version.status is CertificateVersionStatus.PENDING_APPROVAL
-            )
+            was_pending = version.status is CertificateVersionStatus.PENDING_APPROVAL
         if self._blockchain is None:
             raise CertificateConflictError("Blockchain service is unavailable.")
         await self._blockchain.request_certificate_update_anchor(

@@ -54,7 +54,9 @@ def _gateway(handler: httpx.MockTransport) -> PayOSGateway:
         checksum_key=CHECKSUM,
         return_url="https://app.example/payments/return",
         cancel_url="https://app.example/payments/cancel",
-        client=httpx.AsyncClient(transport=handler, base_url="https://api-merchant.payos.vn"),
+        client=httpx.AsyncClient(
+            transport=handler, base_url="https://api-merchant.payos.vn"
+        ),
     )
 
 

@@ -116,8 +116,8 @@ class BlockchainTransactionService:
         self._enqueue_certificate_issue = enqueue_certificate_issue
         self._enqueue_certificate_version = enqueue_certificate_version
         self._clock = clock or (lambda: datetime.now(UTC))
-        self._submitter_reference_factory = (
-            submitter_reference_factory or (lambda: secrets.token_hex(32))
+        self._submitter_reference_factory = submitter_reference_factory or (
+            lambda: secrets.token_hex(32)
         )
         self._transactions = BlockchainTransactionRepository(session)
         self._audit_service = AuditService(session)
@@ -250,9 +250,7 @@ class BlockchainTransactionService:
             if predecessor_evidence_id is not None:
                 predecessor = await self._session.scalar(
                     select(DocumentBlockchainEvidence)
-                    .where(
-                        DocumentBlockchainEvidence.id == predecessor_evidence_id
-                    )
+                    .where(DocumentBlockchainEvidence.id == predecessor_evidence_id)
                     .with_for_update()
                 )
                 if (
@@ -343,9 +341,7 @@ class BlockchainTransactionService:
             claim_ids = tuple(
                 await self._session.scalars(
                     select(DocumentHashClaim.id)
-                    .where(
-                        DocumentHashClaim.dossier_version_id == dossier_version_id
-                    )
+                    .where(DocumentHashClaim.dossier_version_id == dossier_version_id)
                     .order_by(DocumentHashClaim.claimed_at, DocumentHashClaim.id)
                 )
             )
@@ -493,9 +489,7 @@ class BlockchainTransactionService:
                 version.dossier_version_id,
             )
             if dossier_version is None:
-                raise BlockchainConflictError(
-                    "Dossier version context is unavailable."
-                )
+                raise BlockchainConflictError("Dossier version context is unavailable.")
             evidence_rows = await self._dossiers.list_evidences(
                 certificate.dossier_id,
                 version_id=dossier_version.id,
@@ -827,9 +821,7 @@ class BlockchainTransactionService:
                         actor_service="blockchain-confirmation-worker",
                     )
                 return
-            canonical_block_hash = await self._gateway.block_hash(
-                receipt.block_number
-            )
+            canonical_block_hash = await self._gateway.block_hash(receipt.block_number)
             if canonical_block_hash.lower() != receipt.block_hash.lower():
                 await self._record_reconciliation_mismatch(
                     transaction_id,
@@ -1031,8 +1023,7 @@ class BlockchainTransactionService:
             if transaction.method == "updateCertificate":
                 version = await self._session.scalar(
                     select(CertificateVersion).where(
-                        CertificateVersion.blockchain_transaction_id
-                        == transaction.id
+                        CertificateVersion.blockchain_transaction_id == transaction.id
                     )
                 )
                 if (
@@ -1240,8 +1231,7 @@ class BlockchainTransactionService:
             if transaction.method == "updateCertificate":
                 version = await self._session.scalar(
                     select(CertificateVersion).where(
-                        CertificateVersion.blockchain_transaction_id
-                        == transaction.id
+                        CertificateVersion.blockchain_transaction_id == transaction.id
                     )
                 )
                 if (
@@ -1315,9 +1305,7 @@ class BlockchainTransactionService:
         transaction: BlockchainTransaction,
     ) -> None:
         if transaction.certificate_id is None:
-            raise BlockchainConflictError(
-                "Revoked certificate context is unavailable."
-            )
+            raise BlockchainConflictError("Revoked certificate context is unavailable.")
         certificate = await self._session.scalar(
             select(Certificate)
             .where(Certificate.id == transaction.certificate_id)
@@ -1325,9 +1313,7 @@ class BlockchainTransactionService:
             .execution_options(populate_existing=True)
         )
         if certificate is None:
-            raise BlockchainConflictError(
-                "Revoked certificate context is unavailable."
-            )
+            raise BlockchainConflictError("Revoked certificate context is unavailable.")
         version = await self._session.scalar(
             select(CertificateVersion)
             .where(

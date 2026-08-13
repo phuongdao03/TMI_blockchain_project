@@ -141,9 +141,7 @@ def upgrade() -> None:
     ).scalar_one_or_none()
     if permission_id is None:
         permission_id = uuid4()
-        bind.execute(
-            permissions.insert().values(id=permission_id, code=PERMISSION)
-        )
+        bind.execute(permissions.insert().values(id=permission_id, code=PERMISSION))
     reviewer_id = bind.execute(
         sa.select(roles.c.id).where(roles.c.code == "REVIEWER")
     ).scalar_one_or_none()
@@ -171,9 +169,7 @@ def downgrade() -> None:
         sa.select(permissions.c.id).where(permissions.c.code == PERMISSION)
     ).scalar_one_or_none()
     if permission_id is not None:
-        bind.execute(
-            mappings.delete().where(mappings.c.permission_id == permission_id)
-        )
+        bind.execute(mappings.delete().where(mappings.c.permission_id == permission_id))
         bind.execute(permissions.delete().where(permissions.c.id == permission_id))
     op.drop_index(
         "ix_similarity_cases_status_created",

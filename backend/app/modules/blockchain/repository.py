@@ -110,9 +110,7 @@ class BlockchainTransactionRepository:
         int,
     ]:
         condition = (
-            DocumentBlockchainEvidence.status == status
-            if status is not None
-            else None
+            DocumentBlockchainEvidence.status == status if status is not None else None
         )
         query = (
             select(DocumentBlockchainEvidence, BlockchainTransaction)

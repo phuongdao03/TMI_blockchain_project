@@ -56,7 +56,7 @@ def test_authorization_permission_catalog_migration_is_reversible(
         (role, permission) for permission, roles in expected.items() for role in roles
     }
 
-    command.downgrade(config, "0041_blockchain_receipt_provenance")
+    command.downgrade(config, "0041_blockchain_receipt_proof")
     with sqlite3.connect(database_path) as connection:
         remaining = connection.execute(
             "SELECT count(*) FROM permissions WHERE code IN ("

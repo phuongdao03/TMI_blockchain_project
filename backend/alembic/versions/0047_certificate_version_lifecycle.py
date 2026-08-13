@@ -1,6 +1,6 @@
 """Add immutable certificate version lifecycle metadata.
 
-Revision ID: 0047_certificate_version_lifecycle
+Revision ID: 0047_certificate_versioning
 Revises: 0046_similarity_review_cases
 Create Date: 2026-08-11
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0047_certificate_version_lifecycle"
+revision: str = "0047_certificate_versioning"
 down_revision: str | None = "0046_similarity_review_cases"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

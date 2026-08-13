@@ -134,9 +134,7 @@ def _seed_approval_permission() -> None:
         bind.execute(
             permissions.insert(), {"id": permission_id, "code": APPROVE_PERMISSION}
         )
-    role_id = bind.scalar(
-        sa.select(roles.c.id).where(roles.c.code == "SUPER_ADMIN")
-    )
+    role_id = bind.scalar(sa.select(roles.c.id).where(roles.c.code == "SUPER_ADMIN"))
     if role_id is not None:
         existing = bind.scalar(
             sa.select(mappings.c.role_id).where(
@@ -165,12 +163,8 @@ def downgrade() -> None:
         sa.select(permissions.c.id).where(permissions.c.code == APPROVE_PERMISSION)
     )
     if permission_id is not None:
-        bind.execute(
-            mappings.delete().where(mappings.c.permission_id == permission_id)
-        )
-        bind.execute(
-            permissions.delete().where(permissions.c.id == permission_id)
-        )
+        bind.execute(mappings.delete().where(mappings.c.permission_id == permission_id))
+        bind.execute(permissions.delete().where(permissions.c.id == permission_id))
     op.drop_index(
         "uq_privileged_actions_pending_target_type",
         table_name="privileged_actions",

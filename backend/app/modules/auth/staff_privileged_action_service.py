@@ -89,10 +89,15 @@ class StaffPrivilegedActionService:
                 target = await self._repository.get_user_by_id_for_update(
                     target_user_id
                 )
-                if target is None or target.status not in {
-                    UserStatus.ACTIVE,
-                    UserStatus.SUSPENDED,
-                } or target.disabled_at is not None:
+                if (
+                    target is None
+                    or target.status
+                    not in {
+                        UserStatus.ACTIVE,
+                        UserStatus.SUSPENDED,
+                    }
+                    or target.disabled_at is not None
+                ):
                     raise DomainError(
                         code="STAFF_ACCOUNT_NOT_MANAGEABLE",
                         message="The staff account cannot be changed.",

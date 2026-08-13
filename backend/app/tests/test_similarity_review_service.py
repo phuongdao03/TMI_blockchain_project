@@ -46,27 +46,38 @@ def test_similarity_case_assignment_resolution_authorization_and_audit() -> None
             await connection.run_sync(Base.metadata.create_all)
 
         admin = User(
-            id=uuid4(), email="admin@tmigroup.vn",
-            password_hash="unused", status=UserStatus.ACTIVE,
+            id=uuid4(),
+            email="admin@tmigroup.vn",
+            password_hash="unused",
+            status=UserStatus.ACTIVE,
         )
         reviewer = User(
-            id=uuid4(), email="reviewer@tmigroup.vn",
-            password_hash="unused", status=UserStatus.ACTIVE,
+            id=uuid4(),
+            email="reviewer@tmigroup.vn",
+            password_hash="unused",
+            status=UserStatus.ACTIVE,
         )
         outsider = User(
-            id=uuid4(), email="outsider@tmigroup.vn",
-            password_hash="unused", status=UserStatus.ACTIVE,
+            id=uuid4(),
+            email="outsider@tmigroup.vn",
+            password_hash="unused",
+            status=UserStatus.ACTIVE,
         )
         category = Category(id=uuid4(), code="ART", name="Artwork")
         versions: list[DossierVersion] = []
         rows: list[object] = [admin, reviewer, outsider, category]
         for index, owner in enumerate((admin, outsider), start=1):
             dossier = Dossier(
-                id=uuid4(), code=f"DOS-{index}", owner_user_id=owner.id,
-                category_id=category.id, title=f"Artwork {index}",
+                id=uuid4(),
+                code=f"DOS-{index}",
+                owner_user_id=owner.id,
+                category_id=category.id,
+                title=f"Artwork {index}",
             )
             version = DossierVersion(
-                id=uuid4(), dossier_id=dossier.id, version_no=1,
+                id=uuid4(),
+                dossier_id=dossier.id,
+                version_no=1,
                 snapshot_json={
                     "schemaVersion": 1,
                     "dossier": {"code": dossier.code, "title": dossier.title},
@@ -104,8 +115,7 @@ def test_similarity_case_assignment_resolution_authorization_and_audit() -> None
         assert replay.id == created.id
         assert created.status is SimilarityCaseStatus.OPEN
         assert (
-            created.left_dossier_version_id.int
-            < created.right_dossier_version_id.int
+            created.left_dossier_version_id.int < created.right_dossier_version_id.int
         )
 
         admin_page = await service.list_admin_cases(
@@ -174,16 +184,12 @@ def test_similarity_case_assignment_resolution_authorization_and_audit() -> None
                 reason="A resolved disposition cannot be silently replaced later.",
             )
         async with sessions() as session:
-            actions = tuple(
-                (await session.scalars(select(AuditLog.action))).all()
-            )
+            actions = tuple((await session.scalars(select(AuditLog.action))).all())
             assert actions == (
                 "similarity.case.assigned",
                 "similarity.case.resolved",
             )
-            assert await session.scalar(
-                select(func.count()).select_from(AuditLog)
-            ) == 2
+            assert await session.scalar(select(func.count()).select_from(AuditLog)) == 2
 
         await service.close()
         await engine.dispose()

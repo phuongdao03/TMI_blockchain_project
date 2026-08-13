@@ -52,9 +52,7 @@ async def _inspect(media_id: UUID) -> None:
                 scanner=scanner,
                 max_attempts=settings.media_inspection_max_attempts,
                 encryption_keyring=_document_keyring(),
-                private_encryption_required=(
-                    settings.media_private_encryption_enabled
-                ),
+                private_encryption_required=(settings.media_private_encryption_enabled),
             )
             await service.inspect(media_id)
     finally:
@@ -83,9 +81,7 @@ async def _reverify(media_id: UUID) -> None:
                 scanner=scanner,
                 max_attempts=settings.media_inspection_max_attempts,
                 encryption_keyring=_document_keyring(),
-                private_encryption_required=(
-                    settings.media_private_encryption_enabled
-                ),
+                private_encryption_required=(settings.media_private_encryption_enabled),
             )
             await service.reverify(media_id)
     finally:

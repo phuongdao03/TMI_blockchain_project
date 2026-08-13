@@ -37,8 +37,7 @@ def version_has_trusted_provenance(
             or snapshot_media.get("hashByteLength") != media.hash_byte_length
             or snapshot_media.get("inspectionPolicyVersion")
             != media.inspection_policy_version
-            or snapshot_media.get("storageObjectVersion")
-            != media.hash_storage_version
+            or snapshot_media.get("storageObjectVersion") != media.hash_storage_version
         ):
             return False
     return True

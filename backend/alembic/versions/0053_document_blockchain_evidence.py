@@ -1,6 +1,6 @@
 """Add document-level blockchain evidence.
 
-Revision ID: 0053_document_blockchain_evidence
+Revision ID: 0053_document_chain_evidence
 Revises: 0052_document_hash_claims
 Create Date: 2026-08-12
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0053_document_blockchain_evidence"
+revision: str = "0053_document_chain_evidence"
 down_revision: str | None = "0052_document_hash_claims"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

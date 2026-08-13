@@ -47,8 +47,7 @@ class ReviewRepository:
             await self._session.scalar(
                 select(SimilarityReviewCase).where(
                     SimilarityReviewCase.left_dossier_version_id == left_version_id,
-                    SimilarityReviewCase.right_dossier_version_id
-                    == right_version_id,
+                    SimilarityReviewCase.right_dossier_version_id == right_version_id,
                     SimilarityReviewCase.signal_type == signal_type,
                     SimilarityReviewCase.policy_version == policy_version,
                 )

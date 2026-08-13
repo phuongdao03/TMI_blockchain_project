@@ -246,12 +246,8 @@ def test_reviewer_conflict_gate_draft_and_immutable_submit() -> None:
                 "review.draft_saved",
                 "review.submitted",
             ]
-            assert all(
-                row.actor_user_id == users["reviewer"].id for row in audit_rows
-            )
-            assert all(
-                row.resource_type == "review_assignment" for row in audit_rows
-            )
+            assert all(row.actor_user_id == users["reviewer"].id for row in audit_rows)
+            assert all(row.resource_type == "review_assignment" for row in audit_rows)
             assert all(row.resource_id == str(assignment.id) for row in audit_rows)
 
         await service.close()

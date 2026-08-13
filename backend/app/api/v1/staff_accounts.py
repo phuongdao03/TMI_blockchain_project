@@ -183,9 +183,9 @@ async def list_pending_staff_privileged_actions(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
 ) -> PaginatedSuccessEnvelope[list[PrivilegedActionData]]:
-    rows, total = await StaffPrivilegedActionService(
-        session=session
-    ).list_pending(principal=principal, page=page, page_size=page_size)
+    rows, total = await StaffPrivilegedActionService(session=session).list_pending(
+        principal=principal, page=page, page_size=page_size
+    )
     return PaginatedSuccessEnvelope(
         data=rows,
         meta=ListResponseMeta(

@@ -161,8 +161,7 @@ class SqlDocumentProofRepository:
         if predecessor_evidence_id is None:
             return None
         predecessor = await self._session.scalar(
-            select(DocumentBlockchainEvidence.evidence_key)
-            .where(
+            select(DocumentBlockchainEvidence.evidence_key).where(
                 DocumentBlockchainEvidence.id == predecessor_evidence_id
             )
         )

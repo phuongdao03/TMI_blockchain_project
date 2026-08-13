@@ -147,8 +147,7 @@ def test_payment_api_create_get_and_preserve_raw_webhook_body() -> None:
     fetched_by_provider = asyncio.run(
         _request(
             "GET",
-            "/api/v1/payment-orders/by-provider-reference"
-            "?providerOrderId=mock-order",
+            "/api/v1/payment-orders/by-provider-reference?providerOrderId=mock-order",
             service,
         )
     )

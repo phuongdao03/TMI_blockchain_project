@@ -100,9 +100,7 @@ async def _seed_claim_context(
 
 def test_claim_is_idempotent_and_same_scope_can_reuse_exact_bytes() -> None:
     async def exercise() -> None:
-        engine, sessions, dossiers, versions, media_assets = (
-            await _seed_claim_context()
-        )
+        engine, sessions, dossiers, versions, media_assets = await _seed_claim_context()
         async with sessions() as session:
             service = DocumentHashClaimService(session=session)
             async with session.begin():
@@ -140,9 +138,7 @@ def test_claim_is_idempotent_and_same_scope_can_reuse_exact_bytes() -> None:
 
 def test_cross_scope_collision_is_privacy_safe() -> None:
     async def exercise() -> None:
-        engine, sessions, dossiers, versions, media_assets = (
-            await _seed_claim_context()
-        )
+        engine, sessions, dossiers, versions, media_assets = await _seed_claim_context()
         async with sessions() as session:
             service = DocumentHashClaimService(session=session)
             async with session.begin():
@@ -178,10 +174,8 @@ def test_concurrent_cross_scope_claims_have_one_deterministic_winner(
 ) -> None:
     async def exercise() -> None:
         database_path = tmp_path / "concurrent-document-claims.sqlite3"
-        engine, sessions, dossiers, versions, media_assets = (
-            await _seed_claim_context(
-                f"sqlite+aiosqlite:///{database_path.as_posix()}"
-            )
+        engine, sessions, dossiers, versions, media_assets = await _seed_claim_context(
+            f"sqlite+aiosqlite:///{database_path.as_posix()}"
         )
 
         async def attempt(index: int) -> str:

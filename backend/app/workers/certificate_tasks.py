@@ -139,6 +139,4 @@ def issue_certificate(dossier_id: str) -> None:
     retry_jitter=True,
 )  # type: ignore[untyped-decorator]
 def render_certificate_version(certificate_version_id: str) -> None:
-    asyncio.run(
-        _process(certificate_version_id=UUID(certificate_version_id))
-    )
+    asyncio.run(_process(certificate_version_id=UUID(certificate_version_id)))

@@ -116,9 +116,7 @@ def test_stateful_local_dependencies_use_named_volumes() -> None:
         "postgres_data:/var/lib/postgresql/data"
     ]
     assert compose["services"]["mailpit"]["volumes"] == ["mailpit_data:/data"]
-    assert compose["services"]["clamav"]["volumes"] == [
-        "clamav_data:/var/lib/clamav"
-    ]
+    assert compose["services"]["clamav"]["volumes"] == ["clamav_data:/var/lib/clamav"]
 
 
 def test_frontend_stack_is_explicitly_deferred_to_profile() -> None:

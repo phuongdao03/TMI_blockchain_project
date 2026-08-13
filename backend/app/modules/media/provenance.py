@@ -52,8 +52,7 @@ def _snapshot_media_is_trusted(evidence: object) -> bool:
         and isinstance(byte_length, int)
         and byte_length >= 0
         and media.get("hashByteLength") == byte_length
-        and media.get("inspectionPolicyVersion")
-        == CURRENT_INSPECTION_POLICY_VERSION
+        and media.get("inspectionPolicyVersion") == CURRENT_INSPECTION_POLICY_VERSION
         and isinstance(media.get("storageObjectVersion"), int)
         and media["storageObjectVersion"] >= 0
         and isinstance(computed_at, str)

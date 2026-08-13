@@ -34,11 +34,14 @@ def test_private_document_round_trip_binds_ciphertext_to_media_identity() -> Non
     assert len(encrypted.nonce) == 12
     assert len(encrypted.tag) == 16
     assert encrypted.ciphertext != b"trusted original bytes"
-    assert keyring.decrypt(
-        encrypted,
-        media_id=media_id,
-        sha256="a" * 64,
-    ) == b"trusted original bytes"
+    assert (
+        keyring.decrypt(
+            encrypted,
+            media_id=media_id,
+            sha256="a" * 64,
+        )
+        == b"trusted original bytes"
+    )
 
 
 def test_private_document_decryption_rejects_tampered_identity_or_ciphertext() -> None:
@@ -86,16 +89,22 @@ def test_historical_key_remains_decrypt_only_after_rotation() -> None:
         keys={"document-v1": b"1" * 32, "document-v2": b"2" * 32},
     )
 
-    assert rotated_keyring.decrypt(
-        encrypted,
-        media_id=media_id,
-        sha256="d" * 64,
-    ) == b"historical evidence"
-    assert rotated_keyring.encrypt(
-        b"new evidence",
-        media_id=media_id,
-        sha256="e" * 64,
-    ).key_id == "document-v2"
+    assert (
+        rotated_keyring.decrypt(
+            encrypted,
+            media_id=media_id,
+            sha256="d" * 64,
+        )
+        == b"historical evidence"
+    )
+    assert (
+        rotated_keyring.encrypt(
+            b"new evidence",
+            media_id=media_id,
+            sha256="e" * 64,
+        ).key_id
+        == "document-v2"
+    )
 
 
 def test_document_keyring_rejects_missing_active_or_invalid_keys() -> None:

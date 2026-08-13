@@ -27,8 +27,7 @@ def test_provenance_migration_marks_legacy_hashes_for_reverification(
     media_id = "2" * 32
     with sqlite3.connect(database_path) as connection:
         connection.execute(
-            "INSERT INTO users (id, email, password_hash, status) "
-            "VALUES (?, ?, ?, ?)",
+            "INSERT INTO users (id, email, password_hash, status) VALUES (?, ?, ?, ?)",
             (user_id, "legacy@tmigroup.vn", "unused", "ACTIVE"),
         )
         connection.execute(

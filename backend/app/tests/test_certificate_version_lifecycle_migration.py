@@ -26,7 +26,7 @@ def test_certificate_version_lifecycle_schema_and_permissions_are_reversible(
     get_settings.cache_clear()
     config = Config(BACKEND_ROOT / "alembic.ini")
 
-    command.upgrade(config, "0047_certificate_version_lifecycle")
+    command.upgrade(config, "0047_certificate_versioning")
     with sqlite3.connect(database_path) as connection:
         version_columns = _columns(connection, "certificate_versions")
         certificate_columns = _columns(connection, "certificates")

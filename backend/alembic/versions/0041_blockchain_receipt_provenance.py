@@ -1,6 +1,6 @@
 """Add canonical blockchain receipt provenance.
 
-Revision ID: 0041_blockchain_receipt_provenance
+Revision ID: 0041_blockchain_receipt_proof
 Revises: 0040_payment_cancelled_status
 Create Date: 2026-08-10
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0041_blockchain_receipt_provenance"
+revision: str = "0041_blockchain_receipt_proof"
 down_revision: str | None = "0040_payment_cancelled_status"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

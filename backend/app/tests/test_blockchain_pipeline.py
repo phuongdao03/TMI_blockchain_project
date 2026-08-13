@@ -435,9 +435,7 @@ def test_reconciliation_detects_canonical_block_drift() -> None:
                 )
             ).all()
             assert len(audit_rows) == 1
-            assert audit_rows[0].after_json == {
-                "error_code": "CHAIN_STATE_MISMATCH"
-            }
+            assert audit_rows[0].after_json == {"error_code": "CHAIN_STATE_MISMATCH"}
         await engine.dispose()
 
     asyncio.run(exercise())

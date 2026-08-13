@@ -111,9 +111,7 @@ class SimilarityDetectionService:
         for left_hash in left:
             for right_hash in right:
                 try:
-                    distances.append(
-                        perceptual_hash_distance(left_hash, right_hash)
-                    )
+                    distances.append(perceptual_hash_distance(left_hash, right_hash))
                 except SimilarityInputError:
                     continue
         return min(distances) if distances else None

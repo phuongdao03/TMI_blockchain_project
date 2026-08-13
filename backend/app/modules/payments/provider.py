@@ -9,9 +9,7 @@ def build_payment_gateway(settings: Settings) -> PaymentGateway:
     if provider_name == "mock":
         secret = settings.payment_webhook_secret
         return MockPaymentGateway(
-            webhook_secret=(
-                secret.get_secret_value() if secret is not None else ""
-            ),
+            webhook_secret=(secret.get_secret_value() if secret is not None else ""),
             checkout_base_url=settings.payment_checkout_base_url,
             webhook_tolerance_seconds=settings.payment_webhook_tolerance_seconds,
         )

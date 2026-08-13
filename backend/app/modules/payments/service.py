@@ -351,14 +351,18 @@ class PaymentService:
             except PaymentGatewayError as exc:
                 raise PaymentProviderError() from exc
             if (
-                provider_order.order_code is not None
-                and provider_order.order_code != order.order_code
-            ) or (
-                provider_order.amount_minor is not None
-                and provider_order.amount_minor != order.amount_minor
-            ) or (
-                provider_order.currency is not None
-                and provider_order.currency != order.currency
+                (
+                    provider_order.order_code is not None
+                    and provider_order.order_code != order.order_code
+                )
+                or (
+                    provider_order.amount_minor is not None
+                    and provider_order.amount_minor != order.amount_minor
+                )
+                or (
+                    provider_order.currency is not None
+                    and provider_order.currency != order.currency
+                )
             ):
                 raise PaymentAmountMismatchError()
             if provider_order.status == PaymentStatus.PAID.value:

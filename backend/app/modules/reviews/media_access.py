@@ -43,8 +43,7 @@ class ReviewMediaAccessPolicy:
             return False
         review_assignment = exists().where(
             DossierEvidence.media_asset_id == media_id,
-            DossierEvidence.dossier_version_id
-            == ReviewAssignment.dossier_version_id,
+            DossierEvidence.dossier_version_id == ReviewAssignment.dossier_version_id,
             ReviewAssignment.reviewer_user_id == principal.user_id,
             ReviewAssignment.status.in_(DELIVERABLE_ASSIGNMENT_STATUSES),
         )

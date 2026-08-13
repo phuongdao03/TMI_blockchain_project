@@ -47,9 +47,12 @@ def test_gateway_encodes_registry_write_calls() -> None:
         version=1,
         recorded_at=1_700_000_000,
     )
-    assert evidence_payload[:4] == Web3.keccak(
-        text="anchorDocumentEvidence(bytes32,bytes32,bytes32,uint32,uint64)"
-    )[:4]
+    assert (
+        evidence_payload[:4]
+        == Web3.keccak(
+            text="anchorDocumentEvidence(bytes32,bytes32,bytes32,uint32,uint64)"
+        )[:4]
+    )
 
 
 @pytest.mark.skipif(

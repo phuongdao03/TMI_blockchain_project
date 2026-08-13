@@ -288,9 +288,7 @@ class AuthSession(UtcTimestampMixin, Base):
     device_name: Mapped[str | None] = mapped_column(String(255))
     ip_hash: Mapped[str | None] = mapped_column(String(128))
     user_agent: Mapped[str | None] = mapped_column(Text)
-    mfa_verified_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    mfa_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

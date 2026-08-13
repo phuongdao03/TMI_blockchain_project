@@ -66,9 +66,7 @@ def _principal(*roles: str) -> AuthPrincipal:
 
 def test_audit_search_is_scoped_reports_integrity_and_records_the_read() -> None:
     service = _StubAuditService()
-    app = create_application(
-        settings=Settings(audit_integrity_key=SecretStr("x" * 32))
-    )
+    app = create_application(settings=Settings(audit_integrity_key=SecretStr("x" * 32)))
     app.dependency_overrides[get_session] = lambda: _FakeSession()
     app.dependency_overrides[get_audit_service] = lambda: service
     app.dependency_overrides[get_current_principal] = lambda: _principal("SUPER_ADMIN")

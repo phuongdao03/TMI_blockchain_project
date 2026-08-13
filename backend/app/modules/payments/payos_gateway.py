@@ -54,7 +54,9 @@ class PayOSGateway:
     ) -> None:
         if not all((client_id, api_key, checksum_key)):
             raise RuntimeError("payOS credentials are not configured.")
-        if not return_url.startswith("https://") or not cancel_url.startswith("https://"):
+        if not return_url.startswith("https://") or not cancel_url.startswith(
+            "https://"
+        ):
             raise RuntimeError("payOS callback URLs must use HTTPS.")
         self._checksum_key = checksum_key.encode()
         self._return_url = return_url

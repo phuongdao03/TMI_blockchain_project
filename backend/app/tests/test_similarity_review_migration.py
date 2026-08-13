@@ -25,14 +25,11 @@ def test_similarity_review_schema_and_permission_are_reversible(
     command.upgrade(config, "0046_similarity_review_cases")
     with sqlite3.connect(database_path) as connection:
         media_columns = {
-            row[1]
-            for row in connection.execute("PRAGMA table_info(media_assets)")
+            row[1] for row in connection.execute("PRAGMA table_info(media_assets)")
         }
         columns = {
             row[1]
-            for row in connection.execute(
-                "PRAGMA table_info(similarity_review_cases)"
-            )
+            for row in connection.execute("PRAGMA table_info(similarity_review_cases)")
         }
         permission = connection.execute(
             "SELECT r.code, p.code FROM role_permissions rp "
@@ -59,14 +56,16 @@ def test_similarity_review_schema_and_permission_are_reversible(
     command.downgrade(config, "0045_trusted_media_provenance")
     with sqlite3.connect(database_path) as connection:
         media_columns = {
-            row[1]
-            for row in connection.execute("PRAGMA table_info(media_assets)")
+            row[1] for row in connection.execute("PRAGMA table_info(media_assets)")
         }
         assert "perceptual_hash" not in media_columns
-        assert connection.execute(
-            "SELECT name FROM sqlite_master "
-            "WHERE type='table' AND name='similarity_review_cases'"
-        ).fetchone() is None
+        assert (
+            connection.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='table' AND name='similarity_review_cases'"
+            ).fetchone()
+            is None
+        )
         assert connection.execute(
             "SELECT count(*) FROM permissions WHERE code = 'similarity.review'"
         ).fetchone() == (0,)

@@ -1,7 +1,7 @@
 """Add audit actor identity, retention and tamper-evident metadata.
 
 Revision ID: 0048_audit_integrity
-Revises: 0047_certificate_version_lifecycle
+Revises: 0047_certificate_versioning
 Create Date: 2026-08-11
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0048_audit_integrity"
-down_revision: str | None = "0047_certificate_version_lifecycle"
+down_revision: str | None = "0047_certificate_versioning"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -67,12 +67,8 @@ def _create_append_only_guards() -> None:
 def _drop_append_only_guards() -> None:
     dialect = op.get_bind().dialect.name
     if dialect == "postgresql":
-        op.execute(
-            "DROP TRIGGER IF EXISTS trg_audit_logs_reject_update ON audit_logs"
-        )
-        op.execute(
-            "DROP TRIGGER IF EXISTS trg_audit_logs_reject_delete ON audit_logs"
-        )
+        op.execute("DROP TRIGGER IF EXISTS trg_audit_logs_reject_update ON audit_logs")
+        op.execute("DROP TRIGGER IF EXISTS trg_audit_logs_reject_delete ON audit_logs")
         op.execute("DROP FUNCTION IF EXISTS reject_audit_log_mutation()")
     elif dialect == "sqlite":
         op.execute("DROP TRIGGER IF EXISTS trg_audit_logs_reject_update")
@@ -113,9 +109,7 @@ def upgrade() -> None:
         )
 
     with op.batch_alter_table("audit_logs") as batch_op:
-        batch_op.alter_column(
-            "actor_type", existing_type=sa.String(16), nullable=False
-        )
+        batch_op.alter_column("actor_type", existing_type=sa.String(16), nullable=False)
         batch_op.create_check_constraint(
             "audit_actor_type",
             "actor_type IN ('USER', 'SERVICE', 'ANONYMOUS')",
@@ -140,9 +134,7 @@ def upgrade() -> None:
     op.create_index(
         "ix_audit_logs_action_created", "audit_logs", ["action", "created_at"]
     )
-    op.create_index(
-        "ix_audit_logs_retention_until", "audit_logs", ["retention_until"]
-    )
+    op.create_index("ix_audit_logs_retention_until", "audit_logs", ["retention_until"])
     _create_append_only_guards()
 
 

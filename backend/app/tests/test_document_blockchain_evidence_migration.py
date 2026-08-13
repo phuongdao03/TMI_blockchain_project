@@ -21,7 +21,7 @@ def test_document_blockchain_evidence_migration_is_reversible(
     )
     get_settings.cache_clear()
     config = Config(BACKEND_ROOT / "alembic.ini")
-    command.upgrade(config, "0053_document_blockchain_evidence")
+    command.upgrade(config, "0053_document_chain_evidence")
 
     with sqlite3.connect(database_path) as connection:
         columns = {

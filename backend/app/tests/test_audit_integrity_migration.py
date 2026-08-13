@@ -61,7 +61,7 @@ def test_audit_integrity_migration_is_append_only_and_reversible(
         "trg_audit_logs_reject_delete",
     }
 
-    command.downgrade(config, "0047_certificate_version_lifecycle")
+    command.downgrade(config, "0047_certificate_versioning")
     with sqlite3.connect(database_path) as connection:
         downgraded_columns = {
             row[1] for row in connection.execute("PRAGMA table_info(audit_logs)")

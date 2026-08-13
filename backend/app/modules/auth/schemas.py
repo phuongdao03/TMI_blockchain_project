@@ -54,15 +54,18 @@ class PrivilegedActionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     action: Literal["ROLE_CHANGE", "MFA_RECOVERY"]
-    requested_role: Literal[
-        "REVIEWER",
-        "COUNCIL_MEMBER",
-        "COUNCIL_SECRETARY",
-        "FINANCE_ADMIN",
-        "CONTENT_ADMIN",
-        "BLOCKCHAIN_ADMIN",
-        "SUPER_ADMIN",
-    ] | None = Field(default=None, alias="requestedRole")
+    requested_role: (
+        Literal[
+            "REVIEWER",
+            "COUNCIL_MEMBER",
+            "COUNCIL_SECRETARY",
+            "FINANCE_ADMIN",
+            "CONTENT_ADMIN",
+            "BLOCKCHAIN_ADMIN",
+            "SUPER_ADMIN",
+        ]
+        | None
+    ) = Field(default=None, alias="requestedRole")
     reason: Annotated[str, Field(min_length=10, max_length=500)]
 
 

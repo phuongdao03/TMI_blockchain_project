@@ -317,10 +317,7 @@ def test_council_session_rolls_back_when_audit_fails(
                 await session.scalar(select(func.count()).select_from(CouncilSession))
                 == 0
             )
-            assert (
-                await session.scalar(select(func.count()).select_from(AuditLog))
-                == 0
-            )
+            assert await session.scalar(select(func.count()).select_from(AuditLog)) == 0
 
         await service.close()
         await engine.dispose()
@@ -522,13 +519,10 @@ def test_votes_are_conflict_gated_unique_and_close_with_absolute_majority() -> N
             decision_rows = tuple(
                 row
                 for row in audit_rows
-                if row.action
-                in {"council.conflict.declared", "council.vote.cast"}
+                if row.action in {"council.conflict.declared", "council.vote.cast"}
             )
             assert all(row.resource_type == "council_case" for row in decision_rows)
-            assert all(
-                row.resource_id == str(council_case.id) for row in decision_rows
-            )
+            assert all(row.resource_id == str(council_case.id) for row in decision_rows)
             assert audit_rows[-1].action == "council.session.closed"
             assert all(row.after_json is None for row in audit_rows)
 

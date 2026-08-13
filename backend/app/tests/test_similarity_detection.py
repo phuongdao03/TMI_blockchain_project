@@ -37,8 +37,10 @@ def test_detection_creates_explainable_text_and_image_cases_only() -> None:
         async with engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
         owner = User(
-            id=uuid4(), email="owner@tmigroup.vn",
-            password_hash="unused", status=UserStatus.ACTIVE,
+            id=uuid4(),
+            email="owner@tmigroup.vn",
+            password_hash="unused",
+            status=UserStatus.ACTIVE,
         )
         category = Category(id=uuid4(), code="ART", name="Artwork")
         versions: list[DossierVersion] = []
@@ -50,14 +52,20 @@ def test_detection_creates_explainable_text_and_image_cases_only() -> None:
         )
         for index, (title, perceptual_hash) in enumerate(candidates):
             dossier = Dossier(
-                id=uuid4(), code=f"DOS-{index}", owner_user_id=owner.id,
-                category_id=category.id, title=title,
+                id=uuid4(),
+                code=f"DOS-{index}",
+                owner_user_id=owner.id,
+                category_id=category.id,
+                title=title,
             )
             version = DossierVersion(
-                id=uuid4(), dossier_id=dossier.id, version_no=1,
+                id=uuid4(),
+                dossier_id=dossier.id,
+                version_no=1,
                 snapshot_json=_snapshot(title, perceptual_hash),
                 canonical_hash=f"{index + 1}" * 64,
-                submitted_by=owner.id, submitted_at=NOW,
+                submitted_by=owner.id,
+                submitted_at=NOW,
             )
             versions.append(version)
             rows.extend((dossier, version))
@@ -70,9 +78,7 @@ def test_detection_creates_explainable_text_and_image_cases_only() -> None:
         await service.detect(versions[2].id)
 
         async with sessions() as session:
-            cases = tuple(
-                (await session.scalars(select(SimilarityReviewCase))).all()
-            )
+            cases = tuple((await session.scalars(select(SimilarityReviewCase))).all())
         assert len(cases) == 2
         assert {case.signal_type for case in cases} == {
             SimilaritySignalType.TEXT,
