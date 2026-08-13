@@ -66,7 +66,7 @@ jobs:
             --deployer="$CONTRACT_DEPLOYER_ADDRESS" \
             --administrator="$CONTRACT_ADMIN" \
             --issuer="$ISSUER_ADDRESS"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: polygon-contract-dry-run-${{ inputs.source_commit }}
           path: contracts/artifacts/releases/polygon/dry-run-plan.json
