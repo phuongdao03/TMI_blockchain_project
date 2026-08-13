@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr
 from app.modules.blockchain.models import (
     BlockchainTransactionStatus,
     CertificateStatus,
+    CertificateVersionStatus,
 )
 from app.modules.public.models import (
     ContentReportReason,
@@ -91,6 +92,29 @@ class VerificationData(PublicSchema):
     confirmations: int
     confirmed_at: datetime | None
     explorer_url: str | None
+    dossier_code: str | None
+    metadata_hash: str | None
+    block_number: int | None
+    issuer_label: str | None
+    documents: list["PublicEvidenceProofData"]
+
+
+class PublicEvidenceProofData(PublicSchema):
+    title: str
+    evidence_type: str
+    sha256: str
+
+
+class PublicCertificateVersionData(PublicSchema):
+    version_no: int
+    status: CertificateVersionStatus
+    metadata_hash: str
+    transaction_hash: str | None
+    block_number: int | None
+    confirmed_at: datetime | None
+    created_at: datetime
+    issuer_label: str
+    documents: list[PublicEvidenceProofData]
 
 
 class PublicWorkAdminData(PublicSchema):

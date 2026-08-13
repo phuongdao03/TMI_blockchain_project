@@ -55,9 +55,7 @@ class RecordingSearchRepository:
     async def facets(self, query: object, **kwargs: object) -> SearchFacets:
         self.calls.append({"query": query, **kwargs})
         return SearchFacets(
-            categories=(
-                SearchFacetValue(slug="my-thuat", label="Mỹ thuật", count=7),
-            ),
+            categories=(SearchFacetValue(slug="my-thuat", label="Mỹ thuật", count=7),),
             tags=(SearchFacetValue(slug="di-san", label="Di sản", count=4),),
         )
 

@@ -6,6 +6,7 @@ from uuid import UUID
 
 from app.core.errors import DomainError
 from app.modules.audit.service import AuditService
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.search.discovery_models import SearchEvent, SearchSnapshotPeriod
 from app.modules.search.discovery_repository import SearchDiscoveryRepository
@@ -247,9 +248,14 @@ class SearchDiscoveryService:
 
     @staticmethod
     def _require_admin(principal: AuthPrincipal) -> None:
-        if ADMIN_ROLES.isdisjoint(principal.roles):
-            raise DomainError(
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(
+                permission="search.analytics.read", compatible_roles=ADMIN_ROLES
+            ),
+            lambda: DomainError(
                 code="SEARCH_ANALYTICS_FORBIDDEN",
                 message="Search analytics access is forbidden.",
                 status_code=403,
-            )
+            ),
+        )

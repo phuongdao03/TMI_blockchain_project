@@ -32,7 +32,7 @@ test.beforeEach(async ({ context }) => {
 test("account page presents profile and permission-aware organization UI", async ({
   page,
 }) => {
-  await page.goto("/tai-khoan");
+  await page.goto("/account");
 
   await expect(
     page.getByRole("heading", { level: 1, name: "Tài khoản & tổ chức" }),

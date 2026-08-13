@@ -26,12 +26,10 @@ def test_ranking_publication_migration_round_trip(
 
     with sqlite3.connect(database_path) as connection:
         columns = {
-            row[1]
-            for row in connection.execute("PRAGMA table_info(voting_campaigns)")
+            row[1] for row in connection.execute("PRAGMA table_info(voting_campaigns)")
         }
         indexes = {
-            row[1]
-            for row in connection.execute("PRAGMA index_list(voting_campaigns)")
+            row[1] for row in connection.execute("PRAGMA index_list(voting_campaigns)")
         }
         foreign_keys = {
             (row[3], row[2], row[4], row[6])
@@ -51,8 +49,7 @@ def test_ranking_publication_migration_round_trip(
     command.downgrade(config, "0028_trending_snapshots")
     with sqlite3.connect(database_path) as connection:
         columns_after = {
-            row[1]
-            for row in connection.execute("PRAGMA table_info(voting_campaigns)")
+            row[1] for row in connection.execute("PRAGMA table_info(voting_campaigns)")
         }
     assert "published_snapshot_id" not in columns_after
     assert "results_published_at" not in columns_after

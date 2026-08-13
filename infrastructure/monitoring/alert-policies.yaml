@@ -24,6 +24,30 @@ alerts:
     severity: page
     route: platform-on-call
     runbook: docs/runbooks/incident-response.md#queue-backlog
+  - name: durable_job_queue_age
+    signal: durable_job_oldest_queued_seconds
+    condition: greater_than
+    threshold: 600
+    window: 5m
+    severity: page
+    route: platform-on-call
+    runbook: docs/runbooks/durable-job-operations.md#alert-thresholds
+  - name: durable_job_dead_letter
+    signal: durable_job_dead_lettered_count
+    condition: greater_than
+    threshold: 0
+    window: 5m
+    severity: page
+    route: platform-on-call
+    runbook: docs/runbooks/durable-job-operations.md#alert-thresholds
+  - name: durable_job_retry_failures
+    signal: durable_job_retry_failure_count
+    condition: greater_than
+    threshold: 0
+    window: 15m
+    severity: ticket
+    route: platform-on-call
+    runbook: docs/runbooks/durable-job-operations.md#alert-thresholds
   - name: database_pool_exhaustion
     signal: database_pool_utilization_ratio
     condition: greater_than
@@ -32,6 +56,30 @@ alerts:
     severity: page
     route: platform-on-call
     runbook: docs/runbooks/incident-response.md#database
+  - name: database_growth_budget
+    signal: database_size_bytes
+    condition: greater_than
+    threshold: 85899345920
+    window: 15m
+    severity: ticket
+    route: platform-on-call
+    runbook: docs/runbooks/database-capacity-and-migrations.md#representative-cardinality-and-query-budget
+  - name: auth_failure_spike
+    signal: auth_failed_attempt_ratio
+    condition: greater_than
+    threshold: 0.2
+    window: 5m
+    severity: page
+    route: security-and-platform
+    runbook: docs/runbooks/incident-response.md#authentication
+  - name: redis_unavailable
+    signal: redis_readiness_success_ratio
+    condition: less_than
+    threshold: 0.95
+    window: 5m
+    severity: page
+    route: platform-on-call
+    runbook: docs/runbooks/incident-response.md#redis
   - name: payment_webhook_failure
     signal: payment_webhook_failure_count
     condition: greater_than
@@ -40,6 +88,14 @@ alerts:
     severity: page
     route: finance-and-platform
     runbook: docs/runbooks/incident-response.md#payment-webhook
+  - name: certificate_issuance_failure
+    signal: certificate_issuance_failure_count
+    condition: greater_than
+    threshold: 0
+    window: 5m
+    severity: page
+    route: certificate-and-platform
+    runbook: docs/runbooks/incident-response.md#certificate-issuance
   - name: blockchain_pending_age
     signal: blockchain_oldest_pending_seconds
     condition: greater_than
@@ -56,6 +112,38 @@ alerts:
     severity: ticket
     route: blockchain-operations
     runbook: docs/runbooks/incident-response.md#wallet-balance
+  - name: blockchain_rpc_outage
+    signal: blockchain_rpc_success_ratio
+    condition: less_than
+    threshold: 0.95
+    window: 5m
+    severity: page
+    route: blockchain-and-platform
+    runbook: docs/runbooks/incident-response.md#blockchain
+  - name: blockchain_stuck_nonce
+    signal: blockchain_stuck_nonce_count
+    condition: greater_than
+    threshold: 0
+    window: 10m
+    severity: page
+    route: blockchain-and-platform
+    runbook: docs/runbooks/incident-response.md#blockchain
+  - name: blockchain_reverted_transaction
+    signal: blockchain_reverted_transaction_count
+    condition: greater_than
+    threshold: 0
+    window: 5m
+    severity: page
+    route: blockchain-and-platform
+    runbook: docs/runbooks/incident-response.md#blockchain
+  - name: blockchain_state_mismatch
+    signal: blockchain_state_mismatch_count
+    condition: greater_than
+    threshold: 0
+    window: 1m
+    severity: page
+    route: blockchain-and-platform
+    runbook: docs/runbooks/incident-response.md#blockchain
   - name: backup_freshness
     signal: backup_newest_valid_age_seconds
     condition: greater_than
@@ -68,19 +156,36 @@ alerts:
 dashboards:
   - name: platform-overview
     panels:
-      [request_rate, http_5xx_ratio, p50_latency, p95_latency, active_sessions]
+      [
+        request_rate,
+        http_5xx_ratio,
+        p50_latency,
+        p95_latency,
+        active_sessions,
+        auth_failed_attempt_ratio,
+      ]
   - name: workflow-operations
     panels:
       [
         dossier_funnel,
         overdue_reviews,
+        durable_job_oldest_queued_seconds,
+        durable_job_dead_lettered_count,
+        durable_job_retry_failure_count,
         payment_webhook_failure_count,
+        certificate_issuance_failure_count,
         blockchain_oldest_pending_seconds,
+        blockchain_rpc_success_ratio,
+        blockchain_stuck_nonce_count,
+        blockchain_reverted_transaction_count,
+        blockchain_state_mismatch_count,
       ]
   - name: infrastructure
     panels:
       [
         database_pool_utilization_ratio,
+        database_size_bytes,
+        redis_readiness_success_ratio,
         celery_queue_oldest_message_seconds,
         backup_newest_valid_age_seconds,
         cpu_utilization,

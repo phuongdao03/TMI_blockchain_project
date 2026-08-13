@@ -24,6 +24,11 @@ from app.core.schemas import (
 from app.modules.auth.dependencies import (
     OptionalCsrfPrincipalDependency,
     OptionalCurrentPrincipalDependency,
+    SettingsDependency,
+)
+from app.modules.blockchain.schemas import DocumentVerificationData
+from app.modules.blockchain.verification_dependencies import (
+    DocumentVerificationServiceDependency,
 )
 from app.modules.engagement.errors import EngagementUnavailableError
 from app.modules.engagement.schemas import (
@@ -56,6 +61,7 @@ from app.modules.public.schemas import (
     PublicAssetData,
     PublicAssetDetailData,
     PublicCategoryData,
+    PublicCertificateVersionData,
     PublicHomeData,
     PublicMapMarkerData,
     PublicSitemapEntryData,
@@ -77,6 +83,19 @@ PUBLIC_RESPONSES: dict[int | str, dict[str, Any]] = {
     422: {"description": "Request validation failed.", "model": ErrorEnvelope},
 }
 PublicSlugPath = Annotated[str, Path(min_length=1, max_length=180)]
+VerificationTokenPath = Annotated[
+    str,
+    Path(min_length=32, max_length=512, pattern=r"^[A-Za-z0-9_-]+$"),
+]
+CertificateNumberPath = Annotated[
+    str,
+    Path(min_length=3, max_length=128, pattern=r"^[A-Za-z0-9-]+$"),
+]
+TransactionHashPath = Annotated[
+    str,
+    Path(pattern=r"^0x[0-9a-fA-F]{64}$"),
+]
+DocumentIndexPath = Annotated[int, Path(ge=0, le=100)]
 
 
 def _engagement_visitor(request: Request, response: Response) -> str:
@@ -486,9 +505,75 @@ async def _verification_response(
     )
 
 
+@router.post(
+    "/public/certificates/{number}/documents/{document_index}/verifications",
+    response_model=SuccessEnvelope[DocumentVerificationData],
+    responses={
+        415: {
+            "description": "A binary document body is required.",
+            "model": ErrorEnvelope,
+        },
+        413: {
+            "description": "The verification document is too large.",
+            "model": ErrorEnvelope,
+        },
+        **PUBLIC_RESPONSES,
+    },
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/octet-stream": {
+                    "schema": {"type": "string", "format": "binary"}
+                }
+            },
+        }
+    },
+)
+async def verify_public_document_candidate(
+    number: CertificateNumberPath,
+    document_index: DocumentIndexPath,
+    request: Request,
+    settings: SettingsDependency,
+    certificate_service: PublicVerificationDependency,
+    document_service: DocumentVerificationServiceDependency,
+) -> SuccessEnvelope[DocumentVerificationData]:
+    if request.headers.get("content-type") != "application/octet-stream":
+        raise HTTPException(
+            status_code=415,
+            detail="A binary document body is required.",
+        )
+    content_length = request.headers.get("content-length")
+    if (
+        content_length is not None
+        and content_length.isdecimal()
+        and int(content_length) > settings.document_verification_max_bytes
+    ):
+        raise HTTPException(
+            status_code=413,
+            detail="The document exceeds the verification size limit.",
+        )
+    certificate = await certificate_service.verify_number(number)
+    document = (
+        certificate.documents[document_index]
+        if document_index < len(certificate.documents)
+        else None
+    )
+    result = await document_service.verify_public(
+        expected_sha256=document.sha256 if document is not None else None,
+        certificate_is_confirmed=certificate.status.value
+        in {"VALID", "REVOKED", "EXPIRED"},
+        chunks=request.stream(),
+    )
+    return SuccessEnvelope(
+        data=DocumentVerificationData.model_validate(result),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
 @router.get("/verify/{token}", response_model=SuccessEnvelope[VerificationData])
 async def verify_token(
-    token: str,
+    token: VerificationTokenPath,
     request: Request,
     service: PublicVerificationDependency,
 ) -> SuccessEnvelope[VerificationData]:
@@ -500,7 +585,7 @@ async def verify_token(
     response_model=SuccessEnvelope[VerificationData],
 )
 async def verify_certificate(
-    number: str,
+    number: CertificateNumberPath,
     request: Request,
     service: PublicVerificationDependency,
 ) -> SuccessEnvelope[VerificationData]:
@@ -511,11 +596,30 @@ async def verify_certificate(
 
 
 @router.get(
+    "/verify/certificate/{number}/versions",
+    response_model=SuccessEnvelope[list[PublicCertificateVersionData]],
+    responses=PUBLIC_RESPONSES,
+)
+async def public_certificate_versions(
+    number: CertificateNumberPath,
+    request: Request,
+    service: PublicCatalogDependency,
+) -> SuccessEnvelope[list[PublicCertificateVersionData]]:
+    versions = await service.certificate_versions(number)
+    if not versions:
+        raise HTTPException(status_code=404, detail="Certificate was not found.")
+    return SuccessEnvelope(
+        data=[PublicCertificateVersionData.model_validate(item) for item in versions],
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
     "/verify/transaction/{tx_hash}",
     response_model=SuccessEnvelope[VerificationData],
 )
 async def verify_transaction(
-    tx_hash: str,
+    tx_hash: TransactionHashPath,
     request: Request,
     service: PublicVerificationDependency,
 ) -> SuccessEnvelope[VerificationData]:

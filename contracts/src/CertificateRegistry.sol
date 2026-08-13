@@ -18,10 +18,22 @@ contract CertificateRegistry is AccessControl, Pausable {
         bool revoked;
     }
 
+    struct DocumentEvidenceRecord {
+        bytes32 commitment;
+        bytes32 previousEvidenceKey;
+        uint64 recordedAt;
+        uint32 version;
+    }
+
     error CertificateAlreadyExists(bytes32 certificateId);
     error CertificateNotFound(bytes32 certificateId);
     error CertificateIsRevoked(bytes32 certificateId);
     error VersionNotIncreasing(uint32 currentVersion, uint32 requestedVersion);
+    error DocumentEvidenceAlreadyExists(bytes32 evidenceKey);
+    error DocumentEvidenceNotFound(bytes32 evidenceKey);
+    error DocumentEvidencePredecessorUsed(bytes32 evidenceKey);
+    error InvalidDocumentEvidence();
+    error InvalidDocumentEvidenceLineage(uint32 version, bytes32 previousEvidenceKey);
     error InvalidAdministrator();
 
     event CertificateIssued(
@@ -40,8 +52,17 @@ contract CertificateRegistry is AccessControl, Pausable {
     event CertificateRevoked(bytes32 indexed certificateId, bytes32 indexed reasonHash);
     event IssuerGranted(address indexed issuer, address indexed grantedBy);
     event IssuerRevoked(address indexed issuer, address indexed revokedBy);
+    event DocumentEvidenceAnchored(
+        bytes32 indexed evidenceKey,
+        bytes32 indexed commitment,
+        bytes32 indexed previousEvidenceKey,
+        uint32 version,
+        uint64 recordedAt
+    );
 
     mapping(bytes32 certificateId => CertificateRecord record) private _certificates;
+    mapping(bytes32 evidenceKey => DocumentEvidenceRecord record) private _documentEvidence;
+    mapping(bytes32 evidenceKey => bytes32 successorKey) private _documentEvidenceSuccessor;
 
     constructor(address administrator) {
         if (administrator == address(0)) revert InvalidAdministrator();
@@ -107,6 +128,66 @@ contract CertificateRegistry is AccessControl, Pausable {
     {
         CertificateRecord storage record = _requiredCertificate(certificateId);
         return record;
+    }
+
+    function anchorDocumentEvidence(
+        bytes32 evidenceKey,
+        bytes32 commitment,
+        bytes32 previousEvidenceKey,
+        uint32 version,
+        uint64 recordedAt
+    ) external onlyRole(ISSUER_ROLE) whenNotPaused {
+        if (evidenceKey == bytes32(0) || commitment == bytes32(0) || recordedAt == 0) {
+            revert InvalidDocumentEvidence();
+        }
+        if (_documentEvidence[evidenceKey].version != 0) {
+            revert DocumentEvidenceAlreadyExists(evidenceKey);
+        }
+        if (version == 1) {
+            if (previousEvidenceKey != bytes32(0)) {
+                revert InvalidDocumentEvidenceLineage(version, previousEvidenceKey);
+            }
+        } else {
+            DocumentEvidenceRecord storage predecessor = _documentEvidence[previousEvidenceKey];
+            if (
+                previousEvidenceKey == bytes32(0) || predecessor.version == 0
+                    || predecessor.version + 1 != version
+            ) {
+                revert InvalidDocumentEvidenceLineage(version, previousEvidenceKey);
+            }
+            if (_documentEvidenceSuccessor[previousEvidenceKey] != bytes32(0)) {
+                revert DocumentEvidencePredecessorUsed(previousEvidenceKey);
+            }
+            _documentEvidenceSuccessor[previousEvidenceKey] = evidenceKey;
+        }
+        _documentEvidence[evidenceKey] = DocumentEvidenceRecord({
+            commitment: commitment,
+            previousEvidenceKey: previousEvidenceKey,
+            recordedAt: recordedAt,
+            version: version
+        });
+        emit DocumentEvidenceAnchored(
+            evidenceKey, commitment, previousEvidenceKey, version, recordedAt
+        );
+    }
+
+    function getDocumentEvidence(bytes32 evidenceKey)
+        external
+        view
+        returns (DocumentEvidenceRecord memory)
+    {
+        DocumentEvidenceRecord storage record = _documentEvidence[evidenceKey];
+        if (record.version == 0) revert DocumentEvidenceNotFound(evidenceKey);
+        return record;
+    }
+
+    function verifyDocumentEvidence(bytes32 evidenceKey, bytes32 commitment)
+        external
+        view
+        returns (bool)
+    {
+        DocumentEvidenceRecord storage record = _documentEvidence[evidenceKey];
+        return record.version != 0 && record.commitment == commitment;
     }
 
     function grantIssuer(address issuer) external onlyRole(DEFAULT_ADMIN_ROLE) {

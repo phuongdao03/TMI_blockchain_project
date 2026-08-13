@@ -64,9 +64,7 @@ def test_metadata_is_versioned_deterministic_and_excludes_private_fields() -> No
     ]
     assert "private-user-id" not in str(metadata)
     assert "private-media-id" not in str(metadata)
-    assert digest == hashlib.sha256(
-        builder.canonical_bytes(metadata)
-    ).hexdigest()
+    assert digest == hashlib.sha256(builder.canonical_bytes(metadata)).hexdigest()
 
 
 def test_pdf_contains_certificate_fields_qr_and_stable_hash() -> None:

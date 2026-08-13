@@ -4,6 +4,8 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.media.errors import MediaValidationError
+from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.users.models import UserProfile
 from app.modules.users.repository import UserProfileRepository
 from app.modules.users.security import SensitiveFieldCipher
@@ -56,6 +58,19 @@ class UserProfileService:
         changes: ProfileChanges,
     ) -> ProfileView:
         async with self._session.begin():
+            if (
+                "avatar_media_id" in changes.provided_fields
+                and changes.avatar_media_id is not None
+            ):
+                avatar = await self._session.get(MediaAsset, changes.avatar_media_id)
+                if (
+                    avatar is None
+                    or avatar.owner_user_id != user_id
+                    or avatar.status is not MediaStatus.ACTIVE
+                    or not avatar.mime_type.startswith("image/")
+                    or avatar.sha256 is None
+                ):
+                    raise MediaValidationError("Avatar media is not available.")
             profile = await self._repository.get_profile(user_id, for_update=True)
             if profile is None:
                 profile = UserProfile(user_id=user_id)

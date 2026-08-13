@@ -1,4 +1,3 @@
-import logging
 import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -8,14 +7,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.outbox import OutboxEvent
+from app.modules.audit.service import AuditService
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher, hash_verification_token
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.models import (
+    BlockchainTransaction,
     BlockchainTransactionStatus,
     Certificate,
     CertificateStatus,
     CertificateVersion,
+    CertificateVersionStatus,
 )
 from app.modules.blockchain.service import BlockchainTransactionService
 from app.modules.certificates.errors import (
@@ -44,8 +47,6 @@ from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.workflow import DossierWorkflowService
 from app.modules.media.gateway import MediaGateway
 from app.modules.media.models import MediaAsset, MediaStatus
-
-logger = logging.getLogger(__name__)
 
 CERTIFICATE_ISSUED_EVENT = "certificate.issued"
 CERTIFICATE_ROLES = frozenset({"APPLICANT", "ORG_MANAGER", "SUPER_ADMIN"})
@@ -87,10 +88,9 @@ class CertificateService:
         self._enqueue_issue = enqueue_issue
         self._clock = clock or (lambda: datetime.now(UTC))
         self._uuid_factory = uuid_factory or uuid4
-        self._token_factory = token_factory or (
-            lambda: secrets.token_urlsafe(32)
-        )
+        self._token_factory = token_factory or (lambda: secrets.token_urlsafe(32))
         self._certificates = CertificateRepository(session)
+        self._audit_service = AuditService(session)
         self._dossiers = DossierRepository(session)
         self._workflow = DossierWorkflowService(self._dossiers)
         self._outbox = OutboxRepository(session)
@@ -151,24 +151,24 @@ class CertificateService:
                 raise CertificateForbiddenError()
             certificate = row[0]
             if certificate.pdf_media_id is None:
-                raise CertificateConflictError(
-                    "Certificate PDF is not ready."
-                )
+                raise CertificateConflictError("Certificate PDF is not ready.")
             media = await self._session.get(MediaAsset, certificate.pdf_media_id)
             if media is None or media.status is not MediaStatus.ACTIVE:
-                raise CertificateConflictError(
-                    "Certificate PDF is not available."
-                )
-            expires_at = (
-                int(self._clock().timestamp()) + self._delivery_ttl_seconds
-            )
+                raise CertificateConflictError("Certificate PDF is not available.")
+            expires_at = int(self._clock().timestamp()) + self._delivery_ttl_seconds
             url = self._media_gateway.create_signed_delivery_url(
                 public_id=media.cloudinary_public_id,
                 resource_type=media.resource_type,
                 file_format="pdf",
                 expires_at=expires_at,
             )
-        self._audit("certificate.download.signed", principal.user_id, certificate_id)
+            self._audit(
+                "certificate.download.signed",
+                certificate_id,
+                actor_user_id=principal.user_id,
+                status=certificate.status,
+                pdf_ready=True,
+            )
         return CertificateDownloadView(url=url, expires_at=expires_at)
 
     async def process_issuance(self, dossier_id: UUID) -> CertificateView | None:
@@ -185,9 +185,7 @@ class CertificateService:
         if certificate is None and status is DossierStatus.PAID:
             certificate = await self._prepare_certificate(dossier_id)
             if self._blockchain is None:
-                raise CertificateConflictError(
-                    "Blockchain service is unavailable."
-                )
+                raise CertificateConflictError("Blockchain service is unavailable.")
             await self._blockchain.request_certificate_anchor(
                 certificate_id=certificate.id,
                 actor_user_id=actor_user_id,
@@ -207,6 +205,113 @@ class CertificateService:
                 "Dossier is not ready for certificate issuance."
             )
         return await self._render_and_finalize(certificate.id)
+
+    async def render_version(self, certificate_version_id: UUID) -> None:
+        """Render the confirmed current version without changing anchored metadata."""
+        async with self._session.begin():
+            version = await self._certificates.get_version(certificate_version_id)
+            if version is None:
+                raise CertificateNotFoundError()
+            certificate = await self._session.get(Certificate, version.certificate_id)
+            if certificate is None:
+                raise CertificateNotFoundError()
+            dossier = await self._dossiers.get_by_id(certificate.dossier_id)
+            transaction = (
+                await self._session.get(
+                    BlockchainTransaction,
+                    version.blockchain_transaction_id,
+                )
+                if version.blockchain_transaction_id is not None
+                else None
+            )
+            if dossier is None:
+                raise CertificateNotFoundError()
+            if (
+                version.status is not CertificateVersionStatus.ACTIVE
+                or certificate.current_version_no != version.version_no
+                or transaction is None
+                or transaction.status is not BlockchainTransactionStatus.CONFIRMED
+                or transaction.tx_hash is None
+            ):
+                raise CertificateConflictError(
+                    "Certificate version is not ready for rendition."
+                )
+            if version.pdf_media_id is not None:
+                return
+            display_metadata = {
+                **version.metadata_json,
+                "blockchain": {
+                    "network": transaction.network,
+                    "contractAddress": transaction.contract_address,
+                    "transactionHash": transaction.tx_hash,
+                },
+            }
+            verification_url = certificate.qr_payload
+            version_no = version.version_no
+            certificate_number = certificate.certificate_number
+            owner_user_id = dossier.owner_user_id
+            certificate_id = certificate.id
+        try:
+            rendered = self._renderer.render(
+                metadata=display_metadata,
+                verification_url=verification_url,
+            )
+            stored = await self._storage.upload_pdf(
+                public_id=(
+                    f"ip-certificate/{self._environment}/certificates/"
+                    f"{certificate_id}/v{version_no}"
+                ),
+                content=rendered.content,
+            )
+        except Exception as exc:
+            raise CertificateGenerationError(
+                "Certificate PDF generation failed."
+            ) from exc
+        async with self._session.begin():
+            locked_version = await self._certificates.get_version(
+                certificate_version_id,
+                for_update=True,
+            )
+            locked_certificate = await self._session.get(
+                Certificate,
+                certificate_id,
+                with_for_update=True,
+            )
+            if locked_version is None or locked_certificate is None:
+                raise CertificateNotFoundError()
+            if locked_version.pdf_media_id is not None:
+                return
+            if (
+                locked_version.status is not CertificateVersionStatus.ACTIVE
+                or locked_certificate.current_version_no != locked_version.version_no
+            ):
+                raise CertificateConflictError(
+                    "Certificate version changed before rendition completed."
+                )
+            media = MediaAsset(
+                id=self._uuid_factory(),
+                owner_user_id=owner_user_id,
+                cloudinary_public_id=stored.public_id,
+                cloudinary_version=stored.version,
+                resource_type="raw",
+                access_mode="authenticated",
+                original_filename=f"{certificate_number}-v{version_no}.pdf",
+                mime_type="application/pdf",
+                bytes=stored.bytes,
+                sha256=stored.sha256,
+                status=MediaStatus.ACTIVE,
+            )
+            self._session.add(media)
+            locked_version.pdf_media_id = media.id
+            locked_certificate.pdf_media_id = media.id
+            self._audit(
+                "certificate.version.rendered",
+                certificate_version_id,
+                actor_service="certificate-issuance-worker",
+                resource_type="certificate_version",
+                pdf_ready=True,
+            )
+            await self._session.flush()
 
     async def _prepare_certificate(self, dossier_id: UUID) -> Certificate:
         issued_at = self._clock()
@@ -272,7 +377,15 @@ class CertificateService:
                     dossier_version_id=version.id,
                     metadata_json=metadata,
                     metadata_hash=metadata_hash,
+                    status=CertificateVersionStatus.ACTIVE,
                 )
+            )
+            self._audit(
+                "certificate.prepared",
+                certificate.id,
+                actor_service="certificate-issuance-worker",
+                status=certificate.status,
+                pdf_ready=False,
             )
             await self._session.flush()
             return certificate
@@ -290,9 +403,7 @@ class CertificateService:
             or transaction.status is not BlockchainTransactionStatus.CONFIRMED
             or transaction.tx_hash is None
         ):
-            raise CertificateConflictError(
-                "Blockchain anchor is not confirmed."
-            )
+            raise CertificateConflictError("Blockchain anchor is not confirmed.")
         display_metadata = {
             **version.metadata_json,
             "blockchain": {
@@ -340,15 +451,7 @@ class CertificateService:
                 )
                 self._session.add(media)
                 locked.pdf_media_id = media.id
-                rendition = {
-                    "templateVersion": rendered.template_version,
-                    "generatorVersion": rendered.generator_version,
-                    "pdfSha256": rendered.sha256,
-                }
-                version.metadata_json = {
-                    **version.metadata_json,
-                    "rendition": rendition,
-                }
+                version.pdf_media_id = media.id
                 active_dossier = await self._dossiers.get_by_id(
                     dossier.id,
                     for_update=True,
@@ -365,13 +468,15 @@ class CertificateService:
                         reason_code="CERTIFICATE_ISSUED",
                     )
                 self._add_issued_event(locked, dossier.owner_user_id)
+                self._audit(
+                    "certificate.issued",
+                    locked.id,
+                    actor_service="certificate-issuance-worker",
+                    status=locked.status,
+                    pdf_ready=True,
+                )
                 await self._session.flush()
         final_row = await self._required_row(certificate_id)
-        self._audit(
-            "certificate.issued",
-            dossier.owner_user_id,
-            certificate_id,
-        )
         return self._view(final_row)
 
     async def _required_row(self, certificate_id: UUID) -> CertificateRow:
@@ -420,32 +525,44 @@ class CertificateService:
             pdf_ready=certificate.pdf_media_id is not None,
             network=transaction.network if transaction is not None else None,
             contract_address=(
-                transaction.contract_address
-                if transaction is not None
-                else None
+                transaction.contract_address if transaction is not None else None
             ),
-            transaction_hash=(
-                transaction.tx_hash if transaction is not None else None
-            ),
-            blockchain_status=(
-                transaction.status if transaction is not None else None
-            ),
-            confirmations=(
-                transaction.confirmations if transaction is not None else 0
-            ),
+            transaction_hash=(transaction.tx_hash if transaction is not None else None),
+            blockchain_status=(transaction.status if transaction is not None else None),
+            confirmations=(transaction.confirmations if transaction is not None else 0),
         )
 
     @staticmethod
     def _require_role(principal: AuthPrincipal) -> None:
-        if not CERTIFICATE_ROLES.intersection(principal.roles):
-            raise CertificateForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(
+                permission="certificate.read", compatible_roles=CERTIFICATE_ROLES
+            ),
+            CertificateForbiddenError,
+        )
 
-    @staticmethod
-    def _audit(action: str, actor_user_id: UUID, certificate_id: UUID) -> None:
-        logger.info(
-            action,
-            extra={
-                "actor_user_id": str(actor_user_id),
-                "certificate_id": str(certificate_id),
-            },
+    def _audit(
+        self,
+        action: str,
+        resource_id: UUID,
+        *,
+        actor_user_id: UUID | None = None,
+        actor_service: str | None = None,
+        resource_type: str = "certificate",
+        status: CertificateStatus | None = None,
+        pdf_ready: bool | None = None,
+    ) -> None:
+        after: dict[str, object] = {}
+        if status is not None:
+            after["status"] = status.value
+        if pdf_ready is not None:
+            after["pdf_ready"] = pdf_ready
+        self._audit_service.record(
+            actor_user_id=actor_user_id,
+            actor_service=actor_service,
+            action=action,
+            resource_type=resource_type,
+            resource_id=str(resource_id),
+            after=after or None,
         )

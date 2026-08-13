@@ -1,8 +1,10 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { BadgeDollarSign, CheckCircle2, Clock3 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { paymentApi } from "@/lib/api/client";
@@ -20,9 +22,16 @@ export function DossierPaymentAction({
   dossierStatus: DossierStatus;
 }) {
   const router = useRouter();
+  const requestKey = useRef(idempotencyKey());
+  const activeOrder = useQuery({
+    queryKey: ["active-payment-order", dossierId],
+    queryFn: () => paymentApi.getActive(dossierId),
+    enabled: dossierStatus === "PAYMENT_PENDING",
+    retry: false,
+  });
   const createOrder = useMutation({
-    mutationFn: () => paymentApi.create(dossierId, idempotencyKey()),
-    onSuccess: (order) => router.push(`/thanh-toan/${order.id}`),
+    mutationFn: () => paymentApi.create(dossierId, requestKey.current),
+    onSuccess: (order) => router.push(`/payments/${order.id}`),
   });
 
   if (dossierStatus === "PAID") {
@@ -32,7 +41,7 @@ export function DossierPaymentAction({
         <div>
           <h2 className="font-bold">Phí xác lập đã được ghi nhận</h2>
           <p className="mt-1 text-sm leading-6 text-emerald-800">
-            Hồ sơ đang sẵn sàng chuyển sang bước neo dữ liệu blockchain.
+            Hồ sơ đang được chuẩn bị để phát hành chứng thư.
           </p>
         </div>
       </section>
@@ -45,8 +54,25 @@ export function DossierPaymentAction({
         <div>
           <h2 className="font-bold">Đang chờ xác nhận thanh toán</h2>
           <p className="mt-1 text-sm leading-6 text-amber-800">
-            Chỉ webhook đã xác thực từ nhà cung cấp mới có thể đánh dấu đã trả.
+            Bạn có thể mở lại trang thanh toán để tiếp tục hoặc chờ hệ thống cập
+            nhật.
           </p>
+          {activeOrder.data ? (
+            <Link
+              className="mt-3 inline-flex min-h-11 items-center text-sm font-bold text-amber-950 underline decoration-2 underline-offset-4"
+              href={`/payments/${activeOrder.data.id}`}
+            >
+              Mở lại trang thanh toán
+            </Link>
+          ) : activeOrder.isPending ? (
+            <p className="mt-3 text-sm font-semibold">
+              Đang tìm lần thanh toán gần nhất…
+            </p>
+          ) : (
+            <p className="mt-3 text-sm font-semibold">
+              Chưa thể mở lại. Vui lòng tải lại trang hoặc liên hệ hỗ trợ.
+            </p>
+          )}
         </div>
       </section>
     );
@@ -65,7 +91,7 @@ export function DossierPaymentAction({
         <div>
           <h2 className="font-bold text-primary-950">Hồ sơ đã được duyệt</h2>
           <p className="mt-1 text-sm leading-6 text-primary-900/75">
-            Tạo lệnh thanh toán để tiếp tục quy trình xác lập và neo blockchain.
+            Thanh toán phí phát hành để tiếp tục nhận chứng thư.
           </p>
         </div>
       </div>
@@ -73,7 +99,7 @@ export function DossierPaymentAction({
         disabled={createOrder.isPending}
         onClick={() => createOrder.mutate()}
       >
-        {createOrder.isPending ? "Đang tạo lệnh…" : "Tạo lệnh thanh toán"}
+        {createOrder.isPending ? "Đang chuẩn bị…" : "Thanh toán phí phát hành"}
       </Button>
       {createOrder.error ? (
         <p

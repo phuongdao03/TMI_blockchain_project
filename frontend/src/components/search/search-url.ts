@@ -19,5 +19,5 @@ export function searchHref(parameters: SearchParameters): string {
   }
   query.set("sort", parameters.sort);
   if (parameters.cursor) query.set("cursor", parameters.cursor);
-  return `/tim-kiem?${query.toString()}`;
+  return `/search?${query.toString()}`;
 }

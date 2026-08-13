@@ -1,9 +1,10 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from app.modules.media.models import MediaStatus
+from app.modules.media.models import MediaConfidentiality, MediaStatus
 
 
 class MediaPurpose(StrEnum):
@@ -18,6 +19,7 @@ class UploadIntent:
     filename: str
     mime_type: str
     size: int
+    confidentiality: MediaConfidentiality = MediaConfidentiality.PRIVATE
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,9 +51,19 @@ class MediaAssetView:
     width: int | None
     height: int | None
     duration_ms: int | None
+    inspection_attempts: int = 0
+    inspection_reason_code: str | None = None
+    inspected_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class SignedDeliveryView:
     url: str
     expires_at: int
+
+
+@dataclass(frozen=True, slots=True)
+class MediaContentView:
+    content: bytes
+    mime_type: str
+    filename: str

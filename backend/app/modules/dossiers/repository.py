@@ -2,11 +2,14 @@ from typing import cast
 from uuid import UUID
 
 from sqlalchemy import exists, func, or_, select
+from sqlalchemy.dialects.postgresql import insert as postgres_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.dossiers.models import (
     Category,
     Dossier,
+    DossierContentClaim,
     DossierEvidence,
     DossierStatus,
     DossierStatusHistory,
@@ -31,6 +34,60 @@ class DossierRepository:
 
     def add_version(self, version: DossierVersion) -> None:
         self._session.add(version)
+
+    async def claim_content(
+        self,
+        claim: DossierContentClaim,
+    ) -> DossierContentClaim:
+        """Atomically claim a fingerprint, then return the winning claim."""
+        bind = self._session.bind
+        dialect = bind.dialect.name if bind is not None else ""
+        values = {
+            "id": claim.id,
+            "content_fingerprint": claim.content_fingerprint,
+            "dossier_id": claim.dossier_id,
+            "dossier_version_id": claim.dossier_version_id,
+        }
+        if dialect == "postgresql":
+            postgres_statement = postgres_insert(DossierContentClaim).values(values)
+            postgres_statement = postgres_statement.on_conflict_do_nothing(
+                index_elements=[DossierContentClaim.content_fingerprint]
+            )
+            await self._session.execute(postgres_statement)
+        elif dialect == "sqlite":
+            sqlite_statement = sqlite_insert(DossierContentClaim).values(values)
+            sqlite_statement = sqlite_statement.on_conflict_do_nothing(
+                index_elements=[DossierContentClaim.content_fingerprint]
+            )
+            await self._session.execute(sqlite_statement)
+        else:
+            self._session.add(claim)
+            await self._session.flush()
+        stored = await self.get_content_claim(
+            claim.content_fingerprint,
+            for_update=True,
+        )
+        if stored is None:
+            raise RuntimeError("Content claim was not persisted.")
+        return stored
+
+    async def get_content_claim(
+        self,
+        fingerprint: str,
+        *,
+        for_update: bool = False,
+    ) -> DossierContentClaim | None:
+        statement = select(DossierContentClaim).where(
+            DossierContentClaim.content_fingerprint == fingerprint,
+        )
+        if for_update:
+            statement = statement.with_for_update().execution_options(
+                populate_existing=True
+            )
+        return cast(
+            DossierContentClaim | None,
+            await self._session.scalar(statement),
+        )
 
     def add_status_history(self, history: DossierStatusHistory) -> None:
         self._session.add(history)

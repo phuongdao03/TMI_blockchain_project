@@ -398,9 +398,7 @@ async def reorder_public_work_media(
     )
 
 
-@router.delete(
-    "/{work_id}/media/{relation_id}", status_code=status.HTTP_204_NO_CONTENT
-)
+@router.delete("/{work_id}/media/{relation_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_public_work_media(
     work_id: UUID,
     relation_id: UUID,

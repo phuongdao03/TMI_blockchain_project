@@ -9,11 +9,9 @@ import {
 describe("role workspaces", () => {
   it("prioritizes privileged workspaces for multi-role users", () => {
     expect(resolveDefaultWorkspace(["APPLICANT", "CONTENT_ADMIN"])).toBe(
-      "/admin/noi-dung",
+      "/admin/content",
     );
-    expect(resolveDefaultWorkspace(["REVIEWER", "SUPER_ADMIN"])).toBe(
-      "/admin/dashboard",
-    );
+    expect(resolveDefaultWorkspace(["REVIEWER", "SUPER_ADMIN"])).toBe("/admin");
   });
 
   it("keeps applicant actions restricted to applicant roles", () => {

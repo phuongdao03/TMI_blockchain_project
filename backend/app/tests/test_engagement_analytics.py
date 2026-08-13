@@ -76,12 +76,18 @@ class FakeAudit:
 def test_daily_window_requires_ten_minute_utc_grace() -> None:
     day = date(2026, 8, 4)
     assert DAILY_SNAPSHOT_GRACE == timedelta(minutes=10)
-    assert eligible_metric_date(
-        now=datetime(2026, 8, 5, 0, 9, tzinfo=UTC),
-    ) is None
-    assert eligible_metric_date(
-        now=datetime(2026, 8, 5, 0, 10, tzinfo=UTC),
-    ) == day
+    assert (
+        eligible_metric_date(
+            now=datetime(2026, 8, 5, 0, 9, tzinfo=UTC),
+        )
+        is None
+    )
+    assert (
+        eligible_metric_date(
+            now=datetime(2026, 8, 5, 0, 10, tzinfo=UTC),
+        )
+        == day
+    )
 
 
 def test_snapshot_is_idempotent_and_records_audit_telemetry() -> None:
@@ -115,8 +121,6 @@ def test_snapshot_returns_none_before_grace_period() -> None:
     )
 
     assert (
-        asyncio.run(
-            service.snapshot(now=datetime(2026, 8, 5, 0, 9, tzinfo=UTC))
-        )
+        asyncio.run(service.snapshot(now=datetime(2026, 8, 5, 0, 9, tzinfo=UTC)))
         is None
     )

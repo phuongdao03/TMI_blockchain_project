@@ -39,7 +39,7 @@ test("applicant creates, uploads evidence and submits an immutable dossier", asy
     }
   });
 
-  await page.goto("/ho-so");
+  await page.goto("/dossiers");
   await expect(
     page.getByRole("heading", { level: 1, name: "Hồ sơ xác lập" }),
   ).toBeVisible();
@@ -50,7 +50,7 @@ test("applicant creates, uploads evidence and submits an immutable dossier", asy
     .fill("Bộ nhận diện TMI E2E");
   await page.getByLabel("Mô tả ngắn").fill("Hồ sơ kiểm thử luồng xác lập.");
   await page.getByRole("button", { name: "Tạo hồ sơ nháp" }).click();
-  await expect(page).toHaveURL(/\/ho-so\/9155dbf5-/);
+  await expect(page).toHaveURL(/\/dossiers\/9155dbf5-/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Bộ nhận diện TMI E2E" }),
   ).toBeVisible();

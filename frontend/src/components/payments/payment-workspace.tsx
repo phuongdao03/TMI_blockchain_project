@@ -20,6 +20,15 @@ import type { PaymentOrder } from "@/lib/api/types";
 import { paymentKeys } from "@/lib/payments/query-keys";
 
 const POLLING_STATUSES = new Set(["PENDING", "PROCESSING"]);
+const statusLabels: Record<PaymentOrder["status"], string> = {
+  PENDING: "Chờ thanh toán",
+  PROCESSING: "Đang xác nhận",
+  PAID: "Đã thanh toán",
+  FAILED: "Chưa thành công",
+  CANCELLED: "Đã hủy",
+  EXPIRED: "Đã hết hạn",
+  REFUNDED: "Đã hoàn tiền",
+};
 
 function money(order: PaymentOrder) {
   return new Intl.NumberFormat("vi-VN", {
@@ -63,20 +72,29 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
         className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800"
         role="alert"
       >
-        Không thể tải trạng thái thanh toán. Vui lòng quay lại hồ sơ và thử lại.
+        <p>Không thể tải trạng thái thanh toán.</p>
+        <button
+          className="mt-4 min-h-11 rounded-lg border border-red-300 px-4 text-sm font-bold"
+          onClick={() => void order.refetch()}
+          type="button"
+        >
+          Thử lại
+        </button>
       </div>
     );
   }
 
   const payment = order.data;
   const paid = payment.status === "PAID";
-  const stopped = ["FAILED", "EXPIRED", "REFUNDED"].includes(payment.status);
+  const stopped = ["FAILED", "CANCELLED", "EXPIRED", "REFUNDED"].includes(
+    payment.status,
+  );
 
   return (
     <main className="mx-auto max-w-5xl space-y-6">
       <Link
         className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-neutral-500 hover:text-primary-700"
-        href={`/ho-so/${payment.dossierId}`}
+        href={`/dossiers/${payment.dossierId}`}
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         Quay lại hồ sơ
@@ -98,7 +116,7 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
               </h1>
             </div>
             <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold">
-              {payment.status}
+              {statusLabels[payment.status]}
             </span>
           </div>
         </div>
@@ -127,11 +145,11 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                   className="mt-0.5 size-6 shrink-0"
                 />
                 <div>
-                  <h2 className="font-bold">Biên nhận đã được xác thực</h2>
+                  <h2 className="font-bold">Khoản phí đã được xác nhận</h2>
                   <p className="mt-1 text-sm leading-6 text-emerald-800">
-                    Backend đã nhận webhook hợp lệ
+                    Thanh toán được ghi nhận
                     {payment.paidAt ? ` lúc ${formatTime(payment.paidAt)}` : ""}
-                    . Redirect từ nhà cung cấp không được dùng làm bằng chứng.
+                    . Hồ sơ sẽ tự chuyển sang bước phát hành tiếp theo.
                   </p>
                 </div>
               </div>
@@ -145,10 +163,16 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                   className="mt-0.5 size-6 shrink-0"
                 />
                 <div>
-                  <h2 className="font-bold">Không thể tiếp tục với lệnh này</h2>
+                  <h2 className="font-bold">
+                    {payment.status === "CANCELLED"
+                      ? "Bạn đã hủy lần thanh toán này"
+                      : payment.status === "EXPIRED"
+                        ? "Lần thanh toán đã hết hạn"
+                        : "Lần thanh toán chưa hoàn tất"}
+                  </h2>
                   <p className="mt-1 text-sm leading-6">
-                    Trạng thái hiện tại: {payment.status}. Quay lại hồ sơ để
-                    kiểm tra hoặc liên hệ bộ phận hỗ trợ.
+                    Quay lại hồ sơ để bắt đầu lại hoặc liên hệ hỗ trợ nếu tiền
+                    đã được trừ khỏi tài khoản.
                   </p>
                 </div>
               </div>
@@ -159,7 +183,7 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
               >
                 <Clock3 aria-hidden="true" className="mt-0.5 size-6 shrink-0" />
                 <div>
-                  <h2 className="font-bold">Đang chờ nhà cung cấp xác nhận</h2>
+                  <h2 className="font-bold">Đang chờ xác nhận</h2>
                   <p className="mt-1 text-sm leading-6 text-amber-800">
                     Trang tự kiểm tra trạng thái mỗi 3 giây. Bạn có thể giữ
                     trang này mở sau khi hoàn tất thanh toán.
@@ -175,7 +199,7 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                 rel="noopener noreferrer"
                 target="_blank"
               >
-                Mở cổng thanh toán
+                Mở trang thanh toán
                 <ExternalLink aria-hidden="true" className="size-4" />
               </a>
             ) : null}
@@ -189,9 +213,9 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                     aria-hidden="true"
                     className="size-10 text-neutral-900"
                   />
-                  <h2 className="mt-4 font-bold">Mã thanh toán</h2>
-                  <p className="mt-2 break-all font-mono text-xs leading-5 text-neutral-500">
-                    {payment.qrPayload}
+                  <h2 className="mt-4 font-bold">Thanh toán bằng VietQR</h2>
+                  <p className="mt-2 text-sm leading-6 text-neutral-500">
+                    Mở trang thanh toán để quét mã hoặc chọn ứng dụng ngân hàng.
                   </p>
                 </>
               ) : (
@@ -200,9 +224,9 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                     aria-hidden="true"
                     className="size-10 text-neutral-900"
                   />
-                  <h2 className="mt-4 font-bold">Thông tin biên nhận</h2>
+                  <h2 className="mt-4 font-bold">Thông tin thanh toán</h2>
                   <p className="mt-2 text-sm leading-6 text-neutral-500">
-                    Nhà cung cấp: {payment.provider}
+                    Mã tham chiếu: {payment.orderCode}
                   </p>
                 </>
               )}
@@ -212,8 +236,7 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                 aria-hidden="true"
                 className="size-5 shrink-0 text-primary-700"
               />
-              Không lưu dữ liệu thẻ. Số tiền và loại tiền được khóa tại thời
-              điểm tạo lệnh.
+              TMI không yêu cầu mật khẩu hay mã xác nhận ngân hàng của bạn.
             </div>
           </aside>
         </div>

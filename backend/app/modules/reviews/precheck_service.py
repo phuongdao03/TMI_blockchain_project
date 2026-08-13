@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.outbox import OutboxEvent
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
@@ -216,8 +217,11 @@ class PrecheckService:
 
     @staticmethod
     def _require_admin(principal: AuthPrincipal) -> None:
-        if not ADMIN_ROLES.intersection(principal.roles):
-            raise DossierForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(permission="review.assign", compatible_roles=ADMIN_ROLES),
+            DossierForbiddenError,
+        )
 
     @staticmethod
     def _reason(value: str) -> str:

@@ -65,7 +65,7 @@ export function SearchFilters({
         ) : null}
       </FacetGroup>
 
-      <form action="/tim-kiem" className="space-y-4" method="get">
+      <form action="/search" className="space-y-4" method="get">
         <HiddenSearchState parameters={parameters} />
         <label className="block text-sm font-semibold text-slate-300">
           Cách khớp chủ đề
@@ -142,7 +142,7 @@ export function SearchFilters({
         </Button>
         <Link
           className="flex min-h-11 items-center justify-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-white"
-          href="/tim-kiem"
+          href="/search"
         >
           <RotateCcw aria-hidden="true" className="size-4" /> Xóa tất cả
         </Link>

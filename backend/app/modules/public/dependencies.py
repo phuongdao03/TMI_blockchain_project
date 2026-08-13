@@ -4,9 +4,10 @@ from typing import Annotated
 from fastapi import Depends, Request
 from redis.asyncio import Redis
 
+from app.modules.audit.service import AuditService
 from app.modules.auth.dependencies import SessionDependency, SettingsDependency
 from app.modules.auth.errors import RateLimitExceededError, RateLimitUnavailableError
-from app.modules.blockchain.gateway import BlockchainGateway
+from app.modules.blockchain.gateway import SUPPORTED_CHAINS, BlockchainGateway
 from app.modules.engagement.errors import (
     EngagementRateLimitedError,
     EngagementUnavailableError,
@@ -49,7 +50,7 @@ async def get_public_verification(
         chain_id=settings.blockchain_chain_id,
         contract_address=address,
         abi_path=settings.blockchain_contract_abi_path,
-        allowed_networks={"local": 31_337, "amoy": 80_002},
+        allowed_networks=SUPPORTED_CHAINS,
         allowed_contracts={settings.blockchain_network: {address}},
     )
     repository = PublicCatalogService(session).repository
@@ -65,6 +66,8 @@ async def get_public_verification(
                 redis_client,
                 ttl_seconds=settings.public_verification_cache_ttl_seconds,
             ),
+            audit=AuditService(session, settings=settings),
+            audit_session=session,
         )
     finally:
         await gateway.close()

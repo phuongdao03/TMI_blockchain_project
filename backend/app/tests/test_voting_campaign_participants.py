@@ -130,7 +130,9 @@ def test_participant_admin_api_uses_safe_contract_and_csrf_dependency() -> None:
     class StubService:
         bulk_work_ids: tuple[object, ...] = ()
 
-        async def list_participants(self, *_args: object, **_kwargs: object):
+        async def list_participants(
+            self, *_args: object, **_kwargs: object
+        ) -> tuple[tuple[CampaignParticipantView, ...], int]:
             return (participant,), 1
 
         async def add_participants(
@@ -139,7 +141,7 @@ def test_participant_admin_api_uses_safe_contract_and_csrf_dependency() -> None:
             _campaign_id: object,
             work_ids: tuple[object, ...],
             **_kwargs: object,
-        ):
+        ) -> tuple[CampaignParticipantView, ...]:
             self.bulk_work_ids = work_ids
             return (participant,)
 

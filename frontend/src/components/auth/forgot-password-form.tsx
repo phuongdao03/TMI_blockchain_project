@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { sendPasswordResetEmail } from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -8,11 +9,11 @@ import { useForm } from "react-hook-form";
 import { AuthCard, AuthLink } from "@/components/auth/auth-card";
 import { FormField } from "@/components/auth/form-field";
 import { Button } from "@/components/ui/button";
-import { ApiError, authApi } from "@/lib/api/client";
 import {
   forgotPasswordSchema,
   type ForgotPasswordValues,
 } from "@/lib/auth/schemas";
+import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
 
 export function ForgotPasswordForm() {
   const [submitError, setSubmitError] = useState<string>();
@@ -29,12 +30,18 @@ export function ForgotPasswordForm() {
   const onSubmit = handleSubmit(async ({ email }) => {
     setSubmitError(undefined);
     try {
-      await authApi.forgotPassword(email);
+      if (!firebaseConfigured())
+        throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
+      await sendPasswordResetEmail(getFirebaseAuth(), email);
       setAccepted(true);
     } catch (error) {
+      if ((error as { code?: string } | null)?.code === "auth/user-not-found") {
+        setAccepted(true);
+        return;
+      }
       setSubmitError(
-        error instanceof ApiError
-          ? error.message
+        typeof navigator !== "undefined" && !navigator.onLine
+          ? "Bạn đang ngoại tuyến. Hãy kiểm tra kết nối mạng rồi thử lại."
           : "Không thể gửi yêu cầu lúc này. Vui lòng thử lại.",
       );
     }

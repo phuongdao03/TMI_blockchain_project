@@ -11,6 +11,7 @@ export type UploadStatus =
   | "signing"
   | "uploading"
   | "verifying"
+  | "inspecting"
   | "complete"
   | "failed";
 
@@ -29,7 +30,9 @@ export function useMediaUploader({
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const isBusy = ["signing", "uploading", "verifying"].includes(status);
+  const isBusy = ["signing", "uploading", "verifying", "inspecting"].includes(
+    status,
+  );
 
   const selectFile = useCallback(
     (nextFile: File | undefined) => {

@@ -88,6 +88,6 @@ async def _reconcile_all() -> None:
     )
 
 
-@celery_app.task  # type: ignore[misc]
+@celery_app.task  # type: ignore[untyped-decorator]
 def reconcile_vote_aggregates() -> None:
     asyncio.run(_reconcile_all())

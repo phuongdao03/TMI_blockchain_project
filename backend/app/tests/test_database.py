@@ -46,7 +46,12 @@ def test_settings_keep_pooled_and_direct_database_urls_separate() -> None:
     )
 
 
-def test_runtime_engine_requires_pooled_database_url() -> None:
+def test_runtime_engine_requires_pooled_database_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(Path(__file__).resolve().parent)
+    for field_name in Settings.model_fields:
+        monkeypatch.delenv(field_name.upper(), raising=False)
     settings = Settings.model_validate({})
 
     with pytest.raises(DatabaseConfigurationError, match="DATABASE_URL"):

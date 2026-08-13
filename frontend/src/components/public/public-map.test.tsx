@@ -32,7 +32,7 @@ describe("PublicMap", () => {
 
     await screen.findByText("Thương hiệu");
     const links = container.querySelectorAll(
-      'a[href="/tai-san/bo-nhan-dien-tmi"]',
+      'a[href="/works/bo-nhan-dien-tmi"]',
     );
     expect(links).toHaveLength(2);
     expect(mapMock).toHaveBeenCalledWith("BRAND");

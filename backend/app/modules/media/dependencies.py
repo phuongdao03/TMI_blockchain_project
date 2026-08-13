@@ -9,10 +9,12 @@ from app.modules.auth.dependencies import (
     SessionDependency,
     SettingsDependency,
 )
+from app.modules.media.encryption import DocumentEncryptionKeyring
 from app.modules.media.gateway import CloudinaryMediaGateway
 from app.modules.media.service import MediaService
 from app.modules.public.rate_limit import RedisPublicRateLimiter
 from app.modules.reviews.media_access import ReviewMediaAccessPolicy
+from app.workers.celery_app import celery_app
 
 
 async def get_media_service(
@@ -20,6 +22,17 @@ async def get_media_service(
     settings: SettingsDependency,
 ) -> AsyncIterator[MediaService]:
     secret = settings.cloudinary_api_secret
+    encryption_keyring = (
+        DocumentEncryptionKeyring.from_base64_keys(
+            active_key_id=settings.media_private_encryption_active_key_id,
+            encoded_keys={
+                key_id: value.get_secret_value()
+                for key_id, value in settings.media_private_encryption_keys.items()
+            },
+        )
+        if settings.media_private_encryption_enabled
+        else None
+    )
     service = MediaService(
         session=session,
         gateway=CloudinaryMediaGateway(
@@ -33,7 +46,12 @@ async def get_media_service(
         delivery_ttl_seconds=settings.media_delivery_ttl_seconds,
         avatar_max_bytes=settings.media_avatar_max_bytes,
         evidence_max_bytes=settings.media_evidence_max_bytes,
+        enqueue_inspection=lambda media_id: celery_app.send_task(
+            "app.workers.media_inspection_tasks.inspect_media_asset",
+            args=[str(media_id)],
+        ),
         delivery_access_policy=ReviewMediaAccessPolicy(session),
+        encryption_keyring=encryption_keyring,
     )
     try:
         yield service

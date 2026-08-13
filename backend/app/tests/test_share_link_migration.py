@@ -26,9 +26,7 @@ def test_share_link_migration_round_trip(
         with sqlite3.connect(database_path) as connection:
             columns = {
                 row[1]
-                for row in connection.execute(
-                    "PRAGMA table_info(public_share_links)"
-                )
+                for row in connection.execute("PRAGMA table_info(public_share_links)")
             }
             foreign_keys = {
                 (row[3], row[2], row[4], row[6])

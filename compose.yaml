@@ -3,12 +3,12 @@ x-backend-service: &backend-service
     context: ./backend
     dockerfile: Dockerfile
     target: runtime
-  environment:
+  environment: &backend-environment
     ANVIL_RPC_URL: http://anvil:8545
     APP_ENV: local
     APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
-    DATABASE_DIRECT_URL: ${DATABASE_DIRECT_URL:-}
-    DATABASE_URL: ${DATABASE_URL:-}
+    DATABASE_DIRECT_URL: postgresql+asyncpg://tmi_local:tmi-local-only@postgres:5432/tmi_local
+    DATABASE_URL: postgresql+asyncpg://tmi_local:tmi-local-only@postgres:5432/tmi_local
     AUTH_OUTBOX_ENCRYPTION_KEY: ${AUTH_OUTBOX_ENCRYPTION_KEY:-}
     PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY:-}
     AUTH_OUTBOX_KEY_ID: ${AUTH_OUTBOX_KEY_ID:-auth-registration-v1}
@@ -32,6 +32,14 @@ x-backend-service: &backend-service
     AUTH_PASSWORD_RESET_IP_LIMIT: ${AUTH_PASSWORD_RESET_IP_LIMIT:-10}
     AUTH_PASSWORD_RESET_EMAIL_LIMIT: ${AUTH_PASSWORD_RESET_EMAIL_LIMIT:-3}
     AUTH_PASSWORD_RESET_RATE_WINDOW_SECONDS: ${AUTH_PASSWORD_RESET_RATE_WINDOW_SECONDS:-900}
+    FIREBASE_PROJECT_ID: tmi-local
+    FIREBASE_AUTH_EMULATOR_HOST: firebase-emulator:9099
+    FIREBASE_JWKS_URI: ${FIREBASE_JWKS_URI:-https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com}
+    FIREBASE_TIMEOUT_SECONDS: ${FIREBASE_TIMEOUT_SECONDS:-5}
+    FIREBASE_TOTP_ENABLED: "false"
+    STAFF_MFA_MAX_AGE_SECONDS: ${STAFF_MFA_MAX_AGE_SECONDS:-43200}
+    OAUTH_RATE_LIMIT: ${OAUTH_RATE_LIMIT:-10}
+    OAUTH_RATE_WINDOW_SECONDS: ${OAUTH_RATE_WINDOW_SECONDS:-60}
     CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
     CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
     CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
@@ -40,29 +48,53 @@ x-backend-service: &backend-service
     MEDIA_AVATAR_MAX_BYTES: ${MEDIA_AVATAR_MAX_BYTES:-5242880}
     MEDIA_EVIDENCE_MAX_BYTES: ${MEDIA_EVIDENCE_MAX_BYTES:-20971520}
     MEDIA_PROVIDER_TIMEOUT_SECONDS: ${MEDIA_PROVIDER_TIMEOUT_SECONDS:-5}
-    PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+    MEDIA_SCANNER_HOST: ${MEDIA_SCANNER_HOST:-clamav}
+    MEDIA_SCANNER_PORT: ${MEDIA_SCANNER_PORT:-3310}
+    MEDIA_SCANNER_TIMEOUT_SECONDS: ${MEDIA_SCANNER_TIMEOUT_SECONDS:-15}
+    MEDIA_INSPECTION_MAX_ATTEMPTS: ${MEDIA_INSPECTION_MAX_ATTEMPTS:-5}
+    MEDIA_UPLOAD_SIGNATURE_RATE_LIMIT: ${MEDIA_UPLOAD_SIGNATURE_RATE_LIMIT:-20}
+    MEDIA_UPLOAD_SIGNATURE_RATE_WINDOW_SECONDS: ${MEDIA_UPLOAD_SIGNATURE_RATE_WINDOW_SECONDS:-60}
+    PAYMENT_PROVIDER:
+      ${PAYMENT_PROVIDER:?Set PAYMENT_PROVIDER in .env (mock is local-only)}
     PAYMENT_AMOUNT_MINOR: ${PAYMENT_AMOUNT_MINOR:-1000000}
     PAYMENT_CURRENCY: ${PAYMENT_CURRENCY:-VND}
     PAYMENT_ORDER_TTL_SECONDS: ${PAYMENT_ORDER_TTL_SECONDS:-900}
     PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-}
     PAYMENT_WEBHOOK_TOLERANCE_SECONDS: ${PAYMENT_WEBHOOK_TOLERANCE_SECONDS:-300}
-    PAYMENT_CHECKOUT_BASE_URL: ${PAYMENT_CHECKOUT_BASE_URL:-http://localhost:3000/thanh-toan/mock}
+    PAYMENT_CHECKOUT_BASE_URL: ${PAYMENT_CHECKOUT_BASE_URL:-http://localhost:3000/payments/mock}
+    PAYOS_BASE_URL: ${PAYOS_BASE_URL:-https://api-merchant.payos.vn}
+    PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID:-}
+    PAYOS_API_KEY: ${PAYOS_API_KEY:-}
+    PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
+    PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-}
+    PAYOS_CANCEL_URL: ${PAYOS_CANCEL_URL:-}
+    PAYOS_TIMEOUT_SECONDS: ${PAYOS_TIMEOUT_SECONDS:-8}
+    PAYMENT_REAL_MONEY_TEST_ENABLED: ${PAYMENT_REAL_MONEY_TEST_ENABLED:-false}
+    PAYMENT_REAL_MONEY_TEST_MAX_AMOUNT_VND: ${PAYMENT_REAL_MONEY_TEST_MAX_AMOUNT_VND:-10000}
     BLOCKCHAIN_NETWORK: ${BLOCKCHAIN_NETWORK:-local}
     BLOCKCHAIN_CHAIN_ID: ${BLOCKCHAIN_CHAIN_ID:-31337}
     BLOCKCHAIN_RPC_URL: ${BLOCKCHAIN_RPC_URL:-http://anvil:8545}
-    CERTIFICATE_CONTRACT_ADDRESS: ${CERTIFICATE_CONTRACT_ADDRESS:-}
+    BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES: ${BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES:-}
     BLOCKCHAIN_CONTRACT_ABI_PATH: /contracts/artifacts/CertificateRegistry.abi.json
-    BLOCKCHAIN_SIGNER_PRIVATE_KEY: ${BLOCKCHAIN_SIGNER_PRIVATE_KEY:-}
     BLOCKCHAIN_REQUIRED_CONFIRMATIONS: ${BLOCKCHAIN_REQUIRED_CONFIRMATIONS:-1}
     BLOCKCHAIN_NONCE_LOCK_TTL_SECONDS: ${BLOCKCHAIN_NONCE_LOCK_TTL_SECONDS:-30}
     BLOCKCHAIN_EXPLORER_BASE_URL: ${BLOCKCHAIN_EXPLORER_BASE_URL:-}
+    CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
     PUBLIC_RATE_LIMIT: ${PUBLIC_RATE_LIMIT:-120}
     PUBLIC_RATE_WINDOW_SECONDS: ${PUBLIC_RATE_WINDOW_SECONDS:-60}
     PUBLIC_VERIFICATION_CACHE_TTL_SECONDS: ${PUBLIC_VERIFICATION_CACHE_TTL_SECONDS:-30}
     CERTIFICATE_VALIDITY_DAYS: ${CERTIFICATE_VALIDITY_DAYS:-365}
     CERTIFICATE_TEMPLATE_VERSION: ${CERTIFICATE_TEMPLATE_VERSION:-certificate-red-gold-v1}
+    ENGAGEMENT_VISITOR_HMAC_SECRET: ${ENGAGEMENT_VISITOR_HMAC_SECRET:-}
+    ENGAGEMENT_ACTIVITY_RETENTION_DAYS: ${ENGAGEMENT_ACTIVITY_RETENTION_DAYS:-365}
+    SMTP_HOST: mailpit
+    SMTP_PORT: ${SMTP_PORT:-1025}
+    SMTP_SENDER: ${SMTP_SENDER:-no-reply@tmigroup.vn}
     LOG_LEVEL: INFO
     REDIS_URL: redis://redis:6379/0
+  env_file:
+    - path: ./.runtime/local-contract.env
+      required: false
   networks:
     - application
   read_only: true
@@ -75,6 +107,137 @@ x-backend-service: &backend-service
     - ./contracts/artifacts:/contracts/artifacts:ro
 
 services:
+  clamav:
+    image: clamav/clamav:1.4.3
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    networks:
+      - application
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    volumes:
+      - clamav_data:/var/lib/clamav
+
+  contract-deps:
+    image: node:24.18.0-bookworm-slim
+    command: ["npm", "ci"]
+    profiles: ["tools"]
+    user: "1000:1000"
+    volumes:
+      - ./contracts:/contracts
+    working_dir: /contracts
+
+  contract-deployer:
+    image: ghcr.io/foundry-rs/foundry:v1.7.1
+    command:
+      - forge
+      - script
+      - script/DeployCertificateRegistry.s.sol
+      - --rpc-url
+      - http://anvil:8545
+      - --broadcast
+      - --unlocked
+    depends_on:
+      anvil:
+        condition: service_healthy
+    entrypoint: []
+    environment:
+      CONTRACT_ADMIN: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+      DEPLOYER_ADDRESS: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+      EXPECTED_DEPLOYER: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+      EXPECTED_CONTRACT_ADMIN: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+      ISSUER_ADDRESS: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+      EXPECTED_ISSUER: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+    networks:
+      - application
+    profiles: ["tools"]
+    user: "1000:1000"
+    volumes:
+      - ./contracts:/contracts
+    working_dir: /contracts
+
+  postgres:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_DB: tmi_local
+      POSTGRES_PASSWORD: tmi-local-only
+      POSTGRES_USER: tmi_local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tmi_local -d tmi_local"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+    networks:
+      - application
+    ports:
+      - "5432:5432"
+    read_only: true
+    restart: unless-stopped
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  mailpit:
+    image: axllent/mailpit:v1.30.0
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: "500"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - application
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    read_only: true
+    restart: unless-stopped
+    tmpfs:
+      - /tmp
+    volumes:
+      - mailpit_data:/data
+
+  firebase-emulator:
+    build:
+      context: ./infrastructure/firebase-emulator
+    environment:
+      HOME: /tmp/firebase-home
+      XDG_CONFIG_HOME: /tmp/firebase
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          fetch("http://127.0.0.1:9099/emulator/v1/projects/tmi-local/config")
+          .then(response => process.exit(response.ok ? 0 : 1)) .catch(() =>
+          process.exit(1))
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+    networks:
+      - application
+    ports:
+      - "9099:9099"
+    read_only: true
+    restart: unless-stopped
+    tmpfs:
+      - /tmp:rw,uid=1000,gid=1000,mode=700
+
   anvil:
     command:
       - anvil
@@ -116,6 +279,14 @@ services:
     depends_on:
       anvil:
         condition: service_healthy
+      firebase-emulator:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -145,9 +316,17 @@ services:
       - --
       - --hostname
       - 0.0.0.0
+      - --webpack
     environment:
       API_BASE_URL: http://backend:8000
       NPM_CONFIG_CACHE: /tmp/npm-cache
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:-local-api-key}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-tmi-local.firebaseapp.com}
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-tmi-local}
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:-}
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:-}
+      NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:-1:123456789:web:local}
+      NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_URL: ${NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_URL:-http://localhost:9099}
     healthcheck:
       test:
         - CMD
@@ -166,10 +345,11 @@ services:
       - "3000:3000"
     profiles:
       - frontend
-    read_only: true
+    read_only: false
     restart: unless-stopped
     tmpfs:
       - /tmp
+      - /app/.next:rw,uid=1000,gid=1000,mode=755
     user: "1000:1000"
     volumes:
       - ./frontend/src:/app/src:ro
@@ -232,6 +412,17 @@ services:
     volumes:
       - redis_data:/data
 
+  migrate:
+    <<: *backend-service
+    command:
+      - alembic
+      - upgrade
+      - head
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   scheduler:
     <<: *backend-service
     command:
@@ -243,6 +434,10 @@ services:
       - --pidfile=/tmp/celerybeat.pid
       - --schedule=/tmp/celerybeat-schedule
     depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -256,6 +451,9 @@ services:
 
   worker:
     <<: *backend-service
+    environment:
+      <<: *backend-environment
+      DATABASE_NULL_POOL: "true"
     command:
       - celery
       - --app
@@ -263,6 +461,12 @@ services:
       - worker
       - --loglevel=INFO
     depends_on:
+      clamav:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -280,4 +484,7 @@ networks:
     driver: bridge
 
 volumes:
+  clamav_data:
+  mailpit_data:
+  postgres_data:
   redis_data:

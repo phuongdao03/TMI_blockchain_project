@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import DomainError
+from app.modules.audit.service import AuditService
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.engagement.favorite_repository import FavoriteListRow
 from app.modules.engagement.favorite_service import FavoriteService
@@ -102,7 +103,7 @@ def _service(
     return (
         FavoriteService(
             cast(AsyncSession, FakeSession()),
-            audit=cast(object, resolved_audit),
+            audit=cast(AuditService, resolved_audit),
             favorites=resolved_favorites,
             works=works or FakeWorks(),
         ),
@@ -125,25 +126,19 @@ def test_add_favorite_is_idempotent_and_audits_only_the_state_change() -> None:
     )
 
     assert favorites.add_calls == [(USER_ID, WORK_ID), (USER_ID, WORK_ID)]
-    assert [event["action"] for event in audit.events] == [
-        "public_work.favorite_added"
-    ]
+    assert [event["action"] for event in audit.events] == ["public_work.favorite_added"]
 
 
 def test_remove_favorite_is_idempotent_and_owned_by_the_caller() -> None:
     service, favorites, audit = _service()
 
     assert (
-        asyncio.run(
-            service.remove(principal(), slug="public-work", request_id="r-1")
-        )
+        asyncio.run(service.remove(principal(), slug="public-work", request_id="r-1"))
         is True
     )
     favorites.removes = False
     assert (
-        asyncio.run(
-            service.remove(principal(), slug="public-work", request_id="r-2")
-        )
+        asyncio.run(service.remove(principal(), slug="public-work", request_id="r-2"))
         is False
     )
 
@@ -166,9 +161,7 @@ def test_favorite_hides_unpublished_or_inaccessible_work_as_not_found() -> None:
 def test_list_favorites_is_caller_private_and_paginates() -> None:
     service, _favorites, _audit = _service()
 
-    rows, total = asyncio.run(
-        service.list_for_user(principal(), page=2, page_size=20)
-    )
+    rows, total = asyncio.run(service.list_for_user(principal(), page=2, page_size=20))
 
     assert total == 1
     assert rows[0].public_work_id == WORK_ID

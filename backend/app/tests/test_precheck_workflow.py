@@ -32,6 +32,7 @@ from app.modules.dossiers.models import (
 from app.modules.dossiers.service import DossierService
 from app.modules.dossiers.types import CreateDossier, CreateEvidence
 from app.modules.media.models import MediaAsset, MediaStatus
+from app.modules.media.provenance import CURRENT_INSPECTION_POLICY_VERSION
 from app.modules.reviews.precheck_service import PrecheckService
 
 CATEGORY_ID = UUID("4d28db19-1507-5a45-a50d-cd0aa83029ec")
@@ -75,6 +76,11 @@ async def _setup() -> tuple[
         mime_type="application/pdf",
         bytes=2048,
         sha256="a" * 64,
+        hash_algorithm="SHA-256",
+        hash_byte_length=2048,
+        inspection_policy_version=CURRENT_INSPECTION_POLICY_VERSION,
+        hash_storage_version=1,
+        hash_computed_at=NOW,
         status=MediaStatus.ACTIVE,
     )
     async with session_factory() as session:

@@ -1,7 +1,12 @@
 .env*
 .next
+.next-*
 node_modules
 playwright-report
+playwright-report-*
 test-results
+test-results-*
+coverage
+*.tsbuildinfo
 e2e
 *.log

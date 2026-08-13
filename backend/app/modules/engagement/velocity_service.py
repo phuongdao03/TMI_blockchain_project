@@ -55,9 +55,10 @@ def _as_utc(value: datetime) -> datetime:
 def eligible_velocity_date(*, now: datetime) -> date | None:
     normalized = _as_utc(now)
     candidate = normalized.date() - timedelta(days=1)
-    eligible_at = datetime.combine(
-        candidate + timedelta(days=1), time.min, tzinfo=UTC
-    ) + VELOCITY_SNAPSHOT_GRACE
+    eligible_at = (
+        datetime.combine(candidate + timedelta(days=1), time.min, tzinfo=UTC)
+        + VELOCITY_SNAPSHOT_GRACE
+    )
     return candidate if normalized >= eligible_at else None
 
 
@@ -84,9 +85,10 @@ class EngagementVelocityService:
         window_end = as_of_date or eligible_velocity_date(now=normalized_now)
         if window_end is None:
             return None
-        eligible_at = datetime.combine(
-            window_end + timedelta(days=1), time.min, tzinfo=UTC
-        ) + VELOCITY_SNAPSHOT_GRACE
+        eligible_at = (
+            datetime.combine(window_end + timedelta(days=1), time.min, tzinfo=UTC)
+            + VELOCITY_SNAPSHOT_GRACE
+        )
         if normalized_now < eligible_at:
             return None
         window_start = window_end - timedelta(days=6)

@@ -1,5 +1,5 @@
 from datetime import UTC, date, datetime
-from typing import Protocol, cast
+from typing import Protocol
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -69,10 +69,7 @@ class EngagementService:
         )
         self._views = views
         self._shares = shares
-        self._activity = cast(
-            ShareActivityPort,
-            activity or ActivityRepository(session),
-        )
+        self._activity: ShareActivityPort = activity or ActivityRepository(session)
 
     async def record_view(self, *, slug: str, visitor: str) -> bool:
         async with self._session.begin():

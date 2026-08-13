@@ -9,11 +9,23 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 REQUIRED_SERVICES = {
     "anvil",
     "backend",
+    "clamav",
+    "contract-deployer",
+    "contract-deps",
+    "firebase-emulator",
     "frontend",
+    "mailpit",
+    "migrate",
     "nginx",
+    "postgres",
     "redis",
     "scheduler",
     "worker",
+}
+LONG_RUNNING_SERVICES = REQUIRED_SERVICES - {
+    "contract-deployer",
+    "contract-deps",
+    "migrate",
 }
 
 
@@ -53,21 +65,31 @@ def test_services_are_hardened_and_health_checked() -> None:
     services = load_compose()["services"]
     assert isinstance(services, dict)
 
-    for name, service in services.items():
+    for name in LONG_RUNNING_SERVICES:
+        service = services[name]
         assert service["restart"] == "unless-stopped", name
-        assert service["user"] not in {"0", "0:0", "root"}, name
         assert "healthcheck" in service, name
+        if "user" in service:
+            assert service["user"] not in {"0", "0:0", "root"}, name
 
     assert services["backend"]["read_only"] is True
     assert services["worker"]["read_only"] is True
     assert services["scheduler"]["read_only"] is True
 
 
-def test_backend_waits_for_redis_and_anvil_health() -> None:
+def test_backend_waits_for_local_dependencies_and_migration() -> None:
     backend = load_compose()["services"]["backend"]
 
     assert backend["depends_on"]["redis"]["condition"] == "service_healthy"
     assert backend["depends_on"]["anvil"]["condition"] == "service_healthy"
+    assert backend["depends_on"]["postgres"]["condition"] == "service_healthy"
+    assert backend["depends_on"]["firebase-emulator"]["condition"] == (
+        "service_healthy"
+    )
+    assert backend["depends_on"]["mailpit"]["condition"] == "service_healthy"
+    assert backend["depends_on"]["migrate"]["condition"] == (
+        "service_completed_successfully"
+    )
     assert backend["environment"]["REDIS_URL"] == "redis://redis:6379/0"
     assert backend["environment"]["ANVIL_RPC_URL"] == "http://anvil:8545"
     assert backend["environment"]["PII_ENCRYPTION_KEY"] == "${PII_ENCRYPTION_KEY:-}"
@@ -79,12 +101,24 @@ def test_anvil_command_bypasses_foundry_shell_entrypoint() -> None:
     assert anvil["entrypoint"] == []
 
 
-def test_only_redis_has_a_named_persistent_volume() -> None:
+def test_stateful_local_dependencies_use_named_volumes() -> None:
     compose = load_compose()
 
-    assert set(compose["volumes"]) == {"redis_data"}
+    assert set(compose["volumes"]) == {
+        "clamav_data",
+        "mailpit_data",
+        "postgres_data",
+        "redis_data",
+    }
     redis_mounts = compose["services"]["redis"]["volumes"]
     assert redis_mounts == ["redis_data:/data"]
+    assert compose["services"]["postgres"]["volumes"] == [
+        "postgres_data:/var/lib/postgresql/data"
+    ]
+    assert compose["services"]["mailpit"]["volumes"] == ["mailpit_data:/data"]
+    assert compose["services"]["clamav"]["volumes"] == [
+        "clamav_data:/var/lib/clamav"
+    ]
 
 
 def test_frontend_stack_is_explicitly_deferred_to_profile() -> None:
@@ -108,12 +142,16 @@ def test_environment_example_contains_placeholders_only() -> None:
     for secret_name in (
         "BLOCKCHAIN_SIGNER_PRIVATE_KEY",
         "CLOUDINARY_API_SECRET",
-        "DATABASE_URL",
         "JWT_SECRET",
         "PAYMENT_WEBHOOK_SECRET",
         "PII_ENCRYPTION_KEY",
     ):
         assert entries[secret_name] == ""
+    assert entries["DATABASE_URL"].startswith(
+        "postgresql+asyncpg://tmi_local:tmi-local-only@postgres:5432/"
+    )
+    assert entries["FIREBASE_PROJECT_ID"] == "tmi-local"
+    assert entries["FIREBASE_AUTH_EMULATOR_HOST"] == "firebase-emulator:9099"
 
 
 def test_backend_image_runs_as_non_root() -> None:

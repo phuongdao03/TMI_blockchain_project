@@ -11,6 +11,10 @@ import httpx
 from app.modules.media.errors import MediaProviderUnavailableError
 
 
+class MediaContentTooLargeError(Exception):
+    """The provider returned more bytes than the authorized upload size."""
+
+
 @dataclass(frozen=True, slots=True)
 class UploadAuthorization:
     upload_url: str
@@ -45,6 +49,13 @@ class PublicDerivativeMetadata:
     duration_ms: int | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class StoredEncryptedAsset:
+    public_id: str
+    version: int
+    bytes: int
+
+
 class MediaGateway(Protocol):
     async def create_upload_signature(
         self,
@@ -69,6 +80,22 @@ class MediaGateway(Protocol):
         public_id: str,
         resource_type: str,
     ) -> ProviderAssetMetadata: ...
+
+    async def download_asset(
+        self,
+        *,
+        public_id: str,
+        resource_type: str,
+        file_format: str,
+        max_bytes: int,
+    ) -> bytes: ...
+
+    async def upload_encrypted_asset(
+        self,
+        *,
+        public_id: str,
+        content: bytes,
+    ) -> StoredEncryptedAsset: ...
 
     def create_signed_delivery_url(
         self,
@@ -232,6 +259,78 @@ class CloudinaryMediaGateway:
             f"{urlencode(query)}"
         )
 
+    async def download_asset(
+        self,
+        *,
+        public_id: str,
+        resource_type: str,
+        file_format: str,
+        max_bytes: int,
+    ) -> bytes:
+        url = self.create_signed_delivery_url(
+            public_id=public_id,
+            resource_type=resource_type,
+            file_format=file_format,
+            expires_at=int(self._clock()) + 300,
+        )
+        content = bytearray()
+        try:
+            async with self._client.stream("GET", url) as response:
+                response.raise_for_status()
+                declared_length = response.headers.get("content-length")
+                if declared_length is not None and int(declared_length) > max_bytes:
+                    raise MediaContentTooLargeError()
+                async for chunk in response.aiter_bytes():
+                    content.extend(chunk)
+                    if len(content) > max_bytes:
+                        raise MediaContentTooLargeError()
+        except MediaContentTooLargeError:
+            raise
+        except (httpx.HTTPError, ValueError) as exc:
+            raise MediaProviderUnavailableError() from exc
+        return bytes(content)
+
+    async def upload_encrypted_asset(
+        self,
+        *,
+        public_id: str,
+        content: bytes,
+    ) -> StoredEncryptedAsset:
+        timestamp = int(self._clock())
+        parameters = {
+            "overwrite": "true",
+            "public_id": public_id,
+            "timestamp": str(timestamp),
+            "type": self._DELIVERY_TYPE,
+        }
+        form = {
+            **parameters,
+            "api_key": self._api_key,
+            "signature": self.sign_parameters(parameters),
+        }
+        url = (
+            f"https://api.cloudinary.com/v1_1/"
+            f"{quote(self._cloud_name, safe='')}/raw/upload"
+        )
+        payload = await self._request_json(
+            "POST",
+            url,
+            data=form,
+            files={"file": ("document.enc", content, "application/octet-stream")},
+        )
+        if (
+            self._required_str(payload, "public_id") != public_id
+            or self._required_str(payload, "resource_type") != "raw"
+            or self._required_str(payload, "type") != self._DELIVERY_TYPE
+            or self._required_int(payload, "bytes") != len(content)
+        ):
+            raise MediaProviderUnavailableError()
+        return StoredEncryptedAsset(
+            public_id=public_id,
+            version=self._required_int(payload, "version"),
+            bytes=len(content),
+        )
+
     async def delete_asset(
         self,
         *,
@@ -328,12 +427,14 @@ class CloudinaryMediaGateway:
         url: str,
         *,
         data: Mapping[str, str] | None = None,
+        files: Mapping[str, tuple[str, bytes, str]] | None = None,
     ) -> dict[str, object]:
         try:
             response = await self._client.request(
                 method,
                 url,
                 data=data,
+                files=files,
                 auth=(self._api_key, self._api_secret),
             )
             response.raise_for_status()

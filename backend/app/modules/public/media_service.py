@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.outbox import OutboxEvent
 from app.modules.audit.service import AuditService
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
@@ -266,8 +267,14 @@ class PublicMediaService:
 
     @staticmethod
     def _require_admin(principal: AuthPrincipal) -> None:
-        if PUBLIC_MEDIA_ADMIN_ROLES.isdisjoint(principal.roles):
-            raise PublicWorkForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(
+                permission="public_content.manage",
+                compatible_roles=PUBLIC_MEDIA_ADMIN_ROLES,
+            ),
+            PublicWorkForbiddenError,
+        )
 
     def _event(self, work_id: UUID, event_type: str) -> None:
         _record_media_cache_event(

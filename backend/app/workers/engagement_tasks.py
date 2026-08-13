@@ -77,9 +77,7 @@ def _parse_datetime(value: str) -> datetime:
     except ValueError as error:
         raise ValueError("now must be a valid ISO-8601 datetime") from error
     return (
-        parsed.replace(tzinfo=UTC)
-        if parsed.tzinfo is None
-        else parsed.astimezone(UTC)
+        parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
     )
 
 

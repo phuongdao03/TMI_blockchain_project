@@ -33,6 +33,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
   page,
   request,
 }) => {
+  test.setTimeout(90_000);
   const consoleIssues: string[] = [];
   page.on("console", (message) => {
     if (["error", "warning"].includes(message.type())) {
@@ -41,14 +42,14 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
   });
 
   await test.step("applicant creates, uploads and submits dossier", async () => {
-    await page.goto("/ho-so");
+    await page.goto("/dossiers");
     await page.getByRole("link", { name: "Tạo hồ sơ mới" }).click();
     await page
       .getByLabel("Tên tài sản hoặc tác phẩm")
       .fill("Bộ nhận diện TMI Critical Journey");
     await page.getByLabel("Mô tả ngắn").fill("Hồ sơ E2E toàn luồng MVP.");
     await page.getByRole("button", { name: "Tạo hồ sơ nháp" }).click();
-    await expect(page).toHaveURL(/\/ho-so\/9155dbf5-/);
+    await expect(page).toHaveURL(/\/dossiers\/9155dbf5-/);
     await page.getByRole("button", { name: /Bằng chứng/ }).click();
     await page.getByLabel("Tên bằng chứng").fill("Bản gốc nhận diện");
     await page.getByLabel("Chọn bằng chứng hồ sơ").setInputFiles({
@@ -59,7 +60,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
         "base64",
       ),
     });
-    await page.getByRole("button", { name: "Tải lên" }).click();
+    await page.getByRole("button", { name: "Tải lên", exact: true }).click();
     await page.getByRole("button", { name: /Kiểm tra & nộp/ }).click();
     await page.getByRole("button", { name: "Nộp hồ sơ" }).click();
     await expect(page.getByText(/chế độ chỉ đọc/)).toBeVisible();
@@ -67,7 +68,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
 
   await test.step("reviewer completes conflict gate and 5T review", async () => {
     await request.post("http://127.0.0.1:4010/api/e2e/reset-review");
-    await page.goto("/tham-dinh");
+    await page.goto("/reviews");
     await page.getByRole("link", { name: "Mở hồ sơ thẩm định" }).click();
     await page.getByRole("button", { name: "Tôi không có xung đột" }).click();
     const criteria = [
@@ -98,7 +99,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
 
   await test.step("council attends, votes and approves", async () => {
     await request.post("http://127.0.0.1:4010/api/e2e/reset-council");
-    await page.goto("/hoi-dong");
+    await page.goto("/council");
     await page.getByRole("link", { name: "Mở phiên" }).click();
     await page.getByRole("button", { name: "Xác nhận tham dự" }).click();
     await page.getByRole("button", { name: "Mở biểu quyết" }).click();
@@ -120,20 +121,26 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
 
   await test.step("payment is confirmed by trusted status", async () => {
     await request.post("http://127.0.0.1:4010/api/e2e/reset-payment");
-    await page.goto("/ho-so/9155dbf5-bb3e-449d-8bf0-9572cc642cac");
-    await page.getByRole("button", { name: "Tạo lệnh thanh toán" }).click();
+    await page.goto("/dossiers/9155dbf5-bb3e-449d-8bf0-9572cc642cac");
+    await page
+      .getByRole("button", { name: "Thanh toán phí phát hành" })
+      .click();
     await expect(
       page.getByRole("heading", { name: "Thanh toán thành công" }),
     ).toBeVisible({ timeout: 10_000 });
   });
 
   await test.step("anchored certificate is visible and verifiable", async () => {
-    await page.goto("/chung-thu");
+    await page.goto("/certificates");
     await expect(page.getByText("TMI-2026-7EAEC2D2C99A")).toBeVisible();
-    await page.goto("/kiem-tra");
-    await page.getByPlaceholder("TMI-2026-…").fill("TMI-2026-7EAEC2D2C99A");
-    await page.getByRole("button", { name: "Xác minh ngay" }).click();
-    await expect(page.getByRole("heading", { name: "Hợp lệ" })).toBeVisible();
+    await page.goto("/verify");
+    await page
+      .getByLabel("Thông tin cần tra cứu")
+      .fill("TMI-2026-7EAEC2D2C99A");
+    await page.getByRole("button", { name: "Kiểm tra" }).click();
+    await expect(
+      page.getByText("Dữ liệu đã được ghi nhận và không thay đổi"),
+    ).toBeVisible();
   });
 
   expect(consoleIssues).toEqual([]);

@@ -36,7 +36,7 @@ export function DossierCreateForm() {
     mutationFn: dossierApi.create,
     onSuccess: async (dossier) => {
       await queryClient.invalidateQueries({ queryKey: dossierKeys.lists() });
-      router.push(`/ho-so/${dossier.id}`);
+      router.push(`/dossiers/${dossier.id}`);
     },
   });
 
@@ -155,7 +155,10 @@ export function DossierCreateForm() {
           </p>
           {create.error instanceof ApiError &&
           create.error.code === "APPLICANT_PROFILE_INCOMPLETE" ? (
-            <a className="mt-2 inline-block font-bold underline" href="/tai-khoan">
+            <a
+              className="mt-2 inline-block font-bold underline"
+              href="/account"
+            >
               Hoàn thiện hồ sơ tài khoản
             </a>
           ) : null}

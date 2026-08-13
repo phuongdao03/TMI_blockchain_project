@@ -15,10 +15,14 @@ from app.modules.auth.dependencies import (
     CurrentPrincipalDependency,
 )
 from app.modules.blockchain.dependencies import BlockchainServiceDependency
-from app.modules.blockchain.models import BlockchainTransactionStatus
+from app.modules.blockchain.models import (
+    BlockchainTransactionStatus,
+    DocumentEvidenceStatus,
+)
 from app.modules.blockchain.schemas import (
     BlockchainQueuedData,
     BlockchainTransactionData,
+    DocumentEvidenceData,
 )
 
 router = APIRouter(prefix="/api/v1/admin/blockchain", tags=["blockchain-admin"])
@@ -66,6 +70,37 @@ async def list_blockchain_transactions(
     )
 
 
+@router.get(
+    "/document-evidences",
+    response_model=PaginatedSuccessEnvelope[list[DocumentEvidenceData]],
+    responses=RESPONSES,
+)
+async def list_document_evidences(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: BlockchainServiceDependency,
+    evidence_status: Annotated[
+        DocumentEvidenceStatus | None,
+        Query(alias="status"),
+    ] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
+) -> PaginatedSuccessEnvelope[list[DocumentEvidenceData]]:
+    rows, total = await service.list_document_evidences_admin(
+        principal,
+        status=evidence_status,
+        page=page,
+        page_size=page_size,
+    )
+    return PaginatedSuccessEnvelope(
+        data=[DocumentEvidenceData.model_validate(row) for row in rows],
+        meta=ListResponseMeta(
+            request_id=request.state.request_id,
+            page=page,
+            page_size=page_size,
+            total=total,
+        ),
+    )
 @router.post(
     "/transactions/{transaction_id}/retry",
     response_model=SuccessEnvelope[BlockchainTransactionData],

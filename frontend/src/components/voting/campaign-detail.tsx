@@ -137,7 +137,7 @@ export function CampaignDetail({ slug }: { slug: string }) {
           <div>
             <Link
               className="text-xs font-black uppercase tracking-[0.18em] text-gold-300"
-              href="/binh-chon"
+              href="/voting"
             >
               ← Tất cả chiến dịch
             </Link>
@@ -233,7 +233,7 @@ export function CampaignDetail({ slug }: { slug: string }) {
                   {!viewer.data ? (
                     <Link
                       className="rounded-xl bg-ink-950 px-4 py-2.5 text-sm font-black text-white"
-                      href={`/login?next=/binh-chon/${slug}`}
+                      href={`/login?next=/voting/${slug}`}
                     >
                       Đăng nhập để chọn
                     </Link>

@@ -1,51 +1,46 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Header, Query, Request, Response, status
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Header, Request, Response, status
 
 from app.core.config import Settings
 from app.core.schemas import ErrorEnvelope, ResponseMeta, SuccessEnvelope
+from app.modules.audit.service import AuditService
 from app.modules.auth.dependencies import (
     ApplicantUpgradeServiceDependency,
     CsrfProtectedPrincipalDependency,
     CurrentPrincipalDependency,
-    OAuthRuntimeDependency,
+    FirebaseAuthRuntimeDependency,
     PasswordResetServiceDependency,
     RegistrationServiceDependency,
+    SessionDependency,
     SessionServiceDependency,
     SettingsDependency,
+    StaffInvitationServiceDependency,
 )
-from app.modules.auth.errors import (
-    OAuthCodeInvalidError,
-    OAuthStateInvalidError,
-    UnauthenticatedError,
-)
-from app.modules.auth.oauth import (
-    create_oauth_attempt,
-    resolve_oauth_next,
-    validate_oauth_next,
-)
+from app.modules.auth.oauth import create_oauth_attempt
 from app.modules.auth.schemas import (
     ApplicantUpgradeRequest,
     AuthSessionData,
     AuthStatusData,
     AuthUserData,
     EmailVerifiedData,
+    FirebaseExchangeRequest,
     ForgotPasswordRequest,
     LoginData,
     LoginRequest,
-    OAuthLinkStartRequest,
-    OAuthStartData,
-    OAuthStartRequest,
     PasswordResetAcceptedData,
     PasswordResetData,
     RegisterRequest,
     RegistrationAcceptedData,
     ResetPasswordRequest,
+    StaffInvitationAcceptedData,
+    StaffInvitationAcceptRequest,
+    StaffMfaRecoveryAuthorizeRequest,
     VerifyEmailRequest,
 )
 from app.modules.auth.session_service import ClientMetadata, IssuedSession
+from app.modules.auth.staff_account_service import StaffAccountService
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -154,11 +149,6 @@ def _clear_auth_cookies(response: Response, settings: Settings) -> None:
         )
 
 
-def _oauth_redirect_url(settings: Settings, next_path: str) -> str:
-    safe_next = validate_oauth_next(next_path)
-    return f"{settings.app_base_url.rstrip('/')}{safe_next}"
-
-
 @router.post(
     "/register",
     status_code=status.HTTP_202_ACCEPTED,
@@ -223,121 +213,101 @@ async def upgrade_to_applicant(
 
 
 @router.post(
-    "/oauth/google/start",
-    response_model=SuccessEnvelope[OAuthStartData],
+    "/firebase/exchange",
+    response_model=SuccessEnvelope[LoginData],
     responses=OAUTH_ERROR_RESPONSES,
 )
-async def start_google_oauth(
-    payload: OAuthStartRequest,
+async def exchange_firebase_token(
+    payload: FirebaseExchangeRequest,
     request: Request,
-    runtime: OAuthRuntimeDependency,
-) -> SuccessEnvelope[OAuthStartData]:
+    response: Response,
+    runtime: FirebaseAuthRuntimeDependency,
+    session_service: SessionServiceDependency,
+    settings: SettingsDependency,
+) -> SuccessEnvelope[LoginData]:
     client_ip = request.client.host if request.client is not None else "unknown"
     await runtime.rate_limiter.check(client_ip)
     attempt = create_oauth_attempt(
         payload.account_type,
         payload.next_path or "/dashboard",
     )
-    await runtime.state_store.save(attempt)
+    claims = await runtime.verifier.validate_id_token(payload.id_token)
+    completion = await runtime.account_service.complete(
+        claims=claims,
+        attempt=attempt,
+        metadata=_client_metadata(request, "Firebase"),
+    )
+    principal = await session_service.authenticate_access(
+        completion.issued.access_token
+    )
+    _set_auth_cookies(response, completion.issued, settings)
     return SuccessEnvelope(
-        data=OAuthStartData(
-            authorizationUrl=runtime.provider.authorization_url(attempt)
+        data=LoginData(
+            user=AuthUserData(
+                id=principal.user_id,
+                email=principal.email,
+                roles=principal.roles,
+                accountType=principal.account_type,
+            )
         ),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 
 
 @router.post(
-    "/oauth/google/link/start",
-    response_model=SuccessEnvelope[OAuthStartData],
-    responses={
-        400: OAUTH_ERROR_RESPONSES[400],
-        401: AUTH_ERROR_RESPONSES[401],
-        403: AUTH_ERROR_RESPONSES[403],
-        422: OAUTH_ERROR_RESPONSES[422],
-        429: OAUTH_ERROR_RESPONSES[429],
-        503: OAUTH_ERROR_RESPONSES[503],
-    },
+    "/staff-invitations/accept",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=SuccessEnvelope[StaffInvitationAcceptedData],
+    responses=OAUTH_ERROR_RESPONSES,
 )
-async def start_google_link(
-    payload: OAuthLinkStartRequest,
+async def accept_staff_invitation(
+    payload: StaffInvitationAcceptRequest,
     request: Request,
-    principal: CsrfProtectedPrincipalDependency,
-    runtime: OAuthRuntimeDependency,
-) -> SuccessEnvelope[OAuthStartData]:
+    runtime: FirebaseAuthRuntimeDependency,
+    invitation_service: StaffInvitationServiceDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[StaffInvitationAcceptedData]:
     client_ip = request.client.host if request.client is not None else "unknown"
     await runtime.rate_limiter.check(client_ip)
-    attempt = create_oauth_attempt(
-        "PUBLIC_USER",
-        payload.next_path or "/dashboard",
-        purpose="link",
-        user_id=str(principal.user_id),
+    claims = await runtime.verifier.validate_id_token(payload.id_token)
+    await invitation_service.accept(
+        raw_token=payload.invitation_token.get_secret_value(),
+        claims=claims,
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
     )
-    await runtime.state_store.save(attempt)
     return SuccessEnvelope(
-        data=OAuthStartData(
-            authorizationUrl=runtime.provider.authorization_url(attempt)
-        ),
+        data=StaffInvitationAcceptedData(status="MFA_ENROLLMENT_REQUIRED"),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 
 
-@router.get(
-    "/oauth/google/callback",
-    status_code=status.HTTP_303_SEE_OTHER,
+@router.post(
+    "/staff-mfa/recovery/authorize",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=SuccessEnvelope[StaffInvitationAcceptedData],
     responses=OAUTH_ERROR_RESPONSES,
 )
-async def google_oauth_callback(
+async def authorize_staff_mfa_recovery(
+    payload: StaffMfaRecoveryAuthorizeRequest,
     request: Request,
-    runtime: OAuthRuntimeDependency,
-    session_service: SessionServiceDependency,
-    settings: SettingsDependency,
-    code: str | None = Query(default=None, max_length=4_096),
-    state: str | None = Query(default=None, max_length=512),
-    error: str | None = Query(default=None, max_length=128),
-) -> RedirectResponse:
-    if state is None:
-        raise OAuthStateInvalidError()
-    attempt = await runtime.state_store.consume(state)
-    if attempt is None:
-        raise OAuthStateInvalidError()
-    if error is not None or code is None:
-        raise OAuthCodeInvalidError()
-
-    if attempt.purpose == "link":
-        access_token = request.cookies.get(settings.auth_access_cookie_name)
-        if access_token is None:
-            raise UnauthenticatedError()
-        principal = await session_service.authenticate_access(access_token)
-        try:
-            linked_user_id = UUID(attempt.user_id or "")
-        except ValueError as exc:
-            raise OAuthStateInvalidError() from exc
-        if principal.user_id != linked_user_id:
-            raise OAuthStateInvalidError()
-
-    id_token = await runtime.provider.exchange_code(code)
-    claims = await runtime.provider.validate_id_token(
-        id_token,
-        expected_nonce=attempt.nonce,
-    )
-    completion = await runtime.account_service.complete(
+    runtime: FirebaseAuthRuntimeDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[StaffInvitationAcceptedData]:
+    client_ip = request.client.host if request.client is not None else "unknown"
+    await runtime.rate_limiter.check(client_ip)
+    claims = await runtime.verifier.validate_id_token(payload.id_token)
+    await StaffAccountService(session).authorize_mfa_reenrollment(
         claims=claims,
-        attempt=attempt,
-        metadata=_client_metadata(request, "Google OAuth"),
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
     )
-    principal = await session_service.authenticate_access(
-        completion.issued.access_token
+    return SuccessEnvelope(
+        data=StaffInvitationAcceptedData(status="MFA_ENROLLMENT_REQUIRED"),
+        meta=ResponseMeta(request_id=request.state.request_id),
     )
-    redirect = RedirectResponse(
-        url=_oauth_redirect_url(
-            settings,
-            resolve_oauth_next(attempt.next_path, principal.roles),
-        ),
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-    _set_auth_cookies(redirect, completion.issued, settings)
-    return redirect
 
 
 @router.post(

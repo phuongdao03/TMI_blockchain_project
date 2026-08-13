@@ -92,7 +92,9 @@ def test_eligibility_api_returns_only_current_user_summary() -> None:
     )
 
     class StubService:
-        async def evaluate(self, *_args: object, **_kwargs: object):
+        async def evaluate(
+            self, *_args: object, **_kwargs: object
+        ) -> VotingEligibilityDecision:
             return VotingEligibilityDecision(
                 can_vote=False,
                 reasons=(EligibilityReason.EMAIL_NOT_VERIFIED,),

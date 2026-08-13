@@ -91,8 +91,7 @@ class SearchFacetsData(SearchSchema):
     def from_projection(cls, facets: SearchFacets) -> "SearchFacetsData":
         return cls(
             categories=[
-                SearchFacetValueData.from_projection(item)
-                for item in facets.categories
+                SearchFacetValueData.from_projection(item) for item in facets.categories
             ],
             tags=[SearchFacetValueData.from_projection(item) for item in facets.tags],
             approximate=facets.approximate,

@@ -4,9 +4,48 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RegisterForm } from "@/components/auth/register-form";
 
+const replace = vi.fn();
+const refresh = vi.fn();
+const setQueryData = vi.fn();
+const firebaseMocks = vi.hoisted(() => ({
+  createUserWithEmailAndPassword: vi.fn(),
+  sendEmailVerification: vi.fn(),
+  signOut: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace, refresh }),
+}));
+
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ setQueryData }),
+}));
+
+vi.mock("@/lib/firebase/client", () => ({
+  firebaseConfigured: () => true,
+  getFirebaseAuth: () => ({}),
+}));
+
+vi.mock("firebase/auth", () => ({
+  createUserWithEmailAndPassword: firebaseMocks.createUserWithEmailAndPassword,
+  GoogleAuthProvider: vi.fn(),
+  sendEmailVerification: firebaseMocks.sendEmailVerification,
+  signOut: firebaseMocks.signOut,
+  signInWithPopup: vi.fn(async () => ({
+    user: { getIdToken: vi.fn(async () => "firebase-test-token") },
+  })),
+}));
+
 describe("RegisterForm", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    replace.mockReset();
+    refresh.mockReset();
+    setQueryData.mockReset();
+    firebaseMocks.createUserWithEmailAndPassword.mockReset();
+    firebaseMocks.sendEmailVerification.mockReset();
+    firebaseMocks.signOut.mockReset();
+    firebaseMocks.signOut.mockResolvedValue(undefined);
   });
 
   it("rejects mismatched passwords without a network request", async () => {
@@ -33,17 +72,11 @@ describe("RegisterForm", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("shows the same accepted state returned by the generic API", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          success: true,
-          data: { message: "accepted" },
-          meta: { request_id: "request-2" },
-        }),
-        { status: 202, headers: { "Content-Type": "application/json" } },
-      ),
-    );
+  it("creates the email identity in Firebase and sends a verification link", async () => {
+    const user = { uid: "firebase-user-1" };
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    firebaseMocks.createUserWithEmailAndPassword.mockResolvedValue({ user });
+    firebaseMocks.sendEmailVerification.mockResolvedValue(undefined);
     render(<RegisterForm />);
 
     await userEvent.type(
@@ -62,19 +95,24 @@ describe("RegisterForm", () => {
 
     expect(await screen.findByRole("status")).toBeDefined();
     expect(screen.getByText(/hướng dẫn xác minh đã được gửi/i)).toBeDefined();
+    expect(firebaseMocks.createUserWithEmailAndPassword).toHaveBeenCalledWith(
+      {},
+      "owner@tmigroup.vn",
+      "correct horse battery staple",
+    );
+    expect(firebaseMocks.sendEmailVerification).toHaveBeenCalledWith(
+      user,
+      expect.objectContaining({
+        url: expect.stringContaining("accountType=PUBLIC_USER"),
+      }),
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("submits the selected organization applicant account type", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          success: true,
-          data: { message: "accepted" },
-          meta: { request_id: "request-3" },
-        }),
-        { status: 202, headers: { "Content-Type": "application/json" } },
-      ),
-    );
+    const user = { uid: "firebase-organization-1" };
+    firebaseMocks.createUserWithEmailAndPassword.mockResolvedValue({ user });
+    firebaseMocks.sendEmailVerification.mockResolvedValue(undefined);
     render(<RegisterForm />);
 
     await userEvent.click(screen.getByRole("radio", { name: /Tổ chức/i }));
@@ -92,11 +130,12 @@ describe("RegisterForm", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Đăng ký" }));
 
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const options = fetchMock.mock.calls[0]?.[1];
-    expect(JSON.parse(String(options?.body))).toMatchObject({
-      accountType: "ORGANIZATION_APPLICANT",
-    });
+    expect(firebaseMocks.sendEmailVerification).toHaveBeenCalledWith(
+      user,
+      expect.objectContaining({
+        url: expect.stringContaining("accountType=ORGANIZATION_APPLICANT"),
+      }),
+    );
   });
 
   it("offers a browse-only account intent without dossier privileges", () => {
@@ -129,11 +168,12 @@ describe("RegisterForm", () => {
     );
 
     expect((await screen.findByRole("alert")).textContent).toContain(
-      "Google hiện chưa sẵn sàng",
+      "Đăng nhập Google đang tạm thời gián đoạn",
     );
     const [, options] = fetchMock.mock.calls[0] ?? [];
-    expect(JSON.parse(String(options?.body))).toEqual({
+    expect(JSON.parse(String(options?.body))).toMatchObject({
       accountType: "PUBLIC_USER",
+      idToken: "firebase-test-token",
     });
   });
 });

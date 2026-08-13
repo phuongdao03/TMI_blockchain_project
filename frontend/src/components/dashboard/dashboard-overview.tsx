@@ -4,22 +4,62 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   BadgeCheck,
-  Blocks,
-  FileCheck2,
+  CircleAlert,
+  Clock3,
   FilePlus2,
   FolderKanban,
   LoaderCircle,
-  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 
 import { DossierStatusBadge } from "@/components/dossiers/dossier-status";
 import { RoleDashboardOverview } from "@/components/dashboard/role-dashboard-overview";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dossierApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
 import { resolveWorkspacePersona } from "@/lib/auth/role-workspaces";
 import { dossierKeys } from "@/lib/dossiers/query-keys";
+import type { Dossier, DossierStatus } from "@/lib/api/types";
+
+const attentionStatuses = new Set<DossierStatus>([
+  "DRAFT",
+  "NEEDS_SUPPLEMENT",
+  "PAYMENT_PENDING",
+]);
+const completedStatuses = new Set<DossierStatus>([
+  "CERTIFICATE_ISSUED",
+  "PUBLISHED",
+]);
+const closedStatuses = new Set<DossierStatus>([
+  ...completedStatuses,
+  "REJECTED",
+  "REVOKED",
+  "CANCELLED",
+]);
+
+function nextAction(dossier: Dossier) {
+  if (dossier.status === "DRAFT") {
+    return {
+      label: "Tiếp tục hoàn thiện hồ sơ",
+      href: `/dossiers/${dossier.id}`,
+    };
+  }
+  if (dossier.status === "NEEDS_SUPPLEMENT") {
+    return {
+      label: "Bổ sung tài liệu được yêu cầu",
+      href: `/dossiers/${dossier.id}`,
+    };
+  }
+  if (dossier.status === "PAYMENT_PENDING") {
+    return {
+      label: "Thanh toán phí phát hành",
+      href: `/dossiers/${dossier.id}`,
+    };
+  }
+  if (completedStatuses.has(dossier.status)) {
+    return { label: "Tải chứng thư", href: "/certificates" };
+  }
+  return { label: "Xem tiến độ hồ sơ", href: `/dossiers/${dossier.id}` };
+}
 
 export function DashboardOverview() {
   const user = useAuthUser();
@@ -44,123 +84,141 @@ export function DashboardOverview() {
       />
     );
   }
-  const total = dossiers.data?.meta.total ?? 0;
-  const submitted =
-    dossiers.data?.data.filter(({ status }) => status !== "DRAFT").length ?? 0;
+  const visibleDossiers = dossiers.data?.data ?? [];
+  const processingCount = visibleDossiers.filter(
+    ({ status }) => status !== "DRAFT" && !closedStatuses.has(status),
+  ).length;
+  const attentionCount = visibleDossiers.filter(({ status }) =>
+    attentionStatuses.has(status),
+  ).length;
+  const certificateCount = visibleDossiers.filter(({ status }) =>
+    completedStatuses.has(status),
+  ).length;
+  const primaryDossier =
+    visibleDossiers.find(({ status }) => attentionStatuses.has(status)) ??
+    visibleDossiers[0];
+  const primaryAction = primaryDossier ? nextAction(primaryDossier) : null;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-7">
-      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+    <div className="mx-auto max-w-7xl space-y-8">
+      <header>
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
-            Không gian làm việc
+          <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-primary-700">
+            Trung tâm hồ sơ
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] sm:text-4xl">
-            Tổng quan xác lập
+          <h1 className="mt-3 text-4xl font-bold tracking-[-0.04em] sm:text-5xl">
+            Việc cần làm
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
-            Một điểm theo dõi hồ sơ, phiên bản và bằng chứng xác minh của bạn.
+          <p className="mt-3 max-w-2xl text-base leading-7 text-neutral-600">
+            Tiếp tục hồ sơ đang dở, theo dõi cập nhật mới nhất và nhận chứng thư
+            khi hoàn tất.
           </p>
         </div>
-        <Link
-          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 text-sm font-bold text-white shadow-lg shadow-primary-950/15 hover:bg-primary-700"
-          href="/ho-so/tao-moi"
-        >
-          <FilePlus2 aria-hidden="true" className="size-4" />
-          Tạo hồ sơ mới
-        </Link>
-      </div>
+      </header>
 
-      <section className="hero-grid-surface relative overflow-hidden rounded-3xl border border-white/5 bg-ink-950 px-6 py-8 text-white shadow-2xl shadow-slate-950/10 sm:px-8 lg:grid lg:grid-cols-[1fr_auto] lg:items-end lg:gap-10 lg:py-10">
+      <section className="hero-grid-surface relative overflow-hidden rounded-2xl border border-white/8 bg-[#151515] px-6 py-8 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:min-h-72 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-12 lg:px-10 lg:py-10">
         <div className="relative z-10 max-w-3xl">
-          <span className="mb-5 grid size-12 place-items-center rounded-2xl border border-gold-300/30 bg-gold-300/10 text-gold-300">
-            <ShieldCheck aria-hidden="true" className="size-6" />
+          <span className="mb-7 grid size-11 place-items-center rounded-lg border border-gold-300/30 bg-gold-300/10 text-gold-300">
+            {primaryDossier && attentionStatuses.has(primaryDossier.status) ? (
+              <CircleAlert aria-hidden="true" className="size-6" />
+            ) : (
+              <Clock3 aria-hidden="true" className="size-6" />
+            )}
           </span>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-gold-300">
-            TMI Trust Workspace
+          <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-gold-300">
+            {primaryDossier ? "Ưu tiên tiếp theo" : "Bắt đầu hồ sơ đầu tiên"}
           </p>
-          <h2 className="mt-2 text-2xl font-bold tracking-[-0.02em] sm:text-3xl">
-            Biến hồ sơ thành bằng chứng có thể kiểm chứng.
+          <h2 className="mt-3 text-2xl font-bold tracking-[-0.03em] sm:text-3xl lg:text-4xl">
+            {primaryDossier
+              ? primaryAction?.label
+              : "Chuẩn bị thông tin tài sản của bạn"}
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-            Chuẩn hóa thông tin, khóa mỗi lần nộp thành snapshot và sẵn sàng cho
-            quy trình thẩm định.
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
+            {primaryDossier
+              ? `${primaryDossier.title} · Cập nhật ${new Date(primaryDossier.updatedAt).toLocaleDateString("vi-VN")}`
+              : "Bạn có thể lưu bản nháp và quay lại hoàn thiện bất cứ lúc nào."}
           </p>
         </div>
         <Link
-          className="relative z-10 mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-sm font-bold text-white hover:bg-white/10 lg:mt-0"
-          href="/ho-so"
+          className="relative z-10 mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-primary-600 px-5 text-sm font-bold text-white shadow-lg shadow-black/20 hover:bg-primary-500 lg:mt-0"
+          href={primaryAction?.href ?? "/dossiers/new"}
         >
-          Mở không gian hồ sơ
+          {!primaryAction ? (
+            <FilePlus2 aria-hidden="true" className="size-4" />
+          ) : null}
+          {primaryAction?.label ?? "Tạo hồ sơ mới"}
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
       </section>
 
       <section
         aria-label="Chỉ số tổng quan"
-        className="grid gap-4 md:grid-cols-3"
+        className="grid overflow-hidden rounded-xl border border-black/10 bg-[#fbfaf7] md:grid-cols-3"
       >
         {[
           {
-            label: "Tổng hồ sơ",
-            value: dossiers.isPending ? "—" : String(total),
-            detail: "Hồ sơ trong phạm vi của bạn",
+            label: "Việc cần làm",
+            value: dossiers.isPending ? "—" : String(attentionCount),
+            detail: "Hồ sơ cần bạn hoàn thiện, bổ sung hoặc thanh toán",
             icon: FolderKanban,
           },
           {
-            label: "Đã nộp",
-            value: dossiers.isPending ? "—" : String(submitted),
-            detail: "Có ít nhất một phiên bản bất biến",
-            icon: FileCheck2,
+            label: "Đang xử lý",
+            value: dossiers.isPending ? "—" : String(processingCount),
+            detail: "Hồ sơ đã gửi và đang được TMI xử lý",
+            icon: Clock3,
           },
           {
-            label: "Blockchain",
-            value: "Sẵn sàng",
-            detail: "Hạ tầng bằng chứng cho chứng thư hợp lệ",
-            icon: Blocks,
+            label: "Chứng thư sẵn sàng",
+            value: dossiers.isPending ? "—" : String(certificateCount),
+            detail: "Chứng thư đã phát hành và có thể tải xuống",
+            icon: BadgeCheck,
           },
         ].map((item) => {
           const Icon = item.icon;
           return (
-            <Card key={item.label}>
-              <CardHeader className="flex-row items-start justify-between space-y-0">
+            <article
+              className="relative border-b border-black/8 p-6 last:border-b-0 md:border-r md:border-b-0 md:last:border-r-0"
+              key={item.label}
+            >
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                  <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
                     {item.label}
                   </p>
-                  <CardTitle className="mt-3 text-3xl">{item.value}</CardTitle>
+                  <p className="mt-3 text-4xl font-bold tracking-[-0.04em]">
+                    {item.value}
+                  </p>
                 </div>
-                <span className="grid size-10 place-items-center rounded-xl bg-primary-50 text-primary-700">
+                <span className="grid size-9 place-items-center rounded-lg border border-primary-100 bg-primary-50 text-primary-700">
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm leading-6 text-neutral-500">
-                  {item.detail}
-                </p>
-              </CardContent>
-            </Card>
+              </div>
+              <p className="mt-5 max-w-xs text-sm leading-6 text-neutral-600">
+                {item.detail}
+              </p>
+            </article>
           );
         })}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
-        <Card className="overflow-hidden">
-          <CardHeader className="flex-row items-center justify-between border-b border-neutral-100">
+      <section className="grid gap-5 xl:grid-cols-[1.45fr_0.55fr]">
+        <section className="overflow-hidden rounded-xl border border-black/10 bg-[#fbfaf7]">
+          <header className="flex items-center justify-between border-b border-black/8 px-6 py-5">
             <div>
-              <CardTitle>Hồ sơ gần đây</CardTitle>
+              <h2 className="text-lg font-bold">Hồ sơ gần đây</h2>
               <p className="mt-1 text-sm text-neutral-500">
                 Tiếp tục đúng nơi bạn đang dở.
               </p>
             </div>
             <Link
               className="text-sm font-bold text-primary-700 hover:text-primary-800"
-              href="/ho-so"
+              href="/dossiers"
             >
               Xem tất cả
             </Link>
-          </CardHeader>
-          <CardContent className="p-0">
+          </header>
+          <div>
             {dossiers.isPending ? (
               <div
                 className="flex min-h-44 items-center justify-center gap-3 text-sm font-semibold text-neutral-500"
@@ -178,13 +236,20 @@ export function DashboardOverview() {
                 <p className="mt-1 max-w-sm text-sm leading-6 text-neutral-500">
                   Vui lòng kiểm tra kết nối và thử tải lại trang để tiếp tục.
                 </p>
+                <button
+                  className="mt-4 min-h-11 rounded-xl border border-neutral-300 px-4 text-sm font-bold"
+                  onClick={() => void dossiers.refetch()}
+                  type="button"
+                >
+                  Thử lại
+                </button>
               </div>
             ) : dossiers.data?.data.length ? (
               <div className="divide-y divide-neutral-100">
                 {dossiers.data.data.slice(0, 3).map((dossier) => (
                   <Link
                     className="flex min-h-20 items-center justify-between gap-4 px-6 py-4 hover:bg-neutral-50"
-                    href={`/ho-so/${dossier.id}`}
+                    href={`/dossiers/${dossier.id}`}
                     key={dossier.id}
                   >
                     <div className="min-w-0">
@@ -211,34 +276,36 @@ export function DashboardOverview() {
                 </p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card className="border-gold-300/30 bg-amber-50/50">
-          <CardHeader>
-            <BadgeCheck aria-hidden="true" className="size-6 text-amber-700" />
-            <CardTitle>Nền tảng tin cậy</CardTitle>
+        <section className="rounded-xl border border-black/10 bg-[#1d1c1b] p-6 text-white">
+          <div>
+            <BadgeCheck aria-hidden="true" className="size-6 text-gold-300" />
+            <h2 className="mt-6 text-lg font-bold">Cập nhật gần nhất</h2>
             <p className="text-sm leading-6 text-neutral-500">
-              Mỗi phiên bản hồ sơ được chuẩn hóa cho chuỗi xác minh tiếp theo.
+              Theo dõi những thay đổi quan trọng của hồ sơ.
             </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {["Toàn vẹn dữ liệu", "Dấu thời gian", "Xác minh công khai"].map(
-              (label) => (
-                <p
-                  className="flex items-center gap-2 text-sm font-bold text-neutral-700"
-                  key={label}
-                >
-                  <BadgeCheck
-                    aria-hidden="true"
-                    className="size-4 text-emerald-600"
-                  />
-                  {label}
-                </p>
-              ),
-            )}
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-6 space-y-3 border-t border-white/10 pt-5">
+            {[
+              "Trạng thái dễ hiểu",
+              "Thông báo khi cần bổ sung",
+              "Chứng thư sẵn sàng để tải",
+            ].map((label) => (
+              <p
+                className="flex items-center gap-2 text-sm font-semibold text-slate-300"
+                key={label}
+              >
+                <BadgeCheck
+                  aria-hidden="true"
+                  className="size-4 text-emerald-600"
+                />
+                {label}
+              </p>
+            ))}
+          </div>
+        </section>
       </section>
     </div>
   );

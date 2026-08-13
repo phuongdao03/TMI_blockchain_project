@@ -1,9 +1,10 @@
 import {
   BadgeCheck,
-  Blocks,
+  LifeBuoy,
   LockKeyhole,
   Menu,
   ShieldCheck,
+  UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import type { PropsWithChildren, ReactNode } from "react";
@@ -11,15 +12,22 @@ import type { PropsWithChildren, ReactNode } from "react";
 import { BrandMark } from "@/components/layout/brand-mark";
 import { DashboardContextHeader } from "@/components/layout/dashboard-context-header";
 import { DashboardNavigation } from "@/components/layout/dashboard-navigation";
+import type { AuthUser } from "@/lib/api/types";
+import { resolveDefaultWorkspace } from "@/lib/auth/role-workspaces";
 
-export function PublicShell({ children }: PropsWithChildren) {
+export function PublicShell({
+  children,
+  user = null,
+}: PropsWithChildren<{ user?: AuthUser | null }>) {
   const publicLinks = [
     { href: "/", label: "Trang chủ" },
-    { href: "/tim-kiem", label: "Tìm kiếm" },
-    { href: "/thu-vien", label: "Thư viện" },
-    { href: "/ban-do", label: "Bản đồ" },
-    { href: "/kiem-tra", label: "Xác minh" },
-    { href: "/binh-chon", label: "Bình chọn cộng đồng" },
+    { href: "/search", label: "Tìm kiếm" },
+    { href: "/works", label: "Thư viện" },
+    { href: "/map", label: "Bản đồ" },
+    { href: "/verify", label: "Xác minh" },
+    { href: "/voting", label: "Bình chọn cộng đồng" },
+    { href: "/process", label: "Quy trình" },
+    { href: "/policies", label: "Chính sách" },
   ] as const;
 
   return (
@@ -65,18 +73,38 @@ export function PublicShell({ children }: PropsWithChildren) {
                 ))}
               </div>
             </details>
-            <Link
-              className="hidden min-h-11 items-center px-3 text-xs font-semibold text-[#e7bdb7] hover:text-white sm:inline-flex"
-              href="/login"
-            >
-              Đăng nhập
-            </Link>
-            <Link
-              className="inline-flex min-h-11 items-center rounded-md bg-[#ff5545] px-4 text-xs font-bold text-[#fff9ef] transition-colors hover:bg-[#ef4437]"
-              href="/register"
-            >
-              Đăng ký
-            </Link>
+            {user ? (
+              <div className="flex items-center gap-2">
+                <span className="hidden max-w-44 items-center gap-2 truncate rounded-full border border-white/10 px-3 py-2 text-xs font-semibold text-[#c8c6c5] md:inline-flex">
+                  <UserRound
+                    aria-hidden="true"
+                    className="size-3.5 shrink-0 text-[#f3d675]"
+                  />
+                  <span className="truncate">{user.email}</span>
+                </span>
+                <Link
+                  className="inline-flex min-h-11 items-center rounded-md border border-[#f3d675]/50 px-4 text-xs font-bold text-[#f3d675] transition-colors hover:bg-[#f3d675]/10"
+                  href={resolveDefaultWorkspace(user.roles)}
+                >
+                  Bảng điều khiển
+                </Link>
+              </div>
+            ) : (
+              <>
+                <Link
+                  className="hidden min-h-11 items-center px-3 text-xs font-semibold text-[#e7bdb7] hover:text-white sm:inline-flex"
+                  href="/login"
+                >
+                  Đăng nhập
+                </Link>
+                <Link
+                  className="inline-flex min-h-11 items-center rounded-md bg-primary-600 px-4 text-xs font-bold text-white transition-colors hover:bg-primary-700"
+                  href="/register"
+                >
+                  Đăng ký
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       </header>
@@ -89,10 +117,13 @@ export function PublicShell({ children }: PropsWithChildren) {
               Dữ liệu bảo tồn · Trạng thái minh bạch · Xác minh độc lập
             </p>
           </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-2 font-mono text-[0.65rem] tracking-[0.08em] uppercase">
-            <span>Network operational</span>
-            <span>Immutable ledger</span>
-            <span>Privacy policy</span>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link className="hover:text-white" href="/process">
+              Quy trình
+            </Link>
+            <Link className="hover:text-white" href="/policies">
+              Chính sách
+            </Link>
           </div>
         </div>
       </footer>
@@ -108,7 +139,7 @@ export function AuthShell({ children }: PropsWithChildren) {
           <BrandMark className="text-[#e5e2e1]" />
           <p className="hidden items-center gap-2 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[#ad8883] uppercase sm:flex">
             <ShieldCheck aria-hidden="true" className="size-4" />
-            Bảo chứng bởi blockchain
+            Tài khoản được bảo vệ
           </p>
         </div>
       </header>
@@ -120,9 +151,9 @@ export function AuthShell({ children }: PropsWithChildren) {
       </main>
       <div className="mx-auto grid w-full max-w-2xl grid-cols-3 border-y border-white/8 text-center">
         {[
-          { icon: LockKeyhole, label: "Mã hóa AES-256" },
-          { icon: Blocks, label: "Sổ cái bất biến" },
-          { icon: BadgeCheck, label: "Xác minh độc lập" },
+          { icon: LockKeyhole, label: "Bảo vệ tài khoản" },
+          { icon: BadgeCheck, label: "Thông tin riêng tư" },
+          { icon: LifeBuoy, label: "Hỗ trợ rõ ràng" },
         ].map(({ icon: Icon, label }) => (
           <div
             className="flex min-h-20 flex-col items-center justify-center gap-2 border-l border-white/8 first:border-l-0"
@@ -145,7 +176,7 @@ export function AuthShell({ children }: PropsWithChildren) {
           </p>
         </div>
         <p className="font-mono text-[0.58rem] tracking-[0.08em] uppercase">
-          Security · Privacy · Audit trail
+          An toàn · Riêng tư · Đối chiếu minh bạch
         </p>
       </footer>
     </div>
@@ -156,15 +187,14 @@ interface DashboardShellProps {
   children: ReactNode;
 }
 
-function VerificationStatus() {
+function WorkspaceNote() {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-3.5">
-      <p className="flex items-center gap-2 text-xs font-semibold text-emerald-300">
-        <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" />
-        Hệ thống xác minh sẵn sàng
+    <div className="border-t border-white/10 pt-5">
+      <p className="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-[#ffb4aa]">
+        TMI Certificate
       </p>
-      <p className="mt-1.5 text-xs leading-5 text-slate-500">
-        Môi trường thử nghiệm
+      <p className="mt-2 text-xs leading-5 text-slate-500">
+        Công việc, hồ sơ và thông báo quan trọng trong một nơi.
       </p>
     </div>
   );
@@ -172,36 +202,33 @@ function VerificationStatus() {
 
 export function DashboardShell({ children }: DashboardShellProps) {
   return (
-    <div className="dashboard-mesh min-h-dvh bg-neutral-50 text-neutral-950 lg:grid lg:grid-cols-[18.5rem_minmax(0,1fr)]">
-      <aside className="relative hidden min-h-dvh overflow-hidden border-r border-white/5 bg-ink-950 p-5 text-white lg:flex lg:flex-col">
+    <div className="min-h-dvh bg-[#121212] text-neutral-950 lg:grid lg:grid-cols-[17.25rem_minmax(0,1fr)]">
+      <aside className="relative hidden min-h-dvh overflow-y-auto border-r border-white/5 bg-[#121212] p-5 text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col">
         <div className="pointer-events-none absolute -top-32 -left-28 size-72 rounded-full bg-primary-600/15 blur-3xl" />
-        <BrandMark className="relative mb-10 text-white" />
-        <p className="mb-3 px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-slate-500">
-          Không gian làm việc
-        </p>
+        <BrandMark className="relative mb-8 text-white" />
         <nav aria-label="Điều hướng bảng điều khiển">
           <DashboardNavigation />
         </nav>
         <div className="mt-auto pt-8">
-          <VerificationStatus />
+          <WorkspaceNote />
         </div>
       </aside>
 
-      <div className="min-w-0">
-        <header className="sticky top-0 z-20 border-b border-neutral-200/80 bg-white/90 backdrop-blur-xl">
+      <div className="dashboard-mesh min-h-dvh min-w-0">
+        <header className="sticky top-0 z-20 border-b border-black/8 bg-[#fbfaf7]/92 backdrop-blur-xl">
           <DashboardContextHeader />
         </header>
-        <details className="border-b border-white/10 bg-ink-950 text-white lg:hidden">
+        <details className="border-b border-white/10 bg-[#121212] text-white lg:hidden">
           <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 font-semibold">
             <Menu aria-hidden="true" className="size-5" />
             Mở điều hướng
           </summary>
           <DashboardNavigation className="border-t border-white/10 p-3" />
           <div className="px-3 pb-3">
-            <VerificationStatus />
+            <WorkspaceNote />
           </div>
         </details>
-        <main className="min-w-0 px-4 py-7 sm:px-6 lg:px-8 lg:py-9 xl:px-10">
+        <main className="min-w-0 px-4 py-7 sm:px-6 lg:px-8 lg:py-10 xl:px-12">
           {children}
         </main>
       </div>

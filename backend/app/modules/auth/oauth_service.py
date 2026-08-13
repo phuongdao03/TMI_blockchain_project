@@ -8,10 +8,13 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import DomainError
+from app.modules.audit.service import AuditService
 from app.modules.auth.errors import (
     OAuthAccountLinkRequiredError,
     OAuthIdentityInvalidError,
 )
+from app.modules.auth.firebase_provider import FirebaseClaims
 from app.modules.auth.models import (
     AccountType,
     AuthIdentity,
@@ -21,14 +24,10 @@ from app.modules.auth.models import (
     UserRole,
     UserStatus,
 )
-from app.modules.auth.oauth import (
-    OAuthAttempt,
-    OAuthAttemptRateLimiter,
-    OAuthStateStore,
-)
-from app.modules.auth.oauth_provider import GoogleOIDCClaims, GoogleOIDCProvider
+from app.modules.auth.oauth import OAuthAttempt
 from app.modules.auth.repositories import AuthRepository
 from app.modules.auth.roles import PUBLIC_REGISTRATION_ROLE
+from app.modules.auth.schemas import INTERNAL_MANAGED_ROLES
 from app.modules.auth.session_service import ClientMetadata, IssuedSession
 
 logger = logging.getLogger(__name__)
@@ -40,6 +39,7 @@ class OAuthSessionIssuer(Protocol):
         *,
         user_id: UUID,
         metadata: ClientMetadata,
+        mfa_verified_at: datetime | None = None,
     ) -> IssuedSession: ...
 
 
@@ -47,14 +47,6 @@ class OAuthSessionIssuer(Protocol):
 class OAuthCompletion:
     user_id: UUID
     issued: IssuedSession
-
-
-@dataclass(frozen=True, slots=True)
-class OAuthRuntime:
-    account_service: "OAuthService"
-    state_store: OAuthStateStore
-    rate_limiter: OAuthAttemptRateLimiter
-    provider: GoogleOIDCProvider
 
 
 class OAuthService:
@@ -73,10 +65,11 @@ class OAuthService:
     async def complete(
         self,
         *,
-        claims: GoogleOIDCClaims,
+        claims: FirebaseClaims,
         attempt: OAuthAttempt,
         metadata: ClientMetadata,
     ) -> OAuthCompletion:
+        provider = AuthProvider.FIREBASE
         try:
             account_type = AccountType(attempt.account_type)
         except ValueError as exc:
@@ -96,6 +89,7 @@ class OAuthService:
                     account_type=account_type,
                     attempt=attempt,
                     now=now,
+                    provider=provider,
                 )
                 user.last_login_at = now
         except OAuthAccountLinkRequiredError:
@@ -111,13 +105,14 @@ class OAuthService:
         issued = await self._session_issuer.issue_for_user(
             user_id=user.id,
             metadata=metadata,
+            mfa_verified_at=claims.mfa_verified_at,
         )
         logger.info(
             "security_audit",
             extra={
                 "action": event,
                 "user_id": str(user.id),
-                "provider": AuthProvider.GOOGLE.value,
+                "provider": provider.value,
             },
         )
         return OAuthCompletion(user_id=user.id, issued=issued)
@@ -125,13 +120,14 @@ class OAuthService:
     async def _resolve_user(
         self,
         *,
-        claims: GoogleOIDCClaims,
+        claims: FirebaseClaims,
         account_type: AccountType,
         attempt: OAuthAttempt,
         now: datetime,
+        provider: AuthProvider,
     ) -> tuple[User, str]:
         identity = await self._repository.get_identity(
-            provider=AuthProvider.GOOGLE,
+            provider=provider,
             subject=claims.subject,
         )
 
@@ -141,7 +137,7 @@ class OAuthService:
                 raise OAuthIdentityInvalidError()
             existing_for_user = await self._repository.get_identity_for_user(
                 user_id=user.id,
-                provider=AuthProvider.GOOGLE,
+                provider=provider,
             )
             if (
                 existing_for_user is not None
@@ -152,7 +148,7 @@ class OAuthService:
                 self._repository.add_identity(
                     AuthIdentity(
                         user_id=user.id,
-                        provider=AuthProvider.GOOGLE,
+                        provider=provider,
                         provider_subject=claims.subject,
                         last_login_at=now,
                     )
@@ -163,6 +159,12 @@ class OAuthService:
 
         if identity is not None:
             identity_user = await self._repository.get_user_by_id(identity.user_id)
+            if identity_user is not None:
+                await self._activate_pending_staff(
+                    identity_user,
+                    claims=claims,
+                    now=now,
+                )
             if not self._is_active(identity_user):
                 raise OAuthIdentityInvalidError()
             identity.last_login_at = now
@@ -191,12 +193,46 @@ class OAuthService:
         self._repository.add_identity(
             AuthIdentity(
                 user_id=user.id,
-                provider=AuthProvider.GOOGLE,
+                provider=provider,
                 provider_subject=claims.subject,
                 last_login_at=now,
             )
         )
         return user, "auth.oauth.signup.succeeded"
+
+    async def _activate_pending_staff(
+        self,
+        user: User,
+        *,
+        claims: FirebaseClaims,
+        now: datetime,
+    ) -> None:
+        if user.status is not UserStatus.PENDING:
+            return
+        roles = await self._repository.get_role_codes(user.id)
+        if not set(roles).intersection(INTERNAL_MANAGED_ROLES | {"SUPER_ADMIN"}):
+            return
+        if (
+            not claims.email_verified
+            or user.email.lower() != claims.email.lower()
+            or claims.mfa_verified_at is None
+        ):
+            raise DomainError(
+                code="STAFF_MFA_REQUIRED",
+                message="Additional account verification is required.",
+                status_code=403,
+            )
+        recovery = user.mfa_recovery_authorized_at is not None
+        user.status = UserStatus.ACTIVE
+        user.mfa_recovery_authorized_at = None
+        AuditService(self._session).record(
+            actor_user_id=user.id,
+            action="auth.staff_mfa.activated",
+            resource_type="user",
+            resource_id=str(user.id),
+            before={"status": "PENDING_MFA"},
+            after={"status": UserStatus.ACTIVE.value, "recovery": recovery},
+        )
 
     async def _linked_user(self, raw_user_id: str | None) -> User:
         if raw_user_id is None:
@@ -221,7 +257,6 @@ class OAuthService:
 
 __all__ = [
     "OAuthCompletion",
-    "OAuthRuntime",
     "OAuthService",
     "OAuthSessionIssuer",
 ]

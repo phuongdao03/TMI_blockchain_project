@@ -9,12 +9,7 @@ from web3 import AsyncHTTPProvider, AsyncWeb3, Web3
 from app.modules.blockchain.gateway import BlockchainGateway
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-ABI_PATH = (
-    REPOSITORY_ROOT
-    / "contracts"
-    / "artifacts"
-    / "CertificateRegistry.abi.json"
-)
+ABI_PATH = REPOSITORY_ROOT / "contracts" / "artifacts" / "CertificateRegistry.abi.json"
 MANIFEST_PATH = REPOSITORY_ROOT / "contracts" / "deployments" / "local.json"
 
 
@@ -38,8 +33,22 @@ def test_gateway_encodes_registry_write_calls() -> None:
         expires_at=200,
     )
 
-    assert payload[:4] == Web3.keccak(
-        text="issueCertificate(bytes32,bytes32,bytes32,uint64,uint64)"
+    assert (
+        payload[:4]
+        == Web3.keccak(text="issueCertificate(bytes32,bytes32,bytes32,uint64,uint64)")[
+            :4
+        ]
+    )
+
+    evidence_payload = gateway.encode_anchor_document_evidence(
+        evidence_key=b"\x04" * 32,
+        commitment=b"\x05" * 32,
+        previous_evidence_key=b"\x00" * 32,
+        version=1,
+        recorded_at=1_700_000_000,
+    )
+    assert evidence_payload[:4] == Web3.keccak(
+        text="anchorDocumentEvidence(bytes32,bytes32,bytes32,uint32,uint64)"
     )[:4]
 
 
@@ -82,5 +91,28 @@ def test_gateway_reads_certificate_from_anvil() -> None:
         assert record.version == 1
         assert record.issued_at == 100
         assert not record.revoked
+
+        evidence_key = Web3.keccak(text="gateway-document-evidence")
+        commitment = Web3.keccak(text="gateway-document-commitment")
+        evidence_tx = await contract.functions.anchorDocumentEvidence(
+            evidence_key,
+            commitment,
+            bytes(32),
+            1,
+            1_700_000_000,
+        ).transact({"from": account})
+        await web3.eth.wait_for_transaction_receipt(evidence_tx)
+        evidence = await gateway.get_document_evidence(bytes(evidence_key))
+
+        assert evidence.commitment == bytes(commitment)
+        assert evidence.version == 1
+        assert await gateway.verify_document_evidence(
+            evidence_key=bytes(evidence_key),
+            commitment=bytes(commitment),
+        )
+        assert not await gateway.verify_document_evidence(
+            evidence_key=bytes(evidence_key),
+            commitment=bytes(Web3.keccak(text="modified")),
+        )
 
     asyncio.run(exercise())

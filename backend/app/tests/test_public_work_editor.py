@@ -90,9 +90,12 @@ def test_editor_permissions_validation_version_slug_history_and_preview(
             )
             assert updated.version == 2
             assert updated.slug == "approved-work-curated"
-            assert await session.scalar(
-                select(func.count()).select_from(PublicWorkSlugHistory)
-            ) == 1
+            assert (
+                await session.scalar(
+                    select(func.count()).select_from(PublicWorkSlugHistory)
+                )
+                == 1
+            )
             await session.rollback()
             with pytest.raises(PublicWorkVersionConflictError):
                 await service.update(

@@ -48,7 +48,7 @@ def test_admin_vote_list_and_export_are_redacted() -> None:
     class StubService:
         async def list(
             self, received: AuthPrincipal, *_args: object, **_kwargs: object
-        ):
+        ) -> tuple[list[AdminVoteItem], int]:
             assert received.user_id == principal.user_id
             return [item], 1
 

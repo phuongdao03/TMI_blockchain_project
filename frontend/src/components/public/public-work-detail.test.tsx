@@ -222,13 +222,13 @@ describe("PublicWorkDetailPage", () => {
       configurable: true,
       value: { writeText },
     });
-    window.history.replaceState({}, "", "/tai-san/old-slug?tracking=secret");
+    window.history.replaceState({}, "", "/works/old-slug?tracking=secret");
     render(<PublicWorkDetailPage initialDetail={detail} slug={detail.slug} />, {
       wrapper,
     });
     await user.click(screen.getByRole("button", { name: "Sao chép liên kết" }));
     expect(writeText).toHaveBeenCalledWith(
-      "http://localhost:3000/tai-san/di-san-so",
+      "http://localhost:3000/works/di-san-so",
     );
     expect(
       await screen.findByText("Đã sao chép liên kết chính thức."),

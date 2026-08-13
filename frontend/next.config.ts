@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const securityHeaders = [
@@ -17,7 +17,9 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       `connect-src 'self' https:${
-        process.env.NODE_ENV === "production" ? "" : " ws:"
+        process.env.NODE_ENV === "production"
+          ? ""
+          : " ws: http://localhost:9099 http://127.0.0.1:9099"
       }`,
       "font-src 'self' data:",
     ].join("; "),
@@ -52,6 +54,18 @@ const nextConfig: NextConfig = {
   },
   turbopack: {
     root: dirname(fileURLToPath(import.meta.url)),
+  },
+  webpack(config) {
+    if (
+      process.env.NODE_ENV !== "production" &&
+      process.env.AUTH_E2E_SHIM === "true"
+    ) {
+      config.resolve.alias["firebase/auth"] = resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "e2e/firebase-auth-shim.ts",
+      );
+    }
+    return config;
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

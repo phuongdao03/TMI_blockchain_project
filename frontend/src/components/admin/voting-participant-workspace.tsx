@@ -285,7 +285,7 @@ export function VotingParticipantWorkspace() {
                 </span>
                 <Link
                   className="mt-3 block text-lg font-bold text-neutral-950 hover:text-primary-700"
-                  href={`/tai-san/${item.slug}`}
+                  href={`/works/${item.slug}`}
                   target="_blank"
                 >
                   {item.title}

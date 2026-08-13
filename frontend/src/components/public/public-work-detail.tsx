@@ -95,7 +95,7 @@ function PublicWorkPresentation({ detail }: { detail: PublicWorkDetail }) {
           >
             <Link
               className="inline-flex items-center gap-1 hover:text-white"
-              href="/thu-vien"
+              href="/works"
             >
               <ArrowLeft className="size-4" /> Catalog
             </Link>
@@ -182,7 +182,7 @@ function PublicWorkPresentation({ detail }: { detail: PublicWorkDetail }) {
                 {detail.tags.map((tag) => (
                   <Link
                     className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-gold-300"
-                    href={`/thu-vien?tag=${encodeURIComponent(tag.slug)}`}
+                    href={`/works?tag=${encodeURIComponent(tag.slug)}`}
                     key={tag.slug}
                   >
                     #{tag.name}
@@ -480,7 +480,7 @@ function UnavailableWork() {
         </p>
         <Link
           className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold text-white"
-          href="/thu-vien"
+          href="/works"
         >
           <ArrowLeft className="size-4" /> Trở lại catalog
         </Link>

@@ -128,7 +128,7 @@ export function ReviewAssignmentList({
               </div>
               <Link
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border bg-white px-4 text-sm font-bold text-neutral-800 hover:border-primary-200 hover:text-primary-700"
-                href={`/tham-dinh/${item.assignment.id}`}
+                href={`/reviews/${item.assignment.id}`}
               >
                 <ClipboardCheck aria-hidden="true" className="size-4" />
                 Mở hồ sơ thẩm định

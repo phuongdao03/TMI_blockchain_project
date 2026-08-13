@@ -1,7 +1,7 @@
 """Create durable public-work favourites.
 
 Revision ID: 0031_public_work_favorites
-Revises: 0030_public_work_engagement_daily
+Revises: 0030_engagement_daily
 Create Date: 2026-08-04
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0031_public_work_favorites"
-down_revision: str | None = "0030_public_work_engagement_daily"
+down_revision: str | None = "0030_engagement_daily"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

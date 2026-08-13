@@ -3,13 +3,16 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
+    AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 
 from app.db.base import Base
+from app.modules.audit.models import AuditLog
 from app.modules.auth.models import User, UserStatus
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
@@ -45,6 +48,7 @@ COMMENTS = {
 
 async def _setup() -> tuple[
     ReviewService,
+    async_sessionmaker[AsyncSession],
     AsyncEngine,
     dict[str, User],
     ReviewAssignment,
@@ -140,7 +144,7 @@ async def _setup() -> tuple[
         ),
         clock=lambda: NOW,
     )
-    return service, engine, users, assignment, conflicted_assignment
+    return service, session_factory, engine, users, assignment, conflicted_assignment
 
 
 def _principal(user: User, role: str = "REVIEWER") -> AuthPrincipal:
@@ -154,7 +158,7 @@ def _principal(user: User, role: str = "REVIEWER") -> AuthPrincipal:
 
 def test_reviewer_conflict_gate_draft_and_immutable_submit() -> None:
     async def exercise() -> None:
-        service, engine, users, assignment, _ = await _setup()
+        service, session_factory, engine, users, assignment, _ = await _setup()
         reviewer = _principal(users["reviewer"])
 
         page = await service.list_assignments(
@@ -228,6 +232,28 @@ def test_reviewer_conflict_gate_draft_and_immutable_submit() -> None:
         with pytest.raises(ReviewConflictError):
             await service.submit_review(reviewer, assignment.id)
 
+        async with session_factory() as session:
+            audit_rows = tuple(
+                (
+                    await session.scalars(
+                        select(AuditLog).order_by(AuditLog.created_at, AuditLog.action)
+                    )
+                ).all()
+            )
+            assert [row.action for row in audit_rows] == [
+                "review.conflict_declared",
+                "review.draft_saved",
+                "review.draft_saved",
+                "review.submitted",
+            ]
+            assert all(
+                row.actor_user_id == users["reviewer"].id for row in audit_rows
+            )
+            assert all(
+                row.resource_type == "review_assignment" for row in audit_rows
+            )
+            assert all(row.resource_id == str(assignment.id) for row in audit_rows)
+
         await service.close()
         await engine.dispose()
 
@@ -236,7 +262,7 @@ def test_reviewer_conflict_gate_draft_and_immutable_submit() -> None:
 
 def test_reviewer_access_and_conflict_rules_are_enforced() -> None:
     async def exercise() -> None:
-        service, engine, users, assignment, conflicted_assignment = await _setup()
+        service, _, engine, users, assignment, conflicted_assignment = await _setup()
 
         with pytest.raises(ReviewNotFoundError):
             await service.get_assignment(

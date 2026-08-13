@@ -7,11 +7,42 @@ import type {
   MediaUploadAuthorization,
 } from "@/lib/api/types";
 
-type UploadStage = "uploading" | "verifying";
+type UploadStage = "uploading" | "verifying" | "inspecting";
 
 interface UploadCallbacks {
+  inspectionPollIntervalMs?: number;
   onProgress?: (progress: number) => void;
   onStage?: (stage: UploadStage) => void;
+}
+
+const DEFAULT_INSPECTION_POLL_INTERVAL_MS = 1_500;
+const MAX_INSPECTION_POLLS = 40;
+
+const wait = (milliseconds: number) =>
+  new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
+
+async function waitForInspection(
+  mediaId: string,
+  intervalMs: number,
+): Promise<MediaAsset> {
+  for (let attempt = 0; attempt < MAX_INSPECTION_POLLS; attempt += 1) {
+    const asset = await mediaApi.getAsset(mediaId);
+    if (asset.status === "ACTIVE") {
+      return asset;
+    }
+    if (asset.status === "REJECTED") {
+      throw new Error(
+        "Tệp không vượt qua bước xác minh an toàn. Vui lòng chọn tệp khác.",
+      );
+    }
+    if (asset.status !== "PENDING" && asset.status !== "QUARANTINED") {
+      throw new Error("Tệp không còn ở trạng thái có thể xử lý.");
+    }
+    await wait(intervalMs);
+  }
+  throw new Error(
+    "Việc kiểm tra tệp đang mất nhiều thời gian hơn dự kiến. Vui lòng thử lại sau.",
+  );
 }
 
 interface MediaPolicy {
@@ -155,6 +186,7 @@ export async function uploadMedia(
 ): Promise<MediaAsset> {
   validateMediaFile(file, purpose);
   const authorization = await mediaApi.createUploadSignature({
+    confidentiality: purpose === "PUBLIC_WORK" ? "PUBLIC" : "PRIVATE",
     purpose,
     filename: file.name,
     mimeType: file.type,
@@ -176,8 +208,15 @@ export async function uploadMedia(
     version: result.version,
     signature: result.signature,
   });
-  if (asset.status !== "ACTIVE") {
+  if (asset.status === "ACTIVE") {
+    return asset;
+  }
+  if (asset.status !== "QUARANTINED") {
     throw new Error("Tệp chưa hoàn tất xác minh. Vui lòng thử lại.");
   }
-  return asset;
+  callbacks.onStage?.("inspecting");
+  return waitForInspection(
+    asset.id,
+    callbacks.inspectionPollIntervalMs ?? DEFAULT_INSPECTION_POLL_INTERVAL_MS,
+  );
 }

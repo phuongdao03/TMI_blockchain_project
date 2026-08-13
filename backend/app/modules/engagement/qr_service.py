@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.audit.service import AuditService
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.auth.tokens import hash_opaque_token
 from app.modules.engagement.errors import EngagementUnavailableError
@@ -73,8 +74,14 @@ class QrShareLinkService:
             return resolved.slug
 
     async def revoke(self, principal: AuthPrincipal, *, public_work_id: UUID) -> bool:
-        if self.ADMIN_ROLES.isdisjoint(principal.roles):
-            raise PublicWorkForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(
+                permission="engagement.qr.manage",
+                compatible_roles=self.ADMIN_ROLES,
+            ),
+            PublicWorkForbiddenError,
+        )
         async with self._session.begin():
             revoked = await self._links.revoke_active_for_work(
                 public_work_id=public_work_id,

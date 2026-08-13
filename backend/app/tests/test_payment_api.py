@@ -65,6 +65,22 @@ class StubPaymentService:
         del principal, order_id
         return self.view()
 
+    async def get_order_by_provider_reference(
+        self,
+        principal: AuthPrincipal,
+        provider_order_id: str,
+    ) -> PaymentOrderView:
+        del principal, provider_order_id
+        return self.view()
+
+    async def get_active_order_for_dossier(
+        self,
+        principal: AuthPrincipal,
+        dossier_id: UUID,
+    ) -> PaymentOrderView:
+        del principal, dossier_id
+        return self.view()
+
     async def process_webhook(
         self,
         *,
@@ -128,6 +144,21 @@ def test_payment_api_create_get_and_preserve_raw_webhook_body() -> None:
             service,
         )
     )
+    fetched_by_provider = asyncio.run(
+        _request(
+            "GET",
+            "/api/v1/payment-orders/by-provider-reference"
+            "?providerOrderId=mock-order",
+            service,
+        )
+    )
+    active = asyncio.run(
+        _request(
+            "GET",
+            f"/api/v1/dossiers/{service.dossier_id}/active-payment-order",
+            service,
+        )
+    )
     body = b'{"provider_order_id":"mock-order"}'
     webhook = asyncio.run(
         _request(
@@ -146,5 +177,7 @@ def test_payment_api_create_get_and_preserve_raw_webhook_body() -> None:
     assert created.status_code == 201
     assert created.json()["data"]["amountMinor"] == 1_000_000
     assert fetched.status_code == 200
+    assert fetched_by_provider.status_code == 200
+    assert active.status_code == 200
     assert webhook.status_code == 200
     assert service.raw_body == body

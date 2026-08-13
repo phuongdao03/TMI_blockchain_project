@@ -2,7 +2,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from app.modules.dossiers.models import DossierStatus, DossierVisibility
+from app.modules.dossiers.models import (
+    DocumentHashAdjudicationAction,
+    DossierStatus,
+    DossierVisibility,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,6 +121,15 @@ class DossierStatusHistoryView:
 class SubmissionView:
     dossier: DossierView
     version: DossierVersionView
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentHashAdjudicationView:
+    id: UUID
+    dossier_id: UUID
+    media_asset_id: UUID
+    action: DocumentHashAdjudicationAction
+    created_at: datetime
 
 
 @dataclass(frozen=True, slots=True)

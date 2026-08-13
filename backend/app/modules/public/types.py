@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from app.modules.blockchain.models import CertificateStatus
+from app.modules.blockchain.models import CertificateStatus, CertificateVersionStatus
+from app.modules.public.verification import PublicEvidenceProof
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,3 +52,16 @@ class PublicHomeView:
     certificate_count: int
     category_count: int
     latest_assets: tuple[PublicAssetView, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PublicCertificateVersionView:
+    version_no: int
+    status: CertificateVersionStatus
+    metadata_hash: str
+    transaction_hash: str | None
+    block_number: int | None
+    confirmed_at: datetime | None
+    created_at: datetime
+    issuer_label: str
+    documents: tuple[PublicEvidenceProof, ...]

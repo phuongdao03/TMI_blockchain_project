@@ -1,5 +1,9 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/components/auth/logout-button", () => ({
+  LogoutButton: () => <button type="button">Đăng xuất</button>,
+}));
 
 import {
   AuthShell,
@@ -39,8 +43,9 @@ describe("layout shells", () => {
       </AuthShell>,
     );
     expect(screen.getByRole("main", { name: "Tài khoản TMI" })).toBeDefined();
-    expect(screen.getByText("Bảo chứng bởi blockchain")).toBeDefined();
-    expect(screen.getByText("Mã hóa AES-256")).toBeDefined();
+    expect(screen.getByText("Bảo vệ tài khoản")).toBeDefined();
+    expect(screen.getByText("Thông tin riêng tư")).toBeDefined();
+    expect(screen.getByText("Hỗ trợ rõ ràng")).toBeDefined();
     expect(
       screen.getByRole("heading", { level: 1, name: "Đăng nhập" }),
     ).toBeDefined();
@@ -65,12 +70,19 @@ describe("layout shells", () => {
       screen.getByRole("navigation", { name: "Điều hướng bảng điều khiển" }),
     ).toBeDefined();
     expect(screen.getByText("Mở điều hướng")).toBeDefined();
+    expect(screen.getAllByRole("link", { name: "Việc cần làm" })).toHaveLength(
+      2,
+    );
     expect(
-      screen.getAllByRole("link", { name: "Tổng quan hồ sơ" }),
+      screen
+        .getAllByRole("link")
+        .filter((link) => link.getAttribute("href") === "/dashboard"),
     ).toHaveLength(2);
     expect(
       screen.queryByRole("link", { name: "Quản trị nội dung" }),
     ).toBeNull();
+    expect(screen.queryByText("Môi trường thử nghiệm")).toBeNull();
+    expect(screen.queryByText("Hệ thống xác minh sẵn sàng")).toBeNull();
   });
 
   it("keeps public discovery links visible for an authenticated public user", () => {
@@ -90,9 +102,36 @@ describe("layout shells", () => {
     );
 
     const links = screen.getAllByRole("link");
-    for (const href of ["/dashboard", "/tim-kiem", "/thu-vien", "/ban-do"]) {
-      expect(links.some((link) => link.getAttribute("href") === href)).toBe(true);
+    for (const href of ["/dashboard", "/search", "/works", "/map"]) {
+      expect(links.some((link) => link.getAttribute("href") === href)).toBe(
+        true,
+      );
     }
-    expect(links.some((link) => link.getAttribute("href") === "/ho-so")).toBe(false);
+    expect(
+      links.some((link) => link.getAttribute("href") === "/dossiers"),
+    ).toBe(false);
+  });
+
+  it("shows workspace navigation instead of auth CTAs on public pages", () => {
+    render(
+      <PublicShell
+        user={{
+          id: "user-3",
+          email: "reviewer@tmigroup.vn",
+          roles: ["REVIEWER"],
+          accountType: "PUBLIC_USER",
+        }}
+      >
+        <h1>Catalog</h1>
+      </PublicShell>,
+    );
+
+    expect(
+      screen
+        .getByRole("link", { name: "Bảng điều khiển" })
+        .getAttribute("href"),
+    ).toBe("/reviews");
+    expect(screen.queryByRole("link", { name: "Đăng nhập" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Đăng ký" })).toBeNull();
   });
 });

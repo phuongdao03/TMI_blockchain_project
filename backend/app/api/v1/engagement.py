@@ -132,6 +132,8 @@ async def list_activity(
         ),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
+
+
 @router.delete(
     "/admin/public/works/{work_id}/share-link",
     status_code=status.HTTP_204_NO_CONTENT,

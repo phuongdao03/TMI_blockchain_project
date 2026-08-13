@@ -123,7 +123,7 @@ export function CouncilSessionList({
               <p className="flex items-center gap-2">
                 <Users aria-hidden="true" className="size-4" />
                 {item.session.attendanceCount}/{item.session.memberCount} tham
-                dự · quorum {item.session.quorumRequired}
+                dự · cần tối thiểu {item.session.quorumRequired}
               </p>
             </div>
             <div className="mt-5 flex items-center justify-between gap-3 border-t pt-4">
@@ -136,7 +136,7 @@ export function CouncilSessionList({
               </span>
               <Link
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold text-primary-700 hover:bg-primary-50"
-                href={`/hoi-dong/${item.session.id}`}
+                href={`/council/${item.session.id}`}
               >
                 Mở phiên
                 <ArrowRight

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.outbox import OutboxEvent
 from app.modules.audit.service import AuditService
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.repositories import AuthRepository, OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
@@ -252,8 +253,13 @@ class ContentReportService:
 
     @classmethod
     def _require_admin(cls, principal: AuthPrincipal) -> None:
-        if not cls.ADMIN_ROLES.intersection(principal.roles):
-            raise PublicWorkForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(
+                permission="public_content.manage", compatible_roles=cls.ADMIN_ROLES
+            ),
+            PublicWorkForbiddenError,
+        )
 
     @staticmethod
     def _digest(value: str) -> str:

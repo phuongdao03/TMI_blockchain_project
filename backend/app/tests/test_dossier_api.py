@@ -14,9 +14,14 @@ from app.modules.auth.dependencies import (
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.dependencies import get_dossier_service
 from app.modules.dossiers.errors import DossierForbiddenError
-from app.modules.dossiers.models import DossierStatus, DossierVisibility
+from app.modules.dossiers.models import (
+    DocumentHashAdjudicationAction,
+    DossierStatus,
+    DossierVisibility,
+)
 from app.modules.dossiers.types import (
     CreateDossier,
+    DocumentHashAdjudicationView,
     DossierChanges,
     DossierDetailView,
     DossierPage,
@@ -35,6 +40,7 @@ class StubDossierService:
         self.updated: DossierChanges | None = None
         self.filters: tuple[DossierStatus | None, UUID | None, int, int] | None = None
         self.forbidden = False
+        self.override_request: tuple[UUID, UUID, str] | None = None
 
     def _view(self) -> DossierView:
         return DossierView(
@@ -110,6 +116,23 @@ class StubDossierService:
         dossier_id: UUID,
     ) -> None:
         return None
+
+    async def grant_document_hash_override(
+        self,
+        principal: AuthPrincipal,
+        dossier_id: UUID,
+        *,
+        media_asset_id: UUID,
+        reason: str,
+    ) -> DocumentHashAdjudicationView:
+        self.override_request = (dossier_id, media_asset_id, reason)
+        return DocumentHashAdjudicationView(
+            id=uuid4(),
+            dossier_id=dossier_id,
+            media_asset_id=media_asset_id,
+            action=DocumentHashAdjudicationAction.ALLOW_REANCHOR,
+            created_at=NOW,
+        )
 
 
 async def _request(
@@ -248,3 +271,35 @@ def test_dossier_validation_and_forbidden_error_contract() -> None:
     assert empty_patch.status_code == 422
     assert forbidden.status_code == 403
     assert forbidden.json()["error"]["code"] == "DOSSIER_FORBIDDEN"
+
+
+def test_document_claim_override_api_uses_english_resource_contract() -> None:
+    principal = _principal()
+    service = StubDossierService(principal)
+    media_asset_id = uuid4()
+    response = asyncio.run(
+        _request(
+            "POST",
+            f"/api/v1/dossiers/{service.dossier_id}/document-claim-overrides",
+            service,
+            principal,
+            json={
+                "mediaAssetId": str(media_asset_id),
+                "reason": "Ownership evidence was reviewed and approved.",
+            },
+        )
+    )
+
+    assert response.status_code == 201
+    assert response.json()["data"] == {
+        "id": response.json()["data"]["id"],
+        "dossierId": str(service.dossier_id),
+        "mediaAssetId": str(media_asset_id),
+        "action": "ALLOW_REANCHOR",
+        "createdAt": NOW.isoformat().replace("+00:00", "Z"),
+    }
+    assert service.override_request == (
+        service.dossier_id,
+        media_asset_id,
+        "Ownership evidence was reviewed and approved.",
+    )

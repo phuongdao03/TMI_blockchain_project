@@ -40,7 +40,7 @@ test("council member attends, declares conflict, votes and sees result", async (
     }
   });
 
-  await page.goto("/hoi-dong");
+  await page.goto("/council");
   await expect(
     page.getByRole("heading", { level: 1, name: "Phiên xét duyệt" }),
   ).toBeVisible();

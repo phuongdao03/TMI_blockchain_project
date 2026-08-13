@@ -13,6 +13,7 @@ from app.modules.notifications.email import (
 )
 from app.modules.notifications.models import DeliveryStatus
 from app.modules.notifications.service import NotificationService
+from app.workers.notification_tasks import staff_invitation_message
 
 
 class FailingOnceGateway:
@@ -119,3 +120,15 @@ def test_verification_email_contains_escaped_single_use_action_url() -> None:
     assert "token=a&next=b" in text
     assert "token=a&amp;next=b" in html
     assert "Tiếp tục xác minh" in html
+
+
+def test_staff_invitation_email_uses_english_route_and_encodes_token() -> None:
+    message = staff_invitation_message(
+        email="reviewer@example.com",
+        invitation_token="a/b+c",
+        app_base_url="https://app.tmigroup.vn/",
+    )
+
+    assert message.to == "reviewer@example.com"
+    assert "/staff-invitation?token=a%2Fb%2Bc" in message.text
+    assert "/staff-invitation?token=a%2Fb%2Bc" in message.html

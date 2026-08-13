@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import cast
+from typing import Any, cast
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.outbox import OutboxEvent
@@ -15,6 +15,7 @@ from app.modules.auth.models import (
     RolePermission,
     User,
     UserRole,
+    UserStatus,
     VerificationToken,
 )
 
@@ -219,6 +220,126 @@ class AuthRepository:
 
     def add_user_role(self, user_role: UserRole) -> None:
         self._session.add(user_role)
+
+    async def list_internal_users(
+        self,
+        *,
+        page: int,
+        page_size: int,
+        query: str | None = None,
+        role_code: str | None = None,
+        account_status: str | None = None,
+    ) -> tuple[tuple[User, str], ...]:
+        internal_codes = (
+            "REVIEWER",
+            "COUNCIL_MEMBER",
+            "COUNCIL_SECRETARY",
+            "FINANCE_ADMIN",
+            "CONTENT_ADMIN",
+            "BLOCKCHAIN_ADMIN",
+            "SUPER_ADMIN",
+        )
+        statement = (
+            select(User, Role.code)
+            .join(UserRole, UserRole.user_id == User.id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(
+                Role.code.in_(internal_codes),
+                User.status.in_(
+                    (UserStatus.PENDING, UserStatus.ACTIVE, UserStatus.SUSPENDED)
+                ),
+            )
+            .order_by(User.created_at.desc(), User.id)
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        if query:
+            statement = statement.where(User.email.ilike(f"%{query.strip()}%"))
+        if role_code:
+            statement = statement.where(Role.code == role_code)
+        statement = self._filter_staff_status(statement, account_status)
+        rows = (await self._session.execute(statement)).all()
+        return tuple((user, str(code)) for user, code in rows)
+
+    async def count_internal_users(
+        self,
+        *,
+        query: str | None = None,
+        role_code: str | None = None,
+        account_status: str | None = None,
+    ) -> int:
+        internal_codes = (
+            "REVIEWER",
+            "COUNCIL_MEMBER",
+            "COUNCIL_SECRETARY",
+            "FINANCE_ADMIN",
+            "CONTENT_ADMIN",
+            "BLOCKCHAIN_ADMIN",
+            "SUPER_ADMIN",
+        )
+        statement = (
+            select(func.count(distinct(User.id)))
+            .join(UserRole, UserRole.user_id == User.id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(
+                Role.code.in_(internal_codes),
+                User.status.in_(
+                    (UserStatus.PENDING, UserStatus.ACTIVE, UserStatus.SUSPENDED)
+                ),
+            )
+        )
+        if query:
+            statement = statement.where(User.email.ilike(f"%{query.strip()}%"))
+        if role_code:
+            statement = statement.where(Role.code == role_code)
+        statement = self._filter_staff_status(statement, account_status)
+        return int(await self._session.scalar(statement) or 0)
+
+    @staticmethod
+    def _filter_staff_status(statement: Any, account_status: str | None) -> Any:
+        if account_status == "PENDING_MFA":
+            return statement.where(User.status == UserStatus.PENDING)
+        if account_status == "ACTIVE":
+            return statement.where(User.status == UserStatus.ACTIVE)
+        if account_status == "SUSPENDED":
+            return statement.where(
+                User.status == UserStatus.SUSPENDED,
+                User.disabled_at.is_(None),
+            )
+        if account_status == "DISABLED":
+            return statement.where(
+                User.status == UserStatus.SUSPENDED,
+                User.disabled_at.is_not(None),
+            )
+        return statement
+
+    async def list_user_roles(self, user_id: UUID) -> tuple[tuple[UserRole, Role], ...]:
+        statement = (
+            select(UserRole, Role)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(UserRole.user_id == user_id)
+            .order_by(Role.code)
+        )
+        result = await self._session.execute(statement)
+        return tuple((row[0], row[1]) for row in result.all())
+
+    async def delete_user_role(self, user_id: UUID, role_id: UUID) -> None:
+        await self._session.execute(
+            delete(UserRole).where(
+                UserRole.user_id == user_id,
+                UserRole.role_id == role_id,
+            )
+        )
+
+    async def revoke_active_auth_sessions_for_user(
+        self, user_id: UUID, now: datetime
+    ) -> int:
+        sessions = await self.list_active_auth_sessions(
+            user_id=user_id, now=now, for_update=True
+        )
+        for auth_session in sessions:
+            auth_session.revoked_at = now
+        return len(sessions)
 
 
 class OutboxRepository:

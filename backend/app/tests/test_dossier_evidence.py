@@ -31,6 +31,7 @@ from app.modules.dossiers.types import (
     EvidenceChanges,
 )
 from app.modules.media.models import MediaAsset, MediaStatus
+from app.modules.media.provenance import CURRENT_INSPECTION_POLICY_VERSION
 
 CATEGORY_ID = UUID("4d28db19-1507-5a45-a50d-cd0aa83029ec")
 NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
@@ -64,6 +65,7 @@ async def _build_service() -> tuple[
         status: MediaStatus,
         sha256: str | None,
     ) -> MediaAsset:
+        trusted = status is MediaStatus.ACTIVE and sha256 is not None
         return MediaAsset(
             id=uuid4(),
             owner_user_id=owner.id,
@@ -75,6 +77,13 @@ async def _build_service() -> tuple[
             mime_type="application/pdf",
             bytes=1024,
             sha256=sha256,
+            hash_algorithm="SHA-256" if trusted else None,
+            hash_byte_length=1024 if trusted else None,
+            inspection_policy_version=(
+                CURRENT_INSPECTION_POLICY_VERSION if trusted else None
+            ),
+            hash_storage_version=1 if trusted else None,
+            hash_computed_at=NOW if trusted else None,
             status=status,
         )
 

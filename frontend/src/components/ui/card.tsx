@@ -6,7 +6,7 @@ function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "min-w-0 rounded-2xl border border-neutral-200/90 bg-surface shadow-[0_1px_2px_rgb(15_23_42/0.03),0_12px_32px_rgb(15_23_42/0.04)]",
+        "min-w-0 rounded-xl border border-neutral-200 bg-surface",
         className,
       )}
       {...props}

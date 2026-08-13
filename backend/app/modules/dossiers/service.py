@@ -1,4 +1,3 @@
-import logging
 import re
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -6,11 +5,19 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.audit.service import AuditService
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.models import AccountType
 from app.modules.auth.session_service import AuthPrincipal
-from app.modules.dossiers.canonical import snapshot_sha256
+from app.modules.dossiers.canonical import (
+    content_fingerprint,
+    normalized_identity_text,
+    snapshot_sha256,
+)
+from app.modules.dossiers.document_claims import DocumentHashClaimService
 from app.modules.dossiers.errors import (
     ApplicantProfileIncompleteError,
+    DossierDuplicateContentError,
     DossierForbiddenError,
     DossierInvalidStateError,
     DossierNotFoundError,
@@ -19,6 +26,7 @@ from app.modules.dossiers.errors import (
 from app.modules.dossiers.models import (
     Category,
     Dossier,
+    DossierContentClaim,
     DossierEvidence,
     DossierStatus,
     DossierStatusHistory,
@@ -28,6 +36,7 @@ from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.types import (
     CreateDossier,
     CreateEvidence,
+    DocumentHashAdjudicationView,
     DossierChanges,
     DossierDetailView,
     DossierPage,
@@ -40,6 +49,7 @@ from app.modules.dossiers.types import (
 )
 from app.modules.dossiers.workflow import DossierWorkflowService
 from app.modules.media.models import MediaAsset, MediaStatus
+from app.modules.media.provenance import has_current_trusted_provenance
 from app.modules.media.repository import MediaAssetRepository
 from app.modules.organizations.models import (
     MembershipRole,
@@ -49,8 +59,6 @@ from app.modules.organizations.models import (
 from app.modules.organizations.repository import OrganizationRepository
 from app.modules.users.repository import UserProfileRepository
 
-logger = logging.getLogger(__name__)
-
 EDITABLE_STATUSES = frozenset({DossierStatus.DRAFT, DossierStatus.NEEDS_SUPPLEMENT})
 DOSSIER_MUTATION_ROLES = frozenset({"APPLICANT", "ORG_MANAGER"})
 APPLICANT_ACCOUNT_TYPES = frozenset(
@@ -59,21 +67,30 @@ APPLICANT_ACCOUNT_TYPES = frozenset(
 
 
 class DossierService:
+    DOCUMENT_CLAIM_OVERRIDE = PolicyRequirement(
+        permission="document_claim.override",
+        compatible_roles=frozenset({"SUPER_ADMIN"}),
+    )
+
     def __init__(
         self,
         *,
         session: AsyncSession,
         clock: Callable[[], datetime] | None = None,
         uuid_factory: Callable[[], UUID] | None = None,
+        enqueue_similarity_detection: Callable[[UUID], None] | None = None,
     ) -> None:
         self._session = session
         self._repository = DossierRepository(session)
+        self._document_claims = DocumentHashClaimService(session=session)
         self._organizations = OrganizationRepository(session)
         self._profiles = UserProfileRepository(session)
         self._media = MediaAssetRepository(session)
         self._workflow = DossierWorkflowService(self._repository)
+        self._audit_service = AuditService(session)
         self._clock = clock or (lambda: datetime.now(UTC))
         self._uuid_factory = uuid_factory or uuid4
+        self._enqueue_similarity_detection = enqueue_similarity_detection
 
     async def create_dossier(
         self,
@@ -105,8 +122,75 @@ class DossierService:
             self._repository.add(dossier)
             await self._session.flush()
             view = self._view(dossier, can_edit=True)
-        self._audit("dossier.created", principal.user_id, dossier.id)
+            self._audit("dossier.created", principal.user_id, dossier.id)
         return view
+
+    async def grant_document_hash_override(
+        self,
+        principal: AuthPrincipal,
+        dossier_id: UUID,
+        *,
+        media_asset_id: UUID,
+        reason: str,
+    ) -> DocumentHashAdjudicationView:
+        AuthorizationPolicy.require_capability(
+            principal,
+            self.DOCUMENT_CLAIM_OVERRIDE,
+            DossierForbiddenError,
+        )
+        normalized_reason = reason.strip()
+        if not 10 <= len(normalized_reason) <= 1000:
+            raise DossierValidationError(
+                "Override reason must contain between 10 and 1000 characters."
+            )
+        async with self._session.begin():
+            dossier = await self._repository.get_by_id(dossier_id, for_update=True)
+            if dossier is None:
+                raise DossierNotFoundError()
+            if dossier.status not in EDITABLE_STATUSES:
+                raise DossierInvalidStateError(
+                    "Only an editable dossier can receive a document override."
+                )
+            evidence_rows = await self._repository.list_draft_evidences(dossier.id)
+            media = next(
+                (
+                    item
+                    for evidence, item in evidence_rows
+                    if evidence.media_asset_id == media_asset_id
+                ),
+                None,
+            )
+            if media is None:
+                raise DossierNotFoundError("Dossier document was not found.")
+            if not has_current_trusted_provenance(media):
+                raise DossierValidationError(
+                    "Document does not have current trusted provenance."
+                )
+            adjudication, created = await self._document_claims.grant_adjudication(
+                dossier=dossier,
+                media=media,
+                actor_user_id=principal.user_id,
+                reason=normalized_reason,
+            )
+            if created:
+                self._audit_service.record(
+                    actor_user_id=principal.user_id,
+                    action="DOCUMENT_HASH_OVERRIDE_GRANTED",
+                    resource_type="DOCUMENT_HASH_ADJUDICATION",
+                    resource_id=str(adjudication.id),
+                    after={
+                        "dossierId": str(dossier.id),
+                        "mediaAssetId": str(media.id),
+                        "action": adjudication.action.value,
+                    },
+                )
+            return DocumentHashAdjudicationView(
+                id=adjudication.id,
+                dossier_id=adjudication.dossier_id,
+                media_asset_id=adjudication.media_asset_id,
+                action=adjudication.action,
+                created_at=adjudication.created_at,
+            )
 
     async def list_dossiers(
         self,
@@ -215,7 +299,7 @@ class DossierService:
             await self._session.flush()
             await self._session.refresh(dossier, attribute_names=["updated_at"])
             view = self._view(dossier, can_edit=True)
-        self._audit("dossier.updated", principal.user_id, dossier_id)
+            self._audit("dossier.updated", principal.user_id, dossier_id)
         return view
 
     async def delete_dossier(
@@ -234,7 +318,7 @@ class DossierService:
             if dossier.status is not DossierStatus.DRAFT:
                 raise DossierInvalidStateError("Only a draft dossier can be deleted.")
             dossier.deleted_at = self._clock()
-        self._audit("dossier.deleted", principal.user_id, dossier_id)
+            self._audit("dossier.deleted", principal.user_id, dossier_id)
 
     async def attach_evidence(
         self,
@@ -266,7 +350,7 @@ class DossierService:
             self._repository.add_evidence(evidence)
             await self._session.flush()
             view = self._evidence_view(evidence, media)
-        self._audit("dossier.evidence.attached", principal.user_id, dossier_id)
+            self._audit("dossier.evidence.attached", principal.user_id, dossier_id)
         return view
 
     async def update_evidence(
@@ -310,7 +394,7 @@ class DossierService:
             media = await self._require_media(principal, evidence.media_asset_id)
             await self._session.flush()
             view = self._evidence_view(evidence, media)
-        self._audit("dossier.evidence.updated", principal.user_id, dossier_id)
+            self._audit("dossier.evidence.updated", principal.user_id, dossier_id)
         return view
 
     async def remove_evidence(
@@ -333,7 +417,7 @@ class DossierService:
                 evidence_id,
             )
             await self._repository.remove_evidence(evidence)
-        self._audit("dossier.evidence.removed", principal.user_id, dossier_id)
+            self._audit("dossier.evidence.removed", principal.user_id, dossier_id)
 
     async def submit_dossier(
         self,
@@ -396,6 +480,7 @@ class DossierService:
     ) -> SubmissionView:
         self._require_mutation_role(principal)
         normalized_key = self._idempotency_key(idempotency_key)
+        similarity_version_id: UUID | None = None
         async with self._session.begin():
             dossier = await self._owned_or_scoped(
                 principal,
@@ -437,6 +522,11 @@ class DossierService:
                     submitted_by=principal.user_id,
                     submitted_at=submitted_at,
                 )
+                identity_fingerprint = self._content_fingerprint(
+                    dossier,
+                    category,
+                    evidence_rows,
+                )
                 version = DossierVersion(
                     dossier_id=dossier.id,
                     version_no=version_no,
@@ -447,6 +537,22 @@ class DossierService:
                 )
                 self._repository.add_version(version)
                 await self._session.flush()
+                claim = await self._repository.claim_content(
+                    DossierContentClaim(
+                        id=uuid4(),
+                        content_fingerprint=identity_fingerprint,
+                        dossier_id=dossier.id,
+                        dossier_version_id=version.id,
+                    )
+                )
+                if claim.dossier_id != dossier.id:
+                    raise DossierDuplicateContentError()
+                for _, media in evidence_rows:
+                    await self._document_claims.claim_document(
+                        dossier=dossier,
+                        version=version,
+                        media=media,
+                    )
                 for evidence, _ in evidence_rows:
                     evidence.dossier_version_id = version.id
                 self._workflow.transition(
@@ -467,13 +573,52 @@ class DossierService:
                     dossier=self._view(dossier, can_edit=False),
                     version=self._version_view(version),
                 )
-        self._audit_submission(
-            reason_code.lower(),
-            principal.user_id,
-            dossier_id,
-            normalized_key,
-        )
+                similarity_version_id = version.id
+                self._audit_submission(
+                    reason_code.lower(),
+                    principal.user_id,
+                    dossier_id,
+                    normalized_key,
+                )
+        if (
+            similarity_version_id is not None
+            and self._enqueue_similarity_detection is not None
+        ):
+            self._enqueue_similarity_detection(similarity_version_id)
         return result
+
+    @staticmethod
+    def _content_fingerprint(
+        dossier: Dossier,
+        category: Category,
+        rows: tuple[tuple[DossierEvidence, MediaAsset], ...],
+    ) -> str:
+        evidence_identity = sorted(
+            (
+                {
+                    "evidenceType": normalized_identity_text(evidence.evidence_type),
+                    "title": normalized_identity_text(evidence.title),
+                    "mimeType": normalized_identity_text(media.mime_type),
+                    "bytes": media.bytes,
+                    "sha256": media.sha256,
+                }
+                for evidence, media in rows
+            ),
+            key=lambda item: (
+                str(item["sha256"]),
+                str(item["evidenceType"]),
+                str(item["title"]),
+            ),
+        )
+        return content_fingerprint(
+            {
+                "schemaVersion": 1,
+                "categoryCode": normalized_identity_text(category.code),
+                "title": normalized_identity_text(dossier.title),
+                "summary": normalized_identity_text(dossier.summary),
+                "evidence": evidence_identity,
+            }
+        )
 
     @staticmethod
     def _validate_submission_evidence(
@@ -484,14 +629,9 @@ class DossierService:
                 "At least one verified evidence file is required."
             )
         for _, media in rows:
-            if (
-                media.status is not MediaStatus.ACTIVE
-                or media.deleted_at is not None
-                or media.sha256 is None
-                or re.fullmatch(r"[0-9a-f]{64}", media.sha256) is None
-            ):
+            if not has_current_trusted_provenance(media):
                 raise DossierValidationError(
-                    "Every evidence file must be active and checksum verified."
+                    "Every evidence file must have current trusted provenance."
                 )
 
     @classmethod
@@ -523,6 +663,16 @@ class DossierService:
                         "mimeType": media.mime_type,
                         "bytes": media.bytes,
                         "sha256": media.sha256,
+                        "hashAlgorithm": media.hash_algorithm,
+                        "hashByteLength": media.hash_byte_length,
+                        "inspectionPolicyVersion": media.inspection_policy_version,
+                        "storageObjectVersion": media.hash_storage_version,
+                        "hashComputedAt": cls._iso_utc(media.hash_computed_at),
+                        **(
+                            {"perceptualHash": media.perceptual_hash}
+                            if media.perceptual_hash is not None
+                            else {}
+                        ),
                     },
                 }
             )
@@ -592,9 +742,9 @@ class DossierService:
             raise DossierForbiddenError()
         if media.status is not MediaStatus.ACTIVE or media.deleted_at is not None:
             raise DossierInvalidStateError("Evidence media is not active.")
-        if media.sha256 is None or re.fullmatch(r"[0-9a-f]{64}", media.sha256) is None:
+        if not has_current_trusted_provenance(media):
             raise DossierValidationError(
-                "Evidence media must have a verified SHA-256 checksum."
+                "Evidence media must have current trusted provenance."
             )
         return media
 
@@ -629,10 +779,15 @@ class DossierService:
         principal: AuthPrincipal,
         dossier: Dossier,
     ) -> bool:
-        if (
-            not DOSSIER_MUTATION_ROLES.intersection(principal.roles)
-            or dossier.status not in EDITABLE_STATUSES
-        ):
+        can_manage = AuthorizationPolicy.allows_capability(
+            principal,
+            PolicyRequirement(
+                permission="dossier.manage",
+                compatible_roles=DOSSIER_MUTATION_ROLES,
+                allow_super_admin=False,
+            ),
+        )
+        if not can_manage or dossier.status not in EDITABLE_STATUSES:
             return False
         if dossier.owner_user_id == principal.user_id:
             return True
@@ -689,8 +844,15 @@ class DossierService:
 
     @staticmethod
     def _require_mutation_role(principal: AuthPrincipal) -> None:
-        if not DOSSIER_MUTATION_ROLES.intersection(principal.roles):
-            raise DossierForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(
+                permission="dossier.manage",
+                compatible_roles=DOSSIER_MUTATION_ROLES,
+                allow_super_admin=False,
+            ),
+            DossierForbiddenError,
+        )
 
     async def _require_applicant_profile(self, principal: AuthPrincipal) -> None:
         if (
@@ -822,32 +984,27 @@ class DossierService:
             can_edit=can_edit,
         )
 
-    @staticmethod
-    def _audit(action: str, user_id: UUID, dossier_id: UUID) -> None:
-        logger.info(
-            "security_audit",
-            extra={
-                "action": action,
-                "user_id": str(user_id),
-                "dossier_id": str(dossier_id),
-            },
+    def _audit(self, action: str, user_id: UUID, dossier_id: UUID) -> None:
+        self._audit_service.record(
+            actor_user_id=user_id,
+            action=action,
+            resource_type="dossier",
+            resource_id=str(dossier_id),
         )
 
-    @staticmethod
     def _audit_submission(
+        self,
         action: str,
         user_id: UUID,
         dossier_id: UUID,
         idempotency_key: str,
     ) -> None:
-        logger.info(
-            "security_audit",
-            extra={
-                "action": f"dossier.{action}",
-                "user_id": str(user_id),
-                "dossier_id": str(dossier_id),
-                "idempotency_key_length": len(idempotency_key),
-            },
+        self._audit_service.record(
+            actor_user_id=user_id,
+            action=f"dossier.{action}",
+            resource_type="dossier",
+            resource_id=str(dossier_id),
+            after={"idempotency_key_length": len(idempotency_key)},
         )
 
     async def close(self) -> None:

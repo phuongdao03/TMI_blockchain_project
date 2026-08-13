@@ -475,3 +475,22 @@ def test_registration_api_rejects_short_password_without_echoing_it() -> None:
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
     assert "abcxyz" not in response.text
     assert service.registration is None
+
+
+def test_registration_api_rejects_privileged_council_account_type() -> None:
+    service = StubRegistrationService()
+    response = asyncio.run(
+        _post(
+            "/api/v1/auth/register",
+            {
+                "email": "council@tmigroup.vn",
+                "password": "correct horse battery staple",
+                "accountType": "COUNCIL_MEMBER",
+            },
+            service,
+        )
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert service.registration is None

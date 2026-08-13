@@ -22,7 +22,7 @@ def test_favorite_migration_round_trip(
     get_settings.cache_clear()
     config = Config(BACKEND_ROOT / "alembic.ini")
     try:
-        command.upgrade(config, "0030_public_work_engagement_daily")
+        command.upgrade(config, "0030_engagement_daily")
         command.upgrade(config, "0031_public_work_favorites")
         with sqlite3.connect(database_path) as connection:
             columns = {
@@ -56,7 +56,7 @@ def test_favorite_migration_round_trip(
         assert ("public_work_id", "public_works", "id", "RESTRICT") in foreign_keys
         assert "UNIQUE (user_id, public_work_id)" in table_sql
 
-        command.downgrade(config, "0030_public_work_engagement_daily")
+        command.downgrade(config, "0030_engagement_daily")
         with sqlite3.connect(database_path) as connection:
             tables = {
                 row[0]

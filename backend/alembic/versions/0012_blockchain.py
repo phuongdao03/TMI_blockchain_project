@@ -149,10 +149,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["dossier_version_id"],
             ["dossier_versions.id"],
-            name=(
-                "fk_blockchain_transactions_dossier_version_id_"
-                "dossier_versions"
-            ),
+            name=("fk_blockchain_transactions_dossier_version_id_dossier_versions"),
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
@@ -211,10 +208,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["blockchain_transaction_id"],
             ["blockchain_transactions.id"],
-            name=(
-                "fk_certificate_versions_blockchain_transaction_id_"
-                "blockchain_transactions"
-            ),
+            name="fk_cert_versions_blockchain_tx",
             ondelete="RESTRICT",
         ),
         sa.PrimaryKeyConstraint("id", name="pk_certificate_versions"),

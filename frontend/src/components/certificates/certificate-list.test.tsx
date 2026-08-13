@@ -46,8 +46,31 @@ describe("CertificateList", () => {
     );
 
     expect(await screen.findByText("Bộ nhận diện TMI")).toBeDefined();
+    expect(screen.getByText("Có hiệu lực")).toBeDefined();
+    expect(screen.queryByText("ACTIVE")).toBeNull();
     expect(
       screen.getByRole("link", { name: /Xem chứng thư/ }).getAttribute("href"),
-    ).toBe("/chung-thu/7eaec2d2-c99a-42c9-8f1e-71462ba01ea0");
+    ).toBe("/certificates/7eaec2d2-c99a-42c9-8f1e-71462ba01ea0");
+  });
+
+  it("uses plain language when no certificate is available", async () => {
+    listMock.mockResolvedValue({
+      success: true,
+      data: [],
+      meta: { requestId: "test", page: 1, pageSize: 12, total: 0 },
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <CertificateList page={1} />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByText("Chưa có chứng thư được phát hành"),
+    ).toBeDefined();
+    expect(screen.queryByText(/blockchain|database|backend|API/i)).toBeNull();
   });
 });

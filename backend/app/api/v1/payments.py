@@ -1,7 +1,7 @@
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Header, Request, status
+from fastapi import APIRouter, Header, Query, Request, status
 
 from app.core.schemas import ErrorEnvelope, ResponseMeta, SuccessEnvelope
 from app.modules.auth.dependencies import (
@@ -54,6 +54,48 @@ async def create_payment_order(
 
 
 @router.get(
+    "/dossiers/{dossier_id}/active-payment-order",
+    response_model=SuccessEnvelope[PaymentOrderData],
+    responses=PRIVATE_RESPONSES,
+)
+async def get_active_payment_order(
+    dossier_id: UUID,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: PaymentServiceDependency,
+) -> SuccessEnvelope[PaymentOrderData]:
+    order = await service.get_active_order_for_dossier(principal, dossier_id)
+    return SuccessEnvelope(
+        data=PaymentOrderData.model_validate(order),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
+    "/payment-orders/by-provider-reference",
+    response_model=SuccessEnvelope[PaymentOrderData],
+    responses=PRIVATE_RESPONSES,
+)
+async def get_payment_order_by_provider_reference(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: PaymentServiceDependency,
+    provider_order_id: Annotated[
+        str,
+        Query(alias="providerOrderId", min_length=1, max_length=128),
+    ],
+) -> SuccessEnvelope[PaymentOrderData]:
+    order = await service.get_order_by_provider_reference(
+        principal,
+        provider_order_id,
+    )
+    return SuccessEnvelope(
+        data=PaymentOrderData.model_validate(order),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
     "/payment-orders/{order_id}",
     response_model=SuccessEnvelope[PaymentOrderData],
     responses=PRIVATE_RESPONSES,
@@ -85,10 +127,13 @@ async def process_payment_webhook(
     request: Request,
     service: PaymentServiceDependency,
     signature: Annotated[
-        str,
+        str | None,
         Header(alias="X-Payment-Signature", min_length=64, max_length=128),
-    ],
-    timestamp: Annotated[int, Header(alias="X-Payment-Timestamp", ge=0)],
+    ] = None,
+    timestamp: Annotated[
+        int | None,
+        Header(alias="X-Payment-Timestamp", ge=0),
+    ] = None,
 ) -> SuccessEnvelope[PaymentOrderData]:
     if provider != service.provider_name:
         from app.modules.payments.errors import PaymentNotFoundError
@@ -97,8 +142,8 @@ async def process_payment_webhook(
     raw_body = await request.body()
     order = await service.process_webhook(
         raw_body=raw_body,
-        signature=signature,
-        timestamp=timestamp,
+        signature=signature or "",
+        timestamp=timestamp or 0,
     )
     return SuccessEnvelope(
         data=PaymentOrderData.model_validate(order),

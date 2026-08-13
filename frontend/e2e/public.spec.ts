@@ -21,7 +21,7 @@ test("public portal is professional, responsive and verifiable", async ({
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: /Niềm tin cho tài sản số/,
+      name: /Bằng chứng cho giá trị số/,
     }),
   ).toBeVisible();
   await expect(page.getByText("Bộ nhận diện TMI")).toBeVisible();
@@ -30,7 +30,7 @@ test("public portal is professional, responsive and verifiable", async ({
     path: testInfo.outputPath("home.png"),
   });
 
-  await page.goto("/thu-vien");
+  await page.goto("/works");
   await expect(
     page.getByRole("heading", { name: /Di sản được công bố/ }),
   ).toBeVisible();
@@ -48,14 +48,14 @@ test("public portal is professional, responsive and verifiable", async ({
   ).toBeVisible();
   await autocomplete.press("ArrowDown");
   await autocomplete.press("Enter");
-  await expect(page).toHaveURL(/\/tai-san\/bo-nhan-dien-tmi$/);
-  await page.goto("/thu-vien");
+  await expect(page).toHaveURL(/\/works\/bo-nhan-dien-tmi$/);
+  await page.goto("/works");
   await page.screenshot({
     fullPage: true,
     path: testInfo.outputPath("public-catalog.png"),
   });
 
-  await page.goto("/tim-kiem?q=bo&category=brand&sort=relevance");
+  await page.goto("/search?q=bo&category=brand&sort=relevance");
   await expect(
     page.getByRole("heading", { name: /Tìm trong kho tài sản công khai/ }),
   ).toBeVisible();
@@ -90,7 +90,7 @@ test("public portal is professional, responsive and verifiable", async ({
     path: testInfo.outputPath("search-results.png"),
   });
 
-  await page.goto("/thu-vien?category=brand&tag=featured&sort=popular");
+  await page.goto("/works?category=brand&tag=featured&sort=popular");
   await expect(page.getByLabel("Sắp xếp")).toHaveValue("popular");
   await expect(page.getByLabel("Danh mục")).toHaveValue("brand");
   if (testInfo.project.name === "mobile-chrome") {
@@ -101,7 +101,7 @@ test("public portal is professional, responsive and verifiable", async ({
     await expect(page.getByRole("dialog")).toBeHidden();
   }
 
-  await page.goto("/tai-san/bo-nhan-dien-tmi");
+  await page.goto("/works/bo-nhan-dien-tmi");
   await expect(
     page.getByRole("heading", { name: "Bộ nhận diện TMI" }),
   ).toBeVisible();
@@ -109,7 +109,7 @@ test("public portal is professional, responsive and verifiable", async ({
   await expect(page.getByText("Đã đối chiếu on-chain")).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
-    "http://127.0.0.1:3100/tai-san/bo-nhan-dien-tmi",
+    "http://127.0.0.1:3100/works/bo-nhan-dien-tmi",
   );
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
     "content",
@@ -141,19 +141,21 @@ test("public portal is professional, responsive and verifiable", async ({
     path: testInfo.outputPath("public-work-detail.png"),
   });
 
-  await page.goto("/tai-san/bo-nhan-dien-cu");
-  await expect(page).toHaveURL(/\/tai-san\/bo-nhan-dien-tmi$/);
+  await page.goto("/works/bo-nhan-dien-cu");
+  await expect(page).toHaveURL(/\/works\/bo-nhan-dien-tmi$/);
 
-  await page.goto("/tai-san/chia-se-rieng");
+  await page.goto("/works/chia-se-rieng");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     "content",
     /noindex/,
   );
 
-  await page.goto("/kiem-tra");
-  await page.getByPlaceholder("TMI-2026-…").fill("TMI-2026-7EAEC2D2C99A");
-  await page.getByRole("button", { name: "Xác minh ngay" }).click();
-  await expect(page.getByRole("heading", { name: "Hợp lệ" })).toBeVisible();
+  await page.goto("/verify");
+  await page.getByLabel("Thông tin cần tra cứu").fill("TMI-2026-7EAEC2D2C99A");
+  await page.getByRole("button", { name: "Kiểm tra" }).click();
+  await expect(
+    page.getByText("Dữ liệu đã được ghi nhận và không thay đổi"),
+  ).toBeVisible();
 
   const robots = await page.request.get("/robots.txt");
   expect(await robots.text()).toContain(
@@ -163,7 +165,7 @@ test("public portal is professional, responsive and verifiable", async ({
   expect(await sitemapIndex.text()).toContain("/sitemaps/works/1.xml");
   const worksSitemap = await page.request.get("/sitemaps/works/1.xml");
   const worksXml = await worksSitemap.text();
-  expect(worksXml).toContain("/tai-san/bo-nhan-dien-tmi");
+  expect(worksXml).toContain("/works/bo-nhan-dien-tmi");
   expect(worksXml).not.toContain("chia-se-rieng");
 
   expect(consoleProblems).toEqual([]);

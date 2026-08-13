@@ -5,6 +5,8 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.audit.service import AuditService
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.models import Dossier, DossierStatus
 from app.modules.dossiers.repository import DossierRepository
@@ -30,6 +32,16 @@ logger = logging.getLogger(__name__)
 
 PAYMENT_ROLES = frozenset({"APPLICANT", "ORG_MANAGER"})
 FINANCE_ROLES = frozenset({"FINANCE_ADMIN", "SUPER_ADMIN"})
+PAYMENT_REQUIREMENTS = {
+    PAYMENT_ROLES: PolicyRequirement(
+        permission="payment.create",
+        compatible_roles=PAYMENT_ROLES,
+        allow_super_admin=False,
+    ),
+    FINANCE_ROLES: PolicyRequirement(
+        permission="payment.manage", compatible_roles=FINANCE_ROLES
+    ),
+}
 
 
 class PaymentService:
@@ -60,6 +72,7 @@ class PaymentService:
         self._clock = clock or (lambda: datetime.now(UTC))
         self._uuid_factory = uuid_factory or uuid4
         self._payments = PaymentRepository(session)
+        self._audit_service = AuditService(session)
         self._dossiers = DossierRepository(session)
         self._workflow = DossierWorkflowService(self._dossiers)
 
@@ -95,8 +108,14 @@ class PaymentService:
                     "This dossier already has an active payment order."
                 )
             order_id = self._uuid_factory()
-            order_code = f"PAY-{order_id.hex[:16].upper()}"
+            order_code = str((order_id.int % 2_147_483_646) + 1)
             expires_at = self._clock() + self._order_ttl
+            self._audit(
+                "payment.order.created",
+                order_id,
+                user_id=principal.user_id,
+                status=PaymentStatus.PENDING,
+            )
             try:
                 provider_order = await self._gateway.create_order(
                     order_code=order_code,
@@ -132,7 +151,6 @@ class PaymentService:
             )
             await self._session.flush()
             result = self._view(order)
-        self._audit("payment.order.created", principal.user_id, result.id)
         return result
 
     async def get_order(
@@ -147,6 +165,40 @@ class PaymentService:
             self._expire_if_needed(order)
             result = self._view(order)
         return result
+
+    async def get_order_by_provider_reference(
+        self,
+        principal: AuthPrincipal,
+        provider_order_id: str,
+    ) -> PaymentOrderView:
+        normalized_id = provider_order_id.strip()
+        if not normalized_id or len(normalized_id) > 128:
+            raise PaymentNotFoundError()
+        async with self._session.begin():
+            order = await self._payments.get_by_provider_order(
+                self._provider_name,
+                normalized_id,
+            )
+            if order is None:
+                raise PaymentNotFoundError()
+            dossier = await self._required_dossier(order.dossier_id)
+            await self._require_access(principal, dossier)
+            self._expire_if_needed(order)
+            return self._view(order)
+
+    async def get_active_order_for_dossier(
+        self,
+        principal: AuthPrincipal,
+        dossier_id: UUID,
+    ) -> PaymentOrderView:
+        async with self._session.begin():
+            dossier = await self._required_dossier(dossier_id)
+            await self._require_access(principal, dossier)
+            order = await self._payments.get_active_for_dossier(dossier_id)
+            if order is None:
+                raise PaymentNotFoundError()
+            self._expire_if_needed(order)
+            return self._view(order)
 
     async def process_webhook(
         self,
@@ -168,15 +220,9 @@ class PaymentService:
         async with self._session.begin():
             duplicate = await self._payments.get_event(event.provider_event_id)
             if duplicate is not None:
-                replay = self._view(
+                return self._view(
                     await self._required_order(duplicate.payment_order_id)
                 )
-                if (
-                    replay.status is PaymentStatus.PAID
-                    and self._enqueue_certificate_issue is not None
-                ):
-                    self._enqueue_certificate_issue(replay.dossier_id)
-                return replay
             order = await self._payments.get_by_provider_order(
                 self._provider_name,
                 event.provider_order_id,
@@ -196,6 +242,10 @@ class PaymentService:
             if (
                 event.amount_minor != order.amount_minor
                 or event.currency != order.currency
+                or (
+                    event.order_code is not None
+                    and event.order_code != order.order_code
+                )
             ):
                 mismatch = True
                 payment_event.processed_at = self._clock()
@@ -224,9 +274,18 @@ class PaymentService:
             await self._session.flush()
             await self._session.refresh(order)
             result = self._view(order)
+            self._audit(
+                (
+                    "payment.webhook.rejected"
+                    if mismatch
+                    else "payment.webhook.processed"
+                ),
+                result.id,
+                actor_service="payment-webhook",
+                outcome="AMOUNT_MISMATCH" if mismatch else result.status.value,
+            )
         if mismatch:
             raise PaymentAmountMismatchError()
-        self._audit("payment.webhook.processed", None, result.id)
         if (
             result.status is PaymentStatus.PAID
             and self._enqueue_certificate_issue is not None
@@ -240,22 +299,101 @@ class PaymentService:
         order_id: UUID,
     ) -> PaymentOrderView:
         self._require_role(principal, FINANCE_ROLES)
+        result, should_issue = await self._reconcile_provider_order(
+            order_id,
+            user_id=principal.user_id,
+        )
+        if should_issue and self._enqueue_certificate_issue is not None:
+            self._enqueue_certificate_issue(result.dossier_id)
+        return result
+
+    async def reconcile_pending(self, *, limit: int = 100) -> int:
+        if limit < 1 or limit > 500:
+            raise ValueError("Payment reconciliation limit is invalid.")
+        async with self._session.begin():
+            order_ids = tuple(
+                order.id
+                for order in await self._payments.list_reconcilable(limit=limit)
+            )
+        reconciled = 0
+        for order_id in order_ids:
+            try:
+                result, should_issue = await self._reconcile_provider_order(
+                    order_id,
+                    actor_service="payment-reconciliation-worker",
+                )
+            except (PaymentProviderError, PaymentAmountMismatchError):
+                logger.exception(
+                    "payment_reconciliation_failed",
+                    extra={"payment_order_id": str(order_id)},
+                )
+                continue
+            if should_issue and self._enqueue_certificate_issue is not None:
+                self._enqueue_certificate_issue(result.dossier_id)
+            reconciled += 1
+        return reconciled
+
+    async def _reconcile_provider_order(
+        self,
+        order_id: UUID,
+        *,
+        user_id: UUID | None = None,
+        actor_service: str | None = None,
+    ) -> tuple[PaymentOrderView, bool]:
+        should_issue = False
         async with self._session.begin():
             order = await self._required_order(order_id, for_update=True)
+            previous_status = order.status
             if order.provider_order_id is None:
                 raise PaymentConflictError("Provider order is not initialized.")
             try:
-                provider_order = await self._gateway.get_order(
-                    order.provider_order_id
-                )
+                provider_order = await self._gateway.get_order(order.provider_order_id)
             except PaymentGatewayError as exc:
                 raise PaymentProviderError() from exc
-            if provider_order.status == PaymentStatus.FAILED.value:
+            if (
+                provider_order.order_code is not None
+                and provider_order.order_code != order.order_code
+            ) or (
+                provider_order.amount_minor is not None
+                and provider_order.amount_minor != order.amount_minor
+            ) or (
+                provider_order.currency is not None
+                and provider_order.currency != order.currency
+            ):
+                raise PaymentAmountMismatchError()
+            if provider_order.status == PaymentStatus.PAID.value:
+                if order.status is not PaymentStatus.PAID:
+                    dossier = await self._required_dossier(
+                        order.dossier_id,
+                        for_update=True,
+                    )
+                    self._workflow.transition(
+                        dossier,
+                        target=DossierStatus.PAID,
+                        actor_user_id=dossier.owner_user_id,
+                        allowed_sources={DossierStatus.PAYMENT_PENDING},
+                        reason_code="PAYMENT_RECONCILIATION_CONFIRMED",
+                    )
+                    order.status = PaymentStatus.PAID
+                    order.paid_at = self._clock()
+                    should_issue = True
+            elif provider_order.status == "CANCELLED":
+                order.status = PaymentStatus.CANCELLED
+            elif provider_order.status == PaymentStatus.PROCESSING.value:
+                order.status = PaymentStatus.PROCESSING
+            elif provider_order.status == PaymentStatus.FAILED.value:
                 order.status = PaymentStatus.FAILED
             self._expire_if_needed(order)
             result = self._view(order)
-        self._audit("payment.order.reconciled", principal.user_id, result.id)
-        return result
+            if result.status is not previous_status:
+                self._audit(
+                    "payment.order.reconciled",
+                    result.id,
+                    user_id=user_id,
+                    actor_service=actor_service,
+                    status=result.status,
+                )
+        return result, should_issue
 
     async def confirm_manual(
         self,
@@ -298,7 +436,12 @@ class PaymentService:
                 "manual_evidence_reference": evidence,
             }
             result = self._view(order)
-        self._audit("payment.order.manually_confirmed", principal.user_id, result.id)
+            self._audit(
+                "payment.order.manually_confirmed",
+                result.id,
+                user_id=principal.user_id,
+                status=result.status,
+            )
         if self._enqueue_certificate_issue is not None:
             self._enqueue_certificate_issue(result.dossier_id)
         return result
@@ -344,8 +487,12 @@ class PaymentService:
         principal: AuthPrincipal,
         allowed: frozenset[str],
     ) -> None:
-        if allowed.isdisjoint(principal.roles):
+        requirement = PAYMENT_REQUIREMENTS.get(allowed)
+        if requirement is None:
             raise PaymentForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal, requirement, PaymentForbiddenError
+        )
 
     def _expire_if_needed(self, order: PaymentOrder) -> None:
         expires_at = order.expires_at
@@ -378,19 +525,28 @@ class PaymentService:
             updated_at=order.updated_at,
         )
 
-    @staticmethod
     def _audit(
+        self,
         action: str,
-        user_id: UUID | None,
         aggregate_id: UUID,
+        *,
+        user_id: UUID | None = None,
+        actor_service: str | None = None,
+        status: PaymentStatus | None = None,
+        outcome: str | None = None,
     ) -> None:
-        logger.info(
-            "security_audit",
-            extra={
-                "action": action,
-                "user_id": str(user_id) if user_id is not None else None,
-                "aggregate_id": str(aggregate_id),
-            },
+        after: dict[str, object] = {}
+        if status is not None:
+            after["status"] = status.value
+        if outcome is not None:
+            after["outcome"] = outcome
+        self._audit_service.record(
+            actor_user_id=user_id,
+            actor_service=actor_service,
+            action=action,
+            resource_type="payment_order",
+            resource_id=str(aggregate_id),
+            after=after or None,
         )
 
     async def close(self) -> None:

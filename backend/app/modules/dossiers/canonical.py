@@ -1,5 +1,6 @@
 import hashlib
 import json
+import unicodedata
 
 
 def canonical_json_bytes(payload: object) -> bytes:
@@ -14,3 +15,15 @@ def canonical_json_bytes(payload: object) -> bytes:
 
 def snapshot_sha256(payload: object) -> str:
     return hashlib.sha256(canonical_json_bytes(payload)).hexdigest()
+
+
+def normalized_identity_text(value: str | None) -> str:
+    if value is None:
+        return ""
+    normalized = unicodedata.normalize("NFKC", value).casefold()
+    return " ".join(normalized.split())
+
+
+def content_fingerprint(payload: object) -> str:
+    """Hash stable work identity fields, excluding ownership and timestamps."""
+    return snapshot_sha256(payload)

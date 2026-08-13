@@ -36,6 +36,10 @@ const activeAsset: MediaAsset = {
   height: 512,
   durationMs: null,
 };
+const quarantinedAsset: MediaAsset = {
+  ...activeAsset,
+  status: "QUARANTINED",
+};
 
 class FakeXMLHttpRequest extends EventTarget {
   static latest: FakeXMLHttpRequest | undefined;
@@ -111,22 +115,31 @@ describe("uploadMedia", () => {
     );
   });
 
-  it("uploads signed form data with progress then completes verification", async () => {
+  it("waits for trusted inspection before returning the uploaded asset", async () => {
     const signatureSpy = vi
       .spyOn(mediaApi, "createUploadSignature")
       .mockResolvedValue(authorization);
     const completeSpy = vi
       .spyOn(mediaApi, "completeUpload")
-      .mockResolvedValue(activeAsset);
+      .mockResolvedValue(quarantinedAsset);
+    const statusSpy = vi
+      .spyOn(mediaApi, "getAsset")
+      .mockResolvedValueOnce(quarantinedAsset)
+      .mockResolvedValueOnce(activeAsset);
     const onProgress = vi.fn();
     const onStage = vi.fn();
     const file = sizedFile("avatar.png", "image/png", 2_048);
 
     await expect(
-      uploadMedia(file, "AVATAR", { onProgress, onStage }),
+      uploadMedia(file, "AVATAR", {
+        inspectionPollIntervalMs: 0,
+        onProgress,
+        onStage,
+      }),
     ).resolves.toEqual(activeAsset);
 
     expect(signatureSpy).toHaveBeenCalledWith({
+      confidentiality: "PRIVATE",
       purpose: "AVATAR",
       filename: "avatar.png",
       mimeType: "image/png",
@@ -135,6 +148,7 @@ describe("uploadMedia", () => {
     expect(onStage.mock.calls.map(([stage]) => stage)).toEqual([
       "uploading",
       "verifying",
+      "inspecting",
     ]);
     expect(onProgress).toHaveBeenCalledWith(50);
 
@@ -157,6 +171,7 @@ describe("uploadMedia", () => {
       version: 17,
       signature: "b".repeat(40),
     });
+    expect(statusSpy).toHaveBeenCalledTimes(2);
   });
 
   it("rejects an invalid Cloudinary response before completion", async () => {
@@ -192,17 +207,24 @@ describe("uploadMedia", () => {
     expect(completeSpy).not.toHaveBeenCalled();
   });
 
-  it("only returns assets that reached ACTIVE status", async () => {
+  it("rejects files that do not pass trusted inspection", async () => {
     vi.spyOn(mediaApi, "createUploadSignature").mockResolvedValue(
       authorization,
     );
     vi.spyOn(mediaApi, "completeUpload").mockResolvedValue({
       ...activeAsset,
-      status: "PENDING",
+      status: "QUARANTINED",
+    });
+    vi.spyOn(mediaApi, "getAsset").mockResolvedValue({
+      ...activeAsset,
+      status: "REJECTED",
+      inspectionReasonCode: "MALWARE_DETECTED",
     });
 
     await expect(
-      uploadMedia(sizedFile("avatar.png", "image/png", 2_048), "AVATAR"),
+      uploadMedia(sizedFile("avatar.png", "image/png", 2_048), "AVATAR", {
+        inspectionPollIntervalMs: 0,
+      }),
     ).rejects.toThrow(/xác minh/i);
   });
 });

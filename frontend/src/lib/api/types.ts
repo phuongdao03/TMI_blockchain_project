@@ -51,14 +51,61 @@ export interface AuthUser {
   accountType: AccountType | null;
 }
 
+export type StaffAccountRole =
+  | "REVIEWER"
+  | "COUNCIL_MEMBER"
+  | "COUNCIL_SECRETARY"
+  | "FINANCE_ADMIN"
+  | "CONTENT_ADMIN"
+  | "BLOCKCHAIN_ADMIN";
+export type StaffAccountStatus =
+  | "PENDING_MFA"
+  | "ACTIVE"
+  | "SUSPENDED"
+  | "DISABLED";
+
+export interface StaffAccount {
+  id: string;
+  email: string;
+  role: string;
+  status: StaffAccountStatus;
+  createdAt: string | null;
+  lastLoginAt: string | null;
+}
+
+export interface PrivilegedAction {
+  id: string;
+  targetUserId: string;
+  action: "ROLE_CHANGE" | "MFA_RECOVERY";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
+  requestedRole: StaffAccountRole | "SUPER_ADMIN" | null;
+  requestedByUserId: string;
+  approvedByUserId: string | null;
+  reason: string;
+  expiresAt: string;
+  resolvedAt: string | null;
+}
+
+export type StaffInvitationStatus =
+  | "PENDING"
+  | "ACCEPTED"
+  | "REVOKED"
+  | "EXPIRED";
+
+export interface StaffInvitation {
+  id: string;
+  email: string;
+  role: StaffAccountRole;
+  organizationId: string | null;
+  status: StaffInvitationStatus;
+  expiresAt: string;
+  createdAt: string | null;
+}
+
 export type AccountType =
   | "PUBLIC_USER"
   | "INDIVIDUAL_APPLICANT"
   | "ORGANIZATION_APPLICANT";
-
-export interface OAuthStartData {
-  authorizationUrl: string;
-}
 
 export interface CmsPost {
   id: string;
@@ -113,11 +160,47 @@ export interface CmsCategory {
 export interface OperationsMetrics {
   dossierFunnel: Record<string, number>;
   overdueReviews: number;
-  reviewerWorkload: Array<{ userId: string; activeAssignments: number }>;
+  reviewerWorkload: Array<{
+    reviewerEmail: string;
+    activeAssignments: number;
+  }>;
   paymentFailures: number;
   blockchainFailures: number;
   publicCatalogCacheHitRatio: number;
   publicCatalogCacheOperations: Record<string, number>;
+  jobStatusCounts: Record<string, number>;
+  oldestQueuedJobAgeSeconds: number;
+  jobRetryFailures: number;
+  deadLetteredJobsByTask: Record<string, number>;
+}
+
+export type DurableJobStatus =
+  | "QUEUED"
+  | "RUNNING"
+  | "SUCCEEDED"
+  | "DEAD_LETTERED"
+  | "CANCELLED";
+
+export interface DurableJobSummary {
+  id: string;
+  taskName: string;
+  queueName: string;
+  resourceType: string;
+  resourceId: string;
+  status: DurableJobStatus;
+  totalAttempts: number;
+  maxAttempts: number;
+  replayCount: number;
+  version: number;
+  scheduledAt: string;
+  lastErrorCode: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface JobActionInput {
+  expectedVersion: number;
+  reason: string;
 }
 
 export interface NotificationItem {
@@ -244,13 +327,34 @@ export interface VoteMutationResult {
 export interface AuditLogItem {
   id: string;
   actorUserId: string | null;
+  actorType: "USER" | "SERVICE" | "ANONYMOUS";
+  actorService: string | null;
   action: string;
   resourceType: string;
   resourceId: string;
   before: Record<string, unknown> | null;
   after: Record<string, unknown> | null;
   requestId: string | null;
+  integrityStatus: "VERIFIED" | "TAMPERED" | "UNSEALED" | "KEY_UNAVAILABLE";
+  retentionUntil: string | null;
   createdAt: string;
+}
+
+export interface AuditIntegrityCheck {
+  scanned: number;
+  total: number;
+  isComplete: boolean;
+  counts: Record<AuditLogItem["integrityStatus"], number>;
+}
+
+export interface AuditListFilters {
+  page?: number;
+  pageSize?: number;
+  actorUserId?: string;
+  action?: string;
+  resourceType?: string;
+  createdFrom?: string;
+  createdTo?: string;
 }
 
 export interface LoginData {
@@ -287,9 +391,16 @@ export interface ProfileAvatarUpdate {
 }
 
 export type MediaPurpose = "AVATAR" | "DOSSIER_EVIDENCE" | "PUBLIC_WORK";
-export type MediaStatus = "PENDING" | "ACTIVE" | "QUARANTINED" | "DELETED";
+export type MediaConfidentiality = "PRIVATE" | "PUBLIC";
+export type MediaStatus =
+  | "PENDING"
+  | "ACTIVE"
+  | "QUARANTINED"
+  | "REJECTED"
+  | "DELETED";
 
 export interface MediaUploadIntent {
+  confidentiality: MediaConfidentiality;
   purpose: MediaPurpose;
   filename: string;
   mimeType: string;
@@ -322,6 +433,9 @@ export interface MediaAsset {
   width: number | null;
   height: number | null;
   durationMs: number | null;
+  inspectionAttempts?: number;
+  inspectionReasonCode?: string | null;
+  inspectedAt?: string | null;
 }
 
 export interface SignedDelivery {
@@ -486,6 +600,7 @@ export type PaymentStatus =
   | "PROCESSING"
   | "PAID"
   | "FAILED"
+  | "CANCELLED"
   | "EXPIRED"
   | "REFUNDED";
 
@@ -596,6 +711,43 @@ export interface ReviewListFilters {
   page?: number;
   pageSize?: number;
   status?: ReviewAssignmentStatus;
+}
+
+export type SimilarityCaseStatus = "OPEN" | "ASSIGNED" | "RESOLVED";
+export type SimilaritySignalType = "TEXT" | "IMAGE";
+export type SimilarityCaseDisposition = "DISTINCT" | "RELATED" | "SAME_WORK";
+
+export interface SimilarityAssetSummary {
+  dossierId: string;
+  dossierCode: string;
+  dossierTitle: string;
+  versionNo: number;
+  evidenceMediaIds: string[];
+}
+
+export interface SimilarityCase {
+  id: string;
+  leftDossierVersionId: string;
+  rightDossierVersionId: string;
+  leftAsset: SimilarityAssetSummary | null;
+  rightAsset: SimilarityAssetSummary | null;
+  signalType: SimilaritySignalType;
+  textScore: number | null;
+  imageDistance: number | null;
+  policyVersion: string;
+  status: SimilarityCaseStatus;
+  assignedReviewerUserId: string | null;
+  disposition: SimilarityCaseDisposition | null;
+  resolutionReason: string | null;
+  createdAt: string;
+  assignedAt: string | null;
+  resolvedAt: string | null;
+}
+
+export interface SimilarityCaseFilters {
+  page?: number;
+  pageSize?: number;
+  status?: SimilarityCaseStatus;
 }
 
 export type CouncilSessionStatus = "DRAFT" | "OPEN" | "CLOSED";
@@ -741,6 +893,34 @@ export interface CertificateDownload {
   expiresAt: number;
 }
 
+export type CertificateVersionStatus =
+  | "PENDING_APPROVAL"
+  | "REJECTED"
+  | "ANCHOR_PENDING"
+  | "FAILED"
+  | "ACTIVE"
+  | "SUPERSEDED"
+  | "REVOKED";
+
+export interface CertificateVersion {
+  id: string;
+  certificateId: string;
+  versionNo: number;
+  dossierVersionId: string;
+  predecessorVersionId: string | null;
+  status: CertificateVersionStatus;
+  changeReason: string | null;
+  requestedBy: string | null;
+  requestedAt: string | null;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  rejectionReason: string | null;
+  metadataHash: string;
+  blockchainTransactionId: string | null;
+  pdfReady: boolean;
+  createdAt: string;
+}
+
 export interface PublicCategory {
   id: string;
   code: string;
@@ -801,6 +981,42 @@ export interface Verification {
   confirmations: number;
   confirmedAt: string | null;
   explorerUrl: string | null;
+  dossierCode?: string | null;
+  metadataHash?: string | null;
+  blockNumber?: number | null;
+  issuerLabel?: string | null;
+  documents?: PublicEvidenceProof[];
+}
+
+export interface PublicEvidenceProof {
+  title: string;
+  evidenceType: string;
+  sha256: string;
+}
+
+export type DocumentVerificationStatus =
+  | "MATCH"
+  | "NO_MATCH"
+  | "PENDING_CONFIRMATION"
+  | "CHAIN_UNAVAILABLE"
+  | "NOT_FOUND"
+  | "NOT_AUTHORIZED";
+
+export interface DocumentVerification {
+  status: DocumentVerificationStatus;
+  checkedAt: string;
+}
+
+export interface PublicCertificateVersion {
+  versionNo: number;
+  status: "ACTIVE" | "SUPERSEDED" | "REVOKED";
+  metadataHash: string;
+  transactionHash: string | null;
+  blockNumber: number | null;
+  confirmedAt: string | null;
+  createdAt: string;
+  issuerLabel: string;
+  documents: PublicEvidenceProof[];
 }
 
 export type PublicationStatus =

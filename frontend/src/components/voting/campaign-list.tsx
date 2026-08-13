@@ -50,7 +50,7 @@ export function CampaignList() {
           {campaigns.data?.data.map((campaign, index) => (
             <Link
               className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.05] p-7 transition hover:-translate-y-1 hover:border-gold-300/50 sm:p-9"
-              href={`/binh-chon/${campaign.slug}`}
+              href={`/voting/${campaign.slug}`}
               key={campaign.id}
             >
               <div className="flex items-start justify-between gap-5">

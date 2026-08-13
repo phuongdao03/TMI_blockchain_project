@@ -22,14 +22,20 @@ import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
-import { DossierStatusBadge } from "@/components/dossiers/dossier-status";
+import {
+  dossierStatusLabel,
+  DossierStatusBadge,
+} from "@/components/dossiers/dossier-status";
+import { DossierWorkflowTimeline } from "@/components/dossiers/dossier-workflow-timeline";
 import { FileUploader } from "@/components/media/file-uploader";
 import { DossierPaymentAction } from "@/components/payments/dossier-payment-action";
+import { PrivateDocumentVerification } from "@/components/documents/private-document-verification";
 import { Button } from "@/components/ui/button";
 import { dossierApi } from "@/lib/api/client";
 import type {
   DossierDetail,
   DossierEvidence,
+  DossierStatus,
   MediaAsset,
 } from "@/lib/api/types";
 import { dossierKeys } from "@/lib/dossiers/query-keys";
@@ -59,16 +65,86 @@ const steps: Array<{
   {
     id: "evidence",
     label: "Bằng chứng",
-    description: "Tệp đã xác minh",
+    description: "Tài liệu đã tải lên",
     icon: UploadCloud,
   },
   {
     id: "review",
     label: "Kiểm tra & nộp",
-    description: "Khóa phiên bản",
+    description: "Xác nhận nội dung",
     icon: FileCheck2,
   },
 ];
+
+const dossierGuidance: Record<
+  DossierStatus,
+  { outcome: string; next: string }
+> = {
+  DRAFT: {
+    outcome: "Hồ sơ đang được bạn chuẩn bị.",
+    next: "Hoàn thiện thông tin và thêm ít nhất một tài liệu.",
+  },
+  SUBMITTED: {
+    outcome: "TMI đã nhận hồ sơ.",
+    next: "Theo dõi thông báo trong khi hồ sơ được kiểm tra.",
+  },
+  PRECHECK: {
+    outcome: "Hồ sơ đang được kiểm tra ban đầu.",
+    next: "Bạn chưa cần làm gì thêm lúc này.",
+  },
+  NEEDS_SUPPLEMENT: {
+    outcome: "Hồ sơ cần thêm tài liệu hoặc thông tin.",
+    next: "Mở phần được yêu cầu, bổ sung và nộp lại hồ sơ.",
+  },
+  UNDER_REVIEW: {
+    outcome: "Hồ sơ đang được thẩm định.",
+    next: "Theo dõi thông báo và phản hồi nếu có yêu cầu mới.",
+  },
+  COUNCIL_REVIEW: {
+    outcome: "Kết quả thẩm định đang được xem xét.",
+    next: "Bạn chưa cần làm gì thêm lúc này.",
+  },
+  APPROVED: {
+    outcome: "Hồ sơ đã đủ điều kiện phát hành.",
+    next: "Thanh toán phí phát hành để tiếp tục.",
+  },
+  REJECTED: {
+    outcome: "Hồ sơ hiện chưa đủ điều kiện.",
+    next: "Xem thông báo kết quả hoặc liên hệ hỗ trợ khi cần giải thích.",
+  },
+  PAYMENT_PENDING: {
+    outcome: "Hồ sơ đang chờ hoàn tất lệ phí.",
+    next: "Mở lại trang thanh toán hoặc chờ trạng thái được cập nhật.",
+  },
+  PAID: {
+    outcome: "Khoản phí đã được xác nhận.",
+    next: "Chờ TMI chuẩn bị chứng thư.",
+  },
+  ANCHOR_PENDING: {
+    outcome: "Chứng thư đang được chuẩn bị.",
+    next: "Theo dõi thông báo phát hành.",
+  },
+  ANCHORED: {
+    outcome: "Chứng thư đã sẵn sàng để phát hành.",
+    next: "Chờ thông báo tải chứng thư.",
+  },
+  CERTIFICATE_ISSUED: {
+    outcome: "Chứng thư đã được phát hành.",
+    next: "Mở danh sách chứng thư để tải xuống.",
+  },
+  PUBLISHED: {
+    outcome: "Chứng thư đã được công bố.",
+    next: "Tải chứng thư hoặc chia sẻ đường dẫn kiểm tra.",
+  },
+  REVOKED: {
+    outcome: "Chứng thư không còn hiệu lực.",
+    next: "Liên hệ hỗ trợ nếu bạn cần biết thêm lý do.",
+  },
+  CANCELLED: {
+    outcome: "Hồ sơ đã được hủy.",
+    next: "Tạo hồ sơ mới nếu bạn muốn bắt đầu lại.",
+  },
+};
 
 function formatBytes(bytes: number) {
   return new Intl.NumberFormat("vi-VN", {
@@ -101,9 +177,6 @@ function EvidenceItem({
         <p className="mt-1 text-xs text-neutral-500">
           {evidence.mimeType} · {formatBytes(evidence.bytes)} KB
         </p>
-        <p className="mt-1 truncate font-mono text-[0.68rem] text-neutral-400">
-          SHA-256 {evidence.sha256}
-        </p>
       </div>
       {canEdit ? (
         <Button
@@ -121,6 +194,7 @@ function EvidenceItem({
           Đã khóa
         </span>
       )}
+      <PrivateDocumentVerification mediaId={evidence.mediaAssetId} />
     </article>
   );
 }
@@ -325,7 +399,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
         <div className="min-w-0">
           <Link
             className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-neutral-500 hover:text-primary-700"
-            href="/ho-so"
+            href="/dossiers"
           >
             <ArrowLeft aria-hidden="true" className="size-4" />
             Danh sách hồ sơ
@@ -345,10 +419,25 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
             Phiên bản hiện tại: {dossier.currentVersionNo || "Chưa nộp"}
           </p>
           <p className="mt-1 text-xs text-neutral-500">
-            Mọi lần nộp đều tạo snapshot bất biến.
+            Mỗi lần nộp được lưu thành một phiên bản riêng.
           </p>
         </div>
       </div>
+
+      <section className="grid gap-2 border-l-4 border-primary-600 bg-primary-50 px-5 py-4 text-sm text-primary-950 sm:grid-cols-[1fr_1fr] sm:gap-8">
+        <div>
+          <p className="font-bold">Trạng thái hiện tại</p>
+          <p className="mt-1 leading-6">
+            {dossierGuidance[dossier.status].outcome}
+          </p>
+        </div>
+        <div>
+          <p className="font-bold">Việc tiếp theo</p>
+          <p className="mt-1 leading-6">
+            {dossierGuidance[dossier.status].next}
+          </p>
+        </div>
+      </section>
 
       {!dossier.canEdit ? (
         <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
@@ -366,6 +455,11 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
       <DossierPaymentAction
         dossierId={dossier.id}
         dossierStatus={dossier.status}
+      />
+
+      <DossierWorkflowTimeline
+        history={timeline.data ?? []}
+        status={dossier.status}
       />
 
       <div className="grid gap-6 xl:grid-cols-[17rem_minmax(0,1fr)]">
@@ -424,8 +518,8 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   Bằng chứng hồ sơ
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-neutral-500">
-                  Tệp phải hoàn tất xác minh và có checksum SHA-256 trước khi
-                  được gắn vào hồ sơ.
+                  Thêm tài liệu giúp chứng minh nguồn gốc, quyền sở hữu hoặc quá
+                  trình hình thành tác phẩm.
                 </p>
               </div>
               {dossier.canEdit ? (
@@ -516,8 +610,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   Kiểm tra & nộp
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-neutral-500">
-                  Khi nộp, nội dung và bằng chứng hiện tại sẽ được khóa thành
-                  một phiên bản có hash xác minh.
+                  Kiểm tra lại thông tin và tài liệu trước khi gửi TMI xem xét.
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -570,7 +663,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                     />
                     <div>
                       <p className="font-bold text-primary-950">
-                        Xác nhận tạo phiên bản bất biến
+                        Xác nhận nộp hồ sơ
                       </p>
                       <p className="mt-1 text-sm leading-6 text-primary-900/70">
                         Sau khi nộp, bạn không thể sửa phiên bản này trừ khi có
@@ -614,8 +707,11 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                           <p className="text-sm font-bold">
                             Phiên bản {version.versionNo}
                           </p>
-                          <p className="mt-1 truncate font-mono text-[0.68rem] text-neutral-400">
-                            {version.canonicalHash}
+                          <p className="mt-1 text-xs text-neutral-500">
+                            Đã gửi{" "}
+                            {new Date(version.submittedAt).toLocaleString(
+                              "vi-VN",
+                            )}
                           </p>
                         </div>
                       ))
@@ -638,7 +734,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                           <span className="mt-1 size-2 rounded-full bg-primary-600" />
                           <div>
                             <p className="text-sm font-bold">
-                              {item.fromStatus} → {item.toStatus}
+                              {dossierStatusLabel(item.toStatus)}
                             </p>
                             <p className="mt-1 text-xs text-neutral-500">
                               {new Date(item.createdAt).toLocaleString("vi-VN")}

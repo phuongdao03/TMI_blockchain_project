@@ -15,6 +15,137 @@ class RegisterRequest(BaseModel):
     account_type: AccountType = Field(alias="accountType")
 
 
+INTERNAL_ACCOUNT_ROLES = (
+    "REVIEWER",
+    "COUNCIL_MEMBER",
+    "COUNCIL_SECRETARY",
+    "FINANCE_ADMIN",
+    "CONTENT_ADMIN",
+    "BLOCKCHAIN_ADMIN",
+)
+INTERNAL_MANAGED_ROLES = frozenset(INTERNAL_ACCOUNT_ROLES)
+STAFF_ACCOUNT_STATUSES = ("PENDING_MFA", "ACTIVE", "SUSPENDED", "DISABLED")
+StaffAccountRole = Literal[
+    "REVIEWER",
+    "COUNCIL_MEMBER",
+    "COUNCIL_SECRETARY",
+    "FINANCE_ADMIN",
+    "CONTENT_ADMIN",
+    "BLOCKCHAIN_ADMIN",
+]
+StaffAccountStatus = Literal["PENDING_MFA", "ACTIVE", "SUSPENDED", "DISABLED"]
+StaffInvitationStatus = Literal["PENDING", "ACCEPTED", "REVOKED", "EXPIRED"]
+
+
+class StaffAccountUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    role: StaffAccountRole | None = None
+    status: Literal["ACTIVE", "SUSPENDED", "DISABLED"] | None = None
+
+
+class StaffMfaRecoveryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: Annotated[str, Field(min_length=10, max_length=500)]
+
+
+class PrivilegedActionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    action: Literal["ROLE_CHANGE", "MFA_RECOVERY"]
+    requested_role: Literal[
+        "REVIEWER",
+        "COUNCIL_MEMBER",
+        "COUNCIL_SECRETARY",
+        "FINANCE_ADMIN",
+        "CONTENT_ADMIN",
+        "BLOCKCHAIN_ADMIN",
+        "SUPER_ADMIN",
+    ] | None = Field(default=None, alias="requestedRole")
+    reason: Annotated[str, Field(min_length=10, max_length=500)]
+
+
+class PrivilegedActionData(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid", populate_by_name=True, serialize_by_alias=True
+    )
+
+    id: UUID
+    target_user_id: UUID = Field(alias="targetUserId")
+    action: Literal["ROLE_CHANGE", "MFA_RECOVERY"]
+    status: Literal["PENDING", "APPROVED", "REJECTED", "EXPIRED"]
+    requested_role: str | None = Field(default=None, alias="requestedRole")
+    requested_by_user_id: UUID = Field(alias="requestedByUserId")
+    approved_by_user_id: UUID | None = Field(default=None, alias="approvedByUserId")
+    reason: str
+    expires_at: datetime = Field(alias="expiresAt")
+    resolved_at: datetime | None = Field(default=None, alias="resolvedAt")
+
+
+class StaffMfaRecoveryAuthorizeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    id_token: Annotated[
+        str,
+        Field(alias="idToken", min_length=100, max_length=16_384),
+    ]
+
+
+class StaffAccountData(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid", populate_by_name=True, serialize_by_alias=True
+    )
+
+    id: UUID
+    email: EmailStr
+    role: str
+    status: StaffAccountStatus
+    created_at: datetime | None = Field(default=None, alias="createdAt")
+    last_login_at: datetime | None = Field(default=None, alias="lastLoginAt")
+
+
+class StaffInvitationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    email: EmailStr
+    role: StaffAccountRole
+    organization_id: UUID | None = Field(default=None, alias="organizationId")
+
+
+class StaffInvitationAcceptRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    invitation_token: Annotated[
+        SecretStr,
+        Field(alias="invitationToken", min_length=32, max_length=512),
+    ]
+    id_token: Annotated[
+        str,
+        Field(alias="idToken", min_length=100, max_length=16_384),
+    ]
+
+
+class StaffInvitationData(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid", populate_by_name=True, serialize_by_alias=True
+    )
+
+    id: UUID
+    email: EmailStr
+    role: str
+    organization_id: UUID | None = Field(default=None, alias="organizationId")
+    status: StaffInvitationStatus
+    expires_at: datetime = Field(alias="expiresAt")
+    created_at: datetime | None = Field(default=None, alias="createdAt")
+
+
+class StaffInvitationAcceptedData(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["MFA_ENROLLMENT_REQUIRED"]
+
+
 class ApplicantUpgradeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -67,27 +198,14 @@ class LoginData(BaseModel):
     user: AuthUserData
 
 
-class OAuthStartRequest(BaseModel):
+class FirebaseExchangeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
+    id_token: Annotated[
+        str,
+        Field(alias="idToken", min_length=100, max_length=16_384),
+    ]
     account_type: AccountType = Field(alias="accountType")
-    next_path: Annotated[
-        str | None,
-        Field(alias="next", max_length=512),
-    ] = None
-
-
-class OAuthStartData(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid", populate_by_name=True, serialize_by_alias=True
-    )
-
-    authorization_url: str = Field(alias="authorizationUrl")
-
-
-class OAuthLinkStartRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)
-
     next_path: Annotated[
         str | None,
         Field(alias="next", max_length=512),

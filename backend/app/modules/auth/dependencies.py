@@ -1,5 +1,6 @@
 import secrets
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from datetime import timedelta
 from typing import Annotated
 
@@ -14,9 +15,9 @@ from app.modules.auth.errors import (
     OAuthProviderUnavailableError,
     UnauthenticatedError,
 )
-from app.modules.auth.oauth import RedisOAuthRateLimiter, RedisOAuthStateStore
-from app.modules.auth.oauth_provider import GoogleOIDCProvider
-from app.modules.auth.oauth_service import OAuthRuntime, OAuthService
+from app.modules.auth.firebase_provider import FirebaseTokenVerifier
+from app.modules.auth.oauth import RedisOAuthRateLimiter
+from app.modules.auth.oauth_service import OAuthService
 from app.modules.auth.onboarding import ApplicantUpgradeService
 from app.modules.auth.password_reset_service import PasswordResetService
 from app.modules.auth.rate_limit import (
@@ -26,10 +27,19 @@ from app.modules.auth.rate_limit import (
 from app.modules.auth.security import Argon2PasswordHasher, OutboxPayloadCipher
 from app.modules.auth.services import RegistrationService
 from app.modules.auth.session_service import AuthPrincipal, SessionService
+from app.modules.auth.staff_invitation_service import StaffInvitationService
+from app.modules.auth.staff_mfa import StaffMfaPolicy
 from app.modules.auth.tokens import AccessTokenManager, CsrfTokenManager
 
 SessionDependency = Annotated[AsyncSession, Depends(get_session)]
 SettingsDependency = Annotated[Settings, Depends(get_settings)]
+
+
+@dataclass(frozen=True, slots=True)
+class FirebaseAuthRuntime:
+    account_service: OAuthService
+    verifier: FirebaseTokenVerifier
+    rate_limiter: RedisOAuthRateLimiter
 
 
 async def get_registration_service(
@@ -113,6 +123,10 @@ async def get_session_service(
             window_seconds=settings.auth_login_rate_window_seconds,
         ),
         refresh_ttl=timedelta(seconds=settings.auth_refresh_ttl_seconds),
+        mfa_policy=StaffMfaPolicy(
+            max_age=timedelta(seconds=settings.staff_mfa_max_age_seconds),
+            enabled=settings.firebase_totp_enabled,
+        ),
     )
     try:
         yield service
@@ -123,53 +137,69 @@ async def get_session_service(
 SessionServiceDependency = Annotated[SessionService, Depends(get_session_service)]
 
 
-async def get_oauth_runtime(
+async def get_staff_invitation_service(
+    session: SessionDependency,
+    settings: SettingsDependency,
+) -> AsyncIterator[StaffInvitationService]:
+    secret = settings.auth_outbox_encryption_key
+    cipher = OutboxPayloadCipher.from_base64(
+        encoded_key=secret.get_secret_value() if secret is not None else "",
+        key_id=settings.auth_outbox_key_id,
+    )
+    yield StaffInvitationService(
+        session=session,
+        payload_cipher=cipher,
+        invitation_ttl=timedelta(seconds=settings.staff_invitation_ttl_seconds),
+    )
+
+
+StaffInvitationServiceDependency = Annotated[
+    StaffInvitationService,
+    Depends(get_staff_invitation_service),
+]
+
+
+async def get_firebase_auth_runtime(
     session: SessionDependency,
     settings: SettingsDependency,
     session_service: SessionServiceDependency,
-) -> AsyncIterator[OAuthRuntime]:
-    secret = settings.google_oidc_client_secret
-    if not settings.google_oidc_client_id or secret is None:
+) -> AsyncIterator[FirebaseAuthRuntime]:
+    if not settings.firebase_project_id:
         raise OAuthProviderUnavailableError()
     redis_client: Redis = Redis.from_url(
         settings.redis_url,
         socket_connect_timeout=settings.readiness_timeout_seconds,
         socket_timeout=settings.readiness_timeout_seconds,
     )
-    provider = GoogleOIDCProvider(
-        client_id=settings.google_oidc_client_id,
-        client_secret=secret.get_secret_value(),
-        redirect_uri=settings.google_oidc_redirect_uri,
-        authorization_endpoint=settings.google_oidc_authorization_endpoint,
-        token_endpoint=settings.google_oidc_token_endpoint,
-        jwks_uri=settings.google_oidc_jwks_uri,
-        issuer=settings.google_oidc_issuer,
-        timeout_seconds=settings.google_oidc_timeout_seconds,
+    verifier = FirebaseTokenVerifier.create(
+        project_id=settings.firebase_project_id,
+        jwks_uri=settings.firebase_jwks_uri,
+        timeout_seconds=settings.firebase_timeout_seconds,
+        emulator_host=settings.firebase_auth_emulator_host or None,
     )
-    runtime = OAuthRuntime(
+    runtime = FirebaseAuthRuntime(
         account_service=OAuthService(
             session=session,
             session_issuer=session_service,
         ),
-        state_store=RedisOAuthStateStore(
-            redis_client,
-            ttl_seconds=settings.oauth_state_ttl_seconds,
-        ),
+        verifier=verifier,
         rate_limiter=RedisOAuthRateLimiter(
             redis_client,
             attempts=settings.oauth_rate_limit,
             window_seconds=settings.oauth_rate_window_seconds,
         ),
-        provider=provider,
     )
     try:
         yield runtime
     finally:
-        await provider.close()
+        await verifier.close()
         await redis_client.aclose()
 
 
-OAuthRuntimeDependency = Annotated[OAuthRuntime, Depends(get_oauth_runtime)]
+FirebaseAuthRuntimeDependency = Annotated[
+    FirebaseAuthRuntime,
+    Depends(get_firebase_auth_runtime),
+]
 
 
 async def get_current_principal(

@@ -16,13 +16,13 @@ export function hasAnyRole(
 }
 
 export function resolveDefaultWorkspace(roles: readonly string[]): string {
-  if (roles.includes("SUPER_ADMIN")) return "/admin/dashboard";
-  if (roles.includes("CONTENT_ADMIN")) return "/admin/noi-dung";
+  if (roles.includes("SUPER_ADMIN")) return "/admin";
+  if (roles.includes("CONTENT_ADMIN")) return "/admin/content";
   if (roles.includes("FINANCE_ADMIN")) return "/admin/dashboard";
   if (roles.includes("BLOCKCHAIN_ADMIN")) return "/admin/dashboard";
   if (hasAnyRole(roles, ["COUNCIL_SECRETARY", "COUNCIL_MEMBER"]))
-    return "/hoi-dong";
-  if (roles.includes("REVIEWER")) return "/tham-dinh";
+    return "/council";
+  if (roles.includes("REVIEWER")) return "/reviews";
   return "/dashboard";
 }
 

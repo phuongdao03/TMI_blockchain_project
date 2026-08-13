@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.db.base import Base
 from app.db.outbox import OutboxEvent
+from app.modules.audit.models import AuditActorType, AuditLog
 from app.modules.auth.errors import InvalidPasswordResetTokenError
 from app.modules.auth.models import AuthSession, User, UserStatus, VerificationToken
 from app.modules.auth.password_reset_service import PasswordResetService
@@ -123,8 +124,14 @@ def test_unknown_email_is_safe_and_returns_without_records(tmp_path: Path) -> No
         async with session_factory() as session:
             tokens = (await session.scalars(select(VerificationToken))).all()
             events = (await session.scalars(select(OutboxEvent))).all()
+            audit_row = (await session.scalars(select(AuditLog))).one()
         assert tokens == []
         assert events == []
+        assert audit_row.action == "auth.password_reset.requested"
+        assert audit_row.actor_type is AuditActorType.ANONYMOUS
+        assert audit_row.resource_id == "credential"
+        assert audit_row.after_json == {"outcome": "accepted"}
+        assert "unknown@tmigroup.vn" not in str(audit_row.after_json)
         assert limiter.calls == [("unknown@tmigroup.vn", "203.0.113.10")]
         await service.close()
         await engine.dispose()
@@ -149,6 +156,7 @@ def test_reset_token_is_hashed_and_outbox_payload_is_encrypted(tmp_path: Path) -
         async with session_factory() as session:
             token = (await session.scalars(select(VerificationToken))).one()
             event = (await session.scalars(select(OutboxEvent))).one()
+            audit_row = (await session.scalars(select(AuditLog))).one()
         assert token.purpose == "PASSWORD_RESET"
         assert token.token_hash != raw_token
         assert token.expires_at.replace(tzinfo=UTC) == (
@@ -156,6 +164,10 @@ def test_reset_token_is_hashed_and_outbox_payload_is_encrypted(tmp_path: Path) -
         )
         assert event.event_type == "user.password_reset_requested"
         assert raw_token.encode() not in event.payload_ciphertext
+        assert audit_row.actor_type is AuditActorType.ANONYMOUS
+        assert audit_row.resource_id == "credential"
+        assert "owner@tmigroup.vn" not in str(audit_row.after_json)
+        assert raw_token not in str(audit_row.after_json)
         await service.close()
         await engine.dispose()
 
@@ -186,6 +198,11 @@ def test_reset_consumes_token_changes_password_and_revokes_sessions(
             user = (await session.scalars(select(User))).one()
             verification = (await session.scalars(select(VerificationToken))).one()
             auth_session = (await session.scalars(select(AuthSession))).one()
+            audit_actions = (
+                await session.scalars(
+                    select(AuditLog.action).order_by(AuditLog.created_at)
+                )
+            ).all()
         assert user.password_hash is not None
         assert await Argon2PasswordHasher().verify(
             user.password_hash,
@@ -193,6 +210,10 @@ def test_reset_consumes_token_changes_password_and_revokes_sessions(
         )
         assert verification.consumed_at is not None
         assert auth_session.revoked_at is not None
+        assert audit_actions == [
+            "auth.password_reset.requested",
+            "auth.password_reset.completed",
+        ]
 
         with pytest.raises(InvalidPasswordResetTokenError):
             await service.reset_password(
@@ -230,11 +251,62 @@ def test_expired_reset_token_is_rejected_without_changing_password(
         async with session_factory() as session:
             user = (await session.scalars(select(User))).one()
             auth_session = (await session.scalars(select(AuthSession))).one()
+            failed_audit = await session.scalar(
+                select(AuditLog).where(AuditLog.action == "auth.password_reset.failed")
+            )
         assert user.password_hash is not None
         assert await Argon2PasswordHasher().verify(
             user.password_hash,
             "correct horse battery staple",
         )
+        assert auth_session.revoked_at is None
+        assert failed_audit is not None
+        assert failed_audit.actor_type is AuditActorType.ANONYMOUS
+        assert failed_audit.resource_id == "credential"
+        assert failed_audit.after_json == {"outcome": "denied"}
+        assert raw_token not in str(failed_audit.after_json)
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_password_reset_rolls_back_when_audit_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def exercise() -> None:
+        clock = MutableClock(datetime(2026, 7, 30, 8, 0, tzinfo=UTC))
+        service, session_factory, cipher, _, engine = await _build_service(
+            tmp_path,
+            clock,
+        )
+        await service.request_reset(
+            email="owner@tmigroup.vn",
+            client_ip="203.0.113.10",
+        )
+        raw_token = await _reset_token(session_factory, cipher)
+
+        def reject_audit(**_: object) -> None:
+            raise RuntimeError("audit unavailable")
+
+        monkeypatch.setattr(service._audit_service, "record", reject_audit)  # noqa: SLF001
+        with pytest.raises(RuntimeError, match="audit unavailable"):
+            await service.reset_password(
+                token=raw_token,
+                new_password="new correct horse battery staple",
+            )
+
+        async with session_factory() as session:
+            user = (await session.scalars(select(User))).one()
+            verification = (await session.scalars(select(VerificationToken))).one()
+            auth_session = (await session.scalars(select(AuthSession))).one()
+        assert user.password_hash is not None
+        assert await Argon2PasswordHasher().verify(
+            user.password_hash,
+            "correct horse battery staple",
+        )
+        assert verification.consumed_at is None
         assert auth_session.revoked_at is None
         await service.close()
         await engine.dispose()

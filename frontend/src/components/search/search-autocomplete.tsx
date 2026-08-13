@@ -222,6 +222,6 @@ function kindLabel(kind: SearchAutocompleteKind) {
 
 function suggestionHref(item: SearchAutocompleteSuggestion) {
   const slug = encodeURIComponent(item.slug);
-  if (item.kind === "work") return `/tai-san/${slug}`;
-  return `/tim-kiem?${item.kind === "category" ? "category" : "tags"}=${slug}`;
+  if (item.kind === "work") return `/works/${slug}`;
+  return `/search?${item.kind === "category" ? "category" : "tags"}=${slug}`;
 }

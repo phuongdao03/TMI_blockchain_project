@@ -139,7 +139,7 @@ describe("PublicLibrary", () => {
     ).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "Xóa bộ lọc" }).getAttribute("href"),
-    ).toBe("/thu-vien");
+    ).toBe("/works");
   });
 
   it("retries an API error without losing filters", async () => {

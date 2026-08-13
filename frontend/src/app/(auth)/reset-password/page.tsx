@@ -7,8 +7,8 @@ export const metadata: Metadata = { title: "Đặt lại mật khẩu" };
 export default async function ResetPasswordPage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ oobCode?: string }>;
 }) {
-  const { token = "" } = await searchParams;
-  return <ResetPasswordForm token={token} />;
+  const { oobCode = "" } = await searchParams;
+  return <ResetPasswordForm oobCode={oobCode} />;
 }

@@ -139,7 +139,7 @@ export function ContentReportWorkspace() {
                 </p>
                 <Link
                   className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-primary-700"
-                  href={`/tai-san/${report.workSlug}`}
+                  href={`/works/${report.workSlug}`}
                   target="_blank"
                 >
                   Mở nội dung công khai <ExternalLink className="size-4" />

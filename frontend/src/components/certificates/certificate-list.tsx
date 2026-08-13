@@ -10,6 +10,13 @@ import {
 import Link from "next/link";
 
 import { certificateApi } from "@/lib/api/client";
+import type { CertificateStatus } from "@/lib/api/types";
+
+const certificateStatusLabel: Record<CertificateStatus, string> = {
+  ACTIVE: "Có hiệu lực",
+  EXPIRED: "Đã hết hiệu lực",
+  REVOKED: "Đã thu hồi",
+};
 
 function date(value: string) {
   return new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(
@@ -46,8 +53,8 @@ export function CertificateList({ page }: { page: number }) {
           Chưa có chứng thư được phát hành
         </h2>
         <p className="mt-2 text-sm text-neutral-500">
-          Chứng thư sẽ xuất hiện sau khi hồ sơ được thanh toán và neo
-          blockchain.
+          Chứng thư sẽ xuất hiện sau khi hồ sơ hoàn tất lệ phí và được phát
+          hành.
         </p>
       </div>
     );
@@ -65,7 +72,7 @@ export function CertificateList({ page }: { page: number }) {
               <BadgeCheck className="size-6" />
             </span>
             <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-              {certificate.status}
+              {certificateStatusLabel[certificate.status]}
             </span>
           </div>
           <p className="mt-6 font-mono text-xs font-bold tracking-wider text-primary-700">
@@ -86,7 +93,7 @@ export function CertificateList({ page }: { page: number }) {
           </div>
           <Link
             className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-neutral-950 px-4 text-sm font-bold text-white"
-            href={`/chung-thu/${certificate.id}`}
+            href={`/certificates/${certificate.id}`}
           >
             Xem chứng thư <ArrowUpRight className="size-4" />
           </Link>

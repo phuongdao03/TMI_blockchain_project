@@ -23,9 +23,7 @@ class RedisVerificationCache:
             return CertificateRecord(
                 dossier_hash=bytes.fromhex(payload["dossierHash"]),
                 metadata_hash=bytes.fromhex(payload["metadataHash"]),
-                revocation_reason_hash=bytes.fromhex(
-                    payload["revocationReasonHash"]
-                ),
+                revocation_reason_hash=bytes.fromhex(payload["revocationReasonHash"]),
                 issued_at=int(payload["issuedAt"]),
                 expires_at=int(payload["expiresAt"]),
                 version=int(payload["version"]),

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "network": "local",
+  "chainId": 31337,
+  "sourceCommit": "62d77a32adcf99a24d1a6cb7d7ccb95287797b40",
+  "certificateRegistry": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+  "deploymentTransactionHash": "0x0e689a89554773e1eb7fd719f1896ff8658f01fe82f3968c5691d07f9585c2f9",
+  "compiler": {
+    "version": "0.8.30+commit.73712a01",
+    "settings": {
+      "remappings": [
+        "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "none",
+        "appendCBOR": false
+      },
+      "compilationTarget": {
+        "src/CertificateRegistry.sol": "CertificateRegistry"
+      },
+      "evmVersion": "osaka",
+      "libraries": {}
+    }
+  },
+  "abi": "CertificateRegistry.abi.json",
+  "abiSha256": "0x3faf1025f362486df65792956b9c8bfd7518474762a8d3b10129449479620811",
+  "bytecode": {
+    "creationSha256": "0x3559e8b5a9ae6760a02b35c97e0f58ff46ad3e5b0e6f795878fa9289a813b9a6",
+    "runtimeSha256": "0xd64a48daeef0b896e658dd1ac1879d115d1b7c41edb818feb0e0b4f973c83722"
+  }
+}

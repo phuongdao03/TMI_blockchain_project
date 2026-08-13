@@ -19,8 +19,7 @@ class RedisViewDeduplicator:
 
     async def accept(self, *, visitor: str, public_work_id: str) -> bool:
         key = (
-            "engagement:view:"
-            f"{public_work_id}:{self._visitor_context.digest(visitor)}"
+            f"engagement:view:{public_work_id}:{self._visitor_context.digest(visitor)}"
         )
         try:
             return bool(
@@ -84,13 +83,8 @@ class RedisQrScanDeduplicator:
         self._ttl_seconds = ttl_seconds
 
     async def accept(self, *, visitor: str, public_work_id: str) -> bool:
-        key = (
-            "engagement:qr:"
-            f"{public_work_id}:{self._visitor_context.digest(visitor)}"
-        )
+        key = f"engagement:qr:{public_work_id}:{self._visitor_context.digest(visitor)}"
         try:
-            return bool(
-                await self._client.set(key, "1", ex=self._ttl_seconds, nx=True)
-            )
+            return bool(await self._client.set(key, "1", ex=self._ttl_seconds, nx=True))
         except (RedisError, OSError, TimeoutError) as exc:
             raise EngagementUnavailableError() from exc

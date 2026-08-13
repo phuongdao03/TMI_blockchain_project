@@ -12,6 +12,9 @@ celery_app = Celery(
         "app.workers.blockchain_tasks",
         "app.workers.certificate_tasks",
         "app.workers.notification_tasks",
+        "app.workers.payment_tasks",
+        "app.workers.media_inspection_tasks",
+        "app.workers.similarity_tasks",
         "app.workers.public_work_tasks",
         "app.workers.public_media_tasks",
         "app.workers.ranking_tasks",
@@ -39,6 +42,14 @@ celery_app.conf.update(
         "process-notification-outbox": {
             "task": "app.workers.notification_tasks.process_notification_outbox",
             "schedule": 5.0,
+        },
+        "reconcile-pending-payments": {
+            "task": "app.workers.payment_tasks.reconcile_pending_payments",
+            "schedule": 60.0,
+        },
+        "backfill-media-provenance": {
+            "task": "app.workers.media_inspection_tasks.backfill_media_provenance",
+            "schedule": 300.0,
         },
         "publish-scheduled-public-works": {
             "task": "app.workers.public_work_tasks.publish_scheduled_public_works",
@@ -91,9 +102,7 @@ celery_app.conf.update(
             "schedule": 3600.0,
         },
         "generate-daily-engagement-snapshot": {
-            "task": (
-                "app.workers.engagement_tasks.generate_daily_engagement_snapshot"
-            ),
+            "task": ("app.workers.engagement_tasks.generate_daily_engagement_snapshot"),
             "schedule": 86400.0,
         },
         "generate-engagement-velocity-snapshot": {

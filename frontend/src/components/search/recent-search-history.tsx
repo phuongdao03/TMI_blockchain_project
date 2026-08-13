@@ -164,5 +164,5 @@ function ActionError() {
 
 function historyHref(query: string) {
   const parameters = new URLSearchParams({ q: query, sort: "relevance" });
-  return `/tim-kiem?${parameters.toString()}`;
+  return `/search?${parameters.toString()}`;
 }

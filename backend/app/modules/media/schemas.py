@@ -1,9 +1,10 @@
+from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.modules.media.models import MediaStatus
+from app.modules.media.models import MediaConfidentiality, MediaStatus
 from app.modules.media.types import MediaPurpose
 
 
@@ -27,6 +28,7 @@ class UploadSignatureRequest(MediaSchema):
     filename: Annotated[str, Field(min_length=1, max_length=255)]
     mime_type: Annotated[str, Field(min_length=3, max_length=127)]
     size: Annotated[int, Field(gt=0)]
+    confidentiality: MediaConfidentiality = MediaConfidentiality.PRIVATE
 
     @field_validator("filename")
     @classmethod
@@ -68,6 +70,9 @@ class MediaAssetData(MediaSchema):
     width: int | None
     height: int | None
     duration_ms: int | None
+    inspection_attempts: int = 0
+    inspection_reason_code: str | None = None
+    inspected_at: datetime | None = None
 
 
 class SignedDeliveryData(MediaSchema):

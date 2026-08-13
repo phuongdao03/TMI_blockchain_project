@@ -304,9 +304,7 @@ def test_facets_count_only_the_filtered_public_set_with_all_tag_semantics(
                     count_statement,
                 )
         assert statement_count == 1
-        assert [(item.slug, item.count) for item in facets.categories] == [
-            ("art", 1)
-        ]
+        assert [(item.slug, item.count) for item in facets.categories] == [("art", 1)]
         assert [(item.slug, item.count) for item in facets.tags] == [
             ("heritage", 1),
             ("lacquer", 1),

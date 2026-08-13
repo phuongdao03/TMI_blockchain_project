@@ -12,6 +12,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PrivateDocumentVerification } from "@/components/documents/private-document-verification";
 import { mediaApi } from "@/lib/api/client";
 import type { ReviewEvidenceSnapshot } from "@/lib/api/types";
 
@@ -93,6 +94,7 @@ export function EvidenceViewer({
                   )}
                   Xem bằng chứng
                 </Button>
+                <PrivateDocumentVerification mediaId={evidence.mediaAssetId} />
               </article>
             );
           })}

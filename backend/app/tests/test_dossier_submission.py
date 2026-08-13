@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Callable
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -12,15 +13,21 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.db.base import Base
+from app.modules.audit.models import AuditLog
 from app.modules.auth.models import User, UserStatus
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.canonical import canonical_json_bytes, snapshot_sha256
 from app.modules.dossiers.errors import (
+    DossierDuplicateContentError,
+    DossierDuplicateDocumentError,
+    DossierForbiddenError,
     DossierInvalidStateError,
     DossierValidationError,
 )
 from app.modules.dossiers.models import (
     Category,
+    DocumentHashAdjudication,
+    DocumentHashClaim,
     Dossier,
     DossierEvidence,
     DossierStatus,
@@ -35,12 +42,15 @@ from app.modules.dossiers.types import (
     EvidenceView,
 )
 from app.modules.media.models import MediaAsset, MediaStatus
+from app.modules.media.provenance import CURRENT_INSPECTION_POLICY_VERSION
 
 CATEGORY_ID = UUID("4d28db19-1507-5a45-a50d-cd0aa83029ec")
 NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
 
 
-async def _build_service() -> tuple[
+async def _build_service(
+    enqueue_similarity_detection: Callable[[UUID], None] | None = None,
+) -> tuple[
     DossierService,
     async_sessionmaker[AsyncSession],
     AsyncEngine,
@@ -69,6 +79,11 @@ async def _build_service() -> tuple[
         mime_type="application/pdf",
         bytes=2048,
         sha256="a" * 64,
+        hash_algorithm="SHA-256",
+        hash_byte_length=2048,
+        inspection_policy_version=CURRENT_INSPECTION_POLICY_VERSION,
+        hash_storage_version=1,
+        hash_computed_at=NOW,
         status=MediaStatus.ACTIVE,
     )
     async with session_factory() as session:
@@ -91,12 +106,17 @@ async def _build_service() -> tuple[
             UUID("27c53b29-35ea-4fb8-8b64-9c9cd8313c4a"),
             UUID("37c53b29-35ea-4fb8-8b64-9c9cd8313c4a"),
             UUID("47c53b29-35ea-4fb8-8b64-9c9cd8313c4a"),
+            UUID("57c53b29-35ea-4fb8-8b64-9c9cd8313c4a"),
+            UUID("67c53b29-35ea-4fb8-8b64-9c9cd8313c4a"),
+            UUID("77c53b29-35ea-4fb8-8b64-9c9cd8313c4a"),
+            UUID("87c53b29-35ea-4fb8-8b64-9c9cd8313c4a"),
         )
     )
     service = DossierService(
         session=session_factory(),
         clock=lambda: NOW,
         uuid_factory=lambda: next(generated_ids),
+        enqueue_similarity_detection=enqueue_similarity_detection,
     )
     return service, session_factory, engine, user, media
 
@@ -165,8 +185,22 @@ def test_submit_is_atomic_idempotent_and_locks_canonical_snapshot() -> None:
             == submitted.version.canonical_hash
         )
         assert submitted.version.canonical_hash == (
-            "62e29fe48a0092c60bd12d44dab91137208a9bd67b1613bfb8abf41cea7c27b1"
+            "270e05a9bab81b18f6b1d996a301ea247864c961589f4dd2212afd25b81fa807"
         )
+        evidences = submitted.version.snapshot_json["evidences"]
+        assert isinstance(evidences, list)
+        first_evidence = evidences[0]
+        assert isinstance(first_evidence, dict)
+        media_snapshot = first_evidence["media"]
+        assert isinstance(media_snapshot, dict)
+        assert media_snapshot["hashAlgorithm"] == "SHA-256"
+        assert media_snapshot["hashByteLength"] == 2048
+        assert (
+            media_snapshot["inspectionPolicyVersion"]
+            == CURRENT_INSPECTION_POLICY_VERSION
+        )
+        assert media_snapshot["storageObjectVersion"] == 1
+        assert media_snapshot["hashComputedAt"] == "2026-07-31T08:00:00.000000Z"
 
         async with session_factory() as session:
             dossier_row = await session.get(Dossier, dossier.id)
@@ -242,6 +276,11 @@ def test_submit_checklist_failure_rolls_back_and_resubmit_creates_version_two() 
             mime_type="application/pdf",
             bytes=4096,
             sha256="b" * 64,
+            hash_algorithm="SHA-256",
+            hash_byte_length=4096,
+            inspection_policy_version=CURRENT_INSPECTION_POLICY_VERSION,
+            hash_storage_version=1,
+            hash_computed_at=NOW,
             status=MediaStatus.ACTIVE,
         )
         async with session_factory() as session:
@@ -279,6 +318,266 @@ def test_submit_checklist_failure_rolls_back_and_resubmit_creates_version_two() 
     asyncio.run(exercise())
 
 
+def test_exact_duplicate_content_is_rejected_across_dossiers() -> None:
+    async def exercise() -> None:
+        service, session_factory, engine, user, media = await _build_service()
+        second_user = User(
+            id=UUID("7a5ada41-1cf5-471c-a09a-03ac2ab3fb1d"),
+            email="second-owner@tmigroup.vn",
+            password_hash="not-used",
+            status=UserStatus.ACTIVE,
+        )
+        second_media = MediaAsset(
+            id=UUID("946c61be-2f2d-413c-a629-c66be1bc65df"),
+            owner_user_id=second_user.id,
+            cloudinary_public_id="evidence/ownership-copy",
+            cloudinary_version=1,
+            resource_type="raw",
+            access_mode="authenticated",
+            original_filename="ownership.pdf",
+            mime_type="application/pdf",
+            bytes=media.bytes,
+            sha256=media.sha256,
+            hash_algorithm="SHA-256",
+            hash_byte_length=media.bytes,
+            inspection_policy_version=CURRENT_INSPECTION_POLICY_VERSION,
+            hash_storage_version=1,
+            hash_computed_at=NOW,
+            status=MediaStatus.ACTIVE,
+        )
+        async with session_factory() as session:
+            session.add_all([second_user, second_media])
+            await session.commit()
+
+        first_principal = _principal(user)
+        second_principal = _principal(second_user)
+        first, _ = await _draft_with_evidence(service, first_principal, media)
+        await service.submit_dossier(
+            first_principal,
+            first.id,
+            idempotency_key="first-owner-submit",
+        )
+        second, _ = await _draft_with_evidence(
+            service,
+            second_principal,
+            second_media,
+        )
+        with pytest.raises(DossierDuplicateContentError):
+            await service.submit_dossier(
+                second_principal,
+                second.id,
+                idempotency_key="second-owner-submit",
+            )
+
+        async with session_factory() as session:
+            assert (
+                await session.scalar(select(func.count()).select_from(DossierVersion))
+                == 1
+            )
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_exact_document_collision_requires_privileged_reasoned_override() -> None:
+    async def exercise() -> None:
+        service, session_factory, engine, user, media = await _build_service()
+        second_user = User(
+            id=uuid4(),
+            email="document-conflict@tmigroup.vn",
+            password_hash="not-used",
+            status=UserStatus.ACTIVE,
+        )
+        admin_user = User(
+            id=uuid4(),
+            email="claim-admin@tmigroup.vn",
+            password_hash="not-used",
+            status=UserStatus.ACTIVE,
+        )
+        copied_media = MediaAsset(
+            id=uuid4(),
+            owner_user_id=second_user.id,
+            cloudinary_public_id="evidence/exact-document-copy",
+            cloudinary_version=1,
+            resource_type="raw",
+            access_mode="authenticated",
+            original_filename="copy.pdf",
+            mime_type="application/pdf",
+            bytes=media.bytes,
+            sha256=media.sha256,
+            hash_algorithm="SHA-256",
+            hash_byte_length=media.bytes,
+            inspection_policy_version=CURRENT_INSPECTION_POLICY_VERSION,
+            hash_storage_version=1,
+            hash_computed_at=NOW,
+            status=MediaStatus.ACTIVE,
+        )
+        unique_media = MediaAsset(
+            id=uuid4(),
+            owner_user_id=second_user.id,
+            cloudinary_public_id="evidence/unique-document",
+            cloudinary_version=1,
+            resource_type="raw",
+            access_mode="authenticated",
+            original_filename="unique.pdf",
+            mime_type="application/pdf",
+            bytes=1024,
+            sha256="b" * 64,
+            hash_algorithm="SHA-256",
+            hash_byte_length=1024,
+            inspection_policy_version=CURRENT_INSPECTION_POLICY_VERSION,
+            hash_storage_version=1,
+            hash_computed_at=NOW,
+            status=MediaStatus.ACTIVE,
+        )
+        async with session_factory() as session:
+            session.add_all([second_user, admin_user, copied_media, unique_media])
+            await session.commit()
+
+        first, _ = await _draft_with_evidence(service, _principal(user), media)
+        first_submission = await service.submit_dossier(
+            _principal(user),
+            first.id,
+            idempotency_key="first-document-claim",
+        )
+        second_principal = _principal(second_user)
+        second, _ = await _draft_with_evidence(
+            service,
+            second_principal,
+            copied_media,
+        )
+        await service.attach_evidence(
+            second_principal,
+            second.id,
+            CreateEvidence(
+                media_asset_id=unique_media.id,
+                evidence_type="SUPPORTING_DOCUMENT",
+                title="Additional evidence",
+            ),
+        )
+
+        with pytest.raises(DossierDuplicateDocumentError):
+            await service.submit_dossier(
+                second_principal,
+                second.id,
+                idempotency_key="cross-owner-document-conflict",
+            )
+
+        with pytest.raises(DossierForbiddenError):
+            await service.grant_document_hash_override(
+                second_principal,
+                second.id,
+                media_asset_id=copied_media.id,
+                reason="Applicant cannot approve their own conflict.",
+            )
+        admin = AuthPrincipal(
+            user_id=admin_user.id,
+            session_id=uuid4(),
+            email=admin_user.email,
+            roles=("SUPER_ADMIN",),
+            permissions=("document_claim.override",),
+        )
+        async with session_factory() as session:
+            async with session.begin():
+                stale_media = await session.get(MediaAsset, copied_media.id)
+                assert stale_media is not None
+                stale_media.inspection_policy_version = "legacy-unverified-v1"
+        await service.close()
+        service = DossierService(session=session_factory(), clock=lambda: NOW)
+        with pytest.raises(DossierValidationError, match="trusted provenance"):
+            await service.grant_document_hash_override(
+                admin,
+                second.id,
+                media_asset_id=copied_media.id,
+                reason="Reviewed ownership evidence and approved authorized reuse.",
+            )
+        async with session_factory() as session:
+            async with session.begin():
+                trusted_media = await session.get(MediaAsset, copied_media.id)
+                assert trusted_media is not None
+                trusted_media.inspection_policy_version = (
+                    CURRENT_INSPECTION_POLICY_VERSION
+                )
+        await service.close()
+        service = DossierService(session=session_factory(), clock=lambda: NOW)
+        decision = await service.grant_document_hash_override(
+            admin,
+            second.id,
+            media_asset_id=copied_media.id,
+            reason="Reviewed ownership evidence and approved authorized reuse.",
+        )
+        replay = await service.grant_document_hash_override(
+            admin,
+            second.id,
+            media_asset_id=copied_media.id,
+            reason="Reviewed ownership evidence and approved authorized reuse.",
+        )
+        submitted = await service.submit_dossier(
+            second_principal,
+            second.id,
+            idempotency_key="approved-cross-owner-document",
+        )
+
+        assert replay.id == decision.id
+        assert submitted.dossier.status is DossierStatus.SUBMITTED
+
+        async with session_factory() as session:
+            claim_count = await session.scalar(
+                select(func.count()).select_from(DocumentHashClaim)
+            )
+            adjudication_count = await session.scalar(
+                select(func.count()).select_from(DocumentHashAdjudication)
+            )
+            override_audit_count = await session.scalar(
+                select(func.count())
+                .select_from(AuditLog)
+                .where(AuditLog.action == "DOCUMENT_HASH_OVERRIDE_GRANTED")
+            )
+            original_claim = await session.scalar(
+                select(DocumentHashClaim).where(
+                    DocumentHashClaim.media_asset_id == media.id
+                )
+            )
+            assert claim_count == 3
+            assert adjudication_count == 1
+            assert override_audit_count == 1
+            assert original_claim is not None
+            assert original_claim.dossier_id == first.id
+            assert original_claim.dossier_version_id == first_submission.version.id
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_submit_rejects_evidence_with_incomplete_hash_provenance() -> None:
+    async def exercise() -> None:
+        service, session_factory, engine, user, media = await _build_service()
+        principal = _principal(user)
+        dossier, _ = await _draft_with_evidence(service, principal, media)
+
+        async with session_factory() as session:
+            async with session.begin():
+                row = await session.get(MediaAsset, media.id)
+                assert row is not None
+                row.inspection_policy_version = "legacy-unverified-v1"
+
+        with pytest.raises(DossierValidationError, match="trusted provenance"):
+            await service.submit_dossier(
+                principal,
+                dossier.id,
+                idempotency_key="legacy-hash-submit",
+            )
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 def test_canonical_json_has_stable_utf8_ordering() -> None:
     first = {"z": ["Tiếng Việt", {"b": 2, "a": 1}], "a": True}
     second = {"a": True, "z": ["Tiếng Việt", {"a": 1, "b": 2}]}
@@ -287,3 +586,28 @@ def test_canonical_json_has_stable_utf8_ordering() -> None:
     assert snapshot_sha256(first) == (
         "7ab179d25482b5d49581e8177dec372b4ca9dbef043948c854edc6032ad146d1"
     )
+
+
+def test_new_submission_queues_similarity_detection_once() -> None:
+    async def exercise() -> None:
+        queued: list[UUID] = []
+        service, _, engine, user, media = await _build_service(queued.append)
+        principal = _principal(user)
+        dossier, _ = await _draft_with_evidence(service, principal, media)
+
+        submitted = await service.submit_dossier(
+            principal,
+            dossier.id,
+            idempotency_key="queue-similarity-once",
+        )
+        await service.submit_dossier(
+            principal,
+            dossier.id,
+            idempotency_key="queue-similarity-once",
+        )
+
+        assert queued == [submitted.version.id]
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())

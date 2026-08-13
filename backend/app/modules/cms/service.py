@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.audit.service import AuditService
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.cms.errors import (
     CmsForbiddenError,
@@ -666,5 +667,8 @@ class CmsService:
 
     @staticmethod
     def _require_admin(principal: AuthPrincipal) -> None:
-        if CMS_ROLES.isdisjoint(principal.roles):
-            raise CmsForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(permission="cms.manage", compatible_roles=CMS_ROLES),
+            CmsForbiddenError,
+        )

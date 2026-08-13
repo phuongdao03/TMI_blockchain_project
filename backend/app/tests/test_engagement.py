@@ -6,6 +6,7 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+from redis.asyncio import Redis
 from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -53,6 +54,15 @@ class FakeRepository:
         metric_date: date,
     ) -> bool:
         self.increments.append((public_work_id, metric_date))
+        return True
+
+    async def increment_share(
+        self,
+        *,
+        public_work_id: UUID,
+        metric_date: date,
+    ) -> bool:
+        del public_work_id, metric_date
         return True
 
 
@@ -116,7 +126,7 @@ class RedisFailure:
 
 def test_view_deduplicator_fails_closed_when_redis_is_unavailable() -> None:
     deduplicator = RedisViewDeduplicator(
-        cast(object, RedisFailure()),
+        cast(Redis, RedisFailure()),
         visitor_context=EngagementVisitorContext(secret="s" * 32),
         ttl_seconds=86_400,
     )
@@ -153,9 +163,7 @@ def test_view_api_sets_only_a_signed_http_only_visitor_cookie() -> None:
             assert "HttpOnly" in cookie
             assert "SameSite=lax" in cookie
 
-            repeated = client.post(
-                "/api/v1/public/works/public-work/engagement/views"
-            )
+            repeated = client.post("/api/v1/public/works/public-work/engagement/views")
             assert repeated.status_code == 204
             assert "set-cookie" not in repeated.headers
     finally:

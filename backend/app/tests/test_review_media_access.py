@@ -16,11 +16,21 @@ from app.modules.dossiers.models import (
     DossierVersion,
 )
 from app.modules.media.errors import MediaForbiddenError
-from app.modules.media.gateway import ProviderAssetMetadata, UploadAuthorization
+from app.modules.media.gateway import (
+    ProviderAssetMetadata,
+    StoredEncryptedAsset,
+    UploadAuthorization,
+)
 from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.media.service import MediaService
 from app.modules.reviews.media_access import ReviewMediaAccessPolicy
-from app.modules.reviews.models import ReviewAssignment, ReviewAssignmentStatus
+from app.modules.reviews.models import (
+    ReviewAssignment,
+    ReviewAssignmentStatus,
+    SimilarityCaseStatus,
+    SimilarityReviewCase,
+    SimilaritySignalType,
+)
 
 NOW = datetime(2026, 8, 2, 8, 0, tzinfo=UTC)
 
@@ -52,6 +62,24 @@ class ReviewDeliveryGateway:
         resource_type: str,
     ) -> ProviderAssetMetadata:
         raise AssertionError("Upload is outside this delivery test.")
+
+    async def download_asset(
+        self,
+        *,
+        public_id: str,
+        resource_type: str,
+        file_format: str,
+        max_bytes: int,
+    ) -> bytes:
+        raise AssertionError("Inspection is outside this delivery test.")
+
+    async def upload_encrypted_asset(
+        self,
+        *,
+        public_id: str,
+        content: bytes,
+    ) -> StoredEncryptedAsset:
+        raise AssertionError("Encryption is outside this delivery test.")
 
     def create_signed_delivery_url(
         self,
@@ -132,6 +160,15 @@ def test_delivery_requires_acknowledged_owned_assignment() -> None:
             submitted_by=owner.id,
             submitted_at=NOW,
         )
+        comparison_version = DossierVersion(
+            id=uuid4(),
+            dossier_id=dossier.id,
+            version_no=2,
+            snapshot_json={"schemaVersion": 1},
+            canonical_hash="b" * 64,
+            submitted_by=owner.id,
+            submitted_at=NOW,
+        )
         asset = MediaAsset(
             id=uuid4(),
             owner_user_id=owner.id,
@@ -168,6 +205,7 @@ def test_delivery_requires_acknowledged_owned_assignment() -> None:
                     category,
                     dossier,
                     version,
+                    comparison_version,
                     asset,
                     evidence,
                     assignment,
@@ -205,6 +243,29 @@ def test_delivery_requires_acknowledged_owned_assignment() -> None:
                 _principal(other, "REVIEWER"),
                 asset.id,
             )
+        async with sessions() as update_session:
+            update_session.add(
+                SimilarityReviewCase(
+                    id=uuid4(),
+                    left_dossier_version_id=version.id,
+                    right_dossier_version_id=comparison_version.id,
+                    signal_type=SimilaritySignalType.TEXT,
+                    text_score=0.91,
+                    image_distance=None,
+                    policy_version="near-duplicate-v1",
+                    status=SimilarityCaseStatus.ASSIGNED,
+                    assigned_reviewer_user_id=other.id,
+                    assigned_by=owner.id,
+                    assigned_at=NOW,
+                    created_at=NOW,
+                )
+            )
+            await update_session.commit()
+        similarity_delivery = await service.create_signed_url(
+            _principal(other, "REVIEWER"),
+            asset.id,
+        )
+        assert "expires_at=" in similarity_delivery.url
         owner_delivery = await service.create_signed_url(
             _principal(owner, "APPLICANT"),
             asset.id,

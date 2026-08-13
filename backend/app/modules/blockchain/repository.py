@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.blockchain.models import (
     BlockchainTransaction,
     BlockchainTransactionStatus,
+    DocumentBlockchainEvidence,
+    DocumentEvidenceStatus,
 )
 
 
@@ -48,11 +50,9 @@ class BlockchainTransactionRepository:
             BlockchainTransaction | None,
             await self._session.scalar(
                 select(BlockchainTransaction).where(
-                    BlockchainTransaction.dossier_version_id
-                    == dossier_version_id,
+                    BlockchainTransaction.dossier_version_id == dossier_version_id,
                     BlockchainTransaction.network == network,
-                    BlockchainTransaction.contract_address
-                    == contract_address,
+                    BlockchainTransaction.contract_address == contract_address,
                     BlockchainTransaction.method == method,
                     BlockchainTransaction.payload_hash == payload_hash,
                 )
@@ -81,14 +81,55 @@ class BlockchainTransactionRepository:
         )
         return tuple(rows.all()), int(await self._session.scalar(count_query) or 0)
 
-    async def list_broadcast(self, *, limit: int) -> tuple[BlockchainTransaction, ...]:
+    async def list_reconcilable(
+        self, *, limit: int
+    ) -> tuple[BlockchainTransaction, ...]:
         rows = await self._session.scalars(
             select(BlockchainTransaction)
             .where(
-                BlockchainTransaction.status
-                == BlockchainTransactionStatus.BROADCAST
+                BlockchainTransaction.status.in_(
+                    (
+                        BlockchainTransactionStatus.BROADCAST,
+                        BlockchainTransactionStatus.CONFIRMED,
+                    )
+                )
             )
             .order_by(BlockchainTransaction.broadcast_at)
             .limit(limit)
         )
         return tuple(rows.all())
+
+    async def list_document_evidences(
+        self,
+        *,
+        status: DocumentEvidenceStatus | None,
+        offset: int,
+        limit: int,
+    ) -> tuple[
+        tuple[tuple[DocumentBlockchainEvidence, BlockchainTransaction], ...],
+        int,
+    ]:
+        condition = (
+            DocumentBlockchainEvidence.status == status
+            if status is not None
+            else None
+        )
+        query = (
+            select(DocumentBlockchainEvidence, BlockchainTransaction)
+            .join(
+                BlockchainTransaction,
+                BlockchainTransaction.document_evidence_id
+                == DocumentBlockchainEvidence.id,
+            )
+            .order_by(DocumentBlockchainEvidence.recorded_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        count_query = select(func.count()).select_from(DocumentBlockchainEvidence)
+        if condition is not None:
+            query = query.where(condition)
+            count_query = count_query.where(condition)
+        rows = (await self._session.execute(query)).all()
+        return tuple((row[0], row[1]) for row in rows), int(
+            await self._session.scalar(count_query) or 0
+        )

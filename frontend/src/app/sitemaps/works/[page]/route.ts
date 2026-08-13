@@ -12,7 +12,7 @@ export async function GET(
   return xmlResponse(
     sitemapUrlSetXml(
       entries.map((entry) => ({
-        url: new URL(`/tai-san/${encodeURIComponent(entry.slug)}`, origin),
+        url: new URL(`/works/${encodeURIComponent(entry.slug)}`, origin),
         lastModified: entry.lastModified,
       })),
     ),

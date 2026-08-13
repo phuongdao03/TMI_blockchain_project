@@ -1,7 +1,7 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Query, Request, status
 
 from app.core.schemas import (
     ErrorEnvelope,
@@ -11,11 +11,16 @@ from app.core.schemas import (
     SuccessEnvelope,
 )
 from app.modules.auth.dependencies import CurrentPrincipalDependency
-from app.modules.certificates.dependencies import CertificateServiceDependency
+from app.modules.certificates.dependencies import (
+    CertificateServiceDependency,
+    CertificateVersionServiceDependency,
+)
 from app.modules.certificates.schemas import (
     CertificateData,
     CertificateDetailData,
     CertificateDownloadData,
+    CertificateVersionData,
+    CertificateVersionRequest,
 )
 
 router = APIRouter(prefix="/api/v1/certificates", tags=["certificates"])
@@ -93,5 +98,48 @@ async def download_certificate(
     download = await service.download(principal, certificate_id)
     return SuccessEnvelope(
         data=CertificateDownloadData.model_validate(download),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
+    "/{certificate_id}/versions",
+    response_model=SuccessEnvelope[list[CertificateVersionData]],
+    responses=RESPONSES,
+)
+async def list_certificate_versions(
+    certificate_id: UUID,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: CertificateVersionServiceDependency,
+) -> SuccessEnvelope[list[CertificateVersionData]]:
+    rows = await service.list_history(principal, certificate_id)
+    return SuccessEnvelope(
+        data=[CertificateVersionData.model_validate(row) for row in rows],
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/{certificate_id}/version-requests",
+    response_model=SuccessEnvelope[CertificateVersionData],
+    status_code=status.HTTP_201_CREATED,
+    responses=RESPONSES,
+)
+async def request_certificate_version(
+    certificate_id: UUID,
+    payload: CertificateVersionRequest,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: CertificateVersionServiceDependency,
+) -> SuccessEnvelope[CertificateVersionData]:
+    version = await service.request(
+        principal,
+        certificate_id=certificate_id,
+        dossier_version_id=payload.dossier_version_id,
+        reason=payload.reason,
+    )
+    return SuccessEnvelope(
+        data=CertificateVersionData.model_validate(version),
         meta=ResponseMeta(request_id=request.state.request_id),
     )

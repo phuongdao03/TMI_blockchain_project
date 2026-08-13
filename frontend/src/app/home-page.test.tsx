@@ -8,7 +8,7 @@ vi.mock("@/components/public/featured-assets", () => ({
 }));
 
 describe("HomePage", () => {
-  it("communicates the premium verification proposition and next action", () => {
+  it("presents the premium evidence registry and primary public actions", () => {
     render(<HomePage />);
 
     expect(
@@ -18,18 +18,20 @@ describe("HomePage", () => {
       }),
     ).toBeDefined();
     expect(
-      screen.getByRole("img", {
-        name: "Sổ bằng chứng số TMI",
-      }),
-    ).toBeDefined();
-    expect(
-      screen.getByRole("link", { name: "Khởi tạo hồ sơ" }).getAttribute("href"),
+      screen
+        .getAllByRole("link", { name: "Khởi tạo hồ sơ" })[0]
+        ?.getAttribute("href"),
     ).toBe("/register");
     expect(
-      screen.getByRole("heading", {
-        level: 2,
-        name: "Một quy trình. Mỗi bước đều có bằng chứng.",
-      }),
+      screen
+        .getByRole("link", { name: "Khám phá quy trình" })
+        .getAttribute("href"),
+    ).toBe("/process");
+    expect(
+      screen.getByRole("img", { name: "Sổ bằng chứng số TMI" }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("search", { name: "Tra cứu tài sản hoặc chứng thư" }),
     ).toBeDefined();
   });
 });

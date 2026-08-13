@@ -13,8 +13,14 @@ from app.modules.auth.dependencies import (
 )
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.dependencies import get_blockchain_service
-from app.modules.blockchain.models import BlockchainTransactionStatus
-from app.modules.blockchain.types import BlockchainTransactionView
+from app.modules.blockchain.models import (
+    BlockchainTransactionStatus,
+    DocumentEvidenceStatus,
+)
+from app.modules.blockchain.types import (
+    BlockchainTransactionView,
+    DocumentEvidenceView,
+)
 
 NOW = datetime(2026, 7, 31, 9, 0, tzinfo=UTC)
 
@@ -70,6 +76,40 @@ class StubBlockchainService:
         del principal
         self.reconcile_requested = True
 
+    async def list_document_evidences_admin(
+        self,
+        principal: AuthPrincipal,
+        *,
+        status: DocumentEvidenceStatus | None,
+        page: int,
+        page_size: int,
+    ) -> tuple[tuple[DocumentEvidenceView, ...], int]:
+        del principal, status, page, page_size
+        return (
+            (
+                DocumentEvidenceView(
+                    id=uuid4(),
+                    document_hash_claim_id=uuid4(),
+                    dossier_id=uuid4(),
+                    dossier_version_id=uuid4(),
+                    evidence_key="12" * 32,
+                    commitment="34" * 32,
+                    version_no=1,
+                    previous_evidence_key=None,
+                    recorded_at=NOW,
+                    status=DocumentEvidenceStatus.CONFIRMED,
+                    transaction_id=self.transaction_id,
+                    network="local",
+                    tx_hash="0x" + "56" * 32,
+                    confirmations=2,
+                    error_code=None,
+                    created_at=NOW,
+                    updated_at=NOW,
+                ),
+            ),
+            1,
+        )
+
 
 async def _request(
     method: str,
@@ -105,15 +145,15 @@ def test_blockchain_admin_list_retry_and_reconcile_contracts() -> None:
     retried = asyncio.run(
         _request(
             "POST",
-            (
-                "/api/v1/admin/blockchain/transactions/"
-                f"{service.transaction_id}/retry"
-            ),
+            (f"/api/v1/admin/blockchain/transactions/{service.transaction_id}/retry"),
             service,
         )
     )
     reconciled = asyncio.run(
         _request("POST", "/api/v1/admin/blockchain/reconcile", service)
+    )
+    document_evidences = asyncio.run(
+        _request("GET", "/api/v1/admin/blockchain/document-evidences", service)
     )
 
     assert listed.status_code == 200
@@ -123,3 +163,6 @@ def test_blockchain_admin_list_retry_and_reconcile_contracts() -> None:
     assert reconciled.status_code == 200
     assert reconciled.json()["data"]["status"] == "queued"
     assert service.reconcile_requested is True
+    assert document_evidences.status_code == 200
+    assert document_evidences.json()["data"][0]["status"] == "EVIDENCE_CONFIRMED"
+    assert "submitterReference" not in document_evidences.text

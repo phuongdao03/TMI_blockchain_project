@@ -267,9 +267,7 @@ class CouncilRepository:
                 )
             )
         total = await self._session.scalar(
-            select(func.count())
-            .select_from(CouncilSession)
-            .where(*criteria)
+            select(func.count()).select_from(CouncilSession).where(*criteria)
         )
         sessions = tuple(
             (

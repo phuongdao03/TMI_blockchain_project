@@ -26,16 +26,17 @@ export function RoleGate({
           className="mx-auto size-10 text-primary-700"
         />
         <h1 className="mt-4 text-2xl font-bold text-neutral-950">
-          Không có quyền truy cập
+          Trang này chưa mở cho tài khoản của bạn
         </h1>
         <p className="mt-2 text-sm leading-6 text-neutral-600">
-          Không gian làm việc hiện tại không bao gồm chức năng này.
+          Bạn có thể quay lại khu vực của mình hoặc liên hệ người phụ trách nếu
+          cần thêm hỗ trợ.
         </p>
         <Link
           className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-neutral-950 px-5 text-sm font-bold text-white"
           href={resolveDefaultWorkspace(user?.roles ?? [])}
         >
-          Về không gian của tôi
+          Về khu vực của tôi
         </Link>
       </section>
     );

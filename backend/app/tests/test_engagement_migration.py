@@ -23,7 +23,7 @@ def test_engagement_daily_migration_round_trip(
     config = Config(BACKEND_ROOT / "alembic.ini")
     try:
         command.upgrade(config, "0029_ranking_publication")
-        command.upgrade(config, "0030_public_work_engagement_daily")
+        command.upgrade(config, "0030_engagement_daily")
 
         with sqlite3.connect(database_path) as connection:
             columns = {

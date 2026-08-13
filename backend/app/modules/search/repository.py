@@ -227,8 +227,10 @@ class SearchRepository:
             .group_by(PublicTag.slug, PublicTag.name)
         )
         rows: Sequence[RowMapping] = (
-            await self._session.execute(union_all(category_counts, tag_counts))
-        ).mappings().all()
+            (await self._session.execute(union_all(category_counts, tag_counts)))
+            .mappings()
+            .all()
+        )
         categories = sorted(
             (
                 SearchFacetValue(
@@ -364,8 +366,8 @@ class SearchRepository:
             .limit(limit)
         )
         rows: Sequence[RowMapping] = (
-            await self._session.execute(statement)
-        ).mappings().all()
+            (await self._session.execute(statement)).mappings().all()
+        )
         return tuple(
             AutocompleteSuggestion(
                 kind=AutocompleteKind(row["kind"]),
@@ -457,21 +459,16 @@ class SearchRepository:
             where_clauses.append(
                 PublicWork.organization_id.in_(
                     select(Organization.id).where(
-                        func.lower(Organization.code)
-                        == filters.organization_code,
+                        func.lower(Organization.code) == filters.organization_code,
                         Organization.status == OrganizationStatus.ACTIVE,
                         Organization.deleted_at.is_(None),
                     )
                 )
             )
         if filters.published_from is not None:
-            where_clauses.append(
-                PublicWork.published_at >= filters.published_from
-            )
+            where_clauses.append(PublicWork.published_at >= filters.published_from)
         if filters.published_to is not None:
-            where_clauses.append(
-                PublicWork.published_at <= filters.published_to
-            )
+            where_clauses.append(PublicWork.published_at <= filters.published_to)
         if filters.has_blockchain_proof is True:
             where_clauses.append(PublicWork.certificate_id.is_not(None))
         elif filters.has_blockchain_proof is False:

@@ -1,0 +1,16 @@
+title = "TMI Certificate secret detection"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "google-oauth-client-secret-json"
+description = "Google OAuth client secret in downloaded JSON"
+regex = '''(?i)"client_secret"\s*:\s*"([^"]{16,})"'''
+secretGroup = 1
+keywords = ["client_secret"]
+
+[[rules]]
+id = "provider-credential-json-file"
+description = "Downloaded provider credential JSON file"
+path = '''(?i)(client_secret_|firebase-service-account|firebase-adminsdk|service-account).*\.json$'''

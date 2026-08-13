@@ -1,6 +1,7 @@
 import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -12,6 +13,7 @@ from app.core.config import Settings
 from app.db.base import Base
 from app.main import create_application
 from app.modules.dossiers.models import Category
+from app.modules.engagement.qr_service import QrShareLinkService
 from app.modules.public.dependencies import (
     enforce_public_engagement_rate_limit,
     enforce_public_rate_limit,
@@ -134,14 +136,12 @@ def test_qr_uses_opaque_payload_and_rejects_non_public_work(tmp_path: Path) -> N
                 public_base_url="https://catalog.tmi.vn",
                 allow_local_http=False,
                 renderer=renderer,
-                share_links=StubShareLinks(),
+                share_links=cast(QrShareLinkService, StubShareLinks()),
             )
             rendered = await service.render("public-work")
             assert rendered is not None
             assert rendered.png.startswith(b"\x89PNG")
-            assert rendered.payload == (
-                "https://catalog.tmi.vn/r/opaque-share-token"
-            )
+            assert rendered.payload == ("https://catalog.tmi.vn/r/opaque-share-token")
             assert renderer.payloads == [rendered.payload]
             assert await service.render("suspended") is None
         await engine.dispose()

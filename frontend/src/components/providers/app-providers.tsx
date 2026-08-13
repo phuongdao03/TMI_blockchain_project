@@ -14,7 +14,7 @@ function SessionBootstrap() {
   const pathname = usePathname();
   const publicPath =
     pathname === "/" ||
-    ["/thu-vien", "/tim-kiem", "/ban-do", "/tai-san", "/kiem-tra"].some(
+    ["/works", "/search", "/map", "/verify"].some(
       (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
     );
   useQuery({

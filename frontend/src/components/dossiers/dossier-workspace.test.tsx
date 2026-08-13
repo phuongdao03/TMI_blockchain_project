@@ -87,6 +87,10 @@ describe("DossierWorkspace", () => {
         name: "Bộ nhận diện TMI",
       }),
     ).toBeDefined();
+    expect(screen.getByText("Hồ sơ đang được bạn chuẩn bị.")).toBeDefined();
+    expect(
+      screen.queryByText(/SHA-256|snapshot|blockchain|database|backend/i),
+    ).toBeNull();
     await user.clear(screen.getByLabelText("Tên hồ sơ"));
     await user.type(screen.getByLabelText("Tên hồ sơ"), "Bộ nhận diện mới");
     await vi.waitFor(

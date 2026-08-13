@@ -17,6 +17,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -39,6 +40,23 @@ class CertificateStatus(StrEnum):
     REVOKED = "REVOKED"
 
 
+class CertificateVersionStatus(StrEnum):
+    PENDING_APPROVAL = "PENDING_APPROVAL"
+    REJECTED = "REJECTED"
+    ANCHOR_PENDING = "ANCHOR_PENDING"
+    FAILED = "FAILED"
+    ACTIVE = "ACTIVE"
+    SUPERSEDED = "SUPERSEDED"
+    REVOKED = "REVOKED"
+
+
+class DocumentEvidenceStatus(StrEnum):
+    QUEUED = "EVIDENCE_QUEUED"
+    BROADCAST = "EVIDENCE_BROADCAST"
+    CONFIRMED = "EVIDENCE_CONFIRMED"
+    FAILED = "EVIDENCE_FAILED"
+
+
 def _enum(enum_type: type[StrEnum], name: str) -> Enum:
     return Enum(
         enum_type,
@@ -59,6 +77,12 @@ class Certificate(UtcTimestampMixin, Base):
         CheckConstraint(
             "current_version_no > 0",
             name="current_version_no_positive",
+        ),
+        CheckConstraint(
+            "revocation_reason_hash IS NULL OR "
+            "(length(revocation_reason_hash) = 64 "
+            "AND revocation_reason_hash = lower(revocation_reason_hash))",
+            name="certificate_revocation_reason_hash_format",
         ),
         Index("ix_certificates_dossier_status", "dossier_id", "status"),
     )
@@ -87,6 +111,11 @@ class Certificate(UtcTimestampMixin, Base):
     )
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revocation_reason_hash: Mapped[str | None] = mapped_column(CHAR(64))
+    revocation_transaction_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("blockchain_transactions.id", ondelete="RESTRICT"),
+    )
     public_token_hash: Mapped[str] = mapped_column(
         CHAR(64),
         nullable=False,
@@ -97,6 +126,69 @@ class Certificate(UtcTimestampMixin, Base):
         ForeignKey("media_assets.id", ondelete="RESTRICT"),
     )
     qr_payload: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class DocumentBlockchainEvidence(UtcTimestampMixin, Base):
+    __tablename__ = "document_blockchain_evidences"
+    __table_args__ = (
+        CheckConstraint(
+            "length(evidence_key) = 64 AND length(commitment) = 64 "
+            "AND length(submitter_reference) = 64",
+            name="document_blockchain_evidence_hash_lengths",
+        ),
+        CheckConstraint(
+            "(version_no = 1 AND predecessor_evidence_id IS NULL) OR "
+            "(version_no > 1 AND predecessor_evidence_id IS NOT NULL)",
+            name="document_blockchain_evidence_lineage",
+        ),
+        Index(
+            "ix_document_blockchain_evidences_status_recorded_at",
+            "status",
+            "recorded_at",
+        ),
+        Index(
+            "ix_document_blockchain_evidences_dossier_version_id",
+            "dossier_id",
+            "dossier_version_id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    document_hash_claim_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("document_hash_claims.id", ondelete="RESTRICT"),
+        nullable=False,
+        unique=True,
+    )
+    dossier_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("dossiers.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    dossier_version_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("dossier_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    evidence_key: Mapped[str] = mapped_column(CHAR(64), nullable=False, unique=True)
+    commitment: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    submitter_reference: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    version_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    predecessor_evidence_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("document_blockchain_evidences.id", ondelete="RESTRICT"),
+        unique=True,
+    )
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+    status: Mapped[DocumentEvidenceStatus] = mapped_column(
+        _enum(DocumentEvidenceStatus, "document_blockchain_evidence_status"),
+        nullable=False,
+        default=DocumentEvidenceStatus.QUEUED,
+        server_default=DocumentEvidenceStatus.QUEUED.value,
+    )
 
 
 class BlockchainTransaction(UtcTimestampMixin, Base):
@@ -137,6 +229,11 @@ class BlockchainTransaction(UtcTimestampMixin, Base):
         Uuid,
         ForeignKey("certificates.id", ondelete="RESTRICT"),
     )
+    document_evidence_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("document_blockchain_evidences.id", ondelete="RESTRICT"),
+        unique=True,
+    )
     network: Mapped[str] = mapped_column(String(32), nullable=False)
     chain_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     contract_address: Mapped[str] = mapped_column(CHAR(42), nullable=False)
@@ -159,6 +256,9 @@ class BlockchainTransaction(UtcTimestampMixin, Base):
         default=0,
         server_default="0",
     )
+    receipt_block_number: Mapped[int | None] = mapped_column(BigInteger)
+    receipt_block_hash: Mapped[str | None] = mapped_column(CHAR(66))
+    receipt_event_name: Mapped[str | None] = mapped_column(String(64))
     error_code: Mapped[str | None] = mapped_column(String(64))
     error_message: Mapped[str | None] = mapped_column(Text)
     broadcast_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -169,10 +269,34 @@ class CertificateVersion(Base):
     __tablename__ = "certificate_versions"
     __table_args__ = (
         CheckConstraint("version_no > 0", name="version_no_positive"),
+        CheckConstraint(
+            "(version_no = 1 AND predecessor_version_id IS NULL) OR "
+            "(version_no > 1 AND predecessor_version_id IS NOT NULL "
+            "AND length(trim(change_reason)) >= 20)",
+            name="certificate_version_lineage",
+        ),
         UniqueConstraint(
             "certificate_id",
             "version_no",
             name="uq_certificate_versions_certificate_id_version_no",
+        ),
+        Index(
+            "uq_certificate_versions_active",
+            "certificate_id",
+            unique=True,
+            sqlite_where=text("status = 'ACTIVE'"),
+            postgresql_where=text("status = 'ACTIVE'"),
+        ),
+        Index(
+            "uq_certificate_versions_open_request",
+            "certificate_id",
+            unique=True,
+            sqlite_where=text(
+                "status IN ('PENDING_APPROVAL', 'ANCHOR_PENDING', 'FAILED')"
+            ),
+            postgresql_where=text(
+                "status IN ('PENDING_APPROVAL', 'ANCHOR_PENDING', 'FAILED')"
+            ),
         ),
     )
 
@@ -183,6 +307,10 @@ class CertificateVersion(Base):
         nullable=False,
     )
     version_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    predecessor_version_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("certificate_versions.id", ondelete="RESTRICT"),
+    )
     dossier_version_id: Mapped[UUID] = mapped_column(
         Uuid,
         ForeignKey("dossier_versions.id", ondelete="RESTRICT"),
@@ -193,6 +321,28 @@ class CertificateVersion(Base):
         nullable=False,
     )
     metadata_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    status: Mapped[CertificateVersionStatus] = mapped_column(
+        _enum(CertificateVersionStatus, "certificate_version_status"),
+        nullable=False,
+        default=CertificateVersionStatus.ACTIVE,
+    )
+    change_reason: Mapped[str | None] = mapped_column(Text)
+    requested_by: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="RESTRICT"),
+    )
+    requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decided_by: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="RESTRICT"),
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejection_reason: Mapped[str | None] = mapped_column(Text)
+    pdf_media_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("media_assets.id", ondelete="RESTRICT"),
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     blockchain_transaction_id: Mapped[UUID | None] = mapped_column(
         Uuid,
         ForeignKey("blockchain_transactions.id", ondelete="RESTRICT"),

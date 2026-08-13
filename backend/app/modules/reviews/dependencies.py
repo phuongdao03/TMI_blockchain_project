@@ -7,6 +7,7 @@ from app.modules.auth.dependencies import SessionDependency, SettingsDependency
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.reviews.precheck_service import PrecheckService
 from app.modules.reviews.service import ReviewService
+from app.modules.reviews.similarity_service import SimilarityReviewService
 
 
 async def get_precheck_service(
@@ -50,4 +51,20 @@ async def get_review_service(
 ReviewServiceDependency = Annotated[
     ReviewService,
     Depends(get_review_service),
+]
+
+
+async def get_similarity_review_service(
+    session: SessionDependency,
+) -> AsyncIterator[SimilarityReviewService]:
+    service = SimilarityReviewService(session=session)
+    try:
+        yield service
+    finally:
+        await service.close()
+
+
+SimilarityReviewServiceDependency = Annotated[
+    SimilarityReviewService,
+    Depends(get_similarity_review_service),
 ]

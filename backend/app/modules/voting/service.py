@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import DomainError
 from app.db.outbox import OutboxEvent
 from app.modules.audit.service import AuditService
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
@@ -782,8 +783,11 @@ class VotingCampaignService:
 
     @staticmethod
     def _require(principal: AuthPrincipal, permission: str) -> None:
-        if permission not in principal.permissions:
-            raise VotingCampaignForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(permission=permission, allow_super_admin=False),
+            VotingCampaignForbiddenError,
+        )
 
     @staticmethod
     def _values(payload: VotingCampaignInput) -> dict[str, object]:

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import DomainError
 from app.db.outbox import OutboxEvent
 from app.modules.audit.service import AuditService
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
@@ -491,9 +492,7 @@ class PublicationService:
                 if work.scheduled_publish_at
                 else None
             ),
-            "featured_at": (
-                work.featured_at.isoformat() if work.featured_at else None
-            ),
+            "featured_at": (work.featured_at.isoformat() if work.featured_at else None),
             "featured_until": (
                 work.featured_until.isoformat() if work.featured_until else None
             ),
@@ -513,8 +512,14 @@ class PublicationService:
 
     @staticmethod
     def _require_admin(principal: AuthPrincipal) -> None:
-        if PUBLICATION_ADMIN_ROLES.isdisjoint(principal.roles):
-            raise PublicWorkForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(
+                permission="public_content.manage",
+                compatible_roles=PUBLICATION_ADMIN_ROLES,
+            ),
+            PublicWorkForbiddenError,
+        )
 
     @staticmethod
     def _required_reason(reason: str) -> str:

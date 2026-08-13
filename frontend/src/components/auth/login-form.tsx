@@ -2,7 +2,15 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle } from "lucide-react";
+import {
+  getMultiFactorResolver,
+  signInWithEmailAndPassword,
+  TotpMultiFactorGenerator,
+  type MultiFactorError,
+  type MultiFactorResolver,
+  type User,
+} from "firebase/auth";
+import { LoaderCircle, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -12,17 +20,27 @@ import { FormField } from "@/components/auth/form-field";
 import { GoogleOAuthButton } from "@/components/auth/google-oauth-button";
 import { Button } from "@/components/ui/button";
 import { ApiError, authApi } from "@/lib/api/client";
+import type { AccountType } from "@/lib/api/types";
 import { loginSchema, type LoginValues } from "@/lib/auth/schemas";
 import { resolveDefaultWorkspace } from "@/lib/auth/role-workspaces";
+import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
 
 function safeDestination(value: string | undefined, fallback: string): string {
   return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
 }
 
-export function LoginForm({ next }: { next?: string }) {
+export function LoginForm({
+  next,
+  accountType = "PUBLIC_USER",
+}: {
+  next?: string;
+  accountType?: AccountType;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState<string>();
+  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver>();
+  const [verificationCode, setVerificationCode] = useState("");
   const {
     register,
     handleSubmit,
@@ -32,40 +50,121 @@ export function LoginForm({ next }: { next?: string }) {
     defaultValues: { email: "", password: "" },
   });
 
+  async function finishSignIn(user: User) {
+    const idToken = await user.getIdToken(true);
+    const result = await authApi.exchangeFirebaseToken(
+      idToken,
+      accountType,
+      next,
+    );
+    queryClient.setQueryData(["auth", "me"], result.user);
+    router.replace(
+      safeDestination(next, resolveDefaultWorkspace(result.user.roles)),
+    );
+    router.refresh();
+  }
+
+  function loginErrorMessage(error: unknown): string {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      return "Bạn đang ngoại tuyến. Hãy kiểm tra kết nối mạng rồi thử lại.";
+    }
+    const code = (error as { code?: string } | null)?.code;
+    if (
+      [
+        "auth/invalid-credential",
+        "auth/user-not-found",
+        "auth/wrong-password",
+      ].includes(code ?? "")
+    ) {
+      return "Email hoặc mật khẩu chưa đúng. Vui lòng kiểm tra lại.";
+    }
+    if (code === "auth/too-many-requests") {
+      return "Bạn đã thử quá nhiều lần. Vui lòng chờ một lát rồi thử lại.";
+    }
+    if (error instanceof ApiError && error.status === 429) {
+      return "Bạn đã thử quá nhiều lần. Vui lòng chờ một lát rồi thử lại.";
+    }
+    return "Không thể đăng nhập lúc này. Vui lòng thử lại.";
+  }
+
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(undefined);
     try {
-      const result = await authApi.login(
+      if (!firebaseConfigured())
+        throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
+      const credential = await signInWithEmailAndPassword(
+        getFirebaseAuth(),
         values.email,
         values.password,
-        "Trình duyệt web",
       );
-      queryClient.setQueryData(["auth", "me"], result.user);
-      router.replace(
-        safeDestination(next, resolveDefaultWorkspace(result.user.roles)),
-      );
-      router.refresh();
+      await finishSignIn(credential.user);
     } catch (error) {
-      setSubmitError(
-        error instanceof ApiError
-          ? error.message
-          : "Không thể đăng nhập lúc này. Vui lòng thử lại.",
-      );
+      if (
+        (error as { code?: string } | null)?.code ===
+        "auth/multi-factor-auth-required"
+      ) {
+        setMfaResolver(
+          getMultiFactorResolver(getFirebaseAuth(), error as MultiFactorError),
+        );
+        return;
+      }
+      setSubmitError(loginErrorMessage(error));
     }
   });
 
+  async function verifySecondFactor() {
+    if (!mfaResolver || !/^\d{6}$/.test(verificationCode)) return;
+    setSubmitError(undefined);
+    try {
+      const hint = mfaResolver.hints.find(
+        (item) => item.factorId === TotpMultiFactorGenerator.FACTOR_ID,
+      );
+      if (!hint) throw new Error("TOTP_FACTOR_NOT_FOUND");
+      const assertion = TotpMultiFactorGenerator.assertionForSignIn(
+        hint.uid,
+        verificationCode,
+      );
+      const credential = await mfaResolver.resolveSignIn(assertion);
+      await finishSignIn(credential.user);
+    } catch {
+      setSubmitError(
+        "Mã xác minh không đúng hoặc đã hết hạn. Vui lòng thử lại.",
+      );
+    }
+  }
+
   return (
     <AuthCard
-      description="Truy cập hồ sơ và quản lý chứng thư tài sản số của bạn."
+      description="Đăng nhập để quản lý hồ sơ, theo dõi tiến độ hoặc tiếp tục công việc được giao."
       footer={
         <>
           Chưa có tài khoản? <AuthLink href="/register">Đăng ký</AuthLink>
         </>
       }
-      title="Đăng nhập"
+      title="Chào mừng trở lại"
     >
       <div className="space-y-5">
-        <GoogleOAuthButton accountType="PUBLIC_USER" next={next} />
+        <section
+          aria-label="Thông tin đăng nhập"
+          className="rounded-xl border border-white/10 bg-white/[0.035] p-4"
+        >
+          <div className="flex items-start gap-3">
+            <ShieldCheck
+              aria-hidden="true"
+              className="mt-0.5 size-5 text-[#f3d675]"
+            />
+            <div>
+              <p className="text-sm font-semibold text-[#f3d675]">
+                Một tài khoản cho mọi hành trình
+              </p>
+              <p className="mt-1 text-xs leading-5 text-[#929090]">
+                Bạn sẽ được đưa đến đúng khu vực sau khi đăng nhập. Người làm
+                việc nội bộ dùng email được mời riêng.
+              </p>
+            </div>
+          </div>
+        </section>
+        <GoogleOAuthButton accountType={accountType} next={next} />
         <div aria-hidden="true" className="flex items-center gap-3">
           <span className="h-px flex-1 bg-white/10" />
           <span className="font-mono text-[0.6rem] tracking-[0.12em] text-[#6f6d6c] uppercase">
@@ -81,6 +180,35 @@ export function LoginForm({ next }: { next?: string }) {
             >
               {submitError}
             </p>
+          ) : null}
+          {mfaResolver ? (
+            <div className="space-y-3 rounded-lg border border-[#f3d675]/30 bg-[#201d16] p-4">
+              <label
+                className="block text-sm font-semibold"
+                htmlFor="email-mfa-code"
+              >
+                Mã 6 số từ ứng dụng xác thực
+              </label>
+              <input
+                autoComplete="one-time-code"
+                className="min-h-12 w-full rounded-md border border-white/20 bg-[#111] px-3 text-center font-mono text-lg tracking-[0.3em] text-white"
+                id="email-mfa-code"
+                inputMode="numeric"
+                maxLength={6}
+                onChange={(event) =>
+                  setVerificationCode(event.target.value.replace(/\D/g, ""))
+                }
+                value={verificationCode}
+              />
+              <Button
+                className="w-full"
+                disabled={verificationCode.length !== 6}
+                onClick={() => void verifySecondFactor()}
+                type="button"
+              >
+                Xác nhận mã
+              </Button>
+            </div>
           ) : null}
           <FormField
             autoComplete="email"
@@ -101,7 +229,11 @@ export function LoginForm({ next }: { next?: string }) {
               <AuthLink href="/forgot-password">Quên mật khẩu?</AuthLink>
             </div>
           </div>
-          <Button className="w-full" disabled={isSubmitting} type="submit">
+          <Button
+            className="w-full"
+            disabled={isSubmitting || Boolean(mfaResolver)}
+            type="submit"
+          >
             {isSubmitting ? (
               <LoaderCircle
                 aria-hidden="true"
@@ -111,6 +243,10 @@ export function LoginForm({ next }: { next?: string }) {
             {isSubmitting ? "Đang đăng nhập…" : "Đăng nhập"}
           </Button>
         </form>
+        <p className="text-center text-xs leading-5 text-[#888482]">
+          Tài khoản nhân sự chỉ được tạo qua lời mời. Hãy mở liên kết trong
+          email được cấp để thiết lập lần đầu.
+        </p>
       </div>
     </AuthCard>
   );

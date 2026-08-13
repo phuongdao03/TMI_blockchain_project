@@ -10,7 +10,12 @@ from app.core.config import get_settings
 from app.db.outbox import OutboxEvent
 from app.db.session import get_session_factory
 from app.modules.auth.security import OutboxPayloadCipher
-from app.modules.notifications.email import EmailDeliveryService, SmtpEmailGateway
+from app.modules.notifications.email import (
+    EmailDeliveryService,
+    EmailMessage,
+    SmtpEmailGateway,
+    render_email,
+)
 from app.modules.notifications.service import NotificationService
 from app.modules.public.cache_events import CatalogCacheEventHandler
 from app.modules.public.catalog_cache import RedisPublicCatalogCache
@@ -60,6 +65,25 @@ EVENT_COPY: dict[str, tuple[str, str]] = {
 }
 
 
+def staff_invitation_message(
+    *, email: str, invitation_token: str, app_base_url: str
+) -> EmailMessage:
+    token = quote(invitation_token, safe="")
+    action_url = f"{app_base_url.rstrip('/')}/staff-invitation?token={token}"
+    title = "Lời mời tham gia TMI Certificate"
+    body = (
+        "Bạn được mời tham gia đội ngũ vận hành. "
+        "Hãy xác minh đúng địa chỉ email nhận lời mời để tiếp tục."
+    )
+    text, html = render_email(title=title, body=body, action_url=action_url)
+    return EmailMessage(
+        to=email,
+        subject=title,
+        text=text,
+        html=html,
+    )
+
+
 async def _consume(event_id: UUID) -> None:
     settings = get_settings()
     secret = settings.auth_outbox_encryption_key
@@ -86,6 +110,21 @@ async def _consume(event_id: UUID) -> None:
             aggregate_type = event.aggregate_type
         user_id_value = payload.get("user_id") or payload.get("owner_user_id")
         copy = EVENT_COPY.get(event_type)
+        if event_type == "staff.invited":
+            email = payload.get("email")
+            invitation_token = payload.get("invitation_token")
+            if not isinstance(email, str) or not isinstance(invitation_token, str):
+                raise RuntimeError("Invalid staff invitation payload")
+            message = staff_invitation_message(
+                email=email,
+                invitation_token=invitation_token,
+                app_base_url=settings.app_base_url,
+            )
+            await SmtpEmailGateway(
+                host=settings.smtp_host,
+                port=settings.smtp_port,
+                sender=settings.smtp_sender,
+            ).send(message)
         if isinstance(user_id_value, str) and copy is not None:
             notification = await NotificationService(session).consume(
                 event_id=event_id,
@@ -186,18 +225,18 @@ async def _deliver(notification_id: UUID, *, action_url: str | None = None) -> N
             raise RuntimeError("Email provider unavailable")
 
 
-@celery_app.task  # type: ignore[misc]
+@celery_app.task  # type: ignore[untyped-decorator]
 def process_notification_outbox() -> None:
     asyncio.run(_poll())
 
 
-@celery_app.task  # type: ignore[misc]
+@celery_app.task  # type: ignore[untyped-decorator]
 def consume_notification_event(event_id: str) -> None:
     asyncio.run(_consume(UUID(event_id)))
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     autoretry_for=(RuntimeError,), max_retries=5, retry_backoff=True, retry_jitter=True
-)  # type: ignore[misc]
+)
 def deliver_notification_email(notification_id: str) -> None:
     asyncio.run(_deliver(UUID(notification_id)))

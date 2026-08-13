@@ -119,9 +119,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["session_id"],
             ["council_sessions.id"],
-            name=(
-                "fk_council_session_members_session_id_council_sessions"
-            ),
+            name=("fk_council_session_members_session_id_council_sessions"),
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(

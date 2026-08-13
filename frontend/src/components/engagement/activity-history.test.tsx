@@ -36,7 +36,9 @@ describe("ActivityHistory", () => {
 
     expect(await screen.findByText("Public work")).toBeDefined();
     expect(screen.getByText("Đã yêu thích")).toBeDefined();
-    expect(screen.getByRole("button", { name: "Tải thêm hoạt động" })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Tải thêm hoạt động" }),
+    ).toBeDefined();
     expect(listMock).toHaveBeenCalledWith(undefined);
   });
 });

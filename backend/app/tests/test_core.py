@@ -126,7 +126,31 @@ def test_security_headers_are_present_and_hsts_is_production_only() -> None:
             settings=Settings.model_validate(
                 {
                     "app_env": "production",
+                    "firebase_totp_enabled": True,
+                    "audit_integrity_key": "audit-integrity-test-key-32-bytes",
+                    "media_private_encryption_enabled": True,
+                    "media_private_encryption_active_key_id": "document-v1",
+                    "media_private_encryption_keys": {
+                        "document-v1": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ="
+                    },
                     "cors_allowed_origins": "https://app.tmigroup.vn",
+                    "blockchain_network": "polygon",
+                    "blockchain_chain_id": 137,
+                    "blockchain_rpc_url": "https://polygon-rpc.example",
+                    "certificate_contract_address": "0x" + "11" * 20,
+                    "blockchain_allowed_contract_addresses": "0x" + "11" * 20,
+                        "blockchain_signer_mode": "managed",
+                        "blockchain_signer_private_key": None,
+                        "blockchain_managed_signer_url": "https://signer.example/v1/sign",
+                        "blockchain_managed_signer_key_id": "projects/tmi/keys/issuer",
+                        "blockchain_managed_signer_expected_address": "0x"
+                        + "22" * 20,
+                    "payment_provider": "payos",
+                    "payos_client_id": "client",
+                    "payos_api_key": "api-key",
+                    "payos_checksum_key": "checksum",
+                    "payos_return_url": "https://app.example/payments/return",
+                    "payos_cancel_url": "https://app.example/payments/cancel",
                 }
             )
         ),
@@ -171,7 +195,33 @@ def test_cors_uses_environment_allowlist_and_rejects_unknown_origin() -> None:
 def test_production_cors_rejects_wildcard_and_non_tls_origins() -> None:
     for origin in ("*", "http://app.tmigroup.vn"):
         settings = Settings.model_validate(
-            {"app_env": "production", "cors_allowed_origins": origin}
+            {
+                "app_env": "production",
+                "firebase_totp_enabled": True,
+                "audit_integrity_key": "audit-integrity-test-key-32-bytes",
+                "media_private_encryption_enabled": True,
+                "media_private_encryption_active_key_id": "document-v1",
+                "media_private_encryption_keys": {
+                    "document-v1": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ="
+                },
+                "cors_allowed_origins": origin,
+                "blockchain_network": "polygon",
+                "blockchain_chain_id": 137,
+                "blockchain_rpc_url": "https://polygon-rpc.example",
+                "certificate_contract_address": "0x" + "11" * 20,
+                "blockchain_allowed_contract_addresses": "0x" + "11" * 20,
+                    "blockchain_signer_mode": "managed",
+                    "blockchain_signer_private_key": None,
+                "blockchain_managed_signer_url": "https://signer.example/v1/sign",
+                "blockchain_managed_signer_key_id": "projects/tmi/keys/issuer",
+                "blockchain_managed_signer_expected_address": "0x" + "22" * 20,
+                "payment_provider": "payos",
+                "payos_client_id": "client",
+                "payos_api_key": "api-key",
+                "payos_checksum_key": "checksum",
+                "payos_return_url": "https://app.example/payments/return",
+                "payos_cancel_url": "https://app.example/payments/cancel",
+            }
         )
         with pytest.raises(ValueError):
             _ = settings.cors_origins
@@ -210,6 +260,15 @@ def test_readiness_openapi_declares_standard_error_envelope() -> None:
     assert response_schema == {
         "$ref": "#/components/schemas/ErrorEnvelope",
     }
+
+
+def test_docs_is_rendered_without_external_swagger_assets() -> None:
+    response = get(build_app(), "/docs")
+
+    assert response.status_code == 200
+    assert "<table>" in response.text
+    assert "/openapi.json" in response.text
+    assert "cdn.jsdelivr.net" not in response.text
 
 
 def test_not_found_uses_standard_error_envelope() -> None:

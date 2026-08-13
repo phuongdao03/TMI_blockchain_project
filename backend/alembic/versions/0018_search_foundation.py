@@ -29,31 +29,43 @@ HELPER_COLUMNS = (
 
 def upgrade() -> None:
     dialect = op.get_bind().dialect.name
+    existing_columns = (
+        {
+            column["name"]
+            for column in sa.inspect(op.get_bind()).get_columns("public_works")
+        }
+        if dialect != "postgresql"
+        else set()
+    )
     for column_name in HELPER_COLUMNS:
-        op.add_column(
-            "public_works",
-            sa.Column(
-                column_name,
-                sa.Text(),
-                nullable=False,
-                server_default="",
-            ),
-        )
+        if column_name not in existing_columns:
+            op.add_column(
+                "public_works",
+                sa.Column(
+                    column_name,
+                    sa.Text(),
+                    nullable=False,
+                    server_default="",
+                ),
+                if_not_exists=dialect == "postgresql",
+            )
     vector_type: sa.types.TypeEngine[object] = (
         postgresql.TSVECTOR() if dialect == "postgresql" else sa.Text()
     )
     vector_default = (
         sa.text("''::tsvector") if dialect == "postgresql" else sa.text("''")
     )
-    op.add_column(
-        "public_works",
-        sa.Column(
-            "search_vector",
-            vector_type,
-            nullable=False,
-            server_default=vector_default,
-        ),
-    )
+    if "search_vector" not in existing_columns:
+        op.add_column(
+            "public_works",
+            sa.Column(
+                "search_vector",
+                vector_type,
+                nullable=False,
+                server_default=vector_default,
+            ),
+            if_not_exists=dialect == "postgresql",
+        )
 
     if dialect == "postgresql":
         _upgrade_postgresql()
@@ -98,12 +110,23 @@ def _upgrade_postgresql() -> None:
     )
     op.execute(
         """
-        CREATE TRIGGER trg_public_works_search_vector
-        BEFORE INSERT OR UPDATE OF title, short_description, full_description,
-          author_display_name, search_organization_text, search_taxonomy_text,
-          search_certificate_text
-        ON public_works
-        FOR EACH ROW EXECUTE FUNCTION public.refresh_public_work_search_vector()
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1
+            FROM pg_trigger
+            WHERE tgname = 'trg_public_works_search_vector'
+              AND tgrelid = 'public_works'::regclass
+          ) THEN
+            CREATE TRIGGER trg_public_works_search_vector
+            BEFORE INSERT OR UPDATE OF title, short_description, full_description,
+              author_display_name, search_organization_text, search_taxonomy_text,
+              search_certificate_text
+            ON public_works
+            FOR EACH ROW EXECUTE FUNCTION public.refresh_public_work_search_vector();
+          END IF;
+        END
+        $$
         """
     )
     op.execute(
@@ -155,13 +178,14 @@ def _upgrade_postgresql() -> None:
             "public_works",
             ["search_vector"],
             unique=False,
+            if_not_exists=True,
             postgresql_using="gin",
             postgresql_where=sa.text(PUBLIC_PREDICATE),
             postgresql_concurrently=True,
         )
         op.execute(
             """
-            CREATE INDEX CONCURRENTLY ix_public_works_title_trgm_public
+            CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_public_works_title_trgm_public
             ON public_works USING gin
             (public.immutable_unaccent(lower(title)) gin_trgm_ops)
             WHERE publication_status = 'PUBLISHED' AND visibility = 'PUBLIC'
@@ -170,7 +194,7 @@ def _upgrade_postgresql() -> None:
         )
         op.execute(
             """
-            CREATE INDEX CONCURRENTLY ix_public_works_author_trgm_public
+            CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_public_works_author_trgm_public
             ON public_works USING gin
             (public.immutable_unaccent(lower(author_display_name)) gin_trgm_ops)
             WHERE publication_status = 'PUBLISHED' AND visibility = 'PUBLIC'
@@ -182,6 +206,7 @@ def _upgrade_postgresql() -> None:
             "public_works",
             ["publication_status", "visibility", "published_at", "id"],
             unique=False,
+            if_not_exists=True,
             postgresql_concurrently=True,
         )
 
@@ -200,24 +225,28 @@ def _upgrade_portable() -> None:
         "ix_public_works_search_vector_public",
         "public_works",
         ["search_vector"],
+        if_not_exists=True,
         sqlite_where=sa.text(PUBLIC_PREDICATE),
     )
     op.create_index(
         "ix_public_works_title_trgm_public",
         "public_works",
         ["title"],
+        if_not_exists=True,
         sqlite_where=sa.text(PUBLIC_PREDICATE),
     )
     op.create_index(
         "ix_public_works_author_trgm_public",
         "public_works",
         ["author_display_name"],
+        if_not_exists=True,
         sqlite_where=sa.text(f"{PUBLIC_PREDICATE} AND author_display_name IS NOT NULL"),
     )
     op.create_index(
         "ix_public_works_search_visibility_published_id",
         "public_works",
         ["publication_status", "visibility", "published_at", "id"],
+        if_not_exists=True,
     )
 
 

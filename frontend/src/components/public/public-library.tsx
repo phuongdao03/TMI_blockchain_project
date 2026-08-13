@@ -230,7 +230,7 @@ export function PublicLibrary({
                 </p>
                 <Link
                   className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold text-white"
-                  href="/thu-vien"
+                  href="/works"
                 >
                   <X className="size-4" /> Xóa bộ lọc
                 </Link>
@@ -371,7 +371,7 @@ function FilterForm({
       {hasFilters(parameters) ? (
         <Link
           className="flex min-h-11 items-center justify-center gap-2 text-sm font-bold text-slate-400 hover:text-white"
-          href="/thu-vien"
+          href="/works"
         >
           <X className="size-4" /> Xóa tất cả
         </Link>
@@ -483,7 +483,7 @@ function catalogHref(parameters: CatalogParameters): string {
       query.set(name, String(value));
   }
   const suffix = query.toString();
-  return suffix ? `/thu-vien?${suffix}` : "/thu-vien";
+  return suffix ? `/works?${suffix}` : "/works";
 }
 
 function countFilters(parameters: CatalogParameters): number {

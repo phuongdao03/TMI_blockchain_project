@@ -3,7 +3,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-from app.modules.blockchain.models import BlockchainTransactionStatus
+from app.modules.blockchain.models import (
+    BlockchainTransactionStatus,
+    DocumentEvidenceStatus,
+)
+from app.modules.blockchain.verification import DocumentVerificationStatus
 
 
 def _camel(name: str) -> str:
@@ -45,3 +49,28 @@ class BlockchainTransactionData(BlockchainSchema):
 
 class BlockchainQueuedData(BlockchainSchema):
     status: str = "queued"
+
+
+class DocumentEvidenceData(BlockchainSchema):
+    id: UUID
+    document_hash_claim_id: UUID
+    dossier_id: UUID
+    dossier_version_id: UUID
+    evidence_key: str
+    commitment: str
+    version_no: int
+    previous_evidence_key: str | None
+    recorded_at: datetime
+    status: DocumentEvidenceStatus
+    transaction_id: UUID
+    network: str
+    tx_hash: str | None
+    confirmations: int
+    error_code: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class DocumentVerificationData(BlockchainSchema):
+    status: DocumentVerificationStatus
+    checked_at: datetime

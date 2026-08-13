@@ -145,12 +145,10 @@ async def _request(
     )
     app.dependency_overrides[get_session_service] = lambda: service
     app.dependency_overrides[get_current_principal] = lambda: service.principal
-    app.dependency_overrides[get_csrf_protected_principal] = (
-        lambda: service.principal
-    )
+    app.dependency_overrides[get_csrf_protected_principal] = lambda: service.principal
     if upgrade_service is not None:
-        app.dependency_overrides[get_applicant_upgrade_service] = (
-            lambda: upgrade_service
+        app.dependency_overrides[get_applicant_upgrade_service] = lambda: (
+            upgrade_service
         )
     transport = httpx.ASGITransport(app=app)
     async with app.router.lifespan_context(app):

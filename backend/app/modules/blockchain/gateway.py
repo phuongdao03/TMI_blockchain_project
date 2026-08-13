@@ -7,6 +7,8 @@ from web3 import AsyncHTTPProvider, AsyncWeb3, Web3
 from web3.exceptions import TransactionNotFound
 from web3.types import TxReceipt
 
+SUPPORTED_CHAINS = {"local": 31_337, "amoy": 80_002, "polygon": 137}
+
 
 class BlockchainGatewayError(Exception):
     """RPC, ABI, network, or contract validation failure."""
@@ -24,10 +26,37 @@ class CertificateRecord:
 
 
 @dataclass(frozen=True, slots=True)
+class DocumentEvidenceRecord:
+    commitment: bytes
+    previous_evidence_key: bytes
+    recorded_at: int
+    version: int
+
+
+@dataclass(frozen=True, slots=True)
 class TransactionReceipt:
     transaction_hash: str
     block_number: int
+    block_hash: str
+    contract_address: str
+    event_names: tuple[str, ...]
     succeeded: bool
+
+
+_EVENT_TOPICS = {
+    Web3.keccak(
+        text="CertificateIssued(bytes32,bytes32,bytes32,uint64,uint64)"
+    ).to_0x_hex(): "CertificateIssued",
+    Web3.keccak(
+        text="CertificateUpdated(bytes32,bytes32,bytes32,uint32)"
+    ).to_0x_hex(): "CertificateUpdated",
+    Web3.keccak(text="CertificateRevoked(bytes32,bytes32)").to_0x_hex(): (
+        "CertificateRevoked"
+    ),
+    Web3.keccak(
+        text="DocumentEvidenceAnchored(bytes32,bytes32,bytes32,uint32,uint64)"
+    ).to_0x_hex(): "DocumentEvidenceAnchored",
+}
 
 
 class BlockchainGateway:
@@ -127,6 +156,26 @@ class BlockchainGateway:
             ],
         )
 
+    def encode_anchor_document_evidence(
+        self,
+        *,
+        evidence_key: bytes,
+        commitment: bytes,
+        previous_evidence_key: bytes,
+        version: int,
+        recorded_at: int,
+    ) -> bytes:
+        return self._encode(
+            "anchorDocumentEvidence",
+            [
+                self._bytes32(evidence_key),
+                self._bytes32(commitment),
+                self._bytes32(previous_evidence_key),
+                version,
+                recorded_at,
+            ],
+        )
+
     async def get_certificate(self, certificate_id: bytes) -> CertificateRecord:
         await self.validate_chain()
         try:
@@ -144,6 +193,43 @@ class BlockchainGateway:
             version=int(result[5]),
             revoked=bool(result[6]),
         )
+
+    async def get_document_evidence(
+        self,
+        evidence_key: bytes,
+    ) -> DocumentEvidenceRecord:
+        await self.validate_chain()
+        try:
+            result = await self._contract.functions.getDocumentEvidence(
+                self._bytes32(evidence_key)
+            ).call()
+        except Exception as exc:
+            raise BlockchainGatewayError("Document evidence read failed.") from exc
+        return DocumentEvidenceRecord(
+            commitment=bytes(result[0]),
+            previous_evidence_key=bytes(result[1]),
+            recorded_at=int(result[2]),
+            version=int(result[3]),
+        )
+
+    async def verify_document_evidence(
+        self,
+        *,
+        evidence_key: bytes,
+        commitment: bytes,
+    ) -> bool:
+        await self.validate_chain()
+        try:
+            return bool(
+                await self._contract.functions.verifyDocumentEvidence(
+                    self._bytes32(evidence_key),
+                    self._bytes32(commitment),
+                ).call()
+            )
+        except Exception as exc:
+            raise BlockchainGatewayError(
+                "Document evidence verification failed."
+            ) from exc
 
     async def pending_nonce(self, signer: str) -> int:
         await self.validate_chain()
@@ -196,6 +282,18 @@ class BlockchainGateway:
         return TransactionReceipt(
             transaction_hash=HexBytes(receipt["transactionHash"]).to_0x_hex(),
             block_number=int(receipt["blockNumber"]),
+            block_hash=HexBytes(receipt["blockHash"]).to_0x_hex(),
+            contract_address=str(receipt["to"] or ""),
+            event_names=tuple(
+                event_name
+                for log in receipt["logs"]
+                if str(log["address"]).lower() == self.contract_address.lower()
+                and log["topics"]
+                for event_name in [
+                    _EVENT_TOPICS.get(HexBytes(log["topics"][0]).to_0x_hex())
+                ]
+                if event_name is not None
+            ),
             succeeded=int(receipt["status"]) == 1,
         )
 
@@ -205,6 +303,14 @@ class BlockchainGateway:
             return await self._web3.eth.block_number
         except Exception as exc:
             raise BlockchainGatewayError("Latest block lookup failed.") from exc
+
+    async def block_hash(self, block_number: int) -> str:
+        await self.validate_chain()
+        try:
+            block = await self._web3.eth.get_block(block_number)
+            return HexBytes(block["hash"]).to_0x_hex()
+        except Exception as exc:
+            raise BlockchainGatewayError("Canonical block lookup failed.") from exc
 
     def _encode(self, function_name: str, arguments: list[object]) -> bytes:
         try:

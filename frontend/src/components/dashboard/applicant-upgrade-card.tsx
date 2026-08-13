@@ -60,10 +60,15 @@ export function ApplicantUpgradeCard({
       </div>
 
       {completed ? (
-        <div className="mt-6 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800" role="status">
+        <div
+          className="mt-6 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800"
+          role="status"
+        >
           <p className="font-bold">Đã mở không gian gửi tài sản.</p>
-          <p className="mt-1">Hoàn thiện họ tên trong hồ sơ tài khoản trước khi tạo hồ sơ xác lập.</p>
-          <a className="mt-3 inline-block font-bold underline" href="/tai-khoan">
+          <p className="mt-1">
+            Hoàn thiện họ tên trong hồ sơ tài khoản trước khi tạo hồ sơ xác lập.
+          </p>
+          <a className="mt-3 inline-block font-bold underline" href="/account">
             Mở cài đặt tài khoản
           </a>
         </div>
@@ -112,7 +117,10 @@ export function ApplicantUpgradeCard({
             type="button"
           >
             {isSubmitting ? (
-              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+              <LoaderCircle
+                aria-hidden="true"
+                className="size-4 animate-spin"
+              />
             ) : null}
             Bắt đầu gửi tài sản
           </Button>

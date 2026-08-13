@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.db.base import Base
+from app.modules.audit.models import AuditActorType, AuditLog
 from app.modules.auth.models import AuthSession, User, UserStatus
 from app.modules.auth.security import Argon2PasswordHasher
 from app.modules.auth.session_service import (
@@ -112,6 +113,9 @@ def test_login_creates_hashed_refresh_session_and_short_access_token(
         async with session_factory() as session:
             user = (await session.scalars(select(User))).one()
             auth_session = (await session.scalars(select(AuthSession))).one()
+            audit_row = await session.scalar(
+                select(AuditLog).where(AuditLog.action == "auth.login.succeeded")
+            )
 
         assert issued.refresh_token not in auth_session.refresh_token_hash
         assert auth_session.refresh_token_hash
@@ -128,6 +132,10 @@ def test_login_creates_hashed_refresh_session_and_short_access_token(
         assert principal.roles == ()
         assert issued.csrf_token
         assert limiter.calls == [("owner@tmigroup.vn", "203.0.113.10")]
+        assert audit_row is not None
+        assert audit_row.actor_user_id == user.id
+        assert audit_row.resource_id == str(auth_session.id)
+        assert audit_row.after_json == {"outcome": "succeeded"}
 
         await service.close()
         await engine.dispose()
@@ -219,7 +227,18 @@ def test_refresh_rotates_token_and_reuse_revokes_every_session(
             revoked_at_values = (
                 await session.scalars(select(AuthSession.revoked_at))
             ).all()
+            security_actions = (
+                await session.scalars(
+                    select(AuditLog.action)
+                    .where(AuditLog.action.like("auth.refresh.%"))
+                    .order_by(AuditLog.created_at)
+                )
+            ).all()
         assert all(revoked_at is not None for revoked_at in revoked_at_values)
+        assert security_actions == [
+            "auth.refresh.rotated",
+            "auth.refresh.reuse_detected",
+        ]
         with pytest.raises(UnauthenticatedError):
             await service.authenticate_access(second.access_token)
 
@@ -282,6 +301,56 @@ def test_session_listing_revoke_and_logout_are_user_scoped(tmp_path: Path) -> No
     asyncio.run(exercise())
 
 
+def test_session_revocation_rolls_back_when_audit_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def exercise() -> None:
+        clock = MutableClock(datetime.now(UTC).replace(microsecond=0))
+        service, session_factory, _, engine = await _build_session_service(
+            tmp_path,
+            clock,
+        )
+        metadata = ClientMetadata(
+            client_ip="203.0.113.10",
+            user_agent="TMI test browser",
+            device_name="Work laptop",
+        )
+        first = await service.login(
+            email="owner@tmigroup.vn",
+            password="correct horse battery staple",
+            metadata=metadata,
+        )
+        second = await service.login(
+            email="owner@tmigroup.vn",
+            password="correct horse battery staple",
+            metadata=metadata,
+        )
+        first_principal = await service.authenticate_access(first.access_token)
+        second_principal = await service.authenticate_access(second.access_token)
+
+        def reject_audit(**_: object) -> None:
+            raise RuntimeError("audit unavailable")
+
+        monkeypatch.setattr(service._audit_service, "record", reject_audit)  # noqa: SLF001
+        with pytest.raises(RuntimeError, match="audit unavailable"):
+            await service.revoke_session(
+                principal=first_principal,
+                target_session_id=second_principal.session_id,
+                csrf_cookie=first.csrf_token,
+                csrf_header=first.csrf_token,
+            )
+
+        async with session_factory() as session:
+            target = await session.get(AuthSession, second_principal.session_id)
+            assert target is not None
+            assert target.revoked_at is None
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 @pytest.mark.parametrize(
     ("email", "password"),
     [
@@ -314,8 +383,17 @@ def test_login_returns_same_error_for_wrong_password_and_unknown_email(
 
         async with session_factory() as session:
             assert (await session.scalars(select(AuthSession))).all() == []
+            audit_row = await session.scalar(
+                select(AuditLog).where(AuditLog.action == "auth.login.failed")
+            )
         assert error.value.code == "INVALID_CREDENTIALS"
         assert error.value.message == "Email or password is incorrect."
+        assert audit_row is not None
+        assert audit_row.actor_type is AuditActorType.ANONYMOUS
+        assert audit_row.actor_user_id is None
+        assert audit_row.resource_id == "credential"
+        assert audit_row.after_json == {"outcome": "denied"}
+        assert email not in str(audit_row.after_json)
 
         await service.close()
         await engine.dispose()

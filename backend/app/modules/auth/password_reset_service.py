@@ -1,11 +1,12 @@
-import logging
 import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.outbox import OutboxEvent
+from app.modules.audit.service import AuditService
 from app.modules.auth.errors import InvalidPasswordResetTokenError
 from app.modules.auth.models import UserStatus, VerificationToken
 from app.modules.auth.rate_limit import RegistrationRateLimiter
@@ -15,8 +16,6 @@ from app.modules.auth.security import (
     OutboxPayloadCipher,
     hash_verification_token,
 )
-
-logger = logging.getLogger(__name__)
 
 PASSWORD_RESET_PURPOSE = "PASSWORD_RESET"
 PASSWORD_RESET_REQUESTED_EVENT = "user.password_reset_requested"
@@ -35,6 +34,7 @@ class PasswordResetService:
     ) -> None:
         self._session = session
         self._auth_repository = AuthRepository(session)
+        self._audit_service = AuditService(session)
         self._outbox_repository = OutboxRepository(session)
         self._password_hasher = password_hasher
         self._payload_cipher = payload_cipher
@@ -59,6 +59,11 @@ class PasswordResetService:
 
         async with self._session.begin():
             user = await self._auth_repository.get_user_by_email(normalized_email)
+            self._audit(
+                "auth.password_reset.requested",
+                actor_user_id=None,
+                outcome="accepted",
+            )
             if (
                 user is None
                 or user.status is not UserStatus.ACTIVE
@@ -105,17 +110,9 @@ class PasswordResetService:
                 )
             )
 
-        logger.info(
-            "security_audit",
-            extra={
-                "action": "auth.password_reset.requested",
-                "user_id": str(user.id),
-            },
-        )
-
     async def reset_password(self, *, token: str, new_password: str) -> None:
         now = self._clock()
-        user_id: object | None = None
+        reset_failed = False
         async with self._session.begin():
             verification = (
                 await self._auth_repository.get_verification_token_for_update(
@@ -128,38 +125,64 @@ class PasswordResetService:
                 or verification.consumed_at is not None
                 or self._as_utc(verification.expires_at) <= now
             ):
-                raise InvalidPasswordResetTokenError()
-
-            user = await self._auth_repository.get_user_by_id(verification.user_id)
-            if user is None or user.status is not UserStatus.ACTIVE:
-                raise InvalidPasswordResetTokenError()
-
-            user.password_hash = await self._password_hasher.hash(new_password)
-            outstanding_tokens = (
-                await self._auth_repository.list_unconsumed_verification_tokens(
-                    user_id=user.id,
-                    purpose=PASSWORD_RESET_PURPOSE,
-                    for_update=True,
+                self._audit(
+                    "auth.password_reset.failed",
+                    actor_user_id=None,
+                    outcome="denied",
                 )
-            )
-            for outstanding_token in outstanding_tokens:
-                outstanding_token.consumed_at = now
+                reset_failed = True
+            else:
+                user = await self._auth_repository.get_user_by_id(verification.user_id)
+                if user is None or user.status is not UserStatus.ACTIVE:
+                    self._audit(
+                        "auth.password_reset.failed",
+                        actor_user_id=None,
+                        outcome="denied",
+                    )
+                    reset_failed = True
+                else:
+                    user.password_hash = await self._password_hasher.hash(new_password)
+                    outstanding_tokens = (
+                        await self._auth_repository.list_unconsumed_verification_tokens(
+                            user_id=user.id,
+                            purpose=PASSWORD_RESET_PURPOSE,
+                            for_update=True,
+                        )
+                    )
+                    for outstanding_token in outstanding_tokens:
+                        outstanding_token.consumed_at = now
 
-            active_sessions = await self._auth_repository.list_active_auth_sessions(
-                user_id=user.id,
-                now=now,
-                for_update=True,
-            )
-            for auth_session in active_sessions:
-                auth_session.revoked_at = now
-            user_id = user.id
+                    active_sessions = (
+                        await self._auth_repository.list_active_auth_sessions(
+                            user_id=user.id,
+                            now=now,
+                            for_update=True,
+                        )
+                    )
+                    for auth_session in active_sessions:
+                        auth_session.revoked_at = now
+                    self._audit(
+                        "auth.password_reset.completed",
+                        actor_user_id=user.id,
+                        outcome="completed",
+                    )
 
-        logger.info(
-            "security_audit",
-            extra={
-                "action": "auth.password_reset.completed",
-                "user_id": str(user_id),
-            },
+        if reset_failed:
+            raise InvalidPasswordResetTokenError()
+
+    def _audit(
+        self,
+        action: str,
+        *,
+        actor_user_id: UUID | None,
+        outcome: str,
+    ) -> None:
+        self._audit_service.record(
+            actor_user_id=actor_user_id,
+            action=action,
+            resource_type="credential",
+            resource_id="credential",
+            after={"outcome": outcome},
         )
 
     @staticmethod

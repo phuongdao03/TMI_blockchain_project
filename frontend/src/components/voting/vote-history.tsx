@@ -61,7 +61,7 @@ export function VoteHistory() {
           </p>
           <Link
             className="mt-5 inline-flex font-bold text-primary-700"
-            href="/binh-chon"
+            href="/voting"
           >
             Khám phá chiến dịch
           </Link>
@@ -103,7 +103,7 @@ export function VoteHistory() {
               ) : null}
               <Link
                 className="ml-auto inline-flex items-center text-sm font-bold text-primary-700"
-                href={`/binh-chon/${item.campaignSlug}`}
+                href={`/voting/${item.campaignSlug}`}
               >
                 Xem chiến dịch
               </Link>

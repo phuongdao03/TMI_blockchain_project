@@ -22,9 +22,9 @@ class RankingPublicationRepository(RankingPublicationRepositoryPort):
     ) -> RankingPublicationCampaign | None:
         row = (
             await self._session.execute(
-                select(VotingCampaign.id, VotingCampaign.status).where(
-                    VotingCampaign.id == campaign_id
-                ).with_for_update()
+                select(VotingCampaign.id, VotingCampaign.status)
+                .where(VotingCampaign.id == campaign_id)
+                .with_for_update()
             )
         ).one_or_none()
         if row is None:

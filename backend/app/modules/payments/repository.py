@@ -86,6 +86,19 @@ class PaymentRepository:
             ),
         )
 
+    async def list_reconcilable(self, *, limit: int) -> tuple[PaymentOrder, ...]:
+        rows = await self._session.scalars(
+            select(PaymentOrder)
+            .where(
+                PaymentOrder.status.in_(
+                    (PaymentStatus.PENDING, PaymentStatus.PROCESSING)
+                )
+            )
+            .order_by(PaymentOrder.updated_at.asc())
+            .limit(limit)
+        )
+        return tuple(rows.all())
+
     async def can_access_dossier(
         self,
         user_id: UUID,
@@ -98,8 +111,7 @@ class PaymentRepository:
         membership = await self._session.scalar(
             select(
                 exists().where(
-                    OrganizationMember.organization_id
-                    == dossier.organization_id,
+                    OrganizationMember.organization_id == dossier.organization_id,
                     OrganizationMember.user_id == user_id,
                     OrganizationMember.status == MembershipStatus.ACTIVE,
                 )

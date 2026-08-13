@@ -19,7 +19,7 @@ export function PublicWorkCard({
 }) {
   const [imageReady, setImageReady] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
-  const href = `/tai-san/${encodeURIComponent(work.slug)}`;
+  const href = `/works/${encodeURIComponent(work.slug)}`;
 
   return (
     <article className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-950">

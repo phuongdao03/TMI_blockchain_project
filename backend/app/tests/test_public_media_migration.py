@@ -25,12 +25,10 @@ def test_public_media_migration_is_reversible(
 
     with sqlite3.connect(database_path) as connection:
         columns = {
-            row[1]
-            for row in connection.execute("PRAGMA table_info(public_work_media)")
+            row[1] for row in connection.execute("PRAGMA table_info(public_work_media)")
         }
         indexes = {
-            row[1]
-            for row in connection.execute("PRAGMA index_list(public_work_media)")
+            row[1] for row in connection.execute("PRAGMA index_list(public_work_media)")
         }
     assert {
         "id",

@@ -101,15 +101,6 @@ class OAuthStateInvalidError(DomainError):
         )
 
 
-class OAuthCodeInvalidError(DomainError):
-    def __init__(self) -> None:
-        super().__init__(
-            code="OAUTH_CODE_INVALID",
-            message="The OAuth authorization could not be completed.",
-            status_code=400,
-        )
-
-
 class OAuthIdentityInvalidError(DomainError):
     def __init__(self) -> None:
         super().__init__(
@@ -123,7 +114,10 @@ class OAuthAccountLinkRequiredError(DomainError):
     def __init__(self) -> None:
         super().__init__(
             code="OAUTH_ACCOUNT_LINK_REQUIRED",
-            message="This email is already registered. Sign in first to link Google.",
+            message=(
+                "This email is already registered. Sign in with the existing "
+                "method before linking a new identity."
+            ),
             status_code=409,
         )
 

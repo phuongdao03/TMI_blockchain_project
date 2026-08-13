@@ -49,9 +49,7 @@ class StubEditorService:
     ) -> tuple[tuple[PublicWork, ...], int]:
         return (self.work,), 1
 
-    async def get(
-        self, _principal: object, _work_id: UUID
-    ) -> PublicWorkEditorView:
+    async def get(self, _principal: object, _work_id: UUID) -> PublicWorkEditorView:
         return PublicWorkEditorView(
             work=self.work,
             category_name="Digital Art",
@@ -125,9 +123,7 @@ def test_editor_api_contract_and_preview_privacy() -> None:
             assert listed.status_code == 200
             assert listed.json()["meta"]["total"] == 1
 
-            detail = client.get(
-                f"/api/v1/admin/public-works/{service.work.id}"
-            )
+            detail = client.get(f"/api/v1/admin/public-works/{service.work.id}")
             assert detail.status_code == 200
             assert detail.json()["data"]["checklist"] == [
                 {"code": "TITLE_REQUIRED", "passed": True}

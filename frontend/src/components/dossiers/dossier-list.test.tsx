@@ -51,7 +51,7 @@ describe("DossierList", () => {
       screen
         .getByRole("link", { name: "Tiếp tục hoàn thiện" })
         .getAttribute("href"),
-    ).toBe("/ho-so/9155dbf5-bb3e-449d-8bf0-9572cc642cac");
+    ).toBe("/dossiers/9155dbf5-bb3e-449d-8bf0-9572cc642cac");
     expect(listMock).toHaveBeenCalledWith({
       page: 1,
       pageSize: 10,

@@ -156,8 +156,7 @@ def test_unknown_uuid_slug_enumeration_is_indistinguishable_and_bounded() -> Non
         assert [response.status_code for response in responses] == [404, 404]
         assert responses[0].json() == responses[1].json()
         assert all(
-            response.headers["Cache-Control"] == "no-store"
-            for response in responses
+            response.headers["Cache-Control"] == "no-store" for response in responses
         )
         assert oversized.status_code == 422
         actions = [call.kwargs["extra"]["action"] for call in log_info.call_args_list]

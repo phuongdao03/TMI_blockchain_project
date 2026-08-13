@@ -26,7 +26,9 @@ describe("ApplicantUpgradeCard", () => {
 
     expect(screen.getByText(/Không cần tạo tài khoản mới/i)).toBeDefined();
     fireEvent.click(screen.getByLabelText(/Cá nhân/i));
-    fireEvent.click(screen.getByRole("button", { name: /Bắt đầu gửi tài sản/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Bắt đầu gửi tài sản/i }),
+    );
 
     await waitFor(() => {
       expect(upgradeToApplicant).toHaveBeenCalledWith("INDIVIDUAL_APPLICANT");

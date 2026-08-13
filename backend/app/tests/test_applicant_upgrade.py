@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.base import Base
+from app.modules.audit.models import AuditLog
 from app.modules.auth.errors import ApplicantUpgradeNotAllowedError
 from app.modules.auth.models import AccountType, Role, User, UserRole, UserStatus
 from app.modules.auth.onboarding import ApplicantUpgradeService
@@ -79,6 +80,20 @@ def test_public_user_can_upgrade_once_without_privileged_role(tmp_path: Path) ->
             assert stored_user is not None
             assert stored_user.account_type is AccountType.ORGANIZATION_APPLICANT
             assert stored_roles == ("APPLICANT",)
+            audit_rows = (
+                await session.scalars(
+                    select(AuditLog).where(
+                        AuditLog.action == "auth.account.applicant_upgraded"
+                    )
+                )
+            ).all()
+            assert len(audit_rows) == 1
+            assert audit_rows[0].actor_user_id == user_id
+            assert audit_rows[0].resource_id == str(user_id)
+            assert audit_rows[0].after_json == {
+                "account_type": "ORGANIZATION_APPLICANT"
+            }
+            assert "viewer@tmigroup.vn" not in str(audit_rows[0].after_json)
 
     asyncio.run(exercise())
 

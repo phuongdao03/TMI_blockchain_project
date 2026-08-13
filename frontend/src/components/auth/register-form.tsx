@@ -1,6 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  signOut,
+} from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -9,8 +14,8 @@ import { AuthCard, AuthLink } from "@/components/auth/auth-card";
 import { FormField } from "@/components/auth/form-field";
 import { GoogleOAuthButton } from "@/components/auth/google-oauth-button";
 import { Button } from "@/components/ui/button";
-import { ApiError, authApi } from "@/lib/api/client";
 import { registerSchema, type RegisterValues } from "@/lib/auth/schemas";
+import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
 
 export function RegisterForm() {
   const [submitError, setSubmitError] = useState<string>();
@@ -34,12 +39,28 @@ export function RegisterForm() {
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(undefined);
     try {
-      await authApi.register(values.email, values.password, values.accountType);
+      if (!firebaseConfigured())
+        throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
+      const auth = getFirebaseAuth();
+      const credential = await createUserWithEmailAndPassword(
+        auth,
+        values.email,
+        values.password,
+      );
+      const continueUrl = new URL("/login", window.location.origin);
+      continueUrl.searchParams.set("accountType", values.accountType);
+      try {
+        await sendEmailVerification(credential.user, {
+          url: continueUrl.toString(),
+        });
+      } finally {
+        await signOut(auth);
+      }
       setAccepted(true);
-    } catch (error) {
+    } catch {
       setSubmitError(
-        error instanceof ApiError
-          ? error.message
+        typeof navigator !== "undefined" && !navigator.onLine
+          ? "Bạn đang ngoại tuyến. Hãy kiểm tra kết nối mạng rồi thử lại."
           : "Không thể đăng ký lúc này. Vui lòng thử lại.",
       );
     }
@@ -47,13 +68,13 @@ export function RegisterForm() {
 
   return (
     <AuthCard
-      description="Chọn đúng mục đích sử dụng; quyền và không gian làm việc sẽ theo tài khoản của bạn."
+      description="Bắt đầu với danh tính rõ ràng, dữ liệu có nguồn gốc và một quy trình minh bạch."
       footer={
         <>
           Đã có tài khoản? <AuthLink href="/login">Đăng nhập</AuthLink>
         </>
       }
-      title="Tạo tài khoản"
+      title="Tạo tài khoản đáng tin cậy"
     >
       {accepted ? (
         <div
@@ -75,9 +96,8 @@ export function RegisterForm() {
               Chọn cách bắt đầu
             </legend>
             <p className="mb-3 max-w-2xl text-sm leading-6 text-[#a8a3a1]">
-              Nếu bạn chỉ muốn xem và bình chọn, hãy giữ lựa chọn khám phá công
-              khai. Khi sẵn sàng gửi tài sản, bạn có thể nâng cấp chính tài khoản
-              này mà không cần đăng ký lại.
+              Bạn có thể bắt đầu bằng việc tra cứu công khai hoặc tạo hồ sơ cho
+              cá nhân, tổ chức của mình.
             </p>
             <div className="grid gap-2 sm:grid-cols-3">
               {(
@@ -85,7 +105,7 @@ export function RegisterForm() {
                   [
                     "PUBLIC_USER",
                     "Khám phá công khai",
-                    "Tra cứu, xác minh và theo dõi tài sản công khai",
+                    "Tra cứu và xác minh thông tin đã công bố",
                   ],
                   [
                     "INDIVIDUAL_APPLICANT",
@@ -128,6 +148,16 @@ export function RegisterForm() {
               </p>
             ) : null}
           </fieldset>
+          <div className="rounded-lg border border-[#f3d675]/20 bg-[#f3d675]/[0.05] px-3.5 py-3 text-xs leading-5 text-[#b7b1af]">
+            <p className="font-semibold text-[#f3d675]">
+              Bạn được mời làm việc nội bộ?
+            </p>
+            <p className="mt-1">
+              Tài khoản nhân sự không đăng ký tại đây. Hãy mở liên kết riêng
+              trong email được cấp để xác minh và thiết lập bảo vệ tài khoản.
+            </p>
+            <AuthLink href="/login">Đã thiết lập? Đi tới đăng nhập</AuthLink>
+          </div>
           <GoogleOAuthButton accountType={accountType} />
           <div aria-hidden="true" className="flex items-center gap-3">
             <span className="h-px flex-1 bg-white/10" />

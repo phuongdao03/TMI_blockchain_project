@@ -59,7 +59,7 @@ export function SearchResultsPage({
     <div>
       <Link
         className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-white"
-        href="/thu-vien"
+        href="/works"
       >
         <ArrowLeft aria-hidden="true" className="size-4" /> Quay lại thư viện
       </Link>
@@ -77,7 +77,7 @@ export function SearchResultsPage({
       </header>
 
       <form
-        action="/tim-kiem"
+        action="/search"
         className="mt-9 grid gap-3 border-y border-white/10 py-5 lg:grid-cols-[minmax(0,1fr)_13rem_auto]"
         method="get"
       >
@@ -286,7 +286,7 @@ function SearchResult({
         </div>
         <h3 className="mt-2 text-xl font-bold tracking-tight text-white transition group-hover:text-gold-200">
           <Link
-            href={`/tai-san/${encodeURIComponent(work.slug)}`}
+            href={`/works/${encodeURIComponent(work.slug)}`}
             onClick={() => {
               void publicApi
                 .recordSearchClick(requestId, work.id)
@@ -468,7 +468,7 @@ function EmptyState() {
       </p>
       <Link
         className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-gold-200"
-        href="/tim-kiem"
+        href="/search"
       >
         Xóa bộ lọc
       </Link>

@@ -52,11 +52,14 @@ def _as_utc(value: datetime) -> datetime:
 def eligible_metric_date(*, now: datetime) -> date | None:
     normalized = _as_utc(now)
     metric_date = normalized.date() - timedelta(days=1)
-    eligible_at = datetime.combine(
-        metric_date + timedelta(days=1),
-        time.min,
-        tzinfo=UTC,
-    ) + DAILY_SNAPSHOT_GRACE
+    eligible_at = (
+        datetime.combine(
+            metric_date + timedelta(days=1),
+            time.min,
+            tzinfo=UTC,
+        )
+        + DAILY_SNAPSHOT_GRACE
+    )
     return metric_date if normalized >= eligible_at else None
 
 
@@ -85,11 +88,14 @@ class EngagementAnalyticsService:
         if target_date is None:
             self._telemetry.record("not_ready")
             return None
-        eligible_at = datetime.combine(
-            target_date + timedelta(days=1),
-            time.min,
-            tzinfo=UTC,
-        ) + DAILY_SNAPSHOT_GRACE
+        eligible_at = (
+            datetime.combine(
+                target_date + timedelta(days=1),
+                time.min,
+                tzinfo=UTC,
+            )
+            + DAILY_SNAPSHOT_GRACE
+        )
         if normalized_now < eligible_at:
             self._telemetry.record("not_ready")
             return None

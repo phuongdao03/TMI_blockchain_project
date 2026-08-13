@@ -12,6 +12,25 @@ const user = {
   ],
   accountType: "INDIVIDUAL_APPLICANT",
 };
+const applicantUser = {
+  id: "e57912cc-714c-4ab5-9fd9-1c5b38cd902b",
+  email: "applicant@tmigroup.vn",
+  roles: ["APPLICANT"],
+  accountType: "INDIVIDUAL_APPLICANT",
+};
+const reviewerUser = {
+  id: "f57912cc-714c-4ab5-9fd9-1c5b38cd902b",
+  email: "reviewer@tmigroup.vn",
+  roles: ["REVIEWER"],
+  accountType: null,
+};
+const superAdminUser = {
+  id: "a57912cc-714c-4ab5-9fd9-1c5b38cd902b",
+  email: "superadmin@tmigroup.vn",
+  roles: ["SUPER_ADMIN"],
+  accountType: null,
+};
+const consumedInvitationTokens = new Set();
 const organizationId = "9155dbf5-bb3e-449d-8bf0-9572cc642cac";
 const avatarMediaId = "6a0bb388-3c26-4417-aed8-3ca05c212d1f";
 const dossierId = "9155dbf5-bb3e-449d-8bf0-9572cc642cac";
@@ -20,6 +39,7 @@ const categoryId = "4d28db19-1507-5a45-a50d-cd0aa83029ec";
 const reviewAssignmentId = "4155dbf5-bb3e-449d-8bf0-9572cc642cac";
 const reviewVersionId = "8155dbf5-bb3e-449d-8bf0-9572cc642cac";
 const reviewMediaId = "7155dbf5-bb3e-449d-8bf0-9572cc642cac";
+const similarityCaseId = "3155dbf5-bb3e-449d-8bf0-9572cc642cac";
 const councilSessionId = "9255dbf5-bb3e-449d-8bf0-9572cc642cac";
 const councilCaseId = "9355dbf5-bb3e-449d-8bf0-9572cc642cac";
 const paymentOrderId = "a255dbf5-bb3e-449d-8bf0-9572cc642cac";
@@ -65,13 +85,34 @@ let versions = [];
 let timeline = [];
 let reviewAssignmentStatus = "ASSIGNED";
 let review = null;
+let similarityCaseStatus = "ASSIGNED";
+let similarityResolution = null;
 let councilSessionStatus = "DRAFT";
 let councilAttendance = null;
 let councilConflict = null;
 let councilVote = null;
 let paymentOrder = null;
 let paymentStatusReads = 0;
+let paymentScenario = "paid";
 let cmsPosts = [];
+const durableJobId = "b255dbf5-bb3e-449d-8bf0-9572cc642cac";
+const initialDurableJob = {
+  id: durableJobId,
+  taskName: "blockchain.broadcast",
+  queueName: "blockchain",
+  resourceType: "blockchain_transaction",
+  resourceId: "c255dbf5-bb3e-449d-8bf0-9572cc642cac",
+  status: "DEAD_LETTERED",
+  totalAttempts: 6,
+  maxAttempts: 6,
+  replayCount: 0,
+  version: 7,
+  scheduledAt: "2026-08-11T10:00:00Z",
+  lastErrorCode: "BLOCKCHAIN_TRANSIENT",
+  createdAt: "2026-08-11T10:00:00Z",
+  updatedAt: "2026-08-11T10:05:00Z",
+};
+let durableJob = { ...initialDurableJob };
 const publicWorkId = "d255dbf5-bb3e-449d-8bf0-9572cc642cac";
 let publicWork = {
   id: publicWorkId,
@@ -150,8 +191,14 @@ function send(response, status, body, headers = {}) {
 
 const server = createServer(async (request, response) => {
   const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
-  const authenticated = request.headers.cookie?.includes(
-    "tmi_access=e2e-access",
+  const authenticated =
+    request.headers.cookie?.includes("tmi_access=e2e-access") ||
+    request.headers.cookie?.includes("tmi_access=e2e-super-admin-access");
+  const superAdminAuthenticated = request.headers.cookie?.includes(
+    "tmi_access=e2e-super-admin-access",
+  );
+  const applicantAuthenticated = request.headers.cookie?.includes(
+    "tmi_e2e_persona=applicant",
   );
   const csrfProtected =
     authenticated && request.headers["x-csrf-token"] === "e2e-csrf";
@@ -254,6 +301,86 @@ const server = createServer(async (request, response) => {
     );
     return;
   }
+  if (request.method === "POST" && path === "/api/v1/auth/firebase/exchange") {
+    const payload = await readJson(request);
+    let authenticatedUser;
+    if (payload.idToken === "e2e-super-admin-token") {
+      authenticatedUser = superAdminUser;
+      durableJob = { ...initialDurableJob };
+    } else if (payload.idToken === "e2e-admin-token") authenticatedUser = user;
+    else if (payload.idToken === "e2e-reviewer-mfa-token")
+      authenticatedUser = reviewerUser;
+    else if (payload.idToken === "e2e-applicant-token") {
+      authenticatedUser = {
+        ...applicantUser,
+        accountType: payload.accountType,
+        roles: payload.accountType === "PUBLIC_USER" ? [] : ["APPLICANT"],
+      };
+    } else {
+      const failure = error(
+        401,
+        "OAUTH_IDENTITY_INVALID",
+        "Identity cannot be verified.",
+      );
+      send(response, failure.status, failure.body);
+      return;
+    }
+    const accessToken =
+      payload.idToken === "e2e-super-admin-token"
+        ? "e2e-super-admin-access"
+        : "e2e-access";
+    send(response, 200, envelope({ user: authenticatedUser }), {
+      "Set-Cookie": [
+        `tmi_access=${accessToken}; Path=/; HttpOnly; SameSite=Lax`,
+        "tmi_refresh=e2e-refresh; Path=/; HttpOnly; SameSite=Lax",
+        "tmi_csrf=e2e-csrf; Path=/; SameSite=Lax",
+      ],
+    });
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path === "/api/v1/auth/staff-invitations/accept"
+  ) {
+    const payload = await readJson(request);
+    if (payload.idToken !== "e2e-staff-invitation-token") {
+      const failure = error(
+        403,
+        "INVITATION_IDENTITY_MISMATCH",
+        "Invitation cannot be accepted.",
+      );
+      send(response, failure.status, failure.body);
+      return;
+    }
+    if (consumedInvitationTokens.has(payload.invitationToken)) {
+      const failure = error(
+        409,
+        "INVITATION_ALREADY_USED",
+        "Invitation cannot be accepted.",
+      );
+      send(response, failure.status, failure.body);
+      return;
+    }
+    consumedInvitationTokens.add(payload.invitationToken);
+    send(response, 202, envelope({ status: "MFA_ENROLLMENT_REQUIRED" }));
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path === "/api/v1/auth/logout" &&
+    request.headers["x-csrf-token"] === "e2e-csrf"
+  ) {
+    response.writeHead(204, {
+      "Set-Cookie": [
+        "tmi_access=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax",
+        "tmi_refresh=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax",
+        "tmi_csrf=; Path=/; Max-Age=0; SameSite=Lax",
+      ],
+      "X-Request-Id": "e2e-logout",
+    });
+    response.end();
+    return;
+  }
   if (request.method === "GET" && path === "/api/v1/public/search/facets") {
     send(
       response,
@@ -310,7 +437,7 @@ const server = createServer(async (request, response) => {
     );
     response.writeHead(200, {
       "Cache-Control": "no-store",
-      "Content-Location": "http://127.0.0.1:3100/tai-san/bo-nhan-dien-tmi",
+      "Content-Location": "http://127.0.0.1:3100/works/bo-nhan-dien-tmi",
       "Content-Type": "image/png",
     });
     response.end(png);
@@ -328,6 +455,24 @@ const server = createServer(async (request, response) => {
         status: "OPEN",
       }),
     );
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    [
+      "/api/v1/public/works/bo-nhan-dien-tmi/engagement/views",
+      "/api/v1/public/works/chia-se-rieng/engagement/views",
+    ].includes(path)
+  ) {
+    response.writeHead(204, { "X-Request-Id": "e2e-request" });
+    response.end();
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path === "/api/v1/public/works/bo-nhan-dien-tmi/engagement/shares"
+  ) {
+    send(response, 202, envelope({ accepted: true }));
     return;
   }
   if (
@@ -463,7 +608,42 @@ const server = createServer(async (request, response) => {
         confirmations: 3,
         confirmedAt: "2026-07-31T10:00:00Z",
         explorerUrl: null,
+        dossierCode: "TMI-2026-DEMO0001",
+        metadataHash: "ab".repeat(32),
+        blockNumber: 123456,
+        issuerLabel: "TMI Certificate",
+        documents: [
+          {
+            title: "Hồ sơ công khai",
+            evidenceType: "PDF",
+            sha256:
+              "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+          },
+        ],
       }),
+    );
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/verify/certificate/TMI-2026-7EAEC2D2C99A/versions"
+  ) {
+    send(
+      response,
+      200,
+      envelope([
+        {
+          versionNo: 1,
+          status: "ACTIVE",
+          metadataHash: "ab".repeat(32),
+          transactionHash: publicAsset.transactionHash,
+          blockNumber: 123456,
+          confirmedAt: "2026-07-31T10:00:00Z",
+          createdAt: "2026-07-31T09:00:00Z",
+          issuerLabel: "TMI Certificate",
+          documents: [],
+        },
+      ]),
     );
     return;
   }
@@ -511,8 +691,39 @@ const server = createServer(async (request, response) => {
           },
         },
         metadataHash: "ab".repeat(32),
-        qrPayload: "http://127.0.0.1:3100/kiem-tra/demo-token",
+        qrPayload: "http://127.0.0.1:3100/verify/demo-token",
       }),
+    );
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === `/api/v1/certificates/${demoCertificate.id}/versions` &&
+    authenticated
+  ) {
+    send(
+      response,
+      200,
+      envelope([
+        {
+          id: "8eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
+          certificateId: demoCertificate.id,
+          versionNo: 1,
+          dossierVersionId: reviewVersionId,
+          predecessorVersionId: null,
+          status: "ACTIVE",
+          changeReason: null,
+          requestedBy: null,
+          requestedAt: null,
+          decidedBy: null,
+          decidedAt: null,
+          rejectionReason: null,
+          metadataHash: "ab".repeat(32),
+          blockchainTransactionId: "9eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
+          pdfReady: true,
+          createdAt: "2026-07-31T10:00:00Z",
+        },
+      ]),
     );
     return;
   }
@@ -525,7 +736,7 @@ const server = createServer(async (request, response) => {
       response,
       200,
       envelope({
-        url: "http://127.0.0.1:3100/kiem-tra/demo-token",
+        url: "http://127.0.0.1:3100/verify/demo-token",
         expiresAt: Math.floor(Date.now() / 1000) + 300,
       }),
     );
@@ -550,6 +761,18 @@ const server = createServer(async (request, response) => {
         confirmations: 3,
         confirmedAt: "2026-07-31T10:00:00Z",
         explorerUrl: null,
+        dossierCode: "TMI-2026-DEMO0001",
+        metadataHash: "ab".repeat(32),
+        blockNumber: 123456,
+        issuerLabel: "TMI Certificate",
+        documents: [
+          {
+            title: "Hồ sơ công khai",
+            evidenceType: "PDF",
+            sha256:
+              "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+          },
+        ],
       }),
     );
     return;
@@ -577,7 +800,81 @@ const server = createServer(async (request, response) => {
     timeline = [];
     paymentOrder = null;
     paymentStatusReads = 0;
+    paymentScenario = "paid";
     send(response, 200, envelope({ status: "reset" }));
+    return;
+  }
+  if (request.method === "POST" && path === "/api/e2e/reset-payment-expired") {
+    paymentScenario = "expired";
+    paymentStatusReads = 0;
+    paymentOrder = {
+      id: paymentOrderId,
+      orderCode: "PAY-2026-E2E00002",
+      dossierId,
+      provider: "mock",
+      providerOrderId: "mock-provider-expired",
+      amountMinor: 1000000,
+      currency: "VND",
+      status: "EXPIRED",
+      expiresAt: "2026-08-01T08:15:00Z",
+      paidAt: null,
+      checkoutUrl: null,
+      qrPayload: null,
+      createdAt: "2026-08-01T08:00:00Z",
+      updatedAt: "2026-08-01T08:16:00Z",
+    };
+    send(response, 200, envelope({ status: "reset" }));
+    return;
+  }
+  if (request.method === "POST" && path === "/api/e2e/reset-payment-outage") {
+    paymentScenario = "outage";
+    paymentStatusReads = 0;
+    paymentOrder = {
+      id: paymentOrderId,
+      orderCode: "PAY-2026-E2E00003",
+      dossierId,
+      provider: "mock",
+      providerOrderId: "mock-provider-outage",
+      amountMinor: 1000000,
+      currency: "VND",
+      status: "PENDING",
+      expiresAt: "2026-08-01T08:15:00Z",
+      paidAt: null,
+      checkoutUrl: "http://127.0.0.1:4010/mock-checkout",
+      qrPayload: "TMI|PAY-2026-E2E00003",
+      createdAt: "2026-08-01T08:00:00Z",
+      updatedAt: "2026-08-01T08:00:00Z",
+    };
+    send(response, 200, envelope({ status: "reset" }));
+    return;
+  }
+  if (request.method === "POST" && path === "/api/e2e/reset-needs-supplement") {
+    dossier = {
+      id: dossierId,
+      code: "TMI-2026-SUPPLEMENT001",
+      ownerUserId: user.id,
+      organizationId: null,
+      categoryId,
+      title: "Hồ sơ cần bổ sung",
+      slug: null,
+      summary: "Cần bổ sung bằng chứng nguồn gốc.",
+      status: "NEEDS_SUPPLEMENT",
+      visibility: "PRIVATE",
+      currentVersionNo: 1,
+      submittedAt: "2026-07-31T08:00:00Z",
+      createdAt: "2026-07-31T08:00:00Z",
+      updatedAt: "2026-08-01T08:00:00Z",
+      canEdit: true,
+    };
+    send(response, 200, envelope({ status: "reset" }));
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path === "/api/v1/admin/blockchain/transactions/failure-e2e/retry" &&
+    authenticated
+  ) {
+    send(response, 202, envelope({ id: "failure-e2e", status: "QUEUED" }));
     return;
   }
   if (
@@ -612,8 +909,22 @@ const server = createServer(async (request, response) => {
     authenticated &&
     paymentOrder
   ) {
+    if (paymentScenario === "outage") {
+      send(
+        response,
+        503,
+        JSON.stringify({
+          success: false,
+          error: {
+            code: "PAYMENT_PROVIDER_UNAVAILABLE",
+            message: "Unavailable",
+          },
+        }),
+      );
+      return;
+    }
     paymentStatusReads += 1;
-    if (paymentStatusReads >= 2) {
+    if (paymentScenario === "paid" && paymentStatusReads >= 2) {
       paymentOrder = {
         ...paymentOrder,
         status: "PAID",
@@ -868,7 +1179,71 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && path === "/api/e2e/reset-review") {
     reviewAssignmentStatus = "ASSIGNED";
     review = null;
+    similarityCaseStatus = "ASSIGNED";
+    similarityResolution = null;
     send(response, 200, envelope({ status: "reset" }));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/reviewer/similarity-cases" &&
+    authenticated
+  ) {
+    send(
+      response,
+      200,
+      paginatedEnvelope([
+        {
+          id: similarityCaseId,
+          leftDossierVersionId: "8155dbf5-bb3e-449d-8bf0-9572cc642cac",
+          rightDossierVersionId: "8255dbf5-bb3e-449d-8bf0-9572cc642cac",
+          leftAsset: {
+            dossierId: "9155dbf5-bb3e-449d-8bf0-9572cc642cac",
+            dossierCode: "HS-2026-001",
+            dossierTitle: "Bình minh trên sông",
+            versionNo: 1,
+            evidenceMediaIds: [reviewMediaId],
+          },
+          rightAsset: {
+            dossierId: "9255dbf5-bb3e-449d-8bf0-9572cc642cac",
+            dossierCode: "HS-2026-002",
+            dossierTitle: "Bình minh bên sông",
+            versionNo: 1,
+            evidenceMediaIds: [reviewMediaId],
+          },
+          signalType: "TEXT",
+          textScore: 0.91,
+          imageDistance: null,
+          policyVersion: "near-duplicate-v1",
+          status: similarityCaseStatus,
+          assignedReviewerUserId: reviewerUser.id,
+          disposition: similarityResolution?.disposition ?? null,
+          resolutionReason: similarityResolution?.reason ?? null,
+          createdAt: "2026-08-10T10:00:00Z",
+          assignedAt: "2026-08-10T11:00:00Z",
+          resolvedAt: similarityResolution ? "2026-08-10T12:00:00Z" : null,
+        },
+      ]),
+    );
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path === `/api/v1/reviewer/similarity-cases/${similarityCaseId}/resolve` &&
+    csrfProtected
+  ) {
+    similarityResolution = await readJson(request);
+    similarityCaseStatus = "RESOLVED";
+    send(
+      response,
+      200,
+      envelope({
+        id: similarityCaseId,
+        status: similarityCaseStatus,
+        disposition: similarityResolution.disposition,
+        resolutionReason: similarityResolution.reason,
+      }),
+    );
     return;
   }
   if (
@@ -978,7 +1353,8 @@ const server = createServer(async (request, response) => {
     request.method === "GET" &&
     path === `/api/v1/media/${reviewMediaId}/signed-url` &&
     authenticated &&
-    ["IN_PROGRESS", "SUBMITTED"].includes(reviewAssignmentStatus)
+    (["IN_PROGRESS", "SUBMITTED"].includes(reviewAssignmentStatus) ||
+      ["ASSIGNED", "RESOLVED"].includes(similarityCaseStatus))
   ) {
     send(
       response,
@@ -1144,12 +1520,78 @@ const server = createServer(async (request, response) => {
     send(response, 200, envelope(timeline));
     return;
   }
+  if (request.method === "GET" && path === "/api/v1/auth/me" && authenticated) {
+    send(
+      response,
+      200,
+      envelope(
+        superAdminAuthenticated
+          ? superAdminUser
+          : applicantAuthenticated
+            ? applicantUser
+            : user,
+      ),
+    );
+    return;
+  }
   if (
     request.method === "GET" &&
-    path === "/api/v1/auth/me" &&
-    request.headers.cookie?.includes("tmi_access=e2e-access")
+    path === "/api/v1/admin/operations/metrics" &&
+    superAdminAuthenticated
   ) {
-    send(response, 200, envelope(user));
+    send(
+      response,
+      200,
+      envelope({
+        dossierFunnel: { UNDER_REVIEW: 4, PAYMENT_PENDING: 2 },
+        overdueReviews: 1,
+        reviewerWorkload: [],
+        paymentFailures: 0,
+        blockchainFailures: 1,
+        publicCatalogCacheHitRatio: 1,
+        publicCatalogCacheOperations: {},
+        jobStatusCounts: { DEAD_LETTERED: 1 },
+        oldestQueuedJobAgeSeconds: 0,
+        jobRetryFailures: 1,
+        deadLetteredJobsByTask: { "blockchain.broadcast": 1 },
+      }),
+    );
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/admin/operations/jobs" &&
+    superAdminAuthenticated
+  ) {
+    send(response, 200, paginatedEnvelope([durableJob]));
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path === `/api/v1/admin/operations/jobs/${durableJobId}/replays` &&
+    superAdminAuthenticated &&
+    csrfProtected
+  ) {
+    const payload = await readJson(request);
+    if (
+      durableJob.status !== "DEAD_LETTERED" ||
+      payload.expectedVersion !== durableJob.version ||
+      typeof payload.reason !== "string" ||
+      payload.reason.trim().length < 10
+    ) {
+      const failure = error(409, "JOB_VERSION_CONFLICT", "Job changed.");
+      send(response, failure.status, failure.body);
+      return;
+    }
+    durableJob = {
+      ...durableJob,
+      status: "QUEUED",
+      replayCount: durableJob.replayCount + 1,
+      version: durableJob.version + 1,
+      scheduledAt: "2026-08-11T10:10:00Z",
+      updatedAt: "2026-08-11T10:10:00Z",
+    };
+    send(response, 200, envelope(durableJob));
     return;
   }
   if (

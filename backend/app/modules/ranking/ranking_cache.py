@@ -219,7 +219,9 @@ def deserialize_ranking_page(value: str) -> PublicRankingPage | None:
                 slug=str(_mapping(item)["slug"]),
                 title=str(_mapping(item)["title"]),
                 short_description=str(_mapping(item)["short_description"]),
-                author_display_name=_optional_str(_mapping(item)["author_display_name"]),
+                author_display_name=_optional_str(
+                    _mapping(item)["author_display_name"]
+                ),
                 category_id=UUID(str(_mapping(item)["category_id"])),
                 category_name=str(_mapping(item)["category_name"]),
                 category_slug=_optional_str(_mapping(item)["category_slug"]),

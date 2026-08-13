@@ -20,10 +20,7 @@ def group_votes(
     grouped: dict[UUID, list[CouncilVote]] = {}
     for vote in votes:
         grouped.setdefault(vote.case_id, []).append(vote)
-    return {
-        case_id: tuple(case_votes)
-        for case_id, case_votes in grouped.items()
-    }
+    return {case_id: tuple(case_votes) for case_id, case_votes in grouped.items()}
 
 
 def calculate_case_result(
@@ -33,9 +30,7 @@ def calculate_case_result(
     quorum_required: int,
 ) -> CouncilCaseResultView:
     counts = Counter(vote.choice for vote in votes)
-    vote_counts = {
-        choice: counts.get(choice, 0) for choice in CouncilVoteChoice
-    }
+    vote_counts = {choice: counts.get(choice, 0) for choice in CouncilVoteChoice}
     valid_count = len(votes)
     quorum_met = valid_count >= quorum_required
     decision: CouncilCaseDecision | None = None
@@ -81,9 +76,7 @@ def build_minutes_payload(
         "members": [
             {
                 "memberUserId": str(item.member_user_id),
-                "attendanceConfirmedAt": _iso(
-                    item.attendance_confirmed_at
-                ),
+                "attendanceConfirmedAt": _iso(item.attendance_confirmed_at),
             }
             for item in members
         ],
@@ -131,8 +124,6 @@ def _iso(value: datetime | None) -> str | None:
     if value is None:
         return None
     normalized = (
-        value.replace(tzinfo=UTC)
-        if value.tzinfo is None
-        else value.astimezone(UTC)
+        value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
     )
     return normalized.isoformat()

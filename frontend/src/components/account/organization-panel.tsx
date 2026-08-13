@@ -108,7 +108,8 @@ export function OrganizationPanel({ organizations }: OrganizationPanelProps) {
           <div className="mb-4">
             <h3 className="text-base font-semibold">Thành viên tổ chức</h3>
             <p className="mt-1 text-sm text-neutral-500">
-              Phân quyền được kiểm soát tại API và phản ánh ngay trên giao diện.
+              Mỗi thành viên chỉ nhìn thấy phần việc được giao và có thể được
+              cập nhật bất cứ lúc nào.
             </p>
           </div>
           {membersQuery.isPending ? (

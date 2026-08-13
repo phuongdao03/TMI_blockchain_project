@@ -76,17 +76,14 @@ def test_council_migration_upgrades_exact_schema_and_downgrades(
         for table, columns in expected_columns.items():
             assert table in tables
             actual = {
-                row[1]
-                for row in connection.execute(f"PRAGMA table_info({table})")
+                row[1] for row in connection.execute(f"PRAGMA table_info({table})")
             }
             assert actual == columns
 
         session_sql = connection.execute(
             "SELECT sql FROM sqlite_master WHERE name='council_sessions'"
         ).fetchone()
-        vote_indexes = connection.execute(
-            "PRAGMA index_list(council_votes)"
-        ).fetchall()
+        vote_indexes = connection.execute("PRAGMA index_list(council_votes)").fetchall()
         member_indexes = connection.execute(
             "PRAGMA index_list(council_session_members)"
         ).fetchall()

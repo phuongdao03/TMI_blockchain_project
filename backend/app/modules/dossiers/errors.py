@@ -37,6 +37,30 @@ class DossierInvalidStateError(DomainError):
         )
 
 
+class DossierDuplicateContentError(DomainError):
+    def __init__(self) -> None:
+        super().__init__(
+            code="DOSSIER_DUPLICATE_CONTENT",
+            message=(
+                "This dossier matches an existing submission and cannot be "
+                "submitted as a separate work."
+            ),
+            status_code=409,
+        )
+
+
+class DossierDuplicateDocumentError(DomainError):
+    def __init__(self) -> None:
+        super().__init__(
+            code="DOSSIER_DOCUMENT_CONFLICT",
+            message=(
+                "A submitted document conflicts with an existing protected "
+                "record. Contact support if you are authorized to reuse it."
+            ),
+            status_code=409,
+        )
+
+
 class DossierValidationError(DomainError):
     def __init__(self, message: str) -> None:
         super().__init__(

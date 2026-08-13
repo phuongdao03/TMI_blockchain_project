@@ -27,7 +27,7 @@ export function PublicMap({ category }: { category?: string }) {
             <Link
               aria-label={marker.title}
               className="absolute z-10 -translate-x-1/2 -translate-y-1/2 text-primary-500 drop-shadow-[0_0_12px_rgb(239_68_68)]"
-              href={`/tai-san/${marker.slug}`}
+              href={`/works/${marker.slug}`}
               key={marker.slug}
               style={{ left: `${left}%`, top: `${top}%` }}
             >
@@ -54,7 +54,7 @@ export function PublicMap({ category }: { category?: string }) {
           {query.data?.map((marker) => (
             <Link
               className="block rounded-xl border border-white/10 p-4 hover:bg-white/5"
-              href={`/tai-san/${marker.slug}`}
+              href={`/works/${marker.slug}`}
               key={marker.slug}
             >
               <p className="font-bold">{marker.title}</p>

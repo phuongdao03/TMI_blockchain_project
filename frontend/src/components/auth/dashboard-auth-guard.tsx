@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
 
 import { authApi } from "@/lib/api/client";
@@ -17,6 +17,7 @@ export function DashboardAuthGuard({
   initialUser: AuthUser | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: user, isPending } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: authApi.currentUser,
@@ -24,14 +25,17 @@ export function DashboardAuthGuard({
     retry: false,
     staleTime: 60_000,
   });
+  const effectiveUser = user;
 
   useEffect(() => {
-    if (!isPending && !user) {
-      router.replace("/login?next=/dashboard");
+    if (!isPending && !effectiveUser) {
+      const next =
+        pathname && pathname.startsWith("/") ? pathname : "/dashboard";
+      router.replace(`/login?next=${encodeURIComponent(next)}`);
     }
-  }, [isPending, router, user]);
+  }, [effectiveUser, isPending, pathname, router]);
 
-  if (isPending || !user) {
+  if (isPending || !effectiveUser) {
     return (
       <div
         className="grid min-h-dvh place-items-center bg-background text-neutral-700"
@@ -44,5 +48,5 @@ export function DashboardAuthGuard({
       </div>
     );
   }
-  return <AuthUserProvider user={user}>{children}</AuthUserProvider>;
+  return <AuthUserProvider user={effectiveUser}>{children}</AuthUserProvider>;
 }

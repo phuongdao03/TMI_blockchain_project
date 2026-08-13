@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { confirmPasswordReset } from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -8,13 +9,13 @@ import { useForm } from "react-hook-form";
 import { AuthCard, AuthLink } from "@/components/auth/auth-card";
 import { FormField } from "@/components/auth/form-field";
 import { Button } from "@/components/ui/button";
-import { ApiError, authApi } from "@/lib/api/client";
 import {
   resetPasswordSchema,
   type ResetPasswordValues,
 } from "@/lib/auth/schemas";
+import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
 
-export function ResetPasswordForm({ token }: { token: string }) {
+export function ResetPasswordForm({ oobCode }: { oobCode: string }) {
   const [submitError, setSubmitError] = useState<string>();
   const [completed, setCompleted] = useState(false);
   const {
@@ -23,19 +24,23 @@ export function ResetPasswordForm({ token }: { token: string }) {
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordValues>({
     resolver: zodResolver(resetPasswordSchema),
-    defaultValues: { token, newPassword: "", confirmPassword: "" },
+    defaultValues: { token: oobCode, newPassword: "", confirmPassword: "" },
   });
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(undefined);
     try {
-      await authApi.resetPassword(values.token, values.newPassword);
+      if (!firebaseConfigured())
+        throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
+      await confirmPasswordReset(
+        getFirebaseAuth(),
+        values.token,
+        values.newPassword,
+      );
       setCompleted(true);
-    } catch (error) {
+    } catch {
       setSubmitError(
-        error instanceof ApiError
-          ? error.message
-          : "Không thể đặt lại mật khẩu lúc này.",
+        "Liên kết đặt lại mật khẩu không còn hiệu lực. Vui lòng yêu cầu liên kết mới.",
       );
     }
   });

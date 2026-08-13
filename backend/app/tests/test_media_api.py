@@ -19,6 +19,7 @@ from app.modules.media.dependencies import (
 from app.modules.media.models import MediaStatus
 from app.modules.media.types import (
     MediaAssetView,
+    MediaContentView,
     SignedDeliveryView,
     UploadCompletion,
     UploadIntent,
@@ -81,6 +82,35 @@ class StubMediaService:
         return SignedDeliveryView(
             url="https://api.cloudinary.test/download?signed=1",
             expires_at=1_785_398_700,
+        )
+
+    async def get_asset(
+        self,
+        principal: AuthPrincipal,
+        media_id: UUID,
+    ) -> MediaAssetView:
+        return MediaAssetView(
+            id=self.media_id,
+            status=MediaStatus.REJECTED,
+            mime_type="image/png",
+            bytes=2_048,
+            width=512,
+            height=512,
+            duration_ms=None,
+            inspection_attempts=1,
+            inspection_reason_code="MALWARE_DETECTED",
+            inspected_at=NOW,
+        )
+
+    async def download_content(
+        self,
+        principal: AuthPrincipal,
+        media_id: UUID,
+    ) -> MediaContentView:
+        return MediaContentView(
+            content=b"original bytes",
+            mime_type="application/pdf",
+            filename="evidence.pdf",
         )
 
     async def delete_asset(
@@ -162,6 +192,12 @@ def test_media_api_contract_and_validation() -> None:
             principal,
         )
     )
+    status_response = asyncio.run(
+        _request("GET", f"{base}/{service.media_id}", service, principal)
+    )
+    content = asyncio.run(
+        _request("GET", f"{base}/{service.media_id}/content", service, principal)
+    )
     deleted = asyncio.run(
         _request(
             "DELETE",
@@ -189,6 +225,13 @@ def test_media_api_contract_and_validation() -> None:
     assert issued.json()["data"]["parameters"]["type"] == "authenticated"
     assert completed.json()["data"]["status"] == "ACTIVE"
     assert delivery.json()["data"]["expiresAt"] == 1_785_398_700
+    assert status_response.json()["data"]["status"] == "REJECTED"
+    assert status_response.json()["data"]["inspectionReasonCode"] == (
+        "MALWARE_DETECTED"
+    )
+    assert content.content == b"original bytes"
+    assert content.headers["cache-control"] == "private, no-store"
+    assert content.headers["content-disposition"].endswith("evidence.pdf")
     assert deleted.json()["data"] == {"status": "deleted"}
     assert invalid.status_code == 422
     assert service.intent is not None

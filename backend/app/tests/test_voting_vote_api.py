@@ -2,6 +2,7 @@ import asyncio
 import base64
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Never
 from uuid import UUID, uuid4
 
 import pytest
@@ -442,7 +443,9 @@ def test_vote_api_requires_idempotency_key_and_returns_safe_truth() -> None:
     principal = _principal()
 
     class StubService:
-        async def create_vote(self, *_args: object, **_kwargs: object):
+        async def create_vote(
+            self, *_args: object, **_kwargs: object
+        ) -> VoteMutationResult:
             return VoteMutationResult(
                 vote_id=uuid4(),
                 campaign_id=campaign_id,
@@ -453,7 +456,9 @@ def test_vote_api_requires_idempotency_key_and_returns_safe_truth() -> None:
                 created_at=NOW,
             )
 
-        async def change_vote(self, *_args: object, **_kwargs: object):
+        async def change_vote(
+            self, *_args: object, **_kwargs: object
+        ) -> VoteMutationResult:
             return VoteMutationResult(
                 vote_id=uuid4(),
                 campaign_id=campaign_id,
@@ -465,7 +470,9 @@ def test_vote_api_requires_idempotency_key_and_returns_safe_truth() -> None:
                 previous_vote_id=uuid4(),
             )
 
-        async def revoke_vote(self, *_args: object, **_kwargs: object):
+        async def revoke_vote(
+            self, *_args: object, **_kwargs: object
+        ) -> VoteMutationResult:
             return VoteMutationResult(
                 vote_id=uuid4(),
                 campaign_id=campaign_id,
@@ -525,7 +532,9 @@ def test_vote_history_api_is_paginated_and_allowlisted() -> None:
     work_id = uuid4()
 
     class StubHistoryService:
-        async def list(self, received: AuthPrincipal, **kwargs: object):
+        async def list(
+            self, received: AuthPrincipal, **kwargs: object
+        ) -> tuple[list[VoteHistoryItem], int]:
             assert received.user_id == principal.user_id
             assert kwargs["page"] == 2
             return (
@@ -570,7 +579,7 @@ def test_vote_mutation_rejects_missing_csrf_before_service_call() -> None:
     called = False
 
     class StubService:
-        async def create_vote(self, *_args: object, **_kwargs: object):
+        async def create_vote(self, *_args: object, **_kwargs: object) -> Never:
             nonlocal called
             called = True
             raise AssertionError("service must not be called")

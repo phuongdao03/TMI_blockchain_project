@@ -31,9 +31,7 @@ def _run(status: CampaignStatus = CampaignStatus.PUBLISHED) -> RankingRun:
             rule_version=7,
             end_at=NOW,
         ),
-        calculation=calculate_rankings(
-            (RankingCandidate(WORK_ID, CATEGORY_ID, 4),)
-        ),
+        calculation=calculate_rankings((RankingCandidate(WORK_ID, CATEGORY_ID, 4),)),
     )
 
 

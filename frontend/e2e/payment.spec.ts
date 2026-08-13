@@ -31,9 +31,9 @@ test("approved dossier creates order and waits for trusted paid status", async (
     }
   });
 
-  await page.goto("/ho-so/9155dbf5-bb3e-449d-8bf0-9572cc642cac");
+  await page.goto("/dossiers/9155dbf5-bb3e-449d-8bf0-9572cc642cac");
   await page.getByRole("button", { name: "Tạo lệnh thanh toán" }).click();
-  await expect(page).toHaveURL(/\/thanh-toan\/a255dbf5-/);
+  await expect(page).toHaveURL(/\/payments\/a255dbf5-/);
   await expect(
     page.getByRole("heading", { name: "Thanh toán thành công" }),
   ).toBeVisible({ timeout: 10_000 });

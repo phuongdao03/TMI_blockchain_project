@@ -81,7 +81,7 @@ describe("CampaignDetail", () => {
     const login = await screen.findByRole("link", {
       name: "Đăng nhập để chọn",
     });
-    expect(login.getAttribute("href")).toBe("/login?next=/binh-chon/thang-8");
+    expect(login.getAttribute("href")).toBe("/login?next=/voting/thang-8");
     expect(screen.getByText("7 phiếu")).toBeTruthy();
   });
 

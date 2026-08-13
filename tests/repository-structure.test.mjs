@@ -54,9 +54,36 @@ test("ignores local secrets and documents local validation", () => {
 
   assert.match(gitignore, /^\.env\*$/m);
   assert.match(gitignore, /^!\.env\.example$/m);
+  assert.match(gitignore, /^!infrastructure\/\.env\.staging\.example$/m);
   assert.match(gitignore, /^\*\.pem$/m);
+  assert.match(gitignore, /^client_secret_\*\.json$/m);
+  assert.match(gitignore, /^firebase-service-account\*\.json$/m);
+  assert.match(gitignore, /^\*firebase-adminsdk\*\.json$/m);
+  assert.match(gitignore, /^service-account\*\.json$/m);
   assert.match(readme, /npm ci/);
   assert.match(readme, /npm run lint/);
   assert.match(readme, /npm run typecheck/);
   assert.match(readme, /npm test/);
+});
+
+test("pins a redacted full-history secret scan with a synthetic canary", () => {
+  const workflow = readFileSync(".github/workflows/delivery.yml", "utf8");
+  const scanner = readFileSync(
+    "infrastructure/scripts/verify-gitleaks.sh",
+    "utf8",
+  );
+  const config = readFileSync(".gitleaks.toml", "utf8");
+
+  assert.match(workflow, /name: Secret scan/);
+  assert.match(workflow, /fetch-depth: 0/);
+  assert.match(workflow, /infrastructure\/scripts\/verify-gitleaks\.sh/);
+  assert.match(scanner, /ghcr\.io\/gitleaks\/gitleaks:v8\.30\.1/);
+  assert.match(scanner, /gitleaks[^\n]*git|\"\$\{scanner_image\}\" git/);
+  assert.match(scanner, /--redact/);
+  assert.match(scanner, /synthetic canary/i);
+  assert.match(scanner, /\[\[ -f "\$\{repository_root\}\/\$\{path\}" \]\]/);
+  assert.match(scanner, /MSYS_NO_PATHCONV=1 docker run/);
+  assert.match(scanner, /cygpath -w/);
+  assert.match(config, /useDefault\s*=\s*true/);
+  assert.match(config, /google-oauth-client-secret-json/);
 });

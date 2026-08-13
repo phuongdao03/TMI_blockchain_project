@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.db.base import Base
+from app.modules.audit.models import AuditActorType, AuditLog
 from app.modules.auth.models import User, UserStatus
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.models import Category, Dossier, DossierStatus
@@ -23,7 +24,7 @@ from app.modules.payments.errors import (
     PaymentAmountMismatchError,
     PaymentInvalidWebhookError,
 )
-from app.modules.payments.gateway import MockPaymentGateway
+from app.modules.payments.gateway import MockPaymentGateway, ProviderOrder
 from app.modules.payments.models import PaymentEvent, PaymentOrder, PaymentStatus
 from app.modules.payments.service import PaymentService
 
@@ -31,8 +32,42 @@ NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
 DOSSIER_ID = UUID("1d561c46-c710-494b-9b11-402af341acbd")
 
 
+class ReconciliationGateway(MockPaymentGateway):
+    status = "PENDING"
+
+    async def get_order(self, provider_order_id: str) -> ProviderOrder:
+        order = await super().get_order(provider_order_id)
+        return ProviderOrder(
+            provider_order_id=order.provider_order_id,
+            checkout_url=order.checkout_url,
+            qr_payload=order.qr_payload,
+            status=self.status,
+        )
+
+
+class TrackingGateway(MockPaymentGateway):
+    create_called = False
+
+    async def create_order(
+        self,
+        *,
+        order_code: str,
+        amount_minor: int,
+        currency: str,
+        expires_at: datetime,
+    ) -> ProviderOrder:
+        self.create_called = True
+        return await super().create_order(
+            order_code=order_code,
+            amount_minor=amount_minor,
+            currency=currency,
+            expires_at=expires_at,
+        )
+
+
 async def _service(
     issue_queue: list[UUID] | None = None,
+    gateway: MockPaymentGateway | None = None,
 ) -> tuple[
     PaymentService,
     async_sessionmaker[AsyncSession],
@@ -69,7 +104,7 @@ async def _service(
             UUID("4734834e-5f18-4d96-bf24-c096a9ad24e7"),
         )
     )
-    gateway = MockPaymentGateway(
+    gateway = gateway or MockPaymentGateway(
         webhook_secret="payment-secret",
         uuid_factory=lambda: "provider-order",
     )
@@ -142,12 +177,48 @@ def test_create_order_is_idempotent_and_transitions_dossier() -> None:
         assert created.checkout_url is not None
         async with sessions() as session:
             dossier = await session.get(Dossier, DOSSIER_ID)
-            count = await session.scalar(
-                select(func.count()).select_from(PaymentOrder)
-            )
+            count = await session.scalar(select(func.count()).select_from(PaymentOrder))
             assert dossier is not None
             assert dossier.status is DossierStatus.PAYMENT_PENDING
             assert count == 1
+            audits = tuple((await session.scalars(select(AuditLog))).all())
+            assert [row.action for row in audits] == ["payment.order.created"]
+            assert audits[0].actor_user_id == principal.user_id
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_payment_order_and_dossier_transition_roll_back_when_audit_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def exercise() -> None:
+        gateway = TrackingGateway(
+            webhook_secret="payment-secret",
+            uuid_factory=lambda: "provider-order",
+        )
+        service, sessions, engine, principal = await _service(gateway=gateway)
+
+        def fail_audit(**_: object) -> None:
+            raise RuntimeError("audit storage unavailable")
+
+        monkeypatch.setattr(service._audit_service, "record", fail_audit)
+        with pytest.raises(RuntimeError, match="audit storage unavailable"):
+            await service.create_order(
+                principal,
+                DOSSIER_ID,
+                idempotency_key="create-payment-rollback",
+            )
+
+        async with sessions() as session:
+            dossier = await session.get(Dossier, DOSSIER_ID)
+            assert dossier is not None
+            assert dossier.status is DossierStatus.APPROVED
+            assert (await session.scalar(select(PaymentOrder))) is None
+            assert (await session.scalar(select(AuditLog))) is None
+        assert gateway.create_called is False
+
         await service.close()
         await engine.dispose()
 
@@ -178,7 +249,7 @@ def test_paid_webhook_is_atomic_and_duplicate_is_idempotent() -> None:
 
         assert paid.id == duplicate.id == order.id
         assert paid.status is PaymentStatus.PAID
-        assert issue_queue == [DOSSIER_ID, DOSSIER_ID]
+        assert issue_queue == [DOSSIER_ID]
         async with sessions() as session:
             dossier = await session.get(Dossier, DOSSIER_ID)
             event_count = await session.scalar(
@@ -187,6 +258,14 @@ def test_paid_webhook_is_atomic_and_duplicate_is_idempotent() -> None:
             assert dossier is not None
             assert dossier.status is DossierStatus.PAID
             assert event_count == 1
+            audits = tuple((await session.scalars(select(AuditLog))).all())
+            assert [row.action for row in audits] == [
+                "payment.order.created",
+                "payment.webhook.processed",
+            ]
+            assert audits[-1].actor_type is AuditActorType.SERVICE
+            assert audits[-1].actor_service == "payment-webhook"
+            assert "signature" not in str(audits[-1].after_json).lower()
         await service.close()
         await engine.dispose()
 
@@ -223,6 +302,126 @@ def test_webhook_rejects_tampering_and_wrong_amount_without_marking_paid() -> No
             assert order.status is PaymentStatus.PENDING
             assert dossier is not None
             assert dossier.status is DossierStatus.PAYMENT_PENDING
+            audits = tuple((await session.scalars(select(AuditLog))).all())
+            assert [row.action for row in audits] == [
+                "payment.order.created",
+                "payment.webhook.rejected",
+            ]
+            assert audits[-1].after_json == {"outcome": "AMOUNT_MISMATCH"}
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_reconciliation_confirms_paid_once_and_enqueues_issuance_once() -> None:
+    async def exercise() -> None:
+        issue_queue: list[UUID] = []
+        gateway = ReconciliationGateway(
+            webhook_secret="payment-secret",
+            uuid_factory=lambda: "provider-order",
+        )
+        service, sessions, engine, applicant = await _service(issue_queue, gateway)
+        order = await service.create_order(
+            applicant,
+            DOSSIER_ID,
+            idempotency_key="create-payment-reconcile-paid",
+        )
+        finance = AuthPrincipal(
+            user_id=applicant.user_id,
+            session_id=applicant.session_id,
+            email=applicant.email,
+            roles=("FINANCE_ADMIN",),
+        )
+        gateway.status = "PAID"
+
+        paid = await service.reconcile_order(finance, order.id)
+        replay = await service.reconcile_order(finance, order.id)
+
+        assert paid.status is PaymentStatus.PAID
+        assert replay.status is PaymentStatus.PAID
+        assert issue_queue == [DOSSIER_ID]
+        async with sessions() as session:
+            dossier = await session.get(Dossier, DOSSIER_ID)
+            assert dossier is not None
+            assert dossier.status is DossierStatus.PAID
+            audits = tuple((await session.scalars(select(AuditLog))).all())
+            assert [row.action for row in audits] == [
+                "payment.order.created",
+                "payment.order.reconciled",
+            ]
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_reconciliation_records_cancelled_provider_state() -> None:
+    async def exercise() -> None:
+        gateway = ReconciliationGateway(
+            webhook_secret="payment-secret",
+            uuid_factory=lambda: "provider-order",
+        )
+        service, sessions, engine, applicant = await _service(gateway=gateway)
+        order = await service.create_order(
+            applicant,
+            DOSSIER_ID,
+            idempotency_key="create-payment-reconcile-cancelled",
+        )
+        finance = AuthPrincipal(
+            user_id=applicant.user_id,
+            session_id=applicant.session_id,
+            email=applicant.email,
+            roles=("FINANCE_ADMIN",),
+        )
+        gateway.status = "CANCELLED"
+
+        cancelled = await service.reconcile_order(finance, order.id)
+
+        assert cancelled.status is PaymentStatus.CANCELLED
+        async with sessions() as session:
+            audits = tuple((await session.scalars(select(AuditLog))).all())
+            assert [row.action for row in audits] == [
+                "payment.order.created",
+                "payment.order.reconciled",
+            ]
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_manual_confirmation_is_audited_without_evidence_or_note() -> None:
+    async def exercise() -> None:
+        service, sessions, engine, applicant = await _service()
+        order = await service.create_order(
+            applicant,
+            DOSSIER_ID,
+            idempotency_key="create-payment-manual",
+        )
+        finance = AuthPrincipal(
+            user_id=applicant.user_id,
+            session_id=applicant.session_id,
+            email=applicant.email,
+            roles=("FINANCE_ADMIN",),
+        )
+
+        confirmed = await service.confirm_manual(
+            finance,
+            order.id,
+            evidence_reference="bank-reference-123",
+            note="Confirmed against the finance statement.",
+        )
+        assert confirmed.status is PaymentStatus.PAID
+
+        async with sessions() as session:
+            audits = tuple((await session.scalars(select(AuditLog))).all())
+            manual = audits[-1]
+            assert manual.action == "payment.order.manually_confirmed"
+            assert manual.after_json == {"status": "PAID"}
+            assert "bank-reference" not in str(manual.after_json)
+            assert "finance statement" not in str(manual.after_json)
+
         await service.close()
         await engine.dispose()
 

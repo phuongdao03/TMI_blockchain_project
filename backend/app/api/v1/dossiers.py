@@ -17,8 +17,10 @@ from app.modules.auth.dependencies import (
 from app.modules.dossiers.dependencies import DossierServiceDependency
 from app.modules.dossiers.models import DossierStatus
 from app.modules.dossiers.schemas import (
+    CreateDocumentHashOverrideRequest,
     CreateDossierRequest,
     CreateEvidenceRequest,
+    DocumentHashAdjudicationData,
     DossierActionData,
     DossierData,
     DossierDetailData,
@@ -32,6 +34,7 @@ from app.modules.dossiers.schemas import (
 from app.modules.dossiers.types import (
     CreateDossier,
     CreateEvidence,
+    DocumentHashAdjudicationView,
     DossierChanges,
     DossierDetailView,
     DossierStatusHistoryView,
@@ -49,7 +52,10 @@ PRIVATE_RESPONSES: dict[int | str, dict[str, Any]] = {
     403: {"description": "Dossier access is forbidden.", "model": ErrorEnvelope},
     404: {"description": "Dossier or category not found.", "model": ErrorEnvelope},
     409: {
-        "description": "Dossier state conflict or incomplete applicant profile.",
+        "description": (
+            "Dossier state conflict, duplicate content, or incomplete "
+            "applicant profile."
+        ),
         "model": ErrorEnvelope,
     },
     422: {"description": "Request validation failed.", "model": ErrorEnvelope},
@@ -77,6 +83,12 @@ def _submission_data(view: SubmissionView) -> SubmissionData:
         dossier=_dossier_data(view.dossier),
         version=_version_data(view.version),
     )
+
+
+def _adjudication_data(
+    view: DocumentHashAdjudicationView,
+) -> DocumentHashAdjudicationData:
+    return DocumentHashAdjudicationData.model_validate(view)
 
 
 def _dossier_detail_data(view: DossierDetailView) -> DossierDetailData:
@@ -313,6 +325,31 @@ async def remove_evidence(
     await service.remove_evidence(principal, dossier_id, evidence_id)
     return SuccessEnvelope(
         data=DossierActionData(status="removed"),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/{dossier_id}/document-claim-overrides",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SuccessEnvelope[DocumentHashAdjudicationData],
+    responses=PRIVATE_RESPONSES,
+)
+async def create_document_claim_override(
+    dossier_id: UUID,
+    payload: CreateDocumentHashOverrideRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: DossierServiceDependency,
+) -> SuccessEnvelope[DocumentHashAdjudicationData]:
+    adjudication = await service.grant_document_hash_override(
+        principal,
+        dossier_id,
+        media_asset_id=payload.media_asset_id,
+        reason=payload.reason,
+    )
+    return SuccessEnvelope(
+        data=_adjudication_data(adjudication),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 

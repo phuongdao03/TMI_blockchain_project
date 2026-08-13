@@ -50,6 +50,6 @@ describe("ReviewAssignmentList", () => {
       screen
         .getByRole("link", { name: "Mở hồ sơ thẩm định" })
         .getAttribute("href"),
-    ).toBe("/tham-dinh/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
+    ).toBe("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
   });
 });

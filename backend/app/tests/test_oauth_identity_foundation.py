@@ -48,10 +48,13 @@ def test_oauth_identity_repository_uses_provider_subject_and_no_tokens(
                 subject="google-subject-001",
             )
             assert found is not None and found.user_id == user.id
-            assert await repository.get_identity_for_user(
-                user_id=user.id,
-                provider=AuthProvider.GOOGLE,
-            ) == found
+            assert (
+                await repository.get_identity_for_user(
+                    user_id=user.id,
+                    provider=AuthProvider.GOOGLE,
+                )
+                == found
+            )
             assert "access_token" not in AuthIdentity.__table__.c
             assert "id_token" not in AuthIdentity.__table__.c
             assert "refresh_token" not in AuthIdentity.__table__.c
@@ -107,8 +110,7 @@ def test_oauth_identity_migration_is_reversible(tmp_path: Path) -> None:
                 )
             }
             user_columns = {
-                row[1]: row[3]
-                for row in connection.execute("PRAGMA table_info(users)")
+                row[1]: row[3] for row in connection.execute("PRAGMA table_info(users)")
             }
             identity_indexes = {
                 row[1]
@@ -130,8 +132,7 @@ def test_oauth_identity_migration_is_reversible(tmp_path: Path) -> None:
                 )
             }
             user_columns = {
-                row[1]: row[3]
-                for row in connection.execute("PRAGMA table_info(users)")
+                row[1]: row[3] for row in connection.execute("PRAGMA table_info(users)")
             }
         assert "auth_identities" not in tables
         assert user_columns["password_hash"] == 1

@@ -1,4 +1,3 @@
-import logging
 import secrets
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -7,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.audit.service import AuditService
 from app.modules.auth.errors import (
     AuthSessionNotFoundError,
     CsrfValidationError,
@@ -17,6 +17,7 @@ from app.modules.auth.models import AccountType, AuthSession, UserStatus
 from app.modules.auth.rate_limit import RegistrationRateLimiter
 from app.modules.auth.repositories import AuthRepository
 from app.modules.auth.security import Argon2PasswordHasher
+from app.modules.auth.staff_mfa import StaffMfaPolicy
 from app.modules.auth.tokens import (
     AccessTokenManager,
     CsrfTokenManager,
@@ -25,8 +26,6 @@ from app.modules.auth.tokens import (
     hash_opaque_token,
     new_opaque_token,
 )
-
-logger = logging.getLogger(__name__)
 
 DUMMY_PASSWORD_HASH = (
     "$argon2id$v=19$m=65536,t=3,p=4$eayLhPLyNdl5Amv2daXufQ"
@@ -78,15 +77,18 @@ class SessionService:
         csrf_tokens: CsrfTokenManager,
         rate_limiter: RegistrationRateLimiter,
         refresh_ttl: timedelta,
+        mfa_policy: StaffMfaPolicy | None = None,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._session = session
         self._repository = AuthRepository(session)
+        self._audit_service = AuditService(session)
         self._password_hasher = password_hasher
         self._access_tokens = access_tokens
         self._csrf_tokens = csrf_tokens
         self._rate_limiter = rate_limiter
         self._refresh_ttl = refresh_ttl
+        self._mfa_policy = mfa_policy or StaffMfaPolicy(max_age=timedelta(hours=12))
         self._clock = clock or (lambda: datetime.now(UTC))
 
     async def login(
@@ -102,6 +104,8 @@ class SessionService:
             client_ip=metadata.client_ip,
         )
 
+        login_failed = False
+        issued: IssuedSession | None = None
         async with self._session.begin():
             user = await self._repository.get_user_by_email(normalized_email)
             candidate_hash = (
@@ -120,53 +124,62 @@ class SessionService:
                 or user.status is not UserStatus.ACTIVE
                 or user.email_verified_at is None
             ):
-                logger.warning(
-                    "security_audit",
-                    extra={
-                        "action": "auth.login.failed",
-                        "user_id": str(user.id) if user is not None else None,
-                    },
+                self._audit(
+                    "auth.login.failed",
+                    "credential",
+                    outcome="denied",
                 )
-                raise InvalidCredentialsError()
+                login_failed = True
+            else:
+                if self._password_hasher.needs_rehash(user.password_hash):
+                    user.password_hash = await self._password_hasher.hash(password)
 
-            if self._password_hasher.needs_rehash(user.password_hash):
-                user.password_hash = await self._password_hasher.hash(password)
+                now = self._clock()
+                roles = await self._repository.get_role_codes(user.id)
+                self._mfa_policy.require(
+                    roles=roles,
+                    mfa_verified_at=None,
+                    now=now,
+                )
+                refresh_token = new_opaque_token()
+                auth_session = AuthSession(
+                    user_id=user.id,
+                    refresh_token_hash=hash_opaque_token(refresh_token),
+                    device_name=self._limited(metadata.device_name, 255),
+                    ip_hash=hash_ip_address(metadata.client_ip),
+                    user_agent=self._limited(metadata.user_agent, 1024),
+                    expires_at=now + self._refresh_ttl,
+                )
+                self._repository.add_auth_session(auth_session)
+                user.last_login_at = now
+                await self._session.flush()
+                self._audit(
+                    "auth.login.succeeded",
+                    str(auth_session.id),
+                    actor_user_id=user.id,
+                    outcome="succeeded",
+                )
+                issued = IssuedSession(
+                    access_token=self._access_tokens.issue(
+                        user_id=user.id,
+                        session_id=auth_session.id,
+                    ),
+                    refresh_token=refresh_token,
+                    csrf_token=self._csrf_tokens.issue(auth_session.id),
+                )
 
-            now = self._clock()
-            refresh_token = new_opaque_token()
-            auth_session = AuthSession(
-                user_id=user.id,
-                refresh_token_hash=hash_opaque_token(refresh_token),
-                device_name=self._limited(metadata.device_name, 255),
-                ip_hash=hash_ip_address(metadata.client_ip),
-                user_agent=self._limited(metadata.user_agent, 1024),
-                expires_at=now + self._refresh_ttl,
-            )
-            self._repository.add_auth_session(auth_session)
-            user.last_login_at = now
-            await self._session.flush()
-
-            access_token = self._access_tokens.issue(
-                user_id=user.id,
-                session_id=auth_session.id,
-            )
-            csrf_token = self._csrf_tokens.issue(auth_session.id)
-
-        logger.info(
-            "security_audit",
-            extra={"action": "auth.login.succeeded", "user_id": str(user.id)},
-        )
-        return IssuedSession(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            csrf_token=csrf_token,
-        )
+        if login_failed:
+            raise InvalidCredentialsError()
+        if issued is None:
+            raise RuntimeError("Login did not issue a session.")
+        return issued
 
     async def issue_for_user(
         self,
         *,
         user_id: UUID,
         metadata: ClientMetadata,
+        mfa_verified_at: datetime | None = None,
     ) -> IssuedSession:
         now = self._clock()
         async with self._session.begin():
@@ -177,16 +190,26 @@ class SessionService:
                 or user.email_verified_at is None
             ):
                 raise UnauthenticatedError()
+            roles = await self._repository.get_role_codes(user.id)
+            self._mfa_policy.require(
+                roles=roles,
+                mfa_verified_at=mfa_verified_at,
+                now=now,
+            )
             issued = await self._create_session(
                 user_id=user.id,
                 metadata=metadata,
                 rotated_from_id=None,
                 now=now,
+                mfa_verified_at=mfa_verified_at,
             )
-        logger.info(
-            "security_audit",
-            extra={"action": "auth.oauth.session.issued", "user_id": str(user_id)},
-        )
+            self._audit(
+                "auth.oauth.session.issued",
+                str(user_id),
+                actor_user_id=user_id,
+                resource_type="user",
+                outcome="issued",
+            )
         return issued
 
     async def refresh(
@@ -200,7 +223,6 @@ class SessionService:
         now = self._clock()
         reuse_detected = False
         issued: IssuedSession | None = None
-        user_id: UUID | None = None
 
         async with self._session.begin():
             previous = await self._repository.get_auth_session_by_refresh_hash(
@@ -214,8 +236,6 @@ class SessionService:
                 csrf_cookie=csrf_cookie,
                 csrf_header=csrf_header,
             )
-            user_id = previous.user_id
-
             if previous.revoked_at is not None:
                 active_sessions = await self._repository.list_active_auth_sessions(
                     user_id=previous.user_id,
@@ -224,34 +244,42 @@ class SessionService:
                 )
                 for active_session in active_sessions:
                     active_session.revoked_at = now
+                self._audit(
+                    "auth.refresh.reuse_detected",
+                    str(previous.id),
+                    actor_service="auth-session-service",
+                    outcome="sessions_revoked",
+                )
                 reuse_detected = True
             elif self._as_utc(previous.expires_at) <= now:
                 raise UnauthenticatedError()
             else:
+                roles = await self._repository.get_role_codes(previous.user_id)
+                self._mfa_policy.require(
+                    roles=roles,
+                    mfa_verified_at=previous.mfa_verified_at,
+                    now=now,
+                )
                 previous.revoked_at = now
                 issued = await self._create_session(
                     user_id=previous.user_id,
                     metadata=metadata,
                     rotated_from_id=previous.id,
                     now=now,
+                    mfa_verified_at=previous.mfa_verified_at,
+                )
+                self._audit(
+                    "auth.refresh.rotated",
+                    str(previous.id),
+                    actor_user_id=previous.user_id,
+                    outcome="rotated",
                 )
 
         if reuse_detected:
-            logger.warning(
-                "security_audit",
-                extra={
-                    "action": "auth.refresh.reuse_detected",
-                    "user_id": str(user_id),
-                },
-            )
             raise UnauthenticatedError()
         if issued is None:
             raise RuntimeError("Refresh rotation did not issue a session.")
 
-        logger.info(
-            "security_audit",
-            extra={"action": "auth.refresh.rotated", "user_id": str(user_id)},
-        )
         return issued
 
     async def logout(
@@ -262,7 +290,6 @@ class SessionService:
         csrf_header: str | None,
     ) -> None:
         now = self._clock()
-        user_id: UUID | None = None
         async with self._session.begin():
             auth_session = await self._repository.get_auth_session_by_refresh_hash(
                 hash_opaque_token(refresh_token),
@@ -275,14 +302,14 @@ class SessionService:
                 csrf_cookie=csrf_cookie,
                 csrf_header=csrf_header,
             )
-            user_id = auth_session.user_id
             if auth_session.revoked_at is None:
                 auth_session.revoked_at = now
-
-        logger.info(
-            "security_audit",
-            extra={"action": "auth.session.logged_out", "user_id": str(user_id)},
-        )
+                self._audit(
+                    "auth.session.logged_out",
+                    str(auth_session.id),
+                    actor_user_id=auth_session.user_id,
+                    outcome="revoked",
+                )
 
     async def list_sessions(
         self,
@@ -334,14 +361,12 @@ class SessionService:
                 raise AuthSessionNotFoundError()
             if target.revoked_at is None:
                 target.revoked_at = now
-
-        logger.info(
-            "security_audit",
-            extra={
-                "action": "auth.session.revoked",
-                "user_id": str(principal.user_id),
-            },
-        )
+                self._audit(
+                    "auth.session.revoked",
+                    str(target.id),
+                    actor_user_id=principal.user_id,
+                    outcome="revoked",
+                )
 
     async def authenticate_access(self, access_token: str) -> AuthPrincipal:
         try:
@@ -364,6 +389,11 @@ class SessionService:
             ):
                 raise UnauthenticatedError()
             roles = await self._repository.get_role_codes(user.id)
+            self._mfa_policy.require(
+                roles=roles,
+                mfa_verified_at=auth_session.mfa_verified_at,
+                now=now,
+            )
             permissions = await self._repository.get_permission_codes(user.id)
 
         return AuthPrincipal(
@@ -382,6 +412,7 @@ class SessionService:
         metadata: ClientMetadata,
         rotated_from_id: UUID | None,
         now: datetime,
+        mfa_verified_at: datetime | None,
     ) -> IssuedSession:
         refresh_token = new_opaque_token()
         auth_session = AuthSession(
@@ -392,6 +423,7 @@ class SessionService:
             user_agent=self._limited(metadata.user_agent, 1024),
             expires_at=now + self._refresh_ttl,
             rotated_from_id=rotated_from_id,
+            mfa_verified_at=mfa_verified_at,
         )
         self._repository.add_auth_session(auth_session)
         await self._session.flush()
@@ -428,6 +460,25 @@ class SessionService:
         if value.tzinfo is None:
             return value.replace(tzinfo=UTC)
         return value.astimezone(UTC)
+
+    def _audit(
+        self,
+        action: str,
+        resource_id: str,
+        *,
+        actor_user_id: UUID | None = None,
+        actor_service: str | None = None,
+        resource_type: str = "auth_session",
+        outcome: str,
+    ) -> None:
+        self._audit_service.record(
+            actor_user_id=actor_user_id,
+            actor_service=actor_service,
+            action=action,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            after={"outcome": outcome},
+        )
 
     async def close(self) -> None:
         await self._session.close()

@@ -51,8 +51,8 @@ def test_ranking_publish_api_returns_selected_snapshot() -> None:
         settings=Settings.model_validate({"app_env": "local"}),
         health_service=HealthService({}),
     )
-    app.dependency_overrides[get_ranking_publication_service] = (
-        lambda: StubRankingPublicationService()
+    app.dependency_overrides[get_ranking_publication_service] = lambda: (
+        StubRankingPublicationService()
     )
     app.dependency_overrides[get_csrf_protected_principal] = lambda: principal
     app.dependency_overrides[get_current_principal] = lambda: principal

@@ -81,9 +81,7 @@ class CloudinaryCertificateStorage:
         )
         response.raise_for_status()
         payload = response.json()
-        if not isinstance(payload, dict) or not isinstance(
-            payload.get("version"), int
-        ):
+        if not isinstance(payload, dict) or not isinstance(payload.get("version"), int):
             raise RuntimeError("Cloudinary certificate response is invalid.")
         return StoredCertificate(
             public_id=public_id,

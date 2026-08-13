@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+from redis.asyncio import Redis
 from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -77,6 +78,12 @@ class FakeShares:
         return self.accepted
 
 
+class FakeViews:
+    async def accept(self, *, visitor: str, public_work_id: str) -> bool:
+        del visitor, public_work_id
+        return True
+
+
 class FakeActivity:
     def __init__(self) -> None:
         self.events: list[tuple[UUID, UUID, str]] = []
@@ -97,7 +104,7 @@ def test_share_service_counts_once_per_accepted_channel_intent() -> None:
     service = EngagementService(
         cast(AsyncSession, FakeSession()),
         repository=repository,
-        views=cast(object, shares),
+        views=FakeViews(),
         shares=shares,
     )
 
@@ -120,7 +127,7 @@ def test_anonymous_share_does_not_create_private_activity() -> None:
     service = EngagementService(
         cast(AsyncSession, FakeSession()),
         repository=FakeRepository(),
-        views=cast(object, FakeShares(True)),
+        views=FakeViews(),
         shares=FakeShares(True),
         activity=activity,
     )
@@ -144,7 +151,7 @@ def test_authenticated_share_creates_private_activity_for_that_user() -> None:
     service = EngagementService(
         cast(AsyncSession, FakeSession()),
         repository=FakeRepository(),
-        views=cast(object, FakeShares(True)),
+        views=FakeViews(),
         shares=FakeShares(True),
         activity=activity,
     )
@@ -170,7 +177,7 @@ def test_share_service_hides_inaccessible_work_and_skips_duplicates() -> None:
     duplicate_service = EngagementService(
         cast(AsyncSession, FakeSession()),
         repository=duplicate_repository,
-        views=cast(object, FakeShares(False)),
+        views=FakeViews(),
         shares=FakeShares(False),
     )
     assert (
@@ -188,7 +195,7 @@ def test_share_service_hides_inaccessible_work_and_skips_duplicates() -> None:
     missing_service = EngagementService(
         cast(AsyncSession, FakeSession()),
         repository=FakeRepository(work_id=None),
-        views=cast(object, FakeShares(True)),
+        views=FakeViews(),
         shares=FakeShares(True),
     )
     with pytest.raises(DomainError) as captured:
@@ -209,7 +216,7 @@ class FailingRedis:
 
 def test_share_deduplicator_uses_hashed_visitor_and_fails_closed() -> None:
     deduplicator = RedisShareDeduplicator(
-        cast(object, FailingRedis()),
+        cast(Redis, FailingRedis()),
         visitor_context=EngagementVisitorContext(secret="s" * 32),
         ttl_seconds=86_400,
     )

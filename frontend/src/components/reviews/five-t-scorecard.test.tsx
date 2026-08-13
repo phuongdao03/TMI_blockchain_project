@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -20,9 +20,10 @@ describe("FiveTScorecard", () => {
       />,
     );
 
-    await user.type(screen.getByLabelText("Điểm Tính đúng đắn"), "21");
-    await user.tab();
-    expect(screen.getByText("Điểm phải từ 0 đến 20.")).toBeDefined();
+    const truthScore = screen.getByLabelText("Điểm Tính đúng đắn");
+    fireEvent.change(truthScore, { target: { value: "21" } });
+    fireEvent.blur(truthScore);
+    expect(await screen.findByText("Điểm phải từ 0 đến 20.")).toBeDefined();
 
     const criteria = [
       "Tính đúng đắn",
@@ -33,12 +34,10 @@ describe("FiveTScorecard", () => {
     ];
     for (const criterion of criteria) {
       const score = screen.getByLabelText(`Điểm ${criterion}`);
-      await user.clear(score);
-      await user.type(score, "16");
-      await user.type(
-        screen.getByLabelText(`Nhận xét ${criterion}`),
-        `Nhận xét đầy đủ cho ${criterion}.`,
-      );
+      fireEvent.change(score, { target: { value: "16" } });
+      fireEvent.change(screen.getByLabelText(`Nhận xét ${criterion}`), {
+        target: { value: `Nhận xét đầy đủ cho ${criterion}.` },
+      });
     }
     await user.selectOptions(screen.getByLabelText("Kiến nghị"), "APPROVE");
 

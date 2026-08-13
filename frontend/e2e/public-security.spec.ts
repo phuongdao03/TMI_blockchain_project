@@ -46,7 +46,7 @@ test("public visibility and leakage release gate", async ({ page }) => {
   const sitemap = await page.request.get("/sitemaps/works/1.xml");
   expect(await sitemap.text()).not.toContain("chia-se-rieng");
 
-  await page.goto("/tai-san/bo-nhan-dien-tmi");
+  await page.goto("/works/bo-nhan-dien-tmi");
   const html = await page.locator("html").innerHTML();
   for (const field of banned) expect(html).not.toContain(field);
 });

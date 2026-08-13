@@ -12,9 +12,11 @@ from app.modules.public.types import (
     PublicAssetDetailView,
     PublicAssetView,
     PublicCategoryView,
+    PublicCertificateVersionView,
     PublicHomeView,
     PublicMapMarkerView,
 )
+from app.modules.public.verification import public_evidence_proofs
 
 
 class PublicCatalogService:
@@ -79,6 +81,37 @@ class PublicCatalogService:
                 ),
             )
         return categories
+
+    async def certificate_versions(
+        self,
+        certificate_number: str,
+    ) -> tuple[PublicCertificateVersionView, ...]:
+        async with self._session.begin():
+            rows = await self.repository.list_certificate_versions(
+                certificate_number.strip().upper()
+            )
+        return tuple(
+            PublicCertificateVersionView(
+                version_no=version.version_no,
+                status=version.status,
+                metadata_hash=version.metadata_hash,
+                transaction_hash=(
+                    transaction.tx_hash if transaction is not None else None
+                ),
+                block_number=(
+                    transaction.receipt_block_number
+                    if transaction is not None
+                    else None
+                ),
+                confirmed_at=(
+                    transaction.confirmed_at if transaction is not None else None
+                ),
+                created_at=version.created_at,
+                issuer_label="TMI Certificate",
+                documents=public_evidence_proofs(version.metadata_json),
+            )
+            for version, transaction in rows
+        )
 
     async def assets(
         self,

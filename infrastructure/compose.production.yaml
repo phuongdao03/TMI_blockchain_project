@@ -15,6 +15,24 @@ x-app-service: &app-service
     - ../contracts/artifacts:/contracts/artifacts:ro
 
 services:
+  clamav:
+    image: clamav/clamav:1.4.3
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - application
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    volumes:
+      - clamav_data:/var/lib/clamav
+
   backend:
     <<: *app-service
     command:
@@ -50,6 +68,14 @@ services:
 
   frontend:
     image: ${REGISTRY}/${IMAGE_PREFIX}-frontend:${IMAGE_TAG}
+    environment:
+      API_BASE_URL: http://backend:8000
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID}
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}
+      NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID}
     networks:
       - application
     read_only: true
@@ -76,6 +102,8 @@ services:
 
   worker:
     <<: *app-service
+    environment:
+      DATABASE_NULL_POOL: "true"
     command:
       [
         "celery",
@@ -86,8 +114,21 @@ services:
         "--concurrency=2",
       ]
     depends_on:
+      clamav:
+        condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'celery --app app.workers.celery_app inspect ping --destination
+          "celery@$${HOSTNAME}"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   scheduler:
     <<: *app-service
@@ -104,6 +145,16 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'test -s /tmp/celerybeat.pid && kill -0 "$$(cat /tmp/celerybeat.pid)"',
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   redis:
     image: redis:8.4.0-alpine
@@ -173,4 +224,5 @@ networks:
     driver: bridge
 
 volumes:
+  clamav_data:
   redis_data:

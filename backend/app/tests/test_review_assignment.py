@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.db.base import Base
 from app.db.outbox import OutboxEvent
+from app.modules.audit.models import AuditLog
 from app.modules.auth.models import (
     Role,
     User,
@@ -170,6 +171,13 @@ def test_admin_assigns_active_reviewers_and_emits_encrypted_events() -> None:
                 str(users["reviewer"].id),
                 str(users["reviewer_two"].id),
             }
+            audit_rows = tuple((await session.scalars(select(AuditLog))).all())
+            assert len(audit_rows) == 1
+            assert audit_rows[0].action == "review.assignments.created"
+            assert audit_rows[0].actor_user_id == users["admin"].id
+            assert audit_rows[0].resource_type == "dossier"
+            assert audit_rows[0].resource_id == str(dossier.id)
+            assert audit_rows[0].after_json == {"assignment_count": 2}
 
         with pytest.raises(ReviewConflictError):
             await service.assign_reviewers(
@@ -188,6 +196,48 @@ def test_admin_assigns_active_reviewers_and_emits_encrypted_events() -> None:
             )
             assert assignment_count == 2
             assert event_count == 2
+            assert (
+                await session.scalar(select(func.count()).select_from(AuditLog))
+                == 1
+            )
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_assignment_and_outbox_roll_back_when_audit_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def exercise() -> None:
+        service, session_factory, engine, users, dossier, _ = await _setup()
+
+        def fail_audit(**_: object) -> None:
+            raise RuntimeError("audit storage unavailable")
+
+        monkeypatch.setattr(service._audit_service, "record", fail_audit)
+        with pytest.raises(RuntimeError, match="audit storage unavailable"):
+            await service.assign_reviewers(
+                _principal(users["admin"], "SUPER_ADMIN"),
+                dossier.id,
+                reviewer_user_ids=(users["reviewer"].id,),
+                due_at=None,
+            )
+
+        async with session_factory() as session:
+            assert (
+                await session.scalar(select(func.count()).select_from(ReviewAssignment))
+                == 0
+            )
+            assert (
+                await session.scalar(select(func.count()).select_from(OutboxEvent))
+                == 0
+            )
+            assert (
+                await session.scalar(select(func.count()).select_from(AuditLog))
+                == 0
+            )
 
         await service.close()
         await engine.dispose()

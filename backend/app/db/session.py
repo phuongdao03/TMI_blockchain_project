@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from app.core.config import Settings, get_settings
 
@@ -28,10 +29,15 @@ def get_direct_database_url(settings: Settings) -> str:
 
 def create_runtime_engine(settings: Settings) -> AsyncEngine:
     # Source: https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html#sqlalchemy.ext.asyncio.create_async_engine
+    options: dict[str, object] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    }
+    if settings.database_null_pool:
+        options["poolclass"] = NullPool
     return create_async_engine(
         _required_url(settings.database_url, "DATABASE_URL"),
-        pool_pre_ping=True,
-        pool_recycle=300,
+        **options,
     )
 
 

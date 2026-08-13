@@ -3,6 +3,8 @@ from typing import cast
 
 import pytest
 from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import ClauseElement
 
 from app.modules.auth.errors import RateLimitExceededError
 from app.modules.public.rate_limit import RedisPublicRateLimiter
@@ -94,3 +96,34 @@ def test_public_search_builds_published_query_and_category_filters() -> None:
     assert "lower(dossiers.title)" in sql
     assert "lower(certificates.certificate_number)" in sql
     assert "lower(categories.code) = 'brand'" in sql
+
+
+def test_public_version_history_excludes_unconfirmed_workflow_versions() -> None:
+    class Result:
+        @staticmethod
+        def all() -> list[object]:
+            return []
+
+    class Session:
+        statement: object | None = None
+
+        async def execute(self, statement: object) -> Result:
+            self.statement = statement
+            return Result()
+
+    async def scenario() -> None:
+        session = Session()
+        repository = PublicRepository(cast(AsyncSession, session))
+
+        await repository.list_certificate_versions("TMI-2026-0001")
+
+        assert session.statement is not None
+        statement = cast(ClauseElement, session.statement)
+        sql = str(statement.compile(compile_kwargs={"literal_binds": True})).lower()
+        expected_statuses = (
+            "certificate_versions.status in ('active', 'superseded', 'revoked')"
+        )
+        assert expected_statuses in sql
+        assert "blockchain_transactions.status = 'confirmed'" in sql
+
+    asyncio.run(scenario())

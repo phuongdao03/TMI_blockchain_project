@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import Depends
 
 from app.modules.auth.dependencies import SessionDependency, SettingsDependency
-from app.modules.payments.gateway import MockPaymentGateway
+from app.modules.payments.provider import build_payment_gateway
 from app.modules.payments.service import PaymentService
 from app.workers.celery_app import celery_app
 
@@ -13,17 +13,12 @@ async def get_payment_service(
     session: SessionDependency,
     settings: SettingsDependency,
 ) -> AsyncIterator[PaymentService]:
-    secret = settings.payment_webhook_secret
+    provider_name = settings.payment_provider.strip().lower()
+    gateway = build_payment_gateway(settings)
     service = PaymentService(
         session=session,
-        gateway=MockPaymentGateway(
-            webhook_secret=(
-                secret.get_secret_value() if secret is not None else ""
-            ),
-            checkout_base_url=settings.payment_checkout_base_url,
-            webhook_tolerance_seconds=settings.payment_webhook_tolerance_seconds,
-        ),
-        provider_name=settings.payment_provider,
+        gateway=gateway,
+        provider_name=provider_name,
         amount_minor=settings.payment_amount_minor,
         currency=settings.payment_currency,
         order_ttl_seconds=settings.payment_order_ttl_seconds,

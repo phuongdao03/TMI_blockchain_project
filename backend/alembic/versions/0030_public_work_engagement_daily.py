@@ -1,6 +1,6 @@
 """Create daily public-work engagement aggregates.
 
-Revision ID: 0030_public_work_engagement_daily
+Revision ID: 0030_engagement_daily
 Revises: 0029_ranking_publication
 Create Date: 2026-08-04
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0030_public_work_engagement_daily"
+revision: str = "0030_engagement_daily"
 down_revision: str | None = "0029_ranking_publication"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

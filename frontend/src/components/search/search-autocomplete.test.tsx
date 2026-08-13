@@ -49,6 +49,6 @@ describe("SearchAutocomplete", () => {
 
     fireEvent.keyDown(input, { key: "ArrowDown" });
     fireEvent.keyDown(input, { key: "Enter" });
-    expect(push).toHaveBeenCalledWith("/tai-san/son-mai-di-san");
+    expect(push).toHaveBeenCalledWith("/works/son-mai-di-san");
   });
 });

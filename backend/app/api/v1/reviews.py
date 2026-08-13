@@ -17,17 +17,21 @@ from app.modules.auth.dependencies import (
 from app.modules.reviews.dependencies import (
     PrecheckServiceDependency,
     ReviewServiceDependency,
+    SimilarityReviewServiceDependency,
 )
-from app.modules.reviews.models import ReviewAssignmentStatus
+from app.modules.reviews.models import ReviewAssignmentStatus, SimilarityCaseStatus
 from app.modules.reviews.schemas import (
     AssignReviewersRequest,
+    AssignSimilarityCaseRequest,
     ConflictDeclarationRequest,
     DossierTransitionData,
+    ResolveSimilarityCaseRequest,
     ReviewAssignmentData,
     ReviewAssignmentDetailData,
     ReviewAssignmentSummaryData,
     ReviewData,
     ReviewDraftRequest,
+    SimilarityCaseData,
     TransitionRequest,
 )
 from app.modules.reviews.types import (
@@ -315,5 +319,136 @@ async def submit_review(
     result = await service.submit_review(principal, assignment_id)
     return SuccessEnvelope(
         data=_review_data(result),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/api/v1/admin/similarity-cases/{case_id}/assign",
+    response_model=SuccessEnvelope[SimilarityCaseData],
+    responses=PRIVATE_RESPONSES,
+)
+async def assign_similarity_case(
+    case_id: UUID,
+    payload: AssignSimilarityCaseRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: SimilarityReviewServiceDependency,
+) -> SuccessEnvelope[SimilarityCaseData]:
+    result = await service.assign_case(
+        principal,
+        case_id,
+        payload.reviewer_user_id,
+    )
+    return SuccessEnvelope(
+        data=SimilarityCaseData.model_validate(result),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
+    "/api/v1/admin/similarity-cases",
+    response_model=PaginatedSuccessEnvelope[list[SimilarityCaseData]],
+    responses=PRIVATE_RESPONSES,
+)
+async def list_admin_similarity_cases(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: SimilarityReviewServiceDependency,
+    case_status: Annotated[
+        SimilarityCaseStatus | None,
+        Query(alias="status"),
+    ] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
+) -> PaginatedSuccessEnvelope[list[SimilarityCaseData]]:
+    result = await service.list_admin_cases(
+        principal,
+        status=case_status,
+        page=page,
+        page_size=page_size,
+    )
+    return PaginatedSuccessEnvelope(
+        data=[SimilarityCaseData.model_validate(item) for item in result.items],
+        meta=_meta(
+            request,
+            page=page,
+            page_size=page_size,
+            total=result.total,
+        ),
+    )
+
+
+@router.get(
+    "/api/v1/reviewer/similarity-cases",
+    response_model=PaginatedSuccessEnvelope[list[SimilarityCaseData]],
+    responses=PRIVATE_RESPONSES,
+)
+async def list_similarity_cases(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: SimilarityReviewServiceDependency,
+    case_status: Annotated[
+        SimilarityCaseStatus | None,
+        Query(alias="status"),
+    ] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
+) -> PaginatedSuccessEnvelope[list[SimilarityCaseData]]:
+    result = await service.list_reviewer_cases(
+        principal,
+        status=case_status,
+        page=page,
+        page_size=page_size,
+    )
+    return PaginatedSuccessEnvelope(
+        data=[SimilarityCaseData.model_validate(item) for item in result.items],
+        meta=_meta(
+            request,
+            page=page,
+            page_size=page_size,
+            total=result.total,
+        ),
+    )
+
+
+@router.get(
+    "/api/v1/reviewer/similarity-cases/{case_id}",
+    response_model=SuccessEnvelope[SimilarityCaseData],
+    responses=PRIVATE_RESPONSES,
+)
+async def get_similarity_case(
+    case_id: UUID,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: SimilarityReviewServiceDependency,
+) -> SuccessEnvelope[SimilarityCaseData]:
+    result = await service.get_case(principal, case_id)
+    return SuccessEnvelope(
+        data=SimilarityCaseData.model_validate(result),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/api/v1/reviewer/similarity-cases/{case_id}/resolve",
+    response_model=SuccessEnvelope[SimilarityCaseData],
+    responses=PRIVATE_RESPONSES,
+)
+async def resolve_similarity_case(
+    case_id: UUID,
+    payload: ResolveSimilarityCaseRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: SimilarityReviewServiceDependency,
+) -> SuccessEnvelope[SimilarityCaseData]:
+    result = await service.resolve_case(
+        principal,
+        case_id,
+        disposition=payload.disposition,
+        reason=payload.reason,
+    )
+    return SuccessEnvelope(
+        data=SimilarityCaseData.model_validate(result),
         meta=ResponseMeta(request_id=request.state.request_id),
     )

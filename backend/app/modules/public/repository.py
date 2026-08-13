@@ -7,8 +7,10 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from app.modules.blockchain.models import (
     BlockchainTransaction,
+    BlockchainTransactionStatus,
     Certificate,
     CertificateVersion,
+    CertificateVersionStatus,
 )
 from app.modules.dossiers.models import (
     Category,
@@ -26,6 +28,7 @@ PublicRow = tuple[
     Category,
     BlockchainTransaction | None,
 ]
+PublicVersionRow = tuple[CertificateVersion, BlockchainTransaction | None]
 
 
 class PublicRepository:
@@ -73,8 +76,7 @@ class PublicRepository:
                 select(Category, count)
                 .outerjoin(
                     Dossier,
-                    (Dossier.category_id == Category.id)
-                    & self._published_condition(),
+                    (Dossier.category_id == Category.id) & self._published_condition(),
                 )
                 .outerjoin(Certificate, Certificate.dossier_id == Dossier.id)
                 .where(Category.is_active.is_(True))
@@ -101,6 +103,36 @@ class PublicRepository:
         return await self._verification_context(
             func.lower(BlockchainTransaction.tx_hash) == transaction_hash
         )
+
+    async def list_certificate_versions(
+        self,
+        certificate_number: str,
+    ) -> tuple[PublicVersionRow, ...]:
+        rows = await self._session.execute(
+            select(CertificateVersion, BlockchainTransaction)
+            .join(Certificate, Certificate.id == CertificateVersion.certificate_id)
+            .join(Dossier, Dossier.id == Certificate.dossier_id)
+            .outerjoin(
+                BlockchainTransaction,
+                BlockchainTransaction.id
+                == CertificateVersion.blockchain_transaction_id,
+            )
+            .where(
+                Certificate.certificate_number == certificate_number,
+                self._published_condition(),
+                CertificateVersion.status.in_(
+                    (
+                        CertificateVersionStatus.ACTIVE,
+                        CertificateVersionStatus.SUPERSEDED,
+                        CertificateVersionStatus.REVOKED,
+                    )
+                ),
+                BlockchainTransaction.status
+                == BlockchainTransactionStatus.CONFIRMED,
+            )
+            .order_by(CertificateVersion.version_no.desc())
+        )
+        return tuple(cast(PublicVersionRow, row) for row in rows.all())
 
     async def _verification_context(
         self,
@@ -148,14 +180,16 @@ class PublicRepository:
             contract_address=(
                 transaction.contract_address if transaction is not None else None
             ),
-            transaction_hash=(
-                transaction.tx_hash if transaction is not None else None
-            ),
-            confirmations=(
-                transaction.confirmations if transaction is not None else 0
-            ),
+            transaction_hash=(transaction.tx_hash if transaction is not None else None),
+            confirmations=(transaction.confirmations if transaction is not None else 0),
             confirmed_at=(
                 transaction.confirmed_at if transaction is not None else None
+            ),
+            dossier_code=dossier.code,
+            block_number=(
+                transaction.receipt_block_number
+                if transaction is not None
+                else None
             ),
         )
 
@@ -189,13 +223,15 @@ class PublicRepository:
         )
 
     @staticmethod
-    def _public_statement() -> Select[tuple[
-        Certificate,
-        CertificateVersion,
-        Dossier,
-        Category,
-        BlockchainTransaction,
-    ]]:
+    def _public_statement() -> Select[
+        tuple[
+            Certificate,
+            CertificateVersion,
+            Dossier,
+            Category,
+            BlockchainTransaction,
+        ]
+    ]:
         return (
             select(
                 Certificate,
@@ -209,10 +245,7 @@ class PublicRepository:
             .join(
                 CertificateVersion,
                 (CertificateVersion.certificate_id == Certificate.id)
-                & (
-                    CertificateVersion.version_no
-                    == Certificate.current_version_no
-                ),
+                & (CertificateVersion.version_no == Certificate.current_version_no),
             )
             .outerjoin(
                 BlockchainTransaction,

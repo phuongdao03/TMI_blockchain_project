@@ -40,7 +40,7 @@ test("reviewer acknowledges conflict gate, reviews evidence and submits 5T", asy
     }
   });
 
-  await page.goto("/tham-dinh");
+  await page.goto("/reviews");
   await expect(
     page.getByRole("heading", { level: 1, name: "Hàng đợi thẩm định" }),
   ).toBeVisible();
@@ -107,4 +107,31 @@ test("reviewer acknowledges conflict gate, reviews evidence and submits 5T", asy
     path: testInfo.outputPath("review-submitted.png"),
   });
   expect(consoleIssues).toEqual([]);
+});
+
+test("reviewer resolves a similarity case with a reasoned decision", async ({
+  page,
+}) => {
+  await page.goto("/reviews/similarity");
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: "Đối chiếu nội dung tương đồng",
+    }),
+  ).toBeVisible();
+  await expect(page.getByText("Bình minh trên sông")).toBeVisible();
+  await expect(page.getByText("near-duplicate-v1")).toHaveCount(0);
+
+  const popupPromise = page.waitForEvent("popup");
+  await page.getByRole("button", { name: "Xem tài liệu 1" }).first().click();
+  const popup = await popupPromise;
+  await popup.close();
+
+  await page.getByLabel("Kết luận đối chiếu").selectOption("RELATED");
+  await page
+    .getByLabel("Căn cứ cho kết luận")
+    .fill("Hai tác phẩm thuộc cùng một bộ sưu tập nhưng là hai bản độc lập.");
+  await page.getByRole("button", { name: "Hoàn tất đối chiếu" }).click();
+
+  await expect(page.getByText("Đã hoàn tất đối chiếu")).toBeVisible();
 });

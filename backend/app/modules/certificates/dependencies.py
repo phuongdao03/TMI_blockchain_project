@@ -3,6 +3,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
+from app.modules.audit.service import AuditService
 from app.modules.auth.dependencies import SessionDependency, SettingsDependency
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.blockchain.dependencies import BlockchainServiceDependency
@@ -13,6 +14,7 @@ from app.modules.certificates.metadata import (
 from app.modules.certificates.pdf import CertificatePdfRenderer
 from app.modules.certificates.service import CertificateService
 from app.modules.certificates.storage import CloudinaryCertificateStorage
+from app.modules.certificates.version_service import CertificateVersionService
 from app.modules.media.gateway import CloudinaryMediaGateway
 from app.workers.certificate_tasks import issue_certificate
 
@@ -25,9 +27,7 @@ async def get_certificate_service(
     cloudinary_secret = settings.cloudinary_api_secret
     outbox_secret = settings.auth_outbox_encryption_key
     cloudinary_api_secret = (
-        cloudinary_secret.get_secret_value()
-        if cloudinary_secret is not None
-        else ""
+        cloudinary_secret.get_secret_value() if cloudinary_secret is not None else ""
     )
     media_gateway = CloudinaryMediaGateway(
         cloud_name=settings.cloudinary_cloud_name,
@@ -53,9 +53,7 @@ async def get_certificate_service(
         numbering=CertificateNumberingService(),
         payload_cipher=OutboxPayloadCipher.from_base64(
             encoded_key=(
-                outbox_secret.get_secret_value()
-                if outbox_secret is not None
-                else ""
+                outbox_secret.get_secret_value() if outbox_secret is not None else ""
             ),
             key_id=settings.auth_outbox_key_id,
         ),
@@ -76,4 +74,22 @@ async def get_certificate_service(
 CertificateServiceDependency = Annotated[
     CertificateService,
     Depends(get_certificate_service),
+]
+
+
+async def get_certificate_version_service(
+    session: SessionDependency,
+    blockchain_service: BlockchainServiceDependency,
+) -> AsyncIterator[CertificateVersionService]:
+    yield CertificateVersionService(
+        session=session,
+        metadata_builder=CertificateMetadataBuilder(),
+        audit=AuditService(session),
+        blockchain_service=blockchain_service,
+    )
+
+
+CertificateVersionServiceDependency = Annotated[
+    CertificateVersionService,
+    Depends(get_certificate_version_service),
 ]

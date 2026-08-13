@@ -6,6 +6,7 @@
     "build": "forge build",
     "format:check": "forge fmt --check",
     "test": "forge test",
+    "test:provenance": "node --test scripts/export-artifacts.test.mjs scripts/production-release-plan.test.mjs scripts/record-explorer-evidence.test.mjs",
     "export:local": "node scripts/export-artifacts.mjs --network=local --chain-id=31337",
     "export:amoy": "node scripts/export-artifacts.mjs --network=amoy --chain-id=80002"
   },

@@ -1,5 +1,5 @@
 import asyncio
-from typing import cast
+from typing import Never, cast
 from uuid import uuid4
 
 from redis.asyncio import Redis
@@ -9,13 +9,13 @@ from app.modules.voting.aggregate_cache import RedisVoteSummaryCache
 
 
 class UnavailableRedis:
-    async def get(self, _key: str):
+    async def get(self, _key: str) -> Never:
         raise RedisError("unavailable")
 
-    async def set(self, *_args: object, **_kwargs: object):
+    async def set(self, *_args: object, **_kwargs: object) -> Never:
         raise RedisError("unavailable")
 
-    async def delete(self, _key: str):
+    async def delete(self, _key: str) -> Never:
         raise RedisError("unavailable")
 
 

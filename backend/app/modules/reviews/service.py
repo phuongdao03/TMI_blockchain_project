@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -7,6 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.outbox import OutboxEvent
+from app.modules.audit.service import AuditService
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
@@ -33,8 +34,6 @@ from app.modules.reviews.types import (
     ReviewView,
 )
 
-logger = logging.getLogger(__name__)
-
 ASSIGNMENT_CREATED_EVENT = "review.assignment_created"
 ADMIN_ROLES = frozenset({"SUPER_ADMIN"})
 REVIEWER_ROLES = frozenset({"REVIEWER"})
@@ -60,6 +59,7 @@ class ReviewService:
         self._reviews = ReviewRepository(session)
         self._dossiers = DossierRepository(session)
         self._outbox = OutboxRepository(session)
+        self._audit_service = AuditService(session)
         self._payload_cipher = payload_cipher
         self._clock = clock or (lambda: datetime.now(UTC))
         self._uuid_factory = uuid_factory or uuid4
@@ -133,15 +133,15 @@ class ReviewService:
                     assignments.append(assignment)
                 await self._session.flush()
                 result = tuple(self._assignment_view(item) for item in assignments)
+                self._audit_assignment(
+                    principal.user_id,
+                    dossier_id,
+                    assignment_count=len(result),
+                )
         except IntegrityError as exc:
             raise ReviewConflictError(
                 "Reviewer already has an active assignment for this version."
             ) from exc
-        self._audit_assignment(
-            principal.user_id,
-            dossier_id,
-            assignment_count=len(result),
-        )
         return result
 
     async def list_assignments(
@@ -238,11 +238,11 @@ class ReviewService:
             )
             await self._session.flush()
             result = self._assignment_view(assignment)
-        self._audit_review(
-            "review.conflict_declared",
-            principal.user_id,
-            assignment_id,
-        )
+            self._audit_review(
+                "review.conflict_declared",
+                principal.user_id,
+                assignment_id,
+            )
         return result
 
     async def save_draft(
@@ -276,11 +276,11 @@ class ReviewService:
             self._apply_draft(review, validated)
             await self._session.flush()
             result = self._review_view(review)
-        self._audit_review(
-            "review.draft_saved",
-            principal.user_id,
-            assignment_id,
-        )
+            self._audit_review(
+                "review.draft_saved",
+                principal.user_id,
+                assignment_id,
+            )
         return result
 
     async def submit_review(
@@ -313,11 +313,11 @@ class ReviewService:
             assignment.status = ReviewAssignmentStatus.SUBMITTED
             await self._session.flush()
             result = self._review_view(review)
-        self._audit_review(
-            "review.submitted",
-            principal.user_id,
-            assignment_id,
-        )
+            self._audit_review(
+                "review.submitted",
+                principal.user_id,
+                assignment_id,
+            )
         return result
 
     def _add_assignment_event(self, assignment: ReviewAssignment) -> None:
@@ -515,13 +515,23 @@ class ReviewService:
 
     @staticmethod
     def _require_admin(principal: AuthPrincipal) -> None:
-        if not ADMIN_ROLES.intersection(principal.roles):
-            raise ReviewForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(permission="review.assign", compatible_roles=ADMIN_ROLES),
+            ReviewForbiddenError,
+        )
 
     @staticmethod
     def _require_reviewer(principal: AuthPrincipal) -> None:
-        if not REVIEWER_ROLES.intersection(principal.roles):
-            raise ReviewForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(
+                permission="review.submit",
+                compatible_roles=REVIEWER_ROLES,
+                allow_super_admin=False,
+            ),
+            ReviewForbiddenError,
+        )
 
     @staticmethod
     def _assignment_view(assignment: ReviewAssignment) -> ReviewAssignmentView:
@@ -537,36 +547,32 @@ class ReviewService:
             conflict_reason=assignment.conflict_reason,
         )
 
-    @staticmethod
     def _audit_assignment(
+        self,
         user_id: UUID,
         dossier_id: UUID,
         *,
         assignment_count: int,
     ) -> None:
-        logger.info(
-            "security_audit",
-            extra={
-                "action": "review.assignments.created",
-                "user_id": str(user_id),
-                "dossier_id": str(dossier_id),
-                "assignment_count": assignment_count,
-            },
+        self._audit_service.record(
+            actor_user_id=user_id,
+            action="review.assignments.created",
+            resource_type="dossier",
+            resource_id=str(dossier_id),
+            after={"assignment_count": assignment_count},
         )
 
-    @staticmethod
     def _audit_review(
+        self,
         action: str,
         user_id: UUID,
         assignment_id: UUID,
     ) -> None:
-        logger.info(
-            "security_audit",
-            extra={
-                "action": action,
-                "user_id": str(user_id),
-                "assignment_id": str(assignment_id),
-            },
+        self._audit_service.record(
+            actor_user_id=user_id,
+            action=action,
+            resource_type="review_assignment",
+            resource_id=str(assignment_id),
         )
 
     async def close(self) -> None:

@@ -72,7 +72,7 @@ export function DossierList({
         </p>
         <Link
           className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary-600 px-5 text-sm font-bold text-white hover:bg-primary-700"
-          href="/ho-so/tao-moi"
+          href="/dossiers/new"
         >
           <FilePlus2 aria-hidden="true" className="size-4" />
           Tạo hồ sơ
@@ -113,7 +113,7 @@ export function DossierList({
               </div>
               <Link
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 text-sm font-bold text-neutral-800 transition group-hover:border-primary-200 group-hover:text-primary-700"
-                href={`/ho-so/${dossier.id}`}
+                href={`/dossiers/${dossier.id}`}
               >
                 {dossier.canEdit ? "Tiếp tục hoàn thiện" : "Xem hồ sơ"}
                 <ArrowRight aria-hidden="true" className="size-4" />

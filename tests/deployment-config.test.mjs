@@ -20,7 +20,10 @@ test("production images are multi-stage, non-root and health checked", async () 
 });
 
 test("production compose exposes only TLS proxy and uses versioned images", async () => {
-  const compose = await read("infrastructure/compose.production.yaml");
+  const [compose, productionEnvironment] = await Promise.all([
+    read("infrastructure/compose.production.yaml"),
+    read("infrastructure/.env.production.example"),
+  ]);
   const frontendService = compose.match(
     /\n  frontend:\n([\s\S]*?)\n  worker:/,
   )?.[1];
@@ -33,6 +36,16 @@ test("production compose exposes only TLS proxy and uses versioned images", asyn
   assert.match(compose, /restart: unless-stopped/g);
   assert.ok(frontendService, "frontend service is missing");
   assert.doesNotMatch(frontendService, /env_file:/);
+  assert.match(frontendService, /API_BASE_URL: http:\/\/backend:8000/);
+  assert.doesNotMatch(frontendService, /NEXT_PUBLIC_PREVIEW_MODE/);
+  assert.match(compose, /worker:[\s\S]*?healthcheck:/);
+  assert.match(compose, /scheduler:[\s\S]*?healthcheck:/);
+  assert.doesNotMatch(
+    compose,
+    /BLOCKCHAIN_SIGNER_PRIVATE_KEY|\.key:\/|\.pem:\//,
+  );
+  assert.doesNotMatch(productionEnvironment, /BLOCKCHAIN_SIGNER_PRIVATE_KEY/);
+  assert.match(productionEnvironment, /^BLOCKCHAIN_SIGNER_MODE=managed$/m);
 });
 
 test("nginx production config enforces TLS, headers and webhook isolation", async () => {
@@ -41,6 +54,10 @@ test("nginx production config enforces TLS, headers and webhook isolation", asyn
   assert.match(nginx, /ssl_protocols TLSv1\.2 TLSv1\.3/);
   assert.match(nginx, /Strict-Transport-Security/);
   assert.match(nginx, /Content-Security-Policy/);
+  assert.match(
+    nginx,
+    /location = \/health[\s\S]*?proxy_pass http:\/\/backend_upstream\/health/,
+  );
   assert.match(nginx, /location \/api\/v1\/webhooks\/payments\//);
   assert.match(nginx, /limit_req/);
 });
@@ -69,6 +86,21 @@ test("CI has quality, migration, image, staging and manual production gates", as
   assert.match(workflow, /GHCR_PULL_TOKEN/);
   assert.match(workflow, /StrictHostKeyChecking=yes/);
   assert.match(workflow, /rsync -az/);
+
+  const foundryImage = "ghcr.io/foundry-rs/foundry:v1.7.1";
+  for (const command of [
+    "fmt --check",
+    "build --force",
+    "test --fuzz-runs 256",
+  ]) {
+    assert.match(
+      workflow,
+      new RegExp(
+        `docker run [^\\n]*--entrypoint forge [^\\n]*${foundryImage.replaceAll(".", "\\.")} ${command.replaceAll("-", "\\-")}`,
+      ),
+      `CI must invoke the pinned image through the forge entrypoint: ${command}`,
+    );
+  }
 });
 
 test("deployment scripts wait for healthy services and preserve an image rollback path", async () => {
@@ -101,9 +133,16 @@ test("monitoring and recovery configs contain actionable signals", async () => {
     "api_error_rate",
     "queue_backlog",
     "database_pool_exhaustion",
+    "auth_failure_spike",
+    "redis_unavailable",
     "payment_webhook_failure",
+    "certificate_issuance_failure",
     "blockchain_pending_age",
     "wallet_balance",
+    "blockchain_rpc_outage",
+    "blockchain_stuck_nonce",
+    "blockchain_reverted_transaction",
+    "blockchain_state_mismatch",
     "backup_freshness",
   ]) {
     assert.ok(alerts.includes(signal), `missing alert signal: ${signal}`);
@@ -113,4 +152,60 @@ test("monitoring and recovery configs contain actionable signals", async () => {
   assert.match(recovery, /RPO/);
   assert.match(recovery, /RTO/);
   assert.match(recovery, /restore drill/i);
+  assert.match(recovery, /Redis-loss recovery/i);
+});
+
+test("Amoy release gate is fail-closed and publishes explorer evidence", async () => {
+  const [script, stagingEnvironment, runbook] = await Promise.all([
+    read("infrastructure/scripts/deploy-contract-amoy.sh"),
+    read("infrastructure/.env.staging.example"),
+    read("docs/runbooks/blockchain-release.md"),
+  ]);
+
+  assert.match(script, /set -euo pipefail/);
+  assert.match(script, /chain_id[^\n]*80002|80002[^\n]*chain_id/);
+  assert.match(script, /cast wallet address/);
+  assert.match(script, /EXPECTED_DEPLOYER/);
+  assert.match(script, /forge script/);
+  assert.match(script, /export-artifacts\.mjs/);
+  assert.match(script, /forge verify-contract/);
+  assert.match(script, /record-explorer-evidence\.mjs/);
+  assert.doesNotMatch(script, /echo[^\n]*DEPLOYER_PRIVATE_KEY/);
+
+  assert.match(stagingEnvironment, /^APP_ENV=staging$/m);
+  assert.match(stagingEnvironment, /^BLOCKCHAIN_NETWORK=amoy$/m);
+  assert.match(stagingEnvironment, /^BLOCKCHAIN_CHAIN_ID=80002$/m);
+  assert.match(
+    stagingEnvironment,
+    /^BLOCKCHAIN_EXPLORER_BASE_URL=https:\/\/amoy\.polygonscan\.com$/m,
+  );
+  assert.match(runbook, /explorer-evidence\.json/);
+  assert.match(runbook, /never commit/i);
+});
+
+test("Polygon production contract gate is read-only and approval protected", async () => {
+  const [workflow, preflight, runbook, incident] = await Promise.all([
+    read(".github/workflows/contract-release.yml"),
+    read("infrastructure/scripts/blockchain-preflight.sh"),
+    read("docs/runbooks/blockchain-release.md"),
+    read("docs/runbooks/incident-response.md"),
+  ]);
+
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /environment: production-blockchain/);
+  assert.match(workflow, /ref: \$\{\{ inputs\.source_commit \}\}/);
+  assert.match(workflow, /blockchain-preflight\.sh/);
+  assert.match(workflow, /production-release-plan\.mjs/);
+  assert.doesNotMatch(workflow, /forge script[^\n]*--broadcast/);
+
+  assert.match(preflight, /set -euo pipefail/);
+  assert.match(preflight, /https:\/\//);
+  assert.match(preflight, /chain_id[^\n]*137|137[^\n]*chain_id/);
+  assert.match(preflight, /cast balance/);
+  assert.match(preflight, /runtime_bytecode/i);
+  assert.match(preflight, /hasRole/);
+  assert.match(preflight, /BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES/);
+  assert.match(runbook, /canary/i);
+  assert.match(runbook, /pause/i);
+  assert.match(incident, /pause/i);
 });

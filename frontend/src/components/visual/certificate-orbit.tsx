@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 const evidenceSteps = [
   { label: "Nguồn dữ liệu", value: "Đã đối chiếu" },
-  { label: "Thẩm định 5T", value: "Đủ điều kiện" },
+  { label: "Thẩm định", value: "Đủ điều kiện" },
   { label: "Dấu thời gian", value: "Đã ghi nhận" },
 ] as const;
 
@@ -28,7 +28,6 @@ export function CertificateOrbit({ className }: { className?: string }) {
           <strong>01</strong>
           <span>TMI / 26</span>
         </div>
-
         <div className="evidence-document">
           <div className="evidence-document-head">
             <span className="evidence-document-icon">
@@ -43,12 +42,10 @@ export function CertificateOrbit({ className }: { className?: string }) {
               strokeWidth={1.7}
             />
           </div>
-
           <div className="evidence-document-code">
             <span>MÃ BẰNG CHỨNG</span>
             <strong>TMI–VN–2026–0812</strong>
           </div>
-
           <dl className="evidence-document-fields">
             <div>
               <dt>Chủ thể</dt>
@@ -65,7 +62,6 @@ export function CertificateOrbit({ className }: { className?: string }) {
               </dd>
             </div>
           </dl>
-
           <div className="evidence-fingerprint">
             <Fingerprint
               className="size-8 text-primary-500"
@@ -77,7 +73,6 @@ export function CertificateOrbit({ className }: { className?: string }) {
             </span>
           </div>
         </div>
-
         <div className="evidence-chain">
           <div className="evidence-chain-head">
             <span>
@@ -98,7 +93,6 @@ export function CertificateOrbit({ className }: { className?: string }) {
             ))}
           </ol>
         </div>
-
         <div className="evidence-seal">
           <BadgeCheck className="size-5" />
           <span>

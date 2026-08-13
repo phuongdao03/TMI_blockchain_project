@@ -1,4 +1,3 @@
-import logging
 import re
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -8,6 +7,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.outbox import OutboxEvent
+from app.modules.audit.service import AuditService
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
@@ -47,11 +48,11 @@ from app.modules.council.types import (
     CouncilVoteView,
 )
 from app.modules.dossiers.canonical import snapshot_sha256
-from app.modules.dossiers.models import DossierStatus
+from app.modules.dossiers.models import DossierStatus, DossierVersion
+from app.modules.dossiers.provenance import version_has_trusted_provenance
 from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.workflow import DossierWorkflowService
-
-logger = logging.getLogger(__name__)
+from app.modules.reviews.repository import ReviewRepository
 
 SECRETARY_ROLES = frozenset({"COUNCIL_SECRETARY", "SUPER_ADMIN"})
 MEMBER_ROLES = frozenset({"COUNCIL_MEMBER"})
@@ -76,8 +77,10 @@ class CouncilService:
         self._session = session
         self._council = CouncilRepository(session)
         self._dossiers = DossierRepository(session)
+        self._reviews = ReviewRepository(session)
         self._workflow = DossierWorkflowService(self._dossiers)
         self._outbox = OutboxRepository(session)
+        self._audit_service = AuditService(session)
         self._payload_cipher = payload_cipher
         self._clock = clock or (lambda: datetime.now(UTC))
         self._uuid_factory = uuid_factory or uuid4
@@ -138,11 +141,14 @@ class CouncilService:
                     member_count=len(member_ids),
                     attendance_count=0,
                 )
+                self._audit(
+                    "council.session.created",
+                    principal.user_id,
+                    "council_session",
+                    result.id,
+                )
         except IntegrityError as exc:
-            raise CouncilConflictError(
-                "Council session code already exists."
-            ) from exc
-        self._audit("council.session.created", principal.user_id, result.id)
+            raise CouncilConflictError("Council session code already exists.") from exc
         return result
 
     async def add_case(
@@ -180,6 +186,20 @@ class CouncilService:
                     raise CouncilConflictError(
                         "The current dossier version was not found."
                     )
+                (
+                    submitted_reviews,
+                    unfinished_assignments,
+                ) = await self._reviews.get_council_review_gate(version.id)
+                if submitted_reviews < 1:
+                    raise CouncilConflictError(
+                        "At least one complete submitted review is required "
+                        "before council consideration."
+                    )
+                if unfinished_assignments:
+                    raise CouncilConflictError(
+                        "Every assigned reviewer must submit or declare a "
+                        "conflict before council consideration."
+                    )
                 if await self._council.get_session_case_for_version(
                     council_session.id,
                     version.id,
@@ -205,11 +225,16 @@ class CouncilService:
                     version_no=version.version_no,
                     decision=None,
                 )
+                self._audit(
+                    "council.case.added",
+                    principal.user_id,
+                    "council_case",
+                    result.id,
+                )
         except IntegrityError as exc:
             raise CouncilConflictError(
                 "This dossier version is already in the session."
             ) from exc
-        self._audit("council.case.added", principal.user_id, result.id)
         return result
 
     async def confirm_attendance(
@@ -236,7 +261,12 @@ class CouncilService:
             membership.attendance_confirmed_at = self._clock()
             await self._session.flush()
             result = self._member_view(membership)
-        self._audit("council.attendance.confirmed", principal.user_id, session_id)
+            self._audit(
+                "council.attendance.confirmed",
+                principal.user_id,
+                "council_session",
+                session_id,
+            )
         return result
 
     async def open_session(
@@ -258,9 +288,7 @@ class CouncilService:
                 )
             attendance_count = await self._council.count_attendees(session_id)
             if attendance_count < council_session.quorum_required:
-                raise CouncilConflictError(
-                    "Confirmed attendance does not meet quorum."
-                )
+                raise CouncilConflictError("Confirmed attendance does not meet quorum.")
             for council_case in cases:
                 dossier = await self._dossiers.get_by_id(
                     council_case.dossier_id,
@@ -283,7 +311,12 @@ class CouncilService:
                 member_count=await self._council.count_members(session_id),
                 attendance_count=attendance_count,
             )
-        self._audit("council.session.opened", principal.user_id, session_id)
+            self._audit(
+                "council.session.opened",
+                principal.user_id,
+                "council_session",
+                session_id,
+            )
         return result
 
     async def declare_conflict(
@@ -298,7 +331,7 @@ class CouncilService:
         normalized_reason = self._conflict_reason(has_conflict, reason)
         try:
             async with self._session.begin():
-                council_case, council_session, _ = await self._voting_scope(
+                council_case, _, _ = await self._voting_scope(
                     principal,
                     case_id,
                 )
@@ -306,9 +339,7 @@ class CouncilService:
                     council_case.id,
                     principal.user_id,
                 ):
-                    raise CouncilConflictError(
-                        "Conflict declaration is immutable."
-                    )
+                    raise CouncilConflictError("Conflict declaration is immutable.")
                 declaration = CouncilCaseConflict(
                     id=self._uuid_factory(),
                     case_id=council_case.id,
@@ -320,15 +351,14 @@ class CouncilService:
                 self._council.add_conflict(declaration)
                 await self._session.flush()
                 result = self._conflict_view(declaration)
+                self._audit(
+                    "council.conflict.declared",
+                    principal.user_id,
+                    "council_case",
+                    council_case.id,
+                )
         except IntegrityError as exc:
-            raise CouncilConflictError(
-                "Conflict declaration is immutable."
-            ) from exc
-        self._audit(
-            "council.conflict.declared",
-            principal.user_id,
-            council_session.id,
-        )
+            raise CouncilConflictError("Conflict declaration is immutable.") from exc
         return result
 
     async def cast_vote(
@@ -347,7 +377,7 @@ class CouncilService:
             )
         try:
             async with self._session.begin():
-                council_case, council_session, _ = await self._voting_scope(
+                council_case, _, _ = await self._voting_scope(
                     principal,
                     case_id,
                 )
@@ -379,9 +409,14 @@ class CouncilService:
                 self._council.add_vote(vote)
                 await self._session.flush()
                 result = self._vote_view(vote)
+                self._audit(
+                    "council.vote.cast",
+                    principal.user_id,
+                    "council_case",
+                    council_case.id,
+                )
         except IntegrityError as exc:
             raise CouncilConflictError("A member may vote only once.") from exc
-        self._audit("council.vote.cast", principal.user_id, council_session.id)
         return result
 
     async def close_session(
@@ -398,9 +433,7 @@ class CouncilService:
             if council_session.status is not CouncilSessionStatus.OPEN:
                 raise CouncilConflictError("Only an open session can be closed.")
             cases = await self._council.list_cases(session_id)
-            votes = await self._council.list_votes(
-                tuple(item.id for item in cases)
-            )
+            votes = await self._council.list_votes(tuple(item.id for item in cases))
             votes_by_case = group_votes(votes)
             for council_case in cases:
                 result = calculate_case_result(
@@ -416,6 +449,22 @@ class CouncilService:
                     )
                     if dossier is None:
                         raise CouncilNotFoundError("Dossier was not found.")
+                    if result.decision is CouncilCaseDecision.APPROVE:
+                        version = await self._session.get(
+                            DossierVersion,
+                            council_case.dossier_version_id,
+                        )
+                        evidence_rows = await self._dossiers.list_evidences(
+                            council_case.dossier_id,
+                            version_id=council_case.dossier_version_id,
+                        )
+                        if version is None or not version_has_trusted_provenance(
+                            version,
+                            evidence_rows,
+                        ):
+                            raise CouncilConflictError(
+                                "Evidence integrity must be reverified before approval."
+                            )
                     self._workflow.transition(
                         dossier,
                         target=DECISION_TARGETS[result.decision],
@@ -440,7 +489,12 @@ class CouncilService:
                 member_count=await self._council.count_members(session_id),
                 attendance_count=await self._council.count_attendees(session_id),
             )
-        self._audit("council.session.closed", principal.user_id, session_id)
+            self._audit(
+                "council.session.closed",
+                principal.user_id,
+                "council_session",
+                session_id,
+            )
         return result_view
 
     async def get_minutes(
@@ -463,9 +517,7 @@ class CouncilService:
                     "Minutes are available only after session closure."
                 )
             cases = await self._council.list_cases(session_id)
-            votes = await self._council.list_votes(
-                tuple(item.id for item in cases)
-            )
+            votes = await self._council.list_votes(tuple(item.id for item in cases))
             payload, results = await self._minutes_payload(
                 council_session,
                 cases=cases,
@@ -551,9 +603,7 @@ class CouncilService:
                 if item.member_user_id == principal.user_id
             }
             votes_by_case = group_votes(votes)
-            disclose_result = (
-                council_session.status is CouncilSessionStatus.CLOSED
-            )
+            disclose_result = council_session.status is CouncilSessionStatus.CLOSED
             cases = tuple(
                 CouncilCaseDetailView(
                     case=CouncilCaseView(
@@ -564,9 +614,7 @@ class CouncilService:
                         dossier_code=dossier.code,
                         dossier_title=dossier.title,
                         version_no=version.version_no,
-                        decision=(
-                            council_case.decision if disclose_result else None
-                        ),
+                        decision=(council_case.decision if disclose_result else None),
                     ),
                     my_conflict=(
                         self._conflict_view(my_conflicts[council_case.id])
@@ -594,9 +642,7 @@ class CouncilService:
                 session=self._session_view(
                     council_session,
                     member_count=await self._council.count_members(session_id),
-                    attendance_count=await self._council.count_attendees(
-                        session_id
-                    ),
+                    attendance_count=await self._council.count_attendees(session_id),
                 ),
                 my_attendance_confirmed_at=(
                     membership.attendance_confirmed_at
@@ -641,7 +687,12 @@ class CouncilService:
         principal: AuthPrincipal,
         council_session: CouncilSession,
     ) -> None:
-        if SECRETARY_ROLES.intersection(principal.roles):
+        if AuthorizationPolicy.allows_capability(
+            principal,
+            PolicyRequirement(
+                permission="council.manage", compatible_roles=SECRETARY_ROLES
+            ),
+        ):
             return
         self._require_member(principal)
         membership = await self._council.get_membership(
@@ -659,9 +710,7 @@ class CouncilService:
         votes: tuple[CouncilVote, ...],
     ) -> tuple[dict[str, object], tuple[CouncilCaseResultView, ...]]:
         members = await self._council.list_members(council_session.id)
-        conflicts = await self._council.list_conflicts(
-            tuple(item.id for item in cases)
-        )
+        conflicts = await self._council.list_conflicts(tuple(item.id for item in cases))
         votes_by_case = group_votes(votes)
         results = tuple(
             calculate_case_result(
@@ -748,9 +797,7 @@ class CouncilService:
     @staticmethod
     def _utc(value: datetime) -> datetime:
         return (
-            value.replace(tzinfo=UTC)
-            if value.tzinfo is None
-            else value.astimezone(UTC)
+            value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
         )
 
     @staticmethod
@@ -760,19 +807,43 @@ class CouncilService:
 
     @staticmethod
     def _require_secretary(principal: AuthPrincipal) -> None:
-        if not SECRETARY_ROLES.intersection(principal.roles):
-            raise CouncilForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(
+                permission="council.manage", compatible_roles=SECRETARY_ROLES
+            ),
+            CouncilForbiddenError,
+        )
 
     @staticmethod
     def _require_member(principal: AuthPrincipal) -> None:
-        if not MEMBER_ROLES.intersection(principal.roles):
-            raise CouncilForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(
+                permission="council.vote",
+                compatible_roles=MEMBER_ROLES,
+                allow_super_admin=False,
+            ),
+            CouncilForbiddenError,
+        )
 
     @staticmethod
     def _read_member_filter(principal: AuthPrincipal) -> UUID | None:
-        if SECRETARY_ROLES.intersection(principal.roles):
+        if AuthorizationPolicy.allows_capability(
+            principal,
+            PolicyRequirement(
+                permission="council.manage", compatible_roles=SECRETARY_ROLES
+            ),
+        ):
             return None
-        if MEMBER_ROLES.intersection(principal.roles):
+        if AuthorizationPolicy.allows_capability(
+            principal,
+            PolicyRequirement(
+                permission="council.vote",
+                compatible_roles=MEMBER_ROLES,
+                allow_super_admin=False,
+            ),
+        ):
             return principal.user_id
         raise CouncilForbiddenError()
 
@@ -830,15 +901,18 @@ class CouncilService:
             attendance_count=attendance_count,
         )
 
-    @staticmethod
-    def _audit(action: str, user_id: UUID, aggregate_id: UUID) -> None:
-        logger.info(
-            "security_audit",
-            extra={
-                "action": action,
-                "user_id": str(user_id),
-                "aggregate_id": str(aggregate_id),
-            },
+    def _audit(
+        self,
+        action: str,
+        user_id: UUID,
+        resource_type: str,
+        aggregate_id: UUID,
+    ) -> None:
+        self._audit_service.record(
+            actor_user_id=user_id,
+            action=action,
+            resource_type=resource_type,
+            resource_id=str(aggregate_id),
         )
 
     async def close(self) -> None:

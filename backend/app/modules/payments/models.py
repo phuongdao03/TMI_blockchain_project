@@ -26,6 +26,7 @@ class PaymentStatus(StrEnum):
     PROCESSING = "PROCESSING"
     PAID = "PAID"
     FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
     EXPIRED = "EXPIRED"
     REFUNDED = "REFUNDED"
 

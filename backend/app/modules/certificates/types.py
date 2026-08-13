@@ -5,6 +5,7 @@ from uuid import UUID
 from app.modules.blockchain.models import (
     BlockchainTransactionStatus,
     CertificateStatus,
+    CertificateVersionStatus,
 )
 
 
@@ -40,3 +41,23 @@ class CertificateDetailView:
 class CertificateDownloadView:
     url: str
     expires_at: int
+
+
+@dataclass(frozen=True, slots=True)
+class CertificateVersionView:
+    id: UUID
+    certificate_id: UUID
+    version_no: int
+    dossier_version_id: UUID
+    predecessor_version_id: UUID | None
+    status: CertificateVersionStatus
+    change_reason: str | None
+    requested_by: UUID | None
+    requested_at: datetime | None
+    decided_by: UUID | None
+    decided_at: datetime | None
+    rejection_reason: str | None
+    metadata_hash: str
+    blockchain_transaction_id: UUID | None
+    pdf_ready: bool
+    created_at: datetime

@@ -26,8 +26,8 @@ def calculate_velocity(
             continue
         if min(row.views, row.shares, row.qr_scans, row.favorites) < 0:
             raise ValueError("engagement counts must be non-negative")
-        base_score = row.views + (3 * row.shares) + (4 * row.qr_scans) + (
-            2 * row.favorites
+        base_score = (
+            row.views + (3 * row.shares) + (4 * row.qr_scans) + (2 * row.favorites)
         )
         weighted_score = (Decimal(base_score) * (DECAY_FACTOR**days_ago)).quantize(
             SCORE_QUANTUM,

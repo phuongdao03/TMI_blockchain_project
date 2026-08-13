@@ -12,7 +12,7 @@ import type { PublicWorkDetail } from "@/lib/api/types";
 
 export function canonicalBrowserWorkUrl(slug: string, origin: string): string {
   const base = new URL(origin);
-  return new URL(`/tai-san/${encodeURIComponent(slug)}`, base.origin).href;
+  return new URL(`/works/${encodeURIComponent(slug)}`, base.origin).href;
 }
 
 export function PublicWorkShareControls({

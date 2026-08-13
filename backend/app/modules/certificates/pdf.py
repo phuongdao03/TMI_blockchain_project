@@ -64,9 +64,7 @@ class CertificatePdfRenderer:
         asset_value = metadata.get("asset")
         asset = asset_value if isinstance(asset_value, Mapping) else {}
         blockchain_value = metadata.get("blockchain")
-        blockchain = (
-            blockchain_value if isinstance(blockchain_value, Mapping) else {}
-        )
+        blockchain = blockchain_value if isinstance(blockchain_value, Mapping) else {}
         buffer = BytesIO()
         width, height = landscape(A4)
         pdf = Canvas(

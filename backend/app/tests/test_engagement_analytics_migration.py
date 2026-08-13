@@ -22,7 +22,7 @@ def test_engagement_analytics_migration_round_trip(
     get_settings.cache_clear()
     config = Config(BACKEND_ROOT / "alembic.ini")
     try:
-        command.upgrade(config, "0034_engagement_analytics_snapshots")
+        command.upgrade(config, "0034_engagement_analytics")
         with sqlite3.connect(database_path) as connection:
             columns = {
                 row[1]

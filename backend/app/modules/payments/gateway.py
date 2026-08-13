@@ -23,6 +23,9 @@ class ProviderOrder:
     checkout_url: str | None
     qr_payload: str | None
     status: str
+    order_code: str | None = None
+    amount_minor: int | None = None
+    currency: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +36,7 @@ class VerifiedPaymentEvent:
     amount_minor: int
     currency: str
     payload_redacted: Mapping[str, object]
+    order_code: str | None = None
 
 
 class PaymentGateway(Protocol):
@@ -46,6 +50,13 @@ class PaymentGateway(Protocol):
     ) -> ProviderOrder: ...
 
     async def get_order(self, provider_order_id: str) -> ProviderOrder: ...
+
+    async def cancel_order(
+        self,
+        provider_order_id: str,
+        *,
+        reason: str,
+    ) -> ProviderOrder: ...
 
     def verify_webhook(
         self,
@@ -100,6 +111,23 @@ class MockPaymentGateway:
             return self._orders[provider_order_id]
         except KeyError as exc:
             raise PaymentGatewayError("Provider order was not found.") from exc
+
+    async def cancel_order(
+        self,
+        provider_order_id: str,
+        *,
+        reason: str,
+    ) -> ProviderOrder:
+        del reason
+        order = await self.get_order(provider_order_id)
+        cancelled = ProviderOrder(
+            provider_order_id=order.provider_order_id,
+            checkout_url=order.checkout_url,
+            qr_payload=order.qr_payload,
+            status="CANCELLED",
+        )
+        self._orders[provider_order_id] = cancelled
+        return cancelled
 
     def verify_webhook(
         self,

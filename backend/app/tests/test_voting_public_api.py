@@ -32,13 +32,15 @@ def test_public_voting_contract_is_allowlisted() -> None:
     )
 
     class StubService:
-        async def list_campaigns(self, **_kwargs: object):
+        async def list_campaigns(
+            self, **_kwargs: object
+        ) -> tuple[list[SimpleNamespace], int]:
             return [campaign], 1
 
-        async def campaign(self, _slug: str):
+        async def campaign(self, _slug: str) -> SimpleNamespace:
             return campaign
 
-        async def works(self, _slug: str):
+        async def works(self, _slug: str) -> list[PublicCampaignWorkItem]:
             return [
                 PublicCampaignWorkItem(
                     work_id=work_id,
@@ -48,7 +50,7 @@ def test_public_voting_contract_is_allowlisted() -> None:
                 )
             ]
 
-        async def summary(self, _slug: str):
+        async def summary(self, _slug: str) -> list[VoteAggregateItem]:
             return [
                 VoteAggregateItem(
                     work_id=work_id,

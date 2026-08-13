@@ -8,6 +8,7 @@ from app.modules.blockchain.models import (
     BlockchainTransaction,
     Certificate,
     CertificateVersion,
+    CertificateVersionStatus,
 )
 from app.modules.dossiers.models import Category, Dossier
 from app.modules.organizations.models import (
@@ -33,6 +34,80 @@ class CertificateRepository:
 
     def add_version(self, version: CertificateVersion) -> None:
         self._session.add(version)
+
+    async def get_version(
+        self,
+        version_id: UUID,
+        *,
+        for_update: bool = False,
+    ) -> CertificateVersion | None:
+        statement = select(CertificateVersion).where(
+            CertificateVersion.id == version_id
+        )
+        if for_update:
+            statement = statement.with_for_update().execution_options(
+                populate_existing=True
+            )
+        return cast(
+            CertificateVersion | None,
+            await self._session.scalar(statement),
+        )
+
+    async def get_open_version_request(
+        self,
+        certificate_id: UUID,
+    ) -> CertificateVersion | None:
+        return cast(
+            CertificateVersion | None,
+            await self._session.scalar(
+                select(CertificateVersion).where(
+                    CertificateVersion.certificate_id == certificate_id,
+                    CertificateVersion.status.in_(
+                        (
+                            CertificateVersionStatus.PENDING_APPROVAL,
+                            CertificateVersionStatus.ANCHOR_PENDING,
+                            CertificateVersionStatus.FAILED,
+                        )
+                    ),
+                )
+            ),
+        )
+
+    async def list_versions(
+        self,
+        certificate_id: UUID,
+    ) -> tuple[CertificateVersion, ...]:
+        rows = await self._session.scalars(
+            select(CertificateVersion)
+            .where(CertificateVersion.certificate_id == certificate_id)
+            .order_by(CertificateVersion.version_no.desc())
+        )
+        return tuple(rows.all())
+
+    async def list_version_requests(
+        self,
+        *,
+        offset: int,
+        limit: int,
+    ) -> tuple[tuple[CertificateVersion, ...], int]:
+        criteria = CertificateVersion.status.in_(
+            (
+                CertificateVersionStatus.PENDING_APPROVAL,
+                CertificateVersionStatus.ANCHOR_PENDING,
+                CertificateVersionStatus.FAILED,
+            )
+        )
+        rows = await self._session.scalars(
+            select(CertificateVersion)
+            .where(criteria)
+            .order_by(CertificateVersion.requested_at, CertificateVersion.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        total = await self._session.scalar(
+            select(func.count()).select_from(CertificateVersion).where(criteria)
+        )
+        return tuple(rows.all()), int(total or 0)
 
     async def get_by_dossier(
         self,
@@ -136,10 +211,7 @@ class CertificateRepository:
             .join(
                 CertificateVersion,
                 (CertificateVersion.certificate_id == Certificate.id)
-                & (
-                    CertificateVersion.version_no
-                    == Certificate.current_version_no
-                ),
+                & (CertificateVersion.version_no == Certificate.current_version_no),
             )
             .outerjoin(
                 BlockchainTransaction,

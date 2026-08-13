@@ -48,7 +48,7 @@ describe("DossierCreateForm", () => {
       }),
     );
     expect(pushMock).toHaveBeenCalledWith(
-      "/ho-so/9155dbf5-bb3e-449d-8bf0-9572cc642cac",
+      "/dossiers/9155dbf5-bb3e-449d-8bf0-9572cc642cac",
     );
   });
 });

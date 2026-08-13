@@ -19,6 +19,8 @@ contract CertificateRegistryTest {
     bytes32 private constant CERTIFICATE_ID = keccak256("certificate-1");
     bytes32 private constant DOSSIER_HASH = keccak256("dossier-1");
     bytes32 private constant METADATA_HASH = keccak256("metadata-1");
+    bytes32 private constant EVIDENCE_KEY = keccak256("document-evidence-1");
+    bytes32 private constant EVIDENCE_COMMITMENT = keccak256("document-commitment-1");
 
     function setUp() public {
         registry = new CertificateRegistry(address(this));
@@ -100,5 +102,74 @@ contract CertificateRegistryTest {
         );
         vm.prank(ISSUER);
         registry.updateCertificate(CERTIFICATE_ID, DOSSIER_HASH, METADATA_HASH, 2);
+    }
+
+    function testIssuerCanAnchorAndVerifyDocumentEvidence() public {
+        vm.prank(ISSUER);
+        registry.anchorDocumentEvidence(
+            EVIDENCE_KEY, EVIDENCE_COMMITMENT, bytes32(0), 1, 1_700_000_000
+        );
+
+        CertificateRegistry.DocumentEvidenceRecord memory record =
+            registry.getDocumentEvidence(EVIDENCE_KEY);
+        require(record.commitment == EVIDENCE_COMMITMENT, "commitment");
+        require(record.previousEvidenceKey == bytes32(0), "predecessor");
+        require(record.version == 1, "version");
+        require(record.recordedAt == 1_700_000_000, "recordedAt");
+        require(registry.verifyDocumentEvidence(EVIDENCE_KEY, EVIDENCE_COMMITMENT), "verification");
+        require(
+            !registry.verifyDocumentEvidence(EVIDENCE_KEY, keccak256("modified")),
+            "modified bytes must not verify"
+        );
+    }
+
+    function testDocumentEvidenceIsAppendOnlyAndVersioned() public {
+        bytes32 nextKey = keccak256("document-evidence-2");
+        vm.prank(ISSUER);
+        registry.anchorDocumentEvidence(
+            EVIDENCE_KEY, EVIDENCE_COMMITMENT, bytes32(0), 1, 1_700_000_000
+        );
+        vm.prank(ISSUER);
+        registry.anchorDocumentEvidence(
+            nextKey, keccak256("document-commitment-2"), EVIDENCE_KEY, 2, 1_700_000_100
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CertificateRegistry.DocumentEvidenceAlreadyExists.selector, EVIDENCE_KEY
+            )
+        );
+        vm.prank(ISSUER);
+        registry.anchorDocumentEvidence(
+            EVIDENCE_KEY, keccak256("replacement"), bytes32(0), 1, 1_700_000_200
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CertificateRegistry.DocumentEvidencePredecessorUsed.selector, EVIDENCE_KEY
+            )
+        );
+        vm.prank(ISSUER);
+        registry.anchorDocumentEvidence(
+            keccak256("fork"), keccak256("fork-commitment"), EVIDENCE_KEY, 2, 1_700_000_300
+        );
+    }
+
+    function testDocumentEvidenceRejectsInvalidLineageAndUnauthorizedWriter() public {
+        vm.expectRevert();
+        vm.prank(STRANGER);
+        registry.anchorDocumentEvidence(
+            EVIDENCE_KEY, EVIDENCE_COMMITMENT, bytes32(0), 1, 1_700_000_000
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CertificateRegistry.InvalidDocumentEvidenceLineage.selector, uint32(2), bytes32(0)
+            )
+        );
+        vm.prank(ISSUER);
+        registry.anchorDocumentEvidence(
+            EVIDENCE_KEY, EVIDENCE_COMMITMENT, bytes32(0), 2, 1_700_000_000
+        );
     }
 }

@@ -3,8 +3,9 @@ from datetime import UTC, datetime
 from urllib.parse import parse_qs, urlparse
 
 import httpx
+import pytest
 
-from app.modules.media.gateway import CloudinaryMediaGateway
+from app.modules.media.gateway import CloudinaryMediaGateway, MediaContentTooLargeError
 
 
 def test_cloudinary_signatures_and_expiring_private_url() -> None:
@@ -139,9 +140,7 @@ def test_cloudinary_creates_isolated_public_derivative() -> None:
             source_public_id="ip-certificate/private/owner/source-id",
             source_resource_type="image",
             source_format="png",
-            derivative_public_id=(
-                "ip-certificate/public/derivatives/relation-id"
-            ),
+            derivative_public_id=("ip-certificate/public/derivatives/relation-id"),
             transformation="c_limit,w_1600,h_1600,q_auto,f_webp",
         )
 
@@ -150,17 +149,92 @@ def test_cloudinary_creates_isolated_public_derivative() -> None:
         assert "private/owner/source-id" not in derivative.url
         form = parse_qs(requests[0].content.decode())
         assert requests[0].url.path.endswith("/image/upload")
-        assert form["public_id"] == [
-            "ip-certificate/public/derivatives/relation-id"
-        ]
+        assert form["public_id"] == ["ip-certificate/public/derivatives/relation-id"]
         assert form["type"] == ["upload"]
         assert form["overwrite"] == ["true"]
         assert form["invalidate"] == ["true"]
-        assert form["transformation"] == [
-            "c_limit,w_1600,h_1600,q_auto,f_webp"
-        ]
+        assert form["transformation"] == ["c_limit,w_1600,h_1600,q_auto,f_webp"]
         assert "private%2Fowner%2Fsource-id" in form["file"][0]
         assert form["signature"]
+        await gateway.close()
+        await client.aclose()
+
+    asyncio.run(exercise())
+
+
+def test_cloudinary_streams_private_content_with_a_hard_size_limit() -> None:
+    async def exercise() -> None:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            assert request.url.path.endswith("/image/download")
+            return httpx.Response(200, content=b"0123456789")
+
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        gateway = CloudinaryMediaGateway(
+            cloud_name="demo",
+            api_key="api-key",
+            api_secret="abcd",
+            clock=lambda: 1_785_398_400,
+            client=client,
+        )
+        content = await gateway.download_asset(
+            public_id="private/asset",
+            resource_type="image",
+            file_format="png",
+            max_bytes=10,
+        )
+        assert content == b"0123456789"
+
+        with pytest.raises(MediaContentTooLargeError):
+            await gateway.download_asset(
+                public_id="private/asset",
+                resource_type="image",
+                file_format="png",
+                max_bytes=9,
+            )
+        await gateway.close()
+        await client.aclose()
+
+    asyncio.run(exercise())
+
+
+def test_cloudinary_uploads_encrypted_bytes_as_authenticated_raw_asset() -> None:
+    async def exercise() -> None:
+        requests: list[httpx.Request] = []
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(
+                200,
+                json={
+                    "public_id": "private/document-ciphertext",
+                    "version": 9,
+                    "resource_type": "raw",
+                    "type": "authenticated",
+                    "bytes": 18,
+                },
+            )
+
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        gateway = CloudinaryMediaGateway(
+            cloud_name="demo",
+            api_key="api-key",
+            api_secret="abcd",
+            clock=lambda: 1_785_398_400,
+            client=client,
+        )
+        ciphertext = b"encrypted-content!"
+        stored = await gateway.upload_encrypted_asset(
+            public_id="private/document-ciphertext",
+            content=ciphertext,
+        )
+
+        assert stored.version == 9
+        assert stored.bytes == len(ciphertext)
+        assert requests[0].url.path.endswith("/raw/upload")
+        assert ciphertext in requests[0].content
+        assert b'name="type"' in requests[0].content
+        assert b"authenticated" in requests[0].content
+        assert b'name="signature"' in requests[0].content
         await gateway.close()
         await client.aclose()
 

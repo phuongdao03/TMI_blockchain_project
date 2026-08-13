@@ -118,9 +118,7 @@ def test_public_ranking_input_limits_reject_oversized_slug_and_page() -> None:
     app.dependency_overrides[get_public_ranking_service] = Service
     app.dependency_overrides[enforce_public_rate_limit] = lambda: None
     with TestClient(app) as client:
-        oversized_slug = client.get(
-            f"/api/v1/public/campaigns/{'x' * 181}/ranking"
-        )
+        oversized_slug = client.get(f"/api/v1/public/campaigns/{'x' * 181}/ranking")
         oversized_page = client.get(
             "/api/v1/public/campaigns/public/ranking",
             params={"pageSize": 101},

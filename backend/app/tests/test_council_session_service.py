@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.db.base import Base
 from app.db.outbox import OutboxEvent
+from app.modules.audit.models import AuditLog
 from app.modules.auth.models import Role, User, UserRole, UserStatus
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
@@ -32,18 +33,30 @@ from app.modules.council.models import (
 )
 from app.modules.council.service import CouncilService
 from app.modules.council.types import CouncilCaseView
+from app.modules.dossiers.canonical import snapshot_sha256
 from app.modules.dossiers.models import (
     Category,
     Dossier,
+    DossierEvidence,
     DossierStatus,
     DossierVersion,
+)
+from app.modules.media.models import MediaAsset, MediaStatus
+from app.modules.media.provenance import CURRENT_INSPECTION_POLICY_VERSION
+from app.modules.reviews.models import (
+    Review,
+    ReviewAssignment,
+    ReviewAssignmentStatus,
+    ReviewRecommendation,
 )
 
 NOW = datetime(2026, 8, 2, 8, 0, tzinfo=UTC)
 OUTBOX_KEY = b"council-outbox-encryption-key!!!"
 
 
-async def _setup() -> tuple[
+async def _setup(
+    *, include_review: bool = True
+) -> tuple[
     CouncilService,
     async_sessionmaker[AsyncSession],
     AsyncEngine,
@@ -63,7 +76,14 @@ async def _setup() -> tuple[
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
-        for name in ("owner", "secretary", "member1", "member2", "outsider")
+        for name in (
+            "owner",
+            "secretary",
+            "reviewer",
+            "member1",
+            "member2",
+            "outsider",
+        )
     }
     category = Category(id=uuid4(), code="COUNCIL", name="Council")
     dossier = Dossier(
@@ -76,34 +96,116 @@ async def _setup() -> tuple[
         submitted_at=NOW,
     )
     dossier._set_status_from_workflow(DossierStatus.UNDER_REVIEW)
-    version = DossierVersion(
+    version_id = uuid4()
+    media = MediaAsset(
+        id=uuid4(),
+        owner_user_id=users["owner"].id,
+        cloudinary_public_id="evidence/council",
+        cloudinary_version=1,
+        resource_type="raw",
+        access_mode="authenticated",
+        original_filename="council.pdf",
+        mime_type="application/pdf",
+        bytes=128,
+        sha256="a" * 64,
+        hash_algorithm="SHA-256",
+        hash_byte_length=128,
+        inspection_policy_version=CURRENT_INSPECTION_POLICY_VERSION,
+        hash_storage_version=1,
+        hash_computed_at=NOW,
+        status=MediaStatus.ACTIVE,
+    )
+    evidence = DossierEvidence(
         id=uuid4(),
         dossier_id=dossier.id,
+        dossier_version_id=version_id,
+        media_asset_id=media.id,
+        evidence_type="OWNERSHIP_DOCUMENT",
+        title="Council evidence",
+    )
+    snapshot = {
+        "schemaVersion": 1,
+        "dossier": {"title": dossier.title},
+        "evidences": [
+            {
+                "mediaAssetId": str(media.id),
+                "media": {
+                    "mimeType": media.mime_type,
+                    "bytes": media.bytes,
+                    "sha256": media.sha256,
+                    "hashAlgorithm": media.hash_algorithm,
+                    "hashByteLength": media.hash_byte_length,
+                    "inspectionPolicyVersion": media.inspection_policy_version,
+                    "storageObjectVersion": media.hash_storage_version,
+                    "hashComputedAt": "2026-08-02T08:00:00Z",
+                },
+            }
+        ],
+    }
+    version = DossierVersion(
+        id=version_id,
+        dossier_id=dossier.id,
         version_no=1,
-        snapshot_json={"schemaVersion": 1, "dossier": {"title": dossier.title}},
-        canonical_hash="b" * 64,
+        snapshot_json=snapshot,
+        canonical_hash=snapshot_sha256(snapshot),
         submitted_by=users["owner"].id,
         submitted_at=NOW,
     )
+    reviewer_role = Role(id=uuid4(), code="REVIEWER")
     member_role = Role(id=uuid4(), code="COUNCIL_MEMBER")
+    review_assignment = ReviewAssignment(
+        id=uuid4(),
+        dossier_id=dossier.id,
+        dossier_version_id=version.id,
+        reviewer_user_id=users["reviewer"].id,
+        assigned_by=users["secretary"].id,
+        status=ReviewAssignmentStatus.SUBMITTED,
+    )
+    review = Review(
+        id=uuid4(),
+        assignment_id=review_assignment.id,
+        truth_score=18,
+        transparency_score=18,
+        ownership_score=18,
+        professionalism_score=18,
+        respect_score=18,
+        total_score=90,
+        recommendation=ReviewRecommendation.APPROVE,
+        criterion_comments={
+            "truth": "Verified",
+            "transparency": "Clear",
+            "ownership": "Proven",
+            "professionalism": "Complete",
+            "respect": "Compliant",
+        },
+        submitted_at=NOW,
+    )
+    rows = [
+        *users.values(),
+        category,
+        dossier,
+        version,
+        media,
+        evidence,
+        reviewer_role,
+        member_role,
+        UserRole(
+            user_id=users["reviewer"].id,
+            role_id=reviewer_role.id,
+        ),
+        UserRole(
+            user_id=users["member1"].id,
+            role_id=member_role.id,
+        ),
+        UserRole(
+            user_id=users["member2"].id,
+            role_id=member_role.id,
+        ),
+    ]
+    if include_review:
+        rows.extend([review_assignment, review])
     async with sessions() as session:
-        session.add_all(
-            [
-                *users.values(),
-                category,
-                dossier,
-                version,
-                member_role,
-                UserRole(
-                    user_id=users["member1"].id,
-                    role_id=member_role.id,
-                ),
-                UserRole(
-                    user_id=users["member2"].id,
-                    role_id=member_role.id,
-                ),
-            ]
-        )
+        session.add_all(rows)
         await session.commit()
 
     return (
@@ -164,9 +266,17 @@ def test_secretary_creates_session_adds_case_and_opens_with_quorum() -> None:
             assert stored_dossier is not None
             assert stored_dossier.status is DossierStatus.COUNCIL_REVIEW
             assert (
-                await session.scalar(select(func.count()).select_from(CouncilCase))
-                == 1
+                await session.scalar(select(func.count()).select_from(CouncilCase)) == 1
             )
+            audit_rows = tuple((await session.scalars(select(AuditLog))).all())
+            assert [row.action for row in audit_rows] == [
+                "council.session.created",
+                "council.case.added",
+                "council.attendance.confirmed",
+                "council.attendance.confirmed",
+                "council.session.opened",
+            ]
+            assert all(row.after_json is None for row in audit_rows)
 
         with pytest.raises(CouncilConflictError):
             await service.add_case(secretary, created.id, dossier.id)
@@ -175,6 +285,66 @@ def test_secretary_creates_session_adds_case_and_opens_with_quorum() -> None:
                 _principal(users["member1"], "COUNCIL_MEMBER"),
                 created.id,
             )
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_council_session_rolls_back_when_audit_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def exercise() -> None:
+        service, sessions, engine, users, _, _ = await _setup()
+
+        def fail_audit(**_: object) -> None:
+            raise RuntimeError("audit storage unavailable")
+
+        monkeypatch.setattr(service._audit_service, "record", fail_audit)
+        with pytest.raises(RuntimeError, match="audit storage unavailable"):
+            await service.create_session(
+                _principal(users["secretary"], "COUNCIL_SECRETARY"),
+                code="HD-2026-ROLLBACK",
+                title="Rollback council",
+                scheduled_at=NOW,
+                quorum_required=1,
+                member_user_ids=(users["member1"].id,),
+            )
+
+        async with sessions() as session:
+            assert (
+                await session.scalar(select(func.count()).select_from(CouncilSession))
+                == 0
+            )
+            assert (
+                await session.scalar(select(func.count()).select_from(AuditLog))
+                == 0
+            )
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_council_case_requires_completed_review_gate() -> None:
+    async def exercise() -> None:
+        service, _, engine, users, dossier, _ = await _setup(
+            include_review=False,
+        )
+        secretary = _principal(users["secretary"], "COUNCIL_SECRETARY")
+        created = await service.create_session(
+            secretary,
+            code="HD-2026-001",
+            title="Review gate",
+            scheduled_at=NOW,
+            quorum_required=1,
+            member_user_ids=(users["member1"].id,),
+        )
+
+        with pytest.raises(CouncilConflictError, match="submitted review"):
+            await service.add_case(secretary, created.id, dossier.id)
 
         await service.close()
         await engine.dispose()
@@ -334,8 +504,7 @@ def test_votes_are_conflict_gated_unique_and_close_with_absolute_majority() -> N
             assert stored_dossier.approved_at is not None
             assert stored_dossier.approved_at.replace(tzinfo=UTC) == NOW
             assert (
-                await session.scalar(select(func.count()).select_from(CouncilVote))
-                == 2
+                await session.scalar(select(func.count()).select_from(CouncilVote)) == 2
             )
             assert (
                 await session.scalar(
@@ -345,6 +514,23 @@ def test_votes_are_conflict_gated_unique_and_close_with_absolute_majority() -> N
             )
             events = tuple((await session.scalars(select(OutboxEvent))).all())
             assert [event.event_type for event in events] == ["council.decided"]
+            audit_rows = tuple((await session.scalars(select(AuditLog))).all())
+            assert [row.action for row in audit_rows].count(
+                "council.conflict.declared"
+            ) == 2
+            assert [row.action for row in audit_rows].count("council.vote.cast") == 2
+            decision_rows = tuple(
+                row
+                for row in audit_rows
+                if row.action
+                in {"council.conflict.declared", "council.vote.cast"}
+            )
+            assert all(row.resource_type == "council_case" for row in decision_rows)
+            assert all(
+                row.resource_id == str(council_case.id) for row in decision_rows
+            )
+            assert audit_rows[-1].action == "council.session.closed"
+            assert all(row.after_json is None for row in audit_rows)
 
         with pytest.raises(CouncilConflictError):
             await service.declare_conflict(
@@ -401,6 +587,45 @@ def test_abstention_counts_for_quorum_but_not_as_a_decision() -> None:
             assert stored_case is not None
             assert stored_dossier.status is DossierStatus.COUNCIL_REVIEW
             assert stored_case.decision is None
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_approval_is_blocked_when_storage_version_changed_after_inspection() -> None:
+    async def exercise() -> None:
+        service, sessions, engine, users, dossier, _ = await _setup()
+        secretary, council_case = await _open_two_member_case(
+            service,
+            users,
+            dossier,
+        )
+        for name in ("member1", "member2"):
+            principal = _principal(users[name], "COUNCIL_MEMBER")
+            await service.declare_conflict(
+                principal,
+                council_case.id,
+                has_conflict=False,
+                reason=None,
+            )
+            await service.cast_vote(
+                principal,
+                council_case.id,
+                choice=CouncilVoteChoice.APPROVE,
+                reason="Evidence appears sufficient.",
+            )
+
+        async with sessions() as session:
+            async with session.begin():
+                media = await session.scalar(select(MediaAsset))
+                assert media is not None
+                assert media.cloudinary_version is not None
+                media.cloudinary_version += 1
+
+        with pytest.raises(CouncilConflictError, match="reverified"):
+            await service.close_session(secretary, council_case.session_id)
 
         await service.close()
         await engine.dispose()
@@ -486,10 +711,7 @@ def test_request_more_information_returns_dossier_to_supplement() -> None:
             assert stored_dossier is not None
             assert stored_case is not None
             assert stored_dossier.status is DossierStatus.NEEDS_SUPPLEMENT
-            assert (
-                stored_case.decision
-                is CouncilCaseDecision.REQUEST_MORE_INFO
-            )
+            assert stored_case.decision is CouncilCaseDecision.REQUEST_MORE_INFO
 
         await service.close()
         await engine.dispose()

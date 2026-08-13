@@ -54,6 +54,15 @@ class DossierVisibility(StrEnum):
     PUBLIC = "PUBLIC"
 
 
+class DocumentClaimantScope(StrEnum):
+    USER = "USER"
+    ORGANIZATION = "ORGANIZATION"
+
+
+class DocumentHashAdjudicationAction(StrEnum):
+    ALLOW_REANCHOR = "ALLOW_REANCHOR"
+
+
 def _enum(enum_type: type[StrEnum], name: str) -> Enum:
     return Enum(
         enum_type,
@@ -200,6 +209,166 @@ class DossierVersion(Base):
         nullable=False,
     )
     submitted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class DossierContentClaim(Base):
+    """Immutable exact-content claim used to prevent duplicate submissions."""
+
+    __tablename__ = "dossier_content_claims"
+    __table_args__ = (
+        UniqueConstraint(
+            "content_fingerprint",
+            name="uq_dossier_content_claims_fingerprint",
+        ),
+        Index(
+            "ix_dossier_content_claims_dossier_id",
+            "dossier_id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    content_fingerprint: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    dossier_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("dossiers.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    dossier_version_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("dossier_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    claimed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class DocumentHashAnchor(Base):
+    __tablename__ = "document_hash_anchors"
+    __table_args__ = (
+        CheckConstraint(
+            "length(sha256) = 64",
+            name="document_hash_anchor_sha256_length",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    sha256: Mapped[str] = mapped_column(CHAR(64), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class DocumentHashClaim(Base):
+    __tablename__ = "document_hash_claims"
+    __table_args__ = (
+        Index(
+            "ix_document_hash_claims_anchor_claimed_at",
+            "anchor_id",
+            "claimed_at",
+        ),
+        Index(
+            "ix_document_hash_claims_dossier_version_id",
+            "dossier_version_id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    anchor_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey(DocumentHashAnchor.id, ondelete="RESTRICT"),
+        nullable=False,
+    )
+    media_asset_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("media_assets.id", ondelete="RESTRICT"),
+        nullable=False,
+        unique=True,
+    )
+    dossier_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey(Dossier.id, ondelete="RESTRICT"),
+        nullable=False,
+    )
+    dossier_version_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey(DossierVersion.id, ondelete="RESTRICT"),
+        nullable=False,
+    )
+    claimant_scope_type: Mapped[DocumentClaimantScope] = mapped_column(
+        _enum(DocumentClaimantScope, "document_claimant_scope"),
+        nullable=False,
+    )
+    claimant_scope_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    claimed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class DocumentHashAdjudication(Base):
+    __tablename__ = "document_hash_adjudications"
+    __table_args__ = (
+        CheckConstraint(
+            "length(trim(reason)) >= 10",
+            name="document_hash_adjudication_reason_length",
+        ),
+        UniqueConstraint(
+            "anchor_id",
+            "media_asset_id",
+            "dossier_id",
+            name="uq_document_hash_adjudication_target",
+        ),
+        Index(
+            "ix_document_hash_adjudications_dossier_created_at",
+            "dossier_id",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    anchor_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey(DocumentHashAnchor.id, ondelete="RESTRICT"),
+        nullable=False,
+    )
+    media_asset_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("media_assets.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    dossier_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey(Dossier.id, ondelete="RESTRICT"),
+        nullable=False,
+    )
+    claimant_scope_type: Mapped[DocumentClaimantScope] = mapped_column(
+        _enum(DocumentClaimantScope, "document_adjudication_scope"),
+        nullable=False,
+    )
+    claimant_scope_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    action: Mapped[DocumentHashAdjudicationAction] = mapped_column(
+        _enum(DocumentHashAdjudicationAction, "document_adjudication_action"),
+        nullable=False,
+        default=DocumentHashAdjudicationAction.ALLOW_REANCHOR,
+        server_default=DocumentHashAdjudicationAction.ALLOW_REANCHOR.value,
+    )
+    reason: Mapped[str] = mapped_column(String(1000), nullable=False)
+    actor_user_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey(User.id, ondelete="RESTRICT"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),

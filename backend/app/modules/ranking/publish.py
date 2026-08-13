@@ -5,6 +5,7 @@ from typing import Protocol
 from uuid import UUID
 
 from app.core.errors import DomainError
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.ranking.ranking_cache import RankingCacheInvalidator
 from app.modules.voting.models import CampaignStatus
@@ -85,12 +86,18 @@ class RankingPublicationService:
         version: int,
         request_id: str | None = None,
     ) -> RankingPublicationResult:
-        if RANKING_PUBLICATION_ROLES.isdisjoint(principal.roles):
-            raise DomainError(
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(
+                permission="ranking.manage",
+                compatible_roles=RANKING_PUBLICATION_ROLES,
+            ),
+            lambda: DomainError(
                 code="RANKING_PUBLICATION_FORBIDDEN",
                 message="Ranking publication is forbidden.",
                 status_code=403,
-            )
+            ),
+        )
         campaign = await self._repository.get_campaign(campaign_id)
         if campaign is None:
             raise DomainError(
@@ -128,9 +135,7 @@ class RankingPublicationService:
         )
         await self._repository.commit()
         if self._cache_invalidator is not None:
-            await self._cache_invalidator.invalidate(
-                reason="ranking.results.published"
-            )
+            await self._cache_invalidator.invalidate(reason="ranking.results.published")
         return RankingPublicationResult(
             campaign_id=campaign_id,
             snapshot_id=snapshot.id,

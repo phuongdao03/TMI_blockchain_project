@@ -100,7 +100,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
     <div className="mx-auto max-w-[92rem] space-y-6">
       <Link
         className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-neutral-600 hover:text-primary-700"
-        href="/tham-dinh"
+        href="/reviews"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         Trở lại hàng đợi

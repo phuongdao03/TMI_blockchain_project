@@ -32,6 +32,7 @@ interface FileUploaderProps {
 }
 
 const statusText: Record<UploadStatus, string> = {
+  inspecting: "Đang kiểm tra an toàn tệp…",
   idle: "Chưa chọn tệp",
   selected: "Sẵn sàng tải lên",
   signing: "Đang tạo chữ ký bảo mật…",

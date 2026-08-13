@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -11,6 +12,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.db.base import Base
+from app.modules.audit.models import AuditLog
 from app.modules.auth.models import AccountType, User, UserStatus
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.errors import (
@@ -158,6 +160,53 @@ def test_owner_can_create_list_update_and_soft_delete_draft() -> None:
             assert dossier is not None
             assert dossier.deleted_at is not None
             assert dossier.deleted_at.replace(tzinfo=UTC) == NOW
+            audit_rows = tuple(
+                (
+                    await session.scalars(
+                        select(AuditLog)
+                        .where(AuditLog.resource_id == str(created.id))
+                        .order_by(AuditLog.created_at, AuditLog.action)
+                    )
+                ).all()
+            )
+            assert {row.action for row in audit_rows} == {
+                "dossier.created",
+                "dossier.deleted",
+                "dossier.updated",
+            }
+            assert all(row.actor_user_id == principal.user_id for row in audit_rows)
+            assert all(row.resource_type == "dossier" for row in audit_rows)
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_dossier_and_audit_record_roll_back_together(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def exercise() -> None:
+        service, session_factory, engine, users, _ = await _build_service()
+        principal = _principal(users["owner"])
+
+        def fail_audit(**_: object) -> None:
+            raise RuntimeError("audit storage unavailable")
+
+        monkeypatch.setattr(service._audit_service, "record", fail_audit)
+        with pytest.raises(RuntimeError, match="audit storage unavailable"):
+            await service.create_dossier(
+                principal,
+                CreateDossier(
+                    category_id=CATEGORY_ID,
+                    title="Hồ sơ phải rollback",
+                    visibility=DossierVisibility.PRIVATE,
+                ),
+            )
+
+        async with session_factory() as session:
+            assert (await session.scalar(select(Dossier))) is None
+            assert (await session.scalar(select(AuditLog))) is None
 
         await service.close()
         await engine.dispose()

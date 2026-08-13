@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.public.models import PublicWork
 from app.modules.voting.errors import VotingCampaignForbiddenError
@@ -88,5 +89,8 @@ class AdminVoteService:
 
     @staticmethod
     def _require_read(principal: AuthPrincipal) -> None:
-        if VOTE_READ_PERMISSION not in principal.permissions:
-            raise VotingCampaignForbiddenError()
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(permission=VOTE_READ_PERMISSION, allow_super_admin=False),
+            VotingCampaignForbiddenError,
+        )

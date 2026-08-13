@@ -4,7 +4,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.modules.dossiers.models import DossierStatus, DossierVisibility
+from app.modules.dossiers.models import (
+    DocumentHashAdjudicationAction,
+    DossierStatus,
+    DossierVisibility,
+)
 
 
 def _camel(name: str) -> str:
@@ -186,3 +190,21 @@ class DossierStatusHistoryData(DossierSchema):
 class SubmissionData(DossierSchema):
     dossier: DossierData
     version: DossierVersionData
+
+
+class CreateDocumentHashOverrideRequest(DossierSchema):
+    media_asset_id: UUID
+    reason: Annotated[str, Field(min_length=10, max_length=1000)]
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def strip_reason(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+
+class DocumentHashAdjudicationData(DossierSchema):
+    id: UUID
+    dossier_id: UUID
+    media_asset_id: UUID
+    action: DocumentHashAdjudicationAction
+    created_at: datetime

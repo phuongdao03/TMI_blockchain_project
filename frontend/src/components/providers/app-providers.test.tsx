@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppProviders } from "@/components/providers/app-providers";
 import { authApi } from "@/lib/api/client";
 
-let pathname = "/tim-kiem";
+let pathname = "/search";
 
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
 vi.mock("@/lib/api/client", () => ({
@@ -12,7 +12,7 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 beforeEach(() => {
-  pathname = "/tim-kiem";
+  pathname = "/search";
   vi.mocked(authApi.currentUser).mockReset().mockResolvedValue(null);
 });
 

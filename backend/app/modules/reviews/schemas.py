@@ -8,6 +8,9 @@ from app.modules.dossiers.models import DossierStatus
 from app.modules.reviews.models import (
     ReviewAssignmentStatus,
     ReviewRecommendation,
+    SimilarityCaseDisposition,
+    SimilarityCaseStatus,
+    SimilaritySignalType,
 )
 
 
@@ -117,3 +120,39 @@ class ReviewAssignmentDetailData(ReviewAssignmentSummaryData):
     canonical_hash: str | None
     snapshot_json: dict[str, Any] | None
     review: ReviewData | None
+
+
+class AssignSimilarityCaseRequest(ReviewSchema):
+    reviewer_user_id: UUID
+
+
+class ResolveSimilarityCaseRequest(ReviewSchema):
+    disposition: SimilarityCaseDisposition
+    reason: Annotated[str, Field(min_length=20, max_length=2_000)]
+
+
+class SimilarityAssetSummaryData(ReviewSchema):
+    dossier_id: UUID
+    dossier_code: str
+    dossier_title: str
+    version_no: int
+    evidence_media_ids: tuple[UUID, ...]
+
+
+class SimilarityCaseData(ReviewSchema):
+    id: UUID
+    left_dossier_version_id: UUID
+    right_dossier_version_id: UUID
+    left_asset: SimilarityAssetSummaryData | None
+    right_asset: SimilarityAssetSummaryData | None
+    signal_type: SimilaritySignalType
+    text_score: float | None
+    image_distance: int | None
+    policy_version: str
+    status: SimilarityCaseStatus
+    assigned_reviewer_user_id: UUID | None
+    disposition: SimilarityCaseDisposition | None
+    resolution_reason: str | None
+    created_at: datetime
+    assigned_at: datetime | None
+    resolved_at: datetime | None

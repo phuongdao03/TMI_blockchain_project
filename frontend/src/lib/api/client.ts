@@ -2,6 +2,8 @@ import type {
   AccountType,
   ActivityPage,
   AuditLogItem,
+  AuditIntegrityCheck,
+  AuditListFilters,
   AuthUser,
   CmsBanner,
   CmsCategory,
@@ -20,6 +22,7 @@ import type {
   Certificate,
   CertificateDetail,
   CertificateDownload,
+  CertificateVersion,
   ContentReportAccepted,
   ContentReportAdmin,
   ContentReportReason,
@@ -27,27 +30,28 @@ import type {
   Dossier,
   DossierDetail,
   DossierEvidence,
+  DocumentVerification,
   DossierInput,
   DossierListFilters,
   DossierPatch,
   DossierSubmission,
   DossierTimelineItem,
   DossierVersion,
+  DurableJobSummary,
   EvidenceInput,
   ErrorEnvelope,
   ListResponseMeta,
+  JobActionInput,
   LoginData,
   MediaAsset,
   MediaUploadAuthorization,
   MediaUploadCompletion,
   MediaUploadIntent,
   MemberInput,
-  MessageData,
   Organization,
   OrganizationInput,
   OrganizationMember,
   NotificationItem,
-  OAuthStartData,
   OperationsMetrics,
   PaymentOrder,
   ProfileUpdate,
@@ -56,6 +60,7 @@ import type {
   PublicCategory,
   PublicCatalogFilters,
   PublicCatalogWork,
+  PublicCertificateVersion,
   PublicMapMarker,
   PublicationStatus,
   PublicWorkAdmin,
@@ -97,6 +102,14 @@ import type {
   VoteMutationResult,
   CampaignParticipant,
   CampaignParticipantStatus,
+  StaffAccount,
+  StaffAccountRole,
+  StaffAccountStatus,
+  PrivilegedAction,
+  StaffInvitation,
+  SimilarityCase,
+  SimilarityCaseDisposition,
+  SimilarityCaseFilters,
 } from "@/lib/api/types";
 
 const API_ROOT = "/api/v1";
@@ -159,7 +172,7 @@ async function requestEnvelope<Data>(
 ): Promise<SuccessEnvelope<Data>> {
   const method = init.method?.toUpperCase() ?? "GET";
   const headers = new Headers(init.headers);
-  if (init.body !== undefined) {
+  if (init.body !== undefined && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   if (isMutation(method)) {
@@ -210,23 +223,37 @@ async function requestPaginated<Data>(
 }
 
 export const authApi = {
-  register(email: string, password: string, accountType: AccountType) {
-    return request<MessageData>("/auth/register", {
+  exchangeFirebaseToken(
+    idToken: string,
+    accountType: AccountType,
+    next?: string,
+  ) {
+    return request<LoginData>("/auth/firebase/exchange", {
       method: "POST",
-      body: JSON.stringify({ email, password, accountType }),
+      body: JSON.stringify({
+        idToken,
+        accountType,
+        ...(next ? { next } : {}),
+      }),
     });
   },
-  login(email: string, password: string, deviceName: string) {
-    return request<LoginData>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password, deviceName }),
-    });
+  acceptStaffInvitation(invitationToken: string, idToken: string) {
+    return request<{ status: "MFA_ENROLLMENT_REQUIRED" }>(
+      "/auth/staff-invitations/accept",
+      {
+        method: "POST",
+        body: JSON.stringify({ invitationToken, idToken }),
+      },
+    );
   },
-  startGoogle(accountType: AccountType, next?: string) {
-    return request<OAuthStartData>("/auth/oauth/google/start", {
-      method: "POST",
-      body: JSON.stringify({ accountType, ...(next ? { next } : {}) }),
-    });
+  authorizeStaffMfaRecovery(idToken: string) {
+    return request<{ status: "MFA_ENROLLMENT_REQUIRED" }>(
+      "/auth/staff-mfa/recovery/authorize",
+      {
+        method: "POST",
+        body: JSON.stringify({ idToken }),
+      },
+    );
   },
   upgradeToApplicant(accountType: Exclude<AccountType, "PUBLIC_USER">) {
     return request<AuthUser>("/auth/applicant-upgrade", {
@@ -240,17 +267,8 @@ export const authApi = {
       body: JSON.stringify({ token }),
     });
   },
-  forgotPassword(email: string) {
-    return request<MessageData>("/auth/forgot-password", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    });
-  },
-  resetPassword(token: string, newPassword: string) {
-    return request<StatusData>("/auth/reset-password", {
-      method: "POST",
-      body: JSON.stringify({ token, newPassword }),
-    });
+  logout() {
+    return request<StatusData>("/auth/logout", { method: "POST" });
   },
   async currentUser(): Promise<AuthUser | null> {
     try {
@@ -332,6 +350,23 @@ export const cmsApi = {
 export const operationsApi = {
   metrics() {
     return request<OperationsMetrics>("/admin/operations/metrics");
+  },
+  listJobs(page = 1) {
+    return requestPaginated<DurableJobSummary[]>(
+      `/admin/operations/jobs?page=${page}&pageSize=20`,
+    );
+  },
+  replayJob(id: string, input: JobActionInput) {
+    return request(`/admin/operations/jobs/${id}/replays`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  cancelJob(id: string, input: JobActionInput) {
+    return request(`/admin/operations/jobs/${id}/cancellations`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
   },
 };
 
@@ -436,9 +471,120 @@ export const rankingApi = {
 };
 
 export const auditApi = {
-  list(page = 1) {
+  list(filters: AuditListFilters = {}) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.actorUserId) parameters.set("actorUserId", filters.actorUserId);
+    if (filters.action) parameters.set("action", filters.action);
+    if (filters.resourceType)
+      parameters.set("resourceType", filters.resourceType);
+    if (filters.createdFrom) parameters.set("createdFrom", filters.createdFrom);
+    if (filters.createdTo) parameters.set("createdTo", filters.createdTo);
     return requestPaginated<AuditLogItem[]>(
-      `/admin/audit?page=${page}&pageSize=20`,
+      `/admin/audit?${parameters.toString()}`,
+    );
+  },
+  checkIntegrity(limit = 1_000) {
+    return request<AuditIntegrityCheck>(
+      `/admin/audit/integrity-checks?limit=${limit}`,
+      { method: "POST" },
+    );
+  },
+};
+
+export const staffAccountsApi = {
+  list(
+    filters: {
+      page?: number;
+      pageSize?: number;
+      query?: string;
+      role?: StaffAccountRole;
+      status?: StaffAccountStatus;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.query) parameters.set("query", filters.query);
+    if (filters.role) parameters.set("role", filters.role);
+    if (filters.status) parameters.set("status", filters.status);
+    return requestPaginated<StaffAccount[]>(
+      `/admin/staff-accounts?${parameters.toString()}`,
+    );
+  },
+  update(
+    userId: string,
+    input: { status: "ACTIVE" | "SUSPENDED" | "DISABLED" },
+  ) {
+    return request<StaffAccount>(`/admin/staff-accounts/${userId}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+  initiateMfaRecovery(userId: string, reason: string) {
+    return request<PrivilegedAction>(
+      `/admin/staff-accounts/${userId}/mfa-recovery`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      },
+    );
+  },
+  requestRoleChange(
+    userId: string,
+    requestedRole: StaffAccountRole | "SUPER_ADMIN",
+    reason: string,
+  ) {
+    return request<PrivilegedAction>(
+      `/admin/staff-accounts/${userId}/privileged-actions`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          action: "ROLE_CHANGE",
+          requestedRole,
+          reason,
+        }),
+      },
+    );
+  },
+  listPendingActions(page = 1, pageSize = 20) {
+    return requestPaginated<PrivilegedAction[]>(
+      `/admin/staff-accounts/privileged-actions/pending?page=${page}&pageSize=${pageSize}`,
+    );
+  },
+  approveAction(actionId: string) {
+    return request<PrivilegedAction>(
+      `/admin/staff-accounts/privileged-actions/${actionId}/approve`,
+      { method: "POST" },
+    );
+  },
+};
+
+export const staffInvitationsApi = {
+  list(page = 1, pageSize = 20) {
+    return requestPaginated<StaffInvitation[]>(
+      `/admin/staff-invitations?page=${page}&pageSize=${pageSize}`,
+    );
+  },
+  create(input: { email: string; role: StaffAccountRole }) {
+    return request<StaffInvitation>("/admin/staff-invitations", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  resend(invitationId: string) {
+    return request<StaffInvitation>(
+      `/admin/staff-invitations/${invitationId}/resend`,
+      { method: "POST" },
+    );
+  },
+  revoke(invitationId: string) {
+    return request<StaffInvitation>(
+      `/admin/staff-invitations/${invitationId}/revoke`,
+      { method: "POST" },
     );
   },
 };
@@ -474,8 +620,21 @@ export const mediaApi = {
       body: JSON.stringify(completion),
     });
   },
+  getAsset(mediaId: string) {
+    return request<MediaAsset>(`/media/${mediaId}`);
+  },
   signedUrl(mediaId: string) {
     return request<SignedDelivery>(`/media/${mediaId}/signed-url`);
+  },
+  verifyDocument(mediaId: string, file: Blob) {
+    return request<DocumentVerification>(
+      `/media/${encodeURIComponent(mediaId)}/verifications`,
+      {
+        method: "POST",
+        body: file,
+        headers: { "Content-Type": "application/octet-stream" },
+      },
+    );
   },
 };
 
@@ -602,6 +761,15 @@ export const paymentApi = {
   get(orderId: string) {
     return request<PaymentOrder>(`/payment-orders/${orderId}`);
   },
+  getByProviderReference(providerOrderId: string) {
+    const parameters = new URLSearchParams({ providerOrderId });
+    return request<PaymentOrder>(
+      `/payment-orders/by-provider-reference?${parameters.toString()}`,
+    );
+  },
+  getActive(dossierId: string) {
+    return request<PaymentOrder>(`/dossiers/${dossierId}/active-payment-order`);
+  },
 };
 
 export const reviewApi = {
@@ -641,6 +809,46 @@ export const reviewApi = {
   submit(assignmentId: string) {
     return request<ReviewData>(`/reviewer/assignments/${assignmentId}/submit`, {
       method: "POST",
+    });
+  },
+};
+
+function similarityCaseQuery(filters: SimilarityCaseFilters) {
+  const parameters = new URLSearchParams({
+    page: String(filters.page ?? 1),
+    pageSize: String(filters.pageSize ?? 20),
+  });
+  if (filters.status) parameters.set("status", filters.status);
+  return parameters.toString();
+}
+
+export const similarityApi = {
+  listReviewer(filters: SimilarityCaseFilters = {}) {
+    return requestPaginated<SimilarityCase[]>(
+      `/reviewer/similarity-cases?${similarityCaseQuery(filters)}`,
+    );
+  },
+  get(caseId: string) {
+    return request<SimilarityCase>(`/reviewer/similarity-cases/${caseId}`);
+  },
+  resolve(
+    caseId: string,
+    input: { disposition: SimilarityCaseDisposition; reason: string },
+  ) {
+    return request<SimilarityCase>(
+      `/reviewer/similarity-cases/${caseId}/resolve`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  listAdmin(filters: SimilarityCaseFilters = {}) {
+    return requestPaginated<SimilarityCase[]>(
+      `/admin/similarity-cases?${similarityCaseQuery(filters)}`,
+    );
+  },
+  assign(caseId: string, reviewerUserId: string) {
+    return request<SimilarityCase>(`/admin/similarity-cases/${caseId}/assign`, {
+      method: "POST",
+      body: JSON.stringify({ reviewerUserId }),
     });
   },
 };
@@ -708,6 +916,42 @@ export const certificateApi = {
   download(certificateId: string) {
     return request<CertificateDownload>(
       `/certificates/${certificateId}/download`,
+    );
+  },
+  versions(certificateId: string) {
+    return request<CertificateVersion[]>(
+      `/certificates/${certificateId}/versions`,
+    );
+  },
+  requestVersion(
+    certificateId: string,
+    input: { dossierVersionId: string; reason: string },
+  ) {
+    return request<CertificateVersion>(
+      `/certificates/${certificateId}/version-requests`,
+      {
+        method: "POST",
+        body: JSON.stringify(input),
+      },
+    );
+  },
+};
+
+export const certificateVersionRequestApi = {
+  list(page = 1, pageSize = 20) {
+    return requestPaginated<CertificateVersion[]>(
+      `/admin/certificate-version-requests?page=${page}&pageSize=${pageSize}`,
+    );
+  },
+  decide(
+    versionId: string,
+    input:
+      | { decision: "APPROVE"; reason?: never }
+      | { decision: "REJECT"; reason: string },
+  ) {
+    return request<CertificateVersion>(
+      `/admin/certificate-version-requests/${versionId}`,
+      { method: "PATCH", body: JSON.stringify(input) },
     );
   },
 };
@@ -850,9 +1094,24 @@ export const publicApi = {
       `/verify/certificate/${encodeURIComponent(number)}`,
     );
   },
+  certificateVersions(number: string) {
+    return request<PublicCertificateVersion[]>(
+      `/verify/certificate/${encodeURIComponent(number)}/versions`,
+    );
+  },
   verifyTransaction(transactionHash: string) {
     return request<Verification>(
       `/verify/transaction/${encodeURIComponent(transactionHash)}`,
+    );
+  },
+  verifyDocument(number: string, documentIndex: number, file: Blob) {
+    return request<DocumentVerification>(
+      `/public/certificates/${encodeURIComponent(number)}/documents/${documentIndex}/verifications`,
+      {
+        method: "POST",
+        body: file,
+        headers: { "Content-Type": "application/octet-stream" },
+      },
     );
   },
 };

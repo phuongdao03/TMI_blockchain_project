@@ -1,4 +1,5 @@
 import hashlib
+import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -6,6 +7,9 @@ from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.modules.audit.service import AuditService
 from app.modules.blockchain.gateway import (
     BlockchainGatewayError,
     CertificateRecord,
@@ -22,6 +26,46 @@ class VerificationStatus(StrEnum):
     EXPIRED = "EXPIRED"
     PENDING = "PENDING"
     NOT_FOUND = "NOT_FOUND"
+
+
+@dataclass(frozen=True, slots=True)
+class PublicEvidenceProof:
+    title: str
+    evidence_type: str
+    sha256: str
+
+
+def public_evidence_proofs(
+    metadata: dict[str, object],
+) -> tuple[PublicEvidenceProof, ...]:
+    """Project only explicitly public, well-formed document digests."""
+    values = metadata.get("publicEvidences")
+    if not isinstance(values, list):
+        return ()
+    proofs: list[PublicEvidenceProof] = []
+    for value in values:
+        if not isinstance(value, dict):
+            continue
+        title = value.get("title")
+        evidence_type = value.get("type")
+        digest = value.get("sha256")
+        if (
+            not isinstance(title, str)
+            or not title.strip()
+            or not isinstance(evidence_type, str)
+            or not evidence_type.strip()
+            or not isinstance(digest, str)
+            or re.fullmatch(r"[0-9a-fA-F]{64}", digest) is None
+        ):
+            continue
+        proofs.append(
+            PublicEvidenceProof(
+                title=title.strip()[:255],
+                evidence_type=evidence_type.strip()[:64],
+                sha256=digest.lower(),
+            )
+        )
+    return tuple(proofs)
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +87,8 @@ class VerificationContext:
     transaction_hash: str | None
     confirmations: int
     confirmed_at: datetime | None
+    dossier_code: str | None = None
+    block_number: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,6 +107,11 @@ class VerificationView:
     confirmations: int = 0
     confirmed_at: datetime | None = None
     explorer_url: str | None = None
+    dossier_code: str | None = None
+    metadata_hash: str | None = None
+    block_number: int | None = None
+    issuer_label: str | None = None
+    documents: tuple[PublicEvidenceProof, ...] = ()
 
 
 class VerificationEvaluator:
@@ -116,6 +167,8 @@ class PublicVerificationService:
         find_by_token: ContextFinder,
         find_by_number: ContextFinder,
         find_by_transaction: ContextFinder,
+        audit: AuditService,
+        audit_session: AsyncSession,
         explorer_base_url: str | None = None,
         cache: VerificationCache | None = None,
     ) -> None:
@@ -127,20 +180,50 @@ class PublicVerificationService:
             explorer_base_url.rstrip("/") if explorer_base_url else None
         )
         self._cache = cache
+        self._audit = audit
+        self._audit_session = audit_session
 
     async def verify_token(self, token: str) -> VerificationView:
         token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-        return await self._verify(await self._find_by_token(token_hash))
+        context = await self._find_by_token(token_hash)
+        return await self._complete(
+            await self._verify(context),
+            context=context,
+            lookup_type="token",
+        )
 
     async def verify_number(self, certificate_number: str) -> VerificationView:
-        return await self._verify(
-            await self._find_by_number(certificate_number.strip().upper())
+        context = await self._find_by_number(certificate_number.strip().upper())
+        return await self._complete(
+            await self._verify(context),
+            context=context,
+            lookup_type="certificate_number",
         )
 
     async def verify_transaction(self, transaction_hash: str) -> VerificationView:
-        return await self._verify(
-            await self._find_by_transaction(transaction_hash.strip().lower())
+        context = await self._find_by_transaction(transaction_hash.strip().lower())
+        return await self._complete(
+            await self._verify(context),
+            context=context,
+            lookup_type="transaction_hash",
         )
+
+    async def _complete(
+        self,
+        result: VerificationView,
+        *,
+        context: VerificationContext | None,
+        lookup_type: str,
+    ) -> VerificationView:
+        self._audit.record(
+            actor_user_id=None,
+            action="public.verification.completed",
+            resource_type="certificate_verification",
+            resource_id=str(context.certificate_id) if context else "unresolved",
+            after={"lookup_type": lookup_type, "status": result.status.value},
+        )
+        await self._audit_session.commit()
+        return result
 
     async def _verify(
         self,
@@ -190,15 +273,9 @@ class PublicVerificationService:
                 chain_record=record,
                 now=now,
             )
-            if (
-                status is VerificationStatus.VALID
-                and not local_integrity_matches
-            ):
+            if status is VerificationStatus.VALID and not local_integrity_matches:
                 status = VerificationStatus.MISMATCH
-            if (
-                status is VerificationStatus.VALID
-                and self._cache is not None
-            ):
+            if status is VerificationStatus.VALID and self._cache is not None:
                 await self._cache.set(certificate_key, record)
         return VerificationView(
             status=status,
@@ -219,4 +296,9 @@ class PublicVerificationService:
                 if self._explorer_base_url and context.transaction_hash
                 else None
             ),
+            dossier_code=context.dossier_code,
+            metadata_hash=context.metadata_hash,
+            block_number=context.block_number,
+            issuer_label="TMI Certificate",
+            documents=public_evidence_proofs(context.metadata),
         )

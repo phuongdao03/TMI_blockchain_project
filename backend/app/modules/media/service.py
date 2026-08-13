@@ -1,4 +1,4 @@
-import logging
+import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -6,9 +6,16 @@ from pathlib import PurePath
 from typing import Protocol
 from uuid import UUID, uuid4
 
+from cryptography.exceptions import InvalidTag
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.audit.service import AuditService
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.media.encryption import (
+    DocumentEncryptionConfigurationError,
+    DocumentEncryptionKeyring,
+    EncryptedDocument,
+)
 from app.modules.media.errors import (
     MediaForbiddenError,
     MediaInvalidStateError,
@@ -17,19 +24,27 @@ from app.modules.media.errors import (
     MediaUploadMetadataMismatchError,
     MediaValidationError,
 )
-from app.modules.media.gateway import MediaGateway, ProviderAssetMetadata
-from app.modules.media.models import MediaAsset, MediaStatus
+from app.modules.media.gateway import (
+    MediaContentTooLargeError,
+    MediaGateway,
+    ProviderAssetMetadata,
+)
+from app.modules.media.models import (
+    MediaAsset,
+    MediaConfidentiality,
+    MediaEncryptionStatus,
+    MediaStatus,
+)
 from app.modules.media.repository import MediaAssetRepository
 from app.modules.media.types import (
     MediaAssetView,
+    MediaContentView,
     MediaPurpose,
     SignedDeliveryView,
     UploadCompletion,
     UploadIntent,
     UploadSignatureView,
 )
-
-logger = logging.getLogger(__name__)
 
 
 class MediaDeliveryAccessPolicy(Protocol):
@@ -63,6 +78,22 @@ _PURPOSE_MIME_TYPES = {
     MediaPurpose.DOSSIER_EVIDENCE: frozenset(_FORMATS),
     MediaPurpose.PUBLIC_WORK: frozenset(_FORMATS),
 }
+_DANGEROUS_INNER_EXTENSIONS = frozenset(
+    {
+        ".bat",
+        ".cmd",
+        ".com",
+        ".dll",
+        ".exe",
+        ".hta",
+        ".jar",
+        ".js",
+        ".msi",
+        ".ps1",
+        ".scr",
+        ".vbs",
+    }
+)
 
 
 class MediaService:
@@ -76,11 +107,14 @@ class MediaService:
         delivery_ttl_seconds: int,
         avatar_max_bytes: int,
         evidence_max_bytes: int,
+        enqueue_inspection: Callable[[UUID], object] | None = None,
         delivery_access_policy: MediaDeliveryAccessPolicy | None = None,
         clock: Callable[[], datetime] | None = None,
+        encryption_keyring: DocumentEncryptionKeyring | None = None,
     ) -> None:
         self._session = session
         self._repository = MediaAssetRepository(session)
+        self._audit_service = AuditService(session)
         self._gateway = gateway
         self._environment = environment
         self._signature_ttl_seconds = signature_ttl_seconds
@@ -91,7 +125,9 @@ class MediaService:
             MediaPurpose.PUBLIC_WORK: evidence_max_bytes,
         }
         self._delivery_access_policy = delivery_access_policy
+        self._enqueue_inspection = enqueue_inspection or (lambda _media_id: None)
         self._clock = clock or (lambda: datetime.now(UTC))
+        self._encryption_keyring = encryption_keyring
 
     async def create_upload_signature(
         self,
@@ -121,11 +157,17 @@ class MediaService:
             original_filename=intent.filename,
             mime_type=intent.mime_type,
             bytes=intent.size,
+            confidentiality=intent.confidentiality,
         )
         async with self._session.begin():
             self._repository.add(asset)
+            self._audit(
+                "media.upload_authorized",
+                principal.user_id,
+                media_id,
+                status=MediaStatus.PENDING,
+            )
             await self._session.flush()
-        self._audit("media.upload_authorized", principal.user_id, media_id)
         return UploadSignatureView(
             media_id=media_id,
             public_id=public_id,
@@ -142,19 +184,39 @@ class MediaService:
         principal: AuthPrincipal,
         completion: UploadCompletion,
     ) -> MediaAssetView:
+        replay_view: MediaAssetView | None = None
         async with self._session.begin():
             asset = await self._owned_asset(principal, completion.media_id)
-            if asset.status is not MediaStatus.PENDING:
+            if asset.status is MediaStatus.QUARANTINED:
+                if asset.cloudinary_public_id != completion.public_id:
+                    raise MediaUploadMetadataMismatchError()
+                if not self._gateway.verify_upload_result(
+                    public_id=completion.public_id,
+                    version=completion.version,
+                    signature=completion.signature,
+                ):
+                    raise MediaSignatureInvalidError()
+                replay_view = self._view(asset)
+                self._audit(
+                    "media.inspection_requeued",
+                    principal.user_id,
+                    completion.media_id,
+                    status=asset.status,
+                )
+            elif asset.status is not MediaStatus.PENDING:
                 raise MediaInvalidStateError()
-            if asset.cloudinary_public_id != completion.public_id:
+            elif asset.cloudinary_public_id != completion.public_id:
                 raise MediaUploadMetadataMismatchError()
-            if not self._gateway.verify_upload_result(
+            elif not self._gateway.verify_upload_result(
                 public_id=completion.public_id,
                 version=completion.version,
                 signature=completion.signature,
             ):
                 raise MediaSignatureInvalidError()
             resource_type = asset.resource_type
+        if replay_view is not None:
+            self._enqueue_inspection(completion.media_id)
+            return replay_view
         metadata = await self._gateway.get_asset_metadata(
             public_id=completion.public_id,
             resource_type=resource_type,
@@ -173,11 +235,19 @@ class MediaService:
             asset.width = metadata.width
             asset.height = metadata.height
             asset.duration_ms = metadata.duration_ms
-            asset.sha256 = metadata.sha256
-            asset.status = MediaStatus.ACTIVE
+            # Provider digests are advisory only. The trusted inspection worker
+            # computes SHA-256 from the downloaded bytes before activation.
+            asset.sha256 = None
+            asset.status = MediaStatus.QUARANTINED
+            self._audit(
+                "media.upload_quarantined",
+                principal.user_id,
+                completion.media_id,
+                status=asset.status,
+            )
             await self._session.flush()
             view = self._view(asset)
-        self._audit("media.upload_completed", principal.user_id, completion.media_id)
+        self._enqueue_inspection(completion.media_id)
         return view
 
     async def create_signed_url(
@@ -189,15 +259,118 @@ class MediaService:
             asset = await self._deliverable_asset(principal, media_id)
             if asset.status is not MediaStatus.ACTIVE:
                 raise MediaInvalidStateError()
+            if (
+                self._encryption_keyring is not None
+                and asset.confidentiality is MediaConfidentiality.PRIVATE
+                and asset.encryption_status is not MediaEncryptionStatus.ENCRYPTED
+            ):
+                raise MediaInvalidStateError()
             expires_at = int(self._clock().timestamp()) + self._delivery_ttl_seconds
-            url = self._gateway.create_signed_delivery_url(
-                public_id=asset.cloudinary_public_id,
-                resource_type=asset.resource_type,
-                file_format=_FORMATS[asset.mime_type].file_format,
-                expires_at=expires_at,
+            if asset.encryption_status is MediaEncryptionStatus.ENCRYPTED:
+                url = f"/api/v1/media/{media_id}/content"
+            else:
+                url = self._gateway.create_signed_delivery_url(
+                    public_id=asset.cloudinary_public_id,
+                    resource_type=asset.resource_type,
+                    file_format=_FORMATS[asset.mime_type].file_format,
+                    expires_at=expires_at,
+                )
+            self._audit(
+                "media.delivery_signed",
+                principal.user_id,
+                media_id,
+                status=asset.status,
             )
-        self._audit("media.delivery_signed", principal.user_id, media_id)
         return SignedDeliveryView(url=url, expires_at=expires_at)
+
+    async def download_content(
+        self,
+        principal: AuthPrincipal,
+        media_id: UUID,
+    ) -> MediaContentView:
+        async with self._session.begin():
+            asset = await self._deliverable_asset(principal, media_id)
+            if (
+                asset.status != MediaStatus.ACTIVE
+                or asset.encryption_status != MediaEncryptionStatus.ENCRYPTED
+                or asset.sha256 is None
+                or asset.encryption_key_id is None
+                or asset.encryption_nonce is None
+                or asset.encryption_tag is None
+                or asset.encrypted_object_public_id is None
+                or asset.encrypted_bytes is None
+            ):
+                raise MediaInvalidStateError()
+            snapshot = (
+                asset.sha256,
+                asset.encryption_key_id,
+                asset.encryption_nonce,
+                asset.encryption_tag,
+                asset.encrypted_object_public_id,
+                asset.encrypted_bytes,
+                asset.mime_type,
+                asset.original_filename,
+            )
+        (
+            digest,
+            key_id,
+            nonce,
+            tag,
+            encrypted_public_id,
+            encrypted_bytes,
+            mime_type,
+            filename,
+        ) = snapshot
+        try:
+            ciphertext = await self._gateway.download_asset(
+                public_id=encrypted_public_id,
+                resource_type="raw",
+                file_format="bin",
+                max_bytes=encrypted_bytes,
+            )
+        except MediaContentTooLargeError:
+            raise MediaInvalidStateError() from None
+        if len(ciphertext) != encrypted_bytes or self._encryption_keyring is None:
+            raise MediaInvalidStateError()
+        try:
+            content = self._encryption_keyring.decrypt(
+                EncryptedDocument(
+                    key_id=key_id,
+                    nonce=nonce,
+                    ciphertext=ciphertext,
+                    tag=tag,
+                ),
+                media_id=media_id,
+                sha256=digest,
+            )
+        except (InvalidTag, DocumentEncryptionConfigurationError):
+            raise MediaInvalidStateError() from None
+        if hashlib.sha256(content).hexdigest() != digest:
+            raise MediaInvalidStateError()
+        async with self._session.begin():
+            asset = await self._deliverable_asset(principal, media_id)
+            if asset.status is not MediaStatus.ACTIVE:
+                raise MediaInvalidStateError()
+            self._audit(
+                "media.private_content_delivered",
+                principal.user_id,
+                media_id,
+                status=asset.status,
+            )
+        return MediaContentView(
+            content=content,
+            mime_type=mime_type,
+            filename=filename,
+        )
+
+    async def get_asset(
+        self,
+        principal: AuthPrincipal,
+        media_id: UUID,
+    ) -> MediaAssetView:
+        async with self._session.begin():
+            asset = await self._owned_asset(principal, media_id)
+            return self._view(asset)
 
     async def delete_asset(
         self,
@@ -210,6 +383,12 @@ class MediaService:
                 raise MediaInvalidStateError()
             public_id = asset.cloudinary_public_id
             resource_type = asset.resource_type
+            if (
+                asset.encryption_status is MediaEncryptionStatus.ENCRYPTED
+                and asset.encrypted_object_public_id is not None
+            ):
+                public_id = asset.encrypted_object_public_id
+                resource_type = "raw"
         await self._gateway.delete_asset(
             public_id=public_id,
             resource_type=resource_type,
@@ -220,9 +399,23 @@ class MediaService:
                 raise MediaInvalidStateError()
             asset.status = MediaStatus.DELETED
             asset.deleted_at = self._clock()
-        self._audit("media.deleted", principal.user_id, media_id)
+            self._audit(
+                "media.deleted",
+                principal.user_id,
+                media_id,
+                status=asset.status,
+            )
 
     def _validate_intent(self, intent: UploadIntent) -> _FormatPolicy:
+        expected_confidentiality = (
+            MediaConfidentiality.PUBLIC
+            if intent.purpose is MediaPurpose.PUBLIC_WORK
+            else MediaConfidentiality.PRIVATE
+        )
+        if intent.confidentiality is not expected_confidentiality:
+            raise MediaValidationError(
+                "Confidentiality does not match the requested purpose."
+            )
         if intent.mime_type not in _PURPOSE_MIME_TYPES[intent.purpose]:
             raise MediaValidationError(
                 "MIME type is not allowed for the requested purpose."
@@ -240,8 +433,13 @@ class MediaService:
         ):
             raise MediaValidationError("Filename is invalid.")
         policy = _FORMATS[intent.mime_type]
-        if PurePath(intent.filename).suffix.lower() not in policy.extensions:
+        suffixes = [suffix.lower() for suffix in PurePath(intent.filename).suffixes]
+        if not suffixes or suffixes[-1] not in policy.extensions:
             raise MediaValidationError("Filename extension does not match MIME type.")
+        if any(
+            suffix in _DANGEROUS_INNER_EXTENSIONS for suffix in suffixes[:-1]
+        ):
+            raise MediaValidationError("Filename is not allowed.")
         return policy
 
     @staticmethod
@@ -314,17 +512,25 @@ class MediaService:
             width=asset.width,
             height=asset.height,
             duration_ms=asset.duration_ms,
+            inspection_attempts=asset.inspection_attempts,
+            inspection_reason_code=asset.inspection_reason_code,
+            inspected_at=asset.inspected_at,
         )
 
-    @staticmethod
-    def _audit(action: str, user_id: UUID, media_id: UUID) -> None:
-        logger.info(
-            "security_audit",
-            extra={
-                "action": action,
-                "user_id": str(user_id),
-                "media_id": str(media_id),
-            },
+    def _audit(
+        self,
+        action: str,
+        user_id: UUID,
+        media_id: UUID,
+        *,
+        status: MediaStatus,
+    ) -> None:
+        self._audit_service.record(
+            actor_user_id=user_id,
+            action=action,
+            resource_type="media_asset",
+            resource_id=str(media_id),
+            after={"status": status.value},
         )
 
     async def close(self) -> None:

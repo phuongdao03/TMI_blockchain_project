@@ -2,9 +2,7 @@ from collections.abc import Mapping
 
 from app.modules.public.catalog_cache import CatalogCacheInvalidator
 
-CACHE_AGGREGATE_TYPES = frozenset(
-    {"public_work", "public_category", "public_tag"}
-)
+CACHE_AGGREGATE_TYPES = frozenset({"public_work", "public_category", "public_tag"})
 
 
 class CatalogCacheEventHandler:
@@ -23,6 +21,4 @@ class CatalogCacheEventHandler:
             or payload.get("invalidate_cache") != "true"
         ):
             return False
-        return (
-            await self._invalidator.invalidate(reason=event_type)
-        ) is not None
+        return (await self._invalidator.invalidate(reason=event_type)) is not None
