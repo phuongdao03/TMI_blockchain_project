@@ -73,7 +73,7 @@ test("applicant dashboard keeps one clear next action at every breakpoint", asyn
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await expectResponsivePage(page);
-    await expect(page).toHaveScreenshot(
+    await expect.soft(page).toHaveScreenshot(
       `applicant-dashboard-${viewport.width}.png`,
       {
         animations: "disabled",
@@ -103,7 +103,7 @@ test("operations dashboard prioritizes work without horizontal overflow", async 
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await expectResponsivePage(page);
-    await expect(page).toHaveScreenshot(
+    await expect.soft(page).toHaveScreenshot(
       `operations-dashboard-${viewport.width}.png`,
       {
         animations: "disabled",
