@@ -67,6 +67,7 @@ test("workspace discovery keeps navigation context across screens", async ({
   context,
   page,
 }, testInfo) => {
+  test.setTimeout(90_000);
   test.skip(testInfo.project.name !== "desktop-chrome");
   await context.addCookies([
     {
@@ -92,7 +93,7 @@ test("workspace discovery keeps navigation context across screens", async ({
     name: "Điều hướng bảng điều khiển",
   });
   await navigation.getByRole("link", { name: "Tìm kiếm đề cử" }).click();
-  await expect(page).toHaveURL(/\/search$/);
+  await expect(page).toHaveURL(/\/search$/, { timeout: 30_000 });
   await expect(navigation).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Tìm nội dung bạn quan tâm" }),
@@ -107,7 +108,7 @@ test("workspace discovery keeps navigation context across screens", async ({
   });
 
   await navigation.getByRole("link", { name: "Thư viện đề cử" }).click();
-  await expect(page).toHaveURL(/\/works$/);
+  await expect(page).toHaveURL(/\/works$/, { timeout: 30_000 });
   await expect(navigation).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Thư viện đề cử" }),

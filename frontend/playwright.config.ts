@@ -1,6 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const externalServers = process.env.E2E_EXTERNAL_SERVERS === "1";
+const previewRun = process.env.E2E_RELEASE_MODE === "preview";
+const applicationPort = previewRun ? 3101 : 3100;
+const applicationUrl = `http://127.0.0.1:${applicationPort}`;
+const previewTestName = /preview dashboard keeps submission closed/i;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -8,6 +12,8 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   reporter: "line",
+  grep: previewRun ? previewTestName : undefined,
+  grepInvert: previewRun ? undefined : previewTestName,
   expect: {
     toHaveScreenshot: {
       // Tolerate sub-pixel font/transform rasterization while keeping the
@@ -16,7 +22,7 @@ export default defineConfig({
     },
   },
   use: {
-    baseURL: "http://127.0.0.1:3100",
+    baseURL: applicationUrl,
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },
@@ -29,15 +35,15 @@ export default defineConfig({
           reuseExistingServer: !process.env.CI,
         },
         {
-          command:
-            "node node_modules/next/dist/bin/next dev --webpack --hostname 127.0.0.1 --port 3100",
-          port: 3100,
+          command: `node node_modules/next/dist/bin/next dev --webpack --hostname 127.0.0.1 --port ${applicationPort}`,
+          port: applicationPort,
           reuseExistingServer: !process.env.CI,
           env: {
             API_BASE_URL: "http://127.0.0.1:4010",
-            APP_BASE_URL: "http://127.0.0.1:3100",
+            APP_BASE_URL: applicationUrl,
             AUTH_E2E_SHIM: "true",
-            NEXT_DIST_DIR: ".next-e2e",
+            NEXT_DIST_DIR: previewRun ? ".next-e2e-preview" : ".next-e2e",
+            NEXT_PUBLIC_RELEASE_MODE: previewRun ? "preview" : "full",
             NEXT_PUBLIC_FIREBASE_API_KEY: "e2e-api-key",
             NEXT_PUBLIC_FIREBASE_APP_ID: "1:123:web:e2e",
             NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "e2e.firebaseapp.com",
@@ -45,14 +51,14 @@ export default defineConfig({
           },
         },
       ],
-  projects: [
-    {
-      name: "desktop-chrome",
-      use: { ...devices["Desktop Chrome"], channel: "chrome" },
-    },
-    {
-      name: "mobile-chrome",
-      use: { ...devices["Pixel 7"], channel: "chrome" },
-    },
-  ],
+  projects: (previewRun
+    ? ["desktop-chrome"]
+    : ["desktop-chrome", "mobile-chrome"]
+  ).map((name) => ({
+    name,
+    use:
+      name === "desktop-chrome"
+        ? { ...devices["Desktop Chrome"], channel: "chrome" }
+        : { ...devices["Pixel 7"], channel: "chrome" },
+  })),
 });
