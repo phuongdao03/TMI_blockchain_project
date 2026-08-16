@@ -10,11 +10,28 @@ import { usePathname } from "next/navigation";
 
 import { authApi } from "@/lib/api/client";
 
+const sessionlessPrefixes = [
+  "/works",
+  "/search",
+  "/map",
+  "/verify",
+  "/voting",
+  "/process",
+  "/policies",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+  "/staff-invitation",
+  "/staff-mfa-recovery",
+] as const;
+
 function SessionBootstrap() {
   const pathname = usePathname();
   const publicPath =
     pathname === "/" ||
-    ["/works", "/search", "/map", "/verify"].some(
+    sessionlessPrefixes.some(
       (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
     );
   useQuery({

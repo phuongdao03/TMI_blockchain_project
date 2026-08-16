@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, ImageOff, Sparkles } from "lucide-react";
+import { ArrowUpRight, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -20,12 +20,28 @@ export function PublicWorkCard({
   const [imageReady, setImageReady] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const href = `/works/${encodeURIComponent(work.slug)}`;
+  const isLead = source === "featured" && position === 1;
+  const isFeaturedItem = source === "featured";
+  const layout = isLead
+    ? "editorial-lead"
+    : isFeaturedItem
+      ? "editorial-support"
+      : "catalog-row";
 
   return (
-    <article className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-950">
+    <article
+      className={
+        isLead
+          ? "group grid min-w-0 gap-6 border-t border-white/15 pt-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,.85fr)]"
+          : "group grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] gap-4 border-t border-white/15 py-5 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-center"
+      }
+      data-layout={layout}
+    >
       <Link
-        aria-label={`Xem tác phẩm ${work.title}`}
-        className="relative block aspect-[4/3] overflow-hidden bg-ink-800"
+        aria-label={`Xem đề cử ${work.title}`}
+        className={`relative block overflow-hidden bg-ink-800 ${
+          isLead ? "aspect-[16/10]" : "aspect-square sm:aspect-[4/3]"
+        }`}
         href={href}
         onClick={() =>
           trackPublicCatalog({
@@ -55,26 +71,30 @@ export function PublicWorkCard({
             />
           </>
         ) : (
-          <span className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_70%_20%,rgba(212,167,44,.16),transparent_32%),linear-gradient(145deg,#141d2e,#070a12)]">
-            <ImageOff aria-hidden="true" className="size-7 text-slate-600" />
+          <span className="absolute inset-0 flex items-end overflow-hidden bg-[radial-gradient(circle_at_70%_20%,rgba(212,167,44,.22),transparent_32%),linear-gradient(145deg,#192338,#070a12)] p-5">
+            <span
+              aria-hidden="true"
+              className="absolute -top-12 -right-8 font-mono text-[11rem] font-bold leading-none text-white/[0.035]"
+            >
+              {String(position).padStart(2, "0")}
+            </span>
+            <span className="relative font-mono text-[0.62rem] font-bold tracking-[0.16em] text-slate-400 uppercase">
+              Hình ảnh đang cập nhật
+            </span>
           </span>
         )}
-        <span className="absolute inset-0 bg-gradient-to-t from-ink-950 via-transparent to-transparent" />
-        <span className="absolute top-4 left-4 rounded-full border border-white/15 bg-black/45 px-3 py-1 text-[0.68rem] font-bold tracking-[0.14em] text-white uppercase backdrop-blur">
+        <span className="absolute inset-0 bg-gradient-to-t from-ink-950/80 via-transparent to-transparent" />
+        <span className="absolute top-3 left-3 border border-white/20 bg-black/50 px-2.5 py-1 text-[0.6rem] font-bold tracking-[0.12em] text-white uppercase backdrop-blur">
           {work.categoryName}
         </span>
-        {work.isFeatured ? (
-          <span className="absolute top-4 right-4 grid size-9 place-items-center rounded-full bg-gold-300 text-ink-950">
-            <Sparkles aria-label="Tác phẩm nổi bật" className="size-4" />
-          </span>
-        ) : null}
       </Link>
 
-      <div className="flex flex-1 flex-col p-5 sm:p-6">
-        <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+      <div className={isLead ? "flex flex-col py-1 lg:py-3" : "min-w-0"}>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
           <span className="font-mono">
             {String(position).padStart(2, "0")} / TMI
           </span>
+          <span aria-hidden="true">—</span>
           <time dateTime={work.publishedAt}>
             {new Intl.DateTimeFormat("vi-VN", {
               month: "2-digit",
@@ -82,26 +102,17 @@ export function PublicWorkCard({
             }).format(new Date(work.publishedAt))}
           </time>
         </div>
-        <h2 className="mt-5 line-clamp-2 text-xl font-bold tracking-tight text-white sm:text-2xl">
-          {work.title}
-        </h2>
-        <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-400">
-          {work.shortDescription}
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {work.tags.slice(0, 3).map((tag) => (
-            <span className="text-xs font-medium text-slate-500" key={tag.slug}>
-              #{tag.name}
-            </span>
-          ))}
-        </div>
-        <div className="mt-auto flex items-end justify-between gap-4 pt-7">
-          <p className="min-w-0 truncate text-sm font-semibold text-slate-300">
-            {work.authorDisplayName || "Tác giả được công bố"}
+        {isFeaturedItem ? (
+          <p className="mt-4 inline-flex items-center gap-2 text-[0.65rem] font-bold tracking-[0.16em] text-gold-300 uppercase">
+            <Sparkles aria-hidden="true" className="size-3.5" /> Tuyển chọn
           </p>
+        ) : null}
+        <h2
+          className={`line-clamp-2 font-bold tracking-[-0.025em] text-white transition-colors group-hover:text-gold-200 ${
+            isLead ? "mt-3 text-3xl sm:text-4xl" : "mt-2 text-lg sm:text-xl"
+          }`}
+        >
           <Link
-            aria-label={`Mở chi tiết ${work.title}`}
-            className="grid size-11 shrink-0 place-items-center rounded-full border border-white/15 text-white transition group-hover:border-gold-300 group-hover:text-gold-300"
             href={href}
             onClick={() =>
               trackPublicCatalog({
@@ -110,10 +121,64 @@ export function PublicWorkCard({
               })
             }
           >
-            <ArrowUpRight className="size-4" />
+            {work.title}
           </Link>
+        </h2>
+        <p
+          className={`mt-3 text-sm leading-6 text-slate-400 ${
+            isLead ? "line-clamp-3 max-w-xl" : "line-clamp-2"
+          }`}
+        >
+          {work.shortDescription}
+        </p>
+        <div className={`flex flex-wrap gap-2 ${isLead ? "mt-5" : "mt-3"}`}>
+          {work.tags.slice(0, 3).map((tag) => (
+            <span className="text-xs font-medium text-slate-400" key={tag.slug}>
+              #{tag.name}
+            </span>
+          ))}
+        </div>
+        <div
+          className={`flex items-center justify-between gap-4 ${
+            isLead ? "mt-auto pt-8" : "pt-4"
+          }`}
+        >
+          <p className="min-w-0 truncate text-sm font-semibold text-slate-300">
+            {work.authorDisplayName || "Tác giả được công bố"}
+          </p>
+          {isLead ? (
+            <Link
+              aria-label={`Mở chi tiết ${work.title}`}
+              className="inline-flex min-h-11 shrink-0 items-center gap-2 text-sm font-bold text-white transition group-hover:text-gold-300"
+              href={href}
+              onClick={() =>
+                trackPublicCatalog({
+                  name: "catalog_work_opened",
+                  properties: { position, slug: work.slug, source },
+                })
+              }
+            >
+              <span className="hidden sm:inline">Xem chi tiết</span>
+              <ArrowUpRight aria-hidden="true" className="size-4" />
+            </Link>
+          ) : null}
         </div>
       </div>
+      {!isLead ? (
+        <Link
+          aria-label={`Mở chi tiết ${work.title}`}
+          className="hidden size-11 place-items-center self-center border border-white/15 text-white transition hover:border-gold-300 hover:text-gold-300 sm:grid"
+          href={href}
+          onClick={() =>
+            trackPublicCatalog({
+              name: "catalog_work_opened",
+              properties: { position, slug: work.slug, source },
+            })
+          }
+        >
+          <ArrowUpRight aria-hidden="true" className="size-4" />
+        </Link>
+      ) : null}
     </article>
   );
 }

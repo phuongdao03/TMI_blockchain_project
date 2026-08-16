@@ -2,7 +2,9 @@ import { expect, test } from "@playwright/test";
 
 test("super admin reviews and safely replays failed background work", async ({
   page,
+  request,
 }) => {
+  await request.post("http://127.0.0.1:4010/api/e2e/reset-operations-job");
   await page.goto("/login");
   await page
     .getByRole("textbox", { name: "Email" })

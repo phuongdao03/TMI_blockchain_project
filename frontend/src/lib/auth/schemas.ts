@@ -21,11 +21,6 @@ export const registerSchema = z
     email,
     password,
     confirmPassword: z.string(),
-    accountType: z.enum([
-      "PUBLIC_USER",
-      "INDIVIDUAL_APPLICANT",
-      "ORGANIZATION_APPLICANT",
-    ]),
   })
   .refine((values) => values.password === values.confirmPassword, {
     message: "Mật khẩu xác nhận không khớp.",

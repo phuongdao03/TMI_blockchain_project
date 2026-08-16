@@ -30,7 +30,9 @@ release_root() {
 read_env_value() {
   local env_file="$1"
   local key="$2"
-  awk -F= -v key="$key" '$1 == key { sub(/^[^=]*=/, ""); print; exit }' "$env_file"
+  awk -F= -v key="$key" \
+    '$1 == key { sub(/^[^=]*=/, ""); sub(/\r$/, ""); print; exit }' \
+    "$env_file"
 }
 
 require_production_environment() {
@@ -54,7 +56,16 @@ require_production_environment() {
 }
 
 compose_command() {
-  docker compose --env-file "$PRODUCTION_ENV_FILE" -f "$PRODUCTION_COMPOSE_FILE" "$@"
+  local -a compose_arguments
+  compose_arguments=(
+    docker compose
+    --env-file "$PRODUCTION_ENV_FILE"
+    -f "$PRODUCTION_COMPOSE_FILE"
+  )
+  if [[ -n "${PRODUCTION_COMPOSE_OVERRIDE_FILE:-}" ]]; then
+    compose_arguments+=(-f "$PRODUCTION_COMPOSE_OVERRIDE_FILE")
+  fi
+  "${compose_arguments[@]}" "$@"
 }
 
 verify_public_health() {

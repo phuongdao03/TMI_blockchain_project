@@ -2,6 +2,7 @@
 .env*
 !.env.example
 !infrastructure/.env.production.example
+!infrastructure/.env.preview.example
 !infrastructure/.env.staging.example
 *.key
 *.pem

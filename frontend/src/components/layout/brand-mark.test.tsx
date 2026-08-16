@@ -14,5 +14,7 @@ describe("BrandMark", () => {
     expect(decodeURIComponent(source ?? "")).toContain(
       "/assets/brand/tmi-group-logo.png",
     );
+    expect(screen.getByText("Đề cử Tinh Hoa Việt")).toBeDefined();
+    expect(screen.queryByText("TMI Certificate")).toBeNull();
   });
 });

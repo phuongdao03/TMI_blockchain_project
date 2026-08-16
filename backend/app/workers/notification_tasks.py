@@ -70,7 +70,7 @@ def staff_invitation_message(
 ) -> EmailMessage:
     token = quote(invitation_token, safe="")
     action_url = f"{app_base_url.rstrip('/')}/staff-invitation?token={token}"
-    title = "Lời mời tham gia TMI Certificate"
+    title = "Lời mời tham gia Đề cử Tinh Hoa Việt"
     body = (
         "Bạn được mời tham gia đội ngũ vận hành. "
         "Hãy xác minh đúng địa chỉ email nhận lời mời để tiếp tục."

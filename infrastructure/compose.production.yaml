@@ -2,6 +2,12 @@ x-app-service: &app-service
   env_file:
     - ${PRODUCTION_ENV_FILE:-.env.production}
   image: ${REGISTRY}/${IMAGE_PREFIX}-backend:${IMAGE_TAG}
+  init: true
+  logging: &default-logging
+    driver: json-file
+    options:
+      max-file: "3"
+      max-size: "10m"
   networks:
     - application
   read_only: true
@@ -16,7 +22,10 @@ x-app-service: &app-service
 
 services:
   clamav:
+    profiles: ["full"]
     image: clamav/clamav:1.4.3
+    init: true
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "clamdscan --ping 1"]
       interval: 30s
@@ -70,12 +79,8 @@ services:
     image: ${REGISTRY}/${IMAGE_PREFIX}-frontend:${IMAGE_TAG}
     environment:
       API_BASE_URL: http://backend:8000
-      NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY}
-      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
-      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID}
-      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}
-      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}
-      NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID}
+    init: true
+    logging: *default-logging
     networks:
       - application
     read_only: true
@@ -102,6 +107,7 @@ services:
 
   worker:
     <<: *app-service
+    profiles: ["full"]
     environment:
       DATABASE_NULL_POOL: "true"
     command:
@@ -132,6 +138,7 @@ services:
 
   scheduler:
     <<: *app-service
+    profiles: ["full"]
     command:
       [
         "celery",
@@ -158,6 +165,8 @@ services:
 
   redis:
     image: redis:8.4.0-alpine
+    init: true
+    logging: *default-logging
     command:
       [
         "redis-server",
@@ -187,6 +196,8 @@ services:
 
   nginx:
     image: nginxinc/nginx-unprivileged:1.29.4-alpine
+    init: true
+    logging: *default-logging
     depends_on:
       backend:
         condition: service_healthy

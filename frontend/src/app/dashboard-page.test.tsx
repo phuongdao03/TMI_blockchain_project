@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import DashboardPage from "@/app/(dashboard)/dashboard/page";
 import { AuthUserProvider } from "@/lib/auth/user-context";
@@ -14,6 +14,38 @@ vi.mock("@/lib/api/client", () => ({
 describe("dashboard overview", () => {
   beforeEach(() => {
     listMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("shows the preview dashboard without loading business data", () => {
+    vi.stubEnv("NEXT_PUBLIC_RELEASE_MODE", "preview");
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthUserProvider
+          user={{
+            id: "preview-user",
+            email: "preview@tmigroup.vn",
+            roles: ["APPLICANT"],
+            accountType: "INDIVIDUAL_APPLICANT",
+          }}
+        >
+          <DashboardPage />
+        </AuthUserProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("Không gian của bạn")).toBeDefined();
+    expect(screen.getByRole("link", { name: /Xem thư viện/ })).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: /Tìm hiểu cách tham gia/i }),
+    ).toBeDefined();
+    expect(screen.queryByText(/Phiên bản trải nghiệm/i)).toBeNull();
+    expect(screen.queryByText("Tạo hồ sơ mới")).toBeNull();
+    expect(listMock).not.toHaveBeenCalled();
   });
 
   it("renders live dossier summary and primary applicant action", async () => {
@@ -156,7 +188,7 @@ describe("dashboard overview", () => {
     );
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Khám phá TMI" }),
+      screen.getByRole("heading", { level: 1, name: "Khám phá đề cử" }),
     ).toBeDefined();
     expect(screen.queryByRole("link", { name: "Tạo hồ sơ mới" })).toBeNull();
     expect(listMock).not.toHaveBeenCalled();

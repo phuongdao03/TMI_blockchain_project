@@ -3,12 +3,52 @@ from time import perf_counter
 from uuid import UUID, uuid4
 
 from fastapi import Request, Response
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
 
 from app.core.logging import reset_request_id, set_request_id
 
 logger = logging.getLogger(__name__)
+
+
+class PreviewModeMiddleware(BaseHTTPMiddleware):
+    """Deny unavailable state changes during the public-preview release."""
+
+    _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+    _ALLOWED_MUTATION_PREFIXES = (
+        "/api/v1/auth/",
+        "/api/v1/users/me",
+    )
+
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: RequestResponseEndpoint,
+    ) -> Response:
+        is_allowed_mutation = request.url.path.startswith(
+            self._ALLOWED_MUTATION_PREFIXES
+        )
+        if request.method not in self._SAFE_METHODS and not is_allowed_mutation:
+            request_id = getattr(request.state, "request_id", "")
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "success": False,
+                    "error": {
+                        "code": "FEATURE_NOT_AVAILABLE",
+                        "message": (
+                            "Chức năng này chưa khả dụng trong phiên bản trải nghiệm."
+                        ),
+                        "details": {},
+                        "request_id": request_id,
+                    },
+                },
+                headers={"Retry-After": "86400", "X-Release-Mode": "preview"},
+            )
+        response = await call_next(request)
+        response.headers["X-Release-Mode"] = "preview"
+        return response
 
 
 def _validated_request_id(candidate: str | None) -> str:

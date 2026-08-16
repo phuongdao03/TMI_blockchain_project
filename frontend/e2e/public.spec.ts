@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 test("public portal is professional, responsive and verifiable", async ({
@@ -21,10 +22,10 @@ test("public portal is professional, responsive and verifiable", async ({
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: /Bằng chứng cho giá trị số/,
+      name: /Nơi những giá trị Việt được giới thiệu/,
     }),
   ).toBeVisible();
-  await expect(page.getByText("Bộ nhận diện TMI")).toBeVisible();
+  await expect(page.getByText(/Khám phá các đề cử tiêu biểu/)).toBeVisible();
   await page.screenshot({
     fullPage: true,
     path: testInfo.outputPath("home.png"),
@@ -32,15 +33,41 @@ test("public portal is professional, responsive and verifiable", async ({
 
   await page.goto("/works");
   await expect(
-    page.getByRole("heading", { name: /Di sản được công bố/ }),
+    page.getByRole("heading", { name: /Thư viện đề cử/ }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: /Xem tác phẩm Bộ nhận diện TMI/ }).first(),
+    page.getByRole("link", { name: /Xem đề cử/ }).first(),
   ).toBeVisible();
+  await page.screenshot({
+    fullPage: true,
+    path: testInfo.outputPath("public-catalog.png"),
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+    ),
+  ).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  const previewCatalog = await page
+    .getByRole("link", { name: /Xem đề cử Ký ức sơn mài/ })
+    .count();
+  if (previewCatalog) {
+    await page.goto("/search");
+    await expect(
+      page.getByRole("heading", { name: "Tìm nội dung bạn quan tâm" }),
+    ).toBeVisible();
+    await page.goto("/verify");
+    await expect(
+      page.getByRole("heading", { name: "Kiểm tra chứng thư" }),
+    ).toBeVisible();
+    expect(consoleProblems).toEqual([]);
+    expect(searchHistoryRequests).toEqual([]);
+    return;
+  }
   const autocompleteResponse = page.waitForResponse((response) =>
     response.url().includes("/api/v1/public/search/autocomplete?q=bo"),
   );
-  const autocomplete = page.getByRole("combobox", { name: "Tìm tác phẩm" });
+  const autocomplete = page.getByRole("combobox", { name: "Tìm đề cử" });
   await autocomplete.fill("bo");
   await autocompleteResponse;
   await expect(
@@ -50,14 +77,9 @@ test("public portal is professional, responsive and verifiable", async ({
   await autocomplete.press("Enter");
   await expect(page).toHaveURL(/\/works\/bo-nhan-dien-tmi$/);
   await page.goto("/works");
-  await page.screenshot({
-    fullPage: true,
-    path: testInfo.outputPath("public-catalog.png"),
-  });
-
   await page.goto("/search?q=bo&category=brand&sort=relevance");
   await expect(
-    page.getByRole("heading", { name: /Tìm trong kho tài sản công khai/ }),
+    page.getByRole("heading", { name: /Tìm nội dung bạn quan tâm/ }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: /Bỏ danh mục Thương hiệu/ }),
@@ -105,8 +127,8 @@ test("public portal is professional, responsive and verifiable", async ({
   await expect(
     page.getByRole("heading", { name: "Bộ nhận diện TMI" }),
   ).toBeVisible();
-  await expect(page.getByText("Chưa có media công khai")).toBeVisible();
-  await expect(page.getByText("Đã đối chiếu on-chain")).toBeVisible();
+  await expect(page.getByText("Hình ảnh đang được cập nhật")).toBeVisible();
+  await expect(page.getByText("Thông tin đã được đối chiếu")).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
     "http://127.0.0.1:3100/works/bo-nhan-dien-tmi",

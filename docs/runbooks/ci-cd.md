@@ -62,5 +62,5 @@ exception only for a proven false positive.
    migrations must follow an expand/contract compatibility strategy.
 
 The VPS must have Docker Compose v2, Bash, curl, rsync, flock, a pre-created
-`/opt/tmi-platform` directory owned by the deploy user, and a valid
+`/var/www/tmi_blockchain` directory owned by the deploy user, and a valid
 `.env.production` file that is never copied from CI.

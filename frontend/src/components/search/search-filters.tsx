@@ -109,7 +109,7 @@ export function SearchFilters({
           </label>
         </div>
         <label className="block text-sm font-semibold text-slate-300">
-          Bằng chứng blockchain
+          Thông tin xác nhận
           <select
             className={controlClass}
             defaultValue={
@@ -120,8 +120,8 @@ export function SearchFilters({
             name="hasBlockchainProof"
           >
             <option value="">Tất cả</option>
-            <option value="true">Đã có bằng chứng</option>
-            <option value="false">Chưa có bằng chứng</option>
+            <option value="true">Đã được xác nhận</option>
+            <option value="false">Chưa được xác nhận</option>
           </select>
         </label>
         <label className="block text-sm font-semibold text-slate-300">

@@ -9,9 +9,9 @@ import type {
 import { getServerAuthState } from "@/lib/auth/server-session";
 
 export const metadata: Metadata = {
-  title: "Tìm kiếm tài sản công khai | TMI Certificate",
+  title: "Tìm kiếm đề cử",
   description:
-    "Tìm tác phẩm, chủ đề và chứng thư trong kho tài sản công khai TMI.",
+    "Tìm đề cử, chủ đề và thông tin đã được công bố trên Đề cử Tinh Hoa Việt.",
   robots: { index: false, follow: true },
 };
 
@@ -22,6 +22,7 @@ export default async function SearchPage({
 }) {
   const input = await searchParams;
   const authState = await getServerAuthState();
+  const embedded = Boolean(authState.user);
   const q = clean(input.q, 200);
   const parameters: SearchParameters = {
     q,
@@ -37,18 +38,31 @@ export default async function SearchPage({
     cursor: clean(input.cursor, 1_024),
   };
   return (
-    <main className="relative isolate overflow-hidden">
+    <div
+      className={
+        embedded
+          ? "relative isolate overflow-hidden rounded-2xl bg-[#151515] px-5 py-7 text-white shadow-[0_24px_70px_rgba(15,23,42,.12)] sm:px-7 lg:px-9"
+          : "relative isolate overflow-hidden"
+      }
+    >
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[38rem] bg-[radial-gradient(circle_at_82%_4%,rgba(212,167,44,.11),transparent_25rem),radial-gradient(circle_at_6%_26%,rgba(220,38,38,.1),transparent_26rem)]"
       />
-      <div className="mx-auto min-h-[calc(100dvh-5rem)] max-w-[90rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+      <div
+        className={
+          embedded
+            ? "mx-auto max-w-[90rem]"
+            : "mx-auto my-8 min-h-[calc(100dvh-9rem)] max-w-[90rem] rounded-2xl bg-[#151515] px-5 py-7 text-white shadow-[0_24px_70px_rgba(15,23,42,.12)] sm:mx-6 sm:px-7 lg:mx-auto lg:px-9"
+        }
+      >
         <SearchResultsPage
           authenticated={Boolean(authState.user)}
+          embedded={embedded}
           parameters={parameters}
         />
       </div>
-    </main>
+    </div>
   );
 }
 

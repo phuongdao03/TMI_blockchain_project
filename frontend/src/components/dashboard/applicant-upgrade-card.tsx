@@ -1,6 +1,13 @@
 "use client";
 
-import { LoaderCircle, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  FileUp,
+  LoaderCircle,
+  UserRound,
+} from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { authApi, ApiError } from "@/lib/api/client";
@@ -11,8 +18,10 @@ type ApplicantAccountType = "INDIVIDUAL_APPLICANT" | "ORGANIZATION_APPLICANT";
 
 export function ApplicantUpgradeCard({
   onUpgraded,
+  preview = false,
 }: {
   onUpgraded?: (user: AuthUser) => void;
+  preview?: boolean;
 }) {
   const [accountType, setAccountType] = useState<ApplicantAccountType>(
     "INDIVIDUAL_APPLICANT",
@@ -20,6 +29,7 @@ export function ApplicantUpgradeCard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [completed, setCompleted] = useState(false);
+  const [isChoosing, setIsChoosing] = useState(false);
 
   const upgrade = async () => {
     setError(undefined);
@@ -30,53 +40,96 @@ export function ApplicantUpgradeCard({
       onUpgraded?.(user);
     } catch (reason) {
       setError(
-        reason instanceof ApiError
-          ? reason.message
-          : "Không thể mở luồng gửi tài sản lúc này.",
+        reason instanceof ApiError && reason.status === 401
+          ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục."
+          : "Chưa thể bắt đầu hồ sơ lúc này. Vui lòng thử lại sau.",
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (preview) {
+    return (
+      <section className="overflow-hidden rounded-2xl border border-black/10 bg-[#fbfaf7] shadow-[0_18px_55px_rgb(29_28_27/0.08)]">
+        <div className="grid gap-7 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div className="max-w-2xl">
+            <span className="grid size-11 place-items-center rounded-lg bg-primary-50 text-primary-700">
+              <FileUp aria-hidden="true" className="size-5" />
+            </span>
+            <p className="mt-6 font-mono text-[0.65rem] font-bold uppercase tracking-[0.18em] text-primary-700">
+              Sắp ra mắt
+            </p>
+            <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-neutral-950 sm:text-3xl">
+              Cổng gửi đề cử đang được chuẩn bị
+            </h2>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-neutral-600">
+              Khi cổng tiếp nhận mở, hướng dẫn, tiêu chí và danh mục tài liệu
+              cần chuẩn bị sẽ được công bố đầy đủ tại đây.
+            </p>
+          </div>
+          <Link
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-neutral-950 px-5 text-sm font-bold text-white transition-colors hover:bg-neutral-800"
+            href="/coming-soon/submission"
+          >
+            Tìm hiểu cách tham gia
+            <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="rounded-3xl border border-primary-200 bg-white p-6 shadow-sm sm:p-7">
-      <div className="flex items-start gap-4">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary-50 text-primary-700">
-          <ShieldCheck aria-hidden="true" className="size-5" />
-        </span>
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-primary-700">
-            Gửi tài sản lên TMI
+    <section className="overflow-hidden rounded-2xl border border-black/10 bg-[#fbfaf7] shadow-[0_18px_55px_rgb(29_28_27/0.08)]">
+      <div className="grid gap-7 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div className="max-w-2xl">
+          <span className="grid size-11 place-items-center rounded-lg bg-primary-50 text-primary-700">
+            <FileUp aria-hidden="true" className="size-5" />
+          </span>
+          <p className="mt-6 font-mono text-[0.65rem] font-bold uppercase tracking-[0.18em] text-primary-700">
+            Bắt đầu khi bạn sẵn sàng
           </p>
-          <h2 className="mt-1 text-xl font-black text-neutral-950">
-            Không cần tạo tài khoản mới
+          <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-neutral-950 sm:text-3xl">
+            Gửi tác phẩm hoặc hồ sơ
           </h2>
-          <p className="mt-2 text-sm leading-6 text-neutral-600">
-            Nâng cấp tài khoản hiện tại khi bạn đã sẵn sàng. Bạn vẫn có thể xem
-            và bình chọn như bình thường.
+          <p className="mt-3 text-sm leading-6 text-neutral-600">
+            Chuẩn bị thông tin, tải tài liệu lên và theo dõi tiến độ tại một
+            nơi.
           </p>
         </div>
+        {!isChoosing && !completed ? (
+          <Button
+            className="min-h-12"
+            onClick={() => setIsChoosing(true)}
+            type="button"
+          >
+            Gửi tác phẩm hoặc hồ sơ
+            <ArrowRight aria-hidden="true" className="size-4" />
+          </Button>
+        ) : null}
       </div>
 
       {completed ? (
         <div
-          className="mt-6 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800"
+          className="border-t border-emerald-200 bg-emerald-50 px-6 py-5 text-sm text-emerald-800 sm:px-8"
           role="status"
         >
-          <p className="font-bold">Đã mở không gian gửi tài sản.</p>
+          <p className="font-bold">Bạn đã có thể bắt đầu hồ sơ.</p>
           <p className="mt-1">
-            Hoàn thiện họ tên trong hồ sơ tài khoản trước khi tạo hồ sơ xác lập.
+            Hoàn thiện thông tin liên hệ trước khi tải tài liệu lên.
           </p>
           <a className="mt-3 inline-block font-bold underline" href="/account">
-            Mở cài đặt tài khoản
+            Tiếp tục thiết lập
           </a>
         </div>
-      ) : (
+      ) : isChoosing ? (
         <>
-          <fieldset className="mt-6 grid gap-3 sm:grid-cols-2">
-            <legend className="sr-only">Loại hồ sơ người gửi</legend>
-            <label className="rounded-2xl border border-neutral-200 p-4 has-[:checked]:border-primary-600 has-[:checked]:bg-primary-50">
+          <fieldset className="grid gap-3 border-t border-black/10 bg-white px-6 py-6 sm:grid-cols-2 sm:px-8">
+            <legend className="mb-4 text-base font-bold text-neutral-950 sm:col-span-2">
+              Bạn gửi hồ sơ với tư cách nào?
+            </legend>
+            <label className="cursor-pointer rounded-xl border border-neutral-200 p-4 transition has-[:checked]:border-primary-600 has-[:checked]:bg-primary-50">
               <input
                 aria-label="Cá nhân"
                 checked={accountType === "INDIVIDUAL_APPLICANT"}
@@ -85,47 +138,71 @@ export function ApplicantUpgradeCard({
                 onChange={() => setAccountType("INDIVIDUAL_APPLICANT")}
                 type="radio"
               />
-              <span className="font-bold text-neutral-950">Cá nhân</span>
-              <span className="mt-1 block text-sm text-neutral-500">
-                Gửi tài sản thuộc quyền sở hữu cá nhân.
+              <span className="flex items-center gap-2 font-bold text-neutral-950">
+                <UserRound
+                  aria-hidden="true"
+                  className="size-4 text-primary-700"
+                />
+                Cá nhân
+              </span>
+              <span className="mt-2 block text-sm text-neutral-500">
+                Hồ sơ do bạn trực tiếp gửi.
               </span>
             </label>
-            <label className="rounded-2xl border border-neutral-200 p-4 has-[:checked]:border-primary-600 has-[:checked]:bg-primary-50">
+            <label className="cursor-pointer rounded-xl border border-neutral-200 p-4 transition has-[:checked]:border-primary-600 has-[:checked]:bg-primary-50">
               <input
-                aria-label="Tổ chức"
+                aria-label="Doanh nghiệp hoặc tổ chức"
                 checked={accountType === "ORGANIZATION_APPLICANT"}
                 className="sr-only"
                 name="applicant-account-type"
                 onChange={() => setAccountType("ORGANIZATION_APPLICANT")}
                 type="radio"
               />
-              <span className="font-bold text-neutral-950">Tổ chức</span>
-              <span className="mt-1 block text-sm text-neutral-500">
-                Đại diện đơn vị và quản lý thành viên.
+              <span className="flex items-center gap-2 font-bold text-neutral-950">
+                <Building2
+                  aria-hidden="true"
+                  className="size-4 text-primary-700"
+                />
+                Doanh nghiệp hoặc tổ chức
+              </span>
+              <span className="mt-2 block text-sm text-neutral-500">
+                Hồ sơ được gửi thay mặt một đơn vị.
               </span>
             </label>
           </fieldset>
           {error ? (
-            <p className="mt-4 text-sm font-semibold text-error" role="alert">
+            <p
+              className="px-6 pt-4 text-sm font-semibold text-error sm:px-8"
+              role="alert"
+            >
               {error}
             </p>
           ) : null}
-          <Button
-            className="mt-6 min-h-11"
-            disabled={isSubmitting}
-            onClick={upgrade}
-            type="button"
-          >
-            {isSubmitting ? (
-              <LoaderCircle
-                aria-hidden="true"
-                className="size-4 animate-spin"
-              />
-            ) : null}
-            Bắt đầu gửi tài sản
-          </Button>
+          <div className="flex flex-col-reverse gap-3 border-t border-black/8 px-6 py-5 sm:flex-row sm:items-center sm:justify-end sm:px-8">
+            <button
+              className="min-h-11 px-4 text-sm font-bold text-neutral-600 hover:text-neutral-950"
+              onClick={() => setIsChoosing(false)}
+              type="button"
+            >
+              Để sau
+            </button>
+            <Button
+              className="min-h-11"
+              disabled={isSubmitting}
+              onClick={upgrade}
+              type="button"
+            >
+              {isSubmitting ? (
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-4 animate-spin"
+                />
+              ) : null}
+              {isSubmitting ? "Đang thiết lập…" : "Tiếp tục"}
+            </Button>
+          </div>
         </>
-      )}
+      ) : null}
     </section>
   );
 }

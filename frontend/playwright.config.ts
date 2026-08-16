@@ -8,6 +8,13 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   reporter: "line",
+  expect: {
+    toHaveScreenshot: {
+      // Tolerate sub-pixel font/transform rasterization while keeping the
+      // visual gate strict enough to catch real layout or content changes.
+      maxDiffPixelRatio: 0.001,
+    },
+  },
   use: {
     baseURL: "http://127.0.0.1:3100",
     screenshot: "only-on-failure",

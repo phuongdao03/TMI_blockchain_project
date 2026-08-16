@@ -13,13 +13,18 @@ const securityHeaders = [
       "object-src 'none'",
       `script-src 'self' 'unsafe-inline'${
         process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"
-      }`,
+      } https://apis.google.com`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       `connect-src 'self' https:${
         process.env.NODE_ENV === "production"
           ? ""
           : " ws: http://localhost:9099 http://127.0.0.1:9099"
+      }`,
+      `frame-src 'self' https://*.firebaseapp.com${
+        process.env.NODE_ENV === "production"
+          ? ""
+          : " http://localhost:9099 http://127.0.0.1:9099"
       }`,
       "font-src 'self' data:",
     ].join("; "),
@@ -71,7 +76,11 @@ const nextConfig: NextConfig = {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
   async rewrites() {
-    const apiBaseUrl = process.env.API_BASE_URL ?? "http://localhost:8000";
+    const apiBaseUrl = (
+      process.env.API_BASE_URL ??
+      process.env.BACKEND_URL ??
+      "http://localhost:8000"
+    ).replace(/\/$/, "");
     return [
       {
         source: "/api/:path*",

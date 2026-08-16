@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { trackPublicCatalog } from "@/lib/analytics/public-catalog";
 import { publicApi } from "@/lib/api/client";
 import type { PublicCatalogInitialData, PublicWorkSort } from "@/lib/api/types";
+import { isPreviewRelease } from "@/lib/release-mode";
 
 export interface CatalogParameters {
   query?: string;
@@ -38,26 +39,30 @@ export function PublicLibrary({
   ...parameters
 }: CatalogParameters & { initialData?: PublicCatalogInitialData }) {
   const [filterOpen, setFilterOpen] = useState(false);
+  const preview = isPreviewRelease();
   const closeButton = useRef<HTMLButtonElement>(null);
   const filters = { ...parameters, pageSize: 12 };
   const works = useQuery({
     queryKey: ["public-catalog-works", filters],
     queryFn: () => publicApi.works(filters),
     initialData: initialData?.works,
+    enabled: !preview,
   });
   const featured = useQuery({
     queryKey: ["public-catalog-featured"],
     queryFn: () => publicApi.featuredWorks(3),
-    enabled: parameters.page === 1 && !hasFilters(parameters),
+    enabled: !preview && parameters.page === 1 && !hasFilters(parameters),
     initialData: initialData?.featured,
   });
   const categories = useQuery({
     queryKey: ["public-categories"],
     queryFn: publicApi.categories,
+    enabled: !preview,
   });
   const tags = useQuery({
     queryKey: ["public-tags"],
     queryFn: publicApi.tags,
+    enabled: !preview,
   });
 
   useEffect(() => {
@@ -91,23 +96,28 @@ export function PublicLibrary({
                 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl"
                 id="featured-heading"
               >
-                Tác phẩm nổi bật
+                Đề cử nổi bật
               </h2>
             </div>
-            <span className="hidden text-sm text-slate-500 sm:block">
+            <span className="hidden text-sm text-slate-400 sm:block">
               Được biên tập theo thời hạn công bố
             </span>
           </div>
           <div
-            className={`grid gap-4 ${featured.data.length === 1 ? "max-w-2xl" : featured.data.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3"}`}
+            className={
+              featured.data.length > 1
+                ? "grid gap-x-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,.65fr)]"
+                : "max-w-5xl"
+            }
           >
             {featured.data.map((work, index) => (
-              <PublicWorkCard
-                key={work.id}
-                position={index + 1}
-                source="featured"
-                work={work}
-              />
+              <div className={index === 0 ? "lg:row-span-2" : ""} key={work.id}>
+                <PublicWorkCard
+                  position={index + 1}
+                  source="featured"
+                  work={work}
+                />
+              </div>
             ))}
           </div>
         </section>
@@ -172,8 +182,8 @@ export function PublicLibrary({
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
-          <aside className="hidden lg:block">
-            <div className="sticky top-24 rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+          <div aria-label="Bộ lọc kết quả" className="hidden lg:block">
+            <div className="sticky top-24 border-l border-white/15 pl-5">
               <div className="flex items-center gap-2 text-white">
                 <SlidersHorizontal className="size-4 text-gold-300" />
                 <h2 className="font-bold">Tinh chỉnh kết quả</h2>
@@ -184,13 +194,13 @@ export function PublicLibrary({
                 tags={tags.data ?? []}
               />
             </div>
-          </aside>
+          </div>
 
           <div className="min-w-0">
             <div className="mb-5 flex items-end justify-between gap-4">
               <div>
                 <p className="text-xs font-bold tracking-[0.18em] text-primary-400 uppercase">
-                  Public catalog
+                  Danh sách đề cử
                 </p>
                 <h2
                   className="mt-2 text-2xl font-bold text-white"
@@ -200,8 +210,8 @@ export function PublicLibrary({
                 </h2>
               </div>
               {!works.isPending && !works.error ? (
-                <p aria-live="polite" className="text-sm text-slate-500">
-                  {total.toLocaleString("vi-VN")} tác phẩm
+                <p aria-live="polite" className="text-sm text-slate-400">
+                  {total.toLocaleString("vi-VN")} đề cử
                 </p>
               ) : null}
             </div>
@@ -210,7 +220,9 @@ export function PublicLibrary({
               <CatalogSkeleton />
             ) : works.error ? (
               <div className="rounded-3xl border border-red-400/20 bg-red-400/10 px-6 py-14 text-center">
-                <p className="font-bold text-red-100">Chưa thể tải catalog</p>
+                <p className="font-bold text-red-100">
+                  Chưa thể tải danh sách đề cử
+                </p>
                 <p className="mt-2 text-sm text-red-200/70">
                   Kết nối có thể đang gián đoạn. Bạn có thể thử lại mà không mất
                   bộ lọc.
@@ -223,7 +235,7 @@ export function PublicLibrary({
               <div className="rounded-3xl border border-dashed border-white/15 px-6 py-16 text-center">
                 <Search className="mx-auto size-8 text-slate-600" />
                 <h3 className="mt-4 text-xl font-bold text-white">
-                  Chưa tìm thấy tác phẩm phù hợp
+                  Chưa tìm thấy đề cử phù hợp
                 </h3>
                 <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
                   Thử rút gọn từ khóa hoặc bỏ bớt điều kiện lọc.
@@ -236,7 +248,7 @@ export function PublicLibrary({
                 </Link>
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="border-y border-white/15">
                 {works.data.data.map((work, index) => (
                   <PublicWorkCard
                     key={work.id}
@@ -272,7 +284,7 @@ export function PublicLibrary({
                 className="text-xl font-bold text-white"
                 id="mobile-filter-title"
               >
-                Bộ lọc catalog
+                Bộ lọc đề cử
               </h2>
               <button
                 aria-label="Đóng bộ lọc"
@@ -383,14 +395,19 @@ function FilterForm({
 function CatalogSkeleton() {
   return (
     <div
-      aria-label="Đang tải catalog"
-      className="grid gap-px overflow-hidden rounded-3xl border border-white/10 bg-white/10 sm:grid-cols-2 xl:grid-cols-3"
+      aria-label="Đang tải danh sách đề cử"
+      className="divide-y divide-white/10 border-y border-white/10"
     >
-      {Array.from({ length: 6 }, (_, index) => (
-        <div className="min-h-96 animate-pulse bg-ink-950 p-5" key={index}>
-          <div className="aspect-[4/3] rounded-xl bg-ink-800" />
-          <div className="mt-6 h-5 w-2/3 rounded bg-ink-800" />
-          <div className="mt-3 h-4 rounded bg-ink-800" />
+      {Array.from({ length: 5 }, (_, index) => (
+        <div
+          className="grid animate-pulse grid-cols-[7rem_1fr] gap-4 py-5 sm:grid-cols-[9rem_1fr]"
+          key={index}
+        >
+          <div className="aspect-square bg-ink-800 sm:aspect-[4/3]" />
+          <div className="py-2">
+            <div className="h-5 w-2/3 bg-ink-800" />
+            <div className="mt-3 h-4 max-w-lg bg-ink-800" />
+          </div>
         </div>
       ))}
     </div>
@@ -408,7 +425,7 @@ function Pagination({
 }) {
   return (
     <nav
-      aria-label="Phân trang catalog"
+      aria-label="Phân trang đề cử"
       className="mt-8 flex items-center justify-between border-t border-white/10 pt-6"
     >
       <PageLink

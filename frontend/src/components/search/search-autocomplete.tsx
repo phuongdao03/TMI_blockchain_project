@@ -102,7 +102,7 @@ export function SearchAutocomplete({
   return (
     <div className="relative min-w-0 flex-1">
       <label htmlFor={`${listId}-input`} className="sr-only">
-        Tìm tác phẩm
+        Tìm đề cử
       </label>
       <Search
         aria-hidden="true"
@@ -132,7 +132,7 @@ export function SearchAutocomplete({
         }}
         onFocus={() => suggestions.length && setOpen(true)}
         onKeyDown={handleKeyDown}
-        placeholder="Tìm tác phẩm, danh mục hoặc chủ đề"
+        placeholder="Tìm đề cử, danh mục hoặc chủ đề"
         role="combobox"
         type="search"
         value={query}

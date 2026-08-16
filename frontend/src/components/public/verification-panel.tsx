@@ -77,7 +77,13 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
-export function VerificationPanel({ token }: { token?: string }) {
+export function VerificationPanel({
+  token,
+  embedded = false,
+}: {
+  token?: string;
+  embedded?: boolean;
+}) {
   const [mode, setMode] = useState<"number" | "transaction">("number");
   const [value, setValue] = useState("");
   const [lookup, setLookup] = useState(token ?? "");
@@ -105,23 +111,27 @@ export function VerificationPanel({ token }: { token?: string }) {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="verification-panel space-y-8">
       <header className="max-w-3xl">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-gold-300">
           Tra cứu độc lập
         </p>
-        <h1 className="mt-4 text-4xl font-bold tracking-tight text-white sm:text-6xl">
-          Kiểm tra một chứng thư trong vài bước
+        <h1
+          className={`mt-4 font-bold tracking-tight text-white ${
+            embedded ? "text-3xl sm:text-4xl" : "text-4xl sm:text-6xl"
+          }`}
+        >
+          Kiểm tra chứng thư
         </h1>
         <p className="mt-5 text-base leading-7 text-slate-300">
-          Nhập mã được cung cấp để xem tình trạng, lịch sử xác nhận và đối chiếu
-          tài liệu công khai. Không cần hiểu công nghệ phía sau.
+          Nhập mã được cung cấp để xem tình trạng và thông tin xác nhận đã công
+          bố.
         </p>
       </header>
 
       {!token ? (
         <form
-          className="grid gap-3 border-y border-white/10 py-6 md:grid-cols-[12rem_1fr_auto]"
+          className="verification-form grid gap-3 border-y border-white/10 py-6 md:grid-cols-[12rem_1fr_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             setComparison(null);
@@ -133,7 +143,7 @@ export function VerificationPanel({ token }: { token?: string }) {
             Cách tra cứu
           </label>
           <select
-            className="min-h-12 rounded-xl border border-white/15 bg-ink-900 px-4 text-sm text-white"
+            className="verification-control min-h-12 rounded-xl border border-white/15 bg-ink-900 px-4 text-sm text-white"
             id="verification-mode"
             onChange={(event) => setMode(event.target.value as typeof mode)}
             value={mode}
@@ -145,7 +155,7 @@ export function VerificationPanel({ token }: { token?: string }) {
             Thông tin cần tra cứu
           </label>
           <input
-            className="min-h-12 rounded-xl border border-white/15 bg-ink-950 px-4 text-sm text-white outline-none focus:border-gold-300"
+            className="verification-control min-h-12 rounded-xl border border-white/15 bg-ink-950 px-4 text-sm text-white outline-none focus:border-gold-300"
             id="verification-value"
             onChange={(event) => setValue(event.target.value)}
             placeholder={mode === "number" ? "Ví dụ: TMI-2026-…" : "Ví dụ: 0x…"}
@@ -153,7 +163,7 @@ export function VerificationPanel({ token }: { token?: string }) {
             value={value}
           />
           <button
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 text-sm font-bold text-white"
+            className="verification-submit inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 text-sm font-bold text-white"
             type="submit"
           >
             <Search className="size-4" /> Kiểm tra
@@ -351,7 +361,11 @@ export function VerificationPanel({ token }: { token?: string }) {
             </p>
           </div>
         ) : (
-          <div className="grid min-h-64 place-items-center text-center text-slate-400">
+          <div
+            className={`grid place-items-center text-center text-slate-400 ${
+              embedded ? "min-h-32 py-8" : "min-h-64"
+            }`}
+          >
             Nhập mã chứng thư hoặc mã giao dịch để bắt đầu.
           </div>
         )}

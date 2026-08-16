@@ -97,7 +97,7 @@ function PublicWorkPresentation({ detail }: { detail: PublicWorkDetail }) {
               className="inline-flex items-center gap-1 hover:text-white"
               href="/works"
             >
-              <ArrowLeft className="size-4" /> Catalog
+              <ArrowLeft className="size-4" /> Danh sách đề cử
             </Link>
             <span aria-hidden="true">/</span>
             <span>{detail.categoryName}</span>
@@ -161,7 +161,7 @@ function PublicWorkPresentation({ detail }: { detail: PublicWorkDetail }) {
               className="border-t border-white/10 pt-7"
             >
               <p className="text-xs font-bold tracking-[0.2em] text-primary-400 uppercase">
-                Public narrative
+                Câu chuyện đề cử
               </p>
               <h2
                 className="mt-2 text-3xl font-bold text-white"
@@ -252,12 +252,14 @@ function PublicGallery({
       <div className="grid aspect-[16/8] place-items-center rounded-3xl border border-dashed border-white/15 bg-ink-900">
         <div className="text-center">
           <ImageOff className="mx-auto size-9 text-slate-600" />
-          <p className="mt-3 text-sm text-slate-500">Chưa có media công khai</p>
+          <p className="mt-3 text-sm text-slate-500">
+            Hình ảnh đang được cập nhật
+          </p>
         </div>
       </div>
     );
   return (
-    <section aria-label="Thư viện media tác phẩm">
+    <section aria-label="Thư viện nội dung đề cử">
       <div className="relative grid min-h-[22rem] place-items-center overflow-hidden rounded-3xl border border-white/10 bg-ink-900 sm:min-h-[34rem]">
         {selected.kind === "IMAGE" && selected.url ? (
           <Image
@@ -293,7 +295,7 @@ function PublicGallery({
           <div className="text-center text-slate-500">
             <FileText className="mx-auto size-9" />
             <p className="mt-3 text-sm">
-              Media này không có bản xem trước công khai.
+              Nội dung này chưa có bản xem trước công khai.
             </p>
           </div>
         ) : null}
@@ -307,7 +309,7 @@ function PublicGallery({
         <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
           {media.map((item, index) => (
             <button
-              aria-label={`Xem media ${index + 1}`}
+              aria-label={`Xem nội dung ${index + 1}`}
               aria-pressed={item.id === selected?.id}
               className={`min-h-12 shrink-0 rounded-xl border px-4 text-sm font-bold ${item.id === selected?.id ? "border-gold-300 text-gold-300" : "border-white/10 text-slate-400"}`}
               key={item.id}
@@ -339,7 +341,7 @@ function CertificatePanel({
             value={certificate.certificateNumber}
             mono
           />
-          <DataRow label="Trạng thái DB" value={certificate.status} />
+          <DataRow label="Trạng thái xác nhận" value={certificate.status} />
           <DataRow
             label="Ngày phát hành"
             value={new Intl.DateTimeFormat("vi-VN").format(
@@ -372,17 +374,17 @@ function ProofPanel({
         <Blocks className="size-7 text-gold-300" />
         {state.icon}
       </div>
-      <h2 className="mt-4 font-bold text-white">Bằng chứng blockchain</h2>
+      <h2 className="mt-4 font-bold text-white">Thông tin minh bạch</h2>
       <p className={`mt-2 text-sm font-bold ${state.color}`}>{state.label}</p>
       <p className="mt-2 text-xs leading-5 text-slate-500">
         {state.description}
       </p>
       {proof ? (
         <dl className="mt-5 space-y-3 text-sm">
-          <DataRow label="Mạng" value={proof.network} mono />
+          <DataRow label="Nơi ghi nhận" value={proof.network} mono />
           <DataRow
-            label="Transaction"
-            value={proof.transactionHash || "Chưa broadcast"}
+            label="Mã đối chiếu"
+            value={proof.transactionHash || "Đang cập nhật"}
             mono
           />
           <DataRow label="Xác nhận" value={String(proof.confirmations)} />
@@ -395,7 +397,7 @@ function ProofPanel({
           rel="noreferrer"
           target="_blank"
         >
-          Mở blockchain explorer <ExternalLink className="size-4" />
+          Xem bản ghi độc lập <ExternalLink className="size-4" />
         </a>
       ) : null}
     </section>
@@ -409,38 +411,38 @@ function verificationState(
 ) {
   if (!proof)
     return {
-      label: "Chưa có bản ghi giao dịch",
+      label: "Chưa có thông tin đối chiếu",
       description:
-        "Hệ thống chưa lưu bằng chứng blockchain cho projection này.",
+        "Thông tin xác nhận độc lập chưa được công bố cho đề cử này.",
       color: "text-slate-400",
       icon: <CircleHelp className="size-5 text-slate-500" />,
     };
   if (pending)
     return {
-      label: "Đang đối chiếu RPC",
-      description: "Đang đọc trạng thái mới nhất từ mạng blockchain.",
+      label: "Đang kiểm tra trạng thái",
+      description: "Hệ thống đang đọc thông tin xác nhận mới nhất.",
       color: "text-amber-300",
       icon: <RotateCcw className="size-5 animate-spin text-amber-300" />,
     };
   if (!verification || verification.status === "PENDING")
     return {
-      label: "RPC tạm thời chưa khả dụng",
+      label: "Chưa thể đối chiếu lúc này",
       description:
-        "Bản ghi DB vẫn được hiển thị nhưng chưa thể xác nhận on-chain lúc này.",
+        "Thông tin công khai vẫn được hiển thị, nhưng trạng thái xác nhận đang tạm thời gián đoạn.",
       color: "text-amber-300",
       icon: <AlertTriangle className="size-5 text-amber-300" />,
     };
   if (verification.status === "VALID")
     return {
-      label: "Đã đối chiếu on-chain",
-      description: "Hash và phiên bản công khai khớp dữ liệu trên blockchain.",
+      label: "Thông tin đã được đối chiếu",
+      description: "Nội dung công khai khớp với bản ghi xác nhận độc lập.",
       color: "text-emerald-300",
       icon: <ShieldCheck className="size-5 text-emerald-300" />,
     };
   return {
     label: `Cần kiểm tra: ${verification.status}`,
     description:
-      "Trạng thái xác minh không đạt điều kiện VALID. Không nên coi đây là bằng chứng đã xác nhận.",
+      "Trạng thái hiện tại chưa đủ điều kiện xác nhận. Vui lòng kiểm tra lại trước khi sử dụng thông tin.",
     color: "text-red-300",
     icon: <AlertTriangle className="size-5 text-red-300" />,
   };

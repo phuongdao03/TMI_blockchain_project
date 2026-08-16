@@ -27,26 +27,26 @@ interface Action {
 const publicActions: Action[] = [
   {
     href: "/search",
-    label: "Tìm tài sản số",
-    detail: "Tra cứu theo mã, tên hoặc tổ chức phát hành.",
+    label: "Tìm kiếm đề cử",
+    detail: "Tìm theo tên, chủ đề hoặc danh mục.",
     icon: Search,
   },
   {
     href: "/works",
-    label: "Thư viện chứng thư",
-    detail: "Khám phá các tài sản đã được công khai.",
+    label: "Thư viện đề cử",
+    detail: "Khám phá những nội dung đã được công bố.",
     icon: BookOpenText,
   },
   {
     href: "/map",
-    label: "Bản đồ xác lập",
-    detail: "Xem hệ sinh thái tài sản theo khu vực.",
+    label: "Bản đồ đề cử",
+    detail: "Khám phá nội dung theo địa điểm và khu vực.",
     icon: Map,
   },
   {
     href: "/verify",
-    label: "Xác minh chứng thư",
-    detail: "Đối chiếu tính toàn vẹn của chứng thư công khai.",
+    label: "Tra cứu chứng thư",
+    detail: "Kiểm tra trạng thái và thông tin đã công bố.",
     icon: BadgeCheck,
   },
 ];
@@ -212,9 +212,9 @@ export function RoleDashboardOverview({
       : persona === "ADMIN" && roles.includes("CONTENT_ADMIN")
         ? contentAdminWorkspace
         : staffWorkspaces[persona];
-  const title = workspace?.title ?? "Khám phá TMI";
+  const title = workspace?.title ?? "Khám phá đề cử";
   const description = isPublic
-    ? "Tra cứu, xác minh và theo dõi hệ sinh thái chứng thư mà không cần quyền quản lý hồ sơ."
+    ? "Khám phá nội dung đã công bố và theo dõi những hoạt động mới của chương trình."
     : (workspace?.description ?? "");
   const actions = workspace?.actions ?? publicActions;
   const [primaryAction, ...secondaryActions] = actions;
@@ -232,6 +232,10 @@ export function RoleDashboardOverview({
           {description}
         </p>
       </header>
+
+      {isPublic && accountType === "PUBLIC_USER" ? (
+        <ApplicantUpgradeCard onUpgraded={onUpgraded} />
+      ) : null}
 
       {primaryAction ? (
         <section className="hero-grid-surface relative overflow-hidden rounded-2xl bg-[#151515] px-6 py-8 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:min-h-72 lg:grid-cols-[1fr_auto] lg:items-end lg:px-10 lg:py-10">
@@ -261,23 +265,6 @@ export function RoleDashboardOverview({
             <ArrowRight aria-hidden="true" className="size-4" />
           </Link>
         </section>
-      ) : null}
-
-      {isPublic ? (
-        <section className="flex gap-4 border-l-2 border-gold-300 bg-[#fbfaf7] px-5 py-4 text-sm leading-6 text-neutral-600">
-          <BadgeCheck
-            aria-hidden="true"
-            className="mt-0.5 size-5 shrink-0 text-amber-700"
-          />
-          <p>
-            Tài khoản của bạn chỉ hiển thị các công cụ công khai. Để tạo và nộp
-            hồ sơ, hãy đăng ký đúng loại tài khoản người nộp.
-          </p>
-        </section>
-      ) : null}
-
-      {isPublic && accountType === "PUBLIC_USER" ? (
-        <ApplicantUpgradeCard onUpgraded={onUpgraded} />
       ) : null}
 
       {secondaryActions.length ? (

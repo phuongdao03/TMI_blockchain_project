@@ -49,11 +49,11 @@ def render_email(
         if action_url
         else ""
     )
-    text = f"{title}\n\n{body}{action_text}\n\nTMI Certificate Platform"
+    text = f"{title}\n\n{body}{action_text}\n\nĐề cử Tinh Hoa Việt · TMI Group"
     html = (
         '<div style="font-family:Arial,sans-serif;color:#18202b">'
         f"<h1>{escape(title)}</h1><p>{escape(body)}</p>{action_html}"
-        "<p>TMI Certificate Platform</p></div>"
+        "<p>Đề cử Tinh Hoa Việt · TMI Group</p></div>"
     )
     return text, html
 

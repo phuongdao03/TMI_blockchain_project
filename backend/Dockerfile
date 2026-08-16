@@ -1,4 +1,4 @@
-FROM python:3.12.13-alpine3.24 AS builder
+FROM python:3.12.13-alpine3.24@sha256:6d43704baacd1bfbe7c295d7f13079d5d8104ed33568873133f8fc69980419df AS builder
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1
@@ -11,7 +11,7 @@ COPY app ./app
 RUN python -m pip wheel --wheel-dir /wheels .
 
 
-FROM python:3.12.13-alpine3.24 AS runtime
+FROM python:3.12.13-alpine3.24@sha256:6d43704baacd1bfbe7c295d7f13079d5d8104ed33568873133f8fc69980419df AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -23,8 +23,10 @@ RUN addgroup -g 10001 -S app \
 WORKDIR /app
 
 COPY --from=builder /wheels /wheels
-RUN python -m pip install --no-cache-dir /wheels/*.whl \
-    && rm -rf /wheels
+RUN python -m pip install --no-cache-dir --no-compile /wheels/*.whl \
+    && rm -rf /wheels \
+    && rm -rf /usr/local/lib/python3.12/site-packages/pip* \
+        /usr/local/bin/pip*
 
 COPY --chown=10001:10001 alembic.ini ./
 COPY --chown=10001:10001 alembic ./alembic

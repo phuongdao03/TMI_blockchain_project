@@ -5,10 +5,16 @@ import { RoleDashboardOverview } from "@/components/dashboard/role-dashboard-ove
 
 describe("RoleDashboardOverview", () => {
   it("renders browse-only discovery actions for a public user", () => {
-    render(<RoleDashboardOverview persona="PUBLIC" />);
+    render(
+      <RoleDashboardOverview accountType="PUBLIC_USER" persona="PUBLIC" />,
+    );
 
-    expect(screen.getByRole("link", { name: /Tìm tài sản số/i })).toBeDefined();
+    expect(screen.getByRole("link", { name: /Tìm kiếm đề cử/i })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: /Gửi tác phẩm hoặc hồ sơ/i }),
+    ).toBeDefined();
     expect(screen.queryByRole("link", { name: /Tạo hồ sơ mới/i })).toBeNull();
+    expect(screen.queryByText(/đăng ký đúng loại tài khoản/i)).toBeNull();
   });
 
   it.each([

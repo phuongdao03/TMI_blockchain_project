@@ -25,7 +25,7 @@ afterEach(() => vi.useRealTimers());
 describe("SearchAutocomplete", () => {
   it("debounces requests and ignores queries shorter than two characters", async () => {
     render(<SearchAutocomplete />);
-    const input = screen.getByRole("combobox", { name: "Tìm tác phẩm" });
+    const input = screen.getByRole("combobox", { name: "Tìm đề cử" });
 
     fireEvent.change(input, { target: { value: "s" } });
     await act(() => vi.advanceTimersByTimeAsync(300));
@@ -40,7 +40,7 @@ describe("SearchAutocomplete", () => {
 
   it("exposes an ARIA listbox and supports keyboard selection", async () => {
     render(<SearchAutocomplete />);
-    const input = screen.getByRole("combobox", { name: "Tìm tác phẩm" });
+    const input = screen.getByRole("combobox", { name: "Tìm đề cử" });
 
     fireEvent.change(input, { target: { value: "sơn" } });
     await act(() => vi.advanceTimersByTimeAsync(250));

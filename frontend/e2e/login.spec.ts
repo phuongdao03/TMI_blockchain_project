@@ -49,7 +49,6 @@ test("email signup sends Firebase verification without exposing internal access"
   page,
 }) => {
   await page.goto("/register");
-  await page.getByRole("radio", { name: /Cá nhân/ }).click();
   await page
     .getByRole("textbox", { name: "Email" })
     .fill("new-applicant@tmigroup.vn");

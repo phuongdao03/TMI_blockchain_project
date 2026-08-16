@@ -53,6 +53,16 @@ describe("LoginForm", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("keeps account routing and staff provisioning details out of the form", () => {
+    render(<LoginForm />, { wrapper: Wrapper });
+
+    expect(screen.queryByText(/một tài khoản cho mọi hành trình/i)).toBeNull();
+    expect(screen.queryByText(/nhân sự chỉ được tạo qua lời mời/i)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Tiếp tục với Google" }),
+    ).toBeDefined();
+  });
+
   it("signs in with Firebase email and exchanges its ID token", async () => {
     signInWithEmailAndPassword.mockResolvedValue({
       user: { getIdToken: vi.fn(async () => "firebase-email-token") },

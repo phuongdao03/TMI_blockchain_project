@@ -8,7 +8,7 @@ import {
 } from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 
 import { AuthCard, AuthLink } from "@/components/auth/auth-card";
 import { FormField } from "@/components/auth/form-field";
@@ -23,7 +23,6 @@ export function RegisterForm() {
   const {
     register,
     handleSubmit,
-    control,
     formState: { errors, isSubmitting },
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
@@ -31,10 +30,8 @@ export function RegisterForm() {
       email: "",
       password: "",
       confirmPassword: "",
-      accountType: "PUBLIC_USER",
     },
   });
-  const accountType = useWatch({ control, name: "accountType" });
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(undefined);
@@ -48,7 +45,6 @@ export function RegisterForm() {
         values.password,
       );
       const continueUrl = new URL("/login", window.location.origin);
-      continueUrl.searchParams.set("accountType", values.accountType);
       try {
         await sendEmailVerification(credential.user, {
           url: continueUrl.toString(),
@@ -68,13 +64,13 @@ export function RegisterForm() {
 
   return (
     <AuthCard
-      description="Bắt đầu với danh tính rõ ràng, dữ liệu có nguồn gốc và một quy trình minh bạch."
+      description="Đăng ký để lưu nội dung quan tâm và nhận những cập nhật mới từ chương trình."
       footer={
         <>
           Đã có tài khoản? <AuthLink href="/login">Đăng nhập</AuthLink>
         </>
       }
-      title="Tạo tài khoản đáng tin cậy"
+      title="Tạo tài khoản"
     >
       {accepted ? (
         <div
@@ -91,74 +87,7 @@ export function RegisterForm() {
               {submitError}
             </p>
           ) : null}
-          <fieldset>
-            <legend className="mb-3 font-mono text-[0.65rem] font-medium tracking-[0.1em] text-[#e7bdb7] uppercase">
-              Chọn cách bắt đầu
-            </legend>
-            <p className="mb-3 max-w-2xl text-sm leading-6 text-[#a8a3a1]">
-              Bạn có thể bắt đầu bằng việc tra cứu công khai hoặc tạo hồ sơ cho
-              cá nhân, tổ chức của mình.
-            </p>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {(
-                [
-                  [
-                    "PUBLIC_USER",
-                    "Khám phá công khai",
-                    "Tra cứu và xác minh thông tin đã công bố",
-                  ],
-                  [
-                    "INDIVIDUAL_APPLICANT",
-                    "Cá nhân",
-                    "Quản lý hồ sơ tài sản của bạn",
-                  ],
-                  [
-                    "ORGANIZATION_APPLICANT",
-                    "Tổ chức",
-                    "Đại diện đơn vị và cộng tác với thành viên",
-                  ],
-                ] as const
-              ).map(([value, label, description]) => (
-                <label
-                  className="cursor-pointer rounded-md border border-white/8 bg-[#131313] p-3.5 transition-colors hover:border-[#ad8883] has-[:checked]:border-[#ff5545] has-[:checked]:bg-[#2a1d1b]"
-                  key={value}
-                >
-                  <span className="flex items-start gap-3">
-                    <input
-                      className="mt-1 accent-primary-600"
-                      type="radio"
-                      value={value}
-                      {...register("accountType")}
-                    />
-                    <span>
-                      <span className="block text-sm font-bold text-[#e5e2e1]">
-                        {label}
-                      </span>
-                      <span className="mt-1 block text-xs leading-5 text-[#929090]">
-                        {description}
-                      </span>
-                    </span>
-                  </span>
-                </label>
-              ))}
-            </div>
-            {errors.accountType ? (
-              <p className="mt-2 text-sm text-error">
-                {errors.accountType.message}
-              </p>
-            ) : null}
-          </fieldset>
-          <div className="rounded-lg border border-[#f3d675]/20 bg-[#f3d675]/[0.05] px-3.5 py-3 text-xs leading-5 text-[#b7b1af]">
-            <p className="font-semibold text-[#f3d675]">
-              Bạn được mời làm việc nội bộ?
-            </p>
-            <p className="mt-1">
-              Tài khoản nhân sự không đăng ký tại đây. Hãy mở liên kết riêng
-              trong email được cấp để xác minh và thiết lập bảo vệ tài khoản.
-            </p>
-            <AuthLink href="/login">Đã thiết lập? Đi tới đăng nhập</AuthLink>
-          </div>
-          <GoogleOAuthButton accountType={accountType} />
+          <GoogleOAuthButton accountType="PUBLIC_USER" />
           <div aria-hidden="true" className="flex items-center gap-3">
             <span className="h-px flex-1 bg-white/10" />
             <span className="font-mono text-[0.6rem] tracking-[0.12em] text-[#6f6d6c] uppercase">

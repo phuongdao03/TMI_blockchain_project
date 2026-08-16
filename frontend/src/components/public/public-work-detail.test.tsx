@@ -124,16 +124,16 @@ describe("PublicWorkDetailPage", () => {
       wrapper,
     });
     expect(screen.getByRole("heading", { name: detail.title })).toBeTruthy();
-    expect(screen.getByText("Chưa có media công khai")).toBeTruthy();
+    expect(screen.getByText("Hình ảnh đang được cập nhật")).toBeTruthy();
   });
 
-  it("distinguishes persisted proof from an unavailable RPC verification", async () => {
+  it("distinguishes published proof from temporarily unavailable verification", async () => {
     render(<PublicWorkDetailPage initialDetail={detail} slug={detail.slug} />, {
       wrapper,
     });
-    expect(await screen.findByText("RPC tạm thời chưa khả dụng")).toBeTruthy();
+    expect(await screen.findByText("Chưa thể đối chiếu lúc này")).toBeTruthy();
     expect(screen.getByText(detail.proof!.transactionHash!)).toBeTruthy();
-    expect(screen.getByText("Trạng thái DB")).toBeTruthy();
+    expect(screen.getByText("Trạng thái xác nhận")).toBeTruthy();
   });
 
   it("renders long untrusted-looking content as plain text", () => {

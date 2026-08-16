@@ -17,6 +17,18 @@ require_command flock
 project_root="$(release_root)"
 PRODUCTION_ENV_FILE="${PRODUCTION_ENV_FILE:-$project_root/infrastructure/.env.production}"
 PRODUCTION_COMPOSE_FILE="$project_root/infrastructure/compose.production.yaml"
+EDGE_PROXY_MODE="${EDGE_PROXY_MODE:-$(read_env_value "$PRODUCTION_ENV_FILE" "EDGE_PROXY_MODE")}"
+EDGE_PROXY_MODE="${EDGE_PROXY_MODE:-container-nginx}"
+case "$EDGE_PROXY_MODE" in
+  host-nginx)
+    PRODUCTION_COMPOSE_OVERRIDE_FILE="$project_root/infrastructure/compose.host-nginx.yaml"
+    ;;
+  container-nginx) ;;
+  *)
+    release_error "unsupported EDGE_PROXY_MODE: $EDGE_PROXY_MODE"
+    exit 65
+    ;;
+esac
 if [[ -z "${DEPLOY_HEALTH_TIMEOUT_SECONDS:-}" ]]; then
   DEPLOY_HEALTH_TIMEOUT_SECONDS="$(read_env_value "$PRODUCTION_ENV_FILE" "DEPLOY_HEALTH_TIMEOUT_SECONDS")"
 fi
@@ -31,6 +43,10 @@ previous_tag_file="$release_dir/previous-image-tag"
 lock_file="$release_dir/deploy.lock"
 
 require_production_environment "$PRODUCTION_ENV_FILE"
+if [[ "$(read_env_value "$PRODUCTION_ENV_FILE" "RELEASE_MODE")" == "preview" ]]; then
+  bash "$project_root/infrastructure/scripts/validate-preview-environment.sh" \
+    "$PRODUCTION_ENV_FILE"
+fi
 mkdir -p "$release_dir"
 chmod 700 "$release_dir"
 touch "$lock_file"
@@ -41,9 +57,9 @@ flock -n 9 || {
   exit 75
 }
 
+export IMAGE_TAG="$release_tag"
 compose_command config -q
 previous_tag="$(cat "$current_tag_file" 2>/dev/null || true)"
-export IMAGE_TAG="$release_tag"
 
 deploy_release() {
   compose_command pull || return 1

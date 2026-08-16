@@ -103,50 +103,27 @@ describe("RegisterForm", () => {
     expect(firebaseMocks.sendEmailVerification).toHaveBeenCalledWith(
       user,
       expect.objectContaining({
-        url: expect.stringContaining("accountType=PUBLIC_USER"),
+        url: "http://localhost:3000/login",
       }),
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("submits the selected organization applicant account type", async () => {
-    const user = { uid: "firebase-organization-1" };
-    firebaseMocks.createUserWithEmailAndPassword.mockResolvedValue({ user });
-    firebaseMocks.sendEmailVerification.mockResolvedValue(undefined);
-    render(<RegisterForm />);
-
-    await userEvent.click(screen.getByRole("radio", { name: /Tổ chức/i }));
-    await userEvent.type(
-      screen.getByRole("textbox", { name: "Email" }),
-      "organization@tmigroup.vn",
-    );
-    await userEvent.type(
-      screen.getByLabelText("Mật khẩu"),
-      "correct horse battery staple",
-    );
-    await userEvent.type(
-      screen.getByLabelText("Xác nhận mật khẩu"),
-      "correct horse battery staple",
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Đăng ký" }));
-
-    expect(firebaseMocks.sendEmailVerification).toHaveBeenCalledWith(
-      user,
-      expect.objectContaining({
-        url: expect.stringContaining("accountType=ORGANIZATION_APPLICANT"),
-      }),
-    );
-  });
-
-  it("offers a browse-only account intent without dossier privileges", () => {
+  it("does not ask new users to choose an account type", () => {
     render(<RegisterForm />);
 
     expect(
-      screen.getByRole("radio", { name: /Khám phá công khai/i }),
+      screen.getByText(
+        "Đăng ký để lưu nội dung quan tâm và nhận những cập nhật mới từ chương trình.",
+      ),
     ).toBeDefined();
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.queryByText("Cá nhân")).toBeNull();
+    expect(screen.queryByText("Tổ chức")).toBeNull();
+    expect(screen.queryByText(/nhân sự không đăng ký/i)).toBeNull();
   });
 
-  it("starts Google OAuth with the selected account intent and shows provider errors", async () => {
+  it("starts Google signup with the public account intent and shows provider errors", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({

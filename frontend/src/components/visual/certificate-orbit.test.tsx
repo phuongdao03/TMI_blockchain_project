@@ -9,7 +9,7 @@ describe("CertificateOrbit", () => {
 
     expect(
       screen.getByRole("img", {
-        name: "Sổ bằng chứng số TMI",
+        name: "Hồ sơ đề cử minh họa",
       }),
     ).toBeDefined();
     expect(screen.getByText("DẤU VÂN TAY DỮ LIỆU")).toBeDefined();

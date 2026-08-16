@@ -10,7 +10,7 @@ import {
   type MultiFactorResolver,
   type User,
 } from "firebase/auth";
-import { LoaderCircle, ShieldCheck } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -20,7 +20,6 @@ import { FormField } from "@/components/auth/form-field";
 import { GoogleOAuthButton } from "@/components/auth/google-oauth-button";
 import { Button } from "@/components/ui/button";
 import { ApiError, authApi } from "@/lib/api/client";
-import type { AccountType } from "@/lib/api/types";
 import { loginSchema, type LoginValues } from "@/lib/auth/schemas";
 import { resolveDefaultWorkspace } from "@/lib/auth/role-workspaces";
 import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
@@ -29,13 +28,7 @@ function safeDestination(value: string | undefined, fallback: string): string {
   return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
 }
 
-export function LoginForm({
-  next,
-  accountType = "PUBLIC_USER",
-}: {
-  next?: string;
-  accountType?: AccountType;
-}) {
+export function LoginForm({ next }: { next?: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState<string>();
@@ -54,7 +47,7 @@ export function LoginForm({
     const idToken = await user.getIdToken(true);
     const result = await authApi.exchangeFirebaseToken(
       idToken,
-      accountType,
+      "PUBLIC_USER",
       next,
     );
     queryClient.setQueryData(["auth", "me"], result.user);
@@ -135,7 +128,7 @@ export function LoginForm({
 
   return (
     <AuthCard
-      description="Đăng nhập để quản lý hồ sơ, theo dõi tiến độ hoặc tiếp tục công việc được giao."
+      description="Đăng nhập để tiếp tục với Đề cử Tinh Hoa Việt."
       footer={
         <>
           Chưa có tài khoản? <AuthLink href="/register">Đăng ký</AuthLink>
@@ -144,27 +137,7 @@ export function LoginForm({
       title="Chào mừng trở lại"
     >
       <div className="space-y-5">
-        <section
-          aria-label="Thông tin đăng nhập"
-          className="rounded-xl border border-white/10 bg-white/[0.035] p-4"
-        >
-          <div className="flex items-start gap-3">
-            <ShieldCheck
-              aria-hidden="true"
-              className="mt-0.5 size-5 text-[#f3d675]"
-            />
-            <div>
-              <p className="text-sm font-semibold text-[#f3d675]">
-                Một tài khoản cho mọi hành trình
-              </p>
-              <p className="mt-1 text-xs leading-5 text-[#929090]">
-                Bạn sẽ được đưa đến đúng khu vực sau khi đăng nhập. Người làm
-                việc nội bộ dùng email được mời riêng.
-              </p>
-            </div>
-          </div>
-        </section>
-        <GoogleOAuthButton accountType={accountType} next={next} />
+        <GoogleOAuthButton accountType="PUBLIC_USER" next={next} />
         <div aria-hidden="true" className="flex items-center gap-3">
           <span className="h-px flex-1 bg-white/10" />
           <span className="font-mono text-[0.6rem] tracking-[0.12em] text-[#6f6d6c] uppercase">
@@ -243,10 +216,6 @@ export function LoginForm({
             {isSubmitting ? "Đang đăng nhập…" : "Đăng nhập"}
           </Button>
         </form>
-        <p className="text-center text-xs leading-5 text-[#888482]">
-          Tài khoản nhân sự chỉ được tạo qua lời mời. Hãy mở liên kết trong
-          email được cấp để thiết lập lần đầu.
-        </p>
       </div>
     </AuthCard>
   );

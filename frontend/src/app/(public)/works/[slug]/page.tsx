@@ -13,14 +13,14 @@ export async function generateMetadata({
   const result = await loadPublicWork(slug);
   if (result.kind !== "detail") {
     return {
-      title: "Tác phẩm công khai | TMI Certificate",
+      title: "Thông tin đề cử",
       robots: { index: false, follow: false },
     };
   }
   const work = result.detail;
   const thumbnail = work.media.find((item) => item.isThumbnail && item.url);
   return {
-    title: `${work.title} | TMI Certificate`,
+    title: work.title,
     description: work.shortDescription,
     alternates: { canonical: `/works/${work.canonicalSlug}` },
     robots:

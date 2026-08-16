@@ -9,6 +9,12 @@ import { BrandMark } from "@/components/layout/brand-mark";
 import { useAuthUser } from "@/lib/auth/user-context";
 
 const sections = [
+  { prefix: "/works/", label: "Chi tiết đề cử" },
+  { prefix: "/works", label: "Thư viện đề cử" },
+  { prefix: "/search", label: "Tìm kiếm đề cử" },
+  { prefix: "/verify/", label: "Kết quả xác minh" },
+  { prefix: "/verify", label: "Xác minh chứng thư" },
+  { prefix: "/map", label: "Bản đồ đề cử" },
   { prefix: "/activity", label: "Lịch sử hoạt động" },
   { prefix: "/vote-history", label: "Lịch sử bình chọn" },
   { prefix: "/admin/voting", label: "Quản lý bình chọn" },
@@ -40,7 +46,9 @@ export function DashboardContextHeader() {
     <div className="flex min-h-18 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 xl:px-10">
       <BrandMark className="lg:hidden" />
       <div className="hidden items-center gap-2 text-sm lg:flex">
-        <span className="font-medium text-neutral-400">TMI Certificate</span>
+        <span className="font-medium text-neutral-400">
+          Đề cử Tinh Hoa Việt
+        </span>
         <ChevronRight aria-hidden="true" className="size-4 text-neutral-300" />
         <span className="font-bold text-neutral-900">{label}</span>
       </div>

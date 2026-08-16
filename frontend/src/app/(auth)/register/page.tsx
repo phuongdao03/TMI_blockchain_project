@@ -5,7 +5,7 @@ import { RegisterForm } from "@/components/auth/register-form";
 export const metadata: Metadata = {
   title: "Tạo tài khoản",
   description:
-    "Chọn đúng lộ trình khám phá hoặc đề cử tài sản số. Vai trò thẩm định và Hội đồng chỉ được cấp qua bổ nhiệm nội bộ.",
+    "Tạo tài khoản Đề cử Tinh Hoa Việt để sử dụng các tiện ích cá nhân.",
 };
 
 export default function RegisterPage() {

@@ -8,7 +8,7 @@
 - Neon PITR/backup status is green and the previous image tag is recorded.
 - Staging smoke, migration upgrade/downgrade gate and image scan passed.
 - Docker Compose v2, Bash, curl, rsync and flock are installed for the deploy
-  user, and `/opt/tmi-platform` is writable by that user.
+  user, and `/var/www/tmi_blockchain` is writable by that user.
 - The deploy user has a GHCR login with package-read access. GitHub Actions
   supplies it via `GHCR_PULL_TOKEN`; never add it to `.env.production`.
 

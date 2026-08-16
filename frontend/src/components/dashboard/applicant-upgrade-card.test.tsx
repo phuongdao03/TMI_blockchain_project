@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApplicantUpgradeCard } from "@/components/dashboard/applicant-upgrade-card";
 import type { AuthUser } from "@/lib/api/types";
@@ -12,7 +12,11 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 describe("ApplicantUpgradeCard", () => {
-  it("explains the applicant path and upgrades the existing account", async () => {
+  beforeEach(() => {
+    upgradeToApplicant.mockReset();
+  });
+
+  it("reveals sender choices only after the user starts a submission", async () => {
     const upgraded: AuthUser = {
       id: "user-1",
       email: "viewer@tmigroup.vn",
@@ -24,15 +28,39 @@ describe("ApplicantUpgradeCard", () => {
 
     render(<ApplicantUpgradeCard onUpgraded={onUpgraded} />);
 
-    expect(screen.getByText(/Không cần tạo tài khoản mới/i)).toBeDefined();
-    fireEvent.click(screen.getByLabelText(/Cá nhân/i));
+    expect(screen.queryByLabelText(/Cá nhân/i)).toBeNull();
     fireEvent.click(
-      screen.getByRole("button", { name: /Bắt đầu gửi tài sản/i }),
+      screen.getByRole("button", { name: /Gửi tác phẩm hoặc hồ sơ/i }),
     );
+    expect(screen.getByLabelText(/Cá nhân/i)).toBeDefined();
+    fireEvent.click(screen.getByLabelText(/Cá nhân/i));
+    fireEvent.click(screen.getByRole("button", { name: /Tiếp tục/i }));
 
     await waitFor(() => {
       expect(upgradeToApplicant).toHaveBeenCalledWith("INDIVIDUAL_APPLICANT");
       expect(onUpgraded).toHaveBeenCalledWith(upgraded);
     });
+  });
+
+  it("shows the preview entry point without calling the upgrade API", () => {
+    render(<ApplicantUpgradeCard preview />);
+
+    expect(screen.getByText("Sắp ra mắt")).toBeDefined();
+    expect(
+      screen.getByRole("heading", {
+        name: "Cổng gửi đề cử đang được chuẩn bị",
+      }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: /Tìm hiểu cách tham gia/i }),
+    ).toHaveProperty(
+      "href",
+      expect.stringContaining("/coming-soon/submission"),
+    );
+    expect(
+      screen.queryByRole("button", { name: /Gửi tác phẩm hoặc hồ sơ/i }),
+    ).toBeNull();
+    expect(screen.queryByLabelText(/Cá nhân/i)).toBeNull();
+    expect(upgradeToApplicant).not.toHaveBeenCalled();
   });
 });

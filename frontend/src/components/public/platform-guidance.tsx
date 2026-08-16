@@ -5,53 +5,52 @@ import { ProcessStep } from "@/components/ui/process-step";
 const workflowSteps = [
   {
     number: "01",
-    title: "Xác định nhu cầu",
+    title: "Khám phá chương trình",
     userAction:
-      "Chọn tra cứu chứng thư có sẵn hoặc bắt đầu một hồ sơ mới cho tác phẩm của bạn.",
+      "Xem các đề cử đã công bố, tiêu chí tham gia và những câu chuyện nổi bật.",
     tmiAction:
-      "TMI hướng dẫn đúng điểm bắt đầu và cho biết trước những thông tin cần chuẩn bị.",
+      "Nội dung được sắp xếp để bạn dễ tìm hiểu và đối chiếu thông tin được phép công khai.",
     result:
-      "Bạn có lộ trình rõ ràng, không phải điền thông tin khi chưa biết mục đích sử dụng.",
+      "Bạn hiểu chương trình, đối tượng phù hợp và những thông tin nên chuẩn bị.",
   },
   {
     number: "02",
-    title: "Chuẩn bị hồ sơ",
+    title: "Chuẩn bị đề cử",
     userAction:
-      "Cung cấp thông tin tác phẩm, chủ thể liên quan và tải lên tài liệu chứng minh.",
+      "Tham khảo hướng dẫn và chuẩn bị câu chuyện, hình ảnh cùng tài liệu liên quan.",
     tmiAction:
-      "TMI kiểm tra các mục bắt buộc, định dạng tệp và thông báo ngay phần còn thiếu.",
-    result:
-      "Hồ sơ có mã theo dõi và danh sách tài liệu cần hoàn thiện trước khi gửi.",
+      "Tiêu chí và danh mục tài liệu sẽ được công bố đầy đủ trước khi cổng tiếp nhận mở.",
+    result: "Bạn chủ động chuẩn bị nội dung mà chưa cần tải tệp lên.",
   },
   {
     number: "03",
-    title: "Gửi và bổ sung tài liệu",
+    title: "Gửi đề cử",
     userAction:
-      "Xác nhận thông tin, gửi hồ sơ và phản hồi yêu cầu bổ sung nếu có.",
+      "Khi cổng tiếp nhận mở, đăng nhập, điền thông tin và gửi tài liệu được yêu cầu.",
     tmiAction:
-      "TMI tiếp nhận, kiểm tra tính đầy đủ và cập nhật tiến độ bằng ngôn ngữ dễ hiểu.",
+      "Hệ thống hướng dẫn theo từng bước và thông báo rõ nội dung còn thiếu trước khi gửi.",
     result:
-      "Bạn biết hồ sơ đang chờ kiểm tra, cần bổ sung hay đã sẵn sàng để thẩm định.",
+      "Đề cử được ghi nhận với mã theo dõi để bạn có thể quay lại kiểm tra tiến trình.",
   },
   {
     number: "04",
-    title: "Thẩm định",
+    title: "Theo dõi tiến trình",
     userAction:
-      "Theo dõi tiến độ và chỉ cung cấp thêm thông tin khi nhận được yêu cầu cụ thể.",
+      "Theo dõi cập nhật và bổ sung thông tin khi có yêu cầu trong tài khoản của bạn.",
     tmiAction:
-      "TMI tổ chức đánh giá độc lập, kiểm soát xung đột lợi ích và tổng hợp kết quả.",
+      "Đề cử được xem xét theo tiêu chí đã công bố; các cập nhật quan trọng được gửi tới bạn.",
     result:
-      "Bạn nhận được kết luận rõ ràng: đạt yêu cầu, cần bổ sung hoặc chưa đủ điều kiện.",
+      "Bạn biết đề cử đang được tiếp nhận, cần bổ sung hay đã hoàn tất xem xét.",
   },
   {
     number: "05",
-    title: "Thanh toán và nhận chứng thư",
+    title: "Nhận kết quả",
     userAction:
-      "Thanh toán phí phát hành khi hồ sơ đủ điều kiện, sau đó kiểm tra thông tin trước khi nhận.",
+      "Xem thông báo kết quả và kiểm tra lại phần thông tin được phép công bố.",
     tmiAction:
-      "TMI đối soát khoản thanh toán, phát hành chứng thư và mở trang kiểm tra công khai.",
+      "Kết quả được hoàn thiện và công bố theo phạm vi phù hợp của chương trình.",
     result:
-      "Bạn có chứng thư để tải xuống và đường dẫn xác minh có thể chia sẻ độc lập.",
+      "Bạn nhận được hướng dẫn tiếp theo và đường dẫn chia sẻ nếu đề cử được công bố.",
   },
 ] as const;
 
@@ -64,18 +63,11 @@ const accountPaths = [
     next: "Mở Thư viện hoặc nhập mã tại trang Xác minh.",
   },
   {
-    title: "Gửi hồ sơ",
-    access: "Tự tạo tài khoản",
+    title: "Chuẩn bị gửi đề cử",
+    access: "Sắp ra mắt",
     detail:
-      "Cá nhân và tổ chức có thể đăng ký để chuẩn bị hồ sơ, nhận thông báo và tải chứng thư.",
-    next: "Đăng ký, xác nhận email rồi bắt đầu hồ sơ đầu tiên.",
-  },
-  {
-    title: "Làm việc nội bộ",
-    access: "Chỉ qua lời mời",
-    detail:
-      "Nhân sự tham gia kiểm tra và phê duyệt nhận tài khoản theo nhiệm vụ được giao.",
-    next: "Mở liên kết trong email mời và hoàn tất bước bảo vệ tài khoản.",
+      "Bạn có thể xem trước quy trình và chuẩn bị nội dung ngay từ bây giờ. Website chưa yêu cầu tải tài liệu khi cổng tiếp nhận chưa mở.",
+    next: "Khi tính năng được công bố, tài khoản hiện tại của bạn sẽ có hướng dẫn bắt đầu rõ ràng.",
   },
 ] as const;
 
@@ -97,9 +89,9 @@ export const policySections = [
     summary:
       "Tài khoản được bảo vệ bằng xác minh danh tính, giới hạn đăng nhập bất thường và khả năng thu hồi quyền truy cập.",
     details: [
-      "Không chia sẻ mật khẩu, mã xác nhận hoặc liên kết lời mời cho người khác.",
+      "Không chia sẻ mật khẩu, mã xác nhận hoặc đường dẫn truy cập riêng cho người khác.",
       "Bạn có thể yêu cầu đặt lại mật khẩu khi mất quyền truy cập.",
-      "Nhân sự nội bộ phải hoàn tất bước bảo vệ tăng cường trước khi xử lý công việc.",
+      "Một số thao tác nhạy cảm có thể yêu cầu thêm bước xác nhận để bảo vệ tài khoản.",
     ],
   },
   {
@@ -146,17 +138,6 @@ export const policySections = [
       "Kết quả phản hồi nêu quyết định, căn cứ và cách yêu cầu xem xét tiếp theo.",
     ],
   },
-  {
-    id: "staff-invitations",
-    title: "Cách cấp tài khoản nhân sự nội bộ",
-    summary:
-      "Tài khoản nội bộ không được tự đăng ký. Người phụ trách chỉ gửi lời mời sau khi xác minh nhu cầu công việc.",
-    details: [
-      "Lời mời được gửi đến email công việc, có thời hạn và chỉ dùng một lần.",
-      "Phạm vi công việc được xác định trước và có thể điều chỉnh hoặc thu hồi.",
-      "Khi nhiệm vụ kết thúc, quyền truy cập được đóng nhưng kết quả công việc đã ghi nhận vẫn được giữ để đối chiếu.",
-    ],
-  },
 ] as const;
 
 export function ProcessGuide({ compact = false }: { compact?: boolean }) {
@@ -173,8 +154,8 @@ export function ProcessGuide({ compact = false }: { compact?: boolean }) {
               Biết việc cần làm và kết quả ở từng mốc.
             </h2>
             <p className="mt-5 max-w-md text-base leading-7 text-neutral-700">
-              Mỗi bước dưới đây trả lời ba câu hỏi: bạn chuẩn bị gì, TMI xử lý
-              gì và bạn nhận được kết quả nào.
+              Mỗi bước cho biết bạn cần chuẩn bị gì, điều gì sẽ diễn ra tiếp
+              theo và kết quả bạn có thể nhận được.
             </p>
             {compact ? (
               <Link
@@ -198,7 +179,7 @@ export function ProcessGuide({ compact = false }: { compact?: boolean }) {
                     </div>
                     <div>
                       <dt className="font-semibold text-neutral-950">
-                        TMI xử lý gì?
+                        Điều gì diễn ra tiếp theo?
                       </dt>
                       <dd className="mt-1">{step.tmiAction}</dd>
                     </div>
@@ -229,7 +210,7 @@ export function AccessGuide({ compact = false }: { compact?: boolean }) {
             Cách bắt đầu
           </p>
           <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
-            Chọn theo việc bạn muốn hoàn thành.
+            Bắt đầu từ việc bạn muốn làm.
           </h2>
         </div>
         <div className="mt-10 divide-y divide-neutral-300 border-y border-neutral-300">
@@ -310,21 +291,6 @@ export function PolicyGuide() {
 
 export function SecurityPolicy() {
   return <PolicyGuide />;
-}
-
-export function RoleProvisioningPolicy() {
-  const invitation = policySections.find(
-    ({ id }) => id === "staff-invitations",
-  );
-  if (!invitation) return null;
-  return (
-    <section className="border-t border-neutral-200 bg-[#f5efe5] px-4 py-16 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-3xl">
-        <h2 className="text-2xl font-semibold">{invitation.title}</h2>
-        <p className="mt-4 leading-7 text-neutral-700">{invitation.summary}</p>
-      </div>
-    </section>
-  );
 }
 
 export function PlatformGuidance() {

@@ -110,9 +110,9 @@ describe("PublicLibrary", () => {
         }),
       ),
     );
-    expect(
-      (screen.getByLabelText("Tìm tác phẩm") as HTMLInputElement).value,
-    ).toBe("di sản");
+    expect((screen.getByLabelText("Tìm đề cử") as HTMLInputElement).value).toBe(
+      "di sản",
+    );
     await waitFor(() =>
       expect(
         (screen.getByLabelText("Danh mục") as HTMLSelectElement).value,
@@ -134,9 +134,7 @@ describe("PublicLibrary", () => {
     render(<PublicLibrary page={1} query="không tồn tại" sort="newest" />, {
       wrapper,
     });
-    expect(
-      await screen.findByText("Chưa tìm thấy tác phẩm phù hợp"),
-    ).toBeTruthy();
+    expect(await screen.findByText("Chưa tìm thấy đề cử phù hợp")).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "Xóa bộ lọc" }).getAttribute("href"),
     ).toBe("/works");
@@ -173,6 +171,20 @@ describe("PublicLibrary", () => {
 });
 
 describe("PublicWorkCard", () => {
+  it("uses editorial lead and list-row layouts instead of uniform cards", () => {
+    const { rerender } = render(
+      <PublicWorkCard position={1} source="featured" work={work} />,
+    );
+    expect(screen.getByRole("article").getAttribute("data-layout")).toBe(
+      "editorial-lead",
+    );
+
+    rerender(<PublicWorkCard position={4} source="list" work={work} />);
+    expect(screen.getByRole("article").getAttribute("data-layout")).toBe(
+      "catalog-row",
+    );
+  });
+
   it("keeps a loading surface until the responsive image resolves", () => {
     render(<PublicWorkCard position={1} source="list" work={work} />);
     expect(screen.getByTestId("image-loading")).toBeTruthy();

@@ -108,9 +108,33 @@ test("public navigation and primary actions remain keyboard accessible", async (
     )
     .toBe(true);
 
-  const primaryAction = page.locator('a[href="/register"]').first();
+  const primaryAction = page.locator('a[href="/register"]:visible').first();
   await primaryAction.focus();
   await expect(primaryAction).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/(?:login|register)/);
+});
+
+test("verification remains readable in explicit light and dark themes", async ({
+  page,
+}) => {
+  await page.goto("/verify");
+
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
+    await page.locator("summary").click();
+  }
+
+  for (const theme of [
+    { label: "Giao diện sáng", value: "light" },
+    { label: "Giao diện tối", value: "dark" },
+  ]) {
+    await page.getByRole("button", { name: theme.label }).click();
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-theme",
+      theme.value,
+    );
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const accessibility = await new AxeBuilder({ page }).analyze();
+    expect(accessibility.violations).toEqual([]);
+  }
 });

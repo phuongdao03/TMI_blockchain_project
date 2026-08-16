@@ -17,6 +17,36 @@ test("production images are multi-stage, non-root and health checked", async () 
     assert.doesNotMatch(dockerfile, /latest/);
   }
   assert.match(frontend, /standalone/);
+  assert.match(backend, /pip install --no-cache-dir --no-compile/);
+
+  for (const buildArgument of [
+    "NEXT_PUBLIC_RELEASE_MODE",
+    "NEXT_PUBLIC_FIREBASE_API_KEY",
+    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+    "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
+    "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+    "NEXT_PUBLIC_FIREBASE_APP_ID",
+  ]) {
+    assert.match(frontend, new RegExp(`ARG ${buildArgument}`));
+  }
+});
+
+test("Vercel preview exposes the Next.js frontend and FastAPI backend as services", async () => {
+  const config = JSON.parse(await read("vercel.json"));
+
+  assert.deepEqual(config.experimentalServices, {
+    frontend: {
+      entrypoint: "frontend",
+      routePrefix: "/",
+    },
+    backend: {
+      entrypoint: "backend/app/main.py",
+      routePrefix: "/backend",
+      maxDuration: 60,
+      memory: 2048,
+    },
+  });
 });
 
 test("production compose exposes only TLS proxy and uses versioned images", async () => {
@@ -37,7 +67,10 @@ test("production compose exposes only TLS proxy and uses versioned images", asyn
   assert.ok(frontendService, "frontend service is missing");
   assert.doesNotMatch(frontendService, /env_file:/);
   assert.match(frontendService, /API_BASE_URL: http:\/\/backend:8000/);
+  assert.doesNotMatch(frontendService, /NEXT_PUBLIC_/);
   assert.doesNotMatch(frontendService, /NEXT_PUBLIC_PREVIEW_MODE/);
+  assert.match(compose, /profiles: \["full"\]/);
+  assert.match(compose, /max-size: "10m"/);
   assert.match(compose, /worker:[\s\S]*?healthcheck:/);
   assert.match(compose, /scheduler:[\s\S]*?healthcheck:/);
   assert.doesNotMatch(
@@ -46,6 +79,33 @@ test("production compose exposes only TLS proxy and uses versioned images", asyn
   );
   assert.doesNotMatch(productionEnvironment, /BLOCKCHAIN_SIGNER_PRIVATE_KEY/);
   assert.match(productionEnvironment, /^BLOCKCHAIN_SIGNER_MODE=managed$/m);
+});
+
+test("shared VPS deployment binds applications to loopback behind host nginx", async () => {
+  const [override, environment, hostNginx, bootstrapNginx, deploy, rollback] =
+    await Promise.all([
+      read("infrastructure/compose.host-nginx.yaml"),
+      read("infrastructure/.env.preview.example"),
+      read("infrastructure/nginx/decu.tinhhoaviet.org.vn.conf.example"),
+      read(
+        "infrastructure/nginx/decu.tinhhoaviet.org.vn.bootstrap.conf.example",
+      ),
+      read("infrastructure/scripts/deploy.sh"),
+      read("infrastructure/scripts/rollback.sh"),
+    ]);
+
+  assert.match(override, /127\.0\.0\.1:\$\{FRONTEND_HOST_PORT:-3100\}:3000/);
+  assert.match(override, /127\.0\.0\.1:\$\{BACKEND_HOST_PORT:-8100\}:8000/);
+  assert.match(override, /nginx:[\s\S]*?profiles: \["container-edge"\]/);
+  assert.match(environment, /^EDGE_PROXY_MODE=host-nginx$/m);
+  assert.match(environment, /^FRONTEND_HOST_PORT=3100$/m);
+  assert.match(environment, /^BACKEND_HOST_PORT=8100$/m);
+  assert.match(hostNginx, /server_name decu\.tinhhoaviet\.org\.vn/);
+  assert.match(hostNginx, /proxy_pass http:\/\/127\.0\.0\.1:3100/);
+  assert.match(hostNginx, /proxy_pass http:\/\/127\.0\.0\.1:8100/);
+  assert.match(bootstrapNginx, /location \/\.well-known\/acme-challenge\//);
+  assert.match(deploy, /compose\.host-nginx\.yaml/);
+  assert.match(rollback, /compose\.host-nginx\.yaml/);
 });
 
 test("nginx production config enforces TLS, headers and webhook isolation", async () => {
@@ -76,6 +136,10 @@ test("CI has quality, migration, image, staging and manual production gates", as
     "npm --prefix contracts ci",
     "frontend/node_modules/.bin/playwright install --with-deps chromium",
     "aquasec/trivy:0.68.2",
+    "docker/setup-buildx-action@v3",
+    "NEXT_PUBLIC_FIREBASE_API_KEY",
+    "--build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+    "check-image-size.sh",
   ]) {
     assert.ok(workflow.includes(gate), `missing delivery gate: ${gate}`);
   }
@@ -87,6 +151,8 @@ test("CI has quality, migration, image, staging and manual production gates", as
   assert.match(workflow, /GHCR_PULL_TOKEN/);
   assert.match(workflow, /StrictHostKeyChecking=yes/);
   assert.match(workflow, /rsync -az/);
+  assert.match(workflow, /\/var\/www\/tmi_blockchain/);
+  assert.doesNotMatch(workflow, /\/opt\/tmi-platform/);
 
   const foundryImage = "ghcr.io/foundry-rs/foundry:v1.7.1";
   for (const command of [
@@ -119,8 +185,41 @@ test("deployment scripts wait for healthy services and preserve an image rollbac
   }
   assert.match(releaseLibrary, /--wait-timeout/);
   assert.match(deploy, /AUTO_ROLLBACK_ON_FAILURE/);
+  assert.match(deploy, /validate-preview-environment\.sh/);
+  assert.ok(
+    deploy.indexOf('export IMAGE_TAG="$release_tag"') <
+      deploy.indexOf("compose_command config -q"),
+    "release tag must override env values before compose validation",
+  );
   assert.match(rollbackWorkflow, /workflow_dispatch:/);
   assert.match(rollbackWorkflow, /GHCR_PULL_TOKEN/);
+  assert.match(rollbackWorkflow, /\/var\/www\/tmi_blockchain/);
+  assert.match(
+    rollbackWorkflow,
+    /PRODUCTION_ENV_FILE=\/var\/www\/tmi_blockchain\/infrastructure\/\.env\.preview/,
+  );
+  assert.doesNotMatch(rollbackWorkflow, /\/opt\/tmi-platform/);
+});
+
+test("preview VPS contract excludes deferred integrations and documents operator gates", async () => {
+  const [environment, validator, sizeGate, runbook] = await Promise.all([
+    read("infrastructure/.env.preview.example"),
+    read("infrastructure/scripts/validate-preview-environment.sh"),
+    read("infrastructure/scripts/check-image-size.sh"),
+    read("docs/runbooks/public-preview-release.md"),
+  ]);
+
+  assert.match(environment, /^RELEASE_MODE=preview$/m);
+  assert.match(environment, /^PAYMENT_PROVIDER=disabled$/m);
+  assert.doesNotMatch(environment, /CLOUDINARY_|BLOCKCHAIN_|PAYOS_/);
+  assert.doesNotMatch(environment, /NEXT_PUBLIC_FIREBASE_/);
+  assert.match(validator, /required_keys/);
+  assert.match(validator, /PAYMENT_PROVIDER/);
+  assert.match(sizeGate, /docker image inspect/);
+  assert.match(runbook, /Firebase.*build-time/is);
+  assert.match(runbook, /firewall|UFW/i);
+  assert.match(runbook, /rollback/i);
+  assert.match(runbook, /does store real account/i);
 });
 
 test("monitoring and recovery configs contain actionable signals", async () => {

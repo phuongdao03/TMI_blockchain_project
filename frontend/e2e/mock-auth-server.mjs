@@ -876,6 +876,11 @@ const server = createServer(async (request, response) => {
     send(response, 200, envelope({ status: "reset" }));
     return;
   }
+  if (request.method === "POST" && path === "/api/e2e/reset-operations-job") {
+    durableJob = { ...initialDurableJob };
+    send(response, 200, envelope({ status: "reset" }));
+    return;
+  }
   if (
     request.method === "POST" &&
     path === "/api/v1/admin/blockchain/transactions/failure-e2e/retry" &&

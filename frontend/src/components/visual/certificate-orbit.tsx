@@ -15,16 +15,29 @@ const evidenceSteps = [
   { label: "Dấu thời gian", value: "Đã ghi nhận" },
 ] as const;
 
-export function CertificateOrbit({ className }: { className?: string }) {
+const previewSteps = [
+  { label: "Tuyển chọn", value: "Đang trưng bày" },
+  { label: "Thông tin", value: "Đang cập nhật" },
+  { label: "Chứng thư", value: "Chưa phát hành" },
+] as const;
+
+export function CertificateOrbit({
+  className,
+  preview = false,
+}: {
+  className?: string;
+  preview?: boolean;
+}) {
+  const steps = preview ? previewSteps : evidenceSteps;
   return (
     <figure
-      aria-label="Sổ bằng chứng số TMI"
+      aria-label="Hồ sơ đề cử minh họa"
       className={cn("evidence-register", className)}
       role="img"
     >
       <div aria-hidden="true" className="evidence-register-frame">
         <div className="evidence-register-index">
-          <span>HỒ SƠ</span>
+          <span>ĐỀ CỬ</span>
           <strong>01</strong>
           <span>TMI / 26</span>
         </div>
@@ -34,8 +47,8 @@ export function CertificateOrbit({ className }: { className?: string }) {
               <FileBadge2 className="size-6" strokeWidth={1.6} />
             </span>
             <span>
-              <small>SỔ ĐĂNG BỘ SỐ</small>
-              <strong>TMI CERTIFICATE</strong>
+              <small>{preview ? "BỘ SƯU TẬP MỞ ĐẦU" : "SỔ ĐĂNG BỘ SỐ"}</small>
+              <strong>TINH HOA VIỆT</strong>
             </span>
             <BadgeCheck
               className="ml-auto size-6 text-gold-300"
@@ -43,22 +56,25 @@ export function CertificateOrbit({ className }: { className?: string }) {
             />
           </div>
           <div className="evidence-document-code">
-            <span>MÃ BẰNG CHỨNG</span>
-            <strong>TMI–VN–2026–0812</strong>
+            <span>{preview ? "MÃ NỘI DUNG" : "MÃ BẰNG CHỨNG"}</span>
+            <strong>{preview ? "THV–DECU–001" : "THV–VN–2026–0812"}</strong>
           </div>
           <dl className="evidence-document-fields">
             <div>
               <dt>Chủ thể</dt>
-              <dd>TMI Digital Registry</dd>
+              <dd>
+                {preview ? "Bộ sưu tập giới thiệu" : "Đề cử Tinh Hoa Việt"}
+              </dd>
             </div>
             <div>
               <dt>Phiên bản</dt>
-              <dd>01 · Bất biến</dd>
+              <dd>{preview ? "Bản giới thiệu" : "01 · Bất biến"}</dd>
             </div>
             <div>
               <dt>Trạng thái</dt>
               <dd className="evidence-valid">
-                <Check className="size-3.5" /> Đã xác lập
+                {preview ? null : <Check className="size-3.5" />}
+                {preview ? "Chưa phát hành" : "Đã xác lập"}
               </dd>
             </div>
           </dl>
@@ -68,27 +84,34 @@ export function CertificateOrbit({ className }: { className?: string }) {
               strokeWidth={1.4}
             />
             <span>
-              <small>DẤU VÂN TAY DỮ LIỆU</small>
-              <strong>7F4A · 8C29 · B15E · 03D1</strong>
+              <small>
+                {preview ? "THÔNG TIN TRƯNG BÀY" : "DẤU VÂN TAY DỮ LIỆU"}
+              </small>
+              <strong>
+                {preview ? "NỘI DUNG GIỚI THIỆU" : "7F4A · 8C29 · B15E · 03D1"}
+              </strong>
             </span>
           </div>
         </div>
         <div className="evidence-chain">
           <div className="evidence-chain-head">
             <span>
-              <Link2 className="size-4" /> CHUỖI ĐỐI CHIẾU
+              <Link2 className="size-4" />
+              {preview ? " LỘ TRÌNH PHÁT HÀNH" : " CHUỖI ĐỐI CHIẾU"}
             </span>
             <Hash className="size-4 text-slate-600" />
           </div>
           <ol>
-            {evidenceSteps.map((step, index) => (
+            {steps.map((step, index) => (
               <li key={step.label}>
                 <span className="evidence-chain-number">0{index + 1}</span>
                 <span>
                   <small>{step.label}</small>
                   <strong>{step.value}</strong>
                 </span>
-                <Check className="ml-auto size-4 text-emerald-400" />
+                {preview ? null : (
+                  <Check className="ml-auto size-4 text-emerald-400" />
+                )}
               </li>
             ))}
           </ol>
@@ -96,8 +119,12 @@ export function CertificateOrbit({ className }: { className?: string }) {
         <div className="evidence-seal">
           <BadgeCheck className="size-5" />
           <span>
-            <small>PUBLIC PROOF</small>
-            <strong>Sẵn sàng xác minh</strong>
+            <small>
+              {preview ? "NỘI DUNG GIỚI THIỆU" : "THÔNG TIN CÔNG KHAI"}
+            </small>
+            <strong>
+              {preview ? "Nội dung giới thiệu" : "Sẵn sàng xác minh"}
+            </strong>
           </span>
         </div>
       </div>

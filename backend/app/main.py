@@ -47,7 +47,11 @@ from app.core.config import Settings, get_settings
 from app.core.errors import install_exception_handlers
 from app.core.health import HealthService
 from app.core.logging import configure_logging
-from app.core.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
+from app.core.middleware import (
+    PreviewModeMiddleware,
+    RequestContextMiddleware,
+    SecurityHeadersMiddleware,
+)
 from app.core.probes import AnvilProbe, RedisProbe
 
 
@@ -178,25 +182,32 @@ def create_application(
     )
 
     app = FastAPI(
-        title="TMI Blockchain Certificate Platform API",
+        title="Đề cử Tinh Hoa Việt API",
         version="0.1.0",
         docs_url=None,
         redoc_url=None,
+        openapi_url=(
+            None if resolved_settings.app_env == "production" else "/openapi.json"
+        ),
         lifespan=lifespan,
     )
     app.state.settings = resolved_settings
 
-    @app.get("/docs", include_in_schema=False, response_class=HTMLResponse)
-    async def api_docs() -> HTMLResponse:
-        return HTMLResponse(_render_api_docs(app.openapi()))
+    if resolved_settings.app_env != "production":
 
-    @app.get("/redoc", include_in_schema=False, response_class=HTMLResponse)
-    async def api_redoc_redirect() -> HTMLResponse:
-        return HTMLResponse(
-            '<!doctype html><meta http-equiv="refresh" content="0; url=/docs">'
-            '<a href="/docs">Open API docs</a>'
-        )
+        @app.get("/docs", include_in_schema=False, response_class=HTMLResponse)
+        async def api_docs() -> HTMLResponse:
+            return HTMLResponse(_render_api_docs(app.openapi()))
 
+        @app.get("/redoc", include_in_schema=False, response_class=HTMLResponse)
+        async def api_redoc_redirect() -> HTMLResponse:
+            return HTMLResponse(
+                '<!doctype html><meta http-equiv="refresh" content="0; url=/docs">'
+                '<a href="/docs">Open API docs</a>'
+            )
+
+    if resolved_settings.release_mode == "preview":
+        app.add_middleware(PreviewModeMiddleware)
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(
         CORSMiddleware,

@@ -16,17 +16,24 @@ export function BrandMark({ className }: BrandMarkProps) {
       )}
       href="/"
     >
-      <span className="grid size-14 shrink-0 place-items-center overflow-hidden">
+      <span className="grid size-11 shrink-0 place-items-center overflow-hidden sm:size-14">
         <Image
           alt="TMI Group"
-          className="size-14 scale-[1.8] object-contain"
+          className="size-11 scale-[1.8] object-contain sm:size-14"
           height={64}
           loading="eager"
           src="/assets/brand/tmi-group-logo.png"
           width={64}
         />
       </span>
-      <span>TMI Certificate</span>
+      <span className="hidden leading-none min-[390px]:grid">
+        <strong className="text-sm tracking-[-0.02em] sm:text-base">
+          Đề cử Tinh Hoa Việt
+        </strong>
+        <small className="brand-subtitle mt-1 text-[0.55rem] font-semibold tracking-[0.16em] uppercase">
+          TMI Group
+        </small>
+      </span>
     </Link>
   );
 }

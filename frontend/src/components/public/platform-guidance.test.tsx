@@ -16,15 +16,21 @@ describe("platform guidance", () => {
     const { container } = render(<ProcessGuide />);
 
     expect(screen.getAllByText("Bạn cần làm gì?")).toHaveLength(5);
-    expect(screen.getAllByText("TMI xử lý gì?")).toHaveLength(5);
+    expect(screen.getAllByText("Điều gì diễn ra tiếp theo?")).toHaveLength(5);
     expect(screen.getAllByText("Bạn nhận được gì?")).toHaveLength(5);
+    expect(screen.getByText("Khám phá chương trình")).toBeDefined();
+    expect(screen.getByText("Chuẩn bị đề cử")).toBeDefined();
+    expect(screen.getByText("Gửi đề cử")).toBeDefined();
     expect(container.textContent).not.toMatch(forbiddenPublicTerms);
+    expect(container.textContent).not.toMatch(
+      /loại tài khoản|tài khoản nội bộ/i,
+    );
   });
 
   it("documents every required policy section with keyboard anchors", () => {
     const { container } = render(<PolicyGuide />);
 
-    expect(policySections).toHaveLength(7);
+    expect(policySections).toHaveLength(6);
     for (const section of policySections) {
       expect(
         screen.getByRole("heading", { name: section.title, level: 2 }),
@@ -38,14 +44,21 @@ describe("platform guidance", () => {
       ).toBe(`#${section.id}`);
     }
     expect(container.textContent).not.toMatch(forbiddenPublicTerms);
+    expect(container.textContent).not.toMatch(
+      /tài khoản nhân sự|lời mời nội bộ/i,
+    );
   });
 
-  it("explains public, applicant and invited-staff entry points as tasks", () => {
+  it("presents public actions without exposing account taxonomy", () => {
     const { container } = render(<AccessGuide />);
 
     expect(screen.getByText("Tra cứu công khai")).toBeDefined();
-    expect(screen.getByText("Gửi hồ sơ")).toBeDefined();
-    expect(screen.getByText("Làm việc nội bộ")).toBeDefined();
+    expect(screen.getByText("Chuẩn bị gửi đề cử")).toBeDefined();
+    expect(screen.getByText("Sắp ra mắt")).toBeDefined();
+    expect(screen.queryByText("Làm việc nội bộ")).toBeNull();
     expect(container.textContent).not.toMatch(forbiddenPublicTerms);
+    expect(container.textContent).not.toMatch(
+      /cá nhân và tổ chức|loại tài khoản/i,
+    );
   });
 });

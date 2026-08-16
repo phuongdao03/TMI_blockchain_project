@@ -1,5 +1,11 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const navigationState = vi.hoisted(() => ({ pathname: "/" }));
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => navigationState.pathname,
+}));
 
 vi.mock("@/components/auth/logout-button", () => ({
   LogoutButton: () => <button type="button">Đăng xuất</button>,
@@ -10,9 +16,28 @@ import {
   DashboardShell,
   PublicShell,
 } from "@/components/layout/shells";
+import { PublicExperienceShell } from "@/components/layout/public-experience-shell";
 import { AuthUserProvider } from "@/lib/auth/user-context";
 
 describe("layout shells", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    navigationState.pathname = "/";
+  });
+
+  it("keeps preview-only journeys out of the primary public header", () => {
+    vi.stubEnv("NEXT_PUBLIC_RELEASE_MODE", "preview");
+    render(
+      <PublicShell>
+        <h1>Preview</h1>
+      </PublicShell>,
+    );
+
+    expect(screen.getAllByRole("link", { name: "Đề cử" })).toHaveLength(2);
+    expect(screen.queryByRole("link", { name: /Bình chọn/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Gửi đề cử/ })).toBeNull();
+  });
+
   it("renders public navigation with auth entry points", () => {
     render(
       <PublicShell>
@@ -24,9 +49,7 @@ describe("layout shells", () => {
       screen.getByRole("navigation", { name: "Điều hướng chính" }),
     ).toBeDefined();
     expect(screen.getAllByRole("link", { name: "Trang chủ" })).toHaveLength(2);
-    expect(
-      screen.getAllByRole("link", { name: "Bình chọn cộng đồng" }),
-    ).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Minh bạch" })).toHaveLength(2);
     expect(
       screen.queryByRole("complementary", {
         name: "Điều hướng công khai",
@@ -42,10 +65,12 @@ describe("layout shells", () => {
         <h1>Đăng nhập</h1>
       </AuthShell>,
     );
-    expect(screen.getByRole("main", { name: "Tài khoản TMI" })).toBeDefined();
-    expect(screen.getByText("Bảo vệ tài khoản")).toBeDefined();
-    expect(screen.getByText("Thông tin riêng tư")).toBeDefined();
-    expect(screen.getByText("Hỗ trợ rõ ràng")).toBeDefined();
+    expect(
+      screen.getByRole("main", { name: "Tài khoản Đề cử Tinh Hoa Việt" }),
+    ).toBeDefined();
+    expect(screen.getByRole("link", { name: "Quy trình" })).toBeDefined();
+    expect(screen.getByRole("link", { name: "Chính sách" })).toBeDefined();
+    expect(screen.queryByText("Bảo vệ tài khoản")).toBeNull();
     expect(
       screen.getByRole("heading", { level: 1, name: "Đăng nhập" }),
     ).toBeDefined();
@@ -70,9 +95,9 @@ describe("layout shells", () => {
       screen.getByRole("navigation", { name: "Điều hướng bảng điều khiển" }),
     ).toBeDefined();
     expect(screen.getByText("Mở điều hướng")).toBeDefined();
-    expect(screen.getAllByRole("link", { name: "Việc cần làm" })).toHaveLength(
-      2,
-    );
+    expect(screen.getAllByText("Không gian của bạn")).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Tổng quan" })).toHaveLength(2);
+    expect(screen.queryByText("Việc cần làm")).toBeNull();
     expect(
       screen
         .getAllByRole("link")
@@ -112,7 +137,7 @@ describe("layout shells", () => {
     ).toBe(false);
   });
 
-  it("shows workspace navigation instead of auth CTAs on public pages", () => {
+  it("shows one compact workspace action instead of email and auth CTAs", () => {
     render(
       <PublicShell
         user={{
@@ -128,10 +153,39 @@ describe("layout shells", () => {
 
     expect(
       screen
-        .getByRole("link", { name: "Bảng điều khiển" })
+        .getByRole("link", { name: "Không gian của tôi" })
         .getAttribute("href"),
     ).toBe("/reviews");
+    expect(screen.queryByText("reviewer@tmigroup.vn")).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng nhập" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng ký" })).toBeNull();
+  });
+
+  it("keeps signed-in discovery pages inside the dashboard shell", () => {
+    navigationState.pathname = "/search";
+    render(
+      <PublicExperienceShell
+        user={{
+          id: "user-4",
+          email: "reader@tmigroup.vn",
+          roles: [],
+          accountType: "PUBLIC_USER",
+        }}
+      >
+        <h1>Tìm kiếm đề cử</h1>
+      </PublicExperienceShell>,
+    );
+
+    expect(
+      screen.getByRole("navigation", { name: "Điều hướng bảng điều khiển" }),
+    ).toBeDefined();
+    expect(
+      screen
+        .getAllByRole("link", { name: "Tìm kiếm đề cử" })[0]
+        ?.getAttribute("aria-current"),
+    ).toBe("page");
+    expect(
+      screen.queryByRole("navigation", { name: "Điều hướng chính" }),
+    ).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SuccessEnvelope } from "@/lib/api/types";
+import { resolveServerApiBaseUrl } from "@/lib/api/server-base-url";
 import type { SitemapEntry } from "@/lib/seo";
 
 export type SitemapManifest = {
@@ -27,8 +28,7 @@ export async function loadSitemapPage(page: number): Promise<SitemapEntry[]> {
 }
 
 async function loadSeo<Data>(path: string, fallback: Data): Promise<Data> {
-  const apiBaseUrl = process.env.API_BASE_URL;
-  if (!apiBaseUrl) return fallback;
+  const apiBaseUrl = resolveServerApiBaseUrl();
   try {
     const response = await fetch(`${apiBaseUrl}${path}`, { cache: "no-store" });
     if (!response.ok) return fallback;

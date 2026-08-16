@@ -6,17 +6,18 @@ import {
 } from "@/components/public/public-library";
 import type { PublicWorkSort } from "@/lib/api/types";
 import { loadPublicCatalogInitialData } from "@/lib/api/public-catalog-server";
+import { getServerAuthState } from "@/lib/auth/server-session";
 
 export const metadata: Metadata = {
-  title: "Catalog tác phẩm công khai | TMI Certificate",
+  title: "Danh sách đề cử",
   description:
-    "Khám phá các tác phẩm số đã được biên tập và công bố minh bạch trên nền tảng TMI Certificate.",
+    "Khám phá các đề cử đã được giới thiệu và công bố minh bạch trên Đề cử Tinh Hoa Việt.",
   alternates: { canonical: "/works" },
   openGraph: {
     type: "website",
-    title: "Catalog tác phẩm công khai | TMI Certificate",
+    title: "Danh sách đề cử | Đề cử Tinh Hoa Việt",
     description:
-      "Khám phá các tác phẩm số đã được biên tập và công bố minh bạch trên nền tảng TMI Certificate.",
+      "Khám phá các đề cử đã được giới thiệu và công bố minh bạch trên Đề cử Tinh Hoa Việt.",
     url: "/works",
   },
 };
@@ -35,6 +36,8 @@ export default async function LibraryPage({
   }>;
 }) {
   const input = await searchParams;
+  const authState = await getServerAuthState();
+  const embedded = Boolean(authState.user);
   const parameters: CatalogParameters = {
     query: clean(input.query, 120),
     category: clean(input.category, 160),
@@ -50,37 +53,70 @@ export default async function LibraryPage({
   });
 
   return (
-    <main className="relative isolate overflow-hidden">
+    <div
+      className={
+        embedded
+          ? "relative isolate overflow-hidden rounded-2xl bg-[#151515] px-5 py-7 text-white shadow-[0_24px_70px_rgba(15,23,42,.12)] sm:px-7 lg:px-9"
+          : "relative isolate overflow-hidden"
+      }
+    >
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[34rem] bg-[radial-gradient(circle_at_78%_8%,rgba(212,167,44,.12),transparent_24rem),radial-gradient(circle_at_10%_30%,rgba(220,38,38,.14),transparent_28rem)]"
       />
-      <div className="mx-auto min-h-[calc(100dvh-5rem)] max-w-[90rem] px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
-        <header className="grid gap-8 border-b border-white/10 pb-12 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-end">
+      <div
+        className={
+          embedded
+            ? "mx-auto max-w-[90rem]"
+            : "mx-auto min-h-[calc(100dvh-5rem)] max-w-[90rem] px-4 py-14 sm:px-6 lg:px-8 lg:py-20"
+        }
+      >
+        <header
+          className={`grid gap-6 border-b border-white/10 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-end ${
+            embedded ? "pb-7" : "pb-12"
+          }`}
+        >
           <div>
-            <p className="text-xs font-bold tracking-[0.24em] text-gold-300 uppercase">
-              TMI public catalog
+            <p
+              className={`text-xs font-bold tracking-[0.24em] uppercase ${
+                embedded ? "text-gold-300" : "text-red-700"
+              }`}
+            >
+              Không gian đề cử
             </p>
-            <h1 className="mt-5 max-w-5xl text-4xl font-bold tracking-[-0.045em] text-white sm:text-6xl lg:text-7xl">
-              Di sản được công bố.
-              <span className="block text-slate-500">
-                Giá trị được nhìn thấy.
-              </span>
+            <h1
+              className={`mt-4 max-w-5xl font-bold tracking-[-0.045em] text-[var(--theme-text,#fff)] ${
+                embedded
+                  ? "text-3xl sm:text-4xl"
+                  : "text-4xl sm:text-6xl lg:text-7xl"
+              }`}
+            >
+              Thư viện đề cử
+              {!embedded ? (
+                <span className="block text-[var(--theme-muted,#94a3b8)]">
+                  Những giá trị đáng được biết đến.
+                </span>
+              ) : null}
             </h1>
           </div>
           <div className="border-l border-gold-300/40 pl-5">
-            <p className="text-sm leading-7 text-slate-400">
-              Mỗi tác phẩm trong catalog là một projection công khai đã qua kiểm
-              soát nội dung. Dữ liệu hồ sơ nội bộ và media nguồn luôn được tách
-              biệt.
+            <p className="text-sm leading-7 text-[var(--theme-muted,#94a3b8)]">
+              Khám phá những nội dung đã được giới thiệu tới cộng đồng, với
+              thông tin rõ ràng và dễ tra cứu.
             </p>
           </div>
         </header>
-        <div className="mt-10">
+        <div
+          className={
+            embedded
+              ? "mt-8"
+              : "mt-10 bg-[#151515] px-5 py-8 text-white sm:px-7 lg:px-9 lg:py-10"
+          }
+        >
           <PublicLibrary {...parameters} initialData={initialData} />
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 

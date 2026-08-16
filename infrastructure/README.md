@@ -10,6 +10,11 @@ backend/frontend images with `infrastructure/compose.production.yaml`; copy
 `.env.production.example` to the server secret store as `.env.production` and
 replace every `replace` value before validation.
 
+The V1 authenticated preview uses `.env.preview.example` as its reduced server
+contract and leaves the `full` Compose profile disabled. Public Firebase web
+configuration is injected while building the frontend image, not at container
+runtime. See `docs/runbooks/public-preview-release.md`.
+
 Deployment and rollback commands are documented in
 `docs/runbooks/deployment-and-rollback.md`. Monitoring, backup validation and
 incident procedures live under `infrastructure/monitoring` and `docs/runbooks`.

@@ -33,6 +33,7 @@ import {
   type WorkspacePersona,
 } from "@/lib/auth/role-workspaces";
 import { cn } from "@/lib/utils";
+import { isPreviewRelease, isPreviewRestrictedPath } from "@/lib/release-mode";
 
 interface DashboardLink {
   href: string;
@@ -46,28 +47,28 @@ interface DashboardLink {
 const dashboardLinks: readonly DashboardLink[] = [
   {
     href: "/dashboard",
-    label: "Khám phá TMI",
+    label: "Tổng quan",
     icon: LayoutDashboard,
     section: "explore",
     personas: ["PUBLIC"],
   },
   {
     href: "/search",
-    label: "Tìm tài sản số",
+    label: "Tìm kiếm đề cử",
     icon: Search,
     section: "explore",
     personas: ["PUBLIC", "APPLICANT"],
   },
   {
     href: "/works",
-    label: "Thư viện chứng thư",
+    label: "Thư viện đề cử",
     icon: BookOpenText,
     section: "explore",
     personas: ["PUBLIC", "APPLICANT"],
   },
   {
     href: "/map",
-    label: "Bản đồ xác lập",
+    label: "Bản đồ đề cử",
     icon: Map,
     section: "explore",
     personas: ["PUBLIC"],
@@ -81,7 +82,7 @@ const dashboardLinks: readonly DashboardLink[] = [
   },
   {
     href: "/dashboard",
-    label: "Việc cần làm",
+    label: "Tổng quan",
     icon: LayoutDashboard,
     section: "work",
     roles: ["APPLICANT", "ORG_MANAGER"],
@@ -232,6 +233,7 @@ export function DashboardNavigation({
       ? "text-slate-300 hover:bg-white/5 hover:text-white"
       : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-950";
   const visibleLinks = dashboardLinks.filter((item) => {
+    if (isPreviewRelease() && isPreviewRestrictedPath(item.href)) return false;
     if (item.roles && !hasAnyRole(user?.roles ?? [], item.roles)) return false;
     if (item.personas && !item.personas.includes(persona)) return false;
     return true;
@@ -257,7 +259,9 @@ export function DashboardNavigation({
       {sections.map(({ key, items }) => (
         <section key={key}>
           <p className="mb-2 px-3 text-[0.62rem] font-bold uppercase tracking-[0.18em] text-slate-500">
-            {sectionLabels[key]}
+            {key === "work" && persona === "APPLICANT"
+              ? "Không gian của bạn"
+              : sectionLabels[key]}
           </p>
           <div className="grid gap-1">
             {items.map((item) => {

@@ -24,9 +24,11 @@ import type { SearchParameters, SearchResultWork } from "@/lib/api/types";
 export function SearchResultsPage({
   parameters,
   authenticated = false,
+  embedded = false,
 }: {
   parameters: SearchParameters;
   authenticated?: boolean;
+  embedded?: boolean;
 }) {
   const [filterOpen, setFilterOpen] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -57,22 +59,28 @@ export function SearchResultsPage({
   const activeFilters = activeFilterCount(parameters);
   return (
     <div>
-      <Link
-        className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-white"
-        href="/works"
-      >
-        <ArrowLeft aria-hidden="true" className="size-4" /> Quay lại thư viện
-      </Link>
-      <header className="mt-7 max-w-4xl">
+      {!embedded ? (
+        <Link
+          className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-white"
+          href="/works"
+        >
+          <ArrowLeft aria-hidden="true" className="size-4" /> Quay lại thư viện
+        </Link>
+      ) : null}
+      <header className={embedded ? "max-w-3xl" : "mt-7 max-w-4xl"}>
         <p className="text-xs font-bold tracking-[0.22em] text-gold-300 uppercase">
-          TMI Search Index
+          Tìm kiếm đề cử
         </p>
-        <h1 className="mt-4 text-4xl font-bold tracking-[-0.04em] text-white sm:text-6xl">
-          Tìm trong kho tài sản công khai.
+        <h1
+          className={`mt-4 font-bold tracking-[-0.04em] text-white ${
+            embedded ? "text-3xl sm:text-4xl" : "text-4xl sm:text-6xl"
+          }`}
+        >
+          Tìm nội dung bạn quan tâm
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-7 text-slate-400">
-          Tra cứu tác phẩm, danh mục, chủ đề và chứng thư trên tập dữ liệu đã
-          được kiểm soát công khai.
+          Tìm theo tên, chủ đề hoặc danh mục trong những nội dung đã được công
+          bố.
         </p>
       </header>
 
@@ -163,7 +171,7 @@ export function SearchResultsPage({
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
               <p className="text-xs font-bold tracking-[0.18em] text-primary-400 uppercase">
-                Kết quả đã kiểm soát
+                Kết quả tìm kiếm
               </p>
               <h2
                 className="mt-2 text-2xl font-bold text-white"

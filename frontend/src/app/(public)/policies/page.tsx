@@ -2,7 +2,7 @@ import { PolicyGuide } from "@/components/public/platform-guidance";
 
 export default function PoliciesPage() {
   return (
-    <div className="bg-[#fbf7f0]">
+    <div className="process-page">
       <header className="border-b border-neutral-200 text-neutral-950">
         <div className="mx-auto max-w-6xl px-4 pt-16 pb-14 sm:px-6 lg:px-8 lg:pt-24 lg:pb-20">
           <p className="text-xs font-semibold tracking-[0.16em] text-primary-700 uppercase">

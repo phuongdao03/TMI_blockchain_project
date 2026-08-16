@@ -3,6 +3,9 @@ import "server-only";
 import { cache } from "react";
 
 import type { PublicWorkDetail, SuccessEnvelope } from "@/lib/api/types";
+import { resolveServerApiBaseUrl } from "@/lib/api/server-base-url";
+import { isPreviewRelease } from "@/lib/release-mode";
+import { resolvePreviewWork } from "@/lib/preview-catalog";
 
 export type PublicWorkServerResult =
   | { kind: "detail"; detail: PublicWorkDetail }
@@ -12,8 +15,11 @@ export type PublicWorkServerResult =
 
 export const loadPublicWork = cache(
   async (slug: string): Promise<PublicWorkServerResult> => {
-    const apiBaseUrl = process.env.API_BASE_URL;
-    if (!apiBaseUrl) return { kind: "unavailable" };
+    if (isPreviewRelease()) {
+      const detail = resolvePreviewWork(slug);
+      return detail ? { kind: "detail", detail } : { kind: "not_found" };
+    }
+    const apiBaseUrl = resolveServerApiBaseUrl();
     try {
       const response = await fetch(
         `${apiBaseUrl}/api/v1/public/works/${encodeURIComponent(slug)}`,

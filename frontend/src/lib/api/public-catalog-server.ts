@@ -7,12 +7,30 @@ import type {
   PublicCatalogWork,
   SuccessEnvelope,
 } from "@/lib/api/types";
+import { resolveServerApiBaseUrl } from "@/lib/api/server-base-url";
+import { isPreviewRelease } from "@/lib/release-mode";
+import { filterPreviewWorks, previewWorks } from "@/lib/preview-catalog";
 
 export async function loadPublicCatalogInitialData(
   filters: PublicCatalogFilters,
 ): Promise<PublicCatalogInitialData> {
-  const apiBaseUrl = process.env.API_BASE_URL;
-  if (!apiBaseUrl) return {};
+  if (isPreviewRelease()) {
+    const works = filterPreviewWorks(filters);
+    return {
+      featured: previewWorks,
+      works: {
+        success: true,
+        data: works,
+        meta: {
+          requestId: "preview",
+          page: 1,
+          pageSize: filters.pageSize ?? 12,
+          total: works.length,
+        },
+      },
+    };
+  }
+  const apiBaseUrl = resolveServerApiBaseUrl();
   const parameters = catalogParameters(filters);
   const requests: [Promise<Response>, Promise<Response> | undefined] = [
     fetch(`${apiBaseUrl}/api/v1/public/works?${parameters}`, {

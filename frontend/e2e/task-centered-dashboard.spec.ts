@@ -86,8 +86,10 @@ test("applicant dashboard keeps one clear next action at every breakpoint", asyn
 test("operations dashboard prioritizes work without horizontal overflow", async ({
   context,
   page,
+  request,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chrome");
+  await request.post("http://127.0.0.1:4010/api/e2e/reset-operations-job");
   await authenticate(context, "e2e-super-admin-access");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/admin/dashboard");

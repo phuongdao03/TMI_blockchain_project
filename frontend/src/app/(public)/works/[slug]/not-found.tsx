@@ -7,7 +7,7 @@ export default function PublicWorkNotFound() {
       <div>
         <SearchX className="mx-auto size-10 text-gold-300" />
         <h1 className="mt-5 text-3xl font-bold text-white">
-          Không tìm thấy tác phẩm
+          Không tìm thấy đề cử
         </h1>
         <p className="mt-3 text-sm leading-6 text-slate-400">
           Liên kết có thể không còn công khai hoặc đã được thay đổi.
@@ -16,7 +16,7 @@ export default function PublicWorkNotFound() {
           className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 px-5 text-sm font-bold text-white"
           href="/works"
         >
-          <ArrowLeft className="size-4" /> Về catalog
+          <ArrowLeft className="size-4" /> Về danh sách đề cử
         </Link>
       </div>
     </main>

@@ -35,4 +35,19 @@ describe("AppProviders", () => {
     );
     await waitFor(() => expect(authApi.currentUser).toHaveBeenCalledTimes(1));
   });
+
+  it.each(["/process", "/policies", "/login", "/register"])(
+    "does not request a session for %s",
+    async (route) => {
+      pathname = route;
+      render(
+        <AppProviders>
+          <p>Public screen</p>
+        </AppProviders>,
+      );
+
+      await Promise.resolve();
+      expect(authApi.currentUser).not.toHaveBeenCalled();
+    },
+  );
 });

@@ -14,11 +14,13 @@ import Link from "next/link";
 
 import { DossierStatusBadge } from "@/components/dossiers/dossier-status";
 import { RoleDashboardOverview } from "@/components/dashboard/role-dashboard-overview";
+import { PreviewDashboard } from "@/components/dashboard/preview-dashboard";
 import { dossierApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
 import { resolveWorkspacePersona } from "@/lib/auth/role-workspaces";
 import { dossierKeys } from "@/lib/dossiers/query-keys";
 import type { Dossier, DossierStatus } from "@/lib/api/types";
+import { isPreviewRelease } from "@/lib/release-mode";
 
 const attentionStatuses = new Set<DossierStatus>([
   "DRAFT",
@@ -66,12 +68,14 @@ export function DashboardOverview() {
   const queryClient = useQueryClient();
   const persona = resolveWorkspacePersona(user?.roles ?? []);
   const isApplicant = persona === "APPLICANT";
+  const preview = isPreviewRelease();
   const filters = { page: 1, pageSize: 5 } as const;
   const dossiers = useQuery({
     queryKey: dossierKeys.list(filters),
     queryFn: () => dossierApi.list(filters),
-    enabled: isApplicant,
+    enabled: isApplicant && !preview,
   });
+  if (preview) return <PreviewDashboard />;
   if (!isApplicant) {
     return (
       <RoleDashboardOverview

@@ -1,15 +1,14 @@
 import { expect, test } from "@playwright/test";
 
-test("onboarding exposes safe account intents and keyboard-accessible OAuth", async ({
+test("onboarding stays minimal and keeps OAuth keyboard accessible", async ({
   page,
 }) => {
   await page.goto("/register");
 
-  await expect(
-    page.getByRole("radio", { name: /Khám phá công khai/i }),
-  ).toBeVisible();
-  await expect(page.getByRole("radio", { name: /Cá nhân/i })).toBeVisible();
-  await expect(page.getByRole("radio", { name: /Tổ chức/i })).toBeVisible();
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  await expect(page.locator("body")).not.toContainText(
+    /(?:REVIEWER|COUNCIL_MEMBER|SUPER_ADMIN|database|schema)/i,
+  );
 
   const googleButton = page.getByRole("button", {
     name: "Tiếp tục với Google",

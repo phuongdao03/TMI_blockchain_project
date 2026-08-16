@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { PublicShell } from "@/components/layout/shells";
+import { PublicExperienceShell } from "@/components/layout/public-experience-shell";
 import { getServerAuthState } from "@/lib/auth/server-session";
 
 export default async function PublicLayout({
@@ -9,5 +9,5 @@ export default async function PublicLayout({
   children: ReactNode;
 }) {
   const { user } = await getServerAuthState();
-  return <PublicShell user={user}>{children}</PublicShell>;
+  return <PublicExperienceShell user={user}>{children}</PublicExperienceShell>;
 }

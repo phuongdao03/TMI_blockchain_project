@@ -15,6 +15,18 @@ require_command flock
 project_root="$(release_root)"
 PRODUCTION_ENV_FILE="${PRODUCTION_ENV_FILE:-$project_root/infrastructure/.env.production}"
 PRODUCTION_COMPOSE_FILE="$project_root/infrastructure/compose.production.yaml"
+EDGE_PROXY_MODE="${EDGE_PROXY_MODE:-$(read_env_value "$PRODUCTION_ENV_FILE" "EDGE_PROXY_MODE")}"
+EDGE_PROXY_MODE="${EDGE_PROXY_MODE:-container-nginx}"
+case "$EDGE_PROXY_MODE" in
+  host-nginx)
+    PRODUCTION_COMPOSE_OVERRIDE_FILE="$project_root/infrastructure/compose.host-nginx.yaml"
+    ;;
+  container-nginx) ;;
+  *)
+    release_error "unsupported EDGE_PROXY_MODE: $EDGE_PROXY_MODE"
+    exit 65
+    ;;
+esac
 if [[ -z "${DEPLOY_HEALTH_TIMEOUT_SECONDS:-}" ]]; then
   DEPLOY_HEALTH_TIMEOUT_SECONDS="$(read_env_value "$PRODUCTION_ENV_FILE" "DEPLOY_HEALTH_TIMEOUT_SECONDS")"
 fi
@@ -37,10 +49,10 @@ flock -n 9 || {
 
 previous_tag="${1:-$(cat "$previous_tag_file" 2>/dev/null || true)}"
 validate_release_tag "$previous_tag"
+export IMAGE_TAG="$previous_tag"
 compose_command config -q
 
 current_tag="$(cat "$current_tag_file" 2>/dev/null || true)"
-export IMAGE_TAG="$previous_tag"
 compose_command pull
 wait_for_release
 

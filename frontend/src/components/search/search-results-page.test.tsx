@@ -67,6 +67,24 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("SearchResultsPage", () => {
+  it("uses compact workspace copy without a redundant back link", () => {
+    render(
+      <SearchResultsPage
+        embedded
+        parameters={{ tags: [], tagsMode: "any", sort: "newest" }}
+      />,
+      { wrapper },
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Tìm nội dung bạn quan tâm" }),
+    ).toBeDefined();
+    expect(
+      screen.queryByRole("link", { name: /Quay lại thư viện/ }),
+    ).toBeNull();
+    expect(screen.queryByText("TMI Search Index")).toBeNull();
+  });
+
   it("keeps query state in links and renders backend text without raw HTML", async () => {
     render(
       <SearchResultsPage

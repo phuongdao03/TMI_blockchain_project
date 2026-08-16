@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 
 import type { AuthUser, SuccessEnvelope } from "@/lib/api/types";
+import { resolveServerApiBaseUrl } from "@/lib/api/server-base-url";
 
 export interface ServerAuthState {
   user: AuthUser | null;
@@ -17,7 +18,7 @@ export async function getServerAuthState(): Promise<ServerAuthState> {
     .getAll()
     .map(({ name, value }) => `${name}=${value}`)
     .join("; ");
-  const apiBaseUrl = process.env.API_BASE_URL ?? "http://localhost:8000";
+  const apiBaseUrl = resolveServerApiBaseUrl();
 
   try {
     const response = await fetch(`${apiBaseUrl}/api/v1/auth/me`, {

@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     )
 
     app_env: Literal["local", "staging", "production"] = "local"
+    release_mode: Literal["preview", "full"] = "full"
     app_base_url: str = Field(
         default="http://localhost:3000",
         min_length=1,
@@ -227,6 +228,10 @@ class Settings(BaseSettings):
             if item.strip()
         )
 
+    @property
+    def business_workflows_enabled(self) -> bool:
+        return self.release_mode == "full"
+
     @model_validator(mode="after")
     def validate_blockchain_configuration(self) -> Self:
         expected_chain_ids = {"local": 31_337, "amoy": 80_002, "polygon": 137}
@@ -266,7 +271,12 @@ class Settings(BaseSettings):
                     "The certificate contract address is not in the allowlist."
                 )
 
-        if self.app_env == "production":
+        if self.app_env == "production" and self.release_mode == "preview":
+            if self.blockchain_signer_private_key is not None:
+                raise ValueError(
+                    "Raw blockchain signer keys are forbidden in production."
+                )
+        if self.app_env == "production" and self.release_mode == "full":
             if self.blockchain_network != "polygon":
                 raise ValueError("Production blockchain network must be Polygon PoS.")
             if not self.blockchain_rpc_url.startswith("https://"):
@@ -295,7 +305,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_runtime_integrations(self) -> Self:
-        if self.app_env == "production" and not self.media_private_encryption_enabled:
+        if (
+            self.app_env == "production"
+            and self.release_mode == "full"
+            and not self.media_private_encryption_enabled
+        ):
             raise ValueError(
                 "Private document encryption must be enabled in production."
             )
@@ -355,20 +369,32 @@ class Settings(BaseSettings):
             )
         if self.app_env != "local" and self.firebase_auth_emulator_host.strip():
             raise ValueError("Firebase Auth emulator is local-only.")
-        if self.app_env == "production" and not self.firebase_totp_enabled:
+        if (
+            self.app_env == "production"
+            and self.release_mode == "full"
+            and not self.firebase_totp_enabled
+        ):
             raise ValueError("Firebase TOTP MFA must be enabled in production.")
         provider = self.payment_provider.strip().lower()
-        if provider not in {"mock", "payos"}:
-            raise ValueError("Payment provider must be either mock or payos.")
+        if provider not in {"disabled", "mock", "payos"}:
+            raise ValueError("Payment provider must be disabled, mock or payos.")
+        if provider == "disabled" and self.release_mode != "preview":
+            raise ValueError("Disabled payments are allowed only in preview mode.")
+        if self.release_mode == "preview" and provider != "disabled":
+            raise ValueError("Preview mode requires the disabled payment provider.")
         is_mock_provider = provider == "mock"
-        if self.app_env == "local" and not is_mock_provider:
+        if (
+            self.app_env == "local"
+            and self.release_mode == "full"
+            and not is_mock_provider
+        ):
             raise ValueError("Local payment provider must be mock.")
-        if self.app_env != "local" and is_mock_provider:
+        if self.app_env != "local" and self.release_mode == "full" and is_mock_provider:
             raise ValueError(
                 "Mock payment provider is local-only; configure a production "
                 "payment adapter."
             )
-        if self.app_env != "local":
+        if self.app_env != "local" and self.release_mode == "full":
             missing_payos_secret = any(
                 secret is None or not secret.get_secret_value()
                 for secret in (
