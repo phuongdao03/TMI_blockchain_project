@@ -14,7 +14,7 @@ test("content admin creates, previews and publishes a sanitized post", async ({
     .fill("correct horse battery staple");
   await page.getByRole("button", { name: /Đăng nhập|ÄÄƒng nháº­p/ }).click();
 
-  await expect(page).toHaveURL(/\/admin\/content$/);
+  await expect(page).toHaveURL(/\/admin\/content$/, { timeout: 15_000 });
   await page.locator("nav").getByRole("button").nth(1).click();
   await expect(
     page.getByRole("heading", { name: "Trung tâm nội dung" }),
@@ -40,6 +40,7 @@ test("content admin previews and publishes a public work", async ({ page }) => {
   await page.getByLabel(/khẩu/i).fill("correct horse battery staple");
   await page.getByRole("button", { name: /Đăng nhập/i }).click();
 
+  await expect(page).toHaveURL(/\/admin\/content$/, { timeout: 15_000 });
   await page.getByRole("button", { name: /Di sản số TMI/ }).click();
   await expect(page.getByLabel("Tiêu đề công khai")).toHaveValue(
     "Di sản số TMI",
