@@ -83,10 +83,12 @@ test("applicant dossier journey stays readable at all supported widths", async (
         () => document.documentElement.scrollWidth <= window.innerWidth + 1,
       ),
     ).toBe(true);
-    await expect.soft(page).toHaveScreenshot(`applicant-${viewport.width}.png`, {
-      animations: "disabled",
-      fullPage: true,
-    });
+    await expect
+      .soft(page)
+      .toHaveScreenshot(`applicant-${viewport.width}.png`, {
+        animations: "disabled",
+        fullPage: true,
+      });
   }
 });
 
