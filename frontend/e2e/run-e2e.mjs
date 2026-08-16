@@ -5,8 +5,16 @@ const playwrightCli = fileURLToPath(
   new URL("../node_modules/@playwright/test/cli.js", import.meta.url),
 );
 const forwardedArguments = process.argv.slice(2);
+const selectedTestFiles = forwardedArguments.filter((argument) =>
+  /(?:^|[/\\])[^/\\]+\.spec\.[cm]?[jt]sx?$/.test(argument),
+);
+const releaseModes = selectedTestFiles.length
+  ? selectedTestFiles.some((file) => file.includes("preview-release.spec."))
+    ? ["preview"]
+    : ["full"]
+  : ["full", "preview"];
 
-for (const releaseMode of ["full", "preview"]) {
+for (const releaseMode of releaseModes) {
   const result = spawnSync(
     process.execPath,
     [playwrightCli, "test", ...forwardedArguments],
