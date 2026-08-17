@@ -4,7 +4,9 @@ from datetime import UTC, datetime, timedelta
 import httpx
 import jwt
 import pytest
-from cryptography.hazmat.primitives import serialization
+from cryptography import x509
+from cryptography.x509.oid import NameOID
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from app.modules.auth.errors import OAuthIdentityInvalidError
@@ -23,19 +25,58 @@ class FakeFirebaseClient:
         return None
 
 
+def _firebase_certificate(key: rsa.RSAPrivateKey, now: datetime) -> str:
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "securetoken")])
+    certificate = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - timedelta(days=1))
+        .not_valid_after(now + timedelta(days=1))
+        .sign(key, algorithm=hashes.SHA256())
+    )
+    return certificate.public_bytes(serialization.Encoding.PEM).decode()
+
+
+def test_firebase_x509_certificate_is_accepted() -> None:
+    key = rsa.generate_private_key(public_exponent=65_537, key_size=2_048)
+    now = datetime(2026, 8, 6, 8, tzinfo=UTC)
+    token = jwt.encode(
+        {
+            "iss": "https://securetoken.google.com/tmi-test",
+            "aud": "tmi-test",
+            "sub": "firebase-user-x509",
+            "iat": int(now.timestamp()),
+            "exp": int((now + timedelta(hours=1)).timestamp()),
+            "auth_time": int(now.timestamp()),
+            "email": "verified@example.com",
+            "email_verified": True,
+            "firebase": {"sign_in_provider": "google.com"},
+        },
+        key,
+        algorithm="RS256",
+        headers={"kid": "firebase-key"},
+    )
+    verifier = FirebaseTokenVerifier.create(
+        project_id="tmi-test",
+        jwks_uri="https://firebase.test/certs",
+        timeout_seconds=5,
+        http_client=FakeFirebaseClient(_firebase_certificate(key, now)),
+        clock=lambda: now,
+    )
+
+    claims = asyncio.run(verifier.validate_id_token(token))
+
+    assert claims.subject == "firebase-user-x509"
+
+
 @pytest.mark.parametrize("sign_in_provider", ["google.com", "password"])
 def test_firebase_token_is_verified_and_normalized(
     sign_in_provider: str,
 ) -> None:
     key = rsa.generate_private_key(public_exponent=65_537, key_size=2_048)
-    public_key = (
-        key.public_key()
-        .public_bytes(
-            serialization.Encoding.PEM,
-            serialization.PublicFormat.SubjectPublicKeyInfo,
-        )
-        .decode()
-    )
     now = datetime(2026, 8, 6, 8, tzinfo=UTC)
     token = jwt.encode(
         {
@@ -58,7 +99,7 @@ def test_firebase_token_is_verified_and_normalized(
         project_id="tmi-test",
         jwks_uri="https://firebase.test/certs",
         timeout_seconds=5,
-        http_client=FakeFirebaseClient(public_key),
+        http_client=FakeFirebaseClient(_firebase_certificate(key, now)),
         clock=lambda: now,
     )
 
@@ -71,14 +112,6 @@ def test_firebase_token_is_verified_and_normalized(
 
 def test_firebase_totp_claim_exposes_mfa_evidence() -> None:
     key = rsa.generate_private_key(public_exponent=65_537, key_size=2_048)
-    public_key = (
-        key.public_key()
-        .public_bytes(
-            serialization.Encoding.PEM,
-            serialization.PublicFormat.SubjectPublicKeyInfo,
-        )
-        .decode()
-    )
     now = datetime(2026, 8, 6, 8, tzinfo=UTC)
     token = jwt.encode(
         {
@@ -104,7 +137,7 @@ def test_firebase_totp_claim_exposes_mfa_evidence() -> None:
         project_id="tmi-test",
         jwks_uri="https://firebase.test/certs",
         timeout_seconds=5,
-        http_client=FakeFirebaseClient(public_key),
+        http_client=FakeFirebaseClient(_firebase_certificate(key, now)),
         clock=lambda: now,
     )
 

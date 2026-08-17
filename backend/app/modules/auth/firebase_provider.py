@@ -6,7 +6,7 @@ from typing import Protocol
 
 import httpx
 import jwt
-from cryptography.hazmat.primitives import serialization
+from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from pydantic import EmailStr, TypeAdapter, ValidationError
 
@@ -95,7 +95,9 @@ class FirebaseTokenVerifier:
                 ):
                     raise ValueError
                 certificate = await self._get_certificate(header["kid"])
-                public_key = serialization.load_pem_public_key(certificate.encode())
+                public_key = x509.load_pem_x509_certificate(
+                    certificate.encode()
+                ).public_key()
                 if not isinstance(public_key, RSAPublicKey):
                     raise ValueError
                 claims = jwt.decode(
