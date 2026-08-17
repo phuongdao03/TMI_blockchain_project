@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from app.core.config import Settings
 from app.core.health import HealthService
 from app.core.logging import JsonFormatter
-from app.main import create_application
+from app.main import _build_health_service, create_application
 
 
 class StaticProbe:
@@ -248,6 +248,31 @@ def test_ready_endpoint_returns_safe_error_when_dependency_is_down() -> None:
         "dependencies": {"anvil": "down", "redis": "up"}
     }
     assert payload["error"]["request_id"] == response.headers["X-Request-ID"]
+
+
+def test_preview_readiness_does_not_require_blockchain_rpc(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.main.RedisProbe",
+        lambda **_kwargs: StaticProbe(True),
+    )
+
+    def fail_if_constructed(**_kwargs: object) -> StaticProbe:
+        pytest.fail("Preview readiness must not construct a blockchain RPC probe.")
+
+    monkeypatch.setattr("app.main.AnvilProbe", fail_if_constructed)
+    settings = Settings.model_validate(
+        {
+            "app_env": "local",
+            "release_mode": "preview",
+            "payment_provider": "disabled",
+        }
+    )
+
+    dependencies = run(_build_health_service(settings).check_readiness())
+
+    assert dependencies == {"redis": "up"}
 
 
 def test_readiness_openapi_declares_standard_error_envelope() -> None:

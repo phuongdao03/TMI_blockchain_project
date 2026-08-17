@@ -45,7 +45,7 @@ from app.api.v1.voting_me import router as voting_me_router
 from app.api.v1.voting_public import router as voting_public_router
 from app.core.config import Settings, get_settings
 from app.core.errors import install_exception_handlers
-from app.core.health import HealthService
+from app.core.health import DependencyProbe, HealthService
 from app.core.logging import configure_logging
 from app.core.middleware import (
     PreviewModeMiddleware,
@@ -56,18 +56,19 @@ from app.core.probes import AnvilProbe, RedisProbe
 
 
 def _build_health_service(settings: Settings) -> HealthService:
-    return HealthService(
-        {
-            "anvil": AnvilProbe(
-                url=settings.anvil_rpc_url,
-                timeout_seconds=settings.readiness_timeout_seconds,
-            ),
-            "redis": RedisProbe(
-                url=settings.redis_url,
-                timeout_seconds=settings.readiness_timeout_seconds,
-            ),
-        }
-    )
+    probes: dict[str, DependencyProbe] = {
+        "redis": RedisProbe(
+            url=settings.redis_url,
+            timeout_seconds=settings.readiness_timeout_seconds,
+        )
+    }
+    if settings.business_workflows_enabled:
+        probes["anvil"] = AnvilProbe(
+            url=settings.anvil_rpc_url,
+            timeout_seconds=settings.readiness_timeout_seconds,
+        )
+
+    return HealthService(probes)
 
 
 def _render_api_docs(schema: dict[str, Any]) -> str:
