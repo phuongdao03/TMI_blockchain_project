@@ -5,9 +5,9 @@ import httpx
 import jwt
 import pytest
 from cryptography import x509
-from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
 
 from app.modules.auth.errors import OAuthIdentityInvalidError
 from app.modules.auth.firebase_provider import FirebaseTokenVerifier
