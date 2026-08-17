@@ -16,9 +16,9 @@ const evidenceSteps = [
 ] as const;
 
 const previewSteps = [
-  { label: "Tuyển chọn", value: "Đang trưng bày" },
-  { label: "Thông tin", value: "Đang cập nhật" },
-  { label: "Chứng thư", value: "Chưa phát hành" },
+  { label: "Khởi nguồn", value: "Giá trị được hình thành" },
+  { label: "Dấu ấn", value: "Câu chuyện được tiếp nối" },
+  { label: "Lan tỏa", value: "Đến gần hơn với cộng đồng" },
 ] as const;
 
 export function CertificateOrbit({
@@ -47,8 +47,8 @@ export function CertificateOrbit({
               <FileBadge2 className="size-6" strokeWidth={1.6} />
             </span>
             <span>
-              <small>{preview ? "BỘ SƯU TẬP MỞ ĐẦU" : "SỔ ĐĂNG BỘ SỐ"}</small>
-              <strong>TINH HOA VIỆT</strong>
+              <small>{preview ? "HÀNH TRÌNH GIÁ TRỊ VIỆT" : "SỔ ĐĂNG BỘ SỐ"}</small>
+              <strong>{preview ? "DẤU ẤN TINH HOA VIỆT" : "TINH HOA VIỆT"}</strong>
             </span>
             <BadgeCheck
               className="ml-auto size-6 text-gold-300"
@@ -56,25 +56,23 @@ export function CertificateOrbit({
             />
           </div>
           <div className="evidence-document-code">
-            <span>{preview ? "MÃ NỘI DUNG" : "MÃ BẰNG CHỨNG"}</span>
-            <strong>{preview ? "THV–DECU–001" : "THV–VN–2026–0812"}</strong>
+            <span>{preview ? "MÃ CHUYÊN ĐỀ" : "MÃ BẰNG CHỨNG"}</span>
+            <strong>{preview ? "THV–GT–2026–001" : "THV–VN–2026–0812"}</strong>
           </div>
           <dl className="evidence-document-fields">
             <div>
-              <dt>Chủ thể</dt>
-              <dd>
-                {preview ? "Bộ sưu tập giới thiệu" : "Đề cử Tinh Hoa Việt"}
-              </dd>
+              <dt>{preview ? "Giá trị" : "Chủ thể"}</dt>
+              <dd>{preview ? "Nét đẹp tiêu biểu" : "Đề cử Tinh Hoa Việt"}</dd>
             </div>
             <div>
-              <dt>Phiên bản</dt>
-              <dd>{preview ? "Bản giới thiệu" : "01 · Bất biến"}</dd>
+              <dt>{preview ? "Góc nhìn" : "Phiên bản"}</dt>
+              <dd>{preview ? "Câu chuyện Việt" : "01 · Bất biến"}</dd>
             </div>
             <div>
               <dt>Trạng thái</dt>
               <dd className="evidence-valid">
                 {preview ? null : <Check className="size-3.5" />}
-                {preview ? "Chưa phát hành" : "Đã xác lập"}
+                {preview ? "Đang giới thiệu" : "Đã xác lập"}
               </dd>
             </div>
           </dl>
@@ -84,11 +82,9 @@ export function CertificateOrbit({
               strokeWidth={1.4}
             />
             <span>
-              <small>
-                {preview ? "THÔNG TIN TRƯNG BÀY" : "DẤU VÂN TAY DỮ LIỆU"}
-              </small>
+              <small>{preview ? "CÂU CHUYỆN NỔI BẬT" : "DẤU VÂN TAY DỮ LIỆU"}</small>
               <strong>
-                {preview ? "NỘI DUNG GIỚI THIỆU" : "7F4A · 8C29 · B15E · 03D1"}
+                {preview ? "GIÁ TRỊ ĐƯỢC GÌN GIỮ VÀ LAN TỎA" : "7F4A · 8C29 · B15E · 03D1"}
               </strong>
             </span>
           </div>
@@ -97,7 +93,7 @@ export function CertificateOrbit({
           <div className="evidence-chain-head">
             <span>
               <Link2 className="size-4" />
-              {preview ? " LỘ TRÌNH PHÁT HÀNH" : " CHUỖI ĐỐI CHIẾU"}
+              {preview ? " HÀNH TRÌNH KHÁM PHÁ" : " CHUỖI ĐỐI CHIẾU"}
             </span>
             <Hash className="size-4 text-slate-600" />
           </div>
@@ -119,12 +115,8 @@ export function CertificateOrbit({
         <div className="evidence-seal">
           <BadgeCheck className="size-5" />
           <span>
-            <small>
-              {preview ? "NỘI DUNG GIỚI THIỆU" : "THÔNG TIN CÔNG KHAI"}
-            </small>
-            <strong>
-              {preview ? "Nội dung giới thiệu" : "Sẵn sàng xác minh"}
-            </strong>
+            <small>{preview ? "NỘI DUNG TIÊU BIỂU" : "THÔNG TIN CÔNG KHAI"}</small>
+            <strong>{preview ? "Tinh hoa Việt" : "Sẵn sàng xác minh"}</strong>
           </span>
         </div>
       </div>

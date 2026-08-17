@@ -15,4 +15,16 @@ describe("CertificateOrbit", () => {
     expect(screen.getByText("DẤU VÂN TAY DỮ LIỆU")).toBeDefined();
     expect(screen.getByText("Sẵn sàng xác minh")).toBeDefined();
   });
+
+  it("uses specific editorial copy in preview mode", () => {
+    render(<CertificateOrbit preview />);
+
+    expect(screen.getByText("DẤU ẤN TINH HOA VIỆT")).toBeDefined();
+    expect(screen.getByText("Giá trị được hình thành")).toBeDefined();
+    expect(screen.getByText("GIÁ TRỊ ĐƯỢC GÌN GIỮ VÀ LAN TỎA")).toBeDefined();
+    expect(screen.getByText("Tinh hoa Việt")).toBeDefined();
+    expect(screen.queryByText(/sơn mài/i)).toBeNull();
+    expect(screen.queryByText("NỘI DUNG GIỚI THIỆU")).toBeNull();
+    expect(screen.queryByText("Chưa phát hành")).toBeNull();
+  });
 });

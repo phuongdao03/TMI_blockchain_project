@@ -18,9 +18,9 @@ describe("HomePage", () => {
     expect(
       screen.getByRole("link", { name: "Khám phá đề cử" }).getAttribute("href"),
     ).toBe("/works");
-    expect(screen.getAllByText("NỘI DUNG GIỚI THIỆU").length).toBeGreaterThan(
-      0,
-    );
+    expect(screen.getByText("DẤU ẤN TINH HOA VIỆT")).toBeDefined();
+    expect(screen.getByText("GIÁ TRỊ ĐƯỢC GÌN GIỮ VÀ LAN TỎA")).toBeDefined();
+    expect(screen.queryByText("NỘI DUNG GIỚI THIỆU")).toBeNull();
     expect(screen.queryByText(/Phiên bản V1|sau V1/)).toBeNull();
     expect(screen.queryByText("Sẵn sàng xác minh")).toBeNull();
     expect(screen.queryByText("Khởi tạo hồ sơ")).toBeNull();
