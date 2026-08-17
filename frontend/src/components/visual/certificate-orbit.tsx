@@ -47,8 +47,12 @@ export function CertificateOrbit({
               <FileBadge2 className="size-6" strokeWidth={1.6} />
             </span>
             <span>
-              <small>{preview ? "HÀNH TRÌNH GIÁ TRỊ VIỆT" : "SỔ ĐĂNG BỘ SỐ"}</small>
-              <strong>{preview ? "DẤU ẤN TINH HOA VIỆT" : "TINH HOA VIỆT"}</strong>
+              <small>
+                {preview ? "HÀNH TRÌNH GIÁ TRỊ VIỆT" : "SỔ ĐĂNG BỘ SỐ"}
+              </small>
+              <strong>
+                {preview ? "DẤU ẤN TINH HOA VIỆT" : "TINH HOA VIỆT"}
+              </strong>
             </span>
             <BadgeCheck
               className="ml-auto size-6 text-gold-300"
@@ -82,9 +86,13 @@ export function CertificateOrbit({
               strokeWidth={1.4}
             />
             <span>
-              <small>{preview ? "CÂU CHUYỆN NỔI BẬT" : "DẤU VÂN TAY DỮ LIỆU"}</small>
+              <small>
+                {preview ? "CÂU CHUYỆN NỔI BẬT" : "DẤU VÂN TAY DỮ LIỆU"}
+              </small>
               <strong>
-                {preview ? "GIÁ TRỊ ĐƯỢC GÌN GIỮ VÀ LAN TỎA" : "7F4A · 8C29 · B15E · 03D1"}
+                {preview
+                  ? "GIÁ TRỊ ĐƯỢC GÌN GIỮ VÀ LAN TỎA"
+                  : "7F4A · 8C29 · B15E · 03D1"}
               </strong>
             </span>
           </div>
@@ -115,7 +123,9 @@ export function CertificateOrbit({
         <div className="evidence-seal">
           <BadgeCheck className="size-5" />
           <span>
-            <small>{preview ? "NỘI DUNG TIÊU BIỂU" : "THÔNG TIN CÔNG KHAI"}</small>
+            <small>
+              {preview ? "NỘI DUNG TIÊU BIỂU" : "THÔNG TIN CÔNG KHAI"}
+            </small>
             <strong>{preview ? "Tinh hoa Việt" : "Sẵn sàng xác minh"}</strong>
           </span>
         </div>
