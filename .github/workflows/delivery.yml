@@ -256,7 +256,8 @@ jobs:
           # The backend bundles the document/image and Web3 runtimes. Keep a strict
           # ceiling above the measured production image size (239 MiB).
           bash infrastructure/scripts/check-image-size.sh "$REGISTRY/tmi-certificate-backend:$TAG" 260
-          bash infrastructure/scripts/check-image-size.sh "$REGISTRY/tmi-certificate-frontend:$TAG" 90
+          # Next.js standalone output includes the public Firebase runtime bundle.
+          bash infrastructure/scripts/check-image-size.sh "$REGISTRY/tmi-certificate-frontend:$TAG" 200
           docker run -d --rm --name tmi-backend-smoke -p 18000:8000 "$REGISTRY/tmi-certificate-backend:$TAG"
           docker run -d --rm --name tmi-frontend-smoke -p 13000:3000 "$REGISTRY/tmi-certificate-frontend:$TAG"
           trap 'docker stop tmi-backend-smoke tmi-frontend-smoke >/dev/null 2>&1 || true' EXIT
