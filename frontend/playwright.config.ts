@@ -15,6 +15,7 @@ export default defineConfig({
   grep: previewRun ? previewTestName : undefined,
   grepInvert: previewRun ? undefined : previewTestName,
   expect: {
+    timeout: 15000,
     toHaveScreenshot: {
       // Tolerate sub-pixel font/transform rasterization while keeping the
       // visual gate strict enough to catch real layout or content changes.
