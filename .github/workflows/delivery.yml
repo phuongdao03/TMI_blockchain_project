@@ -253,7 +253,9 @@ jobs:
           done
           docker buildx build --pull --load --platform linux/amd64 --cache-from type=gha,scope=backend --cache-to type=gha,mode=max,scope=backend -t "$REGISTRY/tmi-certificate-backend:$TAG" backend
           docker buildx build --pull --load --platform linux/amd64 --cache-from type=gha,scope=frontend --cache-to type=gha,mode=max,scope=frontend --build-arg NEXT_PUBLIC_RELEASE_MODE=preview --build-arg NEXT_PUBLIC_FIREBASE_API_KEY --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID --build-arg NEXT_PUBLIC_FIREBASE_APP_ID -t "$REGISTRY/tmi-certificate-frontend:$TAG" frontend
-          bash infrastructure/scripts/check-image-size.sh "$REGISTRY/tmi-certificate-backend:$TAG" 150
+          # The backend bundles the document/image and Web3 runtimes. Keep a strict
+          # ceiling above the measured production image size (239 MiB).
+          bash infrastructure/scripts/check-image-size.sh "$REGISTRY/tmi-certificate-backend:$TAG" 260
           bash infrastructure/scripts/check-image-size.sh "$REGISTRY/tmi-certificate-frontend:$TAG" 90
           docker run -d --rm --name tmi-backend-smoke -p 18000:8000 "$REGISTRY/tmi-certificate-backend:$TAG"
           docker run -d --rm --name tmi-frontend-smoke -p 13000:3000 "$REGISTRY/tmi-certificate-frontend:$TAG"
