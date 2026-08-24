@@ -1,6 +1,6 @@
 """Restrict consolidated moderators to dossier review capabilities.
 
-Revision ID: 0061_restrict_moderator_permissions
+Revision ID: 0061_moderator_permissions
 Revises: 0060_certificate_version_qr
 Create Date: 2026-08-24
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0061_restrict_moderator_permissions"
+revision: str = "0061_moderator_permissions"
 down_revision: str | None = "0060_certificate_version_qr"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

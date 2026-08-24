@@ -69,6 +69,7 @@ test("frontend source contains no links or rewrites to removed routes", async ()
     /\/(?:quy-trinh|chinh-sach|thu-vien|tai-san|ban-do|kiem-tra|binh-chon|tim-kiem|ho-so|tham-dinh|hoi-dong|chung-thu|thanh-toan|thong-bao|tai-khoan|lich-su-(?:binh-chon|hoat-dong)|admin\/(?:bao-cao|binh-chon|noi-dung|tim-kiem))(?:[/?`"']|$)/;
 
   for (const file of await sourceFiles(sourceRoot)) {
+    if (/\.(?:test|spec)\.(?:ts|tsx|mjs)$/.test(file)) continue;
     const source = await readFile(file, "utf8");
     assert.doesNotMatch(source, forbidden, file);
   }

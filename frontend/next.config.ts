@@ -78,6 +78,20 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+  async redirects() {
+    return [
+      {
+        source: "/tai-san/:slug",
+        destination: "/works/:slug",
+        permanent: true,
+      },
+      {
+        source: "/kiem-tra/:token",
+        destination: "/verify/:token",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
