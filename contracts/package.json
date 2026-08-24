@@ -6,6 +6,7 @@
     "build": "forge build",
     "format:check": "forge fmt --check",
     "test": "forge test",
+    "test:proof-registry-ops": "node --test scripts/verify-thv-proof-registry-roles.test.mjs scripts/read-thv-proof-registry-mainnet-broadcast-evidence.test.mjs scripts/create-thv-proof-registry-mainnet-plan.test.mjs scripts/preflight-thv-proof-registry-mainnet.test.mjs scripts/export-thv-proof-registry-artifacts.test.mjs",
     "test:provenance": "node --test scripts/export-artifacts.test.mjs scripts/production-release-plan.test.mjs scripts/record-explorer-evidence.test.mjs",
     "export:local": "node scripts/export-artifacts.mjs --network=local --chain-id=31337",
     "export:amoy": "node scripts/export-artifacts.mjs --network=amoy --chain-id=80002"
