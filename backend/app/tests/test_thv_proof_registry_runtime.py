@@ -131,14 +131,17 @@ def test_thv_proof_registry_dependency_fails_closed_when_disabled() -> None:
     asyncio.run(exercise())
 
 
-def test_thv_proof_registry_dependency_fails_closed_for_invalid_runtime_config(
-) -> None:
+def test_thv_proof_registry_dependency_fails_closed_for_invalid_runtime_config() -> (
+    None
+):
     async def exercise() -> None:
         dependency = get_thv_proof_registry_service(
             cast(AsyncSession, object()),
             _settings(
                 thv_proof_registry_contract_address=CONTRACT,
-                thv_proof_registry_contract_abi_path=Path("missing-proof-registry.abi.json"),
+                thv_proof_registry_contract_abi_path=Path(
+                    "missing-proof-registry.abi.json"
+                ),
             ),
         )
         with pytest.raises(BlockchainUnavailableError, match="configuration"):
@@ -209,9 +212,7 @@ def test_static_abi_encodes_the_contract_record_proof_signature() -> None:
         version=1,
     )
 
-    assert payload[:4] == Web3.keccak(
-        text="recordProof(bytes32,bytes32,uint64)"
-    )[:4]
+    assert payload[:4] == Web3.keccak(text="recordProof(bytes32,bytes32,uint64)")[:4]
     assert len(payload) == 4 + (32 * 3)
 
 

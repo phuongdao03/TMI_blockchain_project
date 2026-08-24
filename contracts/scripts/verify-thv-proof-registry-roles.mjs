@@ -10,10 +10,13 @@ const DEFAULT_ADMIN_ROLE_SELECTOR = "0xa217fddf";
 const VERIFIER_ROLE_SELECTOR = "0xe7705db6";
 const HAS_ROLE_SELECTOR = "0x91d14854";
 const DEFAULT_ADMIN_ROLE = `0x${"00".repeat(32)}`;
-const VERIFIER_ROLE = "0x0ce23c3e399818cfee81a7ab0880f714e53d7672b08df0fa62f2843416e1ea09";
+const VERIFIER_ROLE =
+  "0x0ce23c3e399818cfee81a7ab0880f714e53d7672b08df0fa62f2843416e1ea09";
 
-export const APPROVED_ADMINISTRATOR = "0xec5FcdFab3FCafCEFCED55CC702CD3B13f54B4Fe".toLowerCase();
-export const APPROVED_SIGNER = "0xBfA38182f0D24589e7898DD4892C58c3FDa58042".toLowerCase();
+export const APPROVED_ADMINISTRATOR =
+  "0xec5FcdFab3FCafCEFCED55CC702CD3B13f54B4Fe".toLowerCase();
+export const APPROVED_SIGNER =
+  "0xBfA38182f0D24589e7898DD4892C58c3FDa58042".toLowerCase();
 
 function requireEnvironment(environment, name) {
   const value = environment[name]?.trim();
@@ -32,10 +35,17 @@ export function normalizeAddress(value) {
 
 export function validateNetworkEnvironment(environment) {
   const network = requireEnvironment(environment, "BLOCKCHAIN_NETWORK");
-  const configuredChainId = Number(requireEnvironment(environment, "BLOCKCHAIN_CHAIN_ID"));
+  const configuredChainId = Number(
+    requireEnvironment(environment, "BLOCKCHAIN_CHAIN_ID"),
+  );
   const expectedChainId = NETWORK_CHAIN_IDS.get(network);
-  if (!Number.isSafeInteger(configuredChainId) || configuredChainId !== expectedChainId) {
-    throw new Error(`Invalid network/chain pair: ${network}:${configuredChainId}`);
+  if (
+    !Number.isSafeInteger(configuredChainId) ||
+    configuredChainId !== expectedChainId
+  ) {
+    throw new Error(
+      `Invalid network/chain pair: ${network}:${configuredChainId}`,
+    );
   }
   return { network, configuredChainId };
 }
@@ -48,12 +58,18 @@ function parseLocalTestMode(environment) {
 }
 
 export function validateRoleIdentityEnvironment(environment, network) {
-  const administrator = normalizeAddress(requireEnvironment(environment, "ADMIN_WALLET_ADDRESS"));
-  const signer = normalizeAddress(requireEnvironment(environment, "SIGNER_WALLET_ADDRESS"));
+  const administrator = normalizeAddress(
+    requireEnvironment(environment, "ADMIN_WALLET_ADDRESS"),
+  );
+  const signer = normalizeAddress(
+    requireEnvironment(environment, "SIGNER_WALLET_ADDRESS"),
+  );
   const localTestMode = parseLocalTestMode(environment);
 
   if (administrator === signer) {
-    throw new Error("ADMIN_WALLET_ADDRESS and SIGNER_WALLET_ADDRESS must be different.");
+    throw new Error(
+      "ADMIN_WALLET_ADDRESS and SIGNER_WALLET_ADDRESS must be different.",
+    );
   }
   if (localTestMode && network !== "local") {
     throw new Error(
@@ -61,19 +77,27 @@ export function validateRoleIdentityEnvironment(environment, network) {
     );
   }
   if (!localTestMode && administrator !== APPROVED_ADMINISTRATOR) {
-    throw new Error("ADMIN_WALLET_ADDRESS must equal the approved THV administrator.");
+    throw new Error(
+      "ADMIN_WALLET_ADDRESS must equal the approved THV administrator.",
+    );
   }
   if (!localTestMode && signer !== APPROVED_SIGNER) {
-    throw new Error("SIGNER_WALLET_ADDRESS must equal the approved THV signer.");
+    throw new Error(
+      "SIGNER_WALLET_ADDRESS must equal the approved THV signer.",
+    );
   }
 
   return { administrator, signer, localTestMode };
 }
 
 function validateDeployerIdentity(environment, administrator, signer) {
-  const deployer = normalizeAddress(requireEnvironment(environment, "EXPECTED_DEPLOYER"));
+  const deployer = normalizeAddress(
+    requireEnvironment(environment, "EXPECTED_DEPLOYER"),
+  );
   if (deployer === administrator || deployer === signer) {
-    throw new Error("EXPECTED_DEPLOYER must be separate from Admin and Signer wallets.");
+    throw new Error(
+      "EXPECTED_DEPLOYER must be separate from Admin and Signer wallets.",
+    );
   }
   return deployer;
 }
@@ -82,7 +106,9 @@ export function encodeHasRole(role, account) {
   if (!/^0x[0-9a-fA-F]{64}$/.test(role)) {
     throw new Error("Role identifier must be bytes32.");
   }
-  const normalizedAccount = normalizeAddress(account).slice(2).padStart(64, "0");
+  const normalizedAccount = normalizeAddress(account)
+    .slice(2)
+    .padStart(64, "0");
   return `${HAS_ROLE_SELECTOR}${role.slice(2).toLowerCase()}${normalizedAccount}`;
 }
 
@@ -97,7 +123,9 @@ async function jsonRpc(fetchImpl, rpcUrl, method, params) {
   }
   const payload = await response.json();
   if (payload.error) {
-    throw new Error(`RPC ${method} failed: ${payload.error.message ?? "unknown error"}`);
+    throw new Error(
+      `RPC ${method} failed: ${payload.error.message ?? "unknown error"}`,
+    );
   }
   return payload.result;
 }
@@ -115,15 +143,21 @@ export async function verifyRoles({
   write = (line) => process.stdout.write(line),
 } = {}) {
   if (typeof fetchImpl !== "function") {
-    throw new Error("A fetch implementation is required for role verification.");
+    throw new Error(
+      "A fetch implementation is required for role verification.",
+    );
   }
 
-  const { network, configuredChainId } = validateNetworkEnvironment(environment);
+  const { network, configuredChainId } =
+    validateNetworkEnvironment(environment);
   const rpcUrl = requireEnvironment(environment, "BLOCKCHAIN_RPC_URL");
   const registry = normalizeAddress(
     requireEnvironment(environment, "THV_PROOF_REGISTRY_CONTRACT_ADDRESS"),
   );
-  const { administrator, signer } = validateRoleIdentityEnvironment(environment, network);
+  const { administrator, signer } = validateRoleIdentityEnvironment(
+    environment,
+    network,
+  );
   const deployer = validateDeployerIdentity(environment, administrator, signer);
 
   const actualChainId = Number.parseInt(
@@ -136,9 +170,14 @@ export async function verifyRoles({
     );
   }
 
-  const runtimeBytecode = await jsonRpc(fetchImpl, rpcUrl, "eth_getCode", [registry, "latest"]);
+  const runtimeBytecode = await jsonRpc(fetchImpl, rpcUrl, "eth_getCode", [
+    registry,
+    "latest",
+  ]);
   if (runtimeBytecode === "0x") {
-    throw new Error("No contract bytecode exists at THV_PROOF_REGISTRY_CONTRACT_ADDRESS.");
+    throw new Error(
+      "No contract bytecode exists at THV_PROOF_REGISTRY_CONTRACT_ADDRESS.",
+    );
   }
 
   const ethCall = (data) =>
@@ -146,10 +185,14 @@ export async function verifyRoles({
   const defaultAdminRole = await ethCall(DEFAULT_ADMIN_ROLE_SELECTOR);
   const verifierRole = await ethCall(VERIFIER_ROLE_SELECTOR);
   if (defaultAdminRole.toLowerCase() !== DEFAULT_ADMIN_ROLE) {
-    throw new Error("Registry DEFAULT_ADMIN_ROLE identifier does not match AccessControl.");
+    throw new Error(
+      "Registry DEFAULT_ADMIN_ROLE identifier does not match AccessControl.",
+    );
   }
   if (verifierRole.toLowerCase() !== VERIFIER_ROLE) {
-    throw new Error("Registry VERIFIER_ROLE identifier does not match THVProofRegistry.");
+    throw new Error(
+      "Registry VERIFIER_ROLE identifier does not match THVProofRegistry.",
+    );
   }
   const [
     adminHasDefaultAdmin,
@@ -181,12 +224,12 @@ export async function verifyRoles({
     deployerHasVerifier: isTrue(deployerHasVerifier),
   };
   if (
-    !result.adminHasDefaultAdmin
-    || result.adminHasVerifier
-    || !result.signerHasVerifier
-    || result.signerHasDefaultAdmin
-    || result.deployerHasDefaultAdmin
-    || result.deployerHasVerifier
+    !result.adminHasDefaultAdmin ||
+    result.adminHasVerifier ||
+    !result.signerHasVerifier ||
+    result.signerHasDefaultAdmin ||
+    result.deployerHasDefaultAdmin ||
+    result.deployerHasVerifier
   ) {
     throw new Error("Role verification failed.");
   }
@@ -198,7 +241,10 @@ export async function verifyRoles({
   return result;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   verifyRoles().catch((error) => {
     process.stderr.write(`${error.message}\n`);
     process.exitCode = 1;

@@ -64,7 +64,7 @@ export function PublicShell({
         Chuyển đến nội dung chính
       </a>
       <header className="public-header">
-        <BrandMark />
+        <BrandMark variant="public-seal" />
         <nav className="public-nav" aria-label="Điều hướng chính">
           {publicLinks.map((item) => (
             <Link key={item.href} href={item.href}>
@@ -119,39 +119,39 @@ export function PublicShell({
             tabIndex={-1}
             onClick={() => closeMenu()}
           />
-        <nav
-          id="public-mobile-navigation"
-          className="public-mobile-nav"
-          aria-label="Điều hướng di động"
-        >
-          {publicLinks.map((item, index) => (
-            <Link
-              key={item.href}
-              ref={index === 0 ? firstMobileLinkRef : undefined}
-              href={item.href}
-              onClick={() => closeMenu(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
-          {publicHeaderAction ? (
-            <Link
-              href={publicHeaderAction.href}
-              onClick={() => closeMenu(false)}
-            >
-              {publicHeaderAction.label}
-            </Link>
-          ) : (
-            <div className="public-mobile-nav__account">
-              <Link href="/login" onClick={() => closeMenu(false)}>
-                Đăng nhập
+          <nav
+            id="public-mobile-navigation"
+            className="public-mobile-nav"
+            aria-label="Điều hướng di động"
+          >
+            {publicLinks.map((item, index) => (
+              <Link
+                key={item.href}
+                ref={index === 0 ? firstMobileLinkRef : undefined}
+                href={item.href}
+                onClick={() => closeMenu(false)}
+              >
+                {item.label}
               </Link>
-              <Link href="/register" onClick={() => closeMenu(false)}>
-                Đăng ký
+            ))}
+            {publicHeaderAction ? (
+              <Link
+                href={publicHeaderAction.href}
+                onClick={() => closeMenu(false)}
+              >
+                {publicHeaderAction.label}
               </Link>
-            </div>
-          )}
-        </nav>
+            ) : (
+              <div className="public-mobile-nav__account">
+                <Link href="/login" onClick={() => closeMenu(false)}>
+                  Đăng nhập
+                </Link>
+                <Link href="/register" onClick={() => closeMenu(false)}>
+                  Đăng ký
+                </Link>
+              </div>
+            )}
+          </nav>
         </div>
       ) : null}
       <main id="main-content">{children}</main>

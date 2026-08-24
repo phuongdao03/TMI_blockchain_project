@@ -118,9 +118,7 @@ def _dossier_detail_data(view: DossierDetailView) -> DossierDetailData:
     return DossierDetailData(
         **dossier.model_dump(),
         evidences=tuple(_evidence_data(item) for item in view.evidences),
-        document_rules=tuple(
-            _document_rule_data(item) for item in view.document_rules
-        ),
+        document_rules=tuple(_document_rule_data(item) for item in view.document_rules),
     )
 
 

@@ -23,9 +23,7 @@ def public_fields_from_snapshot(
     dossier_value = snapshot.get("dossier")
     dossier = dossier_value if isinstance(dossier_value, dict) else {}
     dossier_type_value = dossier.get("dossierType")
-    dossier_type = (
-        dossier_type_value if isinstance(dossier_type_value, dict) else {}
-    )
+    dossier_type = dossier_type_value if isinstance(dossier_type_value, dict) else {}
     fields = dossier_type.get("publicFields")
     if not isinstance(fields, list):
         return []
@@ -60,8 +58,7 @@ def public_fields_from_snapshot(
             isinstance(value, list)
             and len(value) <= MAX_PUBLIC_FIELD_LIST_ITEMS
             and all(
-                isinstance(item, str)
-                and len(item) <= MAX_PUBLIC_FIELD_LIST_ITEM_LENGTH
+                isinstance(item, str) and len(item) <= MAX_PUBLIC_FIELD_LIST_ITEM_LENGTH
                 for item in value
             )
         ):

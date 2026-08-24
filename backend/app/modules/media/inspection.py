@@ -313,13 +313,10 @@ class MediaInspectionPolicy:
             uncompressed_bytes += entry.file_size
             if uncompressed_bytes > _ARCHIVE_MAX_UNCOMPRESSED_BYTES:
                 raise InspectionRejectedError("ARCHIVE_SIZE_LIMIT_EXCEEDED")
-            if (
-                entry.file_size > 0
-                and (
-                    entry.compress_size == 0
-                    or entry.file_size
-                    > entry.compress_size * _ARCHIVE_MAX_COMPRESSION_RATIO
-                )
+            if entry.file_size > 0 and (
+                entry.compress_size == 0
+                or entry.file_size
+                > entry.compress_size * _ARCHIVE_MAX_COMPRESSION_RATIO
             ):
                 raise InspectionRejectedError("ARCHIVE_COMPRESSION_RATIO_EXCEEDED")
         return names

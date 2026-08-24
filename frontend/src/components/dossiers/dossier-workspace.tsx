@@ -380,7 +380,8 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
         mediaAssetId: asset.id,
         evidenceType: selectedRule?.documentType ?? evidenceType,
         evidenceRole: selectedRule?.key,
-        title: evidenceTitle.trim() || selectedRule?.label || "Tài liệu chứng minh",
+        title:
+          evidenceTitle.trim() || selectedRule?.label || "Tài liệu chứng minh",
         displayOrder: detail.data?.evidences.length ?? 0,
       }),
     onSuccess: refresh,
@@ -617,14 +618,17 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                       <div className="mb-4 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="font-bold text-neutral-900">
-                            {selectedRule.required ? "Tài liệu bắt buộc" : "Tài liệu bổ sung"}
+                            {selectedRule.required
+                              ? "Tài liệu bắt buộc"
+                              : "Tài liệu bổ sung"}
                           </p>
                           <span className="text-xs font-semibold text-neutral-500">
                             {selectedRuleCount}/{selectedRule.maxCount} tệp
                           </span>
                         </div>
                         <p className="mt-1 text-xs leading-5 text-neutral-600">
-                          {evidenceScopeLabel(selectedRule.defaultVisibility)}. Hệ thống tự áp dụng phạm vi hiển thị này.
+                          {evidenceScopeLabel(selectedRule.defaultVisibility)}.
+                          Hệ thống tự áp dụng phạm vi hiển thị này.
                         </p>
                       </div>
                     ) : null}
@@ -643,7 +647,10 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                       purpose="DOSSIER_EVIDENCE"
                     />
                     {selectedRuleAtCapacity ? (
-                      <p className="mt-3 text-sm font-medium text-amber-700" role="status">
+                      <p
+                        className="mt-3 text-sm font-medium text-amber-700"
+                        role="status"
+                      >
                         Đã đạt số lượng tối đa cho loại tài liệu này.
                       </p>
                     ) : null}

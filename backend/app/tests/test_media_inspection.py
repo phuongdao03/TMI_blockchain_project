@@ -130,8 +130,9 @@ def test_content_policy_rejects_mime_spoof_and_active_or_malformed_pdf() -> None
         policy.validate("evidence.pdf", "application/pdf", b"%PDF-1.7\n")
 
 
-def test_content_policy_accepts_safe_evidence_archives_and_rejects_unsafe_ones(
-) -> None:
+def test_content_policy_accepts_safe_evidence_archives_and_rejects_unsafe_ones() -> (
+    None
+):
     policy = MediaInspectionPolicy()
     docx = _archive(
         {

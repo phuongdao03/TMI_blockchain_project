@@ -36,7 +36,11 @@ test("accepts valid Polygon Mainnet THVProofRegistry broadcast evidence", () => 
 
 test("rejects prior evidence from a chain other than Polygon Mainnet", () => {
   assert.throws(
-    () => parseMainnetBroadcastEvidence(evidence({ chain: 80002 }), EXPECTED_DEPLOYER),
+    () =>
+      parseMainnetBroadcastEvidence(
+        evidence({ chain: 80002 }),
+        EXPECTED_DEPLOYER,
+      ),
     /chain is not 137/,
   );
 });

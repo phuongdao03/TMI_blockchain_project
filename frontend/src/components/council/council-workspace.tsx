@@ -85,10 +85,8 @@ export function CouncilWorkspace({ sessionId }: { sessionId: string }) {
   }
 
   const detail = query.data;
-  const isMember = user?.roles.includes("MODERATOR") === true;
-  const canManage =
-    user?.roles.some((role) => ["MODERATOR", "SUPER_ADMIN"].includes(role)) ===
-    true;
+  const isMember = user?.roles.includes("SUPER_ADMIN") === true;
+  const canManage = isMember;
   const canVote =
     isMember &&
     detail.session.status === "OPEN" &&

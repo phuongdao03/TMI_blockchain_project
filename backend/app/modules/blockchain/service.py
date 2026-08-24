@@ -471,10 +471,7 @@ class BlockchainTransactionService:
                 raise BlockchainConflictError(
                     "Only an active certificate can be updated."
                 )
-            if (
-                version.public_token_hash is None
-                or version.qr_payload is None
-            ):
+            if version.public_token_hash is None or version.qr_payload is None:
                 raise BlockchainConflictError(
                     "Certificate correction is missing its version-bound QR link."
                 )
@@ -892,7 +889,8 @@ class BlockchainTransactionService:
             elif (
                 not already_confirmed
                 and self._signer is None
-                and method in {
+                and method
+                in {
                     "issueCertificate",
                     "updateCertificate",
                     "revokeCertificate",

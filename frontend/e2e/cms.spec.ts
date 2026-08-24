@@ -8,14 +8,18 @@ test("content admin creates, previews and publishes a sanitized post", async ({
   page,
 }) => {
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Email" }).fill("owner@tmigroup.vn");
+  await page
+    .getByRole("textbox", { name: "Email" })
+    .fill("superadmin@tmigroup.vn");
   await page
     .getByLabel("Mật khẩu", { exact: true })
     .fill("correct horse battery staple");
   await page.getByRole("button", { name: /Đăng nhập|ÄÄƒng nháº­p/ }).click();
 
-  await expect(page).toHaveURL(/\/admin\/content$/, { timeout: 15_000 });
-  await page.locator("nav").getByRole("button").nth(1).click();
+  await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 });
+  await page.getByRole("link", { name: /Nội dung công khai/ }).click();
+  await expect(page).toHaveURL(/\/admin\/content$/);
+  await page.getByRole("button", { name: "Bài viết" }).click();
   await expect(
     page.getByRole("heading", { name: "Trung tâm nội dung" }),
   ).toBeVisible();
@@ -36,13 +40,17 @@ test("content admin creates, previews and publishes a sanitized post", async ({
 
 test("content admin previews and publishes a public work", async ({ page }) => {
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Email" }).fill("owner@tmigroup.vn");
+  await page
+    .getByRole("textbox", { name: "Email" })
+    .fill("superadmin@tmigroup.vn");
   await page
     .getByLabel("Mật khẩu", { exact: true })
     .fill("correct horse battery staple");
   await page.getByRole("button", { name: /Đăng nhập/i }).click();
 
-  await expect(page).toHaveURL(/\/admin\/content$/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 });
+  await page.getByRole("link", { name: /Nội dung công khai/ }).click();
+  await expect(page).toHaveURL(/\/admin\/content$/);
   await page.getByRole("button", { name: /Di sản số TMI/ }).click();
   await expect(page.getByLabel("Tiêu đề công khai")).toHaveValue(
     "Di sản số TMI",

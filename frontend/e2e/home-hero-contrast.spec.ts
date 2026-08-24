@@ -11,8 +11,5 @@ test("light home hero keeps its information summary readable", async ({
 
   const summaryDetails = page.locator(".registry-hero__summary dd");
 
-  await expect(summaryDetails.first()).toHaveCSS(
-    "color",
-    "rgb(255, 255, 255)",
-  );
+  await expect(summaryDetails.first()).toHaveCSS("color", "rgb(255, 255, 255)");
 });

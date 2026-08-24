@@ -5,7 +5,7 @@ test.beforeEach(async ({ context, request }) => {
   await context.addCookies([
     {
       name: "tmi_access",
-      value: "e2e-access",
+      value: "e2e-super-admin-access",
       domain: "127.0.0.1",
       path: "/",
       httpOnly: true,
@@ -27,10 +27,18 @@ test.beforeEach(async ({ context, request }) => {
       httpOnly: false,
       sameSite: "Lax",
     },
+    {
+      name: "tmi_e2e_persona",
+      value: "super-admin",
+      domain: "127.0.0.1",
+      path: "/",
+      httpOnly: false,
+      sameSite: "Lax",
+    },
   ]);
 });
 
-test("council member attends, declares conflict, votes and sees result", async ({
+test("super admin attends, declares conflict, votes and sees result", async ({
   page,
 }, testInfo) => {
   const consoleIssues: string[] = [];

@@ -99,7 +99,9 @@ describe("SearchResultsPage", () => {
       { wrapper },
     );
 
-    expect((await screen.findAllByText(/Sơn mài <img/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/Sơn mài <img/)).length).toBeGreaterThan(
+      0,
+    );
     expect(document.querySelector("img")).toBeNull();
     await waitFor(() => expect(publicApi.search).toHaveBeenCalledTimes(1));
     expect(publicApi.search).toHaveBeenCalledWith(
@@ -125,9 +127,9 @@ describe("SearchResultsPage", () => {
     );
 
     expect(await screen.findByTestId("search-album-grid")).toBeTruthy();
-    expect(
-      screen.getByRole("article").getAttribute("data-layout"),
-    ).toBe("search-album-tile");
+    expect(screen.getByRole("article").getAttribute("data-layout")).toBe(
+      "search-album-tile",
+    );
     expect(
       screen
         .getByRole("button", { name: /Tinh chỉnh kết quả/ })

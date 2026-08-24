@@ -59,8 +59,32 @@ describe("layout shells", () => {
     const loginLink = screen.getByRole("link", { name: "Đăng nhập" });
     const registerLink = screen.getByRole("link", { name: "Đăng ký" });
     expect(loginLink.classList.contains("public-header__auth-link")).toBe(true);
-    expect(registerLink.classList.contains("public-header__auth-link")).toBe(true);
+    expect(registerLink.classList.contains("public-header__auth-link")).toBe(
+      true,
+    );
     expect(registerLink.classList.contains("button")).toBe(false);
+  });
+
+  it("uses the official seal and wordmark together in the public header", () => {
+    render(
+      <PublicShell>
+        <h1>Trang chủ</h1>
+      </PublicShell>,
+    );
+
+    const brandLink = within(screen.getByRole("banner")).getByRole("link", {
+      name: "Trung tâm Đề cử Tinh Hoa Việt",
+    });
+    const headerLogos = Array.from(brandLink.querySelectorAll("img"));
+    const sources = headerLogos.map((logo) =>
+      decodeURIComponent(logo.getAttribute("src") ?? ""),
+    );
+
+    expect(headerLogos).toHaveLength(2);
+    expect(sources[0]).toContain("/assets/brand/thv-public-header-seal.png");
+    expect(sources[1]).toContain(
+      "/assets/brand/thv-public-header-wordmark.png",
+    );
   });
 
   it("keeps public and auth footers limited to terms and privacy links", () => {
@@ -156,7 +180,9 @@ describe("layout shells", () => {
     ).toBeDefined();
     const header = screen.getByRole("banner");
     expect(header.querySelector(".auth-header__identity")).not.toBeNull();
-    expect(within(header).queryByRole("link", { name: "Đăng nhập" })).toBeNull();
+    expect(
+      within(header).queryByRole("link", { name: "Đăng nhập" }),
+    ).toBeNull();
     expect(within(header).queryByRole("link", { name: "Đăng ký" })).toBeNull();
   });
 

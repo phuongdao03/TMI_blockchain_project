@@ -314,9 +314,10 @@ class Settings(BaseSettings):
         if address and re.fullmatch(r"0x[0-9a-fA-F]{40}", address) is None:
             raise ValueError("Certificate contract address is invalid.")
         proof_registry_address = self.thv_proof_registry_contract_address.strip()
-        if proof_registry_address and re.fullmatch(
-            r"0x[0-9a-fA-F]{40}", proof_registry_address
-        ) is None:
+        if (
+            proof_registry_address
+            and re.fullmatch(r"0x[0-9a-fA-F]{40}", proof_registry_address) is None
+        ):
             raise ValueError("THV proof registry contract address is invalid.")
 
         explorer_url = self.blockchain_explorer_base_url
@@ -352,8 +353,7 @@ class Settings(BaseSettings):
                 and proof_registry_address.lower() not in configured_addresses
             ):
                 raise ValueError(
-                    "The THV proof registry contract address is not in the "
-                    "allowlist."
+                    "The THV proof registry contract address is not in the allowlist."
                 )
 
         if self.app_env == "production" and self.release_mode == "preview":

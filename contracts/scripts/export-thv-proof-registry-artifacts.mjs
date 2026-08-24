@@ -19,7 +19,9 @@ function parseOptions(argumentsList) {
 
 function sha256Bytes(value) {
   if (!/^0x(?:[0-9a-fA-F]{2})+$/.test(value)) {
-    throw new Error("Contract bytecode must be non-empty, even-length hexadecimal data.");
+    throw new Error(
+      "Contract bytecode must be non-empty, even-length hexadecimal data.",
+    );
   }
   return `0x${createHash("sha256")
     .update(Buffer.from(value.slice(2), "hex"))
@@ -45,13 +47,20 @@ const network = options.get("network");
 const chainId = Number(options.get("chain-id"));
 const sourceCommit = options.get("source-commit") ?? process.env.SOURCE_COMMIT;
 if (network !== "polygon" || chainId !== 137) {
-  throw new Error("THVProofRegistry release export is restricted to polygon:137.");
+  throw new Error(
+    "THVProofRegistry release export is restricted to polygon:137.",
+  );
 }
 if (!sourceCommit || !SOURCE_COMMIT_PATTERN.test(sourceCommit)) {
   throw new Error("SOURCE_COMMIT must be a full lowercase Git hash.");
 }
 
-const artifactPath = resolve(root, "out", "THVProofRegistry.sol", "THVProofRegistry.json");
+const artifactPath = resolve(
+  root,
+  "out",
+  "THVProofRegistry.sol",
+  "THVProofRegistry.json",
+);
 const broadcastPath = resolve(
   root,
   options.get("broadcast") ??
@@ -70,7 +79,9 @@ const [artifact, broadcast, plan] = await Promise.all([
   readFile(planPath, "utf8").then(JSON.parse),
 ]);
 if (Number(broadcast.chain) !== chainId) {
-  throw new Error("Broadcast chain does not match the requested release chain.");
+  throw new Error(
+    "Broadcast chain does not match the requested release chain.",
+  );
 }
 if (
   plan.contract !== "THVProofRegistry" ||
@@ -78,13 +89,19 @@ if (
   Number(plan.chainId) !== chainId ||
   plan.sourceCommit !== sourceCommit
 ) {
-  throw new Error("Deployment plan does not match the requested release export.");
+  throw new Error(
+    "Deployment plan does not match the requested release export.",
+  );
 }
 const deployment = broadcast.transactions?.find(
-  (transaction) => transaction.transactionType === "CREATE" && isProofRegistry(transaction.contractName),
+  (transaction) =>
+    transaction.transactionType === "CREATE" &&
+    isProofRegistry(transaction.contractName),
 );
 if (!deployment?.contractAddress || !deployment.hash) {
-  throw new Error("THVProofRegistry deployment was not found in broadcast evidence.");
+  throw new Error(
+    "THVProofRegistry deployment was not found in broadcast evidence.",
+  );
 }
 if (!ADDRESS_PATTERN.test(deployment.contractAddress)) {
   throw new Error("Deployment address is invalid.");
@@ -94,15 +111,24 @@ if (!TRANSACTION_HASH_PATTERN.test(deployment.hash)) {
 }
 
 const metadata =
-  typeof artifact.metadata === "string" ? JSON.parse(artifact.metadata) : artifact.metadata;
-if (!Array.isArray(artifact.abi) || !metadata?.compiler?.version || !metadata.settings) {
+  typeof artifact.metadata === "string"
+    ? JSON.parse(artifact.metadata)
+    : artifact.metadata;
+if (
+  !Array.isArray(artifact.abi) ||
+  !metadata?.compiler?.version ||
+  !metadata.settings
+) {
   throw new Error("THVProofRegistry artifact provenance is incomplete.");
 }
 const normalizedAbi = `${JSON.stringify(artifact.abi, null, 2)}\n`;
 const releaseDirectory = resolve(root, "artifacts", "releases", network);
 const abiPath = resolve(root, "artifacts", "THVProofRegistry.abi.json");
 const releaseAbiPath = resolve(releaseDirectory, "THVProofRegistry.abi.json");
-const manifestPath = resolve(releaseDirectory, "thv-proof-registry-manifest.json");
+const manifestPath = resolve(
+  releaseDirectory,
+  "thv-proof-registry-manifest.json",
+);
 const manifest = {
   schemaVersion: 1,
   contract: "THVProofRegistry",

@@ -24,10 +24,7 @@ export function PublicWorkCard({
 
   if (source === "list") {
     return (
-      <article
-        className="group min-w-0"
-        data-layout="catalog-album-tile"
-      >
+      <article className="group min-w-0" data-layout="catalog-album-tile">
         <Link
           aria-label={`Xem đề cử ${work.title}`}
           className="catalog-album-tile block overflow-hidden border border-white/15 bg-ink-900 transition hover:-translate-y-0.5 hover:border-gold-300/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold-300"
@@ -79,7 +76,9 @@ export function PublicWorkCard({
                   year: "numeric",
                 }).format(new Date(work.publishedAt))}
               </time>
-              <span className="truncate">{work.authorDisplayName || "Tác giả công khai"}</span>
+              <span className="truncate">
+                {work.authorDisplayName || "Tác giả công khai"}
+              </span>
             </div>
             <h2 className="mt-3 line-clamp-2 text-xl font-bold tracking-[-0.025em] text-white transition-colors group-hover:text-gold-200">
               {work.title}

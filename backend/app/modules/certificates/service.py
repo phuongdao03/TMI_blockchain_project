@@ -354,9 +354,7 @@ class CertificateService:
                 )
             number = self._numbering.generate(certificate_id, issued_at)
             expires_at = issued_at + timedelta(days=self._validity_days)
-            qr_payload = (
-                f"{self._public_base_url}/verify/{quote(token, safe='-._~')}"
-            )
+            qr_payload = f"{self._public_base_url}/verify/{quote(token, safe='-._~')}"
             metadata, metadata_hash = self._metadata_builder.build(
                 certificate_number=number,
                 certificate_version=1,

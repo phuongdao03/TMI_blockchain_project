@@ -46,9 +46,7 @@ def _tables() -> tuple[sa.TableClause, sa.TableClause, sa.TableClause]:
 def upgrade() -> None:
     bind = op.get_bind()
     roles, permissions, role_permissions = _tables()
-    moderator_id = bind.scalar(
-        sa.select(roles.c.id).where(roles.c.code == "MODERATOR")
-    )
+    moderator_id = bind.scalar(sa.select(roles.c.id).where(roles.c.code == "MODERATOR"))
     if moderator_id is None:
         return
 

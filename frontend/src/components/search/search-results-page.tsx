@@ -171,7 +171,10 @@ export function SearchResultsPage({
 
       <ActiveFilters facets={facets.data} parameters={parameters} />
 
-      <section aria-labelledby="search-results-heading" className="mt-8 min-w-0">
+      <section
+        aria-labelledby="search-results-heading"
+        className="mt-8 min-w-0"
+      >
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <p className="text-xs font-bold tracking-[0.18em] text-primary-400 uppercase">
@@ -187,7 +190,10 @@ export function SearchResultsPage({
             </h2>
           </div>
           {!results.isPending && !results.error ? (
-            <p aria-live="polite" className="hidden text-sm text-slate-500 sm:block">
+            <p
+              aria-live="polite"
+              className="hidden text-sm text-slate-500 sm:block"
+            >
               {results.data?.data.length ?? 0} tác phẩm trên trang
             </p>
           ) : null}
@@ -203,7 +209,8 @@ export function SearchResultsPage({
                   Tinh chỉnh kết quả
                 </p>
                 <p className="mt-1 text-sm text-slate-400">
-                  Lọc theo danh mục, chủ đề, thời điểm công bố và trạng thái xác nhận.
+                  Lọc theo danh mục, chủ đề, thời điểm công bố và trạng thái xác
+                  nhận.
                 </p>
               </div>
               <button
@@ -222,50 +229,49 @@ export function SearchResultsPage({
             />
           </section>
         ) : null}
-          {results.isPending ? (
-            <ResultsSkeleton />
-          ) : results.error ? (
-            <ErrorState retry={() => results.refetch()} />
-          ) : !results.data.data.length ? (
-            <EmptyState />
-          ) : (
-            <div
-              className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
-              data-testid="search-album-grid"
-            >
-              {results.data.data.map((work, index) => (
-                <SearchResult
-                  key={work.id}
-                  position={index + 1}
-                  requestId={results.data.meta.requestId}
-                  work={work}
-                />
-              ))}
-            </div>
-          )}
-          {!results.isPending && results.data ? (
-            <div
-              aria-live="polite"
-              className="mt-6 flex items-center justify-between gap-4 text-sm text-slate-500"
-            >
-              <span>
-                {results.data.data.length} kết quả trên trang ·{" "}
-                {results.data.meta.durationMs} ms
-              </span>
-              {results.data.meta.nextCursor ? (
-                <Link
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-gold-300/30 px-4 font-semibold text-gold-200 transition hover:bg-gold-300/10"
-                  href={searchHref({
-                    ...parameters,
-                    cursor: results.data.meta.nextCursor,
-                  })}
-                >
-                  Trang tiếp{" "}
-                  <ArrowRight aria-hidden="true" className="size-4" />
-                </Link>
-              ) : null}
-            </div>
-          ) : null}
+        {results.isPending ? (
+          <ResultsSkeleton />
+        ) : results.error ? (
+          <ErrorState retry={() => results.refetch()} />
+        ) : !results.data.data.length ? (
+          <EmptyState />
+        ) : (
+          <div
+            className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
+            data-testid="search-album-grid"
+          >
+            {results.data.data.map((work, index) => (
+              <SearchResult
+                key={work.id}
+                position={index + 1}
+                requestId={results.data.meta.requestId}
+                work={work}
+              />
+            ))}
+          </div>
+        )}
+        {!results.isPending && results.data ? (
+          <div
+            aria-live="polite"
+            className="mt-6 flex items-center justify-between gap-4 text-sm text-slate-500"
+          >
+            <span>
+              {results.data.data.length} kết quả trên trang ·{" "}
+              {results.data.meta.durationMs} ms
+            </span>
+            {results.data.meta.nextCursor ? (
+              <Link
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-gold-300/30 px-4 font-semibold text-gold-200 transition hover:bg-gold-300/10"
+                href={searchHref({
+                  ...parameters,
+                  cursor: results.data.meta.nextCursor,
+                })}
+              >
+                Trang tiếp <ArrowRight aria-hidden="true" className="size-4" />
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       {filterOpen ? (
@@ -324,7 +330,9 @@ function SearchResult({
         }}
       >
         <div className="search-album-tile__cover">
-          <span className="search-album-tile__category">{work.categoryName}</span>
+          <span className="search-album-tile__category">
+            {work.categoryName}
+          </span>
           <span className="search-album-tile__number">
             {String(position).padStart(2, "0")}
           </span>
@@ -359,7 +367,10 @@ function SearchResult({
                 Đang cập nhật thông tin xác thực
               </span>
             )}
-            <ArrowRight aria-hidden="true" className="size-4 shrink-0 text-gold-300" />
+            <ArrowRight
+              aria-hidden="true"
+              className="size-4 shrink-0 text-gold-300"
+            />
           </div>
         </div>
       </Link>

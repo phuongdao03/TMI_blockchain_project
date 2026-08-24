@@ -228,9 +228,7 @@ class PublicRepository:
             block_number=(
                 transaction.receipt_block_number if transaction is not None else None
             ),
-            is_current_version=(
-                version.version_no == certificate.current_version_no
-            ),
+            is_current_version=(version.version_no == certificate.current_version_no),
         )
 
     @staticmethod

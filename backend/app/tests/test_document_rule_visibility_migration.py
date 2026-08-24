@@ -48,9 +48,9 @@ def test_document_rule_visibility_migration_is_reversible(
     command.downgrade(config, "0058_four_product_roles")
     with sqlite3.connect(database_path) as connection:
         assert (
-            connection.execute(
-                "SELECT COUNT(*) FROM dossier_type_versions"
-            ).fetchone()[0]
+            connection.execute("SELECT COUNT(*) FROM dossier_type_versions").fetchone()[
+                0
+            ]
             == 12
         )
     get_settings.cache_clear()

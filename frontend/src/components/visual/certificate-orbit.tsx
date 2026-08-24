@@ -88,8 +88,8 @@ export function CertificateOrbit({ className }: { className?: string }) {
         <div className="evidence-seal">
           <FileText className="size-5" />
           <span>
-              <small>PHẠM VI HIỂN THỊ</small>
-              <strong>THÔNG TIN CÔNG BỐ</strong>
+            <small>PHẠM VI HIỂN THỊ</small>
+            <strong>THÔNG TIN CÔNG BỐ</strong>
           </span>
         </div>
       </div>

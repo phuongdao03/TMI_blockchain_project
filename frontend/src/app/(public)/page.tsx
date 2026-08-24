@@ -151,9 +151,7 @@ export default function HomePage() {
       <section className="home-journey journey-workflow border-b">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
           <div className="journey-workflow__intro">
-            <p className="registry-section-label">
-              Hành trình minh bạch
-            </p>
+            <p className="registry-section-label">Hành trình minh bạch</p>
             <h2 className="mt-5 text-4xl font-semibold tracking-[-0.04em] text-balance sm:text-5xl">
               Xem giá trị Việt theo ba bước rõ ràng.
             </h2>
@@ -163,28 +161,33 @@ export default function HomePage() {
             </p>
           </div>
           <ol className="journey-workflow__cards">
-            {journey.map(({ action, detail, href, icon: Icon, number, title }) => (
-              <li key={number}>
-                <Link className="journey-workflow__card" href={href}>
-                  <div
-                    aria-hidden="true"
-                    className={`journey-workflow__visual journey-workflow__visual--${number}`}
-                  >
-                    <span className="journey-workflow__number">{number}</span>
-                    <Icon className="journey-workflow__icon" strokeWidth={1.45} />
-                    <span className="journey-workflow__seal" />
-                    <span className="journey-workflow__grid" />
-                  </div>
-                  <div className="journey-workflow__body">
-                    <h3>{title}</h3>
-                    <p>{detail}</p>
-                    <span className="journey-workflow__action">
-                      {action} <ArrowRight aria-hidden="true" />
-                    </span>
-                  </div>
-                </Link>
-              </li>
-            ))}
+            {journey.map(
+              ({ action, detail, href, icon: Icon, number, title }) => (
+                <li key={number}>
+                  <Link className="journey-workflow__card" href={href}>
+                    <div
+                      aria-hidden="true"
+                      className={`journey-workflow__visual journey-workflow__visual--${number}`}
+                    >
+                      <span className="journey-workflow__number">{number}</span>
+                      <Icon
+                        className="journey-workflow__icon"
+                        strokeWidth={1.45}
+                      />
+                      <span className="journey-workflow__seal" />
+                      <span className="journey-workflow__grid" />
+                    </div>
+                    <div className="journey-workflow__body">
+                      <h3>{title}</h3>
+                      <p>{detail}</p>
+                      <span className="journey-workflow__action">
+                        {action} <ArrowRight aria-hidden="true" />
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              ),
+            )}
           </ol>
         </div>
       </section>
@@ -254,7 +257,10 @@ export default function HomePage() {
       <section className="home-cta border-t">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-16 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div className="max-w-2xl">
-            <ShieldCheck aria-hidden="true" className="size-6 text-primary-700" />
+            <ShieldCheck
+              aria-hidden="true"
+              className="size-6 text-primary-700"
+            />
             <h2 className="mt-5 text-3xl font-semibold tracking-tight">
               {preview
                 ? "Muốn theo dõi hành trình Tinh Hoa Việt?"

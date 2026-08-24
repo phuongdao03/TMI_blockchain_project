@@ -185,7 +185,9 @@ describe("PublicWorkCard", () => {
       "catalog-album-tile",
     );
     expect(
-      screen.getByRole("link", { name: "Xem đề cử Di sản số" }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: "Xem đề cử Di sản số" })
+        .getAttribute("href"),
     ).toBe("/works/di-san-so");
   });
 

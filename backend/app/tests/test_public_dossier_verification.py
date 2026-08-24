@@ -343,9 +343,7 @@ def test_public_dossier_verification_hides_private_and_unpublished_dossiers(
 ) -> None:
     async def exercise() -> None:
         database_path = tmp_path / "public-dossier-gate.sqlite3"
-        engine = create_async_engine(
-            f"sqlite+aiosqlite:///{database_path.as_posix()}"
-        )
+        engine = create_async_engine(f"sqlite+aiosqlite:///{database_path.as_posix()}")
         async with engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
         sessions = async_sessionmaker(engine, expire_on_commit=False)

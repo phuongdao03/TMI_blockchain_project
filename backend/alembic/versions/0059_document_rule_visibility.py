@@ -132,20 +132,28 @@ def upgrade() -> None:
     bind = op.get_bind()
     inserts: list[dict[str, object]] = []
     for code in DEFAULT_TYPE_CODES:
-        type_row = bind.execute(
-            sa.select(dossier_types.c.id).where(dossier_types.c.code == code)
-        ).mappings().one_or_none()
+        type_row = (
+            bind.execute(
+                sa.select(dossier_types.c.id).where(dossier_types.c.code == code)
+            )
+            .mappings()
+            .one_or_none()
+        )
         if type_row is None:
             continue
-        latest = bind.execute(
-            sa.select(
-                dossier_type_versions.c.version_no,
-                dossier_type_versions.c.schema_json,
+        latest = (
+            bind.execute(
+                sa.select(
+                    dossier_type_versions.c.version_no,
+                    dossier_type_versions.c.schema_json,
+                )
+                .where(dossier_type_versions.c.dossier_type_id == type_row["id"])
+                .order_by(dossier_type_versions.c.version_no.desc())
+                .limit(1)
             )
-            .where(dossier_type_versions.c.dossier_type_id == type_row["id"])
-            .order_by(dossier_type_versions.c.version_no.desc())
-            .limit(1)
-        ).mappings().one_or_none()
+            .mappings()
+            .one_or_none()
+        )
         # Preserve any type definition already managed by an operator.  Only
         # seed a new v2 for the untouched, built-in v1 catalog.
         if latest is None or latest["version_no"] != 1:

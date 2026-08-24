@@ -4,16 +4,20 @@ import Link from "next/link";
 type BrandMarkProps = {
   compact?: boolean;
   showCredit?: boolean;
+  variant?: "default" | "public-seal";
 };
 
 export function BrandMark({
   compact = false,
   showCredit = false,
+  variant = "default",
 }: BrandMarkProps) {
+  const usesPublicSeal = !compact && variant === "public-seal";
+
   return (
     <Link
       aria-label="Trung tâm Đề cử Tinh Hoa Việt"
-      className={`brand-mark${compact ? " brand-mark--compact" : ""}`}
+      className={`brand-mark${compact ? " brand-mark--compact" : ""}${usesPublicSeal ? " brand-mark--public-seal" : ""}`}
       href="/"
     >
       {compact ? (
@@ -25,6 +29,29 @@ export function BrandMark({
           height={1254}
           priority
         />
+      ) : usesPublicSeal ? (
+        <span className="brand-mark__public-lockup" aria-hidden="true">
+          <span className="brand-mark__seal-frame">
+            <Image
+              className="brand-mark__seal"
+              src="/assets/brand/thv-public-header-seal.png"
+              alt=""
+              width={1253}
+              height={1254}
+              priority
+            />
+          </span>
+          <span className="brand-mark__public-wordmark-frame">
+            <Image
+              className="brand-mark__public-wordmark"
+              src="/assets/brand/thv-public-header-wordmark.png"
+              alt=""
+              width={1448}
+              height={1086}
+              priority
+            />
+          </span>
+        </span>
       ) : (
         <span className="brand-mark__wordmark-frame" aria-hidden="true">
           <Image

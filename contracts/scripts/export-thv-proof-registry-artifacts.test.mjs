@@ -5,7 +5,10 @@ import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 
-const script = resolve(import.meta.dirname, "export-thv-proof-registry-artifacts.mjs");
+const script = resolve(
+  import.meta.dirname,
+  "export-thv-proof-registry-artifacts.mjs",
+);
 const sourceCommit = "a".repeat(40);
 const contractAddress = `0x${"12".repeat(20)}`;
 const transactionHash = `0x${"34".repeat(32)}`;
@@ -76,7 +79,10 @@ function run(root, overrides = {}) {
   };
   return spawnSync(
     process.execPath,
-    [script, ...Object.entries(options).map(([key, value]) => `--${key}=${value}`)],
+    [
+      script,
+      ...Object.entries(options).map(([key, value]) => `--${key}=${value}`),
+    ],
     { encoding: "utf8" },
   );
 }
@@ -89,7 +95,13 @@ test("exports a reproducible THVProofRegistry Mainnet manifest from broadcast ev
   assert.equal(result.status, 0, result.stderr);
   const manifest = JSON.parse(
     await readFile(
-      resolve(root, "artifacts", "releases", "polygon", "thv-proof-registry-manifest.json"),
+      resolve(
+        root,
+        "artifacts",
+        "releases",
+        "polygon",
+        "thv-proof-registry-manifest.json",
+      ),
       "utf8",
     ),
   );

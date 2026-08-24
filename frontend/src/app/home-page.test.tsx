@@ -90,7 +90,9 @@ describe("HomePage", () => {
       }),
     ).toBeDefined();
     expect(
-      screen.getByRole("link", { name: /Tra cứu chứng thư/i }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: /Tra cứu chứng thư/i })
+        .getAttribute("href"),
     ).toBe("/verify");
   });
 });

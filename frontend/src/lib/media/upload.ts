@@ -81,9 +81,8 @@ export const mediaPolicies: Record<MediaPurpose, MediaPolicy> = {
       "application/pdf": [".pdf"],
       "application/msword": [".doc"],
       "application/vnd.ms-excel": [".xls"],
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
-        ".docx",
-      ],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        [".docx"],
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
         ".xlsx",
       ],

@@ -289,9 +289,7 @@ class PublicVerificationService:
             ).hexdigest()
             cache_key = f"{certificate_key}:v{context.version}"
             record = (
-                await self._cache.get(cache_key)
-                if self._cache is not None
-                else None
+                await self._cache.get(cache_key) if self._cache is not None else None
             )
             if record is None:
                 certificate_id = bytes.fromhex(certificate_key)

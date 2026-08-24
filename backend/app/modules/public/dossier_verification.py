@@ -104,10 +104,7 @@ class PublicDossierVerificationService:
                 .join(
                     CertificateVersion,
                     (CertificateVersion.certificate_id == Certificate.id)
-                    & (
-                        CertificateVersion.version_no
-                        == Certificate.current_version_no
-                    ),
+                    & (CertificateVersion.version_no == Certificate.current_version_no),
                 )
                 .outerjoin(
                     BlockchainTransaction,
@@ -137,9 +134,7 @@ class PublicDossierVerificationService:
         )
         # A certificate without its frozen dossier version is not a valid public
         # verification source.  Fail closed rather than read mutable dossier data.
-        snapshot = (
-            dossier_version.snapshot_json if dossier_version is not None else {}
-        )
+        snapshot = dossier_version.snapshot_json if dossier_version is not None else {}
         return PublicDossierVerificationView(
             code=dossier.code,
             title=dossier.title,

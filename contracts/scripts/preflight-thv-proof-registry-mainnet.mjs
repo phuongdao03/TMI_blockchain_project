@@ -3,7 +3,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const contractRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const APPROVED_ADMIN = "0xec5fcdFab3FCafCEFCED55CC702CD3B13f54B4Fe".toLowerCase();
+const APPROVED_ADMIN =
+  "0xec5fcdFab3FCafCEFCED55CC702CD3B13f54B4Fe".toLowerCase();
 const APPROVED_SIGNER = "0xbfa38182f0d24589e7898dd4892c58c3fda58042";
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 const SOURCE_COMMIT_PATTERN = /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/;
@@ -54,7 +55,9 @@ async function jsonRpc(fetchImpl, rpcUrl, method, params) {
   }
   const payload = await response.json();
   if (payload.error) {
-    throw new Error(`RPC ${method} failed: ${payload.error.message ?? "unknown error"}.`);
+    throw new Error(
+      `RPC ${method} failed: ${payload.error.message ?? "unknown error"}.`,
+    );
   }
   return payload.result;
 }
@@ -68,15 +71,23 @@ function assertEnvironment(environment) {
     requireEnvironment(environment, "ADMIN_WALLET_ADDRESS"),
     "Administrator",
   );
-  const signer = normalizeAddress(requireEnvironment(environment, "SIGNER_WALLET_ADDRESS"), "Signer");
-  const deployer = normalizeAddress(requireEnvironment(environment, "EXPECTED_DEPLOYER"), "Deployer");
+  const signer = normalizeAddress(
+    requireEnvironment(environment, "SIGNER_WALLET_ADDRESS"),
+    "Signer",
+  );
+  const deployer = normalizeAddress(
+    requireEnvironment(environment, "EXPECTED_DEPLOYER"),
+    "Deployer",
+  );
   const configuredBalanceFloor = parseInteger(
     requireEnvironment(environment, "MINIMUM_DEPLOYER_BALANCE_WEI"),
     "MINIMUM_DEPLOYER_BALANCE_WEI",
   );
 
   if (network !== "polygon" || chainId !== "137") {
-    throw new Error("Direct THVProofRegistry deployment is restricted to polygon:137.");
+    throw new Error(
+      "Direct THVProofRegistry deployment is restricted to polygon:137.",
+    );
   }
   if (!rpcUrl.startsWith("https://")) {
     throw new Error("Polygon Mainnet RPC URL must use HTTPS.");
@@ -85,18 +96,37 @@ function assertEnvironment(environment) {
     throw new Error("SOURCE_COMMIT must be a full lowercase Git hash.");
   }
   if (administrator !== APPROVED_ADMIN) {
-    throw new Error("ADMIN_WALLET_ADDRESS does not match the approved Admin wallet.");
+    throw new Error(
+      "ADMIN_WALLET_ADDRESS does not match the approved Admin wallet.",
+    );
   }
   if (signer !== APPROVED_SIGNER) {
-    throw new Error("SIGNER_WALLET_ADDRESS does not match the approved Signer wallet.");
+    throw new Error(
+      "SIGNER_WALLET_ADDRESS does not match the approved Signer wallet.",
+    );
   }
   if (deployer === administrator || deployer === signer) {
-    throw new Error("EXPECTED_DEPLOYER must be separate from Admin and Signer wallets.");
+    throw new Error(
+      "EXPECTED_DEPLOYER must be separate from Admin and Signer wallets.",
+    );
   }
-  return { rpcUrl, sourceCommit, administrator, signer, deployer, configuredBalanceFloor };
+  return {
+    rpcUrl,
+    sourceCommit,
+    administrator,
+    signer,
+    deployer,
+    configuredBalanceFloor,
+  };
 }
 
-async function readDeploymentInputs(root, sourceCommit, deployer, administrator, signer) {
+async function readDeploymentInputs(
+  root,
+  sourceCommit,
+  deployer,
+  administrator,
+  signer,
+) {
   const planPath = resolve(
     root,
     "artifacts",
@@ -104,7 +134,12 @@ async function readDeploymentInputs(root, sourceCommit, deployer, administrator,
     "polygon",
     "thv-proof-registry-deployment-plan.json",
   );
-  const artifactPath = resolve(root, "out", "THVProofRegistry.sol", "THVProofRegistry.json");
+  const artifactPath = resolve(
+    root,
+    "out",
+    "THVProofRegistry.sol",
+    "THVProofRegistry.json",
+  );
   const [plan, artifact] = await Promise.all([
     readFile(planPath, "utf8").then(JSON.parse),
     readFile(artifactPath, "utf8").then(JSON.parse),
@@ -115,7 +150,9 @@ async function readDeploymentInputs(root, sourceCommit, deployer, administrator,
     Number(plan.chainId) !== 137 ||
     plan.sourceCommit !== sourceCommit
   ) {
-    throw new Error("Deployment plan does not match the requested Polygon release.");
+    throw new Error(
+      "Deployment plan does not match the requested Polygon release.",
+    );
   }
   if (
     String(plan.roles?.deployer).toLowerCase() !== deployer ||
@@ -123,7 +160,9 @@ async function readDeploymentInputs(root, sourceCommit, deployer, administrator,
     String(plan.roles?.verifier).toLowerCase() !== signer ||
     plan.roles?.deploymentKeyRetainsRole !== false
   ) {
-    throw new Error("Deployment plan role separation does not match the approved configuration.");
+    throw new Error(
+      "Deployment plan role separation does not match the approved configuration.",
+    );
   }
   return { planPath, artifact };
 }
@@ -134,9 +173,16 @@ export async function runPreflight({
   fetchImpl = globalThis.fetch,
   write = (line) => process.stdout.write(line),
 } = {}) {
-  if (typeof fetchImpl !== "function") throw new Error("A fetch implementation is required.");
-  const { rpcUrl, sourceCommit, administrator, signer, deployer, configuredBalanceFloor } =
-    assertEnvironment(environment);
+  if (typeof fetchImpl !== "function")
+    throw new Error("A fetch implementation is required.");
+  const {
+    rpcUrl,
+    sourceCommit,
+    administrator,
+    signer,
+    deployer,
+    configuredBalanceFloor,
+  } = assertEnvironment(environment);
   const { planPath, artifact } = await readDeploymentInputs(
     root,
     sourceCommit,
@@ -152,20 +198,25 @@ export async function runPreflight({
   const [actualChainId, balance, gasEstimate, gasPrice] = await Promise.all([
     jsonRpc(fetchImpl, rpcUrl, "eth_chainId", []),
     jsonRpc(fetchImpl, rpcUrl, "eth_getBalance", [deployer, "latest"]),
-    jsonRpc(fetchImpl, rpcUrl, "eth_estimateGas", [{ from: deployer, data: deploymentData }]),
+    jsonRpc(fetchImpl, rpcUrl, "eth_estimateGas", [
+      { from: deployer, data: deploymentData },
+    ]),
     jsonRpc(fetchImpl, rpcUrl, "eth_gasPrice", []),
   ]);
   if (parseHexInteger(actualChainId, "eth_chainId") !== 137n) {
-    throw new Error(`RPC chain mismatch: expected 137, received ${actualChainId}.`);
+    throw new Error(
+      `RPC chain mismatch: expected 137, received ${actualChainId}.`,
+    );
   }
 
   const balanceWei = parseHexInteger(balance, "eth_getBalance");
   const gasEstimateValue = parseHexInteger(gasEstimate, "eth_estimateGas");
   const gasPriceWei = parseHexInteger(gasPrice, "eth_gasPrice");
   const estimatedCostWei = gasEstimateValue * gasPriceWei;
-  const requiredBalanceWei = [configuredBalanceFloor, estimatedCostWei * 2n].reduce(
-    (maximum, candidate) => (candidate > maximum ? candidate : maximum),
-  );
+  const requiredBalanceWei = [
+    configuredBalanceFloor,
+    estimatedCostWei * 2n,
+  ].reduce((maximum, candidate) => (candidate > maximum ? candidate : maximum));
   if (balanceWei < requiredBalanceWei) {
     throw new Error(
       `Deployer balance is below the required safety floor: need ${requiredBalanceWei} wei, have ${balanceWei} wei.`,
@@ -190,7 +241,10 @@ export async function runPreflight({
   return result;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   runPreflight().catch((error) => {
     process.stderr.write(`${error.message}\n`);
     process.exitCode = 1;

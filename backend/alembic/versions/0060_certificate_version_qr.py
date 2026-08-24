@@ -60,10 +60,7 @@ def upgrade() -> None:
             certificates,
             certificates.c.id == certificate_versions.c.certificate_id,
         )
-        .where(
-            certificate_versions.c.version_no
-            == certificates.c.current_version_no
-        )
+        .where(certificate_versions.c.version_no == certificates.c.current_version_no)
     ).mappings()
     for row in rows:
         bind.execute(

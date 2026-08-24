@@ -87,7 +87,9 @@ function localComparisonError(error: unknown): string {
   if (error.message === "The selected file is too large.") {
     return `Tệp vượt quá giới hạn ${MAX_LOCAL_VERIFICATION_BYTES / 1024 / 1024} MB để đối chiếu tại máy.`;
   }
-  if (error.message === "Secure local hashing is unavailable in this browser.") {
+  if (
+    error.message === "Secure local hashing is unavailable in this browser."
+  ) {
     return "Trình duyệt này chưa hỗ trợ đối chiếu cục bộ. Hãy cập nhật hoặc dùng trình duyệt khác.";
   }
   return "Không thể đọc tệp để đối chiếu trên thiết bị này.";
@@ -298,7 +300,8 @@ export function VerificationPanel({
                     pending={comparing}
                   />
                   <p className="mt-4 text-xs text-slate-400">
-                    Giới hạn tệp đối chiếu: {MAX_LOCAL_VERIFICATION_BYTES / 1024 / 1024} MB.
+                    Giới hạn tệp đối chiếu:{" "}
+                    {MAX_LOCAL_VERIFICATION_BYTES / 1024 / 1024} MB.
                   </p>
                 </section>
 

@@ -23,14 +23,14 @@ describe("public route compatibility", () => {
       LegacyWorkPage({ params: Promise.resolve({ slug: "bo-nhan-dien-tmi" }) }),
     ).rejects.toThrow("redirect:/works/bo-nhan-dien-tmi");
 
-    expect(permanentRedirect).toHaveBeenCalledWith(
-      "/works/bo-nhan-dien-tmi",
-    );
+    expect(permanentRedirect).toHaveBeenCalledWith("/works/bo-nhan-dien-tmi");
   });
 
   it("permanently redirects the former verification address to /verify", async () => {
     await expect(
-      LegacyVerificationPage({ params: Promise.resolve({ token: "demo-token" }) }),
+      LegacyVerificationPage({
+        params: Promise.resolve({ token: "demo-token" }),
+      }),
     ).rejects.toThrow("redirect:/verify/demo-token");
 
     expect(permanentRedirect).toHaveBeenCalledWith("/verify/demo-token");
@@ -58,9 +58,18 @@ describe("public route compatibility", () => {
         expect.objectContaining({
           source: "/r/:token",
           headers: expect.arrayContaining([
-            expect.objectContaining({ key: "Cache-Control", value: "no-store" }),
-            expect.objectContaining({ key: "Referrer-Policy", value: "no-referrer" }),
-            expect.objectContaining({ key: "X-Robots-Tag", value: "noindex, nofollow" }),
+            expect.objectContaining({
+              key: "Cache-Control",
+              value: "no-store",
+            }),
+            expect.objectContaining({
+              key: "Referrer-Policy",
+              value: "no-referrer",
+            }),
+            expect.objectContaining({
+              key: "X-Robots-Tag",
+              value: "noindex, nofollow",
+            }),
           ]),
         }),
       ]),
@@ -75,9 +84,18 @@ describe("public route compatibility", () => {
         expect.objectContaining({
           source: "/verify/:token",
           headers: expect.arrayContaining([
-            expect.objectContaining({ key: "Cache-Control", value: "no-store" }),
-            expect.objectContaining({ key: "Referrer-Policy", value: "no-referrer" }),
-            expect.objectContaining({ key: "X-Robots-Tag", value: "noindex, nofollow" }),
+            expect.objectContaining({
+              key: "Cache-Control",
+              value: "no-store",
+            }),
+            expect.objectContaining({
+              key: "Referrer-Policy",
+              value: "no-referrer",
+            }),
+            expect.objectContaining({
+              key: "X-Robots-Tag",
+              value: "noindex, nofollow",
+            }),
           ]),
         }),
       ]),

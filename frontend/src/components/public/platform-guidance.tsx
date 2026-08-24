@@ -12,24 +12,21 @@ const workflowSteps = [
   {
     number: "02",
     title: "Nộp để kiểm tra",
-    action:
-      "Gửi hồ sơ khi thông tin và tài liệu đã sẵn sàng.",
+    action: "Gửi hồ sơ khi thông tin và tài liệu đã sẵn sàng.",
     outcome:
       "Nhận mã theo dõi và trạng thái rõ ràng cho từng lần nộp hoặc bổ sung.",
   },
   {
     number: "03",
     title: "Thẩm định & phản hồi",
-    action:
-      "Theo dõi cập nhật và phản hồi hoặc bổ sung khi có yêu cầu.",
+    action: "Theo dõi cập nhật và phản hồi hoặc bổ sung khi có yêu cầu.",
     outcome:
       "Biết hồ sơ đang được xem xét, cần điều chỉnh hay đã đạt điều kiện tiếp theo.",
   },
   {
     number: "04",
     title: "Xác lập và công bố",
-    action:
-      "Kiểm tra lại thông tin được phép công bố sau khi hồ sơ hoàn tất.",
+    action: "Kiểm tra lại thông tin được phép công bố sau khi hồ sơ hoàn tất.",
     outcome:
       "Nhận chứng thư và mã tra cứu khi hồ sơ đủ điều kiện theo quy trình.",
   },
@@ -125,8 +122,8 @@ export function ProcessGuide({ compact = false }: { compact?: boolean }) {
           <p className="public-information-kicker">QUY TRÌNH HỒ SƠ</p>
           <h2>Từ hồ sơ đến chứng thư, rõ ở từng mốc.</h2>
           <p>
-            Bốn bước ngắn gọn để bạn chuẩn bị, gửi, theo dõi và tra cứu
-            kết quả mà không phải đoán bước tiếp theo.
+            Bốn bước ngắn gọn để bạn chuẩn bị, gửi, theo dõi và tra cứu kết quả
+            mà không phải đoán bước tiếp theo.
           </p>
           {compact ? (
             <Link className="public-information-link" href="/process">

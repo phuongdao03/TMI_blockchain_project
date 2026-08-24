@@ -32,8 +32,8 @@ describe("operations route gates", () => {
     ).toBeDefined();
   });
 
-  it("opens each work queue only for an assigned internal account", () => {
-    const { rerender } = render(
+  it("opens the review queue for a moderator", () => {
+    render(
       <AuthUserProvider user={userWith(["MODERATOR"])}>
         <ReviewsLayout>
           <p>Review queue</p>
@@ -41,9 +41,21 @@ describe("operations route gates", () => {
       </AuthUserProvider>,
     );
     expect(screen.getByText("Review queue")).toBeDefined();
+  });
+
+  it("reserves the council workspace for Super Admin", () => {
+    const { rerender } = render(
+      <AuthUserProvider user={userWith(["MODERATOR"])}>
+        <CouncilLayout>
+          <p>Council queue</p>
+        </CouncilLayout>
+      </AuthUserProvider>,
+    );
+
+    expect(screen.queryByText("Council queue")).toBeNull();
 
     rerender(
-      <AuthUserProvider user={userWith(["MODERATOR"])}>
+      <AuthUserProvider user={userWith(["SUPER_ADMIN"])}>
         <CouncilLayout>
           <p>Council queue</p>
         </CouncilLayout>

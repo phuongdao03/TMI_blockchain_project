@@ -26,36 +26,36 @@ const publicWorkCard = readFileSync(
 
 describe("THV identity theme", () => {
   it.each([
-    ["--thv-red", "#9D0000"],
+    ["--thv-red", "#9d0000"],
     ["--thv-red-dark", "#650000"],
     ["--thv-red-deep", "#470000"],
-    ["--thv-red-light", "#B51212"],
-    ["--thv-gold", "#F6C515"],
-    ["--thv-gold-light", "#FFD83D"],
-    ["--thv-gold-dark", "#D49A00"],
-    ["--thv-bg-warm", "#FFF9F3"],
+    ["--thv-red-light", "#b51212"],
+    ["--thv-gold", "#f6c515"],
+    ["--thv-gold-light", "#ffd83d"],
+    ["--thv-gold-dark", "#d49a00"],
+    ["--thv-bg-warm", "#fff9f3"],
     ["--thv-text", "#241515"],
-    ["--thv-text-secondary", "#6B5656"],
-    ["--thv-border", "#EAD9D3"],
+    ["--thv-text-secondary", "#6b5656"],
+    ["--thv-border", "#ead9d3"],
     ["--color-primary-700", "#650000"],
-    ["--color-primary-600", "#9D0000"],
-    ["--color-primary-500", "#B51212"],
-    ["--color-primary-100", "#FCE8DF"],
-    ["--color-primary-50", "#FFF4ED"],
-    ["--color-accent-gold", "#F6C515"],
+    ["--color-primary-600", "#9d0000"],
+    ["--color-primary-500", "#b51212"],
+    ["--color-primary-100", "#fce8df"],
+    ["--color-primary-50", "#fff4ed"],
+    ["--color-accent-gold", "#f6c515"],
     ["--color-neutral-950", "#241515"],
-    ["--color-neutral-700", "#6B5656"],
-    ["--color-neutral-500", "#8D7474"],
-    ["--color-neutral-200", "#EAD9D3"],
+    ["--color-neutral-700", "#6b5656"],
+    ["--color-neutral-500", "#8d7474"],
+    ["--color-neutral-200", "#ead9d3"],
     ["--color-surface", "#ffffff"],
-    ["--color-background", "#FFF9F3"],
+    ["--color-background", "#fff9f3"],
     ["--color-success", "#347a4a"],
     ["--color-warning", "#a87324"],
     ["--color-error", "#b54343"],
     ["--color-ink-950", "#241515"],
     ["--color-ink-900", "#470000"],
     ["--color-ink-800", "#650000"],
-    ["--color-gold-300", "#F6C515"],
+    ["--color-gold-300", "#f6c515"],
   ])("defines %s as %s", (token, value) => {
     expect(stylesheet).toContain(`${token}: ${value};`);
   });
@@ -149,9 +149,11 @@ describe("THV identity theme", () => {
 
   it("uses restrained warm surfaces for the public library in both color schemes", () => {
     expect(stylesheet).toContain(".public-library-page {");
-    expect(stylesheet).toContain("--theme-bg: #FCF5F0;");
-    expect(stylesheet).toContain('html[data-theme="dark"] .public-library-page');
-    expect(stylesheet).toContain("--theme-bg: #24100F;");
+    expect(stylesheet).toContain("--theme-bg: #fcf5f0;");
+    expect(stylesheet).toContain(
+      'html[data-theme="dark"] .public-library-page',
+    );
+    expect(stylesheet).toContain("--theme-bg: #24100f;");
   });
 
   it("keeps the featured work card stacked until a wide desktop is available", () => {

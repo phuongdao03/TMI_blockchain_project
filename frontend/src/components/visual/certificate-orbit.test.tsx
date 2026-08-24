@@ -15,12 +15,8 @@ describe("CertificateOrbit", () => {
     expect(screen.getByText("PHẠM VI HIỂN THỊ")).toBeDefined();
     expect(screen.getByText("THÔNG TIN CÔNG BỐ")).toBeDefined();
     expect(screen.getByText("Thông tin đã được phê duyệt")).toBeDefined();
-    expect(
-      screen.getByText("Đề cử & giới thiệu"),
-    ).toBeDefined();
-    expect(
-      screen.getByText("Mã tra cứu"),
-    ).toBeDefined();
+    expect(screen.getByText("Đề cử & giới thiệu")).toBeDefined();
+    expect(screen.getByText("Mã tra cứu")).toBeDefined();
     expect(screen.getByText("Quyết định xử lý")).toBeDefined();
     expect(screen.queryByText("THÔNG TIN MINH HỌA")).toBeNull();
     expect(screen.queryByText("THV–VN–2026–0812")).toBeNull();

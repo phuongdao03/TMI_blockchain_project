@@ -6,11 +6,7 @@
     "incremental": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,
@@ -18,9 +14,7 @@
     "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     },
     "plugins": [
       {
@@ -84,10 +78,5 @@
     ".next-thv-theme-fix-3101/types/**/*.ts",
     ".next-thv-theme-fix-3101/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    ".next-*",
-    "playwright-report",
-    "test-results"
-  ]
+  "exclude": ["node_modules", ".next-*", "playwright-report", "test-results"]
 }

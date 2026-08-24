@@ -28,4 +28,4 @@ def test_release_library_enables_full_profile_only_for_full_releases() -> None:
     assert expected_release_mode in release_library
     assert 'release_mode="${release_mode:-full}"' in release_library
     assert '[[ "$release_mode" == "full" ]]' in release_library
-    assert 'compose_arguments+=(--profile full)' in release_library
+    assert "compose_arguments+=(--profile full)" in release_library

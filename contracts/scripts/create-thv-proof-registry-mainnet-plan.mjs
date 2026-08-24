@@ -5,7 +5,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const contractRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const APPROVED_ADMIN = "0xec5fcdFab3FCafCEFCED55CC702CD3B13f54B4Fe".toLowerCase();
+const APPROVED_ADMIN =
+  "0xec5fcdFab3FCafCEFCED55CC702CD3B13f54B4Fe".toLowerCase();
 const APPROVED_SIGNER = "0xbfa38182f0d24589e7898dd4892c58c3fda58042";
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 const SOURCE_COMMIT_PATTERN = /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/;
@@ -37,7 +38,9 @@ function parseOptions(argumentsList) {
 
 function sha256Bytes(value) {
   if (!/^0x(?:[0-9a-fA-F]{2})+$/.test(value)) {
-    throw new Error("Contract bytecode must be non-empty, even-length hexadecimal data.");
+    throw new Error(
+      "Contract bytecode must be non-empty, even-length hexadecimal data.",
+    );
   }
   return `0x${createHash("sha256")
     .update(Buffer.from(value.slice(2), "hex"))
@@ -59,31 +62,44 @@ function normalizeAddress(value, label) {
 
 function assertApprovedRoles({ administrator, signer, deployer }) {
   if (administrator !== APPROVED_ADMIN) {
-    throw new Error("ADMIN_WALLET_ADDRESS does not match the approved Admin wallet.");
+    throw new Error(
+      "ADMIN_WALLET_ADDRESS does not match the approved Admin wallet.",
+    );
   }
   if (signer !== APPROVED_SIGNER) {
-    throw new Error("SIGNER_WALLET_ADDRESS does not match the approved Signer wallet.");
+    throw new Error(
+      "SIGNER_WALLET_ADDRESS does not match the approved Signer wallet.",
+    );
   }
   if (deployer === administrator || deployer === signer) {
-    throw new Error("Deployer wallet must be separate from Admin and Signer wallets.");
+    throw new Error(
+      "Deployer wallet must be separate from Admin and Signer wallets.",
+    );
   }
 }
 
 function git(root, argumentsList) {
-  return execFileSync("git", argumentsList, { cwd: root, encoding: "utf8" }).trim();
+  return execFileSync("git", argumentsList, {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
 }
 
 function assertImmutableSource(root, sourceCommit) {
   const head = git(root, ["rev-parse", "HEAD"]);
   if (head !== sourceCommit) {
-    throw new Error("SOURCE_COMMIT must match the checked-out immutable release commit.");
+    throw new Error(
+      "SOURCE_COMMIT must match the checked-out immutable release commit.",
+    );
   }
   git(root, ["cat-file", "-e", `${sourceCommit}^{commit}`]);
   for (const input of RELEASE_INPUTS) {
     try {
       git(root, ["ls-files", "--error-unmatch", "--", input]);
     } catch {
-      throw new Error(`Release input is not tracked by SOURCE_COMMIT: ${input}`);
+      throw new Error(
+        `Release input is not tracked by SOURCE_COMMIT: ${input}`,
+      );
     }
   }
   for (const argumentsList of [
@@ -96,21 +112,35 @@ function assertImmutableSource(root, sourceCommit) {
       throw new Error("Release inputs must not have uncommitted changes.");
     }
   }
-  const status = git(root, ["status", "--porcelain", "--untracked-files=all", "--", ...RELEASE_INPUTS]);
+  const status = git(root, [
+    "status",
+    "--porcelain",
+    "--untracked-files=all",
+    "--",
+    ...RELEASE_INPUTS,
+  ]);
   if (status) {
-    throw new Error("Release inputs must not have staged, unstaged, or untracked changes.");
+    throw new Error(
+      "Release inputs must not have staged, unstaged, or untracked changes.",
+    );
   }
 }
 
 const options = parseOptions(process.argv.slice(2));
 const root = resolve(options.get("root") ?? contractRoot);
 const sourceCommit = options.get("source-commit") ?? process.env.SOURCE_COMMIT;
-const deployer = normalizeAddress(options.get("deployer") ?? process.env.EXPECTED_DEPLOYER, "Deployer");
+const deployer = normalizeAddress(
+  options.get("deployer") ?? process.env.EXPECTED_DEPLOYER,
+  "Deployer",
+);
 const administrator = normalizeAddress(
   options.get("administrator") ?? process.env.ADMIN_WALLET_ADDRESS,
   "Administrator",
 );
-const signer = normalizeAddress(options.get("signer") ?? process.env.SIGNER_WALLET_ADDRESS, "Signer");
+const signer = normalizeAddress(
+  options.get("signer") ?? process.env.SIGNER_WALLET_ADDRESS,
+  "Signer",
+);
 
 if (!sourceCommit || !SOURCE_COMMIT_PATTERN.test(sourceCommit)) {
   throw new Error("SOURCE_COMMIT must be a full lowercase Git hash.");
@@ -118,12 +148,25 @@ if (!sourceCommit || !SOURCE_COMMIT_PATTERN.test(sourceCommit)) {
 assertApprovedRoles({ administrator, signer, deployer });
 assertImmutableSource(root, sourceCommit);
 
-const artifactPath = resolve(root, "out", "THVProofRegistry.sol", "THVProofRegistry.json");
+const artifactPath = resolve(
+  root,
+  "out",
+  "THVProofRegistry.sol",
+  "THVProofRegistry.json",
+);
 const artifact = JSON.parse(await readFile(artifactPath, "utf8"));
 const metadata =
-  typeof artifact.metadata === "string" ? JSON.parse(artifact.metadata) : artifact.metadata;
-if (!Array.isArray(artifact.abi) || !metadata?.compiler?.version || !metadata.settings) {
-  throw new Error("THVProofRegistry artifact is missing ABI, compiler version, or compiler settings.");
+  typeof artifact.metadata === "string"
+    ? JSON.parse(artifact.metadata)
+    : artifact.metadata;
+if (
+  !Array.isArray(artifact.abi) ||
+  !metadata?.compiler?.version ||
+  !metadata.settings
+) {
+  throw new Error(
+    "THVProofRegistry artifact is missing ABI, compiler version, or compiler settings.",
+  );
 }
 
 const creationBytecode = artifact.bytecode?.object;

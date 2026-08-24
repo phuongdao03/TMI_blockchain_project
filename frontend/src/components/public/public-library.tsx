@@ -322,7 +322,10 @@ function FilterForm({
     ? "min-h-10 w-full rounded-lg border border-white/10 bg-ink-950 px-3 text-sm text-white outline-none transition focus:border-gold-300 focus:ring-2 focus:ring-gold-300/20"
     : controlClass;
   return (
-    <form className={compact ? "mt-4 space-y-4" : "mt-5 space-y-5"} method="get">
+    <form
+      className={compact ? "mt-4 space-y-4" : "mt-5 space-y-5"}
+      method="get"
+    >
       <input name="query" type="hidden" value={parameters.query ?? ""} />
       <input name="sort" type="hidden" value={parameters.sort ?? "newest"} />
       <label className="block text-sm font-bold text-slate-300">

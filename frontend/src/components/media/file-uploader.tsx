@@ -21,10 +21,7 @@ import {
 } from "@/components/media/use-media-uploader";
 import { FileUploaderActions } from "@/components/media/file-uploader-actions";
 import type { MediaAsset, MediaPurpose } from "@/lib/api/types";
-import {
-  type MediaFileConstraints,
-  mediaPolicies,
-} from "@/lib/media/upload";
+import { type MediaFileConstraints, mediaPolicies } from "@/lib/media/upload";
 import { cn } from "@/lib/utils";
 
 interface FileUploaderProps {
@@ -59,8 +56,8 @@ function supportedFormatLabel(
   mimeTypes: readonly string[],
   policy: (typeof mediaPolicies)[MediaPurpose],
 ): string {
-  const extensions = mimeTypes.flatMap((mimeType) =>
-    policy.formats[mimeType] ?? [],
+  const extensions = mimeTypes.flatMap(
+    (mimeType) => policy.formats[mimeType] ?? [],
   );
   return [
     ...new Set(extensions.map((extension) => extension.slice(1).toUpperCase())),
@@ -78,10 +75,9 @@ export function FileUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const policy = mediaPolicies[purpose];
-  const allowedMimeTypes =
-    constraints?.allowedMimeTypes?.length
-      ? constraints.allowedMimeTypes
-      : Object.keys(policy.formats);
+  const allowedMimeTypes = constraints?.allowedMimeTypes?.length
+    ? constraints.allowedMimeTypes
+    : Object.keys(policy.formats);
   const maxBytes = constraints?.maxBytes ?? policy.maxBytes;
   const supportedFormats = supportedFormatLabel(allowedMimeTypes, policy);
   const { error, file, isBusy, progress, selectFile, startUpload, status } =

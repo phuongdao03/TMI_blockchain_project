@@ -150,9 +150,7 @@ describe("VerificationPanel", () => {
         "Chứng thư này không công bố dấu vân tay tài liệu để đối chiếu công khai.",
       ),
     ).toBeDefined();
-    expect(
-      screen.queryByLabelText("Chọn tài liệu để đối chiếu"),
-    ).toBeNull();
+    expect(screen.queryByLabelText("Chọn tài liệu để đối chiếu")).toBeNull();
   });
 
   it("lets the user choose which public document to compare", async () => {

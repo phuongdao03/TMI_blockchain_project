@@ -70,10 +70,7 @@ class CloudinaryProbe:
         api_secret: str,
         timeout_seconds: float,
     ) -> None:
-        self._url = (
-            "https://api.cloudinary.com/v1_1/"
-            f"{quote(cloud_name, safe='')}/ping"
-        )
+        self._url = f"https://api.cloudinary.com/v1_1/{quote(cloud_name, safe='')}/ping"
         self._client = httpx.AsyncClient(
             auth=(api_key, api_secret), timeout=timeout_seconds
         )

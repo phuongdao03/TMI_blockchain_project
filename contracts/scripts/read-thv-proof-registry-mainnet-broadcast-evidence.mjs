@@ -6,7 +6,10 @@ const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 const TRANSACTION_HASH_PATTERN = /^0x[0-9a-fA-F]{64}$/;
 
 function isProofRegistry(contractName) {
-  return typeof contractName === "string" && contractName.split(/[\\/:]/).at(-1) === "THVProofRegistry";
+  return (
+    typeof contractName === "string" &&
+    contractName.split(/[\\/:]/).at(-1) === "THVProofRegistry"
+  );
 }
 
 function parseChainId(value) {
@@ -31,7 +34,9 @@ export function parseMainnetBroadcastEvidence(broadcast, expectedDeployer) {
     throw new Error("broadcast evidence chain is not 137");
   }
 
-  const deployments = (Array.isArray(broadcast.transactions) ? broadcast.transactions : []).filter(
+  const deployments = (
+    Array.isArray(broadcast.transactions) ? broadcast.transactions : []
+  ).filter(
     (transaction) =>
       transaction &&
       typeof transaction === "object" &&
@@ -39,7 +44,9 @@ export function parseMainnetBroadcastEvidence(broadcast, expectedDeployer) {
       isProofRegistry(transaction.contractName),
   );
   if (deployments.length !== 1) {
-    throw new Error(`expected exactly one THVProofRegistry CREATE, found ${deployments.length}`);
+    throw new Error(
+      `expected exactly one THVProofRegistry CREATE, found ${deployments.length}`,
+    );
   }
 
   const deployment = deployments[0];
@@ -56,8 +63,12 @@ export function parseMainnetBroadcastEvidence(broadcast, expectedDeployer) {
   if (from.toLowerCase() !== expectedDeployer.toLowerCase()) {
     throw new Error("deployment sender does not match EXPECTED_DEPLOYER");
   }
-  const transactionChainId = deployment.transaction?.chainId ?? deployment.chainId;
-  if (transactionChainId !== undefined && parseChainId(transactionChainId) !== POLYGON_MAINNET_CHAIN_ID) {
+  const transactionChainId =
+    deployment.transaction?.chainId ?? deployment.chainId;
+  if (
+    transactionChainId !== undefined &&
+    parseChainId(transactionChainId) !== POLYGON_MAINNET_CHAIN_ID
+  ) {
     throw new Error("deployment transaction chainId is not 137");
   }
 
@@ -83,7 +94,9 @@ export async function runCli({
   write = (value) => process.stdout.write(value),
 } = {}) {
   if (argv.length !== 2) {
-    throw new Error("Usage: read-thv-proof-registry-mainnet-broadcast-evidence.mjs <evidence-path> <expected-deployer>");
+    throw new Error(
+      "Usage: read-thv-proof-registry-mainnet-broadcast-evidence.mjs <evidence-path> <expected-deployer>",
+    );
   }
   const [evidencePath, expectedDeployer] = argv;
   const { contractAddress } = await readMainnetBroadcastEvidence({
@@ -95,9 +108,14 @@ export async function runCli({
   return contractAddress;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   runCli().catch((error) => {
-    process.stderr.write(`Incompatible prior Mainnet broadcast evidence: ${error.message}\n`);
+    process.stderr.write(
+      `Incompatible prior Mainnet broadcast evidence: ${error.message}\n`,
+    );
     process.exitCode = 70;
   });
 }
