@@ -27,6 +27,17 @@ test.beforeEach(async ({ context, request }) => {
       httpOnly: false,
       sameSite: "Lax",
     },
+    {
+      // The mock API uses this non-sensitive test-only marker to return the
+      // MODERATOR identity. Access tokens alone intentionally default to a
+      // regular applicant, which would exercise the wrong dashboard.
+      name: "tmi_e2e_persona",
+      value: "reviewer",
+      domain: "127.0.0.1",
+      path: "/",
+      httpOnly: false,
+      sameSite: "Lax",
+    },
   ]);
 });
 

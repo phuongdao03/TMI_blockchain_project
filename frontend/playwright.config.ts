@@ -12,6 +12,7 @@ const applicationDistDir =
   (previewRun ? ".next-e2e-preview" : ".next-e2e");
 const applicationUrl = `http://127.0.0.1:${applicationPort}`;
 const previewTestName = /preview dashboard keeps submission closed/i;
+const snapshotPlatform = process.env.E2E_SNAPSHOT_PLATFORM;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -19,6 +20,11 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   reporter: "line",
+  // Lets maintainers regenerate a CI-platform baseline from another host.
+  // CI itself keeps Playwright's native platform suffix by leaving this unset.
+  snapshotPathTemplate: snapshotPlatform
+    ? `{testDir}/{testFilePath}-snapshots/{arg}-{projectName}-${snapshotPlatform}{ext}`
+    : undefined,
   grep: previewRun ? previewTestName : undefined,
   grepInvert: previewRun ? undefined : previewTestName,
   expect: {

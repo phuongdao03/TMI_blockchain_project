@@ -136,7 +136,9 @@ html[data-theme="dark"] .auth-shell {
   --theme-text: #fff9f3;
   --theme-muted: #e4c9c2;
   --theme-border: #4c2424;
-  --theme-accent: #b51212;
+  /* Gold remains legible on the dark burgundy public surface; the previous
+     red accent failed WCAG contrast for labels and links. */
+  --theme-accent: #f6c515;
   --theme-gold: #f6c515;
   --theme-warning: #ffd83d;
   --theme-shadow-color: rgb(18 7 7 / 48%);
