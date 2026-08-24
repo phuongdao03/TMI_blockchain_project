@@ -49,6 +49,9 @@ class StubDossierService:
             owner_user_id=self.principal.user_id,
             organization_id=None,
             category_id=self.category_id,
+            dossier_type_id=None,
+            dossier_type_version_id=None,
+            form_data={},
             title="Bộ nhận diện TMI",
             slug="bo-nhan-dien-tmi",
             summary="Hồ sơ quyền sở hữu.",
@@ -99,7 +102,11 @@ class StubDossierService:
         dossier_id: UUID,
     ) -> DossierDetailView:
         self._require_access()
-        return DossierDetailView(dossier=self._view(), evidences=())
+        return DossierDetailView(
+            dossier=self._view(),
+            evidences=(),
+            document_rules=(),
+        )
 
     async def update_dossier(
         self,

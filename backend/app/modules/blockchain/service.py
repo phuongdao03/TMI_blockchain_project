@@ -52,7 +52,7 @@ from app.modules.dossiers.workflow import DossierWorkflowService
 
 logger = logging.getLogger(__name__)
 
-BLOCKCHAIN_ADMIN_ROLES = frozenset({"BLOCKCHAIN_ADMIN", "SUPER_ADMIN"})
+BLOCKCHAIN_ADMIN_ROLES = frozenset({"SUPER_ADMIN"})
 SUPPORTED_METHODS = frozenset(
     {
         "issueCertificate",
@@ -88,7 +88,7 @@ class BlockchainTransactionService:
         *,
         session: AsyncSession,
         gateway: BlockchainGateway,
-        signer: TransactionSigner,
+        signer: TransactionSigner | None,
         nonce_lock: NonceLock,
         network: str,
         chain_id: int,
@@ -201,7 +201,7 @@ class BlockchainTransactionService:
             await self._session.flush()
             result = self._view(transaction)
             created = True
-        if created and self._enqueue_broadcast is not None:
+        if created and self._signer is not None and self._enqueue_broadcast is not None:
             await self._invoke(self._enqueue_broadcast, result.id)
         return result
 
@@ -327,7 +327,7 @@ class BlockchainTransactionService:
             await self._session.flush()
             result = await self._document_evidence_view(evidence, transaction)
             created = True
-        if created and self._enqueue_broadcast is not None:
+        if created and self._signer is not None and self._enqueue_broadcast is not None:
             await self._invoke(self._enqueue_broadcast, result.transaction_id)
         return result
 
@@ -387,9 +387,9 @@ class BlockchainTransactionService:
                 ).digest(),
                 dossier_hash=bytes.fromhex(dossier_version.canonical_hash),
                 metadata_hash=bytes.fromhex(version.metadata_hash),
-                issued_at=int(certificate.issued_at.timestamp()),
+                issued_at=self._utc_epoch(certificate.issued_at),
                 expires_at=(
-                    int(certificate.expires_at.timestamp())
+                    self._utc_epoch(certificate.expires_at)
                     if certificate.expires_at is not None
                     else 0
                 ),
@@ -470,6 +470,13 @@ class BlockchainTransactionService:
             if certificate.status is not CertificateStatus.ACTIVE:
                 raise BlockchainConflictError(
                     "Only an active certificate can be updated."
+                )
+            if (
+                version.public_token_hash is None
+                or version.qr_payload is None
+            ):
+                raise BlockchainConflictError(
+                    "Certificate correction is missing its version-bound QR link."
                 )
             if version.status not in {
                 CertificateVersionStatus.PENDING_APPROVAL,
@@ -558,7 +565,7 @@ class BlockchainTransactionService:
             await self._session.flush()
             result = self._view(transaction)
             created = True
-        if created and self._enqueue_broadcast is not None:
+        if created and self._signer is not None and self._enqueue_broadcast is not None:
             await self._invoke(self._enqueue_broadcast, result.id)
         return result
 
@@ -662,11 +669,15 @@ class BlockchainTransactionService:
             )
             await self._session.flush()
             result = self._view(replay)
-        if created and self._enqueue_broadcast is not None:
+        if created and self._signer is not None and self._enqueue_broadcast is not None:
             await self._invoke(self._enqueue_broadcast, result.id)
         return result
 
     async def broadcast(self, transaction_id: UUID, payload: bytes) -> None:
+        if self._signer is None:
+            # Human-signing mode deliberately leaves CREATED transactions in the
+            # signer queue. This also makes any stale broadcast job harmless.
+            return
         should_broadcast = False
         async with self._session.begin():
             transaction = await self._required(transaction_id, for_update=True)
@@ -878,6 +889,21 @@ class BlockchainTransactionService:
                         "Document evidence chain state does not match.",
                     )
                     return
+            elif (
+                not already_confirmed
+                and self._signer is None
+                and method in {
+                    "issueCertificate",
+                    "updateCertificate",
+                    "revokeCertificate",
+                }
+            ):
+                if not await self._certificate_chain_state_matches(transaction_id):
+                    await self._record_reconciliation_mismatch(
+                        transaction_id,
+                        "Certificate chain state does not match the frozen proof.",
+                    )
+                    return
         except BlockchainGatewayError as exc:
             raise BlockchainTransientError(
                 "Blockchain confirmation lookup failed."
@@ -1047,7 +1073,7 @@ class BlockchainTransactionService:
                 actor_user_id=principal.user_id,
                 status=BlockchainTransactionStatus.CREATED,
             )
-        if self._enqueue_broadcast is not None:
+        if self._signer is not None and self._enqueue_broadcast is not None:
             await self._invoke(self._enqueue_broadcast, result.id)
         return result
 
@@ -1070,6 +1096,15 @@ class BlockchainTransactionService:
         if inspect.isawaitable(result):
             await result
 
+    @staticmethod
+    def _utc_epoch(value: datetime) -> int:
+        normalized = (
+            value.replace(tzinfo=UTC)
+            if value.tzinfo is None or value.utcoffset() is None
+            else value.astimezone(UTC)
+        )
+        return int(normalized.timestamp())
+
     async def reconcile(self, *, limit: int = 100) -> int:
         async with self._session.begin():
             rows = await self._transactions.list_reconcilable(limit=limit)
@@ -1077,6 +1112,70 @@ class BlockchainTransactionService:
         for transaction_id in transaction_ids:
             await self.confirm(transaction_id)
         return len(transaction_ids)
+
+    async def _certificate_chain_state_matches(self, transaction_id: UUID) -> bool:
+        """Read back the immutable certificate state before confirming a tx."""
+        async with self._session.begin():
+            transaction = await self._required(transaction_id)
+            if transaction.certificate_id is None:
+                return False
+            certificate = await self._session.get(
+                Certificate,
+                transaction.certificate_id,
+            )
+            version = await self._session.scalar(
+                select(CertificateVersion).where(
+                    CertificateVersion.certificate_id == transaction.certificate_id,
+                    CertificateVersion.dossier_version_id
+                    == transaction.dossier_version_id,
+                )
+            )
+            dossier_version = await self._session.get(
+                DossierVersion,
+                transaction.dossier_version_id,
+            )
+            if certificate is None or version is None or dossier_version is None:
+                return False
+            certificate_key = hashlib.sha256(
+                certificate.certificate_number.encode()
+            ).digest()
+            dossier_hash = bytes.fromhex(dossier_version.canonical_hash)
+            metadata_hash = bytes.fromhex(version.metadata_hash)
+            expected_version = version.version_no
+            expected_issued_at = self._utc_epoch(certificate.issued_at)
+            expected_expires_at = (
+                self._utc_epoch(certificate.expires_at)
+                if certificate.expires_at is not None
+                else 0
+            )
+            expected_revocation = (
+                bytes.fromhex(certificate.revocation_reason_hash)
+                if certificate.revocation_reason_hash is not None
+                else None
+            )
+            method = transaction.method
+        record = await self._gateway.get_certificate(certificate_key)
+        if method == "issueCertificate":
+            return (
+                record.dossier_hash == dossier_hash
+                and record.metadata_hash == metadata_hash
+                and record.issued_at == expected_issued_at
+                and record.expires_at == expected_expires_at
+                and record.version == 1
+                and not record.revoked
+            )
+        if method == "updateCertificate":
+            return (
+                record.dossier_hash == dossier_hash
+                and record.metadata_hash == metadata_hash
+                and record.version == expected_version
+                and not record.revoked
+            )
+        return (
+            expected_revocation is not None
+            and record.revoked
+            and record.revocation_reason_hash == expected_revocation
+        )
 
     async def resolve_payload(self, transaction_id: UUID) -> bytes:
         async with self._session.begin():
@@ -1177,7 +1276,7 @@ class BlockchainTransactionService:
             metadata_hash = bytes.fromhex(version.metadata_hash)
             if transaction.method == "issueCertificate":
                 expires_at = (
-                    int(certificate.expires_at.timestamp())
+                    self._utc_epoch(certificate.expires_at)
                     if certificate.expires_at is not None
                     else 0
                 )
@@ -1185,7 +1284,7 @@ class BlockchainTransactionService:
                     certificate_id=certificate_key,
                     dossier_hash=dossier_hash,
                     metadata_hash=metadata_hash,
-                    issued_at=int(certificate.issued_at.timestamp()),
+                    issued_at=self._utc_epoch(certificate.issued_at),
                     expires_at=expires_at,
                 )
             if transaction.method == "updateCertificate":
@@ -1293,10 +1392,16 @@ class BlockchainTransactionService:
             raise BlockchainConflictError(
                 "Certificate version lineage changed before confirmation."
             )
+        if version.public_token_hash is None or version.qr_payload is None:
+            raise BlockchainConflictError(
+                "Certificate version verification data is unavailable."
+            )
         predecessor.status = CertificateVersionStatus.SUPERSEDED
         await self._session.flush()
         version.status = CertificateVersionStatus.ACTIVE
         certificate.current_version_no = version.version_no
+        certificate.public_token_hash = version.public_token_hash
+        certificate.qr_payload = version.qr_payload
         certificate.pdf_media_id = None
         return version.id
 

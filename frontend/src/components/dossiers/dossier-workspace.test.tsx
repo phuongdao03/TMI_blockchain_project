@@ -27,6 +27,9 @@ const dossier = {
   ownerUserId: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
   organizationId: null,
   categoryId: "4d28db19-1507-5a45-a50d-cd0aa83029ec",
+  dossierTypeId: "9e1a095a-0cbd-4f3d-8e24-93b1771ec8b7",
+  dossierTypeVersionId: "2ece72a5-06d8-4200-8a0c-dc7f7ab7bf40",
+  formData: {},
   title: "Bộ nhận diện TMI",
   slug: null,
   summary: "Hồ sơ quyền sở hữu.",
@@ -44,6 +47,8 @@ const dossier = {
       dossierVersionId: null,
       mediaAssetId: "6a0bb388-3c26-4417-aed8-3ca05c212d1f",
       evidenceType: "OWNERSHIP_DOCUMENT",
+      evidenceRole: "OWNERSHIP_DOCUMENT",
+      accessScope: "INTERNAL",
       title: "Giấy xác nhận quyền sở hữu",
       description: null,
       issuedAt: null,
@@ -52,6 +57,18 @@ const dossier = {
       mimeType: "application/pdf",
       bytes: 2048,
       sha256: "a".repeat(64),
+    },
+  ],
+  documentRules: [
+    {
+      key: "OWNERSHIP_DOCUMENT",
+      label: "Tài liệu quyền sở hữu",
+      documentType: "OWNERSHIP_DOCUMENT",
+      required: true,
+      allowedMimeTypes: ["application/pdf"],
+      maxBytes: 31_457_280,
+      maxCount: 1,
+      defaultVisibility: "INTERNAL",
     },
   ],
 };
@@ -160,6 +177,35 @@ describe("DossierWorkspace", () => {
       await screen.findByText("Hồ sơ đã nộp và đang ở chế độ chỉ đọc."),
     ).toBeDefined();
     expect(screen.getByLabelText("Tên hồ sơ").hasAttribute("disabled")).toBe(
+      true,
+    );
+  });
+
+  it("uses server document rules to block submission until required evidence exists", async () => {
+    const user = userEvent.setup();
+    api.get.mockResolvedValue({ ...dossier, evidences: [] });
+    api.versions.mockResolvedValue([]);
+    api.timeline.mockResolvedValue([]);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <DossierWorkspace dossierId={dossier.id} />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "Bộ nhận diện TMI",
+    });
+    await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
+
+    expect(screen.getByText("Cần bổ sung trước khi nộp")).toBeDefined();
+    expect(screen.getByText("Tài liệu quyền sở hữu")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Nộp hồ sơ" })).toHaveProperty(
+      "disabled",
       true,
     );
   });

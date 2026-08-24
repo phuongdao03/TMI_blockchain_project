@@ -1,6 +1,9 @@
 from app.core.config import Settings
 from app.main import create_application
-from app.modules.public.schemas import PublicCertificateVersionData
+from app.modules.public.schemas import (
+    PublicCertificateVersionData,
+    PublicDossierVerificationData,
+)
 
 
 def test_certificate_and_public_routes_match_the_planned_contract() -> None:
@@ -21,6 +24,7 @@ def test_certificate_and_public_routes_match_the_planned_contract() -> None:
         "/api/v1/public/assets",
         "/api/v1/public/assets/{slug}",
         "/api/v1/public/map",
+        "/api/v1/public/dossiers/{code}/verification",
         "/api/v1/verify/{token}",
         "/api/v1/verify/certificate/{number}",
         "/api/v1/verify/certificate/{number}/versions",
@@ -39,5 +43,15 @@ def test_certificate_and_public_routes_match_the_planned_contract() -> None:
         "confirmed_at",
         "created_at",
         "issuer_label",
+        "documents",
+    }
+    assert set(PublicDossierVerificationData.model_fields) == {
+        "code",
+        "title",
+        "summary",
+        "category_name",
+        "published_at",
+        "certificate",
+        "public_fields",
         "documents",
     }

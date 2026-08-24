@@ -32,7 +32,7 @@ export function CmsWorkspace() {
   const [section, setSection] = useState<CmsSection>("publicWorks");
 
   return (
-    <div className="mx-auto max-w-7xl space-y-7">
+    <div className="cms-workspace mx-auto max-w-7xl space-y-7">
       <header className="rounded-3xl bg-neutral-950 px-6 py-7 text-white sm:px-8">
         <p className="flex items-center gap-2 text-sm font-bold text-primary-300">
           <BookOpenText className="size-4" /> CMS nội bộ

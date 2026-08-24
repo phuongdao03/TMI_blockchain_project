@@ -3,7 +3,11 @@
 import { useCallback, useState } from "react";
 
 import type { MediaAsset, MediaPurpose } from "@/lib/api/types";
-import { uploadMedia, validateMediaFile } from "@/lib/media/upload";
+import {
+  type MediaFileConstraints,
+  uploadMedia,
+  validateMediaFile,
+} from "@/lib/media/upload";
 
 export type UploadStatus =
   | "idle"
@@ -16,12 +20,14 @@ export type UploadStatus =
   | "failed";
 
 interface UseMediaUploaderOptions {
+  constraints?: MediaFileConstraints;
   disabled: boolean;
   onComplete: (asset: MediaAsset) => void;
   purpose: MediaPurpose;
 }
 
 export function useMediaUploader({
+  constraints,
   disabled,
   onComplete,
   purpose,
@@ -40,7 +46,7 @@ export function useMediaUploader({
         return;
       }
       try {
-        validateMediaFile(nextFile, purpose);
+        validateMediaFile(nextFile, purpose, constraints);
         setFile(nextFile);
         setStatus("selected");
         setProgress(0);
@@ -56,7 +62,7 @@ export function useMediaUploader({
         );
       }
     },
-    [disabled, isBusy, purpose],
+    [constraints, disabled, isBusy, purpose],
   );
 
   const startUpload = useCallback(async () => {
@@ -67,10 +73,15 @@ export function useMediaUploader({
     setProgress(0);
     setError(null);
     try {
-      const asset = await uploadMedia(file, purpose, {
-        onProgress: setProgress,
-        onStage: setStatus,
-      });
+      const asset = await uploadMedia(
+        file,
+        purpose,
+        {
+          onProgress: setProgress,
+          onStage: setStatus,
+        },
+        constraints,
+      );
       setProgress(100);
       setStatus("complete");
       onComplete(asset);
@@ -82,7 +93,7 @@ export function useMediaUploader({
           : "Không thể tải tệp. Vui lòng thử lại.",
       );
     }
-  }, [disabled, file, isBusy, onComplete, purpose]);
+  }, [constraints, disabled, file, isBusy, onComplete, purpose]);
 
   return {
     error,

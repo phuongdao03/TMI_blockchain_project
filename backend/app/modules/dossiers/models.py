@@ -18,6 +18,7 @@ from sqlalchemy import (
     Uuid,
     false,
     func,
+    text,
     true,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -63,6 +64,15 @@ class DocumentHashAdjudicationAction(StrEnum):
     ALLOW_REANCHOR = "ALLOW_REANCHOR"
 
 
+class EvidenceVisibility(StrEnum):
+    PUBLIC = "PUBLIC"
+    PRIVATE = "PRIVATE"
+    INTERNAL = "INTERNAL"
+    PUBLIC_PREVIEW = "PUBLIC_PREVIEW"
+    REVIEWER_ONLY = "REVIEWER_ONLY"
+    ADMIN_ONLY = "ADMIN_ONLY"
+
+
 def _enum(enum_type: type[StrEnum], name: str) -> Enum:
     return Enum(
         enum_type,
@@ -106,6 +116,49 @@ class Category(Base):
     )
 
 
+class DossierType(Base):
+    __tablename__ = "dossier_types"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    category_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey(Category.id, ondelete="RESTRICT"),
+        nullable=False,
+    )
+    code: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default=true(),
+    )
+
+
+class DossierTypeVersion(Base):
+    __tablename__ = "dossier_type_versions"
+    __table_args__ = (
+        CheckConstraint("version_no > 0", name="version_no_positive"),
+        UniqueConstraint(
+            "dossier_type_id",
+            "version_no",
+            name="uq_dossier_type_versions_type_id_version_no",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    dossier_type_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey(DossierType.id, ondelete="RESTRICT"),
+        nullable=False,
+    )
+    version_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    schema_json: Mapped[dict[str, object]] = mapped_column(
+        JSONB().with_variant(JSON(), "sqlite"),
+        nullable=False,
+    )
+
+
 class Dossier(UtcTimestampMixin, Base):
     __tablename__ = "dossiers"
     __table_args__ = (
@@ -141,6 +194,20 @@ class Dossier(UtcTimestampMixin, Base):
         Uuid,
         ForeignKey("categories.id", ondelete="RESTRICT"),
         nullable=False,
+    )
+    dossier_type_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey(DossierType.id, ondelete="RESTRICT"),
+    )
+    dossier_type_version_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey(DossierTypeVersion.id, ondelete="RESTRICT"),
+    )
+    form_data_json: Mapped[dict[str, object]] = mapped_column(
+        JSONB().with_variant(JSON(), "sqlite"),
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'"),
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str | None] = mapped_column(String(280), unique=True)
@@ -444,6 +511,13 @@ class DossierEvidence(Base):
         nullable=False,
     )
     evidence_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    evidence_role: Mapped[str | None] = mapped_column(String(64))
+    access_scope: Mapped[EvidenceVisibility] = mapped_column(
+        _enum(EvidenceVisibility, "evidence_visibility"),
+        nullable=False,
+        default=EvidenceVisibility.PRIVATE,
+        server_default=EvidenceVisibility.PRIVATE.value,
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     issued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

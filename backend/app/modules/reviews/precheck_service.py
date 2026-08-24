@@ -179,6 +179,8 @@ class PrecheckService:
                     dossier_version_id=None,
                     media_asset_id=evidence.media_asset_id,
                     evidence_type=evidence.evidence_type,
+                    evidence_role=evidence.evidence_role,
+                    access_scope=evidence.access_scope,
                     title=evidence.title,
                     description=evidence.description,
                     issued_at=evidence.issued_at,

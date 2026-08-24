@@ -5,9 +5,9 @@ import {
   ArrowLeft,
   ArrowRight,
   BadgeCheck,
-  Filter,
   RotateCcw,
   Search,
+  SlidersHorizontal,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -86,7 +86,7 @@ export function SearchResultsPage({
 
       <form
         action="/search"
-        className="mt-9 grid gap-3 border-y border-white/10 py-5 lg:grid-cols-[minmax(0,1fr)_13rem_auto]"
+        className="mt-9 grid gap-3 border-y border-white/10 py-5 lg:grid-cols-[minmax(0,1fr)_13rem_auto_auto]"
         method="get"
       >
         <SearchAutocomplete defaultValue={parameters.q} name="q" />
@@ -105,6 +105,16 @@ export function SearchResultsPage({
         </label>
         <Button type="submit">
           <Search aria-hidden="true" className="size-4" /> Tìm kiếm
+        </Button>
+        <Button
+          aria-expanded={filterOpen}
+          className="whitespace-nowrap"
+          onClick={() => setFilterOpen((open) => !open)}
+          type="button"
+          variant="outline"
+        >
+          <SlidersHorizontal aria-hidden="true" className="size-4" />
+          Tinh chỉnh kết quả {activeFilters ? `(${activeFilters})` : ""}
         </Button>
         {parameters.category ? (
           <input name="category" type="hidden" value={parameters.category} />
@@ -161,36 +171,57 @@ export function SearchResultsPage({
 
       <ActiveFilters facets={facets.data} parameters={parameters} />
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[17rem_minmax(0,1fr)]">
-        <aside className="hidden lg:block">
-          <div className="sticky top-24 border-l border-white/10 pl-5">
-            <SearchFilters facets={facets.data} parameters={parameters} />
-          </div>
-        </aside>
-        <section aria-labelledby="search-results-heading" className="min-w-0">
-          <div className="mb-5 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold tracking-[0.18em] text-primary-400 uppercase">
-                Kết quả tìm kiếm
-              </p>
-              <h2
-                className="mt-2 text-2xl font-bold text-white"
-                id="search-results-heading"
-              >
-                {parameters.q
-                  ? `Kết quả cho “${parameters.q}”`
-                  : "Khám phá mới nhất"}
-              </h2>
-            </div>
-            <Button
-              className="lg:hidden"
-              onClick={() => setFilterOpen(true)}
-              variant="outline"
+      <section aria-labelledby="search-results-heading" className="mt-8 min-w-0">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold tracking-[0.18em] text-primary-400 uppercase">
+              Kết quả tìm kiếm
+            </p>
+            <h2
+              className="mt-2 text-2xl font-bold text-white"
+              id="search-results-heading"
             >
-              <Filter aria-hidden="true" className="size-4" /> Bộ lọc{" "}
-              {activeFilters ? `(${activeFilters})` : ""}
-            </Button>
+              {parameters.q
+                ? `Kết quả cho “${parameters.q}”`
+                : "Khám phá mới nhất"}
+            </h2>
           </div>
+          {!results.isPending && !results.error ? (
+            <p aria-live="polite" className="hidden text-sm text-slate-500 sm:block">
+              {results.data?.data.length ?? 0} tác phẩm trên trang
+            </p>
+          ) : null}
+        </div>
+        {filterOpen ? (
+          <section
+            aria-label="Tinh chỉnh kết quả"
+            className="search-filter-panel mb-6 hidden lg:block"
+          >
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold tracking-[0.16em] text-primary-400 uppercase">
+                  Tinh chỉnh kết quả
+                </p>
+                <p className="mt-1 text-sm text-slate-400">
+                  Lọc theo danh mục, chủ đề, thời điểm công bố và trạng thái xác nhận.
+                </p>
+              </div>
+              <button
+                aria-label="Đóng tinh chỉnh kết quả"
+                className="grid size-10 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:border-gold-300/50 hover:text-white"
+                onClick={() => setFilterOpen(false)}
+                type="button"
+              >
+                <X aria-hidden="true" className="size-4" />
+              </button>
+            </div>
+            <SearchFilters
+              facets={facets.data}
+              layout="panel"
+              parameters={parameters}
+            />
+          </section>
+        ) : null}
           {results.isPending ? (
             <ResultsSkeleton />
           ) : results.error ? (
@@ -198,7 +229,10 @@ export function SearchResultsPage({
           ) : !results.data.data.length ? (
             <EmptyState />
           ) : (
-            <div className="divide-y divide-white/10 border-y border-white/10">
+            <div
+              className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
+              data-testid="search-album-grid"
+            >
               {results.data.data.map((work, index) => (
                 <SearchResult
                   key={work.id}
@@ -232,8 +266,7 @@ export function SearchResultsPage({
               ) : null}
             </div>
           ) : null}
-        </section>
-      </div>
+      </section>
 
       {filterOpen ? (
         <div
@@ -277,46 +310,59 @@ function SearchResult({
   requestId: string;
   work: SearchResultWork;
 }) {
+  const href = `/works/${encodeURIComponent(work.slug)}`;
   return (
-    <article className="group grid gap-4 py-6 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:items-start">
-      <span className="font-mono text-sm tabular-nums text-slate-600">
-        {String(position).padStart(2, "0")}
-      </span>
-      <div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-          <span>{work.categoryName}</span>
-          <span aria-hidden="true">/</span>
-          <time dateTime={work.publishedAt}>
-            {new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(
-              new Date(work.publishedAt),
-            )}
-          </time>
+    <article className="group min-w-0" data-layout="search-album-tile">
+      <Link
+        aria-label={`Xem đề cử ${work.title}`}
+        className="search-album-tile block h-full overflow-hidden border transition focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold-300"
+        href={href}
+        onClick={() => {
+          void publicApi
+            .recordSearchClick(requestId, work.id)
+            .catch(() => undefined);
+        }}
+      >
+        <div className="search-album-tile__cover">
+          <span className="search-album-tile__category">{work.categoryName}</span>
+          <span className="search-album-tile__number">
+            {String(position).padStart(2, "0")}
+          </span>
+          <span className="search-album-tile__eyebrow">Thông tin công bố</span>
+          <strong className="search-album-tile__title">{work.title}</strong>
         </div>
-        <h3 className="mt-2 text-xl font-bold tracking-tight text-white transition group-hover:text-gold-200">
-          <Link
-            href={`/works/${encodeURIComponent(work.slug)}`}
-            onClick={() => {
-              void publicApi
-                .recordSearchClick(requestId, work.id)
-                .catch(() => undefined);
-            }}
-          >
+        <div className="search-album-tile__content">
+          <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+            <time dateTime={work.publishedAt}>
+              {new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(
+                new Date(work.publishedAt),
+              )}
+            </time>
+            <span className="truncate">
+              {work.authorDisplayName ?? "Tác giả chưa công bố"}
+            </span>
+          </div>
+          <h3 className="mt-3 line-clamp-2 text-xl font-bold tracking-tight text-white transition group-hover:text-gold-200">
             {work.title}
-          </Link>
-        </h3>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-          {work.shortDescription}
-        </p>
-        <p className="mt-3 text-sm text-slate-500">
-          {work.authorDisplayName ?? "Tác giả chưa công bố"}
-        </p>
-      </div>
-      {work.certificateNumber ? (
-        <div className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-300">
-          <BadgeCheck aria-hidden="true" className="size-4" />
-          <span>{work.certificateNumber}</span>
+          </h3>
+          <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-400">
+            {work.shortDescription}
+          </p>
+          <div className="mt-5 flex min-h-6 items-center justify-between gap-3">
+            {work.certificateNumber ? (
+              <span className="inline-flex min-w-0 items-center gap-2 text-xs font-semibold text-emerald-300">
+                <BadgeCheck aria-hidden="true" className="size-4 shrink-0" />
+                <span className="truncate">{work.certificateNumber}</span>
+              </span>
+            ) : (
+              <span className="text-xs font-medium text-slate-500">
+                Đang cập nhật thông tin xác thực
+              </span>
+            )}
+            <ArrowRight aria-hidden="true" className="size-4 shrink-0 text-gold-300" />
+          </div>
         </div>
-      ) : null}
+      </Link>
     </article>
   );
 }

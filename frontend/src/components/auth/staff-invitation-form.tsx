@@ -83,10 +83,10 @@ export function StaffInvitationForm({ token }: { token?: string }) {
           <div className="flex items-start gap-3">
             <ShieldCheck
               aria-hidden="true"
-              className="mt-0.5 size-5 text-[#f3d675]"
+              className="mt-0.5 size-5 text-[#F6C515]"
             />
             <div>
-              <p className="text-sm font-semibold text-[#f3d675]">
+              <p className="text-sm font-semibold text-[#F6C515]">
                 Lời mời được bảo vệ
               </p>
               <p className="mt-1 text-xs leading-5 text-[#aaa6a4]">
@@ -115,8 +115,8 @@ export function StaffInvitationForm({ token }: { token?: string }) {
         ) : null}
         {totpSecret ? (
           <div className="space-y-4">
-            <div className="rounded-lg border border-[#f3d675]/30 bg-[#201d16] p-4">
-              <p className="text-sm font-semibold text-[#f3d675]">
+            <div className="rounded-lg border border-[#F6C515]/30 bg-[#201d16] p-4">
+              <p className="text-sm font-semibold text-[#F6C515]">
                 Thiết lập ứng dụng xác thực
               </p>
               <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs leading-5 text-[#aaa6a4]">
@@ -133,7 +133,7 @@ export function StaffInvitationForm({ token }: { token?: string }) {
             </label>
             <input
               autoComplete="one-time-code"
-              className="min-h-12 w-full rounded-md border border-white/20 bg-[#111] px-3 text-center font-mono text-lg tracking-[0.3em] text-white outline-none focus:border-[#f3d675]"
+              className="min-h-12 w-full rounded-md border border-white/20 bg-[#111] px-3 text-center font-mono text-lg tracking-[0.3em] text-white outline-none focus:border-[#F6C515]"
               id="totp-code"
               inputMode="numeric"
               maxLength={6}

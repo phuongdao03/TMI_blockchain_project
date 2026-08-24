@@ -35,14 +35,21 @@ class RenderedPublicQr:
     payload: str
 
 
-def canonical_public_work_url(
+def canonical_public_origin(
     public_base_url: str,
-    slug: str,
     *,
     allow_local_http: bool,
 ) -> str:
-    parsed = urlsplit(public_base_url)
-    hostname = parsed.hostname
+    """Return a validated public origin suitable for capability URLs."""
+    try:
+        parsed = urlsplit(public_base_url)
+        hostname = parsed.hostname
+        _ = parsed.port
+    except ValueError as exc:
+        raise PublicShareConfigurationError(
+            "APP_BASE_URL must be a valid HTTPS origin."
+        ) from exc
+
     local_hosts = {"localhost", "127.0.0.1", "::1"}
     is_allowed_http = (
         parsed.scheme == "http" and allow_local_http and hostname in local_hosts
@@ -52,14 +59,28 @@ def canonical_public_work_url(
         or not hostname
         or parsed.username is not None
         or parsed.password is not None
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
     ):
         raise PublicShareConfigurationError(
             "APP_BASE_URL must be an HTTPS origin (HTTP localhost is local-only)."
         )
-    encoded_slug = quote(slug, safe="-._~")
-    return urlunsplit(
-        (parsed.scheme, parsed.netloc, f"/tai-san/{encoded_slug}", "", "")
+    return urlunsplit((parsed.scheme, parsed.netloc, "", "", ""))
+
+
+def canonical_public_work_url(
+    public_base_url: str,
+    slug: str,
+    *,
+    allow_local_http: bool,
+) -> str:
+    origin = canonical_public_origin(
+        public_base_url,
+        allow_local_http=allow_local_http,
     )
+    encoded_slug = quote(slug, safe="-._~")
+    return f"{origin}/works/{encoded_slug}"
 
 
 class PublicQrCodeService:

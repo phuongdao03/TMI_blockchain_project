@@ -153,7 +153,7 @@ def test_publish_checklist_permission_version_and_reason(tmp_path: Path) -> None
             service = _service(session)
             with pytest.raises(PublicWorkForbiddenError):
                 await service.publish(
-                    _principal(owner_id, "APPLICANT"),
+                    _principal(owner_id, "USER"),
                     work_id,
                     expected_version=1,
                     visibility=PublicWorkVisibility.PUBLIC,
@@ -161,7 +161,7 @@ def test_publish_checklist_permission_version_and_reason(tmp_path: Path) -> None
                 )
             with pytest.raises(PublicWorkNotPublishableError) as error:
                 await service.publish(
-                    _principal(owner_id, "CONTENT_ADMIN"),
+                    _principal(owner_id, "SUPER_ADMIN"),
                     work_id,
                     expected_version=1,
                     visibility=PublicWorkVisibility.PUBLIC,
@@ -177,7 +177,7 @@ def test_publish_checklist_permission_version_and_reason(tmp_path: Path) -> None
                 work.thumbnail_media_id = media_id
 
             published = await service.publish(
-                _principal(owner_id, "CONTENT_ADMIN"),
+                _principal(owner_id, "SUPER_ADMIN"),
                 work_id,
                 expected_version=1,
                 visibility=PublicWorkVisibility.PUBLIC,
@@ -190,7 +190,7 @@ def test_publish_checklist_permission_version_and_reason(tmp_path: Path) -> None
 
             with pytest.raises(PublicWorkVersionConflictError):
                 await service.hide(
-                    _principal(owner_id, "CONTENT_ADMIN"),
+                    _principal(owner_id, "SUPER_ADMIN"),
                     work_id,
                     expected_version=1,
                     request_id="request-stale",
@@ -235,7 +235,7 @@ def test_featured_window_uses_utc_versioning_and_clears_on_suspend(
         async with factory() as session:
             work_id, owner_id = await _seed(session)
             service = _service(session)
-            admin = _principal(owner_id, "CONTENT_ADMIN")
+            admin = _principal(owner_id, "SUPER_ADMIN")
             with pytest.raises(PublicWorkNotPublishableError) as error:
                 await service.feature(
                     admin,
@@ -257,7 +257,7 @@ def test_featured_window_uses_utc_versioning_and_clears_on_suspend(
             )
             with pytest.raises(PublicWorkForbiddenError):
                 await service.feature(
-                    _principal(owner_id, "APPLICANT"),
+                    _principal(owner_id, "USER"),
                     work_id,
                     expected_version=2,
                     featured_at=NOW,
@@ -344,7 +344,7 @@ def test_scheduled_publication_is_idempotent(tmp_path: Path) -> None:
             )
             scheduled_for_utc = NOW + timedelta(hours=1)
             scheduled = await service.schedule(
-                _principal(owner_id, "CONTENT_ADMIN"),
+                _principal(owner_id, "SUPER_ADMIN"),
                 work_id,
                 expected_version=1,
                 visibility=PublicWorkVisibility.UNLISTED,
@@ -384,7 +384,7 @@ def test_concurrent_publish_allows_one_version_claim(tmp_path: Path) -> None:
             work_id, owner_id = await _seed(seed_session)
 
         async with factory() as first_session, factory() as second_session:
-            principal = _principal(owner_id, "CONTENT_ADMIN")
+            principal = _principal(owner_id, "SUPER_ADMIN")
             results = await asyncio.gather(
                 _service(first_session).publish(
                     principal,

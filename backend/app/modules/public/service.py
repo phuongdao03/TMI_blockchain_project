@@ -1,4 +1,5 @@
 import json
+import math
 
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +17,10 @@ from app.modules.public.types import (
     PublicHomeView,
     PublicMapMarkerView,
 )
-from app.modules.public.verification import public_evidence_proofs
+from app.modules.public.verification import (
+    public_evidence_metadata,
+    public_evidence_proofs,
+)
 
 
 class PublicCatalogService:
@@ -212,7 +216,7 @@ class PublicCatalogService:
 
     @staticmethod
     def _public_metadata(metadata: dict[str, object]) -> dict[str, object]:
-        return {
+        result = {
             key: value
             for key, value in metadata.items()
             if key
@@ -223,7 +227,65 @@ class PublicCatalogService:
                 "asset",
                 "issuedAt",
                 "expiresAt",
+                "publicFields",
                 "publicEvidences",
                 "blockchain",
             }
         }
+        if "publicEvidences" in metadata:
+            result["publicEvidences"] = [
+                {
+                    "title": evidence.title,
+                    "type": evidence.evidence_type,
+                    "sha256": evidence.sha256,
+                    "accessScope": evidence.access_scope,
+                }
+                for evidence in public_evidence_metadata(metadata)
+            ]
+        if "publicFields" in metadata:
+            # Metadata may predate server-owned schema validation.  Reapply a
+            # strict primitive-only projection before exposing it publicly.
+            result["publicFields"] = _public_metadata_fields(metadata)
+        return result
+
+
+def _public_metadata_fields(metadata: dict[str, object]) -> list[dict[str, object]]:
+    fields = metadata.get("publicFields")
+    if not isinstance(fields, list):
+        return []
+    result: list[dict[str, object]] = []
+    for field in fields:
+        if not isinstance(field, dict):
+            continue
+        key = field.get("key")
+        label = field.get("label")
+        value = field.get("value")
+        if (
+            not isinstance(key, str)
+            or not 1 <= len(key) <= 120
+            or not isinstance(label, str)
+            or not 1 <= len(label.strip()) <= 255
+        ):
+            continue
+        if isinstance(value, str):
+            if len(value) > 5_000:
+                continue
+            safe_value: str | int | float | bool | list[str] = value
+        elif isinstance(value, bool):
+            safe_value = value
+        elif isinstance(value, int):
+            safe_value = value
+        elif isinstance(value, float):
+            if not math.isfinite(value):
+                continue
+            safe_value = value
+        elif (
+            isinstance(value, list)
+            and len(value) <= 100
+            and all(isinstance(item, str) and len(item) <= 500 for item in value)
+        ):
+            safe_value = list(value)
+        else:
+            continue
+        result.append({"key": key, "label": label.strip(), "value": safe_value})
+    return result

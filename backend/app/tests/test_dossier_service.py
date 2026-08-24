@@ -20,6 +20,7 @@ from app.modules.dossiers.errors import (
     DossierForbiddenError,
     DossierInvalidStateError,
     DossierNotFoundError,
+    DossierValidationError,
 )
 from app.modules.dossiers.models import (
     Category,
@@ -110,7 +111,7 @@ def _principal(user: User, *roles: str) -> AuthPrincipal:
         user_id=user.id,
         session_id=uuid4(),
         email=user.email,
-        roles=roles or ("APPLICANT",),
+        roles=roles or ("USER",),
     )
 
 
@@ -183,6 +184,79 @@ def test_owner_can_create_list_update_and_soft_delete_draft() -> None:
     asyncio.run(exercise())
 
 
+def test_content_admin_can_publish_type_and_applicant_data_is_validated() -> None:
+    async def exercise() -> None:
+        service, _, engine, users, _ = await _build_service()
+        administrator = _principal(users["manager"], "SUPER_ADMIN")
+        applicant = _principal(users["owner"], "USER")
+        definition = {
+            "fields": [
+                {
+                    "key": "work_name",
+                    "type": "text",
+                    "label": "Tên tác phẩm",
+                    "required": True,
+                    "minLength": 3,
+                },
+                {
+                    "key": "format",
+                    "type": "select",
+                    "label": "Định dạng",
+                    "required": True,
+                    "options": ["BOOK", "FILM"],
+                },
+            ],
+            "requirements": [{"key": "ownership", "fileRoles": ["OWNERSHIP_PROOF"]}],
+            "reviewChecklist": [{"key": "identity", "required": True}],
+        }
+
+        dossier_type = await service.create_dossier_type(
+            administrator,
+            category_id=CATEGORY_ID,
+            code="CULTURAL_WORK",
+            name="Tác phẩm văn hóa",
+            schema=definition,
+        )
+        assert dossier_type.current_version.version_no == 1
+        active_types = await service.list_active_dossier_types(applicant)
+        assert active_types[0].id == dossier_type.id
+
+        created = await service.create_dossier(
+            applicant,
+            CreateDossier(
+                category_id=CATEGORY_ID,
+                title="Hồ sơ tác phẩm",
+                dossier_type_version_id=dossier_type.current_version.id,
+                form_data={"work_name": "  Trống đồng  ", "format": "BOOK"},
+            ),
+        )
+        assert created.dossier_type_id == dossier_type.id
+        assert created.form_data == {"work_name": "Trống đồng", "format": "BOOK"}
+
+        with pytest.raises(DossierValidationError, match="work_name"):
+            await service.create_dossier(
+                applicant,
+                CreateDossier(
+                    category_id=CATEGORY_ID,
+                    title="Hồ sơ thiếu dữ liệu",
+                    dossier_type_version_id=dossier_type.current_version.id,
+                    form_data={"format": "BOOK"},
+                ),
+            )
+
+        with pytest.raises(DossierForbiddenError):
+            await service.create_dossier_type_version(
+                applicant,
+                dossier_type.id,
+                schema=definition,
+            )
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 def test_dossier_and_audit_record_roll_back_together(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -221,7 +295,7 @@ def test_applicant_must_complete_profile_before_creating_dossier() -> None:
             user_id=users["owner"].id,
             session_id=uuid4(),
             email=users["owner"].email,
-            roles=("APPLICANT",),
+            roles=("USER",),
             account_type=AccountType.INDIVIDUAL_APPLICANT,
         )
 
@@ -258,7 +332,7 @@ def test_applicant_must_complete_profile_before_creating_dossier() -> None:
 def test_organization_scope_allows_read_but_only_manager_mutation() -> None:
     async def exercise() -> None:
         service, _, engine, users, organization = await _build_service()
-        manager = _principal(users["manager"], "ORG_MANAGER")
+        manager = _principal(users["manager"], "USER")
         created = await service.create_dossier(
             manager,
             CreateDossier(
@@ -306,7 +380,7 @@ def test_invalid_category_role_and_non_editable_state_are_rejected() -> None:
             )
         with pytest.raises(DossierForbiddenError):
             await service.create_dossier(
-                _principal(users["owner"], "REVIEWER"),
+                _principal(users["owner"], "MODERATOR"),
                 CreateDossier(category_id=CATEGORY_ID, title="Sai vai trò"),
             )
 

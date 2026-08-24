@@ -37,6 +37,12 @@ def test_production_preview_still_rejects_raw_blockchain_private_keys() -> None:
         preview_settings(blockchain_signer_private_key="0x" + "11" * 32)
 
 
+def test_production_preview_treats_an_empty_signer_key_as_unset() -> None:
+    settings = preview_settings(blockchain_signer_private_key="")
+
+    assert settings.blockchain_signer_private_key is None
+
+
 def test_preview_denies_business_mutations_but_not_auth_contracts() -> None:
     app = create_application(settings=preview_settings())
     client = TestClient(app, raise_server_exceptions=False)

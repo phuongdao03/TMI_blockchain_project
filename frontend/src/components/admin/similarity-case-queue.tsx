@@ -14,7 +14,7 @@ function AssignmentRow({ item }: { item: SimilarityCase }) {
     queryKey: ["staff-accounts", "active-reviewers"],
     queryFn: () =>
       staffAccountsApi.list({
-        role: "REVIEWER",
+        role: "MODERATOR",
         status: "ACTIVE",
         pageSize: 100,
       }),

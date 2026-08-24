@@ -20,8 +20,10 @@ def test_cloudinary_signatures_and_expiring_private_url() -> None:
             resource_type="image",
             timestamp=1_596_000_000,
             allowed_format="png",
+            max_bytes=2_048,
         )
         assert issued.signature == gateway.sign_parameters(issued.parameters)
+        assert issued.parameters["max_file_size"] == "2048"
         assert gateway.verify_upload_result(
             public_id="sample",
             version=1_315_063_250,

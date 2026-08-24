@@ -33,7 +33,7 @@ from app.modules.public.models import (
 )
 from app.modules.public.publication_policy import publication_checklist
 
-PUBLICATION_ADMIN_ROLES = frozenset({"CONTENT_ADMIN", "SUPER_ADMIN"})
+PUBLICATION_ADMIN_ROLES = frozenset({"SUPER_ADMIN"})
 logger = logging.getLogger(__name__)
 
 

@@ -18,6 +18,16 @@ contract CertificateRegistry is AccessControl, Pausable {
         bool revoked;
     }
 
+    /// @dev Append-only data for an individual certificate version. Revocation
+    /// state belongs to the certificate as a whole and is joined at read time.
+    struct CertificateVersionRecord {
+        bytes32 dossierHash;
+        bytes32 metadataHash;
+        uint64 issuedAt;
+        uint64 expiresAt;
+        uint32 version;
+    }
+
     struct DocumentEvidenceRecord {
         bytes32 commitment;
         bytes32 previousEvidenceKey;
@@ -27,6 +37,7 @@ contract CertificateRegistry is AccessControl, Pausable {
 
     error CertificateAlreadyExists(bytes32 certificateId);
     error CertificateNotFound(bytes32 certificateId);
+    error CertificateVersionNotFound(bytes32 certificateId, uint32 version);
     error CertificateIsRevoked(bytes32 certificateId);
     error VersionNotIncreasing(uint32 currentVersion, uint32 requestedVersion);
     error DocumentEvidenceAlreadyExists(bytes32 evidenceKey);
@@ -61,6 +72,8 @@ contract CertificateRegistry is AccessControl, Pausable {
     );
 
     mapping(bytes32 certificateId => CertificateRecord record) private _certificates;
+    mapping(bytes32 certificateId => mapping(uint32 version => CertificateVersionRecord record))
+        private _certificateVersions;
     mapping(bytes32 evidenceKey => DocumentEvidenceRecord record) private _documentEvidence;
     mapping(bytes32 evidenceKey => bytes32 successorKey) private _documentEvidenceSuccessor;
 
@@ -89,6 +102,7 @@ contract CertificateRegistry is AccessControl, Pausable {
             version: 1,
             revoked: false
         });
+        _recordCertificateVersion(certificateId, _certificates[certificateId]);
         emit CertificateIssued(certificateId, dossierHash, metadataHash, issuedAt, expiresAt);
     }
 
@@ -106,6 +120,7 @@ contract CertificateRegistry is AccessControl, Pausable {
         record.dossierHash = dossierHash;
         record.metadataHash = metadataHash;
         record.version = version;
+        _recordCertificateVersion(certificateId, record);
         emit CertificateUpdated(certificateId, dossierHash, metadataHash, version);
     }
 
@@ -128,6 +143,28 @@ contract CertificateRegistry is AccessControl, Pausable {
     {
         CertificateRecord storage record = _requiredCertificate(certificateId);
         return record;
+    }
+
+    /// @notice Returns the immutable hashes for a specific certificate version.
+    /// @dev The returned revocation state is certificate-wide, so a revoked
+    /// certificate cannot be represented as valid through an older QR code.
+    function getCertificateVersion(bytes32 certificateId, uint32 version)
+        external
+        view
+        returns (CertificateRecord memory)
+    {
+        CertificateRecord storage current = _requiredCertificate(certificateId);
+        CertificateVersionRecord storage record = _certificateVersions[certificateId][version];
+        if (record.version == 0) revert CertificateVersionNotFound(certificateId, version);
+        return CertificateRecord({
+            dossierHash: record.dossierHash,
+            metadataHash: record.metadataHash,
+            revocationReasonHash: current.revocationReasonHash,
+            issuedAt: record.issuedAt,
+            expiresAt: record.expiresAt,
+            version: record.version,
+            revoked: current.revoked
+        });
     }
 
     function anchorDocumentEvidence(
@@ -217,5 +254,17 @@ contract CertificateRegistry is AccessControl, Pausable {
     {
         record = _certificates[certificateId];
         if (record.version == 0) revert CertificateNotFound(certificateId);
+    }
+
+    function _recordCertificateVersion(bytes32 certificateId, CertificateRecord storage certificate)
+        private
+    {
+        _certificateVersions[certificateId][certificate.version] = CertificateVersionRecord({
+            dossierHash: certificate.dossierHash,
+            metadataHash: certificate.metadataHash,
+            issuedAt: certificate.issuedAt,
+            expiresAt: certificate.expiresAt,
+            version: certificate.version
+        });
     }
 }

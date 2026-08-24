@@ -300,7 +300,7 @@ class SimilarityReviewService:
             principal,
             PolicyRequirement(
                 permission="similarity.review",
-                compatible_roles=frozenset({"REVIEWER"}),
+                compatible_roles=frozenset({"MODERATOR"}),
                 allow_super_admin=False,
             ),
             ReviewForbiddenError,

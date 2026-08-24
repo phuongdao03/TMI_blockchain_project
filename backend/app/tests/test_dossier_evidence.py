@@ -23,6 +23,7 @@ from app.modules.dossiers.models import (
     Dossier,
     DossierEvidence,
     DossierVersion,
+    EvidenceVisibility,
 )
 from app.modules.dossiers.service import DossierService
 from app.modules.dossiers.types import (
@@ -120,7 +121,7 @@ def _principal(user: User) -> AuthPrincipal:
         user_id=user.id,
         session_id=uuid4(),
         email=user.email,
-        roles=("APPLICANT",),
+        roles=("USER",),
     )
 
 
@@ -248,6 +249,108 @@ def test_evidence_rejects_pending_foreign_media_and_locked_rows() -> None:
                 EvidenceChanges(
                     title="Không được sửa",
                     provided_fields=frozenset({"title"}),
+                ),
+            )
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_document_rules_enforce_type_mime_count_and_server_owned_visibility() -> None:
+    async def exercise() -> None:
+        service, _, engine, users, assets = await _build_service()
+        applicant = _principal(users["owner"])
+        administrator = AuthPrincipal(
+            user_id=users["owner"].id,
+            session_id=uuid4(),
+            email=users["owner"].email,
+            roles=("SUPER_ADMIN",),
+        )
+        dossier_type = await service.create_dossier_type(
+            administrator,
+            category_id=CATEGORY_ID,
+            code="BRANDED_WORK",
+            name="Branded work",
+            schema={
+                "fields": [],
+                "documentRules": [
+                    {
+                        "key": "OWNERSHIP_PROOF",
+                        "label": "Ownership proof",
+                        "documentType": "OWNERSHIP_PROOF",
+                        "required": True,
+                        "allowedMimeTypes": ["application/pdf"],
+                        "maxBytes": 30 * 1024 * 1024,
+                        "maxCount": 1,
+                        "defaultVisibility": "INTERNAL",
+                    },
+                    {
+                        "key": "ARTWORK_IMAGE",
+                        "label": "Artwork image",
+                        "documentType": "ARTWORK_IMAGE",
+                        "required": False,
+                        "allowedMimeTypes": ["image/jpeg", "image/png"],
+                        "maxBytes": 20 * 1024 * 1024,
+                        "maxCount": 1,
+                        "defaultVisibility": "PUBLIC_PREVIEW",
+                    },
+                ],
+            },
+        )
+        dossier = await service.create_dossier(
+            applicant,
+            CreateDossier(
+                category_id=CATEGORY_ID,
+                dossier_type_version_id=dossier_type.current_version.id,
+                title="Document rule protected dossier",
+                form_data={},
+            ),
+        )
+        detail = await service.get_dossier_detail(applicant, dossier.id)
+        assert [rule.key for rule in detail.document_rules] == [
+            "OWNERSHIP_PROOF",
+            "ARTWORK_IMAGE",
+        ]
+        assert detail.document_rules[0].default_visibility == "INTERNAL"
+
+        attached = await service.attach_evidence(
+            applicant,
+            dossier.id,
+            CreateEvidence(
+                media_asset_id=assets["active"].id,
+                evidence_type="OWNERSHIP_PROOF",
+                evidence_role="OWNERSHIP_PROOF",
+                access_scope=EvidenceVisibility.PUBLIC,
+                is_public=True,
+                title="Ownership evidence",
+            ),
+        )
+        assert attached.evidence_role == "OWNERSHIP_PROOF"
+        assert attached.access_scope is EvidenceVisibility.INTERNAL
+        assert attached.is_public is False
+
+        with pytest.raises(DossierValidationError, match="not allowed"):
+            await service.attach_evidence(
+                applicant,
+                dossier.id,
+                CreateEvidence(
+                    media_asset_id=assets["active"].id,
+                    evidence_type="ARTWORK_IMAGE",
+                    evidence_role="ARTWORK_IMAGE",
+                    title="PDF is not an image",
+                ),
+            )
+        with pytest.raises(DossierValidationError, match="maximum"):
+            await service.attach_evidence(
+                applicant,
+                dossier.id,
+                CreateEvidence(
+                    media_asset_id=assets["active"].id,
+                    evidence_type="OWNERSHIP_PROOF",
+                    evidence_role="OWNERSHIP_PROOF",
+                    title="Second ownership proof",
                 ),
             )
 

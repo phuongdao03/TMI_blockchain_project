@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { trackPublicCatalog } from "@/lib/analytics/public-catalog";
 import { publicApi } from "@/lib/api/client";
 import type { PublicCatalogInitialData, PublicWorkSort } from "@/lib/api/types";
-import { isPreviewRelease } from "@/lib/release-mode";
 
 export interface CatalogParameters {
   query?: string;
@@ -39,30 +38,26 @@ export function PublicLibrary({
   ...parameters
 }: CatalogParameters & { initialData?: PublicCatalogInitialData }) {
   const [filterOpen, setFilterOpen] = useState(false);
-  const preview = isPreviewRelease();
   const closeButton = useRef<HTMLButtonElement>(null);
   const filters = { ...parameters, pageSize: 12 };
   const works = useQuery({
     queryKey: ["public-catalog-works", filters],
     queryFn: () => publicApi.works(filters),
     initialData: initialData?.works,
-    enabled: !preview,
   });
   const featured = useQuery({
     queryKey: ["public-catalog-featured"],
     queryFn: () => publicApi.featuredWorks(3),
-    enabled: !preview && parameters.page === 1 && !hasFilters(parameters),
+    enabled: parameters.page === 1 && !hasFilters(parameters),
     initialData: initialData?.featured,
   });
   const categories = useQuery({
     queryKey: ["public-categories"],
     queryFn: publicApi.categories,
-    enabled: !preview,
   });
   const tags = useQuery({
     queryKey: ["public-tags"],
     queryFn: publicApi.tags,
-    enabled: !preview,
   });
 
   useEffect(() => {
@@ -84,7 +79,7 @@ export function PublicLibrary({
   const activeFilterCount = countFilters(parameters);
 
   return (
-    <div className="space-y-10">
+    <div className="public-theme-surface space-y-10">
       {featured.data?.length ? (
         <section aria-labelledby="featured-heading">
           <div className="mb-5 flex items-end justify-between gap-4">
@@ -106,12 +101,12 @@ export function PublicLibrary({
           <div
             className={
               featured.data.length > 1
-                ? "grid gap-x-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,.65fr)]"
+                ? "grid gap-x-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,.65fr)]"
                 : "max-w-5xl"
             }
           >
             {featured.data.map((work, index) => (
-              <div className={index === 0 ? "lg:row-span-2" : ""} key={work.id}>
+              <div className={index === 0 ? "xl:row-span-2" : ""} key={work.id}>
                 <PublicWorkCard
                   position={index + 1}
                   source="featured"
@@ -181,15 +176,16 @@ export function PublicLibrary({
           </form>
         </div>
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <div className="mt-8 grid gap-8 lg:grid-cols-[13rem_minmax(0,1fr)]">
           <div aria-label="Bộ lọc kết quả" className="hidden lg:block">
-            <div className="sticky top-24 border-l border-white/15 pl-5">
+            <div className="sticky top-24 border-l border-white/15 pl-4">
               <div className="flex items-center gap-2 text-white">
                 <SlidersHorizontal className="size-4 text-gold-300" />
-                <h2 className="font-bold">Tinh chỉnh kết quả</h2>
+                <h2 className="text-sm font-bold">Bộ lọc đề cử</h2>
               </div>
               <FilterForm
                 categories={categories.data ?? []}
+                compact
                 parameters={parameters}
                 tags={tags.data ?? []}
               />
@@ -248,7 +244,10 @@ export function PublicLibrary({
                 </Link>
               </div>
             ) : (
-              <div className="border-y border-white/15">
+              <div
+                className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
+                data-testid="public-album-grid"
+              >
                 {works.data.data.map((work, index) => (
                   <PublicWorkCard
                     key={work.id}
@@ -310,21 +309,26 @@ export function PublicLibrary({
 
 function FilterForm({
   categories,
+  compact = false,
   parameters,
   tags,
 }: {
   categories: Awaited<ReturnType<typeof publicApi.categories>>;
+  compact?: boolean;
   parameters: CatalogParameters;
   tags: Awaited<ReturnType<typeof publicApi.tags>>;
 }) {
+  const fieldClass = compact
+    ? "min-h-10 w-full rounded-lg border border-white/10 bg-ink-950 px-3 text-sm text-white outline-none transition focus:border-gold-300 focus:ring-2 focus:ring-gold-300/20"
+    : controlClass;
   return (
-    <form className="mt-5 space-y-5" method="get">
+    <form className={compact ? "mt-4 space-y-4" : "mt-5 space-y-5"} method="get">
       <input name="query" type="hidden" value={parameters.query ?? ""} />
       <input name="sort" type="hidden" value={parameters.sort ?? "newest"} />
       <label className="block text-sm font-bold text-slate-300">
         Danh mục
         <select
-          className={`${controlClass} mt-2`}
+          className={`${fieldClass} mt-2`}
           defaultValue={parameters.category ?? ""}
           key={`${parameters.category}-${categories.length}`}
           name="category"
@@ -342,7 +346,7 @@ function FilterForm({
       <label className="block text-sm font-bold text-slate-300">
         Thẻ chủ đề
         <select
-          className={`${controlClass} mt-2`}
+          className={`${fieldClass} mt-2`}
           defaultValue={parameters.tag ?? ""}
           key={`${parameters.tag}-${tags.length}`}
           name="tag"
@@ -357,11 +361,11 @@ function FilterForm({
             ))}
         </select>
       </label>
-      <div className="grid grid-cols-2 gap-3">
+      <div className={compact ? "space-y-3" : "grid grid-cols-2 gap-3"}>
         <label className="text-sm font-bold text-slate-300">
           Từ ngày
           <input
-            className={`${controlClass} mt-2 px-3`}
+            className={`${fieldClass} mt-2 px-3`}
             defaultValue={parameters.publishedFrom}
             name="publishedFrom"
             type="date"
@@ -370,7 +374,7 @@ function FilterForm({
         <label className="text-sm font-bold text-slate-300">
           Đến ngày
           <input
-            className={`${controlClass} mt-2 px-3`}
+            className={`${fieldClass} mt-2 px-3`}
             defaultValue={parameters.publishedTo}
             name="publishedTo"
             type="date"

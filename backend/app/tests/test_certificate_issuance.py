@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID, uuid4
@@ -7,6 +8,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
+    AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
@@ -38,6 +40,7 @@ from app.modules.dossiers.models import (
 )
 from app.modules.media.gateway import MediaGateway
 from app.modules.media.models import MediaAsset  # noqa: F401
+from app.modules.public.share_service import PublicShareConfigurationError
 
 NOW = datetime(2026, 7, 31, 10, 0, tzinfo=UTC)
 
@@ -85,6 +88,10 @@ class SuccessfulStorage:
 
 async def _issuance_service(
     status: DossierStatus,
+    *,
+    existing_certificate: bool = True,
+    token_factory: Callable[[], str] | None = None,
+    public_base_url: str = "https://tmi.example",
 ) -> tuple[CertificateService, AsyncEngine, UUID]:
     engine = create_async_engine("sqlite+aiosqlite://")
     sessions = async_sessionmaker(engine, expire_on_commit=False)
@@ -148,18 +155,11 @@ async def _issuance_service(
         metadata_hash="55" * 32,
         blockchain_transaction_id=transaction.id,
     )
+    fixtures: list[object] = [user, category, dossier, dossier_version]
+    if existing_certificate:
+        fixtures.extend([certificate, transaction, version])
     async with sessions() as session:
-        session.add_all(
-            [
-                user,
-                category,
-                dossier,
-                dossier_version,
-                certificate,
-                transaction,
-                version,
-            ]
-        )
+        session.add_all(fixtures)
         await session.commit()
     service = CertificateService(
         session=sessions(),
@@ -172,13 +172,67 @@ async def _issuance_service(
             key=bytes(range(32)),
             key_id="certificate-test-v1",
         ),
-        public_base_url="https://tmi.example",
+        public_base_url=public_base_url,
         environment="test",
         delivery_ttl_seconds=300,
         validity_days=365,
         clock=lambda: NOW,
+        token_factory=token_factory,
     )
     return service, engine, dossier.id
+
+
+def test_prepare_certificate_uses_the_canonical_public_verify_route() -> None:
+    async def scenario() -> None:
+        token = "a" * 43
+        service, engine, dossier_id = await _issuance_service(
+            DossierStatus.PAID,
+            existing_certificate=False,
+            token_factory=lambda: token,
+        )
+
+        certificate = await service._prepare_certificate(dossier_id)  # noqa: SLF001
+
+        assert certificate.qr_payload == f"https://tmi.example/verify/{token}"
+        versions = await service._certificates.list_versions(certificate.id)  # noqa: SLF001
+        assert len(versions) == 1
+        assert versions[0].qr_payload == certificate.qr_payload
+        assert versions[0].public_token_hash == certificate.public_token_hash
+        await service._session.close()  # noqa: SLF001
+        await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize(
+    "public_base_url",
+    (
+        "http://tmi.example",
+        "https://user:password@tmi.example",
+        "https://tmi.example/?tracking=1",
+        "https://tmi.example/#section",
+    ),
+)
+def test_certificate_qr_rejects_an_unsafe_public_origin(
+    public_base_url: str,
+) -> None:
+    with pytest.raises(PublicShareConfigurationError):
+        CertificateService(
+            session=cast(AsyncSession, object()),
+            media_gateway=cast(MediaGateway, object()),
+            storage=cast(CertificateStorage, object()),
+            renderer=cast(CertificatePdfRenderer, FailingRenderer()),
+            metadata_builder=CertificateMetadataBuilder(),
+            numbering=CertificateNumberingService(),
+            payload_cipher=OutboxPayloadCipher(
+                key=bytes(range(32)),
+                key_id="certificate-test-v1",
+            ),
+            public_base_url=public_base_url,
+            environment="production",
+            delivery_ttl_seconds=300,
+            validity_days=365,
+        )
 
 
 def test_pending_anchor_is_a_noop_and_safe_to_replay() -> None:

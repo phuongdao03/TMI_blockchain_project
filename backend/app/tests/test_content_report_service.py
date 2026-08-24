@@ -110,7 +110,7 @@ def test_anonymous_user_dedup_permission_and_resolution(tmp_path: Path) -> None:
             with pytest.raises(PublicWorkForbiddenError):
                 await service.list_admin(user, status=None, page=1, page_size=20)
 
-            admin = _principal(("CONTENT_ADMIN",))
+            admin = _principal(("SUPER_ADMIN",))
             reviewing = await service.transition(
                 admin,
                 anonymous_id,

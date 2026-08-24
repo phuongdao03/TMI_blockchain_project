@@ -21,18 +21,97 @@ export function PublicWorkCard({
   const [imageFailed, setImageFailed] = useState(false);
   const href = `/works/${encodeURIComponent(work.slug)}`;
   const isLead = source === "featured" && position === 1;
-  const isFeaturedItem = source === "featured";
-  const layout = isLead
-    ? "editorial-lead"
-    : isFeaturedItem
-      ? "editorial-support"
-      : "catalog-row";
+
+  if (source === "list") {
+    return (
+      <article
+        className="group min-w-0"
+        data-layout="catalog-album-tile"
+      >
+        <Link
+          aria-label={`Xem đề cử ${work.title}`}
+          className="catalog-album-tile block overflow-hidden border border-white/15 bg-ink-900 transition hover:-translate-y-0.5 hover:border-gold-300/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold-300"
+          href={href}
+          onClick={() =>
+            trackPublicCatalog({
+              name: "catalog_work_opened",
+              properties: { position, slug: work.slug, source },
+            })
+          }
+        >
+          <div className="relative aspect-[4/3] overflow-hidden bg-ink-800">
+            {work.thumbnailUrl && !imageFailed ? (
+              <>
+                {!imageReady ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-0 animate-pulse bg-[linear-gradient(110deg,#3A1514_25%,#6E251E_45%,#3A1514_65%)] bg-[length:200%_100%]"
+                    data-testid="image-loading"
+                  />
+                ) : null}
+                <Image
+                  alt={work.thumbnailAltText || work.title}
+                  className={`object-cover transition duration-700 group-hover:scale-[1.04] ${imageReady ? "opacity-85" : "opacity-0"}`}
+                  fill
+                  onError={() => setImageFailed(true)}
+                  onLoad={() => setImageReady(true)}
+                  sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                  src={work.thumbnailUrl}
+                  unoptimized
+                />
+              </>
+            ) : (
+              <span className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(246,197,21,.2),transparent_32%),linear-gradient(145deg,#751C19,#240908)]" />
+            )}
+            <span className="absolute inset-0 bg-gradient-to-t from-ink-950/85 via-ink-950/5 to-transparent" />
+            <span className="absolute top-3 left-3 border border-white/20 bg-ink-950/80 px-2.5 py-1 text-[0.6rem] font-bold tracking-[0.12em] text-white uppercase backdrop-blur">
+              {work.categoryName}
+            </span>
+            <span className="absolute right-3 bottom-3 font-mono text-xs font-bold text-white/75">
+              {String(position).padStart(2, "0")}
+            </span>
+          </div>
+          <div className="min-w-0 p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-3 text-xs text-slate-400">
+              <time dateTime={work.publishedAt}>
+                {new Intl.DateTimeFormat("vi-VN", {
+                  month: "2-digit",
+                  year: "numeric",
+                }).format(new Date(work.publishedAt))}
+              </time>
+              <span className="truncate">{work.authorDisplayName || "Tác giả công khai"}</span>
+            </div>
+            <h2 className="mt-3 line-clamp-2 text-xl font-bold tracking-[-0.025em] text-white transition-colors group-hover:text-gold-200">
+              {work.title}
+            </h2>
+            <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-400">
+              {work.shortDescription}
+            </p>
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-wrap gap-x-2 gap-y-1 text-xs text-slate-400">
+                {work.tags.slice(0, 2).map((tag) => (
+                  <span key={tag.slug}>#{tag.name}</span>
+                ))}
+              </div>
+              <ArrowUpRight
+                aria-hidden="true"
+                className="size-4 shrink-0 text-gold-300"
+              />
+            </div>
+          </div>
+        </Link>
+      </article>
+    );
+  }
+
+  const isFeaturedItem = true;
+  const layout = isLead ? "editorial-lead" : "editorial-support";
 
   return (
     <article
       className={
         isLead
-          ? "group grid min-w-0 gap-6 border-t border-white/15 pt-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,.85fr)]"
+          ? "group grid min-w-0 gap-6 border-t border-white/15 pt-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,.85fr)]"
           : "group grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] gap-4 border-t border-white/15 py-5 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-center"
       }
       data-layout={layout}
@@ -55,7 +134,7 @@ export function PublicWorkCard({
             {!imageReady ? (
               <span
                 aria-hidden="true"
-                className="absolute inset-0 animate-pulse bg-[linear-gradient(110deg,#141d2e_25%,#202c42_45%,#141d2e_65%)] bg-[length:200%_100%]"
+                className="absolute inset-0 animate-pulse bg-[linear-gradient(110deg,#3A1514_25%,#6E251E_45%,#3A1514_65%)] bg-[length:200%_100%]"
                 data-testid="image-loading"
               />
             ) : null}
@@ -71,7 +150,7 @@ export function PublicWorkCard({
             />
           </>
         ) : (
-          <span className="absolute inset-0 flex items-end overflow-hidden bg-[radial-gradient(circle_at_70%_20%,rgba(212,167,44,.22),transparent_32%),linear-gradient(145deg,#192338,#070a12)] p-5">
+          <span className="absolute inset-0 flex items-end overflow-hidden bg-[radial-gradient(circle_at_70%_20%,rgba(246,197,21,.2),transparent_32%),linear-gradient(145deg,#751C19,#240908)] p-5">
             <span
               aria-hidden="true"
               className="absolute -top-12 -right-8 font-mono text-[11rem] font-bold leading-none text-white/[0.035]"
@@ -89,7 +168,7 @@ export function PublicWorkCard({
         </span>
       </Link>
 
-      <div className={isLead ? "flex flex-col py-1 lg:py-3" : "min-w-0"}>
+      <div className={isLead ? "flex flex-col py-1 xl:py-3" : "min-w-0"}>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
           <span className="font-mono">
             {String(position).padStart(2, "0")} / TMI

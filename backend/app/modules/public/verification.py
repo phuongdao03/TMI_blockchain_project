@@ -15,7 +15,10 @@ from app.modules.blockchain.gateway import (
     CertificateRecord,
 )
 from app.modules.blockchain.models import CertificateStatus
-from app.modules.certificates.metadata import CertificateMetadataBuilder
+from app.modules.certificates.metadata import (
+    PUBLIC_EVIDENCE_SCOPES,
+    CertificateMetadataBuilder,
+)
 from app.modules.dossiers.canonical import snapshot_sha256
 
 
@@ -35,37 +38,68 @@ class PublicEvidenceProof:
     sha256: str
 
 
-def public_evidence_proofs(
+@dataclass(frozen=True, slots=True)
+class PublicEvidenceMetadata:
+    """Safe, scope-qualified evidence metadata from a certificate snapshot."""
+
+    title: str
+    evidence_type: str
+    sha256: str
+    access_scope: str
+
+
+def public_evidence_metadata(
     metadata: dict[str, object],
-) -> tuple[PublicEvidenceProof, ...]:
-    """Project only explicitly public, well-formed document digests."""
+) -> tuple[PublicEvidenceMetadata, ...]:
+    """Project only explicitly public, well-formed document metadata.
+
+    Certificates created before access scopes were recorded are intentionally
+    omitted: ``isPublic`` alone is not an authority to disclose an attachment.
+    """
     values = metadata.get("publicEvidences")
     if not isinstance(values, list):
         return ()
-    proofs: list[PublicEvidenceProof] = []
+    evidences: list[PublicEvidenceMetadata] = []
     for value in values:
         if not isinstance(value, dict):
             continue
         title = value.get("title")
         evidence_type = value.get("type")
         digest = value.get("sha256")
+        access_scope = value.get("accessScope")
         if (
             not isinstance(title, str)
             or not title.strip()
             or not isinstance(evidence_type, str)
             or not evidence_type.strip()
             or not isinstance(digest, str)
+            or not isinstance(access_scope, str)
+            or access_scope not in PUBLIC_EVIDENCE_SCOPES
             or re.fullmatch(r"[0-9a-fA-F]{64}", digest) is None
         ):
             continue
-        proofs.append(
-            PublicEvidenceProof(
+        evidences.append(
+            PublicEvidenceMetadata(
                 title=title.strip()[:255],
                 evidence_type=evidence_type.strip()[:64],
                 sha256=digest.lower(),
+                access_scope=access_scope,
             )
         )
-    return tuple(proofs)
+    return tuple(evidences)
+
+
+def public_evidence_proofs(
+    metadata: dict[str, object],
+) -> tuple[PublicEvidenceProof, ...]:
+    return tuple(
+        PublicEvidenceProof(
+            title=evidence.title,
+            evidence_type=evidence.evidence_type,
+            sha256=evidence.sha256,
+        )
+        for evidence in public_evidence_metadata(metadata)
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,6 +123,7 @@ class VerificationContext:
     confirmed_at: datetime | None
     dossier_code: str | None = None
     block_number: int | None = None
+    is_current_version: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -252,15 +287,27 @@ class PublicVerificationService:
             certificate_key = hashlib.sha256(
                 context.certificate_number.encode()
             ).hexdigest()
+            cache_key = f"{certificate_key}:v{context.version}"
             record = (
-                await self._cache.get(certificate_key)
+                await self._cache.get(cache_key)
                 if self._cache is not None
                 else None
             )
             if record is None:
-                record = await self._gateway.get_certificate(
-                    bytes.fromhex(certificate_key)
-                )
+                certificate_id = bytes.fromhex(certificate_key)
+                if context.is_current_version:
+                    record = await self._gateway.get_certificate(certificate_id)
+                else:
+                    version_reader = getattr(
+                        self._gateway,
+                        "get_certificate_version",
+                        None,
+                    )
+                    if not callable(version_reader):
+                        raise BlockchainGatewayError(
+                            "Historical certificate verification is unavailable."
+                        )
+                    record = await version_reader(certificate_id, context.version)
         except BlockchainGatewayError:
             status = VerificationStatus.PENDING
         else:
@@ -276,7 +323,7 @@ class PublicVerificationService:
             if status is VerificationStatus.VALID and not local_integrity_matches:
                 status = VerificationStatus.MISMATCH
             if status is VerificationStatus.VALID and self._cache is not None:
-                await self._cache.set(certificate_key, record)
+                await self._cache.set(cache_key, record)
         return VerificationView(
             status=status,
             checked_at=now,

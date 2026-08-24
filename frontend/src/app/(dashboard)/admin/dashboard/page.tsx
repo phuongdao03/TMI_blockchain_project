@@ -3,7 +3,7 @@ import { RoleGate } from "@/components/auth/role-gate";
 
 export default function AdminDashboardPage() {
   return (
-    <RoleGate allowed={["FINANCE_ADMIN", "BLOCKCHAIN_ADMIN", "SUPER_ADMIN"]}>
+    <RoleGate allowed={["SUPER_ADMIN"]}>
       <OperationsDashboard />
     </RoleGate>
   );

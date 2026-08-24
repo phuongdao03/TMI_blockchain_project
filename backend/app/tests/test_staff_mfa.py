@@ -35,12 +35,12 @@ def test_privileged_staff_requires_recent_totp_evidence() -> None:
     policy = StaffMfaPolicy(max_age=timedelta(hours=12))
 
     with pytest.raises(DomainError) as missing:
-        policy.require(roles=("REVIEWER",), mfa_verified_at=None, now=NOW)
+        policy.require(roles=("MODERATOR",), mfa_verified_at=None, now=NOW)
     assert missing.value.code == "STAFF_MFA_REQUIRED"
 
     with pytest.raises(DomainError) as stale:
         policy.require(
-            roles=("COUNCIL_MEMBER",),
+            roles=("MODERATOR",),
             mfa_verified_at=NOW - timedelta(hours=12),
             now=NOW,
         )
@@ -55,7 +55,7 @@ def test_privileged_staff_requires_recent_totp_evidence() -> None:
 
 def test_mfa_is_not_required_for_applicant_sessions() -> None:
     StaffMfaPolicy(max_age=timedelta(hours=12)).require(
-        roles=("APPLICANT",),
+        roles=("USER",),
         mfa_verified_at=None,
         now=NOW,
     )
@@ -83,7 +83,7 @@ def test_privileged_application_session_preserves_and_expires_mfa_evidence(
                 status=UserStatus.ACTIVE,
                 email_verified_at=NOW,
             )
-            role = Role(code="REVIEWER")
+            role = Role(code="MODERATOR")
             session.add_all((user, role))
             await session.flush()
             session.add(UserRole(user_id=user.id, role_id=role.id))
@@ -153,7 +153,7 @@ def test_staff_mfa_recovery_suspends_then_requires_same_firebase_identity(
                 mfa_recovery_authorized_at=NOW,
             )
             admin_role = Role(code="SUPER_ADMIN")
-            staff_role = Role(code="REVIEWER")
+            staff_role = Role(code="MODERATOR")
             session.add_all((admin, staff, admin_role, staff_role))
             await session.flush()
             session.add_all(

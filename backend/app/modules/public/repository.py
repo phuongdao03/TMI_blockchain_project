@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import cast
 
 from sqlalchemy import Select, func, or_, select
@@ -64,7 +64,10 @@ class PublicRepository:
     async def get_asset(self, slug: str) -> PublicRow | None:
         row = (
             await self._session.execute(
-                self._public_statement().where(Dossier.slug == slug)
+                self._public_statement().where(
+                    Dossier.slug == slug,
+                    self._published_condition(),
+                )
             )
         ).one_or_none()
         return cast(PublicRow | None, row)
@@ -87,8 +90,21 @@ class PublicRepository:
         return tuple((row[0], row[1]) for row in rows)
 
     async def find_by_token(self, token_hash: str) -> VerificationContext | None:
+        # Version tokens are authoritative.  They keep a QR printed for a
+        # superseded certificate bound to its original metadata and dossier
+        # snapshot instead of silently resolving the current version.
+        context = await self._verification_context(
+            CertificateVersion.public_token_hash == token_hash,
+            historical=True,
+        )
+        if context is not None:
+            return context
+        # Certificates issued before version-bound QR tokens stored the token
+        # only on the aggregate.  Retain their current-version link during the
+        # migration window, but never use it to override a version token.
         return await self._verification_context(
-            Certificate.public_token_hash == token_hash
+            (Certificate.public_token_hash == token_hash)
+            & CertificateVersion.public_token_hash.is_(None),
         )
 
     async def find_by_number(self, number: str) -> VerificationContext | None:
@@ -101,7 +117,8 @@ class PublicRepository:
         transaction_hash: str,
     ) -> VerificationContext | None:
         return await self._verification_context(
-            func.lower(BlockchainTransaction.tx_hash) == transaction_hash
+            func.lower(BlockchainTransaction.tx_hash) == transaction_hash,
+            historical=True,
         )
 
     async def list_certificate_versions(
@@ -136,10 +153,27 @@ class PublicRepository:
     async def _verification_context(
         self,
         condition: ColumnElement[bool],
+        *,
+        historical: bool = False,
     ) -> VerificationContext | None:
+        status_filter: tuple[CertificateVersionStatus, ...] = (
+            (
+                CertificateVersionStatus.ACTIVE,
+                CertificateVersionStatus.SUPERSEDED,
+                CertificateVersionStatus.REVOKED,
+            )
+            if historical
+            else ()
+        )
+        filters: list[ColumnElement[bool]] = [
+            condition,
+            self._verification_public_condition(),
+        ]
+        if status_filter:
+            filters.append(CertificateVersion.status.in_(status_filter))
         row = (
             await self._session.execute(
-                self._public_statement()
+                self._verification_statement(historical=historical)
                 .add_columns(
                     DossierVersion.canonical_hash,
                     DossierVersion.snapshot_json,
@@ -148,7 +182,7 @@ class PublicRepository:
                     DossierVersion,
                     DossierVersion.id == CertificateVersion.dossier_version_id,
                 )
-                .where(condition)
+                .where(*filters)
             )
         ).one_or_none()
         if row is None:
@@ -162,12 +196,18 @@ class PublicRepository:
             dossier_hash,
             dossier_snapshot,
         ) = row
+        asset_title, category_name, dossier_code = self._frozen_identity(
+            version.metadata_json
+        )
         return VerificationContext(
             certificate_id=certificate.id,
             certificate_number=certificate.certificate_number,
             certificate_status=certificate.status,
-            asset_title=dossier.title,
-            category_name=category.name,
+            # A QR can point to a superseded version.  Never describe that
+            # version using the mutable dossier/category rows: the labels must
+            # come from the exact metadata hash being verified on-chain.
+            asset_title=asset_title,
+            category_name=category_name,
             issued_at=certificate.issued_at,
             expires_at=certificate.expires_at,
             metadata_hash=version.metadata_hash,
@@ -184,11 +224,56 @@ class PublicRepository:
             confirmed_at=(
                 transaction.confirmed_at if transaction is not None else None
             ),
-            dossier_code=dossier.code,
+            dossier_code=dossier_code,
             block_number=(
                 transaction.receipt_block_number if transaction is not None else None
             ),
+            is_current_version=(
+                version.version_no == certificate.current_version_no
+            ),
         )
+
+    @staticmethod
+    def _frozen_identity(
+        metadata: object,
+    ) -> tuple[str, str, str | None]:
+        """Project user-facing labels from immutable certificate metadata.
+
+        Legacy metadata may be incomplete.  In that case use neutral labels
+        instead of falling back to mutable dossier data and accidentally
+        presenting a historic QR as the latest public work.
+        """
+
+        metadata_map = metadata if isinstance(metadata, Mapping) else {}
+        asset = metadata_map.get("asset")
+        asset_map = asset if isinstance(asset, Mapping) else {}
+        title = (
+            PublicRepository._safe_metadata_text(
+                asset_map.get("title"),
+                fallback=None,
+            )
+            or "Tài sản đã xác nhận"
+        )
+        category = (
+            PublicRepository._safe_metadata_text(
+                asset_map.get("category"),
+                fallback=None,
+            )
+            or "Chưa phân loại"
+        )
+        dossier_code = PublicRepository._safe_metadata_text(
+            metadata_map.get("dossierCode"),
+            fallback=None,
+        )
+        return title, category, dossier_code
+
+    @staticmethod
+    def _safe_metadata_text(value: object, *, fallback: str | None) -> str | None:
+        if isinstance(value, str):
+            normalized = " ".join(value.split())
+            if 1 <= len(normalized) <= 500:
+                return normalized
+        return fallback
 
     @staticmethod
     def _filters(
@@ -220,6 +305,19 @@ class PublicRepository:
         )
 
     @staticmethod
+    def _verification_public_condition() -> ColumnElement[bool]:
+        """Verification is public only after the dossier itself is public.
+
+        A published dossier can be verified by its stable certificate even when
+        it has no catalogue slug.  The public catalogue remains stricter.
+        """
+        return (
+            (Dossier.status == DossierStatus.PUBLISHED)
+            & (Dossier.visibility == DossierVisibility.PUBLIC)
+            & Dossier.deleted_at.is_(None)
+        )
+
+    @staticmethod
     def _public_statement() -> Select[
         tuple[
             Certificate,
@@ -244,6 +342,44 @@ class PublicRepository:
                 (CertificateVersion.certificate_id == Certificate.id)
                 & (CertificateVersion.version_no == Certificate.current_version_no),
             )
+            .outerjoin(
+                BlockchainTransaction,
+                BlockchainTransaction.id
+                == CertificateVersion.blockchain_transaction_id,
+            )
+        )
+
+    @staticmethod
+    def _verification_statement(
+        *,
+        historical: bool = False,
+    ) -> Select[
+        tuple[
+            Certificate,
+            CertificateVersion,
+            Dossier,
+            Category,
+            BlockchainTransaction,
+        ]
+    ]:
+        version_join: ColumnElement[bool] = (
+            CertificateVersion.certificate_id == Certificate.id
+        )
+        if not historical:
+            version_join = version_join & (
+                CertificateVersion.version_no == Certificate.current_version_no
+            )
+        return (
+            select(
+                Certificate,
+                CertificateVersion,
+                Dossier,
+                Category,
+                BlockchainTransaction,
+            )
+            .join(Dossier, Dossier.id == Certificate.dossier_id)
+            .join(Category, Category.id == Dossier.category_id)
+            .join(CertificateVersion, version_join)
             .outerjoin(
                 BlockchainTransaction,
                 BlockchainTransaction.id

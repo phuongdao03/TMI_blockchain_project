@@ -3,7 +3,7 @@ import { RoleGate } from "@/components/auth/role-gate";
 
 export default function CmsAdminPage() {
   return (
-    <RoleGate allowed={["CONTENT_ADMIN", "SUPER_ADMIN"]}>
+    <RoleGate allowed={["SUPER_ADMIN"]}>
       <CmsWorkspace />
     </RoleGate>
   );

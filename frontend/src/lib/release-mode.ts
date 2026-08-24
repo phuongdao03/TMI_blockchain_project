@@ -13,12 +13,12 @@ const restrictedPrefixes = [
 ] as const;
 
 export function releaseMode(value?: string): ReleaseMode {
-  if (value !== undefined) return value === "full" ? "full" : "preview";
+  if (value !== undefined) return value === "preview" ? "preview" : "full";
   const configured = process.env.NEXT_PUBLIC_RELEASE_MODE;
   if (configured !== undefined) {
-    return configured === "full" ? "full" : "preview";
+    return configured === "preview" ? "preview" : "full";
   }
-  return process.env.NODE_ENV === "production" ? "preview" : "full";
+  return "full";
 }
 
 export function isPreviewRelease(value?: string): boolean {

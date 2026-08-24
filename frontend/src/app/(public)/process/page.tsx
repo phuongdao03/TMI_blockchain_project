@@ -33,59 +33,37 @@ export default function ProcessPage() {
   if (preview) {
     return (
       <div className="process-page">
-        <header className="border-b border-neutral-200">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
-            <p className="text-xs font-semibold tracking-[0.18em] text-primary-700 uppercase">
-              Cách chương trình hoạt động
-            </p>
-            <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-0.04em] text-balance sm:text-6xl">
-              Hành trình từ một đề cử đến giá trị được lan tỏa.
-            </h1>
-            <p className="mt-6 max-w-2xl text-base leading-7 text-neutral-700 sm:text-lg">
+        <header className="public-page-header">
+          <div className="public-page-header__content">
+            <p>CÁCH CHƯƠNG TRÌNH HOẠT ĐỘNG</p>
+            <h1>Hành trình từ một đề cử đến giá trị được lan tỏa.</h1>
+            <p>
               Hiện tại, chương trình tập trung giúp cộng đồng khám phá nội dung
-              đã được công bố. Những hoạt động cần gửi thông tin sẽ được mở theo
-              từng giai đoạn.
+              đã được công bố. Hoạt động gửi hồ sơ được mở theo từng giai đoạn.
             </p>
           </div>
         </header>
 
-        <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <ol className="divide-y divide-neutral-200 border-y border-neutral-200">
+        <section className="public-preview-journey">
+          <ol>
             {publicJourney.map((step) => (
-              <li
-                className="grid gap-3 py-8 sm:grid-cols-[4rem_15rem_1fr] sm:items-start"
-                key={step.number}
-              >
-                <span className="font-mono text-sm font-bold text-primary-700">
-                  {step.number}
-                </span>
-                <h2 className="text-xl font-semibold">{step.title}</h2>
-                <p className="max-w-2xl leading-7 text-neutral-700">
-                  {step.detail}
-                </p>
+              <li key={step.number}>
+                <span>{step.number}</span>
+                <h2>{step.title}</h2>
+                <p>{step.detail}</p>
               </li>
             ))}
           </ol>
-
-          <aside className="mt-12 grid gap-6 border border-neutral-300 bg-white p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
+          <aside>
             <div>
-              <p className="text-xs font-bold tracking-[0.16em] text-primary-700 uppercase">
-                Giai đoạn tiếp theo
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold">
-                Cổng gửi đề cử sắp ra mắt
-              </h2>
-              <p className="mt-3 max-w-2xl leading-7 text-neutral-700">
+              <p>GIAI ĐOẠN TIẾP THEO</p>
+              <h2>Cổng gửi đề cử sắp ra mắt</h2>
+              <p>
                 Khi được mở, người tham gia sẽ có thể chuẩn bị thông tin, gửi đề
                 cử và theo dõi tiến trình ngay trong tài khoản của mình.
               </p>
             </div>
-            <Link
-              className="inline-flex min-h-12 items-center justify-center rounded-md bg-primary-600 px-5 text-sm font-bold text-white hover:bg-primary-700"
-              href="/coming-soon/submission"
-            >
-              Xem thông tin mở cổng
-            </Link>
+            <Link href="/coming-soon/submission">Xem thông tin mở cổng</Link>
           </aside>
         </section>
       </div>
@@ -93,31 +71,20 @@ export default function ProcessPage() {
   }
 
   return (
-    <div className="bg-[#fbf7f0]">
-      <header className="border-b border-neutral-200 text-neutral-950">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 pt-16 pb-14 sm:px-6 lg:grid-cols-[1fr_18rem] lg:px-8 lg:pt-24 lg:pb-20">
+    <div className="process-page">
+      <header className="public-page-header">
+        <div className="public-page-header__content public-page-header__content--split">
           <div>
-            <p className="text-xs font-semibold tracking-[0.16em] text-primary-700 uppercase">
-              Hành trình gửi hồ sơ
-            </p>
-            <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-              Mỗi bước đều rõ việc cần làm và kết quả nhận được.
-            </h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-neutral-700 sm:text-lg">
-              Xem trước việc bạn cần làm, cách TMI xử lý và kết quả nhận được ở
-              từng mốc.
+            <p>HÀNH TRÌNH GỬI HỒ SƠ</p>
+            <h1>Hành trình hồ sơ, rõ ràng từ đầu đến cuối.</h1>
+            <p>
+              Chuẩn bị thông tin, gửi hồ sơ, theo dõi phản hồi và tra cứu kết
+              quả trong một quy trình dễ theo dõi.
             </p>
           </div>
-          <div className="self-end border-l-2 border-primary-600 pl-5">
-            <p className="text-sm leading-6 text-neutral-600">
-              Chưa có tài khoản?
-            </p>
-            <Link
-              className="mt-2 inline-flex min-h-11 items-center font-semibold text-primary-700 underline decoration-2 underline-offset-4"
-              href="/register"
-            >
-              Tạo tài khoản
-            </Link>
+          <div className="public-page-header__action">
+            <p>Sẵn sàng bắt đầu?</p>
+            <Link href="/register">Tạo hồ sơ mới</Link>
           </div>
         </div>
       </header>

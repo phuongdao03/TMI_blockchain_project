@@ -14,7 +14,7 @@ from app.modules.public.telemetry import (
     catalog_telemetry,
 )
 
-OPERATIONS_ROLES = frozenset({"FINANCE_ADMIN", "BLOCKCHAIN_ADMIN", "SUPER_ADMIN"})
+OPERATIONS_ROLES = frozenset({"SUPER_ADMIN"})
 
 
 @dataclass(frozen=True, slots=True)

@@ -28,6 +28,7 @@ from app.modules.dossiers.models import (
     DossierStatus,
     DossierStatusHistory,
     DossierVersion,
+    EvidenceVisibility,
 )
 from app.modules.dossiers.service import DossierService
 from app.modules.dossiers.types import CreateDossier, CreateEvidence
@@ -102,7 +103,7 @@ async def _setup() -> tuple[
         user_id=owner.id,
         session_id=uuid4(),
         email=owner.email,
-        roles=("APPLICANT",),
+        roles=("USER",),
     )
     dossier_service = DossierService(session=session_factory(), clock=lambda: NOW)
     dossier = await dossier_service.create_dossier(
@@ -143,6 +144,20 @@ def _cipher() -> OutboxPayloadCipher:
 def test_precheck_and_supplement_clone_version_evidence_and_emit_event() -> None:
     async def exercise() -> None:
         session_factory, engine, owner, admin, _, dossier_id = await _setup()
+        # A supplement draft must retain the server-owned role and visibility
+        # of the submitted evidence it is derived from.
+        async with session_factory() as session:
+            async with session.begin():
+                submitted_evidence = await session.scalar(
+                    select(DossierEvidence).where(
+                        DossierEvidence.dossier_id == dossier_id,
+                        DossierEvidence.dossier_version_id.is_not(None),
+                    )
+                )
+                assert submitted_evidence is not None
+                submitted_evidence.evidence_role = "PUBLIC_PRESENTATION"
+                submitted_evidence.access_scope = EvidenceVisibility.PUBLIC_PREVIEW
+                submitted_evidence.is_public = True
         service = PrecheckService(
             session=session_factory(),
             payload_cipher=_cipher(),
@@ -183,6 +198,12 @@ def test_precheck_and_supplement_clone_version_evidence_and_emit_event() -> None
                 False,
                 True,
             }
+            draft_evidence = next(
+                row for row in evidences if row.dossier_version_id is None
+            )
+            assert draft_evidence.evidence_role == "PUBLIC_PRESENTATION"
+            assert draft_evidence.access_scope is EvidenceVisibility.PUBLIC_PREVIEW
+            assert draft_evidence.is_public is True
             assert event.event_type == "dossier.supplement_requested"
             assert history_count == 3
             payload = json.loads(
@@ -201,7 +222,7 @@ def test_precheck_and_supplement_clone_version_evidence_and_emit_event() -> None
             clock=lambda: NOW,
         )
         resubmitted = await applicant_service.resubmit_dossier(
-            _principal(owner, "APPLICANT"),
+            _principal(owner, "USER"),
             dossier_id,
             idempotency_key="resubmit-after-supplement",
         )
@@ -228,7 +249,7 @@ def test_precheck_rejects_wrong_role_reason_and_invalid_transition_atomically() 
 
         with pytest.raises(DossierForbiddenError):
             await service.start_precheck(
-                _principal(owner, "APPLICANT"),
+                _principal(owner, "USER"),
                 dossier_id,
                 reason="Applicant cannot precheck.",
             )

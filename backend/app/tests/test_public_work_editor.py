@@ -38,8 +38,8 @@ def test_editor_permissions_validation_version_slug_history_and_preview(
                 audit=AuditService(session),
                 payload_cipher=_cipher(),
             )
-            applicant = _principal(owner_id, "APPLICANT")
-            admin = _principal(owner_id, "CONTENT_ADMIN")
+            applicant = _principal(owner_id, "USER")
+            admin = _principal(owner_id, "SUPER_ADMIN")
             with pytest.raises(PublicWorkForbiddenError):
                 await service.list(
                     applicant, query=None, status=None, page=1, page_size=20

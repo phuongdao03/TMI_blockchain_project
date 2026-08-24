@@ -64,7 +64,7 @@ export function RegisterForm() {
 
   return (
     <AuthCard
-      description="Đăng ký để lưu nội dung quan tâm và nhận những cập nhật mới từ chương trình."
+      description="Tạo tài khoản để gửi hồ sơ, lưu bản nháp và theo dõi quá trình xử lý."
       footer={
         <>
           Đã có tài khoản? <AuthLink href="/login">Đăng nhập</AuthLink>

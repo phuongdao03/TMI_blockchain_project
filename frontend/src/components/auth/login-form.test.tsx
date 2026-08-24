@@ -56,6 +56,11 @@ describe("LoginForm", () => {
   it("keeps account routing and staff provisioning details out of the form", () => {
     render(<LoginForm />, { wrapper: Wrapper });
 
+    expect(
+      screen.getByText(
+        "Truy cập không gian hồ sơ để theo dõi tiến trình, phản hồi và chứng thư của bạn.",
+      ),
+    ).toBeDefined();
     expect(screen.queryByText(/một tài khoản cho mọi hành trình/i)).toBeNull();
     expect(screen.queryByText(/nhân sự chỉ được tạo qua lời mời/i)).toBeNull();
     expect(
@@ -75,7 +80,7 @@ describe("LoginForm", () => {
             user: {
               id: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
               email: "owner@tmigroup.vn",
-              roles: ["APPLICANT"],
+              roles: ["USER"],
             },
           },
           meta: { request_id: "request-1" },

@@ -3,7 +3,9 @@ export type SitemapEntry = {
   lastModified: string;
 };
 
-export function canonicalSiteUrl(value = process.env.APP_BASE_URL): URL {
+export function canonicalSiteUrl(
+  value = process.env.NEXT_PUBLIC_APP_BASE_URL ?? process.env.APP_BASE_URL,
+): URL {
   try {
     const url = new URL(value ?? "http://localhost:3000");
     if (!["http:", "https:"].includes(url.protocol))

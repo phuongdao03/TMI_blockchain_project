@@ -54,8 +54,9 @@ from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.workflow import DossierWorkflowService
 from app.modules.reviews.repository import ReviewRepository
 
-SECRETARY_ROLES = frozenset({"COUNCIL_SECRETARY", "SUPER_ADMIN"})
-MEMBER_ROLES = frozenset({"COUNCIL_MEMBER"})
+COUNCIL_OPERATOR_ROLE = "SUPER_ADMIN"
+SECRETARY_ROLES = frozenset({COUNCIL_OPERATOR_ROLE})
+MEMBER_ROLES = frozenset({COUNCIL_OPERATOR_ROLE})
 CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
 DECIDED_EVENT = "council.decided"
 DECISION_TARGETS = {

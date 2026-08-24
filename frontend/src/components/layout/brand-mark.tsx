@@ -1,39 +1,47 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { cn } from "@/lib/utils";
+type BrandMarkProps = {
+  compact?: boolean;
+  showCredit?: boolean;
+};
 
-interface BrandMarkProps {
-  className?: string;
-}
-
-export function BrandMark({ className }: BrandMarkProps) {
+export function BrandMark({
+  compact = false,
+  showCredit = false,
+}: BrandMarkProps) {
   return (
     <Link
-      className={cn(
-        "inline-flex min-h-11 items-center gap-3 rounded-lg font-bold text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600",
-        className,
-      )}
+      aria-label="Trung tâm Đề cử Tinh Hoa Việt"
+      className={`brand-mark${compact ? " brand-mark--compact" : ""}`}
       href="/"
     >
-      <span className="grid size-11 shrink-0 place-items-center overflow-hidden sm:size-14">
+      {compact ? (
         <Image
-          alt="TMI Group"
-          className="size-11 scale-[1.8] object-contain sm:size-14"
-          height={64}
-          loading="eager"
-          src="/assets/brand/tmi-group-logo.png"
-          width={64}
+          className="brand-mark__emblem"
+          src="/assets/brand/thv-brand-emblem.png"
+          alt=""
+          width={1254}
+          height={1254}
+          priority
         />
-      </span>
-      <span className="hidden leading-none min-[390px]:grid">
-        <strong className="text-sm tracking-[-0.02em] sm:text-base">
-          Đề cử Tinh Hoa Việt
-        </strong>
-        <small className="brand-subtitle mt-1 text-[0.55rem] font-semibold tracking-[0.16em] uppercase">
-          TMI Group
-        </small>
-      </span>
+      ) : (
+        <span className="brand-mark__wordmark-frame" aria-hidden="true">
+          <Image
+            className="brand-mark__wordmark"
+            src="/assets/brand/thv-brand-wordmark.png"
+            alt=""
+            width={1448}
+            height={1086}
+            priority
+          />
+        </span>
+      )}
+      {showCredit ? (
+        <span className="brand-mark__credit">
+          Phát triển bởi Trung tâm An ninh Công nghệ số – CNS
+        </span>
+      ) : null}
     </Link>
   );
 }

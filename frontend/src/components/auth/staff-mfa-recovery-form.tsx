@@ -78,7 +78,7 @@ export function StaffMfaRecoveryForm() {
         <p className="flex gap-3 rounded-lg border border-white/10 bg-white/[0.035] p-4 text-sm leading-6 text-[#aaa6a4]">
           <ShieldCheck
             aria-hidden="true"
-            className="mt-0.5 size-5 shrink-0 text-[#f3d675]"
+            className="mt-0.5 size-5 shrink-0 text-[#F6C515]"
           />
           Yêu cầu khôi phục có hiệu lực 24 giờ. Mọi phiên đăng nhập cũ đã bị
           khóa và nhiệm vụ của bạn không thay đổi.
@@ -107,7 +107,7 @@ export function StaffMfaRecoveryForm() {
             </label>
             <input
               autoComplete="one-time-code"
-              className="min-h-12 w-full rounded-md border border-white/20 bg-[#111] px-3 text-center font-mono text-lg tracking-[0.3em] text-white outline-none focus:border-[#f3d675]"
+              className="min-h-12 w-full rounded-md border border-white/20 bg-[#111] px-3 text-center font-mono text-lg tracking-[0.3em] text-white outline-none focus:border-[#F6C515]"
               id="recovery-totp-code"
               inputMode="numeric"
               maxLength={6}

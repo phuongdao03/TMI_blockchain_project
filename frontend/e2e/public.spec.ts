@@ -131,7 +131,7 @@ test("public portal is professional, responsive and verifiable", async ({
   await expect(page.getByText("Thông tin đã được đối chiếu")).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
-    "http://127.0.0.1:3100/works/bo-nhan-dien-tmi",
+    new URL("/works/bo-nhan-dien-tmi", page.url()).toString(),
   );
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
     "content",
@@ -181,7 +181,7 @@ test("public portal is professional, responsive and verifiable", async ({
 
   const robots = await page.request.get("/robots.txt");
   expect(await robots.text()).toContain(
-    "Sitemap: http://127.0.0.1:3100/sitemap.xml",
+    `Sitemap: ${new URL("/sitemap.xml", page.url()).toString()}`,
   );
   const sitemapIndex = await page.request.get("/sitemap.xml");
   expect(await sitemapIndex.text()).toContain("/sitemaps/works/1.xml");

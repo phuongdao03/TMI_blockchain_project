@@ -176,10 +176,10 @@ def test_public_media_permissions_validation_order_removal_and_retry(
                 dispatcher=dispatcher,
                 payload_cipher=payload_cipher,
             )
-            admin = _principal(owner_id, "CONTENT_ADMIN")
+            admin = _principal(owner_id, "SUPER_ADMIN")
             with pytest.raises(PublicWorkForbiddenError):
                 await service.attach(
-                    _principal(owner_id, "APPLICANT"),
+                    _principal(owner_id, "USER"),
                     work_id,
                     PublicMediaInput(first_id, 0, None, "Alt"),
                     request_id="forbidden",

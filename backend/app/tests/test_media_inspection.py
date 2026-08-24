@@ -1,5 +1,7 @@
 import asyncio
 import hashlib
+import io
+import zipfile
 from base64 import b64decode
 from datetime import UTC, datetime
 from uuid import uuid4
@@ -35,6 +37,14 @@ PNG = b64decode(
     "YeDChVgYJLkYGHCioSsNAHzyBJef8jPiAAAAAElFTkSuQmCC"
 )
 SAFE_PDF = b"%PDF-1.7\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n"
+
+
+def _archive(entries: dict[str, bytes]) -> bytes:
+    content = io.BytesIO()
+    with zipfile.ZipFile(content, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, value in entries.items():
+            archive.writestr(name, value)
+    return content.getvalue()
 
 
 class RecordingContentGateway:
@@ -118,6 +128,59 @@ def test_content_policy_rejects_mime_spoof_and_active_or_malformed_pdf() -> None
         )
     with pytest.raises(InspectionRejectedError, match="PDF_MALFORMED"):
         policy.validate("evidence.pdf", "application/pdf", b"%PDF-1.7\n")
+
+
+def test_content_policy_accepts_safe_evidence_archives_and_rejects_unsafe_ones(
+) -> None:
+    policy = MediaInspectionPolicy()
+    docx = _archive(
+        {
+            "[Content_Types].xml": b"<Types/>",
+            "word/document.xml": b"<w:document/>",
+        }
+    )
+    xlsx = _archive(
+        {
+            "[Content_Types].xml": b"<Types/>",
+            "xl/workbook.xml": b"<workbook/>",
+        }
+    )
+
+    policy.validate(
+        "evidence.docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        docx,
+    )
+    policy.validate(
+        "evidence.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        xlsx,
+    )
+    policy.validate("recording.wav", "audio/wav", b"RIFF\x04\x00\x00\x00WAVE")
+    policy.validate(
+        "attachments.zip",
+        "application/zip",
+        _archive({"readme.txt": b"ok"}),
+    )
+
+    with pytest.raises(InspectionRejectedError, match="ARCHIVE_DANGEROUS_CONTENT"):
+        policy.validate(
+            "attachments.zip",
+            "application/zip",
+            _archive({"payload.exe": b"not executed"}),
+        )
+    with pytest.raises(InspectionRejectedError, match="OFFICE_MACRO_CONTENT"):
+        policy.validate(
+            "evidence.docx",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            _archive(
+                {
+                    "[Content_Types].xml": b"<Types/>",
+                    "word/document.xml": b"<w:document/>",
+                    "word/vbaProject.bin": b"macro",
+                }
+            ),
+        )
 
 
 def test_inspection_activates_only_clean_media_and_uses_server_hash() -> None:

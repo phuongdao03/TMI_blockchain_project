@@ -6,10 +6,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
+import {
+  ReviewCompletionChecklist,
+  type ReviewChecklistKey,
+} from "@/components/reviews/review-completion-checklist";
+import { ReviewEvidenceSelect } from "@/components/reviews/review-evidence-select";
+import { ReviewFindingsEditor } from "@/components/reviews/review-findings-editor";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import type { ReviewData, ReviewDraft } from "@/lib/api/types";
+import type {
+  ReviewData,
+  ReviewDraft,
+  ReviewEvidenceSnapshot,
+  ReviewFinding,
+} from "@/lib/api/types";
 
 const scoreMessage = "Điểm phải từ 0 đến 20.";
 const scoreSchema = z
@@ -31,6 +42,7 @@ const draftSchema = z.object({
     professionalism: z.string().max(2_000),
     respect: z.string().max(2_000),
   }),
+  applicantFeedback: z.string().max(2_000).nullable(),
   recommendation: z.enum(["APPROVE", "SUPPLEMENT", "REJECT"]).nullable(),
   privateNote: z.string().max(5_000).nullable(),
 });
@@ -38,9 +50,10 @@ const draftSchema = z.object({
 type ScorecardValues = z.infer<typeof draftSchema>;
 type ScoreKey = Exclude<
   keyof ScorecardValues,
-  "criterionComments" | "recommendation" | "privateNote"
+  "criterionComments" | "applicantFeedback" | "recommendation" | "privateNote"
 >;
 type CriterionKey = keyof ScorecardValues["criterionComments"];
+type CriterionEvidence = Record<CriterionKey, string[]>;
 
 const criteria: Array<{
   key: CriterionKey;
@@ -52,7 +65,7 @@ const criteria: Array<{
     key: "truth",
     label: "Tính đúng đắn",
     scoreKey: "truthScore",
-    hint: "Mức độ chính xác, xác thực và nhất quán của thông tin.",
+    hint: "Độ chính xác, xác thực và nhất quán của thông tin.",
   },
   {
     key: "transparency",
@@ -80,6 +93,14 @@ const criteria: Array<{
   },
 ];
 
+const checklistKeys: ReviewChecklistKey[] = [
+  "evidence_reviewed",
+  "criteria_assessed",
+  "findings_recorded",
+  "similarity_checked",
+  "attestation",
+];
+
 function defaults(review: ReviewData | null): ScorecardValues {
   return {
     truthScore: review?.truthScore ?? null,
@@ -94,22 +115,79 @@ function defaults(review: ReviewData | null): ScorecardValues {
       professionalism: review?.criterionComments.professionalism ?? "",
       respect: review?.criterionComments.respect ?? "",
     },
+    applicantFeedback: review?.applicantFeedback ?? null,
     recommendation: review?.recommendation ?? null,
     privateNote: review?.privateNote ?? null,
   };
 }
 
-function isComplete(values: ScorecardValues) {
+function evidenceDefaults(review: ReviewData | null): CriterionEvidence {
+  return {
+    truth: review?.criterionEvidence.truth ?? [],
+    transparency: review?.criterionEvidence.transparency ?? [],
+    ownership: review?.criterionEvidence.ownership ?? [],
+    professionalism: review?.criterionEvidence.professionalism ?? [],
+    respect: review?.criterionEvidence.respect ?? [],
+  };
+}
+
+function checklistDefaults(review: ReviewData | null) {
+  return checklistKeys.reduce<Record<string, boolean>>(
+    (result, key) => ({
+      ...result,
+      [key]: review?.checklistAnswers[key] ?? false,
+    }),
+    {},
+  );
+}
+
+function findingComplete(finding: ReviewFinding) {
+  const highRisk = ["HIGH", "CRITICAL"].includes(finding.severity);
+  return (
+    finding.evidenceMediaIds.length > 0 &&
+    finding.title.trim().length >= 5 &&
+    finding.description.trim().length >= 20 &&
+    (!highRisk || finding.action === "ESCALATE")
+  );
+}
+
+function buildDraft(
+  values: ScorecardValues,
+  criterionEvidence: CriterionEvidence,
+  findings: ReviewFinding[],
+  checklistAnswers: Record<string, boolean>,
+): ReviewDraft {
+  return { ...values, criterionEvidence, findings, checklistAnswers };
+}
+
+function complete(
+  values: ScorecardValues,
+  criterionEvidence: CriterionEvidence,
+  findings: ReviewFinding[],
+  checklistAnswers: Record<string, boolean>,
+) {
+  const feedbackRequired = ["SUPPLEMENT", "REJECT"].includes(
+    values.recommendation ?? "",
+  );
   return (
     criteria.every(
       ({ key, scoreKey }) =>
         values[scoreKey] !== null &&
-        values.criterionComments[key].trim().length > 0,
-    ) && values.recommendation !== null
+        values.criterionComments[key].trim().length > 0 &&
+        criterionEvidence[key].length > 0,
+    ) &&
+    values.recommendation !== null &&
+    checklistKeys.every((key) => checklistAnswers[key] === true) &&
+    findings.every(findingComplete) &&
+    (!feedbackRequired ||
+      (values.applicantFeedback?.trim().length ?? 0) >= 50) &&
+    (values.recommendation !== "SUPPLEMENT" ||
+      findings.some((finding) => finding.action === "SUPPLEMENT"))
   );
 }
 
 export function FiveTScorecard({
+  evidences,
   initialReview,
   isSaving,
   isSubmitting,
@@ -117,6 +195,7 @@ export function FiveTScorecard({
   onSubmit,
   readOnly,
 }: {
+  evidences: ReviewEvidenceSnapshot[];
   initialReview: ReviewData | null;
   isSaving: boolean;
   isSubmitting: boolean;
@@ -125,11 +204,29 @@ export function FiveTScorecard({
   readOnly: boolean;
 }) {
   const initialValues = useMemo(() => defaults(initialReview), [initialReview]);
+  const [criterionEvidence, setCriterionEvidence] = useState<CriterionEvidence>(
+    () => evidenceDefaults(initialReview),
+  );
+  const [findings, setFindings] = useState<ReviewFinding[]>(
+    () => initialReview?.findings ?? [],
+  );
+  const [checklistAnswers, setChecklistAnswers] = useState<
+    Record<string, boolean>
+  >(() => checklistDefaults(initialReview));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [completionError, setCompletionError] = useState("");
-  const lastSaved = useRef(JSON.stringify(initialValues));
+  const lastSaved = useRef(
+    JSON.stringify(
+      buildDraft(
+        initialValues,
+        evidenceDefaults(initialReview),
+        initialReview?.findings ?? [],
+        checklistDefaults(initialReview),
+      ),
+    ),
+  );
   const saving = useRef(false);
-  const queuedDraft = useRef<ScorecardValues | null>(null);
+  const queuedDraft = useRef<ReviewDraft | null>(null);
   const {
     control,
     formState: { errors, isDirty },
@@ -144,22 +241,22 @@ export function FiveTScorecard({
   const values = useWatch({ control });
 
   const persistDraft = useCallback(
-    async (draft: ScorecardValues) => {
+    async (draft: ReviewDraft) => {
       if (saving.current) {
         queuedDraft.current = draft;
         return;
       }
       saving.current = true;
-      let current: ScorecardValues | null = draft;
+      let pending: ReviewDraft | null = draft;
       try {
-        while (current !== null) {
-          const pending = current;
+        while (pending !== null) {
           queuedDraft.current = null;
           await onSave(pending);
           lastSaved.current = JSON.stringify(pending);
-          current = queuedDraft.current;
+          pending = queuedDraft.current;
         }
       } catch {
+        // A later field change will retry; never leave a rejected autosave promise.
         queuedDraft.current = null;
       } finally {
         saving.current = false;
@@ -169,16 +266,27 @@ export function FiveTScorecard({
   );
 
   useEffect(() => {
-    if (readOnly || !isDirty) return;
-    const serialized = JSON.stringify(values);
-    if (serialized === lastSaved.current) return;
-    const timer = window.setTimeout(() => {
-      const parsed = draftSchema.safeParse(getValues());
-      if (!parsed.success) return;
-      void persistDraft(parsed.data);
-    }, 650);
+    if (readOnly) return;
+    const parsed = draftSchema.safeParse(values);
+    if (!parsed.success || !findings.every(findingComplete)) return;
+    const draft = buildDraft(
+      parsed.data,
+      criterionEvidence,
+      findings,
+      checklistAnswers,
+    );
+    if (JSON.stringify(draft) === lastSaved.current) return;
+    const timer = window.setTimeout(() => void persistDraft(draft), 650);
     return () => window.clearTimeout(timer);
-  }, [getValues, isDirty, persistDraft, readOnly, values]);
+  }, [
+    checklistAnswers,
+    criterionEvidence,
+    findings,
+    isDirty,
+    persistDraft,
+    readOnly,
+    values,
+  ]);
 
   const current = draftSchema.safeParse(values);
   const total = current.success
@@ -191,14 +299,38 @@ export function FiveTScorecard({
   async function prepareSubmit() {
     const valid = await trigger();
     const parsed = draftSchema.safeParse(getValues());
-    if (!valid || !parsed.success || !isComplete(parsed.data)) {
+    if (
+      !valid ||
+      !parsed.success ||
+      !complete(parsed.data, criterionEvidence, findings, checklistAnswers)
+    ) {
       setCompletionError(
-        "Hoàn thiện đủ 5 điểm, 5 nhận xét và kiến nghị trước khi gửi.",
+        "Hoàn tất 5 điểm, nhận xét, bằng chứng, checklist và các phát hiện trước khi gửi.",
       );
       return;
     }
-    setCompletionError("");
-    setConfirmOpen(true);
+    const draft = buildDraft(
+      parsed.data,
+      criterionEvidence,
+      findings,
+      checklistAnswers,
+    );
+    try {
+      // The submit endpoint intentionally only accepts an already persisted draft.
+      // Save this exact validated snapshot before asking for final confirmation.
+      saving.current = true;
+      queuedDraft.current = null;
+      await onSave(draft);
+      lastSaved.current = JSON.stringify(draft);
+      setCompletionError("");
+      setConfirmOpen(true);
+    } catch {
+      setCompletionError(
+        "Không thể lưu phiếu thẩm định trước khi gửi. Vui lòng thử lại.",
+      );
+    } finally {
+      saving.current = false;
+    }
   }
 
   return (
@@ -213,6 +345,9 @@ export function FiveTScorecard({
               <h2 className="mt-2 text-2xl font-bold tracking-tight">
                 Phiếu thẩm định chuyên môn
               </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                Mỗi kết luận cần có bằng chứng thuộc phiên bản hồ sơ đã khóa.
+              </p>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-right">
               <p className="text-xs text-slate-400">Tổng điểm tạm tính</p>
@@ -220,7 +355,7 @@ export function FiveTScorecard({
             </div>
           </div>
         </div>
-        <form className="space-y-5 p-5 sm:p-8">
+        <form className="space-y-6 p-5 sm:p-8">
           {criteria.map(({ hint, key, label, scoreKey }, index) => (
             <fieldset
               className="grid gap-4 rounded-2xl border bg-neutral-50/70 p-4 sm:grid-cols-[minmax(0,1fr)_7rem] sm:p-5"
@@ -239,27 +374,39 @@ export function FiveTScorecard({
                 </p>
                 <label
                   className="mt-4 block text-xs font-bold uppercase tracking-wider text-neutral-600"
-                  htmlFor={`comment-${key}`}
+                  htmlFor={"comment-" + key}
                 >
                   Nhận xét {label}
                 </label>
                 <textarea
                   className="mt-2 min-h-24 w-full rounded-xl border bg-white p-3 text-sm disabled:bg-neutral-100"
-                  id={`comment-${key}`}
+                  id={"comment-" + key}
                   maxLength={2_000}
-                  {...register(`criterionComments.${key}`)}
+                  {...register(`criterionComments.${key}` as const)}
+                />
+                <ReviewEvidenceSelect
+                  disabled={readOnly}
+                  evidences={evidences}
+                  label={label}
+                  onChange={(next) =>
+                    setCriterionEvidence((currentEvidence) => ({
+                      ...currentEvidence,
+                      [key]: next,
+                    }))
+                  }
+                  value={criterionEvidence[key]}
                 />
               </div>
               <div>
                 <label
                   className="text-xs font-bold uppercase tracking-wider text-neutral-600"
-                  htmlFor={`score-${key}`}
+                  htmlFor={"score-" + key}
                 >
                   Điểm {label}
                 </label>
                 <input
                   className="mt-2 h-14 w-full rounded-xl border bg-white px-3 text-center text-2xl font-bold tabular-nums disabled:bg-neutral-100"
-                  id={`score-${key}`}
+                  id={"score-" + key}
                   inputMode="numeric"
                   max={20}
                   min={0}
@@ -277,6 +424,13 @@ export function FiveTScorecard({
               </div>
             </fieldset>
           ))}
+
+          <ReviewFindingsEditor
+            disabled={readOnly}
+            evidences={evidences}
+            onChange={setFindings}
+            value={findings}
+          />
 
           <div className="grid gap-5 rounded-2xl border p-5 md:grid-cols-2">
             <div>
@@ -296,8 +450,28 @@ export function FiveTScorecard({
                 <option value="SUPPLEMENT">Yêu cầu bổ sung</option>
                 <option value="REJECT">Đề nghị từ chối</option>
               </select>
+              <p className="mt-2 text-xs leading-5 text-neutral-500">
+                Đây là kiến nghị chuyên môn, không phải quyết định cuối cùng.
+              </p>
             </div>
             <div>
+              <label className="text-sm font-bold" htmlFor="applicant-feedback">
+                Phản hồi gửi người nộp
+              </label>
+              <textarea
+                className="mt-2 min-h-28 w-full rounded-xl border bg-white p-3 text-sm disabled:bg-neutral-100"
+                disabled={readOnly}
+                id="applicant-feedback"
+                maxLength={2_000}
+                {...register("applicantFeedback", {
+                  setValueAs: (value) => value || null,
+                })}
+              />
+              <p className="mt-2 text-xs leading-5 text-neutral-500">
+                Bắt buộc từ 50 ký tự khi yêu cầu bổ sung hoặc đề nghị từ chối.
+              </p>
+            </div>
+            <div className="md:col-span-2">
               <label className="text-sm font-bold" htmlFor="private-note">
                 Ghi chú nội bộ
               </label>
@@ -313,9 +487,25 @@ export function FiveTScorecard({
             </div>
           </div>
 
+          <ReviewCompletionChecklist
+            disabled={readOnly}
+            onChange={(key, checked) =>
+              setChecklistAnswers((currentAnswers) => ({
+                ...currentAnswers,
+                [key]: checked,
+              }))
+            }
+            value={checklistAnswers}
+          />
+
           {completionError ? (
             <p className="text-sm font-semibold text-red-700" role="alert">
               {completionError}
+            </p>
+          ) : null}
+          {!findings.every(findingComplete) ? (
+            <p className="text-sm font-semibold text-amber-800" role="status">
+              Hoàn tất từng phát hiện để hệ thống có thể lưu phiếu nháp.
             </p>
           ) : null}
           <div className="flex flex-col justify-between gap-4 border-t pt-5 sm:flex-row sm:items-center">
@@ -344,6 +534,7 @@ export function FiveTScorecard({
               <Button
                 disabled={isSaving || isSubmitting}
                 onClick={() => void prepareSubmit()}
+                type="button"
               >
                 <Send aria-hidden="true" className="size-4" />
                 Gửi kết quả thẩm định
@@ -354,7 +545,7 @@ export function FiveTScorecard({
       </Card>
       <ConfirmationDialog
         confirmLabel="Xác nhận gửi"
-        description="Sau khi gửi, phiếu điểm sẽ được khóa và không thể chỉnh sửa. Hãy kiểm tra kỹ toàn bộ nội dung."
+        description="Sau khi gửi, phiếu thẩm định cùng các bằng chứng dẫn chiếu sẽ được khóa và không thể chỉnh sửa."
         isPending={isSubmitting}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={() => {

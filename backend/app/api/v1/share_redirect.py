@@ -1,4 +1,5 @@
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Path, Request, status
 from fastapi.responses import RedirectResponse
@@ -34,9 +35,13 @@ async def redirect_public_share_link(
     assert visitor is not None
     slug = await service.resolve_redirect(token, visitor=visitor)
     response = RedirectResponse(
-        url=f"/tai-san/{slug}",
+        url=f"/works/{quote(slug, safe='-._~')}",
         status_code=status.HTTP_302_FOUND,
-        headers={"Referrer-Policy": "same-origin"},
+        headers={
+            "Cache-Control": "no-store",
+            "Referrer-Policy": "no-referrer",
+            "X-Robots-Tag": "noindex, nofollow",
+        },
     )
     if issue_cookie:
         response.set_cookie(

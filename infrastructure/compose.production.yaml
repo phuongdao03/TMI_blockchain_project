@@ -79,6 +79,7 @@ services:
     image: ${REGISTRY}/${IMAGE_PREFIX}-frontend:${IMAGE_TAG}
     environment:
       API_BASE_URL: http://backend:8000
+      APP_BASE_URL: ${APP_BASE_URL}
     init: true
     logging: *default-logging
     networks:

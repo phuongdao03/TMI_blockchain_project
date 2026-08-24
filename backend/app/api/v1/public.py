@@ -40,6 +40,7 @@ from app.modules.public.catalog_query_service import PublicWorkSort
 from app.modules.public.dependencies import (
     EngagementServiceDependency,
     PublicCatalogDependency,
+    PublicDossierVerificationDependency,
     PublicVerificationDependency,
     enforce_public_engagement_rate_limit,
     enforce_public_rate_limit,
@@ -62,6 +63,7 @@ from app.modules.public.schemas import (
     PublicAssetDetailData,
     PublicCategoryData,
     PublicCertificateVersionData,
+    PublicDossierVerificationData,
     PublicHomeData,
     PublicMapMarkerData,
     PublicSitemapEntryData,
@@ -96,6 +98,10 @@ TransactionHashPath = Annotated[
     Path(pattern=r"^0x[0-9a-fA-F]{64}$"),
 ]
 DocumentIndexPath = Annotated[int, Path(ge=0, le=100)]
+PublicDossierCodePath = Annotated[
+    str,
+    Path(min_length=3, max_length=32, pattern=r"^[A-Za-z0-9-]+$"),
+]
 
 
 def _engagement_visitor(request: Request, response: Response) -> str:
@@ -191,6 +197,26 @@ async def public_home(
                 PublicAssetData.model_validate(asset) for asset in home.latest_assets
             ],
         ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
+    "/public/dossiers/{code}/verification",
+    response_model=SuccessEnvelope[PublicDossierVerificationData],
+    responses=PUBLIC_RESPONSES,
+)
+async def public_dossier_verification(
+    code: PublicDossierCodePath,
+    request: Request,
+    service: PublicDossierVerificationDependency,
+) -> SuccessEnvelope[PublicDossierVerificationData]:
+    """Return the allowlisted public verification view for a dossier code."""
+    dossier = await service.get(code)
+    if dossier is None:
+        raise HTTPException(status_code=404, detail="Public dossier was not found.")
+    return SuccessEnvelope(
+        data=PublicDossierVerificationData.model_validate(dossier),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 

@@ -19,12 +19,17 @@ from app.modules.dossiers.models import DossierStatus
 from app.modules.dossiers.schemas import (
     CreateDocumentHashOverrideRequest,
     CreateDossierRequest,
+    CreateDossierTypeRequest,
+    CreateDossierTypeVersionRequest,
     CreateEvidenceRequest,
     DocumentHashAdjudicationData,
+    DocumentRuleData,
     DossierActionData,
     DossierData,
     DossierDetailData,
     DossierStatusHistoryData,
+    DossierTypeData,
+    DossierTypeVersionData,
     DossierVersionData,
     EvidenceData,
     PatchDossierRequest,
@@ -35,9 +40,12 @@ from app.modules.dossiers.types import (
     CreateDossier,
     CreateEvidence,
     DocumentHashAdjudicationView,
+    DocumentRuleView,
     DossierChanges,
     DossierDetailView,
     DossierStatusHistoryView,
+    DossierTypeVersionView,
+    DossierTypeView,
     DossierVersionView,
     DossierView,
     EvidenceChanges,
@@ -66,8 +74,22 @@ def _dossier_data(view: DossierView) -> DossierData:
     return DossierData.model_validate(view)
 
 
+def _dossier_type_data(view: DossierTypeView) -> DossierTypeData:
+    return DossierTypeData.model_validate(view)
+
+
+def _dossier_type_version_data(
+    view: DossierTypeVersionView,
+) -> DossierTypeVersionData:
+    return DossierTypeVersionData.model_validate(view)
+
+
 def _evidence_data(view: EvidenceView) -> EvidenceData:
     return EvidenceData.model_validate(view)
+
+
+def _document_rule_data(view: DocumentRuleView) -> DocumentRuleData:
+    return DocumentRuleData.model_validate(view)
 
 
 def _version_data(view: DossierVersionView) -> DossierVersionData:
@@ -96,6 +118,9 @@ def _dossier_detail_data(view: DossierDetailView) -> DossierDetailData:
     return DossierDetailData(
         **dossier.model_dump(),
         evidences=tuple(_evidence_data(item) for item in view.evidences),
+        document_rules=tuple(
+            _document_rule_data(item) for item in view.document_rules
+        ),
     )
 
 
@@ -135,10 +160,76 @@ async def create_dossier(
             slug=payload.slug,
             summary=payload.summary,
             visibility=payload.visibility,
+            dossier_type_version_id=payload.dossier_type_version_id,
+            form_data=payload.form_data,
         ),
     )
     return SuccessEnvelope(
         data=_dossier_data(dossier),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
+    "/types",
+    response_model=SuccessEnvelope[list[DossierTypeData]],
+    responses={401: PRIVATE_RESPONSES[401], 403: PRIVATE_RESPONSES[403]},
+)
+async def list_dossier_types(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: DossierServiceDependency,
+) -> SuccessEnvelope[list[DossierTypeData]]:
+    result = await service.list_active_dossier_types(principal)
+    return SuccessEnvelope(
+        data=[_dossier_type_data(item) for item in result],
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/types",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SuccessEnvelope[DossierTypeData],
+    responses=PRIVATE_RESPONSES,
+)
+async def create_dossier_type(
+    payload: CreateDossierTypeRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: DossierServiceDependency,
+) -> SuccessEnvelope[DossierTypeData]:
+    result = await service.create_dossier_type(
+        principal,
+        category_id=payload.category_id,
+        code=payload.code,
+        name=payload.name,
+        schema=payload.definition,
+    )
+    return SuccessEnvelope(
+        data=_dossier_type_data(result),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/types/{dossier_type_id}/versions",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SuccessEnvelope[DossierTypeVersionData],
+    responses=PRIVATE_RESPONSES,
+)
+async def create_dossier_type_version(
+    dossier_type_id: UUID,
+    payload: CreateDossierTypeVersionRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: DossierServiceDependency,
+) -> SuccessEnvelope[DossierTypeVersionData]:
+    result = await service.create_dossier_type_version(
+        principal, dossier_type_id, schema=payload.definition
+    )
+    return SuccessEnvelope(
+        data=_dossier_type_version_data(result),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 
@@ -264,6 +355,8 @@ async def attach_evidence(
         CreateEvidence(
             media_asset_id=payload.media_asset_id,
             evidence_type=payload.evidence_type,
+            evidence_role=payload.evidence_role,
+            access_scope=payload.access_scope,
             title=payload.title,
             description=payload.description,
             issued_at=payload.issued_at,
@@ -296,6 +389,8 @@ async def patch_evidence(
         evidence_id,
         EvidenceChanges(
             evidence_type=payload.evidence_type,
+            evidence_role=payload.evidence_role,
+            access_scope=payload.access_scope,
             title=payload.title,
             description=payload.description,
             issued_at=payload.issued_at,

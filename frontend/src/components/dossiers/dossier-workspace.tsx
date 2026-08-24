@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { dossierApi } from "@/lib/api/client";
 import type {
   DossierDetail,
+  DossierDocumentRule,
   DossierEvidence,
   DossierStatus,
   MediaAsset,
@@ -156,6 +157,27 @@ function newIdempotencyKey() {
   return globalThis.crypto?.randomUUID?.() ?? `submit-${Date.now()}`;
 }
 
+function evidenceScopeLabel(
+  scope: DossierEvidence["accessScope"] | null | undefined,
+): string {
+  return (
+    {
+      PRIVATE: "Chỉ chủ hồ sơ",
+      INTERNAL: "Chỉ người xử lý",
+      PUBLIC_PREVIEW: "Có thể dùng cho bản xem trước",
+      PUBLIC: "Được công bố khi hồ sơ hợp lệ",
+    }[scope ?? "INTERNAL"] ?? "Chỉ người xử lý"
+  );
+}
+
+function ruleProgress(
+  rule: DossierDocumentRule,
+  evidences: DossierEvidence[],
+): number {
+  return evidences.filter((evidence) => evidence.evidenceRole === rule.key)
+    .length;
+}
+
 function EvidenceItem({
   canEdit,
   evidence,
@@ -176,6 +198,9 @@ function EvidenceItem({
         </h3>
         <p className="mt-1 text-xs text-neutral-500">
           {evidence.mimeType} · {formatBytes(evidence.bytes)} KB
+        </p>
+        <p className="mt-1 text-xs font-medium text-neutral-500">
+          {evidenceScopeLabel(evidence.accessScope)}
         </p>
       </div>
       {canEdit ? (
@@ -330,6 +355,11 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
     queryKey: dossierKeys.timeline(dossierId),
     queryFn: () => dossierApi.timeline(dossierId),
   });
+  const documentRules = detail.data?.documentRules ?? [];
+  const selectedRule =
+    documentRules.find((rule) => rule.key === evidenceType) ??
+    documentRules.at(0);
+
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({
@@ -348,10 +378,10 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
     mutationFn: (asset: MediaAsset) =>
       dossierApi.attachEvidence(dossierId, {
         mediaAssetId: asset.id,
-        evidenceType,
-        title: evidenceTitle.trim() || "Tài liệu chứng minh",
+        evidenceType: selectedRule?.documentType ?? evidenceType,
+        evidenceRole: selectedRule?.key,
+        title: evidenceTitle.trim() || selectedRule?.label || "Tài liệu chứng minh",
         displayOrder: detail.data?.evidences.length ?? 0,
-        isPublic: false,
       }),
     onSuccess: refresh,
   });
@@ -392,7 +422,20 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
   }
 
   const dossier = detail.data;
-  const isComplete = dossier.evidences.length > 0 && dossier.title.length >= 3;
+  const missingRequiredRules = documentRules.filter(
+    (rule) => rule.required && ruleProgress(rule, dossier.evidences) === 0,
+  );
+  const selectedRuleCount = selectedRule
+    ? ruleProgress(selectedRule, dossier.evidences)
+    : dossier.evidences.length;
+  const selectedRuleAtCapacity = Boolean(
+    selectedRule && selectedRuleCount >= selectedRule.maxCount,
+  );
+  const isComplete =
+    dossier.title.length >= 3 &&
+    (documentRules.length
+      ? missingRequiredRules.length === 0
+      : dossier.evidences.length > 0);
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
@@ -424,7 +467,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
         </div>
       </div>
 
-      <section className="grid gap-2 border-l-4 border-primary-600 bg-primary-50 px-5 py-4 text-sm text-primary-950 sm:grid-cols-[1fr_1fr] sm:gap-8">
+      <section className="dossier-state-card grid gap-2 px-5 py-4 text-sm sm:grid-cols-[1fr_1fr] sm:gap-8">
         <div>
           <p className="font-bold">Trạng thái hiện tại</p>
           <p className="mt-1 leading-6">
@@ -440,7 +483,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
       </section>
 
       {!dossier.canEdit ? (
-        <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+        <section className="dossier-readonly-notice flex items-start gap-3 rounded-2xl p-4 text-sm">
           <LockKeyhole aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
           <div>
             <p className="font-bold">Hồ sơ đã nộp và đang ở chế độ chỉ đọc.</p>
@@ -449,7 +492,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
               hồ sơ được yêu cầu bổ sung.
             </p>
           </div>
-        </div>
+        </section>
       ) : null}
 
       <DossierPaymentAction
@@ -549,22 +592,61 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                       className="mt-2 min-h-11 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm"
                       id="evidence-type"
                       onChange={(event) => setEvidenceType(event.target.value)}
-                      value={evidenceType}
+                      value={selectedRule?.key ?? evidenceType}
                     >
-                      <option value="OWNERSHIP_DOCUMENT">
-                        Tài liệu quyền sở hữu
-                      </option>
-                      <option value="CREATIVE_WORK">Tác phẩm gốc</option>
-                      <option value="OTHER">Tài liệu khác</option>
+                      {documentRules.length ? (
+                        documentRules.map((rule) => (
+                          <option key={rule.key} value={rule.key}>
+                            {rule.label}
+                            {rule.required ? " · bắt buộc" : ""}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="OWNERSHIP_DOCUMENT">
+                            Tài liệu quyền sở hữu
+                          </option>
+                          <option value="CREATIVE_WORK">Tác phẩm gốc</option>
+                          <option value="OTHER">Tài liệu khác</option>
+                        </>
+                      )}
                     </select>
                   </div>
                   <div className="sm:col-span-2">
+                    {selectedRule ? (
+                      <div className="mb-4 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="font-bold text-neutral-900">
+                            {selectedRule.required ? "Tài liệu bắt buộc" : "Tài liệu bổ sung"}
+                          </p>
+                          <span className="text-xs font-semibold text-neutral-500">
+                            {selectedRuleCount}/{selectedRule.maxCount} tệp
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs leading-5 text-neutral-600">
+                          {evidenceScopeLabel(selectedRule.defaultVisibility)}. Hệ thống tự áp dụng phạm vi hiển thị này.
+                        </p>
+                      </div>
+                    ) : null}
                     <FileUploader
-                      disabled={attach.isPending}
-                      label="Bằng chứng hồ sơ"
+                      constraints={
+                        selectedRule
+                          ? {
+                              allowedMimeTypes: selectedRule.allowedMimeTypes,
+                              maxBytes: selectedRule.maxBytes,
+                            }
+                          : undefined
+                      }
+                      disabled={attach.isPending || selectedRuleAtCapacity}
+                      label={selectedRule?.label ?? "Bằng chứng hồ sơ"}
                       onComplete={(asset) => attach.mutate(asset)}
                       purpose="DOSSIER_EVIDENCE"
                     />
+                    {selectedRuleAtCapacity ? (
+                      <p className="mt-3 text-sm font-medium text-amber-700" role="status">
+                        Đã đạt số lượng tối đa cho loại tài liệu này.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               ) : null}
@@ -613,6 +695,16 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   Kiểm tra lại thông tin và tài liệu trước khi gửi TMI xem xét.
                 </p>
               </div>
+              {missingRequiredRules.length ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                  <p className="font-bold">Cần bổ sung trước khi nộp</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    {missingRequiredRules.map((rule) => (
+                      <li key={rule.key}>{rule.label}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex items-start gap-3 rounded-xl border border-neutral-200 p-4">
                   <CheckCircle2
@@ -627,7 +719,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   </div>
                 </div>
                 <div className="flex items-start gap-3 rounded-xl border border-neutral-200 p-4">
-                  {dossier.evidences.length ? (
+                  {isComplete ? (
                     <CheckCircle2
                       aria-hidden="true"
                       className="mt-0.5 size-5 text-emerald-600"
@@ -641,7 +733,9 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   <div>
                     <p className="text-sm font-bold">Bằng chứng xác minh</p>
                     <p className="mt-1 text-xs text-neutral-500">
-                      {dossier.evidences.length} tệp sẵn sàng
+                      {documentRules.length
+                        ? "Đã đáp ứng các tài liệu bắt buộc"
+                        : `${dossier.evidences.length} tệp sẵn sàng`}
                     </p>
                   </div>
                 </div>

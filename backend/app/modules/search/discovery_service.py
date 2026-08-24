@@ -17,7 +17,7 @@ from app.modules.search.discovery_types import (
 )
 from app.modules.search.privacy import is_safe_aggregate_query
 
-ADMIN_ROLES = frozenset({"CONTENT_ADMIN", "SUPER_ADMIN"})
+ADMIN_ROLES = frozenset({"SUPER_ADMIN"})
 
 
 class DiscoveryCachePort(Protocol):

@@ -13,6 +13,8 @@ from app.modules.dossiers.models import (
     DossierEvidence,
     DossierStatus,
     DossierStatusHistory,
+    DossierType,
+    DossierTypeVersion,
     DossierVersion,
 )
 from app.modules.media.models import MediaAsset
@@ -28,6 +30,65 @@ class DossierRepository:
 
     def add(self, dossier: Dossier) -> None:
         self._session.add(dossier)
+
+    def add_type(self, dossier_type: DossierType) -> None:
+        self._session.add(dossier_type)
+
+    def add_type_version(self, version: DossierTypeVersion) -> None:
+        self._session.add(version)
+
+    async def get_dossier_type(self, dossier_type_id: UUID) -> DossierType | None:
+        return cast(
+            DossierType | None,
+            await self._session.scalar(
+                select(DossierType).where(DossierType.id == dossier_type_id)
+            ),
+        )
+
+    async def get_dossier_type_version(
+        self, version_id: UUID
+    ) -> DossierTypeVersion | None:
+        return cast(
+            DossierTypeVersion | None,
+            await self._session.scalar(
+                select(DossierTypeVersion).where(DossierTypeVersion.id == version_id)
+            ),
+        )
+
+    async def next_dossier_type_version_no(self, dossier_type_id: UUID) -> int:
+        current = await self._session.scalar(
+            select(func.max(DossierTypeVersion.version_no)).where(
+                DossierTypeVersion.dossier_type_id == dossier_type_id
+            )
+        )
+        return int(current or 0) + 1
+
+    async def list_active_dossier_types(
+        self,
+    ) -> tuple[tuple[DossierType, DossierTypeVersion], ...]:
+        latest_versions = (
+            select(
+                DossierTypeVersion.dossier_type_id.label("dossier_type_id"),
+                func.max(DossierTypeVersion.version_no).label("version_no"),
+            )
+            .group_by(DossierTypeVersion.dossier_type_id)
+            .subquery()
+        )
+        rows = await self._session.execute(
+            select(DossierType, DossierTypeVersion)
+            .join(
+                latest_versions,
+                latest_versions.c.dossier_type_id == DossierType.id,
+            )
+            .join(
+                DossierTypeVersion,
+                (DossierTypeVersion.dossier_type_id == DossierType.id)
+                & (DossierTypeVersion.version_no == latest_versions.c.version_no),
+            )
+            .where(DossierType.is_active.is_(True))
+            .order_by(DossierType.name, DossierType.code)
+        )
+        return tuple(rows.tuples().all())
 
     def add_evidence(self, evidence: DossierEvidence) -> None:
         self._session.add(evidence)

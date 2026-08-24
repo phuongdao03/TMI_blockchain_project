@@ -6,6 +6,7 @@ from sqlalchemy import (
     CHAR,
     JSON,
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     Enum,
@@ -32,6 +33,18 @@ class BlockchainTransactionStatus(StrEnum):
     CONFIRMED = "CONFIRMED"
     FAILED = "FAILED"
     REPLACED = "REPLACED"
+
+
+class BlockchainWalletLinkStatus(StrEnum):
+    ACTIVE = "ACTIVE"
+    REVOKED = "REVOKED"
+
+
+class BlockchainTransactionIntentStatus(StrEnum):
+    PREPARED = "PREPARED"
+    SUBMITTED = "SUBMITTED"
+    EXPIRED = "EXPIRED"
+    CANCELLED = "CANCELLED"
 
 
 class CertificateStatus(StrEnum):
@@ -234,6 +247,11 @@ class BlockchainTransaction(UtcTimestampMixin, Base):
         ForeignKey("document_blockchain_evidences.id", ondelete="RESTRICT"),
         unique=True,
     )
+    signer_user_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="RESTRICT"),
+    )
+    signer_wallet_address: Mapped[str | None] = mapped_column(CHAR(42))
     network: Mapped[str] = mapped_column(String(32), nullable=False)
     chain_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     contract_address: Mapped[str] = mapped_column(CHAR(42), nullable=False)
@@ -265,6 +283,161 @@ class BlockchainTransaction(UtcTimestampMixin, Base):
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class BlockchainWalletLink(UtcTimestampMixin, Base):
+    """A verified public wallet bound to a THV user, never a wallet secret."""
+
+    __tablename__ = "blockchain_wallet_links"
+    __table_args__ = (
+        CheckConstraint(
+            "length(wallet_address) = 42",
+            name="blockchain_wallet_link_address_length",
+        ),
+        Index(
+            "uq_blockchain_wallet_links_one_active",
+            "is_active",
+            unique=True,
+            postgresql_where=text("is_active"),
+            sqlite_where=text("is_active"),
+        ),
+        Index(
+            "ix_blockchain_wallet_links_user_active",
+            "user_id",
+            "is_active",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    wallet_address: Mapped[str] = mapped_column(
+        CHAR(42),
+        nullable=False,
+        unique=True,
+    )
+    chain_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    status: Mapped[BlockchainWalletLinkStatus] = mapped_column(
+        _enum(BlockchainWalletLinkStatus, "blockchain_wallet_link_status"),
+        nullable=False,
+        default=BlockchainWalletLinkStatus.ACTIVE,
+        server_default=BlockchainWalletLinkStatus.ACTIVE.value,
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default=text("true"),
+    )
+    verified_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BlockchainWalletChallenge(Base):
+    __tablename__ = "blockchain_wallet_challenges"
+    __table_args__ = (
+        CheckConstraint(
+            "length(nonce_hash) = 64",
+            name="blockchain_wallet_challenge_nonce_hash_length",
+        ),
+        Index(
+            "ix_blockchain_wallet_challenges_user_expires",
+            "user_id",
+            "expires_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    wallet_address: Mapped[str] = mapped_column(CHAR(42), nullable=False)
+    chain_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    nonce_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False, unique=True)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class BlockchainTransactionIntent(UtcTimestampMixin, Base):
+    __tablename__ = "blockchain_transaction_intents"
+    __table_args__ = (
+        CheckConstraint(
+            "length(proof_hash) = 64", name="blockchain_intent_proof_hash_length"
+        ),
+        CheckConstraint(
+            "length(encoded_call_hash) = 64",
+            name="blockchain_intent_encoded_call_hash_length",
+        ),
+        CheckConstraint("chain_id > 0", name="blockchain_intent_chain_id_positive"),
+        Index(
+            "uq_blockchain_transaction_intents_open",
+            "transaction_id",
+            unique=True,
+            postgresql_where=text("status = 'PREPARED'"),
+            sqlite_where=text("status = 'PREPARED'"),
+        ),
+        Index(
+            "ix_blockchain_transaction_intents_status_expires",
+            "status",
+            "expires_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    transaction_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("blockchain_transactions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    dossier_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("dossiers.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    dossier_version_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("dossier_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    signer_user_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    expected_wallet_address: Mapped[str] = mapped_column(CHAR(42), nullable=False)
+    network: Mapped[str] = mapped_column(String(32), nullable=False)
+    chain_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    contract_address: Mapped[str] = mapped_column(CHAR(42), nullable=False)
+    proof_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    encoded_call_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    status: Mapped[BlockchainTransactionIntentStatus] = mapped_column(
+        _enum(
+            BlockchainTransactionIntentStatus,
+            "blockchain_transaction_intent_status",
+        ),
+        nullable=False,
+        default=BlockchainTransactionIntentStatus.PREPARED,
+        server_default=BlockchainTransactionIntentStatus.PREPARED.value,
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class CertificateVersion(Base):
     __tablename__ = "certificate_versions"
     __table_args__ = (
@@ -279,6 +452,10 @@ class CertificateVersion(Base):
             "certificate_id",
             "version_no",
             name="uq_certificate_versions_certificate_id_version_no",
+        ),
+        UniqueConstraint(
+            "public_token_hash",
+            name="uq_certificate_versions_public_token_hash",
         ),
         Index(
             "uq_certificate_versions_active",
@@ -321,6 +498,13 @@ class CertificateVersion(Base):
         nullable=False,
     )
     metadata_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    # A QR token identifies one issued version, never the mutable certificate
+    # aggregate.  Values stay nullable for certificates issued before the
+    # version-aware QR migration; new versions always receive both values.
+    public_token_hash: Mapped[str | None] = mapped_column(
+        CHAR(64),
+    )
+    qr_payload: Mapped[str | None] = mapped_column(Text)
     status: Mapped[CertificateVersionStatus] = mapped_column(
         _enum(CertificateVersionStatus, "certificate_version_status"),
         nullable=False,

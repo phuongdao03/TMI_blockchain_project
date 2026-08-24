@@ -98,6 +98,7 @@ describe("PublicLibrary", () => {
     );
 
     expect(await screen.findByText("Di sản số")).toBeTruthy();
+    expect(screen.getByTestId("public-album-grid")).toBeTruthy();
     await waitFor(() =>
       expect(publicApi.works).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -171,7 +172,7 @@ describe("PublicLibrary", () => {
 });
 
 describe("PublicWorkCard", () => {
-  it("uses editorial lead and list-row layouts instead of uniform cards", () => {
+  it("uses an editorial lead and fully clickable album tiles for the catalogue", () => {
     const { rerender } = render(
       <PublicWorkCard position={1} source="featured" work={work} />,
     );
@@ -181,8 +182,11 @@ describe("PublicWorkCard", () => {
 
     rerender(<PublicWorkCard position={4} source="list" work={work} />);
     expect(screen.getByRole("article").getAttribute("data-layout")).toBe(
-      "catalog-row",
+      "catalog-album-tile",
     );
+    expect(
+      screen.getByRole("link", { name: "Xem đề cử Di sản số" }).getAttribute("href"),
+    ).toBe("/works/di-san-so");
   });
 
   it("keeps a loading surface until the responsive image resolves", () => {

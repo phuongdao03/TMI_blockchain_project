@@ -17,6 +17,9 @@ from app.modules.engagement.service import EngagementService
 from app.modules.engagement.visitor import EngagementVisitorContext
 from app.modules.public.cache import RedisVerificationCache
 from app.modules.public.catalog_cache import RedisPublicCatalogCache
+from app.modules.public.dossier_verification import (
+    PublicDossierVerificationService,
+)
 from app.modules.public.rate_limit import RedisPublicRateLimiter
 from app.modules.public.service import PublicCatalogService
 from app.modules.public.verification import PublicVerificationService
@@ -81,6 +84,18 @@ PublicCatalogDependency = Annotated[
 PublicVerificationDependency = Annotated[
     PublicVerificationService,
     Depends(get_public_verification),
+]
+
+
+async def get_public_dossier_verification(
+    session: SessionDependency,
+) -> AsyncIterator[PublicDossierVerificationService]:
+    yield PublicDossierVerificationService(session)
+
+
+PublicDossierVerificationDependency = Annotated[
+    PublicDossierVerificationService,
+    Depends(get_public_dossier_verification),
 ]
 
 

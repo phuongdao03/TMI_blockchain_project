@@ -99,7 +99,7 @@ def test_oauth_signup_collision_and_existing_identity_are_safe(tmp_path: Path) -
             assert user.password_hash is None
             assert user.email_verified_at is not None
             assert issuer.user_id == user.id
-            role = await session.scalar(select(Role).where(Role.code == "APPLICANT"))
+            role = await session.scalar(select(Role).where(Role.code == "USER"))
             assert role is not None
 
             await session.rollback()
@@ -152,7 +152,7 @@ def test_pending_staff_is_activated_only_by_verified_totp(tmp_path: Path) -> Non
                 status=UserStatus.PENDING,
                 email_verified_at=NOW,
             )
-            role = Role(code="REVIEWER")
+            role = Role(code="MODERATOR")
             session.add_all((staff, role))
             await session.flush()
             session.add_all(

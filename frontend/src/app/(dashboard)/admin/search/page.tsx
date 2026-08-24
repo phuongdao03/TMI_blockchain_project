@@ -3,7 +3,7 @@ import { RoleGate } from "@/components/auth/role-gate";
 
 export default function SearchAnalyticsPage() {
   return (
-    <RoleGate allowed={["CONTENT_ADMIN", "SUPER_ADMIN"]}>
+    <RoleGate allowed={["SUPER_ADMIN"]}>
       <SearchAnalyticsDashboard />
     </RoleGate>
   );

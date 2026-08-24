@@ -56,15 +56,22 @@ NEXT_PUBLIC_FIREBASE_APP_ID=<Firebase Web app config>
 
 The local mock is not a payment processor and must never receive real money.
 
-The bootstrap creates these Firebase Emulator-only accounts. They are not
-production credentials and cannot authenticate against a real Firebase project:
+Bootstrap does not create application accounts or credentials. To create the
+first local Super Admin, choose an email and enter a new password interactively:
 
-| Purpose             | Email                   | Local password    |
-| ------------------- | ----------------------- | ----------------- |
-| Applicant workspace | `applicant@example.com` | `LocalOnly!23456` |
-| Review workspace    | `reviewer@example.com`  | `LocalOnly!23456` |
-| Council workspace   | `council@example.com`   | `LocalOnly!23456` |
-| Administration      | `admin@example.com`     | `LocalOnly!23456` |
+```powershell
+docker compose exec backend python -m app.scripts.bootstrap_local_super_admin --email admin@local.test
+```
+
+The command is limited to `APP_ENV=local` with the Firebase Auth Emulator. It
+does not run in staging or production, never prints the password, and refuses to
+promote an existing non-admin account. Use the normal application flows for
+Viewer/User registration and the staff-management flow to onboard Moderators.
+
+Bootstrap writes only the deployed local contract address and allowlist to
+`.runtime/local-contract.env`; it never extracts or injects an Anvil private
+key. Link a disposable wallet through the Super Admin signing screen to test the
+same human-signing model used in production.
 
 Useful local URLs: application `http://localhost:3000`, proxied stack
 `http://localhost:8080`, API `http://localhost:8000`, and Mailpit
@@ -93,10 +100,10 @@ Required services and values:
 | Sessions     | `JWT_SECRET`, `AUTH_CSRF_SECRET`, `AUTH_OUTBOX_ENCRYPTION_KEY`, `PII_ENCRYPTION_KEY`                                                                                                    | Unique random secrets per environment. Rotating them invalidates sessions or encrypted data as documented.                                                                                                                           |
 | Redis        | `REDIS_PASSWORD`, `REDIS_URL`                                                                                                                                                           | Strong password and `redis://:<password>@redis:6379/0`.                                                                                                                                                                              |
 | Google login | `FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_*`                                                                                                                                         | Enable Google in Firebase Authentication, copy the Web app config, and add `localhost` plus the production domain to Authorized domains. The backend verifies Firebase ID tokens; no service-account secret belongs in the frontend. |
-| Media        | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`                                                                                                                  | Cloudinary production credentials.                                                                                                                                                                                                   |
+| Media        | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `MEDIA_SCANNER_HOST=clamav`, `MEDIA_SCANNER_PORT=3310`                                                         | Cloudinary production credentials and the internal ClamAV service. A full release fails configuration validation without Cloudinary credentials; `/ready` reports `cloudinary` or `clamav` as down when either integration is unavailable. |
 | Email        | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SENDER`                                                                                                                                                 | TLS-capable SMTP relay and verified sender.                                                                                                                                                                                          |
 | Payments     | `PAYMENT_PROVIDER`, `PAYMENT_WEBHOOK_SECRET`, `PAYMENT_CHECKOUT_BASE_URL`                                                                                                               | An implemented provider adapter, its signing secret, and an HTTPS checkout URL. `mock` is rejected outside local.                                                                                                                    |
-| Blockchain   | `BLOCKCHAIN_NETWORK=polygon`, `BLOCKCHAIN_CHAIN_ID=137`, `BLOCKCHAIN_RPC_URL`, `CERTIFICATE_CONTRACT_ADDRESS`, `BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES`, `BLOCKCHAIN_SIGNER_PRIVATE_KEY` | Polygon RPC over HTTPS, deployed contract address/allowlist, and a dedicated hot-wallet key with only required permissions.                                                                                                          |
+| Blockchain   | `BLOCKCHAIN_NETWORK=polygon`, `BLOCKCHAIN_CHAIN_ID=137`, `BLOCKCHAIN_RPC_URL`, `CERTIFICATE_CONTRACT_ADDRESS`, `BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES`, `BLOCKCHAIN_SIGNER_MODE=human`, `BLOCKCHAIN_SIGNING_ENABLED=true` | Polygon RPC over HTTPS, an approved contract address/allowlist and human-controlled wallet signing. Keep `BLOCKCHAIN_SIGNER_PRIVATE_KEY` blank; the active verified signer wallet alone receives `ISSUER_ROLE`. |
 
 ## Current production blocker
 
@@ -115,3 +122,8 @@ docker compose --env-file .env.production -f infrastructure/compose.production.y
 
 Then run migrations, deploy immutable images, and verify `/ready` plus a signed
 provider webhook in staging before production rollout.
+
+`RELEASE_MODE=full` enables the Compose `full` profile during deployment and
+rollback. It starts and waits for ClamAV, the worker and the scheduler in
+addition to the web stack. Keep `RELEASE_MODE=preview` only for preview releases;
+it deliberately does not start those full-profile services.

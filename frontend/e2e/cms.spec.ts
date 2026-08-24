@@ -10,7 +10,7 @@ test("content admin creates, previews and publishes a sanitized post", async ({
   await page.goto("/login");
   await page.getByRole("textbox", { name: "Email" }).fill("owner@tmigroup.vn");
   await page
-    .getByLabel(/Mật khẩu|Máº­t kháº©u/)
+    .getByLabel("Mật khẩu", { exact: true })
     .fill("correct horse battery staple");
   await page.getByRole("button", { name: /Đăng nhập|ÄÄƒng nháº­p/ }).click();
 
@@ -37,7 +37,9 @@ test("content admin creates, previews and publishes a sanitized post", async ({
 test("content admin previews and publishes a public work", async ({ page }) => {
   await page.goto("/login");
   await page.getByRole("textbox", { name: "Email" }).fill("owner@tmigroup.vn");
-  await page.getByLabel(/khẩu/i).fill("correct horse battery staple");
+  await page
+    .getByLabel("Mật khẩu", { exact: true })
+    .fill("correct horse battery staple");
   await page.getByRole("button", { name: /Đăng nhập/i }).click();
 
   await expect(page).toHaveURL(/\/admin\/content$/, { timeout: 15_000 });

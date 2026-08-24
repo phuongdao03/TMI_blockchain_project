@@ -44,7 +44,7 @@ export function DossierWorkflowTimeline({
   return (
     <section
       aria-labelledby="dossier-workflow-heading"
-      className="border-y border-neutral-200 bg-white py-6"
+      className="dossier-workflow py-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3 px-1">
         <div>
@@ -62,7 +62,7 @@ export function DossierWorkflowTimeline({
           </p>
         </div>
         {exception ? (
-          <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800">
+          <span className="dossier-workflow__exception inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold">
             <CircleAlert aria-hidden="true" className="size-4" />
             {status === "NEEDS_SUPPLEMENT"
               ? "Cần bạn bổ sung"
@@ -75,7 +75,7 @@ export function DossierWorkflowTimeline({
         ) : null}
       </div>
 
-      <ol className="mt-6 grid gap-px overflow-hidden border-y border-neutral-200 bg-neutral-200 sm:grid-cols-2 lg:grid-cols-6">
+      <ol className="dossier-workflow__track mt-6 grid gap-px overflow-hidden sm:grid-cols-2 lg:grid-cols-6">
         {workflowStages.map((stage, index) => {
           const isCurrent = stage.statuses.includes(status);
           const isComplete =
@@ -86,8 +86,8 @@ export function DossierWorkflowTimeline({
           return (
             <li
               className={cn(
-                "min-h-28 bg-white p-4",
-                isCurrent && "bg-primary-50",
+                "dossier-workflow__stage min-h-28 p-4",
+                isCurrent && "dossier-workflow__stage--current",
               )}
               key={stage.label}
             >

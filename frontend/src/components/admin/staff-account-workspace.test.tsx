@@ -39,7 +39,7 @@ beforeEach(() => {
       {
         id: "staff-1",
         email: "reviewer@tmigroup.vn",
-        role: "REVIEWER",
+        role: "MODERATOR",
         status: "ACTIVE",
         createdAt: "2026-08-01T00:00:00Z",
         lastLoginAt: null,
@@ -47,7 +47,7 @@ beforeEach(() => {
       {
         id: "staff-2",
         email: "finance@tmigroup.vn",
-        role: "FINANCE_ADMIN",
+        role: "MODERATOR",
         status: "SUSPENDED",
         createdAt: "2026-08-02T00:00:00Z",
         lastLoginAt: "2026-08-03T00:00:00Z",
@@ -68,7 +68,7 @@ beforeEach(() => {
   vi.mocked(staffAccountsApi.update).mockResolvedValue({
     id: "staff-1",
     email: "reviewer@tmigroup.vn",
-    role: "REVIEWER",
+    role: "MODERATOR",
     status: "SUSPENDED",
     createdAt: "2026-08-01T00:00:00Z",
     lastLoginAt: null,
@@ -76,7 +76,7 @@ beforeEach(() => {
   vi.mocked(staffInvitationsApi.create).mockResolvedValue({
     id: "invite-1",
     email: "new.staff@tmigroup.vn",
-    role: "REVIEWER",
+    role: "MODERATOR",
     organizationId: null,
     status: "PENDING",
     expiresAt: "2026-08-09T00:00:00Z",
@@ -87,7 +87,7 @@ beforeEach(() => {
     targetUserId: "staff-1",
     action: "ROLE_CHANGE",
     status: "PENDING",
-    requestedRole: "CONTENT_ADMIN",
+    requestedRole: "MODERATOR",
     requestedByUserId: "admin-1",
     approvedByUserId: null,
     reason: "Điều chuyển nhiệm vụ đã được xác nhận",
@@ -159,7 +159,7 @@ describe("StaffAccountWorkspace", () => {
     await waitFor(() =>
       expect(staffInvitationsApi.create).toHaveBeenCalledWith({
         email: "new.staff@tmigroup.vn",
-        role: "REVIEWER",
+        role: "MODERATOR",
       }),
     );
   });
@@ -171,7 +171,7 @@ describe("StaffAccountWorkspace", () => {
 
     await user.selectOptions(
       screen.getByLabelText("Nhiệm vụ của reviewer@tmigroup.vn"),
-      "CONTENT_ADMIN",
+      "MODERATOR",
     );
     expect(staffAccountsApi.update).not.toHaveBeenCalled();
     expect(
@@ -188,7 +188,7 @@ describe("StaffAccountWorkspace", () => {
     await waitFor(() =>
       expect(staffAccountsApi.requestRoleChange).toHaveBeenCalledWith(
         "staff-1",
-        "CONTENT_ADMIN",
+        "MODERATOR",
         "Điều chuyển nhiệm vụ đã được xác nhận",
       ),
     );

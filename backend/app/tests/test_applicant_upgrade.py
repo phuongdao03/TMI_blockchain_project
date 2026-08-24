@@ -37,7 +37,7 @@ def test_public_user_can_upgrade_once_without_privileged_role(tmp_path: Path) ->
                 email_verified_at=datetime.now(UTC),
                 account_type=AccountType.PUBLIC_USER,
             )
-            role = Role(code="APPLICANT")
+            role = Role(code="VIEWER")
             session.add_all([user, role])
             await session.flush()
             await session.commit()
@@ -58,13 +58,13 @@ def test_public_user_can_upgrade_once_without_privileged_role(tmp_path: Path) ->
                     user_id=principal.user_id,
                     session_id=principal.session_id,
                     email=principal.email,
-                    roles=("APPLICANT",),
+                    roles=("USER",),
                     account_type=AccountType.ORGANIZATION_APPLICANT,
                 ),
                 account_type=AccountType.ORGANIZATION_APPLICANT,
             )
             assert result.account_type is AccountType.ORGANIZATION_APPLICANT
-            assert result.roles == ("APPLICANT",)
+            assert result.roles == ("USER",)
             assert result_again == result
 
             stored_user = await session.get(User, user_id)
@@ -79,7 +79,7 @@ def test_public_user_can_upgrade_once_without_privileged_role(tmp_path: Path) ->
             )
             assert stored_user is not None
             assert stored_user.account_type is AccountType.ORGANIZATION_APPLICANT
-            assert stored_roles == ("APPLICANT",)
+            assert stored_roles == ("USER",)
             audit_rows = (
                 await session.scalars(
                     select(AuditLog).where(
@@ -115,7 +115,7 @@ def test_applicant_upgrade_rejects_non_public_account(tmp_path: Path) -> None:
                 user_id=user.id,
                 session_id=uuid4(),
                 email=user.email,
-                roles=("APPLICANT",),
+                roles=("USER",),
                 account_type=AccountType.INDIVIDUAL_APPLICANT,
             )
             with pytest.raises(ApplicantUpgradeNotAllowedError):

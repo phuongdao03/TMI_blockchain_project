@@ -4,27 +4,26 @@ import { describe, expect, it } from "vitest";
 import { CertificateOrbit } from "@/components/visual/certificate-orbit";
 
 describe("CertificateOrbit", () => {
-  it("presents the TMI evidence register as one accessible visual", () => {
+  it("describes the information that may be publicly displayed without fabricating a certificate", () => {
     render(<CertificateOrbit />);
 
     expect(
       screen.getByRole("img", {
-        name: "Hồ sơ đề cử minh họa",
+        name: "Sơ đồ phạm vi thông tin công bố trên nền tảng Tinh Hoa Việt",
       }),
     ).toBeDefined();
-    expect(screen.getByText("DẤU VÂN TAY DỮ LIỆU")).toBeDefined();
-    expect(screen.getByText("Sẵn sàng xác minh")).toBeDefined();
-  });
-
-  it("uses specific editorial copy in preview mode", () => {
-    render(<CertificateOrbit preview />);
-
-    expect(screen.getByText("DẤU ẤN TINH HOA VIỆT")).toBeDefined();
-    expect(screen.getByText("Giá trị được hình thành")).toBeDefined();
-    expect(screen.getByText("GIÁ TRỊ ĐƯỢC GÌN GIỮ VÀ LAN TỎA")).toBeDefined();
-    expect(screen.getByText("Tinh hoa Việt")).toBeDefined();
-    expect(screen.queryByText(/sơn mài/i)).toBeNull();
-    expect(screen.queryByText("NỘI DUNG GIỚI THIỆU")).toBeNull();
-    expect(screen.queryByText("Chưa phát hành")).toBeNull();
+    expect(screen.getByText("PHẠM VI HIỂN THỊ")).toBeDefined();
+    expect(screen.getByText("THÔNG TIN CÔNG BỐ")).toBeDefined();
+    expect(screen.getByText("Thông tin đã được phê duyệt")).toBeDefined();
+    expect(
+      screen.getByText("Đề cử & giới thiệu"),
+    ).toBeDefined();
+    expect(
+      screen.getByText("Mã tra cứu"),
+    ).toBeDefined();
+    expect(screen.getByText("Quyết định xử lý")).toBeDefined();
+    expect(screen.queryByText("THÔNG TIN MINH HỌA")).toBeNull();
+    expect(screen.queryByText("THV–VN–2026–0812")).toBeNull();
+    expect(screen.queryByText("Sẵn sàng xác minh")).toBeNull();
   });
 });

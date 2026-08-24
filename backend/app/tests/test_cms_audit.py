@@ -34,7 +34,7 @@ def test_cms_publish_sanitizes_html_and_records_audit(tmp_path: Path) -> None:
         factory = async_sessionmaker(engine, expire_on_commit=False)
         async with factory() as session:
             service = CmsService(session=session, audit=AuditService(session))
-            principal = _principal("CONTENT_ADMIN")
+            principal = _principal("SUPER_ADMIN")
             post = await service.create_post(
                 principal,
                 CmsPostInput(
@@ -89,7 +89,7 @@ def test_only_published_posts_are_public(tmp_path: Path) -> None:
         factory = async_sessionmaker(engine, expire_on_commit=False)
         async with factory() as session:
             service = CmsService(session=session, audit=AuditService(session))
-            principal = _principal("CONTENT_ADMIN")
+            principal = _principal("SUPER_ADMIN")
             await service.create_post(
                 principal,
                 CmsPostInput("Bản nháp", "ban-nhap", None, "<p>Draft</p>", None),

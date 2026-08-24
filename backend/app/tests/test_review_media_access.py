@@ -14,6 +14,7 @@ from app.modules.dossiers.models import (
     DossierEvidence,
     DossierStatus,
     DossierVersion,
+    EvidenceVisibility,
 )
 from app.modules.media.errors import MediaForbiddenError
 from app.modules.media.gateway import (
@@ -43,6 +44,7 @@ class ReviewDeliveryGateway:
         resource_type: str,
         timestamp: int,
         allowed_format: str,
+        max_bytes: int,
     ) -> UploadAuthorization:
         raise AssertionError("Upload is outside this delivery test.")
 
@@ -137,6 +139,12 @@ def test_delivery_requires_acknowledged_owned_assignment() -> None:
             password_hash="unused",
             status=UserStatus.ACTIVE,
         )
+        super_admin = User(
+            id=uuid4(),
+            email="super-admin-review-media@tmigroup.vn",
+            password_hash="unused",
+            status=UserStatus.ACTIVE,
+        )
         category = Category(
             id=uuid4(),
             code="MEDIA_REVIEW",
@@ -180,6 +188,17 @@ def test_delivery_requires_acknowledged_owned_assignment() -> None:
             bytes=2_048,
             status=MediaStatus.ACTIVE,
         )
+        admin_only_asset = MediaAsset(
+            id=uuid4(),
+            owner_user_id=owner.id,
+            cloudinary_public_id="ip-certificate/local/evidence/admin-only",
+            resource_type="image",
+            access_mode="authenticated",
+            original_filename="admin-only.png",
+            mime_type="image/png",
+            bytes=2_048,
+            status=MediaStatus.ACTIVE,
+        )
         evidence = DossierEvidence(
             id=uuid4(),
             dossier_id=dossier.id,
@@ -187,6 +206,15 @@ def test_delivery_requires_acknowledged_owned_assignment() -> None:
             media_asset_id=asset.id,
             evidence_type="OWNERSHIP",
             title="Bằng chứng",
+        )
+        admin_only_evidence = DossierEvidence(
+            id=uuid4(),
+            dossier_id=dossier.id,
+            dossier_version_id=version.id,
+            media_asset_id=admin_only_asset.id,
+            evidence_type="OWNERSHIP",
+            access_scope=EvidenceVisibility.ADMIN_ONLY,
+            title="Admin-only evidence",
         )
         assignment = ReviewAssignment(
             id=uuid4(),
@@ -202,12 +230,15 @@ def test_delivery_requires_acknowledged_owned_assignment() -> None:
                     owner,
                     reviewer,
                     other,
+                    super_admin,
                     category,
                     dossier,
                     version,
                     comparison_version,
                     asset,
+                    admin_only_asset,
                     evidence,
+                    admin_only_evidence,
                     assignment,
                 ]
             )
@@ -225,7 +256,7 @@ def test_delivery_requires_acknowledged_owned_assignment() -> None:
             delivery_access_policy=ReviewMediaAccessPolicy(session),
             clock=lambda: NOW,
         )
-        reviewer_principal = _principal(reviewer, "REVIEWER")
+        reviewer_principal = _principal(reviewer, "MODERATOR")
         with pytest.raises(MediaForbiddenError):
             await service.create_signed_url(reviewer_principal, asset.id)
 
@@ -239,8 +270,17 @@ def test_delivery_requires_acknowledged_owned_assignment() -> None:
         assert "expires_at=" in delivery.url
 
         with pytest.raises(MediaForbiddenError):
+            await service.create_signed_url(reviewer_principal, admin_only_asset.id)
+
+        admin_delivery = await service.create_signed_url(
+            _principal(super_admin, "SUPER_ADMIN"),
+            admin_only_asset.id,
+        )
+        assert "expires_at=" in admin_delivery.url
+
+        with pytest.raises(MediaForbiddenError):
             await service.create_signed_url(
-                _principal(other, "REVIEWER"),
+                _principal(other, "MODERATOR"),
                 asset.id,
             )
         async with sessions() as update_session:
@@ -262,12 +302,12 @@ def test_delivery_requires_acknowledged_owned_assignment() -> None:
             )
             await update_session.commit()
         similarity_delivery = await service.create_signed_url(
-            _principal(other, "REVIEWER"),
+            _principal(other, "MODERATOR"),
             asset.id,
         )
         assert "expires_at=" in similarity_delivery.url
         owner_delivery = await service.create_signed_url(
-            _principal(owner, "APPLICANT"),
+            _principal(owner, "USER"),
             asset.id,
         )
         assert owner_delivery.expires_at == int(NOW.timestamp()) + 300

@@ -53,7 +53,7 @@ def test_role_elevation_requires_distinct_approver_and_revokes_sessions(
             approver = User(email="admin-2@example.com", status=UserStatus.ACTIVE)
             target = User(email="reviewer@example.com", status=UserStatus.ACTIVE)
             super_role = Role(code="SUPER_ADMIN")
-            reviewer_role = Role(code="REVIEWER")
+            reviewer_role = Role(code="MODERATOR")
             session.add_all((initiator, approver, target, super_role, reviewer_role))
             await session.flush()
             session.add_all(
@@ -154,7 +154,7 @@ def test_mfa_recovery_changes_state_only_after_second_approval(tmp_path: Path) -
             second = User(email="admin-2@example.com", status=UserStatus.ACTIVE)
             staff = User(email="staff@example.com", status=UserStatus.ACTIVE)
             super_role = Role(code="SUPER_ADMIN")
-            reviewer_role = Role(code="REVIEWER")
+            reviewer_role = Role(code="MODERATOR")
             session.add_all((first, second, staff, super_role, reviewer_role))
             await session.flush()
             session.add_all(

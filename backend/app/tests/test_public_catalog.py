@@ -33,7 +33,27 @@ def test_public_serializer_allowlists_metadata_and_removes_rendition() -> None:
     metadata = {
         "schemaVersion": 1,
         "asset": {"title": "TMI"},
-        "publicEvidences": [{"sha256": "ab" * 32}],
+        "publicEvidences": [
+            {
+                "title": "Tác phẩm công khai",
+                "type": "ARTWORK_IMAGE",
+                "sha256": "ab" * 32,
+                "accessScope": "PUBLIC",
+                "privateOriginalUrl": "https://private.example/original.png",
+            },
+            {
+                "title": "Legacy document",
+                "type": "LEGACY",
+                "sha256": "cd" * 32,
+                "isPublic": True,
+            },
+            {
+                "title": "Internal document",
+                "type": "IDENTITY",
+                "sha256": "ef" * 32,
+                "accessScope": "INTERNAL",
+            },
+        ],
         "ownerUserId": "private-user",
         "privateEvidence": {"mediaAssetId": "private-media"},
         "rendition": {"pdfSha256": "private-file-hash"},
@@ -44,9 +64,51 @@ def test_public_serializer_allowlists_metadata_and_removes_rendition() -> None:
     assert result == {
         "schemaVersion": 1,
         "asset": {"title": "TMI"},
-        "publicEvidences": [{"sha256": "ab" * 32}],
+        "publicEvidences": [
+            {
+                "title": "Tác phẩm công khai",
+                "type": "ARTWORK_IMAGE",
+                "sha256": "ab" * 32,
+                "accessScope": "PUBLIC",
+            }
+        ],
     }
-    assert "private" not in str(result)
+    serialized = str(result)
+    assert "private" not in serialized
+    assert "Legacy" not in serialized
+    assert "Internal" not in serialized
+
+
+def test_public_serializer_only_returns_safe_explicit_public_fields() -> None:
+    result = PublicCatalogService._public_metadata(
+        {
+            "schemaVersion": 2,
+            "publicFields": [
+                {
+                    "key": "story",
+                    "label": "Public story",
+                    "value": "Approved narrative",
+                },
+                {
+                    "key": "email",
+                    "label": "Private email",
+                    "value": {"email": "owner-private@example.test"},
+                },
+            ],
+        }
+    )
+
+    assert result == {
+        "schemaVersion": 2,
+        "publicFields": [
+            {
+                "key": "story",
+                "label": "Public story",
+                "value": "Approved narrative",
+            }
+        ],
+    }
+    assert "owner-private@example.test" not in str(result)
 
 
 def test_public_rate_limit_hashes_ip_and_blocks_above_limit() -> None:

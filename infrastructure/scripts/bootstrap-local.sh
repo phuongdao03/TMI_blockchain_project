@@ -28,22 +28,13 @@ if [ "$contract_code" = "0x" ] || [ -z "$contract_code" ]; then
     node -e "const f=require('/contracts/broadcast/DeployCertificateRegistry.s.sol/31337/run-latest.json'); console.log(f.receipts.filter(x=>x.contractAddress).at(-1).contractAddress)")"
 fi
 
-private_key="$(docker compose logs --no-color anvil \
-  | sed -n 's/.*(0) \(0x[0-9a-fA-F]\{64\}\).*/\1/p' | head -n 1)"
-if ! printf '%s' "$private_key" | grep -Eq '^0x[0-9a-fA-F]{64}$'; then
-  printf '%s\n' 'Could not read the ephemeral Anvil signer key.' >&2
-  exit 1
-fi
-
 {
   printf '%s\n' '# Generated local-only runtime values. This file is gitignored.'
   printf 'CERTIFICATE_CONTRACT_ADDRESS=%s\n' "$contract_address"
   printf 'BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES=%s\n' "$contract_address"
-  printf 'BLOCKCHAIN_SIGNER_PRIVATE_KEY=%s\n' "$private_key"
 } > "$runtime_file"
 
 docker compose --profile frontend up -d --force-recreate --wait --wait-timeout 180 \
   backend worker scheduler frontend nginx
-docker compose exec -T backend python -m app.scripts.seed_local
 printf 'Local bootstrap complete. Contract: %s\n' "$contract_address"
-printf '%s\n' 'Local password for all seeded accounts: LocalOnly!23456'
+printf '%s\n' 'No application accounts were created. Provision a local Super Admin explicitly when needed.'

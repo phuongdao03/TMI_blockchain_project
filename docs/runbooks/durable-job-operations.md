@@ -8,8 +8,8 @@ ad-hoc Celery payload.
 
 ## Access
 
-- `FINANCE_ADMIN` and `BLOCKCHAIN_ADMIN` may view aggregate operations metrics.
-- Only `SUPER_ADMIN` with `operations.jobs.manage` may replay or cancel jobs.
+- Only `SUPER_ADMIN` may view aggregate operations metrics, replay or cancel
+  jobs through `operations.jobs.manage`.
 - Every replay/cancellation requires a reason and creates a sealed audit event.
 
 ## Triage

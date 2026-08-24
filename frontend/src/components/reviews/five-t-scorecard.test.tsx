@@ -11,6 +11,23 @@ describe("FiveTScorecard", () => {
     const submit = vi.fn().mockResolvedValue(undefined);
     render(
       <FiveTScorecard
+        evidences={[
+          {
+            id: "evidence-1",
+            mediaAssetId: "a3fe0d4b-0b7d-45bc-8fc7-077dce2f8426",
+            evidenceType: "SOURCE_DOCUMENT",
+            title: "Bằng chứng nguồn gốc",
+            description: null,
+            issuedAt: null,
+            displayOrder: 1,
+            isPublic: false,
+            media: {
+              mimeType: "application/pdf",
+              bytes: 1024,
+              sha256: "a".repeat(64),
+            },
+          },
+        ]}
         initialReview={null}
         isSaving={false}
         isSubmitting={false}
@@ -39,6 +56,9 @@ describe("FiveTScorecard", () => {
         target: { value: `Nhận xét đầy đủ cho ${criterion}.` },
       });
     }
+    for (const checkbox of screen.getAllByRole("checkbox")) {
+      await user.click(checkbox);
+    }
     await user.selectOptions(screen.getByLabelText("Kiến nghị"), "APPROVE");
 
     await vi.waitFor(() => expect(save).toHaveBeenCalled(), {
@@ -47,6 +67,7 @@ describe("FiveTScorecard", () => {
     await user.click(
       screen.getByRole("button", { name: "Gửi kết quả thẩm định" }),
     );
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2));
     expect(
       screen.getByRole("heading", { name: "Xác nhận gửi kết quả" }),
     ).toBeDefined();

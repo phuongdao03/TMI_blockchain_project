@@ -37,22 +37,15 @@ if (-not $contractAlive) {
     if ($contractAddress -notmatch "^0x[0-9a-fA-F]{40}$") { throw "Deployment output did not contain a contract address." }
 }
 
-$anvilLogs = (docker compose logs --no-color anvil) -join "`n"
-$privateKeyMatch = [regex]::Match($anvilLogs, "\(0\) (0x[0-9a-fA-F]{64})")
-if (-not $privateKeyMatch.Success) { throw "Could not read the ephemeral Anvil signer key." }
-
 New-Item -ItemType Directory -Force $runtimeDirectory | Out-Null
 @(
     "# Generated local-only runtime values. This file is gitignored."
     "CERTIFICATE_CONTRACT_ADDRESS=$contractAddress"
     "BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES=$contractAddress"
-    "BLOCKCHAIN_SIGNER_PRIVATE_KEY=$($privateKeyMatch.Groups[1].Value)"
 ) | Set-Content -Encoding Ascii $runtimeFile
 
 docker compose --profile frontend up -d --force-recreate --wait --wait-timeout 180 backend worker scheduler frontend nginx
 if ($LASTEXITCODE -ne 0) { throw "Application services did not reload contract settings." }
-docker compose exec -T backend python -m app.scripts.seed_local
-if ($LASTEXITCODE -ne 0) { throw "Local development identities could not be seeded." }
 
 Write-Host "Local bootstrap complete. Contract: $contractAddress"
-Write-Host "Local password for all seeded accounts: LocalOnly!23456"
+Write-Host "No application accounts were created. Provision a local Super Admin explicitly when needed."

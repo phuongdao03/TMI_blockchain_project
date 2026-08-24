@@ -20,8 +20,13 @@ describe("dashboard overview", () => {
     vi.unstubAllEnvs();
   });
 
-  it("shows the preview dashboard without loading business data", () => {
+  it("uses live dossier data even when the preview flag is explicitly set", async () => {
     vi.stubEnv("NEXT_PUBLIC_RELEASE_MODE", "preview");
+    listMock.mockResolvedValue({
+      success: true,
+      data: [],
+      meta: { requestId: "preview", page: 1, pageSize: 5, total: 0 },
+    });
     const queryClient = new QueryClient();
     render(
       <QueryClientProvider client={queryClient}>
@@ -29,7 +34,7 @@ describe("dashboard overview", () => {
           user={{
             id: "preview-user",
             email: "preview@tmigroup.vn",
-            roles: ["APPLICANT"],
+            roles: ["USER"],
             accountType: "INDIVIDUAL_APPLICANT",
           }}
         >
@@ -38,14 +43,9 @@ describe("dashboard overview", () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByText("Không gian của bạn")).toBeDefined();
-    expect(screen.getByRole("link", { name: /Xem thư viện/ })).toBeDefined();
-    expect(
-      screen.getByRole("link", { name: /Tìm hiểu cách tham gia/i }),
-    ).toBeDefined();
-    expect(screen.queryByText(/Phiên bản trải nghiệm/i)).toBeNull();
-    expect(screen.queryByText("Tạo hồ sơ mới")).toBeNull();
-    expect(listMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("link", { name: "Tạo hồ sơ mới" })).toBeDefined();
+    expect(await screen.findByText("Chưa có hồ sơ")).toBeDefined();
+    expect(listMock).toHaveBeenCalledTimes(1);
   });
 
   it("renders live dossier summary and primary applicant action", async () => {
@@ -63,7 +63,7 @@ describe("dashboard overview", () => {
           user={{
             id: "applicant-1",
             email: "owner@tmigroup.vn",
-            roles: ["APPLICANT"],
+            roles: ["USER"],
             accountType: "INDIVIDUAL_APPLICANT",
           }}
         >
@@ -123,7 +123,7 @@ describe("dashboard overview", () => {
             user={{
               id: "applicant-1",
               email: "owner@tmigroup.vn",
-              roles: ["APPLICANT"],
+              roles: ["USER"],
               accountType: "INDIVIDUAL_APPLICANT",
             }}
           >
@@ -153,7 +153,7 @@ describe("dashboard overview", () => {
           user={{
             id: "applicant-1",
             email: "owner@tmigroup.vn",
-            roles: ["APPLICANT"],
+            roles: ["USER"],
             accountType: "INDIVIDUAL_APPLICANT",
           }}
         >

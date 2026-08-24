@@ -10,7 +10,7 @@ test("applicant signs in with Firebase email and securely signs out", async ({
   await page
     .getByRole("textbox", { name: "Email" })
     .fill("applicant@tmigroup.vn");
-  await page.getByLabel("Mật khẩu").fill(password);
+  await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
   await expect(page).toHaveURL(/\/dashboard$/);
@@ -43,6 +43,27 @@ test("applicant signs in with Google through Firebase exchange", async ({
   await page.goto("/login?accountType=INDIVIDUAL_APPLICANT");
   await page.getByRole("button", { name: "Tiếp tục với Google" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
+});
+
+test("a public account can choose an applicant profile without a false expired-session error", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await page
+    .getByRole("textbox", { name: "Email" })
+    .fill("applicant@tmigroup.vn");
+  await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Đăng nhập" }).click();
+
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.getByRole("button", { name: "Gửi tác phẩm hoặc hồ sơ" }).click();
+  await page.getByLabel("Cá nhân").check();
+  await page.getByRole("button", { name: "Tiếp tục" }).click();
+
+  await expect(page.getByText("Bạn đã có thể bắt đầu hồ sơ.")).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(
+    "Phiên đăng nhập đã hết hạn",
+  );
 });
 
 test("email signup sends Firebase verification without exposing internal access", async ({

@@ -99,7 +99,7 @@ describe("SearchResultsPage", () => {
       { wrapper },
     );
 
-    expect(await screen.findByText(/Sơn mài <img/)).toBeTruthy();
+    expect((await screen.findAllByText(/Sơn mài <img/)).length).toBeGreaterThan(0);
     expect(document.querySelector("img")).toBeNull();
     await waitFor(() => expect(publicApi.search).toHaveBeenCalledTimes(1));
     expect(publicApi.search).toHaveBeenCalledWith(
@@ -116,6 +116,25 @@ describe("SearchResultsPage", () => {
     expect(next.getAttribute("href")).toContain("cursor=next-safe-cursor");
   });
 
+  it("prioritizes works in an album grid and keeps refinements on demand", async () => {
+    render(
+      <SearchResultsPage
+        parameters={{ tags: [], tagsMode: "any", sort: "newest" }}
+      />,
+      { wrapper },
+    );
+
+    expect(await screen.findByTestId("search-album-grid")).toBeTruthy();
+    expect(
+      screen.getByRole("article").getAttribute("data-layout"),
+    ).toBe("search-album-tile");
+    expect(
+      screen
+        .getByRole("button", { name: /Tinh chỉnh kết quả/ })
+        .getAttribute("aria-expanded"),
+    ).toBe("false");
+  });
+
   it("moves focus into the mobile drawer and closes it with Escape", async () => {
     const user = userEvent.setup();
     render(
@@ -125,7 +144,9 @@ describe("SearchResultsPage", () => {
       { wrapper },
     );
 
-    await user.click(screen.getByRole("button", { name: /Bộ lọc/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Tinh chỉnh kết quả/ }),
+    );
     const close = screen.getByRole("button", { name: "Đóng bộ lọc" });
     await waitFor(() => expect(document.activeElement).toBe(close));
     await user.keyboard("{Escape}");

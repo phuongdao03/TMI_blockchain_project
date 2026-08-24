@@ -29,6 +29,7 @@ from app.modules.public.share_service import (
     PublicShareConfigurationError,
     QrCodePngRenderer,
     RenderedPublicQr,
+    canonical_public_origin,
     canonical_public_work_url,
 )
 
@@ -55,7 +56,7 @@ class StubQrService:
             return None
         return RenderedPublicQr(
             png=b"\x89PNG\r\n\x1a\napi-qr",
-            payload=f"https://catalog.tmi.vn/tai-san/{slug}",
+            payload=f"https://catalog.tmi.vn/r/{'a' * 43}",
         )
 
 
@@ -68,11 +69,11 @@ class StubRedirectService:
 def test_canonical_share_domain_and_unicode_slug() -> None:
     assert (
         canonical_public_work_url(
-            "https://catalog.tmi.vn/path?ignored=1",
+            "https://catalog.tmi.vn/",
             "di-sản-số",
             allow_local_http=False,
         )
-        == "https://catalog.tmi.vn/tai-san/di-s%E1%BA%A3n-s%E1%BB%91"
+        == "https://catalog.tmi.vn/works/di-s%E1%BA%A3n-s%E1%BB%91"
     )
     with pytest.raises(PublicShareConfigurationError):
         canonical_public_work_url(
@@ -86,13 +87,28 @@ def test_canonical_share_domain_and_unicode_slug() -> None:
             "local-work",
             allow_local_http=True,
         )
-        == "http://localhost:3000/tai-san/local-work"
+        == "http://localhost:3000/works/local-work"
     )
     assert (
         QrCodePngRenderer()
-        .render("https://catalog.tmi.vn/tai-san/scan-ready")
+        .render("https://catalog.tmi.vn/works/scan-ready")
         .startswith(b"\x89PNG\r\n\x1a\n")
     )
+
+
+@pytest.mark.parametrize(
+    "unsafe_origin",
+    (
+        "https://user:password@catalog.tmi.vn",
+        "https://catalog.tmi.vn/?tracking=1",
+        "https://catalog.tmi.vn/#section",
+    ),
+)
+def test_public_origin_rejects_credentials_and_non_origin_parts(
+    unsafe_origin: str,
+) -> None:
+    with pytest.raises(PublicShareConfigurationError):
+        canonical_public_origin(unsafe_origin, allow_local_http=False)
 
 
 def test_qr_uses_opaque_payload_and_rejects_non_public_work(tmp_path: Path) -> None:
@@ -161,7 +177,7 @@ def test_public_qr_api_headers_and_not_found_policy() -> None:
             assert response.headers["cache-control"] == "no-store"
             assert response.headers["x-robots-tag"] == "noindex, nofollow"
             assert response.headers["content-location"] == (
-                "https://catalog.tmi.vn/tai-san/shareable"
+                f"https://catalog.tmi.vn/r/{'a' * 43}"
             )
             assert response.content.startswith(b"\x89PNG")
             assert client.get("/api/v1/public/works/suspended/qr").status_code == 404
@@ -179,8 +195,10 @@ def test_opaque_share_redirect_uses_server_canonical_relative_path() -> None:
         with TestClient(app, follow_redirects=False) as client:
             response = client.get(f"/r/{'a' * 43}")
         assert response.status_code == 302
-        assert response.headers["location"] == "/tai-san/public-work"
-        assert response.headers["referrer-policy"] == "same-origin"
+        assert response.headers["location"] == "/works/public-work"
+        assert response.headers["referrer-policy"] == "no-referrer"
+        assert response.headers["cache-control"] == "no-store"
+        assert response.headers["x-robots-tag"] == "noindex, nofollow"
         assert "HttpOnly" in response.headers["set-cookie"]
     finally:
         app.dependency_overrides.clear()

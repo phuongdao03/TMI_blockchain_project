@@ -15,6 +15,7 @@ from app.db.base import Base
 from app.modules.audit.models import AuditLog
 from app.modules.audit.service import AuditService
 from app.modules.auth.models import User, UserStatus
+from app.modules.auth.security import hash_verification_token
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.models import (
     Certificate,
@@ -219,6 +220,9 @@ async def _fixture() -> tuple[
         metadata_builder=CertificateMetadataBuilder(),
         audit=AuditService(session),
         clock=lambda: NOW,
+        public_base_url="https://tmi.example",
+        environment="test",
+        token_factory=lambda: "version-token-for-test",
     )
     return (
         service,
@@ -286,6 +290,44 @@ def test_request_and_reject_preserve_active_version_history() -> None:
         assert audit_actions == (
             "certificate.version.rejected",
             "certificate.version.requested",
+        )
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_correction_request_gets_its_own_immutable_qr_token() -> None:
+    async def scenario() -> None:
+        (
+            service,
+            sessions,
+            engine,
+            certificate_id,
+            target_version_id,
+            owner_id,
+            _,
+            _,
+        ) = await _fixture()
+        owner = _principal(
+            owner_id,
+            "APPLICANT",
+            permissions=("certificate.version.request",),
+        )
+
+        requested = await service.request(
+            owner,
+            certificate_id=certificate_id,
+            dossier_version_id=target_version_id,
+            reason=REQUEST_REASON,
+        )
+
+        async with sessions() as check:
+            stored = await check.get(CertificateVersion, requested.id)
+        assert stored is not None
+        assert stored.qr_payload == "https://tmi.example/verify/version-token-for-test"
+        assert stored.public_token_hash == hash_verification_token(
+            "version-token-for-test"
         )
         await service.close()
         await engine.dispose()

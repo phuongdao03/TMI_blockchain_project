@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -23,6 +23,9 @@ from app.modules.reviews.models import (
     Review,
     ReviewAssignment,
     ReviewAssignmentStatus,
+    ReviewFindingAction,
+    ReviewFindingSeverity,
+    ReviewRecommendation,
 )
 from app.modules.reviews.repository import ReviewRepository
 from app.modules.reviews.types import (
@@ -31,18 +34,28 @@ from app.modules.reviews.types import (
     ReviewAssignmentSummaryView,
     ReviewAssignmentView,
     ReviewDraft,
+    ReviewFinding,
     ReviewView,
 )
 
 ASSIGNMENT_CREATED_EVENT = "review.assignment_created"
 ADMIN_ROLES = frozenset({"SUPER_ADMIN"})
-REVIEWER_ROLES = frozenset({"REVIEWER"})
+REVIEWER_ROLES = frozenset({"MODERATOR"})
 CRITERIA = (
     "truth",
     "transparency",
     "ownership",
     "professionalism",
     "respect",
+)
+REVIEW_CHECKLIST_KEYS = frozenset(
+    {
+        "evidence_reviewed",
+        "criteria_assessed",
+        "findings_recorded",
+        "similarity_checked",
+        "attestation",
+    }
 )
 
 
@@ -263,6 +276,10 @@ class ReviewService:
                 raise ReviewConflictError(
                     "Only an in-progress assignment accepts draft changes."
                 )
+            version = await self._reviews.get_version(assignment.dossier_version_id)
+            if version is None:
+                raise ReviewNotFoundError()
+            self._validate_evidence_references(validated, version.snapshot_json)
             review = await self._reviews.get_review(
                 assignment.id,
                 for_update=True,
@@ -413,6 +430,39 @@ class ReviewService:
                     "Criterion comments cannot exceed 2000 characters."
                 )
             comments[criterion] = normalized
+        if set(draft.criterion_evidence) - set(CRITERIA):
+            raise ReviewValidationError("Criterion evidence key is invalid.")
+        criterion_evidence: dict[str, tuple[UUID, ...]] = {}
+        for criterion, media_ids in draft.criterion_evidence.items():
+            values = tuple(media_ids)
+            if (
+                len(values) > 10
+                or len(values) != len(set(values))
+                or any(not isinstance(media_id, UUID) for media_id in values)
+            ):
+                raise ReviewValidationError("Criterion evidence is invalid.")
+            criterion_evidence[criterion] = values
+        if len(draft.findings) > 20:
+            raise ReviewValidationError("A review can contain at most 20 findings.")
+        findings = tuple(cls._validated_finding(item) for item in draft.findings)
+        if len({item.id for item in findings}) != len(findings):
+            raise ReviewValidationError("Finding identifiers must be unique.")
+        if set(draft.checklist_answers) - REVIEW_CHECKLIST_KEYS:
+            raise ReviewValidationError("Review checklist key is invalid.")
+        checklist_answers: dict[str, bool] = {}
+        for key, answer in draft.checklist_answers.items():
+            if not isinstance(answer, bool):
+                raise ReviewValidationError("Review checklist answers must be boolean.")
+            checklist_answers[key] = answer
+        applicant_feedback = (
+            draft.applicant_feedback.strip()
+            if draft.applicant_feedback is not None
+            else ""
+        )
+        if len(applicant_feedback) > 2_000:
+            raise ReviewValidationError(
+                "Applicant feedback cannot exceed 2000 characters."
+            )
         private_note = (
             draft.private_note.strip() if draft.private_note is not None else ""
         )
@@ -425,9 +475,83 @@ class ReviewService:
             professionalism_score=draft.professionalism_score,
             respect_score=draft.respect_score,
             criterion_comments=comments,
+            criterion_evidence=criterion_evidence,
+            findings=findings,
+            checklist_answers=checklist_answers,
+            applicant_feedback=applicant_feedback or None,
             recommendation=draft.recommendation,
             private_note=private_note or None,
         )
+
+    @staticmethod
+    def _validated_finding(finding: ReviewFinding) -> ReviewFinding:
+        if (
+            not isinstance(finding.id, UUID)
+            or finding.criterion not in CRITERIA
+            or not isinstance(finding.severity, ReviewFindingSeverity)
+            or not isinstance(finding.action, ReviewFindingAction)
+        ):
+            raise ReviewValidationError("Review finding is invalid.")
+        evidence_media_ids = tuple(finding.evidence_media_ids)
+        if (
+            not evidence_media_ids
+            or len(evidence_media_ids) > 10
+            or len(evidence_media_ids) != len(set(evidence_media_ids))
+            or any(not isinstance(item, UUID) for item in evidence_media_ids)
+        ):
+            raise ReviewValidationError("Finding evidence is invalid.")
+        title = " ".join(finding.title.split())
+        description = finding.description.strip()
+        if not 5 <= len(title) <= 240 or not 20 <= len(description) <= 2_000:
+            raise ReviewValidationError("Review finding content is invalid.")
+        if (
+            finding.severity
+            in {ReviewFindingSeverity.HIGH, ReviewFindingSeverity.CRITICAL}
+            and finding.action is not ReviewFindingAction.ESCALATE
+        ):
+            raise ReviewValidationError("High-risk findings must be escalated.")
+        return ReviewFinding(
+            id=finding.id,
+            severity=finding.severity,
+            criterion=finding.criterion,
+            evidence_media_ids=evidence_media_ids,
+            title=title,
+            description=description,
+            action=finding.action,
+        )
+
+    @staticmethod
+    def _validate_evidence_references(
+        draft: ReviewDraft,
+        snapshot: Mapping[str, object],
+    ) -> None:
+        raw_evidences = snapshot.get("evidences")
+        allowed: set[UUID] = set()
+        if isinstance(raw_evidences, list):
+            for evidence in raw_evidences:
+                if not isinstance(evidence, dict):
+                    continue
+                raw_media_id = evidence.get("mediaAssetId")
+                if not isinstance(raw_media_id, str):
+                    continue
+                try:
+                    allowed.add(UUID(raw_media_id))
+                except ValueError:
+                    continue
+        referenced = {
+            media_id
+            for values in draft.criterion_evidence.values()
+            for media_id in values
+        }
+        referenced.update(
+            media_id
+            for finding in draft.findings
+            for media_id in finding.evidence_media_ids
+        )
+        if not referenced.issubset(allowed):
+            raise ReviewValidationError(
+                "Evidence references must belong to the locked dossier version."
+            )
 
     @staticmethod
     def _apply_draft(review: Review, draft: ReviewDraft) -> None:
@@ -437,6 +561,26 @@ class ReviewService:
         review.professionalism_score = draft.professionalism_score
         review.respect_score = draft.respect_score
         review.criterion_comments = dict(draft.criterion_comments)
+        review.criterion_evidence = {
+            criterion: [str(media_id) for media_id in media_ids]
+            for criterion, media_ids in draft.criterion_evidence.items()
+        }
+        review.findings = [
+            {
+                "id": str(finding.id),
+                "severity": finding.severity.value,
+                "criterion": finding.criterion,
+                "evidenceMediaIds": [
+                    str(media_id) for media_id in finding.evidence_media_ids
+                ],
+                "title": finding.title,
+                "description": finding.description,
+                "action": finding.action.value,
+            }
+            for finding in draft.findings
+        ]
+        review.checklist_answers = dict(draft.checklist_answers)
+        review.applicant_feedback = draft.applicant_feedback
         review.recommendation = draft.recommendation
         review.private_note = draft.private_note
         scores = (
@@ -465,7 +609,104 @@ class ReviewService:
             raise ReviewValidationError(
                 "A non-empty comment is required for every 5T criterion."
             )
+        criterion_evidence = cls._criterion_evidence_from_review(review)
+        if set(criterion_evidence) != set(CRITERIA) or any(
+            not criterion_evidence[criterion] for criterion in CRITERIA
+        ):
+            raise ReviewValidationError(
+                "At least one evidence reference is required for every 5T criterion."
+            )
+        if set(review.checklist_answers) != REVIEW_CHECKLIST_KEYS or not all(
+            review.checklist_answers.values()
+        ):
+            raise ReviewValidationError(
+                "All review completion checklist items must be confirmed."
+            )
+        findings = cls._findings_from_review(review)
+        high_risk = {
+            ReviewFindingSeverity.HIGH,
+            ReviewFindingSeverity.CRITICAL,
+        }
+        if review.recommendation is ReviewRecommendation.APPROVE:
+            if sum(scores) < 70:
+                raise ReviewValidationError(
+                    "Approval recommendation requires a score of at least 70."
+                )
+            if any(finding.severity in high_risk for finding in findings):
+                raise ReviewValidationError(
+                    "High-risk findings must be resolved outside an approval "
+                    "recommendation."
+                )
+        if review.recommendation in {
+            ReviewRecommendation.SUPPLEMENT,
+            ReviewRecommendation.REJECT,
+        } and (
+            review.applicant_feedback is None or len(review.applicant_feedback) < 50
+        ):
+            raise ReviewValidationError(
+                "A meaningful applicant-facing explanation is required."
+            )
+        if review.recommendation is ReviewRecommendation.SUPPLEMENT and not any(
+            finding.action is ReviewFindingAction.SUPPLEMENT for finding in findings
+        ):
+            raise ReviewValidationError(
+                "A supplement recommendation requires a supplement finding."
+            )
+        if review.recommendation is ReviewRecommendation.REJECT and (
+            sum(scores) >= 50
+            and not any(
+                finding.severity is ReviewFindingSeverity.CRITICAL
+                for finding in findings
+            )
+        ):
+            raise ReviewValidationError(
+                "A rejection requires a score below 50 or a critical finding."
+            )
         return scores
+
+    @staticmethod
+    def _criterion_evidence_from_review(
+        review: Review,
+    ) -> dict[str, tuple[UUID, ...]]:
+        result: dict[str, tuple[UUID, ...]] = {}
+        for criterion, raw_values in review.criterion_evidence.items():
+            if not isinstance(raw_values, list):
+                raise ReviewValidationError("Stored criterion evidence is invalid.")
+            try:
+                result[criterion] = tuple(UUID(str(item)) for item in raw_values)
+            except ValueError as exc:
+                raise ReviewValidationError(
+                    "Stored criterion evidence is invalid."
+                ) from exc
+        return result
+
+    @staticmethod
+    def _findings_from_review(review: Review) -> tuple[ReviewFinding, ...]:
+        findings: list[ReviewFinding] = []
+        for raw in review.findings:
+            if not isinstance(raw, dict):
+                raise ReviewValidationError("Stored review finding is invalid.")
+            raw_media_ids = raw.get("evidenceMediaIds")
+            if not isinstance(raw_media_ids, list):
+                raise ReviewValidationError("Stored review finding is invalid.")
+            try:
+                finding = ReviewFinding(
+                    id=UUID(str(raw["id"])),
+                    severity=ReviewFindingSeverity(str(raw["severity"])),
+                    criterion=str(raw["criterion"]),
+                    evidence_media_ids=tuple(
+                        UUID(str(media_id)) for media_id in raw_media_ids
+                    ),
+                    title=str(raw["title"]),
+                    description=str(raw["description"]),
+                    action=ReviewFindingAction(str(raw["action"])),
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ReviewValidationError(
+                    "Stored review finding is invalid."
+                ) from exc
+            findings.append(ReviewService._validated_finding(finding))
+        return tuple(findings)
 
     @staticmethod
     def _review_scores(review: Review) -> tuple[int, ...]:
@@ -491,6 +732,10 @@ class ReviewService:
             total_score=review.total_score,
             recommendation=review.recommendation,
             criterion_comments=dict(review.criterion_comments),
+            criterion_evidence=ReviewService._criterion_evidence_from_review(review),
+            findings=ReviewService._findings_from_review(review),
+            checklist_answers=dict(review.checklist_answers),
+            applicant_feedback=review.applicant_feedback,
             private_note=review.private_note,
             submitted_at=review.submitted_at,
         )

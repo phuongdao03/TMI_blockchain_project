@@ -210,7 +210,7 @@ def test_analytics_is_server_authorized_and_period_bounded() -> None:
         start = datetime(2026, 8, 1, tzinfo=UTC)
         end = start + timedelta(days=1)
         summary = await service.analytics(
-            _principal("CONTENT_ADMIN"), start=start, end=end
+            _principal("SUPER_ADMIN"), start=start, end=end
         )
         assert summary.search_count == 10
         with pytest.raises(DomainError) as forbidden:

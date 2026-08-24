@@ -36,7 +36,7 @@ export function DossierPaymentAction({
 
   if (dossierStatus === "PAID") {
     return (
-      <section className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950">
+      <section className="dossier-payment-notice dossier-payment-notice--success flex items-start gap-3 rounded-2xl p-5">
         <CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
         <div>
           <h2 className="font-bold">Phí xác lập đã được ghi nhận</h2>
@@ -49,7 +49,7 @@ export function DossierPaymentAction({
   }
   if (dossierStatus === "PAYMENT_PENDING") {
     return (
-      <section className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
+      <section className="dossier-payment-notice dossier-payment-notice--pending flex items-start gap-3 rounded-2xl p-5">
         <Clock3 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
         <div>
           <h2 className="font-bold">Đang chờ xác nhận thanh toán</h2>
@@ -59,7 +59,7 @@ export function DossierPaymentAction({
           </p>
           {activeOrder.data ? (
             <Link
-              className="mt-3 inline-flex min-h-11 items-center text-sm font-bold text-amber-950 underline decoration-2 underline-offset-4"
+              className="dossier-payment-notice__link mt-3 inline-flex min-h-11 items-center text-sm font-bold underline decoration-2 underline-offset-4"
               href={`/payments/${activeOrder.data.id}`}
             >
               Mở lại trang thanh toán
@@ -82,11 +82,11 @@ export function DossierPaymentAction({
   }
 
   return (
-    <section className="grid gap-5 rounded-2xl border border-primary-200 bg-primary-50 p-5 sm:grid-cols-[1fr_auto] sm:items-center">
+    <section className="dossier-payment-notice dossier-payment-notice--action grid gap-5 rounded-2xl p-5 sm:grid-cols-[1fr_auto] sm:items-center">
       <div className="flex items-start gap-3">
         <BadgeDollarSign
           aria-hidden="true"
-          className="mt-0.5 size-5 shrink-0 text-primary-700"
+          className="dossier-payment-notice__icon mt-0.5 size-5 shrink-0"
         />
         <div>
           <h2 className="font-bold text-primary-950">Hồ sơ đã được duyệt</h2>

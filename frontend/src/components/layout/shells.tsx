@@ -1,127 +1,168 @@
-import { LayoutDashboard, Menu } from "lucide-react";
-import Link from "next/link";
-import type { PropsWithChildren, ReactNode } from "react";
+"use client";
 
-import { BrandMark } from "@/components/layout/brand-mark";
-import { DashboardContextHeader } from "@/components/layout/dashboard-context-header";
-import { DashboardNavigation } from "@/components/layout/dashboard-navigation";
+import { Menu, X } from "lucide-react";
+import Link from "next/link";
+import { type PropsWithChildren, useEffect, useRef, useState } from "react";
+
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { resolvePublicHeaderAction } from "@/lib/auth/role-workspaces";
+import { useAuthUser } from "@/lib/auth/user-context";
 import type { AuthUser } from "@/lib/api/types";
-import { resolveDefaultWorkspace } from "@/lib/auth/role-workspaces";
-import { publicV1Features } from "@/lib/v1-features";
+
+import { BrandMark } from "./brand-mark";
+import { DashboardContextHeader } from "./dashboard-context-header";
+import { DashboardNavigation } from "./dashboard-navigation";
+
+const publicLinks = [
+  { href: "/", label: "Trang chủ" },
+  { href: "/works", label: "Đề cử" },
+  { href: "/process", label: "Quy trình" },
+  { href: "/verify", label: "Minh bạch" },
+];
 
 export function PublicShell({
   children,
-  user = null,
+  user,
 }: PropsWithChildren<{ user?: AuthUser | null }>) {
-  const publicLinks = [
-    { href: "/", label: "Trang chủ" },
-    {
-      href: publicV1Features.publicCatalog.href,
-      label: publicV1Features.publicCatalog.label,
-    },
-    { href: "/process", label: "Quy trình" },
-    {
-      href: publicV1Features.verification.href,
-      label: publicV1Features.verification.label,
-    },
-  ];
+  const contextUser = useAuthUser();
+  const activeUser = user ?? contextUser;
+  const publicHeaderAction = activeUser
+    ? resolvePublicHeaderAction(activeUser.roles)
+    : null;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const firstMobileLinkRef = useRef<HTMLAnchorElement>(null);
+
+  const closeMenu = (restoreFocus = true) => {
+    setMenuOpen(false);
+    if (restoreFocus) {
+      requestAnimationFrame(() => menuButtonRef.current?.focus());
+    }
+  };
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMenu();
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", closeOnEscape);
+    firstMobileLinkRef.current?.focus();
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menuOpen]);
 
   return (
-    <div className="public-shell min-h-dvh">
-      <a
-        className="sr-only z-50 bg-[#fff9ef] px-4 py-3 text-[#131313] focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
-        href="#noi-dung-chinh"
-      >
-        Bỏ qua điều hướng
+    <div className="public-shell">
+      <a className="skip-link" href="#main-content">
+        Chuyển đến nội dung chính
       </a>
-      <header className="public-header sticky top-0 z-40 border-b backdrop-blur-xl">
-        <div className="mx-auto flex min-h-18 max-w-7xl items-center gap-5 px-4 sm:px-6 lg:px-8">
-          <BrandMark className="mr-auto text-current" />
-          <div className="hidden md:block">
-            <ThemeToggle />
-          </div>
-          <nav
-            aria-label="Điều hướng chính"
-            className="flex items-center gap-1"
-          >
-            <div className="hidden items-center lg:flex">
-              {publicLinks.map(({ href, label }) => (
-                <Link
-                  className="public-nav-link inline-flex min-h-11 items-center px-3 text-sm font-semibold transition-colors"
-                  href={href}
-                  key={href}
-                >
-                  {label}
-                </Link>
-              ))}
-            </div>
-            <details className="group relative lg:hidden">
-              <summary className="public-menu-trigger grid size-11 cursor-pointer list-none place-items-center rounded-md border">
-                <Menu aria-hidden="true" className="size-5" />
-                <span className="sr-only">Mở điều hướng công khai</span>
-              </summary>
-              <div className="public-menu absolute top-12 right-0 z-50 grid w-64 gap-1 rounded-lg border p-2 shadow-2xl">
-                <div className="mb-1 border-b border-white/10 p-1 pb-3 md:hidden">
-                  <ThemeToggle />
-                </div>
-                {publicLinks.map(({ href, label }) => (
-                  <Link
-                    className="public-nav-link flex min-h-11 items-center justify-between gap-2 rounded-md px-3 py-2.5 text-sm font-semibold"
-                    href={href}
-                    key={href}
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </div>
-            </details>
-            {user ? (
+      <header className="public-header">
+        <BrandMark />
+        <nav className="public-nav" aria-label="Điều hướng chính">
+          {publicLinks.map((item) => (
+            <Link key={item.href} href={item.href}>
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="public-header__actions">
+          <ThemeToggle />
+          {publicHeaderAction ? (
+            <Link
+              className="button button--secondary public-header__workspace"
+              href={publicHeaderAction.href}
+            >
+              {publicHeaderAction.label}
+            </Link>
+          ) : (
+            <>
               <Link
-                className="public-workspace-link inline-flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-md border px-4 text-xs font-bold transition-colors"
-                href={resolveDefaultWorkspace(user.roles)}
+                className="public-header__auth-link public-header__login"
+                href="/login"
               >
-                <LayoutDashboard aria-hidden="true" className="size-4" />
-                Không gian của tôi
+                Đăng nhập
               </Link>
-            ) : (
-              <>
-                <Link
-                  className="public-login-link hidden min-h-11 items-center px-3 text-xs font-semibold sm:inline-flex"
-                  href="/login"
-                >
-                  Đăng nhập
-                </Link>
-                <Link
-                  className="hidden min-h-11 items-center rounded-md bg-primary-600 px-4 text-xs font-bold text-white transition-colors hover:bg-primary-700 sm:inline-flex"
-                  href="/register"
-                >
-                  Đăng ký
-                </Link>
-              </>
-            )}
-          </nav>
+              <Link
+                className="public-header__auth-link public-header__register"
+                href="/register"
+              >
+                Đăng ký
+              </Link>
+            </>
+          )}
+          <button
+            ref={menuButtonRef}
+            type="button"
+            className="public-header__menu"
+            aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
+            aria-expanded={menuOpen}
+            aria-controls="public-mobile-navigation"
+            onClick={() => (menuOpen ? closeMenu() : setMenuOpen(true))}
+          >
+            {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+          </button>
         </div>
       </header>
-      <main id="noi-dung-chinh">{children}</main>
-      <footer className="public-footer border-t">
-        <div className="public-footer-content mx-auto flex max-w-7xl flex-col gap-5 px-4 py-8 text-xs sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
-          <div>
-            <p className="public-footer-title font-semibold">
-              Đề cử Tinh Hoa Việt
-            </p>
-            <p className="mt-1">Tôn vinh giá trị Việt · Thông tin minh bạch</p>
-          </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-2">
-            <Link className="public-footer-link" href="/process">
-              Quy trình
+      {menuOpen ? (
+        <div className="public-mobile-drawer">
+          <button
+            type="button"
+            className="public-mobile-drawer__backdrop"
+            aria-label="Đóng menu"
+            tabIndex={-1}
+            onClick={() => closeMenu()}
+          />
+        <nav
+          id="public-mobile-navigation"
+          className="public-mobile-nav"
+          aria-label="Điều hướng di động"
+        >
+          {publicLinks.map((item, index) => (
+            <Link
+              key={item.href}
+              ref={index === 0 ? firstMobileLinkRef : undefined}
+              href={item.href}
+              onClick={() => closeMenu(false)}
+            >
+              {item.label}
             </Link>
-            <Link className="public-footer-link" href="/policies">
-              Chính sách
+          ))}
+          {publicHeaderAction ? (
+            <Link
+              href={publicHeaderAction.href}
+              onClick={() => closeMenu(false)}
+            >
+              {publicHeaderAction.label}
             </Link>
-            <span className="public-footer-credit">TMI Group</span>
-          </div>
+          ) : (
+            <div className="public-mobile-nav__account">
+              <Link href="/login" onClick={() => closeMenu(false)}>
+                Đăng nhập
+              </Link>
+              <Link href="/register" onClick={() => closeMenu(false)}>
+                Đăng ký
+              </Link>
+            </div>
+          )}
+        </nav>
         </div>
+      ) : null}
+      <main id="main-content">{children}</main>
+      <footer className="public-footer public-footer--legal">
+        <div className="public-footer__identity">
+          <BrandMark showCredit />
+        </div>
+        <nav aria-label="Liên kết cuối trang">
+          <Link href="/policies">Điều khoản sử dụng</Link>
+          <Link href="/policies#privacy">Chính sách quyền riêng tư</Link>
+        </nav>
       </footer>
     </div>
   );
@@ -129,78 +170,37 @@ export function PublicShell({
 
 export function AuthShell({ children }: PropsWithChildren) {
   return (
-    <div className="auth-shell auth-grid-surface flex min-h-dvh flex-col">
-      <header className="public-header border-b backdrop-blur-xl">
-        <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <BrandMark className="text-current" />
-          <ThemeToggle />
+    <div className="auth-shell">
+      <header className="auth-header">
+        <div className="auth-header__identity">
+          <BrandMark />
         </div>
+        <ThemeToggle />
       </header>
-      <main
-        aria-label="Tài khoản Đề cử Tinh Hoa Việt"
-        className="flex flex-1 items-center justify-center px-4 py-8 sm:px-6 sm:py-12"
-      >
-        <div className="w-full max-w-[29rem]">{children}</div>
+      <main id="main-content" aria-label="Khu vực tài khoản">
+        {children}
       </main>
-      <footer className="mx-auto flex w-full max-w-7xl items-center justify-center gap-5 px-4 py-6 text-xs text-[#777371] sm:px-6 lg:px-8">
-        <Link className="hover:text-[#e5e2e1]" href="/process">
-          Quy trình
-        </Link>
-        <span aria-hidden="true">·</span>
-        <Link className="hover:text-[#e5e2e1]" href="/policies">
-          Chính sách
-        </Link>
+      <footer className="auth-footer">
+        <Link href="/policies">Điều khoản sử dụng</Link>
+        <Link href="/policies#privacy">Chính sách quyền riêng tư</Link>
       </footer>
     </div>
   );
 }
 
-interface DashboardShellProps {
-  children: ReactNode;
-}
+export function DashboardShell({ children }: PropsWithChildren) {
+  const user = useAuthUser();
+  const roles = user?.roles ?? [];
 
-function WorkspaceNote() {
   return (
-    <div className="border-t border-white/10 pt-5">
-      <p className="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-[#ffb4aa]">
-        Đề cử Tinh Hoa Việt
-      </p>
-      <p className="mt-2 text-xs leading-5 text-slate-500">
-        Công việc, hồ sơ và thông báo quan trọng trong một nơi.
-      </p>
-    </div>
-  );
-}
-
-export function DashboardShell({ children }: DashboardShellProps) {
-  return (
-    <div className="min-h-dvh bg-[#121212] text-neutral-950 lg:grid lg:grid-cols-[17.25rem_minmax(0,1fr)]">
-      <aside className="relative hidden min-h-dvh overflow-y-auto border-r border-white/5 bg-[#121212] p-5 text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col">
-        <div className="pointer-events-none absolute -top-32 -left-28 size-72 rounded-full bg-primary-600/15 blur-3xl" />
-        <BrandMark className="relative mb-8 text-white" />
-        <nav aria-label="Điều hướng bảng điều khiển">
-          <DashboardNavigation />
-        </nav>
-        <div className="mt-auto pt-8">
-          <WorkspaceNote />
-        </div>
+    <div className="dashboard-shell">
+      <aside className="dashboard-sidebar">
+        <BrandMark compact />
+        <DashboardNavigation roles={roles} />
       </aside>
-
-      <div className="dashboard-mesh min-h-dvh min-w-0">
-        <header className="sticky top-0 z-20 border-b border-black/8 bg-[#fbfaf7]/92 backdrop-blur-xl">
-          <DashboardContextHeader />
-        </header>
-        <details className="border-b border-white/10 bg-[#121212] text-white lg:hidden">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 font-semibold">
-            <Menu aria-hidden="true" className="size-5" />
-            Mở điều hướng
-          </summary>
-          <DashboardNavigation className="border-t border-white/10 p-3" />
-          <div className="px-3 pb-3">
-            <WorkspaceNote />
-          </div>
-        </details>
-        <main className="min-w-0 px-4 py-7 sm:px-6 lg:px-8 lg:py-10 xl:px-12">
+      <div className="dashboard-shell__content">
+        <DashboardContextHeader user={user} />
+        <main className="dashboard-main" id="main-content">
           {children}
         </main>
       </div>

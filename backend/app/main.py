@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse
 from app.api.v1.audit import router as audit_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.blockchain import router as blockchain_router
+from app.api.v1.blockchain_signing import router as blockchain_signing_router
 from app.api.v1.certificate_revocations import router as certificate_revocations_router
 from app.api.v1.certificate_version_requests import (
     router as certificate_version_requests_router,
@@ -26,6 +27,7 @@ from app.api.v1.notifications import router as notifications_router
 from app.api.v1.operations import router as operations_router
 from app.api.v1.organizations import router as organizations_router
 from app.api.v1.payments import router as payments_router
+from app.api.v1.proof_registry import router as proof_registry_router
 from app.api.v1.public import router as public_router
 from app.api.v1.public_works_admin import router as public_works_admin_router
 from app.api.v1.ranking_admin import router as ranking_admin_router
@@ -52,7 +54,7 @@ from app.core.middleware import (
     RequestContextMiddleware,
     SecurityHeadersMiddleware,
 )
-from app.core.probes import AnvilProbe, RedisProbe
+from app.core.probes import AnvilProbe, ClamAvProbe, CloudinaryProbe, RedisProbe
 
 
 def _build_health_service(settings: Settings) -> HealthService:
@@ -65,6 +67,23 @@ def _build_health_service(settings: Settings) -> HealthService:
     if settings.business_workflows_enabled:
         probes["anvil"] = AnvilProbe(
             url=settings.anvil_rpc_url,
+            timeout_seconds=settings.readiness_timeout_seconds,
+        )
+    if settings.app_env == "production" and settings.release_mode == "full":
+        cloudinary_secret = settings.cloudinary_api_secret
+        probes["cloudinary"] = CloudinaryProbe(
+            cloud_name=settings.cloudinary_cloud_name,
+            api_key=settings.cloudinary_api_key,
+            api_secret=(
+                cloudinary_secret.get_secret_value()
+                if cloudinary_secret is not None
+                else ""
+            ),
+            timeout_seconds=settings.readiness_timeout_seconds,
+        )
+        probes["clamav"] = ClamAvProbe(
+            host=settings.media_scanner_host,
+            port=settings.media_scanner_port,
             timeout_seconds=settings.readiness_timeout_seconds,
         )
 
@@ -232,6 +251,8 @@ def create_application(
     app.include_router(auth_router)
     app.include_router(audit_router)
     app.include_router(blockchain_router)
+    app.include_router(blockchain_signing_router)
+    app.include_router(proof_registry_router)
     app.include_router(council_router)
     app.include_router(cms_router)
     app.include_router(certificates_router)

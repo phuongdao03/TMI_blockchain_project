@@ -43,6 +43,16 @@ class TransactionReceipt:
     succeeded: bool
 
 
+@dataclass(frozen=True, slots=True)
+class ChainTransaction:
+    transaction_hash: str
+    sender: str
+    recipient: str
+    data: bytes
+    chain_id: int
+    value: int
+
+
 _EVENT_TOPICS = {
     Web3.keccak(
         text="CertificateIssued(bytes32,bytes32,bytes32,uint64,uint64)"
@@ -184,15 +194,82 @@ class BlockchainGateway:
             ).call()
         except Exception as exc:
             raise BlockchainGatewayError("Contract read failed.") from exc
-        return CertificateRecord(
-            dossier_hash=bytes(result[0]),
-            metadata_hash=bytes(result[1]),
-            revocation_reason_hash=bytes(result[2]),
-            issued_at=int(result[3]),
-            expires_at=int(result[4]),
-            version=int(result[5]),
-            revoked=bool(result[6]),
-        )
+        return self._certificate_record(result)
+
+    async def get_certificate_version(
+        self,
+        certificate_id: bytes,
+        version: int,
+    ) -> CertificateRecord:
+        """Read the immutable chain snapshot for a certificate version."""
+        if (
+            isinstance(version, bool)
+            or not isinstance(version, int)
+            or not 1 <= version <= 2**32 - 1
+        ):
+            raise BlockchainGatewayError("Certificate version is invalid.")
+        await self.validate_chain()
+        try:
+            result = await self._contract.functions.getCertificateVersion(
+                self._bytes32(certificate_id),
+                version,
+            ).call()
+        except Exception as exc:
+            raise BlockchainGatewayError(
+                "Contract historical version read failed."
+            ) from exc
+        return self._certificate_record(result)
+
+    @staticmethod
+    def _certificate_record(result: object) -> CertificateRecord:
+        try:
+            if not isinstance(result, (list, tuple)):
+                raise TypeError("Contract certificate response must be a sequence.")
+            values: tuple[object, ...] = tuple(result)
+            (
+                dossier_hash,
+                metadata_hash,
+                revocation_reason_hash,
+                issued_at,
+                expires_at,
+                version,
+                revoked,
+            ) = values
+            if (
+                not isinstance(
+                    dossier_hash,
+                    (bytes, bytearray),
+                )
+                or not isinstance(
+                    metadata_hash,
+                    (bytes, bytearray),
+                )
+                or not isinstance(
+                    revocation_reason_hash,
+                    (bytes, bytearray),
+                )
+                or isinstance(issued_at, bool)
+                or not isinstance(issued_at, int)
+                or isinstance(expires_at, bool)
+                or not isinstance(expires_at, int)
+                or isinstance(version, bool)
+                or not isinstance(version, int)
+                or not isinstance(revoked, bool)
+            ):
+                raise TypeError("Contract certificate response has invalid values.")
+            return CertificateRecord(
+                dossier_hash=bytes(dossier_hash),
+                metadata_hash=bytes(metadata_hash),
+                revocation_reason_hash=bytes(revocation_reason_hash),
+                issued_at=issued_at,
+                expires_at=expires_at,
+                version=version,
+                revoked=revoked,
+            )
+        except (IndexError, TypeError, ValueError) as exc:
+            raise BlockchainGatewayError(
+                "Contract certificate response is invalid."
+            ) from exc
 
     async def get_document_evidence(
         self,
@@ -260,6 +337,57 @@ class BlockchainGateway:
             return await self._web3.eth.gas_price
         except Exception as exc:
             raise BlockchainGatewayError("Could not resolve gas price.") from exc
+
+    async def balance(self, wallet_address: str) -> int:
+        await self.validate_chain()
+        try:
+            return int(
+                await self._web3.eth.get_balance(
+                    Web3.to_checksum_address(wallet_address)
+                )
+            )
+        except Exception as exc:
+            raise BlockchainGatewayError("Could not resolve wallet balance.") from exc
+
+    async def has_issuer_role(self, wallet_address: str) -> bool:
+        """Check the existing contract role used for write operations."""
+        await self.validate_chain()
+        try:
+            return bool(
+                await self._contract.functions.hasRole(
+                    Web3.keccak(text="ISSUER_ROLE"),
+                    Web3.to_checksum_address(wallet_address),
+                ).call()
+            )
+        except Exception as exc:
+            raise BlockchainGatewayError("Signer role lookup failed.") from exc
+
+    async def transaction(self, tx_hash: str) -> ChainTransaction | None:
+        await self.validate_chain()
+        try:
+            transaction = await self._web3.eth.get_transaction(HexBytes(tx_hash))
+        except TransactionNotFound:
+            return None
+        except Exception as exc:
+            raise BlockchainGatewayError("Transaction lookup failed.") from exc
+        sender = transaction.get("from")
+        recipient = transaction.get("to")
+        if sender is None or recipient is None:
+            raise BlockchainGatewayError("Transaction sender or recipient is missing.")
+        payload = transaction.get("input", transaction.get("data", b""))
+        supplied_chain_id = transaction.get("chainId")
+        return ChainTransaction(
+            transaction_hash=HexBytes(transaction["hash"]).to_0x_hex(),
+            sender=Web3.to_checksum_address(str(sender)),
+            recipient=Web3.to_checksum_address(str(recipient)),
+            data=bytes(HexBytes(payload)),
+            chain_id=(
+                int(supplied_chain_id)
+                if supplied_chain_id is not None
+                else self.chain_id
+            ),
+            value=int(transaction.get("value", 0)),
+        )
 
     async def broadcast(self, raw_transaction: bytes) -> str:
         await self.validate_chain()

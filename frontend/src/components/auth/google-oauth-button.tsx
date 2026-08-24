@@ -148,7 +148,7 @@ export function GoogleOAuthButton({
         </p>
       ) : null}
       {resolver ? (
-        <div className="space-y-3 rounded-lg border border-[#f3d675]/30 bg-[#201d16] p-4">
+        <div className="space-y-3 rounded-lg border border-[#F6C515]/30 bg-[#201d16] p-4">
           <label
             className="block text-sm font-semibold text-[#e5e2e1]"
             htmlFor="staff-mfa-code"
@@ -157,7 +157,7 @@ export function GoogleOAuthButton({
           </label>
           <input
             autoComplete="one-time-code"
-            className="min-h-12 w-full rounded-md border border-white/20 bg-[#111] px-3 text-center font-mono text-lg tracking-[0.3em] text-white outline-none focus:border-[#f3d675]"
+            className="min-h-12 w-full rounded-md border border-white/20 bg-[#111] px-3 text-center font-mono text-lg tracking-[0.3em] text-white outline-none focus:border-[#F6C515]"
             id="staff-mfa-code"
             inputMode="numeric"
             maxLength={6}
@@ -167,7 +167,7 @@ export function GoogleOAuthButton({
             value={verificationCode}
           />
           <button
-            className="min-h-11 w-full rounded-md bg-[#f3d675] px-4 text-sm font-bold text-[#17130a] disabled:opacity-60"
+            className="min-h-11 w-full rounded-md bg-[#F6C515] px-4 text-sm font-bold text-[#470000] disabled:opacity-60"
             disabled={isPending || verificationCode.length !== 6}
             onClick={verifySecondFactor}
             type="button"
@@ -177,7 +177,7 @@ export function GoogleOAuthButton({
         </div>
       ) : null}
       <button
-        className="flex min-h-12 w-full items-center justify-center gap-3 rounded-md border border-[#ad8883]/45 bg-[#171717] px-4 text-sm font-bold text-[#e5e2e1] transition-colors hover:border-[#ffb4aa] hover:bg-[#242222] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffb4aa] disabled:pointer-events-none disabled:opacity-60"
+        className="auth-google-button flex min-h-12 w-full items-center justify-center gap-3 rounded-md border border-[#ad8883]/45 bg-[#171717] px-4 text-sm font-bold text-[#e5e2e1] transition-colors hover:border-[#ffb4aa] hover:bg-[#242222] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffb4aa] disabled:pointer-events-none disabled:opacity-60"
         disabled={isPending || Boolean(resolver)}
         onClick={startGoogleOAuth}
         type="button"

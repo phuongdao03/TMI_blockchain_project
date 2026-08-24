@@ -33,6 +33,7 @@ def test_metadata_is_versioned_deterministic_and_excludes_private_fields() -> No
             {
                 "title": "Giấy chứng nhận",
                 "evidenceType": "LEGAL",
+                "accessScope": "PUBLIC",
                 "isPublic": True,
                 "mediaAssetId": "private-media-id",
                 "media": {"sha256": "ab" * 32},
@@ -54,12 +55,13 @@ def test_metadata_is_versioned_deterministic_and_excludes_private_fields() -> No
         expires_at=None,
     )
 
-    assert metadata["schemaVersion"] == 1
+    assert metadata["schemaVersion"] == 2
     assert metadata["publicEvidences"] == [
         {
             "title": "Giấy chứng nhận",
             "type": "LEGAL",
             "sha256": "ab" * 32,
+            "accessScope": "PUBLIC",
         }
     ]
     assert "private-user-id" not in str(metadata)

@@ -46,7 +46,7 @@ describe("SimilarityCaseQueue", () => {
         {
           id: "reviewer-1",
           email: "reviewer@tmi.vn",
-          role: "REVIEWER",
+          role: "MODERATOR",
           status: "ACTIVE",
         },
       ],

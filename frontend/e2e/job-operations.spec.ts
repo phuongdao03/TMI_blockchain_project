@@ -9,7 +9,9 @@ test("super admin reviews and safely replays failed background work", async ({
   await page
     .getByRole("textbox", { name: "Email" })
     .fill("superadmin@tmigroup.vn");
-  await page.getByLabel(/Mật khẩu/i).fill("correct horse battery staple");
+  await page
+    .getByLabel("Mật khẩu", { exact: true })
+    .fill("correct horse battery staple");
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
   await expect(page).toHaveURL(/\/admin(?:\/dashboard)?$/);

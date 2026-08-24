@@ -162,6 +162,16 @@ describe("PublicWorkDetailPage", () => {
     expect(
       await screen.findByText("Tác phẩm không còn công khai"),
     ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("status", { name: "Tác phẩm không còn công khai" })
+        .classList.contains("public-status-panel"),
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole("link", { name: "Trở lại danh sách đề cử" })
+        .classList.contains("public-status-panel__action"),
+    ).toBe(true);
   });
 
   it("emits typed QR/report hook events", async () => {

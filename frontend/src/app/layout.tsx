@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   description:
     "Khám phá những đề cử tiêu biểu, câu chuyện giá trị Việt và thông tin minh bạch của chương trình.",
   icons: {
-    icon: "/assets/brand/tmi-group-logo.png",
+    icon: "/assets/brand/thv-brand-emblem.png",
   },
   openGraph: {
     type: "website",

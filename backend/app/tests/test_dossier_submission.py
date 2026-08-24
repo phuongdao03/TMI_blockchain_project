@@ -32,6 +32,8 @@ from app.modules.dossiers.models import (
     DossierEvidence,
     DossierStatus,
     DossierStatusHistory,
+    DossierType,
+    DossierTypeVersion,
     DossierVersion,
 )
 from app.modules.dossiers.service import DossierService
@@ -126,7 +128,7 @@ def _principal(user: User) -> AuthPrincipal:
         user_id=user.id,
         session_id=uuid4(),
         email=user.email,
-        roles=("APPLICANT",),
+        roles=("USER",),
     )
 
 
@@ -185,12 +187,15 @@ def test_submit_is_atomic_idempotent_and_locks_canonical_snapshot() -> None:
             == submitted.version.canonical_hash
         )
         assert submitted.version.canonical_hash == (
-            "270e05a9bab81b18f6b1d996a301ea247864c961589f4dd2212afd25b81fa807"
+            "1e78af4a1c2de118ee9427ccf47e3048089f54b09b288c5d80a9ae7d29f49a71"
         )
         evidences = submitted.version.snapshot_json["evidences"]
         assert isinstance(evidences, list)
         first_evidence = evidences[0]
         assert isinstance(first_evidence, dict)
+        assert first_evidence["evidenceRole"] == "OWNERSHIP_DOCUMENT"
+        assert first_evidence["accessScope"] == "PRIVATE"
+        assert first_evidence["isPublic"] is False
         media_snapshot = first_evidence["media"]
         assert isinstance(media_snapshot, dict)
         assert media_snapshot["hashAlgorithm"] == "SHA-256"
@@ -226,6 +231,95 @@ def test_submit_is_atomic_idempotent_and_locks_canonical_snapshot() -> None:
         assert versions[0].canonical_hash == submitted.version.canonical_hash
         assert timeline[0].from_status is DossierStatus.DRAFT
         assert timeline[0].to_status is DossierStatus.SUBMITTED
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_submitted_dynamic_dossier_freezes_only_explicit_public_fields() -> None:
+    async def exercise() -> None:
+        service, session_factory, engine, user, media = await _build_service()
+        principal = _principal(user)
+        dossier_type_id = uuid4()
+        dossier_type_version_id = uuid4()
+        async with session_factory() as session:
+            async with session.begin():
+                session.add(
+                    DossierType(
+                        id=dossier_type_id,
+                        category_id=CATEGORY_ID,
+                        code="PUBLIC_FIELD_TEST",
+                        name="Public field test",
+                    )
+                )
+                session.add(
+                    DossierTypeVersion(
+                        id=dossier_type_version_id,
+                        dossier_type_id=dossier_type_id,
+                        version_no=1,
+                        schema_json={
+                            "fields": [
+                                {
+                                    "key": "story",
+                                    "label": "Câu chuyện tác phẩm",
+                                    "type": "textarea",
+                                    "maxLength": 2_000,
+                                    "publicVisibility": True,
+                                },
+                                {
+                                    "key": "owner_email",
+                                    "label": "Email chủ sở hữu",
+                                    "type": "email",
+                                },
+                            ]
+                        },
+                    )
+                )
+
+        dossier = await service.create_dossier(
+            principal,
+            CreateDossier(
+                category_id=CATEGORY_ID,
+                title="Hồ sơ có trường công khai",
+                dossier_type_version_id=dossier_type_version_id,
+                form_data={
+                    "story": "  Câu chuyện được công bố có kiểm soát.  ",
+                    "owner_email": "private@example.test",
+                },
+            ),
+        )
+        await service.attach_evidence(
+            principal,
+            dossier.id,
+            CreateEvidence(
+                media_asset_id=media.id,
+                evidence_type="OWNERSHIP_DOCUMENT",
+                title="Giấy xác nhận",
+                issued_at=NOW,
+            ),
+        )
+        submitted = await service.submit_dossier(
+            principal,
+            dossier.id,
+            idempotency_key="freeze-explicit-public-fields",
+        )
+        snapshot_dossier = submitted.version.snapshot_json["dossier"]
+        assert isinstance(snapshot_dossier, dict)
+        dossier_type = snapshot_dossier["dossierType"]
+        assert isinstance(dossier_type, dict)
+        assert dossier_type["publicFields"] == [
+            {
+                "key": "story",
+                "label": "Câu chuyện tác phẩm",
+                "value": "Câu chuyện được công bố có kiểm soát.",
+            }
+        ]
+        assert dossier_type["formData"] == {
+            "story": "Câu chuyện được công bố có kiểm soát.",
+            "owner_email": "private@example.test",
+        }
 
         await service.close()
         await engine.dispose()

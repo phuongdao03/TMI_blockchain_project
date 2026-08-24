@@ -20,7 +20,10 @@ from app.modules.auth.models import (
 )
 from app.modules.auth.rate_limit import RegistrationRateLimiter
 from app.modules.auth.repositories import AuthRepository, OutboxRepository
-from app.modules.auth.roles import PUBLIC_REGISTRATION_ROLE
+from app.modules.auth.roles import (
+    USER_REGISTRATION_ROLE,
+    VIEWER_REGISTRATION_ROLE,
+)
 from app.modules.auth.security import (
     Argon2PasswordHasher,
     OutboxPayloadCipher,
@@ -110,17 +113,17 @@ class RegistrationService:
         self._auth_repository.add_user(user)
         await self._session.flush()
 
-        if account_type is not AccountType.PUBLIC_USER:
-            applicant_role = await self._auth_repository.get_role_by_code(
-                PUBLIC_REGISTRATION_ROLE
-            )
-            if applicant_role is None:
-                applicant_role = Role(code=PUBLIC_REGISTRATION_ROLE)
-                self._auth_repository.add_role(applicant_role)
-                await self._session.flush()
-            self._auth_repository.add_user_role(
-                UserRole(user_id=user.id, role_id=applicant_role.id)
-            )
+        role_code = (
+            VIEWER_REGISTRATION_ROLE
+            if account_type is AccountType.PUBLIC_USER
+            else USER_REGISTRATION_ROLE
+        )
+        role = await self._auth_repository.get_role_by_code(role_code)
+        if role is None:
+            role = Role(code=role_code)
+            self._auth_repository.add_role(role)
+            await self._session.flush()
+        self._auth_repository.add_user_role(UserRole(user_id=user.id, role_id=role.id))
 
         raw_token = secrets.token_urlsafe(32)
         self._auth_repository.add_verification_token(

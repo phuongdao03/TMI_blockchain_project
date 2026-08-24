@@ -245,7 +245,7 @@ def _principal() -> AuthPrincipal:
         user_id=uuid4(),
         session_id=uuid4(),
         email="member@tmigroup.vn",
-        roles=("COUNCIL_MEMBER", "COUNCIL_SECRETARY"),
+        roles=("SUPER_ADMIN",),
     )
 
 

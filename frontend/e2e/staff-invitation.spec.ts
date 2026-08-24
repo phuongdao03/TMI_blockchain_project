@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeEach(async ({ request }) => {
+  await request.post("http://127.0.0.1:4010/api/e2e/reset-staff-invitations");
+});
+
 test("invited staff accepts once, enrolls TOTP and removes setup secret", async ({
   page,
 }, testInfo) => {
@@ -25,7 +29,9 @@ test("staff completes the Firebase TOTP challenge before entering operations", a
   await page
     .getByRole("textbox", { name: "Email" })
     .fill("reviewer@tmigroup.vn");
-  await page.getByLabel("Mật khẩu").fill("correct horse battery staple");
+  await page
+    .getByLabel("Mật khẩu", { exact: true })
+    .fill("correct horse battery staple");
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
   await expect(page.getByLabel("Mã 6 số từ ứng dụng xác thực")).toBeVisible();

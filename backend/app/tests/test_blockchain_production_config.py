@@ -24,10 +24,8 @@ def _production(**overrides: object) -> Settings:
         "blockchain_rpc_url": "https://polygon-rpc.example",
         "certificate_contract_address": CONTRACT,
         "blockchain_allowed_contract_addresses": CONTRACT,
-        "blockchain_signer_mode": "managed",
-        "blockchain_managed_signer_url": "https://signer.example/v1/sign",
-        "blockchain_managed_signer_key_id": "projects/tmi/keys/issuer",
-        "blockchain_managed_signer_expected_address": "0x" + "22" * 20,
+        "blockchain_signer_mode": "human",
+        "blockchain_signing_enabled": True,
         "blockchain_signer_private_key": None,
         "payment_provider": "payos",
         "payos_client_id": "client",
@@ -35,6 +33,9 @@ def _production(**overrides: object) -> Settings:
         "payos_checksum_key": "checksum",
         "payos_return_url": "https://app.example/payments/return",
         "payos_cancel_url": "https://app.example/payments/cancel",
+        "cloudinary_cloud_name": "tmi-production",
+        "cloudinary_api_key": "cloudinary-api-key",
+        "cloudinary_api_secret": "cloudinary-api-secret",
     }
     values.update(overrides)
     return Settings.model_validate(values)
@@ -73,12 +74,27 @@ def test_production_requires_valid_private_document_encryption() -> None:
 @pytest.mark.parametrize(
     "overrides",
     [
+        {"cloudinary_cloud_name": ""},
+        {"cloudinary_api_key": ""},
+        {"cloudinary_api_secret": None},
+    ],
+)
+def test_production_requires_cloudinary_credentials_for_upload_signatures(
+    overrides: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError, match="Cloudinary"):
+        _production(**overrides)
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
         {"blockchain_network": "amoy", "blockchain_chain_id": 80_002},
         {"blockchain_rpc_url": "http://polygon-rpc.example"},
         {"blockchain_allowed_contract_addresses": "0x" + "33" * 20},
         {"blockchain_signer_mode": "local"},
-        {"blockchain_managed_signer_url": "http://signer.example/v1/sign"},
-        {"blockchain_managed_signer_key_id": ""},
+        {"blockchain_signer_mode": "managed"},
+        {"blockchain_signing_enabled": False},
         {"blockchain_explorer_base_url": "http://polygonscan.com"},
         {"blockchain_explorer_base_url": "javascript:alert(1)"},
         {"blockchain_explorer_base_url": "https://user@polygonscan.com"},

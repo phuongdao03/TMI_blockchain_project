@@ -3,7 +3,6 @@ import {
   BadgeCheck,
   BookOpenText,
   ClipboardCheck,
-  Landmark,
   Map,
   Search,
   ShieldCheck,
@@ -15,7 +14,7 @@ import { ApplicantUpgradeCard } from "@/components/dashboard/applicant-upgrade-c
 import type { AccountType, AuthUser } from "@/lib/api/types";
 import type { WorkspacePersona } from "@/lib/auth/role-workspaces";
 
-type RoleWorkspacePersona = Exclude<WorkspacePersona, "APPLICANT">;
+type RoleWorkspacePersona = WorkspacePersona;
 
 interface Action {
   href: string;
@@ -52,7 +51,7 @@ const publicActions: Action[] = [
 ];
 
 const staffWorkspaces: Record<
-  Exclude<RoleWorkspacePersona, "PUBLIC">,
+  Exclude<RoleWorkspacePersona, "VIEWER" | "USER">,
   {
     eyebrow: string;
     title: string;
@@ -60,7 +59,7 @@ const staffWorkspaces: Record<
     actions: Action[];
   }
 > = {
-  REVIEWER: {
+  MODERATOR: {
     eyebrow: "Khu vực thẩm định",
     title: "Hàng đợi thẩm định",
     description:
@@ -73,49 +72,9 @@ const staffWorkspaces: Record<
         icon: ClipboardCheck,
       },
       {
-        href: "/notifications",
-        label: "Thông báo công việc",
-        detail: "Theo dõi thay đổi phân công và nhắc hạn.",
-        icon: BadgeCheck,
-      },
-    ],
-  },
-  COUNCIL: {
-    eyebrow: "Khu vực Hội đồng",
-    title: "Phiên xét duyệt Hội đồng",
-    description:
-      "Rà soát chương trình họp, công khai xung đột lợi ích và biểu quyết theo phiên.",
-    actions: [
-      {
         href: "/council",
-        label: "Mở phiên Hội đồng",
-        detail: "Xem agenda, biên bản và quyết định đang chờ.",
-        icon: Landmark,
-      },
-      {
-        href: "/notifications",
-        label: "Thông báo phiên họp",
-        detail: "Theo dõi lịch và thay đổi của Hội đồng.",
-        icon: BadgeCheck,
-      },
-    ],
-  },
-  ADMIN: {
-    eyebrow: "Khu vực vận hành",
-    title: "Điều hành nền tảng",
-    description:
-      "Theo dõi nội dung, vận hành và các ngoại lệ thuộc đúng phạm vi quản trị của bạn.",
-    actions: [
-      {
-        href: "/admin/dashboard",
-        label: "Mở bảng vận hành",
-        detail: "Theo dõi chỉ số vận hành và các ngoại lệ cần xử lý.",
-        icon: ShieldCheck,
-      },
-      {
-        href: "/notifications",
-        label: "Thông báo vận hành",
-        detail: "Theo dõi các sự kiện và ngoại lệ thuộc phạm vi của bạn.",
+        label: "Phiên xét duyệt",
+        detail: "Khai báo xung đột, biểu quyết và theo dõi biên bản.",
         icon: BadgeCheck,
       },
     ],
@@ -133,35 +92,14 @@ const staffWorkspaces: Record<
         icon: ShieldCheck,
       },
       {
-        href: "/admin/audit",
-        label: "Nhật ký kiểm toán",
-        detail: "Truy vết các hành động quan trọng trong hệ thống.",
-        icon: ClipboardCheck,
+        href: "/blockchain",
+        label: "Ký blockchain",
+        detail: "Liên kết ví và ký các bằng chứng đã được duyệt.",
+        icon: ShieldCheck,
       },
     ],
   },
 };
-
-const contentAdminWorkspace = {
-  eyebrow: "Khu vực biên tập",
-  title: "Quản trị nội dung",
-  description:
-    "Tổ chức xuất bản, thư viện và các báo cáo nội dung thuộc phạm vi biên tập.",
-  actions: [
-    {
-      href: "/admin/content",
-      label: "Mở quản trị nội dung",
-      detail: "Quản lý nội dung và phiên bản công khai.",
-      icon: BookOpenText,
-    },
-    {
-      href: "/notifications",
-      label: "Thông báo biên tập",
-      detail: "Theo dõi các thay đổi và việc cần xử lý.",
-      icon: BadgeCheck,
-    },
-  ],
-} satisfies (typeof staffWorkspaces)["ADMIN"];
 
 function ActionGrid({ actions }: { actions: Action[] }) {
   return (
@@ -196,24 +134,20 @@ function ActionGrid({ actions }: { actions: Action[] }) {
 
 export function RoleDashboardOverview({
   persona,
-  roles = [],
   accountType,
   onUpgraded,
 }: {
   persona: RoleWorkspacePersona;
-  roles?: readonly string[];
   accountType?: AccountType | null;
   onUpgraded?: (user: AuthUser) => void;
 }) {
-  const isPublic = persona === "PUBLIC";
+  const isViewer = persona === "VIEWER";
   const workspace =
-    persona === "PUBLIC"
+    persona === "VIEWER" || persona === "USER"
       ? undefined
-      : persona === "ADMIN" && roles.includes("CONTENT_ADMIN")
-        ? contentAdminWorkspace
-        : staffWorkspaces[persona];
+      : staffWorkspaces[persona];
   const title = workspace?.title ?? "Khám phá đề cử";
-  const description = isPublic
+  const description = isViewer
     ? "Khám phá nội dung đã công bố và theo dõi những hoạt động mới của chương trình."
     : (workspace?.description ?? "");
   const actions = workspace?.actions ?? publicActions;
@@ -223,7 +157,7 @@ export function RoleDashboardOverview({
     <div className="mx-auto max-w-7xl space-y-8">
       <header>
         <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-primary-700">
-          {isPublic ? "Không gian tra cứu" : "Công việc hôm nay"}
+          {isViewer ? "Không gian tra cứu" : "Công việc hôm nay"}
         </p>
         <h1 className="mt-3 text-4xl font-bold tracking-[-0.04em] sm:text-5xl">
           {title}
@@ -233,7 +167,7 @@ export function RoleDashboardOverview({
         </p>
       </header>
 
-      {isPublic && accountType === "PUBLIC_USER" ? (
+      {isViewer && accountType === "PUBLIC_USER" ? (
         <ApplicantUpgradeCard onUpgraded={onUpgraded} />
       ) : null}
 
@@ -241,7 +175,7 @@ export function RoleDashboardOverview({
         <section className="hero-grid-surface relative overflow-hidden rounded-2xl bg-[#151515] px-6 py-8 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:min-h-72 lg:grid-cols-[1fr_auto] lg:items-end lg:px-10 lg:py-10">
           <div className="relative z-10 max-w-2xl">
             <span className="grid size-11 place-items-center rounded-lg border border-gold-300/30 bg-gold-300/10 text-gold-300">
-              {isPublic ? (
+              {isViewer ? (
                 <Sparkles aria-hidden="true" className="size-5" />
               ) : (
                 <ShieldCheck aria-hidden="true" className="size-5" />

@@ -21,7 +21,6 @@ async def get_blockchain_service(
     settings: SettingsDependency,
 ) -> AsyncIterator[BlockchainTransactionService]:
     address = settings.certificate_contract_address
-    secret = settings.blockchain_signer_private_key
     allowed_contracts = set(settings.blockchain_contract_allowlist)
     if settings.blockchain_network == "local" and not allowed_contracts:
         allowed_contracts = {address}
@@ -35,14 +34,17 @@ async def get_blockchain_service(
         allowed_contracts={settings.blockchain_network: allowed_contracts},
     )
     redis_client: Redis = Redis.from_url(settings.redis_url)
-    signer = create_transaction_signer(
-        mode=settings.blockchain_signer_mode,
-        private_key=secret.get_secret_value() if secret is not None else "",
-        managed_url=settings.blockchain_managed_signer_url,
-        managed_key_id=settings.blockchain_managed_signer_key_id,
-        managed_expected_address=settings.blockchain_managed_signer_expected_address,
-        managed_timeout_seconds=settings.blockchain_managed_signer_timeout_seconds,
-    )
+    signer = None
+    if settings.blockchain_signer_mode != "human":
+        secret = settings.blockchain_signer_private_key
+        signer = create_transaction_signer(
+            mode=settings.blockchain_signer_mode,
+            private_key=secret.get_secret_value() if secret is not None else "",
+            managed_url=settings.blockchain_managed_signer_url,
+            managed_key_id=settings.blockchain_managed_signer_key_id,
+            managed_expected_address=settings.blockchain_managed_signer_expected_address,
+            managed_timeout_seconds=settings.blockchain_managed_signer_timeout_seconds,
+        )
     service = BlockchainTransactionService(
         session=session,
         gateway=gateway,
@@ -67,7 +69,8 @@ async def get_blockchain_service(
     try:
         yield service
     finally:
-        await signer.aclose()
+        if signer is not None:
+            await signer.aclose()
         await gateway.close()
         await redis_client.aclose()
 

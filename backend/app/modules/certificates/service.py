@@ -1,6 +1,7 @@
 import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from urllib.parse import quote
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
@@ -47,9 +48,10 @@ from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.workflow import DossierWorkflowService
 from app.modules.media.gateway import MediaGateway
 from app.modules.media.models import MediaAsset, MediaStatus
+from app.modules.public.share_service import canonical_public_origin
 
 CERTIFICATE_ISSUED_EVENT = "certificate.issued"
-CERTIFICATE_ROLES = frozenset({"APPLICANT", "ORG_MANAGER", "SUPER_ADMIN"})
+CERTIFICATE_ROLES = frozenset({"USER", "SUPER_ADMIN"})
 
 
 class CertificateService:
@@ -80,7 +82,10 @@ class CertificateService:
         self._metadata_builder = metadata_builder
         self._numbering = numbering
         self._payload_cipher = payload_cipher
-        self._public_base_url = public_base_url.rstrip("/")
+        self._public_base_url = canonical_public_origin(
+            public_base_url,
+            allow_local_http=environment == "local",
+        )
         self._environment = environment
         self._delivery_ttl_seconds = delivery_ttl_seconds
         self._validity_days = validity_days
@@ -131,7 +136,7 @@ class CertificateService:
                 certificate=self._view(row),
                 metadata=dict(version.metadata_json),
                 metadata_hash=version.metadata_hash,
-                qr_payload=certificate.qr_payload,
+                qr_payload=version.qr_payload or certificate.qr_payload,
             )
 
     async def download(
@@ -246,7 +251,7 @@ class CertificateService:
                     "transactionHash": transaction.tx_hash,
                 },
             }
-            verification_url = certificate.qr_payload
+            verification_url = version.qr_payload or certificate.qr_payload
             version_no = version.version_no
             certificate_number = certificate.certificate_number
             owner_user_id = dossier.owner_user_id
@@ -349,7 +354,9 @@ class CertificateService:
                 )
             number = self._numbering.generate(certificate_id, issued_at)
             expires_at = issued_at + timedelta(days=self._validity_days)
-            qr_payload = f"{self._public_base_url}/kiem-tra/{token}"
+            qr_payload = (
+                f"{self._public_base_url}/verify/{quote(token, safe='-._~')}"
+            )
             metadata, metadata_hash = self._metadata_builder.build(
                 certificate_number=number,
                 certificate_version=1,
@@ -377,6 +384,8 @@ class CertificateService:
                     dossier_version_id=version.id,
                     metadata_json=metadata,
                     metadata_hash=metadata_hash,
+                    public_token_hash=certificate.public_token_hash,
+                    qr_payload=certificate.qr_payload,
                     status=CertificateVersionStatus.ACTIVE,
                 )
             )
@@ -415,7 +424,7 @@ class CertificateService:
         try:
             rendered = self._renderer.render(
                 metadata=display_metadata,
-                verification_url=certificate.qr_payload,
+                verification_url=version.qr_payload or certificate.qr_payload,
             )
             stored = await self._storage.upload_pdf(
                 public_id=(

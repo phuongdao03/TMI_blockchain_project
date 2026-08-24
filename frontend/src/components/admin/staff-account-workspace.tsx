@@ -30,7 +30,7 @@ const inputClass =
 export function StaffAccountWorkspace() {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<StaffAccountRole>("REVIEWER");
+  const [role, setRole] = useState<StaffAccountRole>("MODERATOR");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StaffAccountStatus | "ALL">("ALL");
   const [roleFilter, setRoleFilter] = useState<StaffAccountRole | "ALL">("ALL");

@@ -1,6 +1,7 @@
 import json
 import logging
 from asyncio import run
+from pathlib import Path
 from typing import Final
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from fastapi import FastAPI
 from app.core.config import Settings
 from app.core.health import HealthService
 from app.core.logging import JsonFormatter
+from app.core.probes import CloudinaryProbe
 from app.main import _build_health_service, create_application
 
 
@@ -45,6 +47,50 @@ def build_app(
     )
     resolved_settings = settings or Settings.model_validate({"app_env": "local"})
     return create_application(settings=resolved_settings, health_service=service)
+
+
+def test_settings_accept_legacy_media_key_map_from_env_file(tmp_path: Path) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "MEDIA_PRIVATE_ENCRYPTION_KEYS={'document-v1': 'ZGRk'}\n",
+        encoding="utf-8",
+    )
+
+    settings = Settings(_env_file=env_file)  # type: ignore[call-arg]
+
+    assert (
+        settings.media_private_encryption_keys["document-v1"].get_secret_value()
+        == "ZGRk"
+    )
+
+
+def test_settings_accept_legacy_single_active_media_key_from_env_file(
+    tmp_path: Path,
+) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "MEDIA_PRIVATE_ENCRYPTION_ACTIVE_KEY_ID=document-v1\n"
+        "MEDIA_PRIVATE_ENCRYPTION_KEYS={ZGRk}\n",
+        encoding="utf-8",
+    )
+
+    settings = Settings(_env_file=env_file)  # type: ignore[call-arg]
+
+    assert (
+        settings.media_private_encryption_keys["document-v1"].get_secret_value()
+        == "ZGRk"
+    )
+
+
+def test_settings_ignore_legacy_media_key_when_encryption_is_disabled(
+    tmp_path: Path,
+) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("MEDIA_PRIVATE_ENCRYPTION_KEYS={ZGRk}\n", encoding="utf-8")
+
+    settings = Settings(_env_file=env_file)  # type: ignore[call-arg]
+
+    assert settings.media_private_encryption_keys == {}
 
 
 async def send_request(
@@ -133,17 +179,17 @@ def test_security_headers_are_present_and_hsts_is_production_only() -> None:
                     "media_private_encryption_keys": {
                         "document-v1": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ="
                     },
+                    "cloudinary_cloud_name": "tmi-production",
+                    "cloudinary_api_key": "cloudinary-api-key",
+                    "cloudinary_api_secret": "cloudinary-api-secret",
                     "cors_allowed_origins": "https://app.tmigroup.vn",
                     "blockchain_network": "polygon",
                     "blockchain_chain_id": 137,
                     "blockchain_rpc_url": "https://polygon-rpc.example",
                     "certificate_contract_address": "0x" + "11" * 20,
                     "blockchain_allowed_contract_addresses": "0x" + "11" * 20,
-                    "blockchain_signer_mode": "managed",
+                    "blockchain_signer_mode": "human",
                     "blockchain_signer_private_key": None,
-                    "blockchain_managed_signer_url": "https://signer.example/v1/sign",
-                    "blockchain_managed_signer_key_id": "projects/tmi/keys/issuer",
-                    "blockchain_managed_signer_expected_address": "0x" + "22" * 20,
                     "payment_provider": "payos",
                     "payos_client_id": "client",
                     "payos_api_key": "api-key",
@@ -203,17 +249,17 @@ def test_production_cors_rejects_wildcard_and_non_tls_origins() -> None:
                 "media_private_encryption_keys": {
                     "document-v1": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ="
                 },
+                "cloudinary_cloud_name": "tmi-production",
+                "cloudinary_api_key": "cloudinary-api-key",
+                "cloudinary_api_secret": "cloudinary-api-secret",
                 "cors_allowed_origins": origin,
                 "blockchain_network": "polygon",
                 "blockchain_chain_id": 137,
                 "blockchain_rpc_url": "https://polygon-rpc.example",
                 "certificate_contract_address": "0x" + "11" * 20,
                 "blockchain_allowed_contract_addresses": "0x" + "11" * 20,
-                "blockchain_signer_mode": "managed",
+                "blockchain_signer_mode": "human",
                 "blockchain_signer_private_key": None,
-                "blockchain_managed_signer_url": "https://signer.example/v1/sign",
-                "blockchain_managed_signer_key_id": "projects/tmi/keys/issuer",
-                "blockchain_managed_signer_expected_address": "0x" + "22" * 20,
                 "payment_provider": "payos",
                 "payos_client_id": "client",
                 "payos_api_key": "api-key",
@@ -259,9 +305,11 @@ def test_preview_readiness_does_not_require_blockchain_rpc(
     )
 
     def fail_if_constructed(**_kwargs: object) -> StaticProbe:
-        pytest.fail("Preview readiness must not construct a blockchain RPC probe.")
+        pytest.fail("Preview readiness must not construct a full-release probe.")
 
     monkeypatch.setattr("app.main.AnvilProbe", fail_if_constructed)
+    monkeypatch.setattr("app.main.CloudinaryProbe", fail_if_constructed)
+    monkeypatch.setattr("app.main.ClamAvProbe", fail_if_constructed)
     settings = Settings.model_validate(
         {
             "app_env": "local",
@@ -273,6 +321,73 @@ def test_preview_readiness_does_not_require_blockchain_rpc(
     dependencies = run(_build_health_service(settings).check_readiness())
 
     assert dependencies == {"redis": "up"}
+
+
+def test_full_production_readiness_includes_media_provider_and_scanner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.main.RedisProbe", lambda **_kwargs: StaticProbe(True))
+    monkeypatch.setattr("app.main.AnvilProbe", lambda **_kwargs: StaticProbe(True))
+    monkeypatch.setattr(
+        "app.main.CloudinaryProbe",
+        lambda **_kwargs: StaticProbe(True),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "app.main.ClamAvProbe",
+        lambda **_kwargs: StaticProbe(True),
+        raising=False,
+    )
+    settings = Settings.model_validate(
+        {
+            "app_env": "production",
+            "release_mode": "full",
+            "firebase_totp_enabled": True,
+            "audit_integrity_key": "audit-integrity-test-key-32-bytes",
+            "media_private_encryption_enabled": True,
+            "media_private_encryption_active_key_id": "document-v1",
+            "media_private_encryption_keys": {
+                "document-v1": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ="
+            },
+            "cloudinary_cloud_name": "tmi-production",
+            "cloudinary_api_key": "cloudinary-api-key",
+            "cloudinary_api_secret": "cloudinary-api-secret",
+            "blockchain_network": "polygon",
+            "blockchain_chain_id": 137,
+            "blockchain_rpc_url": "https://polygon-rpc.example",
+            "certificate_contract_address": "0x" + "11" * 20,
+            "blockchain_allowed_contract_addresses": "0x" + "11" * 20,
+            "blockchain_signer_mode": "human",
+            "payment_provider": "payos",
+            "payos_client_id": "client",
+            "payos_api_key": "api-key",
+            "payos_checksum_key": "checksum",
+            "payos_return_url": "https://app.example/payments/return",
+            "payos_cancel_url": "https://app.example/payments/cancel",
+        }
+    )
+
+    dependencies = run(_build_health_service(settings).check_readiness())
+
+    assert dependencies == {
+        "anvil": "up",
+        "cloudinary": "up",
+        "clamav": "up",
+        "redis": "up",
+    }
+
+
+def test_cloudinary_readiness_probe_uses_the_minimal_ping_endpoint() -> None:
+    probe = CloudinaryProbe(
+        cloud_name="tmi-production",
+        api_key="cloudinary-api-key",
+        api_secret="cloudinary-api-secret",
+        timeout_seconds=1,
+    )
+    try:
+        assert probe._url == "https://api.cloudinary.com/v1_1/tmi-production/ping"
+    finally:
+        run(probe.close())
 
 
 def test_readiness_openapi_declares_standard_error_envelope() -> None:

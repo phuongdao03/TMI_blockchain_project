@@ -65,4 +65,4 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
           ssh_options="-i ~/.ssh/id_ed25519 -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
-          printf '%s' "$GHCR_PULL_TOKEN" | ssh $ssh_options "$DEPLOY_USER@$DEPLOY_HOST" "docker login ghcr.io --username '$GHCR_USERNAME' --password-stdin && cd /var/www/tmi_blockchain && PRODUCTION_ENV_FILE=/var/www/tmi_blockchain/infrastructure/.env.preview bash infrastructure/scripts/rollback.sh '$IMAGE_TAG'"
+          printf '%s' "$GHCR_PULL_TOKEN" | ssh $ssh_options "$DEPLOY_USER@$DEPLOY_HOST" "docker login ghcr.io --username '$GHCR_USERNAME' --password-stdin && cd /var/www/tmi_blockchain && PRODUCTION_ENV_FILE=/var/www/tmi_blockchain/infrastructure/.env.production bash infrastructure/scripts/rollback.sh '$IMAGE_TAG'"

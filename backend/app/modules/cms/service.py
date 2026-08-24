@@ -24,7 +24,7 @@ from app.modules.cms.models import (
 from app.modules.cms.repository import CmsRepository
 from app.modules.cms.sanitizer import sanitize_rich_text
 
-CMS_ROLES = frozenset({"CONTENT_ADMIN", "SUPER_ADMIN"})
+CMS_ROLES = frozenset({"SUPER_ADMIN"})
 
 
 @dataclass(frozen=True, slots=True)

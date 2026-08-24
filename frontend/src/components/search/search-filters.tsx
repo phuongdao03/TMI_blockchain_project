@@ -10,13 +10,22 @@ const controlClass =
 
 export function SearchFilters({
   facets,
+  layout = "sidebar",
   parameters,
 }: {
   facets?: SearchFacets;
+  layout?: "sidebar" | "panel";
   parameters: SearchParameters;
 }) {
+  const panel = layout === "panel";
   return (
-    <div className="space-y-7">
+    <div
+      className={
+        panel
+          ? "grid gap-6 xl:grid-cols-[minmax(0,.8fr)_minmax(0,.8fr)_minmax(22rem,1.4fr)]"
+          : "space-y-7"
+      }
+    >
       <FacetGroup label="Danh mục">
         <FacetLink
           active={!parameters.category}
@@ -65,7 +74,11 @@ export function SearchFilters({
         ) : null}
       </FacetGroup>
 
-      <form action="/search" className="space-y-4" method="get">
+      <form
+        action="/search"
+        className={panel ? "grid gap-4 sm:grid-cols-2" : "space-y-4"}
+        method="get"
+      >
         <HiddenSearchState parameters={parameters} />
         <label className="block text-sm font-semibold text-slate-300">
           Cách khớp chủ đề
@@ -88,7 +101,7 @@ export function SearchFilters({
             placeholder="Mã tổ chức"
           />
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:col-span-2">
           <label className="text-sm font-semibold text-slate-300">
             Từ ngày
             <input

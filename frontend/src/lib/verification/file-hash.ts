@@ -1,3 +1,5 @@
+// This must match the default public verification runtime limit. The digest is
+// calculated in the browser; the file is not uploaded during this path.
 export const MAX_LOCAL_VERIFICATION_BYTES = 25 * 1024 * 1024;
 
 export type LocalFileComparison =

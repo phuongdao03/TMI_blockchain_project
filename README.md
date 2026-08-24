@@ -101,7 +101,7 @@ journeys, container builds and immutable release artifacts.
   `staging` environment and setting `STAGING_DEPLOY_ENABLED=true`.
 - Never commit `.env` files, private keys, provider credentials, service-account
   files, certificates or generated evidence.
-- Production configuration fails closed when encryption, MFA, payment or managed
+- Production configuration fails closed when encryption, MFA, payment or human
   blockchain-signer requirements are absent.
 
 Report suspected vulnerabilities through a private GitHub Security Advisory. Do

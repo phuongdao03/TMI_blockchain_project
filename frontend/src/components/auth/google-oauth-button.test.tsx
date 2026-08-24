@@ -56,7 +56,7 @@ describe("GoogleOAuthButton MFA", () => {
         JSON.stringify({
           success: true,
           data: {
-            user: { id: "user-1", email: "staff@tmi.vn", roles: ["REVIEWER"] },
+            user: { id: "user-1", email: "staff@tmi.vn", roles: ["MODERATOR"] },
           },
           meta: { request_id: "request-1" },
         }),

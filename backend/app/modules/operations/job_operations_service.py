@@ -11,7 +11,7 @@ from app.modules.operations.job_repository import DurableJobRepository
 from app.modules.operations.job_service import DurableJobService
 from app.workers.dispatcher import validate_durable_job_replay
 
-READ_ROLES = frozenset({"FINANCE_ADMIN", "BLOCKCHAIN_ADMIN", "SUPER_ADMIN"})
+READ_ROLES = frozenset({"SUPER_ADMIN"})
 ReplayPublisher = Callable[[JobExecution], Awaitable[None]]
 
 

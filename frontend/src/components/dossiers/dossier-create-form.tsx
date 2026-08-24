@@ -1,17 +1,16 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, FilePlus2, ShieldCheck } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, Check, FilePlus2, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { ApiError, dossierApi } from "@/lib/api/client";
 import { dossierKeys } from "@/lib/dossiers/query-keys";
-
-export const DIGITAL_ASSET_CATEGORY_ID = "4d28db19-1507-5a45-a50d-cd0aa83029ec";
 
 const schema = z.object({
   title: z.string().trim().min(3, "Tên hồ sơ cần ít nhất 3 ký tự.").max(255),
@@ -21,9 +20,23 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+function stringFieldValue(value: unknown): string {
+  return typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : "";
+}
+
+function multiSelectFieldValue(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
 export function DossierCreateForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [dossierTypeVersionId, setDossierTypeVersionId] = useState("");
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -32,6 +45,14 @@ export function DossierCreateForm() {
       visibility: "PRIVATE",
     },
   });
+  const dossierTypes = useQuery({
+    queryKey: dossierKeys.types(),
+    queryFn: dossierApi.listTypes,
+  });
+  const dossierType = dossierTypes.data?.find(
+    (item) => item.currentVersion.id === dossierTypeVersionId,
+  );
+  const dossierTypeDescription = dossierType?.currentVersion.schema.description;
   const create = useMutation({
     mutationFn: dossierApi.create,
     onSuccess: async (dossier) => {
@@ -41,16 +62,19 @@ export function DossierCreateForm() {
   });
 
   const submit = form.handleSubmit((values) => {
+    if (!dossierType) return;
     create.mutate({
-      categoryId: DIGITAL_ASSET_CATEGORY_ID,
+      categoryId: dossierType.categoryId,
       title: values.title,
       summary: values.summary || null,
       visibility: values.visibility,
+      dossierTypeVersionId,
+      formData,
     });
   });
 
   return (
-    <form className="space-y-6" onSubmit={submit}>
+    <form className="dossier-create-form space-y-6" onSubmit={submit}>
       <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
         <div className="border-b border-neutral-100 bg-neutral-50/70 px-5 py-4 sm:px-6">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
@@ -62,16 +86,82 @@ export function DossierCreateForm() {
             <ShieldCheck aria-hidden="true" className="size-5" />
           </span>
           <div>
-            <h2 className="font-bold text-neutral-950">Tài sản trí tuệ số</h2>
+            <h2 className="font-bold text-neutral-950">
+              {dossierType?.name ?? "Chọn loại hồ sơ để bắt đầu"}
+            </h2>
             <p className="mt-1 text-sm leading-6 text-neutral-500">
-              Hồ sơ đề nghị xác lập nguồn gốc và bằng chứng cho tác phẩm, thương
-              hiệu hoặc tài sản số.
+              {dossierTypeDescription ??
+                "Chọn loại phù hợp để hệ thống hiển thị đúng thông tin và tài liệu cần chuẩn bị."}
             </p>
           </div>
         </div>
       </section>
 
       <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6">
+        <fieldset aria-describedby="dossier-type-help">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <legend className="text-sm font-bold text-neutral-900">
+              Loại hồ sơ
+            </legend>
+            {dossierTypes.data ? (
+              <span className="text-xs font-medium text-neutral-500">
+                {dossierTypes.data.length} loại đang áp dụng
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 text-sm text-neutral-500" id="dossier-type-help">
+            Chọn một loại để nạp biểu mẫu đúng phiên bản.
+          </p>
+          <div className="mt-3 grid max-h-[23rem] gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
+            {dossierTypes.data?.map((item) => {
+              const selected = item.currentVersion.id === dossierTypeVersionId;
+              const description = item.currentVersion.schema.description;
+              return (
+                <label
+                  className="dossier-type-option"
+                  key={item.currentVersion.id}
+                >
+                  <input
+                    checked={selected}
+                    className="sr-only"
+                    name="dossier-type"
+                    onChange={() => {
+                      setDossierTypeVersionId(item.currentVersion.id);
+                      setFormData({});
+                    }}
+                    type="radio"
+                    value={item.currentVersion.id}
+                  />
+                  <span
+                    className="dossier-type-option__indicator"
+                    aria-hidden="true"
+                  >
+                    {selected ? <Check className="size-3.5" /> : null}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold text-neutral-950">
+                      {item.name}
+                    </span>
+                    <span className="mt-1 block text-xs leading-5 text-neutral-500">
+                      {description ??
+                        `Biểu mẫu phiên bản ${item.currentVersion.versionNo}`}
+                    </span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          {dossierTypes.isError ? (
+            <p className="mt-2 text-sm text-error" role="alert">
+              Không thể tải loại hồ sơ.
+            </p>
+          ) : null}
+          {dossierTypes.isLoading ? (
+            <p className="mt-3 text-sm text-neutral-500">
+              Đang tải danh mục hồ sơ…
+            </p>
+          ) : null}
+        </fieldset>
         <div>
           <label
             className="text-sm font-bold text-neutral-900"
@@ -122,10 +212,7 @@ export function DossierCreateForm() {
               ["UNLISTED", "Không niêm yết", "Chỉ người có liên kết"],
               ["PUBLIC", "Công khai", "Có thể công bố sau cấp chứng thư"],
             ].map(([value, label, description]) => (
-              <label
-                className="cursor-pointer rounded-xl border border-neutral-200 p-4 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50"
-                key={value}
-              >
+              <label className="dossier-visibility-option" key={value}>
                 <input
                   className="accent-primary-600"
                   type="radio"
@@ -140,6 +227,174 @@ export function DossierCreateForm() {
             ))}
           </div>
         </fieldset>
+
+        {dossierType?.currentVersion.schema.fields.map((field) => (
+          <div key={field.key}>
+            <label
+              className="text-sm font-bold text-neutral-900"
+              htmlFor={`field-${field.key}`}
+            >
+              {field.label || field.key}
+              {field.required ? " *" : ""}
+            </label>
+            {field.helpText ? (
+              <p className="mt-1 text-xs leading-5 text-neutral-500">
+                {field.helpText}
+              </p>
+            ) : null}
+            {field.type === "textarea" ? (
+              <textarea
+                className="mt-2 min-h-28 w-full resize-y rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm leading-6"
+                id={`field-${field.key}`}
+                onChange={(event) =>
+                  setFormData((current) => ({
+                    ...current,
+                    [field.key]: event.target.value,
+                  }))
+                }
+                placeholder={field.placeholder}
+                required={field.required}
+                value={stringFieldValue(formData[field.key])}
+              />
+            ) : field.type === "select" ? (
+              <select
+                className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm"
+                id={`field-${field.key}`}
+                onChange={(event) =>
+                  setFormData((current) => ({
+                    ...current,
+                    [field.key]: event.target.value,
+                  }))
+                }
+                required={field.required}
+                value={stringFieldValue(formData[field.key])}
+              >
+                <option value="">Chọn phương án</option>
+                {(field.options ?? []).map((option) => {
+                  const value =
+                    typeof option === "string" ? option : option.value;
+                  const label =
+                    typeof option === "string"
+                      ? option
+                      : (option.label ?? option.value);
+                  return (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+            ) : field.type === "multiselect" ? (
+              <select
+                className="mt-2 min-h-28 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm"
+                id={`field-${field.key}`}
+                multiple
+                onChange={(event) =>
+                  setFormData((current) => ({
+                    ...current,
+                    [field.key]: Array.from(
+                      event.target.selectedOptions,
+                      (option) => option.value,
+                    ),
+                  }))
+                }
+                required={field.required}
+                value={multiSelectFieldValue(formData[field.key])}
+              >
+                {(field.options ?? []).map((option) => {
+                  const value =
+                    typeof option === "string" ? option : option.value;
+                  const label =
+                    typeof option === "string"
+                      ? option
+                      : (option.label ?? option.value);
+                  return (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+            ) : field.type === "radio" ? (
+              <fieldset className="mt-2 grid gap-2 sm:grid-cols-2">
+                <legend className="sr-only">{field.label || field.key}</legend>
+                {(field.options ?? []).map((option) => {
+                  const value =
+                    typeof option === "string" ? option : option.value;
+                  const label =
+                    typeof option === "string"
+                      ? option
+                      : (option.label ?? option.value);
+                  return (
+                    <label className="dossier-choice-option" key={value}>
+                      <input
+                        checked={formData[field.key] === value}
+                        name={`field-${field.key}`}
+                        onChange={() =>
+                          setFormData((current) => ({
+                            ...current,
+                            [field.key]: value,
+                          }))
+                        }
+                        required={field.required}
+                        type="radio"
+                        value={value}
+                      />
+                      <span>{label}</span>
+                    </label>
+                  );
+                })}
+              </fieldset>
+            ) : field.type === "checkbox" ? (
+              <input
+                checked={formData[field.key] === true}
+                className="ml-3 accent-primary-600"
+                id={`field-${field.key}`}
+                onChange={(event) =>
+                  setFormData((current) => ({
+                    ...current,
+                    [field.key]: event.target.checked,
+                  }))
+                }
+                type="checkbox"
+              />
+            ) : (
+              <input
+                className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm"
+                id={`field-${field.key}`}
+                onChange={(event) =>
+                  setFormData((current) => ({
+                    ...current,
+                    [field.key]:
+                      field.type === "number" || field.type === "currency"
+                        ? Number(event.target.value)
+                        : event.target.value,
+                  }))
+                }
+                placeholder={field.placeholder}
+                required={field.required}
+                type={
+                  field.type === "phone"
+                    ? "tel"
+                    : field.type === "currency"
+                      ? "number"
+                      : field.type === "address" ||
+                          field.type === "person" ||
+                          field.type === "organization" ||
+                          field.type === "file"
+                        ? "text"
+                        : field.type
+                }
+                value={
+                  typeof formData[field.key] === "string" ||
+                  typeof formData[field.key] === "number"
+                    ? String(formData[field.key])
+                    : ""
+                }
+              />
+            )}
+          </div>
+        ))}
       </section>
 
       {create.error ? (
@@ -166,7 +421,11 @@ export function DossierCreateForm() {
       ) : null}
 
       <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
-        <Button className="min-w-44" disabled={create.isPending} type="submit">
+        <Button
+          className="min-w-44"
+          disabled={create.isPending || !dossierType}
+          type="submit"
+        >
           <FilePlus2 aria-hidden="true" className="size-4" />
           {create.isPending ? "Đang tạo…" : "Tạo hồ sơ nháp"}
           <ArrowRight aria-hidden="true" className="size-4" />

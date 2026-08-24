@@ -6,7 +6,11 @@
     "incremental": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,
@@ -14,7 +18,9 @@
     "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     },
     "plugins": [
       {
@@ -42,7 +48,46 @@
     ".next-e2e/types/**/*.ts",
     ".next-e2e/dev/types/**/*.ts",
     ".next-demo/types/**/*.ts",
-    ".next-demo/dev/types/**/*.ts"
+    ".next-demo/dev/types/**/*.ts",
+    ".next-e2e-manual/types/**/*.ts",
+    ".next-e2e-manual/dev/types/**/*.ts",
+    ".next-e2e-preview/types/**/*.ts",
+    ".next-e2e-preview/dev/types/**/*.ts",
+    ".next-e2e-3104/types/**/*.ts",
+    ".next-e2e-3104/dev/types/**/*.ts",
+    ".next-e2e-3105/types/**/*.ts",
+    ".next-e2e-3105/dev/types/**/*.ts",
+    ".next-e2e-preview-3106/types/**/*.ts",
+    ".next-e2e-preview-3106/dev/types/**/*.ts",
+    ".next-e2e-3107/types/**/*.ts",
+    ".next-e2e-3107/dev/types/**/*.ts",
+    ".next-e2e-3108/types/**/*.ts",
+    ".next-e2e-3108/dev/types/**/*.ts",
+    ".next-e2e-3109/types/**/*.ts",
+    ".next-e2e-3109/dev/types/**/*.ts",
+    ".next-e2e-3110/types/**/*.ts",
+    ".next-e2e-3110/dev/types/**/*.ts",
+    ".next-e2e-3111/types/**/*.ts",
+    ".next-e2e-3111/dev/types/**/*.ts",
+    ".next-e2e-ui-audit/types/**/*.ts",
+    ".next-e2e-ui-audit/dev/types/**/*.ts",
+    ".next-e2e-ui-audit-mobile/types/**/*.ts",
+    ".next-e2e-ui-audit-mobile/dev/types/**/*.ts",
+    ".next-e2e-ui-quality/types/**/*.ts",
+    ".next-e2e-ui-quality/dev/types/**/*.ts",
+    ".next-e2e-ui-quality-baseline/types/**/*.ts",
+    ".next-e2e-ui-quality-baseline/dev/types/**/*.ts",
+    ".next-e2e-ui-quality-final/types/**/*.ts",
+    ".next-e2e-ui-quality-final/dev/types/**/*.ts",
+    ".next-e2e-ui-quality-mobile-final/types/**/*.ts",
+    ".next-e2e-ui-quality-mobile-final/dev/types/**/*.ts",
+    ".next-thv-theme-fix-3101/types/**/*.ts",
+    ".next-thv-theme-fix-3101/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".next-*", "playwright-report", "test-results"]
+  "exclude": [
+    "node_modules",
+    ".next-*",
+    "playwright-report",
+    "test-results"
+  ]
 }

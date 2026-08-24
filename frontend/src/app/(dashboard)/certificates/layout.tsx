@@ -7,5 +7,5 @@ export default function CertificateLayout({
 }: {
   children: ReactNode;
 }) {
-  return <RoleGate allowed={["APPLICANT", "ORG_MANAGER"]}>{children}</RoleGate>;
+  return <RoleGate allowed={["USER"]}>{children}</RoleGate>;
 }

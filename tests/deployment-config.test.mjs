@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -18,9 +18,11 @@ test("production images are multi-stage, non-root and health checked", async () 
   }
   assert.match(frontend, /standalone/);
   assert.match(backend, /pip install --no-cache-dir --no-compile/);
+  assert.match(frontend, /ARG NEXT_PUBLIC_RELEASE_MODE=full/);
 
   for (const buildArgument of [
     "NEXT_PUBLIC_RELEASE_MODE",
+    "NEXT_PUBLIC_APP_BASE_URL",
     "NEXT_PUBLIC_FIREBASE_API_KEY",
     "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
     "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
@@ -49,6 +51,37 @@ test("Vercel preview exposes the Next.js frontend and FastAPI backend as service
   });
 });
 
+test("the local environment template enables real workflows instead of preview fixtures", async () => {
+  const environment = await read(".env.example");
+
+  assert.match(environment, /^APP_ENV=local$/m);
+  assert.match(environment, /^RELEASE_MODE=full$/m);
+  assert.match(environment, /^NEXT_PUBLIC_RELEASE_MODE=full$/m);
+  assert.match(
+    environment,
+    /^NEXT_PUBLIC_APP_BASE_URL=http:\/\/localhost:3000$/m,
+  );
+});
+
+test("runtime screens do not package a static demonstration catalogue", async () => {
+  const runtimeFiles = await Promise.all([
+    read("frontend/src/lib/api/public-catalog-server.ts"),
+    read("frontend/src/lib/api/public-work-server.ts"),
+    read("frontend/src/components/public/featured-assets.tsx"),
+    read("frontend/src/components/public/public-library.tsx"),
+    read("frontend/src/components/dashboard/dashboard-overview.tsx"),
+    read("frontend/src/components/dashboard/applicant-upgrade-card.tsx"),
+  ]);
+
+  for (const source of runtimeFiles) {
+    assert.doesNotMatch(source, /preview-catalog|PreviewDashboard/);
+  }
+  assert.doesNotMatch(runtimeFiles.at(-1), /preview\s*=/);
+  await assert.rejects(access("frontend/src/lib/preview-catalog.ts"), {
+    code: "ENOENT",
+  });
+});
+
 test("production compose exposes only TLS proxy and uses versioned images", async () => {
   const [compose, productionEnvironment] = await Promise.all([
     read("infrastructure/compose.production.yaml"),
@@ -67,6 +100,7 @@ test("production compose exposes only TLS proxy and uses versioned images", asyn
   assert.ok(frontendService, "frontend service is missing");
   assert.doesNotMatch(frontendService, /env_file:/);
   assert.match(frontendService, /API_BASE_URL: http:\/\/backend:8000/);
+  assert.match(frontendService, /APP_BASE_URL: \$\{APP_BASE_URL\}/);
   assert.doesNotMatch(frontendService, /NEXT_PUBLIC_/);
   assert.doesNotMatch(frontendService, /NEXT_PUBLIC_PREVIEW_MODE/);
   assert.match(compose, /profiles: \["full"\]/);
@@ -78,7 +112,13 @@ test("production compose exposes only TLS proxy and uses versioned images", asyn
     /BLOCKCHAIN_SIGNER_PRIVATE_KEY|\.key:\/|\.pem:\//,
   );
   assert.doesNotMatch(productionEnvironment, /BLOCKCHAIN_SIGNER_PRIVATE_KEY/);
-  assert.match(productionEnvironment, /^BLOCKCHAIN_SIGNER_MODE=managed$/m);
+  assert.match(productionEnvironment, /^RELEASE_MODE=full$/m);
+  assert.match(
+    productionEnvironment,
+    /^NEXT_PUBLIC_APP_BASE_URL=https:\/\/decu\.tinhhoaviet\.org\.vn$/m,
+  );
+  assert.match(productionEnvironment, /^BLOCKCHAIN_SIGNER_MODE=human$/m);
+  assert.doesNotMatch(productionEnvironment, /^BLOCKCHAIN_MANAGED_SIGNER_/m);
 });
 
 test("shared VPS deployment binds applications to loopback behind host nginx", async () => {
@@ -138,6 +178,7 @@ test("CI has quality, migration, image, staging and manual production gates", as
     "aquasec/trivy:0.68.2",
     "docker/setup-buildx-action@v3",
     "NEXT_PUBLIC_FIREBASE_API_KEY",
+    "NEXT_PUBLIC_APP_BASE_URL",
     "--build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID",
     "check-image-size.sh",
   ]) {
@@ -153,6 +194,18 @@ test("CI has quality, migration, image, staging and manual production gates", as
   assert.match(workflow, /rsync -az/);
   assert.match(workflow, /\/var\/www\/tmi_blockchain/);
   assert.doesNotMatch(workflow, /\/opt\/tmi-platform/);
+  assert.match(workflow, /--build-arg NEXT_PUBLIC_RELEASE_MODE=full/);
+  assert.match(workflow, /--build-arg NEXT_PUBLIC_APP_BASE_URL/);
+
+  const productionDeployment = workflow.match(
+    /  deploy-production:[\s\S]*?(?=\n  [a-z-]+:|\n$)/,
+  )?.[0];
+  assert.ok(productionDeployment, "production deployment job is missing");
+  assert.match(
+    productionDeployment,
+    /PRODUCTION_ENV_FILE=[^\s"']+\.env\.production/,
+  );
+  assert.doesNotMatch(productionDeployment, /\.env\.preview/);
 
   const foundryImage = "ghcr.io/foundry-rs/foundry:v1.7.1";
   for (const command of [
@@ -194,10 +247,15 @@ test("deployment scripts wait for healthy services and preserve an image rollbac
   assert.match(rollbackWorkflow, /workflow_dispatch:/);
   assert.match(rollbackWorkflow, /GHCR_PULL_TOKEN/);
   assert.match(rollbackWorkflow, /\/var\/www\/tmi_blockchain/);
+  const productionRollback = rollbackWorkflow.match(
+    /  rollback-production:[\s\S]*?(?=\n  [a-z-]+:|\n$)/,
+  )?.[0];
+  assert.ok(productionRollback, "production rollback job is missing");
   assert.match(
-    rollbackWorkflow,
-    /PRODUCTION_ENV_FILE=\/var\/www\/tmi_blockchain\/infrastructure\/\.env\.preview/,
+    productionRollback,
+    /PRODUCTION_ENV_FILE=\/var\/www\/tmi_blockchain\/infrastructure\/\.env\.production/,
   );
+  assert.doesNotMatch(productionRollback, /\.env\.preview/);
   assert.doesNotMatch(rollbackWorkflow, /\/opt\/tmi-platform/);
 });
 
@@ -275,6 +333,9 @@ test("Amoy release gate is fail-closed and publishes explorer evidence", async (
   assert.match(stagingEnvironment, /^APP_ENV=staging$/m);
   assert.match(stagingEnvironment, /^BLOCKCHAIN_NETWORK=amoy$/m);
   assert.match(stagingEnvironment, /^BLOCKCHAIN_CHAIN_ID=80002$/m);
+  assert.match(stagingEnvironment, /^BLOCKCHAIN_SIGNER_MODE=human$/m);
+  assert.match(stagingEnvironment, /^BLOCKCHAIN_SIGNING_ENABLED=true$/m);
+  assert.doesNotMatch(stagingEnvironment, /^BLOCKCHAIN_SIGNER_PRIVATE_KEY=/m);
   assert.match(
     stagingEnvironment,
     /^BLOCKCHAIN_EXPLORER_BASE_URL=https:\/\/amoy\.polygonscan\.com$/m,
@@ -296,6 +357,8 @@ test("Polygon production contract gate is read-only and approval protected", asy
   assert.match(workflow, /ref: \$\{\{ inputs\.source_commit \}\}/);
   assert.match(workflow, /blockchain-preflight\.sh/);
   assert.match(workflow, /production-release-plan\.mjs/);
+  assert.match(workflow, /BLOCKCHAIN_ACTIVE_SIGNER_WALLET/);
+  assert.doesNotMatch(workflow, /BLOCKCHAIN_MANAGED_SIGNER_EXPECTED_ADDRESS/);
   assert.doesNotMatch(workflow, /forge script[^\n]*--broadcast/);
 
   assert.match(preflight, /set -euo pipefail/);
@@ -305,6 +368,8 @@ test("Polygon production contract gate is read-only and approval protected", asy
   assert.match(preflight, /runtime_bytecode/i);
   assert.match(preflight, /hasRole/);
   assert.match(preflight, /BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES/);
+  assert.match(preflight, /BLOCKCHAIN_ACTIVE_SIGNER_WALLET/);
+  assert.doesNotMatch(preflight, /BLOCKCHAIN_MANAGED_SIGNER_EXPECTED_ADDRESS/);
   assert.match(runbook, /canary/i);
   assert.match(runbook, /pause/i);
   assert.match(incident, /pause/i);

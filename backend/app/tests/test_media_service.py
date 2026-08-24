@@ -60,6 +60,7 @@ class RecordingMediaGateway:
         resource_type: str,
         timestamp: int,
         allowed_format: str,
+        max_bytes: int,
     ) -> UploadAuthorization:
         return UploadAuthorization(
             upload_url="https://api.cloudinary.test/image/upload",
@@ -68,6 +69,7 @@ class RecordingMediaGateway:
             signature="signed-upload",
             parameters={
                 "allowed_formats": allowed_format,
+                "max_file_size": str(max_bytes),
                 "overwrite": "false",
                 "public_id": public_id,
                 "timestamp": str(timestamp),
@@ -509,6 +511,46 @@ def test_upload_policy_rejects_disallowed_type_size_and_extension() -> None:
             ),
         )
         assert public_video.parameters["allowed_formats"] == "webm"
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_evidence_upload_policy_allows_inspected_document_formats_only() -> None:
+    async def exercise() -> None:
+        service, _, _, engine, users = await _build_service()
+        owner = _principal(users["owner"])
+        docx = await service.create_upload_signature(
+            owner,
+            UploadIntent(
+                purpose=MediaPurpose.DOSSIER_EVIDENCE,
+                filename="ownership-proof.docx",
+                mime_type=(
+                    "application/vnd.openxmlformats-officedocument."
+                    "wordprocessingml.document"
+                ),
+                size=2_048,
+            ),
+        )
+        assert docx.parameters["allowed_formats"] == "docx"
+        assert docx.parameters["max_file_size"] == "2048"
+
+        with pytest.raises(MediaValidationError):
+            await service.create_upload_signature(
+                owner,
+                UploadIntent(
+                    purpose=MediaPurpose.PUBLIC_WORK,
+                    filename="ownership-proof.docx",
+                    mime_type=(
+                        "application/vnd.openxmlformats-officedocument."
+                        "wordprocessingml.document"
+                    ),
+                    size=2_048,
+                    confidentiality=MediaConfidentiality.PUBLIC,
+                ),
+            )
 
         await service.close()
         await engine.dispose()

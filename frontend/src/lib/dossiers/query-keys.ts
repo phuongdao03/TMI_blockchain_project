@@ -3,6 +3,7 @@ import type { DossierListFilters } from "@/lib/api/types";
 export const dossierKeys = {
   all: ["dossiers"] as const,
   lists: () => [...dossierKeys.all, "list"] as const,
+  types: () => [...dossierKeys.all, "types"] as const,
   list: (filters: DossierListFilters) =>
     [...dossierKeys.lists(), filters] as const,
   details: () => [...dossierKeys.all, "detail"] as const,

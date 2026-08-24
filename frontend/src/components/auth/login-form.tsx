@@ -128,13 +128,13 @@ export function LoginForm({ next }: { next?: string }) {
 
   return (
     <AuthCard
-      description="Đăng nhập để tiếp tục với Đề cử Tinh Hoa Việt."
+      description="Truy cập không gian hồ sơ để theo dõi tiến trình, phản hồi và chứng thư của bạn."
       footer={
         <>
-          Chưa có tài khoản? <AuthLink href="/register">Đăng ký</AuthLink>
+          Chưa có tài khoản? <AuthLink href="/register">Tạo tài khoản</AuthLink>
         </>
       }
-      title="Chào mừng trở lại"
+      title="Đăng nhập"
     >
       <div className="space-y-5">
         <GoogleOAuthButton accountType="PUBLIC_USER" next={next} />
@@ -155,7 +155,7 @@ export function LoginForm({ next }: { next?: string }) {
             </p>
           ) : null}
           {mfaResolver ? (
-            <div className="space-y-3 rounded-lg border border-[#f3d675]/30 bg-[#201d16] p-4">
+            <div className="space-y-3 rounded-lg border border-[#F6C515]/30 bg-[#201d16] p-4">
               <label
                 className="block text-sm font-semibold"
                 htmlFor="email-mfa-code"

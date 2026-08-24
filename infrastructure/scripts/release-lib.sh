@@ -56,12 +56,18 @@ require_production_environment() {
 }
 
 compose_command() {
+  local release_mode
   local -a compose_arguments
+  release_mode="$(read_env_value "$PRODUCTION_ENV_FILE" "RELEASE_MODE")"
+  release_mode="${release_mode:-full}"
   compose_arguments=(
     docker compose
     --env-file "$PRODUCTION_ENV_FILE"
     -f "$PRODUCTION_COMPOSE_FILE"
   )
+  if [[ "$release_mode" == "full" ]]; then
+    compose_arguments+=(--profile full)
+  fi
   if [[ -n "${PRODUCTION_COMPOSE_OVERRIDE_FILE:-}" ]]; then
     compose_arguments+=(-f "$PRODUCTION_COMPOSE_OVERRIDE_FILE")
   fi

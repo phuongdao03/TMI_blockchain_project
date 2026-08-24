@@ -6,11 +6,24 @@ from uuid import UUID
 from app.modules.dossiers.models import DossierStatus
 from app.modules.reviews.models import (
     ReviewAssignmentStatus,
+    ReviewFindingAction,
+    ReviewFindingSeverity,
     ReviewRecommendation,
     SimilarityCaseDisposition,
     SimilarityCaseStatus,
     SimilaritySignalType,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewFinding:
+    id: UUID
+    severity: ReviewFindingSeverity
+    criterion: str
+    evidence_media_ids: tuple[UUID, ...]
+    title: str
+    description: str
+    action: ReviewFindingAction
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +53,10 @@ class ReviewDraft:
     professionalism_score: int | None = None
     respect_score: int | None = None
     criterion_comments: Mapping[str, str] = field(default_factory=dict)
+    criterion_evidence: Mapping[str, tuple[UUID, ...]] = field(default_factory=dict)
+    findings: tuple[ReviewFinding, ...] = ()
+    checklist_answers: Mapping[str, bool] = field(default_factory=dict)
+    applicant_feedback: str | None = None
     recommendation: ReviewRecommendation | None = None
     private_note: str | None = None
 
@@ -56,6 +73,10 @@ class ReviewView:
     total_score: int | None
     recommendation: ReviewRecommendation | None
     criterion_comments: Mapping[str, str]
+    criterion_evidence: Mapping[str, tuple[UUID, ...]]
+    findings: tuple[ReviewFinding, ...]
+    checklist_answers: Mapping[str, bool]
+    applicant_feedback: str | None
     private_note: str | None
     submitted_at: datetime | None
 

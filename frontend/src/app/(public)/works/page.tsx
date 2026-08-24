@@ -56,8 +56,8 @@ export default async function LibraryPage({
     <div
       className={
         embedded
-          ? "relative isolate overflow-hidden rounded-2xl bg-[#151515] px-5 py-7 text-white shadow-[0_24px_70px_rgba(15,23,42,.12)] sm:px-7 lg:px-9"
-          : "relative isolate overflow-hidden"
+          ? "public-theme-surface public-library-page public-theme-surface--embedded relative isolate overflow-hidden rounded-2xl px-5 py-7 shadow-[0_24px_70px_rgba(15,23,42,.12)] sm:px-7 lg:px-9"
+          : "public-theme-surface public-library-page relative isolate overflow-hidden"
       }
     >
       <div
@@ -108,9 +108,7 @@ export default async function LibraryPage({
         </header>
         <div
           className={
-            embedded
-              ? "mt-8"
-              : "mt-10 bg-[#151515] px-5 py-8 text-white sm:px-7 lg:px-9 lg:py-10"
+            embedded ? "mt-8" : "mt-10 px-5 py-8 sm:px-7 lg:px-9 lg:py-10"
           }
         >
           <PublicLibrary {...parameters} initialData={initialData} />

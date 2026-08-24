@@ -29,7 +29,7 @@ from app.modules.public.errors import (
 )
 from app.modules.public.models import PublicTag
 
-TAXONOMY_ADMIN_ROLES = frozenset({"CONTENT_ADMIN", "SUPER_ADMIN"})
+TAXONOMY_ADMIN_ROLES = frozenset({"SUPER_ADMIN"})
 SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
 
 

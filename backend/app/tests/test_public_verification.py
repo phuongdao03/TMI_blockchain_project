@@ -102,9 +102,41 @@ def test_verification_prioritizes_revocation_and_expiry() -> None:
 def test_public_evidence_projection_is_an_explicit_valid_hash_allowlist() -> None:
     metadata: dict[str, object] = {
         "publicEvidences": [
-            {"title": "Public PDF", "type": "OWNERSHIP", "sha256": "ab" * 32},
-            {"title": "Invalid", "type": "IMAGE", "sha256": "not-a-digest"},
-            {"title": "Missing type", "sha256": "cd" * 32},
+            {
+                "title": "Public PDF",
+                "type": "OWNERSHIP",
+                "sha256": "ab" * 32,
+                "accessScope": "PUBLIC",
+            },
+            {
+                "title": "Public preview",
+                "type": "IMAGE",
+                "sha256": "bc" * 32,
+                "accessScope": "PUBLIC_PREVIEW",
+            },
+            {
+                "title": "Legacy public flag",
+                "type": "LEGACY",
+                "sha256": "cd" * 32,
+                "isPublic": True,
+            },
+            {
+                "title": "Internal document",
+                "type": "IDENTITY",
+                "sha256": "de" * 32,
+                "accessScope": "INTERNAL",
+            },
+            {
+                "title": "Invalid",
+                "type": "IMAGE",
+                "sha256": "not-a-digest",
+                "accessScope": "PUBLIC",
+            },
+            {
+                "title": "Missing type",
+                "sha256": "ef" * 32,
+                "accessScope": "PUBLIC",
+            },
         ],
         "privateEvidence": {"sha256": "ef" * 32},
         "ownerUserId": "private-user",
@@ -115,6 +147,11 @@ def test_public_evidence_projection_is_an_explicit_valid_hash_allowlist() -> Non
             title="Public PDF",
             evidence_type="OWNERSHIP",
             sha256="ab" * 32,
+        ),
+        PublicEvidenceProof(
+            title="Public preview",
+            evidence_type="IMAGE",
+            sha256="bc" * 32,
         ),
     )
 
@@ -324,5 +361,80 @@ def test_verification_recomputes_metadata_instead_of_trusting_stored_hash() -> N
         result = await service.verify_number(context.certificate_number)
 
         assert result.status is VerificationStatus.MISMATCH
+
+    asyncio.run(scenario())
+
+
+def test_historical_qr_reads_its_immutable_chain_version() -> None:
+    async def scenario() -> None:
+        metadata: dict[str, object] = {"schemaVersion": 2, "certificateVersion": 1}
+        snapshot: dict[str, object] = {"dossier": {"code": "THV-HISTORY-1"}}
+        metadata_hash = hashlib.sha256(
+            CertificateMetadataBuilder.canonical_bytes(metadata)
+        ).hexdigest()
+        dossier_hash = snapshot_sha256(snapshot)
+
+        class Gateway:
+            async def get_certificate(self, certificate_id: bytes) -> CertificateRecord:
+                del certificate_id
+                raise AssertionError(
+                    "A historical QR must not read the current version."
+                )
+
+            async def get_certificate_version(
+                self,
+                certificate_id: bytes,
+                version: int,
+            ) -> CertificateRecord:
+                assert len(certificate_id) == 32
+                assert version == 1
+                return CertificateRecord(
+                    dossier_hash=bytes.fromhex(dossier_hash),
+                    metadata_hash=bytes.fromhex(metadata_hash),
+                    revocation_reason_hash=bytes(32),
+                    issued_at=1,
+                    expires_at=0,
+                    version=1,
+                    revoked=False,
+                )
+
+        context = VerificationContext(
+            certificate_id=UUID("7eaec2d2-c99a-42c9-8f1e-71462ba01ea0"),
+            certificate_number="TMI-2026-HISTORY",
+            certificate_status=CertificateStatus.ACTIVE,
+            asset_title="Historical version",
+            category_name="Brand",
+            issued_at=datetime.now(UTC),
+            expires_at=None,
+            metadata_hash=metadata_hash,
+            dossier_hash=dossier_hash,
+            metadata=metadata,
+            dossier_snapshot=snapshot,
+            version=1,
+            network="local",
+            contract_address="0x" + "12" * 20,
+            transaction_hash="0x" + "34" * 32,
+            confirmations=1,
+            confirmed_at=datetime.now(UTC),
+            is_current_version=False,
+        )
+
+        async def find(value: str) -> VerificationContext:
+            del value
+            return context
+
+        audit, audit_session = _audit_dependencies()
+        service = PublicVerificationService(
+            gateway=Gateway(),
+            find_by_token=find,
+            find_by_number=find,
+            find_by_transaction=find,
+            audit=audit,
+            audit_session=audit_session,
+        )
+
+        result = await service.verify_token("historical-qr-token")
+        assert result.status is VerificationStatus.VALID
+        assert result.version == 1
 
     asyncio.run(scenario())

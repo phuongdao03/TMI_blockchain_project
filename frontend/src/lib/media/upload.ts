@@ -15,6 +15,15 @@ interface UploadCallbacks {
   onStage?: (stage: UploadStage) => void;
 }
 
+/**
+ * Server-owned dossier document rules passed to the browser for early feedback.
+ * The upload signature and the dossier API remain authoritative.
+ */
+export interface MediaFileConstraints {
+  allowedMimeTypes?: readonly string[];
+  maxBytes?: number;
+}
+
 const DEFAULT_INSPECTION_POLL_INTERVAL_MS = 1_500;
 const MAX_INSPECTION_POLLS = 40;
 
@@ -64,14 +73,31 @@ export const mediaPolicies: Record<MediaPurpose, MediaPolicy> = {
     },
   },
   DOSSIER_EVIDENCE: {
-    accept: "image/jpeg,image/png,image/webp,application/pdf",
-    maxBytes: 20_971_520,
-    maxMegabytes: 20,
+    accept:
+      "image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/x-wav,video/mp4,video/webm,application/msword,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip",
+    maxBytes: 31_457_280,
+    maxMegabytes: 30,
     formats: {
       "application/pdf": [".pdf"],
+      "application/msword": [".doc"],
+      "application/vnd.ms-excel": [".xls"],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
+        ".docx",
+      ],
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+        ".xlsx",
+      ],
+      "application/zip": [".zip"],
+      "audio/mpeg": [".mp3"],
+      "audio/mp4": [".m4a", ".mp4"],
+      "audio/ogg": [".ogg"],
+      "audio/wav": [".wav"],
+      "audio/x-wav": [".wav"],
       "image/jpeg": [".jpg", ".jpeg"],
       "image/png": [".png"],
       "image/webp": [".webp"],
+      "video/mp4": [".mp4"],
+      "video/webm": [".webm"],
     },
   },
   PUBLIC_WORK: {
@@ -84,6 +110,8 @@ export const mediaPolicies: Record<MediaPurpose, MediaPolicy> = {
       "audio/mpeg": [".mp3"],
       "audio/mp4": [".m4a", ".mp4"],
       "audio/ogg": [".ogg"],
+      "audio/wav": [".wav"],
+      "audio/x-wav": [".wav"],
       "image/jpeg": [".jpg", ".jpeg"],
       "image/png": [".png"],
       "image/webp": [".webp"],
@@ -106,7 +134,11 @@ export class MediaUploadValidationError extends Error {
   }
 }
 
-export function validateMediaFile(file: File, purpose: MediaPurpose): void {
+export function validateMediaFile(
+  file: File,
+  purpose: MediaPurpose,
+  constraints?: MediaFileConstraints,
+): void {
   const policy = mediaPolicies[purpose];
   const extensions = policy.formats[file.type];
   if (!extensions) {
@@ -117,9 +149,18 @@ export function validateMediaFile(file: File, purpose: MediaPurpose): void {
   if (file.size <= 0) {
     throw new MediaUploadValidationError("Tệp không được để trống.");
   }
-  if (file.size > policy.maxBytes) {
+  if (
+    constraints?.allowedMimeTypes?.length &&
+    !constraints.allowedMimeTypes.includes(file.type)
+  ) {
     throw new MediaUploadValidationError(
-      `Tệp vượt quá giới hạn ${policy.maxMegabytes} MB.`,
+      "Định dạng tệp không phù hợp với loại tài liệu đã chọn.",
+    );
+  }
+  const maxBytes = constraints?.maxBytes ?? policy.maxBytes;
+  if (file.size > maxBytes) {
+    throw new MediaUploadValidationError(
+      `Tệp vượt quá giới hạn ${formatMegabytes(maxBytes)} MB.`,
     );
   }
   const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
@@ -128,6 +169,12 @@ export function validateMediaFile(file: File, purpose: MediaPurpose): void {
       "Phần mở rộng của tệp không khớp với định dạng đã chọn.",
     );
   }
+}
+
+function formatMegabytes(bytes: number): string {
+  return (bytes / 1_048_576).toLocaleString("vi-VN", {
+    maximumFractionDigits: 1,
+  });
 }
 
 function uploadToCloudinary(
@@ -183,8 +230,9 @@ export async function uploadMedia(
   file: File,
   purpose: MediaPurpose,
   callbacks: UploadCallbacks = {},
+  constraints?: MediaFileConstraints,
 ): Promise<MediaAsset> {
-  validateMediaFile(file, purpose);
+  validateMediaFile(file, purpose, constraints);
   const authorization = await mediaApi.createUploadSignature({
     confidentiality: purpose === "PUBLIC_WORK" ? "PUBLIC" : "PRIVATE",
     purpose,

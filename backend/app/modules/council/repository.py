@@ -46,7 +46,7 @@ class CouncilRepository:
                 .where(
                     User.id == user_id,
                     User.status == UserStatus.ACTIVE,
-                    Role.code == "COUNCIL_MEMBER",
+                    Role.code == "SUPER_ADMIN",
                 )
             ),
         )

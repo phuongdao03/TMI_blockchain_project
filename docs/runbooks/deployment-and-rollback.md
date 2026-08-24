@@ -18,6 +18,9 @@
    invoke `deploy.sh <commit-sha>` over SSH with a pinned host key.
 2. The script validates the environment file, runs the approved Alembic
    migration, waits for Compose health and checks `https://APP_DOMAIN/health`.
+   With `RELEASE_MODE=full`, it automatically enables the Compose `full` profile
+   and waits for ClamAV, worker and scheduler; preview releases keep that profile
+   disabled.
 3. Smoke login, dossier read, public verification and notification worker.
 4. Monitor errors, P95 latency, queue backlog and pending blockchain age for 30
    minutes.

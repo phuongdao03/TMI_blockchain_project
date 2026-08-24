@@ -64,6 +64,7 @@ class MediaGateway(Protocol):
         resource_type: str,
         timestamp: int,
         allowed_format: str,
+        max_bytes: int,
     ) -> UploadAuthorization: ...
 
     def verify_upload_result(
@@ -167,9 +168,11 @@ class CloudinaryMediaGateway:
         resource_type: str,
         timestamp: int,
         allowed_format: str,
+        max_bytes: int,
     ) -> UploadAuthorization:
         parameters = {
             "allowed_formats": allowed_format,
+            "max_file_size": str(max_bytes),
             "overwrite": "false",
             "public_id": public_id,
             "timestamp": str(timestamp),

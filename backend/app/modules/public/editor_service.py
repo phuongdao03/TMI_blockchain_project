@@ -33,7 +33,7 @@ from app.modules.public.publication_policy import (
     publication_checklist,
 )
 
-EDITOR_ROLES = frozenset({"CONTENT_ADMIN", "SUPER_ADMIN"})
+EDITOR_ROLES = frozenset({"SUPER_ADMIN"})
 
 
 @dataclass(frozen=True, slots=True)

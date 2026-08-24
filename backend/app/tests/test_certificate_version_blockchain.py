@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID, uuid4
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -14,7 +15,12 @@ from sqlalchemy.ext.asyncio import (
 from app.db.base import Base
 from app.modules.audit.models import AuditLog
 from app.modules.auth.models import User, UserStatus
-from app.modules.blockchain.gateway import BlockchainGateway, TransactionReceipt
+from app.modules.blockchain.errors import BlockchainConflictError
+from app.modules.blockchain.gateway import (
+    BlockchainGateway,
+    CertificateRecord,
+    TransactionReceipt,
+)
 from app.modules.blockchain.models import (
     BlockchainTransaction,
     BlockchainTransactionStatus,
@@ -44,6 +50,7 @@ TX_HASH = "0x" + "56" * 32
 
 class VersionGateway:
     event_name = "CertificateUpdated"
+    certificate_record: CertificateRecord | None = None
 
     def encode_update_certificate(
         self,
@@ -87,8 +94,16 @@ class VersionGateway:
         assert block_number == 9
         return "0x" + "78" * 32
 
+    async def get_certificate(self, certificate_id: bytes) -> CertificateRecord:
+        assert len(certificate_id) == 32
+        assert self.certificate_record is not None
+        return self.certificate_record
 
-async def _service() -> tuple[
+
+async def _service(
+    *,
+    human_signer: bool = False,
+) -> tuple[
     BlockchainTransactionService,
     async_sessionmaker[AsyncSession],
     AsyncEngine,
@@ -179,6 +194,8 @@ async def _service() -> tuple[
         dossier_version_id=dossier_v2.id,
         metadata_json={"certificateVersion": 2},
         metadata_hash="d" * 64,
+        public_token_hash="e" * 64,
+        qr_payload="https://tmi.example/verify/version-2-token",
         status=CertificateVersionStatus.PENDING_APPROVAL,
         change_reason="Correct the approved certificate ownership information.",
         requested_by=owner_id,
@@ -235,7 +252,7 @@ async def _service() -> tuple[
     service = BlockchainTransactionService(
         session=sessions(),
         gateway=cast(BlockchainGateway, gateway),
-        signer=cast(TransactionSigner, object()),
+        signer=None if human_signer else cast(TransactionSigner, object()),
         nonce_lock=cast(NonceLock, object()),
         network="local",
         chain_id=31_337,
@@ -315,8 +332,122 @@ def test_update_anchor_is_idempotent_and_promotes_only_after_confirmation() -> N
         assert active is not None
         assert active.status is CertificateVersionStatus.SUPERSEDED
         assert certificate is not None and certificate.current_version_no == 2
+        assert certificate.public_token_hash == "e" * 64
+        assert certificate.qr_payload == "https://tmi.example/verify/version-2-token"
         assert dossier is not None
         assert dossier.status is DossierStatus.CERTIFICATE_ISSUED
+        await service._session.close()  # noqa: SLF001
+        await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_update_anchor_requires_a_version_bound_qr_link() -> None:
+    async def scenario() -> None:
+        (
+            service,
+            sessions,
+            engine,
+            requested_version_id,
+            _,
+            admin_id,
+            enqueued,
+            _,
+        ) = await _service()
+        async with sessions() as session:
+            requested = await session.get(CertificateVersion, requested_version_id)
+            assert requested is not None
+            requested.public_token_hash = None
+            requested.qr_payload = None
+            await session.commit()
+
+        with pytest.raises(BlockchainConflictError, match="version-bound QR"):
+            await service.request_certificate_update_anchor(
+                certificate_version_id=requested_version_id,
+                actor_user_id=admin_id,
+            )
+
+        assert enqueued == []
+        await service._session.close()  # noqa: SLF001
+        await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_human_reconciliation_keeps_historical_transaction_confirmed() -> None:
+    async def scenario() -> None:
+        (
+            service,
+            sessions,
+            engine,
+            requested_version_id,
+            active_version_id,
+            _,
+            _,
+            gateway,
+        ) = await _service(human_signer=True)
+        gateway.event_name = "CertificateIssued"
+
+        async with sessions() as session:
+            certificate = await session.scalar(select(Certificate))
+            active = await session.get(CertificateVersion, active_version_id)
+            requested = await session.get(CertificateVersion, requested_version_id)
+            dossier_v1 = await session.scalar(
+                select(DossierVersion).where(DossierVersion.version_no == 1)
+            )
+            dossier_v2 = await session.scalar(
+                select(DossierVersion).where(DossierVersion.version_no == 2)
+            )
+            assert (
+                certificate is not None
+                and active is not None
+                and requested is not None
+                and dossier_v1 is not None
+                and dossier_v2 is not None
+            )
+            certificate.current_version_no = 2
+            active.status = CertificateVersionStatus.SUPERSEDED
+            await session.flush()
+            requested.status = CertificateVersionStatus.ACTIVE
+            transaction = BlockchainTransaction(
+                dossier_id=certificate.dossier_id,
+                dossier_version_id=dossier_v1.id,
+                certificate_id=certificate.id,
+                network="local",
+                chain_id=31_337,
+                contract_address=CONTRACT,
+                method="issueCertificate",
+                payload_hash="e" * 64,
+                tx_hash=TX_HASH,
+                status=BlockchainTransactionStatus.CONFIRMED,
+                confirmations=2,
+                broadcast_at=NOW,
+                confirmed_at=NOW,
+            )
+            session.add(transaction)
+            gateway.certificate_record = CertificateRecord(
+                dossier_hash=bytes.fromhex(dossier_v2.canonical_hash),
+                metadata_hash=bytes.fromhex(requested.metadata_hash),
+                revocation_reason_hash=bytes(32),
+                issued_at=int(NOW.timestamp()),
+                expires_at=0,
+                version=2,
+                revoked=False,
+            )
+            await session.commit()
+            transaction_id = transaction.id
+
+        await service.confirm(transaction_id)
+
+        async with sessions() as session:
+            confirmed_transaction = await session.get(
+                BlockchainTransaction,
+                transaction_id,
+            )
+            assert confirmed_transaction is not None
+            assert confirmed_transaction.status is BlockchainTransactionStatus.CONFIRMED
+            assert confirmed_transaction.error_code is None
+            assert confirmed_transaction.error_message is None
         await service._session.close()  # noqa: SLF001
         await engine.dispose()
 

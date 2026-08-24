@@ -63,7 +63,7 @@ test("preview dashboard keeps submission closed and hides internal language", as
   }
 });
 
-test("workspace discovery keeps navigation context across screens", async ({
+test("discovery keeps an authenticated return path across public screens", async ({
   context,
   page,
 }, testInfo) => {
@@ -89,12 +89,18 @@ test("workspace discovery keeps navigation context across screens", async ({
 
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/dashboard");
-  const navigation = page.getByRole("navigation", {
-    name: "Điều hướng bảng điều khiển",
+  const dashboardNavigation = page.getByRole("navigation", {
+    name: "Điều hướng",
   });
-  await navigation.getByRole("link", { name: "Tìm kiếm đề cử" }).click();
+  await dashboardNavigation.getByRole("link", { name: "Tìm đề cử" }).click();
   await expect(page).toHaveURL(/\/search$/, { timeout: 30_000 });
-  await expect(navigation).toBeVisible();
+  const publicNavigation = page.getByRole("navigation", {
+    name: "Điều hướng chính",
+  });
+  await expect(publicNavigation).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Hồ sơ của tôi" }),
+  ).toHaveAttribute("href", "/dossiers");
   await expect(
     page.getByRole("heading", { name: "Tìm nội dung bạn quan tâm" }),
   ).toBeVisible();
@@ -107,16 +113,16 @@ test("workspace discovery keeps navigation context across screens", async ({
     path: testInfo.outputPath("workspace-search-desktop.png"),
   });
 
-  await navigation.getByRole("link", { name: "Thư viện đề cử" }).click();
+  await publicNavigation.getByRole("link", { name: "Đề cử" }).click();
   await expect(page).toHaveURL(/\/works$/, { timeout: 30_000 });
-  await expect(navigation).toBeVisible();
+  await expect(publicNavigation).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Thư viện đề cử" }),
   ).toBeVisible();
 
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/verify");
-  await expect(page.getByText("Mở điều hướng")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Mở menu" })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Kiểm tra chứng thư" }),
   ).toBeVisible();

@@ -15,24 +15,10 @@ class RegisterRequest(BaseModel):
     account_type: AccountType = Field(alias="accountType")
 
 
-INTERNAL_ACCOUNT_ROLES = (
-    "REVIEWER",
-    "COUNCIL_MEMBER",
-    "COUNCIL_SECRETARY",
-    "FINANCE_ADMIN",
-    "CONTENT_ADMIN",
-    "BLOCKCHAIN_ADMIN",
-)
+INTERNAL_ACCOUNT_ROLES = ("MODERATOR",)
 INTERNAL_MANAGED_ROLES = frozenset(INTERNAL_ACCOUNT_ROLES)
 STAFF_ACCOUNT_STATUSES = ("PENDING_MFA", "ACTIVE", "SUSPENDED", "DISABLED")
-StaffAccountRole = Literal[
-    "REVIEWER",
-    "COUNCIL_MEMBER",
-    "COUNCIL_SECRETARY",
-    "FINANCE_ADMIN",
-    "CONTENT_ADMIN",
-    "BLOCKCHAIN_ADMIN",
-]
+StaffAccountRole = Literal["MODERATOR",]
 StaffAccountStatus = Literal["PENDING_MFA", "ACTIVE", "SUSPENDED", "DISABLED"]
 StaffInvitationStatus = Literal["PENDING", "ACCEPTED", "REVOKED", "EXPIRED"]
 
@@ -56,12 +42,7 @@ class PrivilegedActionRequest(BaseModel):
     action: Literal["ROLE_CHANGE", "MFA_RECOVERY"]
     requested_role: (
         Literal[
-            "REVIEWER",
-            "COUNCIL_MEMBER",
-            "COUNCIL_SECRETARY",
-            "FINANCE_ADMIN",
-            "CONTENT_ADMIN",
-            "BLOCKCHAIN_ADMIN",
+            "MODERATOR",
             "SUPER_ADMIN",
         ]
         | None

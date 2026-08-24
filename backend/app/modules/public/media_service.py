@@ -28,7 +28,7 @@ from app.modules.public.models import (
     PublicWorkMedia,
 )
 
-PUBLIC_MEDIA_ADMIN_ROLES = frozenset({"CONTENT_ADMIN", "SUPER_ADMIN"})
+PUBLIC_MEDIA_ADMIN_ROLES = frozenset({"SUPER_ADMIN"})
 PUBLIC_MEDIA_MIME_KINDS = {
     "image/jpeg": PublicMediaKind.IMAGE,
     "image/png": PublicMediaKind.IMAGE,

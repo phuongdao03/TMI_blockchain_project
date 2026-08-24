@@ -70,13 +70,34 @@ _FORMATS = {
     "audio/mpeg": _FormatPolicy("mp3", "video", frozenset({".mp3"})),
     "audio/mp4": _FormatPolicy("mp4", "video", frozenset({".m4a", ".mp4"})),
     "audio/ogg": _FormatPolicy("ogg", "video", frozenset({".ogg"})),
+    "audio/wav": _FormatPolicy("wav", "video", frozenset({".wav"})),
+    "audio/x-wav": _FormatPolicy("wav", "video", frozenset({".wav"})),
     "video/mp4": _FormatPolicy("mp4", "video", frozenset({".mp4"})),
     "video/webm": _FormatPolicy("webm", "video", frozenset({".webm"})),
+    "application/msword": _FormatPolicy("doc", "raw", frozenset({".doc"})),
+    "application/vnd.ms-excel": _FormatPolicy("xls", "raw", frozenset({".xls"})),
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
+        _FormatPolicy("docx", "raw", frozenset({".docx"}))
+    ),
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": (
+        _FormatPolicy("xlsx", "raw", frozenset({".xlsx"}))
+    ),
+    "application/zip": _FormatPolicy("zip", "raw", frozenset({".zip"})),
 }
+_EVIDENCE_ONLY_MIME_TYPES = frozenset(
+    {
+        "application/msword",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/zip",
+    }
+)
+_PUBLIC_MEDIA_MIME_TYPES = frozenset(_FORMATS) - _EVIDENCE_ONLY_MIME_TYPES
 _PURPOSE_MIME_TYPES = {
     MediaPurpose.AVATAR: frozenset({"image/jpeg", "image/png", "image/webp"}),
     MediaPurpose.DOSSIER_EVIDENCE: frozenset(_FORMATS),
-    MediaPurpose.PUBLIC_WORK: frozenset(_FORMATS),
+    MediaPurpose.PUBLIC_WORK: _PUBLIC_MEDIA_MIME_TYPES,
 }
 _DANGEROUS_INNER_EXTENSIONS = frozenset(
     {
@@ -147,6 +168,7 @@ class MediaService:
             resource_type=policy.resource_type,
             timestamp=issued_at,
             allowed_format=policy.file_format,
+            max_bytes=intent.size,
         )
         asset = MediaAsset(
             id=media_id,

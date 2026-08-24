@@ -122,6 +122,10 @@ class StubScoringService:
             total_score=80,
             recommendation=draft.recommendation,
             criterion_comments=draft.criterion_comments,
+            criterion_evidence=draft.criterion_evidence,
+            findings=draft.findings,
+            checklist_answers=draft.checklist_answers,
+            applicant_feedback=draft.applicant_feedback,
             private_note=draft.private_note,
             submitted_at=None,
         )

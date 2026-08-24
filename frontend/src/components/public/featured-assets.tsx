@@ -5,43 +5,12 @@ import { ArrowUpRight, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 
 import { publicApi } from "@/lib/api/client";
-import { isPreviewRelease } from "@/lib/release-mode";
-import { previewWorks } from "@/lib/preview-catalog";
 
 export function FeaturedAssets() {
-  const preview = isPreviewRelease();
   const query = useQuery({
     queryKey: ["public-featured-assets"],
     queryFn: () => publicApi.assets({ page: 1 }),
-    enabled: !preview,
   });
-  if (preview) {
-    return (
-      <div className="grid border-y border-white/15 md:grid-cols-3 md:divide-x md:divide-white/15">
-        {previewWorks.map((work) => (
-          <article
-            className="py-7 md:px-7 md:first:pl-0 md:last:pr-0"
-            key={work.id}
-          >
-            <p className="text-xs font-bold uppercase tracking-wider text-[#ff7668]">
-              {work.categoryName}
-            </p>
-            <h3 className="mt-4 text-xl font-bold text-white">{work.title}</h3>
-            <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-400">
-              {work.shortDescription}
-            </p>
-            <Link
-              className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-[#f3d675]"
-              href={`/works/${work.slug}`}
-            >
-              Xem nội dung{" "}
-              <ArrowUpRight aria-hidden="true" className="size-4" />
-            </Link>
-          </article>
-        ))}
-      </div>
-    );
-  }
   if (query.isPending) {
     return (
       <div className="grid min-h-52 place-items-center">

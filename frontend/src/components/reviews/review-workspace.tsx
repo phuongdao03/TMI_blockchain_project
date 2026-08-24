@@ -174,6 +174,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
             </Card>
           </div>
           <FiveTScorecard
+            evidences={detail.snapshotJson.evidences ?? []}
             initialReview={detail.review}
             isSaving={save.isPending}
             isSubmitting={submit.isPending}

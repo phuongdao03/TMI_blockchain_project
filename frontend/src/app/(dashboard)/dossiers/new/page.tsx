@@ -6,7 +6,7 @@ import { RoleGate } from "@/components/auth/role-gate";
 
 export default function CreateDossierPage() {
   return (
-    <RoleGate allowed={["APPLICANT", "ORG_MANAGER"]}>
+    <RoleGate allowed={["USER"]}>
       <div className="mx-auto max-w-4xl space-y-7">
         <div>
           <Link

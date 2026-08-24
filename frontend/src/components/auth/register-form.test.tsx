@@ -48,6 +48,16 @@ describe("RegisterForm", () => {
     firebaseMocks.signOut.mockResolvedValue(undefined);
   });
 
+  it("explains the account purpose in clear production copy", () => {
+    render(<RegisterForm />);
+
+    expect(
+      screen.getByText(
+        "Tạo tài khoản để gửi hồ sơ, lưu bản nháp và theo dõi quá trình xử lý.",
+      ),
+    ).toBeDefined();
+  });
+
   it("rejects mismatched passwords without a network request", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
     render(<RegisterForm />);
@@ -114,7 +124,7 @@ describe("RegisterForm", () => {
 
     expect(
       screen.getByText(
-        "Đăng ký để lưu nội dung quan tâm và nhận những cập nhật mới từ chương trình.",
+        "Tạo tài khoản để gửi hồ sơ, lưu bản nháp và theo dõi quá trình xử lý.",
       ),
     ).toBeDefined();
     expect(screen.queryByRole("radio")).toBeNull();

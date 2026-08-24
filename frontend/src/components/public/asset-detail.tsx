@@ -24,7 +24,7 @@ export function AssetDetail({ slug }: { slug: string }) {
   }
   const { asset } = query.data;
   return (
-    <article>
+    <article className="public-theme-surface">
       <header className="relative overflow-hidden border-b border-white/10 px-4 py-16 sm:px-6 lg:py-24">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_25%,rgb(185_28_28_/_18%),transparent_28rem)]" />
         <div className="relative mx-auto max-w-7xl">

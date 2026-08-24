@@ -7,7 +7,6 @@ import {
   LoaderCircle,
   UserRound,
 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 
 import { authApi, ApiError } from "@/lib/api/client";
@@ -18,10 +17,8 @@ type ApplicantAccountType = "INDIVIDUAL_APPLICANT" | "ORGANIZATION_APPLICANT";
 
 export function ApplicantUpgradeCard({
   onUpgraded,
-  preview = false,
 }: {
   onUpgraded?: (user: AuthUser) => void;
-  preview?: boolean;
 }) {
   const [accountType, setAccountType] = useState<ApplicantAccountType>(
     "INDIVIDUAL_APPLICANT",
@@ -48,37 +45,6 @@ export function ApplicantUpgradeCard({
       setIsSubmitting(false);
     }
   };
-
-  if (preview) {
-    return (
-      <section className="overflow-hidden rounded-2xl border border-black/10 bg-[#fbfaf7] shadow-[0_18px_55px_rgb(29_28_27/0.08)]">
-        <div className="grid gap-7 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div className="max-w-2xl">
-            <span className="grid size-11 place-items-center rounded-lg bg-primary-50 text-primary-700">
-              <FileUp aria-hidden="true" className="size-5" />
-            </span>
-            <p className="mt-6 font-mono text-[0.65rem] font-bold uppercase tracking-[0.18em] text-primary-700">
-              Sắp ra mắt
-            </p>
-            <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-neutral-950 sm:text-3xl">
-              Cổng gửi đề cử đang được chuẩn bị
-            </h2>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-neutral-600">
-              Khi cổng tiếp nhận mở, hướng dẫn, tiêu chí và danh mục tài liệu
-              cần chuẩn bị sẽ được công bố đầy đủ tại đây.
-            </p>
-          </div>
-          <Link
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-neutral-950 px-5 text-sm font-bold text-white transition-colors hover:bg-neutral-800"
-            href="/coming-soon/submission"
-          >
-            Tìm hiểu cách tham gia
-            <ArrowRight aria-hidden="true" className="size-4" />
-          </Link>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section className="overflow-hidden rounded-2xl border border-black/10 bg-[#fbfaf7] shadow-[0_18px_55px_rgb(29_28_27/0.08)]">

@@ -11,16 +11,15 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 import { DossierStatusBadge } from "@/components/dossiers/dossier-status";
 import { RoleDashboardOverview } from "@/components/dashboard/role-dashboard-overview";
-import { PreviewDashboard } from "@/components/dashboard/preview-dashboard";
 import { dossierApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
 import { resolveWorkspacePersona } from "@/lib/auth/role-workspaces";
 import { dossierKeys } from "@/lib/dossiers/query-keys";
 import type { Dossier, DossierStatus } from "@/lib/api/types";
-import { isPreviewRelease } from "@/lib/release-mode";
 
 const attentionStatuses = new Set<DossierStatus>([
   "DRAFT",
@@ -66,25 +65,24 @@ function nextAction(dossier: Dossier) {
 export function DashboardOverview() {
   const user = useAuthUser();
   const queryClient = useQueryClient();
+  const [upgradeCompleted, setUpgradeCompleted] = useState(false);
   const persona = resolveWorkspacePersona(user?.roles ?? []);
-  const isApplicant = persona === "APPLICANT";
-  const preview = isPreviewRelease();
+  const isUser = persona === "USER";
   const filters = { page: 1, pageSize: 5 } as const;
   const dossiers = useQuery({
     queryKey: dossierKeys.list(filters),
     queryFn: () => dossierApi.list(filters),
-    enabled: isApplicant && !preview,
+    enabled: isUser,
   });
-  if (preview) return <PreviewDashboard />;
-  if (!isApplicant) {
+  if (!isUser) {
     return (
       <RoleDashboardOverview
         accountType={user?.accountType}
-        onUpgraded={(upgradedUser) =>
-          queryClient.setQueryData(["auth", "me"], upgradedUser)
-        }
+        onUpgraded={(upgradedUser) => {
+          queryClient.setQueryData(["auth", "me"], upgradedUser);
+          setUpgradeCompleted(true);
+        }}
         persona={persona}
-        roles={user?.roles}
       />
     );
   }
@@ -119,6 +117,18 @@ export function DashboardOverview() {
           </p>
         </div>
       </header>
+
+      {upgradeCompleted ? (
+        <div
+          className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-900"
+          role="status"
+        >
+          <p className="font-bold">Bạn đã có thể bắt đầu hồ sơ.</p>
+          <p className="mt-1">
+            Hoàn thiện thông tin liên hệ trước khi tải tài liệu lên.
+          </p>
+        </div>
+      ) : null}
 
       <section className="hero-grid-surface relative overflow-hidden rounded-2xl border border-white/8 bg-[#151515] px-6 py-8 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:min-h-72 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-12 lg:px-10 lg:py-10">
         <div className="relative z-10 max-w-3xl">

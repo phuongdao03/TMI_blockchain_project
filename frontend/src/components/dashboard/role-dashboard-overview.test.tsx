@@ -6,7 +6,7 @@ import { RoleDashboardOverview } from "@/components/dashboard/role-dashboard-ove
 describe("RoleDashboardOverview", () => {
   it("renders browse-only discovery actions for a public user", () => {
     render(
-      <RoleDashboardOverview accountType="PUBLIC_USER" persona="PUBLIC" />,
+      <RoleDashboardOverview accountType="PUBLIC_USER" persona="VIEWER" />,
     );
 
     expect(screen.getByRole("link", { name: /Tìm kiếm đề cử/i })).toBeDefined();
@@ -18,9 +18,7 @@ describe("RoleDashboardOverview", () => {
   });
 
   it.each([
-    ["REVIEWER", "Hàng đợi thẩm định", "Mở hàng đợi thẩm định"],
-    ["COUNCIL", "Phiên xét duyệt Hội đồng", "Mở phiên Hội đồng"],
-    ["ADMIN", "Điều hành nền tảng", "Mở bảng vận hành"],
+    ["MODERATOR", "Hàng đợi thẩm định", "Mở hàng đợi thẩm định"],
     ["SUPER_ADMIN", "Điều hành toàn hệ thống", "Mở bảng điều hành"],
   ] as const)(
     "renders the permitted landing actions for %s",
@@ -36,14 +34,9 @@ describe("RoleDashboardOverview", () => {
     },
   );
 
-  it("does not expose operations controls to a content-only admin", () => {
-    render(<RoleDashboardOverview persona="ADMIN" roles={["CONTENT_ADMIN"]} />);
+  it("keeps blockchain signing out of the moderator workspace", () => {
+    render(<RoleDashboardOverview persona="MODERATOR" />);
 
-    expect(
-      screen.getByRole("link", { name: /Mở quản trị nội dung/i }),
-    ).toBeDefined();
-    expect(
-      screen.queryByRole("link", { name: /Mở bảng vận hành/i }),
-    ).toBeNull();
+    expect(screen.queryByRole("link", { name: /Ký blockchain/i })).toBeNull();
   });
 });

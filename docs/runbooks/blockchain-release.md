@@ -23,9 +23,10 @@ deterministic manifest, waits for Polygonscan source verification, and writes:
 - `contracts/deployments/amoy.json`
 
 Copy the verified address into both `CERTIFICATE_CONTRACT_ADDRESS` and
-`BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES` in the staging secret store. Do not
-enable the worker until the address and transaction hash match the two evidence
-files and the explorer displays verified source code.
+`BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES` in the staging secret store. Set
+`BLOCKCHAIN_SIGNER_MODE=human` and do not enable human-signing intents until
+the address and transaction hash match the two evidence files and the explorer
+displays verified source code.
 
 Run the staging issue/read/revoke/read smoke with a disposable certificate ID.
 Retain the transaction links with the release evidence. On any chain, signer,
@@ -37,9 +38,13 @@ qualified address.
 Trigger `Contract production dry run` with the full commit that passed Amoy.
 The `production-blockchain` environment must require an authorized reviewer.
 The workflow checks out that immutable commit, runs the pinned build/tests and
-executes only read-only Polygon calls. It verifies chain 137, HTTPS RPC, signer
-balance, contract allowlist, runtime bytecode and administrator/pauser/issuer
-roles before writing the dry-run artifact. It never broadcasts a transaction.
+executes only read-only Polygon calls. Configure the production-blockchain
+environment secret `POLYGON_SUPER_ADMIN_WALLET_ADDRESS` to the one wallet used
+by the THV Super Admin. The workflow verifies chain 137, HTTPS RPC, that active
+signer's balance, contract allowlist, runtime bytecode and
+administrator/pauser/issuer roles before writing the dry-run artifact. The
+active signer must equal the contract `ISSUER_ROLE` address. It never broadcasts
+a transaction.
 
 Before cutover, rehearse on Amoy with a disposable certificate: issue, verify,
 revoke, verify revoked, pause, prove writes are rejected, then unpause. Record
@@ -52,7 +57,7 @@ The registry release must expose `anchorDocumentEvidence`,
 `getDocumentEvidence` and `verifyDocumentEvidence`. Before enabling workers:
 
 1. Confirm the deployed ABI/runtime match the qualified release manifest.
-2. Grant `ISSUER_ROLE` only to the managed application signer.
+2. Grant `ISSUER_ROLE` only to the designated active human signer wallet.
 3. Anchor a disposable document commitment on Amoy and retain the transaction.
 4. Read it back and compare commitment, predecessor, version and timestamp.
 5. Verify a matching commitment returns true and a modified commitment false.

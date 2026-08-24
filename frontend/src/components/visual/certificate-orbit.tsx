@@ -1,132 +1,95 @@
-import {
-  BadgeCheck,
-  Check,
-  FileBadge2,
-  Fingerprint,
-  Hash,
-  Link2,
-} from "lucide-react";
+import { FileText, Hash, Layers3, Link2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const evidenceSteps = [
-  { label: "Nguồn dữ liệu", value: "Đã đối chiếu" },
-  { label: "Thẩm định", value: "Đủ điều kiện" },
-  { label: "Dấu thời gian", value: "Đã ghi nhận" },
+const informationSteps = [
+  { label: "Tiếp nhận", value: "Thông tin hồ sơ và tài liệu" },
+  { label: "Thẩm định", value: "Kết quả xử lý và yêu cầu bổ sung" },
+  { label: "Công bố", value: "Nội dung được phép hiển thị" },
 ] as const;
 
-const previewSteps = [
-  { label: "Khởi nguồn", value: "Giá trị được hình thành" },
-  { label: "Dấu ấn", value: "Câu chuyện được tiếp nối" },
-  { label: "Lan tỏa", value: "Đến gần hơn với cộng đồng" },
-] as const;
-
-export function CertificateOrbit({
-  className,
-  preview = false,
-}: {
-  className?: string;
-  preview?: boolean;
-}) {
-  const steps = preview ? previewSteps : evidenceSteps;
+/**
+ * A decorative explanation of the public-information flow. It deliberately
+ * contains no certificate number, transaction hash, or verification state so
+ * the landing page never presents a fabricated record as a real one.
+ */
+export function CertificateOrbit({ className }: { className?: string }) {
   return (
     <figure
-      aria-label="Hồ sơ đề cử minh họa"
+      aria-label="Sơ đồ phạm vi thông tin công bố trên nền tảng Tinh Hoa Việt"
       className={cn("evidence-register", className)}
       role="img"
     >
       <div aria-hidden="true" className="evidence-register-frame">
         <div className="evidence-register-index">
-          <span>ĐỀ CỬ</span>
-          <strong>01</strong>
-          <span>TMI / 26</span>
+          <span>THV</span>
+          <strong>∞</strong>
+          <span>GIỚI THIỆU</span>
         </div>
         <div className="evidence-document">
           <div className="evidence-document-head">
             <span className="evidence-document-icon">
-              <FileBadge2 className="size-6" strokeWidth={1.6} />
+              <FileText className="size-6" strokeWidth={1.6} />
             </span>
             <span>
-              <small>
-                {preview ? "HÀNH TRÌNH GIÁ TRỊ VIỆT" : "SỔ ĐĂNG BỘ SỐ"}
-              </small>
-              <strong>
-                {preview ? "DẤU ẤN TINH HOA VIỆT" : "TINH HOA VIỆT"}
-              </strong>
+              <small>KHÔNG GIAN THÔNG TIN</small>
+              <strong>ĐỀ CỬ TINH HOA VIỆT</strong>
             </span>
-            <BadgeCheck
+            <Layers3
               className="ml-auto size-6 text-gold-300"
               strokeWidth={1.7}
             />
           </div>
           <div className="evidence-document-code">
-            <span>{preview ? "MÃ CHUYÊN ĐỀ" : "MÃ BẰNG CHỨNG"}</span>
-            <strong>{preview ? "THV–GT–2026–001" : "THV–VN–2026–0812"}</strong>
+            <span>HỒ SƠ ĐƯỢC CÔNG BỐ</span>
+            <strong>Thông tin đã được phê duyệt</strong>
           </div>
           <dl className="evidence-document-fields">
             <div>
-              <dt>{preview ? "Giá trị" : "Chủ thể"}</dt>
-              <dd>{preview ? "Nét đẹp tiêu biểu" : "Đề cử Tinh Hoa Việt"}</dd>
+              <dt>Nội dung công bố</dt>
+              <dd>Đề cử &amp; giới thiệu</dd>
             </div>
             <div>
-              <dt>{preview ? "Góc nhìn" : "Phiên bản"}</dt>
-              <dd>{preview ? "Câu chuyện Việt" : "01 · Bất biến"}</dd>
+              <dt>Kiểm chứng</dt>
+              <dd>Mã tra cứu</dd>
             </div>
             <div>
-              <dt>Trạng thái</dt>
-              <dd className="evidence-valid">
-                {preview ? null : <Check className="size-3.5" />}
-                {preview ? "Đang giới thiệu" : "Đã xác lập"}
-              </dd>
+              <dt>Trạng thái hồ sơ</dt>
+              <dd>Quyết định xử lý</dd>
             </div>
           </dl>
           <div className="evidence-fingerprint">
-            <Fingerprint
-              className="size-8 text-primary-500"
-              strokeWidth={1.4}
-            />
+            <Layers3 className="size-8 text-primary-500" strokeWidth={1.4} />
             <span>
-              <small>
-                {preview ? "CÂU CHUYỆN NỔI BẬT" : "DẤU VÂN TAY DỮ LIỆU"}
-              </small>
-              <strong>
-                {preview
-                  ? "GIÁ TRỊ ĐƯỢC GÌN GIỮ VÀ LAN TỎA"
-                  : "7F4A · 8C29 · B15E · 03D1"}
-              </strong>
+              <small>HÀNH TRÌNH HỒ SƠ</small>
+              <strong>Các mốc xử lý được cập nhật theo quy trình</strong>
             </span>
           </div>
         </div>
         <div className="evidence-chain">
           <div className="evidence-chain-head">
             <span>
-              <Link2 className="size-4" />
-              {preview ? " HÀNH TRÌNH KHÁM PHÁ" : " CHUỖI ĐỐI CHIẾU"}
+              <Link2 className="size-4" /> QUY TRÌNH XỬ LÝ
             </span>
             <Hash className="size-4 text-slate-600" />
           </div>
           <ol>
-            {steps.map((step, index) => (
+            {informationSteps.map((step, index) => (
               <li key={step.label}>
                 <span className="evidence-chain-number">0{index + 1}</span>
                 <span>
                   <small>{step.label}</small>
                   <strong>{step.value}</strong>
                 </span>
-                {preview ? null : (
-                  <Check className="ml-auto size-4 text-emerald-400" />
-                )}
               </li>
             ))}
           </ol>
         </div>
         <div className="evidence-seal">
-          <BadgeCheck className="size-5" />
+          <FileText className="size-5" />
           <span>
-            <small>
-              {preview ? "NỘI DUNG TIÊU BIỂU" : "THÔNG TIN CÔNG KHAI"}
-            </small>
-            <strong>{preview ? "Tinh hoa Việt" : "Sẵn sàng xác minh"}</strong>
+              <small>PHẠM VI HIỂN THỊ</small>
+              <strong>THÔNG TIN CÔNG BỐ</strong>
           </span>
         </div>
       </div>

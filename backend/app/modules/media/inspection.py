@@ -1,10 +1,12 @@
 import asyncio
 import hashlib
+import io
 import struct
+import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import PurePath
+from pathlib import PurePath, PurePosixPath
 from typing import Protocol
 from uuid import UUID
 
@@ -72,9 +74,21 @@ _DELIVERY_FORMATS = {
     "audio/mpeg": "mp3",
     "audio/mp4": "mp4",
     "audio/ogg": "ogg",
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
     "video/mp4": "mp4",
     "video/webm": "webm",
+    "application/msword": "doc",
+    "application/vnd.ms-excel": "xls",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "application/zip": "zip",
 }
+_OLE_COMPOUND_SIGNATURE = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+_ARCHIVE_MAX_ENTRIES = 1_000
+_ARCHIVE_MAX_UNCOMPRESSED_BYTES = 300 * 1024 * 1024
+_ARCHIVE_MAX_COMPRESSION_RATIO = 100
+_OFFICE_MACRO_NAMES = frozenset({"vbaproject.bin", "vbadata.xml"})
 
 
 class InspectionRejectedError(Exception):
@@ -152,8 +166,19 @@ class MediaInspectionPolicy:
             "audio/mpeg": self._mpeg_audio,
             "audio/mp4": self._mp4,
             "audio/ogg": self._ogg,
+            "audio/wav": self._wav,
+            "audio/x-wav": self._wav,
             "video/mp4": self._mp4,
             "video/webm": self._webm,
+            "application/msword": self._legacy_office,
+            "application/vnd.ms-excel": self._legacy_office,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
+                self._docx
+            ),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": (
+                self._xlsx
+            ),
+            "application/zip": self._zip,
         }.get(mime_type)
         if validator is None or not validator(content):
             raise InspectionRejectedError("MAGIC_BYTES_MISMATCH")
@@ -203,8 +228,101 @@ class MediaInspectionPolicy:
         return content.startswith(b"OggS")
 
     @staticmethod
+    def _wav(content: bytes) -> bool:
+        return (
+            len(content) >= 12
+            and content.startswith(b"RIFF")
+            and content[8:12] == b"WAVE"
+        )
+
+    @staticmethod
     def _webm(content: bytes) -> bool:
         return content.startswith(b"\x1aE\xdf\xa3")
+
+    @staticmethod
+    def _legacy_office(content: bytes) -> bool:
+        if not content.startswith(_OLE_COMPOUND_SIGNATURE):
+            return False
+        # Legacy OLE documents can embed VBA streams.  We deliberately reject
+        # a conservative set of macro markers before the ClamAV scan.
+        lowered = content.lower()
+        if b"_vba_project" in lowered or b"vba" in lowered or b"macros" in lowered:
+            raise InspectionRejectedError("OFFICE_MACRO_CONTENT")
+        return True
+
+    def _docx(self, content: bytes) -> bool:
+        self._office_archive(
+            content,
+            required_entries={"[Content_Types].xml", "word/document.xml"},
+        )
+        return True
+
+    def _xlsx(self, content: bytes) -> bool:
+        self._office_archive(
+            content,
+            required_entries={"[Content_Types].xml", "xl/workbook.xml"},
+        )
+        return True
+
+    def _zip(self, content: bytes) -> bool:
+        self._inspect_archive(content)
+        return True
+
+    def _office_archive(self, content: bytes, *, required_entries: set[str]) -> None:
+        names = self._inspect_archive(content)
+        if not required_entries.issubset(names):
+            raise InspectionRejectedError("OFFICE_MALFORMED")
+        if any(
+            PurePosixPath(name).name.lower() in _OFFICE_MACRO_NAMES for name in names
+        ):
+            raise InspectionRejectedError("OFFICE_MACRO_CONTENT")
+
+    @staticmethod
+    def _inspect_archive(content: bytes) -> set[str]:
+        if not content.startswith(b"PK"):
+            raise InspectionRejectedError("MAGIC_BYTES_MISMATCH")
+        try:
+            with zipfile.ZipFile(io.BytesIO(content)) as archive:
+                entries = archive.infolist()
+        except (zipfile.BadZipFile, zipfile.LargeZipFile) as exc:
+            raise InspectionRejectedError("ARCHIVE_MALFORMED") from exc
+
+        if not entries or len(entries) > _ARCHIVE_MAX_ENTRIES:
+            raise InspectionRejectedError("ARCHIVE_MALFORMED")
+
+        names: set[str] = set()
+        uncompressed_bytes = 0
+        for entry in entries:
+            name = entry.filename
+            normalized_name = name.replace("\\", "/")
+            path = PurePosixPath(normalized_name)
+            if (
+                not normalized_name
+                or normalized_name.startswith("/")
+                or any(part in {"", ".", ".."} for part in path.parts)
+            ):
+                raise InspectionRejectedError("ARCHIVE_UNSAFE_PATH")
+            if normalized_name in names or entry.flag_bits & 0x1:
+                raise InspectionRejectedError("ARCHIVE_MALFORMED")
+            names.add(normalized_name)
+            if entry.is_dir():
+                continue
+            suffixes = [suffix.lower() for suffix in path.suffixes]
+            if any(suffix in _DANGEROUS_INNER_EXTENSIONS for suffix in suffixes):
+                raise InspectionRejectedError("ARCHIVE_DANGEROUS_CONTENT")
+            uncompressed_bytes += entry.file_size
+            if uncompressed_bytes > _ARCHIVE_MAX_UNCOMPRESSED_BYTES:
+                raise InspectionRejectedError("ARCHIVE_SIZE_LIMIT_EXCEEDED")
+            if (
+                entry.file_size > 0
+                and (
+                    entry.compress_size == 0
+                    or entry.file_size
+                    > entry.compress_size * _ARCHIVE_MAX_COMPRESSION_RATIO
+                )
+            ):
+                raise InspectionRejectedError("ARCHIVE_COMPRESSION_RATIO_EXCEEDED")
+        return names
 
 
 class ClamAvScanner:

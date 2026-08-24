@@ -129,7 +129,7 @@ async def _service(
             user_id=user.id,
             session_id=uuid4(),
             email=user.email,
-            roles=("APPLICANT",),
+            roles=("USER",),
         ),
     )
 
@@ -331,7 +331,7 @@ def test_reconciliation_confirms_paid_once_and_enqueues_issuance_once() -> None:
             user_id=applicant.user_id,
             session_id=applicant.session_id,
             email=applicant.email,
-            roles=("FINANCE_ADMIN",),
+            roles=("SUPER_ADMIN",),
         )
         gateway.status = "PAID"
 
@@ -372,7 +372,7 @@ def test_reconciliation_records_cancelled_provider_state() -> None:
             user_id=applicant.user_id,
             session_id=applicant.session_id,
             email=applicant.email,
-            roles=("FINANCE_ADMIN",),
+            roles=("SUPER_ADMIN",),
         )
         gateway.status = "CANCELLED"
 
@@ -403,7 +403,7 @@ def test_manual_confirmation_is_audited_without_evidence_or_note() -> None:
             user_id=applicant.user_id,
             session_id=applicant.session_id,
             email=applicant.email,
-            roles=("FINANCE_ADMIN",),
+            roles=("SUPER_ADMIN",),
         )
 
         confirmed = await service.confirm_manual(

@@ -31,6 +31,13 @@ async function authenticateApplicant(context: BrowserContext) {
       path: "/",
       sameSite: "Lax",
     },
+    {
+      name: "tmi_e2e_persona",
+      value: "applicant",
+      domain: "127.0.0.1",
+      path: "/",
+      sameSite: "Lax",
+    },
   ]);
 }
 
@@ -72,7 +79,9 @@ test("applicant dossier journey stays readable at all supported widths", async (
   await authenticateApplicant(context);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/dossiers/9155dbf5-bb3e-449d-8bf0-9572cc642cac");
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Hồ sơ cần bổ sung" }),
+  ).toBeVisible();
 
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
@@ -121,10 +130,6 @@ test("verification remains readable in explicit light and dark themes", async ({
   page,
 }) => {
   await page.goto("/verify");
-
-  if ((page.viewportSize()?.width ?? 1280) < 768) {
-    await page.locator("summary").click();
-  }
 
   for (const theme of [
     { label: "Giao diện sáng", value: "light" },

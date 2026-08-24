@@ -1,5 +1,7 @@
 import {
   ArrowRight,
+  BookOpen,
+  FileText,
   Landmark,
   Search,
   ShieldCheck,
@@ -34,21 +36,33 @@ const audiences = [
 ] as const;
 
 const journey = [
-  [
-    "01",
-    "Khám phá đề cử",
-    "Xem những gương mặt, tác phẩm và giá trị Việt đang được giới thiệu.",
-  ],
-  [
-    "02",
-    "Hiểu câu chuyện",
-    "Tìm hiểu bối cảnh, dấu ấn và những thông tin đã được công bố.",
-  ],
-  [
-    "03",
-    "Kiểm tra minh bạch",
-    "Đối chiếu trạng thái và bằng chứng khi một đề cử có dữ liệu xác thực.",
-  ],
+  {
+    number: "01",
+    title: "Khám phá đề cử",
+    detail:
+      "Tìm tác phẩm, thương hiệu hoặc sáng kiến theo lĩnh vực và bắt đầu từ phần giới thiệu ngắn gọn.",
+    href: "/works",
+    action: "Khám phá đề cử",
+    icon: BookOpen,
+  },
+  {
+    number: "02",
+    title: "Đọc câu chuyện & hồ sơ",
+    detail:
+      "Hiểu bối cảnh, chủ thể và các thông tin được phép công bố kèm theo từng đề cử.",
+    href: "/process",
+    action: "Xem quy trình",
+    icon: FileText,
+  },
+  {
+    number: "03",
+    title: "Kiểm chứng thông tin",
+    detail:
+      "Tra cứu chứng thư khi hồ sơ đã được xác lập để đối chiếu mã, trạng thái và dữ liệu xác thực.",
+    href: "/verify",
+    action: "Tra cứu chứng thư",
+    icon: ShieldCheck,
+  },
 ] as const;
 
 export default function HomePage() {
@@ -68,12 +82,12 @@ export default function HomePage() {
             </p>
             <h1 className="mt-10 text-[clamp(2.9rem,5.5vw,5.65rem)] font-semibold leading-[0.98] tracking-[-0.055em] text-balance">
               Nơi những giá trị Việt được giới thiệu,{" "}
-              <span className="text-[#f3d675]">ghi nhận và lan tỏa.</span>
+              <span className="text-gold-300">ghi nhận và lan tỏa.</span>
             </h1>
             <p className="mt-8 max-w-[41rem] text-base leading-8 text-slate-300 sm:text-lg">
               Khám phá các đề cử tiêu biểu, đọc câu chuyện phía sau mỗi giá trị
-              và theo dõi thông tin được công bố minh bạch. Bình chọn và cổng
-              gửi đề cử sẽ được mở ở giai đoạn tiếp theo.
+              và tra cứu thông tin, trạng thái cùng bằng chứng xác thực của các
+              hồ sơ được công bố.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link
@@ -110,7 +124,7 @@ export default function HomePage() {
               />
               <button type="submit">Tra cứu</button>
             </form>
-            <dl className="mt-8 grid grid-cols-3 border-t border-white/15 pt-6 text-sm">
+            <dl className="registry-hero__summary mt-8 grid grid-cols-3 border-t border-white/15 pt-6 text-sm">
               {[
                 ["Nội dung", "Chọn lọc"],
                 ["Thông tin", "Rõ ràng"],
@@ -129,44 +143,46 @@ export default function HomePage() {
             </dl>
           </div>
           <div className="registry-visual relative min-w-0 self-stretch lg:-mr-14">
-            <CertificateOrbit preview={preview} />
+            <CertificateOrbit />
           </div>
         </div>
       </section>
 
-      <section className="home-journey border-b">
-        <div className="mx-auto grid max-w-7xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[0.72fr_1.28fr] lg:gap-20 lg:px-8 lg:py-28">
-          <div>
+      <section className="home-journey journey-workflow border-b">
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+          <div className="journey-workflow__intro">
             <p className="registry-section-label">
-              Khám phá theo cách tự nhiên
+              Hành trình minh bạch
             </p>
             <h2 className="mt-5 text-4xl font-semibold tracking-[-0.04em] text-balance sm:text-5xl">
-              Bắt đầu từ câu chuyện, đi sâu vào thông tin minh bạch.
+              Xem giá trị Việt theo ba bước rõ ràng.
             </h2>
             <p className="mt-6 max-w-lg leading-7 text-slate-400">
-              Hiện tại, bạn có thể xem và tìm hiểu những nội dung đã được công
-              bố. Các hoạt động tham gia sẽ mở khi quy trình đã sẵn sàng.
+              Mỗi đề cử được trình bày cùng câu chuyện, dữ liệu công khai và
+              trạng thái xác thực để bạn dễ theo dõi từ đầu đến cuối.
             </p>
           </div>
-          <ol className="border-t border-white/15">
-            {journey.map(([number, title, detail]) => (
-              <li
-                className="group grid gap-4 border-b border-white/15 py-7 sm:grid-cols-[4rem_1fr_auto] sm:items-center"
-                key={number}
-              >
-                <span className="font-mono text-xs text-[#ff5545]">
-                  {number}
-                </span>
-                <div>
-                  <h3 className="text-xl font-semibold">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">
-                    {detail}
-                  </p>
-                </div>
-                <ArrowRight
-                  aria-hidden="true"
-                  className="hidden size-5 text-[#f3d675] transition-transform group-hover:translate-x-1 sm:block"
-                />
+          <ol className="journey-workflow__cards">
+            {journey.map(({ action, detail, href, icon: Icon, number, title }) => (
+              <li key={number}>
+                <Link className="journey-workflow__card" href={href}>
+                  <div
+                    aria-hidden="true"
+                    className={`journey-workflow__visual journey-workflow__visual--${number}`}
+                  >
+                    <span className="journey-workflow__number">{number}</span>
+                    <Icon className="journey-workflow__icon" strokeWidth={1.45} />
+                    <span className="journey-workflow__seal" />
+                    <span className="journey-workflow__grid" />
+                  </div>
+                  <div className="journey-workflow__body">
+                    <h3>{title}</h3>
+                    <p>{detail}</p>
+                    <span className="journey-workflow__action">
+                      {action} <ArrowRight aria-hidden="true" />
+                    </span>
+                  </div>
+                </Link>
               </li>
             ))}
           </ol>
@@ -224,7 +240,7 @@ export default function HomePage() {
                   : "Khám phá những giá trị đang được lan tỏa."}
               </h2>
             </div>
-            <Link className="text-sm font-bold text-[#f3d675]" href="/works">
+            <Link className="text-sm font-bold text-primary-700" href="/works">
               Xem các đề cử{" "}
               <ArrowRight aria-hidden="true" className="ml-1 inline size-4" />
             </Link>
@@ -238,7 +254,7 @@ export default function HomePage() {
       <section className="home-cta border-t">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-16 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div className="max-w-2xl">
-            <ShieldCheck aria-hidden="true" className="size-6 text-[#f3d675]" />
+            <ShieldCheck aria-hidden="true" className="size-6 text-primary-700" />
             <h2 className="mt-5 text-3xl font-semibold tracking-tight">
               {preview
                 ? "Muốn theo dõi hành trình Tinh Hoa Việt?"
@@ -246,8 +262,8 @@ export default function HomePage() {
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-400">
               {preview
-                ? "Tạo tài khoản để sử dụng các tiện ích cá nhân và nhận thông tin khi những hoạt động mới được mở."
-                : "Tạo tài khoản để lưu lựa chọn và theo dõi các hoạt động của chương trình."}
+                ? "Tạo tài khoản để lưu nội dung quan tâm và theo dõi các cập nhật chính thức của chương trình."
+                : "Tạo tài khoản để gửi hồ sơ, nhận phản hồi và quản lý thông tin của bạn."}
             </p>
           </div>
           <Link

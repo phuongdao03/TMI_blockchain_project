@@ -178,10 +178,10 @@ def test_unknown_uuid_slug_enumeration_is_indistinguishable_and_bounded() -> Non
 )
 def test_public_catalog_admin_rbac_matrix(guard: object) -> None:
     assert callable(guard)
-    for role in ("APPLICANT", "REVIEWER", "COUNCIL_MEMBER"):
+    for role in ("VIEWER", "USER", "MODERATOR"):
         with pytest.raises(PublicWorkForbiddenError):
             guard(_principal(role))
-    guard(_principal("CONTENT_ADMIN"))
+    guard(_principal("SUPER_ADMIN"))
     guard(_principal("SUPER_ADMIN"))
 
 

@@ -9,7 +9,11 @@ from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.service import BlockchainTransactionService
 from app.modules.certificates.service import CertificateService
 from app.modules.cms.service import CmsService
-from app.modules.council.service import CouncilService
+from app.modules.council.service import (
+    MEMBER_ROLES,
+    SECRETARY_ROLES,
+    CouncilService,
+)
 from app.modules.dossiers.service import DossierService
 from app.modules.operations.service import OPERATIONS_ROLES
 from app.modules.payments.service import FINANCE_ROLES, PAYMENT_ROLES, PaymentService
@@ -30,64 +34,64 @@ ROLE_GUARDS: tuple[tuple[str, Callable[[AuthPrincipal], None], str, str, str], .
     (
         "dossier mutation",
         DossierService._require_mutation_role,
-        "APPLICANT",
-        "REVIEWER",
+        "USER",
+        "MODERATOR",
         "dossier.manage",
     ),
     (
         "review assignment",
         ReviewService._require_admin,
         "SUPER_ADMIN",
-        "REVIEWER",
+        "MODERATOR",
         "review.assign",
     ),
     (
         "review scoring",
         ReviewService._require_reviewer,
-        "REVIEWER",
-        "APPLICANT",
+        "MODERATOR",
+        "USER",
         "review.submit",
     ),
     (
         "council administration",
         CouncilService._require_secretary,
-        "COUNCIL_SECRETARY",
-        "COUNCIL_MEMBER",
+        "SUPER_ADMIN",
+        "MODERATOR",
         "council.manage",
     ),
     (
         "council voting",
         CouncilService._require_member,
-        "COUNCIL_MEMBER",
-        "COUNCIL_SECRETARY",
+        "SUPER_ADMIN",
+        "MODERATOR",
         "council.vote",
     ),
     (
         "blockchain administration",
         BlockchainTransactionService._require_admin,
-        "BLOCKCHAIN_ADMIN",
-        "FINANCE_ADMIN",
+        "SUPER_ADMIN",
+        "MODERATOR",
         "blockchain.manage",
     ),
     (
         "CMS administration",
         CmsService._require_admin,
-        "CONTENT_ADMIN",
-        "APPLICANT",
+        "SUPER_ADMIN",
+        "USER",
         "cms.manage",
     ),
     (
         "certificate access",
         CertificateService._require_role,
-        "APPLICANT",
-        "REVIEWER",
+        "USER",
+        "MODERATOR",
         "certificate.read",
     ),
     (
         "audit access",
         require_audit_access,
         "SUPER_ADMIN",
-        "CONTENT_ADMIN",
+        "MODERATOR",
         "audit.read",
     ),
 )
@@ -115,8 +119,8 @@ def test_critical_role_guards_default_deny(
 @pytest.mark.parametrize(
     ("allowed", "denied", "permission"),
     (
-        (PAYMENT_ROLES, "REVIEWER", "payment.create"),
-        (FINANCE_ROLES, "APPLICANT", "payment.manage"),
+        (PAYMENT_ROLES, "MODERATOR", "payment.create"),
+        (FINANCE_ROLES, "USER", "payment.manage"),
     ),
 )
 def test_payment_role_scopes_default_deny(
@@ -129,7 +133,10 @@ def test_payment_role_scopes_default_deny(
 
 
 def test_operations_role_scope_excludes_business_users() -> None:
-    assert OPERATIONS_ROLES == frozenset(
-        {"FINANCE_ADMIN", "BLOCKCHAIN_ADMIN", "SUPER_ADMIN"}
-    )
-    assert OPERATIONS_ROLES.isdisjoint({"APPLICANT", "REVIEWER", "CONTENT_ADMIN"})
+    assert OPERATIONS_ROLES == frozenset({"SUPER_ADMIN"})
+    assert OPERATIONS_ROLES.isdisjoint({"VIEWER", "USER", "MODERATOR"})
+
+
+def test_council_role_scopes_are_limited_to_super_admin() -> None:
+    assert SECRETARY_ROLES == frozenset({"SUPER_ADMIN"})
+    assert MEMBER_ROLES == frozenset({"SUPER_ADMIN"})

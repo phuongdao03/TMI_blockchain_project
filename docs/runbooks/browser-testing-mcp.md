@@ -24,7 +24,9 @@ to the agent while DevTools MCP is connected.
    The Playwright fixture starts the mock auth/API server on port `4010` and
    Next.js on `3100`; no real credentials are used.
 3. **Integrated local stack:** copy `.env.example` to `.env`, start Postgres,
-   Redis, Anvil, backend, and frontend, then use seeded test accounts only.
+   Redis, Anvil, backend, and frontend. Provision a local Super Admin explicitly
+   with the local-only CLI, then use normal registration and staff-management
+   flows; the bootstrap creates no test identities.
 
 ## Values needed before integrated testing
 
@@ -60,7 +62,8 @@ to the agent while DevTools MCP is connected.
 - HTTPS `BLOCKCHAIN_RPC_URL`
 - `CERTIFICATE_CONTRACT_ADDRESS`
 - `BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES` containing the exact contract
-- `BLOCKCHAIN_SIGNER_PRIVATE_KEY` (production only; never commit or expose it)
+- `BLOCKCHAIN_SIGNER_MODE=human` and `BLOCKCHAIN_SIGNING_ENABLED=true`; do not
+  configure `BLOCKCHAIN_SIGNER_PRIVATE_KEY` in production.
 - `BLOCKCHAIN_EXPLORER_BASE_URL`
 
 Provide secrets through the local environment/secret manager, not in chat,

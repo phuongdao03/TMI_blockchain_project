@@ -13,6 +13,7 @@ from app.modules.auth.dependencies import (
 )
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.dependencies import get_dossier_service
+from app.modules.dossiers.models import EvidenceVisibility
 from app.modules.dossiers.types import CreateEvidence, EvidenceChanges, EvidenceView
 
 NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
@@ -32,6 +33,8 @@ class StubEvidenceService:
             dossier_version_id=None,
             media_asset_id=self.media_id,
             evidence_type="OWNERSHIP_DOCUMENT",
+            evidence_role="OWNERSHIP_DOCUMENT",
+            access_scope=EvidenceVisibility.PRIVATE,
             title="Giấy xác nhận",
             description=None,
             issued_at=NOW,
@@ -114,6 +117,8 @@ def test_evidence_attachment_api_contract() -> None:
             json={
                 "mediaAssetId": str(service.media_id),
                 "evidenceType": "OWNERSHIP_DOCUMENT",
+                "evidenceRole": "OWNERSHIP_DOCUMENT",
+                "accessScope": "PRIVATE",
                 "title": "Giấy xác nhận",
                 "issuedAt": NOW.isoformat(),
             },
@@ -139,9 +144,12 @@ def test_evidence_attachment_api_contract() -> None:
 
     assert created.status_code == 201
     assert created.json()["data"]["sha256"] == "a" * 64
+    assert created.json()["data"]["accessScope"] == "PRIVATE"
     assert updated.status_code == 200
     assert removed.json()["data"] == {"status": "removed"}
     assert service.created is not None
     assert service.created.media_asset_id == service.media_id
+    assert service.created.evidence_role == "OWNERSHIP_DOCUMENT"
+    assert service.created.access_scope is EvidenceVisibility.PRIVATE
     assert service.updated is not None
     assert service.updated.provided_fields == {"title", "display_order"}

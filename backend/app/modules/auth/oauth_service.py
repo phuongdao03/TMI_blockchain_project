@@ -26,7 +26,10 @@ from app.modules.auth.models import (
 )
 from app.modules.auth.oauth import OAuthAttempt
 from app.modules.auth.repositories import AuthRepository
-from app.modules.auth.roles import PUBLIC_REGISTRATION_ROLE
+from app.modules.auth.roles import (
+    USER_REGISTRATION_ROLE,
+    VIEWER_REGISTRATION_ROLE,
+)
 from app.modules.auth.schemas import INTERNAL_MANAGED_ROLES
 from app.modules.auth.session_service import ClientMetadata, IssuedSession
 
@@ -183,13 +186,17 @@ class OAuthService:
         )
         self._repository.add_user(user)
         await self._session.flush()
-        if account_type is not AccountType.PUBLIC_USER:
-            role = await self._repository.get_role_by_code(PUBLIC_REGISTRATION_ROLE)
-            if role is None:
-                role = Role(code=PUBLIC_REGISTRATION_ROLE)
-                self._repository.add_role(role)
-                await self._session.flush()
-            self._repository.add_user_role(UserRole(user_id=user.id, role_id=role.id))
+        role_code = (
+            VIEWER_REGISTRATION_ROLE
+            if account_type is AccountType.PUBLIC_USER
+            else USER_REGISTRATION_ROLE
+        )
+        role = await self._repository.get_role_by_code(role_code)
+        if role is None:
+            role = Role(code=role_code)
+            self._repository.add_role(role)
+            await self._session.flush()
+        self._repository.add_user_role(UserRole(user_id=user.id, role_id=role.id))
         self._repository.add_identity(
             AuthIdentity(
                 user_id=user.id,

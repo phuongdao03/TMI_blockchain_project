@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   canonicalSiteUrl,
@@ -8,6 +8,15 @@ import {
 } from "@/lib/seo";
 
 describe("public SEO output", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("uses the public build origin for generated metadata and sitemap routes", () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_BASE_URL", "https://decu.tinhhoaviet.org.vn");
+    vi.stubEnv("APP_BASE_URL", "http://backend:8000");
+
+    expect(canonicalSiteUrl().href).toBe("https://decu.tinhhoaviet.org.vn/");
+  });
+
   it("uses only a validated canonical origin", () => {
     expect(canonicalSiteUrl("https://catalog.tmi.vn/path?q=1").href).toBe(
       "https://catalog.tmi.vn/",

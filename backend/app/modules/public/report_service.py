@@ -53,7 +53,7 @@ class DisabledCaptchaVerifier:
 
 
 class ContentReportService:
-    ADMIN_ROLES = frozenset({"CONTENT_ADMIN", "SUPER_ADMIN"})
+    ADMIN_ROLES = frozenset({"SUPER_ADMIN"})
 
     def __init__(
         self,

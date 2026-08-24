@@ -44,10 +44,10 @@ jobs:
             ${{ secrets.POLYGON_CERTIFICATE_CONTRACT_ADDRESS }}
           BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES:
             ${{ secrets.POLYGON_ALLOWED_CONTRACT_ADDRESSES }}
-          BLOCKCHAIN_MANAGED_SIGNER_EXPECTED_ADDRESS:
-            ${{ secrets.POLYGON_SIGNER_ADDRESS }}
+          BLOCKCHAIN_ACTIVE_SIGNER_WALLET:
+            ${{ secrets.POLYGON_SUPER_ADMIN_WALLET_ADDRESS }}
           CONTRACT_ADMIN: ${{ secrets.POLYGON_CONTRACT_ADMIN }}
-          ISSUER_ADDRESS: ${{ secrets.POLYGON_ISSUER_ADDRESS }}
+          ISSUER_ADDRESS: ${{ secrets.POLYGON_SUPER_ADMIN_WALLET_ADDRESS }}
           MINIMUM_SIGNER_BALANCE_WEI:
             ${{ vars.POLYGON_MINIMUM_SIGNER_BALANCE_WEI }}
         run: |
@@ -58,7 +58,7 @@ jobs:
         env:
           CONTRACT_ADMIN: ${{ secrets.POLYGON_CONTRACT_ADMIN }}
           CONTRACT_DEPLOYER_ADDRESS: ${{ secrets.POLYGON_DEPLOYER_ADDRESS }}
-          ISSUER_ADDRESS: ${{ secrets.POLYGON_ISSUER_ADDRESS }}
+          ISSUER_ADDRESS: ${{ secrets.POLYGON_SUPER_ADMIN_WALLET_ADDRESS }}
           SOURCE_COMMIT: ${{ inputs.source_commit }}
         run: |
           node contracts/scripts/production-release-plan.mjs \

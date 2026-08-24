@@ -1,13 +1,15 @@
 import base64
 import binascii
+import json
 import re
+from ast import literal_eval
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 from urllib.parse import urlsplit
 
-from pydantic import Field, SecretStr, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, SecretStr, ValidationInfo, field_validator, model_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -139,9 +141,9 @@ class Settings(BaseSettings):
         le=20_971_520,
     )
     media_evidence_max_bytes: int = Field(
-        default=20_971_520,
+        default=31_457_280,
         ge=1,
-        le=104_857_600,
+        le=314_572_800,
     )
     document_verification_max_bytes: int = Field(
         default=26_214_400,
@@ -155,7 +157,9 @@ class Settings(BaseSettings):
     media_inspection_max_attempts: int = Field(default=5, ge=1, le=10)
     media_private_encryption_enabled: bool = False
     media_private_encryption_active_key_id: str = Field(default="", max_length=64)
-    media_private_encryption_keys: dict[str, SecretStr] = Field(default_factory=dict)
+    media_private_encryption_keys: Annotated[dict[str, SecretStr], NoDecode] = Field(
+        default_factory=dict
+    )
     media_upload_signature_rate_limit: int = Field(default=20, ge=1, le=1_000)
     media_upload_signature_rate_window_seconds: int = Field(default=60, ge=1, le=3_600)
     payment_provider: str = Field(default="mock", min_length=1, max_length=32)
@@ -207,18 +211,81 @@ class Settings(BaseSettings):
     blockchain_contract_abi_path: Path = Path(
         "../contracts/artifacts/CertificateRegistry.abi.json"
     )
-    blockchain_signer_mode: Literal["local", "managed"] = "local"
+    # This registry is additive: legacy CertificateRegistry configuration stays
+    # independent so rollout can be disabled simply by leaving the address blank.
+    thv_proof_registry_contract_address: str = Field(default="", max_length=42)
+    thv_proof_registry_contract_abi_path: Path = Path(
+        "../contracts/artifacts/THVProofRegistry.abi.json"
+    )
+    blockchain_signer_mode: Literal["local", "managed", "human"] = "local"
     blockchain_signer_private_key: SecretStr | None = None
     blockchain_managed_signer_url: str = Field(default="", max_length=2_048)
     blockchain_managed_signer_key_id: str = Field(default="", max_length=512)
     blockchain_managed_signer_expected_address: str = Field(default="", max_length=42)
     blockchain_managed_signer_timeout_seconds: float = Field(default=8.0, gt=0, le=30)
     blockchain_required_confirmations: int = Field(default=1, ge=1, le=1_000)
+    blockchain_signing_enabled: bool = True
+    blockchain_wallet_challenge_ttl_seconds: int = Field(
+        default=600,
+        ge=60,
+        le=1_800,
+    )
+    blockchain_transaction_intent_ttl_seconds: int = Field(
+        default=600,
+        ge=60,
+        le=1_800,
+    )
     blockchain_nonce_lock_ttl_seconds: int = Field(default=30, ge=5, le=300)
     blockchain_explorer_base_url: str | None = Field(
         default=None,
         max_length=2_048,
     )
+
+    @field_validator("blockchain_signer_private_key", mode="before")
+    @classmethod
+    def normalize_empty_blockchain_signer_private_key(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @field_validator("media_private_encryption_keys", mode="before")
+    @classmethod
+    def parse_media_private_encryption_keys(
+        cls,
+        value: object,
+        info: ValidationInfo,
+    ) -> object:
+        """Accept map formats and the legacy single active-key value safely."""
+        if not isinstance(value, str):
+            return value
+        serialized = value.strip()
+        if not serialized:
+            return {}
+        active_key_id = info.data.get("media_private_encryption_active_key_id", "")
+        if (
+            serialized.startswith("{")
+            and serialized.endswith("}")
+            and ":" not in serialized
+        ):
+            if isinstance(active_key_id, str) and active_key_id:
+                return {active_key_id: serialized[1:-1].strip()}
+            if not info.data.get("media_private_encryption_enabled", False):
+                return {}
+        try:
+            parsed = json.loads(serialized)
+        except json.JSONDecodeError:
+            try:
+                parsed = literal_eval(serialized)
+            except (SyntaxError, ValueError) as exc:
+                raise ValueError(
+                    "MEDIA_PRIVATE_ENCRYPTION_KEYS must be a key/value map."
+                ) from exc
+        if not isinstance(parsed, dict) or not all(
+            isinstance(key, str) and isinstance(secret, str)
+            for key, secret in parsed.items()
+        ):
+            raise ValueError("MEDIA_PRIVATE_ENCRYPTION_KEYS must be a key/value map.")
+        return parsed
 
     @property
     def blockchain_contract_allowlist(self) -> frozenset[str]:
@@ -227,6 +294,11 @@ class Settings(BaseSettings):
             for item in self.blockchain_allowed_contract_addresses.split(",")
             if item.strip()
         )
+
+    @property
+    def thv_proof_registry_configured(self) -> bool:
+        """Whether the optional append-only proof registry is enabled."""
+        return bool(self.thv_proof_registry_contract_address.strip())
 
     @property
     def business_workflows_enabled(self) -> bool:
@@ -241,6 +313,11 @@ class Settings(BaseSettings):
         address = self.certificate_contract_address
         if address and re.fullmatch(r"0x[0-9a-fA-F]{40}", address) is None:
             raise ValueError("Certificate contract address is invalid.")
+        proof_registry_address = self.thv_proof_registry_contract_address.strip()
+        if proof_registry_address and re.fullmatch(
+            r"0x[0-9a-fA-F]{40}", proof_registry_address
+        ) is None:
+            raise ValueError("THV proof registry contract address is invalid.")
 
         explorer_url = self.blockchain_explorer_base_url
         if explorer_url:
@@ -270,6 +347,14 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "The certificate contract address is not in the allowlist."
                 )
+            if (
+                proof_registry_address
+                and proof_registry_address.lower() not in configured_addresses
+            ):
+                raise ValueError(
+                    "The THV proof registry contract address is not in the "
+                    "allowlist."
+                )
 
         if self.app_env == "production" and self.release_mode == "preview":
             if self.blockchain_signer_private_key is not None:
@@ -281,26 +366,16 @@ class Settings(BaseSettings):
                 raise ValueError("Production blockchain network must be Polygon PoS.")
             if not self.blockchain_rpc_url.startswith("https://"):
                 raise ValueError("Production blockchain RPC must use HTTPS.")
-            if self.blockchain_signer_mode != "managed":
+            if self.blockchain_signer_mode != "human":
                 raise ValueError(
-                    "Production blockchain signing must use a managed key."
+                    "Production blockchain signing must be human-controlled."
                 )
             if self.blockchain_signer_private_key is not None:
                 raise ValueError(
                     "Raw blockchain signer keys are forbidden in production."
                 )
-            if not self.blockchain_managed_signer_url.startswith("https://"):
-                raise ValueError("Managed signer URL must use HTTPS in production.")
-            if not self.blockchain_managed_signer_key_id.strip():
-                raise ValueError("Managed signer key ID is required in production.")
-            if (
-                re.fullmatch(
-                    r"0x[0-9a-fA-F]{40}",
-                    self.blockchain_managed_signer_expected_address,
-                )
-                is None
-            ):
-                raise ValueError("Managed signer expected address is invalid.")
+            if not self.blockchain_signing_enabled:
+                raise ValueError("Production blockchain signing must be enabled.")
         return self
 
     @model_validator(mode="after")
@@ -313,6 +388,23 @@ class Settings(BaseSettings):
             raise ValueError(
                 "Private document encryption must be enabled in production."
             )
+        if self.app_env == "production" and self.release_mode == "full":
+            cloudinary_secret = self.cloudinary_api_secret
+            if (
+                not self.cloudinary_cloud_name.strip()
+                or not self.cloudinary_api_key.strip()
+                or cloudinary_secret is None
+                or not cloudinary_secret.get_secret_value().strip()
+            ):
+                raise ValueError(
+                    "Cloudinary credentials are required for upload signatures "
+                    "in a full production release."
+                )
+            if not self.media_scanner_host.strip():
+                raise ValueError(
+                    "A ClamAV scanner host is required for upload inspection "
+                    "in a full production release."
+                )
         if self.media_private_encryption_enabled:
             active_key_id = self.media_private_encryption_active_key_id
             if (

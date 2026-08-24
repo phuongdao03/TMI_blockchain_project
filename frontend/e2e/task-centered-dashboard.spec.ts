@@ -93,7 +93,9 @@ test("operations dashboard prioritizes work without horizontal overflow", async 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/admin/dashboard");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Tổng quan vận hành" }),
+    page
+      .getByRole("main")
+      .getByRole("heading", { level: 1, name: "Tổng quan vận hành" }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Xem việc cần xử lý" }),

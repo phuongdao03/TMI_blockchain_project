@@ -38,23 +38,13 @@ export default async function SearchPage({
     cursor: clean(input.cursor, 1_024),
   };
   return (
-    <div
-      className={
-        embedded
-          ? "relative isolate overflow-hidden rounded-2xl bg-[#151515] px-5 py-7 text-white shadow-[0_24px_70px_rgba(15,23,42,.12)] sm:px-7 lg:px-9"
-          : "relative isolate overflow-hidden"
-      }
-    >
+    <div className={embedded ? "public-search-frame" : "public-search-page"}>
       <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[38rem] bg-[radial-gradient(circle_at_82%_4%,rgba(212,167,44,.11),transparent_25rem),radial-gradient(circle_at_6%_26%,rgba(220,38,38,.1),transparent_26rem)]"
-      />
-      <div
-        className={
+        className={`public-search-surface ${
           embedded
-            ? "mx-auto max-w-[90rem]"
-            : "mx-auto my-8 min-h-[calc(100dvh-9rem)] max-w-[90rem] rounded-2xl bg-[#151515] px-5 py-7 text-white shadow-[0_24px_70px_rgba(15,23,42,.12)] sm:mx-6 sm:px-7 lg:mx-auto lg:px-9"
-        }
+            ? "public-search-surface--embedded"
+            : "public-search-surface--standalone"
+        }`}
       >
         <SearchResultsPage
           authenticated={Boolean(authState.user)}

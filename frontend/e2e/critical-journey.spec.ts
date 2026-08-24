@@ -45,6 +45,14 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     await page.goto("/dossiers");
     await page.getByRole("link", { name: "Tạo hồ sơ mới" }).click();
     await page
+      .locator(".dossier-type-option")
+      .filter({ hasText: "Tác phẩm văn hóa" })
+      .click();
+    await page
+      .getByLabel("Chủ sở hữu hoặc tác giả")
+      .fill("Trung tâm an ninh công nghệ số - CNS");
+    await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
+    await page
       .getByLabel("Tên tài sản hoặc tác phẩm")
       .fill("Bộ nhận diện TMI Critical Journey");
     await page.getByLabel("Mô tả ngắn").fill("Hồ sơ E2E toàn luồng MVP.");

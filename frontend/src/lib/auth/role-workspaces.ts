@@ -1,12 +1,6 @@
-export const APPLICANT_ROLES = ["APPLICANT", "ORG_MANAGER"] as const;
+export const SUBMISSION_ROLES = ["USER"] as const;
 
-export type WorkspacePersona =
-  | "PUBLIC"
-  | "APPLICANT"
-  | "REVIEWER"
-  | "COUNCIL"
-  | "ADMIN"
-  | "SUPER_ADMIN";
+export type WorkspacePersona = "VIEWER" | "USER" | "MODERATOR" | "SUPER_ADMIN";
 
 export function hasAnyRole(
   roles: readonly string[],
@@ -17,12 +11,7 @@ export function hasAnyRole(
 
 export function resolveDefaultWorkspace(roles: readonly string[]): string {
   if (roles.includes("SUPER_ADMIN")) return "/admin";
-  if (roles.includes("CONTENT_ADMIN")) return "/admin/content";
-  if (roles.includes("FINANCE_ADMIN")) return "/admin/dashboard";
-  if (roles.includes("BLOCKCHAIN_ADMIN")) return "/admin/dashboard";
-  if (hasAnyRole(roles, ["COUNCIL_SECRETARY", "COUNCIL_MEMBER"]))
-    return "/council";
-  if (roles.includes("REVIEWER")) return "/reviews";
+  if (roles.includes("MODERATOR")) return "/reviews";
   return "/dashboard";
 }
 
@@ -30,15 +19,20 @@ export function resolveWorkspacePersona(
   roles: readonly string[],
 ): WorkspacePersona {
   if (roles.includes("SUPER_ADMIN")) return "SUPER_ADMIN";
-  if (
-    hasAnyRole(roles, ["CONTENT_ADMIN", "FINANCE_ADMIN", "BLOCKCHAIN_ADMIN"])
-  ) {
-    return "ADMIN";
-  }
-  if (hasAnyRole(roles, ["COUNCIL_SECRETARY", "COUNCIL_MEMBER"])) {
-    return "COUNCIL";
-  }
-  if (roles.includes("REVIEWER")) return "REVIEWER";
-  if (hasAnyRole(roles, APPLICANT_ROLES)) return "APPLICANT";
-  return "PUBLIC";
+  if (roles.includes("MODERATOR")) return "MODERATOR";
+  if (hasAnyRole(roles, SUBMISSION_ROLES)) return "USER";
+  return "VIEWER";
+}
+
+export function resolvePublicHeaderAction(roles: readonly string[]): {
+  href: string;
+  label: string;
+} {
+  const persona = resolveWorkspacePersona(roles);
+  if (persona === "VIEWER")
+    return { href: "/dashboard", label: "Không gian của tôi" };
+  if (persona === "USER") return { href: "/dossiers", label: "Hồ sơ của tôi" };
+  if (persona === "MODERATOR")
+    return { href: "/reviews", label: "Khu vực thẩm định" };
+  return { href: resolveDefaultWorkspace(roles), label: "Quản trị nội bộ" };
 }

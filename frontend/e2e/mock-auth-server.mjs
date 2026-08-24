@@ -1,27 +1,23 @@
 import { createServer } from "node:http";
 
+const mockPort = Number(process.env.E2E_MOCK_PORT ?? 4010);
+
 const user = {
   id: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
   email: "owner@tmigroup.vn",
-  roles: [
-    "APPLICANT",
-    "REVIEWER",
-    "COUNCIL_MEMBER",
-    "COUNCIL_SECRETARY",
-    "CONTENT_ADMIN",
-  ],
+  roles: ["USER"],
   accountType: "INDIVIDUAL_APPLICANT",
 };
 const applicantUser = {
   id: "e57912cc-714c-4ab5-9fd9-1c5b38cd902b",
   email: "applicant@tmigroup.vn",
-  roles: ["APPLICANT"],
+  roles: ["USER"],
   accountType: "INDIVIDUAL_APPLICANT",
 };
 const reviewerUser = {
   id: "f57912cc-714c-4ab5-9fd9-1c5b38cd902b",
   email: "reviewer@tmigroup.vn",
-  roles: ["REVIEWER"],
+  roles: ["MODERATOR"],
   accountType: null,
 };
 const superAdminUser = {
@@ -30,12 +26,318 @@ const superAdminUser = {
   roles: ["SUPER_ADMIN"],
   accountType: null,
 };
+const signingTransactionId = "3eaec2d2-c99a-42c9-8f1e-71462ba01ea0";
+let blockchainWallet = null;
+let blockchainChallenge = null;
+let blockchainIntent = null;
+let blockchainSigningStatus = {
+  transactionId: signingTransactionId,
+  status: "CREATED",
+  txHash: null,
+  confirmations: 0,
+  errorCode: null,
+  errorMessage: null,
+  confirmedAt: null,
+};
 const consumedInvitationTokens = new Set();
 const organizationId = "9155dbf5-bb3e-449d-8bf0-9572cc642cac";
 const avatarMediaId = "6a0bb388-3c26-4417-aed8-3ca05c212d1f";
 const dossierId = "9155dbf5-bb3e-449d-8bf0-9572cc642cac";
 const evidenceId = "5f81fa20-ec0a-4393-a90c-bf9c6285766d";
 const categoryId = "4d28db19-1507-5a45-a50d-cd0aa83029ec";
+const dossierTypes = [
+  {
+    id: "a4d28db1-1507-5a45-a50d-cd0aa83029ec",
+    categoryId,
+    code: "CULTURAL_WORK",
+    name: "Tác phẩm văn hóa",
+    isActive: true,
+    currentVersion: {
+      id: "b4d28db1-1507-5a45-a50d-cd0aa83029ec",
+      dossierTypeId: "a4d28db1-1507-5a45-a50d-cd0aa83029ec",
+      versionNo: 1,
+      schema: {
+        fields: [
+          {
+            key: "rightsHolder",
+            type: "text",
+            label: "Chủ sở hữu hoặc tác giả",
+            required: true,
+          },
+          {
+            key: "workFormat",
+            type: "select",
+            label: "Loại hình tác phẩm",
+            required: true,
+            options: [
+              { value: "VISUAL_IDENTITY", label: "Bộ nhận diện" },
+              { value: "DIGITAL_CONTENT", label: "Nội dung số" },
+              { value: "PUBLICATION", label: "Ấn phẩm" },
+            ],
+          },
+        ],
+      },
+    },
+  },
+  {
+    id: "c4d28db1-1507-5a45-a50d-cd0aa83029ec",
+    categoryId,
+    code: "TRADEMARK",
+    name: "Nhãn hiệu và thương hiệu",
+    isActive: true,
+    currentVersion: {
+      id: "d4d28db1-1507-5a45-a50d-cd0aa83029ec",
+      dossierTypeId: "c4d28db1-1507-5a45-a50d-cd0aa83029ec",
+      versionNo: 1,
+      schema: {
+        fields: [
+          {
+            key: "rightsHolder",
+            type: "text",
+            label: "Chủ sở hữu nhãn hiệu",
+            required: true,
+          },
+          {
+            key: "useScope",
+            type: "textarea",
+            label: "Phạm vi sử dụng",
+            required: false,
+          },
+        ],
+      },
+    },
+  },
+];
+const defaultDossierTypes = [
+  [
+    "10000000-0000-4000-8000-000000000003",
+    "20000000-0000-4000-8000-000000000003",
+    "ARTWORK",
+    "Tác phẩm nghệ thuật",
+    "Dành cho mỹ thuật, nhiếp ảnh, âm nhạc, sân khấu và các tác phẩm sáng tạo.",
+    [
+      {
+        key: "creator",
+        type: "text",
+        label: "Tác giả / nhóm tác giả",
+        required: true,
+      },
+      {
+        key: "artForm",
+        type: "select",
+        label: "Loại hình",
+        required: true,
+        options: [
+          { value: "VISUAL_ART", label: "Mỹ thuật" },
+          { value: "PHOTOGRAPHY", label: "Nhiếp ảnh" },
+          { value: "MUSIC", label: "Âm nhạc" },
+        ],
+      },
+    ],
+  ],
+  [
+    "10000000-0000-4000-8000-000000000004",
+    "20000000-0000-4000-8000-000000000004",
+    "DOCUMENT",
+    "Tài liệu và tư liệu",
+    "Dành cho bản thảo, tư liệu nghiên cứu, hồ sơ lưu trữ và tài liệu số.",
+    [
+      {
+        key: "custodian",
+        type: "text",
+        label: "Đơn vị hoặc cá nhân lưu giữ",
+        required: true,
+      },
+      {
+        key: "documentDate",
+        type: "date",
+        label: "Ngày lập tài liệu",
+        required: false,
+      },
+    ],
+  ],
+  [
+    "10000000-0000-4000-8000-000000000005",
+    "20000000-0000-4000-8000-000000000005",
+    "CERTIFICATE",
+    "Văn bằng, chứng nhận",
+    "Ghi nhận văn bằng, giải thưởng, chứng nhận hoặc xác nhận chuyên môn.",
+    [
+      {
+        key: "issuer",
+        type: "text",
+        label: "Cơ quan / tổ chức cấp",
+        required: true,
+      },
+      { key: "issuedAt", type: "date", label: "Ngày cấp", required: true },
+    ],
+  ],
+  [
+    "10000000-0000-4000-8000-000000000006",
+    "20000000-0000-4000-8000-000000000006",
+    "PERSON",
+    "Cá nhân tiêu biểu",
+    "Hồ sơ giới thiệu một cá nhân, thành tựu và đóng góp đã được kiểm chứng.",
+    [
+      { key: "fullName", type: "text", label: "Họ và tên", required: true },
+      {
+        key: "contribution",
+        type: "textarea",
+        label: "Đóng góp tiêu biểu",
+        required: true,
+      },
+    ],
+  ],
+  [
+    "10000000-0000-4000-8000-000000000007",
+    "20000000-0000-4000-8000-000000000007",
+    "ORGANIZATION",
+    "Tổ chức, doanh nghiệp",
+    "Hồ sơ về tổ chức, doanh nghiệp, đơn vị cộng đồng hoặc sáng tạo.",
+    [
+      {
+        key: "legalRepresentative",
+        type: "text",
+        label: "Người đại diện",
+        required: true,
+      },
+      {
+        key: "registrationNumber",
+        type: "text",
+        label: "Mã số đăng ký",
+        required: false,
+      },
+    ],
+  ],
+  [
+    "10000000-0000-4000-8000-000000000008",
+    "20000000-0000-4000-8000-000000000008",
+    "PRODUCT",
+    "Sản phẩm và giải pháp",
+    "Dành cho sản phẩm, dịch vụ, giải pháp công nghệ hoặc mô hình có giá trị thực tiễn.",
+    [
+      {
+        key: "provider",
+        type: "text",
+        label: "Đơn vị phát triển",
+        required: true,
+      },
+      {
+        key: "solutionArea",
+        type: "select",
+        label: "Lĩnh vực",
+        required: true,
+        options: [
+          { value: "TECHNOLOGY", label: "Công nghệ" },
+          { value: "CULTURE", label: "Văn hóa" },
+          { value: "COMMUNITY", label: "Cộng đồng" },
+        ],
+      },
+    ],
+  ],
+  [
+    "10000000-0000-4000-8000-000000000009",
+    "20000000-0000-4000-8000-000000000009",
+    "CULTURAL_HERITAGE",
+    "Di sản văn hóa",
+    "Ghi nhận di sản vật thể, phi vật thể, tri thức bản địa hoặc không gian văn hóa.",
+    [
+      {
+        key: "heritageCommunity",
+        type: "text",
+        label: "Cộng đồng / chủ thể thực hành",
+        required: true,
+      },
+      {
+        key: "location",
+        type: "text",
+        label: "Địa điểm hoặc phạm vi phân bố",
+        required: false,
+      },
+    ],
+  ],
+  [
+    "10000000-0000-4000-8000-000000000010",
+    "20000000-0000-4000-8000-000000000010",
+    "INITIATIVE",
+    "Sáng kiến",
+    "Dành cho ý tưởng, sáng kiến cải tiến hoặc đề án mang lại giá trị cộng đồng.",
+    [
+      {
+        key: "proposer",
+        type: "text",
+        label: "Tác giả sáng kiến",
+        required: true,
+      },
+      {
+        key: "impact",
+        type: "textarea",
+        label: "Giá trị và tác động",
+        required: true,
+      },
+    ],
+  ],
+  [
+    "10000000-0000-4000-8000-000000000011",
+    "20000000-0000-4000-8000-000000000011",
+    "INTELLECTUAL_ASSET",
+    "Tài sản trí tuệ số",
+    "Xác lập bằng chứng nguồn gốc cho tài sản số, dữ liệu, thiết kế và nội dung trực tuyến.",
+    [
+      {
+        key: "rightsHolder",
+        type: "text",
+        label: "Chủ sở hữu",
+        required: true,
+      },
+      {
+        key: "assetFormat",
+        type: "select",
+        label: "Định dạng tài sản",
+        required: true,
+        options: [
+          { value: "SOFTWARE", label: "Phần mềm" },
+          { value: "DATASET", label: "Dữ liệu" },
+          { value: "DIGITAL_CONTENT", label: "Nội dung số" },
+        ],
+      },
+    ],
+  ],
+  [
+    "10000000-0000-4000-8000-000000000012",
+    "20000000-0000-4000-8000-000000000012",
+    "OTHER",
+    "Loại hồ sơ khác",
+    "Dùng khi hồ sơ chưa thuộc nhóm có sẵn; cán bộ sẽ hướng dẫn phân loại tiếp theo.",
+    [
+      {
+        key: "applicantRole",
+        type: "text",
+        label: "Người gửi hồ sơ",
+        required: true,
+      },
+      {
+        key: "classificationNote",
+        type: "textarea",
+        label: "Đề xuất phân loại",
+        required: true,
+      },
+    ],
+  ],
+].map(([id, versionId, code, name, description, fields]) => ({
+  id,
+  categoryId,
+  code,
+  name,
+  isActive: true,
+  currentVersion: {
+    id: versionId,
+    dossierTypeId: id,
+    versionNo: 1,
+    schema: { description, fields },
+  },
+}));
+dossierTypes.push(...defaultDossierTypes);
 const reviewAssignmentId = "4155dbf5-bb3e-449d-8bf0-9572cc642cac";
 const reviewVersionId = "8155dbf5-bb3e-449d-8bf0-9572cc642cac";
 const reviewMediaId = "7155dbf5-bb3e-449d-8bf0-9572cc642cac";
@@ -192,15 +494,17 @@ function send(response, status, body, headers = {}) {
 
 const server = createServer(async (request, response) => {
   const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
+  const cookieHeader = request.headers.cookie ?? "";
   const authenticated =
-    request.headers.cookie?.includes("tmi_access=e2e-access") ||
-    request.headers.cookie?.includes("tmi_access=e2e-super-admin-access");
-  const superAdminAuthenticated = request.headers.cookie?.includes(
+    cookieHeader.includes("tmi_access=e2e-access") ||
+    cookieHeader.includes("tmi_access=e2e-super-admin-access");
+  const superAdminAuthenticated = cookieHeader.includes(
     "tmi_access=e2e-super-admin-access",
   );
-  const applicantAuthenticated = request.headers.cookie?.includes(
-    "tmi_e2e_persona=applicant",
-  );
+  const sessionPersona = cookieHeader
+    .split("; ")
+    .find((cookie) => cookie.startsWith("tmi_e2e_persona="))
+    ?.split("=")[1];
   const csrfProtected =
     authenticated && request.headers["x-csrf-token"] === "e2e-csrf";
   const publicAsset = {
@@ -305,17 +609,23 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && path === "/api/v1/auth/firebase/exchange") {
     const payload = await readJson(request);
     let authenticatedUser;
+    let persona = "user";
     if (payload.idToken === "e2e-super-admin-token") {
       authenticatedUser = superAdminUser;
+      persona = "super-admin";
       durableJob = { ...initialDurableJob };
-    } else if (payload.idToken === "e2e-admin-token") authenticatedUser = user;
-    else if (payload.idToken === "e2e-reviewer-mfa-token")
+    } else if (payload.idToken === "e2e-admin-token") {
+      authenticatedUser = superAdminUser;
+      persona = "super-admin";
+    } else if (payload.idToken === "e2e-reviewer-mfa-token") {
       authenticatedUser = reviewerUser;
-    else if (payload.idToken === "e2e-applicant-token") {
+      persona = "reviewer";
+    } else if (payload.idToken === "e2e-applicant-token") {
+      persona = payload.accountType === "PUBLIC_USER" ? "public" : "applicant";
       authenticatedUser = {
         ...applicantUser,
         accountType: payload.accountType,
-        roles: payload.accountType === "PUBLIC_USER" ? [] : ["APPLICANT"],
+        roles: payload.accountType === "PUBLIC_USER" ? ["VIEWER"] : ["USER"],
       };
     } else {
       const failure = error(
@@ -335,8 +645,42 @@ const server = createServer(async (request, response) => {
         `tmi_access=${accessToken}; Path=/; HttpOnly; SameSite=Lax`,
         "tmi_refresh=e2e-refresh; Path=/; HttpOnly; SameSite=Lax",
         "tmi_csrf=e2e-csrf; Path=/; SameSite=Lax",
+        `tmi_e2e_persona=${persona}; Path=/; SameSite=Lax`,
       ],
     });
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path === "/api/v1/auth/applicant-upgrade" &&
+    csrfProtected
+  ) {
+    const payload = await readJson(request);
+    if (
+      !["INDIVIDUAL_APPLICANT", "ORGANIZATION_APPLICANT"].includes(
+        payload.accountType,
+      )
+    ) {
+      const failure = error(
+        422,
+        "APPLICANT_ACCOUNT_TYPE_INVALID",
+        "Applicant account type is required.",
+      );
+      send(response, failure.status, failure.body);
+      return;
+    }
+    send(
+      response,
+      200,
+      envelope({
+        ...applicantUser,
+        accountType: payload.accountType,
+        roles: ["USER"],
+      }),
+      {
+        "Set-Cookie": ["tmi_e2e_persona=applicant; Path=/; SameSite=Lax"],
+      },
+    );
     return;
   }
   if (
@@ -376,6 +720,7 @@ const server = createServer(async (request, response) => {
         "tmi_access=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax",
         "tmi_refresh=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax",
         "tmi_csrf=; Path=/; Max-Age=0; SameSite=Lax",
+        "tmi_e2e_persona=; Path=/; Max-Age=0; SameSite=Lax",
       ],
       "X-Request-Id": "e2e-logout",
     });
@@ -811,6 +1156,14 @@ const server = createServer(async (request, response) => {
     send(response, 200, envelope({ status: "reset" }));
     return;
   }
+  if (
+    request.method === "POST" &&
+    path === "/api/e2e/reset-staff-invitations"
+  ) {
+    consumedInvitationTokens.clear();
+    send(response, 200, envelope({ status: "reset" }));
+    return;
+  }
   if (request.method === "POST" && path === "/api/e2e/reset-payment-expired") {
     paymentScenario = "expired";
     paymentStatusReads = 0;
@@ -873,6 +1226,12 @@ const server = createServer(async (request, response) => {
       updatedAt: "2026-08-01T08:00:00Z",
       canEdit: true,
     };
+    evidences = [];
+    versions = [];
+    timeline = [];
+    paymentOrder = null;
+    paymentStatusReads = 0;
+    paymentScenario = "paid";
     send(response, 200, envelope({ status: "reset" }));
     return;
   }
@@ -887,6 +1246,202 @@ const server = createServer(async (request, response) => {
     authenticated
   ) {
     send(response, 202, envelope({ id: "failure-e2e", status: "QUEUED" }));
+    return;
+  }
+  if (request.method === "GET" && path === "/api/v1/blockchain/wallet") {
+    if (!superAdminAuthenticated) {
+      const failure = error(
+        403,
+        "BLOCKCHAIN_SIGNER_FORBIDDEN",
+        "Super Admin only.",
+      );
+      send(response, failure.status, failure.body);
+      return;
+    }
+    send(response, 200, envelope(blockchainWallet));
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path === "/api/v1/blockchain/wallet-challenges" &&
+    superAdminAuthenticated &&
+    csrfProtected
+  ) {
+    const payload = await readJson(request);
+    blockchainChallenge = {
+      id: "4eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
+      message: `THV wallet verification for ${payload.walletAddress}`,
+      nonce: "e2e-wallet-nonce",
+      expiresAt: "2026-12-31T23:59:59Z",
+      walletAddress: payload.walletAddress,
+      chainId: payload.chainId,
+    };
+    send(response, 200, envelope(blockchainChallenge));
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path === "/api/v1/blockchain/wallet-links" &&
+    superAdminAuthenticated &&
+    csrfProtected
+  ) {
+    const payload = await readJson(request);
+    if (
+      !blockchainChallenge ||
+      payload.challengeId !== blockchainChallenge.id
+    ) {
+      const failure = error(
+        409,
+        "WALLET_CHALLENGE_INVALID",
+        "Challenge is unavailable.",
+      );
+      send(response, failure.status, failure.body);
+      return;
+    }
+    blockchainWallet = {
+      id: "5eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
+      walletAddress: blockchainChallenge.walletAddress,
+      chainId: blockchainChallenge.chainId,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-23T10:00:00Z",
+    };
+    send(response, 200, envelope(blockchainWallet));
+    return;
+  }
+  if (
+    request.method === "DELETE" &&
+    path === "/api/v1/blockchain/wallet" &&
+    superAdminAuthenticated &&
+    csrfProtected &&
+    blockchainWallet
+  ) {
+    blockchainWallet = { ...blockchainWallet, status: "REVOKED" };
+    send(response, 200, envelope(blockchainWallet));
+    blockchainWallet = null;
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/blockchain/signing-queue" &&
+    superAdminAuthenticated &&
+    blockchainWallet
+  ) {
+    send(
+      response,
+      200,
+      envelope([
+        {
+          transactionId: signingTransactionId,
+          dossierId,
+          dossierCode: "HS-2026-SIGN001",
+          dossierTitle: "Hồ sơ đã được duyệt chờ ký",
+          dossierVersionNo: 1,
+          certificateNumber: "THV-2026-SIGN001",
+          proofHash: "a".repeat(64),
+          status: blockchainSigningStatus.status,
+          txHash: blockchainSigningStatus.txHash,
+          errorCode: null,
+          createdAt: "2026-08-23T09:00:00Z",
+        },
+      ]),
+    );
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path ===
+      `/api/v1/blockchain/transactions/${signingTransactionId}/signing-context` &&
+    superAdminAuthenticated &&
+    blockchainWallet
+  ) {
+    send(
+      response,
+      200,
+      envelope({
+        transactionId: signingTransactionId,
+        dossierId,
+        dossierCode: "HS-2026-SIGN001",
+        dossierTitle: "Hồ sơ đã được duyệt chờ ký",
+        dossierVersionNo: 1,
+        certificateNumber: "THV-2026-SIGN001",
+        method: "issueCertificate",
+        proofHash: "a".repeat(64),
+        network: "local",
+        chainId: blockchainWallet.chainId,
+        contractAddress: "0x0000000000000000000000000000000000000001",
+        status: blockchainSigningStatus.status,
+      }),
+    );
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path ===
+      `/api/v1/blockchain/transactions/${signingTransactionId}/intents` &&
+    superAdminAuthenticated &&
+    csrfProtected &&
+    blockchainWallet
+  ) {
+    const payload = await readJson(request);
+    if (payload.connectedWallet !== blockchainWallet.walletAddress) {
+      const failure = error(
+        403,
+        "WALLET_MISMATCH",
+        "Connected wallet is not verified.",
+      );
+      send(response, failure.status, failure.body);
+      return;
+    }
+    blockchainIntent = {
+      id: "6eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
+      transactionId: signingTransactionId,
+      transactionRequest: {
+        from: blockchainWallet.walletAddress,
+        to: "0x0000000000000000000000000000000000000001",
+        data: "0x",
+        value: "0x0",
+      },
+      expiresAt: "2026-12-31T23:59:59Z",
+      estimatedGas: 21000,
+      gasPriceWei: 1000000000,
+      walletBalanceWei: 1000000000000000000,
+    };
+    send(response, 200, envelope(blockchainIntent));
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path ===
+      `/api/v1/blockchain/transactions/${signingTransactionId}/submissions` &&
+    superAdminAuthenticated &&
+    csrfProtected &&
+    blockchainWallet
+  ) {
+    const payload = await readJson(request);
+    if (!blockchainIntent || payload.intentId !== blockchainIntent.id) {
+      const failure = error(
+        409,
+        "SIGNING_INTENT_INVALID",
+        "Intent is unavailable.",
+      );
+      send(response, failure.status, failure.body);
+      return;
+    }
+    blockchainSigningStatus = {
+      ...blockchainSigningStatus,
+      status: "BROADCAST",
+      txHash: payload.transactionHash,
+    };
+    send(response, 200, envelope(blockchainSigningStatus));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === `/api/v1/blockchain/transactions/${signingTransactionId}/status` &&
+    superAdminAuthenticated &&
+    blockchainWallet
+  ) {
+    send(response, 200, envelope(blockchainSigningStatus));
     return;
   }
   if (
@@ -1354,7 +1909,17 @@ const server = createServer(async (request, response) => {
     review.recommendation === "APPROVE" &&
     Object.values(review.criterionComments ?? {}).filter(
       (comment) => comment.trim().length > 0,
-    ).length === 5
+    ).length === 5 &&
+    Object.values(review.criterionEvidence ?? {}).filter(
+      (mediaIds) => Array.isArray(mediaIds) && mediaIds.length > 0,
+    ).length === 5 &&
+    [
+      "evidence_reviewed",
+      "criteria_assessed",
+      "findings_recorded",
+      "similarity_checked",
+      "attestation",
+    ].every((key) => review.checklistAnswers?.[key] === true)
   ) {
     reviewAssignmentStatus = "SUBMITTED";
     review = { ...review, submittedAt: "2026-08-02T09:00:00Z" };
@@ -1385,6 +1950,14 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
+    path === "/api/v1/dossiers/types" &&
+    authenticated
+  ) {
+    send(response, 200, envelope(dossierTypes));
+    return;
+  }
+  if (
+    request.method === "GET" &&
     path === "/api/v1/dossiers" &&
     request.headers.cookie?.includes("tmi_access=e2e-access")
   ) {
@@ -1398,12 +1971,26 @@ const server = createServer(async (request, response) => {
     request.headers["x-csrf-token"] === "e2e-csrf"
   ) {
     const input = await readJson(request);
+    const dossierType = dossierTypes.find(
+      (item) => item.currentVersion.id === input.dossierTypeVersionId,
+    );
+    if (!dossierType || dossierType.categoryId !== input.categoryId) {
+      const failure = error(
+        422,
+        "DOSSIER_TYPE_VERSION_INVALID",
+        "The dossier type version is not available.",
+      );
+      send(response, failure.status, failure.body);
+      return;
+    }
     dossier = {
       id: dossierId,
       code: "TMI-2026-E2E000000001",
       ownerUserId: user.id,
       organizationId: input.organizationId ?? null,
-      categoryId,
+      categoryId: input.categoryId,
+      dossierTypeVersionId: input.dossierTypeVersionId,
+      formData: input.formData ?? {},
       title: input.title,
       slug: null,
       summary: input.summary ?? null,
@@ -1539,9 +2126,17 @@ const server = createServer(async (request, response) => {
       envelope(
         superAdminAuthenticated
           ? superAdminUser
-          : applicantAuthenticated
-            ? applicantUser
-            : user,
+          : sessionPersona === "reviewer"
+            ? reviewerUser
+            : sessionPersona === "applicant"
+              ? applicantUser
+              : sessionPersona === "public"
+                ? {
+                    ...applicantUser,
+                    accountType: "PUBLIC_USER",
+                    roles: ["VIEWER"],
+                  }
+                : user,
       ),
     );
     return;
@@ -1903,7 +2498,7 @@ const server = createServer(async (request, response) => {
   send(response, failure.status, failure.body);
 });
 
-server.listen(4010, "127.0.0.1");
+server.listen(mockPort, "127.0.0.1");
 
 function close() {
   server.close(() => process.exit(0));

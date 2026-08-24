@@ -1,6 +1,7 @@
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +16,19 @@ from app.modules.dossiers.canonical import (
     snapshot_sha256,
 )
 from app.modules.dossiers.document_claims import DocumentHashClaimService
+from app.modules.dossiers.document_rules import (
+    DocumentRule,
+    DocumentRuleError,
+    document_rules_from_schema,
+    validate_attachment_against_rules,
+    validate_required_document_rules,
+)
+from app.modules.dossiers.dynamic_schema import (
+    DynamicSchemaError,
+    public_fields_from_schema,
+    validate_and_normalize_form_data,
+    validate_schema_definition,
+)
 from app.modules.dossiers.errors import (
     ApplicantProfileIncompleteError,
     DossierDuplicateContentError,
@@ -30,17 +44,23 @@ from app.modules.dossiers.models import (
     DossierEvidence,
     DossierStatus,
     DossierStatusHistory,
+    DossierType,
+    DossierTypeVersion,
     DossierVersion,
+    EvidenceVisibility,
 )
 from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.types import (
     CreateDossier,
     CreateEvidence,
     DocumentHashAdjudicationView,
+    DocumentRuleView,
     DossierChanges,
     DossierDetailView,
     DossierPage,
     DossierStatusHistoryView,
+    DossierTypeVersionView,
+    DossierTypeView,
     DossierVersionView,
     DossierView,
     EvidenceChanges,
@@ -60,13 +80,20 @@ from app.modules.organizations.repository import OrganizationRepository
 from app.modules.users.repository import UserProfileRepository
 
 EDITABLE_STATUSES = frozenset({DossierStatus.DRAFT, DossierStatus.NEEDS_SUPPLEMENT})
-DOSSIER_MUTATION_ROLES = frozenset({"APPLICANT", "ORG_MANAGER"})
+DOSSIER_MUTATION_ROLES = frozenset({"USER"})
 APPLICANT_ACCOUNT_TYPES = frozenset(
     {AccountType.INDIVIDUAL_APPLICANT, AccountType.ORGANIZATION_APPLICANT}
+)
+PUBLIC_EVIDENCE_SCOPES = frozenset(
+    {EvidenceVisibility.PUBLIC, EvidenceVisibility.PUBLIC_PREVIEW}
 )
 
 
 class DossierService:
+    DOSSIER_TYPE_MANAGE = PolicyRequirement(
+        permission="cms.manage",
+        compatible_roles=frozenset({"SUPER_ADMIN"}),
+    )
     DOCUMENT_CLAIM_OVERRIDE = PolicyRequirement(
         permission="document_claim.override",
         compatible_roles=frozenset({"SUPER_ADMIN"}),
@@ -102,6 +129,38 @@ class DossierService:
         async with self._session.begin():
             await self._require_applicant_profile(principal)
             await self._require_category(payload.category_id)
+            dossier_type: DossierType | None = None
+            type_version: DossierTypeVersion | None = None
+            form_data: dict[str, Any] = {}
+            if payload.dossier_type_version_id is not None:
+                type_version = await self._repository.get_dossier_type_version(
+                    payload.dossier_type_version_id
+                )
+                if type_version is None:
+                    raise DossierValidationError(
+                        "Selected dossier type is unavailable."
+                    )
+                dossier_type = await self._repository.get_dossier_type(
+                    type_version.dossier_type_id
+                )
+                if (
+                    dossier_type is None
+                    or not dossier_type.is_active
+                    or dossier_type.category_id != payload.category_id
+                ):
+                    raise DossierValidationError(
+                        "Selected dossier type is unavailable."
+                    )
+                try:
+                    form_data = validate_and_normalize_form_data(
+                        type_version.schema_json, payload.form_data or {}
+                    )
+                except DynamicSchemaError as exc:
+                    raise DossierValidationError(str(exc)) from exc
+            elif payload.form_data:
+                raise DossierValidationError(
+                    "Form data requires a selected dossier type."
+                )
             if payload.organization_id is not None:
                 await self._require_organization_manager(
                     principal,
@@ -114,6 +173,11 @@ class DossierService:
                 owner_user_id=principal.user_id,
                 organization_id=payload.organization_id,
                 category_id=payload.category_id,
+                dossier_type_id=(dossier_type.id if dossier_type is not None else None),
+                dossier_type_version_id=(
+                    type_version.id if type_version is not None else None
+                ),
+                form_data_json=form_data,
                 title=title,
                 slug=self._optional_text(payload.slug),
                 summary=self._optional_text(payload.summary),
@@ -124,6 +188,88 @@ class DossierService:
             view = self._view(dossier, can_edit=True)
             self._audit("dossier.created", principal.user_id, dossier.id)
         return view
+
+    async def list_active_dossier_types(
+        self,
+        principal: AuthPrincipal,
+    ) -> tuple[DossierTypeView, ...]:
+        self._require_mutation_role(principal)
+        async with self._session.begin():
+            rows = await self._repository.list_active_dossier_types()
+            return tuple(
+                self._dossier_type_view(item, version) for item, version in rows
+            )
+
+    async def create_dossier_type(
+        self,
+        principal: AuthPrincipal,
+        *,
+        category_id: UUID,
+        code: str,
+        name: str,
+        schema: Mapping[str, Any],
+    ) -> DossierTypeView:
+        AuthorizationPolicy.require_capability(
+            principal, self.DOSSIER_TYPE_MANAGE, DossierForbiddenError
+        )
+        normalized_code = code.strip().upper()
+        normalized_name = name.strip()
+        if not normalized_code or not normalized_name:
+            raise DossierValidationError("Dossier type code and name are required.")
+        try:
+            validated_schema = validate_schema_definition(schema)
+        except DynamicSchemaError as exc:
+            raise DossierValidationError(str(exc)) from exc
+        async with self._session.begin():
+            await self._require_category(category_id)
+            dossier_type = DossierType(
+                id=uuid4(),
+                category_id=category_id,
+                code=normalized_code,
+                name=normalized_name,
+            )
+            version = DossierTypeVersion(
+                dossier_type_id=dossier_type.id,
+                version_no=1,
+                schema_json=validated_schema,
+            )
+            self._repository.add_type(dossier_type)
+            self._repository.add_type_version(version)
+            await self._session.flush()
+            self._audit("dossier.type.created", principal.user_id, dossier_type.id)
+            return self._dossier_type_view(dossier_type, version)
+
+    async def create_dossier_type_version(
+        self,
+        principal: AuthPrincipal,
+        dossier_type_id: UUID,
+        *,
+        schema: Mapping[str, Any],
+    ) -> DossierTypeVersionView:
+        AuthorizationPolicy.require_capability(
+            principal, self.DOSSIER_TYPE_MANAGE, DossierForbiddenError
+        )
+        try:
+            validated_schema = validate_schema_definition(schema)
+        except DynamicSchemaError as exc:
+            raise DossierValidationError(str(exc)) from exc
+        async with self._session.begin():
+            dossier_type = await self._repository.get_dossier_type(dossier_type_id)
+            if dossier_type is None:
+                raise DossierNotFoundError("Dossier type was not found.")
+            version = DossierTypeVersion(
+                dossier_type_id=dossier_type.id,
+                version_no=await self._repository.next_dossier_type_version_no(
+                    dossier_type.id
+                ),
+                schema_json=validated_schema,
+            )
+            self._repository.add_type_version(version)
+            await self._session.flush()
+            self._audit(
+                "dossier.type.version.created", principal.user_id, dossier_type.id
+            )
+            return self._dossier_type_version_view(version)
 
     async def grant_document_hash_override(
         self,
@@ -252,10 +398,14 @@ class DossierService:
                 dossier.id,
                 version_id=version_id,
             )
+            document_rules = await self._document_rules_for(dossier)
             return DossierDetailView(
                 dossier=self._view(dossier, can_edit=can_edit),
                 evidences=tuple(
                     self._evidence_view(evidence, media) for evidence, media in rows
+                ),
+                document_rules=tuple(
+                    self._document_rule_view(rule) for rule in document_rules
                 ),
             )
 
@@ -336,16 +486,26 @@ class DossierService:
             await self._require_mutation_scope(principal, dossier)
             self._require_editable(dossier)
             media = await self._require_media(principal, payload.media_asset_id)
+            existing_rows = await self._repository.list_draft_evidences(dossier.id)
+            evidence_type, evidence_role, access_scope = await self._attachment_policy(
+                dossier,
+                evidence_type=payload.evidence_type,
+                evidence_role=payload.evidence_role,
+                media=media,
+                existing=tuple(item for item, _ in existing_rows),
+            )
             evidence = DossierEvidence(
                 id=self._uuid_factory(),
                 dossier_id=dossier.id,
                 media_asset_id=media.id,
-                evidence_type=self._evidence_type(payload.evidence_type),
+                evidence_type=evidence_type,
+                evidence_role=evidence_role,
+                access_scope=access_scope,
                 title=self._required_title(payload.title),
                 description=self._optional_text(payload.description),
                 issued_at=self._as_utc(payload.issued_at),
                 display_order=self._display_order(payload.display_order),
-                is_public=payload.is_public,
+                is_public=self._is_public_scope(access_scope),
             )
             self._repository.add_evidence(evidence)
             await self._session.flush()
@@ -373,10 +533,61 @@ class DossierService:
                 dossier_id,
                 evidence_id,
             )
-            if "evidence_type" in changes.provided_fields:
-                evidence.evidence_type = self._evidence_type(
-                    changes.evidence_type or ""
+            media = await self._require_media(principal, evidence.media_asset_id)
+            rules = await self._document_rules_for(dossier)
+            candidate_type = (
+                changes.evidence_type
+                if "evidence_type" in changes.provided_fields
+                else evidence.evidence_type
+            )
+            candidate_role = (
+                changes.evidence_role
+                if "evidence_role" in changes.provided_fields
+                else evidence.evidence_role
+            )
+            if rules:
+                try:
+                    rule = validate_attachment_against_rules(
+                        rules,
+                        evidence_type=candidate_type or "",
+                        evidence_role=candidate_role,
+                        mime_type=media.mime_type,
+                        byte_size=media.bytes,
+                        existing=tuple(
+                            item
+                            for item, _ in await self._repository.list_draft_evidences(
+                                dossier.id
+                            )
+                            if item.id != evidence.id
+                        ),
+                    )
+                except DocumentRuleError as exc:
+                    raise DossierValidationError(str(exc)) from exc
+                if rule is None:
+                    raise RuntimeError(
+                        "Configured dossier rules did not select a rule."
+                    )
+                evidence.evidence_type = rule.document_type
+                evidence.evidence_role = rule.key
+                evidence.access_scope = self._evidence_visibility(
+                    rule.default_visibility
                 )
+                evidence.is_public = self._is_public_scope(evidence.access_scope)
+            else:
+                if "evidence_type" in changes.provided_fields:
+                    evidence.evidence_type = self._evidence_type(candidate_type or "")
+                if "evidence_role" in changes.provided_fields:
+                    evidence.evidence_role = self._evidence_role(candidate_role)
+                if {
+                    "access_scope",
+                    "is_public",
+                }.intersection(changes.provided_fields):
+                    # A legacy type has no server-owned public document rule;
+                    # never let a browser promote its attachment to public.
+                    evidence.access_scope = EvidenceVisibility.PRIVATE
+                    evidence.is_public = False
+            if "evidence_type" in changes.provided_fields:
+                evidence.evidence_type = self._evidence_type(evidence.evidence_type)
             if "title" in changes.provided_fields:
                 evidence.title = self._required_title(changes.title or "")
             if "description" in changes.provided_fields:
@@ -387,11 +598,6 @@ class DossierService:
                 if changes.display_order is None:
                     raise DossierValidationError("Display order is required.")
                 evidence.display_order = self._display_order(changes.display_order)
-            if "is_public" in changes.provided_fields:
-                if changes.is_public is None:
-                    raise DossierValidationError("Public flag is required.")
-                evidence.is_public = changes.is_public
-            media = await self._require_media(principal, evidence.media_asset_id)
             await self._session.flush()
             view = self._evidence_view(evidence, media)
             self._audit("dossier.evidence.updated", principal.user_id, dossier_id)
@@ -511,7 +717,19 @@ class DossierService:
                 if category is None:
                     raise DossierValidationError("Dossier category is not active.")
                 evidence_rows = await self._repository.list_draft_evidences(dossier.id)
-                self._validate_submission_evidence(evidence_rows)
+                dossier_type_schema = await self._dossier_type_schema_for(dossier)
+                try:
+                    document_rules = (
+                        document_rules_from_schema(dossier_type_schema)
+                        if dossier_type_schema is not None
+                        else ()
+                    )
+                except DocumentRuleError as exc:
+                    raise DossierValidationError(str(exc)) from exc
+                self._validate_submission_evidence(
+                    evidence_rows,
+                    rules=document_rules,
+                )
                 submitted_at = self._clock()
                 version_no = dossier.current_version_no + 1
                 snapshot = self._snapshot(
@@ -521,6 +739,7 @@ class DossierService:
                     version_no=version_no,
                     submitted_by=principal.user_id,
                     submitted_at=submitted_at,
+                    dossier_type_schema=dossier_type_schema,
                 )
                 identity_fingerprint = self._content_fingerprint(
                     dossier,
@@ -623,6 +842,8 @@ class DossierService:
     @staticmethod
     def _validate_submission_evidence(
         rows: tuple[tuple[DossierEvidence, MediaAsset], ...],
+        *,
+        rules: tuple[DocumentRule, ...],
     ) -> None:
         if not rows:
             raise DossierValidationError(
@@ -633,6 +854,13 @@ class DossierService:
                 raise DossierValidationError(
                     "Every evidence file must have current trusted provenance."
                 )
+        try:
+            validate_required_document_rules(
+                rules,
+                evidences=tuple(evidence for evidence, _ in rows),
+            )
+        except DocumentRuleError as exc:
+            raise DossierValidationError(str(exc)) from exc
 
     @classmethod
     def _snapshot(
@@ -644,6 +872,7 @@ class DossierService:
         version_no: int,
         submitted_by: UUID,
         submitted_at: datetime,
+        dossier_type_schema: Mapping[str, Any] | None,
     ) -> dict[str, object]:
         evidences: list[dict[str, object]] = []
         for evidence, media in rows:
@@ -654,11 +883,13 @@ class DossierService:
                     "id": str(evidence.id),
                     "mediaAssetId": str(media.id),
                     "evidenceType": evidence.evidence_type,
+                    "evidenceRole": evidence.evidence_role,
+                    "accessScope": evidence.access_scope.value,
                     "title": evidence.title,
                     "description": evidence.description,
                     "issuedAt": cls._iso_utc(evidence.issued_at),
                     "displayOrder": evidence.display_order,
-                    "isPublic": evidence.is_public,
+                    "isPublic": cls._is_public_scope(evidence.access_scope),
                     "media": {
                         "mimeType": media.mime_type,
                         "bytes": media.bytes,
@@ -676,27 +907,50 @@ class DossierService:
                     },
                 }
             )
+        dossier_snapshot: dict[str, object] = {
+            "id": str(dossier.id),
+            "code": dossier.code,
+            "ownerUserId": str(dossier.owner_user_id),
+            "organizationId": (
+                str(dossier.organization_id)
+                if dossier.organization_id is not None
+                else None
+            ),
+            "category": {
+                "id": str(category.id),
+                "code": category.code,
+                "name": category.name,
+            },
+            "title": dossier.title,
+            "slug": dossier.slug,
+            "summary": dossier.summary,
+            "visibility": dossier.visibility.value,
+        }
+        if (
+            dossier.dossier_type_id is not None
+            and dossier.dossier_type_version_id is not None
+        ):
+            if dossier_type_schema is None:
+                raise DossierValidationError("Selected dossier type is unavailable.")
+            try:
+                public_fields = public_fields_from_schema(
+                    dossier_type_schema,
+                    dossier.form_data_json,
+                )
+            except DynamicSchemaError as exc:
+                raise DossierValidationError(str(exc)) from exc
+            dossier_snapshot["dossierType"] = {
+                "id": str(dossier.dossier_type_id),
+                "versionId": str(dossier.dossier_type_version_id),
+                "formData": dict(dossier.form_data_json),
+                # Public consumers are allowed to use this frozen, explicit
+                # projection only. Raw formData remains immutable evidence and
+                # is never a public serializer source.
+                "publicFields": public_fields,
+            }
         return {
             "schemaVersion": 1,
-            "dossier": {
-                "id": str(dossier.id),
-                "code": dossier.code,
-                "ownerUserId": str(dossier.owner_user_id),
-                "organizationId": (
-                    str(dossier.organization_id)
-                    if dossier.organization_id is not None
-                    else None
-                ),
-                "category": {
-                    "id": str(category.id),
-                    "code": category.code,
-                    "name": category.name,
-                },
-                "title": dossier.title,
-                "slug": dossier.slug,
-                "summary": dossier.summary,
-                "visibility": dossier.visibility.value,
-            },
+            "dossier": dossier_snapshot,
             "evidences": evidences,
             "submission": {
                 "versionNo": version_no,
@@ -856,13 +1110,78 @@ class DossierService:
 
     async def _require_applicant_profile(self, principal: AuthPrincipal) -> None:
         if (
-            "APPLICANT" not in principal.roles
+            "USER" not in principal.roles
             or principal.account_type not in APPLICANT_ACCOUNT_TYPES
         ):
             return
         profile = await self._profiles.get_profile(principal.user_id)
         if profile is None or not profile.full_name or not profile.full_name.strip():
             raise ApplicantProfileIncompleteError()
+
+    async def _document_rules_for(
+        self,
+        dossier: Dossier,
+    ) -> tuple[DocumentRule, ...]:
+        schema = await self._dossier_type_schema_for(dossier)
+        if schema is None:
+            return ()
+        try:
+            return document_rules_from_schema(schema)
+        except DocumentRuleError as exc:
+            raise DossierValidationError(str(exc)) from exc
+
+    async def _dossier_type_schema_for(
+        self,
+        dossier: Dossier,
+    ) -> Mapping[str, Any] | None:
+        if dossier.dossier_type_version_id is None:
+            return None
+        type_version = await self._repository.get_dossier_type_version(
+            dossier.dossier_type_version_id
+        )
+        if type_version is None:
+            raise DossierValidationError("Selected dossier type is unavailable.")
+        return type_version.schema_json
+
+    async def _attachment_policy(
+        self,
+        dossier: Dossier,
+        *,
+        evidence_type: str,
+        evidence_role: str | None,
+        media: MediaAsset,
+        existing: tuple[DossierEvidence, ...],
+    ) -> tuple[str, str, EvidenceVisibility]:
+        normalized_type = self._evidence_type(evidence_type)
+        normalized_role = self._evidence_role(evidence_role)
+        rules = await self._document_rules_for(dossier)
+        if not rules:
+            # Types without explicit document policy default to private.  This
+            # avoids silently publishing a legacy attachment just because a
+            # client sent an old `isPublic` field.
+            return (
+                normalized_type,
+                normalized_role or normalized_type,
+                EvidenceVisibility.PRIVATE,
+            )
+        try:
+            rule = validate_attachment_against_rules(
+                rules,
+                evidence_type=normalized_type,
+                evidence_role=normalized_role,
+                mime_type=media.mime_type,
+                byte_size=media.bytes,
+                existing=existing,
+            )
+        except DocumentRuleError as exc:
+            raise DossierValidationError(str(exc)) from exc
+        if rule is None:
+            raise RuntimeError("Configured dossier rules did not select a rule.")
+        return (
+            rule.document_type,
+            rule.key,
+            self._evidence_visibility(rule.default_visibility),
+        )
 
     @staticmethod
     def _require_editable(dossier: Dossier) -> None:
@@ -889,6 +1208,23 @@ class DossierService:
         if re.fullmatch(r"[A-Z][A-Z0-9_]{1,63}", normalized) is None:
             raise DossierValidationError("Evidence type is invalid.")
         return normalized
+
+    @classmethod
+    def _evidence_role(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return cls._evidence_type(value)
+
+    @staticmethod
+    def _evidence_visibility(value: str) -> EvidenceVisibility:
+        try:
+            return EvidenceVisibility(value)
+        except ValueError as exc:
+            raise DossierValidationError("Evidence visibility is invalid.") from exc
+
+    @staticmethod
+    def _is_public_scope(scope: EvidenceVisibility) -> bool:
+        return scope in PUBLIC_EVIDENCE_SCOPES
 
     @staticmethod
     def _display_order(value: int) -> int:
@@ -927,6 +1263,8 @@ class DossierService:
             dossier_version_id=evidence.dossier_version_id,
             media_asset_id=evidence.media_asset_id,
             evidence_type=evidence.evidence_type,
+            evidence_role=evidence.evidence_role,
+            access_scope=evidence.access_scope,
             title=evidence.title,
             description=evidence.description,
             issued_at=evidence.issued_at,
@@ -972,6 +1310,9 @@ class DossierService:
             owner_user_id=dossier.owner_user_id,
             organization_id=dossier.organization_id,
             category_id=dossier.category_id,
+            dossier_type_id=dossier.dossier_type_id,
+            dossier_type_version_id=dossier.dossier_type_version_id,
+            form_data=dict(dossier.form_data_json),
             title=dossier.title,
             slug=dossier.slug,
             summary=dossier.summary,
@@ -982,6 +1323,43 @@ class DossierService:
             created_at=dossier.created_at,
             updated_at=dossier.updated_at,
             can_edit=can_edit,
+        )
+
+    @staticmethod
+    def _dossier_type_version_view(
+        version: DossierTypeVersion,
+    ) -> DossierTypeVersionView:
+        return DossierTypeVersionView(
+            id=version.id,
+            dossier_type_id=version.dossier_type_id,
+            version_no=version.version_no,
+            schema=dict(version.schema_json),
+        )
+
+    @staticmethod
+    def _document_rule_view(rule: DocumentRule) -> DocumentRuleView:
+        return DocumentRuleView(
+            key=rule.key,
+            label=rule.label,
+            document_type=rule.document_type,
+            required=rule.required,
+            allowed_mime_types=tuple(sorted(rule.allowed_mime_types)),
+            max_bytes=rule.max_bytes,
+            max_count=rule.max_count,
+            default_visibility=EvidenceVisibility(rule.default_visibility),
+        )
+
+    @classmethod
+    def _dossier_type_view(
+        cls, dossier_type: DossierType, version: DossierTypeVersion
+    ) -> DossierTypeView:
+        return DossierTypeView(
+            id=dossier_type.id,
+            category_id=dossier_type.category_id,
+            code=dossier_type.code,
+            name=dossier_type.name,
+            is_active=dossier_type.is_active,
+            current_version=cls._dossier_type_version_view(version),
         )
 
     def _audit(self, action: str, user_id: UUID, dossier_id: UUID) -> None:

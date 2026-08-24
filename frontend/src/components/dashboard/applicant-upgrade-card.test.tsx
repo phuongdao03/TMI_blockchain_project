@@ -20,7 +20,7 @@ describe("ApplicantUpgradeCard", () => {
     const upgraded: AuthUser = {
       id: "user-1",
       email: "viewer@tmigroup.vn",
-      roles: ["APPLICANT"],
+      roles: ["USER"],
       accountType: "INDIVIDUAL_APPLICANT",
     };
     upgradeToApplicant.mockResolvedValueOnce(upgraded);
@@ -40,27 +40,5 @@ describe("ApplicantUpgradeCard", () => {
       expect(upgradeToApplicant).toHaveBeenCalledWith("INDIVIDUAL_APPLICANT");
       expect(onUpgraded).toHaveBeenCalledWith(upgraded);
     });
-  });
-
-  it("shows the preview entry point without calling the upgrade API", () => {
-    render(<ApplicantUpgradeCard preview />);
-
-    expect(screen.getByText("Sắp ra mắt")).toBeDefined();
-    expect(
-      screen.getByRole("heading", {
-        name: "Cổng gửi đề cử đang được chuẩn bị",
-      }),
-    ).toBeDefined();
-    expect(
-      screen.getByRole("link", { name: /Tìm hiểu cách tham gia/i }),
-    ).toHaveProperty(
-      "href",
-      expect.stringContaining("/coming-soon/submission"),
-    );
-    expect(
-      screen.queryByRole("button", { name: /Gửi tác phẩm hoặc hồ sơ/i }),
-    ).toBeNull();
-    expect(screen.queryByLabelText(/Cá nhân/i)).toBeNull();
-    expect(upgradeToApplicant).not.toHaveBeenCalled();
   });
 });

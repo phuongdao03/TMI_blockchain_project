@@ -42,9 +42,16 @@ test("reviewer acknowledges conflict gate, reviews evidence and submits 5T", asy
 
   await page.goto("/reviews");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Hàng đợi thẩm định" }),
+    page
+      .locator("main")
+      .getByRole("heading", { level: 1, name: "Hàng đợi thẩm định" }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Mở hồ sơ thẩm định" }).click();
+  const reviewLink = page.getByRole("link", { name: "Mở hồ sơ thẩm định" });
+  await expect(reviewLink).toHaveAttribute(
+    "href",
+    /\/reviews\/4155dbf5-bb3e-449d-8bf0-9572cc642cac$/,
+  );
+  await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
   await expect(
     page.getByRole("heading", { level: 1, name: "Hồ sơ thương hiệu TMI" }),
   ).toBeVisible();
@@ -74,6 +81,11 @@ test("reviewer acknowledges conflict gate, reviews evidence and submits 5T", asy
     await page
       .getByLabel(`Nhận xét ${criterion}`)
       .fill(`Đánh giá E2E đầy đủ cho ${criterion}.`);
+  }
+  const checklist = page.getByRole("checkbox");
+  await expect(checklist).toHaveCount(10);
+  for (let index = 0; index < 10; index += 1) {
+    await checklist.nth(index).check();
   }
   const autosave = page.waitForResponse(
     (response) =>
@@ -136,4 +148,24 @@ test("reviewer resolves a similarity case with a reasoned decision", async ({
   await page.getByRole("button", { name: "Hoàn tất đối chiếu" }).click();
 
   await expect(page.getByText("Đã hoàn tất đối chiếu")).toBeVisible();
+});
+
+test("reviewer assessment remains legible in dark mode", async ({ page }) => {
+  await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
+  await page.getByRole("button", { name: "Tôi không có xung đột" }).click();
+  await page.getByRole("button", { name: "Giao diện tối" }).click();
+
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(
+    page.getByRole("heading", { name: "Phiếu thẩm định chuyên môn" }),
+  ).toBeVisible();
+  const firstCriterion = page
+    .locator("fieldset")
+    .filter({ hasText: "01" })
+    .first();
+  await expect(firstCriterion).not.toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  await expect(firstCriterion).toBeVisible();
 });

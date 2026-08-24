@@ -17,7 +17,7 @@ export function PublicMap({ category }: { category?: string }) {
     );
   }
   return (
-    <div className="grid min-h-[38rem] overflow-hidden rounded-3xl border border-white/10 bg-ink-900 lg:grid-cols-[1fr_22rem]">
+    <div className="public-theme-surface grid min-h-[38rem] overflow-hidden rounded-3xl border border-white/10 bg-ink-900 lg:grid-cols-[1fr_22rem]">
       <div className="relative overflow-hidden bg-[radial-gradient(circle_at_center,rgb(30_41_59),rgb(7_10_18)_70%)]">
         <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgb(148_163_184_/_15%)_1px,transparent_1px),linear-gradient(90deg,rgb(148_163_184_/_15%)_1px,transparent_1px)] [background-size:3rem_3rem]" />
         {query.data?.map((marker) => {

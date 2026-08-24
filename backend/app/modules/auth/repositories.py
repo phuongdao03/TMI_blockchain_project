@@ -230,15 +230,7 @@ class AuthRepository:
         role_code: str | None = None,
         account_status: str | None = None,
     ) -> tuple[tuple[User, str], ...]:
-        internal_codes = (
-            "REVIEWER",
-            "COUNCIL_MEMBER",
-            "COUNCIL_SECRETARY",
-            "FINANCE_ADMIN",
-            "CONTENT_ADMIN",
-            "BLOCKCHAIN_ADMIN",
-            "SUPER_ADMIN",
-        )
+        internal_codes = ("MODERATOR", "SUPER_ADMIN")
         statement = (
             select(User, Role.code)
             .join(UserRole, UserRole.user_id == User.id)
@@ -268,15 +260,7 @@ class AuthRepository:
         role_code: str | None = None,
         account_status: str | None = None,
     ) -> int:
-        internal_codes = (
-            "REVIEWER",
-            "COUNCIL_MEMBER",
-            "COUNCIL_SECRETARY",
-            "FINANCE_ADMIN",
-            "CONTENT_ADMIN",
-            "BLOCKCHAIN_ADMIN",
-            "SUPER_ADMIN",
-        )
+        internal_codes = ("MODERATOR", "SUPER_ADMIN")
         statement = (
             select(func.count(distinct(User.id)))
             .join(UserRole, UserRole.user_id == User.id)

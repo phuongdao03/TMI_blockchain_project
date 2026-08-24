@@ -87,7 +87,7 @@ def test_invitation_is_single_use_email_bound_and_idempotently_resendable(
         async with factory() as session:
             async with session.begin():
                 session.add(User(id=admin.user_id, email=admin.email, status="ACTIVE"))
-                session.add(Role(code="REVIEWER"))
+                session.add(Role(code="MODERATOR"))
             service = StaffInvitationService(
                 session=session,
                 payload_cipher=cipher,
@@ -96,7 +96,7 @@ def test_invitation_is_single_use_email_bound_and_idempotently_resendable(
             )
             invitation = await service.create(
                 payload=StaffInvitationRequest(
-                    email="Reviewer@Example.com", role="REVIEWER"
+                    email="Reviewer@Example.com", role="MODERATOR"
                 ),
                 principal=admin,
                 audit=AuditService(session),
@@ -230,7 +230,7 @@ def test_invitation_is_single_use_email_bound_and_idempotently_resendable(
 
             revoked = await service.create(
                 payload=StaffInvitationRequest(
-                    email="revoked@example.com", role="REVIEWER"
+                    email="revoked@example.com", role="MODERATOR"
                 ),
                 principal=admin,
                 audit=AuditService(session),
@@ -248,7 +248,7 @@ def test_invitation_is_single_use_email_bound_and_idempotently_resendable(
 
             expired = await service.create(
                 payload=StaffInvitationRequest(
-                    email="expired@example.com", role="REVIEWER"
+                    email="expired@example.com", role="MODERATOR"
                 ),
                 principal=admin,
                 audit=AuditService(session),
@@ -323,7 +323,7 @@ def test_concurrent_acceptance_creates_exactly_one_staff_account() -> None:
                     invitation_ttl=timedelta(hours=24),
                 )
                 invitation = await service.create(
-                    payload=StaffInvitationRequest(email=email, role="REVIEWER"),
+                    payload=StaffInvitationRequest(email=email, role="MODERATOR"),
                     principal=admin,
                     audit=AuditService(session),
                     request_id="concurrent-create",

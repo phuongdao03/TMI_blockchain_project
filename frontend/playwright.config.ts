@@ -1,8 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const externalServers = process.env.E2E_EXTERNAL_SERVERS === "1";
+const strictApplicationServer =
+  process.env.E2E_STRICT_APPLICATION_SERVER === "1";
 const previewRun = process.env.E2E_RELEASE_MODE === "preview";
-const applicationPort = previewRun ? 3101 : 3100;
+const applicationPort = Number(
+  process.env.E2E_APPLICATION_PORT ?? (previewRun ? 3101 : 3100),
+);
+const applicationDistDir =
+  process.env.E2E_NEXT_DIST_DIR ??
+  (previewRun ? ".next-e2e-preview" : ".next-e2e");
 const applicationUrl = `http://127.0.0.1:${applicationPort}`;
 const previewTestName = /preview dashboard keeps submission closed/i;
 
@@ -38,12 +45,12 @@ export default defineConfig({
         {
           command: `node node_modules/next/dist/bin/next dev --webpack --hostname 127.0.0.1 --port ${applicationPort}`,
           port: applicationPort,
-          reuseExistingServer: !process.env.CI,
+          reuseExistingServer: !process.env.CI && !strictApplicationServer,
           env: {
             API_BASE_URL: "http://127.0.0.1:4010",
             APP_BASE_URL: applicationUrl,
             AUTH_E2E_SHIM: "true",
-            NEXT_DIST_DIR: previewRun ? ".next-e2e-preview" : ".next-e2e",
+            NEXT_DIST_DIR: applicationDistDir,
             NEXT_PUBLIC_RELEASE_MODE: previewRun ? "preview" : "full",
             NEXT_PUBLIC_FIREBASE_API_KEY: "e2e-api-key",
             NEXT_PUBLIC_FIREBASE_APP_ID: "1:123:web:e2e",

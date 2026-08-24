@@ -79,6 +79,7 @@ CertificateServiceDependency = Annotated[
 
 async def get_certificate_version_service(
     session: SessionDependency,
+    settings: SettingsDependency,
     blockchain_service: BlockchainServiceDependency,
 ) -> AsyncIterator[CertificateVersionService]:
     yield CertificateVersionService(
@@ -86,6 +87,8 @@ async def get_certificate_version_service(
         metadata_builder=CertificateMetadataBuilder(),
         audit=AuditService(session),
         blockchain_service=blockchain_service,
+        public_base_url=settings.app_base_url,
+        environment=settings.app_env,
     )
 
 

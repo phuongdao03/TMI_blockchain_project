@@ -149,7 +149,7 @@ def test_registration_persists_argon2id_token_and_encrypted_outbox(
             assert event.event_type == "user.registered"
             assert event.aggregate_id == user.id
             assert user.account_type is AccountType.INDIVIDUAL_APPLICANT
-            assert assigned_role == "APPLICANT"
+            assert assigned_role == "USER"
             assert b"owner@tmigroup.vn" not in event.payload_ciphertext
 
         payload = await _outbox_payload(session_factory, cipher)
@@ -165,7 +165,7 @@ def test_registration_persists_argon2id_token_and_encrypted_outbox(
     asyncio.run(exercise())
 
 
-def test_public_user_registration_has_no_applicant_role(tmp_path: Path) -> None:
+def test_public_user_registration_receives_the_viewer_role(tmp_path: Path) -> None:
     async def exercise() -> None:
         clock = MutableClock(datetime(2026, 8, 1, 8, 0, tzinfo=UTC))
         service, session_factory, _, _ = await _build_service(tmp_path, clock)
@@ -186,8 +186,8 @@ def test_public_user_registration_has_no_applicant_role(tmp_path: Path) -> None:
                     )
                 ).all()
             )
-        assert user.account_type is AccountType.PUBLIC_USER
-        assert roles == ()
+            assert user.account_type is AccountType.PUBLIC_USER
+            assert roles == ("VIEWER",)
         await service.close()
 
     asyncio.run(exercise())

@@ -1,14 +1,10 @@
 SYSTEM_ROLE_CODES = frozenset(
     {
-        "APPLICANT",
-        "ORG_MANAGER",
-        "REVIEWER",
-        "COUNCIL_MEMBER",
-        "COUNCIL_SECRETARY",
-        "FINANCE_ADMIN",
-        "CONTENT_ADMIN",
-        "BLOCKCHAIN_ADMIN",
+        "VIEWER",
+        "USER",
+        "MODERATOR",
         "SUPER_ADMIN",
     }
 )
-PUBLIC_REGISTRATION_ROLE = "APPLICANT"
+VIEWER_REGISTRATION_ROLE = "VIEWER"
+USER_REGISTRATION_ROLE = "USER"

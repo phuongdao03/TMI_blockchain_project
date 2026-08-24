@@ -111,7 +111,6 @@ async def _with_service(
     operation: Callable[[BlockchainTransactionService], Awaitable[None]],
 ) -> None:
     settings = get_settings()
-    secret = settings.blockchain_signer_private_key
     address = settings.certificate_contract_address
     gateway = BlockchainGateway(
         rpc_url=settings.blockchain_rpc_url,
@@ -123,14 +122,17 @@ async def _with_service(
         allowed_contracts={settings.blockchain_network: {address}},
     )
     redis_client: Redis = Redis.from_url(settings.redis_url)
-    signer = create_transaction_signer(
-        mode=settings.blockchain_signer_mode,
-        private_key=secret.get_secret_value() if secret is not None else "",
-        managed_url=settings.blockchain_managed_signer_url,
-        managed_key_id=settings.blockchain_managed_signer_key_id,
-        managed_expected_address=settings.blockchain_managed_signer_expected_address,
-        managed_timeout_seconds=settings.blockchain_managed_signer_timeout_seconds,
-    )
+    signer = None
+    if settings.blockchain_signer_mode != "human":
+        secret = settings.blockchain_signer_private_key
+        signer = create_transaction_signer(
+            mode=settings.blockchain_signer_mode,
+            private_key=secret.get_secret_value() if secret is not None else "",
+            managed_url=settings.blockchain_managed_signer_url,
+            managed_key_id=settings.blockchain_managed_signer_key_id,
+            managed_expected_address=settings.blockchain_managed_signer_expected_address,
+            managed_timeout_seconds=settings.blockchain_managed_signer_timeout_seconds,
+        )
     try:
         async with get_session_factory()() as session:
             service = BlockchainTransactionService(
@@ -154,7 +156,8 @@ async def _with_service(
             )
             await operation(service)
     finally:
-        await signer.aclose()
+        if signer is not None:
+            await signer.aclose()
         await gateway.close()
         await redis_client.aclose()
 

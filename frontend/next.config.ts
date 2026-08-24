@@ -46,6 +46,12 @@ const securityHeaders = [
     : []),
 ];
 
+const qrRedirectHeaders = [
+  { key: "Cache-Control", value: "no-store" },
+  { key: "Referrer-Policy", value: "no-referrer" },
+  { key: "X-Robots-Tag", value: "noindex, nofollow" },
+];
+
 const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   output: "standalone",
@@ -73,7 +79,11 @@ const nextConfig: NextConfig = {
     return config;
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      { source: "/r/:token", headers: qrRedirectHeaders },
+      { source: "/verify/:token", headers: qrRedirectHeaders },
+    ];
   },
   async rewrites() {
     const apiBaseUrl = (
@@ -85,6 +95,10 @@ const nextConfig: NextConfig = {
       {
         source: "/api/:path*",
         destination: `${apiBaseUrl}/api/:path*`,
+      },
+      {
+        source: "/r/:token",
+        destination: `${apiBaseUrl}/r/:token`,
       },
     ];
   },

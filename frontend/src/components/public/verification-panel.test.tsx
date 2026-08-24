@@ -36,6 +36,26 @@ function renderPanel() {
 }
 
 describe("VerificationPanel", () => {
+  it("keeps the certificate number when the form is submitted before hydration", () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <VerificationPanel />
+      </QueryClientProvider>,
+    );
+
+    const form = screen
+      .getByRole("button", { name: "Kiểm tra" })
+      .closest("form");
+    const field = screen.getByLabelText("Thông tin cần tra cứu");
+
+    expect(form?.getAttribute("action")).toBe("/verify");
+    expect(form?.getAttribute("method")).toBe("get");
+    expect(field.getAttribute("name")).toBe("lookup");
+  });
+
   it("presents a plain-language result and confirmed version history", async () => {
     verifyToken.mockResolvedValue({
       status: "VALID",
@@ -102,24 +122,37 @@ describe("VerificationPanel", () => {
     expect(verifyDocument).not.toHaveBeenCalled();
   });
 
-  it("uses the bounded server fallback when browser hashing is unavailable", async () => {
+  it("never uploads a local file when browser hashing is unavailable", async () => {
     compareLocalFile.mockRejectedValue(
       new Error("Secure local hashing is unavailable in this browser."),
     );
-    verifyDocument.mockResolvedValue({
-      status: "MATCH",
-      checkedAt: "2026-08-12T08:00:00Z",
-    });
     renderPanel();
     const input = await screen.findByLabelText("Chọn tài liệu để đối chiếu");
     await userEvent.upload(input, new File(["proof"], "proof.pdf"));
 
-    expect(await screen.findByText("Tài liệu trùng khớp")).toBeDefined();
-    expect(verifyDocument).toHaveBeenCalledWith(
-      "TMI-2026-0001",
-      0,
-      expect.any(File),
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Trình duyệt này chưa hỗ trợ đối chiếu cục bộ",
     );
+    expect(verifyDocument).not.toHaveBeenCalled();
+  });
+
+  it("does not offer a file picker when no document hash is public", async () => {
+    verifyToken.mockResolvedValue({
+      status: "VALID",
+      checkedAt: "2026-08-12T08:00:00Z",
+      certificateNumber: "TMI-2026-0001",
+      documents: [],
+    });
+    renderPanel();
+
+    expect(
+      await screen.findByText(
+        "Chứng thư này không công bố dấu vân tay tài liệu để đối chiếu công khai.",
+      ),
+    ).toBeDefined();
+    expect(
+      screen.queryByLabelText("Chọn tài liệu để đối chiếu"),
+    ).toBeNull();
   });
 
   it("lets the user choose which public document to compare", async () => {

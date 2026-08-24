@@ -21,10 +21,14 @@ import {
 } from "@/components/media/use-media-uploader";
 import { FileUploaderActions } from "@/components/media/file-uploader-actions";
 import type { MediaAsset, MediaPurpose } from "@/lib/api/types";
-import { mediaPolicies } from "@/lib/media/upload";
+import {
+  type MediaFileConstraints,
+  mediaPolicies,
+} from "@/lib/media/upload";
 import { cn } from "@/lib/utils";
 
 interface FileUploaderProps {
+  constraints?: MediaFileConstraints;
   disabled?: boolean;
   label: string;
   onComplete: (asset: MediaAsset) => void;
@@ -51,7 +55,20 @@ function formatBytes(bytes: number): string {
   })} MB`;
 }
 
+function supportedFormatLabel(
+  mimeTypes: readonly string[],
+  policy: (typeof mediaPolicies)[MediaPurpose],
+): string {
+  const extensions = mimeTypes.flatMap((mimeType) =>
+    policy.formats[mimeType] ?? [],
+  );
+  return [
+    ...new Set(extensions.map((extension) => extension.slice(1).toUpperCase())),
+  ].join(", ");
+}
+
 export function FileUploader({
+  constraints,
   disabled = false,
   label,
   onComplete,
@@ -61,8 +78,14 @@ export function FileUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const policy = mediaPolicies[purpose];
+  const allowedMimeTypes =
+    constraints?.allowedMimeTypes?.length
+      ? constraints.allowedMimeTypes
+      : Object.keys(policy.formats);
+  const maxBytes = constraints?.maxBytes ?? policy.maxBytes;
+  const supportedFormats = supportedFormatLabel(allowedMimeTypes, policy);
   const { error, file, isBusy, progress, selectFile, startUpload, status } =
-    useMediaUploader({ disabled, onComplete, purpose });
+    useMediaUploader({ constraints, disabled, onComplete, purpose });
 
   const handleInput = (event: ChangeEvent<HTMLInputElement>) => {
     selectFile(event.target.files?.[0]);
@@ -96,8 +119,8 @@ export function FileUploader({
             className="mt-1 text-xs leading-5 text-neutral-500"
             id={descriptionId}
           >
-            Tối đa {policy.maxMegabytes} MB ·{" "}
-            {purpose === "AVATAR" ? "JPG, PNG, WebP" : "JPG, PNG, WebP, PDF"}
+            Tối đa {formatBytes(maxBytes)}
+            {supportedFormats ? ` · ${supportedFormats}` : ""}
           </p>
         </div>
         <ShieldCheck aria-hidden="true" className="size-5 text-success" />
@@ -122,7 +145,7 @@ export function FileUploader({
         role="group"
       >
         <input
-          accept={policy.accept}
+          accept={allowedMimeTypes.join(",") || policy.accept}
           aria-describedby={descriptionId}
           aria-label={`Chọn ${label.toLocaleLowerCase("vi")}`}
           className="sr-only"

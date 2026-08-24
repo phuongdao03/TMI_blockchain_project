@@ -38,6 +38,7 @@ from app.modules.reviews.types import (
     ReviewAssignmentDetailView,
     ReviewAssignmentSummaryView,
     ReviewDraft,
+    ReviewFinding,
     ReviewView,
 )
 
@@ -295,6 +296,24 @@ async def save_review_draft(
             professionalism_score=payload.professionalism_score,
             respect_score=payload.respect_score,
             criterion_comments=payload.criterion_comments,
+            criterion_evidence={
+                criterion: tuple(media_ids)
+                for criterion, media_ids in payload.criterion_evidence.items()
+            },
+            findings=tuple(
+                ReviewFinding(
+                    id=item.id,
+                    severity=item.severity,
+                    criterion=item.criterion,
+                    evidence_media_ids=tuple(item.evidence_media_ids),
+                    title=item.title,
+                    description=item.description,
+                    action=item.action,
+                )
+                for item in payload.findings
+            ),
+            checklist_answers=payload.checklist_answers,
+            applicant_feedback=payload.applicant_feedback,
             recommendation=payload.recommendation,
             private_note=payload.private_note,
         ),

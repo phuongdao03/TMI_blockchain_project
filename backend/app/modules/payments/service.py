@@ -30,8 +30,8 @@ from app.modules.payments.types import PaymentOrderView
 
 logger = logging.getLogger(__name__)
 
-PAYMENT_ROLES = frozenset({"APPLICANT", "ORG_MANAGER"})
-FINANCE_ROLES = frozenset({"FINANCE_ADMIN", "SUPER_ADMIN"})
+PAYMENT_ROLES = frozenset({"USER"})
+FINANCE_ROLES = frozenset({"SUPER_ADMIN"})
 PAYMENT_REQUIREMENTS = {
     PAYMENT_ROLES: PolicyRequirement(
         permission="payment.create",

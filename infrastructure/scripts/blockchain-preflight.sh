@@ -20,7 +20,7 @@ for variable_name in \
   BLOCKCHAIN_RPC_URL \
   CERTIFICATE_CONTRACT_ADDRESS \
   BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES \
-  BLOCKCHAIN_MANAGED_SIGNER_EXPECTED_ADDRESS \
+  BLOCKCHAIN_ACTIVE_SIGNER_WALLET \
   CONTRACT_ADMIN \
   ISSUER_ADDRESS \
   EXPECTED_RUNTIME_BYTECODE_SHA256 \
@@ -52,13 +52,18 @@ if [[ "$allowed" != "true" ]]; then
   exit 1
 fi
 
+if [[ "${BLOCKCHAIN_ACTIVE_SIGNER_WALLET,,}" != "${ISSUER_ADDRESS,,}" ]]; then
+  printf '%s\n' 'Active Super Admin wallet must be the contract issuer.' >&2
+  exit 1
+fi
+
 balance_wei="$(
-  cast balance --wei "$BLOCKCHAIN_MANAGED_SIGNER_EXPECTED_ADDRESS" \
+  cast balance --wei "$BLOCKCHAIN_ACTIVE_SIGNER_WALLET" \
     --rpc-url "$BLOCKCHAIN_RPC_URL"
 )"
 if ! awk -v actual="$balance_wei" -v minimum="$MINIMUM_SIGNER_BALANCE_WEI" \
   'BEGIN { exit !(actual + 0 >= minimum + 0) }'; then
-  printf '%s\n' 'Managed signer balance is below the approved minimum.' >&2
+  printf '%s\n' 'Active Super Admin signer balance is below the approved minimum.' >&2
   exit 1
 fi
 

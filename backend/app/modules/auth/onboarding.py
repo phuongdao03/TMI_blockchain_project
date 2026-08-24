@@ -48,7 +48,7 @@ class ApplicantUpgradeService:
 
             existing_roles = await self._repository.get_role_codes(user.id)
             if user.account_type is not AccountType.PUBLIC_USER:
-                if user.account_type is account_type and "APPLICANT" in existing_roles:
+                if user.account_type is account_type and "USER" in existing_roles:
                     result = ApplicantUpgradeResult(
                         user_id=user.id,
                         email=user.email,
@@ -58,12 +58,20 @@ class ApplicantUpgradeService:
                 else:
                     raise ApplicantUpgradeNotAllowedError()
             else:
-                role = await self._repository.get_role_by_code("APPLICANT")
+                role = await self._repository.get_role_by_code("USER")
                 if role is None:
-                    role = Role(code="APPLICANT")
+                    role = Role(code="USER")
                     self._repository.add_role(role)
                     await self._session.flush()
-                if "APPLICANT" not in existing_roles:
+                for user_role, existing_role in await self._repository.list_user_roles(
+                    user.id
+                ):
+                    if existing_role.code == "VIEWER":
+                        await self._repository.delete_user_role(
+                            user.id,
+                            user_role.role_id,
+                        )
+                if "USER" not in existing_roles:
                     self._repository.add_user_role(
                         UserRole(user_id=user.id, role_id=role.id)
                     )

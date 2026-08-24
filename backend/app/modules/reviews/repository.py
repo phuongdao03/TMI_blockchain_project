@@ -117,7 +117,7 @@ class ReviewRepository:
                 .where(
                     User.id == user_id,
                     User.status == UserStatus.ACTIVE,
-                    Role.code == "REVIEWER",
+                    Role.code == "MODERATOR",
                 )
             ),
         )

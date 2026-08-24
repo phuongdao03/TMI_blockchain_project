@@ -5,7 +5,7 @@ import { SimilarityReviewWorkspace } from "@/components/reviews/similarity-revie
 
 export default function SimilarityReviewPage() {
   return (
-    <RoleGate allowed={["REVIEWER"]}>
+    <RoleGate allowed={["MODERATOR", "SUPER_ADMIN"]}>
       <div className="mx-auto max-w-7xl space-y-7">
         <header className="border-b border-neutral-200 pb-7">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-primary-700">

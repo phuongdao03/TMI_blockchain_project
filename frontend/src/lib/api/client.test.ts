@@ -29,7 +29,7 @@ describe("auth API client", () => {
     const user = {
       id: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
       email: "owner@tmigroup.vn",
-      roles: ["APPLICANT"],
+      roles: ["USER"],
     };
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
@@ -98,7 +98,7 @@ describe("auth API client", () => {
         data: {
           id: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
           email: "viewer@tmigroup.vn",
-          roles: ["APPLICANT"],
+          roles: ["USER"],
           accountType: "INDIVIDUAL_APPLICANT",
         },
         meta: { request_id: "request-upgrade" },
@@ -419,7 +419,7 @@ describe("staff account API client", () => {
         data: {
           id: "staff-1",
           email: "reviewer@tmigroup.vn",
-          role: "REVIEWER",
+          role: "MODERATOR",
           status: "ACTIVE",
           createdAt: null,
           lastLoginAt: null,
@@ -429,7 +429,7 @@ describe("staff account API client", () => {
     );
     await staffInvitationsApi.create({
       email: "reviewer@tmigroup.vn",
-      role: "REVIEWER",
+      role: "MODERATOR",
     });
     expect(
       new Headers(fetchMock.mock.calls[1]?.[1]?.headers).get("X-CSRF-Token"),
@@ -438,7 +438,7 @@ describe("staff account API client", () => {
     const body = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body));
     expect(body).toEqual({
       email: "reviewer@tmigroup.vn",
-      role: "REVIEWER",
+      role: "MODERATOR",
     });
   });
 });

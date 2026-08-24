@@ -45,6 +45,50 @@ contract CertificateRegistryTest {
         require(record.revoked, "revoked");
     }
 
+    function testCertificateVersionHistoryIsImmutableAndReflectsRevocation() public {
+        bytes32 nextDossierHash = keccak256("dossier-2");
+        bytes32 nextMetadataHash = keccak256("metadata-2");
+        bytes32 revocationReason = keccak256("superseded");
+
+        vm.prank(ISSUER);
+        registry.issueCertificate(CERTIFICATE_ID, DOSSIER_HASH, METADATA_HASH, 100, 200);
+        vm.prank(ISSUER);
+        registry.updateCertificate(CERTIFICATE_ID, nextDossierHash, nextMetadataHash, 2);
+
+        CertificateRegistry.CertificateRecord memory firstVersion =
+            registry.getCertificateVersion(CERTIFICATE_ID, 1);
+        CertificateRegistry.CertificateRecord memory secondVersion =
+            registry.getCertificateVersion(CERTIFICATE_ID, 2);
+        require(firstVersion.dossierHash == DOSSIER_HASH, "v1 dossier hash");
+        require(firstVersion.metadataHash == METADATA_HASH, "v1 metadata hash");
+        require(firstVersion.version == 1, "v1 number");
+        require(secondVersion.dossierHash == nextDossierHash, "v2 dossier hash");
+        require(secondVersion.metadataHash == nextMetadataHash, "v2 metadata hash");
+        require(secondVersion.version == 2, "v2 number");
+
+        vm.prank(ISSUER);
+        registry.revokeCertificate(CERTIFICATE_ID, revocationReason);
+
+        CertificateRegistry.CertificateRecord memory revokedFirstVersion =
+            registry.getCertificateVersion(CERTIFICATE_ID, 1);
+        require(revokedFirstVersion.dossierHash == DOSSIER_HASH, "immutable v1 dossier hash");
+        require(revokedFirstVersion.metadataHash == METADATA_HASH, "immutable v1 metadata hash");
+        require(revokedFirstVersion.revoked, "all versions revoked");
+        require(revokedFirstVersion.revocationReasonHash == revocationReason, "revocation reason");
+    }
+
+    function testUnknownCertificateVersionReverts() public {
+        vm.prank(ISSUER);
+        registry.issueCertificate(CERTIFICATE_ID, DOSSIER_HASH, METADATA_HASH, 100, 200);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CertificateRegistry.CertificateVersionNotFound.selector, CERTIFICATE_ID, uint32(2)
+            )
+        );
+        registry.getCertificateVersion(CERTIFICATE_ID, 2);
+    }
+
     function testDuplicateIssueReverts() public {
         vm.prank(ISSUER);
         registry.issueCertificate(CERTIFICATE_ID, DOSSIER_HASH, METADATA_HASH, 100, 200);

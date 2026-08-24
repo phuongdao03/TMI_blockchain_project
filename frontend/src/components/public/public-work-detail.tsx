@@ -50,19 +50,29 @@ export function PublicWorkDetailPage({
   if (error?.status === 404) return <UnavailableWork />;
   if (detail.error || !detail.data) {
     return (
-      <div className="mx-auto grid min-h-[60dvh] max-w-xl place-items-center px-4 text-center">
-        <div>
-          <CircleHelp className="mx-auto size-9 text-gold-300" />
-          <h1 className="mt-5 text-2xl font-bold text-white">
+      <div className="public-status-layout">
+        <section
+          aria-labelledby="work-load-error-title"
+          className="public-status-panel"
+          role="status"
+        >
+          <CircleHelp
+            aria-hidden="true"
+            className="public-status-panel__icon mx-auto size-9"
+          />
+          <h1
+            className="public-status-panel__title mt-5 text-2xl font-bold"
+            id="work-load-error-title"
+          >
             Chưa thể tải tác phẩm
           </h1>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
+          <p className="public-status-panel__copy mt-2 text-sm leading-6">
             Dịch vụ công khai đang gián đoạn. Hãy thử lại sau ít phút.
           </p>
           <Button className="mt-5" onClick={() => detail.refetch()}>
             <RotateCcw className="size-4" /> Thử lại
           </Button>
-        </div>
+        </section>
       </div>
     );
   }
@@ -86,7 +96,7 @@ function PublicWorkPresentation({ detail }: { detail: PublicWorkDetail }) {
     staleTime: 60_000,
   });
   return (
-    <article className="relative isolate overflow-hidden">
+    <article className="public-theme-surface relative isolate overflow-hidden">
       <header className="border-b border-white/10 px-4 py-10 sm:px-6 lg:py-16">
         <div className="mx-auto max-w-[90rem]">
           <nav
@@ -471,22 +481,32 @@ function DataRow({
 
 function UnavailableWork() {
   return (
-    <div className="mx-auto grid min-h-[60dvh] max-w-xl place-items-center px-4 text-center">
-      <div>
-        <AlertTriangle className="mx-auto size-9 text-amber-300" />
-        <h1 className="mt-5 text-2xl font-bold text-white">
+    <div className="public-status-layout">
+      <section
+        aria-labelledby="unavailable-work-title"
+        className="public-status-panel"
+        role="status"
+      >
+        <AlertTriangle
+          aria-hidden="true"
+          className="public-status-panel__icon mx-auto size-9"
+        />
+        <h1
+          className="public-status-panel__title mt-5 text-2xl font-bold"
+          id="unavailable-work-title"
+        >
           Tác phẩm không còn công khai
         </h1>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
+        <p className="public-status-panel__copy mt-2 text-sm leading-6">
           Nội dung có thể đã được ẩn hoặc tạm ngưng sau khi bạn mở trang.
         </p>
         <Link
-          className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold text-white"
+          className="public-status-panel__action mt-6 inline-flex min-h-11 gap-2 px-5 text-sm font-bold"
           href="/works"
         >
-          <ArrowLeft className="size-4" /> Trở lại catalog
+          <ArrowLeft className="size-4" /> Trở lại danh sách đề cử
         </Link>
-      </div>
+      </section>
     </div>
   );
 }

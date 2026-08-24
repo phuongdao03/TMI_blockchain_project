@@ -30,7 +30,6 @@ async def _process(
 ) -> None:
     settings = get_settings()
     cloudinary_secret = settings.cloudinary_api_secret
-    signer_secret = settings.blockchain_signer_private_key
     outbox_secret = settings.auth_outbox_encryption_key
     cloudinary_api_secret = (
         cloudinary_secret.get_secret_value() if cloudinary_secret is not None else ""
@@ -46,16 +45,19 @@ async def _process(
         allowed_contracts={settings.blockchain_network: {address}},
     )
     redis_client: Redis = Redis.from_url(settings.redis_url)
-    signer = create_transaction_signer(
-        mode=settings.blockchain_signer_mode,
-        private_key=(
-            signer_secret.get_secret_value() if signer_secret is not None else ""
-        ),
-        managed_url=settings.blockchain_managed_signer_url,
-        managed_key_id=settings.blockchain_managed_signer_key_id,
-        managed_expected_address=settings.blockchain_managed_signer_expected_address,
-        managed_timeout_seconds=settings.blockchain_managed_signer_timeout_seconds,
-    )
+    signer = None
+    if settings.blockchain_signer_mode != "human":
+        signer_secret = settings.blockchain_signer_private_key
+        signer = create_transaction_signer(
+            mode=settings.blockchain_signer_mode,
+            private_key=(
+                signer_secret.get_secret_value() if signer_secret is not None else ""
+            ),
+            managed_url=settings.blockchain_managed_signer_url,
+            managed_key_id=settings.blockchain_managed_signer_key_id,
+            managed_expected_address=settings.blockchain_managed_signer_expected_address,
+            managed_timeout_seconds=settings.blockchain_managed_signer_timeout_seconds,
+        )
     media_gateway = CloudinaryMediaGateway(
         cloud_name=settings.cloudinary_cloud_name,
         api_key=settings.cloudinary_api_key,
@@ -115,7 +117,8 @@ async def _process(
             else:
                 raise ValueError("A certificate operation target is required.")
     finally:
-        await signer.aclose()
+        if signer is not None:
+            await signer.aclose()
         await storage.close()
         await media_gateway.close()
         await gateway.close()

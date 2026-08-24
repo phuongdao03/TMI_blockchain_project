@@ -98,6 +98,45 @@ describe("media upload policy", () => {
       validateMediaFile(sizedFile("avatar.jpg", "image/png", 2_048), "AVATAR"),
     ).toThrow(/phần mở rộng/i);
   });
+
+  it("applies the server-provided document rule before creating an upload signature", () => {
+    const documentRule = {
+      allowedMimeTypes: [
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ],
+      maxBytes: 1_048_576,
+    };
+
+    expect(() =>
+      validateMediaFile(
+        sizedFile(
+          "ownership.docx",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          2_048,
+        ),
+        "DOSSIER_EVIDENCE",
+        documentRule,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateMediaFile(
+        sizedFile("ownership.pdf", "application/pdf", 2_048),
+        "DOSSIER_EVIDENCE",
+        documentRule,
+      ),
+    ).toThrow(MediaUploadValidationError);
+    expect(() =>
+      validateMediaFile(
+        sizedFile(
+          "ownership.docx",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          1_048_577,
+        ),
+        "DOSSIER_EVIDENCE",
+        documentRule,
+      ),
+    ).toThrow(MediaUploadValidationError);
+  });
 });
 
 describe("uploadMedia", () => {

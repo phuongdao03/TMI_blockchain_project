@@ -55,6 +55,21 @@ def test_gateway_encodes_registry_write_calls() -> None:
     )
 
 
+def test_gateway_abi_exposes_immutable_certificate_version_reader() -> None:
+    abi = json.loads(ABI_PATH.read_text(encoding="utf-8"))
+    entry = next(
+        item
+        for item in abi
+        if item.get("type") == "function"
+        and item.get("name") == "getCertificateVersion"
+    )
+    assert entry["stateMutability"] == "view"
+    assert [argument["type"] for argument in entry["inputs"]] == [
+        "bytes32",
+        "uint32",
+    ]
+
+
 @pytest.mark.skipif(
     os.getenv("BLOCKCHAIN_INTEGRATION") != "1",
     reason="Anvil integration is opt-in.",

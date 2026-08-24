@@ -1,5 +1,7 @@
+import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime
+from urllib.parse import quote
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
@@ -8,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.audit.service import AuditService
 from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
+from app.modules.auth.security import hash_verification_token
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.models import (
     CertificateStatus,
@@ -27,8 +30,9 @@ from app.modules.council.models import CouncilCase, CouncilCaseDecision
 from app.modules.dossiers.models import DossierVersion
 from app.modules.dossiers.provenance import version_has_trusted_provenance
 from app.modules.dossiers.repository import DossierRepository
+from app.modules.public.share_service import canonical_public_origin
 
-REQUEST_ROLES = frozenset({"APPLICANT", "ORG_MANAGER"})
+REQUEST_ROLES = frozenset({"USER"})
 DECIDE_ROLES = frozenset({"SUPER_ADMIN"})
 MIN_REASON_LENGTH = 20
 MAX_REASON_LENGTH = 2_000
@@ -44,6 +48,9 @@ class CertificateVersionService:
         blockchain_service: BlockchainTransactionService | None = None,
         clock: Callable[[], datetime] | None = None,
         uuid_factory: Callable[[], UUID] | None = None,
+        public_base_url: str = "http://localhost:3100",
+        environment: str = "local",
+        token_factory: Callable[[], str] | None = None,
     ) -> None:
         self._session = session
         self._metadata_builder = metadata_builder
@@ -51,6 +58,11 @@ class CertificateVersionService:
         self._blockchain = blockchain_service
         self._clock = clock or (lambda: datetime.now(UTC))
         self._uuid_factory = uuid_factory or uuid4
+        self._public_base_url = canonical_public_origin(
+            public_base_url,
+            allow_local_http=environment == "local",
+        )
+        self._token_factory = token_factory or (lambda: secrets.token_urlsafe(32))
         self._certificates = CertificateRepository(session)
         self._dossiers = DossierRepository(session)
 
@@ -137,6 +149,10 @@ class CertificateVersionService:
                     issued_at=certificate.issued_at,
                     expires_at=certificate.expires_at,
                 )
+                token = self._token_factory()
+                qr_payload = (
+                    f"{self._public_base_url}/verify/{quote(token, safe='-._~')}"
+                )
                 requested = CertificateVersion(
                     id=self._uuid_factory(),
                     certificate_id=certificate.id,
@@ -145,6 +161,8 @@ class CertificateVersionService:
                     dossier_version_id=target.id,
                     metadata_json=metadata,
                     metadata_hash=metadata_hash,
+                    public_token_hash=hash_verification_token(token),
+                    qr_payload=qr_payload,
                     status=CertificateVersionStatus.PENDING_APPROVAL,
                     change_reason=normalized_reason,
                     requested_by=principal.user_id,

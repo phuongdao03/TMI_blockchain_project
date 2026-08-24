@@ -51,13 +51,7 @@ export interface AuthUser {
   accountType: AccountType | null;
 }
 
-export type StaffAccountRole =
-  | "REVIEWER"
-  | "COUNCIL_MEMBER"
-  | "COUNCIL_SECRETARY"
-  | "FINANCE_ADMIN"
-  | "CONTENT_ADMIN"
-  | "BLOCKCHAIN_ADMIN";
+export type StaffAccountRole = "MODERATOR";
 export type StaffAccountStatus =
   | "PENDING_MFA"
   | "ACTIVE"
@@ -499,6 +493,11 @@ export type DossierStatus =
   | "CANCELLED";
 
 export type DossierVisibility = "PRIVATE" | "UNLISTED" | "PUBLIC";
+export type EvidenceAccessScope =
+  | "PRIVATE"
+  | "INTERNAL"
+  | "PUBLIC_PREVIEW"
+  | "PUBLIC";
 
 export interface Dossier {
   id: string;
@@ -506,6 +505,9 @@ export interface Dossier {
   ownerUserId: string;
   organizationId: string | null;
   categoryId: string;
+  dossierTypeId: string | null;
+  dossierTypeVersionId: string | null;
+  formData: Record<string, unknown>;
   title: string;
   slug: string | null;
   summary: string | null;
@@ -524,6 +526,8 @@ export interface DossierEvidence {
   dossierVersionId: string | null;
   mediaAssetId: string;
   evidenceType: string;
+  evidenceRole: string | null;
+  accessScope: EvidenceAccessScope;
   title: string;
   description: string | null;
   issuedAt: string | null;
@@ -534,8 +538,20 @@ export interface DossierEvidence {
   sha256: string;
 }
 
+export interface DossierDocumentRule {
+  key: string;
+  label: string;
+  documentType: string;
+  required: boolean;
+  allowedMimeTypes: string[];
+  maxBytes: number;
+  maxCount: number;
+  defaultVisibility: EvidenceAccessScope;
+}
+
 export interface DossierDetail extends Dossier {
   evidences: DossierEvidence[];
+  documentRules: DossierDocumentRule[];
 }
 
 export interface DossierInput {
@@ -545,6 +561,72 @@ export interface DossierInput {
   slug?: string | null;
   summary?: string | null;
   visibility: DossierVisibility;
+  dossierTypeVersionId?: string | null;
+  formData?: Record<string, unknown> | null;
+}
+
+export interface DossierTypeField {
+  key: string;
+  type:
+    | "text"
+    | "textarea"
+    | "number"
+    | "date"
+    | "datetime"
+    | "select"
+    | "multiselect"
+    | "radio"
+    | "checkbox"
+    | "currency"
+    | "email"
+    | "phone"
+    | "address"
+    | "person"
+    | "organization"
+    | "file";
+  label?: string;
+  helpText?: string;
+  placeholder?: string;
+  required?: boolean;
+  options?: Array<string | { value: string; label?: string }>;
+}
+
+export interface DossierTypeDefinition {
+  description?: string;
+  fields: DossierTypeField[];
+  documentRules?: Array<{
+    key: string;
+    label?: string;
+    documentType: string;
+    required?: boolean;
+    allowedMimeTypes: string[];
+    maxBytes: number;
+    maxCount?: number;
+    defaultVisibility?: EvidenceAccessScope;
+  }>;
+  requirements?: Array<{
+    key: string;
+    label?: string;
+    required?: boolean;
+    fileRoles: string[];
+  }>;
+  reviewChecklist?: Array<{ key: string; label?: string; required?: boolean }>;
+}
+
+export interface DossierTypeVersion {
+  id: string;
+  dossierTypeId: string;
+  versionNo: number;
+  schema: DossierTypeDefinition;
+}
+
+export interface DossierType {
+  id: string;
+  categoryId: string;
+  code: string;
+  name: string;
+  isActive: boolean;
+  currentVersion: DossierTypeVersion;
 }
 
 export type DossierPatch = Partial<
@@ -562,6 +644,7 @@ export type DossierPatch = Partial<
 export interface EvidenceInput {
   mediaAssetId: string;
   evidenceType: string;
+  evidenceRole?: string | null;
   title: string;
   description?: string | null;
   issuedAt?: string | null;
@@ -636,6 +719,28 @@ export type ReviewAssignmentStatus =
   | "CANCELLED";
 
 export type ReviewRecommendation = "APPROVE" | "SUPPLEMENT" | "REJECT";
+export type ReviewFindingSeverity =
+  | "INFO"
+  | "LOW"
+  | "MEDIUM"
+  | "HIGH"
+  | "CRITICAL";
+export type ReviewFindingAction = "NOTE" | "SUPPLEMENT" | "ESCALATE";
+
+export interface ReviewFinding {
+  id: string;
+  severity: ReviewFindingSeverity;
+  criterion:
+    | "truth"
+    | "transparency"
+    | "ownership"
+    | "professionalism"
+    | "respect";
+  evidenceMediaIds: string[];
+  title: string;
+  description: string;
+  action: ReviewFindingAction;
+}
 
 export interface ReviewAssignment {
   id: string;
@@ -690,6 +795,10 @@ export interface ReviewDraft {
   professionalismScore: number | null;
   respectScore: number | null;
   criterionComments: Record<string, string>;
+  criterionEvidence: Record<string, string[]>;
+  findings: ReviewFinding[];
+  checklistAnswers: Record<string, boolean>;
+  applicantFeedback: string | null;
   recommendation: ReviewRecommendation | null;
   privateNote: string | null;
 }
@@ -861,6 +970,77 @@ export type BlockchainTransactionStatus =
   | "CONFIRMED"
   | "FAILED"
   | "REPLACED";
+
+export type BlockchainWalletLinkStatus = "ACTIVE" | "REVOKED";
+export type BlockchainIntentStatus =
+  | "PREPARED"
+  | "SUBMITTED"
+  | "EXPIRED"
+  | "CANCELLED";
+
+export interface BlockchainWalletChallenge {
+  id: string;
+  message: string;
+  nonce: string;
+  expiresAt: string;
+}
+
+export interface BlockchainWalletLink {
+  id: string;
+  walletAddress: string;
+  chainId: number;
+  status: BlockchainWalletLinkStatus;
+  verifiedAt: string;
+}
+
+export interface BlockchainSigningQueueItem {
+  transactionId: string;
+  dossierId: string;
+  dossierCode: string;
+  dossierTitle: string;
+  dossierVersionNo: number;
+  certificateNumber: string | null;
+  proofHash: string;
+  status: BlockchainTransactionStatus;
+  txHash: string | null;
+  errorCode: string | null;
+  createdAt: string;
+}
+
+export interface BlockchainSigningContext {
+  transactionId: string;
+  dossierId: string;
+  dossierCode: string;
+  dossierTitle: string;
+  dossierVersionNo: number;
+  certificateNumber: string | null;
+  method: string;
+  proofHash: string;
+  network: string;
+  chainId: number;
+  contractAddress: string;
+  status: BlockchainTransactionStatus;
+}
+
+export interface BlockchainSigningIntent {
+  id: string;
+  transactionId: string;
+  transactionRequest: Record<string, string>;
+  expiresAt: string;
+  estimatedGas: number;
+  gasPriceWei: number;
+  walletBalanceWei: number;
+}
+
+export interface BlockchainSigningStatus {
+  transactionId: string;
+  status: BlockchainTransactionStatus;
+  txHash: string | null;
+  confirmations: number;
+  errorCode: string | null;
+  errorMessage: string | null;
+  confirmedAt: string | null;
+}
 
 export interface Certificate {
   id: string;

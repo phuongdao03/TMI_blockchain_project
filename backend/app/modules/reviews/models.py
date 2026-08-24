@@ -39,6 +39,20 @@ class ReviewRecommendation(StrEnum):
     REJECT = "REJECT"
 
 
+class ReviewFindingSeverity(StrEnum):
+    INFO = "INFO"
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class ReviewFindingAction(StrEnum):
+    NOTE = "NOTE"
+    SUPPLEMENT = "SUPPLEMENT"
+    ESCALATE = "ESCALATE"
+
+
 class SimilarityCaseStatus(StrEnum):
     OPEN = "OPEN"
     ASSIGNED = "ASSIGNED"
@@ -92,6 +106,13 @@ class ReviewAssignment(Base):
             sqlite_where=text("status IN ('ASSIGNED', 'IN_PROGRESS')"),
             postgresql_where=text("status IN ('ASSIGNED', 'IN_PROGRESS')"),
         ),
+        Index(
+            "uq_review_assignments_primary_version",
+            "dossier_version_id",
+            unique=True,
+            sqlite_where=text("is_primary = 1"),
+            postgresql_where=text("is_primary"),
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
@@ -116,6 +137,11 @@ class ReviewAssignment(Base):
         nullable=False,
     )
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_primary: Mapped[bool] = mapped_column(
+        nullable=False,
+        default=False,
+        server_default=text("false"),
+    )
     status: Mapped[ReviewAssignmentStatus] = mapped_column(
         _enum(ReviewAssignmentStatus, "review_assignment_status"),
         nullable=False,
@@ -182,6 +208,25 @@ class Review(Base):
         default=dict,
         server_default=text("'{}'"),
     )
+    criterion_evidence: Mapped[dict[str, list[str]]] = mapped_column(
+        COMMENTS_TYPE,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'"),
+    )
+    findings: Mapped[list[dict[str, object]]] = mapped_column(
+        COMMENTS_TYPE,
+        nullable=False,
+        default=list,
+        server_default=text("'[]'"),
+    )
+    checklist_answers: Mapped[dict[str, bool]] = mapped_column(
+        COMMENTS_TYPE,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'"),
+    )
+    applicant_feedback: Mapped[str | None] = mapped_column(Text)
     private_note: Mapped[str | None] = mapped_column(Text)
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

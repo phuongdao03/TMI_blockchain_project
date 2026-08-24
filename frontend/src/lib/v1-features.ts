@@ -1,63 +1,98 @@
-import { releaseMode, type ReleaseMode } from "@/lib/release-mode";
+export type ReleaseMode = "preview" | "full";
 
-export type FeatureAvailability = "enabled" | "coming-soon" | "hidden";
 export type PublicFeatureKey =
-  | "publicCatalog"
+  | "catalog"
   | "authentication"
   | "verification"
   | "voting"
   | "submission"
   | "payment";
 
-interface PublicFeatureDefinition {
+export type PublicFeatureStatus = "enabled" | "coming-soon" | "hidden";
+
+export type PublicFeature = {
+  key: PublicFeatureKey;
   label: string;
   href: string;
-  preview: FeatureAvailability;
-  full: FeatureAvailability;
-}
+  preview: PublicFeatureStatus;
+  full: PublicFeatureStatus;
+};
 
-export const publicV1Features = {
-  publicCatalog: {
+const features: PublicFeature[] = [
+  {
+    key: "catalog",
     label: "Đề cử",
     href: "/works",
     preview: "enabled",
     full: "enabled",
   },
-  authentication: {
-    label: "Tài khoản",
+  {
+    key: "authentication",
+    label: "Đăng nhập",
     href: "/login",
     preview: "enabled",
     full: "enabled",
   },
-  verification: {
+  {
+    key: "verification",
     label: "Minh bạch",
     href: "/verify",
     preview: "enabled",
     full: "enabled",
   },
-  voting: {
+  {
+    key: "voting",
     label: "Bình chọn",
     href: "/coming-soon/voting",
     preview: "coming-soon",
     full: "enabled",
   },
-  submission: {
+  {
+    key: "submission",
     label: "Gửi đề cử",
     href: "/coming-soon/submission",
     preview: "coming-soon",
     full: "enabled",
   },
-  payment: {
+  {
+    key: "payment",
     label: "Thanh toán",
     href: "/payments",
     preview: "hidden",
     full: "enabled",
   },
-} as const satisfies Record<PublicFeatureKey, PublicFeatureDefinition>;
+];
+
+export function getReleaseMode(): ReleaseMode {
+  return process.env.NEXT_PUBLIC_RELEASE_MODE === "preview"
+    ? "preview"
+    : "full";
+}
+
+export function getPublicFeatureStatus(
+  key: PublicFeatureKey,
+  mode = getReleaseMode(),
+): PublicFeatureStatus {
+  const feature = features.find((item) => item.key === key);
+  return feature?.[mode] ?? "hidden";
+}
+
+export function getPublicFeatures(mode = getReleaseMode()) {
+  return features
+    .map((feature) => ({ ...feature, status: feature[mode] }))
+    .filter((feature) => feature.status !== "hidden");
+}
+
+export const publicV1Features = Object.fromEntries(
+  features.map((feature) => [feature.key, feature]),
+) as Record<PublicFeatureKey, PublicFeature>;
 
 export function featureAvailability(
-  feature: PublicFeatureKey,
-  mode: ReleaseMode = releaseMode(),
-): FeatureAvailability {
-  return publicV1Features[feature][mode];
+  key: PublicFeatureKey | "publicCatalog",
+  mode = getReleaseMode(),
+): PublicFeatureStatus {
+  return getPublicFeatureStatus(
+    key === "publicCatalog" ? "catalog" : key,
+    mode,
+  );
 }

@@ -90,7 +90,7 @@ async def _setup() -> tuple[
         submitted_by=users["owner"].id,
         submitted_at=NOW,
     )
-    reviewer_role = Role(id=uuid4(), code="REVIEWER")
+    reviewer_role = Role(id=uuid4(), code="MODERATOR")
     async with session_factory() as session:
         session.add_all(
             [
@@ -245,7 +245,7 @@ def test_assignment_rejects_wrong_scope_owner_nonreviewer_and_invalid_input() ->
 
         with pytest.raises(ReviewForbiddenError):
             await service.assign_reviewers(
-                _principal(users["member"], "APPLICANT"),
+                _principal(users["member"], "USER"),
                 dossier.id,
                 reviewer_user_ids=(users["reviewer"].id,),
                 due_at=None,

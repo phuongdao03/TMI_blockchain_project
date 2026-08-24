@@ -1,26 +1,19 @@
 "use client";
 
 import {
-  ArrowLeftRight,
-  BadgeCheck,
   Bell,
-  BookOpenText,
-  ChartNoAxesCombined,
-  ChartSpline,
-  ClipboardCheck,
+  BookOpen,
   FileCheck2,
-  FileClock,
-  FolderKanban,
-  Flag,
+  FileText,
+  Gauge,
   History,
-  Landmark,
   LayoutDashboard,
   Map,
   Search,
-  ScrollText,
   Settings,
   ShieldCheck,
-  Trophy,
+  Signature,
+  UsersRound,
   Vote,
 } from "lucide-react";
 import Link from "next/link";
@@ -28,263 +21,186 @@ import { usePathname } from "next/navigation";
 
 import { useAuthUser } from "@/lib/auth/user-context";
 import {
-  hasAnyRole,
   resolveWorkspacePersona,
   type WorkspacePersona,
 } from "@/lib/auth/role-workspaces";
 import { cn } from "@/lib/utils";
 import { isPreviewRelease, isPreviewRestrictedPath } from "@/lib/release-mode";
 
-interface DashboardLink {
+type NavigationItem = {
   href: string;
   label: string;
-  icon: typeof LayoutDashboard;
-  section: "work" | "explore" | "manage" | "account";
-  personas?: readonly WorkspacePersona[];
-  roles?: readonly string[];
-}
+  icon: typeof Gauge;
+};
 
-const dashboardLinks: readonly DashboardLink[] = [
-  {
-    href: "/dashboard",
-    label: "Tổng quan",
-    icon: LayoutDashboard,
-    section: "explore",
-    personas: ["PUBLIC"],
-  },
-  {
-    href: "/search",
-    label: "Tìm kiếm đề cử",
-    icon: Search,
-    section: "explore",
-    personas: ["PUBLIC", "APPLICANT"],
-  },
-  {
-    href: "/works",
-    label: "Thư viện đề cử",
-    icon: BookOpenText,
-    section: "explore",
-    personas: ["PUBLIC", "APPLICANT"],
-  },
-  {
-    href: "/map",
-    label: "Bản đồ đề cử",
-    icon: Map,
-    section: "explore",
-    personas: ["PUBLIC"],
-  },
-  {
-    href: "/admin/search",
-    label: "Phân tích tìm kiếm",
-    icon: ChartSpline,
-    section: "manage",
-    roles: ["CONTENT_ADMIN", "SUPER_ADMIN"],
-  },
-  {
-    href: "/dashboard",
-    label: "Tổng quan",
-    icon: LayoutDashboard,
-    section: "work",
-    roles: ["APPLICANT", "ORG_MANAGER"],
-  },
-  {
-    href: "/dossiers",
-    label: "Hồ sơ của tôi",
-    icon: FolderKanban,
-    section: "work",
-    roles: ["APPLICANT", "ORG_MANAGER"],
-  },
-  {
-    href: "/certificates",
-    label: "Chứng thư",
-    icon: FileCheck2,
-    section: "work",
-    roles: ["APPLICANT", "ORG_MANAGER", "SUPER_ADMIN"],
-  },
-  {
-    href: "/reviews",
-    label: "Hồ sơ cần đánh giá",
-    icon: ClipboardCheck,
-    section: "work",
-    roles: ["REVIEWER", "SUPER_ADMIN"],
-  },
-  {
-    href: "/reviews/similarity",
-    label: "Đối chiếu tương đồng",
-    icon: ArrowLeftRight,
-    section: "work",
-    roles: ["REVIEWER"],
-  },
-  {
-    href: "/council",
-    label: "Hội đồng",
-    icon: Landmark,
-    section: "work",
-    roles: ["COUNCIL_MEMBER", "COUNCIL_SECRETARY", "SUPER_ADMIN"],
-  },
-  {
-    href: "/admin",
-    label: "Trung tâm quản trị",
-    icon: ShieldCheck,
-    section: "manage",
-    roles: ["SUPER_ADMIN"],
-  },
-  {
-    href: "/admin/similarity",
-    label: "Phân công đối chiếu",
-    icon: ArrowLeftRight,
-    section: "manage",
-    roles: ["SUPER_ADMIN"],
-  },
-  {
-    href: "/admin/certificate-updates",
-    label: "Cập nhật chứng thư",
-    icon: FileClock,
-    section: "manage",
-    roles: ["SUPER_ADMIN"],
-  },
-  {
-    href: "/admin/dashboard",
-    label: "Vận hành",
-    icon: ChartNoAxesCombined,
-    section: "manage",
-    roles: ["FINANCE_ADMIN", "BLOCKCHAIN_ADMIN", "SUPER_ADMIN"],
-  },
-  {
-    href: "/admin/content",
-    label: "Quản trị nội dung",
-    icon: BookOpenText,
-    section: "manage",
-    roles: ["CONTENT_ADMIN", "SUPER_ADMIN"],
-  },
-  {
-    href: "/admin/voting",
-    label: "Quản lý bình chọn",
-    icon: Trophy,
-    section: "manage",
-    roles: ["CONTENT_ADMIN", "SUPER_ADMIN"],
-  },
-  {
-    href: "/admin/reports",
-    label: "Báo cáo nội dung",
-    icon: Flag,
-    section: "manage",
-    roles: ["CONTENT_ADMIN", "SUPER_ADMIN"],
-  },
-  {
-    href: "/admin/audit",
-    label: "Lịch sử thay đổi",
-    icon: ScrollText,
-    section: "manage",
-    roles: ["SUPER_ADMIN"],
-  },
-  {
-    href: "/verify",
-    label: "Tra cứu chứng thư",
-    icon: BadgeCheck,
-    section: "explore",
-    personas: ["PUBLIC", "APPLICANT"],
-  },
-  {
-    href: "/notifications",
-    label: "Thông báo",
-    icon: Bell,
-    section: "account",
-  },
-  { href: "/account", label: "Tài khoản", icon: Settings, section: "account" },
-  {
-    href: "/vote-history",
-    label: "Bình chọn của tôi",
-    icon: Vote,
-    section: "account",
-    personas: ["PUBLIC", "APPLICANT"],
-  },
-  {
-    href: "/activity",
-    label: "Hoạt động gần đây",
-    icon: History,
-    section: "account",
-  },
+type NavigationSection = {
+  label: string;
+  items: NavigationItem[];
+};
+
+const discoveryItems: NavigationItem[] = [
+  { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
+  { href: "/search", label: "Tìm đề cử", icon: Search },
+  { href: "/works", label: "Thư viện đề cử", icon: BookOpen },
+  { href: "/map", label: "Bản đồ đề cử", icon: Map },
+  { href: "/verify", label: "Tra cứu chứng thư", icon: ShieldCheck },
 ];
 
-const sectionLabels = {
-  work: "Việc cần làm",
-  explore: "Tra cứu",
-  manage: "Điều hành",
-  account: "Cá nhân",
-} as const;
+const personalItems: NavigationItem[] = [
+  { href: "/notifications", label: "Thông báo", icon: Bell },
+  { href: "/account", label: "Tài khoản", icon: Settings },
+  { href: "/vote-history", label: "Bình chọn của tôi", icon: Vote },
+  { href: "/activity", label: "Hoạt động gần đây", icon: History },
+];
+
+const userItems: NavigationItem[] = [
+  { href: "/dossiers", label: "Hồ sơ của tôi", icon: FileText },
+  { href: "/certificates", label: "Chứng thư", icon: FileCheck2 },
+];
+
+const reviewerItems: NavigationItem[] = [
+  { href: "/reviews", label: "Hồ sơ đánh giá", icon: FileCheck2 },
+  {
+    href: "/reviews/similarity",
+    label: "Đối chiếu nội dung",
+    icon: Search,
+  },
+  { href: "/council", label: "Phiên xét duyệt", icon: FileCheck2 },
+];
+
+const adminItems: NavigationItem[] = [
+  {
+    href: "/admin/dashboard",
+    label: "Tổng quan vận hành",
+    icon: Gauge,
+  },
+  { href: "/admin/staff", label: "Tài khoản nhân sự", icon: UsersRound },
+  { href: "/admin/content", label: "Nội dung công bố", icon: FileText },
+  { href: "/admin/audit", label: "Lịch sử hoạt động", icon: History },
+  { href: "/admin/reports", label: "Báo cáo", icon: FileCheck2 },
+];
+
+const blockchainSignerItems: NavigationItem[] = [
+  { href: "/blockchain", label: "Ký blockchain", icon: Signature },
+];
+
+function sectionsFor(persona: WorkspacePersona): NavigationSection[] {
+  if (persona === "SUPER_ADMIN") {
+    return [
+      { label: "Điều hành", items: adminItems },
+      { label: "Tra cứu", items: discoveryItems.slice(1) },
+      { label: "Cá nhân", items: personalItems.slice(0, 2) },
+    ];
+  }
+
+  if (persona === "MODERATOR") {
+    return [
+      { label: "Công việc", items: reviewerItems },
+      { label: "Tra cứu", items: discoveryItems.slice(1) },
+      { label: "Cá nhân", items: personalItems.slice(0, 2) },
+    ];
+  }
+
+  return [
+    { label: "Khám phá", items: discoveryItems },
+    ...(persona === "USER" ? [{ label: "Hồ sơ", items: userItems }] : []),
+    { label: "Cá nhân", items: personalItems },
+  ];
+}
+
+function isActive(pathname: string, href: string) {
+  if (href === "/dashboard") return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function DashboardNavigation({
+  roles,
   className,
-  tone = "dark",
 }: {
+  roles?: readonly string[];
   className?: string;
-  tone?: "dark" | "light";
+  tone?: "light" | "dark";
 }) {
   const pathname = usePathname();
-  const user = useAuthUser();
-  const persona = resolveWorkspacePersona(user?.roles ?? []);
-  const activeClass =
-    tone === "dark"
-      ? "bg-white text-ink-950 shadow-lg shadow-black/10"
-      : "bg-primary-50 text-primary-700";
-  const linkClass =
-    tone === "dark"
-      ? "text-slate-300 hover:bg-white/5 hover:text-white"
-      : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-950";
-  const visibleLinks = dashboardLinks.filter((item) => {
-    if (isPreviewRelease() && isPreviewRestrictedPath(item.href)) return false;
-    if (item.roles && !hasAnyRole(user?.roles ?? [], item.roles)) return false;
-    if (item.personas && !item.personas.includes(persona)) return false;
-    return true;
-  });
-  const activeHref = visibleLinks
-    .filter(
-      (item) =>
-        pathname === item.href ||
-        (item.href !== "/dashboard" &&
-          Boolean(pathname?.startsWith(`${item.href}/`))),
-    )
-    .sort((left, right) => right.href.length - left.href.length)[0]?.href;
+  const authUser = useAuthUser();
+  const effectiveRoles = roles ?? authUser?.roles ?? [];
+  const persona = resolveWorkspacePersona(effectiveRoles);
+  const preview = isPreviewRelease();
+  const sections = [
+    ...sectionsFor(persona),
+    ...(effectiveRoles.includes("SUPER_ADMIN")
+      ? [{ label: "Blockchain", items: blockchainSignerItems }]
+      : []),
+  ].map((section) => ({
+    ...section,
+    items: section.items.filter(
+      (item) => !preview || !isPreviewRestrictedPath(item.href),
+    ),
+  }));
 
-  const sections = (["work", "manage", "explore", "account"] as const)
-    .map((key) => ({
-      key,
-      items: visibleLinks.filter((item) => item.section === key),
-    }))
-    .filter(({ items }) => items.length > 0);
+  const mobileItems = sections.flatMap((section) => section.items).slice(0, 5);
 
   return (
-    <div className={cn("grid gap-6", className)}>
-      {sections.map(({ key, items }) => (
-        <section key={key}>
-          <p className="mb-2 px-3 text-[0.62rem] font-bold uppercase tracking-[0.18em] text-slate-500">
-            {key === "work" && persona === "APPLICANT"
-              ? "Không gian của bạn"
-              : sectionLabels[key]}
-          </p>
-          <div className="grid gap-1">
-            {items.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeHref === item.href;
-              return (
-                <Link
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition-colors",
-                    isActive ? activeClass : linkClass,
-                  )}
-                  href={item.href}
-                  key={`${item.href}-${item.label}`}
-                >
-                  <Icon aria-hidden="true" className="size-5" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      ))}
-    </div>
+    <>
+      <nav
+        className={cn("dashboard-navigation", className)}
+        aria-label="Điều hướng"
+      >
+        {sections.map((section) =>
+          section.items.length ? (
+            <section
+              className="dashboard-navigation__section"
+              key={section.label}
+            >
+              <p className="dashboard-navigation__label">{section.label}</p>
+              <div className="dashboard-navigation__links">
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(pathname, item.href);
+                  return (
+                    <Link
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "dashboard-navigation__link",
+                        active && "dashboard-navigation__link--active",
+                      )}
+                      href={item.href}
+                      key={item.href}
+                    >
+                      <Icon aria-hidden="true" size={20} strokeWidth={1.8} />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null,
+        )}
+      </nav>
+
+      <nav
+        className="dashboard-mobile-navigation"
+        aria-label="Điều hướng nhanh"
+      >
+        {mobileItems.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(pathname, item.href);
+          return (
+            <Link
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "dashboard-mobile-navigation__link",
+                active && "dashboard-mobile-navigation__link--active",
+              )}
+              href={item.href}
+              key={item.href}
+            >
+              <Icon aria-hidden="true" size={21} strokeWidth={1.8} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </>
   );
 }

@@ -151,8 +151,8 @@ async def _setup(
         submitted_by=users["owner"].id,
         submitted_at=NOW,
     )
-    reviewer_role = Role(id=uuid4(), code="REVIEWER")
-    member_role = Role(id=uuid4(), code="COUNCIL_MEMBER")
+    moderator_role = Role(id=uuid4(), code="MODERATOR")
+    super_admin_role = Role(id=uuid4(), code="SUPER_ADMIN")
     review_assignment = ReviewAssignment(
         id=uuid4(),
         dossier_id=dossier.id,
@@ -187,19 +187,23 @@ async def _setup(
         version,
         media,
         evidence,
-        reviewer_role,
-        member_role,
+        moderator_role,
+        super_admin_role,
         UserRole(
             user_id=users["reviewer"].id,
-            role_id=reviewer_role.id,
+            role_id=moderator_role.id,
+        ),
+        UserRole(
+            user_id=users["secretary"].id,
+            role_id=super_admin_role.id,
         ),
         UserRole(
             user_id=users["member1"].id,
-            role_id=member_role.id,
+            role_id=super_admin_role.id,
         ),
         UserRole(
             user_id=users["member2"].id,
-            role_id=member_role.id,
+            role_id=super_admin_role.id,
         ),
     ]
     if include_review:
@@ -234,10 +238,24 @@ def _principal(user: User, *roles: str) -> AuthPrincipal:
     )
 
 
+def test_moderator_cannot_manage_or_vote_in_council() -> None:
+    moderator = AuthPrincipal(
+        user_id=uuid4(),
+        session_id=uuid4(),
+        email="moderator@tmigroup.vn",
+        roles=("MODERATOR",),
+    )
+
+    with pytest.raises(CouncilForbiddenError):
+        CouncilService._require_secretary(moderator)
+    with pytest.raises(CouncilForbiddenError):
+        CouncilService._require_member(moderator)
+
+
 def test_secretary_creates_session_adds_case_and_opens_with_quorum() -> None:
     async def exercise() -> None:
         service, sessions, engine, users, dossier, version = await _setup()
-        secretary = _principal(users["secretary"], "COUNCIL_SECRETARY")
+        secretary = _principal(users["secretary"], "SUPER_ADMIN")
         created = await service.create_session(
             secretary,
             code="HD-2026-001",
@@ -253,7 +271,7 @@ def test_secretary_creates_session_adds_case_and_opens_with_quorum() -> None:
         assert case.dossier_version_id == version.id
 
         for name in ("member1", "member2"):
-            member = _principal(users[name], "COUNCIL_MEMBER")
+            member = _principal(users[name], "SUPER_ADMIN")
             attendance = await service.confirm_attendance(member, created.id)
             assert attendance.attendance_confirmed_at == NOW
 
@@ -282,7 +300,7 @@ def test_secretary_creates_session_adds_case_and_opens_with_quorum() -> None:
             await service.add_case(secretary, created.id, dossier.id)
         with pytest.raises(CouncilConflictError):
             await service.confirm_attendance(
-                _principal(users["member1"], "COUNCIL_MEMBER"),
+                _principal(users["member1"], "SUPER_ADMIN"),
                 created.id,
             )
 
@@ -304,7 +322,7 @@ def test_council_session_rolls_back_when_audit_fails(
         monkeypatch.setattr(service._audit_service, "record", fail_audit)
         with pytest.raises(RuntimeError, match="audit storage unavailable"):
             await service.create_session(
-                _principal(users["secretary"], "COUNCIL_SECRETARY"),
+                _principal(users["secretary"], "SUPER_ADMIN"),
                 code="HD-2026-ROLLBACK",
                 title="Rollback council",
                 scheduled_at=NOW,
@@ -330,7 +348,7 @@ def test_council_case_requires_completed_review_gate() -> None:
         service, _, engine, users, dossier, _ = await _setup(
             include_review=False,
         )
-        secretary = _principal(users["secretary"], "COUNCIL_SECRETARY")
+        secretary = _principal(users["secretary"], "SUPER_ADMIN")
         created = await service.create_session(
             secretary,
             code="HD-2026-001",
@@ -352,14 +370,24 @@ def test_council_case_requires_completed_review_gate() -> None:
 def test_session_creation_and_open_enforce_role_members_and_quorum() -> None:
     async def exercise() -> None:
         service, sessions, engine, users, dossier, _ = await _setup()
-        outsider = _principal(users["outsider"], "APPLICANT")
-        secretary = _principal(users["secretary"], "COUNCIL_SECRETARY")
+        outsider = _principal(users["outsider"], "USER")
+        moderator = _principal(users["reviewer"], "MODERATOR")
+        secretary = _principal(users["secretary"], "SUPER_ADMIN")
 
         with pytest.raises(CouncilForbiddenError):
             await service.create_session(
                 outsider,
                 code="HD-2026-001",
                 title="Forbidden",
+                scheduled_at=NOW,
+                quorum_required=1,
+                member_user_ids=(users["member1"].id,),
+            )
+        with pytest.raises(CouncilForbiddenError):
+            await service.create_session(
+                moderator,
+                code="HD-2026-002",
+                title="Moderator forbidden",
                 scheduled_at=NOW,
                 quorum_required=1,
                 member_user_ids=(users["member1"].id,),
@@ -371,7 +399,7 @@ def test_session_creation_and_open_enforce_role_members_and_quorum() -> None:
                 title="Invalid member",
                 scheduled_at=NOW,
                 quorum_required=1,
-                member_user_ids=(users["outsider"].id,),
+                member_user_ids=(users["reviewer"].id,),
             )
         with pytest.raises(CouncilValidationError):
             await service.create_session(
@@ -393,7 +421,7 @@ def test_session_creation_and_open_enforce_role_members_and_quorum() -> None:
         )
         await service.add_case(secretary, created.id, dossier.id)
         await service.confirm_attendance(
-            _principal(users["member1"], "COUNCIL_MEMBER"),
+            _principal(users["member1"], "SUPER_ADMIN"),
             created.id,
         )
         with pytest.raises(CouncilConflictError):
@@ -415,7 +443,7 @@ async def _open_two_member_case(
     users: dict[str, User],
     dossier: Dossier,
 ) -> tuple[AuthPrincipal, CouncilCaseView]:
-    secretary = _principal(users["secretary"], "COUNCIL_SECRETARY")
+    secretary = _principal(users["secretary"], "SUPER_ADMIN")
     created = await service.create_session(
         secretary,
         code="HD-2026-001",
@@ -427,7 +455,7 @@ async def _open_two_member_case(
     council_case = await service.add_case(secretary, created.id, dossier.id)
     for name in ("member1", "member2"):
         await service.confirm_attendance(
-            _principal(users[name], "COUNCIL_MEMBER"),
+            _principal(users[name], "SUPER_ADMIN"),
             created.id,
         )
     await service.open_session(secretary, created.id)
@@ -442,8 +470,8 @@ def test_votes_are_conflict_gated_unique_and_close_with_absolute_majority() -> N
             users,
             dossier,
         )
-        member1 = _principal(users["member1"], "COUNCIL_MEMBER")
-        member2 = _principal(users["member2"], "COUNCIL_MEMBER")
+        member1 = _principal(users["member1"], "SUPER_ADMIN")
+        member2 = _principal(users["member2"], "SUPER_ADMIN")
 
         with pytest.raises(CouncilConflictError):
             await service.cast_vote(
@@ -553,7 +581,7 @@ def test_abstention_counts_for_quorum_but_not_as_a_decision() -> None:
             ("member2", CouncilVoteChoice.ABSTAIN),
         )
         for name, choice in choices:
-            principal = _principal(users[name], "COUNCIL_MEMBER")
+            principal = _principal(users[name], "SUPER_ADMIN")
             await service.declare_conflict(
                 principal,
                 council_case.id,
@@ -597,7 +625,7 @@ def test_approval_is_blocked_when_storage_version_changed_after_inspection() -> 
             dossier,
         )
         for name in ("member1", "member2"):
-            principal = _principal(users[name], "COUNCIL_MEMBER")
+            principal = _principal(users[name], "SUPER_ADMIN")
             await service.declare_conflict(
                 principal,
                 council_case.id,
@@ -635,8 +663,8 @@ def test_conflicted_member_cannot_vote_and_insufficient_votes_do_not_decide() ->
             users,
             dossier,
         )
-        conflicted = _principal(users["member1"], "COUNCIL_MEMBER")
-        voter = _principal(users["member2"], "COUNCIL_MEMBER")
+        conflicted = _principal(users["member1"], "SUPER_ADMIN")
+        voter = _principal(users["member2"], "SUPER_ADMIN")
         await service.declare_conflict(
             conflicted,
             council_case.id,
@@ -684,7 +712,7 @@ def test_request_more_information_returns_dossier_to_supplement() -> None:
             dossier,
         )
         for name in ("member1", "member2"):
-            principal = _principal(users[name], "COUNCIL_MEMBER")
+            principal = _principal(users[name], "SUPER_ADMIN")
             await service.declare_conflict(
                 principal,
                 council_case.id,

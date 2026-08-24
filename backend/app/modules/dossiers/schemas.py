@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -8,6 +8,7 @@ from app.modules.dossiers.models import (
     DocumentHashAdjudicationAction,
     DossierStatus,
     DossierVisibility,
+    EvidenceVisibility,
 )
 
 
@@ -36,6 +37,8 @@ class CreateDossierRequest(DossierSchema):
     ] = None
     summary: Annotated[str | None, Field(max_length=10_000)] = None
     visibility: DossierVisibility = DossierVisibility.PRIVATE
+    dossier_type_version_id: UUID | None = None
+    form_data: dict[str, Any] | None = None
 
     @field_validator("title", mode="before")
     @classmethod
@@ -78,6 +81,9 @@ class DossierData(DossierSchema):
     owner_user_id: UUID
     organization_id: UUID | None
     category_id: UUID
+    dossier_type_id: UUID | None
+    dossier_type_version_id: UUID | None
+    form_data: dict[str, Any]
     title: str
     slug: str | None
     summary: str | None
@@ -90,6 +96,36 @@ class DossierData(DossierSchema):
     can_edit: bool
 
 
+class DossierTypeVersionData(DossierSchema):
+    id: UUID
+    dossier_type_id: UUID
+    version_no: int
+    definition: dict[str, Any] = Field(alias="schema")
+
+
+class DossierTypeData(DossierSchema):
+    id: UUID
+    category_id: UUID
+    code: str
+    name: str
+    is_active: bool
+    current_version: DossierTypeVersionData
+
+
+class CreateDossierTypeRequest(DossierSchema):
+    category_id: UUID
+    code: Annotated[
+        str,
+        Field(min_length=2, max_length=64, pattern=r"^[A-Za-z][A-Za-z0-9_]+$"),
+    ]
+    name: Annotated[str, Field(min_length=1, max_length=255)]
+    definition: dict[str, Any] = Field(alias="schema")
+
+
+class CreateDossierTypeVersionRequest(DossierSchema):
+    definition: dict[str, Any] = Field(alias="schema")
+
+
 class DossierActionData(DossierSchema):
     status: Literal["deleted", "removed"]
 
@@ -100,11 +136,16 @@ class CreateEvidenceRequest(DossierSchema):
         str,
         Field(min_length=2, max_length=64, pattern=r"^[A-Z][A-Z0-9_]+$"),
     ]
+    evidence_role: Annotated[
+        str | None,
+        Field(min_length=2, max_length=64, pattern=r"^[A-Z][A-Z0-9_]+$"),
+    ] = None
+    access_scope: EvidenceVisibility | None = None
     title: Annotated[str, Field(min_length=1, max_length=255)]
     description: Annotated[str | None, Field(max_length=10_000)] = None
     issued_at: datetime | None = None
     display_order: Annotated[int, Field(ge=0)] = 0
-    is_public: bool = False
+    is_public: bool | None = None
 
     @field_validator("title", mode="before")
     @classmethod
@@ -117,6 +158,11 @@ class PatchEvidenceRequest(DossierSchema):
         str | None,
         Field(min_length=2, max_length=64, pattern=r"^[A-Z][A-Z0-9_]+$"),
     ] = None
+    evidence_role: Annotated[
+        str | None,
+        Field(min_length=2, max_length=64, pattern=r"^[A-Z][A-Z0-9_]+$"),
+    ] = None
+    access_scope: EvidenceVisibility | None = None
     title: Annotated[str | None, Field(min_length=1, max_length=255)] = None
     description: Annotated[str | None, Field(max_length=10_000)] = None
     issued_at: datetime | None = None
@@ -134,6 +180,8 @@ class PatchEvidenceRequest(DossierSchema):
             raise ValueError("At least one evidence field is required.")
         for field_name in (
             "evidence_type",
+            "evidence_role",
+            "access_scope",
             "title",
             "display_order",
             "is_public",
@@ -152,6 +200,8 @@ class EvidenceData(DossierSchema):
     dossier_version_id: UUID | None
     media_asset_id: UUID
     evidence_type: str
+    evidence_role: str | None
+    access_scope: EvidenceVisibility
     title: str
     description: str | None
     issued_at: datetime | None
@@ -162,8 +212,20 @@ class EvidenceData(DossierSchema):
     sha256: str
 
 
+class DocumentRuleData(DossierSchema):
+    key: str
+    label: str
+    document_type: str
+    required: bool
+    allowed_mime_types: tuple[str, ...]
+    max_bytes: int
+    max_count: int
+    default_visibility: EvidenceVisibility
+
+
 class DossierDetailData(DossierData):
     evidences: tuple[EvidenceData, ...]
+    document_rules: tuple[DocumentRuleData, ...]
 
 
 class DossierVersionData(DossierSchema):

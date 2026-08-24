@@ -4,6 +4,12 @@ import type {
   AuditLogItem,
   AuditIntegrityCheck,
   AuditListFilters,
+  BlockchainSigningContext,
+  BlockchainSigningIntent,
+  BlockchainSigningQueueItem,
+  BlockchainSigningStatus,
+  BlockchainWalletChallenge,
+  BlockchainWalletLink,
   AuthUser,
   CmsBanner,
   CmsCategory,
@@ -35,6 +41,7 @@ import type {
   DossierListFilters,
   DossierPatch,
   DossierSubmission,
+  DossierType,
   DossierTimelineItem,
   DossierVersion,
   DurableJobSummary,
@@ -279,6 +286,73 @@ export const authApi = {
       }
       throw error;
     }
+  },
+};
+
+export const blockchainSigningApi = {
+  currentWallet() {
+    return request<BlockchainWalletLink | null>("/blockchain/wallet");
+  },
+  issueWalletChallenge(walletAddress: string, chainId: number) {
+    return request<BlockchainWalletChallenge>("/blockchain/wallet-challenges", {
+      method: "POST",
+      body: JSON.stringify({ walletAddress, chainId }),
+    });
+  },
+  verifyWalletLink(input: {
+    challengeId: string;
+    nonce: string;
+    signature: string;
+  }) {
+    return request<BlockchainWalletLink>("/blockchain/wallet-links", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  revokeCurrentWallet() {
+    return request<BlockchainWalletLink>("/blockchain/wallet", {
+      method: "DELETE",
+    });
+  },
+  queue() {
+    return request<BlockchainSigningQueueItem[]>("/blockchain/signing-queue");
+  },
+  context(transactionId: string) {
+    return request<BlockchainSigningContext>(
+      `/blockchain/transactions/${encodeURIComponent(transactionId)}/signing-context`,
+    );
+  },
+  prepareIntent(transactionId: string, connectedWallet: string) {
+    return request<BlockchainSigningIntent>(
+      `/blockchain/transactions/${encodeURIComponent(transactionId)}/intents`,
+      {
+        method: "POST",
+        body: JSON.stringify({ connectedWallet }),
+      },
+    );
+  },
+  submitTransaction(input: {
+    transactionId: string;
+    intentId: string;
+    transactionHash: string;
+    connectedWallet: string;
+  }) {
+    return request<BlockchainSigningStatus>(
+      `/blockchain/transactions/${encodeURIComponent(input.transactionId)}/submissions`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          intentId: input.intentId,
+          transactionHash: input.transactionHash,
+          connectedWallet: input.connectedWallet,
+        }),
+      },
+    );
+  },
+  status(transactionId: string) {
+    return request<BlockchainSigningStatus>(
+      `/blockchain/transactions/${encodeURIComponent(transactionId)}/status`,
+    );
   },
 };
 
@@ -707,6 +781,9 @@ export const dossierApi = {
       method: "POST",
       body: JSON.stringify(dossier),
     });
+  },
+  listTypes() {
+    return request<DossierType[]>("/dossiers/types");
   },
   update(dossierId: string, dossier: DossierPatch) {
     return request<Dossier>(`/dossiers/${dossierId}`, {

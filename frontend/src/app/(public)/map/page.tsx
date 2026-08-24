@@ -13,8 +13,8 @@ export default async function MapPage({
     <div
       className={
         embedded
-          ? "mx-auto max-w-7xl rounded-2xl bg-[#151515] px-5 py-7 text-white shadow-[0_24px_70px_rgba(15,23,42,.12)] sm:px-7 lg:px-9"
-          : "mx-auto min-h-[calc(100dvh-5rem)] max-w-7xl px-4 py-14 sm:px-6 lg:px-8"
+          ? "public-theme-surface public-theme-surface--embedded mx-auto max-w-7xl rounded-2xl px-5 py-7 shadow-[0_24px_70px_rgba(15,23,42,.12)] sm:px-7 lg:px-9"
+          : "public-theme-surface mx-auto min-h-[calc(100dvh-5rem)] max-w-7xl px-4 py-14 sm:px-6 lg:px-8"
       }
     >
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-gold-300">
@@ -30,7 +30,7 @@ export default async function MapPage({
       <p className="mt-4 max-w-2xl text-slate-400">
         Xem các nội dung đã công bố theo địa điểm và khu vực.
       </p>
-      <div className="mt-10 overflow-hidden rounded-2xl bg-[#151515] p-3 text-white shadow-[0_24px_70px_rgba(15,23,42,.1)] sm:p-5">
+      <div className="mt-10 overflow-hidden rounded-2xl p-3 shadow-[0_24px_70px_rgba(15,23,42,.1)] sm:p-5">
         <PublicMap category={category} />
       </div>
     </div>

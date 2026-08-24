@@ -1,8 +1,81 @@
 import hashlib
 import json
+import math
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from uuid import UUID
+
+PUBLIC_EVIDENCE_SCOPES = frozenset({"PUBLIC", "PUBLIC_PREVIEW"})
+MAX_PUBLIC_FIELD_VALUE_LENGTH = 5_000
+MAX_PUBLIC_FIELD_LIST_ITEMS = 100
+MAX_PUBLIC_FIELD_LIST_ITEM_LENGTH = 500
+
+
+def public_fields_from_snapshot(
+    snapshot: Mapping[str, object],
+) -> list[dict[str, object]]:
+    """Return the immutable, explicitly approved public field projection.
+
+    Raw dynamic form data is deliberately ignored.  This defensive parser also
+    protects metadata generation for records created before server-side schema
+    enforcement was introduced.
+    """
+    dossier_value = snapshot.get("dossier")
+    dossier = dossier_value if isinstance(dossier_value, dict) else {}
+    dossier_type_value = dossier.get("dossierType")
+    dossier_type = (
+        dossier_type_value if isinstance(dossier_type_value, dict) else {}
+    )
+    fields = dossier_type.get("publicFields")
+    if not isinstance(fields, list):
+        return []
+
+    result: list[dict[str, object]] = []
+    for field in fields:
+        if not isinstance(field, dict):
+            continue
+        key = field.get("key")
+        label = field.get("label")
+        value = field.get("value")
+        if (
+            not isinstance(key, str)
+            or not 1 <= len(key) <= 120
+            or not isinstance(label, str)
+            or not 1 <= len(label.strip()) <= 255
+        ):
+            continue
+        if isinstance(value, str):
+            if len(value) > MAX_PUBLIC_FIELD_VALUE_LENGTH:
+                continue
+            safe_value: str | int | float | bool | list[str] = value
+        elif isinstance(value, bool):
+            safe_value = value
+        elif isinstance(value, int):
+            safe_value = value
+        elif isinstance(value, float):
+            if not math.isfinite(value):
+                continue
+            safe_value = value
+        elif (
+            isinstance(value, list)
+            and len(value) <= MAX_PUBLIC_FIELD_LIST_ITEMS
+            and all(
+                isinstance(item, str)
+                and len(item) <= MAX_PUBLIC_FIELD_LIST_ITEM_LENGTH
+                for item in value
+            )
+        ):
+            safe_value = list(value)
+        else:
+            continue
+        result.append(
+            {
+                "key": key,
+                "label": label.strip(),
+                "value": safe_value,
+            }
+        )
+    return result
 
 
 def _iso_utc(value: datetime | None) -> str | None:
@@ -19,7 +92,7 @@ class CertificateNumberingService:
 
 
 class CertificateMetadataBuilder:
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
 
     @staticmethod
     def canonical_bytes(payload: object) -> bytes:
@@ -51,7 +124,13 @@ class CertificateMetadataBuilder:
         evidences = evidences_value if isinstance(evidences_value, list) else []
         public_evidences: list[dict[str, object]] = []
         for value in evidences:
-            if not isinstance(value, dict) or value.get("isPublic") is not True:
+            if not isinstance(value, dict):
+                continue
+            access_scope = value.get("accessScope")
+            if (
+                not isinstance(access_scope, str)
+                or access_scope not in PUBLIC_EVIDENCE_SCOPES
+            ):
                 continue
             media_value = value.get("media")
             media = media_value if isinstance(media_value, dict) else {}
@@ -60,6 +139,7 @@ class CertificateMetadataBuilder:
                     "title": str(value.get("title", "")),
                     "type": str(value.get("evidenceType", "")),
                     "sha256": str(media.get("sha256", "")),
+                    "accessScope": access_scope,
                 }
             )
         metadata: dict[str, object] = {
@@ -81,6 +161,7 @@ class CertificateMetadataBuilder:
             },
             "issuedAt": _iso_utc(issued_at),
             "expiresAt": _iso_utc(expires_at),
+            "publicFields": public_fields_from_snapshot(snapshot),
             "publicEvidences": public_evidences,
             "blockchain": dict(blockchain or {}),
         }

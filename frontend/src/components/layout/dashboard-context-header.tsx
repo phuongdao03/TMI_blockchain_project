@@ -1,74 +1,66 @@
 "use client";
 
-import { Bell, ChevronRight, UserRound } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { LogoutButton } from "@/components/auth/logout-button";
-import { BrandMark } from "@/components/layout/brand-mark";
-import { useAuthUser } from "@/lib/auth/user-context";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
+import type { AuthUser } from "@/lib/api/types";
 
-const sections = [
-  { prefix: "/works/", label: "Chi tiết đề cử" },
-  { prefix: "/works", label: "Thư viện đề cử" },
-  { prefix: "/search", label: "Tìm kiếm đề cử" },
-  { prefix: "/verify/", label: "Kết quả xác minh" },
-  { prefix: "/verify", label: "Xác minh chứng thư" },
-  { prefix: "/map", label: "Bản đồ đề cử" },
-  { prefix: "/activity", label: "Lịch sử hoạt động" },
-  { prefix: "/vote-history", label: "Lịch sử bình chọn" },
-  { prefix: "/admin/voting", label: "Quản lý bình chọn" },
-  { prefix: "/admin/reports", label: "Báo cáo nội dung" },
-  { prefix: "/admin/content", label: "Quản trị nội dung" },
-  { prefix: "/admin/dashboard", label: "Điều hành hệ thống" },
-  { prefix: "/admin/audit", label: "Lịch sử thay đổi" },
-  { prefix: "/notifications", label: "Thông báo" },
-  { prefix: "/council/", label: "Chi tiết phiên Hội đồng" },
-  { prefix: "/council", label: "Phiên xét duyệt Hội đồng" },
-  { prefix: "/reviews/", label: "Chi tiết thẩm định" },
-  { prefix: "/reviews", label: "Hàng đợi thẩm định" },
-  { prefix: "/dossiers/new", label: "Tạo hồ sơ" },
-  { prefix: "/dossiers/", label: "Chi tiết hồ sơ" },
-  { prefix: "/dossiers", label: "Hồ sơ xác lập" },
-  { prefix: "/certificates", label: "Chứng thư số" },
-  { prefix: "/account", label: "Tài khoản và tổ chức" },
-  { prefix: "/dashboard", label: "Tổng quan" },
-] as const;
+const pageTitles: Record<string, string> = {
+  "/dashboard": "Tổng quan",
+  "/account": "Tài khoản",
+  "/activity": "Hoạt động gần đây",
+  "/certificates": "Chứng thư",
+  "/dossiers": "Hồ sơ của tôi",
+  "/notifications": "Thông báo",
+  "/reviews": "Hàng đợi thẩm định",
+  "/reviews/similarity": "Đối chiếu nội dung",
+  "/council": "Phiên thẩm định",
+  "/admin": "Quản trị hệ thống",
+  "/admin/dashboard": "Tổng quan vận hành",
+  "/admin/content": "Quản trị nội dung",
+  "/admin/staff": "Tài khoản nhân sự",
+  "/admin/audit": "Lịch sử hoạt động",
+  "/admin/reports": "Báo cáo",
+};
 
-export function DashboardContextHeader() {
-  const pathname = usePathname() ?? "/dashboard";
-  const user = useAuthUser();
-  const label =
-    sections.find(({ prefix }) => pathname.startsWith(prefix))?.label ??
-    "Không gian làm việc";
+function resolveTitle(pathname: string): string {
+  const exactTitle = pageTitles[pathname];
+  if (exactTitle) return exactTitle;
+
+  const matchedPath = Object.keys(pageTitles)
+    .filter((path) => path !== "/dashboard" && pathname.startsWith(`${path}/`))
+    .sort((left, right) => right.length - left.length)[0];
+
+  return matchedPath
+    ? (pageTitles[matchedPath] ?? "Không gian của bạn")
+    : "Không gian của bạn";
+}
+
+export function DashboardContextHeader({ user }: { user: AuthUser | null }) {
+  const pathname = usePathname();
+  const title = resolveTitle(pathname);
 
   return (
-    <div className="flex min-h-18 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 xl:px-10">
-      <BrandMark className="lg:hidden" />
-      <div className="hidden items-center gap-2 text-sm lg:flex">
-        <span className="font-medium text-neutral-400">
+    <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-4 border-b border-[var(--theme-line)] bg-[color:var(--theme-surface)] px-5 py-3 lg:px-8">
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-muted)]">
           Đề cử Tinh Hoa Việt
-        </span>
-        <ChevronRight aria-hidden="true" className="size-4 text-neutral-300" />
-        <span className="font-bold text-neutral-900">{label}</span>
+        </p>
+        <h1 className="truncate text-lg font-semibold text-[var(--theme-ink)]">
+          {title}
+        </h1>
       </div>
-      <div className="ml-auto flex items-center gap-2">
-        <span className="hidden max-w-56 items-center gap-2 rounded-full border border-neutral-200 bg-[#f7f4ee] px-3 py-1.5 text-xs font-semibold text-neutral-600 sm:inline-flex">
-          <UserRound
-            aria-hidden="true"
-            className="size-3.5 shrink-0 text-primary-700"
-          />
-          <span className="truncate">{user?.email ?? "Tài khoản của bạn"}</span>
-        </span>
-        <Link
-          aria-label="Thông báo"
-          className="grid size-11 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:border-primary-200 hover:text-primary-700"
-          href="/notifications"
-        >
-          <Bell aria-hidden="true" className="size-4.5" />
-        </Link>
-        <LogoutButton />
+
+      <div className="flex shrink-0 items-center gap-2">
+        {user?.email ? (
+          <span className="hidden max-w-52 truncate text-sm text-[var(--theme-muted)] md:block">
+            {user.email}
+          </span>
+        ) : null}
+        <ThemeToggle />
+        {user ? <LogoutButton /> : null}
       </div>
-    </div>
+    </header>
   );
 }

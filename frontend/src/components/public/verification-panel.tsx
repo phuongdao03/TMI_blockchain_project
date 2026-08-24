@@ -77,16 +77,34 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
+function localComparisonError(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return "Không thể đọc tệp để đối chiếu trên thiết bị này.";
+  }
+  if (error.message === "The selected file is empty.") {
+    return "Tệp đã chọn đang trống. Hãy chọn lại tài liệu cần đối chiếu.";
+  }
+  if (error.message === "The selected file is too large.") {
+    return `Tệp vượt quá giới hạn ${MAX_LOCAL_VERIFICATION_BYTES / 1024 / 1024} MB để đối chiếu tại máy.`;
+  }
+  if (error.message === "Secure local hashing is unavailable in this browser.") {
+    return "Trình duyệt này chưa hỗ trợ đối chiếu cục bộ. Hãy cập nhật hoặc dùng trình duyệt khác.";
+  }
+  return "Không thể đọc tệp để đối chiếu trên thiết bị này.";
+}
+
 export function VerificationPanel({
   token,
   embedded = false,
+  initialLookup = "",
 }: {
   token?: string;
   embedded?: boolean;
+  initialLookup?: string;
 }) {
   const [mode, setMode] = useState<"number" | "transaction">("number");
-  const [value, setValue] = useState("");
-  const [lookup, setLookup] = useState(token ?? "");
+  const [value, setValue] = useState(initialLookup);
+  const [lookup, setLookup] = useState(token ?? initialLookup);
   const [comparison, setComparison] = useState<ComparisonState | null>(null);
   const [comparisonError, setComparisonError] = useState<string | null>(null);
   const [comparing, setComparing] = useState(false);
@@ -103,6 +121,12 @@ export function VerificationPanel({
     retry: false,
   });
   const certificateNumber = result.data?.certificateNumber;
+  const publicDocuments = result.data?.documents ?? [];
+  const activeDocumentIndex =
+    documentIndex >= 0 && documentIndex < publicDocuments.length
+      ? documentIndex
+      : 0;
+  const selectedPublicDocument = publicDocuments[activeDocumentIndex];
   const history = useQuery({
     queryKey: ["public-certificate-history", certificateNumber],
     queryFn: () => publicApi.certificateVersions(certificateNumber!),
@@ -131,7 +155,9 @@ export function VerificationPanel({
 
       {!token ? (
         <form
+          action="/verify"
           className="verification-form grid gap-3 border-y border-white/10 py-6 md:grid-cols-[12rem_1fr_auto]"
+          method="get"
           onSubmit={(event) => {
             event.preventDefault();
             setComparison(null);
@@ -157,6 +183,7 @@ export function VerificationPanel({
           <input
             className="verification-control min-h-12 rounded-xl border border-white/15 bg-ink-950 px-4 text-sm text-white outline-none focus:border-gold-300"
             id="verification-value"
+            name="lookup"
             onChange={(event) => setValue(event.target.value)}
             placeholder={mode === "number" ? "Ví dụ: TMI-2026-…" : "Ví dụ: 0x…"}
             required
@@ -196,11 +223,19 @@ export function VerificationPanel({
                     </h2>
                   </div>
                   <p className="mt-3 text-sm leading-6 text-slate-400">
-                    Tài liệu thường được đối chiếu ngay trên thiết bị. Nếu trình
-                    duyệt không hỗ trợ, hệ thống dùng kết nối bảo mật để đối
-                    chiếu tạm thời và không lưu tệp. Tối đa 25 MB.
+                    Tệp được đối chiếu ngay trên thiết bị của bạn và không được
+                    tải lên máy chủ. Tối đa 25 MB mỗi tệp.
                   </p>
-                  {(result.data.documents?.length ?? 0) > 1 ? (
+                  {!publicDocuments.length ? (
+                    <p
+                      className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/5 px-4 py-3 text-sm leading-6 text-amber-100"
+                      role="status"
+                    >
+                      Chứng thư này không công bố dấu vân tay tài liệu để đối
+                      chiếu công khai.
+                    </p>
+                  ) : null}
+                  {publicDocuments.length > 1 ? (
                     <div className="mt-5">
                       <label
                         className="text-xs font-bold text-slate-300"
@@ -216,9 +251,9 @@ export function VerificationPanel({
                           setComparison(null);
                           setComparisonError(null);
                         }}
-                        value={documentIndex}
+                        value={activeDocumentIndex}
                       >
-                        {result.data.documents?.map((document, index) => (
+                        {publicDocuments.map((document, index) => (
                           <option
                             key={`${document.sha256}-${index}`}
                             value={index}
@@ -229,86 +264,41 @@ export function VerificationPanel({
                       </select>
                     </div>
                   ) : null}
-                  <label className="mt-5 inline-flex min-h-11 cursor-pointer items-center rounded-xl border border-white/15 px-4 text-sm font-bold text-white hover:bg-white/5">
-                    Chọn tài liệu để đối chiếu
-                    <input
-                      aria-label="Chọn tài liệu để đối chiếu"
-                      className="sr-only"
-                      onChange={async (event) => {
-                        const file = event.target.files?.[0];
-                        if (!file) return;
-                        setComparing(true);
-                        setComparison(null);
-                        setComparisonError(null);
-                        try {
-                          setComparison(
-                            await compareLocalFile(
-                              file,
-                              result.data.documents?.[documentIndex]
-                                ? [result.data.documents[documentIndex].sha256]
-                                : [],
-                            ),
-                          );
-                        } catch (error) {
-                          const canUseServerFallback =
-                            error instanceof Error &&
-                            error.message.includes("unavailable") &&
-                            Boolean(result.data.certificateNumber) &&
-                            Boolean(result.data.documents?.length);
-                          if (canUseServerFallback) {
-                            try {
-                              const fallback = await publicApi.verifyDocument(
-                                result.data.certificateNumber!,
-                                documentIndex,
-                                file,
-                              );
-                              setComparison(
-                                fallback.status === "MATCH"
-                                  ? { status: "MATCH", digest: "" }
-                                  : fallback.status === "NO_MATCH"
-                                    ? { status: "NO_MATCH", digest: "" }
-                                    : fallback.status === "CHAIN_UNAVAILABLE"
-                                      ? {
-                                          status: "CHAIN_UNAVAILABLE",
-                                          digest: null,
-                                        }
-                                      : fallback.status ===
-                                          "PENDING_CONFIRMATION"
-                                        ? {
-                                            status: "PENDING_CONFIRMATION",
-                                            digest: null,
-                                          }
-                                        : {
-                                            status: "NO_PUBLIC_REFERENCE",
-                                            digest: null,
-                                          },
-                              );
-                            } catch {
-                              setComparisonError(
-                                "Không thể đối chiếu tài liệu lúc này.",
-                              );
-                            }
-                          } else {
-                            setComparisonError(
-                              error instanceof Error
-                                ? error.message
-                                : "Không thể đọc tài liệu.",
+                  {selectedPublicDocument ? (
+                    <label className="mt-5 inline-flex min-h-11 cursor-pointer items-center rounded-xl border border-white/15 px-4 text-sm font-bold text-white hover:bg-white/5">
+                      Chọn tài liệu để đối chiếu
+                      <input
+                        aria-label="Chọn tài liệu để đối chiếu"
+                        className="sr-only"
+                        onChange={async (event) => {
+                          const file = event.target.files?.[0];
+                          if (!file) return;
+                          setComparing(true);
+                          setComparison(null);
+                          setComparisonError(null);
+                          try {
+                            setComparison(
+                              await compareLocalFile(file, [
+                                selectedPublicDocument.sha256,
+                              ]),
                             );
+                          } catch (error) {
+                            setComparisonError(localComparisonError(error));
+                          } finally {
+                            setComparing(false);
                           }
-                        } finally {
-                          setComparing(false);
-                        }
-                      }}
-                      type="file"
-                    />
-                  </label>
+                        }}
+                        type="file"
+                      />
+                    </label>
+                  ) : null}
                   <ComparisonResult
                     comparison={comparison}
                     error={comparisonError}
                     pending={comparing}
                   />
                   <p className="mt-4 text-xs text-slate-400">
-                    Giới hạn: {MAX_LOCAL_VERIFICATION_BYTES / 1024 / 1024} MB.
+                    Giới hạn tệp đối chiếu: {MAX_LOCAL_VERIFICATION_BYTES / 1024 / 1024} MB.
                   </p>
                 </section>
 
@@ -481,8 +471,8 @@ function ComparisonResult({
     );
   if (error)
     return (
-      <p className="mt-4 text-sm text-red-300">
-        Không thể đối chiếu tài liệu này.
+      <p className="mt-4 text-sm text-red-300" role="alert">
+        {error}
       </p>
     );
   if (!comparison) return null;

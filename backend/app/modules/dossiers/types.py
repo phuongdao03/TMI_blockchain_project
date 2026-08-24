@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from app.modules.dossiers.models import (
     DocumentHashAdjudicationAction,
     DossierStatus,
     DossierVisibility,
+    EvidenceVisibility,
 )
 
 
@@ -17,6 +19,8 @@ class CreateDossier:
     slug: str | None = None
     summary: str | None = None
     visibility: DossierVisibility = DossierVisibility.PRIVATE
+    dossier_type_version_id: UUID | None = None
+    form_data: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +41,9 @@ class DossierView:
     owner_user_id: UUID
     organization_id: UUID | None
     category_id: UUID
+    dossier_type_id: UUID | None
+    dossier_type_version_id: UUID | None
+    form_data: dict[str, Any]
     title: str
     slug: str | None
     summary: str | None
@@ -56,19 +63,41 @@ class DossierPage:
 
 
 @dataclass(frozen=True, slots=True)
+class DossierTypeVersionView:
+    id: UUID
+    dossier_type_id: UUID
+    version_no: int
+    schema: dict[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
+class DossierTypeView:
+    id: UUID
+    category_id: UUID
+    code: str
+    name: str
+    is_active: bool
+    current_version: DossierTypeVersionView
+
+
+@dataclass(frozen=True, slots=True)
 class CreateEvidence:
     media_asset_id: UUID
     evidence_type: str
     title: str
+    evidence_role: str | None = None
+    access_scope: EvidenceVisibility | None = None
     description: str | None = None
     issued_at: datetime | None = None
     display_order: int = 0
-    is_public: bool = False
+    is_public: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class EvidenceChanges:
     evidence_type: str | None = None
+    evidence_role: str | None = None
+    access_scope: EvidenceVisibility | None = None
     title: str | None = None
     description: str | None = None
     issued_at: datetime | None = None
@@ -84,6 +113,8 @@ class EvidenceView:
     dossier_version_id: UUID | None
     media_asset_id: UUID
     evidence_type: str
+    evidence_role: str | None
+    access_scope: EvidenceVisibility
     title: str
     description: str | None
     issued_at: datetime | None
@@ -92,6 +123,18 @@ class EvidenceView:
     mime_type: str
     bytes: int
     sha256: str
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentRuleView:
+    key: str
+    label: str
+    document_type: str
+    required: bool
+    allowed_mime_types: tuple[str, ...]
+    max_bytes: int
+    max_count: int
+    default_visibility: EvidenceVisibility
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,3 +179,4 @@ class DocumentHashAdjudicationView:
 class DossierDetailView:
     dossier: DossierView
     evidences: tuple[EvidenceView, ...]
+    document_rules: tuple[DocumentRuleView, ...]

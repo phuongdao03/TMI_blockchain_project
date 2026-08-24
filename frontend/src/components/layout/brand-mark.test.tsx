@@ -4,17 +4,28 @@ import { describe, expect, it } from "vitest";
 import { BrandMark } from "@/components/layout/brand-mark";
 
 describe("BrandMark", () => {
-  it("renders the official TMI Group logo from the brand asset directory", () => {
+  it("renders the approved Tinh Hoa Việt wordmark", () => {
     render(<BrandMark />);
 
-    const logo = screen.getByRole("img", { name: "TMI Group" });
-    const source = logo.getAttribute("src");
+    const homeLink = screen.getByRole("link", {
+      name: "Trung tâm Đề cử Tinh Hoa Việt",
+    });
+    const logo = homeLink.querySelector("img");
+    const source = logo?.getAttribute("src");
 
-    expect(source).not.toBeNull();
+    expect(logo).not.toBeNull();
+    expect(logo?.getAttribute("alt")).toBe("");
     expect(decodeURIComponent(source ?? "")).toContain(
-      "/assets/brand/tmi-group-logo.png",
+      "/assets/brand/thv-brand-wordmark.png",
     );
-    expect(screen.getByText("Đề cử Tinh Hoa Việt")).toBeDefined();
-    expect(screen.queryByText("TMI Certificate")).toBeNull();
+    expect(screen.queryByText(/Phát triển bởi/)).toBeNull();
+  });
+
+  it("adds the CNS attribution only where it is explicitly requested", () => {
+    render(<BrandMark showCredit />);
+
+    expect(
+      screen.getByText("Phát triển bởi Trung tâm An ninh Công nghệ số – CNS"),
+    ).toBeDefined();
   });
 });

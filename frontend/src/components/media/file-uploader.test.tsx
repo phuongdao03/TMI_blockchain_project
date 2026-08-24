@@ -162,4 +162,30 @@ describe("FileUploader", () => {
     expect(screen.getByText("evidence.pdf")).toBeDefined();
     expect(screen.getByRole("button", { name: "Tải lên" })).toBeDefined();
   });
+
+  it("uses the selected dossier rule for the picker and browser validation", () => {
+    render(
+      <FileUploader
+        constraints={{
+          allowedMimeTypes: ["application/pdf"],
+          maxBytes: 1_048_576,
+        }}
+        label="Giấy tờ quyền sở hữu"
+        onComplete={vi.fn()}
+        purpose="DOSSIER_EVIDENCE"
+      />,
+    );
+
+    const input = screen.getByLabelText("Chọn giấy tờ quyền sở hữu");
+    expect(input.getAttribute("accept")).toBe("application/pdf");
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["image"], "ownership.png", { type: "image/png" })],
+      },
+    });
+
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Định dạng tệp không phù hợp",
+    );
+  });
 });

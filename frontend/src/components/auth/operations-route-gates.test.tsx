@@ -34,7 +34,7 @@ describe("operations route gates", () => {
 
   it("opens each work queue only for an assigned internal account", () => {
     const { rerender } = render(
-      <AuthUserProvider user={userWith(["REVIEWER"])}>
+      <AuthUserProvider user={userWith(["MODERATOR"])}>
         <ReviewsLayout>
           <p>Review queue</p>
         </ReviewsLayout>
@@ -43,7 +43,7 @@ describe("operations route gates", () => {
     expect(screen.getByText("Review queue")).toBeDefined();
 
     rerender(
-      <AuthUserProvider user={userWith(["COUNCIL_MEMBER"])}>
+      <AuthUserProvider user={userWith(["MODERATOR"])}>
         <CouncilLayout>
           <p>Council queue</p>
         </CouncilLayout>

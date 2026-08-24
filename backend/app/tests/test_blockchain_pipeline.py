@@ -448,7 +448,7 @@ def test_admin_listing_enforces_blockchain_role() -> None:
             user_id=uuid4(),
             session_id=uuid4(),
             email="applicant@tmigroup.vn",
-            roles=("APPLICANT",),
+            roles=("USER",),
         )
         with pytest.raises(BlockchainForbiddenError):
             await service.list_admin(
@@ -473,7 +473,7 @@ def test_retry_rolls_back_when_audit_cannot_be_persisted(
             user_id=uuid4(),
             session_id=uuid4(),
             email="blockchain-admin@tmigroup.vn",
-            roles=("BLOCKCHAIN_ADMIN",),
+            roles=("SUPER_ADMIN",),
         )
 
         def reject_audit(**_: object) -> None:

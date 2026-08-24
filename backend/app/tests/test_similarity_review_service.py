@@ -88,7 +88,7 @@ def test_similarity_case_assignment_resolution_authorization_and_audit() -> None
             )
             versions.append(version)
             rows.extend((dossier, version))
-        reviewer_role = Role(id=uuid4(), code="REVIEWER")
+        reviewer_role = Role(id=uuid4(), code="MODERATOR")
         rows.extend(
             (
                 reviewer_role,
@@ -131,14 +131,14 @@ def test_similarity_case_assignment_resolution_authorization_and_audit() -> None
 
         with pytest.raises(ReviewForbiddenError):
             await service.assign_case(
-                _principal(outsider, "APPLICANT"), created.id, reviewer.id
+                _principal(outsider, "USER"), created.id, reviewer.id
             )
         assigned = await service.assign_case(
             _principal(admin, "SUPER_ADMIN"), created.id, reviewer.id
         )
         assert assigned.status is SimilarityCaseStatus.ASSIGNED
         page = await service.list_reviewer_cases(
-            _principal(reviewer, "REVIEWER"),
+            _principal(reviewer, "MODERATOR"),
             status=SimilarityCaseStatus.ASSIGNED,
             page=1,
             page_size=20,
@@ -147,7 +147,7 @@ def test_similarity_case_assignment_resolution_authorization_and_audit() -> None
         assert page.items[0].id == created.id
         with pytest.raises(ReviewForbiddenError):
             await service.list_reviewer_cases(
-                _principal(outsider, "APPLICANT"),
+                _principal(outsider, "USER"),
                 status=None,
                 page=1,
                 page_size=20,
@@ -155,20 +155,20 @@ def test_similarity_case_assignment_resolution_authorization_and_audit() -> None
 
         with pytest.raises(ReviewForbiddenError):
             await service.resolve_case(
-                _principal(outsider, "REVIEWER"),
+                _principal(outsider, "MODERATOR"),
                 created.id,
                 disposition=SimilarityCaseDisposition.DISTINCT,
                 reason="These works are clearly different after comparison.",
             )
         with pytest.raises(ReviewValidationError):
             await service.resolve_case(
-                _principal(reviewer, "REVIEWER"),
+                _principal(reviewer, "MODERATOR"),
                 created.id,
                 disposition=SimilarityCaseDisposition.DISTINCT,
                 reason="Too short",
             )
         resolved = await service.resolve_case(
-            _principal(reviewer, "REVIEWER"),
+            _principal(reviewer, "MODERATOR"),
             created.id,
             disposition=SimilarityCaseDisposition.RELATED,
             reason="The works share a series identity but are separate submissions.",
@@ -178,7 +178,7 @@ def test_similarity_case_assignment_resolution_authorization_and_audit() -> None
 
         with pytest.raises(ReviewConflictError):
             await service.resolve_case(
-                _principal(reviewer, "REVIEWER"),
+                _principal(reviewer, "MODERATOR"),
                 created.id,
                 disposition=SimilarityCaseDisposition.SAME_WORK,
                 reason="A resolved disposition cannot be silently replaced later.",

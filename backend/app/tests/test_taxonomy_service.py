@@ -56,7 +56,7 @@ def test_taxonomy_normalization_cycle_permissions_and_audit(tmp_path: Path) -> N
             await connection.run_sync(Base.metadata.create_all)
         factory = async_sessionmaker(engine, expire_on_commit=False)
         async with factory() as session:
-            admin = _principal("CONTENT_ADMIN")
+            admin = _principal("SUPER_ADMIN")
             async with session.begin():
                 session.add(
                     User(
@@ -79,7 +79,7 @@ def test_taxonomy_normalization_cycle_permissions_and_audit(tmp_path: Path) -> N
             data = CategoryInput("Mỹ thuật", "Mỹ thuật", None, None, 0, True)
             with pytest.raises(PublicWorkForbiddenError):
                 await service.create_category(
-                    _principal("APPLICANT"), data, request_id="forbidden"
+                    _principal("USER"), data, request_id="forbidden"
                 )
 
             parent = await service.create_category(admin, data, request_id="parent")

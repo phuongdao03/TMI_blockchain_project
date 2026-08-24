@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr
@@ -103,6 +104,50 @@ class PublicEvidenceProofData(PublicSchema):
     title: str
     evidence_type: str
     sha256: str
+
+
+class PublicDossierDocumentData(PublicSchema):
+    """Public metadata only; never a source-object location or download URL."""
+
+    title: str
+    evidence_type: str
+    access_scope: Literal["PUBLIC", "PUBLIC_PREVIEW"]
+    mime_type: str
+    bytes: int = Field(ge=0)
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class PublicDossierFieldData(PublicSchema):
+    """Explicitly approved dynamic dossier field frozen at submission time."""
+
+    key: str = Field(min_length=1, max_length=120)
+    label: str = Field(min_length=1, max_length=255)
+    value: str | int | float | bool | list[str]
+
+
+class PublicDossierCertificateData(PublicSchema):
+    certificate_number: str
+    status: CertificateStatus
+    issued_at: datetime
+    expires_at: datetime | None
+    version: int = Field(ge=1)
+    network: str | None
+    transaction_hash: str | None
+    confirmations: int = Field(ge=0)
+    confirmed_at: datetime | None
+
+
+class PublicDossierVerificationData(PublicSchema):
+    """Allowlisted result for a stable public dossier verification code."""
+
+    code: str
+    title: str
+    summary: str | None
+    category_name: str
+    published_at: datetime | None
+    certificate: PublicDossierCertificateData | None
+    public_fields: list[PublicDossierFieldData]
+    documents: list[PublicDossierDocumentData]
 
 
 class PublicCertificateVersionData(PublicSchema):
