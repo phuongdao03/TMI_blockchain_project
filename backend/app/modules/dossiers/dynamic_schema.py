@@ -410,7 +410,7 @@ def public_fields_from_schema(
             continue
         # The public field schema has already excluded object/PII field types.
         # Keep this final guard so a malformed stored schema fails closed.
-        if isinstance(value, (str, int, float, bool)) and not isinstance(value, dict):
+        if isinstance(value, (str, int, float, bool)):
             safe_value: object = value
         elif isinstance(value, list) and all(isinstance(item, str) for item in value):
             safe_value = list(value)
