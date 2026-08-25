@@ -19,7 +19,9 @@ test("preview public home keeps submission closed and hides internal language", 
   await expect(
     page.getByRole("button", { name: "Gửi tác phẩm hoặc hồ sơ" }),
   ).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Tạo hồ sơ mới" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Tạo hồ sơ mới" })).toHaveCount(
+    0,
+  );
   await expect(page.locator('a[href="/dossiers/new"]')).toHaveCount(0);
 
   const text = await page.locator("body").innerText();
