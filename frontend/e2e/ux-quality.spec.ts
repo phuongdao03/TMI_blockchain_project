@@ -135,3 +135,21 @@ test("verification remains readable in explicit light and dark themes", async ({
     expect(accessibility.violations).toEqual([]);
   }
 });
+
+test("transparency journey copy keeps contrast in light and dark themes", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const heading = page.locator(".journey-workflow__intro h2");
+  const summary = page.locator(".journey-workflow__intro .text-slate-400");
+  const options = page.locator(".theme-toggle-option");
+
+  await options.nth(1).click();
+  await expect(heading).toHaveCSS("color", "rgb(36, 21, 21)");
+  await expect(summary).toHaveCSS("color", "rgb(107, 86, 86)");
+
+  await options.nth(2).click();
+  await expect(heading).toHaveCSS("color", "rgb(255, 249, 243)");
+  await expect(summary).toHaveCSS("color", "rgb(228, 201, 194)");
+});

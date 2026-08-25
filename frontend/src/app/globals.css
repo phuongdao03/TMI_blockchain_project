@@ -4486,6 +4486,24 @@ html[data-theme="dark"] .public-home .home-audiences {
   background: var(--theme-surface);
 }
 
+/* The public home keeps a fixed light editorial palette in its base rules.
+   Rebind the journey copy to semantic dark tokens so it never becomes dark
+   text on the burgundy workspace surface after a theme switch. */
+html[data-theme="dark"] .public-home .home-journey h2,
+html[data-theme="dark"] .public-home .home-audiences h2,
+html[data-theme="dark"] .public-home .home-featured h2,
+html[data-theme="dark"] .public-home .home-cta h2,
+html[data-theme="dark"] .public-home .home-featured .text-slate-900 {
+  color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .public-home .home-journey .text-slate-400,
+html[data-theme="dark"] .public-home .home-featured .text-slate-400,
+html[data-theme="dark"] .public-home .home-cta .text-slate-400,
+html[data-theme="dark"] .public-home .home-audiences .text-slate-600 {
+  color: var(--theme-muted) !important;
+}
+
 html[data-theme="dark"] .public-home .registry-section-label,
 html[data-theme="dark"] .public-home .home-audiences .text-primary-700,
 html[data-theme="dark"] .public-home .home-featured a,

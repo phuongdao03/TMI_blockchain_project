@@ -103,6 +103,17 @@ describe("THV identity theme", () => {
     );
   });
 
+  it("keeps the transparency journey heading and summary readable in dark mode", () => {
+    expect(stylesheet).toContain(
+      'html[data-theme="dark"] .public-home .home-journey h2',
+    );
+    expect(stylesheet).toContain(
+      'html[data-theme="dark"] .public-home .home-journey .text-slate-400',
+    );
+    expect(stylesheet).toContain("color: var(--theme-text) !important;");
+    expect(stylesheet).toContain("color: var(--theme-muted) !important;");
+  });
+
   it("keeps dossier state surfaces semantic and legible in dark workspaces", () => {
     expect(stylesheet).toContain(".dossier-state-card");
     expect(stylesheet).toContain(".dossier-readonly-notice");
