@@ -72,8 +72,9 @@ contract CertificateRegistry is AccessControl, Pausable {
     );
 
     mapping(bytes32 certificateId => CertificateRecord record) private _certificates;
-    mapping(bytes32 certificateId => mapping(uint32 version => CertificateVersionRecord record))
-        private _certificateVersions;
+    mapping(
+        bytes32 certificateId => mapping(uint32 version => CertificateVersionRecord record)
+    ) private _certificateVersions;
     mapping(bytes32 evidenceKey => DocumentEvidenceRecord record) private _documentEvidence;
     mapping(bytes32 evidenceKey => bytes32 successorKey) private _documentEvidenceSuccessor;
 

@@ -46,13 +46,11 @@ export function SearchAutocomplete({
         );
         setSuggestions(result);
         setActiveIndex(-1);
-        setOpen(true);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError")
           return;
         setSuggestions([]);
         setFailed(true);
-        setOpen(true);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -128,6 +126,8 @@ export function SearchAutocomplete({
             setOpen(false);
             setLoading(false);
             setFailed(false);
+          } else {
+            setOpen(true);
           }
         }}
         onFocus={() => suggestions.length && setOpen(true)}

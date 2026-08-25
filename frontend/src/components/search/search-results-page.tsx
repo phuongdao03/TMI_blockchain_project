@@ -107,6 +107,7 @@ export function SearchResultsPage({
           <Search aria-hidden="true" className="size-4" /> Tìm kiếm
         </Button>
         <Button
+          aria-label="Tinh chỉnh kết quả — Bộ lọc tìm kiếm"
           aria-expanded={filterOpen}
           className="whitespace-nowrap"
           onClick={() => setFilterOpen((open) => !open)}

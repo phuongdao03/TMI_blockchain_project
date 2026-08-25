@@ -28,8 +28,7 @@ contract DeployTHVProofRegistry {
         keccak256("DEPLOY_THV_PROOF_REGISTRY_TO_POLYGON_MAINNET");
 
     /// @dev The Mainnet and Amoy release must preserve this governance separation.
-    address public constant APPROVED_ADMINISTRATOR =
-        0xec5FcdFab3FCafCEFCED55CC702CD3B13f54B4Fe;
+    address public constant APPROVED_ADMINISTRATOR = 0xec5FcdFab3FCafCEFCED55CC702CD3B13f54B4Fe;
     address public constant APPROVED_SIGNER = 0xBfA38182f0D24589e7898DD4892C58c3FDa58042;
 
     VmDeployProofRegistry private constant vm =

@@ -17,8 +17,7 @@ contract DeployTHVProofRegistryTest {
     address private constant DEPLOYER = address(0x1001);
     address private constant ADMIN = address(0x1002);
     address private constant SIGNER = address(0x1003);
-    address private constant APPROVED_ADMINISTRATOR =
-        0xec5FcdFab3FCafCEFCED55CC702CD3B13f54B4Fe;
+    address private constant APPROVED_ADMINISTRATOR = 0xec5FcdFab3FCafCEFCED55CC702CD3B13f54B4Fe;
     address private constant APPROVED_SIGNER = 0xBfA38182f0D24589e7898DD4892C58c3FDa58042;
 
     function testAcceptsApprovedLocalAmoyAndPolygonConfigurations() public view {
@@ -124,38 +123,17 @@ contract DeployTHVProofRegistryTest {
             )
         );
         deployment.validateInputs(
-            31_337,
-            31_337,
-            keccak256("local"),
-            DEPLOYER,
-            address(0x9999),
-            ADMIN,
-            SIGNER,
-            true
+            31_337, 31_337, keccak256("local"), DEPLOYER, address(0x9999), ADMIN, SIGNER, true
         );
 
         vm.expectRevert(DeployTHVProofRegistry.InvalidAdministrator.selector);
         deployment.validateInputs(
-            31_337,
-            31_337,
-            keccak256("local"),
-            DEPLOYER,
-            DEPLOYER,
-            address(0),
-            SIGNER,
-            true
+            31_337, 31_337, keccak256("local"), DEPLOYER, DEPLOYER, address(0), SIGNER, true
         );
 
         vm.expectRevert(DeployTHVProofRegistry.InvalidVerifier.selector);
         deployment.validateInputs(
-            31_337,
-            31_337,
-            keccak256("local"),
-            DEPLOYER,
-            DEPLOYER,
-            ADMIN,
-            address(0),
-            true
+            31_337, 31_337, keccak256("local"), DEPLOYER, DEPLOYER, ADMIN, address(0), true
         );
 
         vm.expectRevert(DeployTHVProofRegistry.RoleSeparationRequired.selector);

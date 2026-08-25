@@ -64,7 +64,6 @@ test("public experience passes visual and accessibility gates at all supported w
     expect(accessibility.violations).toEqual([]);
     await expect.soft(page).toHaveScreenshot(`public-${viewport.width}.png`, {
       animations: "disabled",
-      fullPage: true,
     });
   }
 });
@@ -96,7 +95,6 @@ test("applicant dossier journey stays readable at all supported widths", async (
       .soft(page)
       .toHaveScreenshot(`applicant-${viewport.width}.png`, {
         animations: "disabled",
-        fullPage: true,
       });
   }
 });

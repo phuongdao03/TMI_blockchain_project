@@ -77,7 +77,6 @@ test("applicant dashboard keeps one clear next action at every breakpoint", asyn
       .soft(page)
       .toHaveScreenshot(`applicant-dashboard-${viewport.width}.png`, {
         animations: "disabled",
-        fullPage: true,
       });
   }
 });
@@ -108,7 +107,6 @@ test("operations dashboard prioritizes work without horizontal overflow", async 
       .soft(page)
       .toHaveScreenshot(`operations-dashboard-${viewport.width}.png`, {
         animations: "disabled",
-        fullPage: true,
       });
   }
 });
