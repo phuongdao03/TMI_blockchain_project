@@ -2673,6 +2673,7 @@ html[data-theme="dark"] .dashboard-shell {
   --theme-line: #30392d;
   --theme-accent: #9caf89;
 }
+
 html[data-theme="dark"] .dashboard-navigation__link {
   color: #d6ddd1;
 }
@@ -4046,6 +4047,27 @@ html[data-theme="dark"] .public-library-page {
   color: var(--thv-gold-light);
 }
 
+@media (max-width: 76rem) {
+  .public-shell .public-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+  }
+
+  .public-shell .public-header__workspace {
+    display: none !important;
+  }
+
+  .public-shell .public-header .public-nav,
+  .public-shell .public-header__login,
+  .public-shell .public-header__register {
+    display: none !important;
+  }
+
+  .public-shell .public-header__menu {
+    display: grid !important;
+  }
+}
+
 .public-shell .public-footer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -4175,6 +4197,21 @@ html[data-theme="dark"] .dashboard-shell {
 
 .dashboard-navigation__link--active,
 .dashboard-navigation__link--active:hover {
+  background: var(--thv-gold);
+  box-shadow: 0 0.375rem 1rem rgb(71 0 0 / 22%);
+  color: var(--thv-red-deep);
+}
+
+/* These selectors deliberately match the legacy dark-mode rules above. They
+   must remain later in the stylesheet so the historic olive palette cannot
+   override the THV red-and-gold navigation states. */
+html[data-theme="dark"] .dashboard-navigation__link:hover {
+  background: rgb(255 255 255 / 10%);
+  color: var(--thv-white);
+}
+
+html[data-theme="dark"] .dashboard-navigation__link--active,
+html[data-theme="dark"] .dashboard-navigation__link--active:hover {
   background: var(--thv-gold);
   box-shadow: 0 0.375rem 1rem rgb(71 0 0 / 22%);
   color: var(--thv-red-deep);

@@ -113,6 +113,26 @@ describe("THV identity theme", () => {
     );
   });
 
+  it("keeps dashboard navigation in the red-and-gold brand system in dark mode", () => {
+    expect(stylesheet).toContain(
+      'html[data-theme="dark"] .dashboard-navigation__link:hover',
+    );
+    expect(stylesheet).toContain(
+      'html[data-theme="dark"] .dashboard-navigation__link--active,',
+    );
+    expect(stylesheet).toContain("background: var(--thv-gold);");
+    expect(stylesheet).toContain("color: var(--thv-red-deep);");
+  });
+
+  it("forces compact public headers to keep the workspace action inside the menu", () => {
+    expect(stylesheet).toContain(
+      ".public-shell .public-header__workspace {\n    display: none !important;",
+    );
+    expect(stylesheet).toContain(
+      ".public-shell .public-header__menu {\n    display: grid !important;",
+    );
+  });
+
   it("maps every authenticated status palette to dark workspace tokens", () => {
     expect(stylesheet).toContain(".dashboard-main .bg-neutral-50\\/70");
     expect(stylesheet).toContain(".dashboard-main .bg-emerald-50");

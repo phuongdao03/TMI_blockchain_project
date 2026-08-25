@@ -58,3 +58,41 @@ test("compact public shell keeps the account entry in its drawer and uses a full
 
   await expect(page.locator(".public-shell")).toHaveCSS("display", "flex");
 });
+
+test("medium public shell keeps signed-in navigation in the menu", async ({
+  context,
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chrome");
+
+  await context.addCookies([
+    {
+      name: "tmi_access",
+      value: "e2e-access",
+      domain: "127.0.0.1",
+      path: "/",
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+    {
+      name: "tmi_csrf",
+      value: "e2e-csrf",
+      domain: "127.0.0.1",
+      path: "/",
+      sameSite: "Lax",
+    },
+    {
+      name: "tmi_e2e_persona",
+      value: "public",
+      domain: "127.0.0.1",
+      path: "/",
+      sameSite: "Lax",
+    },
+  ]);
+
+  await page.setViewportSize({ width: 1145, height: 800 });
+  await page.goto("/verify");
+
+  await expect(page.locator(".public-header__workspace")).toBeHidden();
+  await expect(page.locator(".public-header__menu")).toBeVisible();
+});
