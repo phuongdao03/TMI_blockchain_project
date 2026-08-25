@@ -151,14 +151,7 @@ contract DeployTHVProofRegistryTest {
             )
         );
         deployment.validateInputs(
-            137,
-            137,
-            keccak256("polygon"),
-            DEPLOYER,
-            DEPLOYER,
-            ADMIN,
-            APPROVED_SIGNER,
-            false
+            137, 137, keccak256("polygon"), DEPLOYER, DEPLOYER, ADMIN, APPROVED_SIGNER, false
         );
 
         vm.expectRevert(
