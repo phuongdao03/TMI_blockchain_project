@@ -11,7 +11,7 @@ const applicationDistDir =
   process.env.E2E_NEXT_DIST_DIR ??
   (previewRun ? ".next-e2e-preview" : ".next-e2e");
 const applicationUrl = `http://127.0.0.1:${applicationPort}`;
-const previewTestName = /preview dashboard keeps submission closed/i;
+const previewTestName = /preview public home keeps submission closed/i;
 const snapshotPlatform = process.env.E2E_SNAPSHOT_PLATFORM;
 
 export default defineConfig({

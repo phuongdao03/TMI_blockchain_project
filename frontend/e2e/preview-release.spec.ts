@@ -1,48 +1,26 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test("preview dashboard keeps submission closed and hides internal language", async ({
-  context,
+test("preview public home keeps submission closed and hides internal language", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chrome");
-  await context.addCookies([
-    {
-      name: "tmi_access",
-      value: "e2e-access",
-      domain: "127.0.0.1",
-      path: "/",
-      httpOnly: true,
-      sameSite: "Lax",
-    },
-    {
-      name: "tmi_e2e_persona",
-      value: "applicant",
-      domain: "127.0.0.1",
-      path: "/",
-      sameSite: "Lax",
-    },
-  ]);
-
-  await page.goto("/dashboard");
+  await page.goto("/");
 
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Khám phá những đề cử đang được giới thiệu",
+      name: "Nơi những giá trị Việt được giới thiệu, ghi nhận và lan tỏa.",
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Cổng gửi đề cử đang được chuẩn bị" }),
-  ).toBeVisible();
-  await expect(page.getByText("Sắp ra mắt", { exact: true })).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Tìm hiểu cách tham gia" }),
-  ).toHaveAttribute("href", "/coming-soon/submission");
+    page.getByRole("link", { name: "Khám phá đề cử", exact: true }),
+  ).toHaveAttribute("href", "/works");
   await expect(
     page.getByRole("button", { name: "Gửi tác phẩm hoặc hồ sơ" }),
   ).toHaveCount(0);
-  await expect(page.getByLabel("Cá nhân")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Tạo hồ sơ mới" })).toHaveCount(0);
+  await expect(page.locator('a[href="/dossiers/new"]')).toHaveCount(0);
 
   const text = await page.locator("body").innerText();
   expect(text).not.toMatch(
