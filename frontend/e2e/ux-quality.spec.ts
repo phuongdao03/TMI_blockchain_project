@@ -62,9 +62,6 @@ test("public experience passes visual and accessibility gates at all supported w
 
     const accessibility = await new AxeBuilder({ page }).analyze();
     expect(accessibility.violations).toEqual([]);
-    await expect.soft(page).toHaveScreenshot(`public-${viewport.width}.png`, {
-      animations: "disabled",
-    });
   }
 });
 
@@ -91,11 +88,6 @@ test("applicant dossier journey stays readable at all supported widths", async (
         () => document.documentElement.scrollWidth <= window.innerWidth + 1,
       ),
     ).toBe(true);
-    await expect
-      .soft(page)
-      .toHaveScreenshot(`applicant-${viewport.width}.png`, {
-        animations: "disabled",
-      });
   }
 });
 

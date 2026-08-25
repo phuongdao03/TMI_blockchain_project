@@ -30,9 +30,9 @@ export default defineConfig({
   expect: {
     timeout: 15000,
     toHaveScreenshot: {
-      // Viewport snapshots detect visual regressions without encoding the
-      // full document height, which legitimately differs across OS fonts.
-      maxDiffPixelRatio: 0.03,
+      // Tolerate sub-pixel font/transform rasterization while keeping the
+      // visual gate strict enough to catch real layout or content changes.
+      maxDiffPixelRatio: 0.001,
     },
   },
   use: {
