@@ -93,6 +93,56 @@ The deployment command writes a reproducible release manifest to `contracts/arti
 THV_PROOF_REGISTRY_CONTRACT_ADDRESS=<deployed-address>
 ```
 
+The application runtime must use the full workflow and allow both active
+contracts (omit the legacy address only after its certificate routes are
+retired):
+
+```dotenv
+APP_ENV=production
+RELEASE_MODE=full
+BLOCKCHAIN_NETWORK=polygon
+BLOCKCHAIN_CHAIN_ID=137
+BLOCKCHAIN_RPC_URL=https://<restricted-polygon-mainnet-rpc>
+CERTIFICATE_CONTRACT_ADDRESS=<legacy-certificate-registry-address>
+THV_PROOF_REGISTRY_CONTRACT_ADDRESS=<deployed-thv-proof-registry-address>
+BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES=<legacy-address>,<proof-registry-address>
+BLOCKCHAIN_SIGNER_MODE=human
+BLOCKCHAIN_SIGNING_ENABLED=true
+BLOCKCHAIN_REQUIRED_CONFIRMATIONS=3
+BLOCKCHAIN_TRANSACTION_INTENT_TTL_SECONDS=300
+```
+
+Recreate `backend`, `worker` and `frontend` containers after changing this
+file. Confirm the variables reached the backend without printing the RPC URL:
+
+```bash
+docker compose --env-file infrastructure/.env.production \
+  -f infrastructure/compose.production.yaml exec backend \
+  python -c "from app.core.config import get_settings; s=get_settings(); print(s.release_mode, s.blockchain_network, s.blockchain_chain_id, s.thv_proof_registry_contract_address, s.blockchain_signer_mode, s.blockchain_signing_enabled)"
+```
+
+Expected values are `full polygon 137 <deployed-address> human True`.
+
+## Bootstrap the first application Super Admin
+
+Create the Firebase credential in Firebase Console first. The application
+bootstrap only binds that existing Firebase UID to the application database;
+it never accepts or stores the Firebase password. Run migrations, then execute
+the guarded command inside the production backend container:
+
+```bash
+docker compose --env-file infrastructure/.env.production \
+  -f infrastructure/compose.production.yaml exec backend \
+  python -m app.scripts.bootstrap_production_super_admin \
+  --email <exact-firebase-email> \
+  --firebase-uid <exact-firebase-uid> \
+  --confirm BOOTSTRAP_PRODUCTION_SUPER_ADMIN
+```
+
+The command is idempotent for the same identity and refuses a UID collision or
+a second distinct Super Admin. Sign out and sign in again after it succeeds so
+the application session is rebuilt with the new role.
+
 To re-check deployed roles independently:
 
 ```bash

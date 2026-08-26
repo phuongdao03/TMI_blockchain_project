@@ -17,6 +17,9 @@ from app.modules.blockchain.schemas import (
     THVProofRegistryIntentData,
     THVProofRegistryIntentRequest,
     THVProofRegistryProofData,
+    THVProofRegistryQueueItemData,
+    THVProofRegistryStatusData,
+    THVProofRegistrySubmissionRequest,
     THVProofRegistryVerificationData,
 )
 
@@ -41,6 +44,21 @@ def _success(request: Request, data: object) -> SuccessEnvelope[object]:
     )
 
 
+@router.get(
+    "/signing-queue",
+    response_model=SuccessEnvelope[list[THVProofRegistryQueueItemData]],
+    responses=RESPONSES,
+)
+async def signing_queue(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: THVProofRegistryServiceDependency,
+) -> SuccessEnvelope[list[THVProofRegistryQueueItemData]]:
+    views = await service.signing_queue(principal)
+    data = [THVProofRegistryQueueItemData.model_validate(view) for view in views]
+    return _success(request, data)  # type: ignore[return-value]
+
+
 @router.post(
     "/dossiers/{dossier_id}/versions/{version_no}/intents",
     response_model=SuccessEnvelope[THVProofRegistryIntentData],
@@ -61,6 +79,47 @@ async def prepare_record_proof_intent(
         connected_wallet=body.connected_wallet,
     )
     return _success(request, THVProofRegistryIntentData.model_validate(view))  # type: ignore[return-value]
+
+
+@router.post(
+    "/transactions/{transaction_id}/submissions",
+    response_model=SuccessEnvelope[THVProofRegistryStatusData],
+    responses=RESPONSES,
+)
+async def submit_record_proof_transaction(
+    transaction_id: UUID,
+    body: THVProofRegistrySubmissionRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: THVProofRegistryServiceDependency,
+) -> SuccessEnvelope[THVProofRegistryStatusData]:
+    view = await service.submit_transaction(
+        principal,
+        transaction_id=transaction_id,
+        intent_id=body.intent_id,
+        transaction_hash=body.transaction_hash,
+        connected_wallet=body.connected_wallet,
+    )
+    return _success(request, THVProofRegistryStatusData.model_validate(view))  # type: ignore[return-value]
+
+
+@router.get(
+    "/transactions/{transaction_id}/status",
+    response_model=SuccessEnvelope[THVProofRegistryStatusData],
+    responses=RESPONSES,
+)
+async def record_proof_transaction_status(
+    transaction_id: UUID,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: THVProofRegistryServiceDependency,
+) -> SuccessEnvelope[THVProofRegistryStatusData]:
+    view = await service.transaction_status(
+        principal,
+        transaction_id=transaction_id,
+        reconcile=True,
+    )
+    return _success(request, THVProofRegistryStatusData.model_validate(view))  # type: ignore[return-value]
 
 
 @router.get(

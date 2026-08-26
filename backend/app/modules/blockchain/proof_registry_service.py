@@ -8,10 +8,13 @@ transaction itself.
 
 import hashlib
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from uuid import UUID
+from datetime import UTC, datetime, timedelta
+from typing import cast
+from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
@@ -19,11 +22,16 @@ from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.errors import (
     BlockchainConflictError,
     BlockchainForbiddenError,
+    BlockchainNotFoundError,
     BlockchainUnavailableError,
 )
 from app.modules.blockchain.gateway import BlockchainGatewayError
 from app.modules.blockchain.human_signing import normalize_wallet_address
 from app.modules.blockchain.models import (
+    BlockchainTransaction,
+    BlockchainTransactionIntent,
+    BlockchainTransactionIntentStatus,
+    BlockchainTransactionStatus,
     BlockchainWalletLink,
     BlockchainWalletLinkStatus,
 )
@@ -41,6 +49,8 @@ _CANONICAL_HASH = re.compile(r"[0-9a-fA-F]{64}")
 
 @dataclass(frozen=True, slots=True)
 class THVProofRegistryIntentView:
+    intent_id: UUID
+    transaction_id: UUID
     dossier_id: UUID
     dossier_code: str
     dossier_title: str
@@ -54,6 +64,33 @@ class THVProofRegistryIntentView:
     estimated_gas: int
     gas_price_wei: int
     wallet_balance_wei: int
+    expires_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class THVProofRegistryStatusView:
+    transaction_id: UUID
+    status: BlockchainTransactionStatus
+    tx_hash: str | None
+    confirmations: int
+    error_code: str | None
+    error_message: str | None
+    confirmed_at: datetime | None
+
+
+@dataclass(frozen=True, slots=True)
+class THVProofRegistryQueueItemView:
+    transaction_id: UUID | None
+    dossier_id: UUID
+    dossier_code: str
+    dossier_title: str
+    version: int
+    proof_hash: str
+    status: BlockchainTransactionStatus
+    tx_hash: str | None
+    confirmations: int
+    error_code: str | None
+    created_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,6 +118,7 @@ class _ApprovedVersionContext:
     dossier_title: str
     version: int
     canonical_hash: str
+    version_id: UUID
 
 
 def derive_thv_asset_id(dossier_id: UUID) -> bytes:
@@ -98,6 +136,9 @@ class THVProofRegistryService:
         chain_id: int,
         contract_address: str,
         signing_enabled: bool,
+        required_confirmations: int = 1,
+        intent_ttl: timedelta = timedelta(minutes=10),
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         if gateway.contract_address.lower() != contract_address.lower():
             raise ValueError("THV proof registry contract address is inconsistent.")
@@ -107,6 +148,73 @@ class THVProofRegistryService:
         self._chain_id = chain_id
         self._contract_address = contract_address.lower()
         self._signing_enabled = signing_enabled
+        self._required_confirmations = required_confirmations
+        self._intent_ttl = intent_ttl
+        self._clock = clock or (lambda: datetime.now(UTC))
+
+    async def signing_queue(
+        self, principal: AuthPrincipal
+    ) -> list[THVProofRegistryQueueItemView]:
+        """List current approved dossier versions not yet confirmed on registry."""
+        self._require_signer(principal)
+        self._require_enabled()
+        async with self._session.begin():
+            rows = (
+                await self._session.execute(
+                    select(Dossier, DossierVersion, BlockchainTransaction)
+                    .join(
+                        DossierVersion,
+                        and_(
+                            DossierVersion.dossier_id == Dossier.id,
+                            DossierVersion.version_no == Dossier.current_version_no,
+                        ),
+                    )
+                    .outerjoin(
+                        BlockchainTransaction,
+                        and_(
+                            BlockchainTransaction.dossier_version_id
+                            == DossierVersion.id,
+                            BlockchainTransaction.network == self._network,
+                            BlockchainTransaction.contract_address
+                            == self._contract_address,
+                            BlockchainTransaction.method == "recordProof",
+                            BlockchainTransaction.payload_hash
+                            == DossierVersion.canonical_hash,
+                        ),
+                    )
+                    .where(
+                        Dossier.status == DossierStatus.APPROVED,
+                        Dossier.deleted_at.is_(None),
+                        or_(
+                            BlockchainTransaction.id.is_(None),
+                            BlockchainTransaction.status
+                            != BlockchainTransactionStatus.CONFIRMED,
+                        ),
+                    )
+                    .order_by(Dossier.approved_at.asc(), Dossier.created_at.asc())
+                    .limit(200)
+                )
+            ).all()
+        return [
+            THVProofRegistryQueueItemView(
+                transaction_id=transaction.id if transaction else None,
+                dossier_id=dossier.id,
+                dossier_code=dossier.code,
+                dossier_title=dossier.title,
+                version=version.version_no,
+                proof_hash=self._as_hex(bytes.fromhex(version.canonical_hash)),
+                status=(
+                    transaction.status
+                    if transaction
+                    else BlockchainTransactionStatus.CREATED
+                ),
+                tx_hash=transaction.tx_hash if transaction else None,
+                confirmations=transaction.confirmations if transaction else 0,
+                error_code=transaction.error_code if transaction else None,
+                created_at=dossier.approved_at or version.submitted_at,
+            )
+            for dossier, version, transaction in rows
+        ]
 
     async def prepare_record_proof_intent(
         self,
@@ -147,7 +255,85 @@ class THVProofRegistryService:
                 "THV proof registry is unavailable for signing."
             ) from exc
 
+        now = self._clock()
+        async with self._session.begin():
+            transaction = cast(
+                BlockchainTransaction | None,
+                await self._session.scalar(
+                    select(BlockchainTransaction).where(
+                        BlockchainTransaction.dossier_version_id
+                        == context.version_id,
+                        BlockchainTransaction.network == self._network,
+                        BlockchainTransaction.contract_address
+                        == self._contract_address,
+                        BlockchainTransaction.method == "recordProof",
+                        BlockchainTransaction.payload_hash
+                        == context.canonical_hash,
+                    )
+                ),
+            )
+            if transaction is None:
+                transaction = BlockchainTransaction(
+                    id=uuid4(),
+                    dossier_id=context.dossier_id,
+                    dossier_version_id=context.version_id,
+                    network=self._network,
+                    chain_id=self._chain_id,
+                    contract_address=self._contract_address,
+                    method="recordProof",
+                    payload_hash=context.canonical_hash,
+                    status=BlockchainTransactionStatus.CREATED,
+                )
+                self._session.add(transaction)
+                await self._session.flush()
+            if transaction.status in {
+                BlockchainTransactionStatus.BROADCAST,
+                BlockchainTransactionStatus.CONFIRMED,
+            }:
+                raise BlockchainConflictError(
+                    "This dossier version already has a submitted proof transaction."
+                )
+            current = cast(
+                BlockchainTransactionIntent | None,
+                await self._session.scalar(
+                    select(BlockchainTransactionIntent).where(
+                        BlockchainTransactionIntent.transaction_id == transaction.id,
+                        BlockchainTransactionIntent.status
+                        == BlockchainTransactionIntentStatus.PREPARED,
+                    )
+                ),
+            )
+            if current is not None and self._as_utc(current.expires_at) <= now:
+                current.status = BlockchainTransactionIntentStatus.EXPIRED
+                current = None
+            if current is None:
+                current = BlockchainTransactionIntent(
+                    id=uuid4(),
+                    transaction_id=transaction.id,
+                    dossier_id=context.dossier_id,
+                    dossier_version_id=context.version_id,
+                    signer_user_id=principal.user_id,
+                    expected_wallet_address=wallet.wallet_address,
+                    network=self._network,
+                    chain_id=self._chain_id,
+                    contract_address=self._contract_address,
+                    proof_hash=context.canonical_hash,
+                    encoded_call_hash=hashlib.sha256(payload).hexdigest(),
+                    status=BlockchainTransactionIntentStatus.PREPARED,
+                    expires_at=now + self._intent_ttl,
+                )
+                self._session.add(current)
+            elif (
+                current.signer_user_id != principal.user_id
+                or current.expected_wallet_address != wallet.wallet_address
+            ):
+                raise BlockchainConflictError("A signing request is already active.")
+            transaction.status = BlockchainTransactionStatus.SIGNING
+            await self._session.flush()
+
         return THVProofRegistryIntentView(
+            intent_id=current.id,
+            transaction_id=transaction.id,
             dossier_id=context.dossier_id,
             dossier_code=context.dossier_code,
             dossier_title=context.dossier_title,
@@ -166,7 +352,190 @@ class THVProofRegistryService:
             estimated_gas=estimated_gas,
             gas_price_wei=gas_price,
             wallet_balance_wei=balance,
+            expires_at=current.expires_at,
         )
+
+    async def submit_transaction(
+        self,
+        principal: AuthPrincipal,
+        *,
+        transaction_id: UUID,
+        intent_id: UUID,
+        transaction_hash: str,
+        connected_wallet: str,
+    ) -> THVProofRegistryStatusView:
+        self._require_signer(principal)
+        self._require_enabled()
+        wallet = await self._require_active_wallet(principal, connected_wallet)
+        async with self._session.begin():
+            intent = await self._required_intent(intent_id)
+            if intent.transaction_id != transaction_id:
+                raise BlockchainConflictError("Transaction intent does not match.")
+            expected_call_hash = intent.encoded_call_hash
+            expected_wallet = intent.expected_wallet_address
+            expected_contract = intent.contract_address
+            expected_chain = int(intent.chain_id)
+        try:
+            chain_transaction = await self._gateway.transaction(transaction_hash)
+        except BlockchainGatewayError as exc:
+            raise BlockchainUnavailableError(
+                "THV proof transaction lookup is unavailable."
+            ) from exc
+        if chain_transaction is None:
+            raise BlockchainConflictError("Blockchain transaction was not found.")
+        if (
+            chain_transaction.sender != expected_wallet
+            or chain_transaction.sender != wallet.wallet_address
+            or chain_transaction.recipient.lower() != expected_contract.lower()
+            or chain_transaction.chain_id != expected_chain
+            or chain_transaction.value != 0
+            or hashlib.sha256(chain_transaction.data).hexdigest()
+            != expected_call_hash
+        ):
+            raise BlockchainConflictError(
+                "Blockchain transaction does not match intent."
+            )
+        now = self._clock()
+        async with self._session.begin():
+            intent = await self._required_intent(intent_id, for_update=True)
+            transaction = await self._required_transaction(
+                transaction_id, for_update=True
+            )
+            if (
+                intent.signer_user_id != principal.user_id
+                or intent.expected_wallet_address != wallet.wallet_address
+                or intent.status is not BlockchainTransactionIntentStatus.PREPARED
+                or self._as_utc(intent.expires_at) <= now
+                or transaction.method != "recordProof"
+                or transaction.contract_address.lower() != self._contract_address
+            ):
+                raise BlockchainConflictError(
+                    "Blockchain signing intent is no longer valid."
+                )
+            if transaction.status not in {
+                BlockchainTransactionStatus.CREATED,
+                BlockchainTransactionStatus.SIGNING,
+            }:
+                raise BlockchainConflictError("Transaction cannot be submitted now.")
+            transaction.status = BlockchainTransactionStatus.BROADCAST
+            transaction.tx_hash = chain_transaction.transaction_hash
+            transaction.signer_user_id = principal.user_id
+            transaction.signer_wallet_address = wallet.wallet_address
+            transaction.broadcast_at = now
+            transaction.error_code = None
+            transaction.error_message = None
+            intent.status = BlockchainTransactionIntentStatus.SUBMITTED
+            intent.submitted_at = now
+            return self._status_view(transaction)
+
+    async def transaction_status(
+        self,
+        principal: AuthPrincipal,
+        *,
+        transaction_id: UUID,
+        reconcile: bool = True,
+    ) -> THVProofRegistryStatusView:
+        self._require_signer(principal)
+        if reconcile:
+            await self._reconcile(transaction_id)
+        async with self._session.begin():
+            return self._status_view(await self._required_transaction(transaction_id))
+
+    async def _reconcile(self, transaction_id: UUID) -> None:
+        async with self._session.begin():
+            transaction = await self._required_transaction(transaction_id)
+            if transaction.status not in {
+                BlockchainTransactionStatus.BROADCAST,
+                BlockchainTransactionStatus.CONFIRMED,
+            } or transaction.tx_hash is None:
+                return
+            tx_hash = transaction.tx_hash
+            dossier_id = transaction.dossier_id
+            version_id = transaction.dossier_version_id
+            proof_hash = transaction.payload_hash
+            expected_signer = transaction.signer_wallet_address
+        try:
+            receipt = await self._gateway.receipt(tx_hash)
+            if receipt is None:
+                return
+            if not receipt.succeeded:
+                await self._fail_transaction(
+                    transaction_id, "TRANSACTION_REVERTED", "Transaction reverted."
+                )
+                return
+            if (
+                receipt.transaction_hash.lower() != tx_hash.lower()
+                or receipt.contract_address.lower() != self._contract_address
+                or "ProofRecorded" not in receipt.event_names
+            ):
+                await self._fail_transaction(
+                    transaction_id,
+                    "RECEIPT_MISMATCH",
+                    "Receipt contract, hash or ProofRecorded event does not match.",
+                )
+                return
+            canonical_hash = await self._gateway.block_hash(receipt.block_number)
+            if canonical_hash.lower() != receipt.block_hash.lower():
+                await self._fail_transaction(
+                    transaction_id, "CHAIN_REORG", "Receipt block is not canonical."
+                )
+                return
+            latest_block = await self._gateway.latest_block_number()
+            confirmations = max(0, latest_block - receipt.block_number + 1)
+            async with self._session.begin():
+                version = await self._session.get(DossierVersion, version_id)
+            if version is None or version.dossier_id != dossier_id:
+                await self._fail_transaction(
+                    transaction_id, "CONTEXT_MISSING", "Proof context is unavailable."
+                )
+                return
+            asset_id = derive_thv_asset_id(dossier_id)
+            proof = await self._gateway.get_proof(asset_id, version.version_no)
+            if (
+                not proof.exists
+                or proof.asset_id != asset_id
+                or proof.proof_hash != bytes.fromhex(proof_hash)
+                or proof.version != version.version_no
+                or expected_signer is None
+                or proof.signer.lower() != expected_signer.lower()
+            ):
+                await self._fail_transaction(
+                    transaction_id,
+                    "CHAIN_STATE_MISMATCH",
+                    "On-chain proof does not match the frozen dossier proof.",
+                )
+                return
+        except BlockchainGatewayError as exc:
+            raise BlockchainUnavailableError(
+                "THV proof confirmation lookup is unavailable."
+            ) from exc
+
+        async with self._session.begin():
+            transaction = await self._required_transaction(
+                transaction_id, for_update=True
+            )
+            transaction.confirmations = confirmations
+            transaction.receipt_block_number = receipt.block_number
+            transaction.receipt_block_hash = receipt.block_hash
+            transaction.receipt_event_name = "ProofRecorded"
+            transaction.error_code = None
+            transaction.error_message = None
+            if confirmations >= self._required_confirmations:
+                transaction.status = BlockchainTransactionStatus.CONFIRMED
+                transaction.confirmed_at = transaction.confirmed_at or self._clock()
+
+    async def _fail_transaction(
+        self, transaction_id: UUID, code: str, message: str
+    ) -> None:
+        async with self._session.begin():
+            transaction = await self._required_transaction(
+                transaction_id, for_update=True
+            )
+            if transaction.status is BlockchainTransactionStatus.CONFIRMED:
+                return
+            transaction.status = BlockchainTransactionStatus.FAILED
+            transaction.error_code = code
+            transaction.error_message = message
 
     async def get_proof(
         self,
@@ -247,7 +616,37 @@ class THVProofRegistryService:
                 dossier_title=dossier.title,
                 version=version.version_no,
                 canonical_hash=canonical_hash.lower(),
+                version_id=version.id,
             )
+
+    async def _required_transaction(
+        self, transaction_id: UUID, *, for_update: bool = False
+    ) -> BlockchainTransaction:
+        statement = select(BlockchainTransaction).where(
+            BlockchainTransaction.id == transaction_id,
+            BlockchainTransaction.method == "recordProof",
+            BlockchainTransaction.contract_address == self._contract_address,
+        )
+        if for_update:
+            statement = statement.with_for_update()
+        transaction = await self._session.scalar(statement)
+        if transaction is None:
+            raise BlockchainNotFoundError()
+        return transaction
+
+    async def _required_intent(
+        self, intent_id: UUID, *, for_update: bool = False
+    ) -> BlockchainTransactionIntent:
+        statement = select(BlockchainTransactionIntent).where(
+            BlockchainTransactionIntent.id == intent_id,
+            BlockchainTransactionIntent.contract_address == self._contract_address,
+        )
+        if for_update:
+            statement = statement.with_for_update()
+        intent = await self._session.scalar(statement)
+        if intent is None:
+            raise BlockchainNotFoundError()
+        return intent
 
     async def _require_active_wallet(
         self,
@@ -337,6 +736,26 @@ class THVProofRegistryService:
     @staticmethod
     def _as_hex(value: bytes) -> str:
         return "0x" + value.hex()
+
+    @staticmethod
+    def _as_utc(value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            return value.replace(tzinfo=UTC)
+        return value.astimezone(UTC)
+
+    @staticmethod
+    def _status_view(
+        transaction: BlockchainTransaction,
+    ) -> THVProofRegistryStatusView:
+        return THVProofRegistryStatusView(
+            transaction_id=transaction.id,
+            status=transaction.status,
+            tx_hash=transaction.tx_hash,
+            confirmations=transaction.confirmations,
+            error_code=transaction.error_code,
+            error_message=transaction.error_message,
+            confirmed_at=transaction.confirmed_at,
+        )
 
     @classmethod
     def _proof_view(cls, proof: THVProofRecord) -> THVProofRegistryProofView:

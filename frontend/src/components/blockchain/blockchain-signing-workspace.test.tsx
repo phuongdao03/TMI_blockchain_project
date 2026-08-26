@@ -1,22 +1,32 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BlockchainSigningWorkspace } from "@/components/blockchain/blockchain-signing-workspace";
 
-const { queue } = vi.hoisted(() => ({ queue: vi.fn() }));
+const { currentWallet, legacyQueue, proofQueue } = vi.hoisted(() => ({
+  currentWallet: vi.fn(),
+  legacyQueue: vi.fn(),
+  proofQueue: vi.fn(),
+}));
 
 vi.mock("@/lib/api/client", () => ({
   ApiError: class ApiError extends Error {},
   blockchainSigningApi: {
-    currentWallet: vi.fn(async () => null),
-    queue,
+    currentWallet,
+    queue: legacyQueue,
     context: vi.fn(),
     issueWalletChallenge: vi.fn(),
     verifyWalletLink: vi.fn(),
     prepareIntent: vi.fn(),
     submitTransaction: vi.fn(),
+  },
+  proofRegistrySigningApi: {
+    queue: proofQueue,
+    prepareIntent: vi.fn(),
+    submitTransaction: vi.fn(),
+    status: vi.fn(),
   },
 }));
 
@@ -42,12 +52,50 @@ function Wrapper({ children }: { children: ReactNode }) {
 }
 
 describe("BlockchainSigningWorkspace", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentWallet.mockResolvedValue(null);
+    proofQueue.mockResolvedValue([]);
+  });
+
   it("guides an authorized Super Admin to verify a wallet instead of leaving the signing queue loading", async () => {
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
 
     expect(
       await screen.findByText("Kết nối và xác minh ví để mở hàng đợi ký."),
     ).toBeDefined();
-    expect(queue).not.toHaveBeenCalled();
+    expect(proofQueue).not.toHaveBeenCalled();
+    expect(legacyQueue).not.toHaveBeenCalled();
+  });
+
+  it("loads approved dossiers from THVProofRegistry instead of CertificateRegistry", async () => {
+    currentWallet.mockResolvedValue({
+      id: "wallet-link",
+      walletAddress: "0x3434343434343434343434343434343434343434",
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-26T00:00:00Z",
+    });
+    proofQueue.mockResolvedValue([
+      {
+        transactionId: null,
+        dossierId: "dossier-1",
+        dossierCode: "THV-2026-001",
+        dossierTitle: "Tác phẩm đã duyệt",
+        version: 1,
+        proofHash: `0x${"ab".repeat(32)}`,
+        status: "CREATED",
+        txHash: null,
+        confirmations: 0,
+        errorCode: null,
+        createdAt: "2026-08-26T00:00:00Z",
+      },
+    ]);
+
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("Tác phẩm đã duyệt")).toBeDefined();
+    expect(proofQueue).toHaveBeenCalledOnce();
+    expect(legacyQueue).not.toHaveBeenCalled();
   });
 });

@@ -10,6 +10,8 @@ import type {
   BlockchainSigningStatus,
   BlockchainWalletChallenge,
   BlockchainWalletLink,
+  THVProofRegistryIntent,
+  THVProofRegistryQueueItem,
   AuthUser,
   CmsBanner,
   CmsCategory,
@@ -352,6 +354,46 @@ export const blockchainSigningApi = {
   status(transactionId: string) {
     return request<BlockchainSigningStatus>(
       `/blockchain/transactions/${encodeURIComponent(transactionId)}/status`,
+    );
+  },
+};
+
+export const proofRegistrySigningApi = {
+  queue() {
+    return request<THVProofRegistryQueueItem[]>(
+      "/blockchain/proof-registry/signing-queue",
+    );
+  },
+  prepareIntent(dossierId: string, version: number, connectedWallet: string) {
+    return request<THVProofRegistryIntent>(
+      `/blockchain/proof-registry/dossiers/${encodeURIComponent(dossierId)}/versions/${version}/intents`,
+      {
+        method: "POST",
+        body: JSON.stringify({ connectedWallet }),
+      },
+    );
+  },
+  submitTransaction(input: {
+    transactionId: string;
+    intentId: string;
+    transactionHash: string;
+    connectedWallet: string;
+  }) {
+    return request<BlockchainSigningStatus>(
+      `/blockchain/proof-registry/transactions/${encodeURIComponent(input.transactionId)}/submissions`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          intentId: input.intentId,
+          transactionHash: input.transactionHash,
+          connectedWallet: input.connectedWallet,
+        }),
+      },
+    );
+  },
+  status(transactionId: string) {
+    return request<BlockchainSigningStatus>(
+      `/blockchain/proof-registry/transactions/${encodeURIComponent(transactionId)}/status`,
     );
   },
 };

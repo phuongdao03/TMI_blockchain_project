@@ -1,5 +1,5 @@
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
 from uuid import uuid4
@@ -18,8 +18,13 @@ from app.modules.blockchain.errors import (
     BlockchainForbiddenError,
     BlockchainUnavailableError,
 )
+from app.modules.blockchain.gateway import ChainTransaction, TransactionReceipt
 from app.modules.blockchain.human_signing import normalize_wallet_address
-from app.modules.blockchain.models import BlockchainWalletLink
+from app.modules.blockchain.models import (
+    BlockchainTransaction,
+    BlockchainTransactionStatus,
+    BlockchainWalletLink,
+)
 from app.modules.blockchain.proof_registry_dependencies import (
     get_thv_proof_registry_service,
 )
@@ -43,17 +48,21 @@ PAYLOAD = b"thv-proof-registry-calldata"
 class ProofRegistryGateway:
     contract_address = CONTRACT
 
+    def __init__(self) -> None:
+        self.recorded = False
+        self.transaction_hash = "0x" + "90" * 32
+
     async def has_verifier_role(self, wallet_address: str) -> bool:
         return wallet_address == WALLET
 
     async def get_proof(self, asset_id: bytes, version: int) -> THVProofRecord:
         return THVProofRecord(
             asset_id=asset_id,
-            proof_hash=bytes(32),
+            proof_hash=bytes.fromhex("ab" * 32) if self.recorded else bytes(32),
             version=version,
-            recorded_at=0,
-            signer="0x0000000000000000000000000000000000000000",
-            exists=False,
+            recorded_at=int(NOW.timestamp()) if self.recorded else 0,
+            signer=WALLET if self.recorded else "0x" + "00" * 20,
+            exists=self.recorded,
         )
 
     def encode_record_proof(
@@ -79,6 +88,38 @@ class ProofRegistryGateway:
     async def balance(self, wallet_address: str) -> int:
         assert wallet_address == WALLET
         return 10**18
+
+    async def transaction(self, tx_hash: str) -> ChainTransaction | None:
+        if tx_hash != self.transaction_hash:
+            return None
+        self.recorded = True
+        return ChainTransaction(
+            transaction_hash=tx_hash,
+            sender=WALLET,
+            recipient=CONTRACT,
+            data=PAYLOAD,
+            chain_id=31_337,
+            value=0,
+        )
+
+    async def receipt(self, tx_hash: str) -> TransactionReceipt | None:
+        if tx_hash != self.transaction_hash:
+            return None
+        return TransactionReceipt(
+            transaction_hash=tx_hash,
+            block_number=10,
+            block_hash="0x" + "77" * 32,
+            contract_address=CONTRACT,
+            event_names=("ProofRecorded",),
+            succeeded=True,
+        )
+
+    async def latest_block_number(self) -> int:
+        return 11
+
+    async def block_hash(self, block_number: int) -> str:
+        assert block_number == 10
+        return "0x" + "77" * 32
 
 
 def _settings(**overrides: object) -> Settings:
@@ -266,14 +307,24 @@ def test_thv_proof_intent_requires_an_approved_dossier_version() -> None:
             roles=("SUPER_ADMIN",),
             permissions=("blockchain.sign",),
         )
+        gateway = ProofRegistryGateway()
         service = THVProofRegistryService(
             session=sessions(),
-            gateway=cast(THVProofRegistryGateway, ProofRegistryGateway()),
+            gateway=cast(THVProofRegistryGateway, gateway),
             network="local",
             chain_id=31_337,
             contract_address=CONTRACT,
             signing_enabled=True,
+            required_confirmations=2,
+            intent_ttl=timedelta(minutes=10),
+            clock=lambda: NOW,
         )
+        pending = await service.signing_queue(principal)
+        assert len(pending) == 1
+        assert pending[0].dossier_id == dossier.id
+        assert pending[0].transaction_id is None
+        assert pending[0].status is BlockchainTransactionStatus.CREATED
+
         intent = await service.prepare_record_proof_intent(
             principal,
             dossier_id=dossier.id,
@@ -288,6 +339,33 @@ def test_thv_proof_intent_requires_an_approved_dossier_version() -> None:
         }
         assert intent.proof_hash == "0x" + "ab" * 32
         assert intent.version == 1
+        assert intent.transaction_id is not None
+        assert intent.intent_id is not None
+
+        submitted = await service.submit_transaction(
+            principal,
+            transaction_id=intent.transaction_id,
+            intent_id=intent.intent_id,
+            transaction_hash=gateway.transaction_hash,
+            connected_wallet=WALLET,
+        )
+        assert submitted.status is BlockchainTransactionStatus.BROADCAST
+
+        confirmed = await service.transaction_status(
+            principal,
+            transaction_id=intent.transaction_id,
+            reconcile=True,
+        )
+        assert confirmed.status is BlockchainTransactionStatus.CONFIRMED
+        assert confirmed.confirmations == 2
+        assert await service.signing_queue(principal) == []
+        async with sessions() as session:
+            stored_transaction = await session.get(
+                BlockchainTransaction, intent.transaction_id
+            )
+            assert stored_transaction is not None
+            assert stored_transaction.receipt_event_name == "ProofRecorded"
+            assert stored_transaction.signer_wallet_address == WALLET
 
         async with sessions() as session:
             stored = await session.get(Dossier, dossier.id)

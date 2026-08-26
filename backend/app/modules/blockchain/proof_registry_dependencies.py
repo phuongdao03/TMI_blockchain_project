@@ -1,6 +1,7 @@
 """FastAPI dependency wiring for the optional THV proof registry."""
 
 from collections.abc import AsyncIterator
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import Depends
@@ -45,6 +46,10 @@ async def get_thv_proof_registry_service(
         chain_id=settings.blockchain_chain_id,
         contract_address=address,
         signing_enabled=settings.blockchain_signing_enabled,
+        required_confirmations=settings.blockchain_required_confirmations,
+        intent_ttl=timedelta(
+            seconds=settings.blockchain_transaction_intent_ttl_seconds
+        ),
     )
     try:
         yield service

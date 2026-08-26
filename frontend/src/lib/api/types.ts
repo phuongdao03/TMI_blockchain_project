@@ -1042,6 +1042,39 @@ export interface BlockchainSigningStatus {
   confirmedAt: string | null;
 }
 
+export interface THVProofRegistryQueueItem {
+  transactionId: string | null;
+  dossierId: string;
+  dossierCode: string;
+  dossierTitle: string;
+  version: number;
+  proofHash: string;
+  status: BlockchainTransactionStatus;
+  txHash: string | null;
+  confirmations: number;
+  errorCode: string | null;
+  createdAt: string;
+}
+
+export interface THVProofRegistryIntent {
+  intentId: string;
+  transactionId: string;
+  dossierId: string;
+  dossierCode: string;
+  dossierTitle: string;
+  version: number;
+  assetId: string;
+  proofHash: string;
+  network: string;
+  chainId: number;
+  contractAddress: string;
+  transactionRequest: Record<string, string>;
+  estimatedGas: number;
+  gasPriceWei: number;
+  walletBalanceWei: number;
+  expiresAt: string;
+}
+
 export interface Certificate {
   id: string;
   certificateNumber: string;

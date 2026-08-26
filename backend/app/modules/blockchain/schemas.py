@@ -166,7 +166,23 @@ class THVProofRegistryIntentRequest(BlockchainSchema):
     connected_wallet: str = Field(min_length=42, max_length=42)
 
 
+class THVProofRegistryQueueItemData(BlockchainSchema):
+    transaction_id: UUID | None
+    dossier_id: UUID
+    dossier_code: str
+    dossier_title: str
+    version: int
+    proof_hash: str
+    status: BlockchainTransactionStatus
+    tx_hash: str | None
+    confirmations: int
+    error_code: str | None
+    created_at: datetime
+
+
 class THVProofRegistryIntentData(BlockchainSchema):
+    intent_id: UUID
+    transaction_id: UUID
     dossier_id: UUID
     dossier_code: str
     dossier_title: str
@@ -180,6 +196,23 @@ class THVProofRegistryIntentData(BlockchainSchema):
     estimated_gas: int
     gas_price_wei: int
     wallet_balance_wei: int
+    expires_at: datetime
+
+
+class THVProofRegistrySubmissionRequest(BlockchainSchema):
+    intent_id: UUID
+    transaction_hash: str = Field(pattern=r"^0x[0-9a-fA-F]{64}$")
+    connected_wallet: str = Field(min_length=42, max_length=42)
+
+
+class THVProofRegistryStatusData(BlockchainSchema):
+    transaction_id: UUID
+    status: BlockchainTransactionStatus
+    tx_hash: str | None
+    confirmations: int
+    error_code: str | None
+    error_message: str | None
+    confirmed_at: datetime | None
 
 
 class THVProofRegistryProofData(BlockchainSchema):
