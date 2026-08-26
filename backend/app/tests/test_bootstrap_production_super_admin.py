@@ -3,7 +3,12 @@ from typing import cast
 
 import pytest
 from sqlalchemy import Table, func, select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.db.base import Base
 from app.modules.auth.models import (
@@ -20,7 +25,7 @@ from app.scripts.bootstrap_production_super_admin import (
 )
 
 
-async def _factory():
+async def _factory() -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     tables = cast(
         list[Table],
