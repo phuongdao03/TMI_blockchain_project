@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, X } from "lucide-react";
+import { LayoutDashboard, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 
@@ -79,7 +79,11 @@ export function PublicShell({
               className="button button--secondary public-header__workspace"
               href={publicHeaderAction.href}
             >
-              {publicHeaderAction.label}
+              <LayoutDashboard
+                aria-hidden="true"
+                className="public-header__workspace-icon"
+              />
+              <span>{publicHeaderAction.label}</span>
             </Link>
           ) : (
             <>

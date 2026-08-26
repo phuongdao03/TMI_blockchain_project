@@ -418,9 +418,11 @@ body {
 
 .public-header__actions {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: flex-end;
   gap: 0.625rem;
+  flex-wrap: nowrap;
 }
 
 .public-header__auth-link {
@@ -459,8 +461,24 @@ body {
 }
 
 .public-header__workspace {
+  display: inline-flex;
   min-height: 2.75rem;
-  padding-inline: 1rem;
+  max-width: 12rem;
+  align-items: center;
+  gap: 0.625rem;
+  padding-inline: 0.875rem 1rem;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  font-weight: 750;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-header__workspace-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
 }
 
 .public-mobile-drawer,
@@ -4038,8 +4056,9 @@ html[data-theme="dark"] .public-library-page {
 
 .public-shell .public-header__workspace {
   border-color: rgb(246 197 21 / 68%);
-  background: transparent;
+  background: rgb(255 255 255 / 6%);
   color: var(--thv-white);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%);
 }
 
 .public-shell .public-header__workspace:hover {

@@ -285,11 +285,13 @@ describe("layout shells", () => {
       </PublicShell>,
     );
 
+    const workspaceLink = screen.getByRole("link", {
+      name: "Không gian của tôi",
+    });
+    expect(workspaceLink.getAttribute("href")).toBe("/dashboard");
     expect(
-      screen
-        .getByRole("link", { name: "Không gian của tôi" })
-        .getAttribute("href"),
-    ).toBe("/dashboard");
+      workspaceLink.querySelector(".public-header__workspace-icon"),
+    ).not.toBeNull();
     expect(screen.queryByRole("link", { name: /Quản trị nội bộ/i })).toBeNull();
   });
 
