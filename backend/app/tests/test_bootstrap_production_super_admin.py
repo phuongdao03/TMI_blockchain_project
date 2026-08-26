@@ -78,9 +78,7 @@ def test_production_bootstrap_refuses_a_second_super_admin() -> None:
         engine, factory = await _factory()
         async with factory() as session:
             role = Role(code="SUPER_ADMIN")
-            existing = User(
-                email="existing@example.test", status=UserStatus.ACTIVE
-            )
+            existing = User(email="existing@example.test", status=UserStatus.ACTIVE)
             session.add_all([role, existing])
             await session.flush()
             session.add(UserRole(user_id=existing.id, role_id=role.id))
@@ -104,9 +102,7 @@ def test_production_bootstrap_refuses_firebase_uid_collision() -> None:
         engine, factory = await _factory()
         async with factory() as session:
             role = Role(code="SUPER_ADMIN")
-            existing = User(
-                email="existing@example.test", status=UserStatus.ACTIVE
-            )
+            existing = User(email="existing@example.test", status=UserStatus.ACTIVE)
             session.add_all([role, existing])
             await session.flush()
             session.add(

@@ -69,9 +69,7 @@ async def provision_production_super_admin(
     """Provision only the first Super Admin and bind the exact Firebase UID."""
     now = datetime.now(UTC)
     async with session.begin():
-        role = await session.scalar(
-            select(Role).where(Role.code == SUPER_ADMIN_ROLE)
-        )
+        role = await session.scalar(select(Role).where(Role.code == SUPER_ADMIN_ROLE))
         if role is None:
             raise RuntimeError(
                 "SUPER_ADMIN role is unavailable; run database migrations first."

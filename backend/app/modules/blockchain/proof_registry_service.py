@@ -261,14 +261,12 @@ class THVProofRegistryService:
                 BlockchainTransaction | None,
                 await self._session.scalar(
                     select(BlockchainTransaction).where(
-                        BlockchainTransaction.dossier_version_id
-                        == context.version_id,
+                        BlockchainTransaction.dossier_version_id == context.version_id,
                         BlockchainTransaction.network == self._network,
                         BlockchainTransaction.contract_address
                         == self._contract_address,
                         BlockchainTransaction.method == "recordProof",
-                        BlockchainTransaction.payload_hash
-                        == context.canonical_hash,
+                        BlockchainTransaction.payload_hash == context.canonical_hash,
                     )
                 ),
             )
@@ -389,8 +387,7 @@ class THVProofRegistryService:
             or chain_transaction.recipient.lower() != expected_contract.lower()
             or chain_transaction.chain_id != expected_chain
             or chain_transaction.value != 0
-            or hashlib.sha256(chain_transaction.data).hexdigest()
-            != expected_call_hash
+            or hashlib.sha256(chain_transaction.data).hexdigest() != expected_call_hash
         ):
             raise BlockchainConflictError(
                 "Blockchain transaction does not match intent."
@@ -444,10 +441,14 @@ class THVProofRegistryService:
     async def _reconcile(self, transaction_id: UUID) -> None:
         async with self._session.begin():
             transaction = await self._required_transaction(transaction_id)
-            if transaction.status not in {
-                BlockchainTransactionStatus.BROADCAST,
-                BlockchainTransactionStatus.CONFIRMED,
-            } or transaction.tx_hash is None:
+            if (
+                transaction.status
+                not in {
+                    BlockchainTransactionStatus.BROADCAST,
+                    BlockchainTransactionStatus.CONFIRMED,
+                }
+                or transaction.tx_hash is None
+            ):
                 return
             tx_hash = transaction.tx_hash
             dossier_id = transaction.dossier_id

@@ -63,8 +63,11 @@ function errorMessage(error: unknown) {
 export function BlockchainSigningWorkspace() {
   const queryClient = useQueryClient();
   const [connected, setConnected] = useState<ConnectedWallet>(null);
-  const [selected, setSelected] = useState<THVProofRegistryQueueItem | null>(null);
-  const [preparedIntent, setPreparedIntent] = useState<THVProofRegistryIntent | null>(null);
+  const [selected, setSelected] = useState<THVProofRegistryQueueItem | null>(
+    null,
+  );
+  const [preparedIntent, setPreparedIntent] =
+    useState<THVProofRegistryIntent | null>(null);
   const [busy, setBusy] = useState<"connect" | "link" | "sign" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -81,12 +84,21 @@ export function BlockchainSigningWorkspace() {
     refetchInterval: 20_000,
   });
   const transactionStatus = useQuery({
-    queryKey: ["blockchain", "proof-registry", "transaction", selected?.transactionId],
+    queryKey: [
+      "blockchain",
+      "proof-registry",
+      "transaction",
+      selected?.transactionId,
+    ],
     queryFn: () => proofRegistrySigningApi.status(selected!.transactionId!),
-    enabled: Boolean(selected?.transactionId && !terminalStatuses.has(selected.status)),
+    enabled: Boolean(
+      selected?.transactionId && !terminalStatuses.has(selected.status),
+    ),
     retry: false,
     refetchInterval: (query) =>
-      query.state.data && terminalStatuses.has(query.state.data.status) ? false : 5_000,
+      query.state.data && terminalStatuses.has(query.state.data.status)
+        ? false
+        : 5_000,
   });
 
   const displayedSelected =
@@ -113,7 +125,9 @@ export function BlockchainSigningWorkspace() {
   const refreshWalletState = useCallback(async () => {
     try {
       const next = await currentWallet();
-      setConnected(next.address ? { address: next.address, chainId: next.chainId } : null);
+      setConnected(
+        next.address ? { address: next.address, chainId: next.chainId } : null,
+      );
     } catch {
       setConnected(null);
     }
@@ -122,7 +136,9 @@ export function BlockchainSigningWorkspace() {
   useEffect(() => {
     try {
       return subscribeWalletChanges(() => {
-        setMessage("Trạng thái ví đã thay đổi. Vui lòng kiểm tra lại trước khi ký.");
+        setMessage(
+          "Trạng thái ví đã thay đổi. Vui lòng kiểm tra lại trước khi ký.",
+        );
         void refreshWalletState();
         void queryClient.invalidateQueries({ queryKey: ["blockchain"] });
       });
@@ -156,7 +172,10 @@ export function BlockchainSigningWorkspace() {
         connected.address,
         connected.chainId,
       );
-      const signature = await signWalletChallenge(challenge.message, connected.address);
+      const signature = await signWalletChallenge(
+        challenge.message,
+        connected.address,
+      );
       await blockchainSigningApi.verifyWalletLink({
         challengeId: challenge.id,
         nonce: challenge.nonce,
@@ -184,7 +203,9 @@ export function BlockchainSigningWorkspace() {
       return;
     }
     if (connected.chainId !== wallet.data.chainId) {
-      setMessage("Ví đang ở sai mạng. Hãy chuyển sang mạng blockchain của THV.");
+      setMessage(
+        "Ví đang ở sai mạng. Hãy chuyển sang mạng blockchain của THV.",
+      );
       return;
     }
     setBusy("sign");
@@ -236,15 +257,16 @@ export function BlockchainSigningWorkspace() {
     connected && wallet.data && connected.address !== wallet.data.walletAddress,
   );
 
-  if (wallet.isPending) return <p role="status">Đang kiểm tra quyền ký blockchain…</p>;
+  if (wallet.isPending)
+    return <p role="status">Đang kiểm tra quyền ký blockchain…</p>;
   if (wallet.error) {
     return (
       <section className="mx-auto max-w-3xl rounded-2xl border border-amber-200 bg-amber-50 p-7 text-amber-950">
         <ShieldCheck className="size-6" aria-hidden="true" />
         <h1 className="mt-4 text-2xl font-bold">Khu vực ký blockchain</h1>
         <p className="mt-2 leading-7">
-          Chỉ Super Admin được ký blockchain. Hãy đăng nhập lại sau khi tài khoản
-          được cấp quyền, sau đó kết nối ví giữ VERIFIER_ROLE.
+          Chỉ Super Admin được ký blockchain. Hãy đăng nhập lại sau khi tài
+          khoản được cấp quyền, sau đó kết nối ví giữ VERIFIER_ROLE.
         </p>
       </section>
     );
@@ -258,10 +280,13 @@ export function BlockchainSigningWorkspace() {
         </p>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">Hàng đợi chờ ký</h1>
+            <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
+              Hàng đợi chờ ký
+            </h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-              Hồ sơ chỉ xuất hiện sau khi kiểm duyệt hoàn tất. Ví của Super Admin
-              xác nhận recordProof; file và dữ liệu cá nhân không lên blockchain.
+              Hồ sơ chỉ xuất hiện sau khi kiểm duyệt hoàn tất. Ví của Super
+              Admin xác nhận recordProof; file và dữ liệu cá nhân không lên
+              blockchain.
             </p>
           </div>
           <button
@@ -271,7 +296,10 @@ export function BlockchainSigningWorkspace() {
             type="button"
           >
             {busy === "connect" ? (
-              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+              <LoaderCircle
+                className="size-4 animate-spin"
+                aria-hidden="true"
+              />
             ) : (
               <WalletCards className="size-4" aria-hidden="true" />
             )}
@@ -297,15 +325,22 @@ export function BlockchainSigningWorkspace() {
                 Ví VERIFIER_ROLE
               </p>
               <h2 className="mt-2 text-xl font-bold text-neutral-950">
-                {wallet.data ? compactAddress(wallet.data.walletAddress) : "Chưa xác minh ví"}
+                {wallet.data
+                  ? compactAddress(wallet.data.walletAddress)
+                  : "Chưa xác minh ví"}
               </h2>
             </div>
-            <ShieldCheck className="size-6 text-primary-700" aria-hidden="true" />
+            <ShieldCheck
+              className="size-6 text-primary-700"
+              aria-hidden="true"
+            />
           </div>
           <dl className="mt-6 grid gap-4 text-sm sm:grid-cols-2">
             <div className="rounded-xl bg-neutral-50 p-4">
               <dt className="text-neutral-500">Mạng yêu cầu</dt>
-              <dd className="mt-1 font-bold text-neutral-950">Chain ID {requiredChain ?? "–"}</dd>
+              <dd className="mt-1 font-bold text-neutral-950">
+                Chain ID {requiredChain ?? "–"}
+              </dd>
             </div>
             <div className="rounded-xl bg-neutral-50 p-4">
               <dt className="text-neutral-500">Ví đang kết nối</dt>
@@ -326,7 +361,9 @@ export function BlockchainSigningWorkspace() {
                   onClick={() =>
                     void switchChain(requiredChain)
                       .then(refreshWalletState)
-                      .catch((error: unknown) => setMessage(errorMessage(error)))
+                      .catch((error: unknown) =>
+                        setMessage(errorMessage(error)),
+                      )
                   }
                   type="button"
                 >
@@ -342,7 +379,11 @@ export function BlockchainSigningWorkspace() {
               onClick={() => void handleVerifyWallet()}
               type="button"
             >
-              {busy === "link" ? <LoaderCircle className="size-4 animate-spin" /> : <BadgeCheck className="size-4" />}
+              {busy === "link" ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : (
+                <BadgeCheck className="size-4" />
+              )}
               Ký xác minh quyền sở hữu ví
             </button>
           ) : null}
@@ -353,9 +394,18 @@ export function BlockchainSigningWorkspace() {
             Kiểm soát an toàn
           </p>
           <ul className="mt-4 space-y-4 text-sm leading-6 text-neutral-700">
-            <li className="flex gap-3"><CheckCircle2 className="mt-0.5 size-4 text-primary-700" />THV không yêu cầu private key hoặc seed phrase.</li>
-            <li className="flex gap-3"><CheckCircle2 className="mt-0.5 size-4 text-primary-700" />Backend đối chiếu sender, chain, contract, calldata và proof hash.</li>
-            <li className="flex gap-3"><CheckCircle2 className="mt-0.5 size-4 text-primary-700" />Chỉ CONFIRMED sau receipt, ProofRecorded và đọc lại contract.</li>
+            <li className="flex gap-3">
+              <CheckCircle2 className="mt-0.5 size-4 text-primary-700" />
+              THV không yêu cầu private key hoặc seed phrase.
+            </li>
+            <li className="flex gap-3">
+              <CheckCircle2 className="mt-0.5 size-4 text-primary-700" />
+              Backend đối chiếu sender, chain, contract, calldata và proof hash.
+            </li>
+            <li className="flex gap-3">
+              <CheckCircle2 className="mt-0.5 size-4 text-primary-700" />
+              Chỉ CONFIRMED sau receipt, ProofRecorded và đọc lại contract.
+            </li>
           </ul>
         </article>
       </section>
@@ -363,20 +413,40 @@ export function BlockchainSigningWorkspace() {
       <section className="rounded-2xl border border-neutral-200 bg-white">
         <div className="flex items-center justify-between gap-4 border-b border-neutral-200 px-6 py-5">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">Proof đã khóa</p>
-            <h2 className="mt-1 text-xl font-bold text-neutral-950">Hồ sơ chờ bạn ký</h2>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
+              Proof đã khóa
+            </p>
+            <h2 className="mt-1 text-xl font-bold text-neutral-950">
+              Hồ sơ chờ bạn ký
+            </h2>
           </div>
           <button
             className="inline-flex items-center gap-2 text-sm font-bold text-primary-700 disabled:opacity-50"
             disabled={!wallet.data}
             onClick={() => void queue.refetch()}
             type="button"
-          ><RefreshCw className="size-4" /> Làm mới</button>
+          >
+            <RefreshCw className="size-4" /> Làm mới
+          </button>
         </div>
-        {!wallet.data ? <p className="p-6 text-sm text-neutral-600">Kết nối và xác minh ví để mở hàng đợi ký.</p> : null}
-        {wallet.data && queue.isPending ? <p className="p-6 text-sm text-neutral-600">Đang tải hàng đợi…</p> : null}
-        {wallet.data && queue.error ? <p className="p-6 text-sm text-rose-700">{errorMessage(queue.error)}</p> : null}
-        {wallet.data && queue.data?.length === 0 ? <p className="p-6 text-sm text-neutral-600">Không có hồ sơ nào đang chờ ký.</p> : null}
+        {!wallet.data ? (
+          <p className="p-6 text-sm text-neutral-600">
+            Kết nối và xác minh ví để mở hàng đợi ký.
+          </p>
+        ) : null}
+        {wallet.data && queue.isPending ? (
+          <p className="p-6 text-sm text-neutral-600">Đang tải hàng đợi…</p>
+        ) : null}
+        {wallet.data && queue.error ? (
+          <p className="p-6 text-sm text-rose-700">
+            {errorMessage(queue.error)}
+          </p>
+        ) : null}
+        {wallet.data && queue.data?.length === 0 ? (
+          <p className="p-6 text-sm text-neutral-600">
+            Không có hồ sơ nào đang chờ ký.
+          </p>
+        ) : null}
         <div className="divide-y divide-neutral-100">
           {queue.data?.map((item) => (
             <button
@@ -386,11 +456,19 @@ export function BlockchainSigningWorkspace() {
               type="button"
             >
               <div>
-                <p className="font-mono text-xs font-bold text-primary-700">{item.dossierCode} · V{item.version}</p>
-                <h3 className="mt-1 text-base font-bold text-neutral-950">{item.dossierTitle}</h3>
-                <p className="mt-1 text-sm text-neutral-600">recordProof · tạo {formatDate(item.createdAt)}</p>
+                <p className="font-mono text-xs font-bold text-primary-700">
+                  {item.dossierCode} · V{item.version}
+                </p>
+                <h3 className="mt-1 text-base font-bold text-neutral-950">
+                  {item.dossierTitle}
+                </h3>
+                <p className="mt-1 text-sm text-neutral-600">
+                  recordProof · tạo {formatDate(item.createdAt)}
+                </p>
               </div>
-              <span className="rounded-full bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary-800">{statusLabel[item.status] ?? item.status}</span>
+              <span className="rounded-full bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary-800">
+                {statusLabel[item.status] ?? item.status}
+              </span>
             </button>
           ))}
         </div>
@@ -400,34 +478,64 @@ export function BlockchainSigningWorkspace() {
         <section className="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8">
           <div className="flex items-start justify-between gap-5">
             <div>
-              <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-primary-700">Xác nhận trước khi ký</p>
-              <h2 className="mt-2 text-2xl font-bold text-neutral-950">{displayedSelected.dossierTitle}</h2>
-              <p className="mt-2 text-sm text-neutral-600">{displayedSelected.dossierCode} · Phiên bản {displayedSelected.version} · recordProof</p>
+              <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
+                Xác nhận trước khi ký
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-neutral-950">
+                {displayedSelected.dossierTitle}
+              </h2>
+              <p className="mt-2 text-sm text-neutral-600">
+                {displayedSelected.dossierCode} · Phiên bản{" "}
+                {displayedSelected.version} · recordProof
+              </p>
             </div>
-            <span className="rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-bold text-neutral-700">{statusLabel[displayedSelected.status] ?? displayedSelected.status}</span>
+            <span className="rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-bold text-neutral-700">
+              {statusLabel[displayedSelected.status] ??
+                displayedSelected.status}
+            </span>
           </div>
           <dl className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-xl bg-neutral-50 p-4 xl:col-span-2">
               <dt className="text-xs text-neutral-500">Proof SHA-256</dt>
-              <dd className="mt-2 break-all font-mono text-xs text-neutral-900">{displayedSelected.proofHash}</dd>
+              <dd className="mt-2 break-all font-mono text-xs text-neutral-900">
+                {displayedSelected.proofHash}
+              </dd>
             </div>
             <div className="rounded-xl bg-neutral-50 p-4">
               <dt className="text-xs text-neutral-500">Xác nhận</dt>
-              <dd className="mt-2 font-bold text-neutral-950">{displayedSelected.confirmations}</dd>
+              <dd className="mt-2 font-bold text-neutral-950">
+                {displayedSelected.confirmations}
+              </dd>
             </div>
             <div className="rounded-xl bg-neutral-50 p-4">
               <dt className="text-xs text-neutral-500">Contract</dt>
-              <dd className="mt-2 break-all font-mono text-xs text-neutral-900">{preparedIntent?.contractAddress ?? "Xác định khi tạo intent"}</dd>
+              <dd className="mt-2 break-all font-mono text-xs text-neutral-900">
+                {preparedIntent?.contractAddress ?? "Xác định khi tạo intent"}
+              </dd>
             </div>
           </dl>
-          {displayedSelected.txHash ? <p className="mt-4 break-all font-mono text-xs text-neutral-600">Tx: {displayedSelected.txHash}</p> : null}
+          {displayedSelected.txHash ? (
+            <p className="mt-4 break-all font-mono text-xs text-neutral-600">
+              Tx: {displayedSelected.txHash}
+            </p>
+          ) : null}
           <button
             className="mt-7 inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary-700 px-5 text-sm font-bold text-white disabled:opacity-60"
-            disabled={busy === "sign" || !connected || isWrongWallet || isWrongNetwork || displayedSelected.status === "CONFIRMED"}
+            disabled={
+              busy === "sign" ||
+              !connected ||
+              isWrongWallet ||
+              isWrongNetwork ||
+              displayedSelected.status === "CONFIRMED"
+            }
             onClick={() => void handleSign()}
             type="button"
           >
-            {busy === "sign" ? <LoaderCircle className="size-4 animate-spin" /> : <FileCheck2 className="size-4" />}
+            {busy === "sign" ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : (
+              <FileCheck2 className="size-4" />
+            )}
             Ký & ghi nhận blockchain
           </button>
         </section>
