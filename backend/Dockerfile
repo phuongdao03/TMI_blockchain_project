@@ -17,7 +17,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH=/home/app/.local/bin:$PATH
 
-RUN addgroup -g 10001 -S app \
+RUN apk upgrade --no-cache \
+    && addgroup -g 10001 -S app \
     && adduser -u 10001 -S -D -G app app
 
 WORKDIR /app
