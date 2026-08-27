@@ -56,9 +56,10 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000
 WORKDIR /app
 
-# The standalone server only needs the Node runtime. Exclude npm and its
-# package-management dependency tree from the production attack surface.
-RUN rm -rf /usr/local/lib/node_modules/npm
+# Apply Alpine security updates before dropping privileges. The standalone
+# server only needs the Node runtime, so exclude npm and its dependency tree.
+RUN apk upgrade --no-cache \
+    && rm -rf /usr/local/lib/node_modules/npm
 
 COPY --from=builder --chown=node:node /app/public ./public
 COPY --from=builder --chown=node:node /app/.next/standalone ./
