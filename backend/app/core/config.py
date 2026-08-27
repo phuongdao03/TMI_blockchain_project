@@ -574,6 +574,11 @@ class Settings(BaseSettings):
     smtp_sender: str = Field(
         default="no-reply@tmigroup.vn", min_length=3, max_length=320
     )
+    smtp_username: str | None = Field(default=None, min_length=1, max_length=320)
+    smtp_password: SecretStr | None = None
+    smtp_use_tls: bool = False
+    smtp_use_ssl: bool = False
+    smtp_timeout_seconds: int = Field(default=20, ge=1, le=120)
 
     @property
     def cors_origins(self) -> tuple[str, ...]:

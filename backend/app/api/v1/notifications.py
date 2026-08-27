@@ -15,6 +15,7 @@ from app.modules.auth.dependencies import (
 )
 from app.modules.notifications.dependencies import NotificationServiceDependency
 from app.modules.notifications.schemas import (
+    MarkAllReadData,
     MarkReadRequest,
     NotificationData,
     UnreadCountData,
@@ -30,8 +31,14 @@ async def list_notifications(
     service: NotificationServiceDependency,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, alias="pageSize", ge=1, le=100),
+    unread_only: bool = Query(default=False, alias="unreadOnly"),
 ) -> PaginatedSuccessEnvelope[list[NotificationData]]:
-    rows, total = await service.list(principal.user_id, page=page, page_size=page_size)
+    rows, total = await service.list(
+        principal.user_id,
+        page=page,
+        page_size=page_size,
+        unread_only=unread_only,
+    )
     return PaginatedSuccessEnvelope(
         data=[NotificationData.model_validate(row) for row in rows],
         meta=ListResponseMeta(
@@ -40,6 +47,19 @@ async def list_notifications(
             page_size=page_size,
             total=total,
         ),
+    )
+
+
+@router.patch("/read-all", response_model=SuccessEnvelope[MarkAllReadData])
+async def mark_all_read(
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: NotificationServiceDependency,
+) -> SuccessEnvelope[MarkAllReadData]:
+    updated = await service.mark_all_read(principal.user_id)
+    return SuccessEnvelope(
+        data=MarkAllReadData(updatedCount=updated),
+        meta=ResponseMeta(request_id=request.state.request_id),
     )
 
 

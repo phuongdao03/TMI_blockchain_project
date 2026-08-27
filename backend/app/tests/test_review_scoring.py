@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.db.base import Base
+from app.db.outbox import OutboxEvent
 from app.modules.audit.models import AuditLog
 from app.modules.auth.models import User, UserStatus
 from app.modules.auth.security import OutboxPayloadCipher
@@ -269,6 +270,13 @@ def test_reviewer_conflict_gate_draft_and_immutable_submit() -> None:
             assert all(row.actor_user_id == users["reviewer"].id for row in audit_rows)
             assert all(row.resource_type == "review_assignment" for row in audit_rows)
             assert all(row.resource_id == str(assignment.id) for row in audit_rows)
+            completed_event = await session.scalar(
+                select(OutboxEvent).where(
+                    OutboxEvent.event_type == "review.completed",
+                    OutboxEvent.aggregate_id == assignment.id,
+                )
+            )
+            assert completed_event is not None
 
         await service.close()
         await engine.dispose()

@@ -1,4 +1,5 @@
 import asyncio
+import json
 from collections.abc import Callable
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -13,8 +14,10 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.db.base import Base
+from app.db.outbox import OutboxEvent
 from app.modules.audit.models import AuditLog
 from app.modules.auth.models import User, UserStatus
+from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.canonical import canonical_json_bytes, snapshot_sha256
 from app.modules.dossiers.errors import (
@@ -52,6 +55,7 @@ NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
 
 async def _build_service(
     enqueue_similarity_detection: Callable[[UUID], None] | None = None,
+    payload_cipher: OutboxPayloadCipher | None = None,
 ) -> tuple[
     DossierService,
     async_sessionmaker[AsyncSession],
@@ -119,6 +123,7 @@ async def _build_service(
         clock=lambda: NOW,
         uuid_factory=lambda: next(generated_ids),
         enqueue_similarity_detection=enqueue_similarity_detection,
+        payload_cipher=payload_cipher,
     )
     return service, session_factory, engine, user, media
 
@@ -233,6 +238,57 @@ def test_submit_is_atomic_idempotent_and_locks_canonical_snapshot() -> None:
         assert timeline[0].to_status is DossierStatus.SUBMITTED
 
         await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_first_submission_emits_one_encrypted_owner_notification_event() -> None:
+    async def exercise() -> None:
+        cipher = OutboxPayloadCipher(key=bytes(range(32)), key_id="dossier-test-v1")
+        service, session_factory, engine, user, media = await _build_service(
+            payload_cipher=cipher
+        )
+        principal = _principal(user)
+        dossier, _ = await _draft_with_evidence(service, principal, media)
+
+        submitted = await service.submit_dossier(
+            principal,
+            dossier.id,
+            idempotency_key="submit-with-notification",
+        )
+        await service.submit_dossier(
+            principal,
+            dossier.id,
+            idempotency_key="submit-with-notification",
+        )
+
+        async with session_factory() as session:
+            events = tuple(
+                (
+                    await session.scalars(
+                        select(OutboxEvent).where(
+                            OutboxEvent.event_type == "dossier.submitted"
+                        )
+                    )
+                ).all()
+            )
+        assert len(events) == 1
+        event = events[0]
+        payload = json.loads(
+            cipher.decrypt(
+                nonce=event.payload_nonce,
+                ciphertext=event.payload_ciphertext,
+                event_type=event.event_type,
+                aggregate_id=event.aggregate_id,
+            )
+        )
+        assert payload == {
+            "dossier_id": str(dossier.id),
+            "dossier_version_id": str(submitted.version.id),
+            "recipient_user_id": str(user.id),
+            "version": "1",
+        }
         await engine.dispose()
 
     asyncio.run(exercise())

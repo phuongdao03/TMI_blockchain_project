@@ -6,9 +6,12 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.outbox import OutboxEvent
 from app.modules.audit.service import AuditService
 from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.models import AccountType
+from app.modules.auth.repositories import OutboxRepository
+from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.canonical import (
     content_fingerprint,
@@ -87,6 +90,7 @@ APPLICANT_ACCOUNT_TYPES = frozenset(
 PUBLIC_EVIDENCE_SCOPES = frozenset(
     {EvidenceVisibility.PUBLIC, EvidenceVisibility.PUBLIC_PREVIEW}
 )
+DOSSIER_SUBMITTED_EVENT = "dossier.submitted"
 
 
 class DossierService:
@@ -106,6 +110,7 @@ class DossierService:
         clock: Callable[[], datetime] | None = None,
         uuid_factory: Callable[[], UUID] | None = None,
         enqueue_similarity_detection: Callable[[UUID], None] | None = None,
+        payload_cipher: OutboxPayloadCipher | None = None,
     ) -> None:
         self._session = session
         self._repository = DossierRepository(session)
@@ -115,9 +120,11 @@ class DossierService:
         self._media = MediaAssetRepository(session)
         self._workflow = DossierWorkflowService(self._repository)
         self._audit_service = AuditService(session)
+        self._outbox = OutboxRepository(session)
         self._clock = clock or (lambda: datetime.now(UTC))
         self._uuid_factory = uuid_factory or uuid4
         self._enqueue_similarity_detection = enqueue_similarity_detection
+        self._payload_cipher = payload_cipher
 
     async def create_dossier(
         self,
@@ -799,12 +806,42 @@ class DossierService:
                     dossier_id,
                     normalized_key,
                 )
+                self._add_submitted_event(dossier, version)
         if (
             similarity_version_id is not None
             and self._enqueue_similarity_detection is not None
         ):
             self._enqueue_similarity_detection(similarity_version_id)
         return result
+
+    def _add_submitted_event(
+        self,
+        dossier: Dossier,
+        version: DossierVersion,
+    ) -> None:
+        if self._payload_cipher is None:
+            return
+        encrypted = self._payload_cipher.encrypt(
+            {
+                "dossier_id": str(dossier.id),
+                "dossier_version_id": str(version.id),
+                "recipient_user_id": str(dossier.owner_user_id),
+                "version": str(version.version_no),
+            },
+            event_type=DOSSIER_SUBMITTED_EVENT,
+            aggregate_id=dossier.id,
+        )
+        self._outbox.add(
+            OutboxEvent(
+                event_type=DOSSIER_SUBMITTED_EVENT,
+                aggregate_type="dossier",
+                aggregate_id=dossier.id,
+                payload_ciphertext=encrypted.ciphertext,
+                payload_nonce=encrypted.nonce,
+                key_id=encrypted.key_id,
+                occurred_at=self._clock(),
+            )
+        )
 
     @staticmethod
     def _content_fingerprint(

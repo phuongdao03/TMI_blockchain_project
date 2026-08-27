@@ -100,3 +100,32 @@ test("operations dashboard prioritizes work without horizontal overflow", async 
     await expectResponsivePage(page);
   }
 });
+
+test("mobile workspace drawer exposes complete navigation and restores focus", async ({
+  context,
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile-chrome");
+  await authenticate(context, "e2e-access");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/dashboard");
+
+  const trigger = page.getByRole("button", {
+    name: "Mở điều hướng workspace",
+  });
+  await trigger.click();
+
+  const drawer = page.getByRole("dialog", { name: "Điều hướng workspace" });
+  await expect(drawer).toBeVisible();
+  await expect(
+    drawer.getByRole("link", { name: "Hồ sơ của tôi" }),
+  ).toBeVisible();
+  await expect(
+    drawer.getByRole("link", { name: "Hoạt động gần đây" }),
+  ).toBeVisible();
+  await expectResponsivePage(page);
+
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+  await expect(trigger).toBeFocused();
+});

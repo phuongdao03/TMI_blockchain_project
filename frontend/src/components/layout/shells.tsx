@@ -195,19 +195,117 @@ export function AuthShell({ children }: PropsWithChildren) {
 export function DashboardShell({ children }: PropsWithChildren) {
   const user = useAuthUser();
   const roles = user?.roles ?? [];
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  const navigationButtonRef = useRef<HTMLButtonElement>(null);
+  const navigationPanelRef = useRef<HTMLDivElement>(null);
+  const navigationReturnFocusRef = useRef<HTMLElement | null>(null);
+
+  function openNavigation(trigger: HTMLElement | null) {
+    navigationReturnFocusRef.current = trigger;
+    setNavigationOpen(true);
+  }
+
+  function closeNavigation({ restoreFocus = true } = {}) {
+    setNavigationOpen(false);
+    if (restoreFocus) {
+      window.requestAnimationFrame(() => navigationReturnFocusRef.current?.focus());
+    }
+  }
+
+  useEffect(() => {
+    if (!navigationOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    navigationPanelRef.current
+      ?.querySelector<HTMLElement>("a, button")
+      ?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") closeNavigation();
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        navigationPanelRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0]!;
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [navigationOpen]);
 
   return (
     <div className="dashboard-shell">
       <aside className="dashboard-sidebar">
         <BrandMark compact />
-        <DashboardNavigation roles={roles} />
+        <DashboardNavigation
+          onOpenMenu={(trigger) => openNavigation(trigger)}
+          roles={roles}
+        />
       </aside>
       <div className="dashboard-shell__content">
-        <DashboardContextHeader user={user} />
+        <DashboardContextHeader
+          navigationButtonRef={navigationButtonRef}
+          onOpenNavigation={() => openNavigation(navigationButtonRef.current)}
+          user={user}
+        />
         <main className="dashboard-main" id="main-content">
           {children}
         </main>
       </div>
+      {navigationOpen ? (
+        <div className="dashboard-workspace-drawer">
+          <button
+            aria-label="Đóng điều hướng workspace"
+            className="dashboard-workspace-drawer__backdrop"
+            onClick={() => closeNavigation()}
+            type="button"
+          />
+          <div
+            aria-label="Điều hướng workspace"
+            aria-modal="true"
+            className="dashboard-workspace-drawer__panel"
+            id="dashboard-workspace-navigation"
+            ref={navigationPanelRef}
+            role="dialog"
+          >
+            <div className="dashboard-workspace-drawer__header">
+              <div>
+                <p>Đề cử Tinh Hoa Việt</p>
+                <h2>Không gian của bạn</h2>
+              </div>
+              <button
+                aria-label="Đóng điều hướng workspace"
+                onClick={() => closeNavigation()}
+                type="button"
+              >
+                <X aria-hidden="true" size={20} />
+              </button>
+            </div>
+            <DashboardNavigation
+              onNavigate={() => closeNavigation({ restoreFocus: false })}
+              roles={roles}
+              showQuickNavigation={false}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

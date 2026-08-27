@@ -53,10 +53,20 @@ class NotificationService:
             return await self._repository.unread_count(user_id)
 
     async def list(
-        self, user_id: UUID, *, page: int, page_size: int
+        self,
+        user_id: UUID,
+        *,
+        page: int,
+        page_size: int,
+        unread_only: bool = False,
     ) -> tuple[tuple[Notification, ...], int]:
         async with self._session.begin():
-            return await self._repository.list(user_id, page=page, page_size=page_size)
+            return await self._repository.list(
+                user_id,
+                page=page,
+                page_size=page_size,
+                unread_only=unread_only,
+            )
 
     async def mark_read(
         self, *, user_id: UUID, notification_id: UUID
@@ -68,3 +78,9 @@ class NotificationService:
             if row is not None and row.read_at is None:
                 row.read_at = datetime.now(UTC)
             return row
+
+    async def mark_all_read(self, user_id: UUID) -> int:
+        async with self._session.begin():
+            return await self._repository.mark_all_read(
+                user_id, read_at=datetime.now(UTC)
+            )

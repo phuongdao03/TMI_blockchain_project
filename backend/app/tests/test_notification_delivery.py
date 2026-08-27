@@ -1,4 +1,5 @@
 import asyncio
+import smtplib
 from pathlib import Path
 from uuid import uuid4
 
@@ -9,11 +10,17 @@ from app.modules.auth.models import User, UserStatus
 from app.modules.notifications.email import (
     EmailDeliveryService,
     EmailMessage,
+    SmtpEmailGateway,
     render_email,
 )
 from app.modules.notifications.models import DeliveryStatus
 from app.modules.notifications.service import NotificationService
-from app.workers.notification_tasks import staff_invitation_message
+from app.workers.notification_tasks import (
+    EMAIL_EVENTS,
+    EVENT_ROLE_RECIPIENTS,
+    _action_path,
+    staff_invitation_message,
+)
 
 
 class FailingOnceGateway:
@@ -70,6 +77,30 @@ def test_notification_event_is_idempotent_and_unread_count_changes(
             assert await service.unread_count(user_id) == 1
             await service.mark_read(user_id=user_id, notification_id=first.id)
             assert await service.unread_count(user_id) == 0
+
+            await service.consume(
+                event_id=uuid4(),
+                user_id=user_id,
+                event_type="dossier.supplement_requested",
+                title="Cần bổ sung hồ sơ",
+                body="Hồ sơ có yêu cầu bổ sung mới.",
+                data={},
+            )
+            await service.consume(
+                event_id=uuid4(),
+                user_id=user_id,
+                event_type="certificate.issued",
+                title="Chứng thư đã phát hành",
+                body="Chứng thư số đã sẵn sàng.",
+                data={},
+            )
+            unread_rows, unread_total = await service.list(
+                user_id, page=1, page_size=20, unread_only=True
+            )
+            assert len(unread_rows) == unread_total == 2
+            assert await service.mark_all_read(user_id) == 2
+            assert await service.mark_all_read(user_id) == 0
+            assert await service.unread_count(user_id) == 0
         await engine.dispose()
 
     asyncio.run(exercise())
@@ -119,6 +150,9 @@ def test_verification_email_contains_escaped_single_use_action_url() -> None:
     )
     assert "token=a&next=b" in text
     assert "token=a&amp;next=b" in html
+    assert "Trung tâm an ninh công nghệ số - CNS" in text
+    assert "TMI Group" not in text
+    assert "TMI Group" not in html
     assert "Tiếp tục xác minh" in html
 
 
@@ -132,3 +166,113 @@ def test_staff_invitation_email_uses_english_route_and_encodes_token() -> None:
     assert message.to == "reviewer@example.com"
     assert "/staff-invitation?token=a%2Fb%2Bc" in message.text
     assert "/staff-invitation?token=a%2Fb%2Bc" in message.html
+
+
+def test_smtp_gateway_uses_starttls_and_authentication(monkeypatch) -> None:
+    calls: list[tuple[str, object]] = []
+
+    class FakeSmtp:
+        def __init__(self, host: str, port: int, *, timeout: int) -> None:
+            calls.append(("connect", (host, port, timeout)))
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+        def ehlo(self) -> None:
+            calls.append(("ehlo", None))
+
+        def starttls(self) -> None:
+            calls.append(("starttls", None))
+
+        def login(self, username: str, password: str) -> None:
+            calls.append(("login", (username, password)))
+
+        def send_message(self, _message) -> None:
+            calls.append(("send", None))
+
+    monkeypatch.setattr(smtplib, "SMTP", FakeSmtp)
+    gateway = SmtpEmailGateway(
+        host="smtp.example.vn",
+        port=587,
+        sender="no-reply@tinhhoaviet.org.vn",
+        username="mailer",
+        password="secret",
+        use_tls=True,
+        timeout_seconds=12,
+    )
+
+    asyncio.run(
+        gateway.send(
+            EmailMessage(
+                to="owner@example.vn",
+                subject="Thông báo",
+                text="Nội dung",
+                html="<p>Nội dung</p>",
+            )
+        )
+    )
+
+    assert calls == [
+        ("connect", ("smtp.example.vn", 587, 12)),
+        ("ehlo", None),
+        ("starttls", None),
+        ("ehlo", None),
+        ("login", ("mailer", "secret")),
+        ("send", None),
+    ]
+
+
+def test_smtp_gateway_rejects_partial_credentials_and_conflicting_tls() -> None:
+    try:
+        SmtpEmailGateway(
+            host="smtp.example.vn",
+            port=587,
+            sender="no-reply@example.vn",
+            username="mailer",
+        )
+    except ValueError as error:
+        assert "username and password" in str(error)
+    else:
+        raise AssertionError("Partial SMTP credentials must be rejected")
+
+    try:
+        SmtpEmailGateway(
+            host="smtp.example.vn",
+            port=465,
+            sender="no-reply@example.vn",
+            use_tls=True,
+            use_ssl=True,
+        )
+    except ValueError as error:
+        assert "TLS and SSL" in str(error)
+    else:
+        raise AssertionError("Conflicting SMTP transports must be rejected")
+
+
+def test_critical_workflow_events_are_delivered_by_email() -> None:
+    assert {
+        "dossier.submitted",
+        "dossier.supplement_requested",
+        "review.assignment_created",
+        "council.decided",
+        "payment.paid",
+        "certificate.issued",
+        "certificate.revoked",
+        "blockchain.anchored",
+    }.issubset(EMAIL_EVENTS)
+
+
+def test_role_notifications_and_action_paths_are_explicit() -> None:
+    assert EVENT_ROLE_RECIPIENTS["dossier.submitted"] == frozenset({"SUPER_ADMIN"})
+    assert (
+        _action_path(
+            "review.assignment_created",
+            {"assignment_id": "4b6fe80a-1c87-4cc2-ad03-88decb6ebfab"},
+        )
+        == "/reviews/4b6fe80a-1c87-4cc2-ad03-88decb6ebfab"
+    )
+    assert _action_path("content_report.created", {}) == "/admin/content"
+    assert _action_path("unknown.event", {"url": "https://evil.example"}) is None

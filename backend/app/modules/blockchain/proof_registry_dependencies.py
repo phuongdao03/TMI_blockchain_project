@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import Depends
 
 from app.modules.auth.dependencies import SessionDependency, SettingsDependency
+from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.blockchain.errors import BlockchainUnavailableError
 from app.modules.blockchain.gateway import SUPPORTED_CHAINS, BlockchainGatewayError
 from app.modules.blockchain.proof_registry_gateway import THVProofRegistryGateway
@@ -46,6 +47,14 @@ async def get_thv_proof_registry_service(
         chain_id=settings.blockchain_chain_id,
         contract_address=address,
         signing_enabled=settings.blockchain_signing_enabled,
+        payload_cipher=OutboxPayloadCipher.from_base64(
+            encoded_key=(
+                settings.auth_outbox_encryption_key.get_secret_value()
+                if settings.auth_outbox_encryption_key is not None
+                else ""
+            ),
+            key_id=settings.auth_outbox_key_id,
+        ),
         required_confirmations=settings.blockchain_required_confirmations,
         intent_ttl=timedelta(
             seconds=settings.blockchain_transaction_intent_ttl_seconds

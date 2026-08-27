@@ -5,10 +5,12 @@ from uuid import UUID
 
 from redis.asyncio import Redis
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.db.outbox import OutboxEvent
 from app.db.session import get_session_factory
+from app.modules.auth.models import Role, User, UserRole, UserStatus
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.notifications.email import (
     EmailDeliveryService,
@@ -24,11 +26,14 @@ from app.workers.celery_app import celery_app
 EMAIL_EVENTS = frozenset(
     {
         "user.registered",
+        "dossier.submitted",
         "dossier.supplement_requested",
+        "review.assignment_created",
         "council.decided",
         "payment.paid",
         "certificate.issued",
         "certificate.revoked",
+        "blockchain.anchored",
     }
 )
 
@@ -42,7 +47,10 @@ EVENT_COPY: dict[str, tuple[str, str]] = {
         "Cần bổ sung hồ sơ",
         "Hồ sơ có yêu cầu bổ sung mới.",
     ),
-    "review.assigned": ("Phân công thẩm định", "Bạn có một hồ sơ thẩm định mới."),
+    "review.assignment_created": (
+        "Phân công thẩm định",
+        "Bạn có một hồ sơ thẩm định mới.",
+    ),
     "review.completed": (
         "Đã hoàn tất thẩm định",
         "Kết quả thẩm định đã được ghi nhận.",
@@ -63,6 +71,55 @@ EVENT_COPY: dict[str, tuple[str, str]] = {
         "Một tài sản công khai vừa nhận được báo cáo cần kiểm tra.",
     ),
 }
+
+EVENT_ROLE_RECIPIENTS: dict[str, frozenset[str]] = {
+    "dossier.submitted": frozenset({"SUPER_ADMIN"}),
+    "review.completed": frozenset({"SUPER_ADMIN"}),
+}
+
+
+def _action_path(event_type: str, payload: dict[str, object]) -> str | None:
+    dossier_id = payload.get("dossier_id") or payload.get("dossierId")
+    assignment_id = payload.get("assignment_id") or payload.get("assignmentId")
+    certificate_id = payload.get("certificate_id") or payload.get("certificateId")
+    if event_type == "review.assignment_created" and isinstance(assignment_id, str):
+        return f"/reviews/{assignment_id}"
+    if event_type in {
+        "dossier.submitted",
+        "dossier.supplement_requested",
+        "review.completed",
+        "council.decided",
+        "payment.paid",
+    } and isinstance(dossier_id, str):
+        return f"/dossiers/{dossier_id}"
+    if event_type in {"certificate.issued", "certificate.revoked"}:
+        return (
+            f"/certificates/{certificate_id}"
+            if isinstance(certificate_id, str)
+            else "/certificates"
+        )
+    if event_type == "blockchain.anchored":
+        return "/blockchain"
+    if event_type == "content_report.created":
+        return "/admin/content"
+    return None
+
+
+async def _role_recipient_ids(
+    session: AsyncSession, role_codes: frozenset[str]
+) -> tuple[UUID, ...]:
+    if not role_codes:
+        return ()
+    async with session.begin():
+        statement = (
+            select(UserRole.user_id)
+            .join(Role, Role.id == UserRole.role_id)
+            .join(User, User.id == UserRole.user_id)
+            .where(Role.code.in_(role_codes), User.status == UserStatus.ACTIVE)
+            .distinct()
+            .order_by(UserRole.user_id)
+        )
+        return tuple((await session.scalars(statement)).all())
 
 
 def staff_invitation_message(
@@ -108,7 +165,11 @@ async def _consume(event_id: UUID) -> None:
             )
             event_type = event.event_type
             aggregate_type = event.aggregate_type
-        user_id_value = payload.get("user_id") or payload.get("owner_user_id")
+        user_id_value = (
+            payload.get("recipient_user_id")
+            or payload.get("user_id")
+            or payload.get("owner_user_id")
+        )
         copy = EVENT_COPY.get(event_type)
         if event_type == "staff.invited":
             email = payload.get("email")
@@ -124,29 +185,60 @@ async def _consume(event_id: UUID) -> None:
                 host=settings.smtp_host,
                 port=settings.smtp_port,
                 sender=settings.smtp_sender,
+                username=settings.smtp_username,
+                password=(
+                    settings.smtp_password.get_secret_value()
+                    if settings.smtp_password is not None
+                    else None
+                ),
+                use_tls=settings.smtp_use_tls,
+                use_ssl=settings.smtp_use_ssl,
+                timeout_seconds=settings.smtp_timeout_seconds,
             ).send(message)
-        if isinstance(user_id_value, str) and copy is not None:
-            notification = await NotificationService(session).consume(
-                event_id=event_id,
-                user_id=UUID(user_id_value),
-                event_type=event_type,
-                title=copy[0],
-                body=copy[1],
-                data={
-                    key: value
-                    for key, value in payload.items()
-                    if key not in {"email", "verification_token", "token"}
-                },
+        direct_recipient_id: UUID | None = None
+        recipient_ids: set[UUID] = set()
+        if isinstance(user_id_value, str):
+            direct_recipient_id = UUID(user_id_value)
+            recipient_ids.add(direct_recipient_id)
+        recipient_ids.update(
+            await _role_recipient_ids(
+                session, EVENT_ROLE_RECIPIENTS.get(event_type, frozenset())
             )
+        )
+        if recipient_ids and copy is not None:
+            safe_data = {
+                key: value
+                for key, value in payload.items()
+                if key not in {"email", "verification_token", "token"}
+            }
+            action_path = _action_path(event_type, payload)
+            if action_path is not None:
+                safe_data["actionPath"] = action_path
+            notifications = [
+                await NotificationService(session).consume(
+                    event_id=event_id,
+                    user_id=recipient_id,
+                    event_type=event_type,
+                    title=copy[0],
+                    body=copy[1],
+                    data=safe_data,
+                )
+                for recipient_id in sorted(recipient_ids, key=str)
+            ]
             verification_token = payload.get("verification_token")
             if event_type == "user.registered" and isinstance(verification_token, str):
                 token = quote(verification_token, safe="")
                 action_url = (
                     f"{settings.app_base_url.rstrip('/')}/verify-email?token={token}"
                 )
-                await _deliver(notification.id, action_url=action_url)
-            elif event_type in EMAIL_EVENTS:
-                deliver_notification_email.delay(str(notification.id))
+                await _deliver(notifications[0].id, action_url=action_url)
+            elif event_type in EMAIL_EVENTS and direct_recipient_id is not None:
+                direct_notification = next(
+                    notification
+                    for notification in notifications
+                    if notification.user_id == direct_recipient_id
+                )
+                deliver_notification_email.delay(str(direct_notification.id))
         if aggregate_type in {"public_work", "public_category", "public_tag"}:
             redis_client: Redis = Redis.from_url(settings.redis_url)
             try:
@@ -219,6 +311,15 @@ async def _deliver(notification_id: UUID, *, action_url: str | None = None) -> N
                 host=settings.smtp_host,
                 port=settings.smtp_port,
                 sender=settings.smtp_sender,
+                username=settings.smtp_username,
+                password=(
+                    settings.smtp_password.get_secret_value()
+                    if settings.smtp_password is not None
+                    else None
+                ),
+                use_tls=settings.smtp_use_tls,
+                use_ssl=settings.smtp_use_ssl,
+                timeout_seconds=settings.smtp_timeout_seconds,
             ),
         ).deliver(notification_id, action_url=action_url)
         if delivery.status.value == "RETRY_PENDING":

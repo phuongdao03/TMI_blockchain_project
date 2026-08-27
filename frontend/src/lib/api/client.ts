@@ -487,9 +487,9 @@ export const operationsApi = {
 };
 
 export const notificationApi = {
-  list(page = 1) {
+  list(page = 1, pageSize = 20, unreadOnly = false) {
     return requestPaginated<NotificationItem[]>(
-      `/notifications?page=${page}&pageSize=20`,
+      `/notifications?page=${page}&pageSize=${pageSize}&unreadOnly=${unreadOnly}`,
     );
   },
   unreadCount() {
@@ -499,6 +499,11 @@ export const notificationApi = {
     return request<NotificationItem>(`/notifications/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ read: true }),
+    });
+  },
+  markAllRead() {
+    return request<{ updatedCount: number }>("/notifications/read-all", {
+      method: "PATCH",
     });
   },
 };

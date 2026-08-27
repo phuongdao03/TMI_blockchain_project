@@ -17,7 +17,10 @@ from uuid import UUID, uuid4
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.outbox import OutboxEvent
 from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
+from app.modules.auth.repositories import OutboxRepository
+from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.errors import (
     BlockchainConflictError,
@@ -45,6 +48,7 @@ from app.modules.dossiers.models import Dossier, DossierStatus, DossierVersion
 _ASSET_ID_DOMAIN = b"THVProofRegistry:asset:v1:"
 _HEX_BYTES32 = re.compile(r"0x[0-9a-fA-F]{64}")
 _CANONICAL_HASH = re.compile(r"[0-9a-fA-F]{64}")
+_PROOF_CONFIRMED_EVENT = "blockchain.anchored"
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,6 +140,7 @@ class THVProofRegistryService:
         chain_id: int,
         contract_address: str,
         signing_enabled: bool,
+        payload_cipher: OutboxPayloadCipher,
         required_confirmations: int = 1,
         intent_ttl: timedelta = timedelta(minutes=10),
         clock: Callable[[], datetime] | None = None,
@@ -148,6 +153,8 @@ class THVProofRegistryService:
         self._chain_id = chain_id
         self._contract_address = contract_address.lower()
         self._signing_enabled = signing_enabled
+        self._payload_cipher = payload_cipher
+        self._outbox = OutboxRepository(session)
         self._required_confirmations = required_confirmations
         self._intent_ttl = intent_ttl
         self._clock = clock or (lambda: datetime.now(UTC))
@@ -521,9 +528,41 @@ class THVProofRegistryService:
             transaction.receipt_event_name = "ProofRecorded"
             transaction.error_code = None
             transaction.error_message = None
-            if confirmations >= self._required_confirmations:
+            if (
+                confirmations >= self._required_confirmations
+                and transaction.status is not BlockchainTransactionStatus.CONFIRMED
+            ):
                 transaction.status = BlockchainTransactionStatus.CONFIRMED
                 transaction.confirmed_at = transaction.confirmed_at or self._clock()
+                dossier = await self._session.get(Dossier, transaction.dossier_id)
+                if dossier is None:
+                    raise BlockchainNotFoundError()
+                self._add_confirmed_event(transaction, dossier.owner_user_id)
+
+    def _add_confirmed_event(
+        self, transaction: BlockchainTransaction, owner_user_id: UUID
+    ) -> None:
+        encrypted = self._payload_cipher.encrypt(
+            {
+                "dossier_id": str(transaction.dossier_id),
+                "transaction_id": str(transaction.id),
+                "transaction_hash": transaction.tx_hash or "",
+                "owner_user_id": str(owner_user_id),
+            },
+            event_type=_PROOF_CONFIRMED_EVENT,
+            aggregate_id=transaction.id,
+        )
+        self._outbox.add(
+            OutboxEvent(
+                event_type=_PROOF_CONFIRMED_EVENT,
+                aggregate_type="blockchain_transaction",
+                aggregate_id=transaction.id,
+                payload_ciphertext=encrypted.ciphertext,
+                payload_nonce=encrypted.nonce,
+                key_id=encrypted.key_id,
+                occurred_at=self._clock(),
+            )
+        )
 
     async def _fail_transaction(
         self, transaction_id: UUID, code: str, message: str

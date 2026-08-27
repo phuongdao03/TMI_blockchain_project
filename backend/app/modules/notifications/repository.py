@@ -1,7 +1,8 @@
-from typing import cast
+from datetime import datetime
+from typing import Any, cast
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import CursorResult, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.models import User
@@ -58,9 +59,11 @@ class NotificationRepository:
         )
 
     async def list(
-        self, user_id: UUID, *, page: int, page_size: int
+        self, user_id: UUID, *, page: int, page_size: int, unread_only: bool = False
     ) -> tuple[tuple[Notification, ...], int]:
         filters = [Notification.user_id == user_id]
+        if unread_only:
+            filters.append(Notification.read_at.is_(None))
         rows = tuple(
             (
                 await self._session.scalars(
@@ -81,6 +84,20 @@ class NotificationRepository:
             or 0
         )
         return rows, total
+
+    async def mark_all_read(self, user_id: UUID, *, read_at: datetime) -> int:
+        result = cast(
+            CursorResult[Any],
+            await self._session.execute(
+                update(Notification)
+                .where(
+                    Notification.user_id == user_id,
+                    Notification.read_at.is_(None),
+                )
+                .values(read_at=read_at)
+            ),
+        )
+        return int(result.rowcount or 0)
 
     async def get_delivery(
         self,

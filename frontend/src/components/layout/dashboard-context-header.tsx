@@ -1,9 +1,12 @@
 "use client";
 
+import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
+import type { RefObject } from "react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import type { AuthUser } from "@/lib/api/types";
 
 const pageTitles: Record<string, string> = {
@@ -37,7 +40,15 @@ function resolveTitle(pathname: string): string {
     : "Không gian của bạn";
 }
 
-export function DashboardContextHeader({ user }: { user: AuthUser | null }) {
+export function DashboardContextHeader({
+  user,
+  onOpenNavigation,
+  navigationButtonRef,
+}: {
+  user: AuthUser | null;
+  onOpenNavigation?: () => void;
+  navigationButtonRef?: RefObject<HTMLButtonElement | null>;
+}) {
   const pathname = usePathname();
   const title = resolveTitle(pathname);
 
@@ -53,11 +64,22 @@ export function DashboardContextHeader({ user }: { user: AuthUser | null }) {
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
+        <button
+          aria-controls="dashboard-workspace-navigation"
+          aria-label="Mở điều hướng workspace"
+          className="dashboard-context-header__menu"
+          onClick={onOpenNavigation}
+          ref={navigationButtonRef}
+          type="button"
+        >
+          <Menu aria-hidden="true" size={20} />
+        </button>
         {user?.email ? (
           <span className="hidden max-w-52 truncate text-sm text-[var(--theme-muted)] md:block">
             {user.email}
           </span>
         ) : null}
+        {user ? <NotificationBell /> : null}
         <ThemeToggle />
         {user ? <LogoutButton /> : null}
       </div>

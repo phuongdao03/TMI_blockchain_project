@@ -1,4 +1,5 @@
 import asyncio
+import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
@@ -6,12 +7,15 @@ from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from web3 import Web3
 
 from app.core.config import Settings
 from app.db.base import Base
+from app.db.outbox import OutboxEvent
 from app.modules.auth.models import User, UserStatus
+from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.errors import (
     BlockchainConflictError,
@@ -43,6 +47,7 @@ NOW = datetime(2026, 8, 24, 12, 0, tzinfo=UTC)
 CONTRACT = "0x" + "12" * 20
 WALLET = normalize_wallet_address("0x" + "34" * 20) or ""
 PAYLOAD = b"thv-proof-registry-calldata"
+OUTBOX_KEY = b"proof-registry-outbox-key-32byte"
 
 
 class ProofRegistryGateway:
@@ -315,6 +320,7 @@ def test_thv_proof_intent_requires_an_approved_dossier_version() -> None:
             chain_id=31_337,
             contract_address=CONTRACT,
             signing_enabled=True,
+            payload_cipher=OutboxPayloadCipher(key=OUTBOX_KEY, key_id="proof-key-v1"),
             required_confirmations=2,
             intent_ttl=timedelta(minutes=10),
             clock=lambda: NOW,
@@ -358,6 +364,12 @@ def test_thv_proof_intent_requires_an_approved_dossier_version() -> None:
         )
         assert confirmed.status is BlockchainTransactionStatus.CONFIRMED
         assert confirmed.confirmations == 2
+        confirmed_again = await service.transaction_status(
+            principal,
+            transaction_id=intent.transaction_id,
+            reconcile=True,
+        )
+        assert confirmed_again.status is BlockchainTransactionStatus.CONFIRMED
         assert await service.signing_queue(principal) == []
         async with sessions() as session:
             stored_transaction = await session.get(
@@ -366,6 +378,28 @@ def test_thv_proof_intent_requires_an_approved_dossier_version() -> None:
             assert stored_transaction is not None
             assert stored_transaction.receipt_event_name == "ProofRecorded"
             assert stored_transaction.signer_wallet_address == WALLET
+            events = tuple(
+                await session.scalars(
+                    select(OutboxEvent).where(
+                        OutboxEvent.event_type == "blockchain.anchored"
+                    )
+                )
+            )
+            assert len(events) == 1
+            payload = json.loads(
+                OutboxPayloadCipher(key=OUTBOX_KEY, key_id="proof-key-v1").decrypt(
+                    nonce=events[0].payload_nonce,
+                    ciphertext=events[0].payload_ciphertext,
+                    event_type=events[0].event_type,
+                    aggregate_id=events[0].aggregate_id,
+                )
+            )
+            assert payload == {
+                "dossier_id": str(dossier.id),
+                "owner_user_id": str(user.id),
+                "transaction_hash": gateway.transaction_hash,
+                "transaction_id": str(intent.transaction_id),
+            }
 
         async with sessions() as session:
             stored = await session.get(Dossier, dossier.id)

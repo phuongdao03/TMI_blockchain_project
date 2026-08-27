@@ -39,6 +39,7 @@ from app.modules.reviews.types import (
 )
 
 ASSIGNMENT_CREATED_EVENT = "review.assignment_created"
+REVIEW_COMPLETED_EVENT = "review.completed"
 ADMIN_ROLES = frozenset({"SUPER_ADMIN"})
 REVIEWER_ROLES = frozenset({"MODERATOR"})
 CRITERIA = (
@@ -328,6 +329,7 @@ class ReviewService:
             review.total_score = sum(scores)
             review.submitted_at = self._clock()
             assignment.status = ReviewAssignmentStatus.SUBMITTED
+            self._add_review_completed_event(assignment)
             await self._session.flush()
             result = self._review_view(review)
             self._audit_review(
@@ -350,6 +352,27 @@ class ReviewService:
         self._outbox.add(
             OutboxEvent(
                 event_type=ASSIGNMENT_CREATED_EVENT,
+                aggregate_type="review_assignment",
+                aggregate_id=assignment.id,
+                payload_ciphertext=encrypted.ciphertext,
+                payload_nonce=encrypted.nonce,
+                key_id=encrypted.key_id,
+                occurred_at=self._clock(),
+            )
+        )
+
+    def _add_review_completed_event(self, assignment: ReviewAssignment) -> None:
+        encrypted = self._payload_cipher.encrypt(
+            {
+                "assignment_id": str(assignment.id),
+                "dossier_id": str(assignment.dossier_id),
+            },
+            event_type=REVIEW_COMPLETED_EVENT,
+            aggregate_id=assignment.id,
+        )
+        self._outbox.add(
+            OutboxEvent(
+                event_type=REVIEW_COMPLETED_EVENT,
                 aggregate_type="review_assignment",
                 aggregate_id=assignment.id,
                 payload_ciphertext=encrypted.ciphertext,

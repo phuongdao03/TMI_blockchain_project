@@ -9,6 +9,7 @@ import {
   History,
   LayoutDashboard,
   Map,
+  Menu,
   Search,
   Settings,
   ShieldCheck,
@@ -116,10 +117,16 @@ function isActive(pathname: string, href: string) {
 export function DashboardNavigation({
   roles,
   className,
+  showQuickNavigation = true,
+  onNavigate,
+  onOpenMenu,
 }: {
   roles?: readonly string[];
   className?: string;
   tone?: "light" | "dark";
+  showQuickNavigation?: boolean;
+  onNavigate?: () => void;
+  onOpenMenu?: (trigger: HTMLButtonElement) => void;
 }) {
   const pathname = usePathname();
   const authUser = useAuthUser();
@@ -138,7 +145,11 @@ export function DashboardNavigation({
     ),
   }));
 
-  const mobileItems = sections.flatMap((section) => section.items).slice(0, 5);
+  const allNavigationItems = sections.flatMap((section) => section.items);
+  const mobileItems = allNavigationItems.slice(0, 4);
+  const mobileMenuContainsActiveItem = allNavigationItems
+    .slice(4)
+    .some((item) => isActive(pathname, item.href));
 
   return (
     <>
@@ -166,6 +177,7 @@ export function DashboardNavigation({
                       )}
                       href={item.href}
                       key={item.href}
+                      onClick={onNavigate}
                     >
                       <Icon aria-hidden="true" size={20} strokeWidth={1.8} />
                       <span>{item.label}</span>
@@ -178,7 +190,7 @@ export function DashboardNavigation({
         )}
       </nav>
 
-      <nav
+      {showQuickNavigation ? <nav
         className="dashboard-mobile-navigation"
         aria-label="Điều hướng nhanh"
       >
@@ -194,13 +206,29 @@ export function DashboardNavigation({
               )}
               href={item.href}
               key={item.href}
+              onClick={onNavigate}
             >
               <Icon aria-hidden="true" size={21} strokeWidth={1.8} />
               <span>{item.label}</span>
             </Link>
           );
         })}
-      </nav>
+        <button
+          aria-current={mobileMenuContainsActiveItem ? "page" : undefined}
+          aria-label="Mở tất cả chức năng"
+          className={cn(
+            "dashboard-mobile-navigation__link",
+            "dashboard-mobile-navigation__more",
+            mobileMenuContainsActiveItem &&
+              "dashboard-mobile-navigation__link--active",
+          )}
+          onClick={(event) => onOpenMenu?.(event.currentTarget)}
+          type="button"
+        >
+          <Menu aria-hidden="true" size={21} strokeWidth={1.8} />
+          <span>Thêm</span>
+        </button>
+      </nav> : null}
     </>
   );
 }

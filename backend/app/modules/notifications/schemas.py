@@ -23,6 +23,11 @@ class UnreadCountData(BaseModel):
     model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
 
+class MarkAllReadData(BaseModel):
+    updated_count: int = Field(alias="updatedCount")
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
+
 class MarkReadRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     read: Literal[True]

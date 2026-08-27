@@ -220,6 +220,82 @@ describe("layout shells", () => {
     expect(screen.queryByText("Hệ thống xác minh sẵn sàng")).toBeNull();
   });
 
+  it("opens the complete workspace navigation on mobile and restores focus", async () => {
+    const user = userEvent.setup();
+    render(
+      <AuthUserProvider
+        user={{
+          id: "user-mobile",
+          email: "owner@example.vn",
+          roles: ["USER"],
+          accountType: "INDIVIDUAL_APPLICANT",
+        }}
+      >
+        <DashboardShell>
+          <p>Workspace</p>
+        </DashboardShell>
+      </AuthUserProvider>,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "Mở điều hướng workspace",
+    });
+    await user.click(trigger);
+
+    const drawer = screen.getByRole("dialog", {
+      name: "Điều hướng workspace",
+    });
+    expect(within(drawer).getByRole("link", { name: "Hồ sơ của tôi" })).toBeDefined();
+    expect(within(drawer).getByRole("link", { name: "Hoạt động gần đây" })).toBeDefined();
+
+    const closeButton = within(drawer).getByRole("button", {
+      name: "Đóng điều hướng workspace",
+    });
+    closeButton.focus();
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+    expect(document.activeElement).toBe(
+      within(drawer).getByRole("link", { name: "Hoạt động gần đây" }),
+    );
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Điều hướng workspace" })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it("opens the complete workspace navigation from the mobile quick menu", async () => {
+    const user = userEvent.setup();
+    render(
+      <AuthUserProvider
+        user={{
+          id: "user-mobile-quick-menu",
+          email: "owner@example.vn",
+          roles: ["USER"],
+          accountType: "INDIVIDUAL_APPLICANT",
+        }}
+      >
+        <DashboardShell>
+          <p>Workspace</p>
+        </DashboardShell>
+      </AuthUserProvider>,
+    );
+
+    const quickNavigation = screen.getByRole("navigation", {
+      name: "Điều hướng nhanh",
+    });
+    expect(within(quickNavigation).getAllByRole("link")).toHaveLength(4);
+
+    const moreButton = within(quickNavigation).getByRole("button", {
+      name: "Mở tất cả chức năng",
+    });
+    await user.click(moreButton);
+
+    expect(
+      screen.getByRole("dialog", { name: "Điều hướng workspace" }),
+    ).toBeDefined();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(moreButton));
+  });
+
   it("keeps public discovery links visible for an authenticated public user", () => {
     render(
       <AuthUserProvider
