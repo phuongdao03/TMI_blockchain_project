@@ -16,8 +16,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: delivery-${{ github.ref }}
-  cancel-in-progress: false
+  group: delivery-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   secret-scan:
