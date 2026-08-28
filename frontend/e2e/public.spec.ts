@@ -4,7 +4,8 @@ import { expect, test } from "@playwright/test";
 test("public portal is professional, responsive and verifiable", async ({
   page,
 }, testInfo) => {
-  test.setTimeout(60_000);
+  // The first desktop worker compiles several public routes on a cold CI runner.
+  test.setTimeout(120_000);
   const consoleProblems: string[] = [];
   const searchHistoryRequests: string[] = [];
   page.on("console", (message) => {
