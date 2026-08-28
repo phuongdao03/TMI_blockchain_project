@@ -190,45 +190,47 @@ export function DashboardNavigation({
         )}
       </nav>
 
-      {showQuickNavigation ? <nav
-        className="dashboard-mobile-navigation"
-        aria-label="Điều hướng nhanh"
-      >
-        {mobileItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(pathname, item.href);
-          return (
-            <Link
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "dashboard-mobile-navigation__link",
-                active && "dashboard-mobile-navigation__link--active",
-              )}
-              href={item.href}
-              key={item.href}
-              onClick={onNavigate}
-            >
-              <Icon aria-hidden="true" size={21} strokeWidth={1.8} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-        <button
-          aria-current={mobileMenuContainsActiveItem ? "page" : undefined}
-          aria-label="Mở tất cả chức năng"
-          className={cn(
-            "dashboard-mobile-navigation__link",
-            "dashboard-mobile-navigation__more",
-            mobileMenuContainsActiveItem &&
-              "dashboard-mobile-navigation__link--active",
-          )}
-          onClick={(event) => onOpenMenu?.(event.currentTarget)}
-          type="button"
+      {showQuickNavigation ? (
+        <nav
+          className="dashboard-mobile-navigation"
+          aria-label="Điều hướng nhanh"
         >
-          <Menu aria-hidden="true" size={21} strokeWidth={1.8} />
-          <span>Thêm</span>
-        </button>
-      </nav> : null}
+          {mobileItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(pathname, item.href);
+            return (
+              <Link
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "dashboard-mobile-navigation__link",
+                  active && "dashboard-mobile-navigation__link--active",
+                )}
+                href={item.href}
+                key={item.href}
+                onClick={onNavigate}
+              >
+                <Icon aria-hidden="true" size={21} strokeWidth={1.8} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+          <button
+            aria-current={mobileMenuContainsActiveItem ? "page" : undefined}
+            aria-label="Mở tất cả chức năng"
+            className={cn(
+              "dashboard-mobile-navigation__link",
+              "dashboard-mobile-navigation__more",
+              mobileMenuContainsActiveItem &&
+                "dashboard-mobile-navigation__link--active",
+            )}
+            onClick={(event) => onOpenMenu?.(event.currentTarget)}
+            type="button"
+          >
+            <Menu aria-hidden="true" size={21} strokeWidth={1.8} />
+            <span>Thêm</span>
+          </button>
+        </nav>
+      ) : null}
     </>
   );
 }

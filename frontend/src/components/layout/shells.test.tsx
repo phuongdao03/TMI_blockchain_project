@@ -1,5 +1,12 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  render as testingLibraryRender,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const navigationState = vi.hoisted(() => ({ pathname: "/" }));
@@ -19,6 +26,16 @@ import {
 } from "@/components/layout/shells";
 import { PublicExperienceShell } from "@/components/layout/public-experience-shell";
 import { AuthUserProvider } from "@/lib/auth/user-context";
+
+function render(ui: ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  return testingLibraryRender(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 describe("layout shells", () => {
   afterEach(() => {
@@ -245,8 +262,12 @@ describe("layout shells", () => {
     const drawer = screen.getByRole("dialog", {
       name: "Điều hướng workspace",
     });
-    expect(within(drawer).getByRole("link", { name: "Hồ sơ của tôi" })).toBeDefined();
-    expect(within(drawer).getByRole("link", { name: "Hoạt động gần đây" })).toBeDefined();
+    expect(
+      within(drawer).getByRole("link", { name: "Hồ sơ của tôi" }),
+    ).toBeDefined();
+    expect(
+      within(drawer).getByRole("link", { name: "Hoạt động gần đây" }),
+    ).toBeDefined();
 
     const closeButton = within(drawer).getByRole("button", {
       name: "Đóng điều hướng workspace",
@@ -258,7 +279,9 @@ describe("layout shells", () => {
     );
 
     await user.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog", { name: "Điều hướng workspace" })).toBeNull();
+    expect(
+      screen.queryByRole("dialog", { name: "Điều hướng workspace" }),
+    ).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 

@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import type { NotificationItem } from "@/lib/api/types";
 
-import { formatNotificationTime, presentNotification } from "./notification-presentation";
+import {
+  formatNotificationTime,
+  presentNotification,
+} from "./notification-presentation";
 
 const base: NotificationItem = {
   id: "notification-1",
@@ -25,8 +28,10 @@ describe("notification presentation", () => {
 
   it("rejects external and protocol-relative action paths", () => {
     expect(
-      presentNotification({ ...base, data: { actionPath: "https://evil.test" } })
-        .actionPath,
+      presentNotification({
+        ...base,
+        data: { actionPath: "https://evil.test" },
+      }).actionPath,
     ).toBeNull();
     expect(
       presentNotification({ ...base, data: { actionPath: "//evil.test" } })
@@ -36,7 +41,10 @@ describe("notification presentation", () => {
 
   it("formats recent times for quick scanning", () => {
     expect(
-      formatNotificationTime("2026-08-27T09:58:00.000Z", Date.parse("2026-08-27T10:00:00.000Z")),
+      formatNotificationTime(
+        "2026-08-27T09:58:00.000Z",
+        Date.parse("2026-08-27T10:00:00.000Z"),
+      ),
     ).toBe("2 phút trước");
   });
 });

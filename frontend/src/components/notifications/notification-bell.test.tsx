@@ -58,11 +58,16 @@ describe("NotificationBell", () => {
 
   it("marks every unread notification from the panel", async () => {
     api.unreadCount.mockResolvedValue({ unreadCount: 2 });
-    api.list.mockResolvedValue({ data: [], meta: { page: 1, pageSize: 5, total: 0 } });
+    api.list.mockResolvedValue({
+      data: [],
+      meta: { page: 1, pageSize: 5, total: 0 },
+    });
     api.markAllRead.mockResolvedValue({ updatedCount: 2 });
 
     renderBell();
-    fireEvent.click(await screen.findByRole("button", { name: "2 thông báo chưa đọc" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "2 thông báo chưa đọc" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: /Đọc tất cả/i }));
 
     await waitFor(() => expect(api.markAllRead).toHaveBeenCalledOnce());

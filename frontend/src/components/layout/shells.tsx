@@ -208,7 +208,9 @@ export function DashboardShell({ children }: PropsWithChildren) {
   function closeNavigation({ restoreFocus = true } = {}) {
     setNavigationOpen(false);
     if (restoreFocus) {
-      window.requestAnimationFrame(() => navigationReturnFocusRef.current?.focus());
+      window.requestAnimationFrame(() =>
+        navigationReturnFocusRef.current?.focus(),
+      );
     }
   }
 

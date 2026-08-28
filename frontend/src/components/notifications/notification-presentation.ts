@@ -75,7 +75,10 @@ export function presentNotification(
   };
 }
 
-export function formatNotificationTime(value: string, now = Date.now()): string {
+export function formatNotificationTime(
+  value: string,
+  now = Date.now(),
+): string {
   const timestamp = new Date(value).getTime();
   if (!Number.isFinite(timestamp)) return "";
   const elapsedMinutes = Math.max(0, Math.floor((now - timestamp) / 60_000));
