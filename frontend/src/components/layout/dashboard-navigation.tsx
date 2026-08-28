@@ -6,6 +6,7 @@ import {
   FileCheck2,
   FileText,
   Gauge,
+  CircleHelp,
   History,
   LayoutDashboard,
   Map,
@@ -52,6 +53,10 @@ const personalItems: NavigationItem[] = [
   { href: "/account", label: "Tài khoản", icon: Settings },
   { href: "/vote-history", label: "Bình chọn của tôi", icon: Vote },
   { href: "/activity", label: "Hoạt động gần đây", icon: History },
+];
+
+const supportItems: NavigationItem[] = [
+  { href: "/guide", label: "Hướng dẫn", icon: CircleHelp },
 ];
 
 const userItems: NavigationItem[] = [
@@ -135,6 +140,7 @@ export function DashboardNavigation({
   const preview = isPreviewRelease();
   const sections = [
     ...sectionsFor(persona),
+    { label: "Hỗ trợ", items: supportItems },
     ...(effectiveRoles.includes("SUPER_ADMIN")
       ? [{ label: "Blockchain", items: blockchainSignerItems }]
       : []),

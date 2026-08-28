@@ -18,6 +18,7 @@ const publicLinks = [
   { href: "/works", label: "Đề cử" },
   { href: "/process", label: "Quy trình" },
   { href: "/verify", label: "Minh bạch" },
+  { href: "/guide", label: "Hướng dẫn" },
 ];
 
 export function PublicShell({

@@ -74,8 +74,42 @@ export function LoginForm({ next }: { next?: string }) {
     if (code === "auth/too-many-requests") {
       return "Bạn đã thử quá nhiều lần. Vui lòng chờ một lát rồi thử lại.";
     }
+    if (code === "auth/operation-not-allowed") {
+      return "Đăng nhập bằng email chưa được cấu hình. Vui lòng liên hệ quản trị hệ thống.";
+    }
+    if (
+      [
+        "auth/invalid-api-key",
+        "auth/app-not-authorized",
+        "auth/unauthorized-domain",
+      ].includes(code ?? "") ||
+      (error as Error | null)?.message === "FIREBASE_CLIENT_NOT_CONFIGURED"
+    ) {
+      return "Dịch vụ đăng nhập chưa được cấu hình đúng. Vui lòng liên hệ quản trị hệ thống.";
+    }
+    if (code === "auth/network-request-failed") {
+      return "Không thể kết nối dịch vụ đăng nhập. Vui lòng kiểm tra mạng rồi thử lại.";
+    }
     if (error instanceof ApiError && error.status === 429) {
       return "Bạn đã thử quá nhiều lần. Vui lòng chờ một lát rồi thử lại.";
+    }
+    if (
+      error instanceof ApiError &&
+      error.code === "OAUTH_ACCOUNT_LINK_REQUIRED"
+    ) {
+      return "Tài khoản chưa được liên kết hoàn tất. Vui lòng liên hệ quản trị hệ thống.";
+    }
+    if (
+      error instanceof ApiError &&
+      ["OAUTH_IDENTITY_INVALID", "ACCOUNT_INACTIVE"].includes(error.code)
+    ) {
+      return "Tài khoản chưa hoạt động hoặc quyền truy cập không còn hiệu lực. Vui lòng liên hệ quản trị hệ thống.";
+    }
+    if (error instanceof ApiError && error.code === "STAFF_MFA_REQUIRED") {
+      return "Tài khoản quản trị cần hoàn tất xác thực bảo mật trước khi đăng nhập.";
+    }
+    if (error instanceof ApiError && error.status >= 500) {
+      return "Dịch vụ tài khoản đang tạm gián đoạn. Vui lòng thử lại sau ít phút.";
     }
     return "Không thể đăng nhập lúc này. Vui lòng thử lại.";
   }

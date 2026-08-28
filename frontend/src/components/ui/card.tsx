@@ -6,7 +6,7 @@ function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "min-w-0 rounded-xl border border-neutral-200 bg-surface",
+        "ui-card min-w-0 rounded-xl border",
         className,
       )}
       {...props}
@@ -24,7 +24,7 @@ function CardTitle({
 }: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h2
-      className={cn("text-lg font-semibold text-neutral-950", className)}
+      className={cn("ui-card__title text-lg font-semibold", className)}
       {...props}
     />
   );
@@ -36,7 +36,7 @@ function CardDescription({
 }: HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={cn("text-sm leading-6 text-neutral-500", className)}
+      className={cn("ui-card__description text-sm leading-6", className)}
       {...props}
     />
   );

@@ -38,10 +38,36 @@ describe("Firebase password recovery", () => {
       screen.getByRole("button", { name: "Gửi hướng dẫn" }),
     );
 
-    expect(await screen.findByRole("status")).toBeDefined();
+    const status = await screen.findByRole("status");
+    expect(status.textContent).toContain("Hộp thư đến");
+    expect(status.textContent).toContain("Spam/Thư rác");
+    expect(status.textContent).not.toContain("Nếu địa chỉ tồn tại");
     expect(firebaseMocks.sendPasswordResetEmail).toHaveBeenCalledWith(
       { name: "firebase-auth" },
       "owner@tmigroup.vn",
+      {
+        handleCodeInApp: false,
+        url: `${window.location.origin}/login`,
+      },
+    );
+  });
+
+  it("explains when password recovery is disabled in Firebase", async () => {
+    firebaseMocks.sendPasswordResetEmail.mockRejectedValue({
+      code: "auth/operation-not-allowed",
+    });
+    render(<ForgotPasswordForm />);
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Email" }),
+      "owner@tmigroup.vn",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Gửi hướng dẫn" }),
+    );
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Chức năng khôi phục mật khẩu chưa được cấu hình",
     );
   });
 

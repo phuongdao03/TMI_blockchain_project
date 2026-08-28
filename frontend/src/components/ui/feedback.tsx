@@ -6,19 +6,19 @@ import { cn } from "@/lib/utils";
 const tones = {
   error: {
     icon: AlertCircle,
-    className: "border-red-200 bg-red-50 text-red-950",
+    className: "ui-feedback--error",
   },
   info: {
     icon: Info,
-    className: "border-slate-200 bg-slate-50 text-slate-950",
+    className: "ui-feedback--info",
   },
   success: {
     icon: CheckCircle2,
-    className: "border-emerald-200 bg-emerald-50 text-emerald-950",
+    className: "ui-feedback--success",
   },
   warning: {
     icon: TriangleAlert,
-    className: "border-amber-200 bg-amber-50 text-amber-950",
+    className: "ui-feedback--warning",
   },
 } as const;
 
@@ -37,7 +37,7 @@ export function Feedback({
   return (
     <div
       className={cn(
-        "grid grid-cols-[auto_1fr] gap-3 border-l-4 p-4",
+        "ui-feedback grid grid-cols-[auto_1fr] gap-3 border-l-4 p-4",
         toneClassName,
         className,
       )}

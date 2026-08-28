@@ -103,6 +103,7 @@ html[data-theme="dark"] {
   --theme-muted: #6b5656;
   --theme-border: #ead9d3;
   --theme-accent: #9d0000;
+  --theme-accent-contrast: #ffffff;
   --theme-gold: #f6c515;
   --theme-warning: #a87324;
   --theme-shadow-color: rgb(71 0 0 / 8%);
@@ -139,6 +140,7 @@ html[data-theme="dark"] .auth-shell {
   /* Gold remains legible on the dark burgundy public surface; the previous
      red accent failed WCAG contrast for labels and links. */
   --theme-accent: #f6c515;
+  --theme-accent-contrast: #241515;
   --theme-gold: #f6c515;
   --theme-warning: #ffd83d;
   --theme-shadow-color: rgb(18 7 7 / 48%);
@@ -267,6 +269,84 @@ html[data-theme="dark"] .auth-shell {
   background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-elevated));
   box-shadow: 0 2px 7px var(--theme-shadow-color);
   color: var(--theme-accent);
+}
+
+/* Shared controls inherit the active shell instead of freezing light-mode
+   utility colors. This keeps public, auth and role workspaces consistent. */
+.ui-button {
+  border-color: var(--theme-border, var(--color-neutral-200));
+  outline-color: var(--theme-accent, var(--color-primary-600));
+}
+
+.ui-button--primary {
+  border: 1px solid var(--theme-accent, var(--color-primary-600));
+  background: var(--theme-accent, var(--color-primary-600));
+  color: var(--theme-accent-contrast, #ffffff);
+  box-shadow: 0 6px 16px var(--theme-shadow-color, rgb(71 0 0 / 10%));
+}
+
+.ui-button--primary:hover {
+  border-color: color-mix(in srgb, var(--theme-accent) 82%, #000000);
+  background: color-mix(in srgb, var(--theme-accent) 88%, #000000);
+}
+
+.ui-button--outline {
+  background: var(--theme-elevated, var(--color-surface));
+  color: var(--theme-text, var(--color-neutral-950));
+}
+
+.ui-button--outline:hover,
+.ui-button--ghost:hover {
+  background: color-mix(
+    in srgb,
+    var(--theme-accent, var(--color-primary-600)) 9%,
+    var(--theme-elevated, var(--color-surface))
+  );
+  color: var(--theme-accent, var(--color-primary-600));
+}
+
+.ui-button--ghost {
+  color: var(--theme-muted, var(--color-neutral-700));
+}
+
+.ui-card {
+  border-color: var(--theme-border, var(--color-neutral-200));
+  background: var(--theme-elevated, var(--color-surface));
+  color: var(--theme-text, var(--color-neutral-950));
+}
+
+.ui-card__title {
+  color: var(--theme-text, var(--color-neutral-950));
+}
+
+.ui-card__description {
+  color: var(--theme-muted, var(--color-neutral-500));
+}
+
+.ui-feedback {
+  border-color: var(--feedback-accent);
+  background: color-mix(
+    in srgb,
+    var(--feedback-accent) 11%,
+    var(--theme-elevated, var(--color-surface))
+  );
+  color: var(--theme-text, var(--color-neutral-950));
+}
+
+.ui-feedback--error {
+  --feedback-accent: var(--color-error);
+}
+
+.ui-feedback--info {
+  --feedback-accent: #5379c3;
+}
+
+.ui-feedback--success {
+  --feedback-accent: var(--color-success);
+}
+
+.ui-feedback--warning {
+  --feedback-accent: var(--color-warning);
 }
 
 .auth-grid-surface {
@@ -4509,6 +4589,425 @@ html[data-theme="dark"] .dashboard-main .bg-background {
   }
 }
 
+/* Public user guide: a readable manual, not another dashboard. */
+.user-guide-page {
+  background: var(--theme-bg);
+  color: var(--theme-text);
+}
+
+.user-guide-hero {
+  border-bottom: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+}
+
+.user-guide-hero > div,
+.user-guide-journeys,
+.user-guide-layout {
+  width: min(100% - 2rem, 76rem);
+  margin-inline: auto;
+}
+
+.user-guide-hero > div {
+  padding-block: clamp(3.5rem, 8vw, 6.5rem);
+}
+
+.user-guide-hero p:first-child,
+.user-guide-journeys article > div > p:first-child,
+.user-guide-toc > p {
+  margin: 0;
+  color: var(--theme-accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.user-guide-hero h1 {
+  max-width: 52rem;
+  margin: 1rem 0 0;
+  font-size: clamp(2.35rem, 6vw, 5rem);
+  font-weight: 730;
+  letter-spacing: -0.052em;
+  line-height: 1;
+}
+
+.user-guide-hero p:last-child {
+  max-width: 43rem;
+  margin: 1.5rem 0 0;
+  color: var(--theme-muted);
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+
+.user-guide-journeys {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: clamp(2rem, 5vw, 4rem);
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 1rem;
+  background: var(--theme-border);
+}
+
+.user-guide-journeys article {
+  display: grid;
+  min-height: 20rem;
+  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  background: var(--theme-surface);
+}
+
+.user-guide-journeys article > svg {
+  width: 2rem;
+  height: 2rem;
+  color: var(--theme-accent);
+  stroke-width: 1.5;
+}
+
+.user-guide-journeys h2 {
+  max-width: 26rem;
+  margin: 0.65rem 0 0;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.user-guide-journeys article > div > p:not(:first-child) {
+  max-width: 29rem;
+  margin: 1rem 0 0;
+  color: var(--theme-muted);
+  line-height: 1.7;
+}
+
+.user-guide-journeys a,
+.user-guide-content a {
+  color: var(--theme-accent);
+  font-weight: 750;
+  text-underline-offset: 0.22em;
+}
+
+.user-guide-journeys article > div > a {
+  display: inline-flex;
+  margin-top: 2rem;
+}
+
+.user-guide-layout {
+  display: grid;
+  gap: clamp(2rem, 6vw, 5.5rem);
+  grid-template-columns: 13rem minmax(0, 1fr);
+  padding-block: clamp(4rem, 8vw, 7rem);
+  align-items: start;
+}
+
+.user-guide-toc {
+  position: sticky;
+  top: 7rem;
+}
+
+.user-guide-toc nav {
+  display: grid;
+  margin-top: 1rem;
+  border-top: 1px solid var(--theme-border);
+}
+
+.user-guide-toc a {
+  display: grid;
+  min-height: 3.25rem;
+  align-items: center;
+  border-bottom: 1px solid var(--theme-border);
+  color: var(--theme-muted);
+  font-size: 0.85rem;
+  grid-template-columns: 2rem 1fr;
+  text-decoration: none;
+}
+
+.user-guide-toc a:hover,
+.user-guide-toc a:focus-visible {
+  color: var(--theme-text);
+}
+
+.user-guide-toc a span {
+  color: var(--theme-accent);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+}
+
+.user-guide-content {
+  min-width: 0;
+}
+
+.user-guide-section {
+  scroll-margin-top: 6rem;
+  padding-bottom: clamp(3.5rem, 7vw, 5.5rem);
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.user-guide-section + .user-guide-section {
+  padding-top: clamp(3.5rem, 7vw, 5.5rem);
+}
+
+.user-guide-section__heading {
+  display: grid;
+  align-items: center;
+  gap: 0.85rem;
+  grid-template-columns: auto auto minmax(0, 1fr);
+}
+
+.user-guide-section__heading > span {
+  color: var(--theme-accent);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+}
+
+.user-guide-section__heading > svg {
+  color: var(--theme-accent);
+}
+
+.user-guide-section h2 {
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.7rem);
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.user-guide-section__body {
+  margin-top: 2rem;
+  color: var(--theme-muted);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.user-guide-section__body > p {
+  max-width: 47rem;
+  margin: 0;
+}
+
+.user-guide-checklist,
+.user-guide-steps {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.user-guide-checklist {
+  counter-reset: guide-checklist;
+}
+
+.user-guide-checklist li {
+  position: relative;
+  padding: 1rem 0 1rem 2.5rem;
+  border-top: 1px solid var(--theme-border);
+  counter-increment: guide-checklist;
+}
+
+.user-guide-checklist li::before {
+  position: absolute;
+  top: 1rem;
+  left: 0;
+  color: var(--theme-accent);
+  content: counter(guide-checklist, decimal-leading-zero);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+}
+
+.user-guide-note,
+.user-guide-proof {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding: 1.25rem;
+  border: 1px solid var(--theme-border);
+  border-left: 0.25rem solid var(--theme-accent);
+  border-radius: 0.5rem;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.user-guide-note > svg,
+.user-guide-proof > svg {
+  color: var(--theme-accent);
+}
+
+.user-guide-note p,
+.user-guide-proof p {
+  margin: 0;
+  color: var(--theme-muted);
+}
+
+.user-guide-note--warning {
+  border-left-color: var(--thv-gold, #d4a72c);
+}
+
+.user-guide-columns {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 0.75rem;
+  background: var(--theme-border);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.user-guide-columns > div {
+  padding: 1.5rem;
+  background: var(--theme-surface);
+}
+
+.user-guide-columns h3,
+.user-guide-steps h3,
+.user-guide-proof h3 {
+  margin: 0;
+  color: var(--theme-text);
+  font-size: 1rem;
+}
+
+.user-guide-columns p,
+.user-guide-steps p {
+  margin: 0.5rem 0 0;
+}
+
+.user-guide-columns + p {
+  margin-top: 1.5rem;
+}
+
+.user-guide-steps li {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--theme-border);
+  grid-template-columns: 2rem minmax(0, 1fr);
+}
+
+.user-guide-steps li > span {
+  color: var(--theme-accent);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+}
+
+.user-guide-statuses {
+  display: grid;
+  gap: 1px;
+  margin: 2rem 0 0;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 0.75rem;
+  background: var(--theme-border);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.user-guide-statuses > div {
+  padding: 1.25rem;
+  background: var(--theme-surface);
+}
+
+.user-guide-statuses dt {
+  color: var(--theme-text);
+  font-weight: 750;
+}
+
+.user-guide-statuses dd {
+  margin: 0.35rem 0 0;
+}
+
+.user-guide-action {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  margin-top: 1.5rem;
+}
+
+.user-guide-faq {
+  border-top: 1px solid var(--theme-border);
+}
+
+.user-guide-faq details {
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.user-guide-faq summary {
+  padding: 1.15rem 2rem 1.15rem 0;
+  color: var(--theme-text);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.user-guide-faq details p {
+  max-width: 45rem;
+  margin: 0 0 1.25rem;
+}
+
+.user-guide-support-copy {
+  margin-top: 2rem !important;
+}
+
+@media (max-width: 64rem) {
+  .user-guide-journeys {
+    grid-template-columns: 1fr;
+  }
+
+  .user-guide-journeys article {
+    min-height: auto;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .user-guide-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .user-guide-toc {
+    position: static;
+  }
+
+  .user-guide-toc nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .user-guide-toc a {
+    padding-right: 0.5rem;
+  }
+}
+
+@media (max-width: 44rem) {
+  .user-guide-journeys,
+  .user-guide-columns,
+  .user-guide-statuses {
+    grid-template-columns: 1fr;
+  }
+
+  .user-guide-journeys article {
+    min-height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .user-guide-toc nav {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .user-guide-section__heading {
+    grid-template-columns: auto auto;
+  }
+
+  .user-guide-section__heading h2 {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 28rem) {
+  .user-guide-hero > div,
+  .user-guide-journeys,
+  .user-guide-layout {
+    width: min(100% - 1.25rem, 76rem);
+  }
+
+  .user-guide-toc nav {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* On compact public headers, the workspace entry lives in the menu drawer.
    This prevents the account action from squeezing the brand or theme control. */
 @media (max-width: 76rem) {
@@ -4712,6 +5211,7 @@ html[data-theme="dark"] .public-library-page {
   --theme-border: var(--thv-border);
   --theme-line: var(--thv-border);
   --theme-accent: var(--thv-red);
+  --theme-accent-contrast: #ffffff;
   background: var(--thv-bg-warm);
 }
 
@@ -4725,6 +5225,7 @@ html[data-theme="dark"] .dashboard-shell {
   --theme-border: #4c2424;
   --theme-line: #4c2424;
   --theme-accent: #f6c515;
+  --theme-accent-contrast: #241515;
   background: var(--theme-bg);
 }
 

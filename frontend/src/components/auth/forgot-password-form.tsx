@@ -32,11 +32,41 @@ export function ForgotPasswordForm() {
     try {
       if (!firebaseConfigured())
         throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
-      await sendPasswordResetEmail(getFirebaseAuth(), email);
+      await sendPasswordResetEmail(getFirebaseAuth(), email, {
+        handleCodeInApp: false,
+        url: `${window.location.origin}/login`,
+      });
       setAccepted(true);
     } catch (error) {
-      if ((error as { code?: string } | null)?.code === "auth/user-not-found") {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === "auth/user-not-found") {
         setAccepted(true);
+        return;
+      }
+      if (code === "auth/too-many-requests") {
+        setSubmitError(
+          "Bạn đã gửi quá nhiều yêu cầu. Vui lòng chờ một lát rồi thử lại.",
+        );
+        return;
+      }
+      if (code === "auth/operation-not-allowed") {
+        setSubmitError(
+          "Chức năng khôi phục mật khẩu chưa được cấu hình. Vui lòng liên hệ bộ phận hỗ trợ.",
+        );
+        return;
+      }
+      if (
+        [
+          "auth/unauthorized-continue-uri",
+          "auth/unauthorized-domain",
+          "auth/invalid-api-key",
+          "auth/app-not-authorized",
+        ].includes(code ?? "") ||
+        (error as Error | null)?.message === "FIREBASE_CLIENT_NOT_CONFIGURED"
+      ) {
+        setSubmitError(
+          "Dịch vụ khôi phục tài khoản chưa sẵn sàng. Vui lòng liên hệ bộ phận hỗ trợ.",
+        );
         return;
       }
       setSubmitError(
@@ -49,7 +79,7 @@ export function ForgotPasswordForm() {
 
   return (
     <AuthCard
-      description="Nhập email của bạn. Phản hồi luôn giống nhau để bảo vệ tài khoản."
+      description="Nhập email đã dùng để đăng ký. Firebase sẽ gửi liên kết bảo mật để bạn đặt mật khẩu mới."
       footer={<AuthLink href="/login">Quay lại đăng nhập</AuthLink>}
       title="Quên mật khẩu"
     >
@@ -58,7 +88,9 @@ export function ForgotPasswordForm() {
           className="rounded-lg border border-success bg-green-50 p-4 text-sm text-green-800"
           role="status"
         >
-          Nếu địa chỉ tồn tại, hướng dẫn đặt lại mật khẩu đã được gửi.
+          Yêu cầu đặt lại mật khẩu đã được tiếp nhận. Vui lòng kiểm tra Hộp thư
+          đến và mục Spam/Thư rác để mở liên kết đổi mật khẩu. Nếu chưa nhận
+          được email sau vài phút, hãy thử gửi lại yêu cầu.
         </div>
       ) : (
         <form className="space-y-5" noValidate onSubmit={onSubmit}>

@@ -139,4 +139,55 @@ describe("LoginForm", () => {
     ).toBeDefined();
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("explains when Firebase email sign-in is disabled", async () => {
+    signInWithEmailAndPassword.mockRejectedValue({
+      code: "auth/operation-not-allowed",
+    });
+    render(<LoginForm />, { wrapper: Wrapper });
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Email" }),
+      "owner@tmigroup.vn",
+    );
+    await userEvent.type(screen.getByLabelText("Mật khẩu"), "valid password");
+    await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Đăng nhập bằng email chưa được cấu hình",
+    );
+  });
+
+  it("explains when a Firebase account is not linked to the platform account", async () => {
+    signInWithEmailAndPassword.mockResolvedValue({
+      user: { getIdToken: vi.fn(async () => "firebase-admin-token") },
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: false,
+          error: {
+            code: "OAUTH_ACCOUNT_LINK_REQUIRED",
+            message: "Existing account must be linked explicitly.",
+          },
+          meta: { request_id: "request-admin-link" },
+        }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    render(<LoginForm />, { wrapper: Wrapper });
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Email" }),
+      "admin@example.vn",
+    );
+    await userEvent.type(screen.getByLabelText("Mật khẩu"), "valid password");
+    await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
+
+    expect(
+      await screen.findByText(
+        "Tài khoản chưa được liên kết hoàn tất. Vui lòng liên hệ quản trị hệ thống.",
+      ),
+    ).toBeDefined();
+  });
 });

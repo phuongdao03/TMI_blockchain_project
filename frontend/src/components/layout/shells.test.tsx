@@ -68,6 +68,7 @@ describe("layout shells", () => {
     ).toBeDefined();
     expect(screen.getAllByRole("link", { name: "Trang chủ" })).toHaveLength(1);
     expect(screen.getAllByRole("link", { name: "Minh bạch" })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Hướng dẫn" })).toHaveLength(1);
     expect(
       screen.queryByRole("complementary", {
         name: "Điều hướng công khai",
@@ -268,15 +269,17 @@ describe("layout shells", () => {
     expect(
       within(drawer).getByRole("link", { name: "Hoạt động gần đây" }),
     ).toBeDefined();
+    expect(
+      within(drawer).getByRole("link", { name: "Hướng dẫn" }),
+    ).toBeDefined();
 
     const closeButton = within(drawer).getByRole("button", {
       name: "Đóng điều hướng workspace",
     });
     closeButton.focus();
     await user.keyboard("{Shift>}{Tab}{/Shift}");
-    expect(document.activeElement).toBe(
-      within(drawer).getByRole("link", { name: "Hoạt động gần đây" }),
-    );
+    const drawerLinks = within(drawer).getAllByRole("link");
+    expect(document.activeElement).toBe(drawerLinks.at(-1));
 
     await user.keyboard("{Escape}");
     expect(
