@@ -2143,6 +2143,22 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
+    path === "/api/v1/notifications/unread-count" &&
+    authenticated
+  ) {
+    send(response, 200, envelope({ unreadCount: 0 }));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/notifications" &&
+    authenticated
+  ) {
+    send(response, 200, paginatedEnvelope([]));
+    return;
+  }
+  if (
+    request.method === "GET" &&
     path === "/api/v1/admin/operations/metrics" &&
     superAdminAuthenticated
   ) {
