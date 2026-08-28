@@ -5,10 +5,7 @@ import { cn } from "@/lib/utils";
 function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn(
-        "ui-card min-w-0 rounded-xl border",
-        className,
-      )}
+      className={cn("ui-card min-w-0 rounded-xl border", className)}
       {...props}
     />
   );

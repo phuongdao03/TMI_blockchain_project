@@ -19,7 +19,9 @@ describe("theme-aware UI primitives", () => {
     render(
       <Card>
         <CardTitle>Hồ sơ gần đây</CardTitle>
-        <CardDescription>Tiếp tục công việc bạn đang thực hiện.</CardDescription>
+        <CardDescription>
+          Tiếp tục công việc bạn đang thực hiện.
+        </CardDescription>
       </Card>,
     );
 

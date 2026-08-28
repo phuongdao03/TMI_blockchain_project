@@ -45,7 +45,9 @@ describe("UserGuidePage", () => {
       screen.getByText(/quên mật khẩu hoặc chưa nhận được email đặt lại/i),
     ).toBeDefined();
     expect(
-      screen.getByRole("link", { name: "Mở thư viện đề cử" }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: "Mở thư viện đề cử" })
+        .getAttribute("href"),
     ).toBe("/works");
     expect(
       screen

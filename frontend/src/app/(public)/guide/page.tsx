@@ -101,9 +101,9 @@ export default function UserGuidePage() {
             <p>DÀNH CHO NGƯỜI XEM</p>
             <h2>Khám phá các tác phẩm đã công bố</h2>
             <p>
-              Duyệt thư viện, đọc câu chuyện phía sau từng tác phẩm và đối
-              chiếu thông tin xác thực đã được công bố. Các nội dung công khai
-              có thể xem mà không cần đăng nhập.
+              Duyệt thư viện, đọc câu chuyện phía sau từng tác phẩm và đối chiếu
+              thông tin xác thực đã được công bố. Các nội dung công khai có thể
+              xem mà không cần đăng nhập.
             </p>
             <Link href="/works">Mở thư viện đề cử</Link>
           </div>
@@ -143,9 +143,9 @@ export default function UserGuidePage() {
             title="Khám phá tác phẩm"
           >
             <p>
-              Bạn có thể bắt đầu từ thư viện công khai và đi thẳng tới trang
-              chi tiết của từng tác phẩm. Mỗi trang tập hợp câu chuyện, chủ
-              thể, tổ chức liên quan và trạng thái xác thực trong cùng một nơi.
+              Bạn có thể bắt đầu từ thư viện công khai và đi thẳng tới trang chi
+              tiết của từng tác phẩm. Mỗi trang tập hợp câu chuyện, chủ thể, tổ
+              chức liên quan và trạng thái xác thực trong cùng một nơi.
             </p>
             <ol className="user-guide-checklist">
               <li>
@@ -153,8 +153,8 @@ export default function UserGuidePage() {
                 thư viện trực quan.
               </li>
               <li>
-                Dùng ô tìm kiếm và bộ lọc danh mục, chủ đề hoặc thời gian để
-                thu hẹp kết quả.
+                Dùng ô tìm kiếm và bộ lọc danh mục, chủ đề hoặc thời gian để thu
+                hẹp kết quả.
               </li>
               <li>
                 Chọn một tác phẩm để đọc câu chuyện, tác giả, tổ chức và thông
@@ -184,9 +184,9 @@ export default function UserGuidePage() {
               <div>
                 <h3>Tạo tài khoản</h3>
                 <p>
-                  Chọn <Link href="/register">Đăng ký</Link>, nhập email và
-                  mật khẩu theo yêu cầu. Mở liên kết xác minh trong email rồi
-                  quay lại đăng nhập để bắt đầu sử dụng Không gian của tôi.
+                  Chọn <Link href="/register">Đăng ký</Link>, nhập email và mật
+                  khẩu theo yêu cầu. Mở liên kết xác minh trong email rồi quay
+                  lại đăng nhập để bắt đầu sử dụng Không gian của tôi.
                 </p>
               </div>
               <div>
@@ -274,8 +274,8 @@ export default function UserGuidePage() {
               <div>
                 <dt>Cần bổ sung</dt>
                 <dd>
-                  Mở thông báo, đọc rõ từng yêu cầu, cập nhật đúng phần được
-                  nêu rồi gửi lại hồ sơ.
+                  Mở thông báo, đọc rõ từng yêu cầu, cập nhật đúng phần được nêu
+                  rồi gửi lại hồ sơ.
                 </dd>
               </div>
               <div>
@@ -350,8 +350,8 @@ export default function UserGuidePage() {
               <CircleHelp aria-hidden="true" />
               <p>
                 THV không bao giờ yêu cầu bạn cung cấp mật khẩu, mã xác thực,
-                cụm từ khôi phục hoặc khóa ví. Không gửi những thông tin này
-                qua email, tin nhắn hay biểu mẫu hỗ trợ.
+                cụm từ khôi phục hoặc khóa ví. Không gửi những thông tin này qua
+                email, tin nhắn hay biểu mẫu hỗ trợ.
               </p>
             </div>
           </GuideSection>
@@ -373,7 +373,9 @@ export default function UserGuidePage() {
                 </p>
               </details>
               <details>
-                <summary>Quên mật khẩu hoặc chưa nhận được email đặt lại</summary>
+                <summary>
+                  Quên mật khẩu hoặc chưa nhận được email đặt lại
+                </summary>
                 <p>
                   Chọn Quên mật khẩu tại trang đăng nhập, nhập đúng email đã
                   đăng ký rồi kiểm tra hộp thư đến và thư rác. Liên kết bảo mật
