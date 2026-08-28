@@ -1,8 +1,10 @@
 import asyncio
 import smtplib
 from pathlib import Path
+from types import TracebackType
 from uuid import uuid4
 
+import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.db.base import Base
@@ -168,17 +170,24 @@ def test_staff_invitation_email_uses_english_route_and_encodes_token() -> None:
     assert "/staff-invitation?token=a%2Fb%2Bc" in message.html
 
 
-def test_smtp_gateway_uses_starttls_and_authentication(monkeypatch) -> None:
+def test_smtp_gateway_uses_starttls_and_authentication(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[tuple[str, object]] = []
 
     class FakeSmtp:
         def __init__(self, host: str, port: int, *, timeout: int) -> None:
             calls.append(("connect", (host, port, timeout)))
 
-        def __enter__(self):
+        def __enter__(self) -> "FakeSmtp":
             return self
 
-        def __exit__(self, *_args) -> None:
+        def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc_value: BaseException | None,
+            traceback: TracebackType | None,
+        ) -> None:
             return None
 
         def ehlo(self) -> None:
@@ -190,7 +199,7 @@ def test_smtp_gateway_uses_starttls_and_authentication(monkeypatch) -> None:
         def login(self, username: str, password: str) -> None:
             calls.append(("login", (username, password)))
 
-        def send_message(self, _message) -> None:
+        def send_message(self, _message: object) -> None:
             calls.append(("send", None))
 
     monkeypatch.setattr(smtplib, "SMTP", FakeSmtp)
