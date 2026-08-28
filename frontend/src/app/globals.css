@@ -3635,6 +3635,21 @@ html[data-theme="dark"] .dashboard-main .text-error {
   }
 }
 
+@media (max-width: 24rem) {
+  .dashboard-context-header {
+    gap: 0.25rem;
+    padding-inline: 0.5rem;
+  }
+  .dashboard-context-header__title {
+    display: none;
+  }
+  .dashboard-context-header > div:last-child {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.25rem;
+  }
+}
+
 @media (max-width: 30rem) {
   .dashboard-mobile-navigation {
     right: 0.5rem;

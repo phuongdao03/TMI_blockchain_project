@@ -44,17 +44,19 @@ export function DashboardContextHeader({
   user,
   onOpenNavigation,
   navigationButtonRef,
+  navigationOpen = false,
 }: {
   user: AuthUser | null;
   onOpenNavigation?: () => void;
   navigationButtonRef?: RefObject<HTMLButtonElement | null>;
+  navigationOpen?: boolean;
 }) {
   const pathname = usePathname();
   const title = resolveTitle(pathname);
 
   return (
-    <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-4 border-b border-[var(--theme-line)] bg-[color:var(--theme-surface)] px-5 py-3 lg:px-8">
-      <div className="min-w-0">
+    <header className="dashboard-context-header sticky top-0 z-30 flex min-h-16 items-center justify-between gap-4 border-b border-[var(--theme-line)] bg-[color:var(--theme-surface)] px-5 py-3 lg:px-8">
+      <div className="dashboard-context-header__title min-w-0">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-muted)]">
           Đề cử Tinh Hoa Việt
         </p>
@@ -65,7 +67,10 @@ export function DashboardContextHeader({
 
       <div className="flex shrink-0 items-center gap-2">
         <button
-          aria-controls="dashboard-workspace-navigation"
+          aria-controls={
+            navigationOpen ? "dashboard-workspace-navigation" : undefined
+          }
+          aria-expanded={navigationOpen}
           aria-label="Mở điều hướng workspace"
           className="dashboard-context-header__menu"
           onClick={onOpenNavigation}

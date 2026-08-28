@@ -264,6 +264,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
       <div className="dashboard-shell__content">
         <DashboardContextHeader
           navigationButtonRef={navigationButtonRef}
+          navigationOpen={navigationOpen}
           onOpenNavigation={() => openNavigation(navigationButtonRef.current)}
           user={user}
         />
