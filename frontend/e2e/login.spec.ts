@@ -95,8 +95,9 @@ test("password recovery uses Firebase one-time action code", async ({
     .fill("applicant@tmigroup.vn");
   await page.getByRole("button", { name: "Gửi hướng dẫn" }).click();
   await expect(page.getByRole("status")).toContainText(
-    "đặt lại mật khẩu đã được gửi",
+    "Yêu cầu đặt lại mật khẩu đã được tiếp nhận",
   );
+  await expect(page.getByRole("status")).toContainText("Spam/Thư rác");
 
   await page.goto("/reset-password?oobCode=e2e-valid-reset-code-123456789012");
   await page.getByLabel("Mật khẩu mới", { exact: true }).fill(password);
