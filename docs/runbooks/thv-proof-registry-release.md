@@ -143,6 +143,31 @@ The command is idempotent for the same identity and refuses a UID collision or
 a second distinct Super Admin. Sign out and sign in again after it succeeds so
 the application session is rebuilt with the new role.
 
+## Recover Super Admin after Firebase account deletion
+
+Do not hard-delete the former application user: it can own audit history and
+other protected records. If its Firebase credential was irrecoverably deleted,
+the following guarded recovery makes the supplied Firebase identity the sole
+Super Admin. It removes the former Super Admin role, marks every former Super
+Admin account as deleted in the application, revokes its active sessions, and
+writes immutable audit records.
+
+Create the replacement Firebase account first, verify its UID in Firebase
+Console, then run this only after deploying the image that contains the command:
+
+```bash
+docker compose --env-file infrastructure/.env.production \
+  -f infrastructure/compose.production.yaml exec backend \
+  python -m app.scripts.recover_production_super_admin \
+  --email <exact-replacement-firebase-email> \
+  --firebase-uid <exact-replacement-firebase-uid> \
+  --confirm RECOVER_PRODUCTION_SUPER_ADMIN_AFTER_FIREBASE_DELETION
+```
+
+This is an emergency recovery operation, not a normal staff-management flow.
+Do not use it to add a second Super Admin. Sign out and sign in again with the
+replacement account after the command completes.
+
 To re-check deployed roles independently:
 
 ```bash
