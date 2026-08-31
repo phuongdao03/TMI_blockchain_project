@@ -749,7 +749,18 @@ class ReviewService:
             answer = review.specialist_answers.get(str(criterion["key"]))
             if not isinstance(answer, Mapping):
                 raise ReviewValidationError("Stored specialist answer is invalid.")
-            weighted += int(answer["score"]) * int(criterion["weight"]) / 5
+            score = answer.get("score")
+            weight = criterion.get("weight")
+            if (
+                not isinstance(score, int)
+                or isinstance(score, bool)
+                or not 0 <= score <= 5
+                or not isinstance(weight, int)
+                or isinstance(weight, bool)
+                or not 0 <= weight <= 100
+            ):
+                raise ReviewValidationError("Stored specialist rubric is invalid.")
+            weighted += score * weight / 5
         return round(weighted)
 
     @staticmethod

@@ -30,6 +30,7 @@ test.beforeEach(async ({ context }) => {
 });
 
 test("critical MVP journey reaches a publicly verifiable certificate", async ({
+  browser,
   context,
   page,
   request,
@@ -104,8 +105,9 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
         .fill(`Đánh giá đầy đủ cho ${criterion}.`);
     }
     const checklist = page.getByRole("checkbox");
-    await expect(checklist).toHaveCount(10);
-    for (let index = 0; index < 10; index += 1) {
+    const requiredChecklistCount = criteria.length + 4;
+    await expect(checklist).toHaveCount(requiredChecklistCount);
+    for (let index = 0; index < requiredChecklistCount; index += 1) {
       await checklist.nth(index).check();
     }
     const autosave = page.waitForResponse(
@@ -123,13 +125,30 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
 
   await test.step("council attends, votes and approves", async () => {
     await request.post("http://127.0.0.1:4010/api/e2e/reset-council");
-    await context.addCookies([
+    const councilContext = await browser.newContext();
+    await councilContext.addCookies([
       {
         name: "tmi_access",
         value: "e2e-super-admin-access",
         domain: "127.0.0.1",
         path: "/",
         httpOnly: true,
+        sameSite: "Lax",
+      },
+      {
+        name: "tmi_refresh",
+        value: "e2e-refresh",
+        domain: "127.0.0.1",
+        path: "/",
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+      {
+        name: "tmi_csrf",
+        value: "e2e-csrf",
+        domain: "127.0.0.1",
+        path: "/",
+        httpOnly: false,
         sameSite: "Lax",
       },
       {
@@ -141,24 +160,37 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
         sameSite: "Lax",
       },
     ]);
-    await page.goto("/council");
-    await page.getByRole("link", { name: "Mở phiên" }).click();
-    await page.getByRole("button", { name: "Xác nhận tham dự" }).click();
-    await page.getByRole("button", { name: "Mở biểu quyết" }).click();
-    await page.getByRole("button", { name: "Tôi không có xung đột" }).click();
-    await page.getByRole("button", { name: "Biểu quyết hồ sơ" }).click();
-    await page.getByRole("button", { name: "Phê duyệt" }).click();
-    await page
-      .getByLabel("Lý do biểu quyết")
-      .fill("Hồ sơ đáp ứng đầy đủ tiêu chí Hội đồng.");
-    await page
-      .getByRole("button", { name: "Kiểm tra phiếu biểu quyết" })
-      .click();
-    await page.getByRole("button", { name: "Xác nhận và gửi phiếu" }).click();
-    await page.getByRole("button", { name: "Đóng phiên" }).click();
-    await expect(
-      page.getByRole("heading", { name: "Phê duyệt hồ sơ" }),
-    ).toBeVisible();
+    const councilPage = await councilContext.newPage();
+    try {
+      await councilPage.goto("/council");
+      await councilPage.getByRole("link", { name: "Mở phiên" }).click();
+      await councilPage
+        .getByRole("button", { name: "Xác nhận tham dự" })
+        .click();
+      await councilPage.getByRole("button", { name: "Mở biểu quyết" }).click();
+      await councilPage
+        .getByRole("button", { name: "Tôi không có xung đột" })
+        .click();
+      await councilPage
+        .getByRole("button", { name: "Biểu quyết hồ sơ" })
+        .click();
+      await councilPage.getByRole("button", { name: "Phê duyệt" }).click();
+      await councilPage
+        .getByLabel("Lý do biểu quyết")
+        .fill("Hồ sơ đáp ứng đầy đủ tiêu chí Hội đồng.");
+      await councilPage
+        .getByRole("button", { name: "Kiểm tra phiếu biểu quyết" })
+        .click();
+      await councilPage
+        .getByRole("button", { name: "Xác nhận và gửi phiếu" })
+        .click();
+      await councilPage.getByRole("button", { name: "Đóng phiên" }).click();
+      await expect(
+        councilPage.getByRole("heading", { name: "Phê duyệt hồ sơ" }),
+      ).toBeVisible();
+    } finally {
+      await councilContext.close();
+    }
   });
 
   await test.step("payment is confirmed by trusted status", async () => {

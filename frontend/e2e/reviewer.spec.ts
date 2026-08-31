@@ -92,8 +92,9 @@ test("reviewer acknowledges conflict gate, reviews evidence and submits 5T", asy
       .fill(`Đánh giá E2E đầy đủ cho ${criterion}.`);
   }
   const checklist = page.getByRole("checkbox");
-  await expect(checklist).toHaveCount(10);
-  for (let index = 0; index < 10; index += 1) {
+  const requiredChecklistCount = criteria.length + 4;
+  await expect(checklist).toHaveCount(requiredChecklistCount);
+  for (let index = 0; index < requiredChecklistCount; index += 1) {
     await checklist.nth(index).check();
   }
   const autosave = page.waitForResponse(
@@ -138,7 +139,9 @@ test("retired similarity route returns reviewer to the main queue", async ({
   await page.goto("/reviews/similarity");
   await expect(page).toHaveURL(/\/reviews$/);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Hàng đợi thẩm định" }),
+    page
+      .locator("main")
+      .getByRole("heading", { level: 1, name: "Hàng đợi thẩm định" }),
   ).toBeVisible();
 });
 

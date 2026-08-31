@@ -194,7 +194,7 @@ def test_admin_user_suspension_revokes_sessions_and_writes_audit(
                     expectedStatus=UserStatus.ACTIVE,
                     reason="Account activity requires investigation",
                 ),
-                audit=AuditService(session, settings=Settings(_env_file=None)),
+                audit=AuditService(session, settings=Settings.model_validate({})),
                 request_id="suspend-1",
                 user_agent="test-agent",
             )

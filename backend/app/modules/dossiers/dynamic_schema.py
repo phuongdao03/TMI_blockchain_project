@@ -226,11 +226,15 @@ def _validate_review_rubric(rubric: object, errors: list[dict[str, str]]) -> Non
         return
     approve = thresholds.get("approveMin")
     reject = thresholds.get("rejectBelow")
-    valid_values = all(
-        isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 100
-        for value in (approve, reject)
-    )
-    if not valid_values or reject >= approve:
+    if not (
+        isinstance(approve, int)
+        and not isinstance(approve, bool)
+        and isinstance(reject, int)
+        and not isinstance(reject, bool)
+        and 0 <= approve <= 100
+        and 0 <= reject <= 100
+        and reject < approve
+    ):
         _append_error(
             errors,
             f"{path}.thresholds",

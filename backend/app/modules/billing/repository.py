@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy import or_, select
@@ -59,9 +60,12 @@ class BillingRepository:
             statement = statement.with_for_update().execution_options(
                 populate_existing=True
             )
-        return await self._session.scalar(statement)
+        return cast(FeeObligation | None, await self._session.scalar(statement))
 
     async def obligation_for_dossier(self, dossier_id: UUID) -> FeeObligation | None:
-        return await self._session.scalar(
-            select(FeeObligation).where(FeeObligation.dossier_id == dossier_id)
+        return cast(
+            FeeObligation | None,
+            await self._session.scalar(
+                select(FeeObligation).where(FeeObligation.dossier_id == dossier_id)
+            ),
         )
