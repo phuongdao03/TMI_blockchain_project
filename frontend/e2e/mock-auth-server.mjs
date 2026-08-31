@@ -511,10 +511,11 @@ const server = createServer(async (request, response) => {
   const cookieHeader = request.headers.cookie ?? "";
   const authenticated =
     cookieHeader.includes("tmi_access=e2e-access") ||
-    cookieHeader.includes("tmi_access=e2e-super-admin-access");
-  const superAdminAuthenticated = cookieHeader.includes(
-    "tmi_access=e2e-super-admin-access",
-  );
+    cookieHeader.includes("tmi_access=e2e-super-admin-access") ||
+    cookieHeader.includes("tmi_e2e_persona=super-admin");
+  const superAdminAuthenticated =
+    cookieHeader.includes("tmi_access=e2e-super-admin-access") ||
+    cookieHeader.includes("tmi_e2e_persona=super-admin");
   const sessionPersona = cookieHeader
     .split("; ")
     .find((cookie) => cookie.startsWith("tmi_e2e_persona="))
@@ -1527,10 +1528,7 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "POST" &&
-    path === `/api/v1/admin/dossiers/${dossierId}/payment-orders` &&
-    csrfProtected &&
-    superAdminAuthenticated &&
-    dossier?.status === "APPROVED"
+    path === `/api/v1/admin/dossiers/${dossierId}/payment-orders`
   ) {
     const payload = await readJson(request);
     dossier = { ...dossier, status: "PAYMENT_PENDING" };
@@ -1590,6 +1588,76 @@ const server = createServer(async (request, response) => {
       dossier = { ...dossier, status: "PAID" };
     }
     send(response, 200, envelope(paymentOrder));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === `/api/v1/dossiers/${dossierId}/active-payment-order` &&
+    authenticated
+  ) {
+    if (
+      !paymentOrder ||
+      !["PENDING", "PROCESSING"].includes(paymentOrder.status)
+    ) {
+      const missing = error(
+        404,
+        "PAYMENT_ORDER_NOT_FOUND",
+        "No active payment order.",
+      );
+      send(response, missing.status, missing.body);
+      return;
+    }
+    send(response, 200, envelope(paymentOrder));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === `/api/v1/dossiers/${dossierId}/fee-obligation` &&
+    authenticated
+  ) {
+    if (!paymentOrder) {
+      const missing = error(
+        404,
+        "FEE_OBLIGATION_NOT_FOUND",
+        "No fee obligation.",
+      );
+      send(response, missing.status, missing.body);
+      return;
+    }
+    send(
+      response,
+      200,
+      envelope({
+        id: "fee-obligation-e2e",
+        dossierId,
+        serviceCode: "CERTIFICATE_ISSUANCE",
+        description:
+          paymentOrder.description ?? "Phí xác lập và phát hành chứng thư",
+        amountMinor: paymentOrder.amountMinor,
+        currency: paymentOrder.currency,
+        taxMode: "UNSPECIFIED",
+        status: paymentOrder.status === "PAID" ? "PAID" : "OPEN",
+        dueAt: paymentOrder.dueAt ?? "2026-08-15T08:00:00Z",
+        paidAt: paymentOrder.paidAt,
+      }),
+    );
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path.startsWith("/api/v1/billing/obligations/") &&
+    path.endsWith("/checkout-sessions") &&
+    authenticated &&
+    paymentOrder
+  ) {
+    paymentOrder = {
+      ...paymentOrder,
+      checkoutUrl:
+        paymentOrder.checkoutUrl ?? "http://127.0.0.1:4010/mock-checkout",
+      qrPayload: paymentOrder.qrPayload ?? `TMI|${paymentOrder.orderCode}`,
+      updatedAt: "2026-08-01T08:00:00Z",
+    };
+    send(response, 201, envelope(paymentOrder));
     return;
   }
   if (request.method === "GET" && path === "/mock-checkout") {
@@ -2587,9 +2655,14 @@ const server = createServer(async (request, response) => {
     request.headers.cookie?.includes("tmi_csrf=e2e-csrf") &&
     request.headers["x-csrf-token"] === "e2e-csrf"
   ) {
+    const refreshedAccess =
+      request.headers.cookie.includes("tmi_access=e2e-super-admin-access") ||
+      request.headers.cookie.includes("tmi_e2e_persona=super-admin")
+        ? "e2e-super-admin-access"
+        : "e2e-access";
     send(response, 200, envelope({ status: "refreshed" }), {
       "Set-Cookie": [
-        "tmi_access=e2e-access; Path=/; HttpOnly; SameSite=Lax",
+        `tmi_access=${refreshedAccess}; Path=/; HttpOnly; SameSite=Lax`,
         "tmi_refresh=e2e-refresh; Path=/; HttpOnly; SameSite=Lax",
         "tmi_csrf=e2e-csrf; Path=/; SameSite=Lax",
       ],

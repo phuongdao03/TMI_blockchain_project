@@ -29,14 +29,10 @@ def test_price_catalog_migration_is_reversible(
                 "SELECT name FROM sqlite_master WHERE type = 'table'"
             )
         }
-        assert {"price_catalog_versions", "price_catalog_entries"}.issubset(
-            tables
-        )
+        assert {"price_catalog_versions", "price_catalog_entries"}.issubset(tables)
         entry_indexes = {
             row[1]
-            for row in connection.execute(
-                "PRAGMA index_list(price_catalog_entries)"
-            )
+            for row in connection.execute("PRAGMA index_list(price_catalog_entries)")
         }
         assert "ix_price_catalog_entries_dossier_type_id" in entry_indexes
 

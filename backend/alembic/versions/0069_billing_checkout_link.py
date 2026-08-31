@@ -27,15 +27,11 @@ def upgrade() -> None:
             ["id"],
             ondelete="RESTRICT",
         )
-        batch.create_index(
-            "ix_payment_orders_fee_obligation_id", ["fee_obligation_id"]
-        )
+        batch.create_index("ix_payment_orders_fee_obligation_id", ["fee_obligation_id"])
 
 
 def downgrade() -> None:
     with op.batch_alter_table("payment_orders") as batch:
         batch.drop_index("ix_payment_orders_fee_obligation_id")
-        batch.drop_constraint(
-            "fk_payment_orders_fee_obligation_id", type_="foreignkey"
-        )
+        batch.drop_constraint("fk_payment_orders_fee_obligation_id", type_="foreignkey")
         batch.drop_column("fee_obligation_id")

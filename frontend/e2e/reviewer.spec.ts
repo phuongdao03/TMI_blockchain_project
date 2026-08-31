@@ -74,18 +74,16 @@ test("reviewer acknowledges conflict gate, reviews evidence and submits 5T", asy
     page.getByRole("heading", { name: "Giấy xác nhận quyền sở hữu" }),
   ).toBeVisible();
 
-  const popupPromise = page.waitForEvent("popup");
-  await page.getByRole("button", { name: "Xem bằng chứng" }).click();
-  const popup = await popupPromise;
-  await popup.waitForLoadState();
-  await popup.close();
+  const evidencePreview = page.getByRole("region", { name: /xem tr/i });
+  await page.locator('button[aria-label^="Xem "]').first().click();
+  await expect(evidencePreview).toBeVisible();
 
   const criteria = [
     "Tính đúng đắn",
     "Tính minh bạch",
-    "Tinh thần trách nhiệm",
+    "Quyền sở hữu & trách nhiệm",
     "Tính chuyên nghiệp",
-    "Sự tôn trọng",
+    "Tính tôn trọng",
   ];
   for (const criterion of criteria) {
     await page.getByLabel(`Điểm ${criterion}`).fill("16");
@@ -134,31 +132,14 @@ test("reviewer acknowledges conflict gate, reviews evidence and submits 5T", asy
   expect(consoleIssues).toEqual([]);
 });
 
-test("reviewer resolves a similarity case with a reasoned decision", async ({
+test("retired similarity route returns reviewer to the main queue", async ({
   page,
 }) => {
   await page.goto("/reviews/similarity");
+  await expect(page).toHaveURL(/\/reviews$/);
   await expect(
-    page.getByRole("heading", {
-      level: 1,
-      name: "Đối chiếu nội dung tương đồng",
-    }),
+    page.getByRole("heading", { level: 1, name: "Hàng đợi thẩm định" }),
   ).toBeVisible();
-  await expect(page.getByText("Bình minh trên sông")).toBeVisible();
-  await expect(page.getByText("near-duplicate-v1")).toHaveCount(0);
-
-  const popupPromise = page.waitForEvent("popup");
-  await page.getByRole("button", { name: "Xem tài liệu 1" }).first().click();
-  const popup = await popupPromise;
-  await popup.close();
-
-  await page.getByLabel("Kết luận đối chiếu").selectOption("RELATED");
-  await page
-    .getByLabel("Căn cứ cho kết luận")
-    .fill("Hai tác phẩm thuộc cùng một bộ sưu tập nhưng là hai bản độc lập.");
-  await page.getByRole("button", { name: "Hoàn tất đối chiếu" }).click();
-
-  await expect(page.getByText("Đã hoàn tất đối chiếu")).toBeVisible();
 });
 
 test("reviewer assessment remains legible in dark mode", async ({ page }) => {

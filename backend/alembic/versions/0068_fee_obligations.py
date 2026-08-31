@@ -52,12 +52,8 @@ def upgrade() -> None:
             "status IN ('OPEN', 'OVERDUE', 'PAID', 'WAIVED', 'CANCELLED')",
             name="status_values",
         ),
-        sa.ForeignKeyConstraint(
-            ["dossier_id"], ["dossiers.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["owner_user_id"], ["users.id"], ondelete="RESTRICT"
-        ),
+        sa.ForeignKeyConstraint(["dossier_id"], ["dossiers.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(
             ["price_catalog_version_id"],
             ["price_catalog_versions.id"],
@@ -79,7 +75,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(
-        "ix_fee_obligations_owner_status_due", table_name="fee_obligations"
-    )
+    op.drop_index("ix_fee_obligations_owner_status_due", table_name="fee_obligations")
     op.drop_table("fee_obligations")

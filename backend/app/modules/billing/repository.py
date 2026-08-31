@@ -61,9 +61,7 @@ class BillingRepository:
             )
         return await self._session.scalar(statement)
 
-    async def obligation_for_dossier(
-        self, dossier_id: UUID
-    ) -> FeeObligation | None:
+    async def obligation_for_dossier(self, dossier_id: UUID) -> FeeObligation | None:
         return await self._session.scalar(
             select(FeeObligation).where(FeeObligation.dossier_id == dossier_id)
         )

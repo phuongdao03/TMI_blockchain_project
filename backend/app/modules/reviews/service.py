@@ -552,9 +552,10 @@ class ReviewService:
                 raise ReviewValidationError("Rubric answer is invalid.")
             rationale = answer.get("rationale")
             media_ids = answer.get("evidence_media_ids", [])
-            if not isinstance(rationale, str) or not 20 <= len(
-                rationale.strip()
-            ) <= 2_000:
+            if (
+                not isinstance(rationale, str)
+                or not 20 <= len(rationale.strip()) <= 2_000
+            ):
                 raise ReviewValidationError(
                     "Rubric rationale must contain 20 to 2000 characters."
                 )
@@ -696,16 +697,24 @@ class ReviewService:
             return
         gates = rubric.get("gates", [])
         criteria = rubric.get("criteria", [])
-        gate_keys = {
-            str(item["key"])
-            for item in gates
-            if isinstance(item, Mapping) and isinstance(item.get("key"), str)
-        } if isinstance(gates, list) else set()
-        criterion_keys = {
-            str(item["key"])
-            for item in criteria
-            if isinstance(item, Mapping) and isinstance(item.get("key"), str)
-        } if isinstance(criteria, list) else set()
+        gate_keys = (
+            {
+                str(item["key"])
+                for item in gates
+                if isinstance(item, Mapping) and isinstance(item.get("key"), str)
+            }
+            if isinstance(gates, list)
+            else set()
+        )
+        criterion_keys = (
+            {
+                str(item["key"])
+                for item in criteria
+                if isinstance(item, Mapping) and isinstance(item.get("key"), str)
+            }
+            if isinstance(criteria, list)
+            else set()
+        )
         if (
             set(draft.gate_answers) - gate_keys
             or set(draft.specialist_answers) - criterion_keys

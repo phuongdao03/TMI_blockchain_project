@@ -24,8 +24,7 @@ def test_fee_obligation_migration_is_reversible(
     command.upgrade(config, "0068_fee_obligations")
     with sqlite3.connect(database_path) as connection:
         columns = {
-            row[1]
-            for row in connection.execute("PRAGMA table_info(fee_obligations)")
+            row[1] for row in connection.execute("PRAGMA table_info(fee_obligations)")
         }
         assert {
             "dossier_id",
@@ -35,8 +34,7 @@ def test_fee_obligation_migration_is_reversible(
             "due_at",
         }.issubset(columns)
         indexes = {
-            row[1]
-            for row in connection.execute("PRAGMA index_list(fee_obligations)")
+            row[1] for row in connection.execute("PRAGMA index_list(fee_obligations)")
         }
         assert "ix_fee_obligations_owner_status_due" in indexes
 

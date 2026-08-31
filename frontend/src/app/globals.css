@@ -6267,7 +6267,7 @@ html[data-theme="dark"] .public-home .home-journey .font-mono {
   }
 
   .dashboard-mobile-navigation__link {
-    min-height: 3.4rem;
+    min-height: 3.5rem;
     padding-inline: 0.1rem;
   }
 
@@ -6275,7 +6275,7 @@ html[data-theme="dark"] .public-home .home-journey .font-mono {
     max-width: 4.25rem;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
   }
 
   .review-queue__intro h1 {

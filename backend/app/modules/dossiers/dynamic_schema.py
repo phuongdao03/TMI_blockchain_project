@@ -154,9 +154,7 @@ def _validate_keyed_items(
                 )
 
 
-def _validate_review_rubric(
-    rubric: object, errors: list[dict[str, str]]
-) -> None:
+def _validate_review_rubric(rubric: object, errors: list[dict[str, str]]) -> None:
     if rubric is None:
         return
     path = "reviewRubric"

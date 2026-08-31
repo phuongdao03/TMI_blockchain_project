@@ -79,7 +79,7 @@ test("discovery keeps an authenticated return path across public screens", async
   });
   await expect(publicNavigation).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Hồ sơ của tôi" }),
+    page.getByRole("link", { name: "Hồ sơ của tôi", exact: true }),
   ).toHaveAttribute("href", "/dossiers");
   await expect(
     page.getByRole("heading", { name: "Tìm nội dung bạn quan tâm" }),

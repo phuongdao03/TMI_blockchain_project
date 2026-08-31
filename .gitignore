@@ -39,6 +39,8 @@ htmlcov/
 .tmp/
 .mypy_cache/
 .ruff_cache/
+backend/.pytest-notification-tmp/
+backend/.pytest-notification-tmp-final/
 test-results/
 test-results-*/
 playwright-report/

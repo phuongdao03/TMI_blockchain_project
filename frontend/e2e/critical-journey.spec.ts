@@ -93,9 +93,9 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     const criteria = [
       "Tính đúng đắn",
       "Tính minh bạch",
-      "Tinh thần trách nhiệm",
+      "Quyền sở hữu & trách nhiệm",
       "Tính chuyên nghiệp",
-      "Sự tôn trọng",
+      "Tính tôn trọng",
     ];
     for (const criterion of criteria) {
       await page.getByLabel(`Điểm ${criterion}`).fill("16");

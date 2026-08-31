@@ -57,6 +57,7 @@ pythonpath = ["."]
 [tool.ruff]
 target-version = "py312"
 line-length = 88
+extend-exclude = [".pytest-notification-tmp", ".pytest-notification-tmp-final"]
 
 [tool.ruff.lint]
 select = ["B", "E", "F", "I", "UP"]

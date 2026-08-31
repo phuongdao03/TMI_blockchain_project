@@ -169,16 +169,16 @@ def test_admin_user_suspension_revokes_sessions_and_writes_audit(
             await session.flush()
             session.add_all(
                 [
-                AuthSession(
-                    user_id=target.id,
-                    refresh_token_hash="r" * 64,
-                    expires_at=datetime.now(UTC) + timedelta(days=1),
-                ),
-                AuthIdentity(
-                    user_id=target.id,
-                    provider=AuthProvider.FIREBASE,
-                    provider_subject="firebase-target",
-                ),
+                    AuthSession(
+                        user_id=target.id,
+                        refresh_token_hash="r" * 64,
+                        expires_at=datetime.now(UTC) + timedelta(days=1),
+                    ),
+                    AuthIdentity(
+                        user_id=target.id,
+                        provider=AuthProvider.FIREBASE,
+                        provider_subject="firebase-target",
+                    ),
                 ]
             )
         actor = _principal("users.suspend")
