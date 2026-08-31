@@ -143,6 +143,56 @@ The command is idempotent for the same identity and refuses a UID collision or
 a second distinct Super Admin. Sign out and sign in again after it succeeds so
 the application session is rebuilt with the new role.
 
+## One-time Firebase email-verification bootstrap for Super Admin
+
+Use this only when an existing, active `SUPER_ADMIN` Firebase identity cannot
+complete the normal verification email flow. It is not a replacement for email
+verification and must never be exposed as an API, UI action, or normal-user
+bypass.
+
+The command rejects every account except the exact database-bound Firebase UID
+and email that already has `SUPER_ADMIN`. It rejects inactive/deleted accounts,
+does not create credentials or change roles, revokes Firebase and application
+sessions after a successful verification lookup, and writes immutable requested
+and completed audit records. A retry reconciles a partial prior run safely.
+
+The production runtime intentionally has read-only Firebase verification scope.
+Run this through a temporary container with a Firebase Admin credential mounted
+for this one command only. Keep the credential outside the repository and do
+not add it to `infrastructure/.env.production` or the long-running services.
+
+1. Deploy the image that contains
+   `verify_production_super_admin_email.py`.
+2. Create a temporary Firebase service-account credential for the same Firebase
+   project with the minimum approved user-management permission. Firebase's
+   built-in `roles/firebaseauth.admin` includes `firebaseauth.users.update`;
+   remove the role and revoke/delete the key immediately after this operation.
+3. Store that JSON file on the VPS with owner-only permissions, then run:
+
+```bash
+export PRODUCTION_ENV_FILE=/var/www/tmi_blockchain/infrastructure/.env.production
+export FIREBASE_ADMIN_CREDENTIAL_FILE=/root/tmi-secrets/firebase-auth-admin.json
+
+docker compose \
+  --env-file "$PRODUCTION_ENV_FILE" \
+  -f infrastructure/compose.production.yaml \
+  run --rm --no-deps --user 0:0 \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/firebase-admin.json \
+  -v "$FIREBASE_ADMIN_CREDENTIAL_FILE:/run/secrets/firebase-admin.json:ro" \
+  backend \
+  python -m app.scripts.verify_production_super_admin_email \
+  --email <exact-firebase-email> \
+  --firebase-uid <exact-firebase-uid> \
+  --confirm VERIFY_PRODUCTION_SUPER_ADMIN_FIREBASE_EMAIL
+```
+
+The container is temporary and the mounted credential is read-only. The
+`--user 0:0` override exists solely so it can read an owner-only host secret;
+it does not modify the running backend service. After success, remove the
+temporary host file and revoke/delete the Firebase service-account key. Then
+fully sign out and sign in again: an already-issued Firebase ID token retains
+its old `email_verified` claim until a new token is issued.
+
 ## Recover Super Admin after Firebase account deletion
 
 Do not hard-delete the former application user: it can own audit history and

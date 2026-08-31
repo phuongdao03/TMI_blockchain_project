@@ -82,8 +82,8 @@ def test_recovery_replaces_existing_super_admin_and_preserves_old_account_audit(
             result = await recover_production_super_admin(
                 session,
                 ProductionFirebaseIdentity(
-                    email="blockchainadmin@gmail.com",
-                    provider_subject="kRDCuJDD73dni8w7tgN4SLXwy3O2",
+                    email="replacement-super-admin@example.test",
+                    provider_subject="firebase-replacement-super-admin",
                 ),
                 audit=cast(AuditService, audit),
             )
@@ -115,7 +115,7 @@ def test_recovery_replaces_existing_super_admin_and_preserves_old_account_audit(
 
             new_admin = await session.get(User, result.user_id)
             assert new_admin is not None
-            assert new_admin.email == "blockchainadmin@gmail.com"
+            assert new_admin.email == "replacement-super-admin@example.test"
             assert new_admin.status is UserStatus.ACTIVE
             assert (
                 await session.scalar(
