@@ -1,5 +1,6 @@
 type E2EUser = {
   email: string;
+  emailVerified: boolean;
   getIdToken(forceRefresh?: boolean): Promise<string>;
 };
 
@@ -9,8 +10,8 @@ type E2EAuth = {
 
 const auth: E2EAuth = { currentUser: null };
 
-function user(email: string, token: string): E2EUser {
-  return { email, getIdToken: async () => token };
+function user(email: string, token: string, emailVerified = true): E2EUser {
+  return { email, emailVerified, getIdToken: async () => token };
 }
 
 function authError(code: string): Error & { code: string } {
@@ -36,7 +37,7 @@ export async function createUserWithEmailAndPassword(
   target: E2EAuth,
   email: string,
 ): Promise<{ user: E2EUser }> {
-  const created = user(email, "e2e-unverified-token");
+  const created = user(email, "e2e-unverified-token", false);
   target.currentUser = created;
   return { user: created };
 }
