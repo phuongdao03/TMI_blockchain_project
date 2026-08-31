@@ -4,7 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getMultiFactorResolver,
+  sendEmailVerification,
   signInWithEmailAndPassword,
+  signOut,
   TotpMultiFactorGenerator,
   type MultiFactorError,
   type MultiFactorResolver,
@@ -102,10 +104,10 @@ export function LoginForm({ next }: { next?: string }) {
     ) {
       return "Tài khoản chưa được liên kết hoàn tất. Vui lòng liên hệ quản trị hệ thống.";
     }
-    if (
-      error instanceof ApiError &&
-      ["OAUTH_IDENTITY_INVALID", "ACCOUNT_INACTIVE"].includes(error.code)
-    ) {
+    if (error instanceof ApiError && error.code === "OAUTH_IDENTITY_INVALID") {
+      return "Không thể xác minh phiên đăng nhập Firebase. Hãy đăng xuất, đăng nhập lại; nếu lỗi vẫn tiếp diễn, vui lòng liên hệ quản trị hệ thống.";
+    }
+    if (error instanceof ApiError && error.code === "ACCOUNT_INACTIVE") {
       return "Tài khoản chưa hoạt động hoặc quyền truy cập không còn hiệu lực. Vui lòng liên hệ quản trị hệ thống.";
     }
     if (error instanceof ApiError && error.code === "STAFF_MFA_REQUIRED") {
@@ -122,11 +124,30 @@ export function LoginForm({ next }: { next?: string }) {
     try {
       if (!firebaseConfigured())
         throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
+      const auth = getFirebaseAuth();
       const credential = await signInWithEmailAndPassword(
-        getFirebaseAuth(),
+        auth,
         values.email,
         values.password,
       );
+      if (!credential.user.emailVerified) {
+        const continueUrl = new URL("/login", window.location.origin);
+        try {
+          await sendEmailVerification(credential.user, {
+            url: continueUrl.toString(),
+          });
+          setSubmitError(
+            "Email chưa được xác minh. Chúng tôi đã gửi lại liên kết xác minh; hãy mở email rồi đăng nhập lại.",
+          );
+        } catch {
+          setSubmitError(
+            "Email chưa được xác minh. Chưa thể gửi lại liên kết lúc này; vui lòng thử lại sau.",
+          );
+        } finally {
+          await signOut(auth).catch(() => undefined);
+        }
+        return;
+      }
       await finishSignIn(credential.user);
     } catch (error) {
       if (

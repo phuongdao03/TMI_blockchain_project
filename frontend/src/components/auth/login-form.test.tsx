@@ -8,16 +8,21 @@ import { LoginForm } from "@/components/auth/login-form";
 
 const replace = vi.fn();
 const refresh = vi.fn();
-const { signInWithEmailAndPassword } = vi.hoisted(() => ({
-  signInWithEmailAndPassword: vi.fn(),
-}));
+const { sendEmailVerification, signInWithEmailAndPassword, signOut } =
+  vi.hoisted(() => ({
+    sendEmailVerification: vi.fn(),
+    signInWithEmailAndPassword: vi.fn(),
+    signOut: vi.fn(),
+  }));
 
 vi.mock("@/lib/firebase/client", () => ({
   firebaseConfigured: () => true,
   getFirebaseAuth: () => ({ name: "firebase-auth" }),
 }));
 vi.mock("firebase/auth", () => ({
+  sendEmailVerification,
   signInWithEmailAndPassword,
+  signOut,
   getMultiFactorResolver: vi.fn(),
   TotpMultiFactorGenerator: { FACTOR_ID: "totp" },
 }));
@@ -39,7 +44,9 @@ describe("LoginForm", () => {
     vi.restoreAllMocks();
     replace.mockReset();
     refresh.mockReset();
+    sendEmailVerification.mockReset();
     signInWithEmailAndPassword.mockReset();
+    signOut.mockReset();
   });
 
   it("shows accessible field errors before making a request", async () => {
@@ -70,7 +77,10 @@ describe("LoginForm", () => {
 
   it("signs in with Firebase email and exchanges its ID token", async () => {
     signInWithEmailAndPassword.mockResolvedValue({
-      user: { getIdToken: vi.fn(async () => "firebase-email-token") },
+      user: {
+        emailVerified: true,
+        getIdToken: vi.fn(async () => "firebase-email-token"),
+      },
     });
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
@@ -118,6 +128,34 @@ describe("LoginForm", () => {
     );
   });
 
+  it("sends a verification email instead of exchanging an unverified Firebase identity", async () => {
+    const firebaseUser = {
+      emailVerified: false,
+      getIdToken: vi.fn(async () => "unverified-firebase-token"),
+    };
+    signInWithEmailAndPassword.mockResolvedValue({ user: firebaseUser });
+    sendEmailVerification.mockResolvedValue(undefined);
+    signOut.mockResolvedValue(undefined);
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    render(<LoginForm />, { wrapper: Wrapper });
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Email" }),
+      "blockchainadmin@gmail.com",
+    );
+    await userEvent.type(screen.getByLabelText("Mật khẩu"), "valid password");
+    await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Email chưa được xác minh",
+    );
+    expect(sendEmailVerification).toHaveBeenCalledWith(firebaseUser, {
+      url: `${window.location.origin}/login`,
+    });
+    expect(signOut).toHaveBeenCalledWith({ name: "firebase-auth" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("turns backend credential details into an actionable user message", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
     signInWithEmailAndPassword.mockRejectedValue({
@@ -160,7 +198,10 @@ describe("LoginForm", () => {
 
   it("explains when a Firebase account is not linked to the platform account", async () => {
     signInWithEmailAndPassword.mockResolvedValue({
-      user: { getIdToken: vi.fn(async () => "firebase-admin-token") },
+      user: {
+        emailVerified: true,
+        getIdToken: vi.fn(async () => "firebase-admin-token"),
+      },
     });
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
@@ -189,5 +230,39 @@ describe("LoginForm", () => {
         "Tài khoản chưa được liên kết hoàn tất. Vui lòng liên hệ quản trị hệ thống.",
       ),
     ).toBeDefined();
+  });
+
+  it("distinguishes a rejected Firebase identity from an inactive account", async () => {
+    signInWithEmailAndPassword.mockResolvedValue({
+      user: {
+        emailVerified: true,
+        getIdToken: vi.fn(async () => "firebase-invalid-token"),
+      },
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: false,
+          error: {
+            code: "OAUTH_IDENTITY_INVALID",
+            message: "Firebase identity validation failed.",
+          },
+          meta: { request_id: "request-firebase-invalid" },
+        }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    render(<LoginForm />, { wrapper: Wrapper });
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Email" }),
+      "admin@example.vn",
+    );
+    await userEvent.type(screen.getByLabelText("Mật khẩu"), "valid password");
+    await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Không thể xác minh phiên đăng nhập Firebase",
+    );
   });
 });
