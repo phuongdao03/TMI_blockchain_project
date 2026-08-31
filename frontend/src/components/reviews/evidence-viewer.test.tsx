@@ -55,5 +55,43 @@ describe("EvidenceViewer", () => {
     await user.click(screen.getByRole("button", { name: "Đóng xem trước" }));
     expect(screen.queryByRole("img", { name: "Ảnh bản gốc" })).toBeNull();
   });
+
+  it("keeps a PDF out of an iframe and opens its signed link in a new tab", async () => {
+    const user = userEvent.setup();
+    signedUrl.mockResolvedValue({
+      url: "https://media.example.test/evidence.pdf",
+      expiresAt: 1_800_000_000,
+    });
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <EvidenceViewer
+          evidences={[
+            {
+              id: "evidence-pdf",
+              mediaAssetId: "media-pdf",
+              evidenceType: "SOURCE_DOCUMENT",
+              title: "Ho so PDF",
+              description: null,
+              issuedAt: null,
+              displayOrder: 1,
+              isPublic: false,
+              media: {
+                mimeType: "application/pdf",
+                bytes: 2_048,
+                sha256: "b".repeat(64),
+              },
+            },
+          ]}
+        />
+      </QueryClientProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Xem Ho so PDF" }));
+
+    expect(container.querySelector("iframe")).toBeNull();
+    expect(screen.getByRole("link").getAttribute("href")).toBe(
+      "https://media.example.test/evidence.pdf",
+    );
+  });
 });
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

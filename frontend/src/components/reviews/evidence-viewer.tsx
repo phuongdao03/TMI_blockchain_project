@@ -163,11 +163,19 @@ export function EvidenceViewer({
                 src={preview.url}
               />
             ) : preview.evidence.media.mimeType === "application/pdf" ? (
-              <iframe
-                className="h-[65vh] min-h-96 w-full bg-white"
-                src={preview.url}
-                title={`PDF ${preview.evidence.title}`}
-              />
+              <div className="grid min-h-44 place-items-center gap-3 p-6 text-center">
+                <FileText
+                  aria-hidden="true"
+                  className="size-8 text-primary-700"
+                />
+                <div>
+                  <p className="font-bold">Tệp PDF được mở trong tab riêng</p>
+                  <p className="mt-1 text-sm text-neutral-600">
+                    Liên kết có thời hạn giúp bảo vệ phiên thẩm định và tránh
+                    nhúng tài liệu từ nguồn bên ngoài.
+                  </p>
+                </div>
+              </div>
             ) : preview.evidence.media.mimeType.startsWith("audio/") ? (
               <div className="grid min-h-44 place-items-center p-6">
                 <audio className="w-full" controls src={preview.url}>
