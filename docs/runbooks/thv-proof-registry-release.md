@@ -172,6 +172,9 @@ not add it to `infrastructure/.env.production` or the long-running services.
 ```bash
 export PRODUCTION_ENV_FILE=/var/www/tmi_blockchain/infrastructure/.env.production
 export FIREBASE_ADMIN_CREDENTIAL_FILE=/root/tmi-secrets/firebase-auth-admin.json
+# Read the tag written only after a successful deploy, so this one-off container
+# cannot accidentally run an older backend image.
+export IMAGE_TAG="$(cat /var/www/tmi_blockchain/.releases/current-image-tag)"
 
 docker compose \
   --env-file "$PRODUCTION_ENV_FILE" \
