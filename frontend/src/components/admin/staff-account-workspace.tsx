@@ -256,7 +256,7 @@ export function StaffAccountWorkspace() {
               khóa quyền truy cập ngay khi không còn sử dụng.
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          <div className="flex items-center gap-2 rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm font-semibold text-primary-700">
             <ShieldCheck aria-hidden="true" className="size-5" />
             Khu vực quản trị
           </div>

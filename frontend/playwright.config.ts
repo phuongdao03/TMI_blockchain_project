@@ -7,6 +7,7 @@ const previewRun = process.env.E2E_RELEASE_MODE === "preview";
 const applicationPort = Number(
   process.env.E2E_APPLICATION_PORT ?? (previewRun ? 3101 : 3100),
 );
+const mockApiPort = Number(process.env.E2E_MOCK_PORT ?? 4010);
 const applicationDistDir =
   process.env.E2E_NEXT_DIST_DIR ??
   (previewRun ? ".next-e2e-preview" : ".next-e2e");
@@ -45,7 +46,7 @@ export default defineConfig({
     : [
         {
           command: "node e2e/mock-auth-server.mjs",
-          port: 4010,
+          port: mockApiPort,
           reuseExistingServer: !process.env.CI,
         },
         {
@@ -53,7 +54,7 @@ export default defineConfig({
           port: applicationPort,
           reuseExistingServer: !process.env.CI && !strictApplicationServer,
           env: {
-            API_BASE_URL: "http://127.0.0.1:4010",
+            API_BASE_URL: `http://127.0.0.1:${mockApiPort}`,
             APP_BASE_URL: applicationUrl,
             AUTH_E2E_SHIM: "true",
             NEXT_DIST_DIR: applicationDistDir,

@@ -1,9 +1,10 @@
 import {
   ArrowRight,
-  BookOpen,
-  FileText,
+  BookOpenText,
+  ScanSearch,
   Landmark,
   Search,
+  BadgeCheck,
   ShieldCheck,
   Sparkles,
   UserRound,
@@ -43,7 +44,7 @@ const journey = [
       "Tìm tác phẩm, thương hiệu hoặc sáng kiến theo lĩnh vực và bắt đầu từ phần giới thiệu ngắn gọn.",
     href: "/works",
     action: "Khám phá đề cử",
-    icon: BookOpen,
+    icon: ScanSearch,
   },
   {
     number: "02",
@@ -52,7 +53,7 @@ const journey = [
       "Hiểu bối cảnh, chủ thể và các thông tin được phép công bố kèm theo từng đề cử.",
     href: "/process",
     action: "Xem quy trình",
-    icon: FileText,
+    icon: BookOpenText,
   },
   {
     number: "03",
@@ -61,7 +62,7 @@ const journey = [
       "Tra cứu chứng thư khi hồ sơ đã được xác lập để đối chiếu mã, trạng thái và dữ liệu xác thực.",
     href: "/verify",
     action: "Tra cứu chứng thư",
-    icon: ShieldCheck,
+    icon: BadgeCheck,
   },
 ] as const;
 
@@ -170,10 +171,12 @@ export default function HomePage() {
                       className={`journey-workflow__visual journey-workflow__visual--${number}`}
                     >
                       <span className="journey-workflow__number">{number}</span>
-                      <Icon
-                        className="journey-workflow__icon"
-                        strokeWidth={1.45}
-                      />
+                      <span className="journey-workflow__icon-frame">
+                        <Icon
+                          className="journey-workflow__icon"
+                          strokeWidth={1.6}
+                        />
+                      </span>
                       <span className="journey-workflow__seal" />
                       <span className="journey-workflow__grid" />
                     </div>

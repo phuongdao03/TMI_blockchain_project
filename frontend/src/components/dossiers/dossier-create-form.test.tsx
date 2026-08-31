@@ -34,7 +34,28 @@ describe("DossierCreateForm", () => {
           id: "v1",
           dossierTypeId: "d1",
           versionNo: 1,
-          schema: { fields: [] },
+          schema: {
+            fields: [
+              {
+                key: "origin",
+                type: "textarea",
+                label: "Nguồn gốc tác phẩm",
+                required: true,
+              },
+            ],
+            documentRules: [
+              {
+                key: "source-document",
+                label: "Tài liệu chứng minh nguồn gốc",
+                documentType: "SOURCE_DOCUMENT",
+                required: true,
+                allowedMimeTypes: ["application/pdf", "image/png"],
+                maxBytes: 10_485_760,
+                maxCount: 3,
+                defaultVisibility: "PRIVATE",
+              },
+            ],
+          },
         },
       },
     ]);
@@ -51,6 +72,18 @@ describe("DossierCreateForm", () => {
       "Bộ nhận diện TMI",
     );
     await user.click(screen.getByRole("radio", { name: /Tác phẩm văn hóa/ }));
+    expect(
+      screen.getByRole("heading", { name: "Tài liệu cần chuẩn bị" }),
+    ).toBeDefined();
+    expect(screen.getByText("Tài liệu chứng minh nguồn gốc")).toBeDefined();
+    expect(screen.getByText(/PDF, PNG/)).toBeDefined();
+    expect(screen.getByText(/tối đa 10 MB · 3 tệp/)).toBeDefined();
+    expect(screen.getByText(/1 trường thông tin bắt buộc/)).toBeDefined();
+    await user.type(
+      screen.getByLabelText("Nguồn gốc tác phẩm *"),
+      "Tác phẩm được sáng tạo và lưu hồ sơ theo từng phiên bản.",
+    );
+    expect(screen.getByText("2/2 thông tin đã hoàn tất")).toBeDefined();
     await user.type(
       screen.getByLabelText("Mô tả ngắn"),
       "Hồ sơ xác lập quyền sở hữu.",

@@ -10,6 +10,9 @@ from app.modules.auth.dependencies import (
 )
 from app.modules.payments.dependencies import PaymentServiceDependency
 from app.modules.payments.schemas import (
+    CancelPaymentOrderRequest,
+    FeeObligationData,
+    IssuePaymentOrderRequest,
     ManualPaymentConfirmationRequest,
     PaymentOrderData,
 )
@@ -27,13 +30,14 @@ PRIVATE_RESPONSES: dict[int | str, dict[str, Any]] = {
 
 
 @router.post(
-    "/dossiers/{dossier_id}/payment-orders",
+    "/admin/dossiers/{dossier_id}/payment-orders",
     status_code=status.HTTP_201_CREATED,
     response_model=SuccessEnvelope[PaymentOrderData],
     responses=PRIVATE_RESPONSES,
 )
 async def create_payment_order(
     dossier_id: UUID,
+    payload: IssuePaymentOrderRequest,
     request: Request,
     principal: CsrfProtectedPrincipalDependency,
     service: PaymentServiceDependency,
@@ -42,13 +46,35 @@ async def create_payment_order(
         Header(alias="Idempotency-Key", min_length=1, max_length=128),
     ],
 ) -> SuccessEnvelope[PaymentOrderData]:
-    order = await service.create_order(
+    order = await service.issue_order(
         principal,
         dossier_id,
         idempotency_key=idempotency_key,
+        amount_minor=payload.amount_minor,
+        currency=payload.currency,
+        description=payload.description,
+        due_at=payload.due_at,
     )
     return SuccessEnvelope(
         data=PaymentOrderData.model_validate(order),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
+    "/dossiers/{dossier_id}/fee-obligation",
+    response_model=SuccessEnvelope[FeeObligationData],
+    responses=PRIVATE_RESPONSES,
+)
+async def get_dossier_fee_obligation(
+    dossier_id: UUID,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: PaymentServiceDependency,
+) -> SuccessEnvelope[FeeObligationData]:
+    obligation = await service.get_fee_obligation_for_dossier(principal, dossier_id)
+    return SuccessEnvelope(
+        data=FeeObligationData.model_validate(obligation),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 
@@ -65,6 +91,33 @@ async def get_active_payment_order(
     service: PaymentServiceDependency,
 ) -> SuccessEnvelope[PaymentOrderData]:
     order = await service.get_active_order_for_dossier(principal, dossier_id)
+    return SuccessEnvelope(
+        data=PaymentOrderData.model_validate(order),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/billing/obligations/{obligation_id}/checkout-sessions",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SuccessEnvelope[PaymentOrderData],
+    responses=PRIVATE_RESPONSES,
+)
+async def create_obligation_checkout_session(
+    obligation_id: UUID,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: PaymentServiceDependency,
+    idempotency_key: Annotated[
+        str,
+        Header(alias="Idempotency-Key", min_length=1, max_length=128),
+    ],
+) -> SuccessEnvelope[PaymentOrderData]:
+    order = await service.create_checkout_for_obligation(
+        principal,
+        obligation_id,
+        idempotency_key=idempotency_key,
+    )
     return SuccessEnvelope(
         data=PaymentOrderData.model_validate(order),
         meta=ResponseMeta(request_id=request.state.request_id),
@@ -107,6 +160,29 @@ async def get_payment_order(
     service: PaymentServiceDependency,
 ) -> SuccessEnvelope[PaymentOrderData]:
     order = await service.get_order(principal, order_id)
+    return SuccessEnvelope(
+        data=PaymentOrderData.model_validate(order),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/payment-orders/{order_id}/cancel",
+    response_model=SuccessEnvelope[PaymentOrderData],
+    responses=PRIVATE_RESPONSES,
+)
+async def cancel_payment_order(
+    order_id: UUID,
+    payload: CancelPaymentOrderRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: PaymentServiceDependency,
+) -> SuccessEnvelope[PaymentOrderData]:
+    order = await service.cancel_order(
+        principal,
+        order_id,
+        reason=payload.reason,
+    )
     return SuccessEnvelope(
         data=PaymentOrderData.model_validate(order),
         meta=ResponseMeta(request_id=request.state.request_id),
@@ -169,6 +245,24 @@ async def confirm_payment_manually(
         evidence_reference=payload.evidence_reference,
         note=payload.note,
     )
+    return SuccessEnvelope(
+        data=PaymentOrderData.model_validate(order),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/admin/payment-orders/{order_id}/reconcile",
+    response_model=SuccessEnvelope[PaymentOrderData],
+    responses=PRIVATE_RESPONSES,
+)
+async def reconcile_payment_order(
+    order_id: UUID,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: PaymentServiceDependency,
+) -> SuccessEnvelope[PaymentOrderData]:
+    order = await service.reconcile_order(principal, order_id)
     return SuccessEnvelope(
         data=PaymentOrderData.model_validate(order),
         meta=ResponseMeta(request_id=request.state.request_id),

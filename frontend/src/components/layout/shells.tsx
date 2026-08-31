@@ -1,7 +1,15 @@
 "use client";
 
-import { LayoutDashboard, Menu, X } from "lucide-react";
+import {
+  ArrowLeft,
+  LayoutDashboard,
+  LogIn,
+  Menu,
+  UserPlus,
+  X,
+} from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -28,7 +36,7 @@ export function PublicShell({
   const contextUser = useAuthUser();
   const activeUser = user ?? contextUser;
   const publicHeaderAction = activeUser
-    ? resolvePublicHeaderAction(activeUser.roles)
+    ? resolvePublicHeaderAction(activeUser.roles, activeUser.permissions ?? [])
     : null;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -83,6 +91,8 @@ export function PublicShell({
               <LayoutDashboard
                 aria-hidden="true"
                 className="public-header__workspace-icon"
+                focusable="false"
+                strokeWidth={1.75}
               />
               <span>{publicHeaderAction.label}</span>
             </Link>
@@ -92,13 +102,15 @@ export function PublicShell({
                 className="public-header__auth-link public-header__login"
                 href="/login"
               >
-                Đăng nhập
+                <LogIn aria-hidden="true" />
+                <span>Đăng nhập</span>
               </Link>
               <Link
                 className="public-header__auth-link public-header__register"
                 href="/register"
               >
-                Đăng ký
+                <UserPlus aria-hidden="true" />
+                <span>Đăng ký</span>
               </Link>
             </>
           )}
@@ -111,10 +123,34 @@ export function PublicShell({
             aria-controls="public-mobile-navigation"
             onClick={() => (menuOpen ? closeMenu() : setMenuOpen(true))}
           >
-            {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+            {menuOpen ? (
+              <X aria-hidden="true" focusable="false" strokeWidth={1.75} />
+            ) : (
+              <Menu aria-hidden="true" focusable="false" strokeWidth={1.75} />
+            )}
           </button>
         </div>
       </header>
+      {publicHeaderAction ? (
+        <div
+          aria-label="Quay lại khu vực làm việc"
+          className="public-workspace-return"
+          role="navigation"
+        >
+          <Link
+            className="public-workspace-return__link"
+            href={publicHeaderAction.href}
+          >
+            <ArrowLeft aria-hidden="true" focusable="false" strokeWidth={1.75} />
+            <span>
+              Quay lại {publicHeaderAction.label.toLocaleLowerCase("vi")}
+            </span>
+          </Link>
+          <span className="public-workspace-return__context">
+            Bạn đang xem nội dung công khai
+          </span>
+        </div>
+      ) : null}
       {menuOpen ? (
         <div className="public-mobile-drawer">
           <button
@@ -148,11 +184,21 @@ export function PublicShell({
               </Link>
             ) : (
               <div className="public-mobile-nav__account">
-                <Link href="/login" onClick={() => closeMenu(false)}>
-                  Đăng nhập
+                <Link
+                  className="public-mobile-nav__login"
+                  href="/login"
+                  onClick={() => closeMenu(false)}
+                >
+                  <LogIn aria-hidden="true" />
+                  <span>Đăng nhập</span>
                 </Link>
-                <Link href="/register" onClick={() => closeMenu(false)}>
-                  Đăng ký
+                <Link
+                  className="public-mobile-nav__register"
+                  href="/register"
+                  onClick={() => closeMenu(false)}
+                >
+                  <UserPlus aria-hidden="true" />
+                  <span>Đăng ký</span>
                 </Link>
               </div>
             )}
@@ -194,6 +240,7 @@ export function AuthShell({ children }: PropsWithChildren) {
 }
 
 export function DashboardShell({ children }: PropsWithChildren) {
+  const pathname = usePathname();
   const user = useAuthUser();
   const roles = user?.roles ?? [];
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -257,10 +304,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
     <div className="dashboard-shell">
       <aside className="dashboard-sidebar">
         <BrandMark compact />
-        <DashboardNavigation
-          onOpenMenu={(trigger) => openNavigation(trigger)}
-          roles={roles}
-        />
+        <DashboardNavigation roles={roles} showQuickNavigation={false} />
       </aside>
       <div className="dashboard-shell__content">
         <DashboardContextHeader
@@ -270,9 +314,16 @@ export function DashboardShell({ children }: PropsWithChildren) {
           user={user}
         />
         <main className="dashboard-main" id="main-content">
-          {children}
+          <div className="dashboard-page-stage" key={pathname}>
+            {children}
+          </div>
         </main>
       </div>
+      <DashboardNavigation
+        onOpenMenu={(trigger) => openNavigation(trigger)}
+        roles={roles}
+        showPrimaryNavigation={false}
+      />
       {navigationOpen ? (
         <div className="dashboard-workspace-drawer">
           <button
@@ -299,7 +350,12 @@ export function DashboardShell({ children }: PropsWithChildren) {
                 onClick={() => closeNavigation()}
                 type="button"
               >
-                <X aria-hidden="true" size={20} />
+                <X
+                  aria-hidden="true"
+                  focusable="false"
+                  size={20}
+                  strokeWidth={1.75}
+                />
               </button>
             </div>
             <DashboardNavigation

@@ -17,7 +17,6 @@ const pageTitles: Record<string, string> = {
   "/dossiers": "Hồ sơ của tôi",
   "/notifications": "Thông báo",
   "/reviews": "Hàng đợi thẩm định",
-  "/reviews/similarity": "Đối chiếu nội dung",
   "/council": "Phiên thẩm định",
   "/admin": "Quản trị hệ thống",
   "/admin/dashboard": "Tổng quan vận hành",
@@ -77,7 +76,12 @@ export function DashboardContextHeader({
           ref={navigationButtonRef}
           type="button"
         >
-          <Menu aria-hidden="true" size={20} />
+          <Menu
+            aria-hidden="true"
+            focusable="false"
+            size={20}
+            strokeWidth={1.75}
+          />
         </button>
         {user?.email ? (
           <span className="hidden max-w-52 truncate text-sm text-[var(--theme-muted)] md:block">

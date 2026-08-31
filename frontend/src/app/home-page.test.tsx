@@ -94,5 +94,8 @@ describe("HomePage", () => {
         .getByRole("link", { name: /Tra cứu chứng thư/i })
         .getAttribute("href"),
     ).toBe("/verify");
+    expect(
+      document.querySelectorAll(".journey-workflow__icon-frame"),
+    ).toHaveLength(3);
   });
 });

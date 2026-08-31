@@ -2,6 +2,7 @@ import { AlertCircle, CheckCircle2, Info, TriangleAlert } from "lucide-react";
 import type { HTMLAttributes, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import { IconFrame } from "@/components/ui/icon-frame";
 
 const tones = {
   error: {
@@ -44,7 +45,7 @@ export function Feedback({
       role={tone === "error" ? "alert" : "status"}
       {...props}
     >
-      <Icon aria-hidden="true" className="mt-0.5 size-5" />
+      <IconFrame className="mt-0.5" icon={Icon} size="sm" />
       <div>
         <p className="font-semibold">{title}</p>
         {children ? (

@@ -5,6 +5,7 @@ import pytest
 
 from app.api.v1.audit import require_audit_access
 from app.core.errors import DomainError
+from app.modules.auth.authorization import AuthorizationPolicy
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.service import BlockchainTransactionService
 from app.modules.certificates.service import CertificateService
@@ -16,7 +17,12 @@ from app.modules.council.service import (
 )
 from app.modules.dossiers.service import DossierService
 from app.modules.operations.service import OPERATIONS_ROLES
-from app.modules.payments.service import FINANCE_ROLES, PAYMENT_ROLES, PaymentService
+from app.modules.payments.service import (
+    FINANCE_ROLES,
+    PAYMENT_ROLES,
+    RECONCILIATION_REQUIREMENT,
+    PaymentService,
+)
 from app.modules.reviews.service import ReviewService
 
 
@@ -130,6 +136,18 @@ def test_payment_role_scopes_default_deny(
     with pytest.raises(DomainError):
         PaymentService._require_role(_principal(denied), allowed)
     PaymentService._require_role(_principal(denied, permission), allowed)
+
+
+def test_payment_reconciliation_uses_granular_permission() -> None:
+    assert RECONCILIATION_REQUIREMENT.permission == "payments.reconcile"
+    assert AuthorizationPolicy.allows_capability(
+        _principal("VIEWER", "payments.reconcile"),
+        RECONCILIATION_REQUIREMENT,
+    )
+    assert not AuthorizationPolicy.allows_capability(
+        _principal("VIEWER"),
+        RECONCILIATION_REQUIREMENT,
+    )
 
 
 def test_operations_role_scope_excludes_business_users() -> None:

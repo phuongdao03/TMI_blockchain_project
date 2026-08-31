@@ -48,6 +48,9 @@ describe("DossierList", () => {
     expect(await screen.findByText("Bộ nhận diện TMI")).toBeDefined();
     expect(screen.getByText("Bản nháp")).toBeDefined();
     expect(
+      screen.getByText("Việc tiếp theo: Hoàn thiện thông tin và tài liệu"),
+    ).toBeDefined();
+    expect(
       screen
         .getByRole("link", { name: "Tiếp tục hoàn thiện" })
         .getAttribute("href"),

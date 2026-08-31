@@ -34,7 +34,10 @@ export function RoleGate({
         </p>
         <Link
           className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-neutral-950 px-5 text-sm font-bold text-white"
-          href={resolveDefaultWorkspace(user?.roles ?? [])}
+          href={resolveDefaultWorkspace(
+            user?.roles ?? [],
+            user?.permissions ?? [],
+          )}
         >
           Về khu vực của tôi
         </Link>

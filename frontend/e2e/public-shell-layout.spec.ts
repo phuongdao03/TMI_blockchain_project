@@ -39,7 +39,7 @@ test("compact public shell keeps the account entry in its drawer and uses a full
   const menuButton = page.getByRole("button", { name: "Mở menu" });
 
   await expect(header).toBeVisible();
-  await expect(workspaceAction).toBeHidden();
+  await expect(workspaceAction).toBeVisible();
   await expect(menuButton).toBeVisible();
   await expect
     .poll(() =>
@@ -59,7 +59,7 @@ test("compact public shell keeps the account entry in its drawer and uses a full
   await expect(page.locator(".public-shell")).toHaveCSS("display", "flex");
 });
 
-test("medium public shell keeps signed-in navigation in the menu", async ({
+test("medium public shell keeps a one-tap return to the workspace", async ({
   context,
   page,
 }, testInfo) => {
@@ -93,6 +93,6 @@ test("medium public shell keeps signed-in navigation in the menu", async ({
   await page.setViewportSize({ width: 1145, height: 800 });
   await page.goto("/verify");
 
-  await expect(page.locator(".public-header__workspace")).toBeHidden();
+  await expect(page.locator(".public-header__workspace")).toBeVisible();
   await expect(page.locator(".public-header__menu")).toBeVisible();
 });

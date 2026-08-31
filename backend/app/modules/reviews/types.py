@@ -59,6 +59,8 @@ class ReviewDraft:
     applicant_feedback: str | None = None
     recommendation: ReviewRecommendation | None = None
     private_note: str | None = None
+    gate_answers: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
+    specialist_answers: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +73,8 @@ class ReviewView:
     professionalism_score: int | None
     respect_score: int | None
     total_score: int | None
+    rubric_version: str | None
+    specialist_score: int | None
     recommendation: ReviewRecommendation | None
     criterion_comments: Mapping[str, str]
     criterion_evidence: Mapping[str, tuple[UUID, ...]]
@@ -78,6 +82,8 @@ class ReviewView:
     checklist_answers: Mapping[str, bool]
     applicant_feedback: str | None
     private_note: str | None
+    gate_answers: Mapping[str, Mapping[str, object]]
+    specialist_answers: Mapping[str, Mapping[str, object]]
     submitted_at: datetime | None
 
 

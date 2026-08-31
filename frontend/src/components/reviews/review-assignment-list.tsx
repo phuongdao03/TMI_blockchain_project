@@ -28,10 +28,18 @@ const statusLabels: Record<ReviewAssignmentStatus, string> = {
 
 const statusClasses: Record<ReviewAssignmentStatus, string> = {
   ASSIGNED: "border-amber-200 bg-amber-50 text-amber-800",
-  IN_PROGRESS: "border-blue-200 bg-blue-50 text-blue-800",
+  IN_PROGRESS: "border-primary-100 bg-primary-50 text-primary-700",
   CONFLICTED: "border-red-200 bg-red-50 text-red-800",
   SUBMITTED: "border-emerald-200 bg-emerald-50 text-emerald-800",
   CANCELLED: "border-neutral-200 bg-neutral-100 text-neutral-600",
+};
+
+const nextActionLabels: Record<ReviewAssignmentStatus, string> = {
+  ASSIGNED: "Xác nhận xung đột lợi ích",
+  IN_PROGRESS: "Hoàn thiện phiếu điểm 5T",
+  CONFLICTED: "Chờ điều phối phân công lại",
+  SUBMITTED: "Theo dõi kết quả xét duyệt",
+  CANCELLED: "Không còn thao tác",
 };
 
 function formatDate(value: string | null) {
@@ -124,6 +132,9 @@ export function ReviewAssignmentList({
                 <p className="mt-2 flex items-center gap-2 text-xs font-medium text-neutral-500">
                   <CalendarClock aria-hidden="true" className="size-4" />
                   Hạn xử lý: {formatDate(item.assignment.dueAt)}
+                </p>
+                <p className="mt-3 text-sm font-bold text-primary-700">
+                  Bước tiếp theo: {nextActionLabels[item.assignment.status]}
                 </p>
               </div>
               <Link

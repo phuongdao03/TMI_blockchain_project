@@ -10,6 +10,22 @@
 4. Confirm that the sample webhook receives HTTP 2xx only after signature checking.
 5. Set HTTPS return and cancellation URLs to the frontend payment result routes.
 
+## Runtime lifecycle checks
+
+1. Create an approved-dossier payment using a unique `Idempotency-Key`; confirm
+   the internal order code, amount and currency match the payOS payment link.
+2. Complete one payment and confirm only a signature-valid webhook or provider
+   reconciliation moves the internal order and dossier to `PAID`.
+3. Cancel one unpaid order from the application, provide a reason, and confirm
+   payOS reports `CANCELLED` while the dossier returns to `APPROVED`.
+4. Finance operators may trigger
+   `POST /api/v1/admin/payment-orders/{orderId}/reconcile`; applicants must
+   receive 403. Reconciliation must reject mismatched order code, amount or
+   currency and must not infer payment from return URL parameters.
+5. Inspect the audit trail for `payment.order.created`,
+   `payment.order.cancelled`, webhook processing and reconciliation. No secret,
+   raw webhook body or bank credential may appear.
+
 ## Approved low-value verification
 
 Use staging only. Record the approver and ticket, set

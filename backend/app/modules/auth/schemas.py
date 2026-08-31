@@ -89,6 +89,24 @@ class StaffAccountData(BaseModel):
     last_login_at: datetime | None = Field(default=None, alias="lastLoginAt")
 
 
+class StaffPermissionReplaceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    permissions: Annotated[list[str], Field(max_length=100)]
+    expected_version: Annotated[int, Field(alias="expectedVersion", ge=0)]
+    reason: Annotated[str, Field(min_length=10, max_length=500)]
+
+
+class StaffPermissionData(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid", populate_by_name=True, serialize_by_alias=True
+    )
+
+    user_id: UUID = Field(alias="userId")
+    permissions: tuple[str, ...]
+    version: int
+
+
 class StaffInvitationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -173,6 +191,7 @@ class AuthUserData(BaseModel):
     id: UUID
     email: EmailStr
     roles: tuple[str, ...]
+    permissions: tuple[str, ...]
     account_type: AccountType | None = Field(alias="accountType")
 
 

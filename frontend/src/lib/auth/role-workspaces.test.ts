@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   hasAnyRole,
   resolveDefaultWorkspace,
+  resolvePublicHeaderAction,
   resolveWorkspacePersona,
 } from "@/lib/auth/role-workspaces";
 
@@ -12,6 +13,19 @@ describe("role workspaces", () => {
     expect(resolveDefaultWorkspace(["USER"])).toBe("/dashboard");
     expect(resolveDefaultWorkspace(["MODERATOR"])).toBe("/reviews");
     expect(resolveDefaultWorkspace(["SUPER_ADMIN"])).toBe("/admin");
+    expect(resolveDefaultWorkspace(["USER"], ["payments.read"])).toBe(
+      "/admin/payments",
+    );
+    expect(resolveDefaultWorkspace(["USER"], ["users.read"])).toBe(
+      "/admin/users",
+    );
+  });
+
+  it("returns scoped staff from public pages to their assigned operation", () => {
+    expect(resolvePublicHeaderAction(["USER"], ["payments.read"])).toEqual({
+      href: "/admin/payments",
+      label: "Quay lại khu vực làm việc",
+    });
   });
 
   it("keeps submission actions restricted to users", () => {

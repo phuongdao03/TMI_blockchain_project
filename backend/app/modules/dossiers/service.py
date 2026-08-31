@@ -1,5 +1,6 @@
 import re
 from collections.abc import Callable, Mapping
+from copy import deepcopy
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -984,6 +985,11 @@ class DossierService:
                 # projection only. Raw formData remains immutable evidence and
                 # is never a public serializer source.
                 "publicFields": public_fields,
+                **(
+                    {"reviewRubric": deepcopy(dossier_type_schema["reviewRubric"])}
+                    if isinstance(dossier_type_schema.get("reviewRubric"), Mapping)
+                    else {}
+                ),
             }
         return {
             "schemaVersion": 1,

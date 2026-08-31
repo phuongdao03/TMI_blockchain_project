@@ -34,7 +34,12 @@ function NotificationRow({
         <strong className="notification-panel__title">{item.title}</strong>
         <span className="notification-panel__body">{item.body}</span>
       </span>
-      <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
+      <ChevronRight
+        aria-hidden="true"
+        className="size-4 shrink-0"
+        focusable="false"
+        strokeWidth={1.75}
+      />
     </>
   );
 
@@ -125,7 +130,12 @@ export function NotificationBell() {
         ref={buttonRef}
         type="button"
       >
-        <Bell aria-hidden="true" className="size-5" />
+        <Bell
+          aria-hidden="true"
+          className="size-5"
+          focusable="false"
+          strokeWidth={1.75}
+        />
         {unreadCount > 0 ? (
           <span className="notification-bell__badge">
             {unreadCount > 99 ? "99+" : unreadCount}
@@ -150,7 +160,12 @@ export function NotificationBell() {
                 onClick={() => markAllRead.mutate()}
                 type="button"
               >
-                <CheckCheck aria-hidden="true" className="size-4" />
+                <CheckCheck
+                  aria-hidden="true"
+                  className="size-4"
+                  focusable="false"
+                  strokeWidth={1.75}
+                />
                 Đọc tất cả
               </button>
             ) : null}
@@ -181,7 +196,12 @@ export function NotificationBell() {
             onClick={() => setOpen(false)}
           >
             Xem tất cả thông báo
-            <ChevronRight aria-hidden="true" className="size-4" />
+            <ChevronRight
+              aria-hidden="true"
+              className="size-4"
+              focusable="false"
+              strokeWidth={1.75}
+            />
           </Link>
         </section>
       ) : null}

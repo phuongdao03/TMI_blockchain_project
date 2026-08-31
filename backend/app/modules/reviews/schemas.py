@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -79,6 +79,20 @@ class ReviewFindingData(ReviewSchema):
     action: ReviewFindingAction
 
 
+class ReviewGateAnswerData(ReviewSchema):
+    outcome: Literal["PASS", "FAIL", "NOT_APPLICABLE"]
+    rationale: Annotated[str, Field(min_length=20, max_length=2_000)]
+    evidence_media_ids: Annotated[list[UUID], Field(max_length=10)] = Field(
+        default_factory=list
+    )
+
+
+class SpecialistCriterionAnswerData(ReviewSchema):
+    score: Annotated[int, Field(ge=0, le=5)]
+    rationale: Annotated[str, Field(min_length=20, max_length=2_000)]
+    evidence_media_ids: Annotated[list[UUID], Field(min_length=1, max_length=10)]
+
+
 class ReviewDraftRequest(ReviewSchema):
     truth_score: Annotated[int | None, Field(ge=0, le=20)] = None
     transparency_score: Annotated[int | None, Field(ge=0, le=20)] = None
@@ -98,6 +112,10 @@ class ReviewDraftRequest(ReviewSchema):
     applicant_feedback: Annotated[str | None, Field(max_length=2_000)] = None
     recommendation: ReviewRecommendation | None = None
     private_note: Annotated[str | None, Field(max_length=5_000)] = None
+    gate_answers: dict[str, ReviewGateAnswerData] = Field(default_factory=dict)
+    specialist_answers: dict[str, SpecialistCriterionAnswerData] = Field(
+        default_factory=dict
+    )
 
     @field_validator("criterion_comments")
     @classmethod
@@ -139,6 +157,8 @@ class ReviewData(ReviewSchema):
     professionalism_score: int | None
     respect_score: int | None
     total_score: int | None
+    rubric_version: str | None
+    specialist_score: int | None
     recommendation: ReviewRecommendation | None
     criterion_comments: dict[str, str]
     criterion_evidence: dict[str, tuple[UUID, ...]]
@@ -147,6 +167,8 @@ class ReviewData(ReviewSchema):
     applicant_feedback: str | None
     private_note: str | None
     submitted_at: datetime | None
+    gate_answers: dict[str, ReviewGateAnswerData]
+    specialist_answers: dict[str, SpecialistCriterionAnswerData]
 
 
 class ReviewAssignmentSummaryData(ReviewSchema):

@@ -206,6 +206,7 @@ async def upgrade_to_applicant(
             id=result.user_id,
             email=result.email,
             roles=result.roles,
+            permissions=principal.permissions,
             accountType=result.account_type,
         ),
         meta=ResponseMeta(request_id=request.state.request_id),
@@ -247,6 +248,7 @@ async def exchange_firebase_token(
                 id=principal.user_id,
                 email=principal.email,
                 roles=principal.roles,
+                permissions=principal.permissions,
                 accountType=principal.account_type,
             )
         ),
@@ -358,6 +360,7 @@ async def login(
                 id=principal.user_id,
                 email=principal.email,
                 roles=principal.roles,
+                permissions=principal.permissions,
                 accountType=principal.account_type,
             )
         ),
@@ -438,6 +441,7 @@ async def me(
             id=principal.user_id,
             email=principal.email,
             roles=principal.roles,
+            permissions=principal.permissions,
             accountType=principal.account_type,
         ),
         meta=ResponseMeta(request_id=request.state.request_id),

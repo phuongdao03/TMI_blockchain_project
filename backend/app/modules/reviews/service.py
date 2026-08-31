@@ -54,10 +54,12 @@ REVIEW_CHECKLIST_KEYS = frozenset(
         "evidence_reviewed",
         "criteria_assessed",
         "findings_recorded",
-        "similarity_checked",
         "attestation",
     }
 )
+# Kept as an accepted draft key so reviews saved before the similarity module was
+# retired remain readable. It is no longer required to submit a review.
+REVIEW_CHECKLIST_LEGACY_KEYS = frozenset({"similarity_checked"})
 
 
 class ReviewService:
@@ -281,6 +283,7 @@ class ReviewService:
             if version is None:
                 raise ReviewNotFoundError()
             self._validate_evidence_references(validated, version.snapshot_json)
+            self._validate_specialist_answers(validated, version.snapshot_json)
             review = await self._reviews.get_review(
                 assignment.id,
                 for_update=True,
@@ -292,6 +295,13 @@ class ReviewService:
                 )
                 self._reviews.add_review(review)
             self._apply_draft(review, validated)
+            rubric = self._rubric_from_snapshot(version.snapshot_json)
+            review.rubric_version = (
+                str(rubric["version"]) if rubric is not None else None
+            )
+            review.specialist_score = self._specialist_score(
+                review, rubric, require_complete=False
+            )
             await self._session.flush()
             result = self._review_view(review)
             self._audit_review(
@@ -325,7 +335,15 @@ class ReviewService:
                 raise ReviewValidationError(
                     "A complete 5T draft is required before submission."
                 )
+            version = await self._reviews.get_version(assignment.dossier_version_id)
+            if version is None:
+                raise ReviewNotFoundError()
             scores = self._complete_scores(review)
+            rubric = self._rubric_from_snapshot(version.snapshot_json)
+            review.specialist_score = self._specialist_score(
+                review, rubric, require_complete=True
+            )
+            self._validate_specialist_decision(review, rubric)
             review.total_score = sum(scores)
             review.submitted_at = self._clock()
             assignment.status = ReviewAssignmentStatus.SUBMITTED
@@ -470,7 +488,9 @@ class ReviewService:
         findings = tuple(cls._validated_finding(item) for item in draft.findings)
         if len({item.id for item in findings}) != len(findings):
             raise ReviewValidationError("Finding identifiers must be unique.")
-        if set(draft.checklist_answers) - REVIEW_CHECKLIST_KEYS:
+        if set(draft.checklist_answers) - (
+            REVIEW_CHECKLIST_KEYS | REVIEW_CHECKLIST_LEGACY_KEYS
+        ):
             raise ReviewValidationError("Review checklist key is invalid.")
         checklist_answers: dict[str, bool] = {}
         for key, answer in draft.checklist_answers.items():
@@ -504,7 +524,73 @@ class ReviewService:
             applicant_feedback=applicant_feedback or None,
             recommendation=draft.recommendation,
             private_note=private_note or None,
+            gate_answers=cls._validated_answer_map(
+                draft.gate_answers, require_score=False, evidence_required=False
+            ),
+            specialist_answers=cls._validated_answer_map(
+                draft.specialist_answers, require_score=True, evidence_required=True
+            ),
         )
+
+    @staticmethod
+    def _validated_answer_map(
+        answers: Mapping[str, Mapping[str, object]],
+        *,
+        require_score: bool,
+        evidence_required: bool,
+    ) -> dict[str, dict[str, object]]:
+        if len(answers) > 10:
+            raise ReviewValidationError("A rubric can contain at most 10 answers.")
+        result: dict[str, dict[str, object]] = {}
+        for key, answer in answers.items():
+            if (
+                not isinstance(key, str)
+                or not key
+                or len(key) > 64
+                or not isinstance(answer, Mapping)
+            ):
+                raise ReviewValidationError("Rubric answer is invalid.")
+            rationale = answer.get("rationale")
+            media_ids = answer.get("evidence_media_ids", [])
+            if not isinstance(rationale, str) or not 20 <= len(
+                rationale.strip()
+            ) <= 2_000:
+                raise ReviewValidationError(
+                    "Rubric rationale must contain 20 to 2000 characters."
+                )
+            if not isinstance(media_ids, (list, tuple)):
+                raise ReviewValidationError("Rubric evidence is invalid.")
+            parsed_ids = tuple(media_ids)
+            if (
+                len(parsed_ids) > 10
+                or len(parsed_ids) != len(set(parsed_ids))
+                or any(not isinstance(item, UUID) for item in parsed_ids)
+            ):
+                raise ReviewValidationError("Rubric evidence is invalid.")
+            if evidence_required and not parsed_ids:
+                raise ReviewValidationError("Specialist criteria require evidence.")
+            normalized: dict[str, object] = {
+                "rationale": rationale.strip(),
+                "evidence_media_ids": [str(item) for item in parsed_ids],
+            }
+            if require_score:
+                score = answer.get("score")
+                if (
+                    not isinstance(score, int)
+                    or isinstance(score, bool)
+                    or not 0 <= score <= 5
+                ):
+                    raise ReviewValidationError(
+                        "Specialist score must be between 0 and 5."
+                    )
+                normalized["score"] = score
+            else:
+                outcome = answer.get("outcome")
+                if outcome not in {"PASS", "FAIL", "NOT_APPLICABLE"}:
+                    raise ReviewValidationError("Gate outcome is invalid.")
+                normalized["outcome"] = outcome
+            result[key] = normalized
+        return result
 
     @staticmethod
     def _validated_finding(finding: ReviewFinding) -> ReviewFinding:
@@ -571,10 +657,125 @@ class ReviewService:
             for finding in draft.findings
             for media_id in finding.evidence_media_ids
         )
+        all_answers = (
+            *draft.gate_answers.values(),
+            *draft.specialist_answers.values(),
+        )
+        for answer in all_answers:
+            raw_ids = answer.get("evidence_media_ids", [])
+            if isinstance(raw_ids, (list, tuple)):
+                referenced.update(UUID(str(media_id)) for media_id in raw_ids)
         if not referenced.issubset(allowed):
             raise ReviewValidationError(
                 "Evidence references must belong to the locked dossier version."
             )
+
+    @staticmethod
+    def _rubric_from_snapshot(
+        snapshot: Mapping[str, object],
+    ) -> Mapping[str, object] | None:
+        dossier = snapshot.get("dossier")
+        if not isinstance(dossier, Mapping):
+            return None
+        dossier_type = dossier.get("dossierType")
+        if not isinstance(dossier_type, Mapping):
+            return None
+        rubric = dossier_type.get("reviewRubric")
+        return rubric if isinstance(rubric, Mapping) else None
+
+    @classmethod
+    def _validate_specialist_answers(
+        cls, draft: ReviewDraft, snapshot: Mapping[str, object]
+    ) -> None:
+        rubric = cls._rubric_from_snapshot(snapshot)
+        if rubric is None:
+            if draft.gate_answers or draft.specialist_answers:
+                raise ReviewValidationError(
+                    "This dossier version has no specialist rubric."
+                )
+            return
+        gates = rubric.get("gates", [])
+        criteria = rubric.get("criteria", [])
+        gate_keys = {
+            str(item["key"])
+            for item in gates
+            if isinstance(item, Mapping) and isinstance(item.get("key"), str)
+        } if isinstance(gates, list) else set()
+        criterion_keys = {
+            str(item["key"])
+            for item in criteria
+            if isinstance(item, Mapping) and isinstance(item.get("key"), str)
+        } if isinstance(criteria, list) else set()
+        if (
+            set(draft.gate_answers) - gate_keys
+            or set(draft.specialist_answers) - criterion_keys
+        ):
+            raise ReviewValidationError(
+                "Rubric answer key does not belong to this dossier type version."
+            )
+
+    @staticmethod
+    def _specialist_score(
+        review: Review,
+        rubric: Mapping[str, object] | None,
+        *,
+        require_complete: bool,
+    ) -> int | None:
+        if rubric is None:
+            return None
+        raw_criteria = rubric.get("criteria")
+        if not isinstance(raw_criteria, list):
+            raise ReviewValidationError("Stored specialist rubric is invalid.")
+        keys = [str(item["key"]) for item in raw_criteria if isinstance(item, Mapping)]
+        if set(review.specialist_answers) != set(keys):
+            if require_complete:
+                raise ReviewValidationError(
+                    "All specialist rubric criteria are required."
+                )
+            return None
+        weighted = 0.0
+        for criterion in raw_criteria:
+            if not isinstance(criterion, Mapping):
+                raise ReviewValidationError("Stored specialist rubric is invalid.")
+            answer = review.specialist_answers.get(str(criterion["key"]))
+            if not isinstance(answer, Mapping):
+                raise ReviewValidationError("Stored specialist answer is invalid.")
+            weighted += int(answer["score"]) * int(criterion["weight"]) / 5
+        return round(weighted)
+
+    @staticmethod
+    def _validate_specialist_decision(
+        review: Review, rubric: Mapping[str, object] | None
+    ) -> None:
+        if rubric is None:
+            return
+        gates = rubric.get("gates", [])
+        if not isinstance(gates, list):
+            raise ReviewValidationError("Stored specialist rubric is invalid.")
+        gate_keys = {str(item["key"]) for item in gates if isinstance(item, Mapping)}
+        if set(review.gate_answers) != gate_keys:
+            raise ReviewValidationError("All mandatory rubric gates are required.")
+        if review.recommendation is ReviewRecommendation.APPROVE:
+            for gate in gates:
+                if (
+                    not isinstance(gate, Mapping)
+                    or gate.get("required", True) is not True
+                ):
+                    continue
+                answer = review.gate_answers.get(str(gate["key"]), {})
+                if answer.get("outcome") != "PASS":
+                    raise ReviewValidationError(
+                        "Every required rubric gate must pass before approval."
+                    )
+            thresholds = rubric.get("thresholds")
+            if not isinstance(thresholds, Mapping) or review.specialist_score is None:
+                raise ReviewValidationError(
+                    "Stored specialist rubric threshold is invalid."
+                )
+            if review.specialist_score < int(thresholds["approveMin"]):
+                raise ReviewValidationError(
+                    "Specialist score is below the approval threshold."
+                )
 
     @staticmethod
     def _apply_draft(review: Review, draft: ReviewDraft) -> None:
@@ -606,6 +807,12 @@ class ReviewService:
         review.applicant_feedback = draft.applicant_feedback
         review.recommendation = draft.recommendation
         review.private_note = draft.private_note
+        review.gate_answers = {
+            key: dict(value) for key, value in draft.gate_answers.items()
+        }
+        review.specialist_answers = {
+            key: dict(value) for key, value in draft.specialist_answers.items()
+        }
         scores = (
             draft.truth_score,
             draft.transparency_score,
@@ -627,10 +834,12 @@ class ReviewService:
         if review.recommendation is None:
             raise ReviewValidationError("Review recommendation is required.")
         if set(review.criterion_comments) != set(CRITERIA) or any(
-            not review.criterion_comments[criterion].strip() for criterion in CRITERIA
+            len(review.criterion_comments[criterion].strip()) < 20
+            for criterion in CRITERIA
         ):
             raise ReviewValidationError(
-                "A non-empty comment is required for every 5T criterion."
+                "A rationale of at least 20 characters is required for every "
+                "5T criterion."
             )
         criterion_evidence = cls._criterion_evidence_from_review(review)
         if set(criterion_evidence) != set(CRITERIA) or any(
@@ -639,8 +848,8 @@ class ReviewService:
             raise ReviewValidationError(
                 "At least one evidence reference is required for every 5T criterion."
             )
-        if set(review.checklist_answers) != REVIEW_CHECKLIST_KEYS or not all(
-            review.checklist_answers.values()
+        if not REVIEW_CHECKLIST_KEYS.issubset(review.checklist_answers) or not all(
+            review.checklist_answers[key] for key in REVIEW_CHECKLIST_KEYS
         ):
             raise ReviewValidationError(
                 "All review completion checklist items must be confirmed."
@@ -651,9 +860,13 @@ class ReviewService:
             ReviewFindingSeverity.CRITICAL,
         }
         if review.recommendation is ReviewRecommendation.APPROVE:
-            if sum(scores) < 70:
+            if sum(scores) < 75:
                 raise ReviewValidationError(
-                    "Approval recommendation requires a score of at least 70."
+                    "Approval recommendation requires a total score of at least 75."
+                )
+            if any(score < 12 for score in scores):
+                raise ReviewValidationError(
+                    "Approval recommendation requires every 5T score to be at least 12."
                 )
             if any(finding.severity in high_risk for finding in findings):
                 raise ReviewValidationError(
@@ -753,6 +966,8 @@ class ReviewService:
             professionalism_score=review.professionalism_score,
             respect_score=review.respect_score,
             total_score=review.total_score,
+            rubric_version=review.rubric_version,
+            specialist_score=review.specialist_score,
             recommendation=review.recommendation,
             criterion_comments=dict(review.criterion_comments),
             criterion_evidence=ReviewService._criterion_evidence_from_review(review),
@@ -760,6 +975,8 @@ class ReviewService:
             checklist_answers=dict(review.checklist_answers),
             applicant_feedback=review.applicant_feedback,
             private_note=review.private_note,
+            gate_answers=review.gate_answers,
+            specialist_answers=review.specialist_answers,
             submitted_at=review.submitted_at,
         )
 

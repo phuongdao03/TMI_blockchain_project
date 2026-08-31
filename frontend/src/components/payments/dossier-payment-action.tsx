@@ -1,18 +1,12 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { BadgeDollarSign, CheckCircle2, Clock3 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { BadgeDollarSign, CheckCircle2, Clock3, LoaderCircle } from "lucide-react";
 import Link from "next/link";
-import { useRef } from "react";
+import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import { paymentApi } from "@/lib/api/client";
 import type { DossierStatus } from "@/lib/api/types";
-
-function idempotencyKey() {
-  return globalThis.crypto?.randomUUID?.() ?? `payment-${Date.now()}`;
-}
 
 export function DossierPaymentAction({
   dossierId,
@@ -22,15 +16,22 @@ export function DossierPaymentAction({
   dossierStatus: DossierStatus;
 }) {
   const router = useRouter();
-  const requestKey = useRef(idempotencyKey());
+  const shouldLoadPayment = dossierStatus === "PAYMENT_PENDING";
+  const obligation = useQuery({
+    queryKey: ["fee-obligation", dossierId],
+    queryFn: () => paymentApi.getFeeObligation(dossierId),
+    enabled: shouldLoadPayment,
+    retry: false,
+  });
   const activeOrder = useQuery({
     queryKey: ["active-payment-order", dossierId],
     queryFn: () => paymentApi.getActive(dossierId),
-    enabled: dossierStatus === "PAYMENT_PENDING",
+    enabled: shouldLoadPayment,
     retry: false,
   });
-  const createOrder = useMutation({
-    mutationFn: () => paymentApi.create(dossierId, requestKey.current),
+  const checkout = useMutation({
+    mutationFn: (obligationId: string) =>
+      paymentApi.createCheckout(obligationId, crypto.randomUUID()),
     onSuccess: (order) => router.push(`/payments/${order.id}`),
   });
 
@@ -39,76 +40,102 @@ export function DossierPaymentAction({
       <section className="dossier-payment-notice dossier-payment-notice--success flex items-start gap-3 rounded-2xl p-5">
         <CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
         <div>
-          <h2 className="font-bold">Phí xác lập đã được ghi nhận</h2>
-          <p className="mt-1 text-sm leading-6 text-emerald-800">
-            Hồ sơ đang được chuẩn bị để phát hành chứng thư.
+          <h2 className="font-bold">Thanh toán đã được xác nhận</h2>
+          <p className="mt-1 text-sm leading-6">
+            Hồ sơ đang ở hàng đợi ký blockchain và phát hành chứng thư.
           </p>
         </div>
       </section>
     );
   }
+
   if (dossierStatus === "PAYMENT_PENDING") {
     return (
       <section className="dossier-payment-notice dossier-payment-notice--pending flex items-start gap-3 rounded-2xl p-5">
         <Clock3 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
-        <div>
-          <h2 className="font-bold">Đang chờ xác nhận thanh toán</h2>
-          <p className="mt-1 text-sm leading-6 text-amber-800">
-            Bạn có thể mở lại trang thanh toán để tiếp tục hoặc chờ hệ thống cập
-            nhật.
-          </p>
+        <div className="min-w-0">
+          <h2 className="font-bold">Yêu cầu thanh toán đã được gửi</h2>
           {activeOrder.data ? (
-            <Link
-              className="dossier-payment-notice__link mt-3 inline-flex min-h-11 items-center text-sm font-bold underline decoration-2 underline-offset-4"
-              href={`/payments/${activeOrder.data.id}`}
-            >
-              Mở lại trang thanh toán
-            </Link>
-          ) : activeOrder.isPending ? (
-            <p className="mt-3 text-sm font-semibold">
-              Đang tìm lần thanh toán gần nhất…
+            <>
+              <p className="mt-1 text-sm leading-6">
+                Số tiền: {new Intl.NumberFormat("vi-VN").format(activeOrder.data.amountMinor)} VND
+                {activeOrder.data.description ? ` · ${activeOrder.data.description}` : ""}
+              </p>
+              <Link
+                className="dossier-payment-notice__link mt-3 inline-flex min-h-11 items-center text-sm font-bold underline decoration-2 underline-offset-4"
+                href={`/payments/${activeOrder.data.id}`}
+              >
+                Xem và thanh toán qua PayOS
+              </Link>
+            </>
+          ) : obligation.data ? (
+            <>
+              <p className="mt-1 text-sm leading-6">
+                <strong>
+                  {new Intl.NumberFormat("vi-VN").format(obligation.data.amountMinor)}{" "}
+                  {obligation.data.currency}
+                </strong>{" "}
+                · {obligation.data.description}
+              </p>
+              <p className="mt-1 text-xs leading-5 opacity-80">
+                Hạn thanh toán {new Intl.DateTimeFormat("vi-VN", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }).format(new Date(obligation.data.dueAt))}. Phiên QR PayOS được tạo khi bạn
+                bắt đầu thanh toán và có thể cấp lại an toàn nếu hết hạn.
+              </p>
+              <button
+                className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-700 px-5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={checkout.isPending}
+                onClick={() => checkout.mutate(obligation.data.id)}
+                type="button"
+              >
+                {checkout.isPending ? (
+                  <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+                ) : (
+                  <BadgeDollarSign aria-hidden="true" className="size-4" />
+                )}
+                {checkout.isPending ? "Đang mở PayOS…" : "Thanh toán qua PayOS"}
+              </button>
+              {checkout.isError ? (
+                <p className="mt-2 text-sm font-semibold text-red-700" role="alert">
+                  Chưa thể tạo phiên thanh toán. Vui lòng thử lại; hệ thống sẽ không tạo trùng
+                  giao dịch.
+                </p>
+              ) : null}
+            </>
+          ) : activeOrder.isPending || obligation.isPending ? (
+            <p className="mt-2 flex items-center gap-2 text-sm font-semibold">
+              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+              Đang tải khoản phí…
             </p>
           ) : (
-            <p className="mt-3 text-sm font-semibold">
-              Chưa thể mở lại. Vui lòng tải lại trang hoặc liên hệ hỗ trợ.
+            <p className="mt-2 text-sm font-semibold" role="alert">
+              Khoản phí chưa sẵn sàng. Vui lòng tải lại hoặc liên hệ hỗ trợ và cung cấp mã hồ sơ.
             </p>
           )}
         </div>
       </section>
     );
   }
-  if (dossierStatus !== "APPROVED") {
-    return null;
-  }
+
+  if (dossierStatus !== "APPROVED") return null;
 
   return (
-    <section className="dossier-payment-notice dossier-payment-notice--action grid gap-5 rounded-2xl p-5 sm:grid-cols-[1fr_auto] sm:items-center">
+    <section className="dossier-payment-notice dossier-payment-notice--action rounded-2xl p-5">
       <div className="flex items-start gap-3">
         <BadgeDollarSign
           aria-hidden="true"
           className="dossier-payment-notice__icon mt-0.5 size-5 shrink-0"
         />
         <div>
-          <h2 className="font-bold text-primary-950">Hồ sơ đã được duyệt</h2>
-          <p className="mt-1 text-sm leading-6 text-primary-900/75">
-            Thanh toán phí phát hành để tiếp tục nhận chứng thư.
+          <h2 className="font-bold">Hồ sơ đã được phê duyệt</h2>
+          <p className="mt-1 text-sm leading-6">
+            Bộ phận quản trị đang xác định mức phí. Khi yêu cầu được phát hành,
+            bạn sẽ nhận thông báo kèm số tiền và liên kết PayOS.
           </p>
         </div>
       </div>
-      <Button
-        disabled={createOrder.isPending}
-        onClick={() => createOrder.mutate()}
-      >
-        {createOrder.isPending ? "Đang chuẩn bị…" : "Thanh toán phí phát hành"}
-      </Button>
-      {createOrder.error ? (
-        <p
-          className="text-sm font-medium text-red-700 sm:col-span-2"
-          role="alert"
-        >
-          Không thể tạo lệnh thanh toán. Vui lòng tải lại hồ sơ và thử lại.
-        </p>
-      ) : null}
     </section>
   );
 }

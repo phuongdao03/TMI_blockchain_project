@@ -129,3 +129,48 @@ test("mobile workspace drawer exposes complete navigation and restores focus", a
   await expect(drawer).toBeHidden();
   await expect(trigger).toBeFocused();
 });
+
+test("mobile workspace navigation stays compact, centered and touch friendly", async ({
+  context,
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile-chrome");
+  await authenticate(context, "e2e-access");
+  await page.goto("/dashboard");
+
+  const navigation = page.locator(".dashboard-mobile-navigation");
+  await expect(navigation).toBeVisible();
+
+  const navigationBox = await navigation.boundingBox();
+  const viewportWidth = await page.evaluate(() => window.innerWidth);
+  expect(navigationBox).not.toBeNull();
+  expect(navigationBox!.width).toBeLessThanOrEqual(576);
+  expect(
+    Math.abs(navigationBox!.x - (viewportWidth - navigationBox!.width) / 2),
+  ).toBeLessThanOrEqual(1);
+
+  const controls = navigation.locator(".dashboard-mobile-navigation__link");
+  for (const control of await controls.all()) {
+    const box = await control.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(56);
+  }
+
+  const labelWhiteSpace = await controls
+    .first()
+    .locator("span")
+    .last()
+    .evaluate((element) => getComputedStyle(element).whiteSpace);
+  expect(labelWhiteSpace).toBe("normal");
+
+  const activeBackground = await navigation
+    .locator(".dashboard-mobile-navigation__link--active")
+    .evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(activeBackground).not.toBe("rgb(68, 90, 54)");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});

@@ -12,6 +12,13 @@ import {
 } from "@/components/reviews/review-completion-checklist";
 import { ReviewEvidenceSelect } from "@/components/reviews/review-evidence-select";
 import { ReviewFindingsEditor } from "@/components/reviews/review-findings-editor";
+import { SpecialistRubricSection, specialistScore } from "@/components/reviews/specialist-rubric-section";
+import {
+  decisionGate,
+  reviewCriteria,
+  scoreBand,
+  scoreBands,
+} from "@/components/reviews/five-t-rubric";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -20,6 +27,9 @@ import type {
   ReviewDraft,
   ReviewEvidenceSnapshot,
   ReviewFinding,
+  ReviewGateAnswer,
+  ReviewRubric,
+  SpecialistCriterionAnswer,
 } from "@/lib/api/types";
 
 const scoreMessage = "Điểm phải từ 0 đến 20.";
@@ -55,49 +65,18 @@ type ScoreKey = Exclude<
 type CriterionKey = keyof ScorecardValues["criterionComments"];
 type CriterionEvidence = Record<CriterionKey, string[]>;
 
-const criteria: Array<{
+const criteria = reviewCriteria satisfies ReadonlyArray<{
   key: CriterionKey;
   label: string;
   scoreKey: ScoreKey;
-  hint: string;
-}> = [
-  {
-    key: "truth",
-    label: "Tính đúng đắn",
-    scoreKey: "truthScore",
-    hint: "Độ chính xác, xác thực và nhất quán của thông tin.",
-  },
-  {
-    key: "transparency",
-    label: "Tính minh bạch",
-    scoreKey: "transparencyScore",
-    hint: "Khả năng truy xuất nguồn gốc và kiểm chứng bằng chứng.",
-  },
-  {
-    key: "ownership",
-    label: "Tinh thần trách nhiệm",
-    scoreKey: "ownershipScore",
-    hint: "Trách nhiệm của chủ thể đối với cam kết và tài sản.",
-  },
-  {
-    key: "professionalism",
-    label: "Tính chuyên nghiệp",
-    scoreKey: "professionalismScore",
-    hint: "Chuẩn mực, năng lực và chất lượng thực hiện.",
-  },
-  {
-    key: "respect",
-    label: "Sự tôn trọng",
-    scoreKey: "respectScore",
-    hint: "Tôn trọng pháp luật, cộng đồng và các bên liên quan.",
-  },
-];
+  purpose: string;
+  indicators: readonly string[];
+}>;
 
 const checklistKeys: ReviewChecklistKey[] = [
   "evidence_reviewed",
   "criteria_assessed",
   "findings_recorded",
-  "similarity_checked",
   "attestation",
 ];
 
@@ -156,8 +135,22 @@ function buildDraft(
   criterionEvidence: CriterionEvidence,
   findings: ReviewFinding[],
   checklistAnswers: Record<string, boolean>,
+  gateAnswers: Record<string, ReviewGateAnswer>,
+  specialistAnswers: Record<string, SpecialistCriterionAnswer>,
 ): ReviewDraft {
-  return { ...values, criterionEvidence, findings, checklistAnswers };
+  return { ...values, criterionEvidence, findings, checklistAnswers, gateAnswers, specialistAnswers };
+}
+
+function specialistComplete(rubric: ReviewRubric | undefined, gateAnswers: Record<string, ReviewGateAnswer>, specialistAnswers: Record<string, SpecialistCriterionAnswer>, recommendation: ScorecardValues["recommendation"]) {
+  if (!rubric) return true;
+  const answersComplete = rubric.gates.every(({ key }) => (gateAnswers[key]?.rationale.trim().length ?? 0) >= 20) &&
+    rubric.criteria.every(({ key }) => (specialistAnswers[key]?.rationale.trim().length ?? 0) >= 20 && (specialistAnswers[key]?.evidenceMediaIds.length ?? 0) > 0);
+  if (!answersComplete) return false;
+  if (recommendation !== "APPROVE") return true;
+  const total = specialistScore(rubric, specialistAnswers);
+  return total !== null && total >= rubric.thresholds.approveMin && rubric.gates.every(
+    ({ key, required }) => required === false || gateAnswers[key]?.outcome === "PASS",
+  );
 }
 
 function complete(
@@ -169,11 +162,16 @@ function complete(
   const feedbackRequired = ["SUPPLEMENT", "REJECT"].includes(
     values.recommendation ?? "",
   );
+  const gate = decisionGate(
+    criteria.map(({ scoreKey }) => values[scoreKey]),
+    values.recommendation,
+    findings,
+  );
   return (
     criteria.every(
       ({ key, scoreKey }) =>
         values[scoreKey] !== null &&
-        values.criterionComments[key].trim().length > 0 &&
+        values.criterionComments[key].trim().length >= 20 &&
         criterionEvidence[key].length > 0,
     ) &&
     values.recommendation !== null &&
@@ -182,7 +180,8 @@ function complete(
     (!feedbackRequired ||
       (values.applicantFeedback?.trim().length ?? 0) >= 50) &&
     (values.recommendation !== "SUPPLEMENT" ||
-      findings.some((finding) => finding.action === "SUPPLEMENT"))
+      findings.some((finding) => finding.action === "SUPPLEMENT")) &&
+    gate.valid
   );
 }
 
@@ -194,6 +193,7 @@ export function FiveTScorecard({
   onSave,
   onSubmit,
   readOnly,
+  rubric,
 }: {
   evidences: ReviewEvidenceSnapshot[];
   initialReview: ReviewData | null;
@@ -202,6 +202,7 @@ export function FiveTScorecard({
   onSave: (draft: ReviewDraft) => Promise<void>;
   onSubmit: () => Promise<void>;
   readOnly: boolean;
+  rubric?: ReviewRubric;
 }) {
   const initialValues = useMemo(() => defaults(initialReview), [initialReview]);
   const [criterionEvidence, setCriterionEvidence] = useState<CriterionEvidence>(
@@ -213,6 +214,12 @@ export function FiveTScorecard({
   const [checklistAnswers, setChecklistAnswers] = useState<
     Record<string, boolean>
   >(() => checklistDefaults(initialReview));
+  const [gateAnswers, setGateAnswers] = useState<Record<string, ReviewGateAnswer>>(
+    () => initialReview?.gateAnswers ?? {},
+  );
+  const [specialistAnswers, setSpecialistAnswers] = useState<Record<string, SpecialistCriterionAnswer>>(
+    () => initialReview?.specialistAnswers ?? {},
+  );
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [completionError, setCompletionError] = useState("");
   const lastSaved = useRef(
@@ -222,6 +229,8 @@ export function FiveTScorecard({
         evidenceDefaults(initialReview),
         initialReview?.findings ?? [],
         checklistDefaults(initialReview),
+        initialReview?.gateAnswers ?? {},
+        initialReview?.specialistAnswers ?? {},
       ),
     ),
   );
@@ -274,17 +283,21 @@ export function FiveTScorecard({
       criterionEvidence,
       findings,
       checklistAnswers,
+      gateAnswers,
+      specialistAnswers,
     );
     if (JSON.stringify(draft) === lastSaved.current) return;
     const timer = window.setTimeout(() => void persistDraft(draft), 650);
     return () => window.clearTimeout(timer);
   }, [
     checklistAnswers,
+    gateAnswers,
     criterionEvidence,
     findings,
     isDirty,
     persistDraft,
     readOnly,
+    specialistAnswers,
     values,
   ]);
 
@@ -295,6 +308,39 @@ export function FiveTScorecard({
         0,
       )
     : 0;
+  const currentDecisionGate = decisionGate(
+    criteria.map(({ scoreKey }) => values[scoreKey]),
+    values.recommendation ?? null,
+    findings,
+  );
+  const completedCriteria = criteria.filter(({ key, scoreKey }) => {
+    const comments = values.criterionComments;
+    return (
+      values[scoreKey] !== null &&
+      values[scoreKey] !== undefined &&
+      (comments?.[key]?.trim().length ?? 0) >= 20 &&
+      criterionEvidence[key].length > 0
+    );
+  }).length;
+  const completedChecklist = checklistKeys.filter(
+    (key) => checklistAnswers[key] === true,
+  ).length;
+  const firstIncompleteCriterion = criteria.find(({ key, scoreKey }) => {
+    const comments = values.criterionComments;
+    return (
+      values[scoreKey] === null ||
+      values[scoreKey] === undefined ||
+      (comments?.[key]?.trim().length ?? 0) < 20 ||
+      criterionEvidence[key].length === 0
+    );
+  });
+  const nextAction = firstIncompleteCriterion
+    ? `Chấm điểm và nhận xét tiêu chí ${firstIncompleteCriterion.label}`
+    : values.recommendation === null || values.recommendation === undefined
+      ? "Chọn kiến nghị chuyên môn"
+      : completedChecklist < checklistKeys.length
+        ? "Hoàn tất checklist trước khi gửi"
+        : "Kiểm tra lần cuối và gửi kết quả";
 
   async function prepareSubmit() {
     const valid = await trigger();
@@ -303,9 +349,10 @@ export function FiveTScorecard({
       !valid ||
       !parsed.success ||
       !complete(parsed.data, criterionEvidence, findings, checklistAnswers)
+      || !specialistComplete(rubric, gateAnswers, specialistAnswers, parsed.data.recommendation)
     ) {
       setCompletionError(
-        "Hoàn tất 5 điểm, nhận xét, bằng chứng, checklist và các phát hiện trước khi gửi.",
+        "Hoàn tất cổng bắt buộc, rubric chuyên biệt, 5T, bằng chứng, checklist và các phát hiện trước khi gửi.",
       );
       return;
     }
@@ -314,6 +361,8 @@ export function FiveTScorecard({
       criterionEvidence,
       findings,
       checklistAnswers,
+      gateAnswers,
+      specialistAnswers,
     );
     try {
       // The submit endpoint intentionally only accepts an already persisted draft.
@@ -356,9 +405,90 @@ export function FiveTScorecard({
           </div>
         </div>
         <form className="space-y-6 p-5 sm:p-8">
-          {criteria.map(({ hint, key, label, scoreKey }, index) => (
+          <section
+            aria-label="Tiến độ phiếu thẩm định"
+            className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:p-5"
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-bold">
+                  {completedCriteria}/5 tiêu chí hoàn tất
+                </p>
+                <p className="mt-1 text-xs leading-5 text-neutral-600">
+                  Tiếp theo: {nextAction}
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <span className="rounded-lg bg-[var(--theme-surface)] px-3 py-2">
+                  <strong className="block text-base">{evidences.length}</strong>
+                  bằng chứng
+                </span>
+                <span className="rounded-lg bg-[var(--theme-surface)] px-3 py-2">
+                  <strong className="block text-base">{findings.length}</strong>
+                  phát hiện
+                </span>
+                <span className="rounded-lg bg-[var(--theme-surface)] px-3 py-2">
+                  <strong className="block text-base">{completedChecklist}/5</strong>
+                  xác nhận
+                </span>
+              </div>
+            </div>
+            <div
+              aria-label={`${completedCriteria} trên 5 tiêu chí hoàn tất`}
+              aria-valuemax={5}
+              aria-valuemin={0}
+              aria-valuenow={completedCriteria}
+              className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--theme-surface)]"
+              role="progressbar"
+            >
+              <div
+                className="h-full rounded-full bg-primary-600 transition-[width]"
+                style={{ width: `${(completedCriteria / 5) * 100}%` }}
+              />
+            </div>
+            <nav
+              aria-label="Đi tới phần của phiếu"
+              className="mt-4 flex gap-2 overflow-x-auto pb-1 text-xs font-bold"
+            >
+              <a className="whitespace-nowrap rounded-lg border px-3 py-2" href="#review-criteria">Tiêu chí 5T</a>
+              <a className="whitespace-nowrap rounded-lg border px-3 py-2" href="#review-findings">Phát hiện</a>
+              <a className="whitespace-nowrap rounded-lg border px-3 py-2" href="#review-decision">Kiến nghị & gửi</a>
+            </nav>
+          </section>
+          <section className="rounded-2xl border border-[var(--theme-border)] p-4 sm:p-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">Chuẩn chấm thống nhất</p>
+                <h3 className="mt-1 text-lg font-bold">Điểm phải phản ánh mức độ của bằng chứng</h3>
+              </div>
+              <p className="max-w-xl text-xs leading-5 text-neutral-600">Không chấm theo cảm nhận tổng quát. Chọn dải điểm, dẫn chiếu tài liệu và nêu rõ căn cứ kiểm chứng.</p>
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
+              {scoreBands.map((band) => (
+                <div className="rounded-xl bg-[var(--theme-elevated)] p-3" key={band.label}>
+                  <strong className="text-sm">{band.min}–{band.max} · {band.label}</strong>
+                  <p className="mt-1 text-xs leading-5 text-neutral-600">{band.description}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+          <div id="review-criteria" />
+          {rubric ? (
+            <SpecialistRubricSection
+              evidences={evidences}
+              gateAnswers={gateAnswers}
+              onGateChange={setGateAnswers}
+              onSpecialistChange={setSpecialistAnswers}
+              readOnly={readOnly}
+              rubric={rubric}
+              specialistAnswers={specialistAnswers}
+            />
+          ) : null}
+          {criteria.map(({ indicators, key, label, purpose, scoreKey }, index) => {
+            const band = scoreBand(values[scoreKey]);
+            return (
             <fieldset
-              className="grid gap-4 rounded-2xl border bg-neutral-50/70 p-4 sm:grid-cols-[minmax(0,1fr)_7rem] sm:p-5"
+              className="grid gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:grid-cols-[minmax(0,1fr)_8.5rem] sm:p-5"
               disabled={readOnly}
               key={key}
             >
@@ -370,8 +500,13 @@ export function FiveTScorecard({
                   {label}
                 </legend>
                 <p className="mt-1 text-xs leading-5 text-neutral-500">
-                  {hint}
+                  {purpose}
                 </p>
+                <ul className="mt-3 flex flex-wrap gap-2" aria-label={`Chỉ báo ${label}`}>
+                  {indicators.map((indicator) => (
+                    <li className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-2.5 py-1 text-xs text-neutral-600" key={indicator}>{indicator}</li>
+                  ))}
+                </ul>
                 <label
                   className="mt-4 block text-xs font-bold uppercase tracking-wider text-neutral-600"
                   htmlFor={"comment-" + key}
@@ -379,11 +514,12 @@ export function FiveTScorecard({
                   Nhận xét {label}
                 </label>
                 <textarea
-                  className="mt-2 min-h-24 w-full rounded-xl border bg-white p-3 text-sm disabled:bg-neutral-100"
+                  className="mt-2 min-h-28 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm disabled:opacity-60"
                   id={"comment-" + key}
                   maxLength={2_000}
                   {...register(`criterionComments.${key}` as const)}
                 />
+                <p className="mt-2 text-xs text-neutral-500">Nêu nhận định, căn cứ đã kiểm tra và điểm còn giới hạn; tối thiểu 20 ký tự.</p>
                 <ReviewEvidenceSelect
                   disabled={readOnly}
                   evidences={evidences}
@@ -405,7 +541,7 @@ export function FiveTScorecard({
                   Điểm {label}
                 </label>
                 <input
-                  className="mt-2 h-14 w-full rounded-xl border bg-white px-3 text-center text-2xl font-bold tabular-nums disabled:bg-neutral-100"
+                  className="mt-2 h-14 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-center text-2xl font-bold tabular-nums disabled:opacity-60"
                   id={"score-" + key}
                   inputMode="numeric"
                   max={20}
@@ -421,24 +557,33 @@ export function FiveTScorecard({
                     {errors[scoreKey]?.message}
                   </p>
                 ) : null}
+                {band ? (
+                  <div className="mt-3 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-2 text-center">
+                    <strong className="block text-xs text-primary-800">{band.label}</strong>
+                    <span className="mt-1 block text-[11px] leading-4 text-neutral-500">{band.description}</span>
+                  </div>
+                ) : null}
               </div>
             </fieldset>
-          ))}
+            );
+          })}
 
-          <ReviewFindingsEditor
-            disabled={readOnly}
-            evidences={evidences}
-            onChange={setFindings}
-            value={findings}
-          />
+          <div id="review-findings">
+            <ReviewFindingsEditor
+              disabled={readOnly}
+              evidences={evidences}
+              onChange={setFindings}
+              value={findings}
+            />
+          </div>
 
-          <div className="grid gap-5 rounded-2xl border p-5 md:grid-cols-2">
+          <div className="grid gap-5 rounded-2xl border p-5 md:grid-cols-2" id="review-decision">
             <div>
               <label className="text-sm font-bold" htmlFor="recommendation">
                 Kiến nghị
               </label>
               <select
-                className="mt-2 min-h-12 w-full rounded-xl border bg-white px-3 text-sm font-semibold disabled:bg-neutral-100"
+                className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm font-semibold disabled:opacity-60"
                 disabled={readOnly}
                 id="recommendation"
                 {...register("recommendation", {
@@ -459,7 +604,7 @@ export function FiveTScorecard({
                 Phản hồi gửi người nộp
               </label>
               <textarea
-                className="mt-2 min-h-28 w-full rounded-xl border bg-white p-3 text-sm disabled:bg-neutral-100"
+                className="mt-2 min-h-28 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm disabled:opacity-60"
                 disabled={readOnly}
                 id="applicant-feedback"
                 maxLength={2_000}
@@ -476,7 +621,7 @@ export function FiveTScorecard({
                 Ghi chú nội bộ
               </label>
               <textarea
-                className="mt-2 min-h-24 w-full rounded-xl border bg-white p-3 text-sm disabled:bg-neutral-100"
+                className="mt-2 min-h-24 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm disabled:opacity-60"
                 disabled={readOnly}
                 id="private-note"
                 maxLength={5_000}
@@ -484,6 +629,11 @@ export function FiveTScorecard({
                   setValueAs: (value) => value || null,
                 })}
               />
+            </div>
+            <div className={`md:col-span-2 rounded-xl border p-4 ${currentDecisionGate.valid ? "border-emerald-300 bg-emerald-50 text-emerald-950" : "border-amber-300 bg-amber-50 text-amber-950"}`} role="status">
+              <p className="text-xs font-bold uppercase tracking-wider">Cổng quyết định</p>
+              <p className="mt-1 text-sm font-semibold">{currentDecisionGate.message}</p>
+              <p className="mt-2 text-xs leading-5">Phê duyệt: tổng ≥75, mọi tiêu chí ≥12, không còn phát hiện Cao/Nghiêm trọng. Từ chối: tổng &lt;50 hoặc có phát hiện Nghiêm trọng.</p>
             </div>
           </div>
 

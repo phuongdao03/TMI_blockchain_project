@@ -45,6 +45,9 @@ flowchart LR
 The browser communicates only with the backend API. Database, provider and
 blockchain access are enforced behind backend service boundaries.
 
+Admin P0 permissions, API contracts, deployment, rollback, and verification
+evidence are recorded in [the admin dashboard handoff](docs/handoffs/admin-dashboard-p0.md).
+
 ## Local development
 
 ### Requirements

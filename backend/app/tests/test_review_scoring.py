@@ -29,6 +29,7 @@ from app.modules.reviews.errors import (
     ReviewValidationError,
 )
 from app.modules.reviews.models import (
+    Review,
     ReviewAssignment,
     ReviewAssignmentStatus,
     ReviewFindingAction,
@@ -51,9 +52,37 @@ CHECKLIST = {
     "evidence_reviewed": True,
     "criteria_assessed": True,
     "findings_recorded": True,
-    "similarity_checked": True,
     "attestation": True,
 }
+
+
+def test_specialist_rubric_score_and_mandatory_gate_are_server_enforced() -> None:
+    rubric = {
+        "version": "2026.1",
+        "gates": [{"key": "rights", "required": True}],
+        "criteria": [
+            {"key": "originality", "weight": 60},
+            {"key": "cultural_value", "weight": 40},
+        ],
+        "thresholds": {"approveMin": 75, "rejectBelow": 50},
+    }
+    review = Review(id=uuid4(), assignment_id=uuid4())
+    review.recommendation = ReviewRecommendation.APPROVE
+    review.gate_answers = {
+        "rights": {"outcome": "FAIL", "rationale": "Không đủ căn cứ xác lập quyền."}
+    }
+    review.specialist_answers = {
+        "originality": {"score": 4, "rationale": "Có đối chứng nguồn gốc rõ ràng."},
+        "cultural_value": {"score": 4, "rationale": "Giá trị văn hóa được chứng minh."},
+    }
+
+    assert ReviewService._specialist_score(review, rubric, require_complete=True) == 80
+    review.specialist_score = 80
+    with pytest.raises(ReviewValidationError, match="required rubric gate"):
+        ReviewService._validate_specialist_decision(review, rubric)
+
+    review.gate_answers["rights"]["outcome"] = "PASS"
+    ReviewService._validate_specialist_decision(review, rubric)
 
 
 async def _setup() -> tuple[
@@ -305,6 +334,60 @@ def test_review_findings_are_bound_to_locked_evidence_and_submission_policy() ->
         assert isinstance(evidence_media_id_value, str)
         evidence_media_id = UUID(evidence_media_id_value)
         criterion_evidence = {criterion: (evidence_media_id,) for criterion in COMMENTS}
+
+        await service.save_draft(
+            reviewer,
+            assignment.id,
+            ReviewDraft(
+                truth_score=7,
+                transparency_score=17,
+                ownership_score=17,
+                professionalism_score=17,
+                respect_score=17,
+                criterion_comments=COMMENTS,
+                criterion_evidence=criterion_evidence,
+                checklist_answers=CHECKLIST,
+                recommendation=ReviewRecommendation.APPROVE,
+            ),
+        )
+        with pytest.raises(ReviewValidationError, match="at least 12"):
+            await service.submit_review(reviewer, assignment.id)
+
+        await service.save_draft(
+            reviewer,
+            assignment.id,
+            ReviewDraft(
+                truth_score=14,
+                transparency_score=14,
+                ownership_score=14,
+                professionalism_score=14,
+                respect_score=14,
+                criterion_comments=COMMENTS,
+                criterion_evidence=criterion_evidence,
+                checklist_answers=CHECKLIST,
+                recommendation=ReviewRecommendation.APPROVE,
+            ),
+        )
+        with pytest.raises(ReviewValidationError, match="at least 75"):
+            await service.submit_review(reviewer, assignment.id)
+
+        await service.save_draft(
+            reviewer,
+            assignment.id,
+            ReviewDraft(
+                truth_score=15,
+                transparency_score=15,
+                ownership_score=15,
+                professionalism_score=15,
+                respect_score=15,
+                criterion_comments={**COMMENTS, "truth": "Quá ngắn"},
+                criterion_evidence=criterion_evidence,
+                checklist_answers=CHECKLIST,
+                recommendation=ReviewRecommendation.APPROVE,
+            ),
+        )
+        with pytest.raises(ReviewValidationError, match="at least 20 characters"):
+            await service.submit_review(reviewer, assignment.id)
 
         high_risk = ReviewFinding(
             id=uuid4(),

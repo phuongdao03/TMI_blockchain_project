@@ -23,8 +23,8 @@ export default async function ReviewQueuePage({
     : undefined;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-7">
-      <header>
+    <div className="review-queue mx-auto max-w-7xl space-y-7">
+      <header className="review-queue__intro">
         <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
           <ClipboardCheck aria-hidden="true" className="size-4" />
           Không gian chuyên gia
@@ -37,7 +37,23 @@ export default async function ReviewQueuePage({
           5T theo từng phiên bản hồ sơ.
         </p>
       </header>
-      <form className="flex flex-col gap-3 rounded-2xl border bg-white p-4 sm:flex-row sm:items-end">
+      <ol
+        aria-label="Quy trình thẩm định"
+        className="review-queue__steps grid gap-px overflow-hidden rounded-2xl border bg-neutral-200 sm:grid-cols-3"
+      >
+        {[
+          ["01", "Xác nhận độc lập", "Khai báo xung đột lợi ích trước khi xem hồ sơ."],
+          ["02", "Đánh giá bằng chứng", "Kiểm tra tài liệu và hoàn thiện rubric đúng loại hồ sơ."],
+          ["03", "Gửi kết quả", "Kiểm tra toàn bộ phiếu trước khi khóa và gửi."],
+        ].map(([step, title, description]) => (
+          <li className="review-queue__step bg-white p-5" key={step}>
+            <p className="font-mono text-xs font-bold text-primary-700">{step}</p>
+            <h2 className="mt-2 font-bold text-neutral-950">{title}</h2>
+            <p className="mt-1 text-sm leading-6 text-neutral-600">{description}</p>
+          </li>
+        ))}
+      </ol>
+      <form className="review-queue__filters flex flex-col gap-3 rounded-2xl border bg-white p-4 sm:flex-row sm:items-end">
         <div className="flex-1">
           <label
             className="text-xs font-bold uppercase tracking-wider text-neutral-500"

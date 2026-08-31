@@ -57,6 +57,21 @@ class StubPaymentService:
         del principal, dossier_id, idempotency_key
         return self.view()
 
+    async def issue_order(
+        self,
+        principal: AuthPrincipal,
+        dossier_id: UUID,
+        *,
+        idempotency_key: str,
+        amount_minor: int,
+        currency: str,
+        description: str,
+        due_at: datetime | None,
+    ) -> PaymentOrderView:
+        del principal, dossier_id, idempotency_key
+        del amount_minor, currency, description, due_at
+        return self.view()
+
     async def get_order(
         self,
         principal: AuthPrincipal,
@@ -90,6 +105,24 @@ class StubPaymentService:
     ) -> PaymentOrderView:
         del signature, timestamp
         self.raw_body = raw_body
+        return self.view()
+
+    async def cancel_order(
+        self,
+        principal: AuthPrincipal,
+        order_id: UUID,
+        *,
+        reason: str,
+    ) -> PaymentOrderView:
+        del principal, order_id, reason
+        return self.view()
+
+    async def reconcile_order(
+        self,
+        principal: AuthPrincipal,
+        order_id: UUID,
+    ) -> PaymentOrderView:
+        del principal, order_id
         return self.view()
 
 
@@ -132,9 +165,16 @@ def test_payment_api_create_get_and_preserve_raw_webhook_body() -> None:
     created = asyncio.run(
         _request(
             "POST",
-            f"/api/v1/dossiers/{service.dossier_id}/payment-orders",
+            f"/api/v1/admin/dossiers/{service.dossier_id}/payment-orders",
             service,
-            headers={"Idempotency-Key": "payment-request-1"},
+            content=(
+                b'{"amountMinor":1500000,"currency":"VND",'
+                b'"description":"Phi xac lap va phat hanh chung thu"}'
+            ),
+            headers={
+                "Idempotency-Key": "payment-request-1",
+                "Content-Type": "application/json",
+            },
         )
     )
     fetched = asyncio.run(
@@ -180,3 +220,26 @@ def test_payment_api_create_get_and_preserve_raw_webhook_body() -> None:
     assert active.status_code == 200
     assert webhook.status_code == 200
     assert service.raw_body == body
+
+
+def test_payment_api_exposes_cancel_and_finance_reconciliation_commands() -> None:
+    service = StubPaymentService()
+    cancelled = asyncio.run(
+        _request(
+            "POST",
+            f"/api/v1/payment-orders/{service.order_id}/cancel",
+            service,
+            content=b'{"reason":"Applicant requested cancellation"}',
+            headers={"Content-Type": "application/json"},
+        )
+    )
+    reconciled = asyncio.run(
+        _request(
+            "POST",
+            f"/api/v1/admin/payment-orders/{service.order_id}/reconcile",
+            service,
+        )
+    )
+
+    assert cancelled.status_code == 200
+    assert reconciled.status_code == 200

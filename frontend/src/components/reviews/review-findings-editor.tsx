@@ -2,20 +2,14 @@
 
 import { AlertTriangle, Plus, Trash2 } from "lucide-react";
 
+import { reviewCriteria } from "@/components/reviews/five-t-rubric";
+
 import type {
   ReviewEvidenceSnapshot,
   ReviewFinding,
   ReviewFindingAction,
   ReviewFindingSeverity,
 } from "@/lib/api/types";
-
-const criteria = [
-  ["truth", "Tính đúng đắn"],
-  ["transparency", "Tính minh bạch"],
-  ["ownership", "Tinh thần trách nhiệm"],
-  ["professionalism", "Tính chuyên nghiệp"],
-  ["respect", "Sự tôn trọng"],
-] as const;
 
 const severityLabels: Record<ReviewFindingSeverity, string> = {
   INFO: "Thông tin",
@@ -62,7 +56,7 @@ export function ReviewFindingsEditor({
   }
 
   return (
-    <section className="rounded-2xl border bg-white p-5 sm:p-6">
+    <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-amber-800">
@@ -153,7 +147,7 @@ export function ReviewFindingsEditor({
                       }
                       value={finding.criterion}
                     >
-                      {criteria.map(([key, label]) => (
+                      {reviewCriteria.map(({ key, label }) => (
                         <option key={key} value={key}>
                           {label}
                         </option>

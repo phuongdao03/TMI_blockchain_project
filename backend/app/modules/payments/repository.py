@@ -76,6 +76,22 @@ class PaymentRepository:
             ),
         )
 
+    async def get_active_for_obligation(
+        self,
+        fee_obligation_id: UUID,
+    ) -> PaymentOrder | None:
+        return cast(
+            PaymentOrder | None,
+            await self._session.scalar(
+                select(PaymentOrder).where(
+                    PaymentOrder.fee_obligation_id == fee_obligation_id,
+                    PaymentOrder.status.in_(
+                        (PaymentStatus.PENDING, PaymentStatus.PROCESSING)
+                    ),
+                )
+            ),
+        )
+
     async def get_event(self, provider_event_id: str) -> PaymentEvent | None:
         return cast(
             PaymentEvent | None,

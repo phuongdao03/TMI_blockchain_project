@@ -4,9 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ArrowLeft,
+  Clock3,
   CheckCircle2,
   ClipboardCheck,
+  Files,
   LoaderCircle,
+  LockKeyhole,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -25,6 +28,36 @@ const statusLabels = {
   SUBMITTED: "Đã gửi kết quả",
   CANCELLED: "Đã hủy",
 } as const;
+
+export function reviewDeadlineState(dueAt: string | null, now = new Date()) {
+  if (!dueAt) {
+    return {
+      status: "UNSCHEDULED" as const,
+      label: "Chưa đặt thời hạn",
+      detail: "Theo dõi thông báo từ quản lý thẩm định",
+    };
+  }
+  const due = new Date(dueAt);
+  const differenceHours = Math.ceil(
+    (due.getTime() - now.getTime()) / 3_600_000,
+  );
+  const dateLabel = new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(due);
+  if (differenceHours < 0) {
+    return {
+      status: "OVERDUE" as const,
+      label: "Đã quá SLA",
+      detail: `${dateLabel} · quá hạn ${Math.abs(differenceHours)} giờ`,
+    };
+  }
+  return {
+    status: "ON_TRACK" as const,
+    label: differenceHours <= 24 ? "Sắp đến hạn" : "Trong SLA",
+    detail: `${dateLabel} · còn ${differenceHours} giờ`,
+  };
+}
 
 export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
   const queryClient = useQueryClient();
@@ -93,6 +126,8 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
   }
 
   const detail = query.data;
+  const deadline = reviewDeadlineState(detail.assignment.dueAt);
+  const evidenceCount = detail.snapshotJson?.evidences.length ?? 0;
   const terminal = ["CONFLICTED", "CANCELLED"].includes(
     detail.assignment.status,
   );
@@ -121,6 +156,60 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           </span>
         </div>
       </header>
+
+      <section aria-label="Quy trình thẩm định" className="grid overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] sm:grid-cols-3 xl:grid-cols-6">
+        {[
+          ["01", "Độc lập", "Khai báo xung đột"],
+          ["02", "Kiểm tra", "Khóa phiên bản & tài liệu"],
+          ["03", "Chấm 5T", "Điểm neo & căn cứ"],
+          ["04", "Phát hiện", "Rủi ro & hướng xử lý"],
+          ["05", "Kiến nghị", "Qua cổng quyết định"],
+          ["06", "Khóa phiếu", "Xác nhận & gửi một lần"],
+        ].map(([number, title, description]) => (
+          <article className="border-b border-[var(--theme-border)] p-4 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0" key={number}>
+            <p className="font-mono text-xs font-bold text-primary-700">{number}</p>
+            <p className="mt-2 text-sm font-bold">{title}</p>
+            <p className="mt-1 text-xs leading-5 text-neutral-500">{description}</p>
+          </article>
+        ))}
+      </section>
+
+      <section
+        aria-label="Thông tin kiểm soát phiên thẩm định"
+        className="grid overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] sm:grid-cols-3"
+      >
+        <article className="border-b border-[var(--theme-border)] p-4 sm:border-b-0 sm:border-r sm:p-5">
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-500">
+            <Clock3 aria-hidden="true" className="size-4" /> Thời hạn xử lý
+          </p>
+          <p
+            className={`mt-2 font-bold ${deadline.status === "OVERDUE" ? "text-error" : ""}`}
+          >
+            {deadline.label}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-neutral-500">
+            {deadline.detail}
+          </p>
+        </article>
+        <article className="border-b border-[var(--theme-border)] p-4 sm:border-b-0 sm:border-r sm:p-5">
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-500">
+            <Files aria-hidden="true" className="size-4" /> Bộ bằng chứng
+          </p>
+          <p className="mt-2 font-bold">{evidenceCount} tài liệu đã khóa</p>
+          <p className="mt-1 text-xs leading-5 text-neutral-500">
+            Chỉ dẫn chiếu nội dung thuộc phiên bản {detail.versionNo}
+          </p>
+        </article>
+        <article className="p-4 sm:p-5">
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-500">
+            <LockKeyhole aria-hidden="true" className="size-4" /> Phạm vi thao tác
+          </p>
+          <p className="mt-2 font-bold">Thẩm định độc lập</p>
+          <p className="mt-1 text-xs leading-5 text-neutral-500">
+            Không thể sửa hồ sơ hoặc đưa ra quyết định cuối cùng
+          </p>
+        </article>
+      </section>
 
       {conflict.error ? (
         <p
@@ -162,6 +251,16 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
       detail.snapshotJson ? (
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(20rem,0.76fr)_minmax(34rem,1.24fr)]">
           <div className="space-y-6 xl:sticky xl:top-28">
+            {detail.snapshotJson.dossier.summary ? (
+              <Card className="p-5">
+                <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+                  Tóm tắt của người nộp
+                </p>
+                <p className="mt-2 text-sm leading-6 text-neutral-700">
+                  {detail.snapshotJson.dossier.summary}
+                </p>
+              </Card>
+            ) : null}
             <EvidenceViewer evidences={detail.snapshotJson.evidences ?? []} />
             <Card className="p-5">
               <p className="flex items-center gap-2 text-xs font-bold text-emerald-700">
@@ -185,6 +284,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
               await submit.mutateAsync();
             }}
             readOnly={detail.assignment.status === "SUBMITTED"}
+            rubric={detail.snapshotJson.dossier.dossierType?.reviewRubric}
           />
         </div>
       ) : null}

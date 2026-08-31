@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  adminUsersApi,
   auditApi,
   authApi,
   mediaApi,
@@ -11,6 +12,57 @@ import {
   staffAccountsApi,
   staffInvitationsApi,
 } from "@/lib/api/client";
+
+describe("admin users API client", () => {
+  beforeEach(() => {
+    document.cookie = "tmi_csrf=csrf-value";
+    vi.restoreAllMocks();
+  });
+
+  it("sends server-side list filters and an audited status change", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      response({
+        success: true,
+        data: [],
+        meta: { request_id: "users-list", page: 2, pageSize: 25, total: 0 },
+      }),
+    );
+
+    await adminUsersApi.list({
+      page: 2,
+      pageSize: 25,
+      search: "an@example.com",
+      status: "ACTIVE",
+      provider: "GOOGLE",
+      verified: true,
+      sortBy: "email",
+      sortOrder: "asc",
+    });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/v1/admin/users?page=2&pageSize=25&search=an%40example.com&status=ACTIVE&provider=GOOGLE&verified=true&sortBy=email&sortOrder=asc",
+    );
+
+    fetchMock.mockResolvedValueOnce(
+      response({
+        success: true,
+        data: { id: "user-1", status: "SUSPENDED" },
+        meta: { request_id: "user-status" },
+      }),
+    );
+    await adminUsersApi.changeStatus("user-1", {
+      status: "SUSPENDED",
+      expectedStatus: "ACTIVE",
+      reason: "Yeu cau tu bo phan an toan",
+    });
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/v1/admin/users/user-1/status",
+    );
+    expect(fetchMock.mock.calls[1]?.[1]?.method).toBe("PATCH");
+    expect(
+      new Headers(fetchMock.mock.calls[1]?.[1]?.headers).get("X-CSRF-Token"),
+    ).toBe("csrf-value");
+  });
+});
 
 function response(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {

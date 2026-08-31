@@ -21,3 +21,8 @@ class PaymentOrderView:
     qr_payload: str | None
     created_at: datetime
     updated_at: datetime
+    description: str | None = None
+    due_at: datetime | None = None
+    issued_by_user_id: UUID | None = None
+    issued_at: datetime | None = None
+    fee_obligation_id: UUID | None = None

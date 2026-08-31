@@ -61,7 +61,12 @@ export function NotificationCenter() {
       <header className="notification-center__hero">
         <div>
           <p className="notification-center__eyebrow">
-            <Bell aria-hidden="true" className="size-4" />
+            <Bell
+              aria-hidden="true"
+              className="size-4"
+              focusable="false"
+              strokeWidth={1.75}
+            />
             Trung tâm cập nhật
           </p>
           <h1>Thông báo của bạn</h1>
@@ -112,7 +117,12 @@ export function NotificationCenter() {
               onClick={() => markAllRead.mutate()}
               type="button"
             >
-              <CheckCheck aria-hidden="true" className="size-4" />
+              <CheckCheck
+                aria-hidden="true"
+                className="size-4"
+                focusable="false"
+                strokeWidth={1.75}
+              />
               Đánh dấu tất cả đã đọc
             </button>
           ) : null}
@@ -135,7 +145,7 @@ export function NotificationCenter() {
         ) : null}
         {notifications.data?.data.length === 0 ? (
           <div className="notification-center__state">
-            <Bell aria-hidden="true" />
+            <Bell aria-hidden="true" focusable="false" strokeWidth={1.75} />
             <h2>
               {unreadOnly ? "Bạn đã đọc hết thông báo" : "Chưa có thông báo"}
             </h2>
@@ -166,7 +176,12 @@ export function NotificationCenter() {
                 </span>
                 <span className="notification-center__action">
                   {presentation.actionLabel}
-                  <ChevronRight aria-hidden="true" className="size-4" />
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="size-4"
+                    focusable="false"
+                    strokeWidth={1.75}
+                  />
                 </span>
               </>
             );
@@ -215,7 +230,12 @@ export function NotificationCenter() {
               type="button"
             >
               Sau
-              <ChevronRight aria-hidden="true" className="size-4" />
+              <ChevronRight
+                aria-hidden="true"
+                className="size-4"
+                focusable="false"
+                strokeWidth={1.75}
+              />
             </button>
           </nav>
         ) : null}

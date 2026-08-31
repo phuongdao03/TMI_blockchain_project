@@ -24,6 +24,8 @@ from app.modules.auth.schemas import (
     StaffAccountStatus,
     StaffAccountUpdateRequest,
     StaffMfaRecoveryRequest,
+    StaffPermissionData,
+    StaffPermissionReplaceRequest,
 )
 from app.modules.auth.staff_account_service import StaffAccountService
 from app.modules.auth.staff_privileged_action_service import (
@@ -99,6 +101,48 @@ async def update_staff_account(
     session: SessionDependency,
 ) -> SuccessEnvelope[StaffAccountData]:
     data = await _service(session).update(
+        user_id=user_id,
+        payload=payload,
+        principal=principal,
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    return SuccessEnvelope(
+        data=data,
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
+    "/{user_id}/permissions",
+    response_model=SuccessEnvelope[StaffPermissionData],
+)
+async def get_staff_permissions(
+    user_id: UUID,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[StaffPermissionData]:
+    data = await _service(session).get_permissions(user_id, principal)
+    return SuccessEnvelope(
+        data=data,
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.put(
+    "/{user_id}/permissions",
+    response_model=SuccessEnvelope[StaffPermissionData],
+)
+async def replace_staff_permissions(
+    user_id: UUID,
+    payload: StaffPermissionReplaceRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[StaffPermissionData]:
+    data = await _service(session).replace_permissions(
         user_id=user_id,
         payload=payload,
         principal=principal,

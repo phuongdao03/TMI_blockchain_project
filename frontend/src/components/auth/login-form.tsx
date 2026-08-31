@@ -52,7 +52,10 @@ export function LoginForm({ next }: { next?: string }) {
     );
     queryClient.setQueryData(["auth", "me"], result.user);
     router.replace(
-      safeDestination(next, resolveDefaultWorkspace(result.user.roles)),
+      safeDestination(
+        next,
+        resolveDefaultWorkspace(result.user.roles, result.user.permissions),
+      ),
     );
     router.refresh();
   }

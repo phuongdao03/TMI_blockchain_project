@@ -7,11 +7,16 @@ import {
   Clock3,
   Files,
   ReceiptText,
+  RefreshCw,
 } from "lucide-react";
 
+import {
+  OperationsRiskChart,
+  ReviewerWorkloadChart,
+} from "@/components/admin/operations-charts";
+import { JobOperationsWorkspace } from "@/components/admin/job-operations-workspace";
 import { operationsApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
-import { JobOperationsWorkspace } from "@/components/admin/job-operations-workspace";
 
 const dossierStatusLabels: Record<string, string> = {
   DRAFT: "Đang hoàn thiện",
@@ -77,12 +82,35 @@ export function OperationsDashboard({
         </header>
       ) : null}
 
-      <section className="hero-grid-surface relative overflow-hidden rounded-2xl bg-[#151515] px-6 py-8 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:grid-cols-[1fr_auto] lg:items-end lg:px-10 lg:py-10">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3">
+        <p className="text-xs font-medium text-neutral-500">
+          Dữ liệu hiện tại · cập nhật lúc{" "}
+          {new Date(metrics.dataUpdatedAt).toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </p>
+        <button
+          aria-label="Làm mới dữ liệu"
+          className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--theme-border)] px-3 text-xs font-bold hover:bg-[var(--theme-elevated)] disabled:opacity-60"
+          disabled={metrics.isFetching}
+          onClick={() => void metrics.refetch()}
+          type="button"
+        >
+          <RefreshCw
+            aria-hidden="true"
+            className={`size-4 ${metrics.isFetching ? "animate-spin" : ""}`}
+          />
+          {metrics.isFetching ? "Đang cập nhật" : "Làm mới"}
+        </button>
+      </div>
+
+      <section className="hero-grid-surface relative overflow-hidden rounded-2xl bg-[#151515] px-5 py-7 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:grid-cols-[1fr_auto] lg:items-end lg:px-10 lg:py-10">
         <div className="relative z-10">
           <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-gold-300">
             Ưu tiên hôm nay
           </p>
-          <p className="mt-4 text-5xl font-bold tracking-[-0.05em] sm:text-6xl">
+          <p className="mt-4 text-4xl font-bold tracking-[-0.05em] sm:text-6xl">
             {urgentCount}
           </p>
           <h2 className="mt-2 text-xl font-bold">việc cần được xử lý sớm</h2>
@@ -101,19 +129,19 @@ export function OperationsDashboard({
       </section>
 
       <section
-        className="grid overflow-hidden rounded-xl border border-black/10 bg-[#fbfaf7] md:grid-cols-2 xl:grid-cols-4"
+        className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4"
         aria-label="Chỉ số cần theo dõi"
       >
         {cards.map(([label, value, Icon]) => (
           <article
-            className="border-b border-black/8 p-6 last:border-b-0 md:border-r md:[&:nth-child(2)]:border-r-0 xl:border-b-0 xl:[&:nth-child(2)]:border-r xl:last:border-r-0"
+            className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
             key={label}
           >
-            <div className="flex items-start justify-between gap-4">
-              <p className="text-4xl font-bold tracking-[-0.04em]">{value}</p>
+            <div className="flex items-start justify-between gap-2 sm:gap-4">
+              <p className="text-3xl font-bold tracking-[-0.04em] sm:text-4xl">{value}</p>
               <Icon className="size-5 text-primary-700" />
             </div>
-            <p className="mt-4 text-sm font-semibold text-neutral-600">
+            <p className="mt-3 text-xs font-semibold leading-5 text-neutral-600 sm:mt-4 sm:text-sm">
               {label}
             </p>
           </article>
@@ -124,12 +152,16 @@ export function OperationsDashboard({
         className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]"
         id="hang-doi-xu-ly"
       >
-        <section className="rounded-xl border border-black/10 bg-[#fbfaf7] p-6">
+        <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
           <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
             Tiến độ hồ sơ
           </p>
           <h2 className="mt-2 text-xl font-bold">Hồ sơ theo giai đoạn</h2>
-          <div className="mt-6 space-y-5">
+          <div
+            aria-label="Biểu đồ số hồ sơ theo giai đoạn"
+            className="mt-6 space-y-5"
+            role="img"
+          >
             {Object.entries(metrics.data.dossierFunnel).map(
               ([status, count]) => (
                 <div key={status}>
@@ -139,7 +171,7 @@ export function OperationsDashboard({
                     </span>
                     <strong className="font-mono text-sm">{count}</strong>
                   </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-200">
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--theme-elevated)]">
                     <div
                       aria-hidden="true"
                       className="h-full rounded-full bg-primary-600"
@@ -153,34 +185,34 @@ export function OperationsDashboard({
             )}
           </div>
         </section>
-        <section className="rounded-xl border border-black/10 bg-[#1d1c1b] p-6 text-white">
-          <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-gold-300">
-            Phân công hiện tại
+        <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
+          <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
+            Phân bổ rủi ro
           </p>
-          <h2 className="mt-2 text-xl font-bold">Khối lượng thẩm định</h2>
-          <div className="mt-6 divide-y divide-white/10">
-            {metrics.data.reviewerWorkload.length === 0 ? (
-              <p className="py-5 text-sm text-slate-400">
-                Không có phân công đang hoạt động.
-              </p>
-            ) : (
-              metrics.data.reviewerWorkload.map((row) => (
-                <div
-                  className="flex items-center justify-between gap-4 py-4"
-                  key={row.reviewerEmail}
-                >
-                  <span className="truncate text-sm font-medium text-slate-300">
-                    {row.reviewerEmail}
-                  </span>
-                  <strong className="grid size-9 place-items-center rounded-full border border-white/10 bg-white/5">
-                    {row.activeAssignments}
-                  </strong>
-                </div>
-              ))
-            )}
+          <h2 className="mt-2 text-xl font-bold">Cơ cấu cảnh báo</h2>
+          <div className="mt-6">
+            <OperationsRiskChart
+              blockchainFailures={metrics.data.blockchainFailures}
+              overdueReviews={metrics.data.overdueReviews}
+              paymentFailures={metrics.data.paymentFailures}
+            />
           </div>
         </section>
       </div>
+      <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
+              Phân công hiện tại
+            </p>
+            <h2 className="mt-2 text-xl font-bold">Khối lượng thẩm định</h2>
+          </div>
+          <p className="text-xs text-neutral-500">Số hồ sơ đang hoạt động</p>
+        </div>
+        <div className="mt-6">
+          <ReviewerWorkloadChart rows={metrics.data.reviewerWorkload} />
+        </div>
+      </section>
       {user?.roles.includes("SUPER_ADMIN") ? <JobOperationsWorkspace /> : null}
     </div>
   );

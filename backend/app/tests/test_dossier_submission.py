@@ -329,7 +329,21 @@ def test_submitted_dynamic_dossier_freezes_only_explicit_public_fields() -> None
                                     "label": "Email chủ sở hữu",
                                     "type": "email",
                                 },
-                            ]
+                            ],
+                            "reviewRubric": {
+                                "version": "2026.1",
+                                "title": "Thẩm định tài liệu",
+                                "gates": [],
+                                "criteria": [
+                                    {
+                                        "key": "provenance",
+                                        "label": "Nguồn gốc",
+                                        "description": "Khả năng xác lập nguồn gốc.",
+                                        "weight": 100,
+                                    }
+                                ],
+                                "thresholds": {"approveMin": 75, "rejectBelow": 50},
+                            },
                         },
                     )
                 )
@@ -376,6 +390,8 @@ def test_submitted_dynamic_dossier_freezes_only_explicit_public_fields() -> None
             "story": "Câu chuyện được công bố có kiểm soát.",
             "owner_email": "private@example.test",
         }
+        assert dossier_type["reviewRubric"]["version"] == "2026.1"
+        assert dossier_type["reviewRubric"]["criteria"][0]["key"] == "provenance"
 
         await service.close()
         await engine.dispose()

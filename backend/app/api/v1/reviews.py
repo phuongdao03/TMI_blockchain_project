@@ -316,6 +316,14 @@ async def save_review_draft(
             applicant_feedback=payload.applicant_feedback,
             recommendation=payload.recommendation,
             private_note=payload.private_note,
+            gate_answers={
+                key: value.model_dump()
+                for key, value in payload.gate_answers.items()
+            },
+            specialist_answers={
+                key: value.model_dump()
+                for key, value in payload.specialist_answers.items()
+            },
         ),
     )
     return SuccessEnvelope(

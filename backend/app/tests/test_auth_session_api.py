@@ -187,6 +187,7 @@ def test_login_api_sets_secure_cookie_contract_without_returning_tokens() -> Non
             "id": str(service.user_id),
             "roles": ["APPLICANT"],
             "accountType": None,
+            "permissions": [],
         }
     }
     assert "token" not in response.text.lower()
@@ -279,4 +280,5 @@ def test_applicant_upgrade_api_returns_updated_account_scope() -> None:
         "email": "owner@tmigroup.vn",
         "roles": ["APPLICANT"],
         "accountType": "INDIVIDUAL_APPLICANT",
+        "permissions": [],
     }

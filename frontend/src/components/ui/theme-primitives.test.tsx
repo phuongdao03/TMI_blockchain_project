@@ -1,9 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { Bell } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Feedback } from "@/components/ui/feedback";
+import { IconFrame } from "@/components/ui/icon-frame";
 
 describe("theme-aware UI primitives", () => {
   it("uses semantic classes for buttons instead of fixed palette utilities", () => {
@@ -37,6 +40,17 @@ describe("theme-aware UI primitives", () => {
     expect(screen.getByRole("status").className).toContain("ui-feedback");
     expect(screen.getByRole("status").className).toContain(
       "ui-feedback--success",
+    );
+  });
+
+  it("gives decorative icons a consistent optical frame", () => {
+    const { container } = render(<IconFrame icon={Bell} tone="brand" />);
+    const frame = container.firstElementChild;
+
+    expect(frame?.className).toContain("ui-icon-frame");
+    expect(frame?.className).toContain("ui-icon-frame--brand");
+    expect(frame?.querySelector("svg")?.getAttribute("aria-hidden")).toBe(
+      "true",
     );
   });
 });

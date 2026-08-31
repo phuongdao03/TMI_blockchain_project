@@ -184,6 +184,10 @@ class Review(Base):
             "total_score BETWEEN 0 AND 100",
             name="total_score_range",
         ),
+        CheckConstraint(
+            "specialist_score IS NULL OR specialist_score BETWEEN 0 AND 100",
+            name="specialist_score_range",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
@@ -199,6 +203,8 @@ class Review(Base):
     professionalism_score: Mapped[int | None] = mapped_column(SmallInteger)
     respect_score: Mapped[int | None] = mapped_column(SmallInteger)
     total_score: Mapped[int | None] = mapped_column(SmallInteger)
+    rubric_version: Mapped[str | None] = mapped_column(String(120))
+    specialist_score: Mapped[int | None] = mapped_column(SmallInteger)
     recommendation: Mapped[ReviewRecommendation | None] = mapped_column(
         _enum(ReviewRecommendation, "review_recommendation")
     )
@@ -225,6 +231,12 @@ class Review(Base):
         nullable=False,
         default=dict,
         server_default=text("'{}'"),
+    )
+    gate_answers: Mapped[dict[str, dict[str, object]]] = mapped_column(
+        COMMENTS_TYPE, nullable=False, default=dict, server_default=text("'{}'")
+    )
+    specialist_answers: Mapped[dict[str, dict[str, object]]] = mapped_column(
+        COMMENTS_TYPE, nullable=False, default=dict, server_default=text("'{}'")
     )
     applicant_feedback: Mapped[str | None] = mapped_column(Text)
     private_note: Mapped[str | None] = mapped_column(Text)

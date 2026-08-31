@@ -46,6 +46,7 @@ PUBLIC_FIELD_TYPES = {
     "currency",
 }
 PUBLIC_TEXT_MAX_LENGTH = 5_000
+RUBRIC_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 
 
 class DynamicSchemaError(ValueError):
@@ -153,6 +154,92 @@ def _validate_keyed_items(
                 )
 
 
+def _validate_review_rubric(
+    rubric: object, errors: list[dict[str, str]]
+) -> None:
+    if rubric is None:
+        return
+    path = "reviewRubric"
+    if not isinstance(rubric, Mapping):
+        _append_error(errors, path, "Must be an object.")
+        return
+
+    for key in ("version", "title"):
+        value = rubric.get(key)
+        if not isinstance(value, str) or not value.strip() or len(value.strip()) > 120:
+            _append_error(
+                errors,
+                f"{path}.{key}",
+                "Must be non-empty text up to 120 characters.",
+            )
+
+    gates = rubric.get("gates", [])
+    _validate_keyed_items(gates, f"{path}.gates", errors)
+    if _is_sequence(gates) and len(gates) > 10:
+        _append_error(errors, f"{path}.gates", "At most 10 gates are allowed.")
+
+    criteria = rubric.get("criteria")
+    if not _is_sequence(criteria) or not 1 <= len(criteria) <= 10:
+        _append_error(
+            errors, f"{path}.criteria", "Between 1 and 10 criteria are required."
+        )
+    else:
+        keys: set[str] = set()
+        weight_total = 0
+        for index, criterion in enumerate(criteria):
+            item_path = f"{path}.criteria.{index}"
+            if not isinstance(criterion, Mapping):
+                _append_error(errors, item_path, "Must be an object.")
+                continue
+            raw_key = criterion.get("key")
+            key = raw_key.strip() if isinstance(raw_key, str) else ""
+            if not RUBRIC_KEY_PATTERN.fullmatch(key):
+                _append_error(
+                    errors, f"{item_path}.key", "Must be a lowercase stable key."
+                )
+            elif key in keys:
+                _append_error(errors, f"{item_path}.key", "Key must be unique.")
+            keys.add(key)
+            for text_key in ("label", "description"):
+                value = criterion.get(text_key)
+                if not isinstance(value, str) or not value.strip():
+                    _append_error(errors, f"{item_path}.{text_key}", "Is required.")
+            weight = criterion.get("weight")
+            if (
+                not isinstance(weight, int)
+                or isinstance(weight, bool)
+                or not 1 <= weight <= 100
+            ):
+                _append_error(
+                    errors,
+                    f"{item_path}.weight",
+                    "Must be an integer from 1 to 100.",
+                )
+            else:
+                weight_total += weight
+        if weight_total != 100:
+            _append_error(
+                errors, f"{path}.criteria", "Criterion weights must total 100."
+            )
+
+    thresholds = rubric.get("thresholds")
+    if not isinstance(thresholds, Mapping):
+        _append_error(errors, f"{path}.thresholds", "Must be an object.")
+        return
+    approve = thresholds.get("approveMin")
+    reject = thresholds.get("rejectBelow")
+    valid_values = all(
+        isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 100
+        for value in (approve, reject)
+    )
+    if not valid_values or reject >= approve:
+        _append_error(
+            errors,
+            f"{path}.thresholds",
+            "rejectBelow must be lower than approveMin and both must be 0–100.",
+        )
+
+
 def validate_dynamic_schema(schema: object) -> dict[str, Any]:
     if not isinstance(schema, Mapping):
         raise DynamicSchemaError("schema", "Must be an object.")
@@ -247,6 +334,7 @@ def validate_dynamic_schema(schema: object) -> dict[str, Any]:
                 seen_roles.add(normalized_role)
 
     _validate_keyed_items(schema.get("reviewChecklist"), "reviewChecklist", errors)
+    _validate_review_rubric(schema.get("reviewRubric"), errors)
 
     try:
         document_rules_from_schema(schema)

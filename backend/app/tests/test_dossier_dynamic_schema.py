@@ -43,9 +43,75 @@ def test_schema_definition_accepts_supported_fields_and_checklists() -> None:
                 "required": True,
             }
         ],
+        "reviewRubric": {
+            "version": "2026.1",
+            "title": "Thẩm định tác phẩm",
+            "gates": [
+                {
+                    "key": "rights",
+                    "label": "Quyền nộp hợp lệ",
+                    "description": "Xác minh quyền sở hữu hoặc quyền đại diện.",
+                    "required": True,
+                }
+            ],
+            "criteria": [
+                {
+                    "key": "originality",
+                    "label": "Tính nguyên bản",
+                    "description": "Đánh giá nguồn gốc và mức độ sáng tạo.",
+                    "weight": 60,
+                },
+                {
+                    "key": "cultural_value",
+                    "label": "Giá trị văn hóa",
+                    "description": "Đánh giá ý nghĩa và tác động văn hóa.",
+                    "weight": 40,
+                },
+            ],
+            "thresholds": {"approveMin": 75, "rejectBelow": 50},
+        },
     }
 
     assert validate_schema_definition(schema) == schema
+
+
+@pytest.mark.parametrize(
+    ("rubric", "error_path"),
+    [
+        (
+            {
+                "version": "2026.1",
+                "title": "Rubric",
+                "gates": [],
+                "criteria": [
+                    {"key": "a", "label": "A", "description": "A", "weight": 70},
+                    {"key": "b", "label": "B", "description": "B", "weight": 20},
+                ],
+                "thresholds": {"approveMin": 75, "rejectBelow": 50},
+            },
+            "reviewRubric.criteria",
+        ),
+        (
+            {
+                "version": "2026.1",
+                "title": "Rubric",
+                "gates": [{"key": "rights", "label": "Rights"}],
+                "criteria": [
+                    {"key": "a", "label": "A", "description": "A", "weight": 100}
+                ],
+                "thresholds": {"approveMin": 40, "rejectBelow": 50},
+            },
+            "reviewRubric.thresholds",
+        ),
+    ],
+)
+def test_review_rubric_definition_rejects_unsafe_decision_rules(
+    rubric: dict[str, object], error_path: str
+) -> None:
+    with pytest.raises(DynamicSchemaError) as exc_info:
+        validate_schema_definition({"fields": [], "reviewRubric": rubric})
+
+    assert any(item["path"] == error_path for item in exc_info.value.errors)
 
 
 @pytest.mark.parametrize(

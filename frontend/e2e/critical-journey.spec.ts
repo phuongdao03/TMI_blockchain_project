@@ -162,7 +162,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
   });
 
   await test.step("payment is confirmed by trusted status", async () => {
-    await request.post("http://127.0.0.1:4010/api/e2e/reset-payment");
+    await request.post("http://127.0.0.1:4010/api/e2e/reset-payment-pending");
     await context.addCookies([
       {
         name: "tmi_access",
@@ -181,10 +181,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
         sameSite: "Lax",
       },
     ]);
-    await page.goto("/dossiers/9155dbf5-bb3e-449d-8bf0-9572cc642cac");
-    await page
-      .getByRole("button", { name: "Thanh toán phí phát hành" })
-      .click();
+    await page.goto("/payments/a255dbf5-bb3e-449d-8bf0-9572cc642cac");
     await expect(
       page.getByRole("heading", { name: "Thanh toán thành công" }),
     ).toBeVisible({ timeout: 10_000 });

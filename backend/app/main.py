@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
+from app.api.v1.admin_users import router as admin_users_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.blockchain import router as blockchain_router
@@ -248,6 +249,7 @@ def create_application(
     )
     install_exception_handlers(app)
     app.include_router(health_router)
+    app.include_router(admin_users_router)
     app.include_router(auth_router)
     app.include_router(audit_router)
     app.include_router(blockchain_router)

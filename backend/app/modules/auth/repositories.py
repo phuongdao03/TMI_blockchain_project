@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, cast
 from uuid import UUID
 
-from sqlalchemy import delete, distinct, func, select
+from sqlalchemy import delete, distinct, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.outbox import OutboxEvent
@@ -14,6 +14,7 @@ from app.modules.auth.models import (
     Role,
     RolePermission,
     User,
+    UserPermission,
     UserRole,
     UserStatus,
     VerificationToken,
@@ -186,15 +187,29 @@ class AuthRepository:
         return tuple((await self._session.scalars(statement)).all())
 
     async def get_permission_codes(self, user_id: UUID) -> tuple[str, ...]:
-        statement = (
+        role_permissions = (
             select(Permission.code)
             .join(RolePermission, RolePermission.permission_id == Permission.id)
             .join(Role, Role.id == RolePermission.role_id)
             .join(UserRole, UserRole.role_id == Role.id)
             .where(UserRole.user_id == user_id)
-            .distinct()
-            .order_by(Permission.code)
         )
+        user_permissions = (
+            select(Permission.code)
+            .join(
+                UserPermission,
+                UserPermission.permission_id == Permission.id,
+            )
+            .where(
+                UserPermission.user_id == user_id,
+                or_(
+                    UserPermission.expires_at.is_(None),
+                    UserPermission.expires_at > func.now(),
+                ),
+            )
+        )
+        effective = role_permissions.union(user_permissions).subquery()
+        statement = select(effective.c.code).order_by(effective.c.code)
         return tuple((await self._session.scalars(statement)).all())
 
     async def list_user_ids_by_role_codes(

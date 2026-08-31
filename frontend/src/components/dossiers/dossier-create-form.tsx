@@ -2,9 +2,17 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Check, FilePlus2, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  FileCheck2,
+  FilePlus2,
+  Files,
+  ListChecks,
+  ShieldCheck,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useState } from "react";
 import { z } from "zod";
 
@@ -32,6 +40,31 @@ function multiSelectFieldValue(value: unknown): string[] {
     : [];
 }
 
+function hasRequiredValue(value: unknown): boolean {
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value === "boolean") return value;
+  if (Array.isArray(value)) return value.length > 0;
+  return value !== null && value !== undefined;
+}
+
+const mimeLabels: Record<string, string> = {
+  "application/pdf": "PDF",
+  "application/msword": "DOC",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    "DOCX",
+  "image/jpeg": "JPG",
+  "image/png": "PNG",
+  "image/webp": "WEBP",
+  "video/mp4": "MP4",
+  "audio/mpeg": "MP3",
+};
+
+function formatFileLimit(bytes: number): string {
+  const megabytes = bytes / 1024 / 1024;
+  return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(megabytes)} MB`;
+}
+
 export function DossierCreateForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -49,10 +82,23 @@ export function DossierCreateForm() {
     queryKey: dossierKeys.types(),
     queryFn: dossierApi.listTypes,
   });
+  const title = useWatch({ control: form.control, name: "title" });
   const dossierType = dossierTypes.data?.find(
     (item) => item.currentVersion.id === dossierTypeVersionId,
   );
   const dossierTypeDescription = dossierType?.currentVersion.schema.description;
+  const documentRules = dossierType?.currentVersion.schema.documentRules ?? [];
+  const requiredFieldCount =
+    dossierType?.currentVersion.schema.fields.filter((field) => field.required)
+      .length ?? 0;
+  const requiredFields =
+    dossierType?.currentVersion.schema.fields.filter((field) => field.required) ??
+    [];
+  const informationTotal = 1 + requiredFields.length;
+  const informationComplete =
+    (title.trim().length >= 3 ? 1 : 0) +
+    requiredFields.filter((field) => hasRequiredValue(formData[field.key]))
+      .length;
   const create = useMutation({
     mutationFn: dossierApi.create,
     onSuccess: async (dossier) => {
@@ -75,6 +121,33 @@ export function DossierCreateForm() {
 
   return (
     <form className="dossier-create-form space-y-6" onSubmit={submit}>
+      <nav aria-label="Các bước gửi hồ sơ">
+        <ol className="dossier-journey grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["01", "Chọn loại hồ sơ", "Đang thực hiện"],
+            ["02", "Khai thông tin", "Theo biểu mẫu"],
+            ["03", "Tải tài liệu", "Sau khi tạo bản nháp"],
+            ["04", "Kiểm tra & nộp", "Khóa phiên bản"],
+          ].map(([number, label, note], index) => (
+            <li
+              className={`rounded-xl border p-3 ${
+                index === 0
+                  ? "border-primary-300 bg-primary-50/60"
+                  : "border-[var(--theme-border)] bg-[var(--theme-surface)]"
+              }`}
+              key={number}
+            >
+              <span className="font-mono text-xs font-bold text-primary-700">
+                {number}
+              </span>
+              <strong className="ml-2 text-sm">{label}</strong>
+              <span className="mt-1 block pl-7 text-xs text-neutral-500">
+                {note}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </nav>
       <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
         <div className="border-b border-neutral-100 bg-neutral-50/70 px-5 py-4 sm:px-6">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
@@ -162,6 +235,65 @@ export function DossierCreateForm() {
             </p>
           ) : null}
         </fieldset>
+
+        {dossierType ? (
+          <section
+            aria-labelledby="document-preflight-title"
+            className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:p-5"
+          >
+            <div className="flex items-start gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-700">
+                <ListChecks aria-hidden="true" className="size-5" />
+              </span>
+              <div>
+                <h2 className="font-bold" id="document-preflight-title">
+                  Tài liệu cần chuẩn bị
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-neutral-600">
+                  {requiredFieldCount} trường thông tin bắt buộc · {documentRules.length} nhóm tài liệu. Tệp được tải lên sau khi bản nháp được tạo.
+                </p>
+              </div>
+            </div>
+
+            {documentRules.length ? (
+              <ul className="mt-4 grid gap-3 lg:grid-cols-2" role="list">
+                {documentRules.map((rule) => (
+                  <li
+                    className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4"
+                    key={rule.key}
+                  >
+                    <div className="flex items-start gap-3">
+                      <FileCheck2
+                        aria-hidden="true"
+                        className="mt-0.5 size-5 shrink-0 text-primary-700"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold">
+                          {rule.label ?? rule.documentType}
+                          {rule.required ? (
+                            <span className="ml-2 text-xs text-primary-700">
+                              Bắt buộc
+                            </span>
+                          ) : null}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-neutral-600">
+                          {rule.allowedMimeTypes
+                            .map((mime) => mimeLabels[mime] ?? mime)
+                            .join(", ")} · tối đa {formatFileLimit(rule.maxBytes)} · {rule.maxCount ?? 1} tệp
+                        </p>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-sm text-neutral-600">
+                <Files aria-hidden="true" className="size-5 shrink-0" />
+                Loại hồ sơ này chưa yêu cầu nhóm tệp riêng. Bạn vẫn có thể bổ sung bằng chứng trong bản nháp.
+              </div>
+            )}
+          </section>
+        ) : null}
         <div>
           <label
             className="text-sm font-bold text-neutral-900"
@@ -418,6 +550,37 @@ export function DossierCreateForm() {
             </a>
           ) : null}
         </div>
+      ) : null}
+
+      {dossierType ? (
+        <section
+          aria-label="Tiến độ khai thông tin"
+          className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4"
+        >
+          <div className="flex items-center justify-between gap-4 text-sm">
+            <strong>
+              {informationComplete}/{informationTotal} thông tin đã hoàn tất
+            </strong>
+            <span className="text-xs text-neutral-500">
+              Bản nháp có thể tiếp tục chỉnh sửa
+            </span>
+          </div>
+          <div
+            aria-label={`${informationComplete} trên ${informationTotal} thông tin hoàn tất`}
+            aria-valuemax={informationTotal}
+            aria-valuemin={0}
+            aria-valuenow={informationComplete}
+            className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--theme-elevated)]"
+            role="progressbar"
+          >
+            <div
+              className="h-full rounded-full bg-primary-600 transition-[width]"
+              style={{
+                width: `${(informationComplete / informationTotal) * 100}%`,
+              }}
+            />
+          </div>
+        </section>
       ) : null}
 
       <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">

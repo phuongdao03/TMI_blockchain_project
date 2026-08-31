@@ -20,8 +20,10 @@ from app.modules.auth.models import User, UserStatus
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.models import Category, Dossier, DossierStatus
 from app.modules.media.models import MediaAsset  # noqa: F401
+from app.modules.notifications.models import Notification
 from app.modules.payments.errors import (
     PaymentAmountMismatchError,
+    PaymentForbiddenError,
     PaymentInvalidWebhookError,
 )
 from app.modules.payments.gateway import MockPaymentGateway, ProviderOrder
@@ -158,6 +160,67 @@ def _webhook(
     return body, signature, timestamp
 
 
+def test_admin_issues_exact_payment_amount_and_notifies_owner() -> None:
+    async def exercise() -> None:
+        gateway = TrackingGateway(
+            webhook_secret="payment-secret",
+            uuid_factory=lambda: "provider-order",
+        )
+        service, sessions, engine, applicant = await _service(gateway=gateway)
+        operator = AuthPrincipal(
+            user_id=uuid4(),
+            session_id=uuid4(),
+            email="finance@tmigroup.vn",
+            roles=("VIEWER",),
+            permissions=("payments.issue",),
+        )
+
+        order = await service.issue_order(
+            operator,
+            DOSSIER_ID,
+            idempotency_key="admin-issued-payment-1",
+            amount_minor=1_500_000,
+            currency="VND",
+            description="Phí xác lập và phát hành chứng thư",
+            due_at=NOW.replace(day=7, month=8),
+        )
+
+        assert order.amount_minor == 1_500_000
+        assert order.description == "Phí xác lập và phát hành chứng thư"
+        assert order.issued_by_user_id == operator.user_id
+        async with sessions() as session:
+            notification = await session.scalar(select(Notification))
+            assert notification is not None
+            assert notification.user_id == applicant.user_id
+            assert notification.type == "PAYMENT_REQUEST_ISSUED"
+            dossier = await session.get(Dossier, DOSSIER_ID)
+            assert dossier is not None
+            assert dossier.status is DossierStatus.PAYMENT_PENDING
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_applicant_cannot_issue_own_payment_amount() -> None:
+    async def exercise() -> None:
+        service, _, engine, applicant = await _service()
+        with pytest.raises(PaymentForbiddenError):
+            await service.issue_order(
+                applicant,
+                DOSSIER_ID,
+                idempotency_key="applicant-must-not-issue",
+                amount_minor=1_500_000,
+                currency="VND",
+                description="Phí xác lập và phát hành chứng thư",
+                due_at=NOW.replace(day=7, month=8),
+            )
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 def test_create_order_is_idempotent_and_transitions_dossier() -> None:
     async def exercise() -> None:
         service, sessions, engine, principal = await _service()
@@ -184,6 +247,45 @@ def test_create_order_is_idempotent_and_transitions_dossier() -> None:
             audits = tuple((await session.scalars(select(AuditLog))).all())
             assert [row.action for row in audits] == ["payment.order.created"]
             assert audits[0].actor_user_id == principal.user_id
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_applicant_cancels_pending_order_and_can_restart_payment() -> None:
+    async def exercise() -> None:
+        service, sessions, engine, principal = await _service()
+        order = await service.create_order(
+            principal,
+            DOSSIER_ID,
+            idempotency_key="create-payment-cancel",
+        )
+
+        cancelled = await service.cancel_order(
+            principal,
+            order.id,
+            reason="Tôi muốn kiểm tra lại thông tin hồ sơ",
+        )
+        replay = await service.cancel_order(
+            principal,
+            order.id,
+            reason="Yêu cầu được gửi lại do mất kết nối",
+        )
+
+        assert cancelled.status is PaymentStatus.CANCELLED
+        assert replay.status is PaymentStatus.CANCELLED
+        async with sessions() as session:
+            dossier = await session.get(Dossier, DOSSIER_ID)
+            assert dossier is not None
+            assert dossier.status is DossierStatus.APPROVED
+            audits = tuple((await session.scalars(select(AuditLog))).all())
+            assert [row.action for row in audits] == [
+                "payment.order.created",
+                "payment.order.cancelled",
+            ]
+            assert audits[-1].actor_user_id == principal.user_id
+
         await service.close()
         await engine.dispose()
 
@@ -350,6 +452,35 @@ def test_reconciliation_confirms_paid_once_and_enqueues_issuance_once() -> None:
                 "payment.order.created",
                 "payment.order.reconciled",
             ]
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_reconciliation_accepts_granular_permission_without_privileged_role() -> None:
+    async def exercise() -> None:
+        gateway = ReconciliationGateway(
+            webhook_secret="payment-secret",
+            uuid_factory=lambda: "provider-order",
+        )
+        service, _, engine, applicant = await _service(gateway=gateway)
+        order = await service.create_order(
+            applicant,
+            DOSSIER_ID,
+            idempotency_key="create-payment-reconcile-permission",
+        )
+        operator = AuthPrincipal(
+            user_id=applicant.user_id,
+            session_id=applicant.session_id,
+            email=applicant.email,
+            roles=("VIEWER",),
+            permissions=("payments.reconcile",),
+        )
+
+        reconciled = await service.reconcile_order(operator, order.id)
+
+        assert reconciled.id == order.id
         await service.close()
         await engine.dispose()
 

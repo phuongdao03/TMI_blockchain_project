@@ -170,7 +170,7 @@ class Settings(BaseSettings):
         max_length=3,
         pattern=r"^[A-Z]{3}$",
     )
-    payment_order_ttl_seconds: int = Field(default=900, ge=60, le=86_400)
+    payment_order_ttl_seconds: int = Field(default=1_800, ge=60, le=86_400)
     payment_webhook_secret: SecretStr | None = None
     payment_webhook_tolerance_seconds: int = Field(
         default=300,

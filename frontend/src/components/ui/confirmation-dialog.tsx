@@ -1,26 +1,36 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
-import { type KeyboardEvent, useEffect, useId, useRef } from "react";
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+} from "react";
 
 import { Button } from "@/components/ui/button";
 
 export function ConfirmationDialog({
   confirmLabel,
+  confirmDisabled = false,
   description,
   isPending,
   onCancel,
   onConfirm,
   open,
   title,
+  children,
 }: {
   confirmLabel: string;
+  confirmDisabled?: boolean;
   description: string;
   isPending: boolean;
   onCancel: () => void;
   onConfirm: () => void;
   open: boolean;
   title: string;
+  children?: ReactNode;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -28,9 +38,14 @@ export function ConfirmationDialog({
   useEffect(() => {
     if (!open) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
-    const confirm = dialogRef.current?.querySelector<HTMLButtonElement>(
-      "[data-dialog-confirm]",
-    );
+    const confirm =
+      dialogRef.current?.querySelector<HTMLElement>(
+        "[data-dialog-initial-focus]",
+      ) ??
+      dialogRef.current?.querySelector<HTMLElement>(
+        "[data-dialog-confirm]:not(:disabled)",
+      ) ??
+      dialogRef.current?.querySelector<HTMLElement>("button:not(:disabled)");
     confirm?.focus();
     return () => previouslyFocused?.focus();
   }, [open]);
@@ -46,8 +61,8 @@ export function ConfirmationDialog({
     if (event.key !== "Tab") return;
 
     const controls = Array.from(
-      dialogRef.current?.querySelectorAll<HTMLButtonElement>(
-        "button:not(:disabled)",
+      dialogRef.current?.querySelectorAll<HTMLElement>(
+        "button:not(:disabled), textarea:not(:disabled), input:not(:disabled), select:not(:disabled)",
       ) ?? [],
     );
     if (controls.length === 0) return;
@@ -82,11 +97,16 @@ export function ConfirmationDialog({
           {title}
         </h2>
         <p className="mt-2 text-sm leading-6 text-neutral-600">{description}</p>
+        {children}
         <div className="mt-6 flex justify-end gap-3">
           <Button disabled={isPending} onClick={onCancel} variant="ghost">
             Quay lại
           </Button>
-          <Button data-dialog-confirm disabled={isPending} onClick={onConfirm}>
+          <Button
+            data-dialog-confirm
+            disabled={isPending || confirmDisabled}
+            onClick={onConfirm}
+          >
             {isPending ? "Đang gửi…" : confirmLabel}
           </Button>
         </div>

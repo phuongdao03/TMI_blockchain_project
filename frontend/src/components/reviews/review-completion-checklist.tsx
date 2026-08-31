@@ -5,16 +5,15 @@ import { ShieldCheck } from "lucide-react";
 const items = [
   [
     "evidence_reviewed",
-    "Đã kiểm tra bằng chứng thuộc phiên bản hồ sơ đã khóa.",
+    "Đã kiểm tra đầy đủ bằng chứng thuộc phiên bản hồ sơ đã khóa.",
   ],
-  ["criteria_assessed", "Đã hoàn tất nhận xét độc lập cho cả năm tiêu chí 5T."],
+  [
+    "criteria_assessed",
+    "Đã hoàn tất mọi tiêu chí trong rubric được chỉ định cho loại hồ sơ này.",
+  ],
   [
     "findings_recorded",
     "Đã ghi nhận đầy đủ phát hiện hoặc xác nhận không có phát hiện cần xử lý.",
-  ],
-  [
-    "similarity_checked",
-    "Đã kiểm tra các tín hiệu đối chiếu liên quan đến hồ sơ.",
   ],
   [
     "attestation",
@@ -34,7 +33,7 @@ export function ReviewCompletionChecklist({
   value: Record<string, boolean>;
 }) {
   return (
-    <section className="rounded-2xl border border-primary-100 bg-primary-50/50 p-5">
+    <section className="rounded-2xl border border-primary-300/60 bg-[var(--theme-elevated)] p-5">
       <div className="flex gap-3">
         <ShieldCheck
           aria-hidden="true"

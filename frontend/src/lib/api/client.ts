@@ -1,5 +1,7 @@
 import type {
   AccountType,
+  AdminUser,
+  AdminUserListFilters,
   ActivityPage,
   AuditLogItem,
   AuditIntegrityCheck,
@@ -63,6 +65,7 @@ import type {
   NotificationItem,
   OperationsMetrics,
   PaymentOrder,
+  FeeObligation,
   ProfileUpdate,
   PublicAsset,
   PublicAssetDetail,
@@ -615,6 +618,43 @@ export const auditApi = {
   },
 };
 
+export const adminUsersApi = {
+  list(filters: AdminUserListFilters = {}) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.status) parameters.set("status", filters.status);
+    if (filters.provider) parameters.set("provider", filters.provider);
+    if (filters.verified !== undefined)
+      parameters.set("verified", String(filters.verified));
+    if (filters.createdFrom) parameters.set("createdFrom", filters.createdFrom);
+    if (filters.createdTo) parameters.set("createdTo", filters.createdTo);
+    if (filters.sortBy) parameters.set("sortBy", filters.sortBy);
+    if (filters.sortOrder) parameters.set("sortOrder", filters.sortOrder);
+    return requestPaginated<AdminUser[]>(
+      `/admin/users?${parameters.toString()}`,
+    );
+  },
+  detail(userId: string) {
+    return request<AdminUser>(`/admin/users/${encodeURIComponent(userId)}`);
+  },
+  changeStatus(
+    userId: string,
+    input: {
+      status: "ACTIVE" | "SUSPENDED";
+      expectedStatus: AdminUser["status"];
+      reason: string;
+    },
+  ) {
+    return request<AdminUser>(
+      `/admin/users/${encodeURIComponent(userId)}/status`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+};
+
 export const staffAccountsApi = {
   list(
     filters: {
@@ -876,10 +916,32 @@ export const dossierApi = {
 };
 
 export const paymentApi = {
-  create(dossierId: string, idempotencyKey: string) {
-    return request<PaymentOrder>(`/dossiers/${dossierId}/payment-orders`, {
+  getFeeObligation(dossierId: string) {
+    return request<FeeObligation>(`/dossiers/${dossierId}/fee-obligation`);
+  },
+  createCheckout(obligationId: string, idempotencyKey: string) {
+    return request<PaymentOrder>(
+      `/billing/obligations/${obligationId}/checkout-sessions`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+      },
+    );
+  },
+  issue(
+    dossierId: string,
+    input: {
+      amountMinor: number;
+      currency: "VND";
+      description: string;
+      dueAt?: string;
+    },
+    idempotencyKey: string,
+  ) {
+    return request<PaymentOrder>(`/admin/dossiers/${dossierId}/payment-orders`, {
       method: "POST",
       headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify(input),
     });
   },
   get(orderId: string) {
@@ -893,6 +955,17 @@ export const paymentApi = {
   },
   getActive(dossierId: string) {
     return request<PaymentOrder>(`/dossiers/${dossierId}/active-payment-order`);
+  },
+  cancel(orderId: string, reason: string) {
+    return request<PaymentOrder>(`/payment-orders/${orderId}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+  },
+  reconcile(orderId: string) {
+    return request<PaymentOrder>(`/admin/payment-orders/${orderId}/reconcile`, {
+      method: "POST",
+    });
   },
 };
 

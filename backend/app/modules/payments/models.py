@@ -59,6 +59,11 @@ class PaymentOrder(UtcTimestampMixin, Base):
         ForeignKey("dossiers.id", ondelete="RESTRICT"),
         nullable=False,
     )
+    fee_obligation_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("fee_obligations.id", ondelete="RESTRICT"),
+        index=True,
+    )
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
     provider_order_id: Mapped[str | None] = mapped_column(String(128))
     amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)

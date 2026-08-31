@@ -47,6 +47,9 @@ describe("ReviewAssignmentList", () => {
     expect(await screen.findByText("Hồ sơ thương hiệu TMI")).toBeDefined();
     expect(screen.getByText("Chờ xác nhận")).toBeDefined();
     expect(
+      screen.getByText("Bước tiếp theo: Xác nhận xung đột lợi ích"),
+    ).toBeDefined();
+    expect(
       screen
         .getByRole("link", { name: "Mở hồ sơ thẩm định" })
         .getAttribute("href"),

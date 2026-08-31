@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BadgeDollarSign,
   Bell,
   BookOpen,
   FileCheck2,
@@ -27,12 +28,14 @@ import {
   type WorkspacePersona,
 } from "@/lib/auth/role-workspaces";
 import { cn } from "@/lib/utils";
+import { IconFrame } from "@/components/ui/icon-frame";
 import { isPreviewRelease, isPreviewRestrictedPath } from "@/lib/release-mode";
 
 type NavigationItem = {
   href: string;
   label: string;
   icon: typeof Gauge;
+  permission?: string;
 };
 
 type NavigationSection = {
@@ -66,31 +69,88 @@ const userItems: NavigationItem[] = [
 
 const reviewerItems: NavigationItem[] = [
   { href: "/reviews", label: "Hồ sơ đánh giá", icon: FileCheck2 },
-  {
-    href: "/reviews/similarity",
-    label: "Đối chiếu nội dung",
-    icon: Search,
-  },
-  { href: "/council", label: "Phiên xét duyệt", icon: FileCheck2 },
 ];
 
 const adminItems: NavigationItem[] = [
   {
+    href: "/admin/payments",
+    label: "Tài chính",
+    icon: BadgeDollarSign,
+    permission: "payments.read",
+  },
+  {
     href: "/admin/dashboard",
     label: "Tổng quan vận hành",
     icon: Gauge,
+    permission: "dashboard.read",
   },
-  { href: "/admin/staff", label: "Tài khoản nhân sự", icon: UsersRound },
-  { href: "/admin/content", label: "Nội dung công bố", icon: FileText },
-  { href: "/admin/audit", label: "Lịch sử hoạt động", icon: History },
-  { href: "/admin/reports", label: "Báo cáo", icon: FileCheck2 },
+  {
+    href: "/admin/users",
+    label: "Người dùng",
+    icon: UsersRound,
+    permission: "users.read",
+  },
+  {
+    href: "/admin/staff",
+    label: "Tài khoản nhân sự",
+    icon: UsersRound,
+    permission: "staff.read",
+  },
+  {
+    href: "/admin/content",
+    label: "Nội dung công bố",
+    icon: FileText,
+    permission: "public_content.manage",
+  },
+  {
+    href: "/admin/audit",
+    label: "Lịch sử hoạt động",
+    icon: History,
+    permission: "audit.read",
+  },
+  {
+    href: "/admin/reports",
+    label: "Báo cáo",
+    icon: FileCheck2,
+    permission: "reports.read",
+  },
+  {
+    href: "/council",
+    label: "Phiên xét duyệt",
+    icon: FileCheck2,
+    permission: "submissions.approve",
+  },
 ];
 
 const blockchainSignerItems: NavigationItem[] = [
-  { href: "/blockchain", label: "Ký blockchain", icon: Signature },
+  {
+    href: "/blockchain",
+    label: "Ký blockchain",
+    icon: Signature,
+    permission: "blockchain.sign",
+  },
 ];
 
-function sectionsFor(persona: WorkspacePersona): NavigationSection[] {
+function canAccess(
+  item: NavigationItem,
+  roles: readonly string[],
+  permissions: readonly string[],
+): boolean {
+  return (
+    !item.permission ||
+    roles.includes("SUPER_ADMIN") ||
+    permissions.includes(item.permission)
+  );
+}
+
+function sectionsFor(
+  persona: WorkspacePersona,
+  roles: readonly string[],
+  permissions: readonly string[],
+): NavigationSection[] {
+  const operationalItems = adminItems.filter((item) =>
+    canAccess(item, roles, permissions),
+  );
   if (persona === "SUPER_ADMIN") {
     return [
       { label: "Điều hành", items: adminItems },
@@ -101,6 +161,9 @@ function sectionsFor(persona: WorkspacePersona): NavigationSection[] {
 
   if (persona === "MODERATOR") {
     return [
+      ...(operationalItems.length
+        ? [{ label: "Vận hành", items: operationalItems }]
+        : []),
       { label: "Công việc", items: reviewerItems },
       { label: "Tra cứu", items: discoveryItems.slice(1) },
       { label: "Cá nhân", items: personalItems.slice(0, 2) },
@@ -108,6 +171,9 @@ function sectionsFor(persona: WorkspacePersona): NavigationSection[] {
   }
 
   return [
+    ...(operationalItems.length
+      ? [{ label: "Vận hành", items: operationalItems }]
+      : []),
     { label: "Khám phá", items: discoveryItems },
     ...(persona === "USER" ? [{ label: "Hồ sơ", items: userItems }] : []),
     { label: "Cá nhân", items: personalItems },
@@ -119,9 +185,47 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function mobileItemsFor(
+  persona: WorkspacePersona,
+  items: NavigationItem[],
+): NavigationItem[] {
+  const operational = items.filter(
+    (item) =>
+      item.href.startsWith("/admin/") ||
+      item.href === "/council" ||
+      item.href === "/blockchain",
+  );
+  const priorities: Record<WorkspacePersona, string[]> = {
+    VIEWER: ["/dashboard", "/search", "/works", "/map"],
+    USER: ["/dashboard", "/dossiers", "/notifications", "/search"],
+    MODERATOR: ["/reviews", "/notifications", "/search", "/works"],
+    SUPER_ADMIN: [
+      "/admin/dashboard",
+      "/admin/payments",
+      "/admin/users",
+      "/notifications",
+    ],
+  };
+  const byHref = new globalThis.Map(items.map((item) => [item.href, item]));
+  const prioritized = [
+    ...operational,
+    ...priorities[persona].map((href) => byHref.get(href)),
+  ]
+    .filter((item): item is NavigationItem => item !== undefined);
+  const uniquePrioritized = prioritized.filter(
+    (item, index) =>
+      prioritized.findIndex((candidate) => candidate.href === item.href) === index,
+  );
+  const remaining = items.filter(
+    (item) => !uniquePrioritized.some((candidate) => candidate.href === item.href),
+  );
+  return [...uniquePrioritized, ...remaining].slice(0, 4);
+}
+
 export function DashboardNavigation({
   roles,
   className,
+  showPrimaryNavigation = true,
   showQuickNavigation = true,
   onNavigate,
   onOpenMenu,
@@ -129,6 +233,7 @@ export function DashboardNavigation({
   roles?: readonly string[];
   className?: string;
   tone?: "light" | "dark";
+  showPrimaryNavigation?: boolean;
   showQuickNavigation?: boolean;
   onNavigate?: () => void;
   onOpenMenu?: (trigger: HTMLButtonElement) => void;
@@ -136,10 +241,11 @@ export function DashboardNavigation({
   const pathname = usePathname();
   const authUser = useAuthUser();
   const effectiveRoles = roles ?? authUser?.roles ?? [];
+  const effectivePermissions = authUser?.permissions ?? [];
   const persona = resolveWorkspacePersona(effectiveRoles);
   const preview = isPreviewRelease();
   const sections = [
-    ...sectionsFor(persona),
+    ...sectionsFor(persona, effectiveRoles, effectivePermissions),
     { label: "Hỗ trợ", items: supportItems },
     ...(effectiveRoles.includes("SUPER_ADMIN")
       ? [{ label: "Blockchain", items: blockchainSignerItems }]
@@ -147,54 +253,63 @@ export function DashboardNavigation({
   ].map((section) => ({
     ...section,
     items: section.items.filter(
-      (item) => !preview || !isPreviewRestrictedPath(item.href),
+      (item) =>
+        canAccess(item, effectiveRoles, effectivePermissions) &&
+        (!preview || !isPreviewRestrictedPath(item.href)),
     ),
   }));
 
   const allNavigationItems = sections.flatMap((section) => section.items);
-  const mobileItems = allNavigationItems.slice(0, 4);
+  const mobileItems = mobileItemsFor(persona, allNavigationItems);
+  const mobileHrefs = new Set(mobileItems.map((item) => item.href));
   const mobileMenuContainsActiveItem = allNavigationItems
-    .slice(4)
+    .filter((item) => !mobileHrefs.has(item.href))
     .some((item) => isActive(pathname, item.href));
 
   return (
     <>
-      <nav
-        className={cn("dashboard-navigation", className)}
-        aria-label="Điều hướng"
-      >
-        {sections.map((section) =>
-          section.items.length ? (
-            <section
-              className="dashboard-navigation__section"
-              key={section.label}
-            >
-              <p className="dashboard-navigation__label">{section.label}</p>
-              <div className="dashboard-navigation__links">
-                {section.items.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(pathname, item.href);
-                  return (
-                    <Link
-                      aria-current={active ? "page" : undefined}
-                      className={cn(
-                        "dashboard-navigation__link",
-                        active && "dashboard-navigation__link--active",
-                      )}
-                      href={item.href}
-                      key={item.href}
-                      onClick={onNavigate}
-                    >
-                      <Icon aria-hidden="true" size={20} strokeWidth={1.8} />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          ) : null,
-        )}
-      </nav>
+      {showPrimaryNavigation ? (
+        <nav
+          className={cn("dashboard-navigation", className)}
+          aria-label="Điều hướng"
+        >
+          {sections.map((section) =>
+            section.items.length ? (
+              <section
+                className="dashboard-navigation__section"
+                key={section.label}
+              >
+                <p className="dashboard-navigation__label">{section.label}</p>
+                <div className="dashboard-navigation__links">
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(pathname, item.href);
+                    return (
+                      <Link
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "dashboard-navigation__link",
+                          active && "dashboard-navigation__link--active",
+                        )}
+                        href={item.href}
+                        key={item.href}
+                        onClick={onNavigate}
+                      >
+                        <IconFrame
+                          icon={Icon}
+                          size="sm"
+                          tone={active ? "inverse" : "neutral"}
+                        />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null,
+          )}
+        </nav>
+      ) : null}
 
       {showQuickNavigation ? (
         <nav
@@ -215,7 +330,11 @@ export function DashboardNavigation({
                 key={item.href}
                 onClick={onNavigate}
               >
-                <Icon aria-hidden="true" size={21} strokeWidth={1.8} />
+                <IconFrame
+                  icon={Icon}
+                  size="sm"
+                  tone={active ? "brand" : "neutral"}
+                />
                 <span>{item.label}</span>
               </Link>
             );
@@ -232,7 +351,11 @@ export function DashboardNavigation({
             onClick={(event) => onOpenMenu?.(event.currentTarget)}
             type="button"
           >
-            <Menu aria-hidden="true" size={21} strokeWidth={1.8} />
+            <IconFrame
+              icon={Menu}
+              size="sm"
+              tone={mobileMenuContainsActiveItem ? "brand" : "neutral"}
+            />
             <span>Thêm</span>
           </button>
         </nav>

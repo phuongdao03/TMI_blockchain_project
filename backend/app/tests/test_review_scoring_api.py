@@ -120,6 +120,8 @@ class StubScoringService:
             professionalism_score=draft.professionalism_score,
             respect_score=draft.respect_score,
             total_score=80,
+            rubric_version=None,
+            specialist_score=None,
             recommendation=draft.recommendation,
             criterion_comments=draft.criterion_comments,
             criterion_evidence=draft.criterion_evidence,
@@ -127,6 +129,8 @@ class StubScoringService:
             checklist_answers=draft.checklist_answers,
             applicant_feedback=draft.applicant_feedback,
             private_note=draft.private_note,
+            gate_answers=draft.gate_answers,
+            specialist_answers=draft.specialist_answers,
             submitted_at=None,
         )
         return self.review

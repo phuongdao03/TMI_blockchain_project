@@ -22,6 +22,25 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+const nextActions: Record<DossierStatus, string> = {
+  DRAFT: "Hoàn thiện thông tin và tài liệu",
+  SUBMITTED: "Đã tiếp nhận · Chờ kiểm tra",
+  PRECHECK: "Đang kiểm tra tính đầy đủ",
+  NEEDS_SUPPLEMENT: "Cần bổ sung hồ sơ",
+  UNDER_REVIEW: "Đang thẩm định chuyên môn",
+  COUNCIL_REVIEW: "Đang chờ quyết định",
+  APPROVED: "Đã duyệt · Đang lập khoản phí",
+  REJECTED: "Xem kết quả thẩm định",
+  PAYMENT_PENDING: "Cần thanh toán để tiếp tục",
+  PAID: "Đã thanh toán · Chờ ký số",
+  ANCHOR_PENDING: "Đang ký lên blockchain",
+  ANCHORED: "Đang chuẩn bị chứng thư",
+  CERTIFICATE_ISSUED: "Chứng thư đã sẵn sàng",
+  PUBLISHED: "Đã công bố",
+  REVOKED: "Chứng thư đã thu hồi",
+  CANCELLED: "Hồ sơ đã hủy",
+};
+
 export function DossierList({
   page,
   pageSize,
@@ -84,11 +103,11 @@ export function DossierList({
   const totalPages = Math.max(1, Math.ceil(data.meta.total / pageSize));
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+      <div className="dossier-list-surface overflow-hidden rounded-2xl border border-neutral-200 bg-white">
         <div className="divide-y divide-neutral-100">
           {data.data.map((dossier) => (
             <article
-              className="group grid gap-5 p-5 transition-colors hover:bg-neutral-50/80 md:grid-cols-[minmax(0,1fr)_auto] md:items-center lg:p-6"
+              className="dossier-list-item group grid gap-5 p-5 hover:bg-neutral-50/80 md:grid-cols-[minmax(0,1fr)_auto] md:items-center lg:p-6"
               key={dossier.id}
             >
               <div className="min-w-0">
@@ -110,12 +129,19 @@ export function DossierList({
                     ? ` · Phiên bản ${dossier.currentVersionNo}`
                     : ""}
                 </p>
+                <p className="mt-2 text-sm font-semibold text-primary-800">
+                  Việc tiếp theo: {nextActions[dossier.status]}
+                </p>
               </div>
               <Link
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 text-sm font-bold text-neutral-800 transition group-hover:border-primary-200 group-hover:text-primary-700"
+                className="dossier-list-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 text-sm font-bold text-neutral-800 group-hover:border-primary-200 group-hover:text-primary-700"
                 href={`/dossiers/${dossier.id}`}
               >
-                {dossier.canEdit ? "Tiếp tục hoàn thiện" : "Xem hồ sơ"}
+                {dossier.canEdit
+                  ? "Tiếp tục hoàn thiện"
+                  : dossier.status === "PAYMENT_PENDING"
+                    ? "Xem khoản phí"
+                    : "Xem hồ sơ"}
                 <ArrowRight aria-hidden="true" className="size-4" />
               </Link>
             </article>

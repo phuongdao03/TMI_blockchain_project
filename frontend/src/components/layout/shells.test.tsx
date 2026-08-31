@@ -80,6 +80,12 @@ describe("layout shells", () => {
     expect(registerLink.classList.contains("public-header__auth-link")).toBe(
       true,
     );
+    expect(loginLink.classList.contains("public-header__login")).toBe(true);
+    expect(registerLink.classList.contains("public-header__register")).toBe(
+      true,
+    );
+    expect(loginLink.querySelector("svg")).not.toBeNull();
+    expect(registerLink.querySelector("svg")).not.toBeNull();
     expect(registerLink.classList.contains("button")).toBe(false);
   });
 
@@ -309,6 +315,11 @@ describe("layout shells", () => {
       name: "Điều hướng nhanh",
     });
     expect(within(quickNavigation).getAllByRole("link")).toHaveLength(4);
+    expect(
+      within(quickNavigation)
+        .getAllByRole("link")
+        .some((link) => link.getAttribute("href") === "/dossiers"),
+    ).toBe(true);
 
     const moreButton = within(quickNavigation).getByRole("button", {
       name: "Mở tất cả chức năng",
@@ -371,6 +382,78 @@ describe("layout shells", () => {
     expect(screen.queryByText("reviewer@tmigroup.vn")).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng nhập" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng ký" })).toBeNull();
+  });
+
+  it("does not advertise Super Admin council work to a moderator", () => {
+    render(
+      <AuthUserProvider
+        user={{
+          id: "reviewer-navigation",
+          email: "reviewer@tmigroup.vn",
+          roles: ["MODERATOR"],
+          accountType: null,
+        }}
+      >
+        <DashboardShell>
+          <h1>Hàng đợi thẩm định</h1>
+        </DashboardShell>
+      </AuthUserProvider>,
+    );
+
+    expect(screen.queryByRole("link", { name: "Phiên xét duyệt" })).toBeNull();
+    expect(
+      screen.getAllByRole("link", { name: "Hồ sơ đánh giá" }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole("link", { name: "Đối chiếu nội dung" }),
+    ).toBeNull();
+  });
+
+  it("shows only permission-backed operations to scoped staff", () => {
+    render(
+      <AuthUserProvider
+        user={{
+          id: "finance-navigation",
+          email: "finance@tmigroup.vn",
+          roles: ["USER"],
+          permissions: ["payments.read", "payments.reconcile"],
+          accountType: null,
+        }}
+      >
+        <DashboardShell>
+          <h1>Tài chính</h1>
+        </DashboardShell>
+      </AuthUserProvider>,
+    );
+
+    expect(screen.getAllByRole("link", { name: "Tài chính" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: "Người dùng" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Tài khoản nhân sự" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Ký blockchain" })).toBeNull();
+  });
+
+  it("gives a reviewer a visible return path from the public library", () => {
+    navigationState.pathname = "/works";
+    render(
+      <PublicShell
+        user={{
+          id: "reviewer-library",
+          email: "reviewer@tmigroup.vn",
+          roles: ["MODERATOR"],
+          accountType: null,
+        }}
+      >
+        <h1>Thư viện đề cử</h1>
+      </PublicShell>,
+    );
+
+    const returnLink = screen.getByRole("link", {
+      name: "Quay lại khu vực thẩm định",
+    });
+    expect(returnLink.getAttribute("href")).toBe("/reviews");
+    expect(returnLink.classList.contains("public-workspace-return__link")).toBe(
+      true,
+    );
   });
 
   it("keeps a regular user in their personal dashboard instead of advertising internal workspaces", () => {

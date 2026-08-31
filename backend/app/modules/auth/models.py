@@ -9,6 +9,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     Uuid,
@@ -61,6 +62,11 @@ EMAIL_TYPE = CITEXT().with_variant(String(collation="NOCASE"), "sqlite")
 
 class User(UtcTimestampMixin, Base):
     __tablename__ = "users"
+    __table_args__ = (
+        Index("ix_users_created_at", "created_at"),
+        Index("ix_users_status_created_at", "status", "created_at"),
+        Index("ix_users_last_login_at", "last_login_at"),
+    )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     email: Mapped[str] = mapped_column(EMAIL_TYPE, nullable=False, unique=True)
@@ -110,6 +116,11 @@ class AuthIdentity(UtcTimestampMixin, Base):
             "user_id",
             "provider",
             unique=True,
+        ),
+        Index(
+            "ix_auth_identities_provider_user_id",
+            "provider",
+            "user_id",
         ),
     )
 
@@ -250,6 +261,78 @@ class RolePermission(UtcTimestampMixin, Base):
         ForeignKey("permissions.id", ondelete="CASCADE"),
         primary_key=True,
     )
+
+
+class UserPermission(UtcTimestampMixin, Base):
+    __tablename__ = "user_permissions"
+    __table_args__ = (
+        CheckConstraint(
+            "length(trim(reason)) >= 10",
+            name="ck_user_permissions_reason_length",
+        ),
+        CheckConstraint(
+            "version > 0",
+            name="ck_user_permissions_version_positive",
+        ),
+        Index("ix_user_permissions_permission_id", "permission_id"),
+        Index("ix_user_permissions_user_expires", "user_id", "expires_at"),
+    )
+
+    user_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    permission_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("permissions.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    granted_by_user_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default="1",
+    )
+
+
+class UserPermissionRevision(UtcTimestampMixin, Base):
+    __tablename__ = "user_permission_revisions"
+    __table_args__ = (
+        CheckConstraint(
+            "length(trim(reason)) >= 10",
+            name="ck_user_permission_revisions_reason_length",
+        ),
+        CheckConstraint(
+            "version > 0",
+            name="ck_user_permission_revisions_version_positive",
+        ),
+    )
+
+    user_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default="1",
+    )
+    updated_by_user_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
 
 
 class UserRole(UtcTimestampMixin, Base):

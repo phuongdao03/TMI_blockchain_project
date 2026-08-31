@@ -48,7 +48,38 @@ export interface AuthUser {
   id: string;
   email: string;
   roles: string[];
+  permissions?: string[];
   accountType: AccountType | null;
+}
+
+export type AdminUserStatus = "PENDING" | "ACTIVE" | "SUSPENDED" | "DELETED";
+export type AdminUserProvider = "GOOGLE" | "FIREBASE";
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  fullName: string | null;
+  status: AdminUserStatus;
+  isEmailVerified: boolean;
+  providers: AdminUserProvider[];
+  roles: string[];
+  createdAt: string;
+  lastLoginAt: string | null;
+  disabledAt: string | null;
+  deletedAt: string | null;
+}
+
+export interface AdminUserListFilters {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: AdminUserStatus;
+  provider?: AdminUserProvider;
+  verified?: boolean;
+  createdFrom?: string;
+  createdTo?: string;
+  sortBy?: "createdAt" | "email" | "lastLoginAt" | "status";
+  sortOrder?: "asc" | "desc";
 }
 
 export type StaffAccountRole = "MODERATOR";
@@ -702,6 +733,30 @@ export interface PaymentOrder {
   qrPayload: string | null;
   createdAt: string;
   updatedAt: string;
+  description?: string | null;
+  dueAt?: string | null;
+  issuedByUserId?: string | null;
+  issuedAt?: string | null;
+}
+
+export type FeeObligationStatus =
+  | "OPEN"
+  | "OVERDUE"
+  | "PAID"
+  | "WAIVED"
+  | "CANCELLED";
+
+export interface FeeObligation {
+  id: string;
+  dossierId: string;
+  serviceCode: string;
+  description: string;
+  amountMinor: number;
+  currency: string;
+  taxMode: string;
+  status: FeeObligationStatus;
+  dueAt: string;
+  paidAt: string | null;
 }
 
 export interface DossierListFilters {
@@ -777,6 +832,26 @@ export interface ReviewEvidenceSnapshot {
   };
 }
 
+export interface ReviewRubric {
+  version: string;
+  title: string;
+  gates: Array<{ key: string; label: string; description?: string; required?: boolean }>;
+  criteria: Array<{ key: string; label: string; description: string; weight: number }>;
+  thresholds: { approveMin: number; rejectBelow: number };
+}
+
+export interface ReviewGateAnswer {
+  outcome: "PASS" | "FAIL" | "NOT_APPLICABLE";
+  rationale: string;
+  evidenceMediaIds: string[];
+}
+
+export interface SpecialistCriterionAnswer {
+  score: number;
+  rationale: string;
+  evidenceMediaIds: string[];
+}
+
 export interface ReviewSnapshot {
   schemaVersion: number;
   dossier: {
@@ -784,6 +859,7 @@ export interface ReviewSnapshot {
     code: string;
     title: string;
     summary?: string | null;
+    dossierType?: { reviewRubric?: ReviewRubric };
   };
   evidences: ReviewEvidenceSnapshot[];
 }
@@ -801,12 +877,16 @@ export interface ReviewDraft {
   applicantFeedback: string | null;
   recommendation: ReviewRecommendation | null;
   privateNote: string | null;
+  gateAnswers: Record<string, ReviewGateAnswer>;
+  specialistAnswers: Record<string, SpecialistCriterionAnswer>;
 }
 
 export interface ReviewData extends ReviewDraft {
   id: string;
   assignmentId: string;
   totalScore: number | null;
+  rubricVersion: string | null;
+  specialistScore: number | null;
   submittedAt: string | null;
 }
 

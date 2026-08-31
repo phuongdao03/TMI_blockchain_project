@@ -24,7 +24,21 @@ const superAdminUser = {
   id: "a57912cc-714c-4ab5-9fd9-1c5b38cd902b",
   email: "superadmin@tmigroup.vn",
   roles: ["SUPER_ADMIN"],
+  permissions: ["users.read", "users.suspend"],
   accountType: null,
+};
+const adminUser = {
+  id: "b57912cc-714c-4ab5-9fd9-1c5b38cd902b",
+  email: "an@example.com",
+  fullName: "Nguyễn Văn An",
+  status: "ACTIVE",
+  isEmailVerified: true,
+  providers: ["GOOGLE"],
+  roles: ["USER"],
+  createdAt: "2026-08-20T09:00:00Z",
+  lastLoginAt: "2026-08-29T09:00:00Z",
+  disabledAt: null,
+  deletedAt: null,
 };
 const signingTransactionId = "3eaec2d2-c99a-42c9-8f1e-71462ba01ea0";
 let blockchainWallet = null;
@@ -684,6 +698,24 @@ const server = createServer(async (request, response) => {
     return;
   }
   if (
+    request.method === "GET" &&
+    path === "/api/v1/admin/users" &&
+    superAdminAuthenticated
+  ) {
+    send(response, 200, paginatedEnvelope([adminUser]));
+    return;
+  }
+  if (
+    request.method === "PATCH" &&
+    path === `/api/v1/admin/users/${adminUser.id}/status` &&
+    superAdminAuthenticated &&
+    csrfProtected
+  ) {
+    const payload = await readJson(request);
+    send(response, 200, envelope({ ...adminUser, status: payload.status }));
+    return;
+  }
+  if (
     request.method === "POST" &&
     path === "/api/v1/auth/staff-invitations/accept"
   ) {
@@ -1208,6 +1240,29 @@ const server = createServer(async (request, response) => {
     send(response, 200, envelope({ status: "reset" }));
     return;
   }
+  if (request.method === "POST" && path === "/api/e2e/reset-payment-pending") {
+    paymentScenario = "pending";
+    paymentStatusReads = 0;
+    dossier = { ...dossier, status: "PAYMENT_PENDING" };
+    paymentOrder = {
+      id: paymentOrderId,
+      orderCode: "PAY-2026-E2E00004",
+      dossierId,
+      provider: "payos",
+      providerOrderId: "payos-provider-pending",
+      amountMinor: 1000000,
+      currency: "VND",
+      status: "PENDING",
+      expiresAt: "2026-09-01T08:15:00Z",
+      paidAt: null,
+      checkoutUrl: "https://pay.payos.vn/web/payos-provider-pending",
+      qrPayload: "TMI|PAY-2026-E2E00004",
+      createdAt: "2026-08-30T08:00:00Z",
+      updatedAt: "2026-08-30T08:00:00Z",
+    };
+    send(response, 200, envelope({ status: "reset" }));
+    return;
+  }
   if (request.method === "POST" && path === "/api/e2e/reset-needs-supplement") {
     dossier = {
       id: dossierId,
@@ -1348,6 +1403,29 @@ const server = createServer(async (request, response) => {
     return;
   }
   if (
+    request.method === "POST" &&
+    path === `/api/v1/payment-orders/${paymentOrderId}/cancel` &&
+    csrfProtected &&
+    paymentOrder
+  ) {
+    const payload = await readJson(request);
+    if (typeof payload.reason !== "string" || payload.reason.trim().length < 5) {
+      const failure = error(422, "VALIDATION_ERROR", "Reason is required.");
+      send(response, failure.status, failure.body);
+      return;
+    }
+    paymentOrder = {
+      ...paymentOrder,
+      status: "CANCELLED",
+      checkoutUrl: null,
+      qrPayload: null,
+      updatedAt: "2026-08-30T08:05:00Z",
+    };
+    dossier = { ...dossier, status: "APPROVED" };
+    send(response, 200, envelope(paymentOrder));
+    return;
+  }
+  if (
     request.method === "GET" &&
     path ===
       `/api/v1/blockchain/transactions/${signingTransactionId}/signing-context` &&
@@ -1446,10 +1524,12 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "POST" &&
-    path === `/api/v1/dossiers/${dossierId}/payment-orders` &&
+    path === `/api/v1/admin/dossiers/${dossierId}/payment-orders` &&
     csrfProtected &&
+    superAdminAuthenticated &&
     dossier?.status === "APPROVED"
   ) {
+    const payload = await readJson(request);
     dossier = { ...dossier, status: "PAYMENT_PENDING" };
     paymentOrder = {
       id: paymentOrderId,
@@ -1457,7 +1537,7 @@ const server = createServer(async (request, response) => {
       dossierId,
       provider: "mock",
       providerOrderId: "mock-provider-order",
-      amountMinor: 1000000,
+      amountMinor: payload.amountMinor,
       currency: "VND",
       status: "PENDING",
       expiresAt: "2026-08-01T08:15:00Z",
@@ -1466,6 +1546,10 @@ const server = createServer(async (request, response) => {
       qrPayload: "TMI|PAY-2026-E2E00001",
       createdAt: "2026-08-01T08:00:00Z",
       updatedAt: "2026-08-01T08:00:00Z",
+      description: payload.description,
+      dueAt: payload.dueAt ?? null,
+      issuedByUserId: superAdminUser.id,
+      issuedAt: "2026-08-01T08:00:00Z",
     };
     send(response, 201, envelope(paymentOrder));
     return;
