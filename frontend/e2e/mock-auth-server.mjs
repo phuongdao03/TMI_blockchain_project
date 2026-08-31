@@ -1241,8 +1241,15 @@ const server = createServer(async (request, response) => {
     send(response, 200, envelope({ status: "reset" }));
     return;
   }
-  if (request.method === "POST" && path === "/api/e2e/reset-payment-pending") {
-    paymentScenario = "pending";
+  if (
+    request.method === "POST" &&
+    [
+      "/api/e2e/reset-payment-pending",
+      "/api/e2e/reset-payment-confirmed",
+    ].includes(path)
+  ) {
+    const confirmedScenario = path.endsWith("-confirmed");
+    paymentScenario = confirmedScenario ? "paid" : "pending";
     paymentStatusReads = 0;
     dossier = { ...dossier, status: "PAYMENT_PENDING" };
     paymentOrder = {
@@ -1250,14 +1257,20 @@ const server = createServer(async (request, response) => {
       orderCode: "PAY-2026-E2E00004",
       dossierId,
       provider: "payos",
-      providerOrderId: "payos-provider-pending",
+      providerOrderId: confirmedScenario
+        ? "payos-provider-confirmed"
+        : "payos-provider-pending",
       amountMinor: 1000000,
       currency: "VND",
       status: "PENDING",
       expiresAt: "2026-09-01T08:15:00Z",
       paidAt: null,
-      checkoutUrl: "https://pay.payos.vn/web/payos-provider-pending",
-      qrPayload: "TMI|PAY-2026-E2E00004",
+      checkoutUrl: confirmedScenario
+        ? "https://pay.payos.vn/web/payos-provider-confirmed"
+        : "https://pay.payos.vn/web/payos-provider-pending",
+      qrPayload: confirmedScenario
+        ? "TMI|PAY-2026-E2E00005"
+        : "TMI|PAY-2026-E2E00004",
       createdAt: "2026-08-30T08:00:00Z",
       updatedAt: "2026-08-30T08:00:00Z",
     };
@@ -2072,7 +2085,6 @@ const server = createServer(async (request, response) => {
       "evidence_reviewed",
       "criteria_assessed",
       "findings_recorded",
-      "similarity_checked",
       "attestation",
     ].every((key) => review.checklistAnswers?.[key] === true)
   ) {

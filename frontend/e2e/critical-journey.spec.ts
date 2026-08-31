@@ -194,7 +194,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
   });
 
   await test.step("payment is confirmed by trusted status", async () => {
-    await request.post("http://127.0.0.1:4010/api/e2e/reset-payment-pending");
+    await request.post("http://127.0.0.1:4010/api/e2e/reset-payment-confirmed");
     await context.addCookies([
       {
         name: "tmi_access",
