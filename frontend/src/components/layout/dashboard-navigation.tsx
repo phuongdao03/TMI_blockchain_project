@@ -210,14 +210,15 @@ function mobileItemsFor(
   const prioritized = [
     ...operational,
     ...priorities[persona].map((href) => byHref.get(href)),
-  ]
-    .filter((item): item is NavigationItem => item !== undefined);
+  ].filter((item): item is NavigationItem => item !== undefined);
   const uniquePrioritized = prioritized.filter(
     (item, index) =>
-      prioritized.findIndex((candidate) => candidate.href === item.href) === index,
+      prioritized.findIndex((candidate) => candidate.href === item.href) ===
+      index,
   );
   const remaining = items.filter(
-    (item) => !uniquePrioritized.some((candidate) => candidate.href === item.href),
+    (item) =>
+      !uniquePrioritized.some((candidate) => candidate.href === item.href),
   );
   return [...uniquePrioritized, ...remaining].slice(0, 4);
 }

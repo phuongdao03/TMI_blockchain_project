@@ -40,9 +40,7 @@ test("applicant safely cancels a pending payOS checkout on mobile", async ({
   await page.getByRole("button", { name: "Xác nhận hủy" }).click();
 
   await expect(page.getByText("Đã hủy", { exact: true })).toBeVisible();
-  await expect(
-    page.getByText("Bạn đã hủy lần thanh toán này"),
-  ).toBeVisible();
+  await expect(page.getByText("Bạn đã hủy lần thanh toán này")).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

@@ -426,9 +426,13 @@ describe("layout shells", () => {
       </AuthUserProvider>,
     );
 
-    expect(screen.getAllByRole("link", { name: "Tài chính" }).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("link", { name: "Tài chính" }).length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "Người dùng" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Tài khoản nhân sự" })).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: "Tài khoản nhân sự" }),
+    ).toBeNull();
     expect(screen.queryByRole("link", { name: "Ký blockchain" })).toBeNull();
   });
 

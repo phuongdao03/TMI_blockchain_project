@@ -1,7 +1,12 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { BadgeDollarSign, CheckCircle2, ExternalLink, ShieldCheck } from "lucide-react";
+import {
+  BadgeDollarSign,
+  CheckCircle2,
+  ExternalLink,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
@@ -15,7 +20,9 @@ function requestKey() {
 export function PaymentRequestWorkspace() {
   const [dossierId, setDossierId] = useState("");
   const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("Phí xác lập và phát hành chứng thư");
+  const [description, setDescription] = useState(
+    "Phí xác lập và phát hành chứng thư",
+  );
   const [dueAt, setDueAt] = useState("");
   const idempotencyKey = useRef(requestKey());
   const issue = useMutation({
@@ -48,8 +55,8 @@ export function PaymentRequestWorkspace() {
           Phát hành yêu cầu thanh toán
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-muted)] sm:text-base">
-          Chỉ lập yêu cầu sau khi hồ sơ đã được phê duyệt. Số tiền tại đây là
-          số tiền PayOS và webhook sẽ đối chiếu chính xác.
+          Chỉ lập yêu cầu sau khi hồ sơ đã được phê duyệt. Số tiền tại đây là số
+          tiền PayOS và webhook sẽ đối chiếu chính xác.
         </p>
       </header>
 
@@ -79,7 +86,9 @@ export function PaymentRequestWorkspace() {
               inputMode="numeric"
               max={1_000_000_000}
               min={1_000}
-              onChange={(event) => setAmount(event.target.value.replace(/\D/g, ""))}
+              onChange={(event) =>
+                setAmount(event.target.value.replace(/\D/g, ""))
+              }
               placeholder="Ví dụ: 1500000"
               required
               type="text"
@@ -113,11 +122,17 @@ export function PaymentRequestWorkspace() {
           </label>
           <Button disabled={!valid || issue.isPending} type="submit">
             <BadgeDollarSign aria-hidden="true" className="size-4" />
-            {issue.isPending ? "Đang tạo liên kết PayOS…" : "Gửi yêu cầu thanh toán"}
+            {issue.isPending
+              ? "Đang tạo liên kết PayOS…"
+              : "Gửi yêu cầu thanh toán"}
           </Button>
           {issue.error ? (
-            <p className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800" role="alert">
-              Không thể phát hành yêu cầu. Kiểm tra trạng thái hồ sơ, số tiền và quyền payments.issue.
+            <p
+              className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800"
+              role="alert"
+            >
+              Không thể phát hành yêu cầu. Kiểm tra trạng thái hồ sơ, số tiền và
+              quyền payments.issue.
             </p>
           ) : null}
         </form>
@@ -134,17 +149,28 @@ export function PaymentRequestWorkspace() {
       </section>
 
       {issue.data ? (
-        <section className="flex flex-col gap-4 rounded-2xl border border-emerald-300 bg-emerald-50 p-5 text-emerald-950 sm:flex-row sm:items-center sm:justify-between" role="status">
+        <section
+          className="flex flex-col gap-4 rounded-2xl border border-emerald-300 bg-emerald-50 p-5 text-emerald-950 sm:flex-row sm:items-center sm:justify-between"
+          role="status"
+        >
           <div className="flex items-start gap-3">
-            <CheckCircle2 aria-hidden="true" className="mt-0.5 size-6 shrink-0" />
+            <CheckCircle2
+              aria-hidden="true"
+              className="mt-0.5 size-6 shrink-0"
+            />
             <div>
               <h2 className="font-bold">Đã gửi yêu cầu cho người nộp</h2>
               <p className="mt-1 text-sm">
-                Mã PayOS {issue.data.orderCode} · {new Intl.NumberFormat("vi-VN").format(issue.data.amountMinor)} VND
+                Mã PayOS {issue.data.orderCode} ·{" "}
+                {new Intl.NumberFormat("vi-VN").format(issue.data.amountMinor)}{" "}
+                VND
               </p>
             </div>
           </div>
-          <Link className="inline-flex min-h-11 items-center gap-2 font-bold underline" href={`/payments/${issue.data.id}`}>
+          <Link
+            className="inline-flex min-h-11 items-center gap-2 font-bold underline"
+            href={`/payments/${issue.data.id}`}
+          >
             Xem yêu cầu <ExternalLink aria-hidden="true" className="size-4" />
           </Link>
         </section>

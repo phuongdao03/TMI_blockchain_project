@@ -29,7 +29,9 @@ describe("PaymentRequestWorkspace", () => {
     fireEvent.change(screen.getByLabelText("Số tiền cần thanh toán (VND)"), {
       target: { value: "1500000" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Gửi yêu cầu thanh toán" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Gửi yêu cầu thanh toán" }),
+    );
 
     await waitFor(() => expect(issueMock).toHaveBeenCalledOnce());
     expect(issueMock.mock.calls[0]?.[1]).toMatchObject({
@@ -37,6 +39,8 @@ describe("PaymentRequestWorkspace", () => {
       currency: "VND",
       description: "Phí xác lập và phát hành chứng thư",
     });
-    expect(await screen.findByText("Đã gửi yêu cầu cho người nộp")).toBeTruthy();
+    expect(
+      await screen.findByText("Đã gửi yêu cầu cho người nộp"),
+    ).toBeTruthy();
   });
 });

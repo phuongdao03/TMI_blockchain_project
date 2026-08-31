@@ -16,10 +16,20 @@ const rubric: ReviewRubric = {
 
 describe("specialistScore", () => {
   it("calculates the weighted 0–100 result", () => {
-    expect(specialistScore(rubric, {
-      originality: { score: 4, rationale: "Đủ căn cứ kiểm chứng nguồn gốc.", evidenceMediaIds: ["a"] },
-      value: { score: 3, rationale: "Có giá trị được đối chứng rõ ràng.", evidenceMediaIds: ["b"] },
-    })).toBe(72);
+    expect(
+      specialistScore(rubric, {
+        originality: {
+          score: 4,
+          rationale: "Đủ căn cứ kiểm chứng nguồn gốc.",
+          evidenceMediaIds: ["a"],
+        },
+        value: {
+          score: 3,
+          rationale: "Có giá trị được đối chứng rõ ràng.",
+          evidenceMediaIds: ["b"],
+        },
+      }),
+    ).toBe(72);
   });
 
   it("does not present a partial score as complete", () => {

@@ -1,7 +1,12 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { BadgeDollarSign, CheckCircle2, Clock3, LoaderCircle } from "lucide-react";
+import {
+  BadgeDollarSign,
+  CheckCircle2,
+  Clock3,
+  LoaderCircle,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -58,8 +63,14 @@ export function DossierPaymentAction({
           {activeOrder.data ? (
             <>
               <p className="mt-1 text-sm leading-6">
-                Số tiền: {new Intl.NumberFormat("vi-VN").format(activeOrder.data.amountMinor)} VND
-                {activeOrder.data.description ? ` · ${activeOrder.data.description}` : ""}
+                Số tiền:{" "}
+                {new Intl.NumberFormat("vi-VN").format(
+                  activeOrder.data.amountMinor,
+                )}{" "}
+                VND
+                {activeOrder.data.description
+                  ? ` · ${activeOrder.data.description}`
+                  : ""}
               </p>
               <Link
                 className="dossier-payment-notice__link mt-3 inline-flex min-h-11 items-center text-sm font-bold underline decoration-2 underline-offset-4"
@@ -72,17 +83,21 @@ export function DossierPaymentAction({
             <>
               <p className="mt-1 text-sm leading-6">
                 <strong>
-                  {new Intl.NumberFormat("vi-VN").format(obligation.data.amountMinor)}{" "}
+                  {new Intl.NumberFormat("vi-VN").format(
+                    obligation.data.amountMinor,
+                  )}{" "}
                   {obligation.data.currency}
                 </strong>{" "}
                 · {obligation.data.description}
               </p>
               <p className="mt-1 text-xs leading-5 opacity-80">
-                Hạn thanh toán {new Intl.DateTimeFormat("vi-VN", {
+                Hạn thanh toán{" "}
+                {new Intl.DateTimeFormat("vi-VN", {
                   dateStyle: "medium",
                   timeStyle: "short",
-                }).format(new Date(obligation.data.dueAt))}. Phiên QR PayOS được tạo khi bạn
-                bắt đầu thanh toán và có thể cấp lại an toàn nếu hết hạn.
+                }).format(new Date(obligation.data.dueAt))}
+                . Phiên QR PayOS được tạo khi bạn bắt đầu thanh toán và có thể
+                cấp lại an toàn nếu hết hạn.
               </p>
               <button
                 className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-700 px-5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
@@ -91,27 +106,37 @@ export function DossierPaymentAction({
                 type="button"
               >
                 {checkout.isPending ? (
-                  <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-4 animate-spin"
+                  />
                 ) : (
                   <BadgeDollarSign aria-hidden="true" className="size-4" />
                 )}
                 {checkout.isPending ? "Đang mở PayOS…" : "Thanh toán qua PayOS"}
               </button>
               {checkout.isError ? (
-                <p className="mt-2 text-sm font-semibold text-red-700" role="alert">
-                  Chưa thể tạo phiên thanh toán. Vui lòng thử lại; hệ thống sẽ không tạo trùng
-                  giao dịch.
+                <p
+                  className="mt-2 text-sm font-semibold text-red-700"
+                  role="alert"
+                >
+                  Chưa thể tạo phiên thanh toán. Vui lòng thử lại; hệ thống sẽ
+                  không tạo trùng giao dịch.
                 </p>
               ) : null}
             </>
           ) : activeOrder.isPending || obligation.isPending ? (
             <p className="mt-2 flex items-center gap-2 text-sm font-semibold">
-              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+              <LoaderCircle
+                aria-hidden="true"
+                className="size-4 animate-spin"
+              />
               Đang tải khoản phí…
             </p>
           ) : (
             <p className="mt-2 text-sm font-semibold" role="alert">
-              Khoản phí chưa sẵn sàng. Vui lòng tải lại hoặc liên hệ hỗ trợ và cung cấp mã hồ sơ.
+              Khoản phí chưa sẵn sàng. Vui lòng tải lại hoặc liên hệ hỗ trợ và
+              cung cấp mã hồ sơ.
             </p>
           )}
         </div>

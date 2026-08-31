@@ -938,11 +938,14 @@ export const paymentApi = {
     },
     idempotencyKey: string,
   ) {
-    return request<PaymentOrder>(`/admin/dossiers/${dossierId}/payment-orders`, {
-      method: "POST",
-      headers: { "Idempotency-Key": idempotencyKey },
-      body: JSON.stringify(input),
-    });
+    return request<PaymentOrder>(
+      `/admin/dossiers/${dossierId}/payment-orders`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify(input),
+      },
+    );
   },
   get(orderId: string) {
     return request<PaymentOrder>(`/payment-orders/${orderId}`);

@@ -1409,7 +1409,10 @@ const server = createServer(async (request, response) => {
     paymentOrder
   ) {
     const payload = await readJson(request);
-    if (typeof payload.reason !== "string" || payload.reason.trim().length < 5) {
+    if (
+      typeof payload.reason !== "string" ||
+      payload.reason.trim().length < 5
+    ) {
       const failure = error(422, "VALIDATION_ERROR", "Reason is required.");
       send(response, failure.status, failure.body);
       return;

@@ -138,7 +138,9 @@ export function OperationsDashboard({
             key={label}
           >
             <div className="flex items-start justify-between gap-2 sm:gap-4">
-              <p className="text-3xl font-bold tracking-[-0.04em] sm:text-4xl">{value}</p>
+              <p className="text-3xl font-bold tracking-[-0.04em] sm:text-4xl">
+                {value}
+              </p>
               <Icon className="size-5 text-primary-700" />
             </div>
             <p className="mt-3 text-xs font-semibold leading-5 text-neutral-600 sm:mt-4 sm:text-sm">

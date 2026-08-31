@@ -166,7 +166,8 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                   <p className="mt-1 text-sm leading-6 text-emerald-800">
                     Thanh toán được ghi nhận
                     {payment.paidAt ? ` lúc ${formatTime(payment.paidAt)}` : ""}
-                    . TMI đang chuẩn bị và phát hành chứng thư cho hồ sơ của bạn.
+                    . TMI đang chuẩn bị và phát hành chứng thư cho hồ sơ của
+                    bạn.
                   </p>
                 </div>
               </div>
@@ -290,7 +291,8 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
         </label>
         {cancel.isError ? (
           <p className="mt-3 text-sm font-semibold text-red-700" role="alert">
-            Chưa thể hủy lệnh. Có thể khoản thanh toán đã được xử lý; vui lòng tải lại trạng thái.
+            Chưa thể hủy lệnh. Có thể khoản thanh toán đã được xử lý; vui lòng
+            tải lại trạng thái.
           </p>
         ) : null}
       </ConfirmationDialog>

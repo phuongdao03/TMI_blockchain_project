@@ -23,23 +23,23 @@ describe("EvidenceViewer", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <EvidenceViewer
-        evidences={[
-          {
-            id: "evidence-1",
-            mediaAssetId: "media-1",
-            evidenceType: "SOURCE_DOCUMENT",
-            title: "Ảnh bản gốc",
-            description: "Ảnh đối chiếu nguồn gốc.",
-            issuedAt: null,
-            displayOrder: 1,
-            isPublic: false,
-            media: {
-              mimeType: "image/png",
-              bytes: 2_048,
-              sha256: "a".repeat(64),
+          evidences={[
+            {
+              id: "evidence-1",
+              mediaAssetId: "media-1",
+              evidenceType: "SOURCE_DOCUMENT",
+              title: "Ảnh bản gốc",
+              description: "Ảnh đối chiếu nguồn gốc.",
+              issuedAt: null,
+              displayOrder: 1,
+              isPublic: false,
+              media: {
+                mimeType: "image/png",
+                bytes: 2_048,
+                sha256: "a".repeat(64),
+              },
             },
-          },
-        ]}
+          ]}
         />
       </QueryClientProvider>,
     );

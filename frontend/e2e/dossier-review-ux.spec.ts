@@ -29,12 +29,19 @@ test("applicant sees a server-driven preparation journey", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Tài liệu cần chuẩn bị" }),
   ).toBeVisible();
-  await expect(page.getByText(/tệp được tải lên sau khi bản nháp/i)).toBeVisible();
+  await expect(
+    page.getByText(/tệp được tải lên sau khi bản nháp/i),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Giao diện tối" }).click();
-  const preparation = page.getByRole("heading", {
-    name: "Tài liệu cần chuẩn bị",
-  }).locator("..", { hasText: "Tệp được tải lên" });
-  await expect(preparation).not.toHaveCSS("background-color", "rgb(255, 255, 255)");
+  const preparation = page
+    .getByRole("heading", {
+      name: "Tài liệu cần chuẩn bị",
+    })
+    .locator("..", { hasText: "Tệp được tải lên" });
+  await expect(preparation).not.toHaveCSS(
+    "background-color",
+    "rgb(255, 255, 255)",
+  );
   await expect(page.locator("body")).not.toHaveCSS("overflow-x", "scroll");
 });
 

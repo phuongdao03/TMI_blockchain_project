@@ -40,9 +40,7 @@ export function EvidenceViewer({
   const mutation = useMutation({
     mutationFn: mediaApi.signedUrl,
     onSuccess: (delivery, mediaId) => {
-      const evidence = evidences.find(
-        (item) => item.mediaAssetId === mediaId,
-      );
+      const evidence = evidences.find((item) => item.mediaAssetId === mediaId);
       if (evidence) setPreview({ evidence, url: delivery.url });
     },
   });
@@ -195,7 +193,8 @@ export function EvidenceViewer({
                     Định dạng cần mở bằng ứng dụng phù hợp
                   </p>
                   <p className="mt-1 text-sm text-neutral-600">
-                    Nội dung không được nhúng trực tiếp để tránh làm sai định dạng hoặc giảm an toàn.
+                    Nội dung không được nhúng trực tiếp để tránh làm sai định
+                    dạng hoặc giảm an toàn.
                   </p>
                 </div>
               </div>

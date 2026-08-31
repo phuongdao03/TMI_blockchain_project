@@ -157,7 +157,10 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
         </div>
       </header>
 
-      <section aria-label="Quy trình thẩm định" className="grid overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] sm:grid-cols-3 xl:grid-cols-6">
+      <section
+        aria-label="Quy trình thẩm định"
+        className="grid overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] sm:grid-cols-3 xl:grid-cols-6"
+      >
         {[
           ["01", "Độc lập", "Khai báo xung đột"],
           ["02", "Kiểm tra", "Khóa phiên bản & tài liệu"],
@@ -166,10 +169,17 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           ["05", "Kiến nghị", "Qua cổng quyết định"],
           ["06", "Khóa phiếu", "Xác nhận & gửi một lần"],
         ].map(([number, title, description]) => (
-          <article className="border-b border-[var(--theme-border)] p-4 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0" key={number}>
-            <p className="font-mono text-xs font-bold text-primary-700">{number}</p>
+          <article
+            className="border-b border-[var(--theme-border)] p-4 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0"
+            key={number}
+          >
+            <p className="font-mono text-xs font-bold text-primary-700">
+              {number}
+            </p>
             <p className="mt-2 text-sm font-bold">{title}</p>
-            <p className="mt-1 text-xs leading-5 text-neutral-500">{description}</p>
+            <p className="mt-1 text-xs leading-5 text-neutral-500">
+              {description}
+            </p>
           </article>
         ))}
       </section>
@@ -202,7 +212,8 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
         </article>
         <article className="p-4 sm:p-5">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-500">
-            <LockKeyhole aria-hidden="true" className="size-4" /> Phạm vi thao tác
+            <LockKeyhole aria-hidden="true" className="size-4" /> Phạm vi thao
+            tác
           </p>
           <p className="mt-2 font-bold">Thẩm định độc lập</p>
           <p className="mt-1 text-xs leading-5 text-neutral-500">

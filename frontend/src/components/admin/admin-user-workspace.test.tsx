@@ -56,8 +56,12 @@ describe("AdminUserWorkspace", () => {
     render(<AdminUserWorkspace />, { wrapper: Wrapper });
 
     expect(await screen.findAllByText("Nguyen Van An")).toHaveLength(2);
-    expect(screen.getByTestId("admin-users-table").className).toContain("hidden");
-    expect(screen.getByTestId("admin-users-mobile").className).toContain("md:hidden");
+    expect(screen.getByTestId("admin-users-table").className).toContain(
+      "hidden",
+    );
+    expect(screen.getByTestId("admin-users-mobile").className).toContain(
+      "md:hidden",
+    );
 
     fireEvent.click(
       screen.getAllByRole("button", { name: "Tạm đình chỉ" })[0]!,

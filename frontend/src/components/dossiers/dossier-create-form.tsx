@@ -92,8 +92,9 @@ export function DossierCreateForm() {
     dossierType?.currentVersion.schema.fields.filter((field) => field.required)
       .length ?? 0;
   const requiredFields =
-    dossierType?.currentVersion.schema.fields.filter((field) => field.required) ??
-    [];
+    dossierType?.currentVersion.schema.fields.filter(
+      (field) => field.required,
+    ) ?? [];
   const informationTotal = 1 + requiredFields.length;
   const informationComplete =
     (title.trim().length >= 3 ? 1 : 0) +
@@ -250,7 +251,9 @@ export function DossierCreateForm() {
                   Tài liệu cần chuẩn bị
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-neutral-600">
-                  {requiredFieldCount} trường thông tin bắt buộc · {documentRules.length} nhóm tài liệu. Tệp được tải lên sau khi bản nháp được tạo.
+                  {requiredFieldCount} trường thông tin bắt buộc ·{" "}
+                  {documentRules.length} nhóm tài liệu. Tệp được tải lên sau khi
+                  bản nháp được tạo.
                 </p>
               </div>
             </div>
@@ -279,7 +282,9 @@ export function DossierCreateForm() {
                         <p className="mt-1 text-xs leading-5 text-neutral-600">
                           {rule.allowedMimeTypes
                             .map((mime) => mimeLabels[mime] ?? mime)
-                            .join(", ")} · tối đa {formatFileLimit(rule.maxBytes)} · {rule.maxCount ?? 1} tệp
+                            .join(", ")}{" "}
+                          · tối đa {formatFileLimit(rule.maxBytes)} ·{" "}
+                          {rule.maxCount ?? 1} tệp
                         </p>
                       </div>
                     </div>
@@ -289,7 +294,8 @@ export function DossierCreateForm() {
             ) : (
               <div className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-sm text-neutral-600">
                 <Files aria-hidden="true" className="size-5 shrink-0" />
-                Loại hồ sơ này chưa yêu cầu nhóm tệp riêng. Bạn vẫn có thể bổ sung bằng chứng trong bản nháp.
+                Loại hồ sơ này chưa yêu cầu nhóm tệp riêng. Bạn vẫn có thể bổ
+                sung bằng chứng trong bản nháp.
               </div>
             )}
           </section>

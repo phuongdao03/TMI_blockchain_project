@@ -39,7 +39,9 @@ describe("FiveTScorecard", () => {
 
     expect(screen.getByText("0/5 tiêu chí hoàn tất")).toBeDefined();
     expect(
-      screen.getByText("Tiếp theo: Chấm điểm và nhận xét tiêu chí Tính đúng đắn"),
+      screen.getByText(
+        "Tiếp theo: Chấm điểm và nhận xét tiêu chí Tính đúng đắn",
+      ),
     ).toBeDefined();
 
     const truthScore = screen.getByLabelText("Điểm Tính đúng đắn");

@@ -835,8 +835,18 @@ export interface ReviewEvidenceSnapshot {
 export interface ReviewRubric {
   version: string;
   title: string;
-  gates: Array<{ key: string; label: string; description?: string; required?: boolean }>;
-  criteria: Array<{ key: string; label: string; description: string; weight: number }>;
+  gates: Array<{
+    key: string;
+    label: string;
+    description?: string;
+    required?: boolean;
+  }>;
+  criteria: Array<{
+    key: string;
+    label: string;
+    description: string;
+    weight: number;
+  }>;
   thresholds: { approveMin: number; rejectBelow: number };
 }
 

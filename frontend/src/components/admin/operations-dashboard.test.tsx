@@ -37,7 +37,9 @@ describe("OperationsDashboard", () => {
   it("presents work queues without raw status, IDs or infrastructure metrics", async () => {
     render(<OperationsDashboard />, { wrapper: Wrapper });
 
-    expect((await screen.findAllByText("Hồ sơ trễ hạn")).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByText("Hồ sơ trễ hạn")).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText("Đang thẩm định")).toBeDefined();
     expect(screen.getByText("reviewer@tmigroup.vn")).toBeDefined();
     expect(
@@ -49,7 +51,9 @@ describe("OperationsDashboard", () => {
     expect(
       screen.getByRole("img", { name: "Biểu đồ khối lượng theo chuyên viên" }),
     ).toBeDefined();
-    expect(screen.getByRole("button", { name: "Làm mới dữ liệu" })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Làm mới dữ liệu" }),
+    ).toBeDefined();
     expect(screen.queryByText("UNDER_REVIEW")).toBeNull();
     expect(screen.queryByText(/cache/i)).toBeNull();
     expect(screen.queryByText(/blockchain/i)).toBeNull();

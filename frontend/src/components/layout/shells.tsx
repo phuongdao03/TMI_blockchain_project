@@ -141,7 +141,11 @@ export function PublicShell({
             className="public-workspace-return__link"
             href={publicHeaderAction.href}
           >
-            <ArrowLeft aria-hidden="true" focusable="false" strokeWidth={1.75} />
+            <ArrowLeft
+              aria-hidden="true"
+              focusable="false"
+              strokeWidth={1.75}
+            />
             <span>
               Quay lại {publicHeaderAction.label.toLocaleLowerCase("vi")}
             </span>

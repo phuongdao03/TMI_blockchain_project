@@ -12,7 +12,10 @@ import {
 } from "@/components/reviews/review-completion-checklist";
 import { ReviewEvidenceSelect } from "@/components/reviews/review-evidence-select";
 import { ReviewFindingsEditor } from "@/components/reviews/review-findings-editor";
-import { SpecialistRubricSection, specialistScore } from "@/components/reviews/specialist-rubric-section";
+import {
+  SpecialistRubricSection,
+  specialistScore,
+} from "@/components/reviews/specialist-rubric-section";
 import {
   decisionGate,
   reviewCriteria,
@@ -138,18 +141,42 @@ function buildDraft(
   gateAnswers: Record<string, ReviewGateAnswer>,
   specialistAnswers: Record<string, SpecialistCriterionAnswer>,
 ): ReviewDraft {
-  return { ...values, criterionEvidence, findings, checklistAnswers, gateAnswers, specialistAnswers };
+  return {
+    ...values,
+    criterionEvidence,
+    findings,
+    checklistAnswers,
+    gateAnswers,
+    specialistAnswers,
+  };
 }
 
-function specialistComplete(rubric: ReviewRubric | undefined, gateAnswers: Record<string, ReviewGateAnswer>, specialistAnswers: Record<string, SpecialistCriterionAnswer>, recommendation: ScorecardValues["recommendation"]) {
+function specialistComplete(
+  rubric: ReviewRubric | undefined,
+  gateAnswers: Record<string, ReviewGateAnswer>,
+  specialistAnswers: Record<string, SpecialistCriterionAnswer>,
+  recommendation: ScorecardValues["recommendation"],
+) {
   if (!rubric) return true;
-  const answersComplete = rubric.gates.every(({ key }) => (gateAnswers[key]?.rationale.trim().length ?? 0) >= 20) &&
-    rubric.criteria.every(({ key }) => (specialistAnswers[key]?.rationale.trim().length ?? 0) >= 20 && (specialistAnswers[key]?.evidenceMediaIds.length ?? 0) > 0);
+  const answersComplete =
+    rubric.gates.every(
+      ({ key }) => (gateAnswers[key]?.rationale.trim().length ?? 0) >= 20,
+    ) &&
+    rubric.criteria.every(
+      ({ key }) =>
+        (specialistAnswers[key]?.rationale.trim().length ?? 0) >= 20 &&
+        (specialistAnswers[key]?.evidenceMediaIds.length ?? 0) > 0,
+    );
   if (!answersComplete) return false;
   if (recommendation !== "APPROVE") return true;
   const total = specialistScore(rubric, specialistAnswers);
-  return total !== null && total >= rubric.thresholds.approveMin && rubric.gates.every(
-    ({ key, required }) => required === false || gateAnswers[key]?.outcome === "PASS",
+  return (
+    total !== null &&
+    total >= rubric.thresholds.approveMin &&
+    rubric.gates.every(
+      ({ key, required }) =>
+        required === false || gateAnswers[key]?.outcome === "PASS",
+    )
   );
 }
 
@@ -214,12 +241,12 @@ export function FiveTScorecard({
   const [checklistAnswers, setChecklistAnswers] = useState<
     Record<string, boolean>
   >(() => checklistDefaults(initialReview));
-  const [gateAnswers, setGateAnswers] = useState<Record<string, ReviewGateAnswer>>(
-    () => initialReview?.gateAnswers ?? {},
-  );
-  const [specialistAnswers, setSpecialistAnswers] = useState<Record<string, SpecialistCriterionAnswer>>(
-    () => initialReview?.specialistAnswers ?? {},
-  );
+  const [gateAnswers, setGateAnswers] = useState<
+    Record<string, ReviewGateAnswer>
+  >(() => initialReview?.gateAnswers ?? {});
+  const [specialistAnswers, setSpecialistAnswers] = useState<
+    Record<string, SpecialistCriterionAnswer>
+  >(() => initialReview?.specialistAnswers ?? {});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [completionError, setCompletionError] = useState("");
   const lastSaved = useRef(
@@ -348,8 +375,13 @@ export function FiveTScorecard({
     if (
       !valid ||
       !parsed.success ||
-      !complete(parsed.data, criterionEvidence, findings, checklistAnswers)
-      || !specialistComplete(rubric, gateAnswers, specialistAnswers, parsed.data.recommendation)
+      !complete(parsed.data, criterionEvidence, findings, checklistAnswers) ||
+      !specialistComplete(
+        rubric,
+        gateAnswers,
+        specialistAnswers,
+        parsed.data.recommendation,
+      )
     ) {
       setCompletionError(
         "Hoàn tất cổng bắt buộc, rubric chuyên biệt, 5T, bằng chứng, checklist và các phát hiện trước khi gửi.",
@@ -420,7 +452,9 @@ export function FiveTScorecard({
               </div>
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
                 <span className="rounded-lg bg-[var(--theme-surface)] px-3 py-2">
-                  <strong className="block text-base">{evidences.length}</strong>
+                  <strong className="block text-base">
+                    {evidences.length}
+                  </strong>
                   bằng chứng
                 </span>
                 <span className="rounded-lg bg-[var(--theme-surface)] px-3 py-2">
@@ -428,7 +462,9 @@ export function FiveTScorecard({
                   phát hiện
                 </span>
                 <span className="rounded-lg bg-[var(--theme-surface)] px-3 py-2">
-                  <strong className="block text-base">{completedChecklist}/5</strong>
+                  <strong className="block text-base">
+                    {completedChecklist}/5
+                  </strong>
                   xác nhận
                 </span>
               </div>
@@ -450,24 +486,53 @@ export function FiveTScorecard({
               aria-label="Đi tới phần của phiếu"
               className="mt-4 flex gap-2 overflow-x-auto pb-1 text-xs font-bold"
             >
-              <a className="whitespace-nowrap rounded-lg border px-3 py-2" href="#review-criteria">Tiêu chí 5T</a>
-              <a className="whitespace-nowrap rounded-lg border px-3 py-2" href="#review-findings">Phát hiện</a>
-              <a className="whitespace-nowrap rounded-lg border px-3 py-2" href="#review-decision">Kiến nghị & gửi</a>
+              <a
+                className="whitespace-nowrap rounded-lg border px-3 py-2"
+                href="#review-criteria"
+              >
+                Tiêu chí 5T
+              </a>
+              <a
+                className="whitespace-nowrap rounded-lg border px-3 py-2"
+                href="#review-findings"
+              >
+                Phát hiện
+              </a>
+              <a
+                className="whitespace-nowrap rounded-lg border px-3 py-2"
+                href="#review-decision"
+              >
+                Kiến nghị & gửi
+              </a>
             </nav>
           </section>
           <section className="rounded-2xl border border-[var(--theme-border)] p-4 sm:p-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">Chuẩn chấm thống nhất</p>
-                <h3 className="mt-1 text-lg font-bold">Điểm phải phản ánh mức độ của bằng chứng</h3>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
+                  Chuẩn chấm thống nhất
+                </p>
+                <h3 className="mt-1 text-lg font-bold">
+                  Điểm phải phản ánh mức độ của bằng chứng
+                </h3>
               </div>
-              <p className="max-w-xl text-xs leading-5 text-neutral-600">Không chấm theo cảm nhận tổng quát. Chọn dải điểm, dẫn chiếu tài liệu và nêu rõ căn cứ kiểm chứng.</p>
+              <p className="max-w-xl text-xs leading-5 text-neutral-600">
+                Không chấm theo cảm nhận tổng quát. Chọn dải điểm, dẫn chiếu tài
+                liệu và nêu rõ căn cứ kiểm chứng.
+              </p>
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
               {scoreBands.map((band) => (
-                <div className="rounded-xl bg-[var(--theme-elevated)] p-3" key={band.label}>
-                  <strong className="text-sm">{band.min}–{band.max} · {band.label}</strong>
-                  <p className="mt-1 text-xs leading-5 text-neutral-600">{band.description}</p>
+                <div
+                  className="rounded-xl bg-[var(--theme-elevated)] p-3"
+                  key={band.label}
+                >
+                  <strong className="text-sm">
+                    {band.min}–{band.max} · {band.label}
+                  </strong>
+                  <p className="mt-1 text-xs leading-5 text-neutral-600">
+                    {band.description}
+                  </p>
                 </div>
               ))}
             </div>
@@ -484,89 +549,106 @@ export function FiveTScorecard({
               specialistAnswers={specialistAnswers}
             />
           ) : null}
-          {criteria.map(({ indicators, key, label, purpose, scoreKey }, index) => {
-            const band = scoreBand(values[scoreKey]);
-            return (
-            <fieldset
-              className="grid gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:grid-cols-[minmax(0,1fr)_8.5rem] sm:p-5"
-              disabled={readOnly}
-              key={key}
-            >
-              <div>
-                <legend className="font-bold text-neutral-950">
-                  <span className="mr-2 text-primary-700">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  {label}
-                </legend>
-                <p className="mt-1 text-xs leading-5 text-neutral-500">
-                  {purpose}
-                </p>
-                <ul className="mt-3 flex flex-wrap gap-2" aria-label={`Chỉ báo ${label}`}>
-                  {indicators.map((indicator) => (
-                    <li className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-2.5 py-1 text-xs text-neutral-600" key={indicator}>{indicator}</li>
-                  ))}
-                </ul>
-                <label
-                  className="mt-4 block text-xs font-bold uppercase tracking-wider text-neutral-600"
-                  htmlFor={"comment-" + key}
-                >
-                  Nhận xét {label}
-                </label>
-                <textarea
-                  className="mt-2 min-h-28 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm disabled:opacity-60"
-                  id={"comment-" + key}
-                  maxLength={2_000}
-                  {...register(`criterionComments.${key}` as const)}
-                />
-                <p className="mt-2 text-xs text-neutral-500">Nêu nhận định, căn cứ đã kiểm tra và điểm còn giới hạn; tối thiểu 20 ký tự.</p>
-                <ReviewEvidenceSelect
+          {criteria.map(
+            ({ indicators, key, label, purpose, scoreKey }, index) => {
+              const band = scoreBand(values[scoreKey]);
+              return (
+                <fieldset
+                  className="grid gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:grid-cols-[minmax(0,1fr)_8.5rem] sm:p-5"
                   disabled={readOnly}
-                  evidences={evidences}
-                  label={label}
-                  onChange={(next) =>
-                    setCriterionEvidence((currentEvidence) => ({
-                      ...currentEvidence,
-                      [key]: next,
-                    }))
-                  }
-                  value={criterionEvidence[key]}
-                />
-              </div>
-              <div>
-                <label
-                  className="text-xs font-bold uppercase tracking-wider text-neutral-600"
-                  htmlFor={"score-" + key}
+                  key={key}
                 >
-                  Điểm {label}
-                </label>
-                <input
-                  className="mt-2 h-14 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-center text-2xl font-bold tabular-nums disabled:opacity-60"
-                  id={"score-" + key}
-                  inputMode="numeric"
-                  max={20}
-                  min={0}
-                  type="number"
-                  {...register(scoreKey, {
-                    setValueAs: (value) =>
-                      value === "" ? null : Number(value),
-                  })}
-                />
-                {errors[scoreKey]?.message ? (
-                  <p className="mt-2 text-xs font-semibold text-red-700">
-                    {errors[scoreKey]?.message}
-                  </p>
-                ) : null}
-                {band ? (
-                  <div className="mt-3 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-2 text-center">
-                    <strong className="block text-xs text-primary-800">{band.label}</strong>
-                    <span className="mt-1 block text-[11px] leading-4 text-neutral-500">{band.description}</span>
+                  <div>
+                    <legend className="font-bold text-neutral-950">
+                      <span className="mr-2 text-primary-700">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      {label}
+                    </legend>
+                    <p className="mt-1 text-xs leading-5 text-neutral-500">
+                      {purpose}
+                    </p>
+                    <ul
+                      className="mt-3 flex flex-wrap gap-2"
+                      aria-label={`Chỉ báo ${label}`}
+                    >
+                      {indicators.map((indicator) => (
+                        <li
+                          className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-2.5 py-1 text-xs text-neutral-600"
+                          key={indicator}
+                        >
+                          {indicator}
+                        </li>
+                      ))}
+                    </ul>
+                    <label
+                      className="mt-4 block text-xs font-bold uppercase tracking-wider text-neutral-600"
+                      htmlFor={"comment-" + key}
+                    >
+                      Nhận xét {label}
+                    </label>
+                    <textarea
+                      className="mt-2 min-h-28 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm disabled:opacity-60"
+                      id={"comment-" + key}
+                      maxLength={2_000}
+                      {...register(`criterionComments.${key}` as const)}
+                    />
+                    <p className="mt-2 text-xs text-neutral-500">
+                      Nêu nhận định, căn cứ đã kiểm tra và điểm còn giới hạn;
+                      tối thiểu 20 ký tự.
+                    </p>
+                    <ReviewEvidenceSelect
+                      disabled={readOnly}
+                      evidences={evidences}
+                      label={label}
+                      onChange={(next) =>
+                        setCriterionEvidence((currentEvidence) => ({
+                          ...currentEvidence,
+                          [key]: next,
+                        }))
+                      }
+                      value={criterionEvidence[key]}
+                    />
                   </div>
-                ) : null}
-              </div>
-            </fieldset>
-            );
-          })}
+                  <div>
+                    <label
+                      className="text-xs font-bold uppercase tracking-wider text-neutral-600"
+                      htmlFor={"score-" + key}
+                    >
+                      Điểm {label}
+                    </label>
+                    <input
+                      className="mt-2 h-14 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-center text-2xl font-bold tabular-nums disabled:opacity-60"
+                      id={"score-" + key}
+                      inputMode="numeric"
+                      max={20}
+                      min={0}
+                      type="number"
+                      {...register(scoreKey, {
+                        setValueAs: (value) =>
+                          value === "" ? null : Number(value),
+                      })}
+                    />
+                    {errors[scoreKey]?.message ? (
+                      <p className="mt-2 text-xs font-semibold text-red-700">
+                        {errors[scoreKey]?.message}
+                      </p>
+                    ) : null}
+                    {band ? (
+                      <div className="mt-3 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-2 text-center">
+                        <strong className="block text-xs text-primary-800">
+                          {band.label}
+                        </strong>
+                        <span className="mt-1 block text-[11px] leading-4 text-neutral-500">
+                          {band.description}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                </fieldset>
+              );
+            },
+          )}
 
           <div id="review-findings">
             <ReviewFindingsEditor
@@ -577,7 +659,10 @@ export function FiveTScorecard({
             />
           </div>
 
-          <div className="grid gap-5 rounded-2xl border p-5 md:grid-cols-2" id="review-decision">
+          <div
+            className="grid gap-5 rounded-2xl border p-5 md:grid-cols-2"
+            id="review-decision"
+          >
             <div>
               <label className="text-sm font-bold" htmlFor="recommendation">
                 Kiến nghị
@@ -630,10 +715,21 @@ export function FiveTScorecard({
                 })}
               />
             </div>
-            <div className={`md:col-span-2 rounded-xl border p-4 ${currentDecisionGate.valid ? "border-emerald-300 bg-emerald-50 text-emerald-950" : "border-amber-300 bg-amber-50 text-amber-950"}`} role="status">
-              <p className="text-xs font-bold uppercase tracking-wider">Cổng quyết định</p>
-              <p className="mt-1 text-sm font-semibold">{currentDecisionGate.message}</p>
-              <p className="mt-2 text-xs leading-5">Phê duyệt: tổng ≥75, mọi tiêu chí ≥12, không còn phát hiện Cao/Nghiêm trọng. Từ chối: tổng &lt;50 hoặc có phát hiện Nghiêm trọng.</p>
+            <div
+              className={`md:col-span-2 rounded-xl border p-4 ${currentDecisionGate.valid ? "border-emerald-300 bg-emerald-50 text-emerald-950" : "border-amber-300 bg-amber-50 text-amber-950"}`}
+              role="status"
+            >
+              <p className="text-xs font-bold uppercase tracking-wider">
+                Cổng quyết định
+              </p>
+              <p className="mt-1 text-sm font-semibold">
+                {currentDecisionGate.message}
+              </p>
+              <p className="mt-2 text-xs leading-5">
+                Phê duyệt: tổng ≥75, mọi tiêu chí ≥12, không còn phát hiện
+                Cao/Nghiêm trọng. Từ chối: tổng &lt;50 hoặc có phát hiện Nghiêm
+                trọng.
+              </p>
             </div>
           </div>
 
