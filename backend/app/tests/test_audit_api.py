@@ -79,6 +79,7 @@ def test_audit_search_is_scoped_reports_integrity_and_records_the_read() -> None
                     "pageSize": 10,
                     "resourceType": "transaction",
                     "createdFrom": "2026-08-01T00:00:00Z",
+                    "includeAccessEvents": "false",
                 },
             )
         assert response.status_code == 200, response.text
@@ -89,6 +90,7 @@ def test_audit_search_is_scoped_reports_integrity_and_records_the_read() -> None
         assert "integrityHash" not in data
         assert service.filters["page"] == 2
         assert service.filters["resource_type"] == "transaction"
+        assert service.filters["include_access_events"] is False
         assert service.recorded[0]["action"] == "audit.read"
     finally:
         app.dependency_overrides.clear()

@@ -84,6 +84,7 @@ async def search_audit(
     ),
     created_from: Annotated[datetime | None, Query(alias="createdFrom")] = None,
     created_to: Annotated[datetime | None, Query(alias="createdTo")] = None,
+    include_access_events: bool = Query(default=True, alias="includeAccessEvents"),
 ) -> PaginatedSuccessEnvelope[list[AuditLogData]]:
     require_audit_access(principal)
     _validate_date_range(created_from, created_to)
@@ -96,6 +97,7 @@ async def search_audit(
             resource_type=resource_type,
             created_from=created_from,
             created_to=created_to,
+            include_access_events=include_access_events,
         )
         service.record(
             actor_user_id=principal.user_id,
@@ -115,7 +117,9 @@ async def search_audit(
                         created_from,
                         created_to,
                     )
-                ),
+                )
+                or not include_access_events,
+                "include_access_events": include_access_events,
             },
             request_id=request.state.request_id,
             user_agent=request.headers.get("user-agent"),
@@ -151,6 +155,7 @@ async def export_audit(
     ),
     created_from: Annotated[datetime | None, Query(alias="createdFrom")] = None,
     created_to: Annotated[datetime | None, Query(alias="createdTo")] = None,
+    include_access_events: bool = Query(default=True, alias="includeAccessEvents"),
 ) -> Response:
     require_audit_access(principal)
     _validate_date_range(created_from, created_to)
@@ -163,6 +168,7 @@ async def export_audit(
             resource_type=resource_type,
             created_from=created_from,
             created_to=created_to,
+            include_access_events=include_access_events,
         )
         service.record(
             actor_user_id=principal.user_id,
@@ -173,6 +179,7 @@ async def export_audit(
                 "requested_limit": limit,
                 "exported_count": len(rows),
                 "total_available": total,
+                "include_access_events": include_access_events,
             },
             request_id=request.state.request_id,
             user_agent=request.headers.get("user-agent"),

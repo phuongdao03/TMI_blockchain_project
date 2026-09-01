@@ -24,6 +24,7 @@ class AuditRepository:
         resource_type: str | None = None,
         created_from: datetime | None = None,
         created_to: datetime | None = None,
+        include_access_events: bool = True,
     ) -> tuple[tuple[AuditLog, ...], int]:
         filters = []
         if actor_user_id is not None:
@@ -36,6 +37,8 @@ class AuditRepository:
             filters.append(AuditLog.created_at >= created_from)
         if created_to is not None:
             filters.append(AuditLog.created_at <= created_to)
+        if not include_access_events:
+            filters.append(AuditLog.action != "audit.read")
         statement = (
             select(AuditLog)
             .where(*filters)

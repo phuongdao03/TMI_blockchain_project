@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { AuditRow } from "@/components/admin/audit-row";
+import { AuditCard, AuditRow } from "@/components/admin/audit-row";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { auditApi } from "@/lib/api/client";
 import type { AuditListFilters } from "@/lib/api/types";
@@ -25,6 +25,7 @@ export function AuditWorkspace() {
   const [resourceType, setResourceType] = useState("");
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
+  const [showAccessEvents, setShowAccessEvents] = useState(false);
 
   const filters: AuditListFilters = {
     page,
@@ -33,6 +34,7 @@ export function AuditWorkspace() {
     resourceType: resourceType || undefined,
     createdFrom: createdFrom ? `${createdFrom}T00:00:00.000Z` : undefined,
     createdTo: createdTo ? `${createdTo}T23:59:59.999Z` : undefined,
+    includeAccessEvents: showAccessEvents,
   };
   const audit = useQuery({
     queryKey: ["admin", "audit", filters],
@@ -48,8 +50,9 @@ export function AuditWorkspace() {
     if (createdFrom)
       parameters.set("createdFrom", `${createdFrom}T00:00:00.000Z`);
     if (createdTo) parameters.set("createdTo", `${createdTo}T23:59:59.999Z`);
+    parameters.set("includeAccessEvents", String(showAccessEvents));
     return `/api/v1/admin/audit/exports.csv?${parameters.toString()}`;
-  }, [action, resourceType, createdFrom, createdTo]);
+  }, [action, resourceType, createdFrom, createdTo, showAccessEvents]);
   const exceptions = integrity.data
     ? integrity.data.counts.TAMPERED + integrity.data.counts.KEY_UNAVAILABLE
     : null;
@@ -57,23 +60,23 @@ export function AuditWorkspace() {
   const totalPages = Math.max(1, Math.ceil((audit.data?.meta.total ?? 0) / 20));
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6">
+    <main className="mx-auto max-w-7xl space-y-4 pb-24 sm:space-y-6 md:pb-0">
       <header className="grid overflow-hidden border border-ink-900 bg-ink-950 text-white lg:grid-cols-[1fr_22rem]">
-        <div className="p-7 sm:p-9">
+        <div className="p-5 sm:p-9">
           <p className="flex items-center gap-2 text-xs font-bold tracking-[0.18em] text-gold-300 uppercase">
             <ScrollText aria-hidden="true" className="size-4" />
             Kiểm soát thay đổi
           </p>
-          <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h1 className="mt-3 text-2xl font-bold tracking-tight sm:mt-4 sm:text-4xl">
             Lịch sử vận hành
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:leading-7">
             Theo dõi các quyết định và thay đổi quan trọng. Thông tin kỹ thuật
             được thu gọn để danh sách tập trung vào việc đã xảy ra và trạng thái
             kiểm chứng.
           </p>
           <a
-            className={`${buttonVariants({ variant: "outline" })} mt-6 inline-flex`}
+            className={`${buttonVariants({ variant: "outline" })} mt-5 inline-flex w-full sm:mt-6 sm:w-auto`}
             download
             href={exportHref}
           >
@@ -81,7 +84,7 @@ export function AuditWorkspace() {
             Tải báo cáo CSV
           </a>
         </div>
-        <aside className="border-t border-white/10 bg-white/[0.04] p-7 lg:border-t-0 lg:border-l">
+        <aside className="border-t border-white/10 bg-white/[0.04] p-5 sm:p-7 lg:border-t-0 lg:border-l">
           <ShieldCheck className="size-6 text-gold-300" />
           <h2 className="mt-4 text-lg font-bold">Tính toàn vẹn bản ghi</h2>
           <p className="mt-2 text-sm leading-6 text-slate-300">
@@ -120,7 +123,7 @@ export function AuditWorkspace() {
 
       <section
         aria-label="Bộ lọc lịch sử"
-        className="grid gap-4 border border-neutral-200 bg-white p-5 md:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 border border-neutral-200 bg-white p-4 sm:p-5 md:grid-cols-2 xl:grid-cols-4"
       >
         <label className="text-sm font-semibold" htmlFor="audit-action">
           Loại hoạt động
@@ -197,17 +200,37 @@ export function AuditWorkspace() {
             value={createdTo}
           />
         </label>
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 text-sm xl:col-span-4">
+          <input
+            checked={showAccessEvents}
+            className="size-4 accent-primary-700"
+            onChange={(event) => {
+              setShowAccessEvents(event.target.checked);
+              setPage(1);
+            }}
+            type="checkbox"
+          />
+          <span>
+            <strong className="block text-ink-950">
+              Hiển thị lượt truy cập
+            </strong>
+            <span className="text-xs text-neutral-500">
+              Bao gồm các lần quản trị viên mở trang lịch sử; mặc định được ẩn
+              để ưu tiên thay đổi nghiệp vụ.
+            </span>
+          </span>
+        </label>
       </section>
 
       <section className="overflow-hidden border border-neutral-200 bg-white">
-        <div className="flex items-center justify-between gap-4 border-b border-neutral-200 px-5 py-4">
+        <div className="flex items-center justify-between gap-3 border-b border-neutral-200 px-4 py-4 sm:px-5">
           <div>
             <h2 className="font-bold text-ink-950">Hoạt động gần đây</h2>
             <p className="mt-1 text-xs text-neutral-500">
               {audit.data?.meta.total ?? 0} thay đổi phù hợp
             </p>
           </div>
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex shrink-0 items-center gap-1.5 text-sm sm:gap-2">
             <Button
               aria-label="Trang trước"
               disabled={page === 1}
@@ -240,7 +263,10 @@ export function AuditWorkspace() {
           </p>
         ) : null}
         {audit.data?.data.length ? (
-          <div className="overflow-x-auto">
+          <div
+            className="hidden overflow-x-auto md:block"
+            data-testid="audit-desktop-table"
+          >
             <table className="min-w-full text-left text-sm">
               <thead className="bg-neutral-50 text-xs tracking-wide text-neutral-500 uppercase">
                 <tr>
@@ -257,6 +283,16 @@ export function AuditWorkspace() {
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : null}
+        {audit.data?.data.length ? (
+          <div
+            className="grid gap-3 bg-neutral-50 p-3 md:hidden"
+            data-testid="audit-mobile-list"
+          >
+            {audit.data.data.map((row) => (
+              <AuditCard key={row.id} row={row} />
+            ))}
           </div>
         ) : null}
         {audit.data?.data.length === 0 ? (

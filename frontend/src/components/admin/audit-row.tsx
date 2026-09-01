@@ -1,53 +1,105 @@
-import type { AuditLogItem } from "@/lib/api/types";
+import { Clock3 } from "lucide-react";
+
 import {
-  actionLabel,
   actorLabel,
+  auditEventSummary,
+  formatAuditTimestamp,
   integrityLabels,
   resourceLabel,
 } from "@/components/admin/audit-presenters";
+import type { AuditLogItem } from "@/lib/api/types";
 
-export function AuditRow({ row }: { row: AuditLogItem }) {
+function IntegrityBadge({ row }: { row: AuditLogItem }) {
   const integrity = integrityLabels[row.integrityStatus];
   return (
-    <tr className="border-t border-neutral-200 align-top">
+    <span
+      className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-semibold ${integrity.className}`}
+    >
+      {integrity.label}
+    </span>
+  );
+}
+
+function TechnicalDetails({ row }: { row: AuditLogItem }) {
+  return (
+    <details className="group text-xs text-neutral-600">
+      <summary className="cursor-pointer font-semibold text-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2">
+        Thông tin kỹ thuật
+      </summary>
+      <dl className="mt-3 grid max-w-sm gap-2 rounded-lg bg-neutral-50 p-3">
+        <div>
+          <dt className="text-neutral-500">Mã đối tượng</dt>
+          <dd className="break-all font-mono">{row.resourceId}</dd>
+        </div>
+        <div>
+          <dt className="text-neutral-500">Mã yêu cầu</dt>
+          <dd className="break-all font-mono">{row.requestId ?? "—"}</dd>
+        </div>
+      </dl>
+    </details>
+  );
+}
+
+export function AuditRow({ row }: { row: AuditLogItem }) {
+  const timestamp = formatAuditTimestamp(row.createdAt);
+  return (
+    <tr className="border-t border-neutral-200 align-top transition-colors hover:bg-neutral-50/70">
       <td className="whitespace-nowrap px-5 py-4 text-neutral-600">
-        {new Date(row.createdAt).toLocaleString("vi-VN")}
+        <span className="block font-semibold text-ink-950">
+          {timestamp.time}
+        </span>
+        <span className="mt-1 block text-xs">{timestamp.date}</span>
       </td>
-      <td className="px-5 py-4">
+      <td className="px-5 py-4" data-testid="audit-row-summary">
         <span className="font-semibold text-ink-950">
-          {actionLabel(row.action)}
+          {auditEventSummary(row)}
         </span>
         <span className="mt-1 block text-xs text-neutral-500">
           {resourceLabel(row.resourceType)}
         </span>
-      </td>
-      <td className="px-5 py-4 text-neutral-700">
-        {actorLabel(row.actorType)}
-      </td>
-      <td className="px-5 py-4">
-        <span
-          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${integrity.className}`}
-        >
-          {integrity.label}
+        <span className="mt-1 block text-xs text-neutral-500">
+          {actorLabel(row.actorType, row.actorService)}
         </span>
       </td>
+      <td className="px-5 py-4 text-neutral-700">
+        {actorLabel(row.actorType, row.actorService)}
+      </td>
       <td className="px-5 py-4">
-        <details className="group text-xs text-neutral-600">
-          <summary className="cursor-pointer font-semibold text-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2">
-            Xem chi tiết
-          </summary>
-          <dl className="mt-3 grid gap-2">
-            <div>
-              <dt className="text-neutral-500">Đối tượng tham chiếu</dt>
-              <dd className="break-all font-mono">{row.resourceId}</dd>
-            </div>
-            <div>
-              <dt className="text-neutral-500">Mã yêu cầu</dt>
-              <dd className="break-all font-mono">{row.requestId ?? "—"}</dd>
-            </div>
-          </dl>
-        </details>
+        <IntegrityBadge row={row} />
+      </td>
+      <td className="px-5 py-4" data-testid="audit-row-technical-details">
+        <TechnicalDetails row={row} />
       </td>
     </tr>
+  );
+}
+
+export function AuditCard({ row }: { row: AuditLogItem }) {
+  const timestamp = formatAuditTimestamp(row.createdAt);
+  return (
+    <article
+      className="rounded-2xl border border-neutral-200 bg-white p-4"
+      data-testid="audit-mobile-row"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <span className="rounded-xl bg-neutral-100 p-2 text-neutral-600">
+          <Clock3 aria-hidden="true" className="size-4" />
+        </span>
+        <IntegrityBadge row={row} />
+      </div>
+      <h3 className="mt-4 text-base font-bold leading-6 text-ink-950">
+        {auditEventSummary(row)}
+      </h3>
+      <p className="mt-1 text-sm leading-6 text-neutral-600">
+        {resourceLabel(row.resourceType)} ·{" "}
+        {actorLabel(row.actorType, row.actorService)}
+      </p>
+      <time
+        className="mt-3 block text-xs font-medium text-neutral-500"
+        dateTime={row.createdAt}
+      >
+        {timestamp.time} · {timestamp.date}
+      </time>
+    </article>
   );
 }

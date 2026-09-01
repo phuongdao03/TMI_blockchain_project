@@ -19,7 +19,7 @@ vi.mock("@/lib/api/client", () => ({
           actorService: "certificate-worker",
           action: "certificate.version.approved",
           resourceType: "certificate",
-          resourceId: "CERT-001",
+          resourceId: "71a340d3-f813-3e7e-53aa-7495ba56a269",
           before: null,
           after: { status: "ACTIVE" },
           requestId: "request-1",
@@ -67,7 +67,9 @@ describe("AuditWorkspace", () => {
         .getByRole("link", { name: "Tải báo cáo CSV" })
         .getAttribute("href"),
     ).toContain("/api/v1/admin/audit/exports.csv");
-    expect(await screen.findByText("Đã kiểm chứng")).toBeDefined();
+    expect(
+      (await screen.findAllByText("Đã kiểm chứng")).length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByText(/REVIEWER|COUNCIL|database|schema/i)).toBeNull();
   });
 
@@ -75,7 +77,7 @@ describe("AuditWorkspace", () => {
     const user = userEvent.setup();
     render(<AuditWorkspace />, { wrapper: Wrapper });
 
-    await screen.findByText("Đã kiểm chứng");
+    await screen.findAllByText("Đã kiểm chứng");
     await user.selectOptions(
       screen.getByLabelText("Loại hoạt động"),
       "dossier.approved",
@@ -113,5 +115,43 @@ describe("AuditWorkspace", () => {
       await screen.findByText("Phạm vi kiểm tra chưa đầy đủ (10/20 bản ghi)"),
     ).toBeDefined();
     expect(screen.queryByText("Không phát hiện bất thường")).toBeNull();
+  });
+
+  it("prioritizes a human-readable event, resource, and actor before technical identifiers", async () => {
+    render(<AuditWorkspace />, { wrapper: Wrapper });
+
+    const summary = await screen.findByTestId("audit-row-summary");
+    expect(summary.textContent).toContain("Đã phê duyệt chứng thư");
+    expect(summary.textContent).toContain("Hệ thống cấp chứng thư");
+    expect(summary.textContent).not.toContain(
+      "71a340d3-f813-3e7e-53aa-7495ba56a269",
+    );
+
+    const technicalDetails = screen.getByTestId("audit-row-technical-details");
+    expect(technicalDetails.textContent).toContain(
+      "71a340d3-f813-3e7e-53aa-7495ba56a269",
+    );
+    expect(technicalDetails.textContent).toContain("request-1");
+  });
+
+  it("uses single-column audit cards on mobile instead of compressing five table columns", async () => {
+    render(<AuditWorkspace />, { wrapper: Wrapper });
+
+    const desktopTable = await screen.findByTestId("audit-desktop-table");
+    expect(desktopTable.className).toContain("hidden");
+    expect(desktopTable.className).toContain("md:block");
+
+    const mobileList = screen.getByTestId("audit-mobile-list");
+    expect(mobileList.className).toContain("md:hidden");
+    expect(mobileList.querySelectorAll("table").length).toBe(0);
+
+    const mobileRow = screen.getByTestId("audit-mobile-row");
+    expect(mobileRow.tagName).toBe("ARTICLE");
+    expect(mobileRow.textContent).toContain("Đã phê duyệt chứng thư");
+    expect(mobileRow.textContent).toContain("Hệ thống cấp chứng thư");
+    expect(mobileRow.textContent).not.toContain(
+      "71a340d3-f813-3e7e-53aa-7495ba56a269",
+    );
+    expect(mobileRow.textContent).not.toContain("request-1");
   });
 });

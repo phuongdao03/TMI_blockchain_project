@@ -380,6 +380,7 @@ export interface AuditListFilters {
   resourceType?: string;
   createdFrom?: string;
   createdTo?: string;
+  includeAccessEvents?: boolean;
 }
 
 export interface LoginData {

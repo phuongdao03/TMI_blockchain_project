@@ -606,6 +606,11 @@ export const auditApi = {
       parameters.set("resourceType", filters.resourceType);
     if (filters.createdFrom) parameters.set("createdFrom", filters.createdFrom);
     if (filters.createdTo) parameters.set("createdTo", filters.createdTo);
+    if (filters.includeAccessEvents !== undefined)
+      parameters.set(
+        "includeAccessEvents",
+        String(filters.includeAccessEvents),
+      );
     return requestPaginated<AuditLogItem[]>(
       `/admin/audit?${parameters.toString()}`,
     );
