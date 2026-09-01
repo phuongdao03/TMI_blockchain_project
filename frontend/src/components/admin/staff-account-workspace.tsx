@@ -27,6 +27,17 @@ import { STAFF_ACCOUNT_ROLES } from "./staff-account-roles";
 const inputClass =
   "mt-2 min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm text-neutral-950 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100";
 
+function invitationErrorMessage(cause: unknown): string {
+  if (
+    (cause instanceof ApiError && cause.code === "STAFF_ACCOUNT_EXISTS") ||
+    (cause instanceof Error && cause.message.includes("already exists"))
+  ) {
+    return "Tài khoản này đã tồn tại. Hãy chọn tài khoản trong danh sách và cấp nhiệm vụ phù hợp thay vì gửi lời mời mới.";
+  }
+  if (cause instanceof ApiError) return cause.message;
+  return "Không thể gửi lời mời lúc này. Vui lòng thử lại hoặc kiểm tra cấu hình gửi email.";
+}
+
 export function StaffAccountWorkspace() {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
@@ -81,12 +92,10 @@ export function StaffAccountWorkspace() {
         queryKey: ["admin", "staff-invitations"],
       });
     },
-    onError: (cause) =>
-      setError(
-        cause instanceof ApiError
-          ? cause.message
-          : "Không thể gửi lời mời lúc này.",
-      ),
+    onError: (cause) => {
+      setConfirmInvite(false);
+      setError(invitationErrorMessage(cause));
+    },
   });
   const invitationAction = useMutation({
     mutationFn: ({

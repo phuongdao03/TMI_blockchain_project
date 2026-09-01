@@ -86,7 +86,7 @@ export function ConfirmationDialog({
       ref={dialogRef}
       role="dialog"
     >
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white p-6 shadow-2xl">
+      <div className="confirmation-dialog__surface w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl">
         <span className="grid size-11 place-items-center rounded-xl bg-amber-50 text-amber-700">
           <AlertTriangle aria-hidden="true" className="size-5" />
         </span>

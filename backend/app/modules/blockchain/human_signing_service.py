@@ -863,7 +863,7 @@ class HumanSigningService:
             principal,
             PolicyRequirement(
                 permission="blockchain.sign",
-                allow_super_admin=False,
+                compatible_roles=frozenset({"SUPER_ADMIN"}),
             ),
             BlockchainForbiddenError,
         )

@@ -154,4 +154,51 @@ describe("AuditWorkspace", () => {
     );
     expect(mobileRow.textContent).not.toContain("request-1");
   });
+
+  it("describes account and invitation changes instead of generic change records", async () => {
+    vi.mocked(auditApi.list).mockResolvedValueOnce({
+      success: true,
+      data: [
+        {
+          id: "audit-account",
+          actorUserId: "admin-1",
+          actorType: "USER",
+          actorService: null,
+          action: "admin.user.status_changed",
+          resourceType: "user",
+          resourceId: "user-1",
+          before: { status: "ACTIVE" },
+          after: { status: "SUSPENDED" },
+          requestId: "request-account",
+          integrityStatus: "VERIFIED",
+          retentionUntil: null,
+          createdAt: "2026-09-01T03:59:44Z",
+        },
+        {
+          id: "audit-invite",
+          actorUserId: "admin-1",
+          actorType: "USER",
+          actorService: null,
+          action: "admin.staff_invitation.created",
+          resourceType: "staff_invitation",
+          resourceId: "invite-1",
+          before: null,
+          after: { role: "MODERATOR" },
+          requestId: "request-invite",
+          integrityStatus: "VERIFIED",
+          retentionUntil: null,
+          createdAt: "2026-09-01T04:00:00Z",
+        },
+      ],
+      meta: { page: 1, pageSize: 20, total: 2 },
+    });
+
+    render(<AuditWorkspace />, { wrapper: Wrapper });
+
+    expect(await screen.findAllByText("Đã khóa tài khoản")).toHaveLength(2);
+    expect(screen.getAllByText("Đã gửi lời mời Người kiểm duyệt")).toHaveLength(
+      2,
+    );
+    expect(screen.queryByText("Đã ghi nhận thay đổi tài khoản")).toBeNull();
+  });
 });

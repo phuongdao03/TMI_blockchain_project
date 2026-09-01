@@ -43,7 +43,7 @@ function TechnicalDetails({ row }: { row: AuditLogItem }) {
 export function AuditRow({ row }: { row: AuditLogItem }) {
   const timestamp = formatAuditTimestamp(row.createdAt);
   return (
-    <tr className="border-t border-neutral-200 align-top transition-colors hover:bg-neutral-50/70">
+    <tr className="audit-event-row border-t border-neutral-200 align-top transition-colors">
       <td className="whitespace-nowrap px-5 py-4 text-neutral-600">
         <span className="block font-semibold text-ink-950">
           {timestamp.time}

@@ -196,7 +196,7 @@ def test_thv_proof_registry_dependency_fails_closed_for_invalid_runtime_config()
     asyncio.run(exercise())
 
 
-def test_thv_proof_registry_requires_super_admin_with_signing_capability() -> None:
+def test_thv_proof_registry_accepts_super_admin_without_a_duplicate_grant() -> None:
     service = object.__new__(THVProofRegistryService)
     moderator = AuthPrincipal(
         user_id=uuid4(),
@@ -222,9 +222,7 @@ def test_thv_proof_registry_requires_super_admin_with_signing_capability() -> No
 
     with pytest.raises(BlockchainForbiddenError):
         service._require_signer(moderator)
-    with pytest.raises(BlockchainForbiddenError):
-        service._require_signer(super_admin_without_grant)
-
+    service._require_signer(super_admin_without_grant)
     service._require_signer(authorized_super_admin)
 
 

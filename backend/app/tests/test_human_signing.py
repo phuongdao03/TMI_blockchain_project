@@ -130,7 +130,7 @@ def test_wallet_address_normalization_rejects_invalid_addresses() -> None:
     assert normalize_wallet_address("not-an-address") is None
 
 
-def test_only_super_admin_with_the_signing_capability_can_sign() -> None:
+def test_super_admin_can_sign_without_a_duplicated_permission_grant() -> None:
     service = object.__new__(HumanSigningService)
     moderator = AuthPrincipal(
         user_id=uuid4(),
@@ -156,9 +156,7 @@ def test_only_super_admin_with_the_signing_capability_can_sign() -> None:
 
     with pytest.raises(BlockchainForbiddenError):
         service._require_signer(moderator)
-    with pytest.raises(BlockchainForbiddenError):
-        service._require_signer(super_admin_without_grant)
-
+    service._require_signer(super_admin_without_grant)
     service._require_signer(authorized_super_admin)
 
 

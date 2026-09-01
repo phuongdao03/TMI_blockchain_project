@@ -4213,6 +4213,41 @@ html[data-theme="dark"] .cms-workspace textarea::placeholder {
   color: var(--theme-muted) !important;
 }
 
+/* Interactive dashboard surfaces must keep dark-theme contrast. Legacy
+   utility hover colors used a light canvas and made row content disappear. */
+.audit-event-row:hover {
+  background: #faf8f4;
+}
+
+html[data-theme="dark"] .audit-event-row:hover {
+  background: color-mix(in srgb, var(--theme-elevated) 82%, white 6%);
+}
+
+html[data-theme="dark"] .confirmation-dialog__surface {
+  border-color: var(--theme-border);
+  background: var(--theme-elevated) !important;
+  color: var(--theme-text);
+}
+
+html[data-theme="dark"] .cms-list-pane {
+  background: var(--theme-elevated) !important;
+}
+
+.cms-list-item:hover {
+  background: white;
+}
+
+html[data-theme="dark"] .cms-list-item:hover,
+html[data-theme="dark"] .cms-list-item--selected {
+  background: color-mix(in srgb, var(--theme-surface) 88%, white 4%) !important;
+}
+
+html[data-theme="dark"] .dashboard-main .hover\:bg-neutral-50:hover,
+html[data-theme="dark"] .dashboard-main .hover\:bg-neutral-50\/80:hover,
+html[data-theme="dark"] .dashboard-main .hover\:bg-neutral-100:hover {
+  background-color: var(--theme-elevated) !important;
+}
+
 /* Search is shared by the public site and signed-in workspaces.  Its visual
    contract uses the active theme tokens; legacy utility colors are scoped here
    so changing theme cannot leave white copy on a light surface (or reverse). */

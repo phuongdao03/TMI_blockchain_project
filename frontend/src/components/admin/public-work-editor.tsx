@@ -257,7 +257,7 @@ export function PublicWorkEditor() {
   return (
     <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
       <div className="grid min-h-[46rem] lg:grid-cols-[20rem_minmax(0,1fr)]">
-        <aside className="border-b border-neutral-200 bg-neutral-50/80 lg:border-r lg:border-b-0">
+        <aside className="cms-list-pane border-b border-neutral-200 bg-neutral-50/80 lg:border-r lg:border-b-0">
           <div className="border-b border-neutral-200 p-4">
             <div className="relative">
               <Search
@@ -296,7 +296,7 @@ export function PublicWorkEditor() {
             ) : null}
             {works.data?.data.map((work) => (
               <button
-                className={`mb-1 w-full rounded-xl border px-3 py-3 text-left transition ${selectedId === work.id ? "border-primary-200 bg-white shadow-sm" : "border-transparent hover:bg-white"}`}
+                className={`cms-list-item mb-1 w-full rounded-xl border px-3 py-3 text-left transition ${selectedId === work.id ? "cms-list-item--selected border-primary-200 bg-white shadow-sm" : "border-transparent"}`}
                 key={work.id}
                 onClick={() => {
                   if (isDirty && !window.confirm("Bỏ các thay đổi chưa lưu?"))

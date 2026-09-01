@@ -8,6 +8,15 @@ import { StaffAccountWorkspace } from "@/components/admin/staff-account-workspac
 import { staffAccountsApi, staffInvitationsApi } from "@/lib/api/client";
 
 vi.mock("@/lib/api/client", () => ({
+  ApiError: class ApiError extends Error {
+    constructor(
+      message: string,
+      readonly code: string,
+      readonly status: number,
+    ) {
+      super(message);
+    }
+  },
   staffAccountsApi: {
     list: vi.fn(),
     update: vi.fn(),
@@ -162,6 +171,31 @@ describe("StaffAccountWorkspace", () => {
         role: "MODERATOR",
       }),
     );
+  });
+
+  it("closes confirmation and explains why an existing account cannot be invited", async () => {
+    vi.mocked(staffInvitationsApi.create).mockRejectedValueOnce(
+      new Error("An account already exists for this email."),
+    );
+    const user = userEvent.setup();
+    render(<StaffAccountWorkspace />, { wrapper });
+    await screen.findByText("reviewer@tmigroup.vn");
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Email công việc" }),
+      "reviewer@tmigroup.vn",
+    );
+    await user.click(screen.getByRole("button", { name: "Gửi lời mời" }));
+    await user.click(
+      screen.getAllByRole("button", { name: "Gửi lời mời" }).at(-1)!,
+    );
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Tài khoản này đã tồn tại",
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Xác nhận mời nhân sự" }),
+    ).toBeNull();
   });
 
   it("confirms consequences before changing a staff task", async () => {

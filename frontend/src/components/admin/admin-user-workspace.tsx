@@ -24,6 +24,17 @@ const statusLabel: Record<AdminUserStatus, string> = {
   DELETED: "Đã xóa mềm",
 };
 
+const roleLabel: Record<string, string> = {
+  SUPER_ADMIN: "Quản trị hệ thống",
+  MODERATOR: "Người kiểm duyệt",
+  USER: "Người nộp hồ sơ",
+  VIEWER: "Người tra cứu",
+};
+
+function formatRoles(roles: string[]) {
+  return roles.map((role) => roleLabel[role] ?? role).join(", ") || "—";
+}
+
 function formatDate(value: string | null) {
   if (!value) return "Chưa có";
   return new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(
@@ -288,9 +299,7 @@ export function AdminUserWorkspace() {
                     <td className="px-5 py-4">
                       {user.isEmailVerified ? "Đã xác minh" : "Chưa xác minh"}
                     </td>
-                    <td className="px-5 py-4">
-                      {user.roles.join(", ") || "—"}
-                    </td>
+                    <td className="px-5 py-4">{formatRoles(user.roles)}</td>
                     <td className="px-5 py-4">
                       <StatusBadge status={user.status} />
                     </td>
@@ -328,7 +337,7 @@ export function AdminUserWorkspace() {
                   <div>
                     <dt className="text-neutral-500">Vai trò</dt>
                     <dd className="mt-1 font-semibold text-neutral-900">
-                      {user.roles.join(", ") || "—"}
+                      {formatRoles(user.roles)}
                     </dd>
                   </div>
                   <div>
