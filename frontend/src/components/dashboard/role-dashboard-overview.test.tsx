@@ -39,4 +39,14 @@ describe("RoleDashboardOverview", () => {
 
     expect(screen.queryByRole("link", { name: /Ký blockchain/i })).toBeNull();
   });
+
+  it("keeps secondary actions on a dark-theme-safe semantic surface", () => {
+    render(<RoleDashboardOverview persona="SUPER_ADMIN" />);
+
+    const blockchainAction = screen.getByRole("link", {
+      name: /Ký blockchain/i,
+    });
+    expect(blockchainAction.className).not.toContain("hover:bg-white");
+    expect(blockchainAction.className).toContain("workspace-action-card");
+  });
 });

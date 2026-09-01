@@ -28,6 +28,10 @@ function TechnicalDetails({ row }: { row: AuditLogItem }) {
       </summary>
       <dl className="mt-3 grid max-w-sm gap-2 rounded-lg bg-neutral-50 p-3">
         <div>
+          <dt className="text-neutral-500">Loại sự kiện</dt>
+          <dd className="break-all font-mono">{row.action}</dd>
+        </div>
+        <div>
           <dt className="text-neutral-500">Mã đối tượng</dt>
           <dd className="break-all font-mono">{row.resourceId}</dd>
         </div>
@@ -45,13 +49,13 @@ export function AuditRow({ row }: { row: AuditLogItem }) {
   return (
     <tr className="audit-event-row border-t border-neutral-200 align-top transition-colors">
       <td className="whitespace-nowrap px-5 py-4 text-neutral-600">
-        <span className="block font-semibold text-ink-950">
+        <span className="audit-event-title block font-semibold">
           {timestamp.time}
         </span>
         <span className="mt-1 block text-xs">{timestamp.date}</span>
       </td>
       <td className="px-5 py-4" data-testid="audit-row-summary">
-        <span className="font-semibold text-ink-950">
+        <span className="audit-event-title font-semibold">
           {auditEventSummary(row)}
         </span>
         <span className="mt-1 block text-xs text-neutral-500">
@@ -78,7 +82,7 @@ export function AuditCard({ row }: { row: AuditLogItem }) {
   const timestamp = formatAuditTimestamp(row.createdAt);
   return (
     <article
-      className="rounded-2xl border border-neutral-200 bg-white p-4"
+      className="audit-event-card rounded-2xl border p-4"
       data-testid="audit-mobile-row"
     >
       <div className="flex items-start justify-between gap-3">
@@ -87,7 +91,7 @@ export function AuditCard({ row }: { row: AuditLogItem }) {
         </span>
         <IntegrityBadge row={row} />
       </div>
-      <h3 className="mt-4 text-base font-bold leading-6 text-ink-950">
+      <h3 className="audit-event-title mt-4 text-base font-bold leading-6">
         {auditEventSummary(row)}
       </h3>
       <p className="mt-1 text-sm leading-6 text-neutral-600">

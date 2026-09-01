@@ -260,14 +260,29 @@ export function BlockchainSigningWorkspace() {
   if (wallet.isPending)
     return <p role="status">Đang kiểm tra quyền ký blockchain…</p>;
   if (wallet.error) {
+    const apiError = wallet.error instanceof ApiError ? wallet.error : null;
+    const isForbidden = apiError?.status === 403;
+    const title = isForbidden
+      ? "Chưa có quyền ký blockchain"
+      : "Dịch vụ blockchain chưa sẵn sàng";
+    const description = isForbidden
+      ? "Phiên đăng nhập hiện tại chưa có quyền blockchain.sign. Hãy đăng xuất, đăng nhập lại và kiểm tra quyền của tài khoản Super Admin."
+      : "Tài khoản đã vào được khu vực quản trị, nhưng backend chưa tải được cấu hình hoặc dịch vụ blockchain. Kiểm tra RPC, chain ID, contract, allowlist và ABI trên production.";
     return (
-      <section className="mx-auto max-w-3xl rounded-2xl border border-amber-200 bg-amber-50 p-7 text-amber-950">
+      <section className="blockchain-error-state mx-auto max-w-3xl rounded-2xl border p-7">
         <ShieldCheck className="size-6" aria-hidden="true" />
-        <h1 className="mt-4 text-2xl font-bold">Khu vực ký blockchain</h1>
-        <p className="mt-2 leading-7">
-          Chỉ Super Admin được ký blockchain. Hãy đăng nhập lại sau khi tài
-          khoản được cấp quyền, sau đó kết nối ví giữ VERIFIER_ROLE.
+        <h1 className="mt-4 text-2xl font-bold">{title}</h1>
+        <p className="mt-2 leading-7">{description}</p>
+        <p className="mt-4 font-mono text-xs font-bold uppercase tracking-[0.12em]">
+          Mã lỗi: {apiError?.code ?? "REQUEST_FAILED"}
         </p>
+        <button
+          className="mt-5 min-h-11 rounded-lg border px-4 text-sm font-bold transition-colors"
+          onClick={() => void wallet.refetch()}
+          type="button"
+        >
+          Thử kiểm tra lại
+        </button>
       </section>
     );
   }

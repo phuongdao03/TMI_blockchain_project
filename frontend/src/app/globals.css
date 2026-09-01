@@ -1510,6 +1510,44 @@ summary {
   }
 }
 
+/* Semantic workspace surfaces must remain readable in both color schemes. */
+.workspace-action-grid {
+  background: var(--theme-surface);
+  border-color: var(--theme-border);
+}
+
+.workspace-action-card {
+  color: var(--theme-text);
+}
+
+.workspace-action-card:hover {
+  background: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-text));
+}
+
+.blockchain-error-state {
+  background: var(--theme-surface);
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+}
+
+.blockchain-error-state button {
+  border-color: var(--theme-border);
+}
+
+.blockchain-error-state button:hover {
+  background: color-mix(in srgb, var(--theme-surface) 90%, var(--theme-text));
+}
+
+.audit-event-title {
+  color: var(--theme-text);
+}
+
+.audit-event-card {
+  background: var(--theme-surface);
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+}
+
 /* Final THV public palette overrides legacy dark registry styles. */
 .public-home {
   background: #f7f8f5;

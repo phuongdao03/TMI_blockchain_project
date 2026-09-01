@@ -104,12 +104,12 @@ const staffWorkspaces: Record<
 function ActionGrid({ actions }: { actions: Action[] }) {
   return (
     <section
-      className="grid overflow-hidden rounded-xl border border-black/10 bg-[#fbfaf7] sm:grid-cols-2"
+      className="workspace-action-grid grid overflow-hidden rounded-xl border border-black/10 sm:grid-cols-2"
       aria-label="Tác vụ sẵn có"
     >
       {actions.map(({ href, label, detail, icon: Icon }) => (
         <Link
-          className="group min-h-40 border-b border-black/8 p-6 transition hover:bg-white sm:border-r sm:[&:nth-child(even)]:border-r-0 sm:[&:nth-last-child(-n+2)]:border-b-0"
+          className="workspace-action-card group min-h-40 border-b border-black/8 p-6 transition-colors sm:border-r sm:[&:nth-child(even)]:border-r-0 sm:[&:nth-last-child(-n+2)]:border-b-0"
           href={href}
           key={href}
         >

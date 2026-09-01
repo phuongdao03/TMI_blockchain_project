@@ -5,14 +5,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BlockchainSigningWorkspace } from "@/components/blockchain/blockchain-signing-workspace";
 
-const { currentWallet, legacyQueue, proofQueue } = vi.hoisted(() => ({
-  currentWallet: vi.fn(),
-  legacyQueue: vi.fn(),
-  proofQueue: vi.fn(),
-}));
+const { currentWallet, legacyQueue, proofQueue, MockApiError } = vi.hoisted(
+  () => ({
+    currentWallet: vi.fn(),
+    legacyQueue: vi.fn(),
+    proofQueue: vi.fn(),
+    MockApiError: class MockApiError extends Error {
+      constructor(
+        message: string,
+        readonly code: string,
+        readonly status: number,
+      ) {
+        super(message);
+      }
+    },
+  }),
+);
 
 vi.mock("@/lib/api/client", () => ({
-  ApiError: class ApiError extends Error {},
+  ApiError: MockApiError,
   blockchainSigningApi: {
     currentWallet,
     queue: legacyQueue,
@@ -97,5 +108,44 @@ describe("BlockchainSigningWorkspace", () => {
     expect(await screen.findByText("Tác phẩm đã duyệt")).toBeDefined();
     expect(proofQueue).toHaveBeenCalledOnce();
     expect(legacyQueue).not.toHaveBeenCalled();
+  });
+
+  it("distinguishes a blockchain configuration failure from missing admin access", async () => {
+    currentWallet.mockRejectedValue(
+      new MockApiError(
+        "Blockchain service is unavailable.",
+        "BLOCKCHAIN_UNAVAILABLE",
+        503,
+      ),
+    );
+
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Dịch vụ blockchain chưa sẵn sàng",
+      }),
+    ).toBeDefined();
+    expect(screen.queryByText(/Chỉ Super Admin được ký blockchain/)).toBeNull();
+    expect(screen.getByText("Mã lỗi: BLOCKCHAIN_UNAVAILABLE")).toBeDefined();
+  });
+
+  it("shows the permission guidance only for an actual forbidden response", async () => {
+    currentWallet.mockRejectedValue(
+      new MockApiError(
+        "Blockchain administration access is forbidden.",
+        "BLOCKCHAIN_FORBIDDEN",
+        403,
+      ),
+    );
+
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Chưa có quyền ký blockchain",
+      }),
+    ).toBeDefined();
+    expect(screen.getByText("Mã lỗi: BLOCKCHAIN_FORBIDDEN")).toBeDefined();
   });
 });
