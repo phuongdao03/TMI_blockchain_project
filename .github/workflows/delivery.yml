@@ -75,7 +75,7 @@ jobs:
           node --test contracts/scripts/export-artifacts.test.mjs
       - name: Anvil contract release smoke
         run: bash contracts/scripts/smoke-anvil.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: contract-release-${{ github.run_id }}
           path: |
@@ -95,7 +95,7 @@ jobs:
       - run: npm --prefix frontend ci
       - run: frontend/node_modules/.bin/playwright install --with-deps chromium
       - run: npm --prefix frontend run test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-failure-${{ github.run_id }}
@@ -187,7 +187,7 @@ jobs:
         run: >-
           node infrastructure/scripts/run-operational-readiness-regressions.mjs
           --output operational-readiness-evidence
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: operational-readiness-regression-${{ github.run_id }}
@@ -216,7 +216,7 @@ jobs:
         run: >-
           node infrastructure/scripts/run-document-proof-production-gate.mjs
           --output document-proof-production-evidence
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: document-proof-production-gate-${{ github.run_id }}
@@ -289,7 +289,7 @@ jobs:
         run:
           tar -czf rollback-bundle.tgz infrastructure/compose.production.yaml
           infrastructure/nginx/production.conf.template infrastructure/scripts
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rollback-${{ github.event.inputs.image_tag || github.sha }}
           path: rollback-bundle.tgz
