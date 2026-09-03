@@ -22,6 +22,7 @@ import {
 } from "@/lib/api/client";
 import type { StaffAccountRole, StaffAccountStatus } from "@/lib/api/types";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { SelectControl } from "@/components/ui/form-controls";
 import { STAFF_ACCOUNT_ROLES } from "./staff-account-roles";
 
 const inputClass =
@@ -242,7 +243,7 @@ export function StaffAccountWorkspace() {
   const selectedRole = STAFF_ACCOUNT_ROLES.find((item) => item.value === role);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-7 pb-8">
+    <div className="staff-account-workspace mx-auto max-w-7xl space-y-7 pb-8">
       <header className="border-b border-neutral-200 pb-6">
         <Link
           className="inline-flex items-center gap-2 text-sm font-bold text-neutral-500 transition hover:text-neutral-950"
@@ -396,7 +397,7 @@ export function StaffAccountWorkspace() {
               <label className="text-sm font-semibold" htmlFor="staff-role">
                 Nhiệm vụ
               </label>
-              <select
+              <SelectControl
                 className={inputClass}
                 id="staff-role"
                 onChange={(event) =>
@@ -409,7 +410,7 @@ export function StaffAccountWorkspace() {
                     {item.label}
                   </option>
                 ))}
-              </select>
+              </SelectControl>
               <p className="mt-2 rounded-lg bg-neutral-50 px-3 py-2 text-xs leading-5 text-neutral-600">
                 {selectedRole?.description}
               </p>
@@ -530,7 +531,7 @@ export function StaffAccountWorkspace() {
               </label>
               <label>
                 <span className="sr-only">Lọc trạng thái</span>
-                <select
+                <SelectControl
                   aria-label="Lọc trạng thái"
                   className="min-h-11 w-full rounded-xl border border-neutral-300 px-3 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
                   id="staff-status-filter"
@@ -545,11 +546,11 @@ export function StaffAccountWorkspace() {
                   <option value="ACTIVE">Đang hoạt động</option>
                   <option value="SUSPENDED">Đã khóa</option>
                   <option value="DISABLED">Đã vô hiệu hóa</option>
-                </select>
+                </SelectControl>
               </label>
               <label>
                 <span className="sr-only">Lọc nhiệm vụ</span>
-                <select
+                <SelectControl
                   aria-label="Lọc nhiệm vụ"
                   className="min-h-11 w-full rounded-xl border border-neutral-300 px-3 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
                   id="staff-role-filter"
@@ -567,7 +568,7 @@ export function StaffAccountWorkspace() {
                       {item.label}
                     </option>
                   ))}
-                </select>
+                </SelectControl>
               </label>
             </div>
           </div>
@@ -634,7 +635,7 @@ export function StaffAccountWorkspace() {
                           >
                             Nhiệm vụ của {account.email}
                           </label>
-                          <select
+                          <SelectControl
                             className="rounded-lg border border-neutral-300 bg-white px-2 py-2 text-xs font-semibold outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 disabled:bg-neutral-100"
                             disabled={update.isPending || isProtected}
                             id={`role-${account.id}`}
@@ -658,7 +659,7 @@ export function StaffAccountWorkspace() {
                                 {item.label}
                               </option>
                             ))}
-                          </select>
+                          </SelectControl>
                         </td>
                         <td className="px-5 py-4 sm:px-6">
                           <span className="inline-flex rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-xs font-bold text-neutral-700">

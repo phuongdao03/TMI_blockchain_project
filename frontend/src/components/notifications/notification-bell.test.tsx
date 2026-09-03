@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NotificationBell } from "./notification-bell";
 
@@ -25,6 +25,10 @@ function renderBell() {
 }
 
 describe("NotificationBell", () => {
+  beforeEach(() => {
+    Object.values(api).forEach((mock) => mock.mockReset());
+  });
+
   it("shows the unread badge and marks an opened notification as read", async () => {
     api.unreadCount.mockResolvedValue({ unreadCount: 3 });
     api.list.mockResolvedValue({
@@ -71,5 +75,32 @@ describe("NotificationBell", () => {
     fireEvent.click(screen.getByRole("button", { name: /Đọc tất cả/i }));
 
     await waitFor(() => expect(api.markAllRead).toHaveBeenCalledOnce());
+  });
+
+  it("traps keyboard focus and restores it after closing", async () => {
+    api.unreadCount.mockResolvedValue({ unreadCount: 0 });
+    api.list.mockResolvedValue({
+      data: [],
+      meta: { page: 1, pageSize: 5, total: 0 },
+    });
+
+    renderBell();
+    const trigger = await screen.findByRole("button", {
+      name: "Mở trung tâm thông báo",
+    });
+    fireEvent.click(trigger);
+
+    const closeButton = screen.getByRole("button", {
+      name: "Đóng thông báo",
+    });
+    await waitFor(() => expect(document.activeElement).toBe(closeButton));
+
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(
+      screen.getByRole("link", { name: /Xem tất cả thông báo/i }),
+    );
+
+    fireEvent.click(closeButton);
+    expect(document.activeElement).toBe(trigger);
   });
 });

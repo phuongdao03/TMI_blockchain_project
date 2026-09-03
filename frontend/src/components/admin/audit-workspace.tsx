@@ -13,6 +13,7 @@ import { useMemo, useState } from "react";
 
 import { AuditCard, AuditRow } from "@/components/admin/audit-row";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { DateControl, SelectControl } from "@/components/ui/form-controls";
 import { auditApi } from "@/lib/api/client";
 import type { AuditListFilters } from "@/lib/api/types";
 
@@ -127,7 +128,7 @@ export function AuditWorkspace() {
       >
         <label className="text-sm font-semibold" htmlFor="audit-action">
           Loại hoạt động
-          <select
+          <SelectControl
             className={inputClass}
             id="audit-action"
             name="action"
@@ -149,11 +150,11 @@ export function AuditWorkspace() {
             <option value="audit.integrity_checked">
               Tính toàn vẹn được kiểm tra
             </option>
-          </select>
+          </SelectControl>
         </label>
         <label className="text-sm font-semibold" htmlFor="audit-resource-type">
           Nhóm nội dung
-          <select
+          <SelectControl
             className={inputClass}
             id="audit-resource-type"
             name="resourceType"
@@ -168,11 +169,11 @@ export function AuditWorkspace() {
             <option value="certificate">Chứng thư</option>
             <option value="document">Tài liệu</option>
             <option value="payment">Thanh toán</option>
-          </select>
+          </SelectControl>
         </label>
         <label className="text-sm font-semibold" htmlFor="audit-created-from">
           Từ ngày
-          <input
+          <DateControl
             className={inputClass}
             id="audit-created-from"
             max={createdTo || undefined}
@@ -181,13 +182,12 @@ export function AuditWorkspace() {
               setCreatedFrom(event.target.value);
               setPage(1);
             }}
-            type="date"
             value={createdFrom}
           />
         </label>
         <label className="text-sm font-semibold" htmlFor="audit-created-to">
           Đến ngày
-          <input
+          <DateControl
             className={inputClass}
             id="audit-created-to"
             min={createdFrom || undefined}
@@ -196,7 +196,6 @@ export function AuditWorkspace() {
               setCreatedTo(event.target.value);
               setPage(1);
             }}
-            type="date"
             value={createdTo}
           />
         </label>

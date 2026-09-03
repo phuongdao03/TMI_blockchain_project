@@ -2,6 +2,7 @@ import { FilePlus2, FolderKanban } from "lucide-react";
 import Link from "next/link";
 
 import { DossierList } from "@/components/dossiers/dossier-list";
+import { SelectControl } from "@/components/ui/form-controls";
 import type { DossierStatus } from "@/lib/api/types";
 
 const statusOptions: Array<[string, string]> = [
@@ -57,7 +58,7 @@ export default async function DossiersPage({
           >
             Trạng thái
           </label>
-          <select
+          <SelectControl
             className="mt-2 min-h-11 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold sm:max-w-xs"
             defaultValue={status ?? ""}
             id="status-filter"
@@ -68,7 +69,7 @@ export default async function DossiersPage({
                 {label}
               </option>
             ))}
-          </select>
+          </SelectControl>
         </div>
         <button
           className="min-h-11 rounded-xl border border-neutral-200 bg-neutral-950 px-5 text-sm font-bold text-white hover:bg-neutral-800"

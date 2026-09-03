@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-test.beforeEach(async ({ context }) => {
+test.beforeEach(async ({ context, request }) => {
+  const reset = await request.post(
+    "http://127.0.0.1:4010/api/e2e/reset-certificate-versions",
+  );
+  expect(reset.ok()).toBe(true);
   await context.addCookies([
     {
       name: "tmi_access",

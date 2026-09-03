@@ -32,12 +32,16 @@ function applyTheme(preference: ThemePreference) {
 
 export function ThemeToggle() {
   const [preference, setPreference] = useState<ThemePreference>("system");
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(storageKey);
     const initial = isThemePreference(stored) ? stored : "system";
     applyTheme(initial);
-    queueMicrotask(() => setPreference(initial));
+    queueMicrotask(() => {
+      setPreference(initial);
+      setIsReady(true);
+    });
 
     const media =
       typeof window.matchMedia === "function"
@@ -74,6 +78,7 @@ export function ThemeToggle() {
         <button
           aria-pressed={preference === value}
           className="theme-toggle-option"
+          disabled={!isReady}
           key={value}
           onClick={() => {
             setPreference(value);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, LoaderCircle } from "lucide-react";
+import { ArrowUpRight, CircleAlert } from "lucide-react";
 import Link from "next/link";
 
 import { publicApi } from "@/lib/api/client";
@@ -13,8 +13,38 @@ export function FeaturedAssets() {
   });
   if (query.isPending) {
     return (
-      <div className="grid min-h-52 place-items-center">
-        <LoaderCircle className="size-6 animate-spin text-primary-700" />
+      <div className="grid gap-4 md:grid-cols-3" role="status">
+        <span className="sr-only">Đang tải đề cử đã công bố…</span>
+        {[0, 1, 2].map((item) => (
+          <div
+            aria-hidden="true"
+            className="dashboard-skeleton h-48 animate-pulse rounded-xl"
+            key={item}
+          />
+        ))}
+      </div>
+    );
+  }
+  if (query.isError) {
+    return (
+      <div className="grid min-h-52 place-items-center border-y border-dashed border-neutral-300 px-6 py-10 text-center">
+        <div>
+          <CircleAlert
+            aria-hidden="true"
+            className="mx-auto size-6 text-primary-700"
+          />
+          <p className="mt-3 font-bold">Chưa thể tải đề cử</p>
+          <p className="mt-1 text-sm text-neutral-600">
+            Vui lòng kiểm tra kết nối và thử lại.
+          </p>
+          <button
+            className="mt-4 min-h-11 rounded-lg border border-neutral-300 px-4 text-sm font-bold"
+            onClick={() => void query.refetch()}
+            type="button"
+          >
+            Thử lại
+          </button>
+        </div>
       </div>
     );
   }

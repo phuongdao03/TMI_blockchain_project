@@ -375,14 +375,20 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
     ]);
   };
   const attach = useMutation({
-    mutationFn: (asset: MediaAsset) =>
+    mutationFn: ({
+      asset,
+      displayOrder,
+    }: {
+      asset: MediaAsset;
+      displayOrder: number;
+    }) =>
       dossierApi.attachEvidence(dossierId, {
         mediaAssetId: asset.id,
         evidenceType: selectedRule?.documentType ?? evidenceType,
         evidenceRole: selectedRule?.key,
         title:
           evidenceTitle.trim() || selectedRule?.label || "Tài liệu chứng minh",
-        displayOrder: detail.data?.evidences.length ?? 0,
+        displayOrder,
       }),
     onSuccess: refresh,
   });
@@ -643,7 +649,18 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                       }
                       disabled={attach.isPending || selectedRuleAtCapacity}
                       label={selectedRule?.label ?? "Bằng chứng hồ sơ"}
-                      onComplete={(asset) => attach.mutate(asset)}
+                      maxFiles={
+                        selectedRule
+                          ? selectedRule.maxCount - selectedRuleCount
+                          : undefined
+                      }
+                      multiple
+                      onComplete={async (asset, index) => {
+                        await attach.mutateAsync({
+                          asset,
+                          displayOrder: dossier.evidences.length + index,
+                        });
+                      }}
                       purpose="DOSSIER_EVIDENCE"
                     />
                     {selectedRuleAtCapacity ? (

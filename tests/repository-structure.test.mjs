@@ -1,9 +1,16 @@
 import assert from "node:assert/strict";
-import { readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import test from "node:test";
 
 /** @param {string} path */
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
+
+/** @param {string} root */
+const sourceFiles = (root) =>
+  readdirSync(root, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => `${entry.parentPath}/${entry.name}`.replaceAll("\\", "/"))
+    .filter((path) => /\.(py|ts|tsx)$/.test(path));
 
 test("defines the required monorepo roots", () => {
   for (const directory of [
@@ -86,4 +93,72 @@ test("pins a redacted full-history secret scan with a synthetic canary", () => {
   assert.match(scanner, /cygpath -w/);
   assert.match(config, /useDefault\s*=\s*true/);
   assert.match(config, /google-oauth-client-secret-json/);
+});
+
+test("production runtime is THVProofRegistry-only", () => {
+  const archivedBackend = new Set(
+    [
+      "dependencies.py",
+      "gateway.py",
+      "human_signing_dependencies.py",
+      "human_signing_service.py",
+      "service.py",
+    ].map((name) => `backend/app/modules/blockchain/${name}`),
+  );
+  archivedBackend.add("backend/app/workers/blockchain_tasks.py");
+
+  const activeBackend = sourceFiles("backend/app")
+    .filter((path) => !path.startsWith("backend/app/tests/"))
+    .filter((path) => !path.startsWith("backend/app/migrations/"))
+    .filter((path) => !archivedBackend.has(path));
+  const activeFrontend = sourceFiles("frontend/src").filter(
+    (path) => !/\.test\.(ts|tsx)$/.test(path),
+  );
+  const forbiddenRequestTokens = [
+    /modules\.blockchain\.(gateway|service|dependencies|human_signing_service|human_signing_dependencies)/,
+    /app\.workers\.blockchain_tasks/,
+    /\bissueCertificate\b/,
+    /\brevokeCertificate\b/,
+    /\brecordDocumentEvidence\b/,
+    /\bverifyDocumentEvidence\b/,
+  ];
+
+  for (const path of [...activeBackend, ...activeFrontend]) {
+    const source = readFileSync(path, "utf8");
+    for (const token of forbiddenRequestTokens) {
+      assert.doesNotMatch(
+        source,
+        token,
+        `${path} contains legacy runtime flow`,
+      );
+    }
+  }
+
+  const productionEnvironment = readFileSync(
+    "infrastructure/.env.production.example",
+    "utf8",
+  );
+  assert.doesNotMatch(productionEnvironment, /^CERTIFICATE_CONTRACT_ADDRESS=/m);
+  assert.doesNotMatch(productionEnvironment, /^BLOCKCHAIN_CONTRACT_ABI_PATH=/m);
+  assert.match(
+    productionEnvironment,
+    /^THV_PROOF_REGISTRY_CONTRACT_ADDRESS=0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F$/m,
+  );
+
+  const pyproject = readFileSync("backend/pyproject.toml", "utf8");
+  for (const path of archivedBackend) {
+    assert.match(pyproject, new RegExp(path.replace(/^backend\//, "")));
+  }
+
+  for (const path of [
+    ".github/workflows/contract-release.yml",
+    "infrastructure/scripts/run-document-proof-production-gate.mjs",
+  ]) {
+    const productionGate = readFileSync(path, "utf8");
+    assert.doesNotMatch(
+      productionGate,
+      /CertificateRegistry|test:provenance|smoke-anvil/,
+      `${path} builds or exercises the archived registry`,
+    );
+  }
 });

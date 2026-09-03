@@ -16,7 +16,7 @@ class DiscoveryStub:
     ) -> tuple[TrendingSearch, ...]:
         assert period is SearchSnapshotPeriod.DAILY
         assert limit == 5
-        return (TrendingSearch("a" * 64, "sÆ¡n mÃ i", 9),)
+        return (TrendingSearch("a" * 64, "sơn mài", 9),)
 
     async def related(self, *, slug: str, limit: int) -> tuple[RelatedWork, ...]:
         assert slug == "tac-pham-goc"
@@ -25,9 +25,9 @@ class DiscoveryStub:
             RelatedWork(
                 uuid4(),
                 "tac-pham-lien-quan",
-                "TÃ¡c pháº©m liÃªn quan",
-                "MÃ´ táº£ cÃ´ng khai",
-                "Má»¹ thuáº­t",
+                "Tác phẩm liên quan",
+                "Mô tả công khai",
+                "Mỹ thuật",
                 "my-thuat",
                 datetime(2026, 8, 1, tzinfo=UTC),
             ),

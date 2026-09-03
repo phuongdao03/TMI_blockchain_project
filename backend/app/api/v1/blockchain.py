@@ -10,14 +10,24 @@ from app.core.schemas import (
     ResponseMeta,
     SuccessEnvelope,
 )
+from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.dependencies import (
     CsrfProtectedPrincipalDependency,
     CurrentPrincipalDependency,
 )
-from app.modules.blockchain.dependencies import BlockchainServiceDependency
+from app.modules.blockchain.admin_read_dependencies import (
+    BlockchainAdminReadServiceDependency,
+)
+from app.modules.blockchain.errors import (
+    BlockchainForbiddenError,
+    BlockchainLegacyFlowDeprecatedError,
+)
 from app.modules.blockchain.models import (
     BlockchainTransactionStatus,
     DocumentEvidenceStatus,
+)
+from app.modules.blockchain.proof_registry_dependencies import (
+    THVProofRegistryServiceDependency,
 )
 from app.modules.blockchain.schemas import (
     BlockchainQueuedData,
@@ -32,6 +42,10 @@ RESPONSES: dict[int | str, dict[str, Any]] = {
     403: {"description": "Blockchain access is forbidden.", "model": ErrorEnvelope},
     404: {"description": "Transaction not found.", "model": ErrorEnvelope},
     409: {"description": "Transaction state conflict.", "model": ErrorEnvelope},
+    410: {
+        "description": "Legacy transaction mutation is deprecated.",
+        "model": ErrorEnvelope,
+    },
     422: {"description": "Request is invalid.", "model": ErrorEnvelope},
     503: {"description": "Blockchain service unavailable.", "model": ErrorEnvelope},
 }
@@ -45,7 +59,7 @@ RESPONSES: dict[int | str, dict[str, Any]] = {
 async def list_blockchain_transactions(
     request: Request,
     principal: CurrentPrincipalDependency,
-    service: BlockchainServiceDependency,
+    service: BlockchainAdminReadServiceDependency,
     transaction_status: Annotated[
         BlockchainTransactionStatus | None,
         Query(alias="status"),
@@ -53,7 +67,7 @@ async def list_blockchain_transactions(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
 ) -> PaginatedSuccessEnvelope[list[BlockchainTransactionData]]:
-    rows, total = await service.list_admin(
+    rows, total = await service.list_transactions(
         principal,
         status=transaction_status,
         page=page,
@@ -78,7 +92,7 @@ async def list_blockchain_transactions(
 async def list_document_evidences(
     request: Request,
     principal: CurrentPrincipalDependency,
-    service: BlockchainServiceDependency,
+    service: BlockchainAdminReadServiceDependency,
     evidence_status: Annotated[
         DocumentEvidenceStatus | None,
         Query(alias="status"),
@@ -86,7 +100,7 @@ async def list_document_evidences(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
 ) -> PaginatedSuccessEnvelope[list[DocumentEvidenceData]]:
-    rows, total = await service.list_document_evidences_admin(
+    rows, total = await service.list_document_evidences(
         principal,
         status=evidence_status,
         page=page,
@@ -112,13 +126,9 @@ async def retry_blockchain_transaction(
     transaction_id: UUID,
     request: Request,
     principal: CsrfProtectedPrincipalDependency,
-    service: BlockchainServiceDependency,
 ) -> SuccessEnvelope[BlockchainTransactionData]:
-    transaction = await service.retry_admin(principal, transaction_id)
-    return SuccessEnvelope(
-        data=BlockchainTransactionData.model_validate(transaction),
-        meta=ResponseMeta(request_id=request.state.request_id),
-    )
+    del transaction_id, request, principal
+    raise BlockchainLegacyFlowDeprecatedError()
 
 
 @router.post(
@@ -129,9 +139,17 @@ async def retry_blockchain_transaction(
 async def reconcile_blockchain_transactions(
     request: Request,
     principal: CsrfProtectedPrincipalDependency,
-    service: BlockchainServiceDependency,
+    proof_service: THVProofRegistryServiceDependency,
 ) -> SuccessEnvelope[BlockchainQueuedData]:
-    await service.reconcile_admin(principal)
+    AuthorizationPolicy.require_capability(
+        principal,
+        PolicyRequirement(
+            permission="blockchain.manage",
+            compatible_roles=frozenset({"SUPER_ADMIN"}),
+        ),
+        BlockchainForbiddenError,
+    )
+    await proof_service.reconcile_pending()
     return SuccessEnvelope(
         data=BlockchainQueuedData(),
         meta=ResponseMeta(request_id=request.state.request_id),

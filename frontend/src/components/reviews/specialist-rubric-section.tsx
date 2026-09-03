@@ -20,12 +20,16 @@ export function specialistScore(
   rubric: ReviewRubric,
   answers: Record<string, SpecialistCriterionAnswer>,
 ) {
-  if (rubric.criteria.some(({ key }) => answers[key] === undefined))
+  if (
+    rubric.criteria.some(
+      ({ key, weight }) => answers[key] === undefined || weight === undefined,
+    )
+  )
     return null;
   return Math.round(
     rubric.criteria.reduce(
       (total, criterion) =>
-        total + (answers[criterion.key]!.score * criterion.weight) / 5,
+        total + (answers[criterion.key]!.score * (criterion.weight ?? 0)) / 5,
       0,
     ),
   );
@@ -251,8 +255,9 @@ export function SpecialistRubricSection({
         })}
       </div>
       <p className="rounded-xl border border-[var(--theme-border)] p-3 text-sm font-semibold">
-        Ngưỡng chuyên biệt: duyệt từ {rubric.thresholds.approveMin}/100 · từ
-        chối dưới {rubric.thresholds.rejectBelow}/100.
+        {rubric.thresholds
+          ? `Ngưỡng chuyên biệt: duyệt từ ${rubric.thresholds.approveMin}/100 · từ chối dưới ${rubric.thresholds.rejectBelow}/100.`
+          : "Rubric này không sử dụng ngưỡng điểm."}
       </p>
     </section>
   );

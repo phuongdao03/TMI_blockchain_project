@@ -177,6 +177,7 @@ class PublicRepository:
                 .add_columns(
                     DossierVersion.canonical_hash,
                     DossierVersion.snapshot_json,
+                    DossierVersion.version_no,
                 )
                 .join(
                     DossierVersion,
@@ -195,6 +196,7 @@ class PublicRepository:
             transaction,
             dossier_hash,
             dossier_snapshot,
+            dossier_version_no,
         ) = row
         asset_title, category_name, dossier_code = self._frozen_identity(
             version.metadata_json
@@ -215,6 +217,8 @@ class PublicRepository:
             metadata=dict(version.metadata_json),
             dossier_snapshot=dict(dossier_snapshot),
             version=version.version_no,
+            proof_version=dossier_version_no,
+            dossier_id=dossier.id,
             network=transaction.network if transaction is not None else None,
             contract_address=(
                 transaction.contract_address if transaction is not None else None

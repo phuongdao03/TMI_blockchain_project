@@ -41,7 +41,7 @@ class RecordingRepository:
 
     async def trending(self, *, period: str, limit: int) -> tuple[TrendingSearch, ...]:
         del period, limit
-        return (TrendingSearch("a" * 64, "sÆ¡n mÃ i", 12),)
+        return (TrendingSearch("a" * 64, "sơn mài", 12),)
 
     async def related(
         self, *, slug: str, limit: int, now: datetime
@@ -51,9 +51,9 @@ class RecordingRepository:
             RelatedWork(
                 uuid4(),
                 "tac-pham-lien-quan",
-                "TÃ¡c pháº©m liÃªn quan",
-                "MÃ´ táº£ cÃ´ng khai",
-                "Má»¹ thuáº­t",
+                "Tác phẩm liên quan",
+                "Mô tả công khai",
+                "Mỹ thuật",
                 "my-thuat",
                 datetime(2026, 8, 1, tzinfo=UTC),
             ),
@@ -115,10 +115,10 @@ class ResultRepository:
                 SearchWorkProjection(
                     uuid4(),
                     "son-mai",
-                    "SÆ¡n mÃ i",
-                    "MÃ´ táº£",
+                    "Sơn mài",
+                    "Mô tả",
                     None,
-                    "Má»¹ thuáº­t",
+                    "Mỹ thuật",
                     "my-thuat",
                     None,
                     None,
@@ -193,7 +193,7 @@ def test_trending_and_related_are_deterministic_cache_namespaces() -> None:
         repository = RecordingRepository()
         cache = MemoryCache()
         service = SearchDiscoveryService(repository, cache=cache)  # type: ignore[arg-type]
-        assert (await service.trending())[0].query == "sÆ¡n mÃ i"
+        assert (await service.trending())[0].query == "sơn mài"
         first = await service.related(slug="son-mai")
         second = await service.related(slug="son-mai")
         assert first == second
@@ -231,8 +231,8 @@ def test_result_cache_canonicalizes_parameters_and_prevents_stampede() -> None:
         first = PublicSearchService(typed_repository, result_cache=cache)
         second = PublicSearchService(typed_repository, result_cache=cache)
         results = await asyncio.gather(
-            first.search(query="SÆ¡n mÃ i", category="my-thuat"),
-            second.search(query="SÆ¡n mÃ i", category="my-thuat"),
+            first.search(query="Sơn mài", category="my-thuat"),
+            second.search(query="Sơn mài", category="my-thuat"),
         )
         assert repository.calls == 1
         assert results[0].page == results[1].page

@@ -6,6 +6,7 @@ wallet performs that final action in the client.
 """
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
@@ -15,15 +16,16 @@ from web3 import AsyncHTTPProvider, AsyncWeb3, Web3
 from web3.exceptions import TransactionNotFound
 from web3.types import TxReceipt
 
-from app.modules.blockchain.gateway import (
+from app.modules.blockchain.transport import (
     BlockchainGatewayError,
     ChainTransaction,
+    ProofRecordedEvent,
     TransactionReceipt,
 )
 
 _PROOF_RECORDED_TOPIC = Web3.keccak(
     text="ProofRecorded(bytes32,bytes32,uint64,address,uint64)"
-).hex()
+).to_0x_hex()
 
 
 @dataclass(frozen=True, slots=True)
@@ -214,22 +216,49 @@ class THVProofRegistryGateway:
             return None
         except Exception as exc:
             raise BlockchainGatewayError("Transaction receipt lookup failed.") from exc
-        event_names = tuple(
-            "ProofRecorded"
+        proof_events = tuple(
+            event
             for log in receipt["logs"]
-            if str(log["address"]).lower() == self.contract_address.lower()
-            and log["topics"]
-            and HexBytes(log["topics"][0]).to_0x_hex().lower()
-            == _PROOF_RECORDED_TOPIC.lower()
+            if (event := self._proof_recorded_event(log)) is not None
         )
         return TransactionReceipt(
             transaction_hash=HexBytes(receipt["transactionHash"]).to_0x_hex(),
             block_number=int(receipt["blockNumber"]),
             block_hash=HexBytes(receipt["blockHash"]).to_0x_hex(),
             contract_address=str(receipt["to"] or ""),
-            event_names=event_names,
+            event_names=tuple("ProofRecorded" for _event in proof_events),
             succeeded=int(receipt["status"]) == 1,
+            proof_recorded_events=proof_events,
         )
+
+    def _proof_recorded_event(self, log: object) -> ProofRecordedEvent | None:
+        try:
+            if not isinstance(log, Mapping):
+                return None
+            topics = log["topics"]
+            if (
+                str(log["address"]).lower() != self.contract_address.lower()
+                or not isinstance(topics, (tuple, list))
+                or len(topics) != 4
+                or HexBytes(topics[0]).to_0x_hex().lower()
+                != _PROOF_RECORDED_TOPIC.lower()
+            ):
+                return None
+            data = bytes(HexBytes(log["data"]))
+            if len(data) != 64:
+                raise ValueError("ProofRecorded data length is invalid.")
+            signer = Web3.to_checksum_address("0x" + data[12:32].hex())
+            return ProofRecordedEvent(
+                asset_id=bytes(HexBytes(topics[1])),
+                proof_hash=bytes(HexBytes(topics[2])),
+                version=int.from_bytes(bytes(HexBytes(topics[3])), "big"),
+                signer=signer,
+                timestamp=int.from_bytes(data[32:64], "big"),
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise BlockchainGatewayError(
+                "ProofRecorded event payload is invalid."
+            ) from exc
 
     async def latest_block_number(self) -> int:
         await self.validate_chain()

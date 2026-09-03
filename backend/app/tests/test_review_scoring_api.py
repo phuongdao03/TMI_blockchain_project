@@ -125,6 +125,7 @@ class StubScoringService:
             recommendation=draft.recommendation,
             criterion_comments=draft.criterion_comments,
             criterion_evidence=draft.criterion_evidence,
+            evidence_assessments=draft.evidence_assessments,
             findings=draft.findings,
             checklist_answers=draft.checklist_answers,
             applicant_feedback=draft.applicant_feedback,
@@ -132,6 +133,7 @@ class StubScoringService:
             gate_answers=draft.gate_answers,
             specialist_answers=draft.specialist_answers,
             submitted_at=None,
+            criterion_verdicts=draft.criterion_verdicts,
         )
         return self.review
 
@@ -231,6 +233,13 @@ def test_reviewer_conflict_draft_and_submit_contract() -> None:
                 },
                 "recommendation": "APPROVE",
                 "privateNote": "Ghi chú nội bộ",
+                "criterionVerdicts": {
+                    "identity": {
+                        "outcome": "MEETS",
+                        "rationale": "Thông tin chủ thể phù hợp với tài liệu đã nộp.",
+                        "evidenceMediaIds": [],
+                    }
+                },
             },
         )
         invalid = await _request(
@@ -247,6 +256,12 @@ def test_reviewer_conflict_draft_and_submit_contract() -> None:
         assert draft.json()["data"]["totalScore"] == 80
         assert service.received_draft is not None
         assert service.received_draft.recommendation is ReviewRecommendation.APPROVE
+        assert service.received_draft.criterion_verdicts["identity"]["outcome"] == (
+            "MEETS"
+        )
+        assert draft.json()["data"]["criterionVerdicts"]["identity"]["outcome"] == (
+            "MEETS"
+        )
         assert invalid.status_code == 422
         assert submitted.status_code == 200
         assert submitted.json()["data"]["submittedAt"] == "2026-08-02T08:00:00Z"

@@ -54,6 +54,60 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 }
 
+@media (max-width: 768px) {
+  .blockchain-signing-action {
+    position: sticky;
+    z-index: 20;
+    bottom: calc(5.75rem + env(safe-area-inset-bottom));
+    padding: 0.75rem;
+    margin-inline: -0.75rem;
+    background: color-mix(in srgb, var(--theme-surface) 94%, transparent);
+    border: 1px solid var(--theme-border);
+    border-radius: 0.875rem;
+    backdrop-filter: blur(12px);
+  }
+}
+
+.ui-select-control__frame {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+  min-width: 0;
+}
+
+.ui-select-control {
+  min-width: 0;
+  min-height: 2.75rem;
+  padding-right: 2.75rem !important;
+  color: var(--theme-text);
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+  appearance: none;
+}
+
+.ui-select-control__icon {
+  position: absolute;
+  top: 50%;
+  right: 0.875rem;
+  width: 1rem;
+  height: 1rem;
+  color: var(--theme-muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.ui-select-control:focus-visible,
+.ui-date-control:focus-visible {
+  outline: 2px solid var(--theme-accent);
+  outline-offset: 2px;
+}
+
+.ui-select-control:disabled,
+.ui-date-control:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 @theme inline {
   --color-primary-700: var(--color-primary-700);
   --color-primary-600: var(--color-primary-600);
@@ -1059,6 +1113,23 @@ body {
   font-size: 0.75rem;
   font-weight: 750;
 }
+.notification-panel__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.notification-panel__header .notification-panel__close {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1px solid var(--theme-line);
+  border-radius: 999px;
+  color: var(--theme-ink);
+}
+.notification-panel__header .notification-panel__close:hover {
+  background: color-mix(in srgb, var(--theme-ink) 6%, var(--theme-surface));
+}
 .notification-panel__list {
   max-height: min(29rem, calc(100vh - 12rem));
   overflow-y: auto;
@@ -1517,11 +1588,20 @@ summary {
 }
 
 .workspace-action-card {
+  background: var(--theme-surface);
   color: var(--theme-text);
 }
 
 .workspace-action-card:hover {
-  background: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-text));
+  background: color-mix(in srgb, var(--theme-surface) 94%, var(--theme-accent));
+}
+
+.workspace-action-card > span:nth-child(2) {
+  color: var(--theme-text);
+}
+
+.workspace-action-card > span:nth-child(3) {
+  color: var(--theme-muted);
 }
 
 .blockchain-error-state {
@@ -1538,6 +1618,94 @@ summary {
   background: color-mix(in srgb, var(--theme-surface) 90%, var(--theme-text));
 }
 
+.blockchain-surface {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.blockchain-soft-surface {
+  border-color: var(--theme-border);
+  background: color-mix(in srgb, var(--theme-text) 4%, var(--theme-surface));
+  color: var(--theme-text);
+}
+
+.blockchain-signing-workspace .blockchain-surface .text-neutral-950,
+.blockchain-signing-workspace .blockchain-soft-surface .text-neutral-950 {
+  color: var(--theme-text);
+}
+
+.blockchain-signing-workspace .blockchain-surface .text-neutral-500,
+.blockchain-signing-workspace .blockchain-surface .text-neutral-600,
+.blockchain-signing-workspace .blockchain-surface .text-neutral-700,
+.blockchain-signing-workspace .blockchain-soft-surface .text-neutral-500,
+.blockchain-signing-workspace .blockchain-soft-surface .text-neutral-600,
+.blockchain-signing-workspace .blockchain-soft-surface .text-neutral-700 {
+  color: var(--theme-muted);
+}
+
+.blockchain-queue-item:hover {
+  background: color-mix(in srgb, var(--theme-accent) 7%, var(--theme-surface));
+}
+
+.staff-account-workspace .bg-white {
+  background: var(--theme-surface);
+}
+
+.staff-account-workspace .bg-neutral-50 {
+  background: color-mix(in srgb, var(--theme-text) 4%, var(--theme-surface));
+}
+
+.staff-account-workspace .text-neutral-950,
+.staff-account-workspace .text-neutral-900 {
+  color: var(--theme-text);
+}
+
+.staff-account-workspace .text-neutral-400,
+.staff-account-workspace .text-neutral-500,
+.staff-account-workspace .text-neutral-600,
+.staff-account-workspace .text-neutral-700 {
+  color: var(--theme-muted);
+}
+
+.staff-account-workspace .border-neutral-100,
+.staff-account-workspace .border-neutral-200,
+.staff-account-workspace .border-neutral-300 {
+  border-color: var(--theme-border);
+}
+
+.cms-workspace,
+.cms-workspace .bg-white,
+.cms-workspace .bg-white\/95 {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.cms-workspace .bg-neutral-50,
+.cms-workspace .bg-neutral-50\/80 {
+  background: color-mix(in srgb, var(--theme-text) 4%, var(--theme-surface));
+}
+
+.cms-workspace .text-neutral-950,
+.cms-workspace .text-neutral-900,
+.cms-workspace .text-neutral-800 {
+  color: var(--theme-text);
+}
+
+.cms-workspace .text-neutral-400,
+.cms-workspace .text-neutral-500,
+.cms-workspace .text-neutral-600,
+.cms-workspace .text-neutral-700 {
+  color: var(--theme-muted);
+}
+
+.cms-workspace .border-neutral-100,
+.cms-workspace .border-neutral-200,
+.cms-workspace .border-neutral-300 {
+  border-color: var(--theme-border);
+}
+
 .audit-event-title {
   color: var(--theme-text);
 }
@@ -1546,6 +1714,26 @@ summary {
   background: var(--theme-surface);
   border-color: var(--theme-border);
   color: var(--theme-text);
+}
+
+.dashboard-surface {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.dashboard-skeleton {
+  background: color-mix(in srgb, var(--theme-text) 9%, var(--theme-surface));
+}
+
+.dashboard-success-state {
+  border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--color-success) 10%,
+    var(--theme-surface)
+  );
+  color: color-mix(in srgb, var(--color-success) 75%, var(--theme-text));
 }
 
 /* Final THV public palette overrides legacy dark registry styles. */

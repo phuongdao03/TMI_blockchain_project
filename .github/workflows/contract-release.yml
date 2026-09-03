@@ -1,4 +1,4 @@
-name: Contract production dry run
+name: THV registry production read-only gate
 
 on:
   workflow_dispatch:
@@ -31,43 +31,19 @@ jobs:
         with:
           node-version: 24.18.0
           cache: npm
-      - name: Verify pinned contract release
+      - name: Verify active THV contract and read-only tooling
         run: |
-          docker run --rm --entrypoint forge -v "$PWD/contracts:/workspace" -w /workspace ghcr.io/foundry-rs/foundry:v1.7.1 build --force
-          docker run --rm --entrypoint forge -v "$PWD/contracts:/workspace" -w /workspace ghcr.io/foundry-rs/foundry:v1.7.1 test --fuzz-runs 256
+          docker run --rm --entrypoint forge -v "$PWD/contracts:/workspace" -w /workspace ghcr.io/foundry-rs/foundry:v1.7.1 build src/THVProofRegistry.sol --force
+          docker run --rm --entrypoint forge -v "$PWD/contracts:/workspace" -w /workspace ghcr.io/foundry-rs/foundry:v1.7.1 test --match-contract THVProofRegistryTest --fuzz-runs 256
           npm --prefix contracts ci
-          npm --prefix contracts run test:provenance
+          npm --prefix contracts run test:proof-registry-ops
       - name: Read-only Polygon preflight
         env:
           BLOCKCHAIN_RPC_URL: ${{ secrets.POLYGON_RPC_URL }}
-          CERTIFICATE_CONTRACT_ADDRESS:
-            ${{ secrets.POLYGON_CERTIFICATE_CONTRACT_ADDRESS }}
-          BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES:
-            ${{ secrets.POLYGON_ALLOWED_CONTRACT_ADDRESSES }}
-          BLOCKCHAIN_ACTIVE_SIGNER_WALLET:
-            ${{ secrets.POLYGON_SUPER_ADMIN_WALLET_ADDRESS }}
-          CONTRACT_ADMIN: ${{ secrets.POLYGON_CONTRACT_ADMIN }}
-          ISSUER_ADDRESS: ${{ secrets.POLYGON_SUPER_ADMIN_WALLET_ADDRESS }}
+          THV_PROOF_REGISTRY_CONTRACT_ADDRESS: 0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F
+          BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES: 0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F
+          ADMIN_WALLET_ADDRESS: 0xec5FcdFab3FCafCEFCED55CC702CD3B13f54B4Fe
+          SIGNER_WALLET_ADDRESS: 0xBfA38182f0D24589e7898DD4892C58c3FDa58042
           MINIMUM_SIGNER_BALANCE_WEI:
             ${{ vars.POLYGON_MINIMUM_SIGNER_BALANCE_WEI }}
-        run: |
-          expected_hash="$(node -p 'require("./contracts/artifacts/releases/amoy/manifest.json").bytecode.runtimeSha256')"
-          export EXPECTED_RUNTIME_BYTECODE_SHA256="$expected_hash"
-          bash infrastructure/scripts/blockchain-preflight.sh
-      - name: Record immutable dry-run plan
-        env:
-          CONTRACT_ADMIN: ${{ secrets.POLYGON_CONTRACT_ADMIN }}
-          CONTRACT_DEPLOYER_ADDRESS: ${{ secrets.POLYGON_DEPLOYER_ADDRESS }}
-          ISSUER_ADDRESS: ${{ secrets.POLYGON_SUPER_ADMIN_WALLET_ADDRESS }}
-          SOURCE_COMMIT: ${{ inputs.source_commit }}
-        run: |
-          node contracts/scripts/production-release-plan.mjs \
-            --source-commit="$SOURCE_COMMIT" \
-            --deployer="$CONTRACT_DEPLOYER_ADDRESS" \
-            --administrator="$CONTRACT_ADMIN" \
-            --issuer="$ISSUER_ADDRESS"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: polygon-contract-dry-run-${{ inputs.source_commit }}
-          path: contracts/artifacts/releases/polygon/dry-run-plan.json
-          retention-days: 90
+        run: bash infrastructure/scripts/blockchain-preflight.sh

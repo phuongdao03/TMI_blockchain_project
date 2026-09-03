@@ -65,7 +65,6 @@ export function StaffInvitationForm({ token }: { token?: string }) {
       await multiFactor(user).enroll(assertion, "TMI Authenticator");
       await signOut(getFirebaseAuth());
       router.replace("/login?mfa=enrolled");
-      router.refresh();
     } catch {
       setError("Mã xác minh không đúng hoặc đã hết hạn. Vui lòng thử lại.");
       setIsSubmitting(false);

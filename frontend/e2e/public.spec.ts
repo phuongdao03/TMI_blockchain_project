@@ -28,6 +28,7 @@ test("public portal is professional, responsive and verifiable", async ({
   ).toBeVisible();
   await expect(page.getByText(/Khám phá các đề cử tiêu biểu/)).toBeVisible();
   await page.screenshot({
+    caret: "initial",
     fullPage: true,
     path: testInfo.outputPath("home.png"),
   });
@@ -40,6 +41,7 @@ test("public portal is professional, responsive and verifiable", async ({
     page.getByRole("link", { name: /Xem đề cử/ }).first(),
   ).toBeVisible();
   await page.screenshot({
+    caret: "initial",
     fullPage: true,
     path: testInfo.outputPath("public-catalog.png"),
   });
@@ -109,6 +111,7 @@ test("public portal is professional, responsive and verifiable", async ({
     await expect(page.getByRole("dialog")).toBeHidden();
   }
   await page.screenshot({
+    caret: "initial",
     fullPage: true,
     path: testInfo.outputPath("search-results.png"),
   });
@@ -160,6 +163,7 @@ test("public portal is professional, responsive and verifiable", async ({
   await expect(page.getByText("Đã tiếp nhận báo cáo")).toBeVisible();
   await page.getByRole("button", { name: "Hoàn tất" }).click();
   await page.screenshot({
+    caret: "initial",
     fullPage: true,
     path: testInfo.outputPath("public-work-detail.png"),
   });
@@ -177,7 +181,7 @@ test("public portal is professional, responsive and verifiable", async ({
   await page.getByLabel("Thông tin cần tra cứu").fill("TMI-2026-7EAEC2D2C99A");
   await page.getByRole("button", { name: "Kiểm tra" }).click();
   await expect(
-    page.getByText("Dữ liệu đã được ghi nhận và không thay đổi"),
+    page.getByText("Tài liệu đã được ghi nhận và chưa bị thay đổi."),
   ).toBeVisible();
 
   const robots = await page.request.get("/robots.txt");

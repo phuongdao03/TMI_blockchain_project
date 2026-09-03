@@ -5,6 +5,9 @@ import {
   AlertTriangle,
   BadgeCheck,
   CheckCircle2,
+  Circle,
+  Copy,
+  ExternalLink,
   FileCheck2,
   LoaderCircle,
   RefreshCw,
@@ -15,8 +18,8 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   ApiError,
-  blockchainSigningApi,
   proofRegistrySigningApi,
+  walletLinkApi,
 } from "@/lib/api/client";
 import type {
   THVProofRegistryIntent,
@@ -42,6 +45,12 @@ const statusLabel: Record<string, string> = {
   REPLACED: "Đã được thay thế",
 };
 const terminalStatuses = new Set(["CONFIRMED", "FAILED", "REPLACED"]);
+const signingSteps = [
+  "Chuẩn bị",
+  "Chờ MetaMask",
+  "Đang xác nhận",
+  "Đã ghi nhận",
+] as const;
 
 function compactAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -55,9 +64,44 @@ function formatDate(value: string) {
 }
 
 function errorMessage(error: unknown) {
-  return error instanceof ApiError || error instanceof Error
-    ? error.message
-    : "Không thể hoàn tất thao tác. Vui lòng thử lại.";
+  const walletError = error as { code?: number | string; message?: string };
+  if (walletError?.code === 4001 || walletError?.code === "ACTION_REJECTED") {
+    return "Bạn đã từ chối yêu cầu ký trong MetaMask. Giao dịch chưa được gửi.";
+  }
+  if (
+    walletError?.code === -32000 ||
+    walletError?.message?.toLowerCase().includes("insufficient funds")
+  ) {
+    return "Ví không đủ MATIC để trả phí gas. Hãy nạp thêm MATIC rồi thử lại.";
+  }
+  return "Chưa thể hoàn tất thao tác. Vui lòng thử lại hoặc liên hệ bộ phận vận hành.";
+}
+
+function signingStep(status: string, busy: "connect" | "link" | "sign" | null) {
+  if (status === "CONFIRMED") return 3;
+  if (status === "BROADCAST" || status === "FAILED") return 2;
+  if (status === "SIGNING" || busy === "sign") return 1;
+  return 0;
+}
+
+function verificationMessage(status: string) {
+  if (status === "CONFIRMED") {
+    return "Tài liệu đã được ghi nhận và chưa bị thay đổi.";
+  }
+  if (status === "BROADCAST" || status === "SIGNING") {
+    return "Giao dịch đã gửi, đang chờ mạng Polygon xác nhận.";
+  }
+  if (status === "FAILED") {
+    return "Giao dịch chưa được ghi nhận. Vui lòng kiểm tra lỗi và thử lại.";
+  }
+  return "Hồ sơ đã sẵn sàng. Hãy kiểm tra thông tin trước khi ký.";
+}
+
+function estimatedGasFee(intent: THVProofRegistryIntent | null) {
+  if (!intent) return "Ước tính khi chuẩn bị giao dịch";
+  const value =
+    (intent.estimatedGas * intent.gasPriceWei) / 1_000_000_000_000_000_000;
+  return `Tối đa khoảng ${value.toLocaleString("vi-VN", { maximumFractionDigits: 6 })} MATIC`;
 }
 
 export function BlockchainSigningWorkspace() {
@@ -70,10 +114,11 @@ export function BlockchainSigningWorkspace() {
     useState<THVProofRegistryIntent | null>(null);
   const [busy, setBusy] = useState<"connect" | "link" | "sign" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [copiedTransaction, setCopiedTransaction] = useState(false);
 
   const wallet = useQuery({
     queryKey: ["blockchain", "wallet"],
-    queryFn: blockchainSigningApi.currentWallet,
+    queryFn: walletLinkApi.currentWallet,
     retry: false,
   });
   const queue = useQuery({
@@ -168,7 +213,7 @@ export function BlockchainSigningWorkspace() {
     setBusy("link");
     setMessage(null);
     try {
-      const challenge = await blockchainSigningApi.issueWalletChallenge(
+      const challenge = await walletLinkApi.issueWalletChallenge(
         connected.address,
         connected.chainId,
       );
@@ -176,13 +221,13 @@ export function BlockchainSigningWorkspace() {
         challenge.message,
         connected.address,
       );
-      await blockchainSigningApi.verifyWalletLink({
+      await walletLinkApi.verifyWalletLink({
         challengeId: challenge.id,
         nonce: challenge.nonce,
         signature,
       });
       await queryClient.invalidateQueries({ queryKey: ["blockchain"] });
-      setMessage("Ví đã được xác minh và sẵn sàng ký bằng VERIFIER_ROLE.");
+      setMessage("Ví của tổ chức đã được xác minh và sẵn sàng sử dụng.");
     } catch (error) {
       setMessage(errorMessage(error));
     } finally {
@@ -194,6 +239,12 @@ export function BlockchainSigningWorkspace() {
     setSelected(item);
     setPreparedIntent(null);
     setMessage(null);
+    setCopiedTransaction(false);
+  }
+
+  async function copyTransactionHash(transactionHash: string) {
+    await navigator.clipboard.writeText(transactionHash);
+    setCopiedTransaction(true);
   }
 
   async function handleSign() {
@@ -237,7 +288,7 @@ export function BlockchainSigningWorkspace() {
           : current,
       );
       setMessage(
-        "Giao dịch đã được gửi. Hệ thống đang kiểm tra receipt, sự kiện ProofRecorded và số xác nhận.",
+        "Yêu cầu đã được gửi. Hệ thống đang chờ mạng Polygon xác nhận kết quả.",
       );
       await queryClient.invalidateQueries({
         queryKey: ["blockchain", "proof-registry", "signing-queue"],
@@ -258,24 +309,21 @@ export function BlockchainSigningWorkspace() {
   );
 
   if (wallet.isPending)
-    return <p role="status">Đang kiểm tra quyền ký blockchain…</p>;
+    return <p role="status">Đang chuẩn bị khu vực ghi nhận hồ sơ…</p>;
   if (wallet.error) {
     const apiError = wallet.error instanceof ApiError ? wallet.error : null;
     const isForbidden = apiError?.status === 403;
     const title = isForbidden
-      ? "Chưa có quyền ký blockchain"
-      : "Dịch vụ blockchain chưa sẵn sàng";
+      ? "Tài khoản chưa được phân quyền"
+      : "Chưa thể mở khu vực ghi nhận";
     const description = isForbidden
-      ? "Phiên đăng nhập hiện tại chưa có quyền blockchain.sign. Hãy đăng xuất, đăng nhập lại và kiểm tra quyền của tài khoản Super Admin."
-      : "Tài khoản đã vào được khu vực quản trị, nhưng backend chưa tải được cấu hình hoặc dịch vụ blockchain. Kiểm tra RPC, chain ID, contract, allowlist và ABI trên production.";
+      ? "Tài khoản hiện tại chưa được giao nhiệm vụ ghi nhận hồ sơ. Vui lòng liên hệ quản trị viên để kiểm tra phạm vi công việc."
+      : "Khu vực ghi nhận đang tạm gián đoạn. Vui lòng thử lại sau hoặc báo bộ phận vận hành.";
     return (
       <section className="blockchain-error-state mx-auto max-w-3xl rounded-2xl border p-7">
         <ShieldCheck className="size-6" aria-hidden="true" />
         <h1 className="mt-4 text-2xl font-bold">{title}</h1>
         <p className="mt-2 leading-7">{description}</p>
-        <p className="mt-4 font-mono text-xs font-bold uppercase tracking-[0.12em]">
-          Mã lỗi: {apiError?.code ?? "REQUEST_FAILED"}
-        </p>
         <button
           className="mt-5 min-h-11 rounded-lg border px-4 text-sm font-bold transition-colors"
           onClick={() => void wallet.refetch()}
@@ -288,20 +336,20 @@ export function BlockchainSigningWorkspace() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="blockchain-signing-workspace mx-auto max-w-7xl space-y-6">
       <header className="rounded-3xl bg-neutral-950 px-7 py-8 text-white sm:px-10 sm:py-10">
         <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-primary-300">
-          THVProofRegistry
+          Ghi nhận hồ sơ đã phê duyệt
         </p>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
-              Hàng đợi chờ ký
+              Hồ sơ chờ ghi nhận
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-              Hồ sơ chỉ xuất hiện sau khi kiểm duyệt hoàn tất. Ví của Super
-              Admin xác nhận recordProof; file và dữ liệu cá nhân không lên
-              blockchain.
+              Dùng ví của tổ chức để xác nhận hồ sơ đã hoàn tất xét duyệt. Hệ
+              thống chỉ công bố dấu vân tay số để kiểm tra tính toàn vẹn; tài
+              liệu gốc và dữ liệu cá nhân vẫn được lưu trong hệ thống TMI.
             </p>
           </div>
           <button
@@ -332,12 +380,12 @@ export function BlockchainSigningWorkspace() {
         </p>
       ) : null}
 
-      <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-        <article className="rounded-2xl border border-neutral-200 bg-white p-6">
+      <section>
+        <article className="blockchain-surface rounded-2xl border p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
-                Ví VERIFIER_ROLE
+                Ví ký của tổ chức
               </p>
               <h2 className="mt-2 text-xl font-bold text-neutral-950">
                 {wallet.data
@@ -351,13 +399,13 @@ export function BlockchainSigningWorkspace() {
             />
           </div>
           <dl className="mt-6 grid gap-4 text-sm sm:grid-cols-2">
-            <div className="rounded-xl bg-neutral-50 p-4">
+            <div className="blockchain-soft-surface rounded-xl p-4">
               <dt className="text-neutral-500">Mạng yêu cầu</dt>
               <dd className="mt-1 font-bold text-neutral-950">
-                Chain ID {requiredChain ?? "–"}
+                {requiredChain === 137 ? "Polygon Mainnet" : "Chưa xác định"}
               </dd>
             </div>
-            <div className="rounded-xl bg-neutral-50 p-4">
+            <div className="blockchain-soft-surface rounded-xl p-4">
               <dt className="text-neutral-500">Ví đang kết nối</dt>
               <dd className="mt-1 font-bold text-neutral-950">
                 {connected ? compactAddress(connected.address) : "Chưa kết nối"}
@@ -382,7 +430,7 @@ export function BlockchainSigningWorkspace() {
                   }
                   type="button"
                 >
-                  Chuyển sang Chain ID {requiredChain}
+                  Chuyển sang mạng yêu cầu
                 </button>
               ) : null}
             </div>
@@ -399,37 +447,17 @@ export function BlockchainSigningWorkspace() {
               ) : (
                 <BadgeCheck className="size-4" />
               )}
-              Ký xác minh quyền sở hữu ví
+              Xác minh ví của tổ chức
             </button>
           ) : null}
         </article>
-
-        <article className="rounded-2xl border border-neutral-200 bg-[#f8f8f4] p-6">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
-            Kiểm soát an toàn
-          </p>
-          <ul className="mt-4 space-y-4 text-sm leading-6 text-neutral-700">
-            <li className="flex gap-3">
-              <CheckCircle2 className="mt-0.5 size-4 text-primary-700" />
-              THV không yêu cầu private key hoặc seed phrase.
-            </li>
-            <li className="flex gap-3">
-              <CheckCircle2 className="mt-0.5 size-4 text-primary-700" />
-              Backend đối chiếu sender, chain, contract, calldata và proof hash.
-            </li>
-            <li className="flex gap-3">
-              <CheckCircle2 className="mt-0.5 size-4 text-primary-700" />
-              Chỉ CONFIRMED sau receipt, ProofRecorded và đọc lại contract.
-            </li>
-          </ul>
-        </article>
       </section>
 
-      <section className="rounded-2xl border border-neutral-200 bg-white">
-        <div className="flex items-center justify-between gap-4 border-b border-neutral-200 px-6 py-5">
+      <section className="blockchain-surface rounded-2xl border">
+        <div className="flex items-center justify-between gap-4 border-b border-[var(--theme-border)] px-6 py-5">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
-              Proof đã khóa
+              Hồ sơ đã sẵn sàng
             </p>
             <h2 className="mt-1 text-xl font-bold text-neutral-950">
               Hồ sơ chờ bạn ký
@@ -465,7 +493,7 @@ export function BlockchainSigningWorkspace() {
         <div className="divide-y divide-neutral-100">
           {queue.data?.map((item) => (
             <button
-              className="grid w-full gap-3 px-6 py-5 text-left transition hover:bg-neutral-50 md:grid-cols-[1fr_auto] md:items-center"
+              className="blockchain-queue-item grid w-full gap-3 px-6 py-5 text-left transition md:grid-cols-[1fr_auto] md:items-center"
               key={`${item.dossierId}:${item.version}`}
               onClick={() => openItem(item)}
               type="button"
@@ -478,7 +506,7 @@ export function BlockchainSigningWorkspace() {
                   {item.dossierTitle}
                 </h3>
                 <p className="mt-1 text-sm text-neutral-600">
-                  recordProof · tạo {formatDate(item.createdAt)}
+                  Được chuyển sang chờ ghi nhận lúc {formatDate(item.createdAt)}
                 </p>
               </div>
               <span className="rounded-full bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary-800">
@@ -490,7 +518,7 @@ export function BlockchainSigningWorkspace() {
       </section>
 
       {displayedSelected ? (
-        <section className="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8">
+        <section className="blockchain-surface rounded-2xl border p-6 sm:p-8">
           <div className="flex items-start justify-between gap-5">
             <div>
               <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
@@ -501,7 +529,7 @@ export function BlockchainSigningWorkspace() {
               </h2>
               <p className="mt-2 text-sm text-neutral-600">
                 {displayedSelected.dossierCode} · Phiên bản{" "}
-                {displayedSelected.version} · recordProof
+                {displayedSelected.version}
               </p>
             </div>
             <span className="rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-bold text-neutral-700">
@@ -509,50 +537,193 @@ export function BlockchainSigningWorkspace() {
                 displayedSelected.status}
             </span>
           </div>
-          <dl className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl bg-neutral-50 p-4 xl:col-span-2">
-              <dt className="text-xs text-neutral-500">Proof SHA-256</dt>
+          <ol
+            aria-label="Tiến trình ký"
+            className="mt-7 grid gap-2 sm:grid-cols-4"
+          >
+            {signingSteps.map((step, index) => {
+              const currentStep = signingStep(displayedSelected.status, busy);
+              const complete = index < currentStep || currentStep === 3;
+              const current = index === currentStep;
+              return (
+                <li
+                  aria-current={current ? "step" : undefined}
+                  className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ${
+                    current
+                      ? "border-primary-600 bg-primary-50 text-primary-950"
+                      : complete
+                        ? "border-primary-200 bg-primary-50 text-primary-800"
+                        : "border-neutral-200 text-neutral-500"
+                  }`}
+                  key={step}
+                >
+                  {complete ? (
+                    <CheckCircle2
+                      className="size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                  ) : current ? (
+                    <LoaderCircle
+                      className="size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Circle className="size-4 shrink-0" aria-hidden="true" />
+                  )}
+                  {step}
+                </li>
+              );
+            })}
+          </ol>
+
+          <div
+            className="blockchain-soft-surface mt-5 rounded-xl border p-4"
+            role="status"
+          >
+            <p className="font-bold text-neutral-950">
+              {verificationMessage(displayedSelected.status)}
+            </p>
+            {displayedSelected.status === "BROADCAST" ? (
+              <p className="mt-1 text-sm text-neutral-600">
+                Hệ thống tự kiểm tra kết quả định kỳ. Trạng thái chỉ chuyển
+                thành “Đã ghi nhận” sau khi mạng Polygon xác nhận hoàn tất.
+              </p>
+            ) : null}
+          </div>
+
+          <dl className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="blockchain-soft-surface rounded-xl p-4">
+              <dt className="text-xs text-neutral-500">Mạng blockchain</dt>
+              <dd className="mt-2 font-bold text-neutral-950">
+                Polygon Mainnet
+              </dd>
+            </div>
+            <div className="blockchain-soft-surface rounded-xl p-4">
+              <dt className="text-xs text-neutral-500">Ví đang sử dụng</dt>
+              <dd className="mt-2 font-bold text-neutral-950">
+                {connected ? compactAddress(connected.address) : "Chưa kết nối"}
+              </dd>
+            </div>
+            <div className="blockchain-soft-surface rounded-xl p-4">
+              <dt className="text-xs text-neutral-500">Hồ sơ và phiên bản</dt>
+              <dd className="mt-2 font-bold text-neutral-950">
+                {displayedSelected.dossierCode} · V{displayedSelected.version}
+              </dd>
+            </div>
+            <div className="blockchain-soft-surface rounded-xl p-4">
+              <dt className="text-xs text-neutral-500">Phí gas dự kiến</dt>
+              <dd className="mt-2 font-bold text-neutral-950">
+                {estimatedGasFee(preparedIntent)}
+              </dd>
+            </div>
+            <div className="blockchain-soft-surface rounded-xl p-4 sm:col-span-2 xl:col-span-4">
+              <dt className="text-xs text-neutral-500">
+                Dấu vân tay số của hồ sơ
+              </dt>
               <dd className="mt-2 break-all font-mono text-xs text-neutral-900">
                 {displayedSelected.proofHash}
               </dd>
             </div>
-            <div className="rounded-xl bg-neutral-50 p-4">
-              <dt className="text-xs text-neutral-500">Xác nhận</dt>
+            <div className="blockchain-soft-surface rounded-xl p-4">
+              <dt className="text-xs text-neutral-500">
+                Số lượt mạng đã xác nhận
+              </dt>
               <dd className="mt-2 font-bold text-neutral-950">
                 {displayedSelected.confirmations}
               </dd>
             </div>
-            <div className="rounded-xl bg-neutral-50 p-4">
-              <dt className="text-xs text-neutral-500">Contract</dt>
-              <dd className="mt-2 break-all font-mono text-xs text-neutral-900">
-                {preparedIntent?.contractAddress ?? "Xác định khi tạo intent"}
-              </dd>
-            </div>
           </dl>
           {displayedSelected.txHash ? (
-            <p className="mt-4 break-all font-mono text-xs text-neutral-600">
-              Tx: {displayedSelected.txHash}
-            </p>
+            <div className="mt-5 rounded-xl border border-neutral-200 p-4">
+              <p className="text-xs text-neutral-500">
+                Mã giao dịch trên blockchain
+              </p>
+              <p className="mt-2 break-all font-mono text-xs text-neutral-700">
+                {displayedSelected.txHash}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-sm font-bold text-neutral-800"
+                  onClick={() =>
+                    void copyTransactionHash(displayedSelected.txHash!)
+                  }
+                  type="button"
+                >
+                  <Copy className="size-4" aria-hidden="true" />
+                  Sao chép mã giao dịch
+                </button>
+                <a
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-sm font-bold text-neutral-800"
+                  href={`https://polygonscan.com/tx/${displayedSelected.txHash}`}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <ExternalLink className="size-4" aria-hidden="true" />
+                  Mở giao dịch trên PolygonScan
+                </a>
+              </div>
+              {copiedTransaction ? (
+                <p className="mt-2 text-sm text-primary-800" role="status">
+                  Đã sao chép mã giao dịch.
+                </p>
+              ) : null}
+            </div>
           ) : null}
-          <button
-            className="mt-7 inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary-700 px-5 text-sm font-bold text-white disabled:opacity-60"
-            disabled={
-              busy === "sign" ||
-              !connected ||
-              isWrongWallet ||
-              isWrongNetwork ||
-              displayedSelected.status === "CONFIRMED"
-            }
-            onClick={() => void handleSign()}
-            type="button"
-          >
-            {busy === "sign" ? (
-              <LoaderCircle className="size-4 animate-spin" />
-            ) : (
-              <FileCheck2 className="size-4" />
-            )}
-            Ký & ghi nhận blockchain
-          </button>
+          <details className="mt-5 rounded-xl border border-neutral-200 p-4">
+            <summary className="cursor-pointer font-bold text-neutral-950">
+              Chi tiết nâng cao
+            </summary>
+            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-neutral-500">Sự kiện hợp đồng</dt>
+                <dd className="font-mono text-xs">ProofRecorded</dd>
+              </div>
+              <div>
+                <dt className="text-neutral-500">
+                  Địa chỉ sổ đăng ký công khai
+                </dt>
+                <dd className="break-all font-mono text-xs">
+                  {preparedIntent?.contractAddress ??
+                    "0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-neutral-500">Mã hồ sơ trên sổ công khai</dt>
+                <dd className="break-all font-mono text-xs">
+                  {preparedIntent?.assetId ?? "Tạo khi chuẩn bị giao dịch"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-neutral-500">Ví thực hiện</dt>
+                <dd className="break-all font-mono text-xs">
+                  {connected?.address ??
+                    wallet.data?.walletAddress ??
+                    "Chưa kết nối"}
+                </dd>
+              </div>
+            </dl>
+          </details>
+          <div className="blockchain-signing-action mt-7">
+            <button
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary-700 px-5 text-sm font-bold text-white disabled:opacity-60 sm:w-auto"
+              disabled={
+                busy === "sign" ||
+                !connected ||
+                isWrongWallet ||
+                isWrongNetwork ||
+                displayedSelected.status === "CONFIRMED"
+              }
+              onClick={() => void handleSign()}
+              type="button"
+            >
+              {busy === "sign" ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : (
+                <FileCheck2 className="size-4" />
+              )}
+              Ký và ghi nhận blockchain
+            </button>
+          </div>
         </section>
       ) : null}
     </div>

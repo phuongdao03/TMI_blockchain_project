@@ -7,7 +7,8 @@ from redis.asyncio import Redis
 from app.modules.audit.service import AuditService
 from app.modules.auth.dependencies import SessionDependency, SettingsDependency
 from app.modules.auth.errors import RateLimitExceededError, RateLimitUnavailableError
-from app.modules.blockchain.gateway import SUPPORTED_CHAINS, BlockchainGateway
+from app.modules.blockchain.proof_registry_gateway import THVProofRegistryGateway
+from app.modules.blockchain.transport import SUPPORTED_CHAINS
 from app.modules.engagement.errors import (
     EngagementRateLimitedError,
     EngagementUnavailableError,
@@ -46,15 +47,18 @@ async def get_public_verification(
     session: SessionDependency,
     settings: SettingsDependency,
 ) -> AsyncIterator[PublicVerificationService]:
-    address = settings.certificate_contract_address
-    gateway = BlockchainGateway(
+    address = settings.thv_proof_registry_contract_address
+    gateway = THVProofRegistryGateway(
         rpc_url=settings.blockchain_rpc_url,
         network=settings.blockchain_network,
         chain_id=settings.blockchain_chain_id,
         contract_address=address,
-        abi_path=settings.blockchain_contract_abi_path,
+        abi_path=settings.thv_proof_registry_contract_abi_path,
         allowed_networks=SUPPORTED_CHAINS,
-        allowed_contracts={settings.blockchain_network: {address}},
+        allowed_contracts={
+            settings.blockchain_network: set(settings.blockchain_contract_allowlist)
+            or {address}
+        },
     )
     repository = PublicCatalogService(session).repository
     redis_client: Redis = Redis.from_url(settings.redis_url)

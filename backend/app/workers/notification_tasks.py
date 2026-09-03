@@ -195,6 +195,18 @@ async def _consume(event_id: UUID) -> None:
                 use_ssl=settings.smtp_use_ssl,
                 timeout_seconds=settings.smtp_timeout_seconds,
             ).send(message)
+        if event_type == "blockchain.anchored":
+            dossier_id = payload.get("dossier_id")
+            certificate_version_id = payload.get("certificate_version_id")
+            from app.workers.certificate_tasks import (
+                issue_certificate,
+                render_certificate_version,
+            )
+
+            if isinstance(dossier_id, str):
+                issue_certificate.delay(dossier_id)
+            if isinstance(certificate_version_id, str):
+                render_certificate_version.delay(certificate_version_id)
         direct_recipient_id: UUID | None = None
         recipient_ids: set[UUID] = set()
         if isinstance(user_id_value, str):

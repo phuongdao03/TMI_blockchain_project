@@ -11,8 +11,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.modules.audit.models import AuditLog
 from app.modules.audit.service import AuditService
-from app.modules.blockchain.gateway import BlockchainGatewayError, CertificateRecord
 from app.modules.blockchain.models import CertificateStatus
+from app.modules.blockchain.proof_registry_gateway import THVProofRecord
+from app.modules.blockchain.transport import BlockchainGatewayError
 from app.modules.certificates.metadata import CertificateMetadataBuilder
 from app.modules.dossiers.canonical import snapshot_sha256
 from app.modules.public.verification import (
@@ -29,29 +30,28 @@ def _audit_dependencies() -> tuple[Mock, AsyncMock]:
     return Mock(spec=AuditService), AsyncMock()
 
 
-def _record(*, metadata_hash: bytes, revoked: bool = False) -> CertificateRecord:
+DOSSIER_ID = UUID("8eaec2d2-c99a-42c9-8f1e-71462ba01ea0")
+
+
+def _record(*, proof_hash: bytes, version: int = 1) -> THVProofRecord:
     now = datetime.now(UTC)
-    return CertificateRecord(
-        dossier_hash=bytes.fromhex("11" * 32),
-        metadata_hash=metadata_hash,
-        revocation_reason_hash=bytes(32),
-        issued_at=int((now - timedelta(days=1)).timestamp()),
-        expires_at=int((now + timedelta(days=1)).timestamp()),
-        version=1,
-        revoked=revoked,
+    return THVProofRecord(
+        asset_id=bytes.fromhex("aa" * 32),
+        proof_hash=proof_hash,
+        version=version,
+        recorded_at=int(now.timestamp()),
+        signer="0x" + "34" * 20,
+        exists=True,
     )
 
 
 def test_verification_is_valid_only_when_chain_and_database_match() -> None:
-    digest = bytes.fromhex("22" * 32)
-
     status = VerificationEvaluator.evaluate(
         local_status=CertificateStatus.ACTIVE,
-        local_metadata_hash=digest.hex(),
         local_dossier_hash="11" * 32,
-        local_version=1,
+        proof_version=1,
         expires_at=datetime.now(UTC) + timedelta(days=1),
-        chain_record=_record(metadata_hash=digest),
+        chain_record=_record(proof_hash=bytes.fromhex("11" * 32)),
         now=datetime.now(UTC),
     )
 
@@ -61,11 +61,10 @@ def test_verification_is_valid_only_when_chain_and_database_match() -> None:
 def test_verification_detects_mismatch_before_reporting_valid() -> None:
     status = VerificationEvaluator.evaluate(
         local_status=CertificateStatus.ACTIVE,
-        local_metadata_hash="22" * 32,
         local_dossier_hash="11" * 32,
-        local_version=1,
+        proof_version=1,
         expires_at=None,
-        chain_record=_record(metadata_hash=bytes.fromhex("33" * 32)),
+        chain_record=_record(proof_hash=bytes.fromhex("33" * 32)),
         now=datetime.now(UTC),
     )
 
@@ -74,24 +73,20 @@ def test_verification_detects_mismatch_before_reporting_valid() -> None:
 
 def test_verification_prioritizes_revocation_and_expiry() -> None:
     now = datetime.now(UTC)
-    digest = bytes.fromhex("22" * 32)
-
     revoked = VerificationEvaluator.evaluate(
-        local_status=CertificateStatus.ACTIVE,
-        local_metadata_hash=digest.hex(),
+        local_status=CertificateStatus.REVOKED,
         local_dossier_hash="11" * 32,
-        local_version=1,
+        proof_version=1,
         expires_at=now + timedelta(days=1),
-        chain_record=_record(metadata_hash=digest, revoked=True),
+        chain_record=_record(proof_hash=bytes.fromhex("11" * 32)),
         now=now,
     )
     expired = VerificationEvaluator.evaluate(
         local_status=CertificateStatus.ACTIVE,
-        local_metadata_hash=digest.hex(),
         local_dossier_hash="11" * 32,
-        local_version=1,
+        proof_version=1,
         expires_at=now - timedelta(seconds=1),
-        chain_record=_record(metadata_hash=digest),
+        chain_record=_record(proof_hash=bytes.fromhex("11" * 32)),
         now=now,
     )
 
@@ -162,8 +157,8 @@ def test_verification_reports_not_found_and_temporary_chain_unavailability() -> 
         snapshot: dict[str, object] = {}
 
         class UnavailableGateway:
-            async def get_certificate(self, certificate_id: bytes) -> CertificateRecord:
-                del certificate_id
+            async def get_proof(self, asset_id: bytes, version: int) -> THVProofRecord:
+                del asset_id, version
                 raise BlockchainGatewayError("offline")
 
         context = VerificationContext(
@@ -181,6 +176,8 @@ def test_verification_reports_not_found_and_temporary_chain_unavailability() -> 
             metadata=metadata,
             dossier_snapshot=snapshot,
             version=1,
+            proof_version=1,
+            dossier_id=DOSSIER_ID,
             network="polygon",
             contract_address=None,
             transaction_hash=None,
@@ -232,8 +229,8 @@ def test_public_verification_persists_only_allowlisted_result_metadata() -> None
         session = sessions()
 
         class Gateway:
-            async def get_certificate(self, certificate_id: bytes) -> CertificateRecord:
-                del certificate_id
+            async def get_proof(self, asset_id: bytes, version: int) -> THVProofRecord:
+                del asset_id, version
                 raise AssertionError("The gateway must not run for an unknown lookup.")
 
         async def missing(value: str) -> None:
@@ -273,8 +270,8 @@ def test_public_verification_persists_only_allowlisted_result_metadata() -> None
 def test_public_verification_fails_closed_when_audit_cannot_be_written() -> None:
     async def scenario() -> None:
         class Gateway:
-            async def get_certificate(self, certificate_id: bytes) -> CertificateRecord:
-                del certificate_id
+            async def get_proof(self, asset_id: bytes, version: int) -> THVProofRecord:
+                del asset_id, version
                 raise AssertionError("The gateway must not run for an unknown lookup.")
 
         class FailingAudit:
@@ -312,16 +309,11 @@ def test_verification_recomputes_metadata_instead_of_trusting_stored_hash() -> N
         chain_metadata_hash = bytes.fromhex("22" * 32)
 
         class Gateway:
-            async def get_certificate(self, certificate_id: bytes) -> CertificateRecord:
-                del certificate_id
-                return CertificateRecord(
-                    dossier_hash=bytes.fromhex(snapshot_sha256(snapshot)),
-                    metadata_hash=chain_metadata_hash,
-                    revocation_reason_hash=bytes(32),
-                    issued_at=1,
-                    expires_at=0,
-                    version=1,
-                    revoked=False,
+            async def get_proof(self, asset_id: bytes, version: int) -> THVProofRecord:
+                del asset_id
+                return _record(
+                    proof_hash=bytes.fromhex(snapshot_sha256(snapshot)),
+                    version=version,
                 )
 
         context = VerificationContext(
@@ -337,6 +329,8 @@ def test_verification_recomputes_metadata_instead_of_trusting_stored_hash() -> N
             metadata=original_metadata,
             dossier_snapshot=snapshot,
             version=1,
+            proof_version=1,
+            dossier_id=DOSSIER_ID,
             network="local",
             contract_address="0x" + "12" * 20,
             transaction_hash="0x" + "34" * 32,
@@ -375,27 +369,12 @@ def test_historical_qr_reads_its_immutable_chain_version() -> None:
         dossier_hash = snapshot_sha256(snapshot)
 
         class Gateway:
-            async def get_certificate(self, certificate_id: bytes) -> CertificateRecord:
-                del certificate_id
-                raise AssertionError(
-                    "A historical QR must not read the current version."
-                )
-
-            async def get_certificate_version(
-                self,
-                certificate_id: bytes,
-                version: int,
-            ) -> CertificateRecord:
-                assert len(certificate_id) == 32
+            async def get_proof(self, asset_id: bytes, version: int) -> THVProofRecord:
+                assert len(asset_id) == 32
                 assert version == 1
-                return CertificateRecord(
-                    dossier_hash=bytes.fromhex(dossier_hash),
-                    metadata_hash=bytes.fromhex(metadata_hash),
-                    revocation_reason_hash=bytes(32),
-                    issued_at=1,
-                    expires_at=0,
-                    version=1,
-                    revoked=False,
+                return _record(
+                    proof_hash=bytes.fromhex(dossier_hash),
+                    version=version,
                 )
 
         context = VerificationContext(
@@ -411,6 +390,8 @@ def test_historical_qr_reads_its_immutable_chain_version() -> None:
             metadata=metadata,
             dossier_snapshot=snapshot,
             version=1,
+            proof_version=1,
+            dossier_id=DOSSIER_ID,
             network="local",
             contract_address="0x" + "12" * 20,
             transaction_hash="0x" + "34" * 32,

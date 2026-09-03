@@ -1,5 +1,9 @@
 # Type-specific review rubric specification
 
+> Phần chấm điểm trong tài liệu này là đặc tả tương thích cho hồ sơ cũ. Hồ sơ
+> mới dùng phương thức kết luận tại
+> [verdict-based-review-spec.md](./verdict-based-review-spec.md).
+
 ## Objective
 
 Extend the existing reviewer workflow so each versioned dossier type can define
@@ -25,12 +29,17 @@ remains reproducible after later template changes.
     "version": "2026.1",
     "title": "Thẩm định tác phẩm nghệ thuật",
     "gates": [
-      {"key": "rights", "label": "Quyền nộp hợp lệ", "description": "..."}
+      { "key": "rights", "label": "Quyền nộp hợp lệ", "description": "..." }
     ],
     "criteria": [
-      {"key": "originality", "label": "Tính nguyên bản", "description": "...", "weight": 30}
+      {
+        "key": "originality",
+        "label": "Tính nguyên bản",
+        "description": "...",
+        "weight": 30
+      }
     ],
-    "thresholds": {"approveMin": 75, "rejectBelow": 50}
+    "thresholds": { "approveMin": 75, "rejectBelow": 50 }
   }
 }
 ```

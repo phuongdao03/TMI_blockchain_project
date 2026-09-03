@@ -41,6 +41,7 @@ htmlcov/
 .ruff_cache/
 backend/.pytest-notification-tmp/
 backend/.pytest-notification-tmp-final/
+backend/.pytest-verdict-full/
 test-results/
 test-results-*/
 playwright-report/

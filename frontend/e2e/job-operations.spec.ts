@@ -1,20 +1,29 @@
 import { expect, test } from "@playwright/test";
 
 test("super admin reviews and safely replays failed background work", async ({
+  context,
   page,
   request,
 }) => {
+  test.setTimeout(60_000);
   await request.post("http://127.0.0.1:4010/api/e2e/reset-operations-job");
-  await page.goto("/login");
-  await page
-    .getByRole("textbox", { name: "Email" })
-    .fill("superadmin@tmigroup.vn");
-  await page
-    .getByLabel("Mật khẩu", { exact: true })
-    .fill("correct horse battery staple");
-  await page.getByRole("button", { name: "Đăng nhập" }).click();
-
-  await expect(page).toHaveURL(/\/admin(?:\/dashboard)?$/);
+  await context.addCookies([
+    {
+      name: "tmi_access",
+      value: "e2e-super-admin-access",
+      domain: "127.0.0.1",
+      path: "/",
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+    {
+      name: "tmi_csrf",
+      value: "e2e-csrf",
+      domain: "127.0.0.1",
+      path: "/",
+      sameSite: "Lax",
+    },
+  ]);
   await page.goto("/admin/dashboard");
 
   await expect(

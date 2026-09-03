@@ -55,8 +55,8 @@ export function CouncilSessionHero({
             </span>
             <span className="flex items-center gap-2">
               <Users aria-hidden="true" className="size-4" />
-              {session.attendanceCount}/{session.memberCount} tham dự · quorum{" "}
-              {session.quorumRequired}
+              {session.attendanceCount}/{session.memberCount} người đã tham gia
+              · cần tối thiểu {session.quorumRequired}
             </span>
           </div>
         </div>
@@ -75,7 +75,7 @@ export function CouncilSessionHero({
               onClick={() => onLifecycle("open")}
               variant="outline"
             >
-              Mở biểu quyết
+              Bắt đầu xét duyệt
             </Button>
           ) : null}
           {canManage && session.status === "OPEN" ? (
@@ -85,7 +85,7 @@ export function CouncilSessionHero({
               variant="outline"
             >
               <LockKeyhole aria-hidden="true" className="size-4" />
-              Đóng phiên
+              Kết thúc phiên
             </Button>
           ) : null}
         </div>

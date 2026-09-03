@@ -28,7 +28,6 @@ from app.modules.blockchain.errors import (
     BlockchainNotFoundError,
     BlockchainUnavailableError,
 )
-from app.modules.blockchain.gateway import BlockchainGatewayError
 from app.modules.blockchain.human_signing import normalize_wallet_address
 from app.modules.blockchain.models import (
     BlockchainTransaction,
@@ -37,11 +36,16 @@ from app.modules.blockchain.models import (
     BlockchainTransactionStatus,
     BlockchainWalletLink,
     BlockchainWalletLinkStatus,
+    Certificate,
+    CertificateVersion,
+    CertificateVersionStatus,
 )
 from app.modules.blockchain.proof_registry_gateway import (
     THVProofRecord,
     THVProofRegistryGateway,
 )
+from app.modules.blockchain.transport import BlockchainGatewayError
+from app.modules.council.models import CouncilCase, CouncilCaseDecision
 from app.modules.dossiers.errors import DossierNotFoundError
 from app.modules.dossiers.models import Dossier, DossierStatus, DossierVersion
 
@@ -49,6 +53,14 @@ _ASSET_ID_DOMAIN = b"THVProofRegistry:asset:v1:"
 _HEX_BYTES32 = re.compile(r"0x[0-9a-fA-F]{64}")
 _CANONICAL_HASH = re.compile(r"[0-9a-fA-F]{64}")
 _PROOF_CONFIRMED_EVENT = "blockchain.anchored"
+_PROOF_ELIGIBLE_DOSSIER_STATUSES = (
+    DossierStatus.APPROVED,
+    DossierStatus.PAYMENT_PENDING,
+    DossierStatus.PAID,
+    DossierStatus.ANCHORED,
+    DossierStatus.CERTIFICATE_ISSUED,
+    DossierStatus.PUBLISHED,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -190,7 +202,14 @@ class THVProofRegistryService:
                         ),
                     )
                     .where(
-                        Dossier.status == DossierStatus.APPROVED,
+                        Dossier.status.in_(_PROOF_ELIGIBLE_DOSSIER_STATUSES),
+                        select(CouncilCase.id)
+                        .where(
+                            CouncilCase.dossier_id == Dossier.id,
+                            CouncilCase.dossier_version_id == DossierVersion.id,
+                            CouncilCase.decision == CouncilCaseDecision.APPROVE,
+                        )
+                        .exists(),
                         Dossier.deleted_at.is_(None),
                         or_(
                             BlockchainTransaction.id.is_(None),
@@ -445,6 +464,36 @@ class THVProofRegistryService:
         async with self._session.begin():
             return self._status_view(await self._required_transaction(transaction_id))
 
+    async def reconcile_transaction(self, transaction_id: UUID) -> None:
+        """Read-only chain reconciliation entry point for background workers."""
+        await self._reconcile(transaction_id)
+
+    async def reconcile_pending(self, *, limit: int = 200) -> None:
+        """Reconcile only THV ``recordProof`` transactions for this deployment."""
+        async with self._session.begin():
+            transaction_ids = tuple(
+                (
+                    await self._session.scalars(
+                        select(BlockchainTransaction.id)
+                        .where(
+                            BlockchainTransaction.method == "recordProof",
+                            BlockchainTransaction.contract_address
+                            == self._contract_address,
+                            BlockchainTransaction.status.in_(
+                                (
+                                    BlockchainTransactionStatus.BROADCAST,
+                                    BlockchainTransactionStatus.CONFIRMED,
+                                )
+                            ),
+                        )
+                        .order_by(BlockchainTransaction.broadcast_at)
+                        .limit(limit)
+                    )
+                ).all()
+            )
+        for transaction_id in transaction_ids:
+            await self._reconcile(transaction_id)
+
     async def _reconcile(self, transaction_id: UUID) -> None:
         async with self._session.begin():
             transaction = await self._required_transaction(transaction_id)
@@ -498,6 +547,22 @@ class THVProofRegistryService:
                 )
                 return
             asset_id = derive_thv_asset_id(dossier_id)
+            matching_events = tuple(
+                event
+                for event in receipt.proof_recorded_events
+                if event.asset_id == asset_id
+                and event.proof_hash == bytes.fromhex(proof_hash)
+                and event.version == version.version_no
+                and expected_signer is not None
+                and event.signer.lower() == expected_signer.lower()
+            )
+            if len(matching_events) != 1:
+                await self._fail_transaction(
+                    transaction_id,
+                    "PROOF_EVENT_MISMATCH",
+                    "ProofRecorded event does not match the frozen dossier proof.",
+                )
+                return
             proof = await self._gateway.get_proof(asset_id, version.version_no)
             if (
                 not proof.exists
@@ -537,18 +602,32 @@ class THVProofRegistryService:
                 dossier = await self._session.get(Dossier, transaction.dossier_id)
                 if dossier is None:
                     raise BlockchainNotFoundError()
-                self._add_confirmed_event(transaction, dossier.owner_user_id)
+                promoted_version_id = await self._promote_certificate_version(
+                    transaction
+                )
+                self._add_confirmed_event(
+                    transaction,
+                    dossier.owner_user_id,
+                    certificate_version_id=promoted_version_id,
+                )
 
     def _add_confirmed_event(
-        self, transaction: BlockchainTransaction, owner_user_id: UUID
+        self,
+        transaction: BlockchainTransaction,
+        owner_user_id: UUID,
+        *,
+        certificate_version_id: UUID | None,
     ) -> None:
+        payload = {
+            "dossier_id": str(transaction.dossier_id),
+            "transaction_id": str(transaction.id),
+            "transaction_hash": transaction.tx_hash or "",
+            "owner_user_id": str(owner_user_id),
+        }
+        if certificate_version_id is not None:
+            payload["certificate_version_id"] = str(certificate_version_id)
         encrypted = self._payload_cipher.encrypt(
-            {
-                "dossier_id": str(transaction.dossier_id),
-                "transaction_id": str(transaction.id),
-                "transaction_hash": transaction.tx_hash or "",
-                "owner_user_id": str(owner_user_id),
-            },
+            payload,
             event_type=_PROOF_CONFIRMED_EVENT,
             aggregate_id=transaction.id,
         )
@@ -563,6 +642,56 @@ class THVProofRegistryService:
                 occurred_at=self._clock(),
             )
         )
+
+    async def _promote_certificate_version(
+        self, transaction: BlockchainTransaction
+    ) -> UUID | None:
+        """Promote a correction only after its dossier proof is confirmed."""
+        version = await self._session.scalar(
+            select(CertificateVersion)
+            .where(
+                CertificateVersion.dossier_version_id == transaction.dossier_version_id,
+                CertificateVersion.status == CertificateVersionStatus.ANCHOR_PENDING,
+            )
+            .with_for_update()
+        )
+        if version is None:
+            return None
+        if version.predecessor_version_id is None:
+            raise BlockchainConflictError(
+                "Certificate correction predecessor is unavailable."
+            )
+        predecessor = await self._session.get(
+            CertificateVersion,
+            version.predecessor_version_id,
+            with_for_update=True,
+        )
+        certificate = await self._session.get(
+            Certificate,
+            version.certificate_id,
+            with_for_update=True,
+        )
+        if (
+            predecessor is None
+            or predecessor.status is not CertificateVersionStatus.ACTIVE
+            or certificate is None
+            or certificate.current_version_no != predecessor.version_no
+            or version.version_no != predecessor.version_no + 1
+            or version.public_token_hash is None
+            or version.qr_payload is None
+        ):
+            raise BlockchainConflictError(
+                "Certificate correction lineage changed before proof confirmation."
+            )
+        version.blockchain_transaction_id = transaction.id
+        predecessor.status = CertificateVersionStatus.SUPERSEDED
+        await self._session.flush()
+        version.status = CertificateVersionStatus.ACTIVE
+        certificate.current_version_no = version.version_no
+        certificate.public_token_hash = version.public_token_hash
+        certificate.qr_payload = version.qr_payload
+        certificate.pdf_media_id = None
+        return version.id
 
     async def _fail_transaction(
         self, transaction_id: UUID, code: str, message: str
@@ -629,9 +758,9 @@ class THVProofRegistryService:
             dossier = await self._session.get(Dossier, dossier_id)
             if dossier is None:
                 raise DossierNotFoundError()
-            if dossier.status is not DossierStatus.APPROVED:
+            if dossier.status not in _PROOF_ELIGIBLE_DOSSIER_STATUSES:
                 raise BlockchainConflictError(
-                    "A THV proof can be recorded only after dossier approval."
+                    "A THV proof can be recorded only for an approved dossier."
                 )
             if dossier.current_version_no != normalized_version:
                 raise BlockchainConflictError(
@@ -645,6 +774,17 @@ class THVProofRegistryService:
             )
             if version is None:
                 raise DossierNotFoundError("Dossier version was not found.")
+            approval = await self._session.scalar(
+                select(CouncilCase.id).where(
+                    CouncilCase.dossier_id == dossier.id,
+                    CouncilCase.dossier_version_id == version.id,
+                    CouncilCase.decision == CouncilCaseDecision.APPROVE,
+                )
+            )
+            if approval is None:
+                raise BlockchainConflictError(
+                    "The current dossier version is not council-approved."
+                )
             canonical_hash = version.canonical_hash
             if _CANONICAL_HASH.fullmatch(canonical_hash) is None:
                 raise BlockchainConflictError(

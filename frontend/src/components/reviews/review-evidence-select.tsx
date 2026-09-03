@@ -64,8 +64,10 @@ export function ReviewEvidenceSelect({
                   {evidence.title}
                 </span>
                 <span className="mt-0.5 block text-xs text-neutral-500">
-                  {evidence.evidenceType}
-                  {evidence.issuedAt ? ` · ${evidence.issuedAt}` : ""}
+                  Tài liệu trong hồ sơ
+                  {evidence.issuedAt
+                    ? ` · Ngày tài liệu ${new Intl.DateTimeFormat("vi-VN").format(new Date(evidence.issuedAt))}`
+                    : ""}
                 </span>
               </span>
             </label>

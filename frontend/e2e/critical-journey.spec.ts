@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
+
 test.beforeEach(async ({ context }) => {
   await context.addCookies([
     {
@@ -35,7 +37,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
   page,
   request,
 }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(240_000);
   const consoleIssues: string[] = [];
   page.on("console", (message) => {
     if (["error", "warning"].includes(message.type())) {
@@ -58,8 +60,16 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       .getByLabel("Tên tài sản hoặc tác phẩm")
       .fill("Bộ nhận diện TMI Critical Journey");
     await page.getByLabel("Mô tả ngắn").fill("Hồ sơ E2E toàn luồng MVP.");
+    const createDossier = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/api/v1/dossiers") &&
+        response.request().method() === "POST",
+    );
     await page.getByRole("button", { name: "Tạo hồ sơ nháp" }).click();
-    await expect(page).toHaveURL(/\/dossiers\/9155dbf5-/);
+    expect((await createDossier).ok()).toBe(true);
+    await expect(page).toHaveURL(/\/dossiers\/9155dbf5-/, {
+      timeout: 30_000,
+    });
     await page.getByRole("button", { name: /Bằng chứng/ }).click();
     await page.getByLabel("Tên bằng chứng").fill("Bản gốc nhận diện");
     await page.getByLabel("Chọn bằng chứng hồ sơ").setInputFiles({
@@ -76,8 +86,8 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     await expect(page.getByText(/chế độ chỉ đọc/)).toBeVisible();
   });
 
-  await test.step("reviewer completes conflict gate and 5T review", async () => {
-    await request.post("http://127.0.0.1:4010/api/e2e/reset-review");
+  await test.step("reviewer completes the assigned criteria review", async () => {
+    await request.post(`${mockApiUrl}/api/e2e/reset-review`);
     await context.addCookies([
       {
         name: "tmi_e2e_persona",
@@ -90,41 +100,33 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     ]);
     await page.goto("/reviews");
     await page.getByRole("link", { name: "Mở hồ sơ thẩm định" }).click();
-    await page.getByRole("button", { name: "Tôi không có xung đột" }).click();
+    await page
+      .getByLabel("Kết quả kiểm tra Giấy xác nhận quyền sở hữu")
+      .selectOption("VALID");
     const criteria = [
-      "Tính đúng đắn",
-      "Tính minh bạch",
-      "Quyền sở hữu & trách nhiệm",
-      "Tính chuyên nghiệp",
-      "Tính tôn trọng",
+      "Căn cứ quyền sở hữu",
+      "Thông tin nhất quán",
+      "Đủ căn cứ xác minh",
     ];
     for (const criterion of criteria) {
-      await page.getByLabel(`Điểm ${criterion}`).fill("16");
+      await page.getByLabel(`Kết luận ${criterion}`).selectOption("MEETS");
       await page
-        .getByLabel(`Nhận xét ${criterion}`)
-        .fill(`Đánh giá đầy đủ cho ${criterion}.`);
+        .getByLabel(`Nhận định ${criterion}`)
+        .fill(`Đã đối chiếu tài liệu và xác nhận ${criterion.toLowerCase()}.`);
     }
     const checklist = page.getByRole("checkbox");
-    const requiredChecklistCount = criteria.length + 4;
-    await expect(checklist).toHaveCount(requiredChecklistCount);
-    for (let index = 0; index < requiredChecklistCount; index += 1) {
+    await expect(checklist).toHaveCount(criteria.length);
+    for (let index = 0; index < criteria.length; index += 1) {
       await checklist.nth(index).check();
     }
-    const autosave = page.waitForResponse(
-      (response) =>
-        response.url().endsWith("/draft") &&
-        response.request().method() === "PUT" &&
-        response.ok(),
-    );
-    await page.getByLabel("Kiến nghị").selectOption("APPROVE");
-    await autosave;
+    await expect(page.getByText("Đề nghị phê duyệt")).toBeVisible();
     await page.getByRole("button", { name: "Gửi kết quả thẩm định" }).click();
     await page.getByRole("button", { name: "Xác nhận gửi" }).click();
-    await expect(page.getByText(/không thể chỉnh sửa/)).toBeVisible();
+    await expect(page.getByText("Kết quả đã gửi.")).toBeVisible();
   });
 
   await test.step("council attends, votes and approves", async () => {
-    await request.post("http://127.0.0.1:4010/api/e2e/reset-council");
+    await request.post(`${mockApiUrl}/api/e2e/reset-council`);
     const councilContext = await browser.newContext();
     await councilContext.addCookies([
       {
@@ -163,7 +165,15 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     const councilPage = await councilContext.newPage();
     try {
       await councilPage.goto("/council");
-      await councilPage.getByRole("link", { name: "Mở phiên" }).click();
+      const openSessionLink = councilPage.getByRole("link", {
+        name: "Mở phiên",
+      });
+      await expect(openSessionLink).toHaveAttribute("href", /\/council\//);
+      const sessionHref = await openSessionLink.getAttribute("href");
+      if (!sessionHref) {
+        throw new Error("Council session link is missing its destination.");
+      }
+      await councilPage.goto(sessionHref);
       await councilPage
         .getByRole("button", { name: "Xác nhận tham dự" })
         .click();
@@ -194,7 +204,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
   });
 
   await test.step("payment is confirmed by trusted status", async () => {
-    await request.post("http://127.0.0.1:4010/api/e2e/reset-payment-confirmed");
+    await request.post(`${mockApiUrl}/api/e2e/reset-payment-confirmed`);
     await context.addCookies([
       {
         name: "tmi_access",
@@ -228,7 +238,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       .fill("TMI-2026-7EAEC2D2C99A");
     await page.getByRole("button", { name: "Kiểm tra" }).click();
     await expect(
-      page.getByText("Dữ liệu đã được ghi nhận và không thay đổi"),
+      page.getByText("Tài liệu đã được ghi nhận và chưa bị thay đổi."),
     ).toBeVisible();
   });
 

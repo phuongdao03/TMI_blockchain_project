@@ -37,5 +37,17 @@ class BlockchainUnavailableError(DomainError):
         )
 
 
+class BlockchainLegacyFlowDeprecatedError(DomainError):
+    def __init__(self) -> None:
+        super().__init__(
+            code="BLOCKCHAIN_LEGACY_FLOW_DEPRECATED",
+            message=(
+                "This CertificateRegistry signing flow is deprecated. "
+                "Use /api/v1/blockchain/proof-registry instead."
+            ),
+            status_code=410,
+        )
+
+
 class BlockchainTransientError(RuntimeError):
     """Signals a retryable worker failure after durable failure recording."""

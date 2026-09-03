@@ -43,11 +43,13 @@ export function CouncilResultPanel({ result }: { result: CouncilCaseResult }) {
               ? decisionLabels[result.decision]
               : result.quorumMet
                 ? "Không đạt đa số tuyệt đối"
-                : "Không đủ quorum"}
+                : "Chưa đủ người tham gia"}
           </h3>
           <p className="mt-1 text-sm text-neutral-500">
             {result.validVoteCount} phiếu hợp lệ ·{" "}
-            {result.quorumMet ? "Đủ quorum" : "Chưa đủ quorum"}
+            {result.quorumMet
+              ? "Đủ số người tham gia"
+              : "Chưa đủ số người tham gia"}
           </p>
         </div>
       </div>

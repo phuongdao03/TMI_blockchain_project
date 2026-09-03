@@ -40,6 +40,7 @@ export function PublicShell({
     : null;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileNavigationRef = useRef<HTMLElement>(null);
   const firstMobileLinkRef = useRef<HTMLAnchorElement>(null);
 
   const closeMenu = (restoreFocus = true) => {
@@ -53,17 +54,38 @@ export function PublicShell({
     if (!menuOpen) return;
 
     const previousOverflow = document.body.style.overflow;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeMenu();
+    const handleDrawerKeyboard = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeMenu();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        mobileNavigationRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
 
     document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("keydown", handleDrawerKeyboard);
     firstMobileLinkRef.current?.focus();
 
     return () => {
       document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("keydown", handleDrawerKeyboard);
     };
   }, [menuOpen]);
 
@@ -165,6 +187,7 @@ export function PublicShell({
             onClick={() => closeMenu()}
           />
           <nav
+            ref={mobileNavigationRef}
             id="public-mobile-navigation"
             className="public-mobile-nav"
             aria-label="Điều hướng di động"

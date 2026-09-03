@@ -15,6 +15,8 @@ from app.core.logging import JsonFormatter
 from app.core.probes import CloudinaryProbe
 from app.main import _build_health_service, create_application
 
+THV_REGISTRY = "0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F"
+
 
 class StaticProbe:
     def __init__(self, is_available: bool) -> None:
@@ -186,8 +188,8 @@ def test_security_headers_are_present_and_hsts_is_production_only() -> None:
                     "blockchain_network": "polygon",
                     "blockchain_chain_id": 137,
                     "blockchain_rpc_url": "https://polygon-rpc.example",
-                    "certificate_contract_address": "0x" + "11" * 20,
-                    "blockchain_allowed_contract_addresses": "0x" + "11" * 20,
+                    "thv_proof_registry_contract_address": THV_REGISTRY,
+                    "blockchain_allowed_contract_addresses": THV_REGISTRY,
                     "blockchain_signer_mode": "human",
                     "blockchain_signer_private_key": None,
                     "payment_provider": "payos",
@@ -256,8 +258,8 @@ def test_production_cors_rejects_wildcard_and_non_tls_origins() -> None:
                 "blockchain_network": "polygon",
                 "blockchain_chain_id": 137,
                 "blockchain_rpc_url": "https://polygon-rpc.example",
-                "certificate_contract_address": "0x" + "11" * 20,
-                "blockchain_allowed_contract_addresses": "0x" + "11" * 20,
+                "thv_proof_registry_contract_address": THV_REGISTRY,
+                "blockchain_allowed_contract_addresses": THV_REGISTRY,
                 "blockchain_signer_mode": "human",
                 "blockchain_signer_private_key": None,
                 "payment_provider": "payos",
@@ -355,8 +357,8 @@ def test_full_production_readiness_includes_media_provider_and_scanner(
             "blockchain_network": "polygon",
             "blockchain_chain_id": 137,
             "blockchain_rpc_url": "https://polygon-rpc.example",
-            "certificate_contract_address": "0x" + "11" * 20,
-            "blockchain_allowed_contract_addresses": "0x" + "11" * 20,
+            "thv_proof_registry_contract_address": THV_REGISTRY,
+            "blockchain_allowed_contract_addresses": THV_REGISTRY,
             "blockchain_signer_mode": "human",
             "payment_provider": "payos",
             "payos_client_id": "client",

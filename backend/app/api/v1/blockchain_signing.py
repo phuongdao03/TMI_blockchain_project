@@ -8,9 +8,7 @@ from app.modules.auth.dependencies import (
     CsrfProtectedPrincipalDependency,
     CurrentPrincipalDependency,
 )
-from app.modules.blockchain.human_signing_dependencies import (
-    HumanSigningServiceDependency,
-)
+from app.modules.blockchain.errors import BlockchainLegacyFlowDeprecatedError
 from app.modules.blockchain.schemas import (
     SigningContextData,
     SigningIntentData,
@@ -23,6 +21,7 @@ from app.modules.blockchain.schemas import (
     WalletLinkData,
     WalletLinkVerificationRequest,
 )
+from app.modules.blockchain.wallet_link_dependencies import WalletLinkServiceDependency
 
 router = APIRouter(prefix="/api/v1/blockchain", tags=["blockchain-signing"])
 RESPONSES: dict[int | str, dict[str, Any]] = {
@@ -30,6 +29,7 @@ RESPONSES: dict[int | str, dict[str, Any]] = {
     403: {"description": "Blockchain signing is forbidden.", "model": ErrorEnvelope},
     404: {"description": "Blockchain resource was not found.", "model": ErrorEnvelope},
     409: {"description": "Blockchain signing conflict.", "model": ErrorEnvelope},
+    410: {"description": "Legacy signing flow is deprecated.", "model": ErrorEnvelope},
     422: {"description": "Request is invalid.", "model": ErrorEnvelope},
     503: {"description": "Blockchain service unavailable.", "model": ErrorEnvelope},
 }
@@ -51,7 +51,7 @@ async def create_wallet_challenge(
     body: WalletChallengeRequest,
     request: Request,
     principal: CsrfProtectedPrincipalDependency,
-    service: HumanSigningServiceDependency,
+    service: WalletLinkServiceDependency,
 ) -> SuccessEnvelope[WalletChallengeData]:
     view = await service.create_wallet_challenge(
         principal,
@@ -68,7 +68,7 @@ async def verify_wallet_link(
     body: WalletLinkVerificationRequest,
     request: Request,
     principal: CsrfProtectedPrincipalDependency,
-    service: HumanSigningServiceDependency,
+    service: WalletLinkServiceDependency,
 ) -> SuccessEnvelope[WalletLinkData]:
     view = await service.verify_wallet_link(
         principal,
@@ -87,7 +87,7 @@ async def verify_wallet_link(
 async def current_wallet(
     request: Request,
     principal: CurrentPrincipalDependency,
-    service: HumanSigningServiceDependency,
+    service: WalletLinkServiceDependency,
 ) -> SuccessEnvelope[WalletLinkData | None]:
     view = await service.current_wallet(principal)
     return _success(request, WalletLinkData.model_validate(view) if view else None)  # type: ignore[return-value]
@@ -99,7 +99,7 @@ async def current_wallet(
 async def revoke_current_wallet(
     request: Request,
     principal: CsrfProtectedPrincipalDependency,
-    service: HumanSigningServiceDependency,
+    service: WalletLinkServiceDependency,
 ) -> SuccessEnvelope[WalletLinkData]:
     view = await service.revoke_current_wallet(principal)
     return _success(request, WalletLinkData.model_validate(view))  # type: ignore[return-value]
@@ -113,12 +113,9 @@ async def revoke_current_wallet(
 async def list_signing_queue(
     request: Request,
     principal: CurrentPrincipalDependency,
-    service: HumanSigningServiceDependency,
 ) -> SuccessEnvelope[list[SigningQueueItemData]]:
-    views = await service.list_signing_queue(principal)
-    return _success(
-        request, [SigningQueueItemData.model_validate(view) for view in views]
-    )  # type: ignore[return-value]
+    del request, principal
+    raise BlockchainLegacyFlowDeprecatedError()
 
 
 @router.get(
@@ -130,14 +127,9 @@ async def signing_context(
     transaction_id: UUID,
     request: Request,
     principal: CurrentPrincipalDependency,
-    service: HumanSigningServiceDependency,
 ) -> SuccessEnvelope[SigningContextData]:
-    return _success(
-        request,
-        SigningContextData.model_validate(
-            await service.signing_context(principal, transaction_id)
-        ),
-    )  # type: ignore[return-value]
+    del transaction_id, request, principal
+    raise BlockchainLegacyFlowDeprecatedError()
 
 
 @router.post(
@@ -150,14 +142,9 @@ async def prepare_signing_intent(
     body: SigningIntentRequest,
     request: Request,
     principal: CsrfProtectedPrincipalDependency,
-    service: HumanSigningServiceDependency,
 ) -> SuccessEnvelope[SigningIntentData]:
-    view = await service.prepare_intent(
-        principal,
-        transaction_id=transaction_id,
-        connected_wallet=body.connected_wallet,
-    )
-    return _success(request, SigningIntentData.model_validate(view))  # type: ignore[return-value]
+    del transaction_id, body, request, principal
+    raise BlockchainLegacyFlowDeprecatedError()
 
 
 @router.post(
@@ -170,16 +157,9 @@ async def submit_signing_transaction(
     body: SigningSubmissionRequest,
     request: Request,
     principal: CsrfProtectedPrincipalDependency,
-    service: HumanSigningServiceDependency,
 ) -> SuccessEnvelope[SigningStatusData]:
-    view = await service.submit_transaction(
-        principal,
-        transaction_id=transaction_id,
-        intent_id=body.intent_id,
-        transaction_hash=body.transaction_hash,
-        connected_wallet=body.connected_wallet,
-    )
-    return _success(request, SigningStatusData.model_validate(view))  # type: ignore[return-value]
+    del transaction_id, body, request, principal
+    raise BlockchainLegacyFlowDeprecatedError()
 
 
 @router.get(
@@ -191,11 +171,6 @@ async def signing_status(
     transaction_id: UUID,
     request: Request,
     principal: CurrentPrincipalDependency,
-    service: HumanSigningServiceDependency,
 ) -> SuccessEnvelope[SigningStatusData]:
-    return _success(
-        request,
-        SigningStatusData.model_validate(
-            await service.transaction_status(principal, transaction_id)
-        ),
-    )  # type: ignore[return-value]
+    del transaction_id, request, principal
+    raise BlockchainLegacyFlowDeprecatedError()

@@ -206,13 +206,14 @@ class Settings(BaseSettings):
         min_length=1,
         max_length=2_048,
     )
+    # Rollback-only compatibility settings. Active runtime modules must not read
+    # these CertificateRegistry values; the production wheel excludes its code.
     certificate_contract_address: str = Field(default="", max_length=42)
     blockchain_allowed_contract_addresses: str = Field(default="", max_length=8_192)
     blockchain_contract_abi_path: Path = Path(
         "../contracts/artifacts/CertificateRegistry.abi.json"
     )
-    # This registry is additive: legacy CertificateRegistry configuration stays
-    # independent so rollout can be disabled simply by leaving the address blank.
+    # The only registry used by active blockchain flows.
     thv_proof_registry_contract_address: str = Field(default="", max_length=42)
     thv_proof_registry_contract_abi_path: Path = Path(
         "../contracts/artifacts/THVProofRegistry.abi.json"
@@ -297,7 +298,7 @@ class Settings(BaseSettings):
 
     @property
     def thv_proof_registry_configured(self) -> bool:
-        """Whether the optional append-only proof registry is enabled."""
+        """Whether the append-only proof registry is configured."""
         return bool(self.thv_proof_registry_contract_address.strip())
 
     @property
@@ -310,9 +311,6 @@ class Settings(BaseSettings):
         if self.blockchain_chain_id != expected_chain_ids[self.blockchain_network]:
             raise ValueError("Blockchain chain ID does not match the selected network.")
 
-        address = self.certificate_contract_address
-        if address and re.fullmatch(r"0x[0-9a-fA-F]{40}", address) is None:
-            raise ValueError("Certificate contract address is invalid.")
         proof_registry_address = self.thv_proof_registry_contract_address.strip()
         if (
             proof_registry_address
@@ -344,14 +342,7 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "A contract address allowlist is required outside local mode."
                 )
-            if address.lower() not in configured_addresses:
-                raise ValueError(
-                    "The certificate contract address is not in the allowlist."
-                )
-            if (
-                proof_registry_address
-                and proof_registry_address.lower() not in configured_addresses
-            ):
+            if proof_registry_address.lower() not in configured_addresses:
                 raise ValueError(
                     "The THV proof registry contract address is not in the allowlist."
                 )
@@ -366,6 +357,17 @@ class Settings(BaseSettings):
                 raise ValueError("Production blockchain network must be Polygon PoS.")
             if not self.blockchain_rpc_url.startswith("https://"):
                 raise ValueError("Production blockchain RPC must use HTTPS.")
+            expected_registry = "0x4b7fff9e719a55ca3792cf96fbb229611e505b5f"
+            if proof_registry_address.lower() != expected_registry:
+                raise ValueError(
+                    "Production THV proof registry address does not match the "
+                    "approved Polygon deployment."
+                )
+            if configured_addresses != frozenset({expected_registry}):
+                raise ValueError(
+                    "Production contract allowlist must contain only the approved "
+                    "THV proof registry."
+                )
             if self.blockchain_signer_mode != "human":
                 raise ValueError(
                     "Production blockchain signing must be human-controlled."

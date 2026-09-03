@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
+
 const baseCookies = [
   ["tmi_access", "e2e-access", true],
   ["tmi_refresh", "e2e-refresh", true],
@@ -66,7 +68,7 @@ test("reviewer sees live progress and the next blocking action", async ({
   page,
   request,
 }) => {
-  await request.post("http://127.0.0.1:4010/api/e2e/reset-review");
+  await request.post(`${mockApiUrl}/api/e2e/reset-review`);
   await context.addCookies([
     {
       name: "tmi_e2e_persona",
@@ -79,9 +81,7 @@ test("reviewer sees live progress and the next blocking action", async ({
   ]);
   await page.goto("/reviews");
   await page.getByRole("link", { name: "Mở hồ sơ thẩm định" }).click();
-  await page.getByRole("button", { name: "Tôi không có xung đột" }).click();
-
-  await expect(page.getByText("Đã quá SLA")).toBeVisible();
+  await expect(page.getByText("Đã quá hạn xử lý")).toBeVisible();
   await expect(page.getByText("1 tài liệu đã khóa")).toBeVisible();
   await expect(page.getByText("Tóm tắt của người nộp")).toBeVisible();
   await page
@@ -92,11 +92,12 @@ test("reviewer sees live progress and the next blocking action", async ({
       name: "Xem trước Giấy xác nhận quyền sở hữu",
     }),
   ).toBeVisible();
-  await expect(page.getByText("0/5 tiêu chí hoàn tất")).toBeVisible();
   await expect(
-    page.getByText(/Tiếp theo: Chấm điểm và nhận xét tiêu chí/),
+    page.getByRole("heading", { name: "Phiếu thẩm định hồ sơ" }),
   ).toBeVisible();
+  await expect(page.getByText("Kết luận từng tiêu chí")).toBeVisible();
+  await expect(page.getByText("0/5 tiêu chí hoàn tất")).toHaveCount(0);
   await expect(
-    page.getByRole("navigation", { name: "Đi tới phần của phiếu" }),
+    page.getByText("Loại tài liệu: Tài liệu chứng minh quyền sở hữu"),
   ).toBeVisible();
 });

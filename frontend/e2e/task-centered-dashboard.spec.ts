@@ -4,6 +4,8 @@ import type { BrowserContext, Page } from "@playwright/test";
 
 const viewports = [
   { width: 320, height: 844 },
+  { width: 375, height: 812 },
+  { width: 390, height: 844 },
   { width: 768, height: 1024 },
   { width: 1024, height: 900 },
   { width: 1440, height: 1000 },

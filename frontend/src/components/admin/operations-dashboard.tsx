@@ -105,7 +105,7 @@ export function OperationsDashboard({
         </button>
       </div>
 
-      <section className="hero-grid-surface relative overflow-hidden rounded-2xl bg-[#151515] px-5 py-7 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:grid-cols-[1fr_auto] lg:items-end lg:px-10 lg:py-10">
+      <section className="hero-grid-surface relative overflow-hidden rounded-2xl bg-neutral-950 px-5 py-7 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:grid-cols-[1fr_auto] lg:items-end lg:px-10 lg:py-10">
         <div className="relative z-10">
           <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-gold-300">
             Ưu tiên hôm nay

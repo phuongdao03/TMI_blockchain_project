@@ -323,6 +323,14 @@ async def save_review_draft(
                 key: value.model_dump()
                 for key, value in payload.specialist_answers.items()
             },
+            criterion_verdicts={
+                key: value.model_dump()
+                for key, value in payload.criterion_verdicts.items()
+            },
+            evidence_assessments={
+                str(media_id): value.model_dump()
+                for media_id, value in payload.evidence_assessments.items()
+            },
         ),
     )
     return SuccessEnvelope(

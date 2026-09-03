@@ -202,14 +202,14 @@ function mobileItemsFor(
     SUPER_ADMIN: [
       "/admin/dashboard",
       "/admin/payments",
-      "/admin/users",
+      "/blockchain",
       "/notifications",
     ],
   };
   const byHref = new globalThis.Map(items.map((item) => [item.href, item]));
   const prioritized = [
-    ...operational,
     ...priorities[persona].map((href) => byHref.get(href)),
+    ...operational,
   ].filter((item): item is NavigationItem => item !== undefined);
   const uniquePrioritized = prioritized.filter(
     (item, index) =>

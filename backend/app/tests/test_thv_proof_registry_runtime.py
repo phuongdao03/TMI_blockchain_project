@@ -22,7 +22,6 @@ from app.modules.blockchain.errors import (
     BlockchainForbiddenError,
     BlockchainUnavailableError,
 )
-from app.modules.blockchain.gateway import ChainTransaction, TransactionReceipt
 from app.modules.blockchain.human_signing import normalize_wallet_address
 from app.modules.blockchain.models import (
     BlockchainTransaction,
@@ -40,6 +39,17 @@ from app.modules.blockchain.proof_registry_service import (
     THVProofRegistryService,
     derive_thv_asset_id,
 )
+from app.modules.blockchain.transport import (
+    ChainTransaction,
+    ProofRecordedEvent,
+    TransactionReceipt,
+)
+from app.modules.council.models import (
+    CouncilCase,
+    CouncilCaseDecision,
+    CouncilSession,
+    CouncilSessionStatus,
+)
 from app.modules.dossiers.models import Category, Dossier, DossierStatus, DossierVersion
 from app.modules.media.models import MediaAsset  # noqa: F401
 
@@ -55,7 +65,12 @@ class ProofRegistryGateway:
 
     def __init__(self) -> None:
         self.recorded = False
+        self.receipt_available = True
+        self.latest_block = 11
         self.transaction_hash = "0x" + "90" * 32
+        self.asset_id = bytes(32)
+        self.proof_hash = bytes(32)
+        self.version = 0
 
     async def has_verifier_role(self, wallet_address: str) -> bool:
         return wallet_address == WALLET
@@ -80,6 +95,9 @@ class ProofRegistryGateway:
         assert len(asset_id) == 32
         assert len(proof_hash) == 32
         assert version > 0
+        self.asset_id = asset_id
+        self.proof_hash = proof_hash
+        self.version = version
         return PAYLOAD
 
     async def estimate_gas(self, *, signer: str, payload: bytes) -> int:
@@ -108,7 +126,7 @@ class ProofRegistryGateway:
         )
 
     async def receipt(self, tx_hash: str) -> TransactionReceipt | None:
-        if tx_hash != self.transaction_hash:
+        if tx_hash != self.transaction_hash or not self.receipt_available:
             return None
         return TransactionReceipt(
             transaction_hash=tx_hash,
@@ -117,10 +135,19 @@ class ProofRegistryGateway:
             contract_address=CONTRACT,
             event_names=("ProofRecorded",),
             succeeded=True,
+            proof_recorded_events=(
+                ProofRecordedEvent(
+                    asset_id=self.asset_id,
+                    proof_hash=self.proof_hash,
+                    version=self.version,
+                    signer=WALLET,
+                    timestamp=int(NOW.timestamp()),
+                ),
+            ),
         )
 
     async def latest_block_number(self) -> int:
-        return 11
+        return self.latest_block
 
     async def block_hash(self, block_number: int) -> str:
         assert block_number == 10
@@ -136,6 +163,39 @@ def _settings(**overrides: object) -> Settings:
     }
     values.update(overrides)
     return Settings.model_validate(values)
+
+
+def test_gateway_decodes_full_proof_recorded_event_payload() -> None:
+    gateway = object.__new__(THVProofRegistryGateway)
+    gateway.contract_address = Web3.to_checksum_address(CONTRACT)
+    asset_id = bytes.fromhex("ab" * 32)
+    proof_hash = bytes.fromhex("cd" * 32)
+    version = 7
+    timestamp = int(NOW.timestamp())
+    event = gateway._proof_recorded_event(
+        {
+            "address": CONTRACT,
+            "topics": [
+                Web3.keccak(
+                    text="ProofRecorded(bytes32,bytes32,uint64,address,uint64)"
+                ),
+                asset_id,
+                proof_hash,
+                version.to_bytes(32, "big"),
+            ],
+            "data": bytes(12)
+            + bytes.fromhex(WALLET.removeprefix("0x"))
+            + timestamp.to_bytes(32, "big"),
+        }
+    )
+
+    assert event == ProofRecordedEvent(
+        asset_id=asset_id,
+        proof_hash=proof_hash,
+        version=version,
+        signer=WALLET,
+        timestamp=timestamp,
+    )
 
 
 def test_thv_proof_registry_is_disabled_without_a_contract_address() -> None:
@@ -299,8 +359,33 @@ def test_thv_proof_intent_requires_an_approved_dossier_version() -> None:
             chain_id=31_337,
             verified_at=NOW,
         )
+        council_session = CouncilSession(
+            id=uuid4(),
+            code="THV-PROOF-APPROVAL",
+            title="THV proof approval",
+            scheduled_at=NOW,
+            status=CouncilSessionStatus.CLOSED,
+            quorum_required=1,
+        )
+        council_case = CouncilCase(
+            id=uuid4(),
+            session_id=council_session.id,
+            dossier_id=dossier.id,
+            dossier_version_id=dossier_version.id,
+            decision=CouncilCaseDecision.APPROVE,
+        )
         async with sessions() as session:
-            session.add_all([user, category, dossier, dossier_version, wallet_link])
+            session.add_all(
+                [
+                    user,
+                    category,
+                    dossier,
+                    dossier_version,
+                    wallet_link,
+                    council_session,
+                    council_case,
+                ]
+            )
             await session.commit()
 
         principal = AuthPrincipal(
@@ -355,6 +440,26 @@ def test_thv_proof_intent_requires_an_approved_dossier_version() -> None:
         )
         assert submitted.status is BlockchainTransactionStatus.BROADCAST
 
+        gateway.receipt_available = False
+        without_receipt = await service.transaction_status(
+            principal,
+            transaction_id=intent.transaction_id,
+            reconcile=True,
+        )
+        assert without_receipt.status is BlockchainTransactionStatus.BROADCAST
+
+        gateway.receipt_available = True
+        gateway.latest_block = 10
+        without_confirmations = await service.transaction_status(
+            principal,
+            transaction_id=intent.transaction_id,
+            reconcile=True,
+        )
+        assert without_confirmations.status is BlockchainTransactionStatus.BROADCAST
+        assert without_confirmations.confirmations == 1
+
+        gateway.latest_block = 11
+
         confirmed = await service.transaction_status(
             principal,
             transaction_id=intent.transaction_id,
@@ -405,7 +510,7 @@ def test_thv_proof_intent_requires_an_approved_dossier_version() -> None:
             stored._set_status_from_workflow(DossierStatus.UNDER_REVIEW)
             await session.commit()
 
-        with pytest.raises(BlockchainConflictError, match="approval"):
+        with pytest.raises(BlockchainConflictError, match="approved dossier"):
             await service.prepare_record_proof_intent(
                 principal,
                 dossier_id=dossier.id,

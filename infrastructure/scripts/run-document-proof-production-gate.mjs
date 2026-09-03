@@ -64,16 +64,15 @@ export const documentProofScenarios = Object.freeze([
     ],
   },
   {
-    id: "blockchain_reliability",
+    id: "proof_registry_reliability",
     command: "python",
     arguments: [
       "-m",
       "pytest",
       "-q",
-      "backend/app/tests/test_document_blockchain_evidence.py",
-      "backend/app/tests/test_document_blockchain_evidence_pipeline.py",
-      "backend/app/tests/test_blockchain_pipeline.py",
-      "backend/app/tests/test_certificate_version_blockchain.py",
+      "backend/app/tests/test_thv_proof_registry_runtime.py",
+      "backend/app/tests/test_blockchain_api.py",
+      "backend/app/tests/test_blockchain_production_config.py",
     ],
   },
   {
@@ -119,7 +118,7 @@ export const documentProofScenarios = Object.freeze([
     ],
   },
   {
-    id: "contract_document_evidence",
+    id: "thv_proof_registry_contract",
     command: "docker",
     arguments: [
       "run",
@@ -135,18 +134,10 @@ export const documentProofScenarios = Object.freeze([
       "ghcr.io/foundry-rs/foundry:v1.7.1",
       "test",
       "--match-contract",
-      "CertificateRegistryTest",
+      "THVProofRegistryTest",
       "--fuzz-runs",
       "256",
     ],
-  },
-  {
-    id: "anvil_document_evidence",
-    command:
-      process.platform === "win32"
-        ? "C:\\Program Files\\Git\\bin\\bash.exe"
-        : "bash",
-    arguments: ["contracts/scripts/smoke-anvil.sh"],
   },
 ]);
 

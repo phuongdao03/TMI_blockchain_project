@@ -5,6 +5,8 @@ from pydantic import ValidationError
 
 from app.core.config import Settings
 
+THV_REGISTRY = "0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F"
+
 
 def _isolate_settings_sources(
     monkeypatch: pytest.MonkeyPatch,
@@ -118,8 +120,8 @@ def test_real_money_test_gate_is_bounded_and_never_enabled_in_production(
                 "blockchain_network": "polygon",
                 "blockchain_chain_id": 137,
                 "blockchain_rpc_url": "https://polygon-rpc.example",
-                "certificate_contract_address": "0x" + "11" * 20,
-                "blockchain_allowed_contract_addresses": "0x" + "11" * 20,
+                "thv_proof_registry_contract_address": THV_REGISTRY,
+                "blockchain_allowed_contract_addresses": THV_REGISTRY,
                 "blockchain_signer_mode": "human",
                 "payment_provider": "payos",
                 "payos_client_id": "client",

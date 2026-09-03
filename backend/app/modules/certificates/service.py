@@ -21,7 +21,6 @@ from app.modules.blockchain.models import (
     CertificateVersion,
     CertificateVersionStatus,
 )
-from app.modules.blockchain.service import BlockchainTransactionService
 from app.modules.certificates.errors import (
     CertificateConflictError,
     CertificateForbiddenError,
@@ -69,7 +68,6 @@ class CertificateService:
         environment: str,
         delivery_ttl_seconds: int,
         validity_days: int,
-        blockchain_service: BlockchainTransactionService | None = None,
         enqueue_issue: Callable[[UUID], None] | None = None,
         clock: Callable[[], datetime] | None = None,
         uuid_factory: Callable[[], UUID] | None = None,
@@ -89,7 +87,6 @@ class CertificateService:
         self._environment = environment
         self._delivery_ttl_seconds = delivery_ttl_seconds
         self._validity_days = validity_days
-        self._blockchain = blockchain_service
         self._enqueue_issue = enqueue_issue
         self._clock = clock or (lambda: datetime.now(UTC))
         self._uuid_factory = uuid_factory or uuid4
@@ -189,13 +186,56 @@ class CertificateService:
             actor_user_id = dossier.owner_user_id
         if certificate is None and status is DossierStatus.PAID:
             certificate = await self._prepare_certificate(dossier_id)
-            if self._blockchain is None:
-                raise CertificateConflictError("Blockchain service is unavailable.")
-            await self._blockchain.request_certificate_anchor(
-                certificate_id=certificate.id,
-                actor_user_id=actor_user_id,
-            )
-            return None
+        if status is DossierStatus.PAID:
+            if certificate is None:
+                raise CertificateConflictError(
+                    "Certificate issuance context is unavailable."
+                )
+            async with self._session.begin():
+                dossier = await self._dossiers.get_by_id(dossier_id, for_update=True)
+                if dossier is None:
+                    raise CertificateNotFoundError()
+                version = await self._session.scalar(
+                    select(DossierVersion).where(
+                        DossierVersion.dossier_id == dossier.id,
+                        DossierVersion.version_no == dossier.current_version_no,
+                    )
+                )
+                proof_transaction = (
+                    await self._session.scalar(
+                        select(BlockchainTransaction)
+                        .where(
+                            BlockchainTransaction.dossier_version_id == version.id,
+                            BlockchainTransaction.method == "recordProof",
+                            BlockchainTransaction.status
+                            == BlockchainTransactionStatus.CONFIRMED,
+                        )
+                        .order_by(BlockchainTransaction.confirmed_at.desc())
+                    )
+                    if version is not None
+                    else None
+                )
+                if proof_transaction is None or proof_transaction.tx_hash is None:
+                    return None
+                certificate_version = await self._session.scalar(
+                    select(CertificateVersion).where(
+                        CertificateVersion.certificate_id == certificate.id,
+                        CertificateVersion.version_no == certificate.current_version_no,
+                    )
+                )
+                if certificate_version is None:
+                    raise CertificateConflictError(
+                        "Certificate version context is unavailable."
+                    )
+                certificate_version.blockchain_transaction_id = proof_transaction.id
+                self._workflow.transition(
+                    dossier,
+                    target=DossierStatus.ANCHORED,
+                    actor_user_id=actor_user_id,
+                    allowed_sources={DossierStatus.PAID},
+                    reason_code="THV_PROOF_CONFIRMED",
+                )
+                status = DossierStatus.ANCHORED
         if status is DossierStatus.ANCHOR_PENDING:
             return None
         if certificate is None:

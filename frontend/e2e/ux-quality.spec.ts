@@ -95,6 +95,9 @@ test("public navigation and primary actions remain keyboard accessible", async (
   page,
 }) => {
   await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: "Theo thiết bị" }),
+  ).toBeEnabled();
   await page.keyboard.press("Tab");
   await expect
     .poll(() =>

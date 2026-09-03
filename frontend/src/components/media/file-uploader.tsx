@@ -28,7 +28,9 @@ interface FileUploaderProps {
   constraints?: MediaFileConstraints;
   disabled?: boolean;
   label: string;
-  onComplete: (asset: MediaAsset) => void;
+  maxFiles?: number;
+  multiple?: boolean;
+  onComplete: (asset: MediaAsset, index: number) => void | Promise<void>;
   purpose: MediaPurpose;
 }
 
@@ -68,6 +70,8 @@ export function FileUploader({
   constraints,
   disabled = false,
   label,
+  maxFiles,
+  multiple = false,
   onComplete,
   purpose,
 }: FileUploaderProps) {
@@ -80,18 +84,37 @@ export function FileUploader({
     : Object.keys(policy.formats);
   const maxBytes = constraints?.maxBytes ?? policy.maxBytes;
   const supportedFormats = supportedFormatLabel(allowedMimeTypes, policy);
-  const { error, file, isBusy, progress, selectFile, startUpload, status } =
-    useMediaUploader({ constraints, disabled, onComplete, purpose });
+  const {
+    error,
+    file,
+    files,
+    isBusy,
+    progress,
+    selectFile,
+    selectFiles,
+    startUpload,
+    status,
+  } = useMediaUploader({
+    constraints,
+    disabled,
+    maxFiles,
+    onComplete,
+    purpose,
+  });
 
   const handleInput = (event: ChangeEvent<HTMLInputElement>) => {
-    selectFile(event.target.files?.[0]);
+    const selected = Array.from(event.target.files ?? []);
+    if (multiple) selectFiles(selected);
+    else selectFile(selected[0]);
     event.target.value = "";
   };
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragging(false);
-    selectFile(event.dataTransfer.files[0]);
+    const dropped = Array.from(event.dataTransfer.files);
+    if (multiple) selectFiles(dropped);
+    else selectFile(dropped[0]);
   };
 
   const openPicker = () => inputRef.current?.click();
@@ -147,6 +170,7 @@ export function FileUploader({
           className="sr-only"
           disabled={disabled || isBusy}
           id={inputId}
+          multiple={multiple}
           onChange={handleInput}
           ref={inputRef}
           tabIndex={-1}
@@ -164,15 +188,32 @@ export function FileUploader({
             )}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-neutral-950">
-              {file?.name ?? "Kéo tệp vào đây hoặc chọn từ thiết bị"}
-            </p>
+            {files.length ? (
+              <ul className="space-y-1 text-sm font-semibold text-neutral-950">
+                {files.map((selectedFile) => (
+                  <li
+                    className="truncate"
+                    key={`${selectedFile.name}-${selectedFile.size}`}
+                  >
+                    {selectedFile.name}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="truncate text-sm font-semibold text-neutral-950">
+                Kéo tệp vào đây hoặc chọn từ thiết bị
+              </p>
+            )}
             <p
               aria-live="polite"
               className="mt-1 text-xs text-neutral-500"
               role="status"
             >
-              {file ? `${formatBytes(file.size)} · ` : ""}
+              {files.length > 1
+                ? `${files.length} tệp · `
+                : file
+                  ? `${formatBytes(file.size)} · `
+                  : ""}
               {statusLabel}
             </p>
           </div>

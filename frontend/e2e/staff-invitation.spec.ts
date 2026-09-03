@@ -10,6 +10,9 @@ test("invited staff accepts once, enrolls TOTP and removes setup secret", async 
   const tokenPrefix = `${testInfo.project.name === "mobile-chrome" ? "m" : "d"}${testInfo.repeatEachIndex}`;
   const token = `${tokenPrefix}${"a".repeat(48 - tokenPrefix.length)}`;
   await page.goto(`/staff-invitation?token=${token}`);
+  await expect(page.getByRole("button", { name: "Theo thiết bị" })).toBeEnabled(
+    { timeout: 45_000 },
+  );
   await page
     .getByRole("button", { name: "Xác minh email và tiếp tục" })
     .click();

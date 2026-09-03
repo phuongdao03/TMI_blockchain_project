@@ -153,6 +153,9 @@ describe("SearchResultsPage", () => {
     await waitFor(() => expect(document.activeElement).toBe(close));
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: /Tinh chỉnh kết quả/ }),
+    );
   });
 
   it("renders actionable empty and retry states without losing URL state", async () => {

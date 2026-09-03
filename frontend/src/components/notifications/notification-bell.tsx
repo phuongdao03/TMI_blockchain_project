@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CheckCheck, ChevronRight } from "lucide-react";
+import { Bell, CheckCheck, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -67,6 +67,7 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const unread = useQuery({
     queryKey: ["notifications", "unread-count"],
     queryFn: notificationApi.unreadCount,
@@ -93,19 +94,44 @@ export function NotificationBell() {
 
   useEffect(() => {
     if (!open) return;
-    function closeOnOutsideClick(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    }
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
+    const panel = panelRef.current;
+    const focusableSelector =
+      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const firstFocusable = panel?.querySelector<HTMLElement>(focusableSelector);
+    firstFocusable?.focus();
+
+    function closePanel() {
       setOpen(false);
       buttonRef.current?.focus();
     }
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) closePanel();
+    }
+    function manageKeyboard(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closePanel();
+        return;
+      }
+      if (event.key !== "Tab" || !panel) return;
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(focusableSelector),
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
     document.addEventListener("pointerdown", closeOnOutsideClick);
-    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("keydown", manageKeyboard);
     return () => {
       document.removeEventListener("pointerdown", closeOnOutsideClick);
-      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("keydown", manageKeyboard);
     };
   }, [open]);
 
@@ -146,7 +172,9 @@ export function NotificationBell() {
       {open ? (
         <section
           aria-label="Thông báo gần đây"
+          aria-modal="true"
           className="notification-panel"
+          ref={panelRef}
           role="dialog"
         >
           <header className="notification-panel__header">
@@ -154,21 +182,34 @@ export function NotificationBell() {
               <p>Trung tâm cập nhật</p>
               <h2>Thông báo</h2>
             </div>
-            {unreadCount > 0 ? (
+            <div className="notification-panel__header-actions">
+              {unreadCount > 0 ? (
+                <button
+                  disabled={markAllRead.isPending}
+                  onClick={() => markAllRead.mutate()}
+                  type="button"
+                >
+                  <CheckCheck
+                    aria-hidden="true"
+                    className="size-4"
+                    focusable="false"
+                    strokeWidth={1.75}
+                  />
+                  Đọc tất cả
+                </button>
+              ) : null}
               <button
-                disabled={markAllRead.isPending}
-                onClick={() => markAllRead.mutate()}
+                aria-label="Đóng thông báo"
+                className="notification-panel__close"
+                onClick={() => {
+                  setOpen(false);
+                  buttonRef.current?.focus();
+                }}
                 type="button"
               >
-                <CheckCheck
-                  aria-hidden="true"
-                  className="size-4"
-                  focusable="false"
-                  strokeWidth={1.75}
-                />
-                Đọc tất cả
+                <X aria-hidden="true" className="size-5" />
               </button>
-            ) : null}
+            </div>
           </header>
           <div className="notification-panel__list">
             {recent.isPending ? (

@@ -22,17 +22,19 @@ export type UploadStatus =
 interface UseMediaUploaderOptions {
   constraints?: MediaFileConstraints;
   disabled: boolean;
-  onComplete: (asset: MediaAsset) => void;
+  maxFiles?: number;
+  onComplete: (asset: MediaAsset, index: number) => void | Promise<void>;
   purpose: MediaPurpose;
 }
 
 export function useMediaUploader({
   constraints,
   disabled,
+  maxFiles,
   onComplete,
   purpose,
 }: UseMediaUploaderOptions) {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -40,19 +42,24 @@ export function useMediaUploader({
     status,
   );
 
-  const selectFile = useCallback(
-    (nextFile: File | undefined) => {
-      if (!nextFile || isBusy || disabled) {
+  const selectFiles = useCallback(
+    (nextFiles: readonly File[]) => {
+      if (!nextFiles.length || isBusy || disabled) {
         return;
       }
       try {
-        validateMediaFile(nextFile, purpose, constraints);
-        setFile(nextFile);
+        if (maxFiles !== undefined && nextFiles.length > maxFiles) {
+          throw new Error(`Chỉ có thể chọn tối đa ${maxFiles} tệp.`);
+        }
+        nextFiles.forEach((nextFile) =>
+          validateMediaFile(nextFile, purpose, constraints),
+        );
+        setFiles([...nextFiles]);
         setStatus("selected");
         setProgress(0);
         setError(null);
       } catch (validationError) {
-        setFile(null);
+        setFiles([]);
         setStatus("failed");
         setProgress(0);
         setError(
@@ -62,29 +69,39 @@ export function useMediaUploader({
         );
       }
     },
-    [constraints, disabled, isBusy, purpose],
+    [constraints, disabled, isBusy, maxFiles, purpose],
+  );
+  const selectFile = useCallback(
+    (nextFile: File | undefined) => selectFiles(nextFile ? [nextFile] : []),
+    [selectFiles],
   );
 
   const startUpload = useCallback(async () => {
-    if (!file || isBusy || disabled) {
+    if (!files.length || isBusy || disabled) {
       return;
     }
     setStatus("signing");
     setProgress(0);
     setError(null);
     try {
-      const asset = await uploadMedia(
-        file,
-        purpose,
-        {
-          onProgress: setProgress,
-          onStage: setStatus,
-        },
-        constraints,
-      );
+      for (const [index, file] of files.entries()) {
+        const asset = await uploadMedia(
+          file,
+          purpose,
+          {
+            onProgress: (fileProgress) => {
+              setProgress(
+                Math.round(((index + fileProgress / 100) / files.length) * 100),
+              );
+            },
+            onStage: setStatus,
+          },
+          constraints,
+        );
+        await onComplete(asset, index);
+      }
       setProgress(100);
       setStatus("complete");
-      onComplete(asset);
     } catch (uploadError) {
       setStatus("failed");
       setError(
@@ -93,14 +110,16 @@ export function useMediaUploader({
           : "Không thể tải tệp. Vui lòng thử lại.",
       );
     }
-  }, [constraints, disabled, file, isBusy, onComplete, purpose]);
+  }, [constraints, disabled, files, isBusy, onComplete, purpose]);
 
   return {
     error,
-    file,
+    file: files[0] ?? null,
+    files,
     isBusy,
     progress,
     selectFile,
+    selectFiles,
     startUpload,
     status,
   };

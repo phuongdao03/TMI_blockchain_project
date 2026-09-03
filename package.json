@@ -30,7 +30,8 @@
     "test": "npm run test:root && npm run test:frontend && npm run test:backend",
     "test:root": "node --test tests/repository-structure.test.mjs",
     "test:frontend": "npm --prefix frontend run test",
-    "test:backend": "python -m pytest backend/app/tests"
+    "test:backend": "python -m pytest backend/app/tests",
+    "test:e2e": "npm --prefix frontend run test:e2e"
   },
   "devDependencies": {
     "@types/node": "24.10.1",

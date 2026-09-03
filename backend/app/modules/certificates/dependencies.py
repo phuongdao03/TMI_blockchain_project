@@ -6,7 +6,6 @@ from fastapi import Depends
 from app.modules.audit.service import AuditService
 from app.modules.auth.dependencies import SessionDependency, SettingsDependency
 from app.modules.auth.security import OutboxPayloadCipher
-from app.modules.blockchain.dependencies import BlockchainServiceDependency
 from app.modules.certificates.metadata import (
     CertificateMetadataBuilder,
     CertificateNumberingService,
@@ -22,7 +21,6 @@ from app.workers.certificate_tasks import issue_certificate
 async def get_certificate_service(
     session: SessionDependency,
     settings: SettingsDependency,
-    blockchain_service: BlockchainServiceDependency,
 ) -> AsyncIterator[CertificateService]:
     cloudinary_secret = settings.cloudinary_api_secret
     outbox_secret = settings.auth_outbox_encryption_key
@@ -61,7 +59,6 @@ async def get_certificate_service(
         environment=settings.app_env,
         delivery_ttl_seconds=settings.media_delivery_ttl_seconds,
         validity_days=settings.certificate_validity_days,
-        blockchain_service=blockchain_service,
         enqueue_issue=lambda dossier_id: issue_certificate.delay(str(dossier_id)),
     )
     try:
@@ -80,13 +77,11 @@ CertificateServiceDependency = Annotated[
 async def get_certificate_version_service(
     session: SessionDependency,
     settings: SettingsDependency,
-    blockchain_service: BlockchainServiceDependency,
 ) -> AsyncIterator[CertificateVersionService]:
     yield CertificateVersionService(
         session=session,
         metadata_builder=CertificateMetadataBuilder(),
         audit=AuditService(session),
-        blockchain_service=blockchain_service,
         public_base_url=settings.app_base_url,
         environment=settings.app_env,
     )

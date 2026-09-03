@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from app.core.config import Settings
 from app.modules.blockchain.gateway import SUPPORTED_CHAINS
 
-CONTRACT = "0x" + "11" * 20
+CONTRACT = "0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F"
 
 
 def _production(**overrides: object) -> Settings:
@@ -22,7 +22,7 @@ def _production(**overrides: object) -> Settings:
         "blockchain_network": "polygon",
         "blockchain_chain_id": 137,
         "blockchain_rpc_url": "https://polygon-rpc.example",
-        "certificate_contract_address": CONTRACT,
+        "thv_proof_registry_contract_address": CONTRACT,
         "blockchain_allowed_contract_addresses": CONTRACT,
         "blockchain_signer_mode": "human",
         "blockchain_signing_enabled": True,
@@ -48,6 +48,8 @@ def test_production_blockchain_configuration_is_accepted() -> None:
     assert settings.blockchain_network == "polygon"
     assert settings.blockchain_chain_id == 137
     assert SUPPORTED_CHAINS[settings.blockchain_network] == settings.blockchain_chain_id
+    assert settings.certificate_contract_address == ""
+    assert settings.thv_proof_registry_contract_address == CONTRACT
 
 
 def test_production_requires_firebase_totp_attestation() -> None:

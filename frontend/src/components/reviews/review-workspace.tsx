@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import { ConflictGate } from "@/components/reviews/conflict-gate";
 import { EvidenceViewer } from "@/components/reviews/evidence-viewer";
 import { FiveTScorecard } from "@/components/reviews/five-t-scorecard";
 import { Card } from "@/components/ui/card";
@@ -22,9 +21,9 @@ import type { ReviewAssignmentDetail, ReviewDraft } from "@/lib/api/types";
 import { reviewKeys } from "@/lib/reviews/query-keys";
 
 const statusLabels = {
-  ASSIGNED: "Chờ xác nhận xung đột",
+  ASSIGNED: "Đang thẩm định",
   IN_PROGRESS: "Đang thẩm định",
-  CONFLICTED: "Đã báo xung đột",
+  CONFLICTED: "Đã kết thúc",
   SUBMITTED: "Đã gửi kết quả",
   CANCELLED: "Đã hủy",
 } as const;
@@ -48,13 +47,13 @@ export function reviewDeadlineState(dueAt: string | null, now = new Date()) {
   if (differenceHours < 0) {
     return {
       status: "OVERDUE" as const,
-      label: "Đã quá SLA",
+      label: "Đã quá hạn xử lý",
       detail: `${dateLabel} · quá hạn ${Math.abs(differenceHours)} giờ`,
     };
   }
   return {
     status: "ON_TRACK" as const,
-    label: differenceHours <= 24 ? "Sắp đến hạn" : "Trong SLA",
+    label: differenceHours <= 24 ? "Sắp đến hạn" : "Còn trong thời hạn",
     detail: `${dateLabel} · còn ${differenceHours} giờ`,
   };
 }
@@ -64,15 +63,6 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
   const query = useQuery({
     queryKey: reviewKeys.detail(assignmentId),
     queryFn: () => reviewApi.get(assignmentId),
-  });
-  const refresh = () =>
-    queryClient.invalidateQueries({
-      queryKey: reviewKeys.detail(assignmentId),
-    });
-  const conflict = useMutation({
-    mutationFn: (input: { hasConflict: boolean; reason: string | null }) =>
-      reviewApi.declareConflict(assignmentId, input),
-    onSuccess: refresh,
   });
   const save = useMutation({
     mutationFn: (draft: ReviewDraft) =>
@@ -128,6 +118,9 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
   const detail = query.data;
   const deadline = reviewDeadlineState(detail.assignment.dueAt);
   const evidenceCount = detail.snapshotJson?.evidences.length ?? 0;
+  const usesVerdictReview =
+    detail.snapshotJson?.dossier.dossierType?.reviewRubric?.assessmentMethod ===
+    "VERDICT";
   const terminal = ["CONFLICTED", "CANCELLED"].includes(
     detail.assignment.status,
   );
@@ -159,16 +152,22 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
 
       <section
         aria-label="Quy trình thẩm định"
-        className="grid overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] sm:grid-cols-3 xl:grid-cols-6"
+        className="grid overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] sm:grid-cols-2 xl:grid-cols-4"
       >
-        {[
-          ["01", "Độc lập", "Khai báo xung đột"],
-          ["02", "Kiểm tra", "Khóa phiên bản & tài liệu"],
-          ["03", "Chấm 5T", "Điểm neo & căn cứ"],
-          ["04", "Phát hiện", "Rủi ro & hướng xử lý"],
-          ["05", "Kiến nghị", "Qua cổng quyết định"],
-          ["06", "Khóa phiếu", "Xác nhận & gửi một lần"],
-        ].map(([number, title, description]) => (
+        {(usesVerdictReview
+          ? [
+              ["01", "Kiểm tra hồ sơ", "Xem phiên bản và từng tài liệu"],
+              ["02", "Đối chiếu tiêu chí", "Chọn kết luận và nêu căn cứ"],
+              ["03", "Kiểm tra kết quả", "Xem kết quả được tổng hợp"],
+              ["04", "Gửi kết quả", "Xác nhận và hoàn tất"],
+            ]
+          : [
+              ["01", "Kiểm tra hồ sơ", "Xem phiên bản và tài liệu"],
+              ["02", "Đánh giá 5T", "Chấm điểm và ghi nhận xét"],
+              ["03", "Kiến nghị", "Chọn kết quả thẩm định"],
+              ["04", "Gửi kết quả", "Xác nhận và hoàn tất"],
+            ]
+        ).map(([number, title, description]) => (
           <article
             className="border-b border-[var(--theme-border)] p-4 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0"
             key={number}
@@ -215,21 +214,13 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
             <LockKeyhole aria-hidden="true" className="size-4" /> Phạm vi thao
             tác
           </p>
-          <p className="mt-2 font-bold">Thẩm định độc lập</p>
+          <p className="mt-2 font-bold">Thẩm định nội bộ</p>
           <p className="mt-1 text-xs leading-5 text-neutral-500">
             Không thể sửa hồ sơ hoặc đưa ra quyết định cuối cùng
           </p>
         </article>
       </section>
 
-      {conflict.error ? (
-        <p
-          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800"
-          role="alert"
-        >
-          Không thể ghi nhận xác nhận xung đột. Vui lòng thử lại.
-        </p>
-      ) : null}
       {save.error || submit.error ? (
         <p
           className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800"
@@ -239,14 +230,6 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           hình; vui lòng thử lại.
         </p>
       ) : null}
-      {detail.assignment.status === "ASSIGNED" ? (
-        <ConflictGate
-          isPending={conflict.isPending}
-          onDeclare={async (input) => {
-            await conflict.mutateAsync(input);
-          }}
-        />
-      ) : null}
       {terminal ? (
         <Card className="p-8 text-center">
           <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-amber-50 text-amber-700">
@@ -254,7 +237,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           </span>
           <h2 className="mt-4 text-xl font-bold">Phân công đã kết thúc</h2>
           <p className="mt-2 text-sm text-neutral-500">
-            Hồ sơ không còn khả dụng cho thao tác chấm điểm.
+            Hồ sơ không còn khả dụng để tiếp tục thẩm định.
           </p>
         </Card>
       ) : null}
@@ -272,7 +255,12 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
                 </p>
               </Card>
             ) : null}
-            <EvidenceViewer evidences={detail.snapshotJson.evidences ?? []} />
+            <EvidenceViewer
+              documentRules={
+                detail.snapshotJson.dossier.dossierType?.documentRules
+              }
+              evidences={detail.snapshotJson.evidences ?? []}
+            />
             <Card className="p-5">
               <p className="flex items-center gap-2 text-xs font-bold text-emerald-700">
                 <CheckCircle2 className="size-4" />
@@ -295,6 +283,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
               await submit.mutateAsync();
             }}
             readOnly={detail.assignment.status === "SUBMITTED"}
+            requireEvidenceAssessments={detail.snapshotJson.schemaVersion >= 2}
             rubric={detail.snapshotJson.dossier.dossierType?.reviewRubric}
           />
         </div>

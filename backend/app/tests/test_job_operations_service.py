@@ -35,11 +35,11 @@ def _principal(role: str, *permissions: str) -> AuthPrincipal:
 
 def _registration(index: int = 1) -> JobRegistration:
     return JobRegistration(
-        task_name="blockchain.broadcast",
+        task_name="blockchain.confirm",
         queue_name="blockchain",
         resource_type="blockchain_transaction",
         resource_id=f"tx-{index}",
-        idempotency_key=f"broadcast:tx-{index}",
+        idempotency_key=f"confirm:tx-{index}",
         intent={"transaction_id": f"tx-{index}"},
         max_attempts=1,
         scheduled_at=NOW,

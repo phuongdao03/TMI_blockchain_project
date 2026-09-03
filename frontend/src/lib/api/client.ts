@@ -6,9 +6,6 @@ import type {
   AuditLogItem,
   AuditIntegrityCheck,
   AuditListFilters,
-  BlockchainSigningContext,
-  BlockchainSigningIntent,
-  BlockchainSigningQueueItem,
   BlockchainSigningStatus,
   BlockchainWalletChallenge,
   BlockchainWalletLink,
@@ -97,7 +94,6 @@ import type {
   SignedDelivery,
   SuccessEnvelope,
   UserProfile,
-  ReviewAssignment,
   ReviewAssignmentDetail,
   ReviewAssignmentSummary,
   ReviewData,
@@ -294,7 +290,7 @@ export const authApi = {
   },
 };
 
-export const blockchainSigningApi = {
+export const walletLinkApi = {
   currentWallet() {
     return request<BlockchainWalletLink | null>("/blockchain/wallet");
   },
@@ -318,46 +314,6 @@ export const blockchainSigningApi = {
     return request<BlockchainWalletLink>("/blockchain/wallet", {
       method: "DELETE",
     });
-  },
-  queue() {
-    return request<BlockchainSigningQueueItem[]>("/blockchain/signing-queue");
-  },
-  context(transactionId: string) {
-    return request<BlockchainSigningContext>(
-      `/blockchain/transactions/${encodeURIComponent(transactionId)}/signing-context`,
-    );
-  },
-  prepareIntent(transactionId: string, connectedWallet: string) {
-    return request<BlockchainSigningIntent>(
-      `/blockchain/transactions/${encodeURIComponent(transactionId)}/intents`,
-      {
-        method: "POST",
-        body: JSON.stringify({ connectedWallet }),
-      },
-    );
-  },
-  submitTransaction(input: {
-    transactionId: string;
-    intentId: string;
-    transactionHash: string;
-    connectedWallet: string;
-  }) {
-    return request<BlockchainSigningStatus>(
-      `/blockchain/transactions/${encodeURIComponent(input.transactionId)}/submissions`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          intentId: input.intentId,
-          transactionHash: input.transactionHash,
-          connectedWallet: input.connectedWallet,
-        }),
-      },
-    );
-  },
-  status(transactionId: string) {
-    return request<BlockchainSigningStatus>(
-      `/blockchain/transactions/${encodeURIComponent(transactionId)}/status`,
-    );
   },
 };
 
@@ -991,18 +947,6 @@ export const reviewApi = {
   get(assignmentId: string) {
     return request<ReviewAssignmentDetail>(
       `/reviewer/assignments/${assignmentId}`,
-    );
-  },
-  declareConflict(
-    assignmentId: string,
-    input: { hasConflict: boolean; reason: string | null },
-  ) {
-    return request<ReviewAssignment>(
-      `/reviewer/assignments/${assignmentId}/conflict`,
-      {
-        method: "POST",
-        body: JSON.stringify(input),
-      },
     );
   },
   saveDraft(assignmentId: string, draft: ReviewDraft) {

@@ -1,12 +1,13 @@
 import { Landmark } from "lucide-react";
 
 import { CouncilSessionList } from "@/components/council/council-session-list";
+import { SelectControl } from "@/components/ui/form-controls";
 import type { CouncilSessionStatus } from "@/lib/api/types";
 
 const statuses: Array<[string, string]> = [
   ["", "Tất cả phiên"],
   ["DRAFT", "Đang chuẩn bị"],
-  ["OPEN", "Đang biểu quyết"],
+  ["OPEN", "Đang xét duyệt"],
   ["CLOSED", "Đã kết thúc"],
 ];
 
@@ -27,24 +28,24 @@ export default async function CouncilPage({
         <div>
           <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
             <Landmark aria-hidden="true" className="size-4" />
-            Không gian Hội đồng
+            Quyết định hồ sơ
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] sm:text-4xl">
             Phiên xét duyệt
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
-            Xác nhận tham dự, công khai xung đột lợi ích và biểu quyết từng hồ
-            sơ trong quy trình có thể kiểm chứng.
+            Tổ chức phiên xử lý cuối cùng cho các hồ sơ đã hoàn tất thẩm định.
+            Nhân sự tham gia xem kết quả, chọn hướng xử lý và ghi rõ lý do.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border bg-neutral-200">
           <div className="bg-white px-5 py-3">
-            <p className="text-xs font-semibold text-neutral-500">Nguyên tắc</p>
-            <p className="mt-1 font-bold">Đa số tuyệt đối</p>
+            <p className="text-xs font-semibold text-neutral-500">Mục đích</p>
+            <p className="mt-1 font-bold">Thống nhất kết quả hồ sơ</p>
           </div>
           <div className="bg-white px-5 py-3">
-            <p className="text-xs font-semibold text-neutral-500">Phiếu bầu</p>
-            <p className="mt-1 font-bold">Không thể sửa sau khi gửi</p>
+            <p className="text-xs font-semibold text-neutral-500">Kết quả</p>
+            <p className="mt-1 font-bold">Được lưu vào biên bản phiên</p>
           </div>
         </div>
       </header>
@@ -56,7 +57,7 @@ export default async function CouncilPage({
           >
             Trạng thái phiên
           </label>
-          <select
+          <SelectControl
             className="mt-2 min-h-11 w-full rounded-xl border bg-white px-3 text-sm font-semibold sm:max-w-xs"
             defaultValue={status ?? ""}
             id="council-status"
@@ -67,7 +68,7 @@ export default async function CouncilPage({
                 {label}
               </option>
             ))}
-          </select>
+          </SelectControl>
         </div>
         <button
           className="min-h-11 rounded-xl bg-neutral-950 px-5 text-sm font-bold text-white hover:bg-neutral-800"

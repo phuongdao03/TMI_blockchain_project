@@ -9,19 +9,15 @@ from app.modules.operations.job_models import JobExecution
 from app.modules.operations.job_service import DurableJobService, JobRegistration
 from app.workers.celery_app import celery_app
 from app.workers.job_intents import (
-    blockchain_broadcast_intent,
     blockchain_confirmation_intent,
     blockchain_reconciliation_intent,
 )
 
-BLOCKCHAIN_BROADCAST_TASK = (
-    "app.workers.blockchain_tasks.broadcast_blockchain_transaction"
-)
 BLOCKCHAIN_CONFIRMATION_TASK = (
-    "app.workers.blockchain_tasks.confirm_blockchain_transaction"
+    "app.workers.proof_registry_tasks.confirm_proof_registry_transaction"
 )
 BLOCKCHAIN_RECONCILIATION_TASK = (
-    "app.workers.blockchain_tasks.reconcile_blockchain_transactions"
+    "app.workers.proof_registry_tasks.reconcile_proof_registry_transactions"
 )
 PAYMENT_RECONCILIATION_TASK = "app.workers.payment_tasks.reconcile_pending_payments"
 
@@ -92,11 +88,10 @@ def _runtime_dispatcher() -> DurableJobDispatcher:
 
 
 async def enqueue_blockchain_broadcast(transaction_id: UUID) -> None:
-    task_id = str(uuid4())
-    await _runtime_dispatcher().dispatch(
-        blockchain_broadcast_intent(transaction_id, task_id=task_id),
-        celery_task_name=BLOCKCHAIN_BROADCAST_TASK,
-        args=[str(transaction_id)],
+    """Compatibility seam for archived callers; legacy writes stay disabled."""
+    del transaction_id
+    raise JobReplayPolicyError(
+        "Archived CertificateRegistry broadcast jobs are not publishable."
     )
 
 
@@ -139,16 +134,15 @@ async def replay_durable_job(
 
 
 def validate_durable_job_replay(job: JobExecution) -> tuple[str, list[object]]:
-    if job.task_name in {"blockchain.broadcast", "blockchain.confirm"}:
+    if job.task_name == "blockchain.broadcast":
+        raise JobReplayPolicyError(
+            "Archived CertificateRegistry broadcast jobs are not replayable."
+        )
+    if job.task_name == "blockchain.confirm":
         transaction_id = job.intent_json.get("transaction_id")
         if not isinstance(transaction_id, str) or transaction_id != job.resource_id:
             raise JobReplayPolicyError("Blockchain replay intent is invalid.")
-        task_name = (
-            BLOCKCHAIN_BROADCAST_TASK
-            if job.task_name == "blockchain.broadcast"
-            else BLOCKCHAIN_CONFIRMATION_TASK
-        )
-        return task_name, [transaction_id]
+        return BLOCKCHAIN_CONFIRMATION_TASK, [transaction_id]
     if job.task_name == "blockchain.reconcile":
         if job.intent_json != {"scope": "pending_transactions"}:
             raise JobReplayPolicyError("Blockchain replay intent is invalid.")

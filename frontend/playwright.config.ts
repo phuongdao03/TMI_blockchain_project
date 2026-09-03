@@ -17,6 +17,8 @@ const snapshotPlatform = process.env.E2E_SNAPSHOT_PLATFORM;
 
 export default defineConfig({
   testDir: "./e2e",
+  globalTeardown: "./e2e/global-teardown.mjs",
+  timeout: 90_000,
   fullyParallel: false,
   workers: 1,
   retries: 0,

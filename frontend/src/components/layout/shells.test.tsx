@@ -183,6 +183,28 @@ describe("layout shells", () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
+  it("traps keyboard focus inside the public mobile drawer", async () => {
+    const user = userEvent.setup();
+    render(
+      <PublicShell>
+        <h1>Trang chủ</h1>
+      </PublicShell>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Mở menu" }));
+    const navigation = screen.getByRole("navigation", {
+      name: "Điều hướng di động",
+    });
+    const links = within(navigation).getAllByRole("link");
+
+    await waitFor(() => expect(document.activeElement).toBe(links[0]));
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+    expect(document.activeElement).toBe(links.at(-1));
+
+    await user.keyboard("{Tab}");
+    expect(document.activeElement).toBe(links[0]);
+  });
+
   it("renders the auth shell with a labelled main region", () => {
     render(
       <AuthShell>
@@ -333,6 +355,33 @@ describe("layout shells", () => {
     await waitFor(() => expect(document.activeElement).toBe(moreButton));
   });
 
+  it("keeps blockchain signing directly visible to a super admin on mobile", () => {
+    render(
+      <AuthUserProvider
+        user={{
+          id: "super-admin-mobile",
+          email: "admin@example.vn",
+          roles: ["SUPER_ADMIN"],
+          accountType: null,
+        }}
+      >
+        <DashboardShell>
+          <p>Administration</p>
+        </DashboardShell>
+      </AuthUserProvider>,
+    );
+
+    const quickNavigation = screen.getByRole("navigation", {
+      name: "Điều hướng nhanh",
+    });
+    expect(within(quickNavigation).getAllByRole("link")).toHaveLength(4);
+    expect(
+      within(quickNavigation)
+        .getAllByRole("link")
+        .some((link) => link.getAttribute("href") === "/blockchain"),
+    ).toBe(true);
+  });
+
   it("keeps public discovery links visible for an authenticated public user", () => {
     render(
       <AuthUserProvider
@@ -344,7 +393,7 @@ describe("layout shells", () => {
         }}
       >
         <DashboardShell>
-          <h1>KhÃ¡m phÃ¡</h1>
+          <h1>Khám phá</h1>
         </DashboardShell>
       </AuthUserProvider>,
     );

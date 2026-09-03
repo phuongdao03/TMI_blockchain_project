@@ -9,7 +9,7 @@ celery_app = Celery(
     broker=settings.redis_url,
     backend=settings.redis_url,
     include=[
-        "app.workers.blockchain_tasks",
+        "app.workers.proof_registry_tasks",
         "app.workers.certificate_tasks",
         "app.workers.notification_tasks",
         "app.workers.payment_tasks",
@@ -36,7 +36,7 @@ celery_app.conf.update(
     timezone="UTC",
     beat_schedule={
         "reconcile-blockchain-transactions": {
-            "task": ("app.workers.blockchain_tasks.reconcile_blockchain_transactions"),
+            "task": "app.workers.proof_registry_tasks.reconcile_proof_registry_transactions",  # noqa: E501
             "schedule": 30.0,
         },
         "process-notification-outbox": {

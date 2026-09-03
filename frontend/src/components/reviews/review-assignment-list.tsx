@@ -19,9 +19,9 @@ import { reviewKeys } from "@/lib/reviews/query-keys";
 import { cn } from "@/lib/utils";
 
 const statusLabels: Record<ReviewAssignmentStatus, string> = {
-  ASSIGNED: "Chờ xác nhận",
+  ASSIGNED: "Đang thẩm định",
   IN_PROGRESS: "Đang thẩm định",
-  CONFLICTED: "Đã báo xung đột",
+  CONFLICTED: "Đã kết thúc",
   SUBMITTED: "Đã gửi kết quả",
   CANCELLED: "Đã hủy",
 };
@@ -32,14 +32,6 @@ const statusClasses: Record<ReviewAssignmentStatus, string> = {
   CONFLICTED: "border-red-200 bg-red-50 text-red-800",
   SUBMITTED: "border-emerald-200 bg-emerald-50 text-emerald-800",
   CANCELLED: "border-neutral-200 bg-neutral-100 text-neutral-600",
-};
-
-const nextActionLabels: Record<ReviewAssignmentStatus, string> = {
-  ASSIGNED: "Xác nhận xung đột lợi ích",
-  IN_PROGRESS: "Hoàn thiện phiếu điểm 5T",
-  CONFLICTED: "Chờ điều phối phân công lại",
-  SUBMITTED: "Theo dõi kết quả xét duyệt",
-  CANCELLED: "Không còn thao tác",
 };
 
 function formatDate(value: string | null) {
@@ -132,9 +124,6 @@ export function ReviewAssignmentList({
                 <p className="mt-2 flex items-center gap-2 text-xs font-medium text-neutral-500">
                   <CalendarClock aria-hidden="true" className="size-4" />
                   Hạn xử lý: {formatDate(item.assignment.dueAt)}
-                </p>
-                <p className="mt-3 text-sm font-bold text-primary-700">
-                  Bước tiếp theo: {nextActionLabels[item.assignment.status]}
                 </p>
               </div>
               <Link

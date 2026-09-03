@@ -77,7 +77,7 @@ describe("FileUploader", () => {
         "Tệp đã được tải lên và xác minh.",
       );
     });
-    expect(onComplete).toHaveBeenCalledWith(activeAsset);
+    expect(onComplete).toHaveBeenCalledWith(activeAsset, 0);
   });
 
   it("keeps the selected file and retries with a fresh upload attempt", async () => {
@@ -187,5 +187,62 @@ describe("FileUploader", () => {
     expect(screen.getByRole("alert").textContent).toContain(
       "Định dạng tệp không phù hợp",
     );
+  });
+
+  it("uploads a selected dossier evidence batch in order", async () => {
+    const user = userEvent.setup();
+    const onComplete = vi.fn();
+    const secondAsset = { ...activeAsset, id: "asset-2" };
+    uploadMediaMock
+      .mockResolvedValueOnce(activeAsset)
+      .mockResolvedValueOnce(secondAsset);
+
+    render(
+      <FileUploader
+        label="Bằng chứng hồ sơ"
+        multiple
+        onComplete={onComplete}
+        purpose="DOSSIER_EVIDENCE"
+      />,
+    );
+
+    const files = [
+      new File(["one"], "one.pdf", { type: "application/pdf" }),
+      new File(["two"], "two.pdf", { type: "application/pdf" }),
+    ];
+    await user.upload(screen.getByLabelText("Chọn bằng chứng hồ sơ"), files);
+
+    expect(screen.getByText("one.pdf")).toBeDefined();
+    expect(screen.getByText("two.pdf")).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Tải lên" }));
+
+    await vi.waitFor(() => expect(uploadMediaMock).toHaveBeenCalledTimes(2));
+    expect(uploadMediaMock.mock.calls[0]?.[0]).toBe(files[0]);
+    expect(uploadMediaMock.mock.calls[1]?.[0]).toBe(files[1]);
+    expect(onComplete).toHaveBeenNthCalledWith(1, activeAsset, 0);
+    expect(onComplete).toHaveBeenNthCalledWith(2, secondAsset, 1);
+  });
+
+  it("rejects a batch larger than the remaining evidence capacity", async () => {
+    const user = userEvent.setup();
+    render(
+      <FileUploader
+        label="Báº±ng chá»©ng há»“ sÆ¡"
+        maxFiles={1}
+        multiple
+        onComplete={vi.fn()}
+        purpose="DOSSIER_EVIDENCE"
+      />,
+    );
+
+    const input = document.querySelector('input[type="file"]');
+    expect(input).not.toBeNull();
+    await user.upload(input as HTMLInputElement, [
+      new File(["one"], "one.pdf", { type: "application/pdf" }),
+      new File(["two"], "two.pdf", { type: "application/pdf" }),
+    ]);
+
+    expect(screen.getByRole("alert").textContent).toContain("1");
+    expect(uploadMediaMock).not.toHaveBeenCalled();
   });
 });

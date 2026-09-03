@@ -75,6 +75,58 @@ def test_schema_definition_accepts_supported_fields_and_checklists() -> None:
     assert validate_schema_definition(schema) == schema
 
 
+def test_verdict_review_rubric_does_not_require_scores_or_thresholds() -> None:
+    schema = {
+        "fields": [],
+        "reviewRubric": {
+            "version": "2026.2",
+            "title": "Kết luận hồ sơ",
+            "assessmentMethod": "VERDICT",
+            "gates": [],
+            "criteria": [
+                {
+                    "key": "identity",
+                    "label": "Thông tin chủ thể",
+                    "description": "Đối chiếu thông tin chủ thể trong hồ sơ.",
+                },
+                {
+                    "key": "evidence",
+                    "label": "Tài liệu chứng minh",
+                    "description": "Kiểm tra tính phù hợp của tài liệu đã nộp.",
+                },
+            ],
+        },
+    }
+
+    assert validate_schema_definition(schema) == schema
+
+
+def test_review_rubric_rejects_an_unknown_assessment_method() -> None:
+    with pytest.raises(DynamicSchemaError) as exc_info:
+        validate_schema_definition(
+            {
+                "fields": [],
+                "reviewRubric": {
+                    "version": "2026.2",
+                    "title": "Kết luận hồ sơ",
+                    "assessmentMethod": "AVERAGE_SCORE",
+                    "criteria": [
+                        {
+                            "key": "identity",
+                            "label": "Thông tin chủ thể",
+                            "description": "Đối chiếu thông tin chủ thể.",
+                        }
+                    ],
+                },
+            }
+        )
+
+    assert any(
+        item["path"] == "reviewRubric.assessmentMethod"
+        for item in exc_info.value.errors
+    )
+
+
 @pytest.mark.parametrize(
     ("rubric", "error_path"),
     [

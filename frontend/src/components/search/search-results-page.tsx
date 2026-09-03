@@ -18,6 +18,7 @@ import { RecentSearchHistory } from "@/components/search/recent-search-history";
 import { SearchFilters } from "@/components/search/search-filters";
 import { searchHref } from "@/components/search/search-url";
 import { Button } from "@/components/ui/button";
+import { SelectControl } from "@/components/ui/form-controls";
 import { publicApi } from "@/lib/api/client";
 import type { SearchParameters, SearchResultWork } from "@/lib/api/types";
 
@@ -32,6 +33,8 @@ export function SearchResultsPage({
 }) {
   const [filterOpen, setFilterOpen] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const filterButton = useRef<HTMLButtonElement>(null);
+  const mobileFilter = useRef<HTMLDivElement>(null);
   const results = useQuery({
     queryKey: ["public-search", parameters],
     queryFn: ({ signal }) => publicApi.search(parameters, signal),
@@ -45,14 +48,36 @@ export function SearchResultsPage({
   useEffect(() => {
     if (!filterOpen) return;
     closeButton.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setFilterOpen(false);
+    const closeFilter = () => {
+      setFilterOpen(false);
+      filterButton.current?.focus();
+    };
+    const manageKeyboard = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeFilter();
+        return;
+      }
+      if (event.key !== "Tab" || !mobileFilter.current) return;
+      const focusable = Array.from(
+        mobileFilter.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
     };
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("keydown", manageKeyboard);
     return () => {
       document.body.style.overflow = "";
-      window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("keydown", manageKeyboard);
     };
   }, [filterOpen]);
 
@@ -92,7 +117,7 @@ export function SearchResultsPage({
         <SearchAutocomplete defaultValue={parameters.q} name="q" />
         <label>
           <span className="sr-only">Sắp xếp kết quả</span>
-          <select
+          <SelectControl
             className="min-h-12 w-full rounded-xl border border-white/10 bg-ink-950 px-4 text-sm text-white outline-none focus:border-gold-300"
             defaultValue={parameters.sort}
             name="sort"
@@ -101,7 +126,7 @@ export function SearchResultsPage({
             <option value="newest">Mới nhất</option>
             <option value="oldest">Cũ nhất</option>
             <option value="most_viewed">Xem nhiều</option>
-          </select>
+          </SelectControl>
         </label>
         <Button type="submit">
           <Search aria-hidden="true" className="size-4" /> Tìm kiếm
@@ -111,6 +136,7 @@ export function SearchResultsPage({
           aria-expanded={filterOpen}
           className="whitespace-nowrap"
           onClick={() => setFilterOpen((open) => !open)}
+          ref={filterButton}
           type="button"
           variant="outline"
         >
@@ -282,7 +308,10 @@ export function SearchResultsPage({
           className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm lg:hidden"
           role="dialog"
         >
-          <div className="absolute inset-x-0 bottom-0 max-h-[92dvh] overflow-y-auto rounded-t-2xl border-t border-white/10 bg-ink-900 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          <div
+            className="absolute inset-x-0 bottom-0 max-h-[92dvh] overflow-y-auto rounded-t-2xl border-t border-white/10 bg-ink-900 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+            ref={mobileFilter}
+          >
             <div className="mb-6 flex items-center justify-between">
               <h2
                 className="text-xl font-bold text-white"
@@ -293,7 +322,10 @@ export function SearchResultsPage({
               <button
                 aria-label="Đóng bộ lọc"
                 className="grid size-11 place-items-center rounded-lg border border-white/10 text-white"
-                onClick={() => setFilterOpen(false)}
+                onClick={() => {
+                  setFilterOpen(false);
+                  filterButton.current?.focus();
+                }}
                 ref={closeButton}
                 type="button"
               >

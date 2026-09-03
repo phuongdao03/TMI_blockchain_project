@@ -23,7 +23,7 @@ describe("ReviewAssignmentList", () => {
             reviewerUserId: "7155dbf5-bb3e-449d-8bf0-9572cc642cac",
             assignedBy: "6155dbf5-bb3e-449d-8bf0-9572cc642cac",
             dueAt: "2026-08-08T08:00:00Z",
-            status: "ASSIGNED",
+            status: "IN_PROGRESS",
             conflictDeclaredAt: null,
             conflictReason: null,
           },
@@ -40,15 +40,14 @@ describe("ReviewAssignmentList", () => {
 
     render(
       <QueryClientProvider client={client}>
-        <ReviewAssignmentList page={1} pageSize={10} status="ASSIGNED" />
+        <ReviewAssignmentList page={1} pageSize={10} status="IN_PROGRESS" />
       </QueryClientProvider>,
     );
 
     expect(await screen.findByText("Hồ sơ thương hiệu TMI")).toBeDefined();
-    expect(screen.getByText("Chờ xác nhận")).toBeDefined();
-    expect(
-      screen.getByText("Bước tiếp theo: Xác nhận xung đột lợi ích"),
-    ).toBeDefined();
+    expect(screen.getByText("Đang thẩm định")).toBeDefined();
+    expect(screen.queryByText(/Bước tiếp theo:/)).toBeNull();
+    expect(screen.queryByText(/xung đột lợi ích/i)).toBeNull();
     expect(
       screen
         .getByRole("link", { name: "Mở hồ sơ thẩm định" })

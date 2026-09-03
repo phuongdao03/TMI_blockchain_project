@@ -1,3 +1,4 @@
+import hashlib
 import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -17,7 +18,6 @@ from app.modules.blockchain.models import (
     CertificateVersion,
     CertificateVersionStatus,
 )
-from app.modules.blockchain.service import BlockchainTransactionService
 from app.modules.certificates.errors import (
     CertificateConflictError,
     CertificateForbiddenError,
@@ -45,7 +45,6 @@ class CertificateVersionService:
         session: AsyncSession,
         metadata_builder: CertificateMetadataBuilder,
         audit: AuditService,
-        blockchain_service: BlockchainTransactionService | None = None,
         clock: Callable[[], datetime] | None = None,
         uuid_factory: Callable[[], UUID] | None = None,
         public_base_url: str = "http://localhost:3100",
@@ -55,7 +54,6 @@ class CertificateVersionService:
         self._session = session
         self._metadata_builder = metadata_builder
         self._audit = audit
-        self._blockchain = blockchain_service
         self._clock = clock or (lambda: datetime.now(UTC))
         self._uuid_factory = uuid_factory or uuid4
         self._public_base_url = canonical_public_origin(
@@ -245,16 +243,14 @@ class CertificateVersionService:
             if version.requested_by == principal.user_id:
                 raise CertificateForbiddenError()
             was_pending = version.status is CertificateVersionStatus.PENDING_APPROVAL
-        if self._blockchain is None:
-            raise CertificateConflictError("Blockchain service is unavailable.")
-        await self._blockchain.request_certificate_update_anchor(
-            certificate_version_id=version_id,
-            actor_user_id=principal.user_id,
-        )
         async with self._session.begin():
-            anchored = await self._certificates.get_version(version_id)
+            anchored = await self._certificates.get_version(version_id, for_update=True)
             if anchored is None:
                 raise CertificateNotFoundError()
+            if anchored.status is CertificateVersionStatus.PENDING_APPROVAL:
+                anchored.status = CertificateVersionStatus.ANCHOR_PENDING
+                anchored.decided_by = principal.user_id
+                anchored.decided_at = self._clock()
             if was_pending:
                 self._audit.record(
                     actor_user_id=principal.user_id,
@@ -307,25 +303,39 @@ class CertificateVersionService:
         reason: str,
     ) -> CertificateVersionView:
         self._require_decide(principal)
-        if self._blockchain is None:
-            raise CertificateConflictError("Blockchain service is unavailable.")
         normalized_reason = self._reason(reason, field="Revocation reason")
-        await self._blockchain.request_certificate_revocation(
-            certificate_id=certificate_id,
-            reason=normalized_reason,
-            actor_user_id=principal.user_id,
-        )
         async with self._session.begin():
             row = await self._certificates.get(certificate_id)
             if row is None:
                 raise CertificateNotFoundError()
-            version = row[1]
+            certificate, version, _, _, _ = row
+            if certificate.status is CertificateStatus.REVOKED:
+                raise CertificateConflictError("Certificate is already revoked.")
+            open_version = await self._certificates.get_open_version_request(
+                certificate_id
+            )
+            if open_version is not None:
+                raise CertificateConflictError(
+                    "Resolve the open certificate correction before revocation."
+                )
+            revoked_at = self._clock()
+            certificate.status = CertificateStatus.REVOKED
+            certificate.revoked_at = revoked_at
+            certificate.revocation_reason_hash = hashlib.sha256(
+                normalized_reason.encode("utf-8")
+            ).hexdigest()
+            version.status = CertificateVersionStatus.REVOKED
+            version.revoked_at = revoked_at
             self._audit.record(
                 actor_user_id=principal.user_id,
-                action="certificate.revocation.requested",
+                action="certificate.revoked",
                 resource_type="certificate",
                 resource_id=str(certificate_id),
-                after={"version_no": version.version_no},
+                after={
+                    "version_no": version.version_no,
+                    "reason": normalized_reason,
+                    "mode": "database",
+                },
             )
             await self._session.flush()
             return self._view(version)

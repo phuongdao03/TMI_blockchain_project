@@ -23,11 +23,24 @@ describe("EvidenceViewer", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <EvidenceViewer
+          documentRules={[
+            {
+              key: "PRIMARY",
+              label: "Nội dung chính",
+              documentType: "SOURCE_DOCUMENT",
+              required: false,
+              allowedMimeTypes: ["image/png"],
+              maxBytes: 10_000,
+              maxCount: 10,
+              defaultVisibility: "INTERNAL",
+            },
+          ]}
           evidences={[
             {
               id: "evidence-1",
               mediaAssetId: "media-1",
               evidenceType: "SOURCE_DOCUMENT",
+              evidenceRole: "PRIMARY",
               title: "Ảnh bản gốc",
               description: "Ảnh đối chiếu nguồn gốc.",
               issuedAt: null,
@@ -44,6 +57,8 @@ describe("EvidenceViewer", () => {
       </QueryClientProvider>,
     );
 
+    expect(screen.getByText("Nội dung chính · 1 tệp")).toBeDefined();
+
     await user.click(screen.getByRole("button", { name: "Xem Ảnh bản gốc" }));
 
     expect(
@@ -54,6 +69,48 @@ describe("EvidenceViewer", () => {
     ).toBe("https://media.example.test/evidence.png");
     await user.click(screen.getByRole("button", { name: "Đóng xem trước" }));
     expect(screen.queryByRole("img", { name: "Ảnh bản gốc" })).toBeNull();
+  });
+
+  it("shows the submitted document category and a readable file format", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <EvidenceViewer
+          documentRules={[
+            {
+              key: "PRIMARY",
+              label: "Nội dung chính",
+              documentType: "SOURCE_DOCUMENT",
+              required: false,
+              allowedMimeTypes: ["video/mp4"],
+              maxBytes: 10_000,
+              maxCount: 10,
+              defaultVisibility: "INTERNAL",
+            },
+          ]}
+          evidences={[
+            {
+              id: "evidence-video",
+              mediaAssetId: "media-video",
+              evidenceType: "SOURCE_DOCUMENT",
+              evidenceRole: "PRIMARY",
+              title: "Video giới thiệu",
+              description: null,
+              issuedAt: null,
+              displayOrder: 1,
+              isPublic: false,
+              media: {
+                mimeType: "video/mp4",
+                bytes: 2_048,
+                sha256: "c".repeat(64),
+              },
+            },
+          ]}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("Loại tài liệu: Nội dung chính")).toBeDefined();
+    expect(screen.getByText("Định dạng: MP4")).toBeDefined();
   });
 
   it("keeps a PDF out of an iframe and opens its signed link in a new tab", async () => {

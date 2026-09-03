@@ -1,5 +1,9 @@
 # Reviewer assessment workspace — Phase 2
 
+> Phiếu điểm số trong tài liệu này được giữ để đọc dữ liệu cũ. Thiết kế áp dụng
+> cho hồ sơ mới được thay thế bởi
+> [verdict-based-review-spec.md](./verdict-based-review-spec.md).
+
 ## Objective
 
 Turn the current 5T scoring form into a controlled reviewer workspace. A
@@ -12,25 +16,25 @@ recommendation.
 Each criterion is scored from 0 to 20 against observable evidence, not the
 reviewer's general impression:
 
-| Band | Meaning | Required interpretation |
-| --- | --- | --- |
-| 0–4 | Critical failure | Missing, contradictory, unlawful, or unverifiable evidence. |
-| 5–8 | Weak | Material gaps create a high decision risk. |
-| 9–11 | Conditional | Partly supported but requires clarification or supplementation. |
-| 12–15 | Meets standard | Sufficient, consistent evidence for the expected standard. |
-| 16–18 | Strong | Complete evidence with independent corroboration. |
-| 19–20 | Exemplary | Exceptional evidence, traceability, and sustainable practice. |
+| Band  | Meaning          | Required interpretation                                         |
+| ----- | ---------------- | --------------------------------------------------------------- |
+| 0–4   | Critical failure | Missing, contradictory, unlawful, or unverifiable evidence.     |
+| 5–8   | Weak             | Material gaps create a high decision risk.                      |
+| 9–11  | Conditional      | Partly supported but requires clarification or supplementation. |
+| 12–15 | Meets standard   | Sufficient, consistent evidence for the expected standard.      |
+| 16–18 | Strong           | Complete evidence with independent corroboration.               |
+| 19–20 | Exemplary        | Exceptional evidence, traceability, and sustainable practice.   |
 
 The five criteria are: factual integrity; transparency and traceability;
 ownership, rights, and accountability; professional quality and execution; and
-legal, ethical, and stakeholder respect. Every score requires a rationale and
-at least one reference from the locked evidence set. A rationale must contain
-at least 20 meaningful characters so an unexplained score cannot be submitted.
+legal, ethical, and stakeholder respect. Every score requires a rationale and at
+least one reference from the locked evidence set. A rationale must contain at
+least 20 meaningful characters so an unexplained score cannot be submitted.
 
 ## Decision gates
 
-- **Recommend approval:** total at least 75/100, every criterion at least
-  12/20, and no unresolved high or critical finding.
+- **Recommend approval:** total at least 75/100, every criterion at least 12/20,
+  and no unresolved high or critical finding.
 - **Request supplementation:** a recoverable evidence gap exists and at least
   one structured finding specifies what must be supplied.
 - **Recommend rejection:** total below 50/100 or a critical finding makes the

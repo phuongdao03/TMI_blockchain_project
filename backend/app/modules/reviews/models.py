@@ -145,8 +145,8 @@ class ReviewAssignment(Base):
     status: Mapped[ReviewAssignmentStatus] = mapped_column(
         _enum(ReviewAssignmentStatus, "review_assignment_status"),
         nullable=False,
-        default=ReviewAssignmentStatus.ASSIGNED,
-        server_default=ReviewAssignmentStatus.ASSIGNED.value,
+        default=ReviewAssignmentStatus.IN_PROGRESS,
+        server_default=ReviewAssignmentStatus.IN_PROGRESS.value,
     )
     conflict_declared_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
@@ -236,6 +236,12 @@ class Review(Base):
         COMMENTS_TYPE, nullable=False, default=dict, server_default=text("'{}'")
     )
     specialist_answers: Mapped[dict[str, dict[str, object]]] = mapped_column(
+        COMMENTS_TYPE, nullable=False, default=dict, server_default=text("'{}'")
+    )
+    criterion_verdicts: Mapped[dict[str, dict[str, object]]] = mapped_column(
+        COMMENTS_TYPE, nullable=False, default=dict, server_default=text("'{}'")
+    )
+    evidence_assessments: Mapped[dict[str, dict[str, object]]] = mapped_column(
         COMMENTS_TYPE, nullable=False, default=dict, server_default=text("'{}'")
     )
     applicant_feedback: Mapped[str | None] = mapped_column(Text)

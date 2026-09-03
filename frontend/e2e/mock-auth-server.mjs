@@ -399,7 +399,7 @@ let dossier = null;
 let evidences = [];
 let versions = [];
 let timeline = [];
-let reviewAssignmentStatus = "ASSIGNED";
+let reviewAssignmentStatus = "IN_PROGRESS";
 let review = null;
 let similarityCaseStatus = "ASSIGNED";
 let similarityResolution = null;
@@ -1189,6 +1189,19 @@ const server = createServer(async (request, response) => {
     send(response, 200, envelope({ status: "reset" }));
     return;
   }
+  if (request.method === "POST" && path === "/api/e2e/shutdown") {
+    send(response, 200, envelope({ status: "stopping" }));
+    setImmediate(close);
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path === "/api/e2e/reset-certificate-versions"
+  ) {
+    versions = [];
+    send(response, 200, envelope({ status: "reset" }));
+    return;
+  }
   if (
     request.method === "POST" &&
     path === "/api/e2e/reset-staff-invitations"
@@ -1311,6 +1324,31 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "POST" &&
+    path === "/api/e2e/reset-blockchain-signing"
+  ) {
+    blockchainWallet = {
+      id: "5eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
+      walletAddress: "0x3434343434343434343434343434343434343434",
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-23T10:00:00Z",
+    };
+    blockchainChallenge = null;
+    blockchainIntent = null;
+    blockchainSigningStatus = {
+      transactionId: signingTransactionId,
+      status: "CREATED",
+      txHash: null,
+      confirmations: 0,
+      errorCode: null,
+      errorMessage: null,
+      confirmedAt: null,
+    };
+    send(response, 200, envelope({ status: "reset" }));
+    return;
+  }
+  if (
+    request.method === "POST" &&
     path === "/api/v1/admin/blockchain/transactions/failure-e2e/retry" &&
     authenticated
   ) {
@@ -1391,7 +1429,7 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/blockchain/signing-queue" &&
+    path === "/api/v1/blockchain/proof-registry/signing-queue" &&
     superAdminAuthenticated &&
     blockchainWallet
   ) {
@@ -1404,11 +1442,11 @@ const server = createServer(async (request, response) => {
           dossierId,
           dossierCode: "HS-2026-SIGN001",
           dossierTitle: "Hồ sơ đã được duyệt chờ ký",
-          dossierVersionNo: 1,
-          certificateNumber: "THV-2026-SIGN001",
-          proofHash: "a".repeat(64),
+          version: 1,
+          proofHash: `0x${"a".repeat(64)}`,
           status: blockchainSigningStatus.status,
           txHash: blockchainSigningStatus.txHash,
+          confirmations: blockchainSigningStatus.confirmations,
           errorCode: null,
           createdAt: "2026-08-23T09:00:00Z",
         },
@@ -1444,8 +1482,7 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path ===
-      `/api/v1/blockchain/transactions/${signingTransactionId}/signing-context` &&
+    path === `/__archived/thv-proof/${signingTransactionId}/context` &&
     superAdminAuthenticated &&
     blockchainWallet
   ) {
@@ -1459,7 +1496,7 @@ const server = createServer(async (request, response) => {
         dossierTitle: "Hồ sơ đã được duyệt chờ ký",
         dossierVersionNo: 1,
         certificateNumber: "THV-2026-SIGN001",
-        method: "issueCertificate",
+        method: "recordProof",
         proofHash: "a".repeat(64),
         network: "local",
         chainId: blockchainWallet.chainId,
@@ -1472,7 +1509,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "POST" &&
     path ===
-      `/api/v1/blockchain/transactions/${signingTransactionId}/intents` &&
+      `/api/v1/blockchain/proof-registry/dossiers/${dossierId}/versions/1/intents` &&
     superAdminAuthenticated &&
     csrfProtected &&
     blockchainWallet
@@ -1488,13 +1525,22 @@ const server = createServer(async (request, response) => {
       return;
     }
     blockchainIntent = {
-      id: "6eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
+      intentId: "6eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
       transactionId: signingTransactionId,
+      dossierId,
+      dossierCode: "HS-2026-SIGN001",
+      dossierTitle: "THV proof signing dossier",
+      version: 1,
+      assetId: `0x${"b".repeat(64)}`,
+      proofHash: `0x${"a".repeat(64)}`,
+      network: "polygon",
+      chainId: blockchainWallet.chainId,
+      contractAddress: "0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F",
       transactionRequest: {
-        from: blockchainWallet.walletAddress,
-        to: "0x0000000000000000000000000000000000000001",
+        to: "0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F",
         data: "0x",
-        value: "0x0",
+        chainId: String(blockchainWallet.chainId),
+        value: "0",
       },
       expiresAt: "2026-12-31T23:59:59Z",
       estimatedGas: 21000,
@@ -1507,13 +1553,13 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "POST" &&
     path ===
-      `/api/v1/blockchain/transactions/${signingTransactionId}/submissions` &&
+      `/api/v1/blockchain/proof-registry/transactions/${signingTransactionId}/submissions` &&
     superAdminAuthenticated &&
     csrfProtected &&
     blockchainWallet
   ) {
     const payload = await readJson(request);
-    if (!blockchainIntent || payload.intentId !== blockchainIntent.id) {
+    if (!blockchainIntent || payload.intentId !== blockchainIntent.intentId) {
       const failure = error(
         409,
         "SIGNING_INTENT_INVALID",
@@ -1532,7 +1578,8 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path === `/api/v1/blockchain/transactions/${signingTransactionId}/status` &&
+    path ===
+      `/api/v1/blockchain/proof-registry/transactions/${signingTransactionId}/status` &&
     superAdminAuthenticated &&
     blockchainWallet
   ) {
@@ -1691,12 +1738,55 @@ const server = createServer(async (request, response) => {
     conflictReason: null,
   };
   const reviewSnapshot = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     dossier: {
       id: dossierId,
       code: "HS-2026-REVIEW01",
       title: "Hồ sơ thương hiệu TMI",
-      summary: "Hồ sơ kiểm thử thẩm định 5T.",
+      summary: "Hồ sơ kiểm thử thẩm định theo kết luận.",
+      dossierType: {
+        code: "TRADEMARK_PROFILE",
+        name: "Hồ sơ thương hiệu",
+        versionNo: 2,
+        documentRules: [
+          {
+            key: "ownership_document",
+            label: "Tài liệu chứng minh quyền sở hữu",
+            documentType: "OWNERSHIP_DOCUMENT",
+            required: false,
+            allowedMimeTypes: ["application/pdf"],
+            maxBytes: 10_485_760,
+            maxCount: 10,
+            defaultVisibility: "PRIVATE",
+          },
+        ],
+        reviewRubric: {
+          version: "2026.2",
+          title: "Tiêu chí thẩm định hồ sơ thương hiệu",
+          assessmentMethod: "VERDICT",
+          gates: [],
+          criteria: [
+            {
+              key: "ownership_basis",
+              label: "Căn cứ quyền sở hữu",
+              description:
+                "Tài liệu thể hiện được căn cứ để người nộp sử dụng hoặc sở hữu đối tượng trong hồ sơ.",
+            },
+            {
+              key: "information_consistency",
+              label: "Thông tin nhất quán",
+              description:
+                "Thông tin chính giữa biểu mẫu và tài liệu gửi kèm không mâu thuẫn.",
+            },
+            {
+              key: "verification_readiness",
+              label: "Đủ căn cứ xác minh",
+              description:
+                "Tài liệu hiện có đủ rõ ràng để nền tảng đưa ra kết luận thẩm định.",
+            },
+          ],
+        },
+      },
     },
     evidences: [
       {
@@ -1912,7 +2002,7 @@ const server = createServer(async (request, response) => {
     return;
   }
   if (request.method === "POST" && path === "/api/e2e/reset-review") {
-    reviewAssignmentStatus = "ASSIGNED";
+    reviewAssignmentStatus = "IN_PROGRESS";
     review = null;
     similarityCaseStatus = "ASSIGNED";
     similarityResolution = null;
@@ -2073,20 +2163,16 @@ const server = createServer(async (request, response) => {
     path === `/api/v1/reviewer/assignments/${reviewAssignmentId}/submit` &&
     csrfProtected &&
     review &&
-    review.totalScore === 80 &&
+    review.totalScore === null &&
     review.recommendation === "APPROVE" &&
-    Object.values(review.criterionComments ?? {}).filter(
-      (comment) => comment.trim().length > 0,
-    ).length === 5 &&
-    Object.values(review.criterionEvidence ?? {}).filter(
-      (mediaIds) => Array.isArray(mediaIds) && mediaIds.length > 0,
-    ).length === 5 &&
-    [
-      "evidence_reviewed",
-      "criteria_assessed",
-      "findings_recorded",
-      "attestation",
-    ].every((key) => review.checklistAnswers?.[key] === true)
+    Object.values(review.criterionVerdicts ?? {}).length === 3 &&
+    Object.values(review.criterionVerdicts ?? {}).every(
+      (answer) =>
+        answer.outcome === "MEETS" &&
+        answer.rationale.trim().length >= 20 &&
+        answer.evidenceMediaIds?.includes(reviewMediaId),
+    ) &&
+    review.evidenceAssessments?.[reviewMediaId]?.status === "VALID"
   ) {
     reviewAssignmentStatus = "SUBMITTED";
     review = { ...review, submittedAt: "2026-08-02T09:00:00Z" };
@@ -2104,7 +2190,7 @@ const server = createServer(async (request, response) => {
       response,
       200,
       envelope({
-        url: "http://127.0.0.1:4010/mock-evidence.pdf",
+        url: `http://127.0.0.1:${mockPort}/mock-evidence.pdf`,
         expiresAt: 1785657900,
       }),
     );
@@ -2690,6 +2776,8 @@ server.listen(mockPort, "127.0.0.1");
 
 function close() {
   server.close(() => process.exit(0));
+  server.closeAllConnections?.();
+  setTimeout(() => process.exit(0), 1_000).unref();
 }
 
 process.on("SIGINT", close);

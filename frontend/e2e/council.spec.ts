@@ -52,7 +52,13 @@ test("super admin attends, declares conflict, votes and sees result", async ({
   await expect(
     page.getByRole("heading", { level: 1, name: "Phiên xét duyệt" }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Mở phiên" }).click();
+  const openSessionLink = page.getByRole("link", { name: "Mở phiên" });
+  await expect(openSessionLink).toHaveAttribute("href", /\/council\//);
+  const sessionHref = await openSessionLink.getAttribute("href");
+  if (!sessionHref) {
+    throw new Error("Council session link is missing its destination.");
+  }
+  await page.goto(sessionHref);
   await expect(
     page.getByRole("heading", {
       level: 1,

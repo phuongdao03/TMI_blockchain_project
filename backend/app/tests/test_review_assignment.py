@@ -146,7 +146,7 @@ def test_admin_assigns_active_reviewers_and_emits_encrypted_events() -> None:
 
         assert len(assignments) == 2
         assert {item.status for item in assignments} == {
-            ReviewAssignmentStatus.ASSIGNED
+            ReviewAssignmentStatus.IN_PROGRESS
         }
         assert {item.dossier_version_id for item in assignments} == {version.id}
 

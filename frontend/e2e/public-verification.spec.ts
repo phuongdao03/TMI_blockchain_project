@@ -6,7 +6,7 @@ test("public verification explains provenance and compares a file locally", asyn
   await page.goto("/verify/demo-token");
 
   await expect(
-    page.getByText("Dữ liệu đã được ghi nhận và không thay đổi"),
+    page.getByText("Tài liệu đã được ghi nhận và chưa bị thay đổi."),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Lịch sử xác nhận" }),
@@ -21,6 +21,6 @@ test("public verification explains provenance and compares a file locally", asyn
   });
   await expect(page.getByText("Tài liệu trùng khớp")).toBeVisible();
 
-  await page.getByText("Xem thông tin đối chiếu nâng cao").click();
+  await page.getByText("Chi tiết nâng cao", { exact: true }).click();
   await expect(page.getByText("Mạng ghi nhận")).toBeVisible();
 });

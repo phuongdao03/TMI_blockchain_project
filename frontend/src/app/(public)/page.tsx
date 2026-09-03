@@ -75,13 +75,13 @@ export default function HomePage() {
         id="gioi-thieu"
       >
         <div className="registry-hero-glow" aria-hidden="true" />
-        <div className="mx-auto grid min-h-[calc(100dvh-4.5rem)] max-w-[100rem] items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[0.88fr_1.12fr] lg:gap-5 lg:px-8 lg:py-16 xl:px-14">
+        <div className="mx-auto grid max-w-[100rem] items-center gap-8 px-4 py-10 sm:px-6 sm:py-14 lg:min-h-[calc(100dvh-4.5rem)] lg:grid-cols-[0.88fr_1.12fr] lg:gap-5 lg:px-8 lg:py-16 xl:px-14">
           <div className="relative z-10 max-w-[44rem] lg:py-8">
             <p className="registry-kicker">
               <span aria-hidden="true" className="registry-kicker-dot" />
               Đề cử Tinh Hoa Việt
             </p>
-            <h1 className="mt-10 text-[clamp(2.9rem,5.5vw,5.65rem)] font-semibold leading-[0.98] tracking-[-0.055em] text-balance">
+            <h1 className="mt-7 text-[clamp(2.35rem,10vw,5.65rem)] font-semibold leading-[0.98] tracking-[-0.055em] text-balance sm:mt-10">
               Nơi những giá trị Việt được giới thiệu,{" "}
               <span className="text-gold-300">ghi nhận và lan tỏa.</span>
             </h1>
@@ -89,6 +89,14 @@ export default function HomePage() {
               Khám phá các đề cử tiêu biểu, đọc câu chuyện phía sau mỗi giá trị
               và tra cứu thông tin, trạng thái cùng bằng chứng xác thực của các
               hồ sơ được công bố.
+            </p>
+            <p className="mt-4 flex max-w-[41rem] items-start gap-2 text-sm leading-6 text-slate-300">
+              <ShieldCheck
+                aria-hidden="true"
+                className="mt-0.5 size-4 shrink-0 text-gold-300"
+              />
+              Blockchain chỉ ghi dấu vân tay số để kiểm tra thay đổi; tài liệu
+              gốc vẫn được lưu an toàn trong kho của hệ thống.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link
@@ -143,7 +151,7 @@ export default function HomePage() {
               ))}
             </dl>
           </div>
-          <div className="registry-visual relative min-w-0 self-stretch lg:-mr-14">
+          <div className="registry-visual relative hidden min-w-0 self-stretch sm:flex lg:-mr-14">
             <CertificateOrbit />
           </div>
         </div>

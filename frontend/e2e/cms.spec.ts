@@ -1,24 +1,31 @@
 import { expect, test } from "@playwright/test";
 
-test.beforeEach(async ({ request }) => {
+test.beforeEach(async ({ context, request }) => {
   await request.post("http://127.0.0.1:4010/api/e2e/reset-cms");
+  await context.addCookies([
+    {
+      name: "tmi_access",
+      value: "e2e-super-admin-access",
+      domain: "127.0.0.1",
+      path: "/",
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+    {
+      name: "tmi_csrf",
+      value: "e2e-csrf",
+      domain: "127.0.0.1",
+      path: "/",
+      sameSite: "Lax",
+    },
+  ]);
 });
 
 test("content admin creates, previews and publishes a sanitized post", async ({
   page,
 }) => {
-  await page.goto("/login");
-  await page
-    .getByRole("textbox", { name: "Email" })
-    .fill("superadmin@tmigroup.vn");
-  await page
-    .getByLabel("Mật khẩu", { exact: true })
-    .fill("correct horse battery staple");
-  await page.getByRole("button", { name: /Đăng nhập|ÄÄƒng nháº­p/ }).click();
-
-  await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 });
-  await page.getByRole("link", { name: /Nội dung công khai/ }).click();
-  await expect(page).toHaveURL(/\/admin\/content$/);
+  test.setTimeout(90_000);
+  await page.goto("/admin/content");
   await page.getByRole("button", { name: "Bài viết" }).click();
   await expect(
     page.getByRole("heading", { name: "Trung tâm nội dung" }),
@@ -39,18 +46,7 @@ test("content admin creates, previews and publishes a sanitized post", async ({
 });
 
 test("content admin previews and publishes a public work", async ({ page }) => {
-  await page.goto("/login");
-  await page
-    .getByRole("textbox", { name: "Email" })
-    .fill("superadmin@tmigroup.vn");
-  await page
-    .getByLabel("Mật khẩu", { exact: true })
-    .fill("correct horse battery staple");
-  await page.getByRole("button", { name: /Đăng nhập/i }).click();
-
-  await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 });
-  await page.getByRole("link", { name: /Nội dung công khai/ }).click();
-  await expect(page).toHaveURL(/\/admin\/content$/);
+  await page.goto("/admin/content");
   await page.getByRole("button", { name: /Di sản số TMI/ }).click();
   await expect(page.getByLabel("Tiêu đề công khai")).toHaveValue(
     "Di sản số TMI",

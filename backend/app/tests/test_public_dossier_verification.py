@@ -291,7 +291,7 @@ def test_public_dossier_verification_projects_only_safe_frozen_documents(
                 id=uuid4(),
                 dossier_id=dossier_id,
                 version_no=2,
-                snapshot_json={"dossier": {"title": "PhiÃªn báº£n má»›i"}},
+                snapshot_json={"dossier": {"title": "Phiên bản mới"}},
                 canonical_hash="f" * 64,
                 submitted_by=owner_id,
                 submitted_at=NOW,

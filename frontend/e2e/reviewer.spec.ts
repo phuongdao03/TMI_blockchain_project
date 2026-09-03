@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 
+const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
+
 test.beforeEach(async ({ context, request }) => {
-  await request.post("http://127.0.0.1:4010/api/e2e/reset-review");
+  await request.post(`${mockApiUrl}/api/e2e/reset-review`);
   await context.addCookies([
     {
       name: "tmi_access",
@@ -41,7 +43,7 @@ test.beforeEach(async ({ context, request }) => {
   ]);
 });
 
-test("reviewer acknowledges conflict gate, reviews evidence and submits 5T", async ({
+test("reviewer reviews each document and submits a criteria verdict", async ({
   page,
 }, testInfo) => {
   const consoleIssues: string[] = [];
@@ -66,54 +68,47 @@ test("reviewer acknowledges conflict gate, reviews evidence and submits 5T", asy
   await expect(
     page.getByRole("heading", { level: 1, name: "Hồ sơ thương hiệu TMI" }),
   ).toBeVisible();
-  await expect(page.getByText("Bằng chứng phiên bản đã khóa")).toHaveCount(0);
-
-  await page.getByRole("button", { name: "Tôi không có xung đột" }).click();
   await expect(page.getByText("Bằng chứng phiên bản đã khóa")).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Giấy xác nhận quyền sở hữu" }),
   ).toBeVisible();
+  await expect(
+    page.getByText("Loại tài liệu: Tài liệu chứng minh quyền sở hữu"),
+  ).toBeVisible();
+  await expect(page.getByText("Định dạng: PDF")).toBeVisible();
 
   const evidencePreview = page.getByRole("region", { name: /xem tr/i });
   await page.locator('button[aria-label^="Xem "]').first().click();
   await expect(evidencePreview).toBeVisible();
 
+  await page
+    .getByLabel("Kết quả kiểm tra Giấy xác nhận quyền sở hữu")
+    .selectOption("VALID");
   const criteria = [
-    "Tính đúng đắn",
-    "Tính minh bạch",
-    "Quyền sở hữu & trách nhiệm",
-    "Tính chuyên nghiệp",
-    "Tính tôn trọng",
+    "Căn cứ quyền sở hữu",
+    "Thông tin nhất quán",
+    "Đủ căn cứ xác minh",
   ];
   for (const criterion of criteria) {
-    await page.getByLabel(`Điểm ${criterion}`).fill("16");
+    await page.getByLabel(`Kết luận ${criterion}`).selectOption("MEETS");
     await page
-      .getByLabel(`Nhận xét ${criterion}`)
-      .fill(`Đánh giá E2E đầy đủ cho ${criterion}.`);
+      .getByLabel(`Nhận định ${criterion}`)
+      .fill(`Đã đối chiếu tài liệu và xác nhận ${criterion.toLowerCase()}.`);
   }
   const checklist = page.getByRole("checkbox");
-  const requiredChecklistCount = criteria.length + 4;
-  await expect(checklist).toHaveCount(requiredChecklistCount);
-  for (let index = 0; index < requiredChecklistCount; index += 1) {
+  await expect(checklist).toHaveCount(criteria.length);
+  for (let index = 0; index < criteria.length; index += 1) {
     await checklist.nth(index).check();
   }
-  const autosave = page.waitForResponse(
-    (response) =>
-      response.url().endsWith("/draft") &&
-      response.request().method() === "PUT" &&
-      response.status() === 200,
-  );
-  await page.getByLabel("Kiến nghị").selectOption("APPROVE");
-  await autosave;
+  await expect(page.getByText("Đề nghị phê duyệt")).toBeVisible();
+  await expect(page.getByText("0/100")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Gửi kết quả thẩm định" }).click();
   await expect(
     page.getByRole("heading", { name: "Xác nhận gửi kết quả" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Xác nhận gửi" }).click();
-  await expect(
-    page.getByText("Kết quả đã gửi và không thể chỉnh sửa."),
-  ).toBeVisible();
+  await expect(page.getByText("Kết quả đã gửi.")).toBeVisible();
 
   const overflow = await page.evaluate(() => {
     const width = document.documentElement.clientWidth;
@@ -147,12 +142,11 @@ test("retired similarity route returns reviewer to the main queue", async ({
 
 test("reviewer assessment remains legible in dark mode", async ({ page }) => {
   await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
-  await page.getByRole("button", { name: "Tôi không có xung đột" }).click();
   await page.getByRole("button", { name: "Giao diện tối" }).click();
 
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(
-    page.getByRole("heading", { name: "Phiếu thẩm định chuyên môn" }),
+    page.getByRole("heading", { name: "Phiếu thẩm định hồ sơ" }),
   ).toBeVisible();
   const firstCriterion = page
     .locator("fieldset")

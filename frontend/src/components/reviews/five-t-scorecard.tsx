@@ -11,7 +11,9 @@ import {
   type ReviewChecklistKey,
 } from "@/components/reviews/review-completion-checklist";
 import { ReviewEvidenceSelect } from "@/components/reviews/review-evidence-select";
+import { ReviewEvidenceAssessments } from "@/components/reviews/review-evidence-assessments";
 import { ReviewFindingsEditor } from "@/components/reviews/review-findings-editor";
+import { VerdictReviewForm } from "@/components/reviews/verdict-review-form";
 import {
   SpecialistRubricSection,
   specialistScore,
@@ -26,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import type {
+  EvidenceAssessment,
   ReviewData,
   ReviewDraft,
   ReviewEvidenceSnapshot,
@@ -140,6 +143,7 @@ function buildDraft(
   checklistAnswers: Record<string, boolean>,
   gateAnswers: Record<string, ReviewGateAnswer>,
   specialistAnswers: Record<string, SpecialistCriterionAnswer>,
+  evidenceAssessments: Record<string, EvidenceAssessment>,
 ): ReviewDraft {
   return {
     ...values,
@@ -148,6 +152,7 @@ function buildDraft(
     checklistAnswers,
     gateAnswers,
     specialistAnswers,
+    evidenceAssessments,
   };
 }
 
@@ -172,6 +177,7 @@ function specialistComplete(
   const total = specialistScore(rubric, specialistAnswers);
   return (
     total !== null &&
+    rubric.thresholds !== undefined &&
     total >= rubric.thresholds.approveMin &&
     rubric.gates.every(
       ({ key, required }) =>
@@ -185,6 +191,9 @@ function complete(
   criterionEvidence: CriterionEvidence,
   findings: ReviewFinding[],
   checklistAnswers: Record<string, boolean>,
+  evidenceAssessments: Record<string, EvidenceAssessment>,
+  evidences: ReviewEvidenceSnapshot[],
+  requireEvidenceAssessments: boolean,
 ) {
   const feedbackRequired = ["SUPPLEMENT", "REJECT"].includes(
     values.recommendation ?? "",
@@ -208,11 +217,44 @@ function complete(
       (values.applicantFeedback?.trim().length ?? 0) >= 50) &&
     (values.recommendation !== "SUPPLEMENT" ||
       findings.some((finding) => finding.action === "SUPPLEMENT")) &&
+    (!requireEvidenceAssessments ||
+      evidences.every((evidence) => {
+        const assessment = evidenceAssessments[evidence.mediaAssetId];
+        return (
+          assessment !== undefined &&
+          assessment.status !== "UNREVIEWED" &&
+          (assessment.status !== "NEEDS_CLARIFICATION" ||
+            assessment.note.trim().length >= 10)
+        );
+      })) &&
     gate.valid
   );
 }
 
-export function FiveTScorecard({
+export function FiveTScorecard(props: {
+  evidences: ReviewEvidenceSnapshot[];
+  initialReview: ReviewData | null;
+  isSaving: boolean;
+  isSubmitting: boolean;
+  onSave: (draft: ReviewDraft) => Promise<void>;
+  onSubmit: () => Promise<void>;
+  readOnly: boolean;
+  requireEvidenceAssessments?: boolean;
+  rubric?: ReviewRubric;
+}) {
+  if (props.rubric?.assessmentMethod === "VERDICT") {
+    return (
+      <VerdictReviewForm
+        {...props}
+        requireEvidenceAssessments={props.requireEvidenceAssessments ?? true}
+        rubric={props.rubric}
+      />
+    );
+  }
+  return <ScoredReviewForm {...props} />;
+}
+
+function ScoredReviewForm({
   evidences,
   initialReview,
   isSaving,
@@ -220,6 +262,7 @@ export function FiveTScorecard({
   onSave,
   onSubmit,
   readOnly,
+  requireEvidenceAssessments = true,
   rubric,
 }: {
   evidences: ReviewEvidenceSnapshot[];
@@ -229,6 +272,7 @@ export function FiveTScorecard({
   onSave: (draft: ReviewDraft) => Promise<void>;
   onSubmit: () => Promise<void>;
   readOnly: boolean;
+  requireEvidenceAssessments?: boolean;
   rubric?: ReviewRubric;
 }) {
   const initialValues = useMemo(() => defaults(initialReview), [initialReview]);
@@ -247,6 +291,9 @@ export function FiveTScorecard({
   const [specialistAnswers, setSpecialistAnswers] = useState<
     Record<string, SpecialistCriterionAnswer>
   >(() => initialReview?.specialistAnswers ?? {});
+  const [evidenceAssessments, setEvidenceAssessments] = useState<
+    Record<string, EvidenceAssessment>
+  >(() => initialReview?.evidenceAssessments ?? {});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [completionError, setCompletionError] = useState("");
   const lastSaved = useRef(
@@ -258,6 +305,7 @@ export function FiveTScorecard({
         checklistDefaults(initialReview),
         initialReview?.gateAnswers ?? {},
         initialReview?.specialistAnswers ?? {},
+        initialReview?.evidenceAssessments ?? {},
       ),
     ),
   );
@@ -312,6 +360,7 @@ export function FiveTScorecard({
       checklistAnswers,
       gateAnswers,
       specialistAnswers,
+      evidenceAssessments,
     );
     if (JSON.stringify(draft) === lastSaved.current) return;
     const timer = window.setTimeout(() => void persistDraft(draft), 650);
@@ -325,6 +374,7 @@ export function FiveTScorecard({
     persistDraft,
     readOnly,
     specialistAnswers,
+    evidenceAssessments,
     values,
   ]);
 
@@ -375,7 +425,15 @@ export function FiveTScorecard({
     if (
       !valid ||
       !parsed.success ||
-      !complete(parsed.data, criterionEvidence, findings, checklistAnswers) ||
+      !complete(
+        parsed.data,
+        criterionEvidence,
+        findings,
+        checklistAnswers,
+        evidenceAssessments,
+        evidences,
+        requireEvidenceAssessments,
+      ) ||
       !specialistComplete(
         rubric,
         gateAnswers,
@@ -395,6 +453,7 @@ export function FiveTScorecard({
       checklistAnswers,
       gateAnswers,
       specialistAnswers,
+      evidenceAssessments,
     );
     try {
       // The submit endpoint intentionally only accepts an already persisted draft.
@@ -437,6 +496,12 @@ export function FiveTScorecard({
           </div>
         </div>
         <form className="space-y-6 p-5 sm:p-8">
+          <ReviewEvidenceAssessments
+            assessments={evidenceAssessments}
+            evidences={evidences}
+            onChange={setEvidenceAssessments}
+            readOnly={readOnly}
+          />
           <section
             aria-label="Tiến độ phiếu thẩm định"
             className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:p-5"

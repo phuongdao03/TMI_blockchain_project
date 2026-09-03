@@ -8,7 +8,6 @@ import {
   Clock3,
   FilePlus2,
   FolderKanban,
-  LoaderCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -120,7 +119,7 @@ export function DashboardOverview() {
 
       {upgradeCompleted ? (
         <div
-          className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-900"
+          className="dashboard-success-state rounded-xl border px-5 py-4 text-sm"
           role="status"
         >
           <p className="font-bold">Bạn đã có thể bắt đầu hồ sơ.</p>
@@ -130,7 +129,7 @@ export function DashboardOverview() {
         </div>
       ) : null}
 
-      <section className="hero-grid-surface relative overflow-hidden rounded-2xl border border-white/8 bg-[#151515] px-6 py-8 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:min-h-72 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-12 lg:px-10 lg:py-10">
+      <section className="hero-grid-surface relative overflow-hidden rounded-2xl border border-white/8 bg-neutral-950 px-6 py-8 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:min-h-72 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-12 lg:px-10 lg:py-10">
         <div className="relative z-10 max-w-3xl">
           <span className="mb-7 grid size-11 place-items-center rounded-lg border border-gold-300/30 bg-gold-300/10 text-gold-300">
             {primaryDossier && attentionStatuses.has(primaryDossier.status) ? (
@@ -167,7 +166,7 @@ export function DashboardOverview() {
 
       <section
         aria-label="Chỉ số tổng quan"
-        className="grid overflow-hidden rounded-xl border border-black/10 bg-[#fbfaf7] md:grid-cols-3"
+        className="dashboard-surface grid overflow-hidden rounded-xl border md:grid-cols-3"
       >
         {[
           {
@@ -217,7 +216,7 @@ export function DashboardOverview() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.45fr_0.55fr]">
-        <section className="overflow-hidden rounded-xl border border-black/10 bg-[#fbfaf7]">
+        <section className="dashboard-surface overflow-hidden rounded-xl border">
           <header className="flex items-center justify-between border-b border-black/8 px-6 py-5">
             <div>
               <h2 className="text-lg font-bold">Hồ sơ gần đây</h2>
@@ -234,15 +233,15 @@ export function DashboardOverview() {
           </header>
           <div>
             {dossiers.isPending ? (
-              <div
-                className="flex min-h-44 items-center justify-center gap-3 text-sm font-semibold text-neutral-500"
-                role="status"
-              >
-                <LoaderCircle
-                  aria-hidden="true"
-                  className="size-5 animate-spin"
-                />
-                Đang tải hồ sơ…
+              <div className="space-y-3 px-6 py-5" role="status">
+                <span className="sr-only">Đang tải hồ sơ…</span>
+                {[0, 1, 2].map((item) => (
+                  <div
+                    aria-hidden="true"
+                    className="dashboard-skeleton h-14 animate-pulse rounded-lg"
+                    key={item}
+                  />
+                ))}
               </div>
             ) : dossiers.isError ? (
               <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center">
@@ -293,11 +292,11 @@ export function DashboardOverview() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-black/10 bg-[#1d1c1b] p-6 text-white">
+        <section className="rounded-xl border border-white/10 bg-neutral-950 p-6 text-white">
           <div>
             <BadgeCheck aria-hidden="true" className="size-6 text-gold-300" />
             <h2 className="mt-6 text-lg font-bold">Cập nhật gần nhất</h2>
-            <p className="text-sm leading-6 text-neutral-500">
+            <p className="text-sm leading-6 text-slate-300">
               Theo dõi những thay đổi quan trọng của hồ sơ.
             </p>
           </div>
@@ -313,7 +312,7 @@ export function DashboardOverview() {
               >
                 <BadgeCheck
                   aria-hidden="true"
-                  className="size-4 text-emerald-600"
+                  className="size-4 text-gold-300"
                 />
                 {label}
               </p>

@@ -49,14 +49,14 @@ export function PaymentRequestWorkspace() {
     <main className="mx-auto max-w-5xl space-y-6">
       <header className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-8">
         <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
-          PayOS · Thu phí theo hồ sơ
+          Thu phí hồ sơ
         </p>
         <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-          Phát hành yêu cầu thanh toán
+          Tạo yêu cầu thanh toán
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-muted)] sm:text-base">
-          Chỉ lập yêu cầu sau khi hồ sơ đã được phê duyệt. Số tiền tại đây là số
-          tiền PayOS và webhook sẽ đối chiếu chính xác.
+          Tạo khoản phí cho hồ sơ đã được phê duyệt. Người nộp sẽ nhận thông báo
+          và đường dẫn thanh toán ngay sau khi yêu cầu được gửi.
         </p>
       </header>
 
@@ -74,7 +74,7 @@ export function PaymentRequestWorkspace() {
               autoComplete="off"
               className="min-h-12 rounded-lg border px-4 font-mono text-sm"
               onChange={(event) => setDossierId(event.target.value)}
-              placeholder="UUID của hồ sơ đã phê duyệt"
+              placeholder="Nhập mã hồ sơ đã được phê duyệt"
               required
               value={dossierId}
             />
@@ -122,17 +122,15 @@ export function PaymentRequestWorkspace() {
           </label>
           <Button disabled={!valid || issue.isPending} type="submit">
             <BadgeDollarSign aria-hidden="true" className="size-4" />
-            {issue.isPending
-              ? "Đang tạo liên kết PayOS…"
-              : "Gửi yêu cầu thanh toán"}
+            {issue.isPending ? "Đang tạo yêu cầu…" : "Gửi yêu cầu thanh toán"}
           </Button>
           {issue.error ? (
             <p
               className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800"
               role="alert"
             >
-              Không thể phát hành yêu cầu. Kiểm tra trạng thái hồ sơ, số tiền và
-              quyền payments.issue.
+              Chưa thể tạo yêu cầu thanh toán. Hãy kiểm tra mã hồ sơ, trạng thái
+              phê duyệt và số tiền rồi thử lại.
             </p>
           ) : null}
         </form>
@@ -143,7 +141,7 @@ export function PaymentRequestWorkspace() {
           <ol className="mt-3 space-y-3 text-sm leading-6 text-[var(--theme-muted)]">
             <li>1. Hồ sơ đã ở trạng thái phê duyệt.</li>
             <li>2. Số tiền và nội dung phí đã được xác nhận.</li>
-            <li>3. User sẽ nhận thông báo ngay sau khi tạo PayOS link.</li>
+            <li>3. Người nộp sẽ nhận thông báo và đường dẫn thanh toán.</li>
           </ol>
         </aside>
       </section>
@@ -161,7 +159,7 @@ export function PaymentRequestWorkspace() {
             <div>
               <h2 className="font-bold">Đã gửi yêu cầu cho người nộp</h2>
               <p className="mt-1 text-sm">
-                Mã PayOS {issue.data.orderCode} ·{" "}
+                Mã thanh toán {issue.data.orderCode} ·{" "}
                 {new Intl.NumberFormat("vi-VN").format(issue.data.amountMinor)}{" "}
                 VND
               </p>

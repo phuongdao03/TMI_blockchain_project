@@ -60,7 +60,7 @@ export const reviewCriteria = [
     indicators: [
       "Chuỗi nguồn gốc",
       "Lịch sử chỉnh sửa",
-      "Công khai giới hạn và xung đột",
+      "Công khai giới hạn thông tin",
     ],
   },
   {

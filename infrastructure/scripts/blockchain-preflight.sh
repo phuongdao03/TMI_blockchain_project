@@ -1,6 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
+# Read-only Polygon gate for the approved THVProofRegistry. It never signs,
+# broadcasts, deploys, grants, or revokes a role.
+readonly APPROVED_REGISTRY="0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F"
+readonly APPROVED_ADMIN="0xec5FcdFab3FCafCEFCED55CC702CD3B13f54B4Fe"
+readonly APPROVED_VERIFIER="0xBfA38182f0D24589e7898DD4892C58c3FDa58042"
+
 required() {
   local name="$1"
   if [[ -z "${!name:-}" ]]; then
@@ -9,27 +15,32 @@ required() {
   fi
 }
 
-for command_name in cast node; do
-  command -v "$command_name" >/dev/null 2>&1 || {
-    printf 'Required command is unavailable: %s\n' "$command_name" >&2
-    exit 1
-  }
-done
+command -v cast >/dev/null 2>&1 || {
+  printf '%s\n' 'Required command is unavailable: cast' >&2
+  exit 1
+}
 
 for variable_name in \
   BLOCKCHAIN_RPC_URL \
-  CERTIFICATE_CONTRACT_ADDRESS \
+  THV_PROOF_REGISTRY_CONTRACT_ADDRESS \
   BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES \
-  BLOCKCHAIN_ACTIVE_SIGNER_WALLET \
-  CONTRACT_ADMIN \
-  ISSUER_ADDRESS \
-  EXPECTED_RUNTIME_BYTECODE_SHA256 \
+  ADMIN_WALLET_ADDRESS \
+  SIGNER_WALLET_ADDRESS \
   MINIMUM_SIGNER_BALANCE_WEI; do
   required "$variable_name"
 done
 
 if [[ ! "$BLOCKCHAIN_RPC_URL" =~ ^https:// ]]; then
   printf '%s\n' 'Production RPC must use HTTPS.' >&2
+  exit 1
+fi
+if [[ "${THV_PROOF_REGISTRY_CONTRACT_ADDRESS,,}" != "${APPROVED_REGISTRY,,}" ]]; then
+  printf '%s\n' 'THV registry is not the approved Polygon deployment.' >&2
+  exit 1
+fi
+if [[ "${ADMIN_WALLET_ADDRESS,,}" != "${APPROVED_ADMIN,,}" ]] || \
+   [[ "${SIGNER_WALLET_ADDRESS,,}" != "${APPROVED_VERIFIER,,}" ]]; then
+  printf '%s\n' 'THV role holders do not match the approved identities.' >&2
   exit 1
 fi
 
@@ -40,66 +51,50 @@ if [[ "$chain_id" != "137" ]]; then
   exit 1
 fi
 
-allowed=false
 IFS=',' read -r -a allowlist <<<"$BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES"
-for candidate in "${allowlist[@]}"; do
-  if [[ "${candidate,,}" == "${CERTIFICATE_CONTRACT_ADDRESS,,}" ]]; then
-    allowed=true
-  fi
-done
-if [[ "$allowed" != "true" ]]; then
-  printf '%s\n' 'Certificate contract is not in the production allowlist.' >&2
+if [[ "${#allowlist[@]}" -ne 1 ]] || \
+   [[ "${allowlist[0],,}" != "${APPROVED_REGISTRY,,}" ]]; then
+  printf '%s\n' 'Production allowlist must contain only the approved THV registry.' >&2
   exit 1
 fi
 
-if [[ "${BLOCKCHAIN_ACTIVE_SIGNER_WALLET,,}" != "${ISSUER_ADDRESS,,}" ]]; then
-  printf '%s\n' 'Active Super Admin wallet must be the contract issuer.' >&2
-  exit 1
-fi
-
-balance_wei="$(
-  cast balance --wei "$BLOCKCHAIN_ACTIVE_SIGNER_WALLET" \
-    --rpc-url "$BLOCKCHAIN_RPC_URL"
-)"
-if ! awk -v actual="$balance_wei" -v minimum="$MINIMUM_SIGNER_BALANCE_WEI" \
-  'BEGIN { exit !(actual + 0 >= minimum + 0) }'; then
-  printf '%s\n' 'Active Super Admin signer balance is below the approved minimum.' >&2
-  exit 1
-fi
-
-runtime_code="$(
-  cast code "$CERTIFICATE_CONTRACT_ADDRESS" --rpc-url "$BLOCKCHAIN_RPC_URL"
-)"
+runtime_code="$(cast code "$APPROVED_REGISTRY" --rpc-url "$BLOCKCHAIN_RPC_URL")"
 if [[ "$runtime_code" == "0x" ]]; then
-  printf '%s\n' 'Certificate contract has no deployed runtime bytecode.' >&2
-  exit 1
-fi
-runtime_bytecode_sha256="$(
-  node -e 'const {createHash}=require("node:crypto"); const value=process.argv[1].replace(/^0x/, ""); process.stdout.write(`0x${createHash("sha256").update(Buffer.from(value, "hex")).digest("hex")}`)' \
-    "$runtime_code"
-)"
-if [[ "${runtime_bytecode_sha256,,}" != "${EXPECTED_RUNTIME_BYTECODE_SHA256,,}" ]]; then
-  printf '%s\n' 'Deployed runtime bytecode hash does not match the reviewed release.' >&2
+  printf '%s\n' 'THV registry has no deployed runtime bytecode.' >&2
   exit 1
 fi
 
 admin_role="0x$(printf '0%.0s' {1..64})"
-pauser_role="$(cast keccak 'PAUSER_ROLE')"
-issuer_role="$(cast keccak 'ISSUER_ROLE')"
+verifier_role="$(cast keccak 'VERIFIER_ROLE')"
 for role_check in \
-  "$admin_role:$CONTRACT_ADMIN:administrator" \
-  "$pauser_role:$CONTRACT_ADMIN:pauser" \
-  "$issuer_role:$ISSUER_ADDRESS:issuer"; do
+  "$admin_role:$APPROVED_ADMIN:administrator" \
+  "$verifier_role:$APPROVED_VERIFIER:verifier"; do
   IFS=':' read -r role account label <<<"$role_check"
-  has_role="$(
-    cast call "$CERTIFICATE_CONTRACT_ADDRESS" \
-      'hasRole(bytes32,address)(bool)' "$role" "$account" \
-      --rpc-url "$BLOCKCHAIN_RPC_URL"
-  )"
+  has_role="$(cast call "$APPROVED_REGISTRY" \
+    'hasRole(bytes32,address)(bool)' "$role" "$account" \
+    --rpc-url "$BLOCKCHAIN_RPC_URL")"
   if [[ "$has_role" != "true" ]]; then
     printf 'Required %s role is missing.\n' "$label" >&2
     exit 1
   fi
 done
 
-printf '%s\n' 'Polygon preflight passed without broadcasting a transaction.'
+admin_has_verifier="$(cast call "$APPROVED_REGISTRY" \
+  'hasRole(bytes32,address)(bool)' "$verifier_role" "$APPROVED_ADMIN" \
+  --rpc-url "$BLOCKCHAIN_RPC_URL")"
+verifier_has_admin="$(cast call "$APPROVED_REGISTRY" \
+  'hasRole(bytes32,address)(bool)' "$admin_role" "$APPROVED_VERIFIER" \
+  --rpc-url "$BLOCKCHAIN_RPC_URL")"
+if [[ "$admin_has_verifier" != "false" ]] || [[ "$verifier_has_admin" != "false" ]]; then
+  printf '%s\n' 'THV administrator and verifier roles must remain separated.' >&2
+  exit 1
+fi
+
+balance_wei="$(cast balance --wei "$APPROVED_VERIFIER" --rpc-url "$BLOCKCHAIN_RPC_URL")"
+if ! awk -v actual="$balance_wei" -v minimum="$MINIMUM_SIGNER_BALANCE_WEI" \
+  'BEGIN { exit !(actual + 0 >= minimum + 0) }'; then
+  printf '%s\n' 'Approved verifier balance is below the operational minimum.' >&2
+  exit 1
+fi
+
+printf '%s\n' 'THVProofRegistry Polygon preflight passed without broadcasting.'

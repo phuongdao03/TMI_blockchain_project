@@ -35,7 +35,7 @@ export function CmsWorkspace() {
     <div className="cms-workspace mx-auto max-w-7xl space-y-7">
       <header className="rounded-3xl bg-neutral-950 px-6 py-7 text-white sm:px-8">
         <p className="flex items-center gap-2 text-sm font-bold text-primary-300">
-          <BookOpenText className="size-4" /> CMS nội bộ
+          <BookOpenText className="size-4" /> Nội dung công khai
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight">
           Trung tâm nội dung
@@ -120,7 +120,7 @@ function PostManager() {
           value={form.title}
         />
         <TextField
-          label="Slug"
+          label="Đường dẫn công khai"
           onChange={(value) =>
             setForm((current) => ({ ...current, slug: value }))
           }
@@ -207,7 +207,7 @@ function PageManager() {
           }
         />
         <TextField
-          label="Slug"
+          label="Đường dẫn công khai"
           value={form.slug}
           onChange={(value) =>
             setForm((current) => ({ ...current, slug: value }))
@@ -283,7 +283,7 @@ function BannerManager() {
           }
         />
         <TextField
-          label="Slug"
+          label="Đường dẫn công khai"
           value={form.slug}
           onChange={(value) =>
             setForm((current) => ({ ...current, slug: value }))
@@ -358,7 +358,7 @@ function CategoryManager() {
           }
         />
         <TextField
-          label="Slug"
+          label="Đường dẫn công khai"
           value={form.slug}
           onChange={(value) =>
             setForm((current) => ({ ...current, slug: value }))
@@ -444,7 +444,7 @@ function HtmlField({
 function MutationFeedback({ error }: { error: Error | null }) {
   return error ? (
     <p className="text-sm font-semibold text-error" role="alert">
-      Không thể lưu. Kiểm tra slug và dữ liệu nhập.
+      Không thể lưu. Vui lòng kiểm tra đường dẫn công khai và nội dung đã nhập.
     </p>
   ) : null;
 }

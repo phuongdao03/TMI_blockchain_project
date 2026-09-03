@@ -726,6 +726,9 @@ class DossierService:
                     raise DossierValidationError("Dossier category is not active.")
                 evidence_rows = await self._repository.list_draft_evidences(dossier.id)
                 dossier_type_schema = await self._dossier_type_schema_for(dossier)
+                dossier_type_identity = await self._dossier_type_snapshot_identity_for(
+                    dossier
+                )
                 try:
                     document_rules = (
                         document_rules_from_schema(dossier_type_schema)
@@ -748,6 +751,7 @@ class DossierService:
                     submitted_by=principal.user_id,
                     submitted_at=submitted_at,
                     dossier_type_schema=dossier_type_schema,
+                    dossier_type_identity=dossier_type_identity,
                 )
                 identity_fingerprint = self._content_fingerprint(
                     dossier,
@@ -911,6 +915,7 @@ class DossierService:
         submitted_by: UUID,
         submitted_at: datetime,
         dossier_type_schema: Mapping[str, Any] | None,
+        dossier_type_identity: Mapping[str, object] | None,
     ) -> dict[str, object]:
         evidences: list[dict[str, object]] = []
         for evidence, media in rows:
@@ -970,6 +975,8 @@ class DossierService:
         ):
             if dossier_type_schema is None:
                 raise DossierValidationError("Selected dossier type is unavailable.")
+            if dossier_type_identity is None:
+                raise DossierValidationError("Selected dossier type is unavailable.")
             try:
                 public_fields = public_fields_from_schema(
                     dossier_type_schema,
@@ -980,6 +987,7 @@ class DossierService:
             dossier_snapshot["dossierType"] = {
                 "id": str(dossier.dossier_type_id),
                 "versionId": str(dossier.dossier_type_version_id),
+                **dict(dossier_type_identity),
                 "formData": dict(dossier.form_data_json),
                 # Public consumers are allowed to use this frozen, explicit
                 # projection only. Raw formData remains immutable evidence and
@@ -990,9 +998,14 @@ class DossierService:
                     if isinstance(dossier_type_schema.get("reviewRubric"), Mapping)
                     else {}
                 ),
+                **(
+                    {"documentRules": deepcopy(dossier_type_schema["documentRules"])}
+                    if isinstance(dossier_type_schema.get("documentRules"), list)
+                    else {}
+                ),
             }
         return {
-            "schemaVersion": 1,
+            "schemaVersion": 2 if dossier.dossier_type_id is not None else 1,
             "dossier": dossier_snapshot,
             "evidences": evidences,
             "submission": {
@@ -1185,6 +1198,28 @@ class DossierService:
         if type_version is None:
             raise DossierValidationError("Selected dossier type is unavailable.")
         return type_version.schema_json
+
+    async def _dossier_type_snapshot_identity_for(
+        self,
+        dossier: Dossier,
+    ) -> Mapping[str, object] | None:
+        if dossier.dossier_type_id is None or dossier.dossier_type_version_id is None:
+            return None
+        dossier_type = await self._repository.get_dossier_type(dossier.dossier_type_id)
+        type_version = await self._repository.get_dossier_type_version(
+            dossier.dossier_type_version_id
+        )
+        if (
+            dossier_type is None
+            or type_version is None
+            or type_version.dossier_type_id != dossier_type.id
+        ):
+            raise DossierValidationError("Selected dossier type is unavailable.")
+        return {
+            "code": dossier_type.code,
+            "name": dossier_type.name,
+            "versionNo": type_version.version_no,
+        }
 
     async def _attachment_policy(
         self,

@@ -142,7 +142,7 @@ class ReviewService:
                         reviewer_user_id=reviewer.id,
                         assigned_by=principal.user_id,
                         due_at=normalized_due_at,
-                        status=ReviewAssignmentStatus.ASSIGNED,
+                        status=ReviewAssignmentStatus.IN_PROGRESS,
                     )
                     self._reviews.add_assignment(assignment)
                     self._add_assignment_event(assignment)
@@ -338,13 +338,19 @@ class ReviewService:
             version = await self._reviews.get_version(assignment.dossier_version_id)
             if version is None:
                 raise ReviewNotFoundError()
-            scores = self._complete_scores(review)
+            self._validate_complete_evidence_assessments(review, version.snapshot_json)
             rubric = self._rubric_from_snapshot(version.snapshot_json)
-            review.specialist_score = self._specialist_score(
-                review, rubric, require_complete=True
-            )
-            self._validate_specialist_decision(review, rubric)
-            review.total_score = sum(scores)
+            if rubric is not None and self._is_verdict_rubric(rubric):
+                self._validate_verdict_decision(review, rubric)
+                review.specialist_score = None
+                review.total_score = None
+            else:
+                scores = self._complete_scores(review)
+                review.specialist_score = self._specialist_score(
+                    review, rubric, require_complete=True
+                )
+                self._validate_specialist_decision(review, rubric)
+                review.total_score = sum(scores)
             review.submitted_at = self._clock()
             assignment.status = ReviewAssignmentStatus.SUBMITTED
             self._add_review_completed_event(assignment)
@@ -530,7 +536,97 @@ class ReviewService:
             specialist_answers=cls._validated_answer_map(
                 draft.specialist_answers, require_score=True, evidence_required=True
             ),
+            criterion_verdicts=cls._validated_verdict_map(draft.criterion_verdicts),
+            evidence_assessments=cls._validated_evidence_assessments(
+                draft.evidence_assessments
+            ),
         )
+
+    @staticmethod
+    def _validated_evidence_assessments(
+        assessments: Mapping[str, Mapping[str, object]],
+    ) -> dict[str, dict[str, object]]:
+        if len(assessments) > 100:
+            raise ReviewValidationError(
+                "A review can assess at most 100 evidence files."
+            )
+        allowed_statuses = {
+            "UNREVIEWED",
+            "VALID",
+            "NEEDS_CLARIFICATION",
+            "NOT_RELEVANT",
+        }
+        result: dict[str, dict[str, object]] = {}
+        for raw_media_id, assessment in assessments.items():
+            try:
+                media_id = str(UUID(raw_media_id))
+            except (TypeError, ValueError) as exc:
+                raise ReviewValidationError(
+                    "Evidence assessment identifier is invalid."
+                ) from exc
+            if not isinstance(assessment, Mapping):
+                raise ReviewValidationError("Evidence assessment is invalid.")
+            status = assessment.get("status")
+            note = assessment.get("note", "")
+            if status not in allowed_statuses or not isinstance(note, str):
+                raise ReviewValidationError("Evidence assessment is invalid.")
+            normalized_note = note.strip()
+            if len(normalized_note) > 1_000:
+                raise ReviewValidationError(
+                    "Evidence assessment note cannot exceed 1000 characters."
+                )
+            if status == "NEEDS_CLARIFICATION" and len(normalized_note) < 10:
+                raise ReviewValidationError(
+                    "Clarification assessments require a short explanation."
+                )
+            result[media_id] = {"status": status, "note": normalized_note}
+        return result
+
+    @staticmethod
+    def _validated_verdict_map(
+        answers: Mapping[str, Mapping[str, object]],
+    ) -> dict[str, dict[str, object]]:
+        if len(answers) > 10:
+            raise ReviewValidationError("A rubric can contain at most 10 conclusions.")
+        outcomes = {
+            "MEETS",
+            "NEEDS_CLARIFICATION",
+            "DOES_NOT_MEET",
+            "NOT_APPLICABLE",
+        }
+        result: dict[str, dict[str, object]] = {}
+        for key, answer in answers.items():
+            if (
+                not isinstance(key, str)
+                or not key
+                or len(key) > 64
+                or not isinstance(answer, Mapping)
+            ):
+                raise ReviewValidationError("Criterion conclusion is invalid.")
+            outcome = answer.get("outcome")
+            rationale = answer.get("rationale")
+            media_ids = answer.get("evidence_media_ids", [])
+            if outcome not in outcomes:
+                raise ReviewValidationError("Criterion conclusion is invalid.")
+            if not isinstance(rationale, str) or len(rationale.strip()) > 2_000:
+                raise ReviewValidationError(
+                    "Criterion rationale cannot exceed 2000 characters."
+                )
+            if not isinstance(media_ids, (list, tuple)):
+                raise ReviewValidationError("Criterion evidence is invalid.")
+            parsed_ids = tuple(media_ids)
+            if (
+                len(parsed_ids) > 10
+                or len(parsed_ids) != len(set(parsed_ids))
+                or any(not isinstance(item, UUID) for item in parsed_ids)
+            ):
+                raise ReviewValidationError("Criterion evidence is invalid.")
+            result[key] = {
+                "outcome": outcome,
+                "rationale": rationale.strip(),
+                "evidence_media_ids": [str(item) for item in parsed_ids],
+            }
+        return result
 
     @staticmethod
     def _validated_answer_map(
@@ -658,9 +754,11 @@ class ReviewService:
             for finding in draft.findings
             for media_id in finding.evidence_media_ids
         )
+        referenced.update(UUID(media_id) for media_id in draft.evidence_assessments)
         all_answers = (
             *draft.gate_answers.values(),
             *draft.specialist_answers.values(),
+            *draft.criterion_verdicts.values(),
         )
         for answer in all_answers:
             raw_ids = answer.get("evidence_media_ids", [])
@@ -669,6 +767,35 @@ class ReviewService:
         if not referenced.issubset(allowed):
             raise ReviewValidationError(
                 "Evidence references must belong to the locked dossier version."
+            )
+
+    @staticmethod
+    def _validate_complete_evidence_assessments(
+        review: Review,
+        snapshot: Mapping[str, object],
+    ) -> None:
+        if snapshot.get("schemaVersion") != 2:
+            return
+        raw_evidences = snapshot.get("evidences")
+        if not isinstance(raw_evidences, list):
+            raise ReviewValidationError("Stored dossier evidence is invalid.")
+        expected = {
+            str(evidence["mediaAssetId"])
+            for evidence in raw_evidences
+            if isinstance(evidence, Mapping)
+            and isinstance(evidence.get("mediaAssetId"), str)
+        }
+        assessments = review.evidence_assessments or {}
+        assessed = {
+            media_id
+            for media_id, assessment in assessments.items()
+            if isinstance(assessment, Mapping)
+            and assessment.get("status")
+            in {"VALID", "NEEDS_CLARIFICATION", "NOT_RELEVANT"}
+        }
+        if assessed != expected:
+            raise ReviewValidationError(
+                "Every file in this dossier version must be assessed before submission."
             )
 
     @staticmethod
@@ -684,13 +811,21 @@ class ReviewService:
         rubric = dossier_type.get("reviewRubric")
         return rubric if isinstance(rubric, Mapping) else None
 
+    @staticmethod
+    def _is_verdict_rubric(rubric: Mapping[str, object] | None) -> bool:
+        return rubric is not None and rubric.get("assessmentMethod") == "VERDICT"
+
     @classmethod
     def _validate_specialist_answers(
         cls, draft: ReviewDraft, snapshot: Mapping[str, object]
     ) -> None:
         rubric = cls._rubric_from_snapshot(snapshot)
         if rubric is None:
-            if draft.gate_answers or draft.specialist_answers:
+            if (
+                draft.gate_answers
+                or draft.specialist_answers
+                or draft.criterion_verdicts
+            ):
                 raise ReviewValidationError(
                     "This dossier version has no specialist rubric."
                 )
@@ -715,13 +850,19 @@ class ReviewService:
             if isinstance(criteria, list)
             else set()
         )
-        if (
-            set(draft.gate_answers) - gate_keys
-            or set(draft.specialist_answers) - criterion_keys
-        ):
+        answer_keys = (
+            set(draft.criterion_verdicts)
+            if cls._is_verdict_rubric(rubric)
+            else set(draft.specialist_answers)
+        )
+        if set(draft.gate_answers) - gate_keys or answer_keys - criterion_keys:
             raise ReviewValidationError(
                 "Rubric answer key does not belong to this dossier type version."
             )
+        if cls._is_verdict_rubric(rubric) and draft.specialist_answers:
+            raise ReviewValidationError("Verdict rubrics do not accept scores.")
+        if not cls._is_verdict_rubric(rubric) and draft.criterion_verdicts:
+            raise ReviewValidationError("Scored rubrics do not accept conclusions.")
 
     @staticmethod
     def _specialist_score(
@@ -731,6 +872,8 @@ class ReviewService:
         require_complete: bool,
     ) -> int | None:
         if rubric is None:
+            return None
+        if rubric.get("assessmentMethod") == "VERDICT":
             return None
         raw_criteria = rubric.get("criteria")
         if not isinstance(raw_criteria, list):
@@ -798,6 +941,71 @@ class ReviewService:
                 )
 
     @staticmethod
+    def _validate_verdict_decision(
+        review: Review, rubric: Mapping[str, object]
+    ) -> None:
+        raw_criteria = rubric.get("criteria")
+        gates = rubric.get("gates", [])
+        if not isinstance(raw_criteria, list) or not isinstance(gates, list):
+            raise ReviewValidationError("Stored verdict rubric is invalid.")
+        criterion_keys = {
+            str(item["key"]) for item in raw_criteria if isinstance(item, Mapping)
+        }
+        criterion_verdicts = review.criterion_verdicts or {}
+        if set(criterion_verdicts) != criterion_keys:
+            raise ReviewValidationError("Every rubric criterion requires a conclusion.")
+        for answer in criterion_verdicts.values():
+            if not isinstance(answer, Mapping):
+                raise ReviewValidationError("Stored criterion conclusion is invalid.")
+            rationale = answer.get("rationale")
+            evidence_ids = answer.get("evidence_media_ids", [])
+            outcome = answer.get("outcome")
+            if not isinstance(rationale, str) or len(rationale.strip()) < 20:
+                raise ReviewValidationError(
+                    "Every rubric criterion requires a clear rationale."
+                )
+            if outcome != "NOT_APPLICABLE" and not evidence_ids:
+                raise ReviewValidationError(
+                    "Every applicable rubric criterion requires evidence."
+                )
+        outcomes = {
+            str(value.get("outcome"))
+            for value in criterion_verdicts.values()
+            if isinstance(value, Mapping)
+        }
+        if not outcomes or outcomes == {"NOT_APPLICABLE"}:
+            raise ReviewValidationError("At least one rubric criterion must apply.")
+        gate_keys = {str(item["key"]) for item in gates if isinstance(item, Mapping)}
+        gate_answers = review.gate_answers or {}
+        if set(gate_answers) != gate_keys:
+            raise ReviewValidationError("All mandatory rubric gates are required.")
+        required_gate_failed = any(
+            isinstance(gate, Mapping)
+            and gate.get("required", True) is True
+            and gate_answers.get(str(gate["key"]), {}).get("outcome") != "PASS"
+            for gate in gates
+        )
+        expected = ReviewRecommendation.APPROVE
+        if required_gate_failed or "DOES_NOT_MEET" in outcomes:
+            expected = ReviewRecommendation.REJECT
+        elif "NEEDS_CLARIFICATION" in outcomes:
+            expected = ReviewRecommendation.SUPPLEMENT
+        if review.recommendation is not expected:
+            raise ReviewValidationError(
+                f"Criterion conclusions require recommendation {expected.value}."
+            )
+        if expected in {
+            ReviewRecommendation.SUPPLEMENT,
+            ReviewRecommendation.REJECT,
+        } and (
+            review.applicant_feedback is None
+            or len(review.applicant_feedback.strip()) < 20
+        ):
+            raise ReviewValidationError(
+                "A clear applicant-facing explanation is required."
+            )
+
+    @staticmethod
     def _apply_draft(review: Review, draft: ReviewDraft) -> None:
         review.truth_score = draft.truth_score
         review.transparency_score = draft.transparency_score
@@ -832,6 +1040,12 @@ class ReviewService:
         }
         review.specialist_answers = {
             key: dict(value) for key, value in draft.specialist_answers.items()
+        }
+        review.criterion_verdicts = {
+            key: dict(value) for key, value in draft.criterion_verdicts.items()
+        }
+        review.evidence_assessments = {
+            key: dict(value) for key, value in draft.evidence_assessments.items()
         }
         scores = (
             draft.truth_score,
@@ -997,6 +1211,8 @@ class ReviewService:
             private_note=review.private_note,
             gate_answers=review.gate_answers,
             specialist_answers=review.specialist_answers,
+            criterion_verdicts=review.criterion_verdicts,
+            evidence_assessments=review.evidence_assessments,
             submitted_at=review.submitted_at,
         )
 

@@ -2,6 +2,7 @@ import { Check, RotateCcw } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { DateControl, SelectControl } from "@/components/ui/form-controls";
 import { searchHref } from "@/components/search/search-url";
 import type { SearchFacets, SearchParameters } from "@/lib/api/types";
 
@@ -82,14 +83,14 @@ export function SearchFilters({
         <HiddenSearchState parameters={parameters} />
         <label className="block text-sm font-semibold text-slate-300">
           Cách khớp chủ đề
-          <select
+          <SelectControl
             className={controlClass}
             defaultValue={parameters.tagsMode}
             name="tagsMode"
           >
             <option value="any">Khớp một chủ đề</option>
             <option value="all">Khớp tất cả chủ đề</option>
-          </select>
+          </SelectControl>
         </label>
         <label className="block text-sm font-semibold text-slate-300">
           Tổ chức
@@ -104,26 +105,24 @@ export function SearchFilters({
         <div className="grid grid-cols-2 gap-3 sm:col-span-2">
           <label className="text-sm font-semibold text-slate-300">
             Từ ngày
-            <input
+            <DateControl
               className={controlClass}
               defaultValue={parameters.publishedFrom}
               name="publishedFrom"
-              type="date"
             />
           </label>
           <label className="text-sm font-semibold text-slate-300">
             Đến ngày
-            <input
+            <DateControl
               className={controlClass}
               defaultValue={parameters.publishedTo}
               name="publishedTo"
-              type="date"
             />
           </label>
         </div>
         <label className="block text-sm font-semibold text-slate-300">
           Thông tin xác nhận
-          <select
+          <SelectControl
             className={controlClass}
             defaultValue={
               parameters.hasBlockchainProof === undefined
@@ -135,11 +134,11 @@ export function SearchFilters({
             <option value="">Tất cả</option>
             <option value="true">Đã được xác nhận</option>
             <option value="false">Chưa được xác nhận</option>
-          </select>
+          </SelectControl>
         </label>
         <label className="block text-sm font-semibold text-slate-300">
           Trạng thái chứng thư
-          <select
+          <SelectControl
             className={controlClass}
             defaultValue={parameters.certificateStatus ?? ""}
             name="certificateStatus"
@@ -148,7 +147,7 @@ export function SearchFilters({
             <option value="ACTIVE">Còn hiệu lực</option>
             <option value="EXPIRED">Hết hạn</option>
             <option value="REVOKED">Đã thu hồi</option>
-          </select>
+          </SelectControl>
         </label>
         <Button className="w-full" type="submit">
           Áp dụng bộ lọc

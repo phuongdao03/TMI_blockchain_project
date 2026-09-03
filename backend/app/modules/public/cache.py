@@ -3,7 +3,7 @@ import json
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
-from app.modules.blockchain.gateway import CertificateRecord
+from app.modules.blockchain.proof_registry_gateway import THVProofRecord
 
 
 class RedisVerificationCache:
@@ -11,7 +11,7 @@ class RedisVerificationCache:
         self._client = client
         self._ttl_seconds = ttl_seconds
 
-    async def get(self, key: str) -> CertificateRecord | None:
+    async def get(self, key: str) -> THVProofRecord | None:
         try:
             raw = await self._client.get(f"public:verification:{key}")
         except (RedisError, OSError, TimeoutError):
@@ -20,28 +20,26 @@ class RedisVerificationCache:
             return None
         try:
             payload = json.loads(raw)
-            return CertificateRecord(
-                dossier_hash=bytes.fromhex(payload["dossierHash"]),
-                metadata_hash=bytes.fromhex(payload["metadataHash"]),
-                revocation_reason_hash=bytes.fromhex(payload["revocationReasonHash"]),
-                issued_at=int(payload["issuedAt"]),
-                expires_at=int(payload["expiresAt"]),
+            return THVProofRecord(
+                asset_id=bytes.fromhex(payload["assetId"]),
+                proof_hash=bytes.fromhex(payload["proofHash"]),
                 version=int(payload["version"]),
-                revoked=bool(payload["revoked"]),
+                recorded_at=int(payload["recordedAt"]),
+                signer=str(payload["signer"]),
+                exists=bool(payload["exists"]),
             )
         except (KeyError, TypeError, ValueError, json.JSONDecodeError):
             return None
 
-    async def set(self, key: str, record: CertificateRecord) -> None:
+    async def set(self, key: str, record: THVProofRecord) -> None:
         payload = json.dumps(
             {
-                "dossierHash": record.dossier_hash.hex(),
-                "metadataHash": record.metadata_hash.hex(),
-                "revocationReasonHash": record.revocation_reason_hash.hex(),
-                "issuedAt": record.issued_at,
-                "expiresAt": record.expires_at,
+                "assetId": record.asset_id.hex(),
+                "proofHash": record.proof_hash.hex(),
                 "version": record.version,
-                "revoked": record.revoked,
+                "recordedAt": record.recorded_at,
+                "signer": record.signer,
+                "exists": record.exists,
             },
             separators=(",", ":"),
         )

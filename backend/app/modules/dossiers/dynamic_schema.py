@@ -171,6 +171,15 @@ def _validate_review_rubric(rubric: object, errors: list[dict[str, str]]) -> Non
                 "Must be non-empty text up to 120 characters.",
             )
 
+    assessment_method = rubric.get("assessmentMethod", "SCORED")
+    if assessment_method not in {"SCORED", "VERDICT"}:
+        _append_error(
+            errors,
+            f"{path}.assessmentMethod",
+            "Must be SCORED or VERDICT.",
+        )
+    is_verdict = assessment_method == "VERDICT"
+
     gates = rubric.get("gates", [])
     _validate_keyed_items(gates, f"{path}.gates", errors)
     if _is_sequence(gates) and len(gates) > 10:
@@ -202,23 +211,33 @@ def _validate_review_rubric(rubric: object, errors: list[dict[str, str]]) -> Non
                 value = criterion.get(text_key)
                 if not isinstance(value, str) or not value.strip():
                     _append_error(errors, f"{item_path}.{text_key}", "Is required.")
-            weight = criterion.get("weight")
-            if (
-                not isinstance(weight, int)
-                or isinstance(weight, bool)
-                or not 1 <= weight <= 100
-            ):
-                _append_error(
-                    errors,
-                    f"{item_path}.weight",
-                    "Must be an integer from 1 to 100.",
-                )
-            else:
-                weight_total += weight
-        if weight_total != 100:
+            if not is_verdict:
+                weight = criterion.get("weight")
+                if (
+                    not isinstance(weight, int)
+                    or isinstance(weight, bool)
+                    or not 1 <= weight <= 100
+                ):
+                    _append_error(
+                        errors,
+                        f"{item_path}.weight",
+                        "Must be an integer from 1 to 100.",
+                    )
+                else:
+                    weight_total += weight
+        if not is_verdict and weight_total != 100:
             _append_error(
                 errors, f"{path}.criteria", "Criterion weights must total 100."
             )
+
+    if is_verdict:
+        if "thresholds" in rubric:
+            _append_error(
+                errors,
+                f"{path}.thresholds",
+                "Verdict rubrics must not define score thresholds.",
+            )
+        return
 
     thresholds = rubric.get("thresholds")
     if not isinstance(thresholds, Mapping):

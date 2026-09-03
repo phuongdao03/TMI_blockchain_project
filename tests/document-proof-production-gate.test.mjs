@@ -18,12 +18,11 @@ test("document proof gate covers every production-risk category", () => {
       "encryption_and_key_rotation",
       "storage_and_delivery",
       "claims_and_authorization",
-      "blockchain_reliability",
+      "proof_registry_reliability",
       "verification_and_leakage",
       "frontend_verification",
       "verification_e2e",
-      "contract_document_evidence",
-      "anvil_document_evidence",
+      "thv_proof_registry_contract",
     ],
   );
   assert.ok(
@@ -49,19 +48,6 @@ test("frontend scenario uses the platform executable without a shell", () => {
   if (process.platform === "win32") {
     assert.match(frontend.arguments[0], /npm-cli\.js$/);
   }
-});
-
-test("Anvil scenario avoids the WSL launcher on Windows", () => {
-  const anvil = documentProofScenarios.find(
-    ({ id }) => id === "anvil_document_evidence",
-  );
-
-  assert.equal(
-    anvil.command,
-    process.platform === "win32"
-      ? "C:\\Program Files\\Git\\bin\\bash.exe"
-      : "bash",
-  );
 });
 
 test("document proof evidence is bounded, redacted and fail closed", () => {
@@ -152,17 +138,6 @@ test("delivery CI retains the document proof gate and blocks image publication",
     workflow,
     /needs:[\s\S]*document-proof-production-gate,[\s\S]*runs-on:/,
   );
-});
-
-test("Anvil smoke anchors, reads and verifies document evidence", async () => {
-  const smoke = await read("contracts/scripts/smoke-anvil.sh");
-
-  assert.match(smoke, /anchorDocumentEvidence/);
-  assert.match(smoke, /getDocumentEvidence/);
-  assert.match(smoke, /verifyDocumentEvidence/);
-  assert.match(smoke, /modified_document_commitment/);
-  assert.match(smoke, /docker compose logs --no-color anvil/);
-  assert.doesNotMatch(smoke, /ac0974bec39a17e36/);
 });
 
 test("repository exposes one reproducible document proof gate command", async () => {

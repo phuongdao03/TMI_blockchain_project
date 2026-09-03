@@ -344,6 +344,19 @@ def test_submitted_dynamic_dossier_freezes_only_explicit_public_fields() -> None
                                 ],
                                 "thresholds": {"approveMin": 75, "rejectBelow": 50},
                             },
+                            "documentRules": [
+                                {
+                                    "key": "PRIMARY",
+                                    "label": "Tài liệu chính",
+                                    "description": "Nội dung chính của hồ sơ.",
+                                    "required": False,
+                                    "allowedMimeTypes": ["application/pdf"],
+                                    "documentType": "PRIMARY",
+                                    "maxCount": 10,
+                                    "maxBytes": 25_000_000,
+                                    "defaultVisibility": "PRIVATE",
+                                }
+                            ],
                         },
                     )
                 )
@@ -365,7 +378,8 @@ def test_submitted_dynamic_dossier_freezes_only_explicit_public_fields() -> None
             dossier.id,
             CreateEvidence(
                 media_asset_id=media.id,
-                evidence_type="OWNERSHIP_DOCUMENT",
+                evidence_type="PRIMARY",
+                evidence_role="PRIMARY",
                 title="Giấy xác nhận",
                 issued_at=NOW,
             ),
@@ -392,6 +406,23 @@ def test_submitted_dynamic_dossier_freezes_only_explicit_public_fields() -> None
         }
         assert dossier_type["reviewRubric"]["version"] == "2026.1"
         assert dossier_type["reviewRubric"]["criteria"][0]["key"] == "provenance"
+        assert dossier_type["code"] == "PUBLIC_FIELD_TEST"
+        assert dossier_type["name"] == "Public field test"
+        assert dossier_type["versionNo"] == 1
+        assert dossier_type["documentRules"] == [
+            {
+                "key": "PRIMARY",
+                "label": "Tài liệu chính",
+                "description": "Nội dung chính của hồ sơ.",
+                "required": False,
+                "allowedMimeTypes": ["application/pdf"],
+                "documentType": "PRIMARY",
+                "maxCount": 10,
+                "maxBytes": 25_000_000,
+                "defaultVisibility": "PRIVATE",
+            }
+        ]
+        assert submitted.version.snapshot_json["schemaVersion"] == 2
 
         await service.close()
         await engine.dispose()

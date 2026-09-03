@@ -85,6 +85,137 @@ def test_specialist_rubric_score_and_mandatory_gate_are_server_enforced() -> Non
     ReviewService._validate_specialist_decision(review, rubric)
 
 
+def test_verdict_rubric_enforces_complete_evidence_based_conclusions() -> None:
+    evidence_id = uuid4()
+    rubric = {
+        "version": "2026.2",
+        "assessmentMethod": "VERDICT",
+        "gates": [],
+        "criteria": [
+            {"key": "identity"},
+            {"key": "evidence"},
+        ],
+    }
+    review = Review(id=uuid4(), assignment_id=uuid4())
+    review.recommendation = ReviewRecommendation.APPROVE
+    review.criterion_verdicts = {
+        "identity": {
+            "outcome": "MEETS",
+            "rationale": "Thông tin chủ thể khớp với tài liệu đã nộp.",
+            "evidence_media_ids": [str(evidence_id)],
+        },
+        "evidence": {
+            "outcome": "NEEDS_CLARIFICATION",
+            "rationale": "Tài liệu cần bổ sung thông tin về thời điểm phát hành.",
+            "evidence_media_ids": [str(evidence_id)],
+        },
+    }
+
+    with pytest.raises(ReviewValidationError, match="SUPPLEMENT"):
+        ReviewService._validate_verdict_decision(review, rubric)
+
+    review.recommendation = ReviewRecommendation.SUPPLEMENT
+    review.applicant_feedback = (
+        "Vui lòng bổ sung thông tin về thời điểm phát hành của tài liệu."
+    )
+    ReviewService._validate_verdict_decision(review, rubric)
+
+    del review.criterion_verdicts["identity"]
+    with pytest.raises(ReviewValidationError, match="Every rubric criterion"):
+        ReviewService._validate_verdict_decision(review, rubric)
+
+
+def test_snapshot_v2_requires_an_assessment_for_every_frozen_file() -> None:
+    media_id = uuid4()
+    review = Review(id=uuid4(), assignment_id=uuid4())
+    snapshot = {
+        "schemaVersion": 2,
+        "evidences": [{"mediaAssetId": str(media_id)}],
+    }
+
+    with pytest.raises(ReviewValidationError, match="Every file"):
+        ReviewService._validate_complete_evidence_assessments(review, snapshot)
+
+    review.evidence_assessments = {str(media_id): {"status": "VALID", "note": ""}}
+    ReviewService._validate_complete_evidence_assessments(review, snapshot)
+
+    # Historic snapshots remain submittable without retroactively inventing data.
+    ReviewService._validate_complete_evidence_assessments(
+        Review(id=uuid4(), assignment_id=uuid4()),
+        {"schemaVersion": 1, "evidences": [{"mediaAssetId": str(media_id)}]},
+    )
+
+
+def test_verdict_review_submits_without_numeric_scores() -> None:
+    async def exercise() -> None:
+        service, session_factory, engine, users, assignment, _ = await _setup()
+        reviewer = _principal(users["reviewer"])
+        await service.declare_conflict(
+            reviewer,
+            assignment.id,
+            has_conflict=False,
+            reason=None,
+        )
+        async with session_factory() as session:
+            version = await session.get(DossierVersion, assignment.dossier_version_id)
+            assert version is not None
+            snapshot = dict(version.snapshot_json)
+            raw_dossier_snapshot = snapshot["dossier"]
+            assert isinstance(raw_dossier_snapshot, dict)
+            dossier_snapshot = dict(raw_dossier_snapshot)
+            dossier_snapshot["dossierType"] = {
+                "reviewRubric": {
+                    "version": "2026.2",
+                    "title": "Kết luận hồ sơ",
+                    "assessmentMethod": "VERDICT",
+                    "gates": [],
+                    "criteria": [
+                        {
+                            "key": "identity",
+                            "label": "Thông tin chủ thể",
+                            "description": "Đối chiếu thông tin chủ thể.",
+                        }
+                    ],
+                }
+            }
+            snapshot["dossier"] = dossier_snapshot
+            version.snapshot_json = snapshot
+            await session.commit()
+        detail = await service.get_assignment(reviewer, assignment.id)
+        assert detail.snapshot_json is not None
+        raw_evidences = detail.snapshot_json["evidences"]
+        assert isinstance(raw_evidences, list)
+        assert isinstance(raw_evidences[0], dict)
+        evidence_id = UUID(str(raw_evidences[0]["mediaAssetId"]))
+
+        saved = await service.save_draft(
+            reviewer,
+            assignment.id,
+            ReviewDraft(
+                recommendation=ReviewRecommendation.APPROVE,
+                criterion_verdicts={
+                    "identity": {
+                        "outcome": "MEETS",
+                        "rationale": "Thông tin chủ thể phù hợp với tài liệu đã nộp.",
+                        "evidence_media_ids": (evidence_id,),
+                    }
+                },
+            ),
+        )
+        assert saved.total_score is None
+        assert saved.criterion_verdicts["identity"]["outcome"] == "MEETS"
+
+        submitted = await service.submit_review(reviewer, assignment.id)
+        assert submitted.submitted_at == NOW
+        assert submitted.total_score is None
+        assert submitted.specialist_score is None
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 async def _setup() -> tuple[
     ReviewService,
     async_sessionmaker[AsyncSession],
@@ -261,11 +392,20 @@ def test_reviewer_conflict_gate_draft_and_immutable_submit() -> None:
                 criterion_comments=COMMENTS,
                 criterion_evidence=criterion_evidence,
                 checklist_answers=CHECKLIST,
+                evidence_assessments={
+                    str(evidence_media_id): {
+                        "status": "VALID",
+                        "note": "Tệp phù hợp với nội dung hồ sơ đã khóa.",
+                    }
+                },
                 recommendation=ReviewRecommendation.APPROVE,
                 private_note="Đủ căn cứ chuyển hội đồng.",
             ),
         )
         assert completed.total_score == 80
+        assert completed.evidence_assessments[str(evidence_media_id)]["status"] == (
+            "VALID"
+        )
 
         submitted = await service.submit_review(reviewer, assignment.id)
         assert submitted.submitted_at == NOW

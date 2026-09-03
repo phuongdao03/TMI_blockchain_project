@@ -101,11 +101,18 @@ describe("VerificationPanel", () => {
     renderPanel();
 
     expect(
-      await screen.findByText("Dữ liệu đã được ghi nhận và không thay đổi"),
+      await screen.findByText("Tài liệu đã được ghi nhận và chưa bị thay đổi."),
     ).toBeDefined();
     expect(await screen.findByText("Lịch sử xác nhận")).toBeDefined();
     expect(screen.getByText("Bộ nhận diện TMI")).toBeDefined();
     expect(screen.queryByText(/database|role|schema|endpoint/i)).toBeNull();
+    expect(screen.getByText("Blockchain là gì?")).toBeDefined();
+    expect(screen.getByText("Chi tiết nâng cao")).toBeDefined();
+    expect(screen.getByText("Dấu vân tay số của hồ sơ")).toBeDefined();
+    expect(screen.getByText("Mã giao dịch trên blockchain")).toBeDefined();
+    expect(screen.getByText("Số lượt mạng đã xác nhận")).toBeDefined();
+    expect(screen.getByText("Số khối ghi nhận")).toBeDefined();
+    expect(screen.getByText("Địa chỉ sổ đăng ký công khai")).toBeDefined();
   });
 
   it("compares a selected file locally", async () => {
@@ -120,6 +127,22 @@ describe("VerificationPanel", () => {
     expect(await screen.findByText("Tài liệu trùng khớp")).toBeDefined();
     expect(compareLocalFile).toHaveBeenCalledOnce();
     expect(verifyDocument).not.toHaveBeenCalled();
+  });
+
+  it("uses plain language when a selected file does not match", async () => {
+    compareLocalFile.mockResolvedValue({
+      status: "NO_MATCH",
+      digest: "ef".repeat(32),
+    });
+    renderPanel();
+    const input = await screen.findByLabelText("Chọn tài liệu để đối chiếu");
+    await userEvent.upload(input, new File(["changed"], "changed.pdf"));
+
+    expect(
+      await screen.findByText(
+        "Tài liệu hiện tại không trùng với dấu vân tay đã công bố.",
+      ),
+    ).toBeDefined();
   });
 
   it("never uploads a local file when browser hashing is unavailable", async () => {

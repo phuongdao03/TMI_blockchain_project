@@ -54,9 +54,9 @@ const modules = [
   },
   {
     href: "/council",
-    title: "Phiên Hội đồng",
+    title: "Phiên xét duyệt",
     description:
-      "Điều phối lịch họp, xung đột lợi ích, biểu quyết và biên bản.",
+      "Tổ chức quyết định cuối cùng, ghi nhận lý do và lưu biên bản hồ sơ.",
     icon: Landmark,
     tone: "bg-violet-50 text-violet-700",
   },

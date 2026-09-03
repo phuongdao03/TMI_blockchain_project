@@ -83,8 +83,8 @@ async def _work(
         code=f"DOS-{uuid4().hex[:10]}",
         owner_user_id=owner.id,
         category_id=category.id,
-        title="TÃ¡c pháº©m tham gia",
-        summary="TÃ¡c pháº©m Ä‘Ã£ cÃ´ng bá»‘",
+        title="Tác phẩm tham gia",
+        summary="Tác phẩm đã công bố",
         _status=DossierStatus.CERTIFICATE_ISSUED,
     )
     work = PublicWork(
@@ -92,8 +92,8 @@ async def _work(
         dossier_id=dossier.id,
         owner_user_id=owner.id,
         slug=f"work-{uuid4().hex}",
-        title="TÃ¡c pháº©m tham gia",
-        short_description="MÃ´ táº£ cÃ´ng khai",
+        title="Tác phẩm tham gia",
+        short_description="Mô tả công khai",
         category_id=category.id,
         publication_status=PublicationStatus.PUBLISHED,
         visibility=visibility,
@@ -191,9 +191,9 @@ def test_participant_service_enforces_eligibility_freeze_and_audit(
         category = Category(id=uuid4(), code="VOTING", name="Voting")
         campaign = VotingCampaign(
             id=uuid4(),
-            name="BÃ¬nh chá»n",
+            name="Bình chọn",
             slug="binh-chon",
-            description="BÃ¬nh chá»n cá»™ng Ä‘á»“ng",
+            description="Bình chọn cộng đồng",
             status=CampaignStatus.DRAFT,
             campaign_type=CampaignType.PERIODIC,
             period_type=PeriodType.MONTHLY,
@@ -235,7 +235,7 @@ def test_participant_service_enforces_eligibility_freeze_and_audit(
                 principal,
                 campaign_id,
                 public_work.id,
-                reason="Äá»§ Ä‘iá»u kiá»‡n",
+                reason="Đủ điều kiện",
                 request_id="add",
             )
             repeated = await service.add_participant(
@@ -253,7 +253,7 @@ def test_participant_service_enforces_eligibility_freeze_and_audit(
                     principal,
                     campaign_id,
                     hidden_work.id,
-                    reason="KhÃ´ng há»£p lá»‡",
+                    reason="Không hợp lệ",
                     request_id="hidden",
                 )
 
@@ -261,7 +261,7 @@ def test_participant_service_enforces_eligibility_freeze_and_audit(
                 principal,
                 campaign_id,
                 participant.id,
-                reason="ÄÃ£ kiá»ƒm tra",
+                reason="Đã kiểm tra",
                 request_id="approve",
             )
             assert approved.status is CampaignWorkStatus.APPROVED
@@ -273,7 +273,7 @@ def test_participant_service_enforces_eligibility_freeze_and_audit(
                 page_size=20,
             )
             assert total == 1
-            assert rows[0].title == "TÃ¡c pháº©m tham gia"
+            assert rows[0].title == "Tác phẩm tham gia"
 
             await session.commit()
             async with session.begin():
@@ -283,7 +283,7 @@ def test_participant_service_enforces_eligibility_freeze_and_audit(
                     principal,
                     campaign_id,
                     participant.id,
-                    reason="KhÃ³a sau khi kÃ­ch hoáº¡t",
+                    reason="Khóa sau khi kích hoạt",
                     request_id="locked",
                 )
 

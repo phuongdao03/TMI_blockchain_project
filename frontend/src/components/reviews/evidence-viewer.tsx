@@ -17,8 +17,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PrivateDocumentVerification } from "@/components/documents/private-document-verification";
+import { formatEvidenceMimeType } from "@/components/reviews/review-evidence-format";
 import { mediaApi } from "@/lib/api/client";
-import type { ReviewEvidenceSnapshot } from "@/lib/api/types";
+import type {
+  DossierDocumentRule,
+  ReviewEvidenceSnapshot,
+} from "@/lib/api/types";
 
 function formatBytes(bytes: number) {
   const divisor = bytes >= 1_048_576 ? 1_048_576 : 1_024;
@@ -28,8 +32,10 @@ function formatBytes(bytes: number) {
 }
 
 export function EvidenceViewer({
+  documentRules = [],
   evidences,
 }: {
+  documentRules?: DossierDocumentRule[];
   evidences: ReviewEvidenceSnapshot[];
 }) {
   const [activeMediaId, setActiveMediaId] = useState<string | null>(null);
@@ -44,6 +50,30 @@ export function EvidenceViewer({
       if (evidence) setPreview({ evidence, url: delivery.url });
     },
   });
+  const grouped = documentRules
+    .map((rule) => ({
+      key: rule.key,
+      label: rule.label,
+      items: evidences.filter(
+        (evidence) =>
+          evidence.evidenceRole === rule.key ||
+          (!evidence.evidenceRole &&
+            evidence.evidenceType === rule.documentType),
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+  const groupedIds = new Set(
+    grouped.flatMap((group) => group.items.map((evidence) => evidence.id)),
+  );
+  const ungrouped = evidences.filter(
+    (evidence) => !groupedIds.has(evidence.id),
+  );
+  const evidenceGroups = [
+    ...grouped,
+    ...(ungrouped.length
+      ? [{ key: "OTHER", label: "Tài liệu khác", items: ungrouped }]
+      : []),
+  ];
 
   return (
     <Card className="overflow-hidden">
@@ -57,61 +87,88 @@ export function EvidenceViewer({
         </h2>
       </div>
       {evidences.length ? (
-        <div className="divide-y">
-          {evidences.map((evidence) => {
-            const Icon = evidence.media.mimeType.startsWith("image/")
-              ? FileImage
-              : evidence.media.mimeType.startsWith("audio/")
-                ? FileAudio
-                : evidence.media.mimeType.startsWith("video/")
-                  ? FileVideo
-                  : FileText;
-            const opening =
-              mutation.isPending && activeMediaId === evidence.mediaAssetId;
-            return (
-              <article
-                className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 p-5 sm:items-center sm:px-8"
-                key={evidence.id}
-              >
-                <span className="grid size-11 place-items-center rounded-xl bg-primary-50 text-primary-700">
-                  <Icon aria-hidden="true" className="size-5" />
-                </span>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-neutral-950">
-                    {evidence.title}
-                  </h3>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    {evidence.evidenceType} ·{" "}
-                    {formatBytes(evidence.media.bytes)} ·{" "}
-                    {evidence.media.mimeType}
-                  </p>
-                  {evidence.description ? (
-                    <p className="mt-2 text-sm leading-6 text-neutral-600">
-                      {evidence.description}
-                    </p>
-                  ) : null}
-                </div>
-                <Button
-                  aria-label={`Xem ${evidence.title}`}
-                  className="col-span-2 w-full"
-                  disabled={mutation.isPending}
-                  onClick={() => {
-                    setActiveMediaId(evidence.mediaAssetId);
-                    mutation.mutate(evidence.mediaAssetId);
-                  }}
-                  variant="outline"
+        <div className="divide-y divide-[var(--theme-border)]">
+          {evidenceGroups.map((group) => (
+            <section
+              aria-labelledby={`evidence-group-${group.key}`}
+              key={group.key}
+            >
+              <div className="bg-[var(--theme-elevated)] px-5 py-3 sm:px-8">
+                <h3
+                  className="text-xs font-bold uppercase tracking-[0.14em] text-neutral-600"
+                  id={`evidence-group-${group.key}`}
                 >
-                  {opening ? (
-                    <LoaderCircle className="size-4 animate-spin" />
-                  ) : (
-                    <ExternalLink className="size-4" />
-                  )}
-                  Xem bằng chứng
-                </Button>
-                <PrivateDocumentVerification mediaId={evidence.mediaAssetId} />
-              </article>
-            );
-          })}
+                  {group.label} · {group.items.length} tệp
+                </h3>
+              </div>
+              <div className="divide-y divide-[var(--theme-border)]">
+                {group.items.map((evidence) => {
+                  const Icon = evidence.media.mimeType.startsWith("image/")
+                    ? FileImage
+                    : evidence.media.mimeType.startsWith("audio/")
+                      ? FileAudio
+                      : evidence.media.mimeType.startsWith("video/")
+                        ? FileVideo
+                        : FileText;
+                  const opening =
+                    mutation.isPending &&
+                    activeMediaId === evidence.mediaAssetId;
+                  return (
+                    <article
+                      className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 p-5 sm:items-center sm:px-8"
+                      key={evidence.id}
+                    >
+                      <span className="grid size-11 place-items-center rounded-xl bg-primary-50 text-primary-700">
+                        <Icon aria-hidden="true" className="size-5" />
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-neutral-950">
+                          {evidence.title}
+                        </h3>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-neutral-600">
+                          <span className="rounded-full border bg-[var(--theme-surface)] px-2.5 py-1">
+                            Loại tài liệu: {group.label}
+                          </span>
+                          <span className="rounded-full border bg-[var(--theme-surface)] px-2.5 py-1">
+                            Định dạng:{" "}
+                            {formatEvidenceMimeType(evidence.media.mimeType)}
+                          </span>
+                          <span className="rounded-full border bg-[var(--theme-surface)] px-2.5 py-1">
+                            Dung lượng: {formatBytes(evidence.media.bytes)}
+                          </span>
+                        </div>
+                        {evidence.description ? (
+                          <p className="mt-2 text-sm leading-6 text-neutral-600">
+                            {evidence.description}
+                          </p>
+                        ) : null}
+                      </div>
+                      <Button
+                        aria-label={`Xem ${evidence.title}`}
+                        className="col-span-2 w-full"
+                        disabled={mutation.isPending}
+                        onClick={() => {
+                          setActiveMediaId(evidence.mediaAssetId);
+                          mutation.mutate(evidence.mediaAssetId);
+                        }}
+                        variant="outline"
+                      >
+                        {opening ? (
+                          <LoaderCircle className="size-4 animate-spin" />
+                        ) : (
+                          <ExternalLink className="size-4" />
+                        )}
+                        Xem bằng chứng
+                      </Button>
+                      <PrivateDocumentVerification
+                        mediaId={evidence.mediaAssetId}
+                      />
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       ) : (
         <p className="p-8 text-sm text-neutral-500">

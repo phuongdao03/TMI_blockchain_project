@@ -25,6 +25,7 @@ import { z } from "zod";
 
 import { FileUploader } from "@/components/media/file-uploader";
 import { Button } from "@/components/ui/button";
+import { SelectControl } from "@/components/ui/form-controls";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ApiError, publicWorkAdminApi } from "@/lib/api/client";
 import type {
@@ -36,7 +37,7 @@ import type {
 const editorSchema = z.object({
   slug: z
     .string()
-    .min(1, "Slug là bắt buộc.")
+    .min(1, "Đường dẫn công khai là bắt buộc.")
     .max(180)
     .regex(
       /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
@@ -255,7 +256,7 @@ export function PublicWorkEditor() {
   const saveError = save.error as ApiError | null;
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
+    <section className="cms-workspace overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
       <div className="grid min-h-[46rem] lg:grid-cols-[20rem_minmax(0,1fr)]">
         <aside className="cms-list-pane border-b border-neutral-200 bg-neutral-50/80 lg:border-r lg:border-b-0">
           <div className="border-b border-neutral-200 p-4">
@@ -268,11 +269,11 @@ export function PublicWorkEditor() {
                 aria-label="Tìm tác phẩm"
                 className={`${fieldClass} pl-9`}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Tìm tiêu đề hoặc slug"
+                placeholder="Tìm theo tiêu đề hoặc đường dẫn"
                 value={query}
               />
             </div>
-            <select
+            <SelectControl
               aria-label="Lọc theo trạng thái"
               className={`${fieldClass} mt-3`}
               onChange={(event) =>
@@ -286,13 +287,35 @@ export function PublicWorkEditor() {
                   {label}
                 </option>
               ))}
-            </select>
+            </SelectControl>
           </div>
           <div className="max-h-80 overflow-y-auto p-2 lg:max-h-[38rem]">
             {works.isPending ? (
-              <p className="p-4 text-sm text-neutral-500">
-                Đang tải danh sách…
-              </p>
+              <div className="space-y-2 p-2" role="status">
+                <span className="sr-only">Đang tải danh sách…</span>
+                {[0, 1, 2, 3].map((item) => (
+                  <div
+                    aria-hidden="true"
+                    className="dashboard-skeleton h-16 animate-pulse rounded-xl"
+                    key={item}
+                  />
+                ))}
+              </div>
+            ) : null}
+            {works.isError ? (
+              <div className="p-4 text-sm" role="alert">
+                <p className="font-bold">Chưa thể tải nội dung</p>
+                <p className="mt-1 text-neutral-500">
+                  Vui lòng kiểm tra kết nối và thử lại.
+                </p>
+                <button
+                  className="mt-3 min-h-11 font-bold text-primary-700"
+                  onClick={() => void works.refetch()}
+                  type="button"
+                >
+                  Thử lại
+                </button>
+              </div>
             ) : null}
             {works.data?.data.map((work) => (
               <button
@@ -331,8 +354,8 @@ export function PublicWorkEditor() {
                 Chọn một tác phẩm để biên tập
               </h2>
               <p className="mt-2 text-sm leading-6 text-neutral-500">
-                Metadata, thư viện media và bản xem trước sẽ dùng dữ liệu mới
-                nhất từ máy chủ.
+                Thông tin, hình ảnh và bản xem trước sẽ sử dụng dữ liệu mới nhất
+                đã lưu trên hệ thống.
               </p>
             </div>
           </div>
@@ -436,7 +459,7 @@ export function PublicWorkEditor() {
                       error={errors.categoryId?.message}
                       label="Danh mục"
                     >
-                      <select
+                      <SelectControl
                         className={fieldClass}
                         {...register("categoryId")}
                       >
@@ -448,17 +471,17 @@ export function PublicWorkEditor() {
                               {item.name}
                             </option>
                           ))}
-                      </select>
+                      </SelectControl>
                     </EditorField>
                     <EditorField label="Phạm vi hiển thị">
-                      <select
+                      <SelectControl
                         className={fieldClass}
                         {...register("visibility")}
                       >
                         <option value="PUBLIC">Công khai</option>
                         <option value="UNLISTED">Chỉ người có liên kết</option>
                         <option value="PRIVATE">Riêng tư</option>
-                      </select>
+                      </SelectControl>
                     </EditorField>
                   </div>
                   <fieldset>
@@ -698,7 +721,7 @@ function Gallery({
       </div>
       <div className="mt-4">
         <FileUploader
-          label="Tải media công khai"
+          label="Tải hình ảnh hoặc video công khai"
           onComplete={(asset) => onAttach(asset.id)}
           purpose="PUBLIC_WORK"
         />
@@ -745,7 +768,7 @@ function Gallery({
               <ArrowDown className="size-4" />
             </button>
             <button
-              aria-label="Xóa media"
+              aria-label="Xóa hình ảnh hoặc video"
               className="text-red-700"
               onClick={() => void remove(item.id)}
               type="button"

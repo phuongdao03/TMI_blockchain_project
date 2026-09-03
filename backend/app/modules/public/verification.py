@@ -10,11 +10,10 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.audit.service import AuditService
-from app.modules.blockchain.gateway import (
-    BlockchainGatewayError,
-    CertificateRecord,
-)
 from app.modules.blockchain.models import CertificateStatus
+from app.modules.blockchain.proof_registry_gateway import THVProofRecord
+from app.modules.blockchain.proof_registry_service import derive_thv_asset_id
+from app.modules.blockchain.transport import BlockchainGatewayError
 from app.modules.certificates.metadata import (
     PUBLIC_EVIDENCE_SCOPES,
     CertificateMetadataBuilder,
@@ -116,6 +115,8 @@ class VerificationContext:
     metadata: dict[str, object]
     dossier_snapshot: dict[str, object]
     version: int
+    proof_version: int
+    dossier_id: UUID
     network: str | None
     contract_address: str | None
     transaction_hash: str | None
@@ -154,44 +155,38 @@ class VerificationEvaluator:
     def evaluate(
         *,
         local_status: CertificateStatus,
-        local_metadata_hash: str,
         local_dossier_hash: str,
-        local_version: int,
+        proof_version: int,
         expires_at: datetime | None,
-        chain_record: CertificateRecord,
+        chain_record: THVProofRecord,
         now: datetime,
     ) -> VerificationStatus:
-        if local_status is CertificateStatus.REVOKED or chain_record.revoked:
+        if local_status is CertificateStatus.REVOKED:
             return VerificationStatus.REVOKED
-        if (
-            local_status is CertificateStatus.EXPIRED
-            or (expires_at is not None and expires_at <= now)
-            or (
-                chain_record.expires_at > 0
-                and chain_record.expires_at <= now.timestamp()
-            )
+        if local_status is CertificateStatus.EXPIRED or (
+            expires_at is not None and expires_at <= now
         ):
             return VerificationStatus.EXPIRED
         if (
-            chain_record.metadata_hash.hex() != local_metadata_hash.lower()
-            or chain_record.dossier_hash.hex() != local_dossier_hash.lower()
-            or chain_record.version != local_version
+            not chain_record.exists
+            or chain_record.proof_hash.hex() != local_dossier_hash.lower()
+            or chain_record.version != proof_version
         ):
             return VerificationStatus.MISMATCH
         return VerificationStatus.VALID
 
 
 class CertificateReader(Protocol):
-    async def get_certificate(self, certificate_id: bytes) -> CertificateRecord: ...
+    async def get_proof(self, asset_id: bytes, version: int) -> THVProofRecord: ...
 
 
 ContextFinder = Callable[[str], Awaitable[VerificationContext | None]]
 
 
 class VerificationCache(Protocol):
-    async def get(self, key: str) -> CertificateRecord | None: ...
+    async def get(self, key: str) -> THVProofRecord | None: ...
 
-    async def set(self, key: str, record: CertificateRecord) -> None: ...
+    async def set(self, key: str, record: THVProofRecord) -> None: ...
 
 
 class PublicVerificationService:
@@ -284,36 +279,20 @@ class PublicVerificationService:
                 metadata_hash == context.metadata_hash.lower()
                 and dossier_hash == context.dossier_hash.lower()
             )
-            certificate_key = hashlib.sha256(
-                context.certificate_number.encode()
-            ).hexdigest()
-            cache_key = f"{certificate_key}:v{context.version}"
+            asset_id = derive_thv_asset_id(context.dossier_id)
+            cache_key = f"{asset_id.hex()}:v{context.proof_version}"
             record = (
                 await self._cache.get(cache_key) if self._cache is not None else None
             )
             if record is None:
-                certificate_id = bytes.fromhex(certificate_key)
-                if context.is_current_version:
-                    record = await self._gateway.get_certificate(certificate_id)
-                else:
-                    version_reader = getattr(
-                        self._gateway,
-                        "get_certificate_version",
-                        None,
-                    )
-                    if not callable(version_reader):
-                        raise BlockchainGatewayError(
-                            "Historical certificate verification is unavailable."
-                        )
-                    record = await version_reader(certificate_id, context.version)
+                record = await self._gateway.get_proof(asset_id, context.proof_version)
         except BlockchainGatewayError:
             status = VerificationStatus.PENDING
         else:
             status = VerificationEvaluator.evaluate(
                 local_status=context.certificate_status,
-                local_metadata_hash=metadata_hash,
                 local_dossier_hash=dossier_hash,
-                local_version=context.version,
+                proof_version=context.proof_version,
                 expires_at=context.expires_at,
                 chain_record=record,
                 now=now,

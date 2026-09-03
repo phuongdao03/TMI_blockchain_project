@@ -40,13 +40,11 @@ describe("RoleDashboardOverview", () => {
     expect(screen.queryByRole("link", { name: /Ký blockchain/i })).toBeNull();
   });
 
-  it("keeps secondary actions on a dark-theme-safe semantic surface", () => {
+  it("keeps the landing page focused on a single primary action", () => {
     render(<RoleDashboardOverview persona="SUPER_ADMIN" />);
 
-    const blockchainAction = screen.getByRole("link", {
-      name: /Ký blockchain/i,
-    });
-    expect(blockchainAction.className).not.toContain("hover:bg-white");
-    expect(blockchainAction.className).toContain("workspace-action-card");
+    expect(screen.queryByText("Việc cần làm tiếp theo")).toBeNull();
+    expect(screen.queryByText("Sau hành động chính")).toBeNull();
+    expect(screen.queryByRole("link", { name: /Ký blockchain/i })).toBeNull();
   });
 });

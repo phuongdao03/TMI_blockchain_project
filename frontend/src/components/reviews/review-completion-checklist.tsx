@@ -17,7 +17,7 @@ const items = [
   ],
   [
     "attestation",
-    "Tôi chịu trách nhiệm về tính độc lập và căn cứ của phiếu thẩm định này.",
+    "Tôi chịu trách nhiệm về nội dung và căn cứ của phiếu thẩm định này.",
   ],
 ] as const;
 

@@ -15,6 +15,7 @@ import {
 import { useState } from "react";
 
 import { publicApi } from "@/lib/api/client";
+import { SelectControl } from "@/components/ui/form-controls";
 import type { VerificationStatus } from "@/lib/api/types";
 import {
   compareLocalFile,
@@ -31,34 +32,34 @@ const resultCopy: Record<
   { title: string; detail: string; tone: string; icon: typeof CheckCircle2 }
 > = {
   VALID: {
-    title: "Dữ liệu đã được ghi nhận và không thay đổi",
-    detail: "Thông tin hiện tại trùng với dấu xác nhận đã công bố.",
-    tone: "text-emerald-300",
+    title: "Tài liệu đã được ghi nhận và chưa bị thay đổi.",
+    detail:
+      "Dấu vân tay số hiện tại trùng với bản đã được công bố trên blockchain.",
+    tone: "text-success",
     icon: CheckCircle2,
   },
   MISMATCH: {
-    title: "Dữ liệu đối chiếu không trùng khớp",
-    detail:
-      "Không nên sử dụng chứng thư này trước khi liên hệ đơn vị phát hành.",
-    tone: "text-red-300",
+    title: "Tài liệu hiện tại không trùng với dấu vân tay đã công bố.",
+    detail: "Hãy kiểm tra lại tài liệu hoặc liên hệ đơn vị phát hành.",
+    tone: "text-error",
     icon: AlertTriangle,
   },
   REVOKED: {
     title: "Chứng thư đã được thu hồi",
     detail: "Chứng thư không còn hiệu lực sử dụng.",
-    tone: "text-red-300",
+    tone: "text-error",
     icon: AlertTriangle,
   },
   EXPIRED: {
     title: "Chứng thư đã hết hạn",
     detail: "Hãy yêu cầu chủ thể cung cấp chứng thư còn hiệu lực.",
-    tone: "text-amber-300",
+    tone: "text-warning",
     icon: AlertTriangle,
   },
   PENDING: {
     title: "Đang chờ xác nhận",
-    detail: "Hệ thống chưa thể hoàn tất đối chiếu. Vui lòng thử lại sau.",
-    tone: "text-amber-300",
+    detail: "Giao dịch đã gửi, đang chờ mạng Polygon xác nhận.",
+    tone: "text-warning",
     icon: LoaderCircle,
   },
   NOT_FOUND: {
@@ -170,7 +171,7 @@ export function VerificationPanel({
           <label className="sr-only" htmlFor="verification-mode">
             Cách tra cứu
           </label>
-          <select
+          <SelectControl
             className="verification-control min-h-12 rounded-xl border border-white/15 bg-ink-900 px-4 text-sm text-white"
             id="verification-mode"
             onChange={(event) => setMode(event.target.value as typeof mode)}
@@ -178,7 +179,7 @@ export function VerificationPanel({
           >
             <option value="number">Số chứng thư</option>
             <option value="transaction">Mã giao dịch</option>
-          </select>
+          </SelectControl>
           <label className="sr-only" htmlFor="verification-value">
             Thông tin cần tra cứu
           </label>
@@ -209,7 +210,7 @@ export function VerificationPanel({
           </div>
         ) : result.error ? (
           <div className="border border-red-400/30 bg-red-400/5 p-6 text-red-200">
-            Chưa thể kết nối dịch vụ. Vui lòng thử lại sau.
+            Chưa thể kiểm tra blockchain. Vui lòng thử lại sau.
           </div>
         ) : result.data ? (
           <div className="space-y-8">
@@ -245,7 +246,7 @@ export function VerificationPanel({
                       >
                         Tài liệu cần đối chiếu
                       </label>
-                      <select
+                      <SelectControl
                         className="mt-2 min-h-11 w-full rounded-xl border border-white/15 bg-ink-950 px-4 text-sm text-white"
                         id="verification-document"
                         onChange={(event) => {
@@ -263,7 +264,7 @@ export function VerificationPanel({
                             {document.title}
                           </option>
                         ))}
-                      </select>
+                      </SelectControl>
                     </div>
                   ) : null}
                   {selectedPublicDocument ? (
@@ -407,17 +408,36 @@ function VerificationResult({
         </dl>
         <details className="mt-6 border-t border-white/10 pt-4 text-sm">
           <summary className="cursor-pointer font-bold text-slate-200">
-            Xem thông tin đối chiếu nâng cao
+            Chi tiết nâng cao
           </summary>
           <dl className="mt-4 space-y-3 text-xs">
             <Fact label="Mạng ghi nhận" value={data.network} technical />
             <Fact
-              label="Khối xác nhận"
+              label="Số lượt mạng đã xác nhận"
+              value={String(data.confirmations)}
+              technical
+            />
+            <Fact
+              label="Số khối ghi nhận"
               value={data.blockNumber ? String(data.blockNumber) : null}
               technical
             />
-            <Fact label="Dấu dữ liệu" value={data.metadataHash} technical />
-            <Fact label="Mã giao dịch" value={data.transactionHash} technical />
+            <Fact
+              label="Dấu vân tay số của hồ sơ"
+              value={data.metadataHash}
+              technical
+            />
+            <Fact
+              label="Mã giao dịch trên blockchain"
+              value={data.transactionHash}
+              technical
+            />
+            <Fact
+              label="Địa chỉ sổ đăng ký công khai"
+              value={data.contractAddress}
+              technical
+            />
+            <Fact label="Sự kiện ghi nhận" value="ProofRecorded" technical />
           </dl>
           {data.explorerUrl ? (
             <a
@@ -429,6 +449,16 @@ function VerificationResult({
               Xem bản ghi công khai <ExternalLink className="size-4" />
             </a>
           ) : null}
+        </details>
+        <details className="mt-4 border-t border-white/10 pt-4 text-sm">
+          <summary className="cursor-pointer font-bold text-slate-200">
+            Blockchain là gì?
+          </summary>
+          <p className="mt-3 leading-6 text-slate-400">
+            Blockchain là sổ ghi nhận công khai. Hệ thống không đưa tài liệu gốc
+            lên mạng; chỉ ghi lại dấu vân tay số để kiểm tra tài liệu có bị thay
+            đổi hay không.
+          </p>
         </details>
       </div>
     </section>
@@ -488,8 +518,8 @@ function ComparisonResult({
   }
   if (comparison.status === "NO_MATCH") {
     return (
-      <p className="mt-4 text-sm font-bold text-red-300">
-        Tài liệu đã thay đổi hoặc không thuộc bộ công khai này
+      <p className="mt-4 text-sm font-bold text-error">
+        Tài liệu hiện tại không trùng với dấu vân tay đã công bố.
       </p>
     );
   }

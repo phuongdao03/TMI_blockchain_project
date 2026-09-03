@@ -1,9 +1,6 @@
 import {
   ArrowRight,
-  BadgeCheck,
-  BookOpenText,
   ClipboardCheck,
-  Map,
   Search,
   ShieldCheck,
   Sparkles,
@@ -23,32 +20,12 @@ interface Action {
   icon: typeof Search;
 }
 
-const publicActions: Action[] = [
-  {
-    href: "/search",
-    label: "Tìm kiếm đề cử",
-    detail: "Tìm theo tên, chủ đề hoặc danh mục.",
-    icon: Search,
-  },
-  {
-    href: "/works",
-    label: "Thư viện đề cử",
-    detail: "Khám phá những nội dung đã được công bố.",
-    icon: BookOpenText,
-  },
-  {
-    href: "/map",
-    label: "Bản đồ đề cử",
-    detail: "Khám phá nội dung theo địa điểm và khu vực.",
-    icon: Map,
-  },
-  {
-    href: "/verify",
-    label: "Tra cứu chứng thư",
-    detail: "Kiểm tra trạng thái và thông tin đã công bố.",
-    icon: BadgeCheck,
-  },
-];
+const publicAction: Action = {
+  href: "/search",
+  label: "Tìm kiếm đề cử",
+  detail: "Tìm theo tên, chủ đề hoặc danh mục.",
+  icon: Search,
+};
 
 const staffWorkspaces: Record<
   Exclude<RoleWorkspacePersona, "VIEWER" | "USER">,
@@ -56,7 +33,7 @@ const staffWorkspaces: Record<
     eyebrow: string;
     title: string;
     description: string;
-    actions: Action[];
+    primaryAction: Action;
   }
 > = {
   MODERATOR: {
@@ -64,73 +41,26 @@ const staffWorkspaces: Record<
     title: "Hàng đợi thẩm định",
     description:
       "Tập trung vào hồ sơ được phân công, tiêu chí 5T và các mốc SLA cần xử lý.",
-    actions: [
-      {
-        href: "/reviews",
-        label: "Mở hàng đợi thẩm định",
-        detail: "Xem phân công và tiếp tục phiên đánh giá.",
-        icon: ClipboardCheck,
-      },
-      {
-        href: "/council",
-        label: "Phiên xét duyệt",
-        detail: "Khai báo xung đột, biểu quyết và theo dõi biên bản.",
-        icon: BadgeCheck,
-      },
-    ],
+    primaryAction: {
+      href: "/reviews",
+      label: "Mở hàng đợi thẩm định",
+      detail: "Xem phân công và tiếp tục phiên đánh giá.",
+      icon: ClipboardCheck,
+    },
   },
   SUPER_ADMIN: {
     eyebrow: "Khu vực điều hành",
     title: "Điều hành toàn hệ thống",
     description:
       "Quan sát vận hành liên phòng ban, kiểm soát ngoại lệ và truy cập các công cụ quản trị được cấp.",
-    actions: [
-      {
-        href: "/admin/dashboard",
-        label: "Mở bảng điều hành",
-        detail: "Tổng quan vận hành và tín hiệu cần ưu tiên.",
-        icon: ShieldCheck,
-      },
-      {
-        href: "/blockchain",
-        label: "Ký blockchain",
-        detail: "Liên kết ví và ký các bằng chứng đã được duyệt.",
-        icon: ShieldCheck,
-      },
-    ],
+    primaryAction: {
+      href: "/admin/dashboard",
+      label: "Mở bảng điều hành",
+      detail: "Tổng quan vận hành và tín hiệu cần ưu tiên.",
+      icon: ShieldCheck,
+    },
   },
 };
-
-function ActionGrid({ actions }: { actions: Action[] }) {
-  return (
-    <section
-      className="workspace-action-grid grid overflow-hidden rounded-xl border border-black/10 sm:grid-cols-2"
-      aria-label="Tác vụ sẵn có"
-    >
-      {actions.map(({ href, label, detail, icon: Icon }) => (
-        <Link
-          className="workspace-action-card group min-h-40 border-b border-black/8 p-6 transition-colors sm:border-r sm:[&:nth-child(even)]:border-r-0 sm:[&:nth-last-child(-n+2)]:border-b-0"
-          href={href}
-          key={href}
-        >
-          <span className="grid size-10 place-items-center rounded-lg border border-primary-100 bg-primary-50 text-primary-700">
-            <Icon aria-hidden="true" className="size-5" />
-          </span>
-          <span className="mt-5 flex items-center justify-between gap-3 text-base font-bold text-neutral-950">
-            {label}
-            <ArrowRight
-              aria-hidden="true"
-              className="size-4 text-neutral-400 transition group-hover:translate-x-1 group-hover:text-primary-700"
-            />
-          </span>
-          <span className="mt-2 block text-sm leading-6 text-neutral-500">
-            {detail}
-          </span>
-        </Link>
-      ))}
-    </section>
-  );
-}
 
 export function RoleDashboardOverview({
   persona,
@@ -150,8 +80,7 @@ export function RoleDashboardOverview({
   const description = isViewer
     ? "Khám phá nội dung đã công bố và theo dõi những hoạt động mới của chương trình."
     : (workspace?.description ?? "");
-  const actions = workspace?.actions ?? publicActions;
-  const [primaryAction, ...secondaryActions] = actions;
+  const primaryAction = workspace?.primaryAction ?? publicAction;
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -172,7 +101,7 @@ export function RoleDashboardOverview({
       ) : null}
 
       {primaryAction ? (
-        <section className="hero-grid-surface relative overflow-hidden rounded-2xl bg-[#151515] px-6 py-8 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:min-h-72 lg:grid-cols-[1fr_auto] lg:items-end lg:px-10 lg:py-10">
+        <section className="hero-grid-surface relative overflow-hidden rounded-2xl bg-neutral-950 px-6 py-8 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:min-h-72 lg:grid-cols-[1fr_auto] lg:items-end lg:px-10 lg:py-10">
           <div className="relative z-10 max-w-2xl">
             <span className="grid size-11 place-items-center rounded-lg border border-gold-300/30 bg-gold-300/10 text-gold-300">
               {isViewer ? (
@@ -199,10 +128,6 @@ export function RoleDashboardOverview({
             <ArrowRight aria-hidden="true" className="size-4" />
           </Link>
         </section>
-      ) : null}
-
-      {secondaryActions.length ? (
-        <ActionGrid actions={secondaryActions} />
       ) : null}
     </div>
   );

@@ -47,7 +47,7 @@ export function ApplicantUpgradeCard({
   };
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-black/10 bg-[#fbfaf7] shadow-[0_18px_55px_rgb(29_28_27/0.08)]">
+    <section className="dashboard-surface overflow-hidden rounded-2xl border shadow-[0_18px_55px_rgb(29_28_27/0.08)]">
       <div className="grid gap-7 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-end">
         <div className="max-w-2xl">
           <span className="grid size-11 place-items-center rounded-lg bg-primary-50 text-primary-700">

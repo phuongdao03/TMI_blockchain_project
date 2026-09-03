@@ -9,9 +9,9 @@ from fastapi import Depends
 from app.modules.auth.dependencies import SessionDependency, SettingsDependency
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.blockchain.errors import BlockchainUnavailableError
-from app.modules.blockchain.gateway import SUPPORTED_CHAINS, BlockchainGatewayError
 from app.modules.blockchain.proof_registry_gateway import THVProofRegistryGateway
 from app.modules.blockchain.proof_registry_service import THVProofRegistryService
+from app.modules.blockchain.transport import SUPPORTED_CHAINS, BlockchainGatewayError
 
 
 async def get_thv_proof_registry_service(

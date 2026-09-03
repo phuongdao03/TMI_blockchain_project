@@ -171,7 +171,7 @@ export function AdminUserWorkspace() {
               aria-label="Tìm theo tên, email hoặc mã người dùng"
               className={`${fieldClass} w-full pl-10`}
               onChange={(event) => setDraftSearch(event.target.value)}
-              placeholder="Tên, email hoặc UUID"
+              placeholder="Tìm theo tên hoặc email"
               type="search"
               value={draftSearch}
             />

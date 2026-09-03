@@ -42,7 +42,7 @@ export function CouncilCasePanel({
             </div>
             <span className="inline-flex w-fit items-center gap-2 rounded-full border bg-white px-3 py-1.5 text-xs font-bold text-neutral-600">
               <FileText aria-hidden="true" className="size-4" />
-              Hồ sơ Hội đồng
+              Hồ sơ trong phiên
             </span>
           </div>
         </div>
@@ -51,10 +51,9 @@ export function CouncilCasePanel({
             <div className="flex gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
               <CheckCircle2 aria-hidden="true" className="mt-0.5 size-5" />
               <div>
-                <p className="font-bold">Phiếu của bạn đã được ghi nhận</p>
+                <p className="font-bold">Kết quả của bạn đã được ghi nhận</p>
                 <p className="mt-1 text-sm">
-                  Lựa chọn: {detail.myVote.choice} · Phiếu đã khóa và không thể
-                  chỉnh sửa.
+                  Kết quả đã được lưu vào biên bản phiên và không thể chỉnh sửa.
                 </p>
               </div>
             </div>
@@ -62,9 +61,9 @@ export function CouncilCasePanel({
             <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
               <ShieldAlert aria-hidden="true" className="mt-0.5 size-5" />
               <div>
-                <p className="font-bold">Đã ghi nhận xung đột lợi ích</p>
+                <p className="font-bold">Hồ sơ không được phân công cho bạn</p>
                 <p className="mt-1 text-sm">
-                  Bạn không thể biểu quyết hồ sơ này.
+                  Bạn không thể gửi kết quả xử lý cho hồ sơ này.
                 </p>
               </div>
             </div>
@@ -79,7 +78,7 @@ export function CouncilCasePanel({
             <div className="flex gap-3 rounded-xl border bg-neutral-50 p-4 text-neutral-600">
               <LockKeyhole aria-hidden="true" className="mt-0.5 size-5" />
               <p className="text-sm font-semibold">
-                Biểu quyết chưa khả dụng ở trạng thái hiện tại.
+                Chưa thể gửi kết quả ở trạng thái hiện tại.
               </p>
             </div>
           )}

@@ -31,7 +31,7 @@ const choices: Array<{
   {
     value: "ABSTAIN",
     label: "Không biểu quyết",
-    description: "Tính vào quorum nhưng không tạo quyết định.",
+    description: "Ghi nhận đã tham gia nhưng chưa chọn hướng xử lý.",
   },
 ];
 
@@ -53,11 +53,11 @@ export function CouncilVoteDialog({
 
   const reviewVote = () => {
     if (!choice) {
-      setError("Vui lòng chọn phương án biểu quyết.");
+      setError("Vui lòng chọn kết quả xử lý.");
       return;
     }
     if (!reason.trim()) {
-      setError("Vui lòng nêu lý do cho phiếu biểu quyết.");
+      setError("Vui lòng nêu lý do cho kết quả đã chọn.");
       return;
     }
     setError(null);
@@ -68,7 +68,7 @@ export function CouncilVoteDialog({
     return (
       <Button onClick={() => setOpen(true)}>
         <Send aria-hidden="true" className="size-4" />
-        Biểu quyết hồ sơ
+        Gửi kết quả xử lý
       </Button>
     );
   }
@@ -80,10 +80,11 @@ export function CouncilVoteDialog({
         className="rounded-2xl border border-primary-200 bg-primary-50/50 p-5"
       >
         <h3 className="text-lg font-bold" id="vote-form-title">
-          Phiếu biểu quyết
+          Kết quả xử lý hồ sơ
         </h3>
         <p className="mt-1 text-sm text-neutral-600">
-          Phiếu được khóa ngay sau khi gửi. Hãy kiểm tra kỹ lựa chọn và lý do.
+          Kết quả được lưu vào biên bản ngay sau khi gửi. Hãy kiểm tra kỹ lựa
+          chọn và lý do.
         </p>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           {choices.map((item) => (
@@ -119,7 +120,7 @@ export function CouncilVoteDialog({
           className="mt-4 block text-sm font-bold"
           htmlFor="council-vote-reason"
         >
-          Lý do biểu quyết
+          Lý do lựa chọn
         </label>
         <textarea
           aria-describedby={error ? "council-vote-error" : undefined}
@@ -143,13 +144,13 @@ export function CouncilVoteDialog({
             Hủy
           </Button>
           <Button disabled={isPending} onClick={reviewVote}>
-            Kiểm tra phiếu biểu quyết
+            Kiểm tra kết quả
           </Button>
         </div>
       </section>
       <ConfirmationDialog
-        confirmLabel="Xác nhận và gửi phiếu"
-        description="Phiếu biểu quyết không thể chỉnh sửa hoặc gửi lại sau khi xác nhận."
+        confirmLabel="Xác nhận và gửi kết quả"
+        description="Kết quả sẽ được lưu vào biên bản phiên và không thể chỉnh sửa sau khi xác nhận."
         isPending={isPending}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={() => {
@@ -162,7 +163,7 @@ export function CouncilVoteDialog({
             .catch(() => undefined);
         }}
         open={confirmOpen}
-        title="Xác nhận phiếu biểu quyết"
+        title="Xác nhận kết quả xử lý"
       />
     </>
   );

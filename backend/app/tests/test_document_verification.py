@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import AsyncIterator
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -7,7 +8,6 @@ import pytest
 
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.document_evidence import build_document_evidence_commitment
-from app.modules.blockchain.gateway import BlockchainGatewayError
 from app.modules.blockchain.models import DocumentEvidenceStatus
 from app.modules.blockchain.verification import (
     DocumentProofReference,
@@ -46,23 +46,6 @@ class StubAccessPolicy:
         return self.allowed
 
 
-class StubGateway:
-    def __init__(self, result: bool | Exception = True) -> None:
-        self.result = result
-        self.calls = 0
-
-    async def verify_document_evidence(
-        self,
-        *,
-        evidence_key: bytes,
-        commitment: bytes,
-    ) -> bool:
-        self.calls += 1
-        if isinstance(self.result, Exception):
-            raise self.result
-        return self.result
-
-
 def _principal(user_id: UUID | None = None) -> AuthPrincipal:
     return AuthPrincipal(
         user_id=user_id or uuid4(),
@@ -95,6 +78,7 @@ def _reference(*, owner_user_id: UUID | None = None) -> DocumentProofReference:
         version_no=1,
         submitter_reference="ef" * 32,
         recorded_at=recorded_at,
+        proof_confirmed=True,
     )
 
 
@@ -131,14 +115,12 @@ def test_private_verification_does_not_distinguish_missing_and_forbidden_ids() -
     missing = PrivateDocumentVerificationService(
         repository=StubProofRepository(None),
         access_policy=StubAccessPolicy(False),
-        gateway=StubGateway(),
         max_bytes=16,
         clock=lambda: now,
     )
     forbidden = PrivateDocumentVerificationService(
         repository=StubProofRepository(_reference()),
         access_policy=StubAccessPolicy(False),
-        gateway=StubGateway(),
         max_bytes=16,
         clock=lambda: now,
     )
@@ -154,13 +136,17 @@ def test_private_verification_does_not_distinguish_missing_and_forbidden_ids() -
     assert missing_result.status is DocumentVerificationStatus.NOT_AUTHORIZED
 
 
-def test_private_verification_reports_chain_unavailable_before_reading_file() -> None:
+def test_private_verification_preserves_failed_historical_evidence_state() -> None:
     owner_id = uuid4()
-    gateway = StubGateway(BlockchainGatewayError("rpc unavailable"))
+    reference = _reference(owner_user_id=owner_id)
+    reference = replace(
+        reference,
+        evidence_status=DocumentEvidenceStatus.FAILED,
+        proof_confirmed=False,
+    )
     service = PrivateDocumentVerificationService(
-        repository=StubProofRepository(_reference(owner_user_id=owner_id)),
+        repository=StubProofRepository(reference),
         access_policy=StubAccessPolicy(False),
-        gateway=gateway,
         max_bytes=16,
     )
 
@@ -169,7 +155,6 @@ def test_private_verification_reports_chain_unavailable_before_reading_file() ->
     )
 
     assert result.status is DocumentVerificationStatus.CHAIN_UNAVAILABLE
-    assert gateway.calls == 1
 
 
 def test_private_verification_reports_pending_and_mismatch_states() -> None:
@@ -187,17 +172,16 @@ def test_private_verification_reports_pending_and_mismatch_states() -> None:
         submitter_reference=pending_reference.submitter_reference,
         previous_evidence_key=pending_reference.previous_evidence_key,
         recorded_at=pending_reference.recorded_at,
+        proof_confirmed=False,
     )
     pending = PrivateDocumentVerificationService(
         repository=StubProofRepository(pending_reference),
         access_policy=StubAccessPolicy(False),
-        gateway=StubGateway(),
         max_bytes=16,
     )
     mismatch = PrivateDocumentVerificationService(
         repository=StubProofRepository(_reference(owner_user_id=owner_id)),
         access_policy=StubAccessPolicy(False),
-        gateway=StubGateway(),
         max_bytes=16,
     )
 

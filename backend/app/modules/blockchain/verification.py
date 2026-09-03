@@ -6,14 +6,15 @@ from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import DomainError
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.document_evidence import build_document_evidence_commitment
-from app.modules.blockchain.gateway import BlockchainGatewayError
 from app.modules.blockchain.models import (
+    BlockchainTransaction,
+    BlockchainTransactionStatus,
     DocumentBlockchainEvidence,
     DocumentEvidenceStatus,
 )
@@ -58,6 +59,7 @@ class DocumentProofReference:
     submitter_reference: str | None = None
     previous_evidence_key: str | None = None
     recorded_at: datetime | None = None
+    proof_confirmed: bool = False
 
 
 class DocumentProofRepository(Protocol):
@@ -72,15 +74,6 @@ class DocumentDeliveryAccessPolicy(Protocol):
         self,
         principal: AuthPrincipal,
         media_id: UUID,
-    ) -> bool: ...
-
-
-class DocumentEvidenceVerifier(Protocol):
-    async def verify_document_evidence(
-        self,
-        *,
-        evidence_key: bytes,
-        commitment: bytes,
     ) -> bool: ...
 
 
@@ -107,6 +100,7 @@ class SqlDocumentProofRepository:
                     DocumentBlockchainEvidence.submitter_reference,
                     DocumentBlockchainEvidence.recorded_at,
                     DocumentBlockchainEvidence.predecessor_evidence_id,
+                    BlockchainTransaction.status.label("proof_transaction_status"),
                 )
                 .select_from(MediaAsset)
                 .outerjoin(
@@ -121,6 +115,14 @@ class SqlDocumentProofRepository:
                     DocumentBlockchainEvidence,
                     DocumentBlockchainEvidence.document_hash_claim_id
                     == DocumentHashClaim.id,
+                )
+                .outerjoin(
+                    BlockchainTransaction,
+                    and_(
+                        BlockchainTransaction.dossier_version_id
+                        == DocumentHashClaim.dossier_version_id,
+                        BlockchainTransaction.method == "recordProof",
+                    ),
                 )
                 .where(
                     MediaAsset.id == media_id,
@@ -152,6 +154,9 @@ class SqlDocumentProofRepository:
                 proof.predecessor_evidence_id,
             ),
             recorded_at=proof.recorded_at,
+            proof_confirmed=(
+                proof.proof_transaction_status is BlockchainTransactionStatus.CONFIRMED
+            ),
         )
 
     async def _previous_evidence_key(
@@ -221,7 +226,6 @@ class PrivateDocumentVerificationService:
         *,
         repository: DocumentProofRepository,
         access_policy: DocumentDeliveryAccessPolicy,
-        gateway: DocumentEvidenceVerifier,
         max_bytes: int,
         clock: Callable[[], datetime] | None = None,
         record_result: Callable[
@@ -231,7 +235,6 @@ class PrivateDocumentVerificationService:
     ) -> None:
         self._repository = repository
         self._access_policy = access_policy
-        self._gateway = gateway
         self._max_bytes = max_bytes
         self._clock = clock or (lambda: datetime.now(UTC))
         self._record_result = record_result
@@ -275,9 +278,23 @@ class PrivateDocumentVerificationService:
             reference.owner_user_id != principal.user_id and not policy_allowed
         ):
             return self._result(DocumentVerificationStatus.NOT_AUTHORIZED, checked_at)
+        if reference.expected_sha256 is None:
+            return self._result(
+                DocumentVerificationStatus.PENDING_CONFIRMATION,
+                checked_at,
+            )
+        if reference.proof_confirmed:
+            candidate_sha256 = await _bounded_sha256(chunks, max_bytes=self._max_bytes)
+            return self._result(
+                (
+                    DocumentVerificationStatus.MATCH
+                    if candidate_sha256 == reference.expected_sha256.lower()
+                    else DocumentVerificationStatus.NO_MATCH
+                ),
+                checked_at,
+            )
         if (
-            reference.expected_sha256 is None
-            or reference.evidence_status is None
+            reference.evidence_status is None
             or reference.evidence_key is None
             or reference.commitment is None
         ):
@@ -299,18 +316,6 @@ class PrivateDocumentVerificationService:
                 checked_at,
             )
         if not self._proof_reference_is_consistent(reference):
-            return self._result(DocumentVerificationStatus.NO_MATCH, checked_at)
-        try:
-            proof_matches = await self._gateway.verify_document_evidence(
-                evidence_key=bytes.fromhex(reference.evidence_key),
-                commitment=bytes.fromhex(reference.commitment),
-            )
-        except (BlockchainGatewayError, ValueError):
-            return self._result(
-                DocumentVerificationStatus.CHAIN_UNAVAILABLE,
-                checked_at,
-            )
-        if not proof_matches:
             return self._result(DocumentVerificationStatus.NO_MATCH, checked_at)
         candidate_sha256 = await _bounded_sha256(chunks, max_bytes=self._max_bytes)
         return self._result(

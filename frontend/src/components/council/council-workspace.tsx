@@ -68,7 +68,7 @@ export function CouncilWorkspace({ sessionId }: { sessionId: string }) {
       <div className="grid min-h-[60vh] place-items-center" role="status">
         <span className="flex items-center gap-3 font-semibold text-neutral-600">
           <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
-          Đang mở phiên Hội đồng…
+          Đang mở phiên xét duyệt…
         </span>
       </div>
     );
@@ -79,7 +79,7 @@ export function CouncilWorkspace({ sessionId }: { sessionId: string }) {
         className="rounded-2xl border border-red-200 bg-red-50 p-6 font-semibold text-red-800"
         role="alert"
       >
-        Không thể mở phiên Hội đồng hoặc bạn không còn quyền truy cập.
+        Chưa thể mở phiên xét duyệt hoặc tài khoản không còn được phân công.
       </div>
     );
   }
@@ -101,7 +101,7 @@ export function CouncilWorkspace({ sessionId }: { sessionId: string }) {
         href="/council"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Trở lại lịch Hội đồng
+        Trở lại danh sách phiên
       </Link>
       <CouncilSessionHero
         canManage={canManage}
@@ -142,7 +142,7 @@ export function CouncilWorkspace({ sessionId }: { sessionId: string }) {
         <footer className="rounded-2xl border bg-white p-5 sm:p-6">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-neutral-500">
             <Hash aria-hidden="true" className="size-4" />
-            Dấu vân tay biên bản
+            Mã đối chiếu biên bản
           </p>
           <code className="mt-3 block break-all rounded-xl bg-neutral-950 p-4 text-xs text-emerald-300">
             {minutes.data.minutesHash}

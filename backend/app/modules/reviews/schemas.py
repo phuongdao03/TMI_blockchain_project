@@ -93,6 +93,19 @@ class SpecialistCriterionAnswerData(ReviewSchema):
     evidence_media_ids: Annotated[list[UUID], Field(min_length=1, max_length=10)]
 
 
+class CriterionVerdictData(ReviewSchema):
+    outcome: Literal["MEETS", "NEEDS_CLARIFICATION", "DOES_NOT_MEET", "NOT_APPLICABLE"]
+    rationale: Annotated[str, Field(max_length=2_000)] = ""
+    evidence_media_ids: Annotated[list[UUID], Field(max_length=10)] = Field(
+        default_factory=list
+    )
+
+
+class EvidenceAssessmentData(ReviewSchema):
+    status: Literal["UNREVIEWED", "VALID", "NEEDS_CLARIFICATION", "NOT_RELEVANT"]
+    note: Annotated[str, Field(max_length=1_000)] = ""
+
+
 class ReviewDraftRequest(ReviewSchema):
     truth_score: Annotated[int | None, Field(ge=0, le=20)] = None
     transparency_score: Annotated[int | None, Field(ge=0, le=20)] = None
@@ -114,6 +127,10 @@ class ReviewDraftRequest(ReviewSchema):
     private_note: Annotated[str | None, Field(max_length=5_000)] = None
     gate_answers: dict[str, ReviewGateAnswerData] = Field(default_factory=dict)
     specialist_answers: dict[str, SpecialistCriterionAnswerData] = Field(
+        default_factory=dict
+    )
+    criterion_verdicts: dict[str, CriterionVerdictData] = Field(default_factory=dict)
+    evidence_assessments: dict[UUID, EvidenceAssessmentData] = Field(
         default_factory=dict
     )
 
@@ -169,6 +186,8 @@ class ReviewData(ReviewSchema):
     submitted_at: datetime | None
     gate_answers: dict[str, ReviewGateAnswerData]
     specialist_answers: dict[str, SpecialistCriterionAnswerData]
+    criterion_verdicts: dict[str, CriterionVerdictData]
+    evidence_assessments: dict[UUID, EvidenceAssessmentData]
 
 
 class ReviewAssignmentSummaryData(ReviewSchema):

@@ -11,6 +11,22 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 describe("PaymentRequestWorkspace", () => {
+  it("uses business language instead of payment provider implementation terms", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PaymentRequestWorkspace />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("Tạo yêu cầu thanh toán")).toBeDefined();
+    expect(
+      screen.getByPlaceholderText("Nhập mã hồ sơ đã được phê duyệt"),
+    ).toBeDefined();
+    expect(
+      screen.queryByText(/PayOS|webhook|UUID|payments\.issue/i),
+    ).toBeNull();
+  });
+
   it("sends the operator-entered amount instead of a fixed frontend price", async () => {
     issueMock.mockResolvedValue({
       id: "payment-1",

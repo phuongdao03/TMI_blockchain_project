@@ -28,11 +28,11 @@ NOW = datetime(2026, 8, 11, 11, 0, tzinfo=UTC)
 
 def _registration() -> JobRegistration:
     return JobRegistration(
-        task_name="blockchain.broadcast",
+        task_name="blockchain.confirm",
         queue_name="blockchain",
         resource_type="blockchain_transaction",
         resource_id="tx-1",
-        idempotency_key="broadcast:tx-1",
+        idempotency_key="confirm:tx-1",
         intent={"transaction_id": "tx-1"},
         max_attempts=1,
         scheduled_at=NOW,

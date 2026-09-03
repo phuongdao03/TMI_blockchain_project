@@ -1,14 +1,13 @@
 import { ClipboardCheck } from "lucide-react";
 
 import { ReviewAssignmentList } from "@/components/reviews/review-assignment-list";
+import { SelectControl } from "@/components/ui/form-controls";
 import type { ReviewAssignmentStatus } from "@/lib/api/types";
 
 const statuses: Array<[string, string]> = [
   ["", "Tất cả phân công"],
-  ["ASSIGNED", "Chờ xác nhận"],
   ["IN_PROGRESS", "Đang thẩm định"],
   ["SUBMITTED", "Đã gửi kết quả"],
-  ["CONFLICTED", "Đã báo xung đột"],
 ];
 
 export default async function ReviewQueuePage({
@@ -33,27 +32,22 @@ export default async function ReviewQueuePage({
           Hàng đợi thẩm định
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
-          Kiểm tra xung đột lợi ích, đánh giá bằng chứng và hoàn tất phiếu điểm
-          5T theo từng phiên bản hồ sơ.
+          Kiểm tra từng tài liệu, đối chiếu tiêu chí phù hợp với loại hồ sơ và
+          gửi kết quả thẩm định.
         </p>
       </header>
       <ol
         aria-label="Quy trình thẩm định"
-        className="review-queue__steps grid gap-px overflow-hidden rounded-2xl border bg-neutral-200 sm:grid-cols-3"
+        className="review-queue__steps grid gap-px overflow-hidden rounded-2xl border bg-neutral-200 sm:grid-cols-2"
       >
         {[
           [
             "01",
-            "Xác nhận độc lập",
-            "Khai báo xung đột lợi ích trước khi xem hồ sơ.",
+            "Kiểm tra tài liệu",
+            "Xem nội dung, loại tài liệu và ghi nhận kết quả kiểm tra.",
           ],
           [
             "02",
-            "Đánh giá bằng chứng",
-            "Kiểm tra tài liệu và hoàn thiện rubric đúng loại hồ sơ.",
-          ],
-          [
-            "03",
             "Gửi kết quả",
             "Kiểm tra toàn bộ phiếu trước khi khóa và gửi.",
           ],
@@ -69,15 +63,15 @@ export default async function ReviewQueuePage({
           </li>
         ))}
       </ol>
-      <form className="review-queue__filters flex flex-col gap-3 rounded-2xl border bg-white p-4 sm:flex-row sm:items-end">
-        <div className="flex-1">
+      <form className="review-queue__filters grid gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-[minmax(16rem,28rem)_auto] sm:items-end sm:justify-start">
+        <div>
           <label
             className="text-xs font-bold uppercase tracking-wider text-neutral-500"
             htmlFor="review-status"
           >
             Trạng thái phân công
           </label>
-          <select
+          <SelectControl
             className="mt-2 min-h-11 w-full rounded-xl border bg-white px-3 text-sm font-semibold sm:max-w-xs"
             defaultValue={status ?? ""}
             id="review-status"
@@ -88,7 +82,7 @@ export default async function ReviewQueuePage({
                 {label}
               </option>
             ))}
-          </select>
+          </SelectControl>
         </div>
         <button
           className="min-h-11 rounded-xl bg-neutral-950 px-5 text-sm font-bold text-white hover:bg-neutral-800"

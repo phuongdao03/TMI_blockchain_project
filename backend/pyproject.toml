@@ -43,6 +43,15 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
+exclude = [
+  "app/modules/blockchain/dependencies.py",
+  "app/modules/blockchain/gateway.py",
+  "app/modules/blockchain/human_signing_dependencies.py",
+  "app/modules/blockchain/human_signing_service.py",
+  "app/modules/blockchain/service.py",
+  "app/workers/blockchain_tasks.py",
+  "app/tests/**",
+]
 
 [tool.mypy]
 python_version = "3.12"

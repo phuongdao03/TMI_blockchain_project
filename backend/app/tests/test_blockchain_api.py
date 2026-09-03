@@ -1,6 +1,6 @@
 import asyncio
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import httpx
 
@@ -12,10 +12,15 @@ from app.modules.auth.dependencies import (
     get_current_principal,
 )
 from app.modules.auth.session_service import AuthPrincipal
-from app.modules.blockchain.dependencies import get_blockchain_service
+from app.modules.blockchain.admin_read_dependencies import (
+    get_blockchain_admin_read_service,
+)
 from app.modules.blockchain.models import (
     BlockchainTransactionStatus,
     DocumentEvidenceStatus,
+)
+from app.modules.blockchain.proof_registry_dependencies import (
+    get_thv_proof_registry_service,
 )
 from app.modules.blockchain.types import (
     BlockchainTransactionView,
@@ -53,7 +58,7 @@ class StubBlockchainService:
             updated_at=NOW,
         )
 
-    async def list_admin(
+    async def list_transactions(
         self,
         principal: AuthPrincipal,
         *,
@@ -64,19 +69,10 @@ class StubBlockchainService:
         del principal, status, page, page_size
         return (self.view(),), 1
 
-    async def retry_admin(
-        self,
-        principal: AuthPrincipal,
-        transaction_id: UUID,
-    ) -> BlockchainTransactionView:
-        del principal, transaction_id
-        return self.view()
-
-    async def reconcile_admin(self, principal: AuthPrincipal) -> None:
-        del principal
+    async def reconcile_pending(self) -> None:
         self.reconcile_requested = True
 
-    async def list_document_evidences_admin(
+    async def list_document_evidences(
         self,
         principal: AuthPrincipal,
         *,
@@ -120,13 +116,15 @@ async def _request(
         user_id=uuid4(),
         session_id=uuid4(),
         email="chain-admin@tmigroup.vn",
-        roles=("BLOCKCHAIN_ADMIN",),
+        roles=("SUPER_ADMIN",),
+        permissions=("blockchain.manage",),
     )
     app = create_application(
         settings=Settings.model_validate({"app_env": "local"}),
         health_service=HealthService({}),
     )
-    app.dependency_overrides[get_blockchain_service] = lambda: service
+    app.dependency_overrides[get_blockchain_admin_read_service] = lambda: service
+    app.dependency_overrides[get_thv_proof_registry_service] = lambda: service
     app.dependency_overrides[get_csrf_protected_principal] = lambda: principal
     app.dependency_overrides[get_current_principal] = lambda: principal
     async with app.router.lifespan_context(app):
@@ -158,8 +156,7 @@ def test_blockchain_admin_list_retry_and_reconcile_contracts() -> None:
 
     assert listed.status_code == 200
     assert listed.json()["meta"]["total"] == 1
-    assert retried.status_code == 200
-    assert retried.json()["data"]["errorCode"] == "RPC_FAILURE"
+    assert retried.status_code == 410
     assert reconciled.status_code == 200
     assert reconciled.json()["data"]["status"] == "queued"
     assert service.reconcile_requested is True

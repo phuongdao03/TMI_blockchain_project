@@ -821,6 +821,7 @@ export interface ReviewEvidenceSnapshot {
   id: string;
   mediaAssetId: string;
   evidenceType: string;
+  evidenceRole?: string | null;
   title: string;
   description: string | null;
   issuedAt: string | null;
@@ -836,6 +837,7 @@ export interface ReviewEvidenceSnapshot {
 export interface ReviewRubric {
   version: string;
   title: string;
+  assessmentMethod?: "SCORED" | "VERDICT";
   gates: Array<{
     key: string;
     label: string;
@@ -846,9 +848,9 @@ export interface ReviewRubric {
     key: string;
     label: string;
     description: string;
-    weight: number;
+    weight?: number;
   }>;
-  thresholds: { approveMin: number; rejectBelow: number };
+  thresholds?: { approveMin: number; rejectBelow: number };
 }
 
 export interface ReviewGateAnswer {
@@ -863,6 +865,18 @@ export interface SpecialistCriterionAnswer {
   evidenceMediaIds: string[];
 }
 
+export type CriterionVerdictOutcome =
+  | "MEETS"
+  | "NEEDS_CLARIFICATION"
+  | "DOES_NOT_MEET"
+  | "NOT_APPLICABLE";
+
+export interface CriterionVerdict {
+  outcome: CriterionVerdictOutcome;
+  rationale: string;
+  evidenceMediaIds: string[];
+}
+
 export interface ReviewSnapshot {
   schemaVersion: number;
   dossier: {
@@ -870,7 +884,13 @@ export interface ReviewSnapshot {
     code: string;
     title: string;
     summary?: string | null;
-    dossierType?: { reviewRubric?: ReviewRubric };
+    dossierType?: {
+      code?: string;
+      name?: string;
+      versionNo?: number;
+      documentRules?: DossierDocumentRule[];
+      reviewRubric?: ReviewRubric;
+    };
   };
   evidences: ReviewEvidenceSnapshot[];
 }
@@ -890,6 +910,19 @@ export interface ReviewDraft {
   privateNote: string | null;
   gateAnswers: Record<string, ReviewGateAnswer>;
   specialistAnswers: Record<string, SpecialistCriterionAnswer>;
+  criterionVerdicts?: Record<string, CriterionVerdict>;
+  evidenceAssessments?: Record<string, EvidenceAssessment>;
+}
+
+export type EvidenceAssessmentStatus =
+  | "UNREVIEWED"
+  | "VALID"
+  | "NEEDS_CLARIFICATION"
+  | "NOT_RELEVANT";
+
+export interface EvidenceAssessment {
+  status: EvidenceAssessmentStatus;
+  note: string;
 }
 
 export interface ReviewData extends ReviewDraft {
@@ -1082,45 +1115,6 @@ export interface BlockchainWalletLink {
   chainId: number;
   status: BlockchainWalletLinkStatus;
   verifiedAt: string;
-}
-
-export interface BlockchainSigningQueueItem {
-  transactionId: string;
-  dossierId: string;
-  dossierCode: string;
-  dossierTitle: string;
-  dossierVersionNo: number;
-  certificateNumber: string | null;
-  proofHash: string;
-  status: BlockchainTransactionStatus;
-  txHash: string | null;
-  errorCode: string | null;
-  createdAt: string;
-}
-
-export interface BlockchainSigningContext {
-  transactionId: string;
-  dossierId: string;
-  dossierCode: string;
-  dossierTitle: string;
-  dossierVersionNo: number;
-  certificateNumber: string | null;
-  method: string;
-  proofHash: string;
-  network: string;
-  chainId: number;
-  contractAddress: string;
-  status: BlockchainTransactionStatus;
-}
-
-export interface BlockchainSigningIntent {
-  id: string;
-  transactionId: string;
-  transactionRequest: Record<string, string>;
-  expiresAt: string;
-  estimatedGas: number;
-  gasPriceWei: number;
-  walletBalanceWei: number;
 }
 
 export interface BlockchainSigningStatus {

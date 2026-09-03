@@ -88,8 +88,8 @@ export function SearchAnalyticsDashboard() {
               Hiểu nhu cầu tra cứu, không đánh đổi riêng tư.
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">
-              Dashboard chỉ sử dụng snapshot tổng hợp. Cụm từ tìm kiếm, danh
-              tính và phiên người dùng không xuất hiện trong báo cáo quản trị.
+              Báo cáo chỉ sử dụng số liệu tổng hợp. Cụm từ tìm kiếm, danh tính
+              và phiên người dùng không xuất hiện trong báo cáo quản trị.
             </p>
           </div>
           <div className="flex flex-col items-end gap-3">
@@ -145,7 +145,7 @@ export function SearchAnalyticsDashboard() {
         </label>
       </section>
       {analytics.isPending ? (
-        <p role="status">Đang tổng hợp snapshot tìm kiếm...</p>
+        <p role="status">Đang tổng hợp dữ liệu tìm kiếm...</p>
       ) : null}
       {analytics.error ? (
         <p className="text-error" role="alert">
@@ -177,7 +177,7 @@ export function SearchAnalyticsDashboard() {
                 <h2 className="mt-2 text-2xl font-bold">Hiệu suất tìm kiếm</h2>
               </div>
               <span className="text-sm text-neutral-500">
-                {analytics.data.points.length} snapshot
+                {analytics.data.points.length} kỳ thống kê
               </span>
             </div>
             <div className="mt-6 overflow-x-auto">

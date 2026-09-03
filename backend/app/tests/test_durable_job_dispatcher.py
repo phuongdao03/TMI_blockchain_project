@@ -107,7 +107,7 @@ def test_broker_failure_leaves_queued_job_visible() -> None:
     asyncio.run(scenario())
 
 
-def test_replay_publishes_only_allowlisted_immutable_intent() -> None:
+def test_replay_rejects_archived_certificate_registry_broadcast_intent() -> None:
     async def scenario() -> None:
         sessions, engine = await _database()
         publisher = Publisher()
@@ -115,20 +115,13 @@ def test_replay_publishes_only_allowlisted_immutable_intent() -> None:
         async with sessions() as session:
             job = await DurableJobService(session).register(_registration())
 
-        await replay_durable_job(
-            job,
-            dispatcher=dispatcher,
-            task_id_factory=lambda: "replay-task-1",
-        )
-        assert publisher.calls == [
-            {
-                "name": "app.workers.blockchain_tasks.broadcast_blockchain_transaction",
-                "args": ["tx-1"],
-                "kwargs": {"durable_job_id": str(job.id)},
-                "queue": "blockchain",
-                "task_id": "replay-task-1",
-            }
-        ]
+        with pytest.raises(JobReplayPolicyError, match="not replayable"):
+            await replay_durable_job(
+                job,
+                dispatcher=dispatcher,
+                task_id_factory=lambda: "replay-task-1",
+            )
+        assert publisher.calls == []
 
         job.task_name = "arbitrary.shell.command"
         with pytest.raises(JobReplayPolicyError):

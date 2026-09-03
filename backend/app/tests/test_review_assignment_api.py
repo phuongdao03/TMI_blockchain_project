@@ -47,7 +47,7 @@ class StubReviewService:
                 reviewer_user_id=reviewer_id,
                 assigned_by=principal.user_id,
                 due_at=due_at,
-                status=ReviewAssignmentStatus.ASSIGNED,
+                status=ReviewAssignmentStatus.IN_PROGRESS,
                 conflict_declared_at=None,
                 conflict_reason=None,
             )
@@ -111,7 +111,7 @@ def test_assign_reviewers_api_contract_and_validation() -> None:
 
     assert assigned.status_code == 201
     assert len(assigned.json()["data"]) == 2
-    assert assigned.json()["data"][0]["status"] == "ASSIGNED"
+    assert assigned.json()["data"][0]["status"] == "IN_PROGRESS"
     assert service.reviewer_ids == reviewer_ids
     assert service.due_at == NOW
     assert invalid.status_code == 422

@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 
 const statusLabels: Record<CouncilSessionStatus, string> = {
   DRAFT: "Chuẩn bị",
-  OPEN: "Đang biểu quyết",
+  OPEN: "Đang xét duyệt",
   CLOSED: "Đã kết thúc",
 };
 
@@ -58,7 +58,7 @@ export function CouncilSessionList({
       >
         <span className="flex items-center gap-3 text-sm font-semibold text-neutral-600">
           <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
-          Đang tải lịch Hội đồng…
+          Đang tải các phiên xét duyệt…
         </span>
       </div>
     );
@@ -69,7 +69,7 @@ export function CouncilSessionList({
         className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-semibold text-red-800"
         role="alert"
       >
-        Không thể tải lịch Hội đồng hoặc bạn không có quyền truy cập.
+        Chưa thể tải các phiên xét duyệt. Vui lòng thử lại sau.
       </div>
     );
   }
@@ -122,8 +122,8 @@ export function CouncilSessionList({
               </p>
               <p className="flex items-center gap-2">
                 <Users aria-hidden="true" className="size-4" />
-                {item.session.attendanceCount}/{item.session.memberCount} tham
-                dự · cần tối thiểu {item.session.quorumRequired}
+                {item.session.attendanceCount}/{item.session.memberCount} người
+                tham gia · cần tối thiểu {item.session.quorumRequired}
               </p>
             </div>
             <div className="mt-5 flex items-center justify-between gap-3 border-t pt-4">
@@ -132,7 +132,7 @@ export function CouncilSessionList({
                   ? "Bạn đã xác nhận tham dự"
                   : item.session.status === "DRAFT"
                     ? "Chờ xác nhận tham dự"
-                    : "Phiên Hội đồng"}
+                    : "Phiên xét duyệt"}
               </span>
               <Link
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold text-primary-700 hover:bg-primary-50"

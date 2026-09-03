@@ -61,6 +61,10 @@ class ReviewDraft:
     private_note: str | None = None
     gate_answers: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
     specialist_answers: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
+    criterion_verdicts: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
+    evidence_assessments: Mapping[str, Mapping[str, object]] = field(
+        default_factory=dict
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,7 +88,9 @@ class ReviewView:
     private_note: str | None
     gate_answers: Mapping[str, Mapping[str, object]]
     specialist_answers: Mapping[str, Mapping[str, object]]
+    evidence_assessments: Mapping[str, Mapping[str, object]]
     submitted_at: datetime | None
+    criterion_verdicts: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
