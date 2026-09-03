@@ -177,24 +177,26 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       await councilPage
         .getByRole("button", { name: "Xác nhận tham dự" })
         .click();
-      await councilPage.getByRole("button", { name: "Mở biểu quyết" }).click();
       await councilPage
-        .getByRole("button", { name: "Tôi không có xung đột" })
+        .getByRole("button", { name: "Bắt đầu xét duyệt" })
         .click();
       await councilPage
-        .getByRole("button", { name: "Biểu quyết hồ sơ" })
+        .getByRole("button", { name: "Tiếp nhận hồ sơ" })
+        .click();
+      await councilPage
+        .getByRole("button", { name: "Gửi kết quả xử lý" })
         .click();
       await councilPage.getByRole("button", { name: "Phê duyệt" }).click();
       await councilPage
-        .getByLabel("Lý do biểu quyết")
+        .getByLabel("Lý do lựa chọn")
         .fill("Hồ sơ đáp ứng đầy đủ tiêu chí Hội đồng.");
       await councilPage
-        .getByRole("button", { name: "Kiểm tra phiếu biểu quyết" })
+        .getByRole("button", { name: "Kiểm tra kết quả" })
         .click();
       await councilPage
-        .getByRole("button", { name: "Xác nhận và gửi phiếu" })
+        .getByRole("button", { name: "Xác nhận và gửi kết quả" })
         .click();
-      await councilPage.getByRole("button", { name: "Đóng phiên" }).click();
+      await councilPage.getByRole("button", { name: "Kết thúc phiên" }).click();
       await expect(
         councilPage.getByRole("heading", { name: "Phê duyệt hồ sơ" }),
       ).toBeVisible();

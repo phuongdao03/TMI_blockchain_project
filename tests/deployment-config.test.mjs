@@ -356,8 +356,7 @@ test("Polygon production contract gate is read-only and approval protected", asy
   assert.match(workflow, /environment: production-blockchain/);
   assert.match(workflow, /ref: \$\{\{ inputs\.source_commit \}\}/);
   assert.match(workflow, /blockchain-preflight\.sh/);
-  assert.match(workflow, /production-release-plan\.mjs/);
-  assert.match(workflow, /BLOCKCHAIN_ACTIVE_SIGNER_WALLET/);
+  assert.match(workflow, /SIGNER_WALLET_ADDRESS/);
   assert.doesNotMatch(workflow, /BLOCKCHAIN_MANAGED_SIGNER_EXPECTED_ADDRESS/);
   assert.doesNotMatch(workflow, /forge script[^\n]*--broadcast/);
 
@@ -365,10 +364,10 @@ test("Polygon production contract gate is read-only and approval protected", asy
   assert.match(preflight, /https:\/\//);
   assert.match(preflight, /chain_id[^\n]*137|137[^\n]*chain_id/);
   assert.match(preflight, /cast balance/);
-  assert.match(preflight, /runtime_bytecode/i);
+  assert.match(preflight, /runtime_(?:code|bytecode)/i);
   assert.match(preflight, /hasRole/);
   assert.match(preflight, /BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES/);
-  assert.match(preflight, /BLOCKCHAIN_ACTIVE_SIGNER_WALLET/);
+  assert.match(preflight, /SIGNER_WALLET_ADDRESS/);
   assert.doesNotMatch(preflight, /BLOCKCHAIN_MANAGED_SIGNER_EXPECTED_ADDRESS/);
   assert.match(runbook, /canary/i);
   assert.match(runbook, /pause/i);

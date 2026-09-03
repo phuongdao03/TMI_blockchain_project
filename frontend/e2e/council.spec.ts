@@ -67,30 +67,34 @@ test("super admin attends, declares conflict, votes and sees result", async ({
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Xác nhận tham dự" }).click();
-  await expect(page.getByText("1/1 tham dự · quorum 1")).toBeVisible();
-  await page.getByRole("button", { name: "Mở biểu quyết" }).click();
   await expect(
-    page.getByRole("heading", { name: "Xác nhận xung đột lợi ích" }),
+    page.getByText("1/1 người đã tham gia · cần tối thiểu 1"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Bắt đầu xét duyệt" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Tiếp nhận hồ sơ trong phiên này" }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Tôi không có xung đột" }).click();
-  await page.getByRole("button", { name: "Biểu quyết hồ sơ" }).click();
+  await page.getByRole("button", { name: "Tiếp nhận hồ sơ" }).click();
+  await page.getByRole("button", { name: "Gửi kết quả xử lý" }).click();
   await page.getByRole("button", { name: "Phê duyệt" }).click();
   await page
-    .getByLabel("Lý do biểu quyết")
+    .getByLabel("Lý do lựa chọn")
     .fill("Hồ sơ đáp ứng đầy đủ tiêu chí của Hội đồng.");
-  await page.getByRole("button", { name: "Kiểm tra phiếu biểu quyết" }).click();
+  await page.getByRole("button", { name: "Kiểm tra kết quả" }).click();
   await expect(
-    page.getByRole("heading", { name: "Xác nhận phiếu biểu quyết" }),
+    page.getByRole("heading", { name: "Xác nhận kết quả xử lý" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Xác nhận và gửi phiếu" }).click();
-  await expect(page.getByText("Phiếu của bạn đã được ghi nhận")).toBeVisible();
+  await page.getByRole("button", { name: "Xác nhận và gửi kết quả" }).click();
+  await expect(
+    page.getByText("Kết quả của bạn đã được ghi nhận"),
+  ).toBeVisible();
 
-  await page.getByRole("button", { name: "Đóng phiên" }).click();
+  await page.getByRole("button", { name: "Kết thúc phiên" }).click();
   await expect(
     page.getByRole("heading", { name: "Phê duyệt hồ sơ" }),
   ).toBeVisible();
-  await expect(page.getByText("Dấu vân tay biên bản")).toBeVisible();
+  await expect(page.getByText("Mã đối chiếu biên bản")).toBeVisible();
 
   const overflow = await page.evaluate(() => {
     const width = document.documentElement.clientWidth;

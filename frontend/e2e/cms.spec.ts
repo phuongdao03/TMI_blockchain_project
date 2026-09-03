@@ -32,7 +32,7 @@ test("content admin creates, previews and publishes a sanitized post", async ({
   ).toBeVisible();
 
   await page.getByLabel("Tiêu đề").fill("Thông báo xác lập");
-  await page.getByLabel("Slug").fill("thong-bao-xac-lap");
+  await page.getByLabel("Đường dẫn công khai").fill("thong-bao-xac-lap");
   await page
     .getByLabel("Nội dung HTML giới hạn")
     .fill("<p>Nội dung đã duyệt</p>");

@@ -51,7 +51,7 @@ test("Super Admin sends a THV proof and sees Polygon confirmation progress", asy
   await page.goto("/blockchain");
 
   await expect(
-    page.getByRole("heading", { level: 1, name: "Hàng đợi chờ ký" }),
+    page.getByRole("heading", { level: 1, name: "Hồ sơ chờ ghi nhận" }),
   ).toBeVisible();
   await expect(
     page.getByText("Polygon Mainnet", { exact: true }),
@@ -101,7 +101,7 @@ test("blockchain workspace remains visible and usable at 320px", async ({
   await page.goto("/blockchain");
 
   await expect(
-    page.getByRole("heading", { level: 1, name: "Hàng đợi chờ ký" }),
+    page.getByRole("heading", { level: 1, name: "Hồ sơ chờ ghi nhận" }),
   ).toBeVisible();
   expect(
     await page.evaluate(
