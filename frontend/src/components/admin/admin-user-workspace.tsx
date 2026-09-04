@@ -275,7 +275,7 @@ export function AdminUserWorkspace() {
             data-testid="admin-users-table"
           >
             <table className="w-full min-w-[850px] text-left text-sm">
-              <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
+              <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-600">
                 <tr>
                   <th className="px-5 py-4">Người dùng</th>
                   <th className="px-5 py-4">Xác minh</th>
@@ -294,7 +294,7 @@ export function AdminUserWorkspace() {
                       <p className="font-bold text-neutral-950">
                         {user.fullName || "Chưa cập nhật tên"}
                       </p>
-                      <p className="mt-1 text-neutral-500">{user.email}</p>
+                      <p className="mt-1 text-neutral-600">{user.email}</p>
                     </td>
                     <td className="px-5 py-4">
                       {user.isEmailVerified ? "Đã xác minh" : "Chưa xác minh"}
@@ -327,7 +327,7 @@ export function AdminUserWorkspace() {
                     <h2 className="truncate font-bold text-neutral-950">
                       {user.fullName || "Chưa cập nhật tên"}
                     </h2>
-                    <p className="mt-1 truncate text-sm text-neutral-500">
+                    <p className="mt-1 truncate text-sm text-neutral-600">
                       {user.email}
                     </p>
                   </div>
@@ -335,13 +335,13 @@ export function AdminUserWorkspace() {
                 </div>
                 <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-neutral-100 pt-4 text-sm">
                   <div>
-                    <dt className="text-neutral-500">Vai trò</dt>
+                    <dt className="text-neutral-600">Vai trò</dt>
                     <dd className="mt-1 font-semibold text-neutral-900">
                       {formatRoles(user.roles)}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-neutral-500">Đăng nhập cuối</dt>
+                    <dt className="text-neutral-600">Đăng nhập cuối</dt>
                     <dd className="mt-1 font-semibold text-neutral-900">
                       {formatDate(user.lastLoginAt)}
                     </dd>

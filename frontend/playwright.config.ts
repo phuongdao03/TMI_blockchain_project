@@ -21,7 +21,9 @@ export default defineConfig({
   timeout: 90_000,
   fullyParallel: false,
   workers: 1,
-  retries: 0,
+  // CI runners can transiently reset a navigation while Next compiles or
+  // recovers memory. Retry once there, while keeping local runs fail-fast.
+  retries: process.env.CI ? 1 : 0,
   reporter: "line",
   // Lets maintainers regenerate a CI-platform baseline from another host.
   // CI itself keeps Playwright's native platform suffix by leaving this unset.

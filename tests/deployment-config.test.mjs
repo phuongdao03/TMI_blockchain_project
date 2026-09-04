@@ -392,3 +392,18 @@ test("Polygon production contract gate is read-only and approval protected", asy
   assert.match(runbook, /pause/i);
   assert.match(incident, /pause/i);
 });
+
+test("browser E2E restarts the development server between desktop and mobile", async () => {
+  const [playwrightConfig, e2eRunner] = await Promise.all([
+    read("frontend/playwright.config.ts"),
+    read("frontend/e2e/run-e2e.mjs"),
+  ]);
+
+  assert.match(
+    playwrightConfig,
+    /node node_modules\/next\/dist\/bin\/next dev --webpack/,
+  );
+  assert.match(playwrightConfig, /retries: process\.env\.CI \? 1 : 0/);
+  assert.match(e2eRunner, /\["desktop-chrome", "mobile-chrome"\]/);
+  assert.match(e2eRunner, /--project=\$\{project\}/);
+});

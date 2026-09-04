@@ -15,15 +15,30 @@ const releaseModes = selectedTestFiles.length
   : ["full", "preview"];
 
 for (const releaseMode of releaseModes) {
-  const result = spawnSync(
-    process.execPath,
-    [playwrightCli, "test", ...forwardedArguments],
-    {
-      env: { ...process.env, E2E_RELEASE_MODE: releaseMode },
-      stdio: "inherit",
-    },
-  );
+  const projectRuns = forwardedArguments.some((argument) =>
+    argument.startsWith("--project"),
+  )
+    ? [undefined]
+    : releaseMode === "preview"
+      ? ["desktop-chrome"]
+      : ["desktop-chrome", "mobile-chrome"];
 
-  if (result.error) throw result.error;
-  if (result.status !== 0) process.exit(result.status ?? 1);
+  for (const project of projectRuns) {
+    const result = spawnSync(
+      process.execPath,
+      [
+        playwrightCli,
+        "test",
+        ...forwardedArguments,
+        ...(project ? [`--project=${project}`] : []),
+      ],
+      {
+        env: { ...process.env, E2E_RELEASE_MODE: releaseMode },
+        stdio: "inherit",
+      },
+    );
+
+    if (result.error) throw result.error;
+    if (result.status !== 0) process.exit(result.status ?? 1);
+  }
 }
