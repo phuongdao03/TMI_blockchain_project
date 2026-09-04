@@ -27,7 +27,7 @@ jobs:
         env:
           SOURCE_COMMIT: ${{ inputs.source_commit }}
         run: test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24.18.0
           cache: npm
