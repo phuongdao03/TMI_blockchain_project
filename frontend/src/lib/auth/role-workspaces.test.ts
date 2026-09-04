@@ -22,10 +22,11 @@ describe("role workspaces", () => {
   });
 
   it("returns scoped staff from public pages to their assigned operation", () => {
-    expect(resolvePublicHeaderAction(["USER"], ["payments.read"])).toEqual({
-      href: "/admin/payments",
-      label: "Quay lại khu vực làm việc",
-    });
+    const action = resolvePublicHeaderAction(["USER"], ["payments.read"]);
+
+    expect(action.href).toBe("/admin/payments");
+    expect(action.label).toBe("Khu vực làm việc");
+    expect(action.label).not.toMatch(/^Quay lại/i);
   });
 
   it("keeps submission actions restricted to users", () => {

@@ -58,6 +58,6 @@ export function resolvePublicHeaderAction(
     return { href: "/reviews", label: "Khu vực thẩm định" };
   return {
     href: resolveDefaultWorkspace(roles, permissions),
-    label: "Quay lại khu vực làm việc",
+    label: "Khu vực làm việc",
   };
 }

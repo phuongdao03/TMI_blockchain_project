@@ -26,6 +26,8 @@ describe("UserGuidePage", () => {
       "Tạo tài khoản và đăng nhập",
       "Tạo và gửi hồ sơ",
       "Theo dõi hồ sơ và thông báo",
+      "Thanh toán hồ sơ",
+      "Kết nối ví và ghi nhận hồ sơ",
       "Tra cứu chứng thư và mã QR",
       "Bảo vệ tài khoản và dữ liệu",
       "Khi bạn cần hỗ trợ",
@@ -34,6 +36,15 @@ describe("UserGuidePage", () => {
     }
 
     expect(screen.getByText(/không lưu tệp gốc.*blockchain/i)).toBeDefined();
+    expect(
+      screen.getByText(/số tiền chính xác.*trước khi thanh toán/i),
+    ).toBeDefined();
+    expect(
+      screen.getByText(/MetaMask, Rabby, Coinbase hoặc WalletConnect/i),
+    ).toBeDefined();
+    expect(
+      screen.queryByText(/VERIFIER_ROLE|window\.ethereum|checksum|webhook/i),
+    ).toBeNull();
     expect(screen.getByText(/không bao giờ yêu cầu.*khóa ví/i)).toBeDefined();
     expect(screen.queryByText(/không nhận được email xác minh/i)).toBeNull();
     expect(

@@ -1,7 +1,7 @@
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Header, Query, Request, status
+from fastapi import APIRouter, Header, Query, Request, Response, status
 
 from app.core.schemas import ErrorEnvelope, ResponseMeta, SuccessEnvelope
 from app.modules.auth.dependencies import (
@@ -9,6 +9,7 @@ from app.modules.auth.dependencies import (
     CurrentPrincipalDependency,
 )
 from app.modules.payments.dependencies import PaymentServiceDependency
+from app.modules.payments.errors import PaymentNotFoundError
 from app.modules.payments.schemas import (
     CancelPaymentOrderRequest,
     FeeObligationData,
@@ -193,6 +194,7 @@ async def cancel_payment_order(
     "/webhooks/payments/{provider}",
     response_model=SuccessEnvelope[PaymentOrderData],
     responses={
+        204: {"description": "Verified PayOS registration probe acknowledged."},
         404: PRIVATE_RESPONSES[404],
         409: PRIVATE_RESPONSES[409],
         422: PRIVATE_RESPONSES[422],
@@ -210,17 +212,23 @@ async def process_payment_webhook(
         int | None,
         Header(alias="X-Payment-Timestamp", ge=0),
     ] = None,
-) -> SuccessEnvelope[PaymentOrderData]:
+) -> SuccessEnvelope[PaymentOrderData] | Response:
     if provider != service.provider_name:
-        from app.modules.payments.errors import PaymentNotFoundError
-
         raise PaymentNotFoundError("Payment provider was not found.")
     raw_body = await request.body()
-    order = await service.process_webhook(
-        raw_body=raw_body,
-        signature=signature or "",
-        timestamp=timestamp or 0,
-    )
+    try:
+        order = await service.process_webhook(
+            raw_body=raw_body,
+            signature=signature or "",
+            timestamp=timestamp or 0,
+        )
+    except PaymentNotFoundError:
+        # PayOS sends a correctly signed sample transaction while confirming a
+        # webhook URL. The signature has already been verified by the gateway;
+        # acknowledge that probe without creating or changing payment data.
+        if provider == "payos":
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        raise
     return SuccessEnvelope(
         data=PaymentOrderData.model_validate(order),
         meta=ResponseMeta(request_id=request.state.request_id),

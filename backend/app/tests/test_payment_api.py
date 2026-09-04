@@ -13,6 +13,7 @@ from app.modules.auth.dependencies import (
 )
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.payments.dependencies import get_payment_service
+from app.modules.payments.errors import PaymentNotFoundError
 from app.modules.payments.models import PaymentStatus
 from app.modules.payments.types import PaymentOrderView
 
@@ -219,6 +220,39 @@ def test_payment_api_create_get_and_preserve_raw_webhook_body() -> None:
     assert fetched_by_provider.status_code == 200
     assert active.status_code == 200
     assert webhook.status_code == 200
+    assert service.raw_body == body
+
+
+def test_payos_webhook_acknowledges_signed_registration_probe() -> None:
+    class PayOSProbeService(StubPaymentService):
+        @property
+        def provider_name(self) -> str:
+            return "payos"
+
+        async def process_webhook(
+            self,
+            *,
+            raw_body: bytes,
+            signature: str,
+            timestamp: int,
+        ) -> PaymentOrderView:
+            del signature, timestamp
+            self.raw_body = raw_body
+            raise PaymentNotFoundError()
+
+    service = PayOSProbeService()
+    body = b'{"success":true,"data":{"orderCode":123},"signature":"signed"}'
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/api/v1/webhooks/payments/payos",
+            service,
+            content=body,
+            headers={"Content-Type": "application/json"},
+        )
+    )
+
+    assert response.status_code == 204
     assert service.raw_body == body
 
 

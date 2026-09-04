@@ -3,12 +3,14 @@ import {
   BookOpen,
   CheckCircle2,
   CircleHelp,
+  CreditCard,
   FileCheck2,
   FileText,
   QrCode,
   Search,
   ShieldCheck,
   UserRound,
+  WalletCards,
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -18,6 +20,8 @@ const sections = [
   { id: "account", label: "Tạo tài khoản" },
   { id: "dossier", label: "Gửi hồ sơ" },
   { id: "tracking", label: "Theo dõi xử lý" },
+  { id: "payment", label: "Thanh toán hồ sơ" },
+  { id: "wallet", label: "Kết nối ví" },
   { id: "verification", label: "Xác minh chứng thư" },
   { id: "security", label: "Bảo vệ thông tin" },
   { id: "support", label: "Cần hỗ trợ" },
@@ -289,9 +293,115 @@ export default function UserGuidePage() {
           </GuideSection>
 
           <GuideSection
+            icon={CreditCard}
+            id="payment"
+            number="05"
+            title="Thanh toán hồ sơ"
+          >
+            <p>
+              Khi hồ sơ đủ điều kiện thanh toán, hệ thống sẽ gửi thông báo trong
+              tài khoản của bạn. Mở hồ sơ, kiểm tra số tiền chính xác và nội
+              dung khoản phí trước khi thanh toán, sau đó chọn nút thanh toán để
+              mở trang PayOS.
+            </p>
+            <ol className="user-guide-checklist">
+              <li>
+                Đối chiếu mã hồ sơ, nội dung khoản phí và số tiền cần trả.
+              </li>
+              <li>
+                Quét mã QR bằng ứng dụng ngân hàng hoặc làm theo hướng dẫn trên
+                trang thanh toán.
+              </li>
+              <li>
+                Không sửa nội dung chuyển khoản. Sau khi trả tiền, chờ hệ thống
+                cập nhật kết quả rồi quay lại hồ sơ.
+              </li>
+              <li>
+                Nếu đã bị trừ tiền nhưng trạng thái chưa đổi, không thanh toán
+                lần hai; hãy giữ biên lai và liên hệ hỗ trợ.
+              </li>
+            </ol>
+            <div className="user-guide-note">
+              <ShieldCheck aria-hidden="true" />
+              <p>
+                TMI không yêu cầu số thẻ, mã bảo mật thẻ hoặc mật khẩu ngân hàng
+                trong hồ sơ. Việc thanh toán chỉ thực hiện trên trang PayOS được
+                mở từ chính hồ sơ của bạn.
+              </p>
+            </div>
+          </GuideSection>
+
+          <GuideSection
+            icon={WalletCards}
+            id="wallet"
+            number="06"
+            title="Kết nối ví và ghi nhận hồ sơ"
+          >
+            <p>
+              Phần này dành cho nhân sự được giao nhiệm vụ ghi nhận hồ sơ đã phê
+              duyệt. Bạn có thể dùng MetaMask, Rabby, Coinbase hoặc
+              WalletConnect. Hệ thống chỉ yêu cầu xác nhận bằng ví của tổ chức,
+              không yêu cầu nhập khóa bí mật.
+            </p>
+            <ol className="user-guide-steps">
+              <li>
+                <span>01</span>
+                <div>
+                  <h3>Chọn ví</h3>
+                  <p>
+                    Mở mục Ký blockchain, chọn Kết nối ví rồi chọn ứng dụng ví
+                    đang sử dụng. Với điện thoại, WalletConnect sẽ hiển thị mã
+                    QR hoặc mở ứng dụng ví phù hợp.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span>02</span>
+                <div>
+                  <h3>Xác nhận đúng tài khoản</h3>
+                  <p>
+                    Kiểm tra địa chỉ ví hiển thị trên màn hình. Nếu hệ thống báo
+                    sai ví hoặc sai mạng, đổi sang đúng tài khoản và Polygon
+                    Mainnet rồi thử lại.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span>03</span>
+                <div>
+                  <h3>Kiểm tra hồ sơ trước khi ký</h3>
+                  <p>
+                    Đối chiếu tên hồ sơ, phiên bản và dấu vân tay số. Chỉ tiếp
+                    tục khi thông tin khớp với hồ sơ đã được phê duyệt.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span>04</span>
+                <div>
+                  <h3>Chờ mạng xác nhận</h3>
+                  <p>
+                    Sau khi đồng ý trong ví, giữ trang mở cho đến khi hệ thống
+                    báo Đã ghi nhận. Nếu giao dịch đang chờ, không ký lại cùng
+                    một hồ sơ.
+                  </p>
+                </div>
+              </li>
+            </ol>
+            <div className="user-guide-note user-guide-note--warning">
+              <CircleHelp aria-hidden="true" />
+              <p>
+                Không cung cấp cụm từ khôi phục hoặc khóa bí mật cho bất kỳ ai.
+                Nếu ví báo thiếu phí, sai mạng hoặc giao dịch thất bại, dừng
+                thao tác và báo bộ phận vận hành.
+              </p>
+            </div>
+          </GuideSection>
+
+          <GuideSection
             icon={QrCode}
             id="verification"
-            number="05"
+            number="07"
             title="Tra cứu chứng thư và mã QR"
           >
             <ol className="user-guide-checklist">
@@ -325,7 +435,7 @@ export default function UserGuidePage() {
           <GuideSection
             icon={ShieldCheck}
             id="security"
-            number="06"
+            number="08"
             title="Bảo vệ tài khoản và dữ liệu"
           >
             <ol className="user-guide-checklist">
@@ -359,7 +469,7 @@ export default function UserGuidePage() {
           <GuideSection
             icon={CircleHelp}
             id="support"
-            number="07"
+            number="09"
             title="Khi bạn cần hỗ trợ"
           >
             <div className="user-guide-faq">

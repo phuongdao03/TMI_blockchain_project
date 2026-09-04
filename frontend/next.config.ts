@@ -67,6 +67,10 @@ const nextConfig: NextConfig = {
     root: dirname(fileURLToPath(import.meta.url)),
   },
   webpack(config) {
+    // MetaMask SDK supports React Native too, but this application only ships
+    // a browser bundle. Exclude its optional native storage adapter.
+    config.resolve.alias["@react-native-async-storage/async-storage"] = false;
+
     if (
       process.env.NODE_ENV !== "production" &&
       process.env.AUTH_E2E_SHIM === "true"

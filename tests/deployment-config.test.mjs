@@ -23,6 +23,7 @@ test("production images are multi-stage, non-root and health checked", async () 
   for (const buildArgument of [
     "NEXT_PUBLIC_RELEASE_MODE",
     "NEXT_PUBLIC_APP_BASE_URL",
+    "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID",
     "NEXT_PUBLIC_FIREBASE_API_KEY",
     "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
     "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
@@ -162,6 +163,22 @@ test("nginx production config enforces TLS, headers and webhook isolation", asyn
   assert.match(nginx, /limit_req/);
 });
 
+test("PayOS webhook registration is explicit and keeps credentials out of arguments", async () => {
+  const script = await read(
+    "infrastructure/scripts/configure-payos-webhook.sh",
+  );
+
+  assert.match(script, /^#!\/bin\/bash\nset -euo pipefail/m);
+  assert.match(script, /PAYOS_CLIENT_ID/);
+  assert.match(script, /PAYOS_API_KEY/);
+  assert.match(script, /PAYOS_WEBHOOK_URL/);
+  assert.match(script, /\/confirm-webhook/);
+  assert.match(script, /x-client-id/);
+  assert.match(script, /x-api-key/);
+  assert.match(script, /\/api\/v1\/webhooks\/payments\/payos/);
+  assert.doesNotMatch(script, /PAYOS_CHECKSUM_KEY.*printf/);
+});
+
 test("CI has quality, migration, image, staging and manual production gates", async () => {
   const workflow = await read(".github/workflows/delivery.yml");
 
@@ -179,7 +196,9 @@ test("CI has quality, migration, image, staging and manual production gates", as
     "docker/setup-buildx-action@v3",
     "NEXT_PUBLIC_FIREBASE_API_KEY",
     "NEXT_PUBLIC_APP_BASE_URL",
+    "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID",
     "--build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+    "--build-arg NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID",
     "check-image-size.sh",
   ]) {
     assert.ok(workflow.includes(gate), `missing delivery gate: ${gate}`);

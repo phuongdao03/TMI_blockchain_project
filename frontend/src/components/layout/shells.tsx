@@ -107,6 +107,11 @@ export function PublicShell({
           <ThemeToggle />
           {publicHeaderAction ? (
             <Link
+              aria-label={
+                publicHeaderAction.label === "Khu vực làm việc"
+                  ? "Quay lại khu vực làm việc"
+                  : undefined
+              }
               className="button button--secondary public-header__workspace"
               href={publicHeaderAction.href}
             >

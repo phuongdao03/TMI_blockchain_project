@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   WalletCards,
 } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -27,11 +28,14 @@ import type {
 } from "@/lib/api/types";
 import {
   connectWallet,
+  connectWalletWithConnector,
   currentWallet,
   sendTransaction,
   signWalletChallenge,
   subscribeWalletChanges,
   switchChain,
+  walletOptions,
+  walletErrorCode,
 } from "@/lib/blockchain/eip1193";
 
 type ConnectedWallet = { address: string; chainId: number } | null;
@@ -65,6 +69,19 @@ function formatDate(value: string) {
 
 function errorMessage(error: unknown) {
   const walletError = error as { code?: number | string; message?: string };
+  const providerCode = walletErrorCode(error);
+  if (providerCode === "NO_WALLET") {
+    return "KhÃ´ng tÃ¬m tháº¥y vÃ­. HÃ£y cÃ i Ä‘áº·t vÃ  má»Ÿ khÃ³a MetaMask, Rabby hoáº·c Coinbase Wallet.";
+  }
+  if (providerCode === "REQUEST_PENDING") {
+    return "VÃ­ Ä‘ang cÃ³ yÃªu cáº§u chÆ°a xá»­ lÃ½. HÃ£y má»Ÿ cá»­a sá»• vÃ­ Ä‘á»ƒ xÃ¡c nháº­n hoáº·c há»§y yÃªu cáº§u Ä‘Ã³.";
+  }
+  if (providerCode === "UNAUTHORIZED") {
+    return "Website chÆ°a Ä‘Æ°á»£c vÃ­ cho phÃ©p truy cáº­p. HÃ£y káº¿t ná»‘i láº¡i trong vÃ­.";
+  }
+  if (providerCode === "DISCONNECTED" || providerCode === "CHAIN_UNAVAILABLE") {
+    return "VÃ­ Ä‘Ã£ ngáº¯t káº¿t ná»‘i. HÃ£y má»Ÿ khÃ³a vÃ­ vÃ  thá»­ káº¿t ná»‘i láº¡i.";
+  }
   if (walletError?.code === 4001 || walletError?.code === "ACTION_REJECTED") {
     return "Bạn đã từ chối yêu cầu ký trong MetaMask. Giao dịch chưa được gửi.";
   }
@@ -115,6 +132,7 @@ export function BlockchainSigningWorkspace() {
   const [busy, setBusy] = useState<"connect" | "link" | "sign" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [copiedTransaction, setCopiedTransaction] = useState(false);
+  const [walletPickerOpen, setWalletPickerOpen] = useState(false);
 
   const wallet = useQuery({
     queryKey: ["blockchain", "wallet"],
@@ -195,8 +213,27 @@ export function BlockchainSigningWorkspace() {
   async function handleConnect() {
     setBusy("connect");
     setMessage(null);
+    const options = walletOptions?.() ?? [];
+    if (options.length > 1) {
+      setBusy(null);
+      setWalletPickerOpen(true);
+      return;
+    }
     try {
       setConnected(await connectWallet());
+    } catch (error) {
+      setMessage(errorMessage(error));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleConnectWithConnector(connectorId: string) {
+    setBusy("connect");
+    setMessage(null);
+    try {
+      setConnected(await connectWalletWithConnector(connectorId));
+      setWalletPickerOpen(false);
     } catch (error) {
       setMessage(errorMessage(error));
     } finally {
@@ -378,6 +415,60 @@ export function BlockchainSigningWorkspace() {
         >
           {message}
         </p>
+      ) : null}
+
+      {walletPickerOpen ? (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wallet-picker-title"
+        >
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 text-neutral-950 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="wallet-picker-title" className="text-xl font-bold">
+                  Chọn ví để kết nối
+                </h2>
+                <p className="mt-1 text-sm text-neutral-600">
+                  Bạn có thể dùng MetaMask, Rabby, Coinbase hoặc WalletConnect.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="min-h-11 rounded-lg border px-3 text-sm font-semibold"
+                onClick={() => setWalletPickerOpen(false)}
+              >
+                Đóng
+              </button>
+            </div>
+            <div className="mt-5 grid gap-3">
+              {walletOptions().map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className="flex min-h-12 items-center gap-3 rounded-xl border px-4 text-left font-semibold transition-colors hover:bg-neutral-100 disabled:opacity-60"
+                  disabled={busy === "connect"}
+                  onClick={() => void handleConnectWithConnector(option.id)}
+                >
+                  {option.icon ? (
+                    <Image
+                      src={option.icon}
+                      alt=""
+                      className="size-6"
+                      height={24}
+                      unoptimized
+                      width={24}
+                    />
+                  ) : (
+                    <WalletCards className="size-5" aria-hidden="true" />
+                  )}
+                  <span>{option.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       ) : null}
 
       <section>

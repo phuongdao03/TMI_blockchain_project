@@ -17,6 +17,7 @@ const {
   MockApiError,
 } = vi.hoisted(() => ({
   connectBrowserWallet: vi.fn(),
+  connectWalletWithConnector: vi.fn(),
   currentWallet: vi.fn(),
   prepareIntent: vi.fn(),
   proofQueue: vi.fn(),
@@ -51,11 +52,22 @@ vi.mock("@/lib/api/client", () => ({
 
 vi.mock("@/lib/blockchain/eip1193", () => ({
   connectWallet: connectBrowserWallet,
+  connectWalletWithConnector: vi.fn(),
   currentWallet: vi.fn(),
   sendTransaction: sendBrowserTransaction,
   signWalletChallenge: vi.fn(),
   subscribeWalletChanges: vi.fn(() => () => undefined),
   switchChain: vi.fn(),
+  walletOptions: vi.fn(() => []),
+  walletErrorCode: (error: { code?: number | string; message?: string }) => {
+    if (error?.code === 4001) return "USER_REJECTED";
+    if (error?.code === -32002) return "REQUEST_PENDING";
+    if (error?.code === 4100) return "UNAUTHORIZED";
+    if (error?.code === 4900) return "DISCONNECTED";
+    if (error?.code === 4901) return "CHAIN_UNAVAILABLE";
+    if (error?.message?.toLowerCase().includes("not found")) return "NO_WALLET";
+    return "WALLET_ERROR";
+  },
 }));
 
 function Wrapper({ children }: { children: ReactNode }) {

@@ -2,13 +2,33 @@
 
 ## Before deployment
 
-1. Complete payOS identity or business verification and link the settlement bank.
+1. Complete payOS identity or business verification and link the settlement
+   bank.
 2. Create the TMI payment channel and copy Client ID, API Key and Checksum Key
-   directly into the deployment secret manager. Never put them in Git or CI logs.
+   directly into the deployment secret manager. Never put them in Git or CI
+   logs.
 3. Deploy the backend behind HTTPS, then register
    `https://<api-host>/api/v1/webhooks/payments/payos` in the payOS channel.
-4. Confirm that the sample webhook receives HTTP 2xx only after signature checking.
+4. Confirm that the sample webhook receives HTTP 2xx only after signature
+   checking.
 5. Set HTTPS return and cancellation URLs to the frontend payment result routes.
+
+For the TMI production domain, register the callback after the backend is
+healthy:
+
+```bash
+cd /var/www/tmi_blockchain
+set -a
+. infrastructure/.env.production
+set +a
+export PAYOS_WEBHOOK_URL=https://decu.tinhhoaviet.org.vn/api/v1/webhooks/payments/payos
+bash infrastructure/scripts/configure-payos-webhook.sh
+unset PAYOS_CLIENT_ID PAYOS_API_KEY PAYOS_CHECKSUM_KEY PAYOS_WEBHOOK_URL
+```
+
+The script reads credentials from environment variables, validates the HTTPS
+callback path, asks payOS to verify it, and prints only the configured URL. Do
+not paste credentials directly into the command or terminal history.
 
 ## Runtime lifecycle checks
 
@@ -30,9 +50,9 @@
 
 Use staging only. Record the approver and ticket, set
 `PAYMENT_REAL_MONEY_TEST_ENABLED=true`, set the cap at or below 100,000 VND and
-create an order whose amount is at or below that cap. Restore the flag to `false`
-immediately after collecting the provider reference, webhook event and database
-state. The flag is rejected when `APP_ENV=production`.
+create an order whose amount is at or below that cap. Restore the flag to
+`false` immediately after collecting the provider reference, webhook event and
+database state. The flag is rejected when `APP_ENV=production`.
 
 ## Release block
 
