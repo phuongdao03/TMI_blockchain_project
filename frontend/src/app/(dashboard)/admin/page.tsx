@@ -1,11 +1,9 @@
 import {
-  Activity,
   BookOpenText,
   ChartNoAxesCombined,
   ClipboardCheck,
   FilePenLine,
   FileClock,
-  Landmark,
   UsersRound,
 } from "lucide-react";
 import Link from "next/link";
@@ -53,14 +51,6 @@ const modules = [
     tone: "bg-sky-50 text-sky-700",
   },
   {
-    href: "/council",
-    title: "Phiên xét duyệt",
-    description:
-      "Tổ chức quyết định cuối cùng, ghi nhận lý do và lưu biên bản hồ sơ.",
-    icon: Landmark,
-    tone: "bg-violet-50 text-violet-700",
-  },
-  {
     href: "/admin/audit",
     title: "Lịch sử thay đổi",
     description:
@@ -74,32 +64,6 @@ export default function AdminPortalPage() {
   return (
     <RoleGate allowed={["SUPER_ADMIN"]}>
       <div className="mx-auto max-w-7xl space-y-8">
-        <header className="rounded-3xl bg-neutral-950 p-7 text-white sm:p-10">
-          <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-primary-300">
-            <Activity aria-hidden="true" className="size-4" />
-            Khu vực quản trị
-          </p>
-          <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight sm:text-5xl">
-            Mọi việc quan trọng, ở một nơi.
-          </h1>
-          <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-            Theo dõi con người, hồ sơ và những mốc phát hành của TMI. Thông tin
-            được sắp xếp theo công việc để bạn xử lý nhanh mà không cần biết chi
-            tiết kỹ thuật phía sau.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3 text-xs font-semibold text-slate-300">
-            <span className="rounded-full border border-white/15 px-3 py-2">
-              Truy cập riêng tư
-            </span>
-            <span className="rounded-full border border-white/15 px-3 py-2">
-              Bảo vệ nhiều lớp
-            </span>
-            <span className="rounded-full border border-white/15 px-3 py-2">
-              Lịch sử rõ ràng
-            </span>
-          </div>
-        </header>
-
         <section aria-labelledby="admin-priority-title">
           <div className="mb-5">
             <p className="text-sm font-bold uppercase tracking-[0.16em] text-primary-700">

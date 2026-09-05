@@ -90,14 +90,6 @@ export default function HomePage() {
               và tra cứu thông tin, trạng thái cùng bằng chứng xác thực của các
               hồ sơ được công bố.
             </p>
-            <p className="mt-4 flex max-w-[41rem] items-start gap-2 text-sm leading-6 text-slate-300">
-              <ShieldCheck
-                aria-hidden="true"
-                className="mt-0.5 size-4 shrink-0 text-gold-300"
-              />
-              Blockchain chỉ ghi dấu vân tay số để kiểm tra thay đổi; tài liệu
-              gốc vẫn được lưu an toàn trong kho của hệ thống.
-            </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link
                 className="registry-button registry-button-primary"

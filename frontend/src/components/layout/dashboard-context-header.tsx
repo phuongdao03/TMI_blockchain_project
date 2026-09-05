@@ -17,7 +17,6 @@ const pageTitles: Record<string, string> = {
   "/dossiers": "Hồ sơ của tôi",
   "/notifications": "Thông báo",
   "/reviews": "Hàng đợi thẩm định",
-  "/council": "Phiên thẩm định",
   "/admin": "Quản trị hệ thống",
   "/admin/dashboard": "Tổng quan vận hành",
   "/admin/content": "Quản trị nội dung",

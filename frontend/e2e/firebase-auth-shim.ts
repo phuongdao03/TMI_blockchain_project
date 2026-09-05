@@ -20,13 +20,6 @@ function authError(code: string): Error & { code: string } {
 
 export class GoogleAuthProvider {}
 
-export const TotpMultiFactorGenerator = {
-  FACTOR_ID: "totp",
-  assertionForEnrollment: (_secret: unknown, code: string) => ({ code }),
-  assertionForSignIn: (_uid: string, code: string) => ({ code }),
-  generateSecret: async () => ({ secretKey: "E2E-TOTP-SETUP-KEY" }),
-};
-
 export function getAuth(): E2EAuth {
   return auth;
 }
@@ -69,16 +62,15 @@ export async function signInWithEmailAndPassword(
   if (password !== "correct horse battery staple") {
     throw authError("auth/invalid-credential");
   }
-  if (email === "reviewer@tmigroup.vn") {
-    throw authError("auth/multi-factor-auth-required");
-  }
   const signedIn = user(
     email,
     email === "superadmin@tmigroup.vn"
       ? "e2e-super-admin-token"
-      : email === "owner@tmigroup.vn"
-        ? "e2e-admin-token"
-        : "e2e-applicant-token",
+      : email === "reviewer@tmigroup.vn"
+        ? "e2e-reviewer-token"
+        : email === "owner@tmigroup.vn"
+          ? "e2e-admin-token"
+          : "e2e-applicant-token",
   );
   target.currentUser = signedIn;
   return { user: signedIn };
@@ -95,34 +87,8 @@ export async function signInWithPopup(
   return { user: signedIn };
 }
 
-export function getMultiFactorResolver(target: E2EAuth) {
-  return {
-    hints: [{ factorId: "totp", uid: "e2e-totp-factor" }],
-    async resolveSignIn(assertion: { code: string }) {
-      if (assertion.code !== "654321")
-        throw authError("auth/invalid-verification-code");
-      const signedIn = user("reviewer@tmigroup.vn", "e2e-reviewer-mfa-token");
-      target.currentUser = signedIn;
-      return { user: signedIn };
-    },
-  };
-}
-
-export function multiFactor(target: E2EUser) {
-  return {
-    getSession: async () => ({ user: target.email }),
-    async enroll(assertion: { code: string }) {
-      if (assertion.code !== "654321")
-        throw authError("auth/invalid-verification-code");
-    },
-  };
-}
-
 export async function signOut(target: E2EAuth): Promise<void> {
   target.currentUser = null;
 }
 
-export type MultiFactorError = Error & { code: string };
-export type MultiFactorResolver = ReturnType<typeof getMultiFactorResolver>;
-export type TotpSecret = { secretKey: string };
 export type User = E2EUser;

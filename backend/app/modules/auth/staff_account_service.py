@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID
 
@@ -8,9 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import DomainError
 from app.modules.audit.service import AuditService
 from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
-from app.modules.auth.firebase_provider import FirebaseClaims
 from app.modules.auth.models import (
-    AuthProvider,
     Permission,
     User,
     UserPermission,
@@ -30,7 +28,6 @@ from app.modules.auth.session_service import AuthPrincipal
 
 
 class StaffAccountService:
-    MFA_RECOVERY_WINDOW = timedelta(hours=24)
     MANAGE_STAFF = PolicyRequirement(
         permission="admin.staff.manage",
         compatible_roles=frozenset({"SUPER_ADMIN"}),
@@ -355,66 +352,10 @@ class StaffAccountService:
     def _permission_error(code: str, message: str, status: int) -> DomainError:
         return DomainError(code=code, message=message, status_code=status)
 
-    async def authorize_mfa_reenrollment(
-        self,
-        *,
-        claims: FirebaseClaims,
-        audit: AuditService,
-        request_id: str | None,
-        user_agent: str | None,
-    ) -> None:
-        invalid = DomainError(
-            code="STAFF_MFA_RECOVERY_INVALID",
-            message="The MFA recovery request is invalid or expired.",
-            status_code=400,
-        )
-        if not claims.email_verified:
-            raise invalid
-        now = datetime.now(UTC)
-        async with self._session.begin():
-            identity = await self._repository.get_identity(
-                provider=AuthProvider.FIREBASE,
-                subject=claims.subject,
-            )
-            if identity is None:
-                raise invalid
-            user = await self._repository.get_user_by_id_for_update(identity.user_id)
-            if (
-                user is None
-                or user.email.lower() != claims.email.lower()
-                or user.status is not UserStatus.SUSPENDED
-                or user.mfa_recovery_authorized_at is None
-            ):
-                raise invalid
-            authorized_at = user.mfa_recovery_authorized_at
-            if authorized_at.tzinfo is None:
-                authorized_at = authorized_at.replace(tzinfo=UTC)
-            if authorized_at + self.MFA_RECOVERY_WINDOW <= now:
-                raise invalid
-            roles = await self._repository.get_role_codes(user.id)
-            if not set(roles).intersection(INTERNAL_MANAGED_ROLES):
-                raise invalid
-            user.status = UserStatus.PENDING
-            audit.record(
-                actor_user_id=user.id,
-                action="auth.staff_mfa_recovery.authorized",
-                resource_type="user",
-                resource_id=str(user.id),
-                before={"status": UserStatus.SUSPENDED.value},
-                after={
-                    "status": "PENDING_MFA",
-                    "mfa_enrollment_required": True,
-                },
-                request_id=request_id,
-                user_agent=user_agent,
-            )
-
     @staticmethod
     def _to_data(user: User, role_code: str) -> StaffAccountData:
         status: StaffAccountStatus = cast(StaffAccountStatus, user.status.value)
-        if user.status is UserStatus.PENDING:
-            status = "PENDING_MFA"
-        elif user.disabled_at is not None or user.status is UserStatus.DELETED:
+        if user.disabled_at is not None or user.status is UserStatus.DELETED:
             status = "DISABLED"
         return StaffAccountData(
             id=user.id,

@@ -36,11 +36,9 @@ from app.modules.auth.schemas import (
     ResetPasswordRequest,
     StaffInvitationAcceptedData,
     StaffInvitationAcceptRequest,
-    StaffMfaRecoveryAuthorizeRequest,
     VerifyEmailRequest,
 )
 from app.modules.auth.session_service import ClientMetadata, IssuedSession
-from app.modules.auth.staff_account_service import StaffAccountService
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -280,34 +278,7 @@ async def accept_staff_invitation(
         user_agent=request.headers.get("user-agent"),
     )
     return SuccessEnvelope(
-        data=StaffInvitationAcceptedData(status="MFA_ENROLLMENT_REQUIRED"),
-        meta=ResponseMeta(request_id=request.state.request_id),
-    )
-
-
-@router.post(
-    "/staff-mfa/recovery/authorize",
-    status_code=status.HTTP_202_ACCEPTED,
-    response_model=SuccessEnvelope[StaffInvitationAcceptedData],
-    responses=OAUTH_ERROR_RESPONSES,
-)
-async def authorize_staff_mfa_recovery(
-    payload: StaffMfaRecoveryAuthorizeRequest,
-    request: Request,
-    runtime: FirebaseAuthRuntimeDependency,
-    session: SessionDependency,
-) -> SuccessEnvelope[StaffInvitationAcceptedData]:
-    client_ip = request.client.host if request.client is not None else "unknown"
-    await runtime.rate_limiter.check(client_ip)
-    claims = await runtime.verifier.validate_id_token(payload.id_token)
-    await StaffAccountService(session).authorize_mfa_reenrollment(
-        claims=claims,
-        audit=AuditService(session),
-        request_id=request.state.request_id,
-        user_agent=request.headers.get("user-agent"),
-    )
-    return SuccessEnvelope(
-        data=StaffInvitationAcceptedData(status="MFA_ENROLLMENT_REQUIRED"),
+        data=StaffInvitationAcceptedData(status="ACTIVE"),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 

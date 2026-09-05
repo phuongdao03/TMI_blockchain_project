@@ -3,13 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  getMultiFactorResolver,
   sendEmailVerification,
   signInWithEmailAndPassword,
   signOut,
-  TotpMultiFactorGenerator,
-  type MultiFactorError,
-  type MultiFactorResolver,
   type User,
 } from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
@@ -34,8 +30,6 @@ export function LoginForm({ next }: { next?: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState<string>();
-  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver>();
-  const [verificationCode, setVerificationCode] = useState("");
   const {
     register,
     handleSubmit,
@@ -110,9 +104,6 @@ export function LoginForm({ next }: { next?: string }) {
     if (error instanceof ApiError && error.code === "ACCOUNT_INACTIVE") {
       return "Tài khoản chưa hoạt động hoặc quyền truy cập không còn hiệu lực. Vui lòng liên hệ quản trị hệ thống.";
     }
-    if (error instanceof ApiError && error.code === "STAFF_MFA_REQUIRED") {
-      return "Tài khoản quản trị cần hoàn tất xác thực bảo mật trước khi đăng nhập.";
-    }
     if (error instanceof ApiError && error.status >= 500) {
       return "Dịch vụ tài khoản đang tạm gián đoạn. Vui lòng thử lại sau ít phút.";
     }
@@ -150,39 +141,9 @@ export function LoginForm({ next }: { next?: string }) {
       }
       await finishSignIn(credential.user);
     } catch (error) {
-      if (
-        (error as { code?: string } | null)?.code ===
-        "auth/multi-factor-auth-required"
-      ) {
-        setMfaResolver(
-          getMultiFactorResolver(getFirebaseAuth(), error as MultiFactorError),
-        );
-        return;
-      }
       setSubmitError(loginErrorMessage(error));
     }
   });
-
-  async function verifySecondFactor() {
-    if (!mfaResolver || !/^\d{6}$/.test(verificationCode)) return;
-    setSubmitError(undefined);
-    try {
-      const hint = mfaResolver.hints.find(
-        (item) => item.factorId === TotpMultiFactorGenerator.FACTOR_ID,
-      );
-      if (!hint) throw new Error("TOTP_FACTOR_NOT_FOUND");
-      const assertion = TotpMultiFactorGenerator.assertionForSignIn(
-        hint.uid,
-        verificationCode,
-      );
-      const credential = await mfaResolver.resolveSignIn(assertion);
-      await finishSignIn(credential.user);
-    } catch {
-      setSubmitError(
-        "Mã xác minh không đúng hoặc đã hết hạn. Vui lòng thử lại.",
-      );
-    }
-  }
 
   return (
     <AuthCard
@@ -212,35 +173,6 @@ export function LoginForm({ next }: { next?: string }) {
               {submitError}
             </p>
           ) : null}
-          {mfaResolver ? (
-            <div className="space-y-3 rounded-lg border border-[#F6C515]/30 bg-[#201d16] p-4">
-              <label
-                className="block text-sm font-semibold"
-                htmlFor="email-mfa-code"
-              >
-                Mã 6 số từ ứng dụng xác thực
-              </label>
-              <input
-                autoComplete="one-time-code"
-                className="min-h-12 w-full rounded-md border border-white/20 bg-[#111] px-3 text-center font-mono text-lg tracking-[0.3em] text-white"
-                id="email-mfa-code"
-                inputMode="numeric"
-                maxLength={6}
-                onChange={(event) =>
-                  setVerificationCode(event.target.value.replace(/\D/g, ""))
-                }
-                value={verificationCode}
-              />
-              <Button
-                className="w-full"
-                disabled={verificationCode.length !== 6}
-                onClick={() => void verifySecondFactor()}
-                type="button"
-              >
-                Xác nhận mã
-              </Button>
-            </div>
-          ) : null}
           <FormField
             autoComplete="email"
             error={errors.email?.message}
@@ -260,11 +192,7 @@ export function LoginForm({ next }: { next?: string }) {
               <AuthLink href="/forgot-password">Quên mật khẩu?</AuthLink>
             </div>
           </div>
-          <Button
-            className="w-full"
-            disabled={isSubmitting || Boolean(mfaResolver)}
-            type="submit"
-          >
+          <Button className="w-full" disabled={isSubmitting} type="submit">
             {isSubmitting ? (
               <LoaderCircle
                 aria-hidden="true"

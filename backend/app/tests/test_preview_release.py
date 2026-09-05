@@ -16,7 +16,6 @@ def preview_settings(**overrides: object) -> Settings:
         "audit_integrity_key": "audit-integrity-test-key-32-bytes",
         "payment_provider": "disabled",
         "media_private_encryption_enabled": False,
-        "firebase_totp_enabled": False,
     }
     values.update(overrides)
     return Settings.model_validate(values)

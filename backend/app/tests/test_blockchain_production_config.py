@@ -12,7 +12,6 @@ CONTRACT = "0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F"
 def _production(**overrides: object) -> Settings:
     values: dict[str, object] = {
         "app_env": "production",
-        "firebase_totp_enabled": True,
         "audit_integrity_key": "audit-integrity-test-key-32-bytes",
         "media_private_encryption_enabled": True,
         "media_private_encryption_active_key_id": "document-v1",
@@ -50,11 +49,6 @@ def test_production_blockchain_configuration_is_accepted() -> None:
     assert SUPPORTED_CHAINS[settings.blockchain_network] == settings.blockchain_chain_id
     assert settings.certificate_contract_address == ""
     assert settings.thv_proof_registry_contract_address == CONTRACT
-
-
-def test_production_requires_firebase_totp_attestation() -> None:
-    with pytest.raises(ValidationError):
-        _production(firebase_totp_enabled=False)
 
 
 def test_production_requires_a_dedicated_audit_integrity_key() -> None:

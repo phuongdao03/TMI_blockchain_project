@@ -4,6 +4,23 @@ import { describe, expect, it } from "vitest";
 import { BrandMark } from "@/components/layout/brand-mark";
 
 describe("BrandMark", () => {
+  it("shows the emblem and supplied wordmark together in compact workspaces", () => {
+    render(<BrandMark compact />);
+
+    const homeLink = screen.getByRole("link", {
+      name: "Trung tâm Đề cử Tinh Hoa Việt",
+    });
+    const sources = Array.from(homeLink.querySelectorAll("img"), (logo) =>
+      decodeURIComponent(logo.getAttribute("src") ?? ""),
+    );
+
+    expect(sources).toHaveLength(2);
+    expect(sources[0]).toContain("/assets/brand/thv-brand-emblem.png");
+    expect(sources[1]).toContain(
+      "/assets/brand/thv-public-header-wordmark.png",
+    );
+  });
+
   it("renders the approved Tinh Hoa Việt wordmark", () => {
     render(<BrandMark />);
 

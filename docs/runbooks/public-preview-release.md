@@ -187,7 +187,7 @@ certificate number, transaction hash or verification status. Preview content
 must remain labelled as introductory.
 
 Promotion to `full` is a separate release. It requires payOS qualification,
-staff MFA, document storage and malware scanning, Polygon contract/signing,
+staff access controls, document storage and malware scanning, Polygon contract/signing,
 security/E2E evidence and the existing production go/no-go approval. Rebuild the
 frontend with `NEXT_PUBLIC_RELEASE_MODE=full`; changing the VPS environment
 alone is insufficient.

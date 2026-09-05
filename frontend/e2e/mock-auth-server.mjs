@@ -632,7 +632,7 @@ const server = createServer(async (request, response) => {
     } else if (payload.idToken === "e2e-admin-token") {
       authenticatedUser = superAdminUser;
       persona = "super-admin";
-    } else if (payload.idToken === "e2e-reviewer-mfa-token") {
+    } else if (payload.idToken === "e2e-reviewer-token") {
       authenticatedUser = reviewerUser;
       persona = "reviewer";
     } else if (payload.idToken === "e2e-applicant-token") {
@@ -740,7 +740,7 @@ const server = createServer(async (request, response) => {
       return;
     }
     consumedInvitationTokens.add(payload.invitationToken);
-    send(response, 202, envelope({ status: "MFA_ENROLLMENT_REQUIRED" }));
+    send(response, 202, envelope({ status: "ACTIVE" }));
     return;
   }
   if (

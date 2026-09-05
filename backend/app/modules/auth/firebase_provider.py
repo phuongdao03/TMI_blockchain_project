@@ -32,15 +32,6 @@ class FirebaseClaims:
     email_verified: bool
     name: str | None
     picture: str | None
-    auth_time: datetime | None = None
-    sign_in_second_factor: str | None = None
-    second_factor_identifier: str | None = None
-
-    @property
-    def mfa_verified_at(self) -> datetime | None:
-        if self.sign_in_second_factor != "totp":
-            return None
-        return self.auth_time
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,13 +152,6 @@ class FirebaseTokenVerifier:
                 email_verified=email_verified,
                 name=_optional_string(claims.get("name")),
                 picture=_optional_string(claims.get("picture")),
-                auth_time=datetime.fromtimestamp(float(auth_time), tz=UTC),
-                sign_in_second_factor=_optional_string(
-                    firebase_claim.get("sign_in_second_factor")
-                ),
-                second_factor_identifier=_optional_string(
-                    firebase_claim.get("second_factor_identifier")
-                ),
             )
         except (jwt.InvalidTokenError, TypeError, ValueError, ValidationError) as exc:
             raise OAuthIdentityInvalidError() from exc

@@ -23,7 +23,6 @@ from app.modules.auth.schemas import (
     StaffAccountRole,
     StaffAccountStatus,
     StaffAccountUpdateRequest,
-    StaffMfaRecoveryRequest,
     StaffPermissionData,
     StaffPermissionReplaceRequest,
 )
@@ -145,41 +144,6 @@ async def replace_staff_permissions(
     data = await _service(session).replace_permissions(
         user_id=user_id,
         payload=payload,
-        principal=principal,
-        audit=AuditService(session),
-        request_id=request.state.request_id,
-        user_agent=request.headers.get("user-agent"),
-    )
-    return SuccessEnvelope(
-        data=data,
-        meta=ResponseMeta(request_id=request.state.request_id),
-    )
-
-
-@router.post(
-    "/{user_id}/mfa-recovery",
-    response_model=SuccessEnvelope[PrivilegedActionData],
-    responses={
-        403: {
-            "description": "Only a super administrator can initiate recovery.",
-            "model": ErrorEnvelope,
-        },
-        404: {"description": "Staff account not found.", "model": ErrorEnvelope},
-    },
-)
-async def initiate_staff_mfa_recovery(
-    user_id: UUID,
-    payload: StaffMfaRecoveryRequest,
-    request: Request,
-    principal: CsrfProtectedPrincipalDependency,
-    session: SessionDependency,
-) -> SuccessEnvelope[PrivilegedActionData]:
-    data = await StaffPrivilegedActionService(session=session).request(
-        target_user_id=user_id,
-        payload=PrivilegedActionRequest(
-            action="MFA_RECOVERY",
-            reason=payload.reason,
-        ),
         principal=principal,
         audit=AuditService(session),
         request_id=request.state.request_id,

@@ -1,15 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  GoogleAuthProvider,
-  TotpMultiFactorGenerator,
-  getMultiFactorResolver,
-  signInWithPopup,
-  type MultiFactorError,
-  type MultiFactorResolver,
-  type User,
-} from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup, type User } from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -42,11 +34,6 @@ function oauthErrorMessage(error: unknown): string {
       return "Đăng nhập Google đang tạm thời gián đoạn. Vui lòng thử lại sau.";
     if (error.code === "OAUTH_ACCOUNT_LINK_REQUIRED")
       return "Email này đã có tài khoản. Hãy đăng nhập bằng email và mật khẩu trước.";
-    if (
-      error.code === "STAFF_MFA_REQUIRED" ||
-      error.code === "STAFF_MFA_REAUTH_REQUIRED"
-    )
-      return "Tài khoản cần xác minh bổ sung. Hãy đăng nhập lại và nhập mã từ ứng dụng xác thực.";
     return "Không thể hoàn tất đăng nhập lúc này. Vui lòng thử lại.";
   }
   const code = (error as { code?: string } | null)?.code;
@@ -72,8 +59,6 @@ export function GoogleOAuthButton({
   const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string>();
-  const [resolver, setResolver] = useState<MultiFactorResolver>();
-  const [verificationCode, setVerificationCode] = useState("");
 
   async function finishSignIn(user: User) {
     const idToken = await user.getIdToken(true);
@@ -104,38 +89,7 @@ export function GoogleOAuthButton({
       );
       await finishSignIn(credential.user);
     } catch (cause) {
-      if (
-        (cause as { code?: string } | null)?.code ===
-        "auth/multi-factor-auth-required"
-      ) {
-        setResolver(
-          getMultiFactorResolver(getFirebaseAuth(), cause as MultiFactorError),
-        );
-        setIsPending(false);
-        return;
-      }
       setError(oauthErrorMessage(cause));
-      setIsPending(false);
-    }
-  }
-
-  async function verifySecondFactor() {
-    if (!resolver || !/^\d{6}$/.test(verificationCode)) return;
-    setError(undefined);
-    setIsPending(true);
-    try {
-      const hint = resolver.hints.find(
-        (item) => item.factorId === TotpMultiFactorGenerator.FACTOR_ID,
-      );
-      if (!hint) throw new Error("TOTP_FACTOR_NOT_FOUND");
-      const assertion = TotpMultiFactorGenerator.assertionForSignIn(
-        hint.uid,
-        verificationCode,
-      );
-      const credential = await resolver.resolveSignIn(assertion);
-      await finishSignIn(credential.user);
-    } catch {
-      setError("Mã xác minh không đúng hoặc đã hết hạn. Vui lòng thử lại.");
       setIsPending(false);
     }
   }
@@ -150,38 +104,9 @@ export function GoogleOAuthButton({
           {error}
         </p>
       ) : null}
-      {resolver ? (
-        <div className="space-y-3 rounded-lg border border-[#F6C515]/30 bg-[#201d16] p-4">
-          <label
-            className="block text-sm font-semibold text-[#e5e2e1]"
-            htmlFor="staff-mfa-code"
-          >
-            Mã 6 số từ ứng dụng xác thực
-          </label>
-          <input
-            autoComplete="one-time-code"
-            className="min-h-12 w-full rounded-md border border-white/20 bg-[#111] px-3 text-center font-mono text-lg tracking-[0.3em] text-white outline-none focus:border-[#F6C515]"
-            id="staff-mfa-code"
-            inputMode="numeric"
-            maxLength={6}
-            onChange={(event) =>
-              setVerificationCode(event.target.value.replace(/\D/g, ""))
-            }
-            value={verificationCode}
-          />
-          <button
-            className="min-h-11 w-full rounded-md bg-[#F6C515] px-4 text-sm font-bold text-[#470000] disabled:opacity-60"
-            disabled={isPending || verificationCode.length !== 6}
-            onClick={verifySecondFactor}
-            type="button"
-          >
-            {isPending ? "Đang xác minh…" : "Xác nhận mã"}
-          </button>
-        </div>
-      ) : null}
       <button
         className="auth-google-button flex min-h-12 w-full items-center justify-center gap-3 rounded-md border border-[#ad8883]/45 bg-[#171717] px-4 text-sm font-bold text-[#e5e2e1] transition-colors hover:border-[#ffb4aa] hover:bg-[#242222] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffb4aa] disabled:pointer-events-none disabled:opacity-60"
-        disabled={isPending || Boolean(resolver)}
+        disabled={isPending}
         onClick={startGoogleOAuth}
         type="button"
       >

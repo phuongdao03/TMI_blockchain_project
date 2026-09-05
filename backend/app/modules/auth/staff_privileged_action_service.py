@@ -196,11 +196,13 @@ class StaffPrivilegedActionService:
                 "status": target.status.value,
                 "roles": sorted(role.code for _, role in before_roles),
             }
-            if action.action_type is PrivilegedActionType.ROLE_CHANGE:
-                await self._apply_role_change(action, target.id, before_roles)
-            else:
-                target.status = UserStatus.SUSPENDED
-                target.mfa_recovery_authorized_at = now
+            if action.action_type is not PrivilegedActionType.ROLE_CHANGE:
+                raise DomainError(
+                    code="PRIVILEGED_ACTION_DEPRECATED",
+                    message="This legacy privileged action is no longer supported.",
+                    status_code=409,
+                )
+            await self._apply_role_change(action, target.id, before_roles)
             revoked = await self._repository.revoke_active_auth_sessions_for_user(
                 target.id, now
             )

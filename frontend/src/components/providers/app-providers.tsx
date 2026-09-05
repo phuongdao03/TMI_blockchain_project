@@ -26,7 +26,6 @@ const sessionlessPrefixes = [
   "/reset-password",
   "/verify-email",
   "/staff-invitation",
-  "/staff-mfa-recovery",
 ] as const;
 
 function SessionBootstrap() {

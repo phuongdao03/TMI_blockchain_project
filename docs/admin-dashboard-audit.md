@@ -78,7 +78,7 @@ server-paginated data-table contract.
 - Permission codes use the requested `resource.action` style and policy checks
   default to denial when neither permission, compatibility role, nor permitted
   Super Admin bypass applies.
-- Staff invitation, disable, role-change, session revocation, and MFA recovery
+- Staff invitation, disable, role-change, and session revocation
   flows exist. Privileged role/MFA actions can require a distinct approver and
   carry a reason, status, expiry, and audit evidence.
 - A major product conflict exists: migration `0058` intentionally consolidated

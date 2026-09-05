@@ -32,7 +32,6 @@ test.beforeEach(async ({ context }) => {
 });
 
 test("critical MVP journey reaches a publicly verifiable certificate", async ({
-  browser,
   context,
   page,
   request,
@@ -123,86 +122,6 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     await page.getByRole("button", { name: "Gửi kết quả thẩm định" }).click();
     await page.getByRole("button", { name: "Xác nhận gửi" }).click();
     await expect(page.getByText("Kết quả đã gửi.")).toBeVisible();
-  });
-
-  await test.step("council attends, votes and approves", async () => {
-    await request.post(`${mockApiUrl}/api/e2e/reset-council`);
-    const councilContext = await browser.newContext();
-    await councilContext.addCookies([
-      {
-        name: "tmi_access",
-        value: "e2e-super-admin-access",
-        domain: "127.0.0.1",
-        path: "/",
-        httpOnly: true,
-        sameSite: "Lax",
-      },
-      {
-        name: "tmi_refresh",
-        value: "e2e-refresh",
-        domain: "127.0.0.1",
-        path: "/",
-        httpOnly: true,
-        sameSite: "Lax",
-      },
-      {
-        name: "tmi_csrf",
-        value: "e2e-csrf",
-        domain: "127.0.0.1",
-        path: "/",
-        httpOnly: false,
-        sameSite: "Lax",
-      },
-      {
-        name: "tmi_e2e_persona",
-        value: "super-admin",
-        domain: "127.0.0.1",
-        path: "/",
-        httpOnly: false,
-        sameSite: "Lax",
-      },
-    ]);
-    const councilPage = await councilContext.newPage();
-    try {
-      await councilPage.goto("/council");
-      const openSessionLink = councilPage.getByRole("link", {
-        name: "Mở phiên",
-      });
-      await expect(openSessionLink).toHaveAttribute("href", /\/council\//);
-      const sessionHref = await openSessionLink.getAttribute("href");
-      if (!sessionHref) {
-        throw new Error("Council session link is missing its destination.");
-      }
-      await councilPage.goto(sessionHref);
-      await councilPage
-        .getByRole("button", { name: "Xác nhận tham dự" })
-        .click();
-      await councilPage
-        .getByRole("button", { name: "Bắt đầu xét duyệt" })
-        .click();
-      await councilPage
-        .getByRole("button", { name: "Tiếp nhận hồ sơ" })
-        .click();
-      await councilPage
-        .getByRole("button", { name: "Gửi kết quả xử lý" })
-        .click();
-      await councilPage.getByRole("button", { name: "Phê duyệt" }).click();
-      await councilPage
-        .getByLabel("Lý do lựa chọn")
-        .fill("Hồ sơ đáp ứng đầy đủ tiêu chí Hội đồng.");
-      await councilPage
-        .getByRole("button", { name: "Kiểm tra kết quả" })
-        .click();
-      await councilPage
-        .getByRole("button", { name: "Xác nhận và gửi kết quả" })
-        .click();
-      await councilPage.getByRole("button", { name: "Kết thúc phiên" }).click();
-      await expect(
-        councilPage.getByRole("heading", { name: "Phê duyệt hồ sơ" }),
-      ).toBeVisible();
-    } finally {
-      await councilContext.close();
-    }
   });
 
   await test.step("payment is confirmed by trusted status", async () => {

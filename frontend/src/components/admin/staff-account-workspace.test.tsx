@@ -20,7 +20,6 @@ vi.mock("@/lib/api/client", () => ({
   staffAccountsApi: {
     list: vi.fn(),
     update: vi.fn(),
-    initiateMfaRecovery: vi.fn(),
     requestRoleChange: vi.fn(),
     listPendingActions: vi.fn(),
     approveAction: vi.fn(),

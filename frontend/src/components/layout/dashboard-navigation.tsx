@@ -58,9 +58,17 @@ const personalItems: NavigationItem[] = [
   { href: "/activity", label: "Hoạt động gần đây", icon: History },
 ];
 
-const supportItems: NavigationItem[] = [
-  { href: "/guide", label: "Hướng dẫn", icon: CircleHelp },
-];
+const publicSupportItem: NavigationItem = {
+  href: "/guide",
+  label: "Hướng dẫn",
+  icon: CircleHelp,
+};
+
+const adminSupportItem: NavigationItem = {
+  href: "/admin/guide",
+  label: "Hướng dẫn",
+  icon: CircleHelp,
+};
 
 const userItems: NavigationItem[] = [
   { href: "/dossiers", label: "Hồ sơ của tôi", icon: FileText },
@@ -113,12 +121,6 @@ const adminItems: NavigationItem[] = [
     label: "Báo cáo",
     icon: FileCheck2,
     permission: "reports.read",
-  },
-  {
-    href: "/council",
-    label: "Phiên xét duyệt",
-    icon: FileCheck2,
-    permission: "submissions.approve",
   },
 ];
 
@@ -190,10 +192,7 @@ function mobileItemsFor(
   items: NavigationItem[],
 ): NavigationItem[] {
   const operational = items.filter(
-    (item) =>
-      item.href.startsWith("/admin/") ||
-      item.href === "/council" ||
-      item.href === "/blockchain",
+    (item) => item.href.startsWith("/admin/") || item.href === "/blockchain",
   );
   const priorities: Record<WorkspacePersona, string[]> = {
     VIEWER: ["/dashboard", "/search", "/works", "/map"],
@@ -245,9 +244,11 @@ export function DashboardNavigation({
   const effectivePermissions = authUser?.permissions ?? [];
   const persona = resolveWorkspacePersona(effectiveRoles);
   const preview = isPreviewRelease();
+  const supportItem =
+    persona === "SUPER_ADMIN" ? adminSupportItem : publicSupportItem;
   const sections = [
     ...sectionsFor(persona, effectiveRoles, effectivePermissions),
-    { label: "Hỗ trợ", items: supportItems },
+    { label: "Hỗ trợ", items: [supportItem] },
     ...(effectiveRoles.includes("SUPER_ADMIN")
       ? [{ label: "Blockchain", items: blockchainSignerItems }]
       : []),

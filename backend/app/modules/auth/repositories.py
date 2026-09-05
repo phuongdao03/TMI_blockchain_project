@@ -296,8 +296,6 @@ class AuthRepository:
 
     @staticmethod
     def _filter_staff_status(statement: Any, account_status: str | None) -> Any:
-        if account_status == "PENDING_MFA":
-            return statement.where(User.status == UserStatus.PENDING)
         if account_status == "ACTIVE":
             return statement.where(User.status == UserStatus.ACTIVE)
         if account_status == "SUSPENDED":

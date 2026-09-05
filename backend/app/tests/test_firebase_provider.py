@@ -110,43 +110,6 @@ def test_firebase_token_is_verified_and_normalized(
     assert claims.email_verified is True
 
 
-def test_firebase_totp_claim_exposes_mfa_evidence() -> None:
-    key = rsa.generate_private_key(public_exponent=65_537, key_size=2_048)
-    now = datetime(2026, 8, 6, 8, tzinfo=UTC)
-    token = jwt.encode(
-        {
-            "iss": "https://securetoken.google.com/tmi-test",
-            "aud": "tmi-test",
-            "sub": "firebase-staff-1",
-            "iat": int(now.timestamp()),
-            "exp": int((now + timedelta(hours=1)).timestamp()),
-            "auth_time": int(now.timestamp()),
-            "email": "staff@example.com",
-            "email_verified": True,
-            "firebase": {
-                "sign_in_provider": "google.com",
-                "sign_in_second_factor": "totp",
-                "second_factor_identifier": "totp-enrollment-1",
-            },
-        },
-        key,
-        algorithm="RS256",
-        headers={"kid": "firebase-key"},
-    )
-    verifier = FirebaseTokenVerifier.create(
-        project_id="tmi-test",
-        jwks_uri="https://firebase.test/certs",
-        timeout_seconds=5,
-        http_client=FakeFirebaseClient(_firebase_certificate(key, now)),
-        clock=lambda: now,
-    )
-
-    claims = asyncio.run(verifier.validate_id_token(token))
-
-    assert claims.mfa_verified_at == now
-    assert claims.second_factor_identifier == "totp-enrollment-1"
-
-
 def test_unsigned_emulator_token_requires_explicit_local_verifier() -> None:
     now = datetime(2026, 8, 8, 8, tzinfo=UTC)
     token = jwt.encode(

@@ -17,7 +17,6 @@ from app.modules.auth.models import AccountType, AuthSession, UserStatus
 from app.modules.auth.rate_limit import RegistrationRateLimiter
 from app.modules.auth.repositories import AuthRepository
 from app.modules.auth.security import Argon2PasswordHasher
-from app.modules.auth.staff_mfa import StaffMfaPolicy
 from app.modules.auth.tokens import (
     AccessTokenManager,
     CsrfTokenManager,
@@ -77,7 +76,6 @@ class SessionService:
         csrf_tokens: CsrfTokenManager,
         rate_limiter: RegistrationRateLimiter,
         refresh_ttl: timedelta,
-        mfa_policy: StaffMfaPolicy | None = None,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._session = session
@@ -88,7 +86,6 @@ class SessionService:
         self._csrf_tokens = csrf_tokens
         self._rate_limiter = rate_limiter
         self._refresh_ttl = refresh_ttl
-        self._mfa_policy = mfa_policy or StaffMfaPolicy(max_age=timedelta(hours=12))
         self._clock = clock or (lambda: datetime.now(UTC))
 
     async def login(
@@ -135,12 +132,6 @@ class SessionService:
                     user.password_hash = await self._password_hasher.hash(password)
 
                 now = self._clock()
-                roles = await self._repository.get_role_codes(user.id)
-                self._mfa_policy.require(
-                    roles=roles,
-                    mfa_verified_at=None,
-                    now=now,
-                )
                 refresh_token = new_opaque_token()
                 auth_session = AuthSession(
                     user_id=user.id,
@@ -179,7 +170,6 @@ class SessionService:
         *,
         user_id: UUID,
         metadata: ClientMetadata,
-        mfa_verified_at: datetime | None = None,
     ) -> IssuedSession:
         now = self._clock()
         async with self._session.begin():
@@ -190,18 +180,11 @@ class SessionService:
                 or user.email_verified_at is None
             ):
                 raise UnauthenticatedError()
-            roles = await self._repository.get_role_codes(user.id)
-            self._mfa_policy.require(
-                roles=roles,
-                mfa_verified_at=mfa_verified_at,
-                now=now,
-            )
             issued = await self._create_session(
                 user_id=user.id,
                 metadata=metadata,
                 rotated_from_id=None,
                 now=now,
-                mfa_verified_at=mfa_verified_at,
             )
             self._audit(
                 "auth.oauth.session.issued",
@@ -254,19 +237,12 @@ class SessionService:
             elif self._as_utc(previous.expires_at) <= now:
                 raise UnauthenticatedError()
             else:
-                roles = await self._repository.get_role_codes(previous.user_id)
-                self._mfa_policy.require(
-                    roles=roles,
-                    mfa_verified_at=previous.mfa_verified_at,
-                    now=now,
-                )
                 previous.revoked_at = now
                 issued = await self._create_session(
                     user_id=previous.user_id,
                     metadata=metadata,
                     rotated_from_id=previous.id,
                     now=now,
-                    mfa_verified_at=previous.mfa_verified_at,
                 )
                 self._audit(
                     "auth.refresh.rotated",
@@ -389,11 +365,6 @@ class SessionService:
             ):
                 raise UnauthenticatedError()
             roles = await self._repository.get_role_codes(user.id)
-            self._mfa_policy.require(
-                roles=roles,
-                mfa_verified_at=auth_session.mfa_verified_at,
-                now=now,
-            )
             permissions = await self._repository.get_permission_codes(user.id)
 
         return AuthPrincipal(
@@ -412,7 +383,6 @@ class SessionService:
         metadata: ClientMetadata,
         rotated_from_id: UUID | None,
         now: datetime,
-        mfa_verified_at: datetime | None,
     ) -> IssuedSession:
         refresh_token = new_opaque_token()
         auth_session = AuthSession(
@@ -423,7 +393,6 @@ class SessionService:
             user_agent=self._limited(metadata.user_agent, 1024),
             expires_at=now + self._refresh_ttl,
             rotated_from_id=rotated_from_id,
-            mfa_verified_at=mfa_verified_at,
         )
         self._repository.add_auth_session(auth_session)
         await self._session.flush()

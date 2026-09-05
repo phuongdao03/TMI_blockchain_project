@@ -107,7 +107,6 @@ def test_real_money_test_gate_is_bounded_and_never_enabled_in_production(
         Settings.model_validate(
             {
                 "app_env": "production",
-                "firebase_totp_enabled": True,
                 "audit_integrity_key": "audit-integrity-test-key-32-bytes",
                 "media_private_encryption_enabled": True,
                 "media_private_encryption_active_key_id": "document-v1",

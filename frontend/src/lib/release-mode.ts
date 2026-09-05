@@ -4,7 +4,6 @@ const restrictedPrefixes = [
   "/admin",
   "/activity",
   "/certificates",
-  "/council",
   "/dossiers",
   "/notifications",
   "/payments",

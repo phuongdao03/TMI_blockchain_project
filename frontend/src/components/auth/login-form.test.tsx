@@ -23,8 +23,6 @@ vi.mock("firebase/auth", () => ({
   sendEmailVerification,
   signInWithEmailAndPassword,
   signOut,
-  getMultiFactorResolver: vi.fn(),
-  TotpMultiFactorGenerator: { FACTOR_ID: "totp" },
 }));
 
 vi.mock("next/navigation", () => ({

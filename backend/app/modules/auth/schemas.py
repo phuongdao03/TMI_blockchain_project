@@ -17,9 +17,9 @@ class RegisterRequest(BaseModel):
 
 INTERNAL_ACCOUNT_ROLES = ("MODERATOR",)
 INTERNAL_MANAGED_ROLES = frozenset(INTERNAL_ACCOUNT_ROLES)
-STAFF_ACCOUNT_STATUSES = ("PENDING_MFA", "ACTIVE", "SUSPENDED", "DISABLED")
+STAFF_ACCOUNT_STATUSES = ("ACTIVE", "SUSPENDED", "DISABLED")
 StaffAccountRole = Literal["MODERATOR",]
-StaffAccountStatus = Literal["PENDING_MFA", "ACTIVE", "SUSPENDED", "DISABLED"]
+StaffAccountStatus = Literal["ACTIVE", "SUSPENDED", "DISABLED"]
 StaffInvitationStatus = Literal["PENDING", "ACCEPTED", "REVOKED", "EXPIRED"]
 
 
@@ -30,16 +30,10 @@ class StaffAccountUpdateRequest(BaseModel):
     status: Literal["ACTIVE", "SUSPENDED", "DISABLED"] | None = None
 
 
-class StaffMfaRecoveryRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    reason: Annotated[str, Field(min_length=10, max_length=500)]
-
-
 class PrivilegedActionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
-    action: Literal["ROLE_CHANGE", "MFA_RECOVERY"]
+    action: Literal["ROLE_CHANGE"]
     requested_role: (
         Literal[
             "MODERATOR",
@@ -65,15 +59,6 @@ class PrivilegedActionData(BaseModel):
     reason: str
     expires_at: datetime = Field(alias="expiresAt")
     resolved_at: datetime | None = Field(default=None, alias="resolvedAt")
-
-
-class StaffMfaRecoveryAuthorizeRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)
-
-    id_token: Annotated[
-        str,
-        Field(alias="idToken", min_length=100, max_length=16_384),
-    ]
 
 
 class StaffAccountData(BaseModel):
@@ -145,7 +130,7 @@ class StaffInvitationData(BaseModel):
 class StaffInvitationAcceptedData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: Literal["MFA_ENROLLMENT_REQUIRED"]
+    status: Literal["ACTIVE"]
 
 
 class ApplicantUpgradeRequest(BaseModel):

@@ -126,8 +126,6 @@ class Settings(BaseSettings):
         ge=900,
         le=604_800,
     )
-    firebase_totp_enabled: bool = False
-    staff_mfa_max_age_seconds: int = Field(default=43_200, ge=300, le=86_400)
     oauth_rate_limit: int = Field(default=10, ge=1, le=100)
     oauth_rate_window_seconds: int = Field(default=60, ge=1, le=3_600)
     cloudinary_cloud_name: str = Field(default="", max_length=255)
@@ -463,12 +461,6 @@ class Settings(BaseSettings):
             )
         if self.app_env != "local" and self.firebase_auth_emulator_host.strip():
             raise ValueError("Firebase Auth emulator is local-only.")
-        if (
-            self.app_env == "production"
-            and self.release_mode == "full"
-            and not self.firebase_totp_enabled
-        ):
-            raise ValueError("Firebase TOTP MFA must be enabled in production.")
         provider = self.payment_provider.strip().lower()
         if provider not in {"disabled", "mock", "payos"}:
             raise ValueError("Payment provider must be disabled, mock or payos.")

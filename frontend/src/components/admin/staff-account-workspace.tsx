@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   MailPlus,
-  KeyRound,
   LockKeyhole,
   Search,
   ShieldCheck,
@@ -47,11 +46,6 @@ export function StaffAccountWorkspace() {
   const [status, setStatus] = useState<StaffAccountStatus | "ALL">("ALL");
   const [roleFilter, setRoleFilter] = useState<StaffAccountRole | "ALL">("ALL");
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [recoveryTarget, setRecoveryTarget] = useState<{
-    id: string;
-    email: string;
-  } | null>(null);
-  const [recoveryReason, setRecoveryReason] = useState("");
   const [roleChangeReason, setRoleChangeReason] = useState("");
   const [confirmInvite, setConfirmInvite] = useState(false);
   const [pendingUpdate, setPendingUpdate] = useState<{
@@ -177,32 +171,6 @@ export function StaffAccountWorkspace() {
         cause instanceof ApiError
           ? cause.message
           : "Không thể gửi yêu cầu thay đổi nhiệm vụ.",
-      ),
-  });
-  const recovery = useMutation({
-    mutationFn: () => {
-      if (!recoveryTarget) throw new Error("No recovery target selected");
-      return staffAccountsApi.initiateMfaRecovery(
-        recoveryTarget.id,
-        recoveryReason.trim(),
-      );
-    },
-    onSuccess: () => {
-      setFeedback(
-        "Đã gửi yêu cầu khôi phục. Tài khoản chỉ bị tạm khóa sau khi một quản trị viên khác phê duyệt.",
-      );
-      setError(null);
-      setRecoveryTarget(null);
-      setRecoveryReason("");
-      void queryClient.invalidateQueries({
-        queryKey: ["admin", "staff-privileged-actions"],
-      });
-    },
-    onError: (cause) =>
-      setError(
-        cause instanceof ApiError
-          ? cause.message
-          : "Không thể bắt đầu khôi phục tài khoản.",
       ),
   });
   const approveAction = useMutation({
@@ -340,7 +308,7 @@ export function StaffAccountWorkspace() {
                   <p className="font-semibold text-neutral-950">
                     {action.action === "ROLE_CHANGE"
                       ? `Thay đổi nhiệm vụ${action.requestedRole ? ` · ${action.requestedRole}` : ""}`
-                      : "Khôi phục bảo vệ tài khoản"}
+                      : "Yêu cầu bảo mật cũ"}
                   </p>
                   <p className="mt-1 text-sm text-neutral-600">
                     {target?.email ?? "Tài khoản nội bộ"} · {action.reason}
@@ -542,7 +510,6 @@ export function StaffAccountWorkspace() {
                   value={status}
                 >
                   <option value="ALL">Tất cả trạng thái</option>
-                  <option value="PENDING_MFA">Chờ hoàn tất bảo vệ</option>
                   <option value="ACTIVE">Đang hoạt động</option>
                   <option value="SUSPENDED">Đã khóa</option>
                   <option value="DISABLED">Đã vô hiệu hóa</option>
@@ -689,8 +656,7 @@ export function StaffAccountWorkspace() {
                                 {nextStatus === "ACTIVE" ? "Mở khóa" : "Khóa"}
                               </button>
                             ) : null}
-                            {account.status !== "DISABLED" &&
-                            account.status !== "PENDING_MFA" ? (
+                            {account.status !== "DISABLED" ? (
                               <button
                                 aria-label={`Vô hiệu hóa ${account.email}`}
                                 className="inline-flex min-h-9 items-center rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
@@ -707,29 +673,6 @@ export function StaffAccountWorkspace() {
                                 Vô hiệu hóa
                               </button>
                             ) : null}
-                            <button
-                              aria-label={`Khôi phục ứng dụng xác thực cho ${account.email}`}
-                              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-amber-300 px-3 text-xs font-bold text-amber-800 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
-                              disabled={
-                                recovery.isPending ||
-                                isProtected ||
-                                account.status !== "ACTIVE"
-                              }
-                              onClick={() => {
-                                setRecoveryTarget({
-                                  id: account.id,
-                                  email: account.email,
-                                });
-                                setRecoveryReason("");
-                              }}
-                              type="button"
-                            >
-                              <KeyRound
-                                aria-hidden="true"
-                                className="size-3.5"
-                              />
-                              Khôi phục bảo vệ
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -798,64 +741,9 @@ export function StaffAccountWorkspace() {
             </div>
           </div>
         ) : null}
-        {recoveryTarget ? (
-          <div
-            aria-labelledby="staff-recovery-title"
-            aria-modal="true"
-            className="fixed inset-0 z-50 grid place-items-center bg-neutral-950/70 p-4 backdrop-blur-sm"
-            role="dialog"
-          >
-            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-              <h2
-                className="text-xl font-bold text-neutral-950"
-                id="staff-recovery-title"
-              >
-                Khôi phục bảo vệ tài khoản
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-neutral-600">
-                Yêu cầu cho {recoveryTarget.email} cần một quản trị viên khác
-                phê duyệt. Khi được duyệt, mọi phiên đang mở mới bị kết thúc.
-              </p>
-              <label
-                className="mt-5 block text-sm font-semibold text-neutral-900"
-                htmlFor="staff-recovery-reason"
-              >
-                Lý do khôi phục
-              </label>
-              <textarea
-                className={`${inputClass} min-h-28 resize-y py-3`}
-                id="staff-recovery-reason"
-                maxLength={500}
-                onChange={(event) => setRecoveryReason(event.target.value)}
-                placeholder="Ví dụ: Nhân sự đã xác minh danh tính và mất thiết bị cũ."
-                value={recoveryReason}
-              />
-              <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <button
-                  className="min-h-11 rounded-lg px-4 text-sm font-bold text-neutral-600 hover:bg-neutral-100"
-                  disabled={recovery.isPending}
-                  onClick={() => setRecoveryTarget(null)}
-                  type="button"
-                >
-                  Hủy
-                </button>
-                <button
-                  className="min-h-11 rounded-lg bg-amber-700 px-4 text-sm font-bold text-white disabled:opacity-50"
-                  disabled={
-                    recovery.isPending || recoveryReason.trim().length < 10
-                  }
-                  onClick={() => recovery.mutate()}
-                  type="button"
-                >
-                  {recovery.isPending ? "Đang xử lý…" : "Gửi yêu cầu khôi phục"}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
         <ConfirmationDialog
           confirmLabel="Gửi lời mời"
-          description={`Lời mời sẽ được gửi tới ${email || "email đã nhập"} cho nhiệm vụ ${selectedRole?.label ?? "đã chọn"}. Người nhận phải xác minh đúng email và thiết lập bảo vệ tài khoản trước khi làm việc.`}
+          description={`Lời mời sẽ được gửi tới ${email || "email đã nhập"} cho nhiệm vụ ${selectedRole?.label ?? "đã chọn"}. Người nhận phải xác minh đúng email trước khi làm việc.`}
           isPending={create.isPending}
           onCancel={() => setConfirmInvite(false)}
           onConfirm={() => create.mutate()}
@@ -880,10 +768,7 @@ export function StaffAccountWorkspace() {
           isPending={update.isPending}
           onCancel={() => setPendingUpdate(null)}
           onConfirm={() => {
-            if (
-              pendingUpdate?.status &&
-              pendingUpdate.status !== "PENDING_MFA"
-            ) {
+            if (pendingUpdate?.status) {
               update.mutate({
                 id: pendingUpdate.id,
                 email: pendingUpdate.email,
@@ -940,7 +825,6 @@ function TableSkeleton() {
 
 function staffStatusLabel(status: StaffAccountStatus) {
   const labels: Record<StaffAccountStatus, string> = {
-    PENDING_MFA: "Chờ hoàn tất bảo vệ",
     ACTIVE: "Đang hoạt động",
     SUSPENDED: "Tạm khóa",
     DISABLED: "Đã vô hiệu hóa",

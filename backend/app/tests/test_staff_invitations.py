@@ -37,8 +37,8 @@ def test_staff_accounts_can_only_be_provisioned_through_invitations() -> None:
     assert "post" not in paths["/api/v1/admin/staff-accounts"]
     assert "post" in paths["/api/v1/admin/staff-invitations"]
     assert "post" in paths["/api/v1/auth/staff-invitations/accept"]
-    assert "post" in paths["/api/v1/auth/staff-mfa/recovery/authorize"]
-    assert "post" in paths["/api/v1/admin/staff-accounts/{user_id}/mfa-recovery"]
+    assert "/api/v1/auth/staff-mfa/recovery/authorize" not in paths
+    assert "/api/v1/admin/staff-accounts/{user_id}/mfa-recovery" not in paths
     assert "post" in paths["/api/v1/admin/staff-accounts/{user_id}/privileged-actions"]
     assert "get" in paths["/api/v1/admin/staff-accounts/privileged-actions/pending"]
     assert (
@@ -205,7 +205,7 @@ def test_invitation_is_single_use_email_bound_and_idempotently_resendable(
                 user_agent="test",
             )
             assert accepted.email == "reviewer@example.com"
-            assert accepted.status == "PENDING_MFA"
+            assert accepted.status == "ACTIVE"
             assert await session.scalar(select(func.count(User.id))) == 2
             assert await session.scalar(select(func.count(AuthIdentity.id))) == 1
             assert await session.scalar(select(func.count()).select_from(UserRole)) == 1

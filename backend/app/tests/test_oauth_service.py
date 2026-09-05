@@ -36,9 +36,8 @@ class FakeIssuer:
         *,
         user_id: UUID,
         metadata: ClientMetadata,
-        mfa_verified_at: datetime | None = None,
     ) -> IssuedSession:
-        del metadata, mfa_verified_at
+        del metadata
         self.user_id = user_id
         return IssuedSession("access", "refresh", "csrf")
 
@@ -138,7 +137,7 @@ def test_oauth_signup_collision_and_existing_identity_are_safe(tmp_path: Path) -
     asyncio.run(scenario())
 
 
-def test_pending_staff_is_activated_only_by_verified_totp(tmp_path: Path) -> None:
+def test_pending_staff_is_activated_by_matching_verified_email(tmp_path: Path) -> None:
     async def scenario() -> None:
         engine = create_async_engine(
             f"sqlite+aiosqlite:///{(tmp_path / 'staff-activation.sqlite3').as_posix()}"
@@ -173,27 +172,8 @@ def test_pending_staff_is_activated_only_by_verified_totp(tmp_path: Path) -> Non
                 session_issuer=FakeIssuer(),
                 clock=lambda: NOW,
             )
-            with pytest.raises(DomainError) as missing_mfa:
-                await service.complete(
-                    claims=_claims(
-                        email="reviewer@example.com", subject="firebase-staff"
-                    ),
-                    attempt=_attempt(),
-                    metadata=ClientMetadata("127.0.0.1", "test", "Firebase"),
-                )
-            assert missing_mfa.value.code == "STAFF_MFA_REQUIRED"
-            await session.rollback()
-
             await service.complete(
-                claims=FirebaseClaims(
-                    subject="firebase-staff",
-                    email="reviewer@example.com",
-                    email_verified=True,
-                    name=None,
-                    picture=None,
-                    auth_time=NOW,
-                    sign_in_second_factor="totp",
-                ),
+                claims=_claims(email="reviewer@example.com", subject="firebase-staff"),
                 attempt=_attempt(),
                 metadata=ClientMetadata("127.0.0.1", "test", "Firebase"),
             )
@@ -202,7 +182,7 @@ def test_pending_staff_is_activated_only_by_verified_totp(tmp_path: Path) -> Non
             activated = await session.get(User, staff_id)
             assert activated is not None
             assert activated.status is UserStatus.ACTIVE
-            assert "auth.staff_mfa.activated" in set(
+            assert "auth.staff_account.activated" in set(
                 (await session.scalars(select(AuditLog.action))).all()
             )
         await engine.dispose()

@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import CouncilLayout from "@/app/(dashboard)/council/layout";
 import ReviewsLayout from "@/app/(dashboard)/reviews/layout";
 import { AuthUserProvider } from "@/lib/auth/user-context";
 
@@ -41,26 +40,5 @@ describe("operations route gates", () => {
       </AuthUserProvider>,
     );
     expect(screen.getByText("Review queue")).toBeDefined();
-  });
-
-  it("reserves the council workspace for Super Admin", () => {
-    const { rerender } = render(
-      <AuthUserProvider user={userWith(["MODERATOR"])}>
-        <CouncilLayout>
-          <p>Council queue</p>
-        </CouncilLayout>
-      </AuthUserProvider>,
-    );
-
-    expect(screen.queryByText("Council queue")).toBeNull();
-
-    rerender(
-      <AuthUserProvider user={userWith(["SUPER_ADMIN"])}>
-        <CouncilLayout>
-          <p>Council queue</p>
-        </CouncilLayout>
-      </AuthUserProvider>,
-    );
-    expect(screen.getByText("Council queue")).toBeDefined();
   });
 });

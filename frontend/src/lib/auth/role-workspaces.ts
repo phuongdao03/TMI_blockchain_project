@@ -16,7 +16,7 @@ const OPERATIONAL_WORKSPACES: ReadonlyArray<readonly [string, string]> = [
   ["staff.read", "/admin/staff"],
   ["audit.read", "/admin/audit"],
   ["reports.read", "/admin/reports"],
-  ["submissions.approve", "/council"],
+  ["submissions.approve", "/reviews"],
   ["blockchain.sign", "/blockchain"],
 ];
 

@@ -21,14 +21,26 @@ export function BrandMark({
       href="/"
     >
       {compact ? (
-        <Image
-          className="brand-mark__emblem"
-          src="/assets/brand/thv-brand-emblem.png"
-          alt=""
-          width={1254}
-          height={1254}
-          priority
-        />
+        <span className="brand-mark__compact-lockup" aria-hidden="true">
+          <Image
+            className="brand-mark__emblem"
+            src="/assets/brand/thv-brand-emblem.png"
+            alt=""
+            width={1254}
+            height={1254}
+            priority
+          />
+          <span className="brand-mark__compact-wordmark-frame">
+            <Image
+              className="brand-mark__compact-wordmark"
+              src="/assets/brand/thv-public-header-wordmark.png"
+              alt=""
+              width={1536}
+              height={1024}
+              priority
+            />
+          </span>
+        </span>
       ) : usesPublicSeal ? (
         <span className="brand-mark__public-lockup" aria-hidden="true">
           <span className="brand-mark__seal-frame">

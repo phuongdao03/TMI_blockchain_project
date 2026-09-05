@@ -83,11 +83,7 @@ export interface AdminUserListFilters {
 }
 
 export type StaffAccountRole = "MODERATOR";
-export type StaffAccountStatus =
-  | "PENDING_MFA"
-  | "ACTIVE"
-  | "SUSPENDED"
-  | "DISABLED";
+export type StaffAccountStatus = "ACTIVE" | "SUSPENDED" | "DISABLED";
 
 export interface StaffAccount {
   id: string;
@@ -981,109 +977,6 @@ export interface SimilarityCaseFilters {
   page?: number;
   pageSize?: number;
   status?: SimilarityCaseStatus;
-}
-
-export type CouncilSessionStatus = "DRAFT" | "OPEN" | "CLOSED";
-
-export type CouncilVoteChoice =
-  | "APPROVE"
-  | "REJECT"
-  | "ABSTAIN"
-  | "REQUEST_MORE_INFO";
-
-export type CouncilCaseDecision = Exclude<CouncilVoteChoice, "ABSTAIN">;
-
-export interface CouncilSession {
-  id: string;
-  code: string;
-  title: string;
-  scheduledAt: string;
-  status: CouncilSessionStatus;
-  quorumRequired: number;
-  openedAt: string | null;
-  closedAt: string | null;
-  minutesHash: string | null;
-  memberCount: number;
-  attendanceCount: number;
-}
-
-export interface CouncilMember {
-  id: string;
-  sessionId: string;
-  memberUserId: string;
-  attendanceConfirmedAt: string | null;
-}
-
-export interface CouncilCase {
-  id: string;
-  sessionId: string;
-  dossierId: string;
-  dossierVersionId: string;
-  dossierCode: string;
-  dossierTitle: string;
-  versionNo: number;
-  decision: CouncilCaseDecision | null;
-}
-
-export interface CouncilConflict {
-  id: string;
-  caseId: string;
-  memberUserId: string;
-  hasConflict: boolean;
-  reason: string | null;
-  declaredAt: string;
-}
-
-export interface CouncilVote {
-  id: string;
-  caseId: string;
-  memberUserId: string;
-  choice: CouncilVoteChoice;
-  reason: string;
-  votedAt: string;
-}
-
-export interface CouncilCaseResult {
-  caseId: string;
-  dossierId: string;
-  dossierVersionId: string;
-  decision: CouncilCaseDecision | null;
-  quorumMet: boolean;
-  validVoteCount: number;
-  voteCounts: Record<CouncilVoteChoice, number>;
-}
-
-export interface CouncilSessionListItem {
-  session: CouncilSession;
-  myAttendanceConfirmedAt: string | null;
-}
-
-export interface CouncilCaseDetail {
-  case: CouncilCase;
-  myConflict: CouncilConflict | null;
-  myVote: CouncilVote | null;
-  result: CouncilCaseResult | null;
-}
-
-export interface CouncilSessionDetail {
-  session: CouncilSession;
-  myAttendanceConfirmedAt: string | null;
-  cases: CouncilCaseDetail[];
-}
-
-export interface CouncilMinutes {
-  sessionId: string;
-  sessionCode: string;
-  closedAt: string;
-  quorumRequired: number;
-  minutesHash: string;
-  cases: CouncilCaseResult[];
-}
-
-export interface CouncilListFilters {
-  page?: number;
-  pageSize?: number;
-  status?: CouncilSessionStatus;
 }
 
 export type CertificateStatus = "ACTIVE" | "EXPIRED" | "REVOKED";

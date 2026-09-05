@@ -42,7 +42,6 @@ class OAuthSessionIssuer(Protocol):
         *,
         user_id: UUID,
         metadata: ClientMetadata,
-        mfa_verified_at: datetime | None = None,
     ) -> IssuedSession: ...
 
 
@@ -108,7 +107,6 @@ class OAuthService:
         issued = await self._session_issuer.issue_for_user(
             user_id=user.id,
             metadata=metadata,
-            mfa_verified_at=claims.mfa_verified_at,
         )
         logger.info(
             "security_audit",
@@ -219,26 +217,20 @@ class OAuthService:
         roles = await self._repository.get_role_codes(user.id)
         if not set(roles).intersection(INTERNAL_MANAGED_ROLES | {"SUPER_ADMIN"}):
             return
-        if (
-            not claims.email_verified
-            or user.email.lower() != claims.email.lower()
-            or claims.mfa_verified_at is None
-        ):
+        if not claims.email_verified or user.email.lower() != claims.email.lower():
             raise DomainError(
-                code="STAFF_MFA_REQUIRED",
-                message="Additional account verification is required.",
+                code="OAUTH_IDENTITY_INVALID",
+                message="The verified staff identity does not match the invitation.",
                 status_code=403,
             )
-        recovery = user.mfa_recovery_authorized_at is not None
         user.status = UserStatus.ACTIVE
-        user.mfa_recovery_authorized_at = None
         AuditService(self._session).record(
             actor_user_id=user.id,
-            action="auth.staff_mfa.activated",
+            action="auth.staff_account.activated",
             resource_type="user",
             resource_id=str(user.id),
-            before={"status": "PENDING_MFA"},
-            after={"status": UserStatus.ACTIVE.value, "recovery": recovery},
+            before={"status": UserStatus.PENDING.value},
+            after={"status": UserStatus.ACTIVE.value},
         )
 
     async def _linked_user(self, raw_user_id: str | None) -> User:

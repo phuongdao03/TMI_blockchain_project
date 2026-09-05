@@ -382,6 +382,32 @@ describe("layout shells", () => {
     ).toBe(true);
   });
 
+  it("opens the internal guide from the super admin workspace", () => {
+    render(
+      <AuthUserProvider
+        user={{
+          id: "super-admin-guide",
+          email: "admin@example.vn",
+          roles: ["SUPER_ADMIN"],
+          accountType: null,
+        }}
+      >
+        <DashboardShell>
+          <p>Workspace</p>
+        </DashboardShell>
+      </AuthUserProvider>,
+    );
+
+    const guideLinks = screen.getAllByRole("link", { name: "Hướng dẫn" });
+    expect(
+      guideLinks.some((link) => link.getAttribute("href") === "/admin/guide"),
+    ).toBe(true);
+    expect(
+      guideLinks.some((link) => link.getAttribute("href") === "/guide"),
+    ).toBe(false);
+    expect(screen.queryByRole("link", { name: "Phiên xét duyệt" })).toBeNull();
+  });
+
   it("keeps public discovery links visible for an authenticated public user", () => {
     render(
       <AuthUserProvider

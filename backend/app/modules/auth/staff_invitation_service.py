@@ -225,7 +225,7 @@ class StaffInvitationService:
                 user = User(
                     email=email,
                     password_hash=None,
-                    status=UserStatus.PENDING,
+                    status=UserStatus.ACTIVE,
                     email_verified_at=now,
                 )
                 self._auth.add_user(user)
@@ -267,7 +267,7 @@ class StaffInvitationService:
             id=user.id,
             email=user.email,
             role=invitation.role_code,
-            status="PENDING_MFA",
+            status="ACTIVE",
             createdAt=user.created_at,
             lastLoginAt=user.last_login_at,
         )

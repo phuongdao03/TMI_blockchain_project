@@ -17,15 +17,6 @@ import type {
   CmsPage,
   CmsPost,
   CmsPostInput,
-  CouncilConflict,
-  CouncilListFilters,
-  CouncilMember,
-  CouncilMinutes,
-  CouncilSession,
-  CouncilSessionDetail,
-  CouncilSessionListItem,
-  CouncilVote,
-  CouncilVoteChoice,
   Certificate,
   CertificateDetail,
   CertificateDownload,
@@ -246,22 +237,10 @@ export const authApi = {
     });
   },
   acceptStaffInvitation(invitationToken: string, idToken: string) {
-    return request<{ status: "MFA_ENROLLMENT_REQUIRED" }>(
-      "/auth/staff-invitations/accept",
-      {
-        method: "POST",
-        body: JSON.stringify({ invitationToken, idToken }),
-      },
-    );
-  },
-  authorizeStaffMfaRecovery(idToken: string) {
-    return request<{ status: "MFA_ENROLLMENT_REQUIRED" }>(
-      "/auth/staff-mfa/recovery/authorize",
-      {
-        method: "POST",
-        body: JSON.stringify({ idToken }),
-      },
-    );
+    return request<{ status: "ACTIVE" }>("/auth/staff-invitations/accept", {
+      method: "POST",
+      body: JSON.stringify({ invitationToken, idToken }),
+    });
   },
   upgradeToApplicant(accountType: Exclude<AccountType, "PUBLIC_USER">) {
     return request<AuthUser>("/auth/applicant-upgrade", {
@@ -646,15 +625,6 @@ export const staffAccountsApi = {
       body: JSON.stringify(input),
     });
   },
-  initiateMfaRecovery(userId: string, reason: string) {
-    return request<PrivilegedAction>(
-      `/admin/staff-accounts/${userId}/mfa-recovery`,
-      {
-        method: "POST",
-        body: JSON.stringify({ reason }),
-      },
-    );
-  },
   requestRoleChange(
     userId: string,
     requestedRole: StaffAccountRole | "SUPER_ADMIN",
@@ -999,57 +969,6 @@ export const similarityApi = {
       method: "POST",
       body: JSON.stringify({ reviewerUserId }),
     });
-  },
-};
-
-export const councilApi = {
-  list(filters: CouncilListFilters = {}) {
-    const parameters = new URLSearchParams({
-      page: String(filters.page ?? 1),
-      pageSize: String(filters.pageSize ?? 20),
-    });
-    if (filters.status) parameters.set("status", filters.status);
-    return requestPaginated<CouncilSessionListItem[]>(
-      `/council/sessions?${parameters.toString()}`,
-    );
-  },
-  get(sessionId: string) {
-    return request<CouncilSessionDetail>(`/council/sessions/${sessionId}`);
-  },
-  confirmAttendance(sessionId: string) {
-    return request<CouncilMember>(`/council/sessions/${sessionId}/attendance`, {
-      method: "POST",
-    });
-  },
-  open(sessionId: string) {
-    return request<CouncilSession>(
-      `/admin/council/sessions/${sessionId}/open`,
-      { method: "POST" },
-    );
-  },
-  close(sessionId: string) {
-    return request<CouncilSession>(
-      `/admin/council/sessions/${sessionId}/close`,
-      { method: "POST" },
-    );
-  },
-  declareConflict(
-    caseId: string,
-    input: { hasConflict: boolean; reason: string | null },
-  ) {
-    return request<CouncilConflict>(`/council/cases/${caseId}/conflict`, {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
-  },
-  vote(caseId: string, input: { choice: CouncilVoteChoice; reason: string }) {
-    return request<CouncilVote>(`/council/cases/${caseId}/vote`, {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
-  },
-  minutes(sessionId: string) {
-    return request<CouncilMinutes>(`/council/sessions/${sessionId}/minutes`);
   },
 };
 

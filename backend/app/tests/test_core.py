@@ -174,7 +174,6 @@ def test_security_headers_are_present_and_hsts_is_production_only() -> None:
             settings=Settings.model_validate(
                 {
                     "app_env": "production",
-                    "firebase_totp_enabled": True,
                     "audit_integrity_key": "audit-integrity-test-key-32-bytes",
                     "media_private_encryption_enabled": True,
                     "media_private_encryption_active_key_id": "document-v1",
@@ -244,7 +243,6 @@ def test_production_cors_rejects_wildcard_and_non_tls_origins() -> None:
         settings = Settings.model_validate(
             {
                 "app_env": "production",
-                "firebase_totp_enabled": True,
                 "audit_integrity_key": "audit-integrity-test-key-32-bytes",
                 "media_private_encryption_enabled": True,
                 "media_private_encryption_active_key_id": "document-v1",
@@ -344,7 +342,6 @@ def test_full_production_readiness_includes_media_provider_and_scanner(
         {
             "app_env": "production",
             "release_mode": "full",
-            "firebase_totp_enabled": True,
             "audit_integrity_key": "audit-integrity-test-key-32-bytes",
             "media_private_encryption_enabled": True,
             "media_private_encryption_active_key_id": "document-v1",

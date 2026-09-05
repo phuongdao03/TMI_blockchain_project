@@ -4,28 +4,27 @@ test.beforeEach(async ({ request }) => {
   await request.post("http://127.0.0.1:4010/api/e2e/reset-staff-invitations");
 });
 
-test("invited staff accepts once, enrolls TOTP and removes setup secret", async ({
+test("invited staff verifies email and activates the account once", async ({
   page,
 }, testInfo) => {
-  const tokenPrefix = `${testInfo.project.name === "mobile-chrome" ? "m" : "d"}${testInfo.repeatEachIndex}`;
+  const device = testInfo.project.name === "mobile-chrome" ? "m" : "d";
+  const tokenPrefix = `${device}${testInfo.repeatEachIndex}`;
   const token = `${tokenPrefix}${"a".repeat(48 - tokenPrefix.length)}`;
+
   await page.goto(`/staff-invitation?token=${token}`);
   await expect(page.getByRole("button", { name: "Theo thiết bị" })).toBeEnabled(
-    { timeout: 45_000 },
+    {
+      timeout: 45_000,
+    },
   );
   await page
-    .getByRole("button", { name: "Xác minh email và tiếp tục" })
+    .getByRole("button", { name: "Xác minh email và kích hoạt tài khoản" })
     .click();
 
-  await expect(page.getByText("E2E-TOTP-SETUP-KEY")).toBeVisible();
-  await page.getByLabel("Mã xác minh 6 số").fill("654321");
-  await page.getByRole("button", { name: "Kích hoạt bảo vệ hai bước" }).click();
-
-  await expect(page).toHaveURL(/\/login\?mfa=enrolled$/);
-  await expect(page.getByText("E2E-TOTP-SETUP-KEY")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/login\?invitation=accepted$/);
 });
 
-test("staff completes the Firebase TOTP challenge before entering operations", async ({
+test("reviewer signs in directly after Firebase authentication", async ({
   page,
 }) => {
   await page.goto("/login");
@@ -37,8 +36,5 @@ test("staff completes the Firebase TOTP challenge before entering operations", a
     .fill("correct horse battery staple");
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
-  await expect(page.getByLabel("Mã 6 số từ ứng dụng xác thực")).toBeVisible();
-  await page.getByLabel("Mã 6 số từ ứng dụng xác thực").fill("654321");
-  await page.getByRole("button", { name: "Xác nhận mã" }).click();
   await expect(page).toHaveURL(/\/reviews$/);
 });

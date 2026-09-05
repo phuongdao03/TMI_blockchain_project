@@ -28,7 +28,6 @@ from app.modules.auth.security import Argon2PasswordHasher, OutboxPayloadCipher
 from app.modules.auth.services import RegistrationService
 from app.modules.auth.session_service import AuthPrincipal, SessionService
 from app.modules.auth.staff_invitation_service import StaffInvitationService
-from app.modules.auth.staff_mfa import StaffMfaPolicy
 from app.modules.auth.tokens import AccessTokenManager, CsrfTokenManager
 
 SessionDependency = Annotated[AsyncSession, Depends(get_session)]
@@ -123,10 +122,6 @@ async def get_session_service(
             window_seconds=settings.auth_login_rate_window_seconds,
         ),
         refresh_ttl=timedelta(seconds=settings.auth_refresh_ttl_seconds),
-        mfa_policy=StaffMfaPolicy(
-            max_age=timedelta(seconds=settings.staff_mfa_max_age_seconds),
-            enabled=settings.firebase_totp_enabled,
-        ),
     )
     try:
         yield service

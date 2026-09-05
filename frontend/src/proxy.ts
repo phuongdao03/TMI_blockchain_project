@@ -17,7 +17,6 @@ export const config = {
     "/admin/:path*",
     "/activity/:path*",
     "/certificates/:path*",
-    "/council/:path*",
     "/dossiers/:path*",
     "/notifications/:path*",
     "/payments/:path*",
