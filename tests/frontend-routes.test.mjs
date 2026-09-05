@@ -17,7 +17,6 @@ const routeMigrations = [
   ["(public)/tim-kiem", "(public)/search"],
   ["(dashboard)/ho-so", "(dashboard)/dossiers"],
   ["(dashboard)/tham-dinh", "(dashboard)/reviews"],
-  ["(dashboard)/hoi-dong", "(dashboard)/council"],
   ["(dashboard)/chung-thu", "(dashboard)/certificates"],
   ["(dashboard)/thanh-toan", "(dashboard)/payments"],
   ["(dashboard)/thong-bao", "(dashboard)/notifications"],
