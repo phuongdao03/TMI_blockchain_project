@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DossierCreateForm } from "@/components/dossiers/dossier-create-form";
 
@@ -17,6 +17,12 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 describe("DossierCreateForm", () => {
+  beforeEach(() => {
+    createMock.mockReset();
+    listTypesMock.mockReset();
+    pushMock.mockReset();
+  });
+
   it("creates a valid draft and opens its workspace", async () => {
     const user = userEvent.setup();
     createMock.mockResolvedValue({
@@ -68,7 +74,7 @@ describe("DossierCreateForm", () => {
     );
 
     await user.type(
-      screen.getByLabelText("Tên tài sản hoặc tác phẩm"),
+      await screen.findByLabelText("Tên tài sản hoặc tác phẩm"),
       "Bộ nhận diện TMI",
     );
     await user.click(screen.getByRole("radio", { name: /Tác phẩm văn hóa/ }));
@@ -156,5 +162,30 @@ describe("DossierCreateForm", () => {
     expect(
       screen.getByRole("heading", { name: "Nhãn hiệu và thương hiệu" }),
     ).toBeTruthy();
+  });
+
+  it("explains a failed type request and lets the user retry", async () => {
+    const user = userEvent.setup();
+    listTypesMock
+      .mockRejectedValueOnce(new Error("network unavailable"))
+      .mockResolvedValueOnce([]);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <DossierCreateForm />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByText(
+        "Chưa thể tải danh mục hồ sơ. Vui lòng kiểm tra kết nối và thử lại.",
+      ),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Thử tải lại" }));
+
+    expect(listTypesMock).toHaveBeenCalledTimes(2);
   });
 });

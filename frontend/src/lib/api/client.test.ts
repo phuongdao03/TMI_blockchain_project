@@ -4,6 +4,7 @@ import {
   adminUsersApi,
   auditApi,
   authApi,
+  dossierApi,
   mediaApi,
   organizationApi,
   profileApi,
@@ -141,6 +142,68 @@ describe("auth API client", () => {
 
     await expect(authApi.currentUser()).resolves.toBeNull();
     expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("shares one refresh across concurrent authenticated requests", async () => {
+    let resourceCalls = 0;
+    let refreshCalls = 0;
+    let releaseInitialRequests: (() => void) | undefined;
+    const initialRequestsReady = new Promise<void>((resolve) => {
+      releaseInitialRequests = resolve;
+    });
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.endsWith("/api/v1/dossiers/types")) {
+          resourceCalls += 1;
+          if (resourceCalls <= 2) {
+            if (resourceCalls === 2) releaseInitialRequests?.();
+            await initialRequestsReady;
+            return response(
+              {
+                success: false,
+                error: {
+                  code: "UNAUTHENTICATED",
+                  message: "Authentication is required.",
+                },
+              },
+              401,
+            );
+          }
+          return response({
+            success: true,
+            data: [],
+            meta: { request_id: `dossier-types-${resourceCalls}` },
+          });
+        }
+        if (url.endsWith("/api/v1/auth/refresh")) {
+          refreshCalls += 1;
+          return refreshCalls === 1
+            ? response({
+                success: true,
+                data: { status: "refreshed" },
+                meta: { request_id: "refresh" },
+              })
+            : response(
+                {
+                  success: false,
+                  error: {
+                    code: "UNAUTHENTICATED",
+                    message: "Authentication is required.",
+                  },
+                },
+                401,
+              );
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      });
+
+    await expect(
+      Promise.all([dossierApi.listTypes(), dossierApi.listTypes()]),
+    ).resolves.toEqual([[], []]);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(refreshCalls).toBe(1);
   });
 
   it("upgrades a public account through the CSRF-protected onboarding API", async () => {

@@ -9,6 +9,7 @@ import {
   FilePlus2,
   Files,
   ListChecks,
+  RefreshCw,
   ShieldCheck,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -86,6 +87,7 @@ export function DossierCreateForm() {
   const dossierType = dossierTypes.data?.find(
     (item) => item.currentVersion.id === dossierTypeVersionId,
   );
+  const hasDossierTypes = (dossierTypes.data?.length ?? 0) > 0;
   const dossierTypeDescription = dossierType?.currentVersion.schema.description;
   const documentRules = dossierType?.currentVersion.schema.documentRules ?? [];
   const requiredFieldCount =
@@ -226,17 +228,41 @@ export function DossierCreateForm() {
             })}
           </div>
           {dossierTypes.isError ? (
-            <p className="mt-2 text-sm text-error" role="alert">
-              Không thể tải loại hồ sơ.
-            </p>
+            <div
+              className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4"
+              role="alert"
+            >
+              <p className="text-sm font-medium text-red-800">
+                Chưa thể tải danh mục hồ sơ. Vui lòng kiểm tra kết nối và thử lại.
+              </p>
+              <Button
+                disabled={dossierTypes.isFetching}
+                onClick={() => void dossierTypes.refetch()}
+                type="button"
+                variant="outline"
+              >
+                <RefreshCw
+                  aria-hidden="true"
+                  className={`size-4 ${dossierTypes.isFetching ? "animate-spin" : ""}`}
+                />
+                {dossierTypes.isFetching ? "Đang tải lại…" : "Thử tải lại"}
+              </Button>
+            </div>
           ) : null}
           {dossierTypes.isLoading ? (
             <p className="mt-3 text-sm text-neutral-500">
               Đang tải danh mục hồ sơ…
             </p>
           ) : null}
+          {dossierTypes.isSuccess && !hasDossierTypes ? (
+            <p className="mt-3 text-sm text-neutral-500" role="status">
+              Hiện chưa có loại hồ sơ đang mở. Vui lòng liên hệ bộ phận hỗ trợ.
+            </p>
+          ) : null}
         </fieldset>
 
+        {hasDossierTypes ? (
+          <>
         {dossierType ? (
           <section
             aria-labelledby="document-preflight-title"
@@ -533,6 +559,8 @@ export function DossierCreateForm() {
             )}
           </div>
         ))}
+          </>
+        ) : null}
       </section>
 
       {create.error ? (
@@ -589,6 +617,7 @@ export function DossierCreateForm() {
         </section>
       ) : null}
 
+      {hasDossierTypes ? (
       <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
         <Button
           className="min-w-44"
@@ -600,6 +629,7 @@ export function DossierCreateForm() {
           <ArrowRight aria-hidden="true" className="size-4" />
         </Button>
       </div>
+      ) : null}
     </form>
   );
 }

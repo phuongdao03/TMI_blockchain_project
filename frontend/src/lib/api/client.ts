@@ -113,6 +113,7 @@ import type {
 
 const API_ROOT = "/api/v1";
 const CSRF_COOKIE_NAME = "tmi_csrf";
+let sessionRefreshInFlight: Promise<void> | null = null;
 
 export class ApiError extends Error {
   constructor(
@@ -164,6 +165,22 @@ async function parseResponse<Data>(
   return payload;
 }
 
+function refreshSession(): Promise<void> {
+  if (!sessionRefreshInFlight) {
+    sessionRefreshInFlight = requestEnvelope<StatusData>(
+      "/auth/refresh",
+      { method: "POST" },
+      false,
+    )
+      .then(() => undefined)
+      .finally(() => {
+        sessionRefreshInFlight = null;
+      });
+  }
+
+  return sessionRefreshInFlight;
+}
+
 async function requestEnvelope<Data>(
   path: string,
   init: RequestInit = {},
@@ -193,11 +210,7 @@ async function requestEnvelope<Data>(
     !["/auth/login", "/auth/refresh"].includes(path);
   if (refreshable) {
     try {
-      await requestEnvelope<StatusData>(
-        "/auth/refresh",
-        { method: "POST" },
-        false,
-      );
+      await refreshSession();
       return requestEnvelope<Data>(path, init, false);
     } catch {
       // Preserve the original endpoint's authentication failure.
