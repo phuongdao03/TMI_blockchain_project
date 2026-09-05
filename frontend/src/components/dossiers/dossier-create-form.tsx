@@ -233,7 +233,8 @@ export function DossierCreateForm() {
               role="alert"
             >
               <p className="text-sm font-medium text-red-800">
-                Chưa thể tải danh mục hồ sơ. Vui lòng kiểm tra kết nối và thử lại.
+                Chưa thể tải danh mục hồ sơ. Vui lòng kiểm tra kết nối và thử
+                lại.
               </p>
               <Button
                 disabled={dossierTypes.isFetching}
@@ -263,302 +264,304 @@ export function DossierCreateForm() {
 
         {hasDossierTypes ? (
           <>
-        {dossierType ? (
-          <section
-            aria-labelledby="document-preflight-title"
-            className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:p-5"
-          >
-            <div className="flex items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-700">
-                <ListChecks aria-hidden="true" className="size-5" />
-              </span>
-              <div>
-                <h2 className="font-bold" id="document-preflight-title">
-                  Tài liệu cần chuẩn bị
-                </h2>
-                <p className="mt-1 text-sm leading-6 text-neutral-600">
-                  {requiredFieldCount} trường thông tin bắt buộc ·{" "}
-                  {documentRules.length} nhóm tài liệu. Tệp được tải lên sau khi
-                  bản nháp được tạo.
+            {dossierType ? (
+              <section
+                aria-labelledby="document-preflight-title"
+                className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:p-5"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-700">
+                    <ListChecks aria-hidden="true" className="size-5" />
+                  </span>
+                  <div>
+                    <h2 className="font-bold" id="document-preflight-title">
+                      Tài liệu cần chuẩn bị
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-neutral-600">
+                      {requiredFieldCount} trường thông tin bắt buộc ·{" "}
+                      {documentRules.length} nhóm tài liệu. Tệp được tải lên sau
+                      khi bản nháp được tạo.
+                    </p>
+                  </div>
+                </div>
+
+                {documentRules.length ? (
+                  <ul className="mt-4 grid gap-3 lg:grid-cols-2" role="list">
+                    {documentRules.map((rule) => (
+                      <li
+                        className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4"
+                        key={rule.key}
+                      >
+                        <div className="flex items-start gap-3">
+                          <FileCheck2
+                            aria-hidden="true"
+                            className="mt-0.5 size-5 shrink-0 text-primary-700"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold">
+                              {rule.label ?? rule.documentType}
+                              {rule.required ? (
+                                <span className="ml-2 text-xs text-primary-700">
+                                  Bắt buộc
+                                </span>
+                              ) : null}
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-neutral-600">
+                              {rule.allowedMimeTypes
+                                .map((mime) => mimeLabels[mime] ?? mime)
+                                .join(", ")}{" "}
+                              · tối đa {formatFileLimit(rule.maxBytes)} ·{" "}
+                              {rule.maxCount ?? 1} tệp
+                            </p>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-sm text-neutral-600">
+                    <Files aria-hidden="true" className="size-5 shrink-0" />
+                    Loại hồ sơ này chưa yêu cầu nhóm tệp riêng. Bạn vẫn có thể
+                    bổ sung bằng chứng trong bản nháp.
+                  </div>
+                )}
+              </section>
+            ) : null}
+            <div>
+              <label
+                className="text-sm font-bold text-neutral-900"
+                htmlFor="dossier-title"
+              >
+                Tên tài sản hoặc tác phẩm
+              </label>
+              <input
+                aria-describedby="dossier-title-error"
+                className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
+                id="dossier-title"
+                placeholder="Ví dụ: Bộ nhận diện thương hiệu TMI"
+                {...form.register("title")}
+              />
+              {form.formState.errors.title ? (
+                <p
+                  className="mt-2 text-sm font-medium text-error"
+                  id="dossier-title-error"
+                  role="alert"
+                >
+                  {form.formState.errors.title.message}
                 </p>
-              </div>
+              ) : null}
             </div>
 
-            {documentRules.length ? (
-              <ul className="mt-4 grid gap-3 lg:grid-cols-2" role="list">
-                {documentRules.map((rule) => (
-                  <li
-                    className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4"
-                    key={rule.key}
-                  >
-                    <div className="flex items-start gap-3">
-                      <FileCheck2
-                        aria-hidden="true"
-                        className="mt-0.5 size-5 shrink-0 text-primary-700"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold">
-                          {rule.label ?? rule.documentType}
-                          {rule.required ? (
-                            <span className="ml-2 text-xs text-primary-700">
-                              Bắt buộc
-                            </span>
-                          ) : null}
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-neutral-600">
-                          {rule.allowedMimeTypes
-                            .map((mime) => mimeLabels[mime] ?? mime)
-                            .join(", ")}{" "}
-                          · tối đa {formatFileLimit(rule.maxBytes)} ·{" "}
-                          {rule.maxCount ?? 1} tệp
-                        </p>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-sm text-neutral-600">
-                <Files aria-hidden="true" className="size-5 shrink-0" />
-                Loại hồ sơ này chưa yêu cầu nhóm tệp riêng. Bạn vẫn có thể bổ
-                sung bằng chứng trong bản nháp.
-              </div>
-            )}
-          </section>
-        ) : null}
-        <div>
-          <label
-            className="text-sm font-bold text-neutral-900"
-            htmlFor="dossier-title"
-          >
-            Tên tài sản hoặc tác phẩm
-          </label>
-          <input
-            aria-describedby="dossier-title-error"
-            className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
-            id="dossier-title"
-            placeholder="Ví dụ: Bộ nhận diện thương hiệu TMI"
-            {...form.register("title")}
-          />
-          {form.formState.errors.title ? (
-            <p
-              className="mt-2 text-sm font-medium text-error"
-              id="dossier-title-error"
-              role="alert"
-            >
-              {form.formState.errors.title.message}
-            </p>
-          ) : null}
-        </div>
-
-        <div>
-          <label
-            className="text-sm font-bold text-neutral-900"
-            htmlFor="dossier-summary"
-          >
-            Mô tả ngắn
-          </label>
-          <textarea
-            className="mt-2 min-h-32 w-full resize-y rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
-            id="dossier-summary"
-            placeholder="Nêu mục đích, nguồn gốc và phạm vi tài sản cần xác lập."
-            {...form.register("summary")}
-          />
-        </div>
-
-        <fieldset>
-          <legend className="text-sm font-bold text-neutral-900">
-            Chế độ hiển thị
-          </legend>
-          <div className="mt-2 grid gap-3 sm:grid-cols-3">
-            {[
-              ["PRIVATE", "Riêng tư", "Chỉ chủ hồ sơ và người xử lý"],
-              ["UNLISTED", "Không niêm yết", "Chỉ người có liên kết"],
-              ["PUBLIC", "Công khai", "Có thể công bố sau cấp chứng thư"],
-            ].map(([value, label, description]) => (
-              <label className="dossier-visibility-option" key={value}>
-                <input
-                  className="accent-primary-600"
-                  type="radio"
-                  value={value}
-                  {...form.register("visibility")}
-                />
-                <span className="ml-2 text-sm font-bold">{label}</span>
-                <span className="mt-1 block pl-6 text-xs leading-5 text-neutral-500">
-                  {description}
-                </span>
+            <div>
+              <label
+                className="text-sm font-bold text-neutral-900"
+                htmlFor="dossier-summary"
+              >
+                Mô tả ngắn
               </label>
-            ))}
-          </div>
-        </fieldset>
-
-        {dossierType?.currentVersion.schema.fields.map((field) => (
-          <div key={field.key}>
-            <label
-              className="text-sm font-bold text-neutral-900"
-              htmlFor={`field-${field.key}`}
-            >
-              {field.label || field.key}
-              {field.required ? " *" : ""}
-            </label>
-            {field.helpText ? (
-              <p className="mt-1 text-xs leading-5 text-neutral-500">
-                {field.helpText}
-              </p>
-            ) : null}
-            {field.type === "textarea" ? (
               <textarea
-                className="mt-2 min-h-28 w-full resize-y rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm leading-6"
-                id={`field-${field.key}`}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    [field.key]: event.target.value,
-                  }))
-                }
-                placeholder={field.placeholder}
-                required={field.required}
-                value={stringFieldValue(formData[field.key])}
+                className="mt-2 min-h-32 w-full resize-y rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
+                id="dossier-summary"
+                placeholder="Nêu mục đích, nguồn gốc và phạm vi tài sản cần xác lập."
+                {...form.register("summary")}
               />
-            ) : field.type === "select" ? (
-              <select
-                className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm"
-                id={`field-${field.key}`}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    [field.key]: event.target.value,
-                  }))
-                }
-                required={field.required}
-                value={stringFieldValue(formData[field.key])}
-              >
-                <option value="">Chọn phương án</option>
-                {(field.options ?? []).map((option) => {
-                  const value =
-                    typeof option === "string" ? option : option.value;
-                  const label =
-                    typeof option === "string"
-                      ? option
-                      : (option.label ?? option.value);
-                  return (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  );
-                })}
-              </select>
-            ) : field.type === "multiselect" ? (
-              <select
-                className="mt-2 min-h-28 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm"
-                id={`field-${field.key}`}
-                multiple
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    [field.key]: Array.from(
-                      event.target.selectedOptions,
-                      (option) => option.value,
-                    ),
-                  }))
-                }
-                required={field.required}
-                value={multiSelectFieldValue(formData[field.key])}
-              >
-                {(field.options ?? []).map((option) => {
-                  const value =
-                    typeof option === "string" ? option : option.value;
-                  const label =
-                    typeof option === "string"
-                      ? option
-                      : (option.label ?? option.value);
-                  return (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  );
-                })}
-              </select>
-            ) : field.type === "radio" ? (
-              <fieldset className="mt-2 grid gap-2 sm:grid-cols-2">
-                <legend className="sr-only">{field.label || field.key}</legend>
-                {(field.options ?? []).map((option) => {
-                  const value =
-                    typeof option === "string" ? option : option.value;
-                  const label =
-                    typeof option === "string"
-                      ? option
-                      : (option.label ?? option.value);
-                  return (
-                    <label className="dossier-choice-option" key={value}>
-                      <input
-                        checked={formData[field.key] === value}
-                        name={`field-${field.key}`}
-                        onChange={() =>
-                          setFormData((current) => ({
-                            ...current,
-                            [field.key]: value,
-                          }))
-                        }
-                        required={field.required}
-                        type="radio"
-                        value={value}
-                      />
-                      <span>{label}</span>
-                    </label>
-                  );
-                })}
-              </fieldset>
-            ) : field.type === "checkbox" ? (
-              <input
-                checked={formData[field.key] === true}
-                className="ml-3 accent-primary-600"
-                id={`field-${field.key}`}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    [field.key]: event.target.checked,
-                  }))
-                }
-                type="checkbox"
-              />
-            ) : (
-              <input
-                className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm"
-                id={`field-${field.key}`}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    [field.key]:
-                      field.type === "number" || field.type === "currency"
-                        ? Number(event.target.value)
-                        : event.target.value,
-                  }))
-                }
-                placeholder={field.placeholder}
-                required={field.required}
-                type={
-                  field.type === "phone"
-                    ? "tel"
-                    : field.type === "currency"
-                      ? "number"
-                      : field.type === "address" ||
-                          field.type === "person" ||
-                          field.type === "organization" ||
-                          field.type === "file"
-                        ? "text"
-                        : field.type
-                }
-                value={
-                  typeof formData[field.key] === "string" ||
-                  typeof formData[field.key] === "number"
-                    ? String(formData[field.key])
-                    : ""
-                }
-              />
-            )}
-          </div>
-        ))}
+            </div>
+
+            <fieldset>
+              <legend className="text-sm font-bold text-neutral-900">
+                Chế độ hiển thị
+              </legend>
+              <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                {[
+                  ["PRIVATE", "Riêng tư", "Chỉ chủ hồ sơ và người xử lý"],
+                  ["UNLISTED", "Không niêm yết", "Chỉ người có liên kết"],
+                  ["PUBLIC", "Công khai", "Có thể công bố sau cấp chứng thư"],
+                ].map(([value, label, description]) => (
+                  <label className="dossier-visibility-option" key={value}>
+                    <input
+                      className="accent-primary-600"
+                      type="radio"
+                      value={value}
+                      {...form.register("visibility")}
+                    />
+                    <span className="ml-2 text-sm font-bold">{label}</span>
+                    <span className="mt-1 block pl-6 text-xs leading-5 text-neutral-500">
+                      {description}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            {dossierType?.currentVersion.schema.fields.map((field) => (
+              <div key={field.key}>
+                <label
+                  className="text-sm font-bold text-neutral-900"
+                  htmlFor={`field-${field.key}`}
+                >
+                  {field.label || field.key}
+                  {field.required ? " *" : ""}
+                </label>
+                {field.helpText ? (
+                  <p className="mt-1 text-xs leading-5 text-neutral-500">
+                    {field.helpText}
+                  </p>
+                ) : null}
+                {field.type === "textarea" ? (
+                  <textarea
+                    className="mt-2 min-h-28 w-full resize-y rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm leading-6"
+                    id={`field-${field.key}`}
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        [field.key]: event.target.value,
+                      }))
+                    }
+                    placeholder={field.placeholder}
+                    required={field.required}
+                    value={stringFieldValue(formData[field.key])}
+                  />
+                ) : field.type === "select" ? (
+                  <select
+                    className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm"
+                    id={`field-${field.key}`}
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        [field.key]: event.target.value,
+                      }))
+                    }
+                    required={field.required}
+                    value={stringFieldValue(formData[field.key])}
+                  >
+                    <option value="">Chọn phương án</option>
+                    {(field.options ?? []).map((option) => {
+                      const value =
+                        typeof option === "string" ? option : option.value;
+                      const label =
+                        typeof option === "string"
+                          ? option
+                          : (option.label ?? option.value);
+                      return (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      );
+                    })}
+                  </select>
+                ) : field.type === "multiselect" ? (
+                  <select
+                    className="mt-2 min-h-28 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm"
+                    id={`field-${field.key}`}
+                    multiple
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        [field.key]: Array.from(
+                          event.target.selectedOptions,
+                          (option) => option.value,
+                        ),
+                      }))
+                    }
+                    required={field.required}
+                    value={multiSelectFieldValue(formData[field.key])}
+                  >
+                    {(field.options ?? []).map((option) => {
+                      const value =
+                        typeof option === "string" ? option : option.value;
+                      const label =
+                        typeof option === "string"
+                          ? option
+                          : (option.label ?? option.value);
+                      return (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      );
+                    })}
+                  </select>
+                ) : field.type === "radio" ? (
+                  <fieldset className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <legend className="sr-only">
+                      {field.label || field.key}
+                    </legend>
+                    {(field.options ?? []).map((option) => {
+                      const value =
+                        typeof option === "string" ? option : option.value;
+                      const label =
+                        typeof option === "string"
+                          ? option
+                          : (option.label ?? option.value);
+                      return (
+                        <label className="dossier-choice-option" key={value}>
+                          <input
+                            checked={formData[field.key] === value}
+                            name={`field-${field.key}`}
+                            onChange={() =>
+                              setFormData((current) => ({
+                                ...current,
+                                [field.key]: value,
+                              }))
+                            }
+                            required={field.required}
+                            type="radio"
+                            value={value}
+                          />
+                          <span>{label}</span>
+                        </label>
+                      );
+                    })}
+                  </fieldset>
+                ) : field.type === "checkbox" ? (
+                  <input
+                    checked={formData[field.key] === true}
+                    className="ml-3 accent-primary-600"
+                    id={`field-${field.key}`}
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        [field.key]: event.target.checked,
+                      }))
+                    }
+                    type="checkbox"
+                  />
+                ) : (
+                  <input
+                    className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm"
+                    id={`field-${field.key}`}
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        [field.key]:
+                          field.type === "number" || field.type === "currency"
+                            ? Number(event.target.value)
+                            : event.target.value,
+                      }))
+                    }
+                    placeholder={field.placeholder}
+                    required={field.required}
+                    type={
+                      field.type === "phone"
+                        ? "tel"
+                        : field.type === "currency"
+                          ? "number"
+                          : field.type === "address" ||
+                              field.type === "person" ||
+                              field.type === "organization" ||
+                              field.type === "file"
+                            ? "text"
+                            : field.type
+                    }
+                    value={
+                      typeof formData[field.key] === "string" ||
+                      typeof formData[field.key] === "number"
+                        ? String(formData[field.key])
+                        : ""
+                    }
+                  />
+                )}
+              </div>
+            ))}
           </>
         ) : null}
       </section>
@@ -618,17 +621,17 @@ export function DossierCreateForm() {
       ) : null}
 
       {hasDossierTypes ? (
-      <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
-        <Button
-          className="min-w-44"
-          disabled={create.isPending || !dossierType}
-          type="submit"
-        >
-          <FilePlus2 aria-hidden="true" className="size-4" />
-          {create.isPending ? "Đang tạo…" : "Tạo hồ sơ nháp"}
-          <ArrowRight aria-hidden="true" className="size-4" />
-        </Button>
-      </div>
+        <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
+          <Button
+            className="min-w-44"
+            disabled={create.isPending || !dossierType}
+            type="submit"
+          >
+            <FilePlus2 aria-hidden="true" className="size-4" />
+            {create.isPending ? "Đang tạo…" : "Tạo hồ sơ nháp"}
+            <ArrowRight aria-hidden="true" className="size-4" />
+          </Button>
+        </div>
       ) : null}
     </form>
   );
