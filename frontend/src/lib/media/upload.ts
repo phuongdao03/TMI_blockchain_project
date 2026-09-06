@@ -176,9 +176,6 @@ function formatMegabytes(bytes: number): string {
   });
 }
 
-const CHUNKED_UPLOAD_THRESHOLD_BYTES = 20 * 1_048_576;
-const UPLOAD_CHUNK_BYTES = 6 * 1_048_576;
-
 function rejectedUploadMessage(status: number, response: unknown): string {
   const upstreamMessage = z
     .object({ error: z.object({ message: z.string() }) })
@@ -204,17 +201,14 @@ function rejectedUploadMessage(status: number, response: unknown): string {
 }
 
 function sendUploadRequest(
-  content: Blob,
-  filename: string,
+  file: File,
   authorization: MediaUploadAuthorization,
-  headers: Readonly<Record<string, string>>,
   onProgress?: (progress: number) => void,
 ): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const form = new FormData();
-    if (content instanceof File) form.append("file", content);
-    else form.append("file", content, filename);
+    form.append("file", file);
     form.append("api_key", authorization.apiKey);
     form.append("signature", authorization.signature);
     for (const [name, value] of Object.entries(authorization.parameters)) {
@@ -247,9 +241,6 @@ function sendUploadRequest(
     xhr.responseType = "json";
     xhr.timeout = 600_000;
     xhr.open("POST", authorization.uploadUrl, true);
-    for (const [name, value] of Object.entries(headers)) {
-      xhr.setRequestHeader(name, value);
-    }
     xhr.send(form);
   });
 }
@@ -259,35 +250,7 @@ async function uploadToCloudinary(
   authorization: MediaUploadAuthorization,
   onProgress?: (progress: number) => void,
 ): Promise<z.infer<typeof cloudinaryResponseSchema>> {
-  let response: unknown;
-  if (file.size <= CHUNKED_UPLOAD_THRESHOLD_BYTES) {
-    response = await sendUploadRequest(
-      file,
-      file.name,
-      authorization,
-      {},
-      onProgress,
-    );
-  } else {
-    const uploadId = crypto.randomUUID();
-    for (let start = 0; start < file.size; start += UPLOAD_CHUNK_BYTES) {
-      const endExclusive = Math.min(start + UPLOAD_CHUNK_BYTES, file.size);
-      response = await sendUploadRequest(
-        file.slice(start, endExclusive, file.type),
-        file.name,
-        authorization,
-        {
-          "Content-Range": `bytes ${start}-${endExclusive - 1}/${file.size}`,
-          "X-Unique-Upload-Id": uploadId,
-        },
-        (chunkProgress) => {
-          const uploaded =
-            start + ((endExclusive - start) * chunkProgress) / 100;
-          onProgress?.(Math.min(100, Math.round((uploaded / file.size) * 100)));
-        },
-      );
-    }
-  }
+  const response = await sendUploadRequest(file, authorization, onProgress);
 
   const result = cloudinaryResponseSchema.safeParse(response);
   if (!result.success) {

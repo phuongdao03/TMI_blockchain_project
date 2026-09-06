@@ -225,25 +225,22 @@ describe("uploadMedia", () => {
     expect(statusSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("uploads large video evidence in network-resilient chunks", async () => {
+  it("uploads supported 50 MB video evidence in a single request", async () => {
     vi.spyOn(mediaApi, "createUploadSignature").mockResolvedValue({
       ...authorization,
       uploadUrl: "https://api.cloudinary.test/v1_1/demo/video/upload",
     });
     vi.spyOn(mediaApi, "completeUpload").mockResolvedValue(activeAsset);
+    const file = sizedFile("evidence.mp4", "video/mp4", 52_574_976);
 
-    await uploadMedia(
-      sizedFile("evidence.mp4", "video/mp4", 25_165_824),
-      "DOSSIER_EVIDENCE",
-    );
+    await uploadMedia(file, "DOSSIER_EVIDENCE");
 
-    expect(FakeXMLHttpRequest.instances.length).toBeGreaterThan(1);
+    expect(FakeXMLHttpRequest.instances).toHaveLength(1);
     expect(
       FakeXMLHttpRequest.instances[0]?.setRequestHeader,
-    ).toHaveBeenCalledWith("X-Unique-Upload-Id", expect.any(String));
-    expect(
-      FakeXMLHttpRequest.instances[0]?.setRequestHeader,
-    ).toHaveBeenCalledWith("Content-Range", expect.stringMatching(/^bytes 0-/));
+    ).not.toHaveBeenCalled();
+    const body = FakeXMLHttpRequest.instances[0]?.sent.mock.calls[0]?.[0];
+    expect((body as FormData).get("file")).toBe(file);
   });
 
   it("rejects an invalid storage response before completion", async () => {
