@@ -482,7 +482,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
         </p>
       </div>
 
-      <section className="overflow-hidden rounded-2xl border border-primary-200 bg-primary-50/70">
+      <section className="dossier-state-card overflow-hidden rounded-2xl border border-primary-200 bg-primary-50/70">
         <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
