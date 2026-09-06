@@ -9,17 +9,19 @@ export default function CreateDossierPage() {
     <RoleGate allowed={["USER"]}>
       <div className="mx-auto max-w-4xl space-y-7">
         <div>
-          <Link
-            className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-neutral-500 hover:text-primary-700"
-            href="/dossiers"
-          >
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            Danh sách hồ sơ
-          </Link>
-          <p className="mt-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
-            <FilePlus2 aria-hidden="true" className="size-4" />
-            Hồ sơ mới
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-neutral-500 hover:text-primary-700"
+              href="/dossiers"
+            >
+              <ArrowLeft aria-hidden="true" className="size-4" />
+              Danh sách hồ sơ
+            </Link>
+            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
+              <FilePlus2 aria-hidden="true" className="size-4" />
+              Hồ sơ mới
+            </p>
+          </div>
           <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] sm:text-4xl">
             Khởi tạo hồ sơ xác lập
           </h1>

@@ -43,7 +43,9 @@ const quarantinedAsset: MediaAsset = {
 };
 
 class FakeXMLHttpRequest extends EventTarget {
+  static instances: FakeXMLHttpRequest[] = [];
   static latest: FakeXMLHttpRequest | undefined;
+  static status = 200;
   static response: unknown = {
     public_id: authorization.publicId,
     version: 17,
@@ -52,14 +54,16 @@ class FakeXMLHttpRequest extends EventTarget {
 
   readonly upload = new EventTarget();
   readonly open = vi.fn();
+  readonly setRequestHeader = vi.fn();
   readonly sent = vi.fn();
   response: unknown = FakeXMLHttpRequest.response;
   responseType: XMLHttpRequestResponseType = "";
-  status = 200;
+  status = FakeXMLHttpRequest.status;
 
   constructor() {
     super();
     FakeXMLHttpRequest.latest = this;
+    FakeXMLHttpRequest.instances.push(this);
   }
 
   send(body: Document | XMLHttpRequestBodyInit | null) {
@@ -148,6 +152,8 @@ describe("media upload policy", () => {
 describe("uploadMedia", () => {
   beforeEach(() => {
     FakeXMLHttpRequest.latest = undefined;
+    FakeXMLHttpRequest.instances = [];
+    FakeXMLHttpRequest.status = 200;
     FakeXMLHttpRequest.response = {
       public_id: authorization.publicId,
       version: 17,
@@ -219,7 +225,28 @@ describe("uploadMedia", () => {
     expect(statusSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("rejects an invalid Cloudinary response before completion", async () => {
+  it("uploads large video evidence in network-resilient chunks", async () => {
+    vi.spyOn(mediaApi, "createUploadSignature").mockResolvedValue({
+      ...authorization,
+      uploadUrl: "https://api.cloudinary.test/v1_1/demo/video/upload",
+    });
+    vi.spyOn(mediaApi, "completeUpload").mockResolvedValue(activeAsset);
+
+    await uploadMedia(
+      sizedFile("evidence.mp4", "video/mp4", 25_165_824),
+      "DOSSIER_EVIDENCE",
+    );
+
+    expect(FakeXMLHttpRequest.instances.length).toBeGreaterThan(1);
+    expect(
+      FakeXMLHttpRequest.instances[0]?.setRequestHeader,
+    ).toHaveBeenCalledWith("X-Unique-Upload-Id", expect.any(String));
+    expect(
+      FakeXMLHttpRequest.instances[0]?.setRequestHeader,
+    ).toHaveBeenCalledWith("Content-Range", expect.stringMatching(/^bytes 0-/));
+  });
+
+  it("rejects an invalid storage response before completion", async () => {
     vi.spyOn(mediaApi, "createUploadSignature").mockResolvedValue(
       authorization,
     );
@@ -231,8 +258,26 @@ describe("uploadMedia", () => {
 
     await expect(
       uploadMedia(sizedFile("avatar.png", "image/png", 2_048), "AVATAR"),
-    ).rejects.toThrow(/Cloudinary/i);
+    ).rejects.toThrow(/dịch vụ lưu trữ/i);
     expect(completeSpy).not.toHaveBeenCalled();
+  });
+
+  it("turns an upstream size rejection into a provider-neutral action", async () => {
+    vi.spyOn(mediaApi, "createUploadSignature").mockResolvedValue(
+      authorization,
+    );
+    FakeXMLHttpRequest.status = 413;
+    FakeXMLHttpRequest.response = {
+      error: { message: "File size too large for the configured account" },
+    };
+
+    const upload = uploadMedia(
+      sizedFile("evidence.mp4", "video/mp4", 52_533_658),
+      "DOSSIER_EVIDENCE",
+    );
+
+    await expect(upload).rejects.toThrow(/kích thước/i);
+    await expect(upload).rejects.not.toThrow(/Cloudinary/i);
   });
 
   it("does not complete when Cloudinary returns another public asset", async () => {

@@ -46,7 +46,7 @@ test("account page presents profile and permission-aware organization UI", async
       "base64",
     ),
   });
-  await page.getByRole("button", { name: "Tải tệp lên" }).click();
+  await page.getByRole("button", { name: "Tải lên 1 tệp" }).click();
   await expect(page.getByText("Ảnh đại diện đã được liên kết")).toBeVisible();
   await expect(
     page.getByText("Tệp đã được tải lên và xác minh."),

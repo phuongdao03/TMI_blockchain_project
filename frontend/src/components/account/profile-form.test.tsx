@@ -83,8 +83,6 @@ describe("ProfileForm", () => {
 
     expect(screen.getByText("Chưa có ảnh đại diện")).toBeDefined();
     expect(screen.getByLabelText("Chọn ảnh đại diện")).toBeDefined();
-    expect(
-      screen.getByRole("button", { name: "Chọn tệp từ thiết bị" }),
-    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "Thêm tệp" })).toBeDefined();
   });
 });

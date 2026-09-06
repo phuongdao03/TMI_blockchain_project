@@ -80,7 +80,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       ),
     });
     await page
-      .getByRole("button", { name: "Tải tệp lên", exact: true })
+      .getByRole("button", { name: "Tải lên 1 tệp", exact: true })
       .click();
     await page.getByRole("button", { name: /Kiểm tra & nộp/ }).click();
     await page.getByRole("button", { name: "Nộp hồ sơ" }).click();

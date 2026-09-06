@@ -133,18 +133,21 @@ export function DossierCreateForm() {
             ["04", "Kiểm tra & nộp", "Khóa phiên bản"],
           ].map(([number, label, note], index) => (
             <li
-              className={`rounded-xl border p-3 ${
+              aria-current={index === 0 ? "step" : undefined}
+              className={`dossier-journey__step rounded-xl border p-3 ${
                 index === 0
-                  ? "border-primary-300 bg-primary-50/60"
+                  ? "dossier-journey__step--active"
                   : "border-[var(--theme-border)] bg-[var(--theme-surface)]"
               }`}
               key={number}
             >
-              <span className="font-mono text-xs font-bold text-primary-700">
+              <span className="dossier-journey__number font-mono text-xs font-bold">
                 {number}
               </span>
-              <strong className="ml-2 text-sm">{label}</strong>
-              <span className="mt-1 block pl-7 text-xs text-neutral-500">
+              <strong className="ml-2 text-sm text-[var(--theme-text)]">
+                {label}
+              </strong>
+              <span className="mt-1 block pl-7 text-xs text-[var(--theme-muted)]">
                 {note}
               </span>
             </li>

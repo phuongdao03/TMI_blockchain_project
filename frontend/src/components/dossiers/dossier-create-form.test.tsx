@@ -23,6 +23,22 @@ describe("DossierCreateForm", () => {
     pushMock.mockReset();
   });
 
+  it("uses the theme-aware active treatment for the current step", () => {
+    listTypesMock.mockResolvedValue([]);
+    const queryClient = new QueryClient();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <DossierCreateForm />
+      </QueryClientProvider>,
+    );
+
+    const activeStep = screen.getByText("Chọn loại hồ sơ").closest("li");
+    expect(activeStep?.getAttribute("aria-current")).toBe("step");
+    expect(activeStep?.className).toContain("dossier-journey__step--active");
+    expect(activeStep?.className).not.toContain("bg-primary-50");
+  });
+
   it("creates a valid draft and opens its workspace", async () => {
     const user = userEvent.setup();
     createMock.mockResolvedValue({

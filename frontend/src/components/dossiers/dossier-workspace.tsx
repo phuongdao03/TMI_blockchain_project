@@ -10,7 +10,6 @@ import {
   CircleAlert,
   FileCheck2,
   FileText,
-  Fingerprint,
   LoaderCircle,
   LockKeyhole,
   Save,
@@ -734,15 +733,18 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                     />
                   ))
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 px-5 py-8 text-center">
-                    <Fingerprint
-                      aria-hidden="true"
-                      className="mx-auto size-7 text-neutral-400"
-                    />
-                    <p className="mt-3 font-bold">Chưa có bằng chứng</p>
-                    <p className="mt-1 text-sm text-neutral-500">
-                      Hồ sơ cần ít nhất một tệp đã xác minh để có thể nộp.
-                    </p>
+                  <div className="flex items-start gap-3 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-4">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white text-neutral-500 ring-1 ring-neutral-200">
+                      <FileCheck2 aria-hidden="true" className="size-4" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold">
+                        Chưa có tệp đã xác minh
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-neutral-500">
+                        Chọn tệp ở phía trên; tệp hợp lệ sẽ xuất hiện tại đây.
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>

@@ -176,15 +176,45 @@ function formatMegabytes(bytes: number): string {
   });
 }
 
-function uploadToCloudinary(
-  file: File,
+const CHUNKED_UPLOAD_THRESHOLD_BYTES = 20 * 1_048_576;
+const UPLOAD_CHUNK_BYTES = 6 * 1_048_576;
+
+function rejectedUploadMessage(status: number, response: unknown): string {
+  const upstreamMessage = z
+    .object({ error: z.object({ message: z.string() }) })
+    .safeParse(response);
+  const reason = upstreamMessage.success
+    ? upstreamMessage.data.error.message.toLocaleLowerCase("en")
+    : "";
+  if (
+    status === 413 ||
+    reason.includes("file size") ||
+    reason.includes("too large") ||
+    reason.includes("maximum")
+  ) {
+    return "Tệp bị từ chối vì kích thước vượt giới hạn của hệ thống lưu trữ. Hãy nén tệp hoặc chọn tệp nhỏ hơn.";
+  }
+  if (status === 408 || status === 504) {
+    return "Tải tệp mất quá nhiều thời gian. Vui lòng kiểm tra kết nối và thử lại.";
+  }
+  if (status === 429) {
+    return "Hệ thống đang nhận nhiều lượt tải tệp. Vui lòng đợi một lát rồi thử lại.";
+  }
+  return "Dịch vụ lưu trữ chưa thể nhận tệp này. Vui lòng thử lại hoặc chọn tệp khác.";
+}
+
+function sendUploadRequest(
+  content: Blob,
+  filename: string,
   authorization: MediaUploadAuthorization,
+  headers: Readonly<Record<string, string>>,
   onProgress?: (progress: number) => void,
-): Promise<z.infer<typeof cloudinaryResponseSchema>> {
+): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const form = new FormData();
-    form.append("file", file);
+    if (content instanceof File) form.append("file", content);
+    else form.append("file", content, filename);
     form.append("api_key", authorization.apiKey);
     form.append("signature", authorization.signature);
     for (const [name, value] of Object.entries(authorization.parameters)) {
@@ -209,20 +239,61 @@ function uploadToCloudinary(
     });
     xhr.addEventListener("load", () => {
       if (xhr.status < 200 || xhr.status >= 300) {
-        reject(new Error("Cloudinary từ chối tệp tải lên."));
+        reject(new Error(rejectedUploadMessage(xhr.status, xhr.response)));
         return;
       }
-      const result = cloudinaryResponseSchema.safeParse(xhr.response);
-      if (!result.success) {
-        reject(new Error("Phản hồi Cloudinary không hợp lệ."));
-        return;
-      }
-      resolve(result.data);
+      resolve(xhr.response);
     });
     xhr.responseType = "json";
+    xhr.timeout = 600_000;
     xhr.open("POST", authorization.uploadUrl, true);
+    for (const [name, value] of Object.entries(headers)) {
+      xhr.setRequestHeader(name, value);
+    }
     xhr.send(form);
   });
+}
+
+async function uploadToCloudinary(
+  file: File,
+  authorization: MediaUploadAuthorization,
+  onProgress?: (progress: number) => void,
+): Promise<z.infer<typeof cloudinaryResponseSchema>> {
+  let response: unknown;
+  if (file.size <= CHUNKED_UPLOAD_THRESHOLD_BYTES) {
+    response = await sendUploadRequest(
+      file,
+      file.name,
+      authorization,
+      {},
+      onProgress,
+    );
+  } else {
+    const uploadId = crypto.randomUUID();
+    for (let start = 0; start < file.size; start += UPLOAD_CHUNK_BYTES) {
+      const endExclusive = Math.min(start + UPLOAD_CHUNK_BYTES, file.size);
+      response = await sendUploadRequest(
+        file.slice(start, endExclusive, file.type),
+        file.name,
+        authorization,
+        {
+          "Content-Range": `bytes ${start}-${endExclusive - 1}/${file.size}`,
+          "X-Unique-Upload-Id": uploadId,
+        },
+        (chunkProgress) => {
+          const uploaded =
+            start + ((endExclusive - start) * chunkProgress) / 100;
+          onProgress?.(Math.min(100, Math.round((uploaded / file.size) * 100)));
+        },
+      );
+    }
+  }
+
+  const result = cloudinaryResponseSchema.safeParse(response);
+  if (!result.success) {
+    throw new Error("Phản hồi từ dịch vụ lưu trữ không hợp lệ.");
+  }
+  return result.data;
 }
 
 export async function uploadMedia(
@@ -246,7 +317,7 @@ export async function uploadMedia(
     callbacks.onProgress,
   );
   if (result.public_id !== authorization.publicId) {
-    throw new Error("Tài nguyên Cloudinary không khớp với chữ ký tải lên.");
+    throw new Error("Tệp tải lên không khớp với phiên bảo mật hiện tại.");
   }
   callbacks.onStage?.("verifying");
   const asset = await mediaApi.completeUpload({
