@@ -139,12 +139,12 @@ class Settings(BaseSettings):
         le=20_971_520,
     )
     media_evidence_max_bytes: int = Field(
-        default=31_457_280,
+        default=104_857_600,
         ge=1,
         le=314_572_800,
     )
     document_verification_max_bytes: int = Field(
-        default=26_214_400,
+        default=104_857_600,
         ge=1,
         le=104_857_600,
     )

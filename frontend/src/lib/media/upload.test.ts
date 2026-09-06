@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mediaApi } from "@/lib/api/client";
 import type { MediaAsset, MediaUploadAuthorization } from "@/lib/api/types";
 import {
+  mediaPolicies,
   MediaUploadValidationError,
   uploadMedia,
   validateMediaFile,
@@ -81,6 +82,11 @@ function sizedFile(name: string, type: string, size: number) {
 }
 
 describe("media upload policy", () => {
+  it("allows dossier video evidence up to 100 MB", () => {
+    expect(mediaPolicies.DOSSIER_EVIDENCE.maxBytes).toBe(104_857_600);
+    expect(mediaPolicies.DOSSIER_EVIDENCE.maxMegabytes).toBe(100);
+  });
+
   it("rejects disallowed MIME, excessive size and mismatched extension", () => {
     expect(() =>
       validateMediaFile(

@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  ArrowRight,
   BadgeCheck,
   CheckCircle2,
   CircleAlert,
@@ -340,7 +341,7 @@ function InformationStep({ dossier }: { dossier: DossierDetail }) {
 
 export function DossierWorkspace({ dossierId }: { dossierId: string }) {
   const [step, setStep] = useState<Step>("information");
-  const [evidenceTitle, setEvidenceTitle] = useState("Tài liệu chứng minh");
+  const [evidenceTitle, setEvidenceTitle] = useState("");
   const [evidenceType, setEvidenceType] = useState("OWNERSHIP_DOCUMENT");
   const queryClient = useQueryClient();
   const detail = useQuery({
@@ -443,6 +444,18 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
     (documentRules.length
       ? missingRequiredRules.length === 0
       : dossier.evidences.length > 0);
+  const informationReady = dossier.title.length >= 3;
+  const evidenceReady = documentRules.length
+    ? missingRequiredRules.length === 0
+    : dossier.evidences.length > 0;
+  const completedPreparationSteps = [informationReady, evidenceReady].filter(
+    Boolean,
+  ).length;
+  const nextPreparationStep: Step = !informationReady
+    ? "information"
+    : !evidenceReady
+      ? "evidence"
+      : "review";
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
@@ -464,28 +477,44 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
             {dossier.title}
           </h1>
         </div>
-        <div className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm">
-          <p className="font-bold text-neutral-900">
-            Phiên bản hiện tại: {dossier.currentVersionNo || "Chưa nộp"}
-          </p>
-          <p className="mt-1 text-xs text-neutral-500">
-            Mỗi lần nộp được lưu thành một phiên bản riêng.
-          </p>
-        </div>
+        <p className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-bold text-neutral-600">
+          Phiên bản: {dossier.currentVersionNo || "Chưa nộp"}
+        </p>
       </div>
 
-      <section className="dossier-state-card grid gap-2 px-5 py-4 text-sm sm:grid-cols-[1fr_1fr] sm:gap-8">
-        <div>
-          <p className="font-bold">Trạng thái hiện tại</p>
-          <p className="mt-1 leading-6">
-            {dossierGuidance[dossier.status].outcome}
-          </p>
-        </div>
-        <div>
-          <p className="font-bold">Việc tiếp theo</p>
-          <p className="mt-1 leading-6">
-            {dossierGuidance[dossier.status].next}
-          </p>
+      <section className="overflow-hidden rounded-2xl border border-primary-200 bg-primary-50/70">
+        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
+              Việc cần làm tiếp theo
+            </p>
+            <p className="mt-2 text-lg font-bold leading-7 text-neutral-950">
+              {dossierGuidance[dossier.status].next}
+            </p>
+            {dossier.canEdit ? (
+              <Button
+                className="mt-4"
+                onClick={() => setStep(nextPreparationStep)}
+                type="button"
+              >
+                Tiếp tục hoàn thiện
+                <ArrowRight aria-hidden="true" className="size-4" />
+              </Button>
+            ) : null}
+          </div>
+          <div className="rounded-xl border border-primary-200 bg-white/80 p-4 text-sm">
+            <p className="font-bold text-neutral-950">
+              {dossierStatusLabel(dossier.status)}
+            </p>
+            <p className="mt-1 leading-6 text-neutral-600">
+              {dossierGuidance[dossier.status].outcome}
+            </p>
+            {dossier.canEdit ? (
+              <p className="mt-3 border-t border-primary-100 pt-3 text-xs font-semibold text-primary-800">
+                Đã xong {completedPreparationSteps}/2 phần chuẩn bị
+              </p>
+            ) : null}
+          </div>
         </div>
       </section>
 
@@ -507,15 +536,10 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
         dossierStatus={dossier.status}
       />
 
-      <DossierWorkflowTimeline
-        history={timeline.data ?? []}
-        status={dossier.status}
-      />
-
-      <div className="grid gap-6 xl:grid-cols-[17rem_minmax(0,1fr)]">
+      <div className="space-y-4">
         <nav
           aria-label="Các bước hoàn thiện hồ sơ"
-          className="h-fit rounded-2xl border border-neutral-200 bg-white p-2 xl:sticky xl:top-24"
+          className="grid gap-2 rounded-2xl border border-neutral-200 bg-white p-2 md:grid-cols-3"
         >
           {steps.map((item, index) => {
             const Icon = item.icon;
@@ -568,76 +592,86 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   Bằng chứng hồ sơ
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-neutral-500">
-                  Thêm tài liệu giúp chứng minh nguồn gốc, quyền sở hữu hoặc quá
-                  trình hình thành tác phẩm.
+                  Chọn đúng loại, tải tệp lên và chờ hệ thống xác nhận an toàn.
+                  Bạn có thể tải nhiều tệp cùng lúc.
                 </p>
               </div>
               {dossier.canEdit ? (
-                <div className="grid gap-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 sm:grid-cols-2">
-                  <div>
-                    <label
-                      className="text-sm font-bold"
-                      htmlFor="evidence-title"
-                    >
-                      Tên bằng chứng
-                    </label>
-                    <input
-                      className="mt-2 min-h-11 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm"
-                      id="evidence-title"
-                      onChange={(event) => setEvidenceTitle(event.target.value)}
-                      value={evidenceTitle}
-                    />
+                <div className="space-y-5 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 sm:p-5">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label
+                        className="text-sm font-bold"
+                        htmlFor="evidence-type"
+                      >
+                        1. Chọn loại tài liệu
+                      </label>
+                      <select
+                        className="mt-2 min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm font-semibold"
+                        id="evidence-type"
+                        onChange={(event) =>
+                          setEvidenceType(event.target.value)
+                        }
+                        value={selectedRule?.key ?? evidenceType}
+                      >
+                        {documentRules.length ? (
+                          documentRules.map((rule) => (
+                            <option key={rule.key} value={rule.key}>
+                              {rule.label}
+                              {rule.required ? " · bắt buộc" : ""}
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="OWNERSHIP_DOCUMENT">
+                              Tài liệu quyền sở hữu
+                            </option>
+                            <option value="CREATIVE_WORK">Tác phẩm gốc</option>
+                            <option value="OTHER">Tài liệu khác</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        className="text-sm font-bold"
+                        htmlFor="evidence-title"
+                      >
+                        2. Tên tài liệu
+                      </label>
+                      <input
+                        className="mt-2 min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm"
+                        id="evidence-title"
+                        onChange={(event) =>
+                          setEvidenceTitle(event.target.value)
+                        }
+                        placeholder={
+                          selectedRule?.label ?? "Ví dụ: Video tác phẩm gốc"
+                        }
+                        value={evidenceTitle}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label
-                      className="text-sm font-bold"
-                      htmlFor="evidence-type"
-                    >
-                      Loại bằng chứng
-                    </label>
-                    <select
-                      className="mt-2 min-h-11 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm"
-                      id="evidence-type"
-                      onChange={(event) => setEvidenceType(event.target.value)}
-                      value={selectedRule?.key ?? evidenceType}
-                    >
-                      {documentRules.length ? (
-                        documentRules.map((rule) => (
-                          <option key={rule.key} value={rule.key}>
-                            {rule.label}
-                            {rule.required ? " · bắt buộc" : ""}
-                          </option>
-                        ))
-                      ) : (
-                        <>
-                          <option value="OWNERSHIP_DOCUMENT">
-                            Tài liệu quyền sở hữu
-                          </option>
-                          <option value="CREATIVE_WORK">Tác phẩm gốc</option>
-                          <option value="OTHER">Tài liệu khác</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
-                  <div className="sm:col-span-2">
-                    {selectedRule ? (
-                      <div className="mb-4 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="font-bold text-neutral-900">
-                            {selectedRule.required
-                              ? "Tài liệu bắt buộc"
-                              : "Tài liệu bổ sung"}
-                          </p>
-                          <span className="text-xs font-semibold text-neutral-500">
-                            {selectedRuleCount}/{selectedRule.maxCount} tệp
-                          </span>
-                        </div>
+                  {selectedRule ? (
+                    <div className="flex flex-col gap-2 rounded-xl border border-primary-100 bg-white px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-bold text-neutral-900">
+                          {selectedRule.required
+                            ? "Cần có tài liệu này để nộp hồ sơ"
+                            : "Tài liệu bổ sung, không bắt buộc"}
+                        </p>
                         <p className="mt-1 text-xs leading-5 text-neutral-600">
                           {evidenceScopeLabel(selectedRule.defaultVisibility)}.
-                          Hệ thống tự áp dụng phạm vi hiển thị này.
+                          Phạm vi hiển thị được áp dụng tự động.
                         </p>
                       </div>
-                    ) : null}
+                      <span className="shrink-0 rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-700">
+                        {selectedRuleCount}/{selectedRule.maxCount} tệp
+                      </span>
+                    </div>
+                  ) : null}
+                  <div>
+                    <p className="mb-3 text-sm font-bold">3. Chọn và tải tệp</p>
                     <FileUploader
                       constraints={
                         selectedRule
@@ -684,6 +718,12 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                 </p>
               ) : null}
               <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-bold text-neutral-950">Tệp đã thêm</h3>
+                  <span className="text-xs font-semibold text-neutral-500">
+                    {dossier.evidences.length} tệp
+                  </span>
+                </div>
                 {dossier.evidences.length ? (
                   dossier.evidences.map((evidence) => (
                     <EvidenceItem
@@ -694,7 +734,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                     />
                   ))
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-neutral-300 px-5 py-10 text-center">
+                  <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 px-5 py-8 text-center">
                     <Fingerprint
                       aria-hidden="true"
                       className="mx-auto size-7 text-neutral-400"
@@ -872,6 +912,11 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
           ) : null}
         </div>
       </div>
+
+      <DossierWorkflowTimeline
+        history={timeline.data ?? []}
+        status={dossier.status}
+      />
     </div>
   );
 }

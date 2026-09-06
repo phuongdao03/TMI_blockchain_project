@@ -33,7 +33,7 @@ export function ProfileForm({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       fullName: profile.fullName ?? "",
-      phone: profile.phone ?? "",
+      phone: profile.phone?.replace(/^\+84/, "0") ?? "",
       locale: profile.locale,
       timezone: profile.timezone,
     },
@@ -96,9 +96,10 @@ export function ProfileForm({
         <FormField
           autoComplete="tel"
           error={errors.phone?.message}
-          hint="Dùng mã quốc gia, ví dụ +84."
+          hint="Nhập số Việt Nam bắt đầu bằng 0."
           label="Số điện thoại"
-          placeholder="+84901234567"
+          inputMode="tel"
+          placeholder="0901234567"
           {...register("phone")}
         />
         <FormField

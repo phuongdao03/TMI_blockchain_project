@@ -4,8 +4,14 @@ const optionalPhone = z
   .string()
   .trim()
   .refine(
-    (value) => value === "" || /^\+[1-9]\d{7,14}$/.test(value),
-    "Số điện thoại phải theo định dạng quốc tế, ví dụ +84901234567.",
+    (value) =>
+      value === "" ||
+      /^0\d{8,10}$/.test(value) ||
+      /^\+[1-9]\d{7,14}$/.test(value),
+    "Số điện thoại chưa đúng. Ví dụ: 0901234567.",
+  )
+  .transform((value) =>
+    value.startsWith("0") ? `+84${value.slice(1)}` : value,
   );
 
 export const profileSchema = z.object({

@@ -30,6 +30,21 @@ describe("FileUploader", () => {
     uploadMediaMock.mockReset();
   });
 
+  it("explains the three upload steps before a file is selected", () => {
+    render(
+      <FileUploader
+        label="Bằng chứng hồ sơ"
+        onComplete={vi.fn()}
+        purpose="DOSSIER_EVIDENCE"
+      />,
+    );
+
+    expect(screen.getByText(/1\. Chọn tệp/)).toBeDefined();
+    expect(screen.getByText(/2\. Tải lên/)).toBeDefined();
+    expect(screen.getByText(/3\. Chờ kiểm tra/)).toBeDefined();
+    expect(screen.getByText(/Tối đa 100 MB/)).toBeDefined();
+  });
+
   it("announces progress and returns the verified media asset", async () => {
     const user = userEvent.setup();
     const onComplete = vi.fn();
@@ -65,7 +80,7 @@ describe("FileUploader", () => {
       "Sẵn sàng tải lên",
     );
 
-    await user.click(screen.getByRole("button", { name: "Tải lên" }));
+    await user.click(screen.getByRole("button", { name: "Tải tệp lên" }));
     expect(screen.getByRole("progressbar").getAttribute("value")).toBe("64");
     expect(screen.getByRole("status").textContent).toContain(
       "Đang tải lên Cloudinary · 64%",
@@ -97,7 +112,7 @@ describe("FileUploader", () => {
       screen.getByLabelText("Chọn ảnh đại diện"),
       new File(["avatar"], "avatar.png", { type: "image/png" }),
     );
-    await user.click(screen.getByRole("button", { name: "Tải lên" }));
+    await user.click(screen.getByRole("button", { name: "Tải tệp lên" }));
 
     expect((await screen.findByRole("alert")).textContent).toContain(
       "Mạng không ổn định.",
@@ -160,7 +175,7 @@ describe("FileUploader", () => {
     );
 
     expect(screen.getByText("evidence.pdf")).toBeDefined();
-    expect(screen.getByRole("button", { name: "Tải lên" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Tải tệp lên" })).toBeDefined();
   });
 
   it("uses the selected dossier rule for the picker and browser validation", () => {
@@ -214,7 +229,7 @@ describe("FileUploader", () => {
 
     expect(screen.getByText("one.pdf")).toBeDefined();
     expect(screen.getByText("two.pdf")).toBeDefined();
-    await user.click(screen.getByRole("button", { name: "Tải lên" }));
+    await user.click(screen.getByRole("button", { name: "Tải tệp lên" }));
 
     await vi.waitFor(() => expect(uploadMediaMock).toHaveBeenCalledTimes(2));
     expect(uploadMediaMock.mock.calls[0]?.[0]).toBe(files[0]);

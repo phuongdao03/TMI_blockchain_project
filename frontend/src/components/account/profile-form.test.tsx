@@ -36,6 +36,34 @@ describe("ProfileForm", () => {
     });
   });
 
+  it("accepts a Vietnamese phone number beginning with zero", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ProfileForm
+        onAvatarUploaded={vi.fn()}
+        onSave={onSave}
+        profile={{
+          userId: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
+          email: "owner@tmigroup.vn",
+          fullName: "Nguyễn Minh Anh",
+          phone: null,
+          avatarMediaId: null,
+          locale: "vi-VN",
+          timezone: "Asia/Ho_Chi_Minh",
+        }}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Số điện thoại"), "0901234567");
+    await user.click(screen.getByRole("button", { name: "Lưu hồ sơ" }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ phone: "+84901234567" }),
+    );
+    expect(screen.queryByText(/phải theo định dạng quốc tế/i)).toBeNull();
+  });
+
   it("shows the current avatar state with the secure uploader", () => {
     render(
       <ProfileForm
@@ -55,6 +83,8 @@ describe("ProfileForm", () => {
 
     expect(screen.getByText("Chưa có ảnh đại diện")).toBeDefined();
     expect(screen.getByLabelText("Chọn ảnh đại diện")).toBeDefined();
-    expect(screen.getByRole("button", { name: "Chọn tệp" })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Chọn tệp từ thiết bị" }),
+    ).toBeDefined();
   });
 });

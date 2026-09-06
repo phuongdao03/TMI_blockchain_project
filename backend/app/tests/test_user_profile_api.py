@@ -168,3 +168,27 @@ def test_profile_api_enforces_auth_csrf_and_field_validation() -> None:
     assert forbidden.status_code == 403
     assert invalid.status_code == 422
     assert invalid.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_profile_api_normalizes_vietnamese_local_phone() -> None:
+    principal = AuthPrincipal(
+        user_id=uuid4(),
+        session_id=uuid4(),
+        email="owner@tmigroup.vn",
+        roles=("APPLICANT",),
+    )
+    service = StubUserProfileService(principal)
+
+    response = asyncio.run(
+        _request(
+            "PATCH",
+            "/api/v1/users/me",
+            service,
+            principal,
+            json={"phone": "0901234567"},
+        )
+    )
+
+    assert response.status_code == 200
+    assert service.changes is not None
+    assert service.changes.phone == "+84901234567"

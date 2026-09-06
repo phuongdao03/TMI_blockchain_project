@@ -75,8 +75,8 @@ export const mediaPolicies: Record<MediaPurpose, MediaPolicy> = {
   DOSSIER_EVIDENCE: {
     accept:
       "image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/x-wav,video/mp4,video/webm,application/msword,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip",
-    maxBytes: 31_457_280,
-    maxMegabytes: 30,
+    maxBytes: 104_857_600,
+    maxMegabytes: 100,
     formats: {
       "application/pdf": [".pdf"],
       "application/msword": [".doc"],

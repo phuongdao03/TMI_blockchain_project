@@ -28,7 +28,7 @@ export function FileUploaderActions({
         type="button"
         variant="outline"
       >
-        Chọn tệp
+        Chọn tệp từ thiết bị
       </Button>
     );
   }
@@ -36,7 +36,7 @@ export function FileUploaderActions({
     return (
       <Button disabled={disabled} onClick={onUpload} type="button">
         <UploadCloud aria-hidden="true" className="size-4" />
-        Tải lên
+        Tải tệp lên
       </Button>
     );
   }

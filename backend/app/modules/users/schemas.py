@@ -41,6 +41,20 @@ class PatchUserProfileRequest(BaseModel):
     def strip_full_name(cls, value: str | None) -> str | None:
         return value.strip() if value is not None else None
 
+    @field_validator("phone", mode="before")
+    @classmethod
+    def normalize_phone(cls, value: object) -> object:
+        if isinstance(value, str):
+            stripped = value.strip()
+            if (
+                stripped.startswith("0")
+                and stripped.isdigit()
+                and 9 <= len(stripped) <= 11
+            ):
+                return f"+84{stripped[1:]}"
+            return stripped
+        return value
+
     @field_validator("timezone")
     @classmethod
     def validate_timezone(cls, value: str | None) -> str | None:

@@ -125,8 +125,8 @@ export function FileUploader({
       : statusText[status];
 
   return (
-    <section aria-labelledby={`${inputId}-label`} className="space-y-3">
-      <div className="flex items-end justify-between gap-4">
+    <section aria-labelledby={`${inputId}-label`} className="space-y-4">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h3
             className="text-sm font-semibold text-neutral-950"
@@ -135,7 +135,7 @@ export function FileUploader({
             {label}
           </h3>
           <p
-            className="mt-1 text-xs leading-5 text-neutral-500"
+            className="mt-1 text-sm leading-6 text-neutral-600"
             id={descriptionId}
           >
             Tối đa {formatBytes(maxBytes)}
@@ -145,13 +145,21 @@ export function FileUploader({
         <ShieldCheck aria-hidden="true" className="size-5 text-success" />
       </div>
 
+      <ol className="grid gap-2 text-xs font-semibold text-neutral-600 sm:grid-cols-3">
+        <li className="rounded-lg bg-neutral-100 px-3 py-2">1. Chọn tệp</li>
+        <li className="rounded-lg bg-neutral-100 px-3 py-2">2. Tải lên</li>
+        <li className="rounded-lg bg-neutral-100 px-3 py-2">
+          3. Chờ kiểm tra an toàn
+        </li>
+      </ol>
+
       <div
         aria-label={`Vùng tải ${label.toLocaleLowerCase("vi")}`}
         className={cn(
-          "rounded-xl border border-dashed p-4 transition-colors",
+          "rounded-2xl border-2 border-dashed p-5 transition-colors sm:p-6",
           isDragging
-            ? "border-primary-600 bg-primary-50"
-            : "border-neutral-200 bg-neutral-50",
+            ? "border-primary-600 bg-primary-50 shadow-sm"
+            : "border-neutral-300 bg-neutral-50 hover:border-primary-300 hover:bg-primary-50/40",
           disabled && "opacity-60",
         )}
         onDragEnter={(event) => {
@@ -177,8 +185,8 @@ export function FileUploader({
           type="file"
         />
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-white text-primary-600 shadow-sm">
+        <div className="flex min-h-24 flex-col gap-4 sm:flex-row sm:items-center">
+          <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-white text-primary-700 shadow-sm ring-1 ring-neutral-200">
             {status === "complete" ? (
               <FileCheck2 aria-hidden="true" className="size-5" />
             ) : file ? (
@@ -200,8 +208,8 @@ export function FileUploader({
                 ))}
               </ul>
             ) : (
-              <p className="truncate text-sm font-semibold text-neutral-950">
-                Kéo tệp vào đây hoặc chọn từ thiết bị
+              <p className="text-base font-bold text-neutral-950">
+                Kéo thả tệp vào đây
               </p>
             )}
             <p
@@ -213,7 +221,7 @@ export function FileUploader({
                 ? `${files.length} tệp · `
                 : file
                   ? `${formatBytes(file.size)} · `
-                  : ""}
+                  : "Bạn cũng có thể chọn nhiều tệp cùng lúc · "}
               {statusLabel}
             </p>
           </div>

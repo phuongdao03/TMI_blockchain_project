@@ -64,7 +64,7 @@ test("applicant creates, uploads evidence and submits an immutable dossier", asy
   ).toBeVisible();
 
   await page.getByRole("button", { name: /Bằng chứng/ }).click();
-  await page.getByLabel("Tên bằng chứng").fill("Bản gốc nhận diện");
+  await page.getByLabel("2. Tên tài liệu").fill("Bản gốc nhận diện");
   await page.getByLabel("Chọn bằng chứng hồ sơ").setInputFiles({
     name: "evidence.png",
     mimeType: "image/png",
@@ -73,7 +73,7 @@ test("applicant creates, uploads evidence and submits an immutable dossier", asy
       "base64",
     ),
   });
-  await page.getByRole("button", { name: "Tải lên", exact: true }).click();
+  await page.getByRole("button", { name: "Tải tệp lên", exact: true }).click();
   await expect(page.getByText("Bản gốc nhận diện")).toBeVisible();
 
   await page.getByRole("button", { name: /Kiểm tra & nộp/ }).click();

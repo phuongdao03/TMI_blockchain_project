@@ -34,4 +34,4 @@ def test_document_verification_accepts_its_bounded_binary_body_only() -> None:
         assert verification_location in config
         location_start = config.index(verification_location)
         location_end = config.index("\n    }", location_start)
-        assert "client_max_body_size 25m;" in config[location_start:location_end]
+        assert "client_max_body_size 100m;" in config[location_start:location_end]
