@@ -164,6 +164,7 @@ def test_document_verification_openapi_does_not_add_vietnamese_paths() -> None:
 
 
 def test_document_verification_rejects_non_binary_and_oversized_bodies_early() -> None:
+    settings = Settings()
     wrong_type = asyncio.run(
         _request(
             "POST",
@@ -177,7 +178,7 @@ def test_document_verification_rejects_non_binary_and_oversized_bodies_early() -
             "POST",
             f"/api/v1/media/{uuid4()}/verifications",
             content=b"hello",
-            content_length=26_214_401,
+            content_length=settings.document_verification_max_bytes + 1,
         )
     )
 
