@@ -5,7 +5,11 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StaffAccountWorkspace } from "@/components/admin/staff-account-workspace";
-import { staffAccountsApi, staffInvitationsApi } from "@/lib/api/client";
+import {
+  adminUsersApi,
+  staffAccountsApi,
+  staffInvitationsApi,
+} from "@/lib/api/client";
 
 vi.mock("@/lib/api/client", () => ({
   ApiError: class ApiError extends Error {
@@ -16,6 +20,9 @@ vi.mock("@/lib/api/client", () => ({
     ) {
       super(message);
     }
+  },
+  adminUsersApi: {
+    list: vi.fn(),
   },
   staffAccountsApi: {
     list: vi.fn(),
@@ -63,6 +70,25 @@ beforeEach(() => {
     ],
     meta: { request_id: "staff-list", page: 1, pageSize: 100, total: 2 },
   });
+  vi.mocked(adminUsersApi.list).mockResolvedValue({
+    success: true,
+    data: [
+      {
+        id: "user-1",
+        email: "member@example.com",
+        fullName: "Nguyễn Minh An",
+        status: "ACTIVE",
+        isEmailVerified: true,
+        providers: ["FIREBASE"],
+        roles: ["USER"],
+        createdAt: "2026-08-01T00:00:00Z",
+        lastLoginAt: null,
+        disabledAt: null,
+        deletedAt: null,
+      },
+    ],
+    meta: { request_id: "users", page: 1, pageSize: 100, total: 1 },
+  });
   vi.mocked(staffInvitationsApi.list).mockResolvedValue({
     success: true,
     data: [],
@@ -106,22 +132,18 @@ beforeEach(() => {
 
 describe("StaffAccountWorkspace", () => {
   it("shows a clear summary, account table and filters", async () => {
-    const user = userEvent.setup();
     render(<StaffAccountWorkspace />, { wrapper });
 
     expect(await screen.findByText("reviewer@tmigroup.vn")).toBeDefined();
     expect(screen.getAllByText("Đang hoạt động").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Đã khóa").length).toBeGreaterThan(0);
     expect(screen.getByText("2 tài khoản")).toBeDefined();
-    expect(screen.getByRole("button", { name: "Gửi lời mời" })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Chọn làm người kiểm duyệt" }),
+    ).toBeDefined();
     expect(screen.queryByLabelText("Mật khẩu tạm")).toBeNull();
 
-    await user.type(screen.getByRole("searchbox"), "finance");
-    await waitFor(() =>
-      expect(staffAccountsApi.list).toHaveBeenLastCalledWith(
-        expect.objectContaining({ query: "finance" }),
-      ),
-    );
+    expect(screen.getByText("Nguyễn Minh An")).toBeDefined();
   });
 
   it("requires confirmation before suspending an account", async () => {
@@ -145,16 +167,14 @@ describe("StaffAccountWorkspace", () => {
     );
   });
 
-  it("confirms the recipient and task before sending an invitation", async () => {
+  it("lets the administrator select an existing account and confirm the invitation", async () => {
     const user = userEvent.setup();
     render(<StaffAccountWorkspace />, { wrapper });
     await screen.findByText("reviewer@tmigroup.vn");
 
-    await user.type(
-      screen.getByRole("textbox", { name: "Email công việc" }),
-      "new.staff@tmigroup.vn",
+    await user.click(
+      screen.getByRole("button", { name: "Chọn làm người kiểm duyệt" }),
     );
-    await user.click(screen.getByRole("button", { name: "Gửi lời mời" }));
     expect(staffInvitationsApi.create).not.toHaveBeenCalled();
     expect(
       screen.getByRole("heading", { name: "Xác nhận mời nhân sự" }),
@@ -166,64 +186,9 @@ describe("StaffAccountWorkspace", () => {
     await user.click(confirmationButtons.at(-1)!);
     await waitFor(() =>
       expect(staffInvitationsApi.create).toHaveBeenCalledWith({
-        email: "new.staff@tmigroup.vn",
+        email: "member@example.com",
         role: "MODERATOR",
       }),
-    );
-  });
-
-  it("closes confirmation and explains why an existing account cannot be invited", async () => {
-    vi.mocked(staffInvitationsApi.create).mockRejectedValueOnce(
-      new Error("An account already exists for this email."),
-    );
-    const user = userEvent.setup();
-    render(<StaffAccountWorkspace />, { wrapper });
-    await screen.findByText("reviewer@tmigroup.vn");
-
-    await user.type(
-      screen.getByRole("textbox", { name: "Email công việc" }),
-      "reviewer@tmigroup.vn",
-    );
-    await user.click(screen.getByRole("button", { name: "Gửi lời mời" }));
-    await user.click(
-      screen.getAllByRole("button", { name: "Gửi lời mời" }).at(-1)!,
-    );
-
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      "Tài khoản này đã tồn tại",
-    );
-    expect(
-      screen.queryByRole("heading", { name: "Xác nhận mời nhân sự" }),
-    ).toBeNull();
-  });
-
-  it("confirms consequences before changing a staff task", async () => {
-    const user = userEvent.setup();
-    render(<StaffAccountWorkspace />, { wrapper });
-    await screen.findByText("reviewer@tmigroup.vn");
-
-    await user.selectOptions(
-      screen.getByLabelText("Nhiệm vụ của reviewer@tmigroup.vn"),
-      "MODERATOR",
-    );
-    expect(staffAccountsApi.update).not.toHaveBeenCalled();
-    expect(
-      screen.getByRole("heading", { name: "Yêu cầu thay đổi nhiệm vụ" }),
-    ).toBeDefined();
-
-    await user.type(
-      screen.getByRole("textbox", { name: "Căn cứ thay đổi" }),
-      "Điều chuyển nhiệm vụ đã được xác nhận",
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Gửi yêu cầu phê duyệt" }),
-    );
-    await waitFor(() =>
-      expect(staffAccountsApi.requestRoleChange).toHaveBeenCalledWith(
-        "staff-1",
-        "MODERATOR",
-        "Điều chuyển nhiệm vụ đã được xác nhận",
-      ),
     );
   });
 });

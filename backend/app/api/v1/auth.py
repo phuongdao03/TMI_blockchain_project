@@ -36,6 +36,7 @@ from app.modules.auth.schemas import (
     ResetPasswordRequest,
     StaffInvitationAcceptedData,
     StaffInvitationAcceptRequest,
+    StaffInvitationDecisionData,
     VerifyEmailRequest,
 )
 from app.modules.auth.session_service import ClientMetadata, IssuedSession
@@ -279,6 +280,54 @@ async def accept_staff_invitation(
     )
     return SuccessEnvelope(
         data=StaffInvitationAcceptedData(status="ACTIVE"),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/staff-invitations/{invitation_id}/accept",
+    response_model=SuccessEnvelope[StaffInvitationDecisionData],
+)
+async def accept_existing_staff_invitation(
+    invitation_id: UUID,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    invitation_service: StaffInvitationServiceDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[StaffInvitationDecisionData]:
+    await invitation_service.accept_existing(
+        invitation_id=invitation_id,
+        principal=principal,
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    return SuccessEnvelope(
+        data=StaffInvitationDecisionData(status="ACCEPTED"),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/staff-invitations/{invitation_id}/decline",
+    response_model=SuccessEnvelope[StaffInvitationDecisionData],
+)
+async def decline_existing_staff_invitation(
+    invitation_id: UUID,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    invitation_service: StaffInvitationServiceDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[StaffInvitationDecisionData]:
+    await invitation_service.decline_existing(
+        invitation_id=invitation_id,
+        principal=principal,
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    return SuccessEnvelope(
+        data=StaffInvitationDecisionData(status="DECLINED"),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 

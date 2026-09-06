@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CheckCircle2,
-  MailPlus,
   LockKeyhole,
   Search,
   ShieldCheck,
@@ -12,10 +11,11 @@ import {
   UsersRound,
 } from "lucide-react";
 import Link from "next/link";
-import { type FormEvent, useState } from "react";
+import { useState } from "react";
 
 import {
   ApiError,
+  adminUsersApi,
   staffAccountsApi,
   staffInvitationsApi,
 } from "@/lib/api/client";
@@ -41,12 +41,12 @@ function invitationErrorMessage(cause: unknown): string {
 export function StaffAccountWorkspace() {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<StaffAccountRole>("MODERATOR");
+  const [candidateSearch, setCandidateSearch] = useState("");
+  const role: StaffAccountRole = "MODERATOR";
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StaffAccountStatus | "ALL">("ALL");
   const [roleFilter, setRoleFilter] = useState<StaffAccountRole | "ALL">("ALL");
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [roleChangeReason, setRoleChangeReason] = useState("");
   const [confirmInvite, setConfirmInvite] = useState(false);
   const [pendingUpdate, setPendingUpdate] = useState<{
     id: string;
@@ -70,9 +70,18 @@ export function StaffAccountWorkspace() {
     queryKey: ["admin", "staff-invitations"],
     queryFn: () => staffInvitationsApi.list(1, 20),
   });
-  const pendingActions = useQuery({
-    queryKey: ["admin", "staff-privileged-actions"],
-    queryFn: () => staffAccountsApi.listPendingActions(1, 50),
+  const candidates = useQuery({
+    queryKey: ["admin", "reviewer-candidates", candidateSearch],
+    queryFn: () =>
+      adminUsersApi.list({
+        page: 1,
+        pageSize: 100,
+        search: candidateSearch || undefined,
+        status: "ACTIVE",
+        verified: true,
+        sortBy: "email",
+        sortOrder: "asc",
+      }),
   });
   const create = useMutation({
     mutationFn: () => staffInvitationsApi.create({ email, role }),
@@ -86,6 +95,7 @@ export function StaffAccountWorkspace() {
       void queryClient.invalidateQueries({
         queryKey: ["admin", "staff-invitations"],
       });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
     onError: (cause) => {
       setConfirmInvite(false);
@@ -146,61 +156,6 @@ export function StaffAccountWorkspace() {
           : "Không thể cập nhật tài khoản.",
       ),
   });
-  const requestRoleChange = useMutation({
-    mutationFn: () => {
-      if (!pendingUpdate?.role) throw new Error("No role change selected");
-      return staffAccountsApi.requestRoleChange(
-        pendingUpdate.id,
-        pendingUpdate.role,
-        roleChangeReason.trim(),
-      );
-    },
-    onSuccess: () => {
-      setPendingUpdate(null);
-      setRoleChangeReason("");
-      setFeedback(
-        "Đã gửi yêu cầu thay đổi nhiệm vụ. Một quản trị viên khác cần phê duyệt trước khi quyền mới có hiệu lực.",
-      );
-      setError(null);
-      void queryClient.invalidateQueries({
-        queryKey: ["admin", "staff-privileged-actions"],
-      });
-    },
-    onError: (cause) =>
-      setError(
-        cause instanceof ApiError
-          ? cause.message
-          : "Không thể gửi yêu cầu thay đổi nhiệm vụ.",
-      ),
-  });
-  const approveAction = useMutation({
-    mutationFn: (actionId: string) => staffAccountsApi.approveAction(actionId),
-    onSuccess: () => {
-      setFeedback(
-        "Đã phê duyệt yêu cầu và kết thúc các phiên truy cập liên quan.",
-      );
-      setError(null);
-      void queryClient.invalidateQueries({
-        queryKey: ["admin", "staff-privileged-actions"],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["admin", "staff-accounts"],
-      });
-    },
-    onError: (cause) =>
-      setError(
-        cause instanceof ApiError
-          ? cause.message
-          : "Không thể phê duyệt yêu cầu này.",
-      ),
-  });
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFeedback(null);
-    setError(null);
-    setConfirmInvite(true);
-  }
-
   const rows = accounts.data?.data ?? [];
   const activeCount = rows.filter(
     (account) => account.status === "ACTIVE",
@@ -209,6 +164,15 @@ export function StaffAccountWorkspace() {
     (account) => account.status === "SUSPENDED",
   ).length;
   const selectedRole = STAFF_ACCOUNT_ROLES.find((item) => item.value === role);
+  const pendingEmails = new Set(
+    (invitations.data?.data ?? [])
+      .filter((invitation) => invitation.status === "PENDING")
+      .map((invitation) => invitation.email.toLowerCase()),
+  );
+  const eligibleUsers = (candidates.data?.data ?? []).filter(
+    (user) =>
+      !user.roles.includes("SUPER_ADMIN") && !user.roles.includes("MODERATOR"),
+  );
 
   return (
     <div className="staff-account-workspace mx-auto max-w-7xl space-y-7 pb-8">
@@ -269,67 +233,6 @@ export function StaffAccountWorkspace() {
         <SummaryCard label="Đang hoạt động" value={activeCount} tone="green" />
         <SummaryCard label="Đã khóa" value={suspendedCount} tone="red" />
       </section>
-      <section className="border-y border-neutral-200 bg-white px-5 py-5 sm:px-6">
-        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">
-              Cần xác nhận độc lập
-            </p>
-            <h2 className="mt-1 text-lg font-bold text-neutral-950">
-              Yêu cầu đang chờ phê duyệt
-            </h2>
-            <p className="mt-1 text-sm text-neutral-600">
-              Người tạo yêu cầu không thể tự phê duyệt thay đổi quyền hoặc khôi
-              phục bảo vệ.
-            </p>
-          </div>
-          <span className="text-sm font-semibold text-neutral-500">
-            {pendingActions.data?.meta.total ?? 0} yêu cầu
-          </span>
-        </div>
-        {pendingActions.isPending ? <TableSkeleton /> : null}
-        {!pendingActions.isPending &&
-        (pendingActions.data?.data.length ?? 0) === 0 ? (
-          <p className="mt-4 border-l-2 border-neutral-200 pl-4 text-sm text-neutral-500">
-            Không có yêu cầu nào cần xử lý.
-          </p>
-        ) : null}
-        <div className="mt-4 divide-y divide-neutral-200">
-          {(pendingActions.data?.data ?? []).map((action) => {
-            const target = rows.find(
-              (account) => account.id === action.targetUserId,
-            );
-            return (
-              <article
-                className="grid gap-4 py-4 md:grid-cols-[1fr_auto] md:items-center"
-                key={action.id}
-              >
-                <div>
-                  <p className="font-semibold text-neutral-950">
-                    {action.action === "ROLE_CHANGE"
-                      ? `Thay đổi nhiệm vụ${action.requestedRole ? ` · ${action.requestedRole}` : ""}`
-                      : "Yêu cầu bảo mật cũ"}
-                  </p>
-                  <p className="mt-1 text-sm text-neutral-600">
-                    {target?.email ?? "Tài khoản nội bộ"} · {action.reason}
-                  </p>
-                  <p className="mt-1 text-xs text-neutral-400">
-                    Hết hạn {new Date(action.expiresAt).toLocaleString("vi-VN")}
-                  </p>
-                </div>
-                <button
-                  className="min-h-10 rounded-lg bg-neutral-950 px-4 text-sm font-bold text-white transition hover:bg-neutral-800 disabled:opacity-50"
-                  disabled={approveAction.isPending}
-                  onClick={() => approveAction.mutate(action.id)}
-                  type="button"
-                >
-                  Phê duyệt yêu cầu
-                </button>
-              </article>
-            );
-          })}
-        </div>
-      </section>
       <div className="grid gap-6 xl:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.6fr)]">
         <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
           <div className="flex items-start gap-3">
@@ -338,63 +241,75 @@ export function StaffAccountWorkspace() {
             </span>
             <div>
               <h2 className="text-lg font-bold text-neutral-950">
-                Tạo lời mời
+                Chọn người kiểm duyệt
               </h2>
               <p className="mt-1 text-sm leading-6 text-neutral-600">
-                Nhân sự tự xác minh danh tính và đặt thông tin đăng nhập qua
-                liên kết bảo mật được gửi tới email công việc.
+                Chọn một tài khoản đã hoạt động trên hệ thống. Người đó chỉ nhận
+                quyền kiểm duyệt sau khi tự chấp nhận lời mời.
               </p>
             </div>
           </div>
-          <form className="mt-6 space-y-4" onSubmit={submit}>
-            <div>
-              <label className="text-sm font-semibold" htmlFor="staff-email">
-                Email công việc
-              </label>
-              <input
-                className={inputClass}
-                id="staff-email"
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="ten@tmigroup.vn"
-                required
-                type="email"
-                value={email}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-semibold" htmlFor="staff-role">
-                Nhiệm vụ
-              </label>
-              <SelectControl
-                className={inputClass}
-                id="staff-role"
-                onChange={(event) =>
-                  setRole(event.target.value as StaffAccountRole)
-                }
-                value={role}
-              >
-                {STAFF_ACCOUNT_ROLES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </SelectControl>
-              <p className="mt-2 rounded-lg bg-neutral-50 px-3 py-2 text-xs leading-5 text-neutral-600">
-                {selectedRole?.description}
+          <label
+            className="mt-6 block text-sm font-semibold"
+            htmlFor="reviewer-search"
+          >
+            Tìm tài khoản
+            <input
+              className={inputClass}
+              id="reviewer-search"
+              onChange={(event) => setCandidateSearch(event.target.value)}
+              placeholder="Tên hoặc email"
+              type="search"
+              value={candidateSearch}
+            />
+          </label>
+          <div
+            className="mt-4 max-h-80 space-y-2 overflow-y-auto"
+            data-testid="reviewer-candidates"
+          >
+            {candidates.isPending ? <TableSkeleton /> : null}
+            {!candidates.isPending && eligibleUsers.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-neutral-300 p-4 text-sm text-neutral-600">
+                Không có tài khoản phù hợp. Tài khoản phải đang hoạt động và đã
+                xác minh email.
               </p>
-            </div>
-            <button
-              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 text-sm font-bold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={create.isPending}
-              type="submit"
-            >
-              <MailPlus aria-hidden="true" className="size-4" />
-              {create.isPending ? "Đang gửi…" : "Gửi lời mời"}
-            </button>
-          </form>
+            ) : null}
+            {eligibleUsers.map((user) => {
+              const pending = pendingEmails.has(user.email.toLowerCase());
+              return (
+                <article
+                  className="rounded-xl border border-neutral-200 p-3"
+                  key={user.id}
+                >
+                  <p className="truncate text-sm font-bold text-neutral-950">
+                    {user.fullName || user.email}
+                  </p>
+                  <p className="truncate text-xs text-neutral-500">
+                    {user.email}
+                  </p>
+                  <button
+                    className="mt-3 min-h-10 w-full rounded-lg bg-neutral-950 px-3 text-xs font-bold text-white disabled:opacity-50"
+                    disabled={pending || create.isPending}
+                    onClick={() => {
+                      setEmail(user.email);
+                      setFeedback(null);
+                      setError(null);
+                      setConfirmInvite(true);
+                    }}
+                    type="button"
+                  >
+                    {pending
+                      ? "Đang chờ xác nhận"
+                      : "Chọn làm người kiểm duyệt"}
+                  </button>
+                </article>
+              );
+            })}
+          </div>
           <div className="mt-5 border-t border-neutral-100 pt-4 text-xs leading-5 text-neutral-500">
-            Lời mời chỉ dùng một lần và hết hạn sau 24 giờ. Quản trị viên không
-            tạo hoặc biết mật khẩu của nhân sự.
+            Lời mời chỉ dùng một lần và hết hạn sau 24 giờ. Quản trị viên là cấp
+            phê duyệt cao nhất; người được chọn vẫn phải tự xác nhận để nhận
+            quyền.
           </div>
           <div className="mt-6 border-t border-neutral-200 pt-5">
             <div className="flex items-center justify-between gap-3">
@@ -604,16 +519,8 @@ export function StaffAccountWorkspace() {
                           </label>
                           <SelectControl
                             className="rounded-lg border border-neutral-300 bg-white px-2 py-2 text-xs font-semibold outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 disabled:bg-neutral-100"
-                            disabled={update.isPending || isProtected}
+                            disabled
                             id={`role-${account.id}`}
-                            onChange={(event) => {
-                              setRoleChangeReason("");
-                              setPendingUpdate({
-                                id: account.id,
-                                email: account.email,
-                                role: event.target.value as StaffAccountRole,
-                              });
-                            }}
                             value={account.role}
                           >
                             {isProtected ? (
@@ -683,64 +590,6 @@ export function StaffAccountWorkspace() {
             </div>
           ) : null}
         </section>
-        {pendingUpdate?.role ? (
-          <div
-            aria-labelledby="staff-role-change-title"
-            aria-modal="true"
-            className="fixed inset-0 z-50 grid place-items-center bg-neutral-950/70 p-4 backdrop-blur-sm"
-            role="dialog"
-          >
-            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-              <h2
-                className="text-xl font-bold text-neutral-950"
-                id="staff-role-change-title"
-              >
-                Yêu cầu thay đổi nhiệm vụ
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-neutral-600">
-                Thay đổi của {pendingUpdate.email} chỉ có hiệu lực sau khi một
-                quản trị viên khác kiểm tra và phê duyệt.
-              </p>
-              <label
-                className="mt-5 block text-sm font-semibold text-neutral-900"
-                htmlFor="staff-role-change-reason"
-              >
-                Căn cứ thay đổi
-              </label>
-              <textarea
-                className={`${inputClass} min-h-28 resize-y py-3`}
-                id="staff-role-change-reason"
-                maxLength={500}
-                onChange={(event) => setRoleChangeReason(event.target.value)}
-                placeholder="Ví dụ: Điều chuyển nhiệm vụ theo quyết định nhân sự đã được xác nhận."
-                value={roleChangeReason}
-              />
-              <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <button
-                  className="min-h-11 rounded-lg px-4 text-sm font-bold text-neutral-600 hover:bg-neutral-100"
-                  disabled={requestRoleChange.isPending}
-                  onClick={() => setPendingUpdate(null)}
-                  type="button"
-                >
-                  Hủy
-                </button>
-                <button
-                  className="min-h-11 rounded-lg bg-neutral-950 px-4 text-sm font-bold text-white disabled:opacity-50"
-                  disabled={
-                    requestRoleChange.isPending ||
-                    roleChangeReason.trim().length < 10
-                  }
-                  onClick={() => requestRoleChange.mutate()}
-                  type="button"
-                >
-                  {requestRoleChange.isPending
-                    ? "Đang gửi…"
-                    : "Gửi yêu cầu phê duyệt"}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
         <ConfirmationDialog
           confirmLabel="Gửi lời mời"
           description={`Lời mời sẽ được gửi tới ${email || "email đã nhập"} cho nhiệm vụ ${selectedRole?.label ?? "đã chọn"}. Người nhận phải xác minh đúng email trước khi làm việc.`}

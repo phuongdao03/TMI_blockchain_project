@@ -11,7 +11,11 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 
-import { notificationApi } from "@/lib/api/client";
+import {
+  ApiError,
+  notificationApi,
+  staffInvitationsApi,
+} from "@/lib/api/client";
 import type { NotificationItem } from "@/lib/api/types";
 
 import {
@@ -43,6 +47,31 @@ export function NotificationCenter() {
   const markAllRead = useMutation({
     mutationFn: notificationApi.markAllRead,
     onSuccess: refresh,
+  });
+  const decideInvitation = useMutation<
+    { status: "ACCEPTED" | "DECLINED" },
+    Error,
+    { invitationId: string; decision: "accept" | "decline" }
+  >({
+    mutationFn: async ({
+      invitationId,
+      decision,
+    }: {
+      invitationId: string;
+      decision: "accept" | "decline";
+    }) => {
+      const result =
+        decision === "accept"
+          ? await staffInvitationsApi.accept(invitationId)
+          : await staffInvitationsApi.decline(invitationId);
+      return { status: result.status };
+    },
+    onSuccess: async (_, variables) => {
+      await refresh();
+      if (variables.decision === "accept") {
+        await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      }
+    },
   });
   const total = notifications.data?.meta.total ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -160,6 +189,84 @@ export function NotificationCenter() {
         <div className="notification-center__list">
           {notifications.data?.data.map((item) => {
             const presentation = presentNotification(item);
+            const invitationId =
+              item.type === "staff.reviewer_invited" &&
+              typeof item.data.invitationId === "string"
+                ? item.data.invitationId
+                : null;
+            if (invitationId) {
+              const decision =
+                item.data.decision === "ACCEPTED" ||
+                item.data.decision === "DECLINED" ||
+                item.data.decision === "REVOKED" ||
+                item.data.decision === "REPLACED"
+                  ? item.data.decision
+                  : null;
+              return (
+                <article
+                  className={`notification-center__item${item.readAt ? "" : " is-unread"}`}
+                  key={item.id}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="notification-center__indicator notification-center__indicator--action"
+                  />
+                  <span className="notification-center__content">
+                    <span className="notification-center__meta">
+                      {presentation.groupLabel} ·{" "}
+                      {formatNotificationTime(item.createdAt)}
+                    </span>
+                    <strong>{item.title}</strong>
+                    <span>{item.body}</span>
+                    {decideInvitation.isError ? (
+                      <span className="mt-2 text-sm text-red-700" role="alert">
+                        {decideInvitation.error instanceof ApiError
+                          ? decideInvitation.error.message
+                          : "Không thể xử lý lời mời. Vui lòng thử lại."}
+                      </span>
+                    ) : null}
+                    {decision ? (
+                      <span className="mt-3 text-sm font-bold text-emerald-700">
+                        {decision === "ACCEPTED"
+                          ? "Bạn đã chấp nhận lời mời."
+                          : decision === "DECLINED"
+                            ? "Bạn đã từ chối lời mời."
+                            : "Lời mời này không còn hiệu lực."}
+                      </span>
+                    ) : (
+                      <span className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          className="min-h-10 rounded-lg bg-neutral-950 px-4 text-sm font-bold text-white disabled:opacity-50"
+                          disabled={decideInvitation.isPending}
+                          onClick={() =>
+                            decideInvitation.mutate({
+                              invitationId,
+                              decision: "accept",
+                            })
+                          }
+                          type="button"
+                        >
+                          Chấp nhận và trở thành Người kiểm duyệt
+                        </button>
+                        <button
+                          className="min-h-10 rounded-lg border border-neutral-300 px-4 text-sm font-bold disabled:opacity-50"
+                          disabled={decideInvitation.isPending}
+                          onClick={() =>
+                            decideInvitation.mutate({
+                              invitationId,
+                              decision: "decline",
+                            })
+                          }
+                          type="button"
+                        >
+                          Từ chối
+                        </button>
+                      </span>
+                    )}
+                  </span>
+                </article>
+              );
+            }
             const inner = (
               <>
                 <span

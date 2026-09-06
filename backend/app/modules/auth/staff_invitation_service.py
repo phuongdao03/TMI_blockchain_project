@@ -30,6 +30,7 @@ from app.modules.auth.schemas import (
 )
 from app.modules.auth.security import OutboxPayloadCipher, hash_verification_token
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.notifications.models import Notification
 from app.modules.organizations.models import (
     MembershipRole,
     MembershipStatus,
@@ -79,7 +80,7 @@ class StaffInvitationService:
         now = self._clock()
         try:
             async with self._session.begin():
-                await self._validate_target(
+                target_user = await self._validate_target(
                     email=email,
                     role_code=payload.role,
                     organization_id=payload.organization_id,
@@ -99,6 +100,14 @@ class StaffInvitationService:
                 )
                 for previous in active:
                     previous.revoked_at = now
+                    previous_user = await self._auth.get_user_by_email(previous.email)
+                    if previous_user is not None:
+                        await self._resolve_recipient_notification(
+                            invitation=previous,
+                            user_id=previous_user.id,
+                            decision="REPLACED",
+                            now=now,
+                        )
                 invitation, raw_token = self._new_invitation(
                     email=email,
                     role_code=payload.role,
@@ -109,6 +118,25 @@ class StaffInvitationService:
                 self._session.add(invitation)
                 await self._session.flush()
                 self._enqueue(invitation, raw_token=raw_token, now=now)
+                if target_user is not None:
+                    self._session.add(
+                        Notification(
+                            user_id=target_user.id,
+                            source_event_id=invitation.id,
+                            type="staff.reviewer_invited",
+                            title="Lời mời trở thành Người kiểm duyệt",
+                            body=(
+                                "Quản trị viên mời bạn tham gia thẩm định hồ sơ. "
+                                "Hãy xem và xác nhận lời mời."
+                            ),
+                            data_json={
+                                "actionPath": "/notifications",
+                                "invitationId": str(invitation.id),
+                                "role": invitation.role_code,
+                            },
+                            created_at=now,
+                        )
+                    )
                 audit.record(
                     actor_user_id=principal.user_id,
                     action="admin.staff_invitation.created",
@@ -172,6 +200,14 @@ class StaffInvitationService:
             self._require_pending(invitation, now=now)
             await self._cancel_pending_delivery(invitation.id, now=now)
             invitation.revoked_at = now
+            invited_user = await self._auth.get_user_by_email(invitation.email)
+            if invited_user is not None:
+                await self._resolve_recipient_notification(
+                    invitation=invitation,
+                    user_id=invited_user.id,
+                    decision="REVOKED",
+                    now=now,
+                )
             audit.record(
                 actor_user_id=principal.user_id,
                 action="admin.staff_invitation.revoked",
@@ -208,37 +244,47 @@ class StaffInvitationService:
                 email = claims.email.strip().lower()
                 if email != invitation.email:
                     raise self._invalid()
-                if await self._auth.get_user_by_email(email) is not None:
-                    raise self._invalid()
-                if (
-                    await self._auth.get_identity(
-                        provider=AuthProvider.FIREBASE,
-                        subject=claims.subject,
-                    )
-                    is not None
+                existing_user = await self._auth.get_user_by_email(email)
+                identity = await self._auth.get_identity(
+                    provider=AuthProvider.FIREBASE,
+                    subject=claims.subject,
+                )
+                if existing_user is not None and (
+                    identity is None or identity.user_id != existing_user.id
                 ):
+                    raise self._invalid()
+                if existing_user is None and identity is not None:
                     raise self._invalid()
                 role = await self._auth.get_role_by_code(invitation.role_code)
                 if role is None or role.code not in INTERNAL_MANAGED_ROLES:
                     raise self._invalid()
 
-                user = User(
-                    email=email,
-                    password_hash=None,
-                    status=UserStatus.ACTIVE,
-                    email_verified_at=now,
-                )
-                self._auth.add_user(user)
-                await self._session.flush()
-                self._auth.add_identity(
-                    AuthIdentity(
-                        user_id=user.id,
-                        provider=AuthProvider.FIREBASE,
-                        provider_subject=claims.subject,
-                        last_login_at=now,
+                if existing_user is None:
+                    user = User(
+                        email=email,
+                        password_hash=None,
+                        status=UserStatus.ACTIVE,
+                        email_verified_at=now,
                     )
-                )
-                self._auth.add_user_role(UserRole(user_id=user.id, role_id=role.id))
+                    self._auth.add_user(user)
+                    await self._session.flush()
+                    self._auth.add_identity(
+                        AuthIdentity(
+                            user_id=user.id,
+                            provider=AuthProvider.FIREBASE,
+                            provider_subject=claims.subject,
+                            last_login_at=now,
+                        )
+                    )
+                else:
+                    user = existing_user
+                    if (
+                        user.status is not UserStatus.ACTIVE
+                        or user.email_verified_at is None
+                    ):
+                        raise self._invalid()
+                if not await self._session.get(UserRole, (user.id, role.id)):
+                    self._auth.add_user_role(UserRole(user_id=user.id, role_id=role.id))
                 if invitation.organization_id is not None:
                     self._session.add(
                         OrganizationMember(
@@ -272,6 +318,91 @@ class StaffInvitationService:
             lastLoginAt=user.last_login_at,
         )
 
+    async def accept_existing(
+        self,
+        *,
+        invitation_id: UUID,
+        principal: AuthPrincipal,
+        audit: AuditService,
+        request_id: str | None,
+        user_agent: str | None,
+    ) -> None:
+        now = self._clock()
+        async with self._session.begin():
+            invitation = await self._locked(invitation_id)
+            self._require_pending(invitation, now=now)
+            if invitation.email != principal.email.strip().lower():
+                raise DomainError(
+                    code="STAFF_INVITATION_FORBIDDEN",
+                    message="This invitation belongs to another account.",
+                    status_code=403,
+                )
+            user = await self._auth.get_user_by_id_for_update(principal.user_id)
+            if (
+                user is None
+                or user.email.strip().lower() != invitation.email
+                or user.status is not UserStatus.ACTIVE
+                or user.email_verified_at is None
+            ):
+                raise self._invalid()
+            role = await self._auth.get_role_by_code(invitation.role_code)
+            if role is None or role.code not in INTERNAL_MANAGED_ROLES:
+                raise self._invalid()
+            current_roles = set(await self._auth.get_role_codes(user.id))
+            if "SUPER_ADMIN" in current_roles:
+                raise self._invalid()
+            if role.code not in current_roles:
+                self._auth.add_user_role(UserRole(user_id=user.id, role_id=role.id))
+            invitation.accepted_at = now
+            invitation.accepted_user_id = user.id
+            await self._resolve_recipient_notification(
+                invitation=invitation, user_id=user.id, decision="ACCEPTED", now=now
+            )
+            audit.record(
+                actor_user_id=user.id,
+                action="auth.staff_invitation.accepted",
+                resource_type="staff_invitation",
+                resource_id=str(invitation.id),
+                after={"role": invitation.role_code},
+                request_id=request_id,
+                user_agent=user_agent,
+            )
+
+    async def decline_existing(
+        self,
+        *,
+        invitation_id: UUID,
+        principal: AuthPrincipal,
+        audit: AuditService,
+        request_id: str | None,
+        user_agent: str | None,
+    ) -> None:
+        now = self._clock()
+        async with self._session.begin():
+            invitation = await self._locked(invitation_id)
+            self._require_pending(invitation, now=now)
+            if invitation.email != principal.email.strip().lower():
+                raise DomainError(
+                    code="STAFF_INVITATION_FORBIDDEN",
+                    message="This invitation belongs to another account.",
+                    status_code=403,
+                )
+            invitation.revoked_at = now
+            await self._resolve_recipient_notification(
+                invitation=invitation,
+                user_id=principal.user_id,
+                decision="DECLINED",
+                now=now,
+            )
+            audit.record(
+                actor_user_id=principal.user_id,
+                action="auth.staff_invitation.declined",
+                resource_type="staff_invitation",
+                resource_id=str(invitation.id),
+                request_id=request_id,
+                user_agent=user_agent,
+            )
+
     async def list(
         self, *, page: int, page_size: int
     ) -> tuple[list[StaffInvitationData], int]:
@@ -290,13 +421,8 @@ class StaffInvitationService:
 
     async def _validate_target(
         self, *, email: str, role_code: str, organization_id: UUID | None
-    ) -> None:
-        if await self._auth.get_user_by_email(email) is not None:
-            raise DomainError(
-                code="STAFF_ACCOUNT_EXISTS",
-                message="An account already exists for this email.",
-                status_code=409,
-            )
+    ) -> User | None:
+        user = await self._auth.get_user_by_email(email)
         role = await self._auth.get_role_by_code(role_code)
         if role is None or role_code not in INTERNAL_MANAGED_ROLES:
             raise DomainError(
@@ -312,6 +438,21 @@ class StaffInvitationService:
                     message="The selected organization was not found.",
                     status_code=404,
                 )
+        if user is not None:
+            roles = set(await self._auth.get_role_codes(user.id))
+            if user.status is not UserStatus.ACTIVE or user.email_verified_at is None:
+                raise DomainError(
+                    code="STAFF_INVITATION_TARGET_INELIGIBLE",
+                    message="Only active, verified accounts can be invited.",
+                    status_code=409,
+                )
+            if "SUPER_ADMIN" in roles or role_code in roles:
+                raise DomainError(
+                    code="STAFF_INVITATION_TARGET_ALREADY_PRIVILEGED",
+                    message="This account already has an equal or higher role.",
+                    status_code=409,
+                )
+        return user
 
     def _new_invitation(
         self,
@@ -372,6 +513,29 @@ class StaffInvitationService:
             )
             .values(processed_at=now)
         )
+
+    async def _resolve_recipient_notification(
+        self,
+        *,
+        invitation: StaffInvitation,
+        user_id: UUID,
+        decision: str,
+        now: datetime,
+    ) -> None:
+        notification = await self._session.scalar(
+            select(Notification)
+            .where(
+                Notification.user_id == user_id,
+                Notification.source_event_id == invitation.id,
+            )
+            .with_for_update()
+        )
+        if notification is not None:
+            notification.data_json = {
+                **notification.data_json,
+                "decision": decision,
+            }
+            notification.read_at = now
 
     async def _locked(self, invitation_id: UUID) -> StaffInvitation:
         invitation = await self._session.scalar(

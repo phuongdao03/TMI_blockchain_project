@@ -53,6 +53,11 @@ const EVENT_PRESENTATION: Record<
     groupLabel: "Cần xử lý",
     tone: "warning",
   },
+  "staff.reviewer_invited": {
+    actionLabel: "Xem lời mời",
+    groupLabel: "Quyền kiểm duyệt",
+    tone: "action",
+  },
 };
 
 function safeInternalPath(value: unknown): string | null {

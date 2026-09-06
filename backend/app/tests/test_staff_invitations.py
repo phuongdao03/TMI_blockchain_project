@@ -23,6 +23,7 @@ from app.modules.auth.schemas import StaffAccountData, StaffInvitationRequest
 from app.modules.auth.security import OutboxPayloadCipher, hash_verification_token
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.auth.staff_invitation_service import StaffInvitationService
+from app.modules.notifications.models import Notification
 
 NOW = datetime(2026, 8, 8, 8, tzinfo=UTC)
 
@@ -66,6 +67,100 @@ def test_invitation_management_accepts_normalized_permission() -> None:
             permissions=("admin.staff.manage",),
         )
     )
+
+
+def test_admin_invites_existing_verified_user_and_user_accepts(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        engine = create_async_engine(
+            f"sqlite+aiosqlite:///{(tmp_path / 'existing-reviewer.sqlite3').as_posix()}"
+        )
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        cipher = OutboxPayloadCipher.from_base64(
+            encoded_key="MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+            key_id="test-key",
+        )
+        admin = _admin()
+        target_id = uuid4()
+        async with factory() as session:
+            async with session.begin():
+                session.add(User(id=admin.user_id, email=admin.email, status="ACTIVE"))
+                session.add(
+                    User(
+                        id=target_id,
+                        email="member@example.com",
+                        status="ACTIVE",
+                        email_verified_at=NOW,
+                    )
+                )
+                session.add(Role(code="MODERATOR"))
+            service = StaffInvitationService(
+                session=session,
+                payload_cipher=cipher,
+                invitation_ttl=timedelta(hours=24),
+                clock=lambda: NOW,
+            )
+            invitation = await service.create(
+                payload=StaffInvitationRequest(
+                    email="member@example.com", role="MODERATOR"
+                ),
+                principal=admin,
+                audit=AuditService(session),
+                request_id="invite-existing",
+                user_agent="test",
+            )
+            notification = await session.scalar(
+                select(Notification).where(
+                    Notification.source_event_id == invitation.id
+                )
+            )
+            assert notification is not None
+            assert notification.user_id == target_id
+            assert notification.type == "staff.reviewer_invited"
+            await session.commit()
+
+            target = AuthPrincipal(
+                user_id=target_id,
+                session_id=uuid4(),
+                email="member@example.com",
+                roles=("USER",),
+            )
+            with pytest.raises(DomainError) as wrong_account:
+                await service.accept_existing(
+                    invitation_id=invitation.id,
+                    principal=AuthPrincipal(
+                        user_id=uuid4(),
+                        session_id=uuid4(),
+                        email="other@example.com",
+                        roles=("USER",),
+                    ),
+                    audit=AuditService(session),
+                    request_id="wrong-account",
+                    user_agent="test",
+                )
+            assert wrong_account.value.code == "STAFF_INVITATION_FORBIDDEN"
+            await service.accept_existing(
+                invitation_id=invitation.id,
+                principal=target,
+                audit=AuditService(session),
+                request_id="accept-existing",
+                user_agent="test",
+            )
+            role_count = await session.scalar(
+                select(func.count())
+                .select_from(UserRole)
+                .join(Role, Role.id == UserRole.role_id)
+                .where(UserRole.user_id == target_id, Role.code == "MODERATOR")
+            )
+            assert role_count == 1
+            await session.refresh(notification)
+            assert notification.data_json["decision"] == "ACCEPTED"
+            assert notification.read_at is not None
+            assert notification.read_at.replace(tzinfo=UTC) == NOW
+        await engine.dispose()
+
+    asyncio.run(scenario())
 
 
 def test_invitation_is_single_use_email_bound_and_idempotently_resendable(

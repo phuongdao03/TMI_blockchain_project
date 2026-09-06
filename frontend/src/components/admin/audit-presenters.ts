@@ -16,6 +16,7 @@ const exactActionLabels: Record<string, string> = {
   "admin.staff_invitation.resent": "Đã gửi lại lời mời nhân sự",
   "admin.staff_invitation.revoked": "Đã thu hồi lời mời nhân sự",
   "auth.staff_invitation.accepted": "Nhân sự đã chấp nhận lời mời",
+  "auth.staff_invitation.declined": "Người dùng đã từ chối lời mời kiểm duyệt",
   "admin.privileged_action.requested": "Đã gửi yêu cầu thay đổi đặc quyền",
   "admin.privileged_action.approved": "Đã phê duyệt thay đổi đặc quyền",
   "cms.post.created": "Đã tạo bài viết",

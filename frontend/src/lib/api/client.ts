@@ -692,6 +692,18 @@ export const staffInvitationsApi = {
       { method: "POST" },
     );
   },
+  accept(invitationId: string) {
+    return request<{ status: "ACCEPTED" }>(
+      `/auth/staff-invitations/${encodeURIComponent(invitationId)}/accept`,
+      { method: "POST" },
+    );
+  },
+  decline(invitationId: string) {
+    return request<{ status: "DECLINED" }>(
+      `/auth/staff-invitations/${encodeURIComponent(invitationId)}/decline`,
+      { method: "POST" },
+    );
+  },
 };
 
 export const profileApi = {
