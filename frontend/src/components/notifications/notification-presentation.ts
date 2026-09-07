@@ -68,15 +68,24 @@ function safeInternalPath(value: unknown): string | null {
 
 export function presentNotification(
   item: NotificationItem,
+  options: { adminDossierLinks?: boolean } = {},
 ): NotificationPresentation {
   const configured = EVENT_PRESENTATION[item.type] ?? {
     actionLabel: "Xem thông báo",
     groupLabel: "Cập nhật",
     tone: "info" as const,
   };
+  const submittedDossierId =
+    options.adminDossierLinks && item.type === "dossier.submitted"
+      ? (item.data.dossierId ?? item.data.dossier_id)
+      : null;
+  const actionPath =
+    typeof submittedDossierId === "string"
+      ? `/admin/reviews/${encodeURIComponent(submittedDossierId)}`
+      : safeInternalPath(item.data.actionPath);
   return {
     ...configured,
-    actionPath: safeInternalPath(item.data.actionPath),
+    actionPath,
   };
 }
 

@@ -1,5 +1,8 @@
 import type {
   AccountType,
+  AdminReviewDossierDetail,
+  AdminReviewDossierStatus,
+  AdminReviewDossierSummary,
   AdminUser,
   AdminUserListFilters,
   ActivityPage,
@@ -85,6 +88,7 @@ import type {
   SignedDelivery,
   SuccessEnvelope,
   UserProfile,
+  ReviewAssignment,
   ReviewAssignmentDetail,
   ReviewAssignmentSummary,
   ReviewData,
@@ -954,6 +958,57 @@ export const reviewApi = {
     return request<ReviewData>(`/reviewer/assignments/${assignmentId}/submit`, {
       method: "POST",
     });
+  },
+};
+
+export const adminReviewApi = {
+  list(
+    filters: {
+      status?: AdminReviewDossierStatus;
+      page?: number;
+      pageSize?: number;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.status) parameters.set("status", filters.status);
+    return requestPaginated<AdminReviewDossierSummary[]>(
+      `/admin/review-dossiers?${parameters.toString()}`,
+    );
+  },
+  get(dossierId: string) {
+    return request<AdminReviewDossierDetail>(
+      `/admin/review-dossiers/${encodeURIComponent(dossierId)}`,
+    );
+  },
+  startPrecheck(dossierId: string, reason: string) {
+    return request<{ dossierId: string; status: AdminReviewDossierStatus }>(
+      `/admin/dossiers/${encodeURIComponent(dossierId)}/precheck`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+  },
+  passPrecheck(dossierId: string, reason: string) {
+    return request<{ dossierId: string; status: AdminReviewDossierStatus }>(
+      `/admin/dossiers/${encodeURIComponent(dossierId)}/pass-precheck`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+  },
+  requestSupplement(dossierId: string, reason: string) {
+    return request<{ dossierId: string; status: Dossier["status"] }>(
+      `/admin/dossiers/${encodeURIComponent(dossierId)}/request-supplement`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+  },
+  assign(dossierId: string, reviewerUserIds: string[], dueAt?: string) {
+    return request<ReviewAssignment[]>(
+      `/admin/dossiers/${encodeURIComponent(dossierId)}/assign-reviewers`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reviewerUserIds, dueAt: dueAt || null }),
+      },
+    );
   },
 };
 

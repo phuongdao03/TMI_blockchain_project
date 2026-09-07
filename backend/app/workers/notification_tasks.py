@@ -1,5 +1,6 @@
 import asyncio
 import json
+from collections.abc import Mapping
 from urllib.parse import quote
 from uuid import UUID
 
@@ -78,7 +79,7 @@ EVENT_ROLE_RECIPIENTS: dict[str, frozenset[str]] = {
 }
 
 
-def _action_path(event_type: str, payload: dict[str, object]) -> str | None:
+def _action_path(event_type: str, payload: Mapping[str, object]) -> str | None:
     dossier_id = payload.get("dossier_id") or payload.get("dossierId")
     assignment_id = payload.get("assignment_id") or payload.get("assignmentId")
     certificate_id = payload.get("certificate_id") or payload.get("certificateId")
@@ -103,6 +104,23 @@ def _action_path(event_type: str, payload: dict[str, object]) -> str | None:
     if event_type == "content_report.created":
         return "/admin/content"
     return None
+
+
+def _recipient_action_path(
+    event_type: str,
+    payload: Mapping[str, object],
+    *,
+    recipient_id: UUID,
+    direct_recipient_id: UUID | None,
+) -> str | None:
+    dossier_id = payload.get("dossier_id") or payload.get("dossierId")
+    if (
+        event_type == "dossier.submitted"
+        and recipient_id != direct_recipient_id
+        and isinstance(dossier_id, str)
+    ):
+        return f"/admin/reviews/{dossier_id}"
+    return _action_path(event_type, payload)
 
 
 async def _role_recipient_ids(
@@ -223,20 +241,27 @@ async def _consume(event_id: UUID) -> None:
                 for key, value in payload.items()
                 if key not in {"email", "verification_token", "token"}
             }
-            action_path = _action_path(event_type, payload)
-            if action_path is not None:
-                safe_data["actionPath"] = action_path
-            notifications = [
-                await NotificationService(session).consume(
-                    event_id=event_id,
-                    user_id=recipient_id,
-                    event_type=event_type,
-                    title=copy[0],
-                    body=copy[1],
-                    data=safe_data,
+            notifications = []
+            for recipient_id in sorted(recipient_ids, key=str):
+                recipient_data = dict(safe_data)
+                action_path = _recipient_action_path(
+                    event_type,
+                    payload,
+                    recipient_id=recipient_id,
+                    direct_recipient_id=direct_recipient_id,
                 )
-                for recipient_id in sorted(recipient_ids, key=str)
-            ]
+                if action_path is not None:
+                    recipient_data["actionPath"] = action_path
+                notifications.append(
+                    await NotificationService(session).consume(
+                        event_id=event_id,
+                        user_id=recipient_id,
+                        event_type=event_type,
+                        title=copy[0],
+                        body=copy[1],
+                        data=recipient_data,
+                    )
+                )
             verification_token = payload.get("verification_token")
             if event_type == "user.registered" and isinstance(verification_token, str):
                 token = quote(verification_token, safe="")

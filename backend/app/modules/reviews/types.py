@@ -33,6 +33,29 @@ class DossierTransitionView:
 
 
 @dataclass(frozen=True, slots=True)
+class AdminReviewDossierSummaryView:
+    dossier_id: UUID
+    dossier_code: str
+    dossier_title: str
+    status: DossierStatus
+    version_no: int
+    submitted_at: datetime | None
+    assignment_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class AdminReviewDossierPage:
+    items: tuple[AdminReviewDossierSummaryView, ...]
+    total: int
+
+
+@dataclass(frozen=True, slots=True)
+class AdminReviewDossierDetailView(AdminReviewDossierSummaryView):
+    canonical_hash: str
+    snapshot_json: Mapping[str, object]
+
+
+@dataclass(frozen=True, slots=True)
 class ReviewAssignmentView:
     id: UUID
     dossier_id: UUID

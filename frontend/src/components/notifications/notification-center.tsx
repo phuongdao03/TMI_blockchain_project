@@ -17,6 +17,7 @@ import {
   staffInvitationsApi,
 } from "@/lib/api/client";
 import type { NotificationItem } from "@/lib/api/types";
+import { useAuthUser } from "@/lib/auth/user-context";
 
 import {
   formatNotificationTime,
@@ -26,6 +27,7 @@ import {
 const PAGE_SIZE = 12;
 
 export function NotificationCenter() {
+  const user = useAuthUser();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -188,7 +190,9 @@ export function NotificationCenter() {
 
         <div className="notification-center__list">
           {notifications.data?.data.map((item) => {
-            const presentation = presentNotification(item);
+            const presentation = presentNotification(item, {
+              adminDossierLinks: user?.roles.includes("SUPER_ADMIN") ?? false,
+            });
             const invitationId =
               item.type === "staff.reviewer_invited" &&
               typeof item.data.invitationId === "string"

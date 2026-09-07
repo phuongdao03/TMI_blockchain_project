@@ -3,9 +3,10 @@ from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.modules.auth.models import Role, User, UserRole, UserStatus
-from app.modules.dossiers.models import Dossier, DossierVersion
+from app.modules.dossiers.models import Dossier, DossierStatus, DossierVersion
 from app.modules.reviews.models import (
     Review,
     ReviewAssignment,
@@ -33,6 +34,72 @@ class ReviewRepository:
 
     def add_similarity_case(self, case: SimilarityReviewCase) -> None:
         self._session.add(case)
+
+    async def list_admin_dossiers(
+        self,
+        *,
+        status: DossierStatus | None,
+        allowed_statuses: tuple[DossierStatus, ...],
+        offset: int,
+        limit: int,
+    ) -> tuple[tuple[tuple[Dossier, DossierVersion, int], ...], int]:
+        criteria: list[ColumnElement[bool]] = [
+            Dossier.deleted_at.is_(None),
+            Dossier.status.in_(allowed_statuses),
+        ]
+        if status is not None:
+            criteria.append(Dossier.status == status)
+        assignment_count = (
+            select(func.count(ReviewAssignment.id))
+            .where(ReviewAssignment.dossier_version_id == DossierVersion.id)
+            .correlate(DossierVersion)
+            .scalar_subquery()
+        )
+        total = await self._session.scalar(
+            select(func.count()).select_from(Dossier).where(*criteria)
+        )
+        rows = await self._session.execute(
+            select(Dossier, DossierVersion, assignment_count)
+            .join(
+                DossierVersion,
+                (DossierVersion.dossier_id == Dossier.id)
+                & (DossierVersion.version_no == Dossier.current_version_no),
+            )
+            .where(*criteria)
+            .order_by(Dossier.submitted_at.asc(), Dossier.id.asc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return tuple(rows.tuples().all()), int(total or 0)
+
+    async def get_admin_dossier(
+        self,
+        dossier_id: UUID,
+        *,
+        allowed_statuses: tuple[DossierStatus, ...],
+    ) -> tuple[Dossier, DossierVersion, int] | None:
+        assignment_count = (
+            select(func.count(ReviewAssignment.id))
+            .where(ReviewAssignment.dossier_version_id == DossierVersion.id)
+            .correlate(DossierVersion)
+            .scalar_subquery()
+        )
+        row = (
+            await self._session.execute(
+                select(Dossier, DossierVersion, assignment_count)
+                .join(
+                    DossierVersion,
+                    (DossierVersion.dossier_id == Dossier.id)
+                    & (DossierVersion.version_no == Dossier.current_version_no),
+                )
+                .where(
+                    Dossier.id == dossier_id,
+                    Dossier.deleted_at.is_(None),
+                    Dossier.status.in_(allowed_statuses),
+                )
+            )
+        ).one_or_none()
+        return cast(tuple[Dossier, DossierVersion, int] | None, row)
 
     async def find_similarity_case(
         self,

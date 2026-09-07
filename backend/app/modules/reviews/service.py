@@ -11,7 +11,7 @@ from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequiremen
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
-from app.modules.dossiers.models import DossierStatus
+from app.modules.dossiers.models import Dossier, DossierStatus, DossierVersion
 from app.modules.dossiers.repository import DossierRepository
 from app.modules.reviews.errors import (
     ReviewConflictError,
@@ -29,6 +29,9 @@ from app.modules.reviews.models import (
 )
 from app.modules.reviews.repository import ReviewRepository
 from app.modules.reviews.types import (
+    AdminReviewDossierDetailView,
+    AdminReviewDossierPage,
+    AdminReviewDossierSummaryView,
     ReviewAssignmentDetailView,
     ReviewAssignmentPage,
     ReviewAssignmentSummaryView,
@@ -42,6 +45,11 @@ ASSIGNMENT_CREATED_EVENT = "review.assignment_created"
 REVIEW_COMPLETED_EVENT = "review.completed"
 ADMIN_ROLES = frozenset({"SUPER_ADMIN"})
 REVIEWER_ROLES = frozenset({"MODERATOR"})
+ADMIN_REVIEW_DOSSIER_STATUSES = (
+    DossierStatus.SUBMITTED,
+    DossierStatus.PRECHECK,
+    DossierStatus.UNDER_REVIEW,
+)
 CRITERIA = (
     "truth",
     "transparency",
@@ -79,6 +87,78 @@ class ReviewService:
         self._payload_cipher = payload_cipher
         self._clock = clock or (lambda: datetime.now(UTC))
         self._uuid_factory = uuid_factory or uuid4
+
+    async def list_admin_dossiers(
+        self,
+        principal: AuthPrincipal,
+        *,
+        status: DossierStatus | None,
+        page: int,
+        page_size: int,
+    ) -> AdminReviewDossierPage:
+        self._require_admin(principal)
+        if page < 1 or page_size < 1 or page_size > 100:
+            raise ReviewValidationError("Review queue pagination is invalid.")
+        if status is not None and status not in ADMIN_REVIEW_DOSSIER_STATUSES:
+            raise ReviewValidationError("Review queue status is invalid.")
+        async with self._session.begin():
+            rows, total = await self._reviews.list_admin_dossiers(
+                status=status,
+                allowed_statuses=ADMIN_REVIEW_DOSSIER_STATUSES,
+                offset=(page - 1) * page_size,
+                limit=page_size,
+            )
+            items = tuple(
+                self._admin_dossier_summary(dossier, version, assignment_count)
+                for dossier, version, assignment_count in rows
+            )
+        return AdminReviewDossierPage(items=items, total=total)
+
+    async def get_admin_dossier(
+        self,
+        principal: AuthPrincipal,
+        dossier_id: UUID,
+    ) -> AdminReviewDossierDetailView:
+        self._require_admin(principal)
+        async with self._session.begin():
+            row = await self._reviews.get_admin_dossier(
+                dossier_id,
+                allowed_statuses=ADMIN_REVIEW_DOSSIER_STATUSES,
+            )
+            if row is None:
+                raise ReviewNotFoundError("Review dossier was not found.")
+            dossier, version, assignment_count = row
+            summary = self._admin_dossier_summary(dossier, version, assignment_count)
+            return AdminReviewDossierDetailView(
+                dossier_id=summary.dossier_id,
+                dossier_code=summary.dossier_code,
+                dossier_title=summary.dossier_title,
+                status=summary.status,
+                version_no=summary.version_no,
+                submitted_at=summary.submitted_at,
+                assignment_count=summary.assignment_count,
+                canonical_hash=version.canonical_hash,
+                snapshot_json=version.snapshot_json,
+            )
+
+    @classmethod
+    def _admin_dossier_summary(
+        cls,
+        dossier: Dossier,
+        version: DossierVersion,
+        assignment_count: int,
+    ) -> AdminReviewDossierSummaryView:
+        return AdminReviewDossierSummaryView(
+            dossier_id=dossier.id,
+            dossier_code=dossier.code,
+            dossier_title=cls._snapshot_title(
+                version.snapshot_json, fallback=dossier.title
+            ),
+            status=dossier.status,
+            version_no=version.version_no,
+            submitted_at=dossier.submitted_at,
+            assignment_count=assignment_count,
+        )
 
     async def assign_reviewers(
         self,

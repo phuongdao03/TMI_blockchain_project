@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { notificationApi } from "@/lib/api/client";
 import type { NotificationItem } from "@/lib/api/types";
+import { useAuthUser } from "@/lib/auth/user-context";
 
 import {
   formatNotificationTime,
@@ -15,12 +16,14 @@ import {
 
 function NotificationRow({
   item,
+  adminDossierLinks,
   onOpen,
 }: {
   item: NotificationItem;
+  adminDossierLinks: boolean;
   onOpen: (item: NotificationItem) => void;
 }) {
-  const presentation = presentNotification(item);
+  const presentation = presentNotification(item, { adminDossierLinks });
   const content = (
     <>
       <span
@@ -63,6 +66,7 @@ function NotificationRow({
 }
 
 export function NotificationBell() {
+  const user = useAuthUser();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -228,7 +232,12 @@ export function NotificationBell() {
               </p>
             ) : null}
             {recent.data?.data.map((item) => (
-              <NotificationRow item={item} key={item.id} onOpen={openItem} />
+              <NotificationRow
+                adminDossierLinks={user?.roles.includes("SUPER_ADMIN") ?? false}
+                item={item}
+                key={item.id}
+                onOpen={openItem}
+              />
             ))}
           </div>
           <Link

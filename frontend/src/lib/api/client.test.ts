@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  adminReviewApi,
   adminUsersApi,
   auditApi,
   authApi,
@@ -13,6 +14,45 @@ import {
   staffAccountsApi,
   staffInvitationsApi,
 } from "@/lib/api/client";
+
+describe("admin review API client", () => {
+  beforeEach(() => {
+    document.cookie = "tmi_csrf=csrf-value";
+    vi.restoreAllMocks();
+  });
+
+  it("lists the handoff queue and assigns a reviewer", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    fetchMock
+      .mockResolvedValueOnce(
+        response({
+          success: true,
+          data: [],
+          meta: { requestId: "review-queue", page: 1, pageSize: 20, total: 0 },
+        }),
+      )
+      .mockResolvedValueOnce(
+        response({ success: true, data: [], meta: { requestId: "assign" } }),
+      );
+
+    await adminReviewApi.list({ status: "UNDER_REVIEW" });
+    await adminReviewApi.assign("dossier/1", ["reviewer-1"], "2026-09-10");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/v1/admin/review-dossiers?page=1&pageSize=20&status=UNDER_REVIEW",
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/v1/admin/dossiers/dossier%2F1/assign-reviewers",
+    );
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      method: "POST",
+      body: JSON.stringify({
+        reviewerUserIds: ["reviewer-1"],
+        dueAt: "2026-09-10",
+      }),
+    });
+  });
+});
 
 describe("admin users API client", () => {
   beforeEach(() => {

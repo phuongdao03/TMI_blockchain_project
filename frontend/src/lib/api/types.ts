@@ -936,6 +936,26 @@ export interface ReviewAssignmentDetail extends ReviewAssignmentSummary {
   review: ReviewData | null;
 }
 
+export type AdminReviewDossierStatus =
+  | "SUBMITTED"
+  | "PRECHECK"
+  | "UNDER_REVIEW";
+
+export interface AdminReviewDossierSummary {
+  dossierId: string;
+  dossierCode: string;
+  dossierTitle: string;
+  status: AdminReviewDossierStatus;
+  versionNo: number;
+  submittedAt: string | null;
+  assignmentCount: number;
+}
+
+export interface AdminReviewDossierDetail extends AdminReviewDossierSummary {
+  canonicalHash: string;
+  snapshotJson: ReviewSnapshot;
+}
+
 export interface ReviewListFilters {
   page?: number;
   pageSize?: number;
