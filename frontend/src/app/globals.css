@@ -6558,6 +6558,18 @@ html[data-theme="dark"] .public-home .home-journey .font-mono {
     color-mix(in srgb, var(--theme-text) 5%, transparent);
 }
 
+.review-workspace__error {
+  border-color: color-mix(in srgb, #b91c1c 38%, var(--theme-border));
+  background: color-mix(in srgb, #dc2626 8%, var(--theme-surface));
+  color: #991b1b;
+}
+
+html[data-theme="dark"] .review-workspace__error {
+  border-color: color-mix(in srgb, #f87171 45%, var(--theme-border));
+  background: color-mix(in srgb, #7f1d1d 38%, var(--theme-surface));
+  color: #fecaca;
+}
+
 .payment-workspace__surface {
   box-shadow: 0 1.5rem 4rem
     color-mix(in srgb, var(--theme-text) 10%, transparent);

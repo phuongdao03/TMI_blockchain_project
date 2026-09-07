@@ -108,6 +108,67 @@ export function VerdictReviewForm({
     [gates, rubric, verdicts],
   );
 
+  const validationIssues = useMemo(() => {
+    const issues: string[] = [];
+    for (const criterion of rubric.criteria) {
+      const answer = verdicts[criterion.key];
+      if (!answer?.outcome) {
+        issues.push(`${criterion.label}: chưa chọn kết luận.`);
+        continue;
+      }
+      if (answer.rationale.trim().length < 20) {
+        issues.push(
+          `${criterion.label}: nhận định cần ít nhất 20 ký tự (hiện có ${answer.rationale.trim().length}).`,
+        );
+      }
+      if (
+        answer.outcome !== "NOT_APPLICABLE" &&
+        answer.evidenceMediaIds.length === 0
+      ) {
+        issues.push(`${criterion.label}: chưa chọn tài liệu dẫn chiếu.`);
+      }
+    }
+    for (const gate of rubric.gates) {
+      const rationaleLength = gates[gate.key]?.rationale.trim().length ?? 0;
+      if (rationaleLength < 20) {
+        issues.push(
+          `${gate.label}: căn cứ cần ít nhất 20 ký tự (hiện có ${rationaleLength}).`,
+        );
+      }
+    }
+    if (requireEvidenceAssessments) {
+      for (const evidence of evidences) {
+        const assessment = assessments[evidence.mediaAssetId];
+        if (!assessment || assessment.status === "UNREVIEWED") {
+          issues.push(`${evidence.title}: chưa ghi nhận kết quả kiểm tra tệp.`);
+        }
+      }
+    }
+    if (recommendation === null && issues.length === 0) {
+      issues.push("Cần có ít nhất một tiêu chí áp dụng cho hồ sơ.");
+    }
+    if (
+      recommendation !== null &&
+      recommendation !== "APPROVE" &&
+      applicantFeedback.trim().length < 20
+    ) {
+      issues.push(
+        `Phản hồi gửi người nộp cần ít nhất 20 ký tự (hiện có ${applicantFeedback.trim().length}).`,
+      );
+    }
+    return issues;
+  }, [
+    applicantFeedback,
+    assessments,
+    evidences,
+    gates,
+    recommendation,
+    requireEvidenceAssessments,
+    rubric.criteria,
+    rubric.gates,
+    verdicts,
+  ]);
+
   const buildDraft = useCallback((): ReviewDraft => {
     const criterionVerdicts = Object.fromEntries(
       Object.entries(verdicts)
@@ -145,32 +206,11 @@ export function VerdictReviewForm({
   const autosaveDraft = useMemo(() => buildDraft(), [buildDraft]);
   useReviewAutosave({ draft: autosaveDraft, onSave, readOnly });
 
-  const complete =
-    recommendation !== null &&
-    rubric.criteria.every(({ key }) => {
-      const answer = verdicts[key];
-      return (
-        Boolean(answer?.outcome) &&
-        (answer?.rationale.trim().length ?? 0) >= 20 &&
-        (answer?.outcome === "NOT_APPLICABLE" ||
-          (answer?.evidenceMediaIds.length ?? 0) > 0)
-      );
-    }) &&
-    rubric.gates.every(
-      ({ key }) => (gates[key]?.rationale.trim().length ?? 0) >= 20,
-    ) &&
-    (!requireEvidenceAssessments ||
-      evidences.every(({ mediaAssetId }) => {
-        const assessment = assessments[mediaAssetId];
-        return assessment && assessment.status !== "UNREVIEWED";
-      })) &&
-    (recommendation === "APPROVE" || applicantFeedback.trim().length >= 20);
+  const complete = validationIssues.length === 0;
 
   async function prepareSubmit() {
     if (!complete) {
-      setError(
-        "Hãy hoàn tất kết luận, căn cứ và phản hồi cần thiết trước khi gửi.",
-      );
+      setError(validationIssues.join(" "));
       return;
     }
     try {
@@ -244,21 +284,27 @@ export function VerdictReviewForm({
                         <option value="FAIL">Không đáp ứng</option>
                         <option value="NOT_APPLICABLE">Không áp dụng</option>
                       </select>
-                      <textarea
-                        aria-label={`Căn cứ ${gate.label}`}
-                        className="min-h-20 rounded-lg border bg-[var(--theme-surface)] p-3"
-                        onChange={(event) =>
-                          setGates((current) => ({
-                            ...current,
-                            [gate.key]: {
-                              ...answer,
-                              rationale: event.target.value,
-                            },
-                          }))
-                        }
-                        placeholder="Nêu kết quả đối chiếu"
-                        value={answer.rationale}
-                      />
+                      <div>
+                        <textarea
+                          aria-label={`Căn cứ ${gate.label}`}
+                          className="min-h-20 w-full rounded-lg border bg-[var(--theme-surface)] p-3"
+                          maxLength={2_000}
+                          onChange={(event) =>
+                            setGates((current) => ({
+                              ...current,
+                              [gate.key]: {
+                                ...answer,
+                                rationale: event.target.value,
+                              },
+                            }))
+                          }
+                          placeholder="Nêu kết quả đối chiếu (tối thiểu 20 ký tự)"
+                          value={answer.rationale}
+                        />
+                        <p className="mt-1 text-right text-xs text-[var(--theme-muted)]">
+                          {answer.rationale.trim().length}/20 ký tự tối thiểu
+                        </p>
+                      </div>
                     </div>
                     <ReviewEvidenceSelect
                       disabled={readOnly}
@@ -331,21 +377,27 @@ export function VerdictReviewForm({
                         </option>
                       ))}
                     </select>
-                    <textarea
-                      aria-label={`Nhận định ${criterion.label}`}
-                      className="min-h-24 rounded-lg border bg-[var(--theme-surface)] p-3"
-                      onChange={(event) =>
-                        setVerdicts((current) => ({
-                          ...current,
-                          [criterion.key]: {
-                            ...answer,
-                            rationale: event.target.value,
-                          },
-                        }))
-                      }
-                      placeholder="Nêu điều đã kiểm tra và căn cứ kết luận"
-                      value={answer.rationale}
-                    />
+                    <div>
+                      <textarea
+                        aria-label={`Nhận định ${criterion.label}`}
+                        className="min-h-24 w-full rounded-lg border bg-[var(--theme-surface)] p-3"
+                        maxLength={2_000}
+                        onChange={(event) =>
+                          setVerdicts((current) => ({
+                            ...current,
+                            [criterion.key]: {
+                              ...answer,
+                              rationale: event.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="Nêu điều đã kiểm tra và căn cứ kết luận (tối thiểu 20 ký tự)"
+                        value={answer.rationale}
+                      />
+                      <p className="mt-1 text-right text-xs text-[var(--theme-muted)]">
+                        {answer.rationale.trim().length}/20 ký tự tối thiểu
+                      </p>
+                    </div>
                   </div>
                   <ReviewEvidenceSelect
                     disabled={readOnly || answer.outcome === "NOT_APPLICABLE"}

@@ -145,6 +145,10 @@ test("reviewer assessment remains legible in dark mode", async ({ page }) => {
   await page.getByRole("button", { name: "Giao diện tối" }).click();
 
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  const controlSummary = page.getByRole("region", {
+    name: "Thông tin kiểm soát phiên thẩm định",
+  });
+  await expect(controlSummary).toHaveCSS("background-color", "rgb(38, 17, 17)");
   await expect(
     page.getByRole("heading", { name: "Phiếu thẩm định hồ sơ" }),
   ).toBeVisible();
@@ -157,4 +161,11 @@ test("reviewer assessment remains legible in dark mode", async ({ page }) => {
     "rgba(0, 0, 0, 0)",
   );
   await expect(firstCriterion).toBeVisible();
+
+  await page.getByRole("button", { name: "Giao diện sáng" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(controlSummary).toHaveCSS(
+    "background-color",
+    "rgb(255, 255, 255)",
+  );
 });

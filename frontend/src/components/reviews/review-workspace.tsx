@@ -119,7 +119,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
     detail.assignment.status,
   );
   return (
-    <div className="mx-auto max-w-[92rem] space-y-6">
+    <div className="review-workspace mx-auto max-w-[92rem] space-y-6">
       <Link
         className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-neutral-600 hover:text-primary-700"
         href="/reviews"
@@ -127,7 +127,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
         <ArrowLeft aria-hidden="true" className="size-4" />
         Trở lại hàng đợi
       </Link>
-      <header className="border-l-4 border-l-primary-700 border-y border-r border-neutral-200 bg-white px-6 py-6 sm:px-8">
+      <header className="border-l-4 border-l-primary-700 border-y border-r border-[var(--theme-border)] bg-[var(--theme-surface)] px-6 py-6 text-[var(--theme-text)] sm:px-8">
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
           <div>
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
@@ -146,7 +146,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
 
       <ol
         aria-label="Quy trình thẩm định"
-        className="grid gap-3 border-b border-neutral-200 pb-6 md:grid-cols-3"
+        className="grid gap-3 border-b border-[var(--theme-border)] pb-6 md:grid-cols-3"
       >
         {(usesVerdictReview
           ? [
@@ -176,7 +176,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
 
       <section
         aria-label="Thông tin kiểm soát phiên thẩm định"
-        className="grid overflow-hidden border-y border-neutral-200 bg-neutral-50/60 sm:grid-cols-3"
+        className="grid overflow-hidden border-y border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text)] sm:grid-cols-3"
       >
         <article className="border-b border-[var(--theme-border)] p-4 sm:border-b-0 sm:border-r sm:p-5">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-500">
@@ -214,11 +214,16 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
 
       {save.error || submit.error ? (
         <p
-          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800"
+          className="review-workspace__error rounded-xl border p-4 text-sm font-semibold"
           role="alert"
         >
-          Không thể lưu hoặc gửi phiếu thẩm định. Nội dung vẫn còn trên màn
-          hình; vui lòng thử lại.
+          <span className="block font-bold">
+            Không thể lưu hoặc gửi phiếu thẩm định.
+          </span>
+          <span className="mt-1 block font-medium">
+            {(submit.error ?? save.error)?.message ||
+              "Nội dung vẫn còn trên màn hình; vui lòng thử lại."}
+          </span>
         </p>
       ) : null}
       {terminal ? (

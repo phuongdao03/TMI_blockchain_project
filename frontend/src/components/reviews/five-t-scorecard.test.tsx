@@ -36,6 +36,50 @@ describe("FiveTScorecard", () => {
     expect(screen.queryByText("Tổng điểm tạm tính")).toBeNull();
   });
 
+  it("identifies the exact incomplete verdict fields before submission", async () => {
+    const user = userEvent.setup();
+    render(
+      <FiveTScorecard
+        evidences={[]}
+        initialReview={null}
+        isSaving={false}
+        isSubmitting={false}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onSubmit={vi.fn().mockResolvedValue(undefined)}
+        readOnly={false}
+        rubric={{
+          version: "2026.2",
+          title: "Kết luận hồ sơ",
+          assessmentMethod: "VERDICT",
+          gates: [],
+          criteria: [
+            {
+              key: "identity",
+              label: "Thông tin chủ thể",
+              description: "Đối chiếu thông tin chủ thể trong hồ sơ.",
+            },
+          ],
+        }}
+      />,
+    );
+
+    await user.selectOptions(
+      screen.getByLabelText("Kết luận Thông tin chủ thể"),
+      "MEETS",
+    );
+    await user.type(
+      screen.getByLabelText("Nhận định Thông tin chủ thể"),
+      "Đã kiểm tra",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Gửi kết quả thẩm định" }),
+    );
+
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Thông tin chủ thể: nhận định cần ít nhất 20 ký tự",
+    );
+  });
+
   it("derives a supplement result from criterion conclusions", async () => {
     const user = userEvent.setup();
     const save = vi.fn().mockResolvedValue(undefined);
