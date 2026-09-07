@@ -41,8 +41,26 @@ def test_restore_runbook_contains_verifiable_drill_gates() -> None:
 def test_delivery_yaml_files_parse_for_pipeline_dry_run() -> None:
     for relative_path in (
         ".github/workflows/delivery.yml",
+        ".github/workflows/contract-release.yml",
         "infrastructure/compose.production.yaml",
         "infrastructure/monitoring/alert-policies.yaml",
     ):
         document = yaml.safe_load((ROOT / relative_path).read_text(encoding="utf-8"))
         assert isinstance(document, dict)
+
+
+def test_contract_release_wallet_and_contract_addresses_are_yaml_strings() -> None:
+    document = yaml.safe_load(
+        (ROOT / ".github/workflows/contract-release.yml").read_text(encoding="utf-8")
+    )
+    preflight = document["jobs"]["polygon-dry-run"]["steps"][4]
+
+    for name in (
+        "THV_PROOF_REGISTRY_CONTRACT_ADDRESS",
+        "BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES",
+        "ADMIN_WALLET_ADDRESS",
+        "SIGNER_WALLET_ADDRESS",
+    ):
+        value = preflight["env"][name]
+        assert isinstance(value, str)
+        assert value.startswith("0x")
