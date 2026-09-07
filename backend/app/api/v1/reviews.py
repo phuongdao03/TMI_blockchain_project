@@ -362,18 +362,19 @@ async def save_review_draft(
             recommendation=payload.recommendation,
             private_note=payload.private_note,
             gate_answers={
-                key: value.model_dump() for key, value in payload.gate_answers.items()
+                key: value.model_dump(by_alias=False)
+                for key, value in payload.gate_answers.items()
             },
             specialist_answers={
-                key: value.model_dump()
+                key: value.model_dump(by_alias=False)
                 for key, value in payload.specialist_answers.items()
             },
             criterion_verdicts={
-                key: value.model_dump()
+                key: value.model_dump(by_alias=False)
                 for key, value in payload.criterion_verdicts.items()
             },
             evidence_assessments={
-                str(media_id): value.model_dump()
+                str(media_id): value.model_dump(by_alias=False)
                 for media_id, value in payload.evidence_assessments.items()
             },
         ),

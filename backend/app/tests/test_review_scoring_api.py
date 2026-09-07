@@ -207,6 +207,7 @@ def test_reviewer_assignment_read_contract() -> None:
 def test_reviewer_conflict_draft_and_submit_contract() -> None:
     async def exercise() -> None:
         service = StubScoringService()
+        evidence_media_id = uuid4()
         base = f"/api/v1/reviewer/assignments/{service.assignment.id}"
         acknowledged = await _request(
             service,
@@ -237,7 +238,7 @@ def test_reviewer_conflict_draft_and_submit_contract() -> None:
                     "identity": {
                         "outcome": "MEETS",
                         "rationale": "Thông tin chủ thể phù hợp với tài liệu đã nộp.",
-                        "evidenceMediaIds": [],
+                        "evidenceMediaIds": [str(evidence_media_id)],
                     }
                 },
             },
@@ -259,6 +260,9 @@ def test_reviewer_conflict_draft_and_submit_contract() -> None:
         assert service.received_draft.criterion_verdicts["identity"]["outcome"] == (
             "MEETS"
         )
+        assert service.received_draft.criterion_verdicts["identity"][
+            "evidence_media_ids"
+        ] == [evidence_media_id]
         assert draft.json()["data"]["criterionVerdicts"]["identity"]["outcome"] == (
             "MEETS"
         )
