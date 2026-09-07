@@ -25,7 +25,9 @@ export interface MediaFileConstraints {
 }
 
 const DEFAULT_INSPECTION_POLL_INTERVAL_MS = 1_500;
-const MAX_INSPECTION_POLLS = 40;
+// Large private files are downloaded, scanned, encrypted and uploaded in parts.
+// Keep polling for up to ten minutes instead of reporting a false upload failure.
+const MAX_INSPECTION_POLLS = 400;
 
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));

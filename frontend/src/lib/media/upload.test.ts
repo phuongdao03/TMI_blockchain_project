@@ -243,6 +243,30 @@ describe("uploadMedia", () => {
     expect((body as FormData).get("file")).toBe(file);
   });
 
+  it("keeps waiting for large video inspection beyond the former one-minute limit", async () => {
+    vi.spyOn(mediaApi, "createUploadSignature").mockResolvedValue({
+      ...authorization,
+      uploadUrl: "https://api.cloudinary.test/v1_1/demo/video/upload",
+    });
+    vi.spyOn(mediaApi, "completeUpload").mockResolvedValue(quarantinedAsset);
+    let polls = 0;
+    const statusSpy = vi
+      .spyOn(mediaApi, "getAsset")
+      .mockImplementation(async () => {
+        polls += 1;
+        return polls <= 40 ? quarantinedAsset : activeAsset;
+      });
+
+    await expect(
+      uploadMedia(
+        sizedFile("evidence.mp4", "video/mp4", 52_574_976),
+        "DOSSIER_EVIDENCE",
+        { inspectionPollIntervalMs: 0 },
+      ),
+    ).resolves.toEqual(activeAsset);
+    expect(statusSpy).toHaveBeenCalledTimes(41);
+  });
+
   it("rejects an invalid storage response before completion", async () => {
     vi.spyOn(mediaApi, "createUploadSignature").mockResolvedValue(
       authorization,
