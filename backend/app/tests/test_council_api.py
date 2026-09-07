@@ -20,6 +20,7 @@ from app.modules.council.models import (
     CouncilVoteChoice,
 )
 from app.modules.council.types import (
+    AdminDossierDecisionView,
     CouncilCaseDetailView,
     CouncilCaseResultView,
     CouncilCaseView,
@@ -32,6 +33,7 @@ from app.modules.council.types import (
     CouncilSessionView,
     CouncilVoteView,
 )
+from app.modules.dossiers.models import DossierStatus
 
 NOW = datetime(2026, 8, 3, 8, 0, tzinfo=UTC)
 
@@ -172,6 +174,26 @@ class StubCouncilService:
             attendance_count=1,
         )
         return self.session
+
+    async def record_admin_decision(
+        self,
+        principal: AuthPrincipal,
+        dossier_id: UUID,
+        *,
+        decision: CouncilCaseDecision,
+        reason: str,
+        confirm_no_conflict: bool,
+    ) -> AdminDossierDecisionView:
+        assert dossier_id == self.case.dossier_id
+        assert decision is CouncilCaseDecision.APPROVE
+        assert reason == "Reviewer report and evidence are accepted."
+        assert confirm_no_conflict is True
+        return AdminDossierDecisionView(
+            dossier_id=dossier_id,
+            status=DossierStatus.APPROVED,
+            council_session_id=self.session.id,
+            minutes_hash="c" * 64,
+        )
 
     async def list_sessions(
         self,
@@ -362,5 +384,30 @@ def test_council_attendance_conflict_vote_close_and_minutes_contracts() -> None:
         assert closed.json()["data"]["status"] == "CLOSED"
         assert minutes.json()["data"]["cases"][0]["decision"] == "APPROVE"
         assert minutes.json()["data"]["cases"][0]["voteCounts"]["APPROVE"] == 1
+
+    asyncio.run(exercise())
+
+
+def test_admin_can_record_final_dossier_decision_from_reviewer_report() -> None:
+    async def exercise() -> None:
+        service = StubCouncilService()
+        response = await _request(
+            service,
+            "POST",
+            f"/api/v1/admin/council/dossiers/{service.case.dossier_id}/decision",
+            json={
+                "decision": "APPROVE",
+                "reason": "Reviewer report and evidence are accepted.",
+                "confirmNoConflict": True,
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"] == {
+            "dossierId": str(service.case.dossier_id),
+            "status": "APPROVED",
+            "councilSessionId": str(service.session.id),
+            "minutesHash": "c" * 64,
+        }
 
     asyncio.run(exercise())

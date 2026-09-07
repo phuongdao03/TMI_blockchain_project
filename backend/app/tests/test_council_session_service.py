@@ -27,6 +27,7 @@ from app.modules.council.models import (
     CouncilCaseConflict,
     CouncilCaseDecision,
     CouncilSession,
+    CouncilSessionMember,
     CouncilSessionStatus,
     CouncilVote,
     CouncilVoteChoice,
@@ -39,6 +40,7 @@ from app.modules.dossiers.models import (
     Dossier,
     DossierEvidence,
     DossierStatus,
+    DossierStatusHistory,
     DossierVersion,
 )
 from app.modules.media.models import MediaAsset, MediaStatus
@@ -360,6 +362,76 @@ def test_council_case_requires_completed_review_gate() -> None:
 
         with pytest.raises(CouncilConflictError, match="submitted review"):
             await service.add_case(secretary, created.id, dossier.id)
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_admin_final_decision_records_minutes_and_approves_completed_review() -> None:
+    async def exercise() -> None:
+        service, sessions, engine, users, dossier, _ = await _setup()
+        result = await service.record_admin_decision(
+            _principal(users["secretary"], "SUPER_ADMIN"),
+            dossier.id,
+            decision=CouncilCaseDecision.APPROVE,
+            reason="Reviewer report and locked evidence are accepted.",
+            confirm_no_conflict=True,
+        )
+
+        assert result.status is DossierStatus.APPROVED
+        assert len(result.minutes_hash) == 64
+        async with sessions() as session:
+            stored_dossier = await session.get(Dossier, dossier.id)
+            stored_session = await session.get(
+                CouncilSession, result.council_session_id
+            )
+            assert stored_dossier is not None
+            assert stored_dossier.status is DossierStatus.APPROVED
+            assert stored_dossier.approved_at is not None
+            assert stored_dossier.approved_at.replace(tzinfo=UTC) == NOW
+            assert stored_session is not None
+            assert stored_session.status is CouncilSessionStatus.CLOSED
+            assert stored_session.minutes_hash == result.minutes_hash
+            assert (
+                await session.scalar(select(func.count()).select_from(CouncilCase)) == 1
+            )
+            assert (
+                await session.scalar(
+                    select(func.count()).select_from(CouncilSessionMember)
+                )
+                == 1
+            )
+            assert (
+                await session.scalar(select(func.count()).select_from(CouncilVote)) == 1
+            )
+            transitions = tuple(
+                (await session.scalars(select(DossierStatusHistory))).all()
+            )
+            assert {(item.from_status, item.to_status) for item in transitions} == {
+                (DossierStatus.UNDER_REVIEW, DossierStatus.COUNCIL_REVIEW),
+                (DossierStatus.COUNCIL_REVIEW, DossierStatus.APPROVED),
+            }
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_admin_final_decision_requires_explicit_no_conflict_confirmation() -> None:
+    async def exercise() -> None:
+        service, _, engine, users, dossier, _ = await _setup()
+
+        with pytest.raises(CouncilValidationError, match="no-conflict"):
+            await service.record_admin_decision(
+                _principal(users["secretary"], "SUPER_ADMIN"),
+                dossier.id,
+                decision=CouncilCaseDecision.APPROVE,
+                reason="Reviewer report and locked evidence are accepted.",
+                confirm_no_conflict=False,
+            )
 
         await service.close()
         await engine.dispose()

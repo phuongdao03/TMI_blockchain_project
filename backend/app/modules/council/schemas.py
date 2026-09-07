@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -9,6 +9,7 @@ from app.modules.council.models import (
     CouncilSessionStatus,
     CouncilVoteChoice,
 )
+from app.modules.dossiers.models import DossierStatus
 
 
 def _camel(name: str) -> str:
@@ -43,6 +44,19 @@ class CreateCouncilSessionRequest(CouncilSchema):
 
 class AddCouncilCaseRequest(CouncilSchema):
     dossier_id: UUID
+
+
+class AdminDossierDecisionRequest(CouncilSchema):
+    decision: CouncilCaseDecision
+    reason: Annotated[str, Field(min_length=1, max_length=2_000)]
+    confirm_no_conflict: Literal[True]
+
+
+class AdminDossierDecisionData(CouncilSchema):
+    dossier_id: UUID
+    status: DossierStatus
+    council_session_id: UUID
+    minutes_hash: str
 
 
 class CouncilConflictRequest(CouncilSchema):

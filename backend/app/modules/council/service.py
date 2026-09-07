@@ -35,6 +35,7 @@ from app.modules.council.models import (
 )
 from app.modules.council.repository import CouncilRepository
 from app.modules.council.types import (
+    AdminDossierDecisionView,
     CouncilCaseDetailView,
     CouncilCaseResultView,
     CouncilCaseView,
@@ -236,6 +237,160 @@ class CouncilService:
             raise CouncilConflictError(
                 "This dossier version is already in the session."
             ) from exc
+        return result
+
+    async def record_admin_decision(
+        self,
+        principal: AuthPrincipal,
+        dossier_id: UUID,
+        *,
+        decision: CouncilCaseDecision,
+        reason: str,
+        confirm_no_conflict: bool,
+    ) -> AdminDossierDecisionView:
+        """Record a one-admin final decision with complete council evidence."""
+        self._require_secretary(principal)
+        normalized_reason = reason.strip()
+        if not normalized_reason or len(normalized_reason) > 2_000:
+            raise CouncilValidationError(
+                "Decision reason must contain between 1 and 2000 characters."
+            )
+        if not confirm_no_conflict:
+            raise CouncilValidationError(
+                "The final decision requires a no-conflict declaration."
+            )
+        now = self._clock()
+        async with self._session.begin():
+            dossier = await self._dossiers.get_by_id(dossier_id, for_update=True)
+            if dossier is None:
+                raise CouncilNotFoundError("Dossier was not found.")
+            if (
+                dossier.status is not DossierStatus.UNDER_REVIEW
+                or dossier.current_version_no < 1
+            ):
+                raise CouncilConflictError(
+                    "Only an UNDER_REVIEW dossier can receive a final decision."
+                )
+            version = await self._dossiers.get_version(
+                dossier.id,
+                dossier.current_version_no,
+            )
+            if version is None:
+                raise CouncilConflictError("The current dossier version was not found.")
+            (
+                submitted_reviews,
+                unfinished_assignments,
+            ) = await self._reviews.get_council_review_gate(version.id)
+            if submitted_reviews < 1:
+                raise CouncilConflictError(
+                    "At least one complete submitted review is required."
+                )
+            if unfinished_assignments:
+                raise CouncilConflictError(
+                    "Every assigned reviewer must submit or declare a conflict."
+                )
+            if decision is CouncilCaseDecision.APPROVE:
+                evidence_rows = await self._dossiers.list_evidences(
+                    dossier.id,
+                    version_id=version.id,
+                )
+                if not version_has_trusted_provenance(version, evidence_rows):
+                    raise CouncilConflictError(
+                        "Evidence integrity must be reverified before approval."
+                    )
+
+            council_session = CouncilSession(
+                id=self._uuid_factory(),
+                code=f"FINAL-{version.id.hex.upper()}",
+                title=f"Final decision for {dossier.code}",
+                scheduled_at=now,
+                status=CouncilSessionStatus.CLOSED,
+                quorum_required=1,
+                opened_at=now,
+                closed_at=now,
+            )
+            member = CouncilSessionMember(
+                id=self._uuid_factory(),
+                session_id=council_session.id,
+                member_user_id=principal.user_id,
+                attendance_confirmed_at=now,
+            )
+            council_case = CouncilCase(
+                id=self._uuid_factory(),
+                session_id=council_session.id,
+                dossier_id=dossier.id,
+                dossier_version_id=version.id,
+                decision=decision,
+            )
+            conflict = CouncilCaseConflict(
+                id=self._uuid_factory(),
+                case_id=council_case.id,
+                member_user_id=principal.user_id,
+                has_conflict=False,
+                reason=None,
+                declared_at=now,
+            )
+            vote = CouncilVote(
+                id=self._uuid_factory(),
+                case_id=council_case.id,
+                member_user_id=principal.user_id,
+                choice=CouncilVoteChoice(decision.value),
+                reason=normalized_reason,
+                voted_at=now,
+            )
+            self._council.add_session(council_session)
+            self._council.add_member(member)
+            self._council.add_case(council_case)
+            self._council.add_conflict(conflict)
+            self._council.add_vote(vote)
+
+            self._workflow.transition(
+                dossier,
+                target=DossierStatus.COUNCIL_REVIEW,
+                actor_user_id=principal.user_id,
+                allowed_sources={DossierStatus.UNDER_REVIEW},
+                reason_code="ADMIN_FINAL_REVIEW_STARTED",
+                note=normalized_reason,
+            )
+            target = DECISION_TARGETS[decision]
+            self._workflow.transition(
+                dossier,
+                target=target,
+                actor_user_id=principal.user_id,
+                allowed_sources={DossierStatus.COUNCIL_REVIEW},
+                reason_code=f"COUNCIL_{decision.value}",
+                note=normalized_reason,
+            )
+            if decision is CouncilCaseDecision.APPROVE:
+                dossier.approved_at = now
+
+            case_result = calculate_case_result(
+                council_case,
+                (vote,),
+                quorum_required=1,
+            )
+            minutes_payload = build_minutes_payload(
+                council_session,
+                members=(member,),
+                conflicts=(conflict,),
+                votes=(vote,),
+                results=(case_result,),
+            )
+            council_session.minutes_hash = snapshot_sha256(minutes_payload)
+            self._add_decision_event(council_case, decision)
+            self._audit(
+                "council.admin_decision.recorded",
+                principal.user_id,
+                "council_case",
+                council_case.id,
+            )
+            await self._session.flush()
+            result = AdminDossierDecisionView(
+                dossier_id=dossier.id,
+                status=dossier.status,
+                council_session_id=council_session.id,
+                minutes_hash=council_session.minutes_hash,
+            )
         return result
 
     async def confirm_attendance(

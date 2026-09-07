@@ -8,6 +8,15 @@ from app.modules.council.models import (
     CouncilSessionStatus,
     CouncilVoteChoice,
 )
+from app.modules.dossiers.models import DossierStatus
+
+
+@dataclass(frozen=True, slots=True)
+class AdminDossierDecisionView:
+    dossier_id: UUID
+    status: DossierStatus
+    council_session_id: UUID
+    minutes_hash: str
 
 
 @dataclass(frozen=True, slots=True)

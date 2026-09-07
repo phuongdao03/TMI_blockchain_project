@@ -18,6 +18,8 @@ from app.modules.council.dependencies import CouncilServiceDependency
 from app.modules.council.models import CouncilSessionStatus
 from app.modules.council.schemas import (
     AddCouncilCaseRequest,
+    AdminDossierDecisionData,
+    AdminDossierDecisionRequest,
     CouncilCaseData,
     CouncilCaseDetailData,
     CouncilCaseResultData,
@@ -97,6 +99,31 @@ def _minutes_data(view: CouncilMinutesView) -> CouncilMinutesData:
         quorum_required=view.quorum_required,
         minutes_hash=view.minutes_hash,
         cases=[_result_data(item) for item in view.cases],
+    )
+
+
+@router.post(
+    "/api/v1/admin/council/dossiers/{dossier_id}/decision",
+    response_model=SuccessEnvelope[AdminDossierDecisionData],
+    responses=PRIVATE_RESPONSES,
+)
+async def record_admin_dossier_decision(
+    dossier_id: UUID,
+    payload: AdminDossierDecisionRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: CouncilServiceDependency,
+) -> SuccessEnvelope[AdminDossierDecisionData]:
+    result = await service.record_admin_decision(
+        principal,
+        dossier_id,
+        decision=payload.decision,
+        reason=payload.reason,
+        confirm_no_conflict=payload.confirm_no_conflict,
+    )
+    return SuccessEnvelope(
+        data=AdminDossierDecisionData.model_validate(result),
+        meta=ResponseMeta(request_id=request.state.request_id),
     )
 
 
