@@ -257,9 +257,10 @@ def test_cloudinary_chunks_large_encrypted_assets_and_reassembles_them() -> None
             marker = f'name="{name}"'.encode()
             start = request.content.index(marker)
             start = request.content.index(b"\r\n\r\n", start) + 4
-            boundary = b"\r\n--" + request.headers["content-type"].split(
-                "boundary=", 1
-            )[1].encode()
+            boundary = (
+                b"\r\n--"
+                + request.headers["content-type"].split("boundary=", 1)[1].encode()
+            )
             end = request.content.index(boundary, start)
             return request.content[start:end]
 
@@ -302,9 +303,10 @@ def test_cloudinary_chunks_large_encrypted_assets_and_reassembles_them() -> None
         assert stored.public_id == "private/large-ciphertext"
         assert stored.bytes == len(ciphertext)
         assert len(uploaded) == 3
-        assert uploaded["private/large-ciphertext.part-00000"] == ciphertext[
-            : 8 * 1_048_576
-        ]
+        assert (
+            uploaded["private/large-ciphertext.part-00000"]
+            == ciphertext[: 8 * 1_048_576]
+        )
         assert uploaded["private/large-ciphertext.part-00001"] == b"encrypted-tail"
         manifest_bytes = uploaded["private/large-ciphertext"]
         assert manifest_bytes.startswith(b"TMI-ENCRYPTED-PARTS-V1\n")

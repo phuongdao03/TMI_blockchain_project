@@ -375,11 +375,14 @@ class CloudinaryMediaGateway:
                         "sha256": hashlib.sha256(part).hexdigest(),
                     }
                 )
-            manifest = _ENCRYPTED_MANIFEST_PREFIX + json.dumps(
-                {"bytes": len(content), "parts": parts, "version": 1},
-                separators=(",", ":"),
-                sort_keys=True,
-            ).encode()
+            manifest = (
+                _ENCRYPTED_MANIFEST_PREFIX
+                + json.dumps(
+                    {"bytes": len(content), "parts": parts, "version": 1},
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ).encode()
+            )
             stored = await self._upload_raw_asset(
                 public_id=public_id,
                 content=manifest,
