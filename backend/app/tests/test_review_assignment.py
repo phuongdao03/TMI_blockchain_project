@@ -204,6 +204,39 @@ def test_admin_assigns_active_reviewers_and_emits_encrypted_events() -> None:
     asyncio.run(exercise())
 
 
+def test_admin_can_list_and_open_dossiers_waiting_for_review() -> None:
+    async def exercise() -> None:
+        service, _, engine, users, dossier, version = await _setup()
+        admin = _principal(users["admin"], "SUPER_ADMIN")
+
+        page = await service.list_admin_dossiers(
+            admin,
+            status=DossierStatus.UNDER_REVIEW,
+            page=1,
+            page_size=20,
+        )
+        detail = await service.get_admin_dossier(admin, dossier.id)
+
+        assert page.total == 1
+        assert page.items[0].dossier_id == dossier.id
+        assert page.items[0].assignment_count == 0
+        assert detail.snapshot_json == version.snapshot_json
+        assert detail.canonical_hash == version.canonical_hash
+
+        with pytest.raises(ReviewForbiddenError):
+            await service.list_admin_dossiers(
+                _principal(users["reviewer"], "MODERATOR"),
+                status=None,
+                page=1,
+                page_size=20,
+            )
+
+        await service._session.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 def test_assignment_and_outbox_roll_back_when_audit_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

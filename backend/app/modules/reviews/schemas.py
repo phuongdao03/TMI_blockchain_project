@@ -40,6 +40,21 @@ class DossierTransitionData(ReviewSchema):
     status: DossierStatus
 
 
+class AdminReviewDossierSummaryData(ReviewSchema):
+    dossier_id: UUID
+    dossier_code: str
+    dossier_title: str
+    status: DossierStatus
+    version_no: int
+    submitted_at: datetime | None
+    assignment_count: int
+
+
+class AdminReviewDossierDetailData(AdminReviewDossierSummaryData):
+    canonical_hash: str
+    snapshot_json: dict[str, object]
+
+
 class AssignReviewersRequest(ReviewSchema):
     reviewer_user_ids: Annotated[list[UUID], Field(min_length=1, max_length=50)]
     due_at: datetime | None = None

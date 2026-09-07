@@ -511,6 +511,28 @@ describe("layout shells", () => {
     expect(screen.queryByRole("link", { name: "Ký blockchain" })).toBeNull();
   });
 
+  it("shows the review assignment workspace to authorized staff", () => {
+    render(
+      <AuthUserProvider
+        user={{
+          id: "review-coordinator",
+          email: "coordinator@tmigroup.vn",
+          roles: ["USER"],
+          permissions: ["review.assign"],
+          accountType: null,
+        }}
+      >
+        <DashboardShell>
+          <h1>Phân công thẩm định</h1>
+        </DashboardShell>
+      </AuthUserProvider>,
+    );
+
+    expect(
+      screen.getAllByRole("link", { name: "Phân công thẩm định" }).length,
+    ).toBeGreaterThan(0);
+  });
+
   it("gives a reviewer a visible return path from the public library", () => {
     navigationState.pathname = "/works";
     render(

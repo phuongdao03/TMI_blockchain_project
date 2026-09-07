@@ -14,6 +14,7 @@ from app.modules.auth.dependencies import (
     CsrfProtectedPrincipalDependency,
     CurrentPrincipalDependency,
 )
+from app.modules.dossiers.models import DossierStatus
 from app.modules.reviews.dependencies import (
     PrecheckServiceDependency,
     ReviewServiceDependency,
@@ -21,6 +22,8 @@ from app.modules.reviews.dependencies import (
 )
 from app.modules.reviews.models import ReviewAssignmentStatus, SimilarityCaseStatus
 from app.modules.reviews.schemas import (
+    AdminReviewDossierDetailData,
+    AdminReviewDossierSummaryData,
     AssignReviewersRequest,
     AssignSimilarityCaseRequest,
     ConflictDeclarationRequest,
@@ -96,6 +99,48 @@ def _meta(
         page=page,
         page_size=page_size,
         total=total,
+    )
+
+
+@router.get(
+    "/api/v1/admin/review-dossiers",
+    response_model=PaginatedSuccessEnvelope[list[AdminReviewDossierSummaryData]],
+    responses=PRIVATE_RESPONSES,
+)
+async def list_admin_review_dossiers(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: ReviewServiceDependency,
+    dossier_status: Annotated[DossierStatus | None, Query(alias="status")] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
+) -> PaginatedSuccessEnvelope[list[AdminReviewDossierSummaryData]]:
+    result = await service.list_admin_dossiers(
+        principal, status=dossier_status, page=page, page_size=page_size
+    )
+    return PaginatedSuccessEnvelope(
+        data=[
+            AdminReviewDossierSummaryData.model_validate(item) for item in result.items
+        ],
+        meta=_meta(request, page=page, page_size=page_size, total=result.total),
+    )
+
+
+@router.get(
+    "/api/v1/admin/review-dossiers/{dossier_id}",
+    response_model=SuccessEnvelope[AdminReviewDossierDetailData],
+    responses=PRIVATE_RESPONSES,
+)
+async def get_admin_review_dossier(
+    dossier_id: UUID,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: ReviewServiceDependency,
+) -> SuccessEnvelope[AdminReviewDossierDetailData]:
+    result = await service.get_admin_dossier(principal, dossier_id)
+    return SuccessEnvelope(
+        data=AdminReviewDossierDetailData.model_validate(result),
+        meta=ResponseMeta(request_id=request.state.request_id),
     )
 
 

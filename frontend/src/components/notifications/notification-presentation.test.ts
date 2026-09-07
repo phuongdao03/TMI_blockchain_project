@@ -18,6 +18,19 @@ const base: NotificationItem = {
 };
 
 describe("notification presentation", () => {
+  it("routes existing submitted-dossier notifications to the admin queue", () => {
+    expect(
+      presentNotification(
+        {
+          ...base,
+          type: "dossier.submitted",
+          data: { dossier_id: "dossier-1", actionPath: "/dossiers/dossier-1" },
+        },
+        { adminDossierLinks: true },
+      ).actionPath,
+    ).toBe("/admin/reviews/dossier-1");
+  });
+
   it("maps a reviewer job to a safe internal action", () => {
     expect(presentNotification(base)).toMatchObject({
       actionLabel: "Bắt đầu thẩm định",

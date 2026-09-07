@@ -12,13 +12,18 @@ import {
 
 export function RoleGate({
   allowed,
+  permissions = [],
   children,
 }: {
   allowed: readonly string[];
+  permissions?: readonly string[];
   children: ReactNode;
 }) {
   const user = useAuthUser();
-  if (!user || !hasAnyRole(user.roles, allowed)) {
+  const hasPermission = permissions.some((permission) =>
+    user?.permissions?.includes(permission),
+  );
+  if (!user || (!hasAnyRole(user.roles, allowed) && !hasPermission)) {
     return (
       <section className="mx-auto max-w-2xl rounded-2xl border border-neutral-200 bg-white p-8 text-center">
         <ShieldX

@@ -21,6 +21,7 @@ from app.workers.notification_tasks import (
     EMAIL_EVENTS,
     EVENT_ROLE_RECIPIENTS,
     _action_path,
+    _recipient_action_path,
     staff_invitation_message,
 )
 
@@ -277,6 +278,10 @@ def test_critical_workflow_events_are_delivered_by_email() -> None:
 def test_role_notifications_and_action_paths_are_explicit() -> None:
     assert EVENT_ROLE_RECIPIENTS["dossier.submitted"] == frozenset({"SUPER_ADMIN"})
     assert (
+        _action_path("dossier.submitted", {"dossier_id": "dossier-1"})
+        == "/dossiers/dossier-1"
+    )
+    assert (
         _action_path(
             "review.assignment_created",
             {"assignment_id": "4b6fe80a-1c87-4cc2-ad03-88decb6ebfab"},
@@ -285,3 +290,25 @@ def test_role_notifications_and_action_paths_are_explicit() -> None:
     )
     assert _action_path("content_report.created", {}) == "/admin/content"
     assert _action_path("unknown.event", {"url": "https://evil.example"}) is None
+
+    owner_id = uuid4()
+    admin_id = uuid4()
+    payload = {"dossier_id": "dossier-1"}
+    assert (
+        _recipient_action_path(
+            "dossier.submitted",
+            payload,
+            recipient_id=owner_id,
+            direct_recipient_id=owner_id,
+        )
+        == "/dossiers/dossier-1"
+    )
+    assert (
+        _recipient_action_path(
+            "dossier.submitted",
+            payload,
+            recipient_id=admin_id,
+            direct_recipient_id=owner_id,
+        )
+        == "/admin/reviews/dossier-1"
+    )

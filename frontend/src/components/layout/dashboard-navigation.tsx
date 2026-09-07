@@ -4,6 +4,7 @@ import {
   BadgeDollarSign,
   Bell,
   BookOpen,
+  ClipboardCheck,
   FileCheck2,
   FileText,
   Gauge,
@@ -80,6 +81,12 @@ const reviewerItems: NavigationItem[] = [
 ];
 
 const adminItems: NavigationItem[] = [
+  {
+    href: "/admin/reviews",
+    label: "Phân công thẩm định",
+    icon: ClipboardCheck,
+    permission: "review.assign",
+  },
   {
     href: "/admin/payments",
     label: "Tài chính",

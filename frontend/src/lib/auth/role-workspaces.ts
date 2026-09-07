@@ -10,6 +10,7 @@ export function hasAnyRole(
 }
 
 const OPERATIONAL_WORKSPACES: ReadonlyArray<readonly [string, string]> = [
+  ["review.assign", "/admin/reviews"],
   ["payments.read", "/admin/payments"],
   ["dashboard.read", "/admin/dashboard"],
   ["users.read", "/admin/users"],
