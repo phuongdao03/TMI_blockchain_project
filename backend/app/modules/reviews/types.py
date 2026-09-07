@@ -50,12 +50,6 @@ class AdminReviewDossierPage:
 
 
 @dataclass(frozen=True, slots=True)
-class AdminReviewDossierDetailView(AdminReviewDossierSummaryView):
-    canonical_hash: str
-    snapshot_json: Mapping[str, object]
-
-
-@dataclass(frozen=True, slots=True)
 class ReviewAssignmentView:
     id: UUID
     dossier_id: UUID
@@ -114,6 +108,20 @@ class ReviewView:
     evidence_assessments: Mapping[str, Mapping[str, object]]
     submitted_at: datetime | None
     criterion_verdicts: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class AdminReviewAssignmentView:
+    assignment: ReviewAssignmentView
+    reviewer_email: str
+    review: ReviewView | None
+
+
+@dataclass(frozen=True, slots=True)
+class AdminReviewDossierDetailView(AdminReviewDossierSummaryView):
+    canonical_hash: str
+    snapshot_json: Mapping[str, object]
+    assignments: tuple[AdminReviewAssignmentView, ...]
 
 
 @dataclass(frozen=True, slots=True)

@@ -76,7 +76,8 @@ export function presentNotification(
     tone: "info" as const,
   };
   const submittedDossierId =
-    options.adminDossierLinks && item.type === "dossier.submitted"
+    options.adminDossierLinks &&
+    ["dossier.submitted", "review.completed"].includes(item.type)
       ? (item.data.dossierId ?? item.data.dossier_id)
       : null;
   const actionPath =

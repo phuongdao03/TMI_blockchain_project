@@ -11,10 +11,14 @@ from app.modules.auth.dependencies import get_current_principal
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.models import DossierStatus
 from app.modules.reviews.dependencies import get_review_service
+from app.modules.reviews.models import ReviewAssignmentStatus, ReviewRecommendation
 from app.modules.reviews.types import (
+    AdminReviewAssignmentView,
     AdminReviewDossierDetailView,
     AdminReviewDossierPage,
     AdminReviewDossierSummaryView,
+    ReviewAssignmentView,
+    ReviewView,
 )
 
 NOW = datetime(2026, 9, 7, 4, 0, tzinfo=UTC)
@@ -24,6 +28,8 @@ class StubReviewService:
     def __init__(self) -> None:
         self.dossier_id = uuid4()
         self.status: DossierStatus | None = None
+        self.assignment_id = uuid4()
+        self.reviewer_id = uuid4()
 
     async def list_admin_dossiers(
         self,
@@ -68,6 +74,45 @@ class StubReviewService:
                 "dossier": {"title": "Hồ sơ chờ phân công"},
                 "evidences": [],
             },
+            assignments=(
+                AdminReviewAssignmentView(
+                    assignment=ReviewAssignmentView(
+                        id=self.assignment_id,
+                        dossier_id=dossier_id,
+                        dossier_version_id=uuid4(),
+                        reviewer_user_id=self.reviewer_id,
+                        assigned_by=uuid4(),
+                        due_at=None,
+                        status=ReviewAssignmentStatus.SUBMITTED,
+                        conflict_declared_at=None,
+                        conflict_reason=None,
+                    ),
+                    reviewer_email="reviewer@tmi.vn",
+                    review=ReviewView(
+                        id=uuid4(),
+                        assignment_id=self.assignment_id,
+                        truth_score=None,
+                        transparency_score=None,
+                        ownership_score=None,
+                        professionalism_score=None,
+                        respect_score=None,
+                        total_score=90,
+                        rubric_version="verdict-v1",
+                        specialist_score=None,
+                        recommendation=ReviewRecommendation.APPROVE,
+                        criterion_comments={},
+                        criterion_evidence={},
+                        findings=(),
+                        checklist_answers={},
+                        applicant_feedback="Hồ sơ đạt yêu cầu.",
+                        private_note="Đã đối chiếu bản gốc.",
+                        gate_answers={},
+                        specialist_answers={},
+                        evidence_assessments={},
+                        submitted_at=NOW,
+                    ),
+                ),
+            ),
         )
 
 
@@ -123,3 +168,7 @@ def test_admin_review_queue_list_and_detail_contract() -> None:
     assert detail.status_code == 200
     assert detail.json()["data"]["canonicalHash"] == "a" * 64
     assert detail.json()["data"]["snapshotJson"]["evidences"] == []
+    report = detail.json()["data"]["assignments"][0]
+    assert report["reviewerEmail"] == "reviewer@tmi.vn"
+    assert report["assignment"]["status"] == "SUBMITTED"
+    assert report["review"]["recommendation"] == "APPROVE"

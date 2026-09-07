@@ -101,6 +101,19 @@ class ReviewRepository:
         ).one_or_none()
         return cast(tuple[Dossier, DossierVersion, int] | None, row)
 
+    async def list_admin_assignments(
+        self,
+        dossier_version_id: UUID,
+    ) -> tuple[tuple[ReviewAssignment, User, Review | None], ...]:
+        rows = await self._session.execute(
+            select(ReviewAssignment, User, Review)
+            .join(User, User.id == ReviewAssignment.reviewer_user_id)
+            .outerjoin(Review, Review.assignment_id == ReviewAssignment.id)
+            .where(ReviewAssignment.dossier_version_id == dossier_version_id)
+            .order_by(ReviewAssignment.id)
+        )
+        return tuple(rows.tuples().all())
+
     async def find_similarity_case(
         self,
         *,

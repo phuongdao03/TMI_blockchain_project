@@ -31,6 +31,19 @@ describe("notification presentation", () => {
     ).toBe("/admin/reviews/dossier-1");
   });
 
+  it("routes existing completed-review notifications to the admin report", () => {
+    expect(
+      presentNotification(
+        {
+          ...base,
+          type: "review.completed",
+          data: { dossier_id: "dossier-1", actionPath: "/dossiers/dossier-1" },
+        },
+        { adminDossierLinks: true },
+      ).actionPath,
+    ).toBe("/admin/reviews/dossier-1");
+  });
+
   it("maps a reviewer job to a safe internal action", () => {
     expect(presentNotification(base)).toMatchObject({
       actionLabel: "Bắt đầu thẩm định",

@@ -312,3 +312,12 @@ def test_role_notifications_and_action_paths_are_explicit() -> None:
         )
         == "/admin/reviews/dossier-1"
     )
+    assert (
+        _recipient_action_path(
+            "review.completed",
+            payload,
+            recipient_id=admin_id,
+            direct_recipient_id=None,
+        )
+        == "/admin/reviews/dossier-1"
+    )

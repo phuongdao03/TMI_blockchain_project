@@ -50,11 +50,6 @@ class AdminReviewDossierSummaryData(ReviewSchema):
     assignment_count: int
 
 
-class AdminReviewDossierDetailData(AdminReviewDossierSummaryData):
-    canonical_hash: str
-    snapshot_json: dict[str, object]
-
-
 class AssignReviewersRequest(ReviewSchema):
     reviewer_user_ids: Annotated[list[UUID], Field(min_length=1, max_length=50)]
     due_at: datetime | None = None
@@ -203,6 +198,18 @@ class ReviewData(ReviewSchema):
     specialist_answers: dict[str, SpecialistCriterionAnswerData]
     criterion_verdicts: dict[str, CriterionVerdictData]
     evidence_assessments: dict[UUID, EvidenceAssessmentData]
+
+
+class AdminReviewAssignmentData(ReviewSchema):
+    assignment: ReviewAssignmentData
+    reviewer_email: str
+    review: ReviewData | None
+
+
+class AdminReviewDossierDetailData(AdminReviewDossierSummaryData):
+    canonical_hash: str
+    snapshot_json: dict[str, object]
+    assignments: tuple[AdminReviewAssignmentData, ...]
 
 
 class ReviewAssignmentSummaryData(ReviewSchema):

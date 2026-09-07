@@ -115,7 +115,7 @@ def _recipient_action_path(
 ) -> str | None:
     dossier_id = payload.get("dossier_id") or payload.get("dossierId")
     if (
-        event_type == "dossier.submitted"
+        event_type in {"dossier.submitted", "review.completed"}
         and recipient_id != direct_recipient_id
         and isinstance(dossier_id, str)
     ):

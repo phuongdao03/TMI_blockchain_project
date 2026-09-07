@@ -29,6 +29,7 @@ from app.modules.reviews.models import (
 )
 from app.modules.reviews.repository import ReviewRepository
 from app.modules.reviews.types import (
+    AdminReviewAssignmentView,
     AdminReviewDossierDetailView,
     AdminReviewDossierPage,
     AdminReviewDossierSummaryView,
@@ -128,6 +129,7 @@ class ReviewService:
             if row is None:
                 raise ReviewNotFoundError("Review dossier was not found.")
             dossier, version, assignment_count = row
+            assignment_rows = await self._reviews.list_admin_assignments(version.id)
             summary = self._admin_dossier_summary(dossier, version, assignment_count)
             return AdminReviewDossierDetailView(
                 dossier_id=summary.dossier_id,
@@ -139,6 +141,16 @@ class ReviewService:
                 assignment_count=summary.assignment_count,
                 canonical_hash=version.canonical_hash,
                 snapshot_json=version.snapshot_json,
+                assignments=tuple(
+                    AdminReviewAssignmentView(
+                        assignment=self._assignment_view(assignment),
+                        reviewer_email=reviewer.email,
+                        review=self._review_view(review)
+                        if review is not None
+                        else None,
+                    )
+                    for assignment, reviewer, review in assignment_rows
+                ),
             )
 
     @classmethod
