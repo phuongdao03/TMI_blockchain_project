@@ -250,10 +250,12 @@ describe("uploadMedia", () => {
     });
     vi.spyOn(mediaApi, "completeUpload").mockResolvedValue(quarantinedAsset);
     let polls = 0;
-    const statusSpy = vi.spyOn(mediaApi, "getAsset").mockImplementation(async () => {
-      polls += 1;
-      return polls <= 40 ? quarantinedAsset : activeAsset;
-    });
+    const statusSpy = vi
+      .spyOn(mediaApi, "getAsset")
+      .mockImplementation(async () => {
+        polls += 1;
+        return polls <= 40 ? quarantinedAsset : activeAsset;
+      });
 
     await expect(
       uploadMedia(
