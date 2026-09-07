@@ -170,9 +170,13 @@ class CloudinaryMediaGateway:
         allowed_format: str,
         max_bytes: int,
     ) -> UploadAuthorization:
+        # Cloudinary accepts max_file_size only in upload presets. Including it
+        # in a signed Upload API request makes Cloudinary omit it from its own
+        # signature calculation and reject the request as an invalid signature.
+        # Size is enforced when the intent is issued and metadata is verified.
+        _ = max_bytes
         parameters = {
             "allowed_formats": allowed_format,
-            "max_file_size": str(max_bytes),
             "overwrite": "false",
             "public_id": public_id,
             "timestamp": str(timestamp),

@@ -23,7 +23,7 @@ def test_cloudinary_signatures_and_expiring_private_url() -> None:
             max_bytes=2_048,
         )
         assert issued.signature == gateway.sign_parameters(issued.parameters)
-        assert issued.parameters["max_file_size"] == "2048"
+        assert "max_file_size" not in issued.parameters
         assert gateway.verify_upload_result(
             public_id="sample",
             version=1_315_063_250,
