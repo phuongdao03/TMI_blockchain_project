@@ -80,7 +80,7 @@ test("reviewer sees live progress and the next blocking action", async ({
     },
   ]);
   await page.goto("/reviews");
-  await page.getByRole("link", { name: "Mở hồ sơ thẩm định" }).click();
+  await page.getByRole("link", { name: "Mở phiếu kiểm duyệt" }).click();
   await expect(page.getByText("Đã quá hạn xử lý")).toBeVisible();
   await expect(page.getByText("1 tài liệu đã khóa")).toBeVisible();
   await expect(page.getByText("Tóm tắt của người nộp")).toBeVisible();

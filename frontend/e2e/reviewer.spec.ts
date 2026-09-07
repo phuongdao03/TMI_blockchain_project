@@ -57,9 +57,9 @@ test("reviewer reviews each document and submits a criteria verdict", async ({
   await expect(
     page
       .locator("main")
-      .getByRole("heading", { level: 1, name: "Hàng đợi thẩm định" }),
+      .getByRole("heading", { level: 1, name: "Công việc kiểm duyệt" }),
   ).toBeVisible();
-  const reviewLink = page.getByRole("link", { name: "Mở hồ sơ thẩm định" });
+  const reviewLink = page.getByRole("link", { name: "Mở phiếu kiểm duyệt" });
   await expect(reviewLink).toHaveAttribute(
     "href",
     /\/reviews\/4155dbf5-bb3e-449d-8bf0-9572cc642cac$/,
@@ -136,7 +136,7 @@ test("retired similarity route returns reviewer to the main queue", async ({
   await expect(
     page
       .locator("main")
-      .getByRole("heading", { level: 1, name: "Hàng đợi thẩm định" }),
+      .getByRole("heading", { level: 1, name: "Công việc kiểm duyệt" }),
   ).toBeVisible();
 });
 
