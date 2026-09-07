@@ -3,6 +3,7 @@ import type {
   AdminReviewDossierDetail,
   AdminReviewDossierStatus,
   AdminReviewDossierSummary,
+  AdminDossierDecision,
   AdminUser,
   AdminUserListFilters,
   ActivityPage,
@@ -1000,6 +1001,22 @@ export const adminReviewApi = {
       `/admin/dossiers/${encodeURIComponent(dossierId)}/request-supplement`,
       { method: "POST", body: JSON.stringify({ reason }) },
     );
+  },
+  decide(
+    dossierId: string,
+    decision: AdminDossierDecision,
+    reason: string,
+    confirmNoConflict: boolean,
+  ) {
+    return request<{
+      dossierId: string;
+      status: Dossier["status"];
+      councilSessionId: string;
+      minutesHash: string;
+    }>(`/admin/council/dossiers/${encodeURIComponent(dossierId)}/decision`, {
+      method: "POST",
+      body: JSON.stringify({ decision, reason, confirmNoConflict }),
+    });
   },
   assign(dossierId: string, reviewerUserIds: string[], dueAt?: string) {
     return request<ReviewAssignment[]>(

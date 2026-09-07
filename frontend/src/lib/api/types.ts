@@ -954,7 +954,16 @@ export interface AdminReviewDossierSummary {
 export interface AdminReviewDossierDetail extends AdminReviewDossierSummary {
   canonicalHash: string;
   snapshotJson: ReviewSnapshot;
+  assignments: AdminReviewAssignment[];
 }
+
+export interface AdminReviewAssignment {
+  assignment: ReviewAssignment;
+  reviewerEmail: string;
+  review: ReviewData | null;
+}
+
+export type AdminDossierDecision = "APPROVE" | "REJECT" | "REQUEST_MORE_INFO";
 
 export interface ReviewListFilters {
   page?: number;
