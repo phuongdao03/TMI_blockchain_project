@@ -1,4 +1,5 @@
 import hashlib
+import json
 import secrets
 import time
 from collections.abc import Callable, Mapping
@@ -13,6 +14,12 @@ from app.modules.media.errors import MediaProviderUnavailableError
 
 class MediaContentTooLargeError(Exception):
     """The provider returned more bytes than the authorized upload size."""
+
+
+_ENCRYPTED_PART_BYTES = 8 * 1_048_576
+_ENCRYPTED_MANIFEST_MAX_BYTES = 1_048_576
+_ENCRYPTED_ASSET_MAX_BYTES = 104_857_600
+_ENCRYPTED_MANIFEST_PREFIX = b"TMI-ENCRYPTED-PARTS-V1\n"
 
 
 @dataclass(frozen=True, slots=True)
@@ -274,6 +281,45 @@ class CloudinaryMediaGateway:
         file_format: str,
         max_bytes: int,
     ) -> bytes:
+        content = await self._download_single_asset(
+            public_id=public_id,
+            resource_type=resource_type,
+            file_format=file_format,
+            max_bytes=max_bytes,
+        )
+        parts = self._encrypted_manifest_parts(
+            content,
+            public_id=public_id,
+            max_bytes=max_bytes,
+        )
+        if parts is None:
+            return content
+        assembled = bytearray()
+        for part_public_id, part_bytes, part_sha256 in parts:
+            part = await self._download_single_asset(
+                public_id=part_public_id,
+                resource_type="raw",
+                file_format="bin",
+                max_bytes=part_bytes,
+            )
+            if (
+                len(part) != part_bytes
+                or hashlib.sha256(part).hexdigest() != part_sha256
+            ):
+                raise MediaProviderUnavailableError()
+            assembled.extend(part)
+        if len(assembled) > max_bytes:
+            raise MediaContentTooLargeError()
+        return bytes(assembled)
+
+    async def _download_single_asset(
+        self,
+        *,
+        public_id: str,
+        resource_type: str,
+        file_format: str,
+        max_bytes: int,
+    ) -> bytes:
         url = self.create_signed_delivery_url(
             public_id=public_id,
             resource_type=resource_type,
@@ -302,6 +348,61 @@ class CloudinaryMediaGateway:
         *,
         public_id: str,
         content: bytes,
+    ) -> StoredEncryptedAsset:
+        if len(content) <= _ENCRYPTED_PART_BYTES:
+            return await self._upload_raw_asset(
+                public_id=public_id,
+                content=content,
+                reported_bytes=len(content),
+            )
+        parts: list[dict[str, str | int]] = []
+        uploaded_public_ids: list[str] = []
+        try:
+            offsets = range(0, len(content), _ENCRYPTED_PART_BYTES)
+            for index, offset in enumerate(offsets):
+                part = content[offset : offset + _ENCRYPTED_PART_BYTES]
+                part_public_id = f"{public_id}.part-{index:05d}"
+                await self._upload_raw_asset(
+                    public_id=part_public_id,
+                    content=part,
+                    reported_bytes=len(part),
+                )
+                uploaded_public_ids.append(part_public_id)
+                parts.append(
+                    {
+                        "bytes": len(part),
+                        "public_id": part_public_id,
+                        "sha256": hashlib.sha256(part).hexdigest(),
+                    }
+                )
+            manifest = _ENCRYPTED_MANIFEST_PREFIX + json.dumps(
+                {"bytes": len(content), "parts": parts, "version": 1},
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode()
+            stored = await self._upload_raw_asset(
+                public_id=public_id,
+                content=manifest,
+                reported_bytes=len(content),
+            )
+        except MediaProviderUnavailableError:
+            for uploaded_public_id in reversed(uploaded_public_ids):
+                try:
+                    await self._delete_single_asset(
+                        public_id=uploaded_public_id,
+                        resource_type="raw",
+                    )
+                except MediaProviderUnavailableError:
+                    pass
+            raise
+        return stored
+
+    async def _upload_raw_asset(
+        self,
+        *,
+        public_id: str,
+        content: bytes,
+        reported_bytes: int,
     ) -> StoredEncryptedAsset:
         timestamp = int(self._clock())
         parameters = {
@@ -335,10 +436,83 @@ class CloudinaryMediaGateway:
         return StoredEncryptedAsset(
             public_id=public_id,
             version=self._required_int(payload, "version"),
-            bytes=len(content),
+            bytes=reported_bytes,
         )
 
+    @staticmethod
+    def _encrypted_manifest_parts(
+        content: bytes,
+        *,
+        public_id: str,
+        max_bytes: int | None,
+    ) -> list[tuple[str, int, str]] | None:
+        if not content.startswith(_ENCRYPTED_MANIFEST_PREFIX):
+            return None
+        try:
+            manifest = json.loads(content[len(_ENCRYPTED_MANIFEST_PREFIX) :])
+            if (
+                not isinstance(manifest, dict)
+                or manifest.get("version") != 1
+                or not isinstance(manifest.get("bytes"), int)
+                or not 0 < manifest["bytes"] <= _ENCRYPTED_ASSET_MAX_BYTES
+                or (max_bytes is not None and manifest["bytes"] != max_bytes)
+                or not isinstance(manifest.get("parts"), list)
+            ):
+                raise ValueError
+            parts: list[tuple[str, int, str]] = []
+            total_bytes = 0
+            for index, item in enumerate(manifest["parts"]):
+                expected_public_id = f"{public_id}.part-{index:05d}"
+                if (
+                    not isinstance(item, dict)
+                    or item.get("public_id") != expected_public_id
+                    or not isinstance(item.get("bytes"), int)
+                    or not 0 < item["bytes"] <= _ENCRYPTED_PART_BYTES
+                    or not isinstance(item.get("sha256"), str)
+                    or len(item["sha256"]) != 64
+                ):
+                    raise ValueError
+                total_bytes += item["bytes"]
+                parts.append((expected_public_id, item["bytes"], item["sha256"]))
+            if not parts or total_bytes != manifest["bytes"]:
+                raise ValueError
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise MediaProviderUnavailableError() from exc
+        return parts
+
     async def delete_asset(
+        self,
+        *,
+        public_id: str,
+        resource_type: str,
+    ) -> None:
+        if resource_type == "raw":
+            try:
+                manifest = await self._download_single_asset(
+                    public_id=public_id,
+                    resource_type="raw",
+                    file_format="bin",
+                    max_bytes=_ENCRYPTED_MANIFEST_MAX_BYTES,
+                )
+            except MediaContentTooLargeError:
+                manifest = b""
+            parts = self._encrypted_manifest_parts(
+                manifest,
+                public_id=public_id,
+                max_bytes=None,
+            )
+            if parts is not None:
+                for part_public_id, _, _ in parts:
+                    await self._delete_single_asset(
+                        public_id=part_public_id,
+                        resource_type="raw",
+                    )
+        await self._delete_single_asset(
+            public_id=public_id,
+            resource_type=resource_type,
+        )
+
+    async def _delete_single_asset(
         self,
         *,
         public_id: str,

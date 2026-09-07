@@ -1,4 +1,6 @@
 import asyncio
+import hashlib
+import json
 from datetime import UTC, datetime
 from urllib.parse import parse_qs, urlparse
 
@@ -237,6 +239,108 @@ def test_cloudinary_uploads_encrypted_bytes_as_authenticated_raw_asset() -> None
         assert b'name="type"' in requests[0].content
         assert b"authenticated" in requests[0].content
         assert b'name="signature"' in requests[0].content
+        await gateway.close()
+        await client.aclose()
+
+    asyncio.run(exercise())
+
+
+def test_cloudinary_chunks_large_encrypted_assets_and_reassembles_them() -> None:
+    async def exercise() -> None:
+        requests: list[httpx.Request] = []
+        uploaded: dict[str, bytes] = {}
+        deleted: list[str] = []
+
+        def multipart_value(request: httpx.Request, name: str) -> bytes:
+            marker = f'name="{name}"'.encode()
+            start = request.content.index(marker)
+            start = request.content.index(b"\r\n\r\n", start) + 4
+            boundary = b"\r\n--" + request.headers["content-type"].split(
+                "boundary=", 1
+            )[1].encode()
+            end = request.content.index(boundary, start)
+            return request.content[start:end]
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            if request.method == "POST" and request.url.path.endswith("/raw/upload"):
+                uploaded_public_id = multipart_value(request, "public_id").decode()
+                uploaded_content = multipart_value(request, "file")
+                uploaded[uploaded_public_id] = uploaded_content
+                return httpx.Response(
+                    200,
+                    json={
+                        "public_id": uploaded_public_id,
+                        "version": len(uploaded),
+                        "resource_type": "raw",
+                        "type": "authenticated",
+                        "bytes": len(uploaded_content),
+                    },
+                )
+            if request.method == "POST" and request.url.path.endswith("/raw/destroy"):
+                deleted.append(parse_qs(request.content.decode())["public_id"][0])
+                return httpx.Response(200, json={"result": "ok"})
+            public_id = parse_qs(request.url.query.decode())["public_id"][0]
+            return httpx.Response(200, content=uploaded[public_id])
+
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        gateway = CloudinaryMediaGateway(
+            cloud_name="demo",
+            api_key="api-key",
+            api_secret="abcd",
+            clock=lambda: 1_785_398_400,
+            client=client,
+        )
+        ciphertext = b"a" * (8 * 1_048_576) + b"encrypted-tail"
+        stored = await gateway.upload_encrypted_asset(
+            public_id="private/large-ciphertext",
+            content=ciphertext,
+        )
+
+        assert stored.public_id == "private/large-ciphertext"
+        assert stored.bytes == len(ciphertext)
+        assert len(uploaded) == 3
+        assert uploaded["private/large-ciphertext.part-00000"] == ciphertext[
+            : 8 * 1_048_576
+        ]
+        assert uploaded["private/large-ciphertext.part-00001"] == b"encrypted-tail"
+        manifest_bytes = uploaded["private/large-ciphertext"]
+        assert manifest_bytes.startswith(b"TMI-ENCRYPTED-PARTS-V1\n")
+        manifest = json.loads(manifest_bytes.split(b"\n", 1)[1])
+        assert manifest == {
+            "bytes": len(ciphertext),
+            "parts": [
+                {
+                    "bytes": 8 * 1_048_576,
+                    "public_id": "private/large-ciphertext.part-00000",
+                    "sha256": hashlib.sha256(ciphertext[: 8 * 1_048_576]).hexdigest(),
+                },
+                {
+                    "bytes": len(b"encrypted-tail"),
+                    "public_id": "private/large-ciphertext.part-00001",
+                    "sha256": hashlib.sha256(b"encrypted-tail").hexdigest(),
+                },
+            ],
+            "version": 1,
+        }
+
+        downloaded = await gateway.download_asset(
+            public_id=stored.public_id,
+            resource_type="raw",
+            file_format="bin",
+            max_bytes=len(ciphertext),
+        )
+        assert downloaded == ciphertext
+
+        await gateway.delete_asset(
+            public_id=stored.public_id,
+            resource_type="raw",
+        )
+        assert deleted == [
+            "private/large-ciphertext.part-00000",
+            "private/large-ciphertext.part-00001",
+            "private/large-ciphertext",
+        ]
         await gateway.close()
         await client.aclose()
 
