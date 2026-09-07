@@ -27,6 +27,8 @@ const assignmentLabels = {
   CANCELLED: "Đã hủy",
 } as const;
 
+const routingReason = "Hệ thống chuyển hồ sơ đến người kiểm duyệt.";
+
 function ReviewReport({ item }: { item: AdminReviewAssignment }) {
   const { assignment, review, reviewerEmail } = item;
   return (
@@ -99,13 +101,13 @@ export function ReviewLifecyclePanel({
 }) {
   const queryClient = useQueryClient();
   const router = useRouter();
-  const [reason, setReason] = useState("");
   const [reviewerId, setReviewerId] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [finalReason, setFinalReason] = useState("");
   const [confirmNoConflict, setConfirmNoConflict] = useState(false);
-  const canChooseReviewer =
-    dossier.status === "PRECHECK" || dossier.status === "UNDER_REVIEW";
+  const canChooseReviewer = ["SUBMITTED", "PRECHECK", "UNDER_REVIEW"].includes(
+    dossier.status,
+  );
   const reviewers = useQuery({
     queryKey: ["staff-accounts", "active-reviewers"],
     queryFn: () =>
@@ -126,8 +128,11 @@ export function ReviewLifecyclePanel({
   };
   const handoff = useMutation({
     mutationFn: async () => {
-      if (dossier.status === "PRECHECK") {
-        await adminReviewApi.passPrecheck(dossier.dossierId, reason);
+      if (dossier.status === "SUBMITTED") {
+        await adminReviewApi.startPrecheck(dossier.dossierId, routingReason);
+      }
+      if (dossier.status === "SUBMITTED" || dossier.status === "PRECHECK") {
+        await adminReviewApi.passPrecheck(dossier.dossierId, routingReason);
       }
       return adminReviewApi.assign(
         dossier.dossierId,
@@ -137,17 +142,7 @@ export function ReviewLifecyclePanel({
     },
     onSettled: refresh,
   });
-  const transition = useMutation({
-    mutationFn: (action: "start" | "supplement") =>
-      action === "start"
-        ? adminReviewApi.startPrecheck(dossier.dossierId, reason)
-        : adminReviewApi.requestSupplement(dossier.dossierId, reason),
-    onSuccess: async (_, action) => {
-      if (action === "supplement") router.push("/admin/reviews");
-      await refresh();
-    },
-  });
-  const busy = handoff.isPending || transition.isPending;
+  const busy = handoff.isPending;
   const assignedIds = new Set(
     dossier.assignments.map((item) => item.assignment.reviewerUserId),
   );
@@ -194,40 +189,8 @@ export function ReviewLifecyclePanel({
           </div>
         </div>
 
-        {dossier.status === "SUBMITTED" ? (
-          <div className="mt-5 space-y-4">
-            <label className="block text-sm font-semibold">
-              Ghi chú tiếp nhận
-              <textarea
-                className="mt-2 min-h-24 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3"
-                onChange={(event) => setReason(event.target.value)}
-                value={reason}
-              />
-            </label>
-            <button
-              className="min-h-11 rounded-xl bg-primary-700 px-5 font-bold text-white disabled:opacity-50"
-              disabled={!reason.trim() || busy}
-              onClick={() => transition.mutate("start")}
-              type="button"
-            >
-              {transition.isPending
-                ? "Đang tiếp nhận…"
-                : "Tiếp nhận và bắt đầu sơ kiểm"}
-            </button>
-          </div>
-        ) : canChooseReviewer ? (
+        {canChooseReviewer ? (
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {dossier.status === "PRECHECK" ? (
-              <label className="block text-sm font-semibold md:col-span-2">
-                Ghi chú sơ kiểm
-                <textarea
-                  className="mt-2 min-h-24 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3"
-                  onChange={(event) => setReason(event.target.value)}
-                  placeholder="Ghi kết quả đọc và đối chiếu hồ sơ"
-                  value={reason}
-                />
-              </label>
-            ) : null}
             <label className="text-sm font-semibold">
               Người kiểm duyệt
               <select
@@ -257,33 +220,17 @@ export function ReviewLifecyclePanel({
             <div className="flex flex-wrap gap-3 md:col-span-2">
               <button
                 className="min-h-11 rounded-xl bg-primary-700 px-5 font-bold text-white disabled:opacity-50"
-                disabled={
-                  !reviewerId ||
-                  busy ||
-                  (dossier.status === "PRECHECK" && !reason.trim())
-                }
+                disabled={!reviewerId || busy}
                 onClick={() => handoff.mutate()}
                 type="button"
               >
-                {handoff.isPending
-                  ? "Đang phân công…"
-                  : dossier.status === "PRECHECK"
-                    ? "Đạt sơ kiểm và phân công"
-                    : "Phân công người kiểm duyệt"}
-              </button>
-              <button
-                className="min-h-11 rounded-xl border border-red-300 px-5 font-bold text-red-700 disabled:opacity-50"
-                disabled={!reason.trim() || busy}
-                onClick={() => transition.mutate("supplement")}
-                type="button"
-              >
-                Yêu cầu bổ sung
+                {handoff.isPending ? "Đang phân công…" : "Phân công kiểm duyệt"}
               </button>
             </div>
           </div>
         ) : null}
 
-        {handoff.isError || transition.isError ? (
+        {handoff.isError ? (
           <p className="mt-4 text-sm font-semibold text-red-700" role="alert">
             Chưa thể cập nhật hồ sơ. Kiểm tra dữ liệu và thử lại.
           </p>
@@ -313,7 +260,8 @@ export function ReviewLifecyclePanel({
             <div>
               <h2 className="text-xl font-bold">Báo cáo kiểm duyệt</h2>
               <p className="mt-1 text-sm text-neutral-500">
-                Admin xem kết luận của reviewer trước khi quyết định cuối.
+                Admin xem kết luận của người kiểm duyệt trước khi quyết định
+                cuối.
               </p>
             </div>
           </div>
@@ -330,86 +278,88 @@ export function ReviewLifecyclePanel({
         </section>
       )}
 
-      <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5">
-        <h2 className="text-xl font-bold">Quyết định cuối của Admin</h2>
-        <p className="mt-1 text-sm text-neutral-500">
-          Chỉ mở sau khi mọi người kiểm duyệt đã hoàn tất. Quyết định được lưu
-          thành biên bản trước khi chuyển sang ký blockchain.
-        </p>
-        <label className="mt-5 block text-sm font-semibold">
-          Lý do quyết định cuối
-          <textarea
-            className="mt-2 min-h-24 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3"
-            disabled={!isDecisionReady || decide.isPending}
-            onChange={(event) => setFinalReason(event.target.value)}
-            placeholder={
-              isDecisionReady
-                ? "Nêu căn cứ dựa trên báo cáo và tài liệu"
-                : "Đang chờ báo cáo kiểm duyệt hoàn tất"
-            }
-            value={finalReason}
-          />
-        </label>
-        <label className="mt-4 flex items-start gap-3 text-sm font-medium">
-          <input
-            checked={confirmNoConflict}
-            className="mt-0.5 h-4 w-4 accent-primary-700"
-            disabled={!isDecisionReady || decide.isPending}
-            onChange={(event) => setConfirmNoConflict(event.target.checked)}
-            type="checkbox"
-          />
-          <span>
-            Tôi xác nhận đã đọc báo cáo, đối chiếu tài liệu và không có xung đột
-            lợi ích.
-          </span>
-        </label>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button
-            className="min-h-11 rounded-xl bg-primary-700 px-5 font-bold text-white disabled:opacity-50"
-            disabled={
-              !isDecisionReady ||
-              !finalReason.trim() ||
-              !confirmNoConflict ||
-              decide.isPending
-            }
-            onClick={() => decide.mutate("APPROVE")}
-            type="button"
-          >
-            Phê duyệt hồ sơ
-          </button>
-          <button
-            className="min-h-11 rounded-xl border border-[var(--theme-border)] px-5 font-bold disabled:opacity-50"
-            disabled={
-              !isDecisionReady ||
-              !finalReason.trim() ||
-              decide.isPending ||
-              requestFinalSupplement.isPending
-            }
-            onClick={() => requestFinalSupplement.mutate()}
-            type="button"
-          >
-            Yêu cầu bổ sung
-          </button>
-          <button
-            className="min-h-11 rounded-xl border border-red-300 px-5 font-bold text-red-700 disabled:opacity-50"
-            disabled={
-              !isDecisionReady ||
-              !finalReason.trim() ||
-              !confirmNoConflict ||
-              decide.isPending
-            }
-            onClick={() => decide.mutate("REJECT")}
-            type="button"
-          >
-            Từ chối hồ sơ
-          </button>
-        </div>
-        {decide.isError || requestFinalSupplement.isError ? (
-          <p className="mt-4 text-sm font-semibold text-red-700" role="alert">
-            Chưa thể ghi nhận quyết định. Hãy kiểm tra báo cáo và thử lại.
+      {dossier.assignments.length > 0 ? (
+        <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5">
+          <h2 className="text-xl font-bold">Quyết định cuối của Admin</h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            Chỉ mở sau khi mọi người kiểm duyệt đã hoàn tất. Quyết định được lưu
+            thành biên bản trước khi chuyển sang ký blockchain.
           </p>
-        ) : null}
-      </section>
+          <label className="mt-5 block text-sm font-semibold">
+            Lý do quyết định cuối
+            <textarea
+              className="mt-2 min-h-24 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3"
+              disabled={!isDecisionReady || decide.isPending}
+              onChange={(event) => setFinalReason(event.target.value)}
+              placeholder={
+                isDecisionReady
+                  ? "Nêu căn cứ dựa trên báo cáo của người kiểm duyệt"
+                  : "Đang chờ báo cáo kiểm duyệt hoàn tất"
+              }
+              value={finalReason}
+            />
+          </label>
+          <label className="mt-4 flex items-start gap-3 text-sm font-medium">
+            <input
+              checked={confirmNoConflict}
+              className="mt-0.5 h-4 w-4 accent-primary-700"
+              disabled={!isDecisionReady || decide.isPending}
+              onChange={(event) => setConfirmNoConflict(event.target.checked)}
+              type="checkbox"
+            />
+            <span>
+              Tôi xác nhận đã đọc đầy đủ báo cáo kiểm duyệt và không có xung đột
+              lợi ích khi ra quyết định cuối.
+            </span>
+          </label>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              className="min-h-11 rounded-xl bg-primary-700 px-5 font-bold text-white disabled:opacity-50"
+              disabled={
+                !isDecisionReady ||
+                !finalReason.trim() ||
+                !confirmNoConflict ||
+                decide.isPending
+              }
+              onClick={() => decide.mutate("APPROVE")}
+              type="button"
+            >
+              Phê duyệt hồ sơ
+            </button>
+            <button
+              className="min-h-11 rounded-xl border border-[var(--theme-border)] px-5 font-bold disabled:opacity-50"
+              disabled={
+                !isDecisionReady ||
+                !finalReason.trim() ||
+                decide.isPending ||
+                requestFinalSupplement.isPending
+              }
+              onClick={() => requestFinalSupplement.mutate()}
+              type="button"
+            >
+              Yêu cầu bổ sung
+            </button>
+            <button
+              className="min-h-11 rounded-xl border border-red-300 px-5 font-bold text-red-700 disabled:opacity-50"
+              disabled={
+                !isDecisionReady ||
+                !finalReason.trim() ||
+                !confirmNoConflict ||
+                decide.isPending
+              }
+              onClick={() => decide.mutate("REJECT")}
+              type="button"
+            >
+              Từ chối hồ sơ
+            </button>
+          </div>
+          {decide.isError || requestFinalSupplement.isError ? (
+            <p className="mt-4 text-sm font-semibold text-red-700" role="alert">
+              Chưa thể ghi nhận quyết định. Hãy kiểm tra báo cáo và thử lại.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
     </div>
   );
 }

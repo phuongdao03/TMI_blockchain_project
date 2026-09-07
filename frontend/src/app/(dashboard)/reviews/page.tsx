@@ -22,48 +22,21 @@ export default async function ReviewQueuePage({
     : undefined;
 
   return (
-    <div className="review-queue mx-auto max-w-7xl space-y-7">
-      <header className="review-queue__intro">
+    <div className="review-queue mx-auto max-w-7xl space-y-8">
+      <header className="review-queue__intro border-b border-neutral-200 pb-7">
         <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
           <ClipboardCheck aria-hidden="true" className="size-4" />
-          Không gian chuyên gia
+          Trung tâm kiểm duyệt
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] sm:text-4xl">
-          Hàng đợi thẩm định
+          Công việc kiểm duyệt
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
-          Kiểm tra từng tài liệu, đối chiếu tiêu chí phù hợp với loại hồ sơ và
-          gửi kết quả thẩm định.
+          Làm việc trên các hồ sơ được Admin phân công, đối chiếu bằng chứng và
+          gửi báo cáo độc lập để Admin ra quyết định cuối.
         </p>
       </header>
-      <ol
-        aria-label="Quy trình thẩm định"
-        className="review-queue__steps grid gap-px overflow-hidden rounded-2xl border bg-neutral-200 sm:grid-cols-2"
-      >
-        {[
-          [
-            "01",
-            "Kiểm tra tài liệu",
-            "Xem nội dung, loại tài liệu và ghi nhận kết quả kiểm tra.",
-          ],
-          [
-            "02",
-            "Gửi kết quả",
-            "Kiểm tra toàn bộ phiếu trước khi khóa và gửi.",
-          ],
-        ].map(([step, title, description]) => (
-          <li className="review-queue__step bg-white p-5" key={step}>
-            <p className="font-mono text-xs font-bold text-primary-700">
-              {step}
-            </p>
-            <h2 className="mt-2 font-bold text-neutral-950">{title}</h2>
-            <p className="mt-1 text-sm leading-6 text-neutral-600">
-              {description}
-            </p>
-          </li>
-        ))}
-      </ol>
-      <form className="review-queue__filters grid gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-[minmax(16rem,28rem)_auto] sm:items-end sm:justify-start">
+      <form className="review-queue__filters grid gap-3 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4 sm:grid-cols-[minmax(16rem,28rem)_auto] sm:items-end sm:justify-start">
         <div>
           <label
             className="text-xs font-bold uppercase tracking-wider text-neutral-500"

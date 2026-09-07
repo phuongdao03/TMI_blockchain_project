@@ -8,14 +8,14 @@ vi.mock("@/components/reviews/review-assignment-list", () => ({
 }));
 
 describe("ReviewQueuePage", () => {
-  it("renders two balanced workflow steps and a compact filter group", async () => {
+  it("renders a focused reviewer header and compact filter group", async () => {
     const page = await ReviewQueuePage({ searchParams: Promise.resolve({}) });
     const { container } = render(page);
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(2);
     expect(
-      container.querySelector(".review-queue__steps")?.className,
-    ).toContain("sm:grid-cols-2");
+      screen.getByRole("heading", { name: "Công việc kiểm duyệt" }),
+    ).toBeDefined();
+    expect(screen.queryByRole("listitem")).toBeNull();
     expect(
       container.querySelector(".review-queue__filters")?.className,
     ).toContain("sm:grid-cols-[minmax(16rem,28rem)_auto]");

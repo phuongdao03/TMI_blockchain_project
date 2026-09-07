@@ -67,12 +67,6 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
   const save = useMutation({
     mutationFn: (draft: ReviewDraft) =>
       reviewApi.saveDraft(assignmentId, draft),
-    onSuccess: (review) => {
-      queryClient.setQueryData<ReviewAssignmentDetail>(
-        reviewKeys.detail(assignmentId),
-        (current) => (current ? { ...current, review } : current),
-      );
-    },
   });
   const submit = useMutation({
     mutationFn: () => reviewApi.submit(assignmentId),
@@ -133,10 +127,10 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
         <ArrowLeft aria-hidden="true" className="size-4" />
         Trở lại hàng đợi
       </Link>
-      <header className="rounded-3xl bg-ink-950 p-6 text-white shadow-xl shadow-slate-950/10 sm:p-8">
-        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+      <header className="border-l-4 border-l-primary-700 border-y border-r border-neutral-200 bg-white px-6 py-6 sm:px-8">
+        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
           <div>
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-gold-300">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
               <ClipboardCheck className="size-4" />
               {detail.dossierCode} · Phiên bản {detail.versionNo}
             </p>
@@ -144,48 +138,45 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
               {detail.dossierTitle}
             </h1>
           </div>
-          <span className="w-fit rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold">
+          <span className="w-fit rounded-full border border-primary-200 bg-[var(--theme-elevated)] px-3 py-1.5 text-xs font-bold text-primary-800">
             {statusLabels[detail.assignment.status]}
           </span>
         </div>
       </header>
 
-      <section
+      <ol
         aria-label="Quy trình thẩm định"
-        className="grid overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-3 border-b border-neutral-200 pb-6 md:grid-cols-3"
       >
         {(usesVerdictReview
           ? [
-              ["01", "Kiểm tra hồ sơ", "Xem phiên bản và từng tài liệu"],
-              ["02", "Đối chiếu tiêu chí", "Chọn kết luận và nêu căn cứ"],
-              ["03", "Kiểm tra kết quả", "Xem kết quả được tổng hợp"],
-              ["04", "Gửi kết quả", "Xác nhận và hoàn tất"],
+              ["01", "Kiểm tra bằng chứng", "Xem từng tài liệu đã khóa"],
+              ["02", "Lập báo cáo", "Kết luận và nêu căn cứ"],
+              ["03", "Gửi Admin", "Xác nhận và hoàn tất"],
             ]
           : [
-              ["01", "Kiểm tra hồ sơ", "Xem phiên bản và tài liệu"],
+              ["01", "Kiểm tra bằng chứng", "Xem tài liệu đã khóa"],
               ["02", "Đánh giá 5T", "Chấm điểm và ghi nhận xét"],
-              ["03", "Kiến nghị", "Chọn kết quả thẩm định"],
-              ["04", "Gửi kết quả", "Xác nhận và hoàn tất"],
+              ["03", "Gửi Admin", "Xác nhận và hoàn tất"],
             ]
         ).map(([number, title, description]) => (
-          <article
-            className="border-b border-[var(--theme-border)] p-4 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0"
-            key={number}
-          >
-            <p className="font-mono text-xs font-bold text-primary-700">
+          <li className="grid grid-cols-[2rem_1fr] gap-3 py-2" key={number}>
+            <span className="grid size-8 place-items-center rounded-full bg-[var(--theme-elevated)] font-mono text-xs font-bold text-primary-700">
               {number}
-            </p>
-            <p className="mt-2 text-sm font-bold">{title}</p>
-            <p className="mt-1 text-xs leading-5 text-neutral-500">
-              {description}
-            </p>
-          </article>
+            </span>
+            <div>
+              <p className="text-sm font-bold">{title}</p>
+              <p className="mt-1 text-xs leading-5 text-neutral-500">
+                {description}
+              </p>
+            </div>
+          </li>
         ))}
-      </section>
+      </ol>
 
       <section
         aria-label="Thông tin kiểm soát phiên thẩm định"
-        className="grid overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] sm:grid-cols-3"
+        className="grid overflow-hidden border-y border-neutral-200 bg-neutral-50/60 sm:grid-cols-3"
       >
         <article className="border-b border-[var(--theme-border)] p-4 sm:border-b-0 sm:border-r sm:p-5">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-500">

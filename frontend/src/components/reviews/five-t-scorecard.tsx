@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, LoaderCircle, Save, Send } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
@@ -13,6 +13,7 @@ import {
 import { ReviewEvidenceSelect } from "@/components/reviews/review-evidence-select";
 import { ReviewEvidenceAssessments } from "@/components/reviews/review-evidence-assessments";
 import { ReviewFindingsEditor } from "@/components/reviews/review-findings-editor";
+import { useReviewAutosave } from "@/components/reviews/use-review-autosave";
 import { VerdictReviewForm } from "@/components/reviews/verdict-review-form";
 import {
   SpecialistRubricSection,
@@ -296,24 +297,9 @@ function ScoredReviewForm({
   >(() => initialReview?.evidenceAssessments ?? {});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [completionError, setCompletionError] = useState("");
-  const lastSaved = useRef(
-    JSON.stringify(
-      buildDraft(
-        initialValues,
-        evidenceDefaults(initialReview),
-        initialReview?.findings ?? [],
-        checklistDefaults(initialReview),
-        initialReview?.gateAnswers ?? {},
-        initialReview?.specialistAnswers ?? {},
-        initialReview?.evidenceAssessments ?? {},
-      ),
-    ),
-  );
-  const saving = useRef(false);
-  const queuedDraft = useRef<ReviewDraft | null>(null);
   const {
     control,
-    formState: { errors, isDirty },
+    formState: { errors },
     getValues,
     register,
     trigger,
@@ -324,36 +310,10 @@ function ScoredReviewForm({
   });
   const values = useWatch({ control });
 
-  const persistDraft = useCallback(
-    async (draft: ReviewDraft) => {
-      if (saving.current) {
-        queuedDraft.current = draft;
-        return;
-      }
-      saving.current = true;
-      let pending: ReviewDraft | null = draft;
-      try {
-        while (pending !== null) {
-          queuedDraft.current = null;
-          await onSave(pending);
-          lastSaved.current = JSON.stringify(pending);
-          pending = queuedDraft.current;
-        }
-      } catch {
-        // A later field change will retry; never leave a rejected autosave promise.
-        queuedDraft.current = null;
-      } finally {
-        saving.current = false;
-      }
-    },
-    [onSave],
-  );
-
-  useEffect(() => {
-    if (readOnly) return;
+  const autosaveDraft = useMemo(() => {
     const parsed = draftSchema.safeParse(values);
-    if (!parsed.success || !findings.every(findingComplete)) return;
-    const draft = buildDraft(
+    if (!parsed.success || !findings.every(findingComplete)) return null;
+    return buildDraft(
       parsed.data,
       criterionEvidence,
       findings,
@@ -362,21 +322,16 @@ function ScoredReviewForm({
       specialistAnswers,
       evidenceAssessments,
     );
-    if (JSON.stringify(draft) === lastSaved.current) return;
-    const timer = window.setTimeout(() => void persistDraft(draft), 650);
-    return () => window.clearTimeout(timer);
   }, [
     checklistAnswers,
     gateAnswers,
     criterionEvidence,
     findings,
-    isDirty,
-    persistDraft,
-    readOnly,
     specialistAnswers,
     evidenceAssessments,
     values,
   ]);
+  useReviewAutosave({ draft: autosaveDraft, onSave, readOnly });
 
   const current = draftSchema.safeParse(values);
   const total = current.success
@@ -458,40 +413,35 @@ function ScoredReviewForm({
     try {
       // The submit endpoint intentionally only accepts an already persisted draft.
       // Save this exact validated snapshot before asking for final confirmation.
-      saving.current = true;
-      queuedDraft.current = null;
       await onSave(draft);
-      lastSaved.current = JSON.stringify(draft);
       setCompletionError("");
       setConfirmOpen(true);
     } catch {
       setCompletionError(
         "Không thể lưu phiếu thẩm định trước khi gửi. Vui lòng thử lại.",
       );
-    } finally {
-      saving.current = false;
     }
   }
 
   return (
     <>
       <Card className="overflow-hidden">
-        <div className="border-b bg-ink-950 px-6 py-6 text-white sm:px-8">
+        <div className="border-b border-[var(--theme-border)] bg-[var(--theme-elevated)] px-6 py-6 text-[var(--theme-text)] sm:px-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-gold-300">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
                 Khung đánh giá 5T
               </p>
               <h2 className="mt-2 text-2xl font-bold tracking-tight">
                 Phiếu thẩm định chuyên môn
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
                 Mỗi kết luận cần có bằng chứng thuộc phiên bản hồ sơ đã khóa.
               </p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-right">
-              <p className="text-xs text-slate-400">Tổng điểm tạm tính</p>
-              <strong className="text-2xl text-gold-300">{total}/100</strong>
+            <div className="rounded-xl border border-primary-200 bg-[var(--theme-surface)] px-4 py-2 text-right">
+              <p className="text-xs text-neutral-500">Tổng điểm tạm tính</p>
+              <strong className="text-2xl text-primary-800">{total}/100</strong>
             </div>
           </div>
         </div>
@@ -832,12 +782,12 @@ function ScoredReviewForm({
               ) : isSaving ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />
-                  Đang tự động lưu…
+                  Đang lưu thay đổi…
                 </>
               ) : (
                 <>
                   <Save className="size-4 text-emerald-600" />
-                  Bản nháp được tự động lưu.
+                  Đã lưu bản nháp.
                 </>
               )}
             </p>

@@ -96,12 +96,25 @@ export function ReviewAssignmentList({
 
   const totalPages = Math.max(1, Math.ceil(data.meta.total / pageSize));
   return (
-    <div className="space-y-4">
-      <div className="overflow-hidden rounded-2xl border bg-white">
+    <section className="space-y-4" aria-labelledby="review-work-title">
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-neutral-200 pb-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
+            Hàng đợi cá nhân
+          </p>
+          <h2 className="mt-1 text-xl font-bold" id="review-work-title">
+            Công việc cần xử lý
+          </h2>
+        </div>
+        <p className="text-sm font-semibold text-neutral-500">
+          {data.meta.total} hồ sơ trong hàng đợi
+        </p>
+      </header>
+      <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm shadow-neutral-950/5">
         <div className="divide-y divide-neutral-100">
           {data.data.map((item) => (
             <article
-              className="grid gap-5 p-5 transition hover:bg-neutral-50/80 md:grid-cols-[minmax(0,1fr)_auto] md:items-center lg:p-6"
+              className="relative grid gap-5 border-l-4 border-l-transparent p-5 transition hover:border-l-primary-700 hover:bg-[var(--theme-elevated)] md:grid-cols-[minmax(0,1fr)_auto] md:items-center lg:p-6"
               key={item.assignment.id}
             >
               <div className="min-w-0">
@@ -131,7 +144,7 @@ export function ReviewAssignmentList({
                 href={`/reviews/${item.assignment.id}`}
               >
                 <ClipboardCheck aria-hidden="true" className="size-4" />
-                Mở hồ sơ thẩm định
+                Mở phiếu kiểm duyệt
                 <ArrowRight aria-hidden="true" className="size-4" />
               </Link>
             </article>
@@ -140,7 +153,7 @@ export function ReviewAssignmentList({
       </div>
       <div className="flex items-center justify-between gap-4 text-sm">
         <p className="text-neutral-500">
-          {data.meta.total} phân công · Trang {page}/{totalPages}
+          Trang {page}/{totalPages}
         </p>
         <div className="flex gap-2">
           {[
@@ -161,6 +174,6 @@ export function ReviewAssignmentList({
           ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

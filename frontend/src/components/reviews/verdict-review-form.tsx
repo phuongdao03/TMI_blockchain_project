@@ -1,10 +1,11 @@
 "use client";
 
 import { CheckCircle2, LoaderCircle, Save, Send } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { ReviewEvidenceAssessments } from "@/components/reviews/review-evidence-assessments";
 import { ReviewEvidenceSelect } from "@/components/reviews/review-evidence-select";
+import { useReviewAutosave } from "@/components/reviews/use-review-autosave";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -141,21 +142,8 @@ export function VerdictReviewForm({
     verdicts,
   ]);
 
-  const lastSaved = useRef(JSON.stringify(buildDraft()));
-  useEffect(() => {
-    if (readOnly) return;
-    const draft = buildDraft();
-    const serialized = JSON.stringify(draft);
-    if (serialized === lastSaved.current) return;
-    const timer = window.setTimeout(() => {
-      void onSave(draft)
-        .then(() => {
-          lastSaved.current = serialized;
-        })
-        .catch(() => undefined);
-    }, 650);
-    return () => window.clearTimeout(timer);
-  }, [buildDraft, onSave, readOnly]);
+  const autosaveDraft = useMemo(() => buildDraft(), [buildDraft]);
+  useReviewAutosave({ draft: autosaveDraft, onSave, readOnly });
 
   const complete =
     recommendation !== null &&
@@ -197,12 +185,12 @@ export function VerdictReviewForm({
   return (
     <>
       <Card className="overflow-hidden">
-        <header className="border-b bg-ink-950 px-5 py-6 text-white sm:px-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-gold-300">
+        <header className="border-b border-[var(--theme-border)] bg-[var(--theme-elevated)] px-5 py-6 text-[var(--theme-text)] sm:px-8">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
             Kết luận theo tiêu chí
           </p>
           <h2 className="mt-2 text-2xl font-bold">Phiếu thẩm định hồ sơ</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
             Chọn kết luận rõ ràng cho từng tiêu chí và dẫn tài liệu đã kiểm tra.
             Phiếu này không sử dụng điểm số.
           </p>
@@ -436,12 +424,12 @@ export function VerdictReviewForm({
               ) : isSaving ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />
-                  Đang tự động lưu…
+                  Đang lưu thay đổi…
                 </>
               ) : (
                 <>
                   <Save className="size-4" />
-                  Bản nháp được tự động lưu.
+                  Đã lưu bản nháp.
                 </>
               )}
             </p>

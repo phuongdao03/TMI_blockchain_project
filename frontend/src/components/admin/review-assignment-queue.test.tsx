@@ -8,6 +8,7 @@ import { ReviewAssignmentQueue } from "@/components/admin/review-assignment-queu
 const list = vi.hoisted(() => vi.fn());
 const get = vi.hoisted(() => vi.fn());
 const assign = vi.hoisted(() => vi.fn());
+const startPrecheck = vi.hoisted(() => vi.fn());
 const passPrecheck = vi.hoisted(() => vi.fn());
 const decide = vi.hoisted(() => vi.fn());
 const listStaff = vi.hoisted(() => vi.fn());
@@ -20,7 +21,7 @@ vi.mock("@/lib/api/client", () => ({
     list,
     get,
     assign,
-    startPrecheck: vi.fn(),
+    startPrecheck,
     passPrecheck,
     requestSupplement: vi.fn(),
     decide,
@@ -64,7 +65,9 @@ describe("ReviewAssignmentQueue", () => {
 
     expect(await screen.findByText("Hồ sơ cần duyệt")).toBeDefined();
     expect(
-      screen.getByRole("link", { name: /Xem và xử lý/ }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: /Mở để phân công/ })
+        .getAttribute("href"),
     ).toBe("/admin/reviews/dossier-1");
   });
 
@@ -107,12 +110,12 @@ describe("ReviewAssignmentQueue", () => {
       "reviewer-1",
     );
     await user.click(
-      screen.getByRole("button", { name: "Phân công người kiểm duyệt" }),
+      screen.getByRole("button", { name: "Phân công kiểm duyệt" }),
     );
     expect(assign).toHaveBeenCalledWith("dossier-1", ["reviewer-1"], undefined);
   });
 
-  it("prechecks and assigns the selected reviewer in one guided action", async () => {
+  it("assigns a reviewer without asking the admin to inspect evidence", async () => {
     get.mockResolvedValue({
       dossierId: "dossier-1",
       dossierCode: "TMI-001",
@@ -149,19 +152,76 @@ describe("ReviewAssignmentQueue", () => {
 
     renderQueue("dossier-1");
 
-    await user.type(
-      await screen.findByLabelText("Ghi chú sơ kiểm"),
-      "Tài liệu hợp lệ",
-    );
+    await screen.findByRole("option", { name: "reviewer@tmi.vn" });
     await user.selectOptions(
-      screen.getByLabelText("Người kiểm duyệt"),
+      await screen.findByLabelText("Người kiểm duyệt"),
       "reviewer-1",
     );
     await user.click(
-      screen.getByRole("button", { name: "Đạt sơ kiểm và phân công" }),
+      screen.getByRole("button", { name: "Phân công kiểm duyệt" }),
     );
 
-    expect(passPrecheck).toHaveBeenCalledWith("dossier-1", "Tài liệu hợp lệ");
+    expect(screen.queryByText("Tài liệu hồ sơ")).toBeNull();
+    expect(screen.queryByLabelText(/Ghi chú sơ kiểm/i)).toBeNull();
+    expect(passPrecheck).toHaveBeenCalledWith(
+      "dossier-1",
+      "Hệ thống chuyển hồ sơ đến người kiểm duyệt.",
+    );
+    expect(assign).toHaveBeenCalledWith("dossier-1", ["reviewer-1"], undefined);
+  });
+
+  it("routes a newly submitted dossier to the reviewer in one action", async () => {
+    get.mockResolvedValue({
+      dossierId: "dossier-1",
+      dossierCode: "TMI-001",
+      dossierTitle: "Hồ sơ cần duyệt",
+      status: "SUBMITTED",
+      versionNo: 1,
+      submittedAt: "2026-09-07T00:00:00Z",
+      assignmentCount: 0,
+      canonicalHash: "hash",
+      snapshotJson: {
+        schemaVersion: 1,
+        dossier: { id: "dossier-1", code: "TMI-001", title: "Hồ sơ cần duyệt" },
+        evidences: [],
+      },
+      assignments: [],
+    });
+    listStaff.mockResolvedValue({
+      data: [
+        {
+          id: "reviewer-1",
+          email: "reviewer@tmi.vn",
+          role: "MODERATOR",
+          status: "ACTIVE",
+        },
+      ],
+      meta: { total: 1 },
+    });
+    startPrecheck.mockResolvedValue({
+      dossierId: "dossier-1",
+      status: "PRECHECK",
+    });
+    passPrecheck.mockResolvedValue({
+      dossierId: "dossier-1",
+      status: "UNDER_REVIEW",
+    });
+    assign.mockResolvedValue([]);
+    const user = userEvent.setup();
+
+    renderQueue("dossier-1");
+    await screen.findByRole("option", { name: "reviewer@tmi.vn" });
+    await user.selectOptions(
+      await screen.findByLabelText("Người kiểm duyệt"),
+      "reviewer-1",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Phân công kiểm duyệt" }),
+    );
+
+    const reason = "Hệ thống chuyển hồ sơ đến người kiểm duyệt.";
+    expect(startPrecheck).toHaveBeenCalledWith("dossier-1", reason);
+    expect(passPrecheck).toHaveBeenCalledWith("dossier-1", reason);
     expect(assign).toHaveBeenCalledWith("dossier-1", ["reviewer-1"], undefined);
   });
 

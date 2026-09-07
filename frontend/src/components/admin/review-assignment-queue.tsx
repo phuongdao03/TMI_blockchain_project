@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { ReviewLifecyclePanel } from "@/components/admin/review-lifecycle-panel";
-import { EvidenceViewer } from "@/components/reviews/evidence-viewer";
 import { adminReviewApi } from "@/lib/api/client";
 import type {
   AdminReviewDossierDetail,
@@ -14,9 +13,9 @@ import type {
 } from "@/lib/api/types";
 
 const statusLabels: Record<AdminReviewDossierStatus, string> = {
-  SUBMITTED: "Chờ sơ kiểm",
-  PRECHECK: "Đang sơ kiểm",
-  UNDER_REVIEW: "Kiểm duyệt và quyết định",
+  SUBMITTED: "Chờ phân công",
+  PRECHECK: "Đang chuyển người kiểm duyệt",
+  UNDER_REVIEW: "Đang kiểm duyệt / chờ quyết định",
 };
 
 function dossierStatusLabel(
@@ -45,7 +44,6 @@ function DossierDetail({ dossierId }: { dossierId: string }) {
   if (detail.isError) return <p role="alert">Không thể mở hồ sơ này.</p>;
 
   const dossier = detail.data;
-  const rules = dossier.snapshotJson.dossier.dossierType?.documentRules ?? [];
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
@@ -54,7 +52,7 @@ function DossierDetail({ dossierId }: { dossierId: string }) {
             className="text-sm font-semibold text-primary-700"
             href="/admin/reviews"
           >
-            ← Quản lý kiểm duyệt
+            ← Hàng chờ phân công
           </Link>
           <h1 className="mt-3 text-3xl font-bold">{dossier.dossierTitle}</h1>
           <p className="mt-2 text-sm text-neutral-500">
@@ -66,15 +64,6 @@ function DossierDetail({ dossierId }: { dossierId: string }) {
           {dossier.assignmentCount} phân công
         </span>
       </header>
-      <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5">
-        <h2 className="text-xl font-bold">Tài liệu trong hồ sơ</h2>
-        <div className="mt-5">
-          <EvidenceViewer
-            documentRules={rules}
-            evidences={dossier.snapshotJson.evidences}
-          />
-        </div>
-      </section>
       <ReviewLifecyclePanel dossier={dossier} />
     </div>
   );
@@ -98,12 +87,12 @@ export function ReviewAssignmentQueue({
     <div className="mx-auto max-w-7xl space-y-7">
       <header>
         <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
-          Điều phối hồ sơ
+          Điều phối kiểm duyệt
         </p>
-        <h1 className="mt-3 text-4xl font-bold">Kiểm duyệt hồ sơ</h1>
+        <h1 className="mt-3 text-4xl font-bold">Phân công hồ sơ</h1>
         <p className="mt-3 text-neutral-600">
-          Sơ kiểm hồ sơ đã nộp, xem tài liệu và giao việc cho nhân viên thẩm
-          định.
+          Tiếp nhận hồ sơ đã nộp và giao đúng người kiểm duyệt. Việc kiểm tra
+          tài liệu được thực hiện độc lập trong tài khoản người kiểm duyệt.
         </p>
       </header>
       <label className="block max-w-sm text-sm font-bold">
@@ -167,7 +156,7 @@ export function ReviewAssignmentQueue({
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--theme-border)] px-4 font-bold"
                 href={`/admin/reviews/${dossier.dossierId}`}
               >
-                Xem và xử lý <ArrowRight className="size-4" />
+                Mở để phân công <ArrowRight className="size-4" />
               </Link>
             </article>
           ))}
