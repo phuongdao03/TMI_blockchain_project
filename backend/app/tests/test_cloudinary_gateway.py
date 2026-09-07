@@ -236,6 +236,8 @@ def test_cloudinary_uploads_encrypted_bytes_as_authenticated_raw_asset() -> None
         assert stored.bytes == len(ciphertext)
         assert requests[0].url.path.endswith("/raw/upload")
         assert ciphertext in requests[0].content
+        assert b'filename="document"' in requests[0].content
+        assert b'filename="document.enc"' not in requests[0].content
         assert b'name="type"' in requests[0].content
         assert b"authenticated" in requests[0].content
         assert b'name="signature"' in requests[0].content

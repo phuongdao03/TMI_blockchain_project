@@ -424,7 +424,9 @@ class CloudinaryMediaGateway:
             "POST",
             url,
             data=form,
-            files={"file": ("document.enc", content, "application/octet-stream")},
+            # Raw uploads inherit the multipart filename extension in public_id.
+            # Keep it extensionless so Cloudinary preserves our signed public_id.
+            files={"file": ("document", content, "application/octet-stream")},
         )
         if (
             self._required_str(payload, "public_id") != public_id
