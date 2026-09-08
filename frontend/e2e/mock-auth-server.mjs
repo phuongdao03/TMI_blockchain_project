@@ -1587,6 +1587,29 @@ const server = createServer(async (request, response) => {
     return;
   }
   if (
+    request.method === "GET" &&
+    path === "/api/v1/admin/payment-candidates" &&
+    superAdminAuthenticated
+  ) {
+    send(
+      response,
+      200,
+      envelope(
+        dossier.status === "APPROVED"
+          ? [
+              {
+                dossierId: dossier.id,
+                dossierCode: dossier.code,
+                dossierTitle: dossier.title,
+                versionNo: dossier.currentVersionNo,
+              },
+            ]
+          : [],
+      ),
+    );
+    return;
+  }
+  if (
     request.method === "POST" &&
     path === `/api/v1/admin/dossiers/${dossierId}/payment-orders`
   ) {

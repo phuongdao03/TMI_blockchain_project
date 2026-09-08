@@ -43,15 +43,15 @@ test("admin issues exact fee, applicant pays, blockchain issuance is queued", as
     },
   ]);
   await page.goto("/admin/payments");
-  const dossierIdField = page.getByLabel("Mã hồ sơ");
+  const dossierField = page.getByLabel("Hồ sơ đã phê duyệt");
   const amountField = page.getByLabel("Số tiền cần thanh toán (VND)");
   const issueButton = page.getByRole("button", {
     name: "Gửi yêu cầu thanh toán",
   });
-  await expect(dossierIdField).toBeVisible();
+  await expect(dossierField).toBeVisible();
+  await dossierField.selectOption(dossierId);
   await amountField.fill("1500000");
-  await dossierIdField.fill(dossierId);
-  await expect(dossierIdField).toHaveValue(dossierId);
+  await expect(dossierField).toHaveValue(dossierId);
   await expect(amountField).toHaveValue("1500000");
   await expect(issueButton).toBeEnabled();
   await issueButton.click();
