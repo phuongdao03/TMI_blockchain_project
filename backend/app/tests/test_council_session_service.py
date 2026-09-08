@@ -69,6 +69,7 @@ async def _setup(
     engine = create_async_engine("sqlite+aiosqlite://")
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     async with engine.begin() as connection:
+        await connection.exec_driver_sql("PRAGMA foreign_keys=ON")
         await connection.run_sync(Base.metadata.create_all)
 
     users = {
@@ -182,15 +183,14 @@ async def _setup(
         },
         submitted_at=NOW,
     )
-    rows = [
+    identity_rows = [
         *users.values(),
         category,
-        dossier,
-        version,
         media,
-        evidence,
         moderator_role,
         super_admin_role,
+    ]
+    role_rows = [
         UserRole(
             user_id=users["reviewer"].id,
             role_id=moderator_role.id,
@@ -208,10 +208,18 @@ async def _setup(
             role_id=super_admin_role.id,
         ),
     ]
-    if include_review:
-        rows.extend([review_assignment, review])
     async with sessions() as session:
-        session.add_all(rows)
+        session.add_all(identity_rows)
+        await session.flush()
+        session.add(dossier)
+        await session.flush()
+        session.add(version)
+        await session.flush()
+        session.add_all([evidence, *role_rows])
+        if include_review:
+            session.add(review_assignment)
+            await session.flush()
+            session.add(review)
         await session.commit()
 
     return (

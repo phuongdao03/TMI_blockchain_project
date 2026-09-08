@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -314,7 +314,63 @@ describe("ReviewAssignmentQueue", () => {
       "Đồng ý với báo cáo kiểm duyệt",
       true,
     );
-    expect(push).toHaveBeenCalledWith("/blockchain");
+    expect(await screen.findByText("Đã ghi nhận quyết định")).toBeDefined();
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/blockchain"));
+  });
+
+  it("shows a submitting state while the admin decision is pending", async () => {
+    let finishDecision:
+      | ((value: { dossierId: string; status: string }) => void)
+      | undefined;
+    get.mockResolvedValue({
+      dossierId: "dossier-1",
+      dossierCode: "TMI-001",
+      dossierTitle: "Hồ sơ cần duyệt",
+      status: "UNDER_REVIEW",
+      versionNo: 1,
+      submittedAt: "2026-09-07T00:00:00Z",
+      assignmentCount: 1,
+      canonicalHash: "hash",
+      snapshotJson: { schemaVersion: 1, dossier: {}, evidences: [] },
+      assignments: [
+        {
+          reviewerEmail: "reviewer@tmi.vn",
+          assignment: { id: "assignment-1", status: "SUBMITTED" },
+          review: {
+            recommendation: "APPROVE",
+            totalScore: null,
+            submittedAt: "2026-09-07T01:00:00Z",
+            applicantFeedback: "Hồ sơ đạt yêu cầu.",
+            privateNote: null,
+            findings: [],
+          },
+        },
+      ],
+    });
+    listStaff.mockResolvedValue({ data: [], meta: { total: 0 } });
+    decide.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishDecision = resolve;
+        }),
+    );
+    const user = userEvent.setup();
+
+    renderQueue("dossier-1");
+    await user.type(
+      await screen.findByLabelText("Lý do quyết định cuối"),
+      "Đồng ý với báo cáo kiểm duyệt",
+    );
+    await user.click(screen.getByLabelText(/không có xung đột lợi ích/i));
+    await user.click(screen.getByRole("button", { name: "Phê duyệt hồ sơ" }));
+
+    expect(await screen.findByText("Đang ghi nhận quyết định…")).toBeDefined();
+    expect(
+      screen
+        .getByRole("button", { name: "Đang phê duyệt…" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    finishDecision?.({ dossierId: "dossier-1", status: "APPROVED" });
   });
 
   it("explains when the backend still considers the reviewer report incomplete", async () => {
