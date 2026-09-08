@@ -623,10 +623,10 @@ class ReviewService:
             recommendation=draft.recommendation,
             private_note=private_note or None,
             gate_answers=cls._validated_answer_map(
-                draft.gate_answers, require_score=False, evidence_required=False
+                draft.gate_answers, require_score=False
             ),
             specialist_answers=cls._validated_answer_map(
-                draft.specialist_answers, require_score=True, evidence_required=True
+                draft.specialist_answers, require_score=True
             ),
             criterion_verdicts=cls._validated_verdict_map(draft.criterion_verdicts),
             evidence_assessments=cls._validated_evidence_assessments(
@@ -666,10 +666,6 @@ class ReviewService:
             if len(normalized_note) > 1_000:
                 raise ReviewValidationError(
                     "Evidence assessment note cannot exceed 1000 characters."
-                )
-            if status == "NEEDS_CLARIFICATION" and len(normalized_note) < 10:
-                raise ReviewValidationError(
-                    "Clarification assessments require a short explanation."
                 )
             result[media_id] = {"status": status, "note": normalized_note}
         return result
@@ -725,7 +721,6 @@ class ReviewService:
         answers: Mapping[str, Mapping[str, object]],
         *,
         require_score: bool,
-        evidence_required: bool,
     ) -> dict[str, dict[str, object]]:
         if len(answers) > 10:
             raise ReviewValidationError("A rubric can contain at most 10 answers.")
@@ -740,12 +735,9 @@ class ReviewService:
                 raise ReviewValidationError("Rubric answer is invalid.")
             rationale = answer.get("rationale")
             media_ids = answer.get("evidence_media_ids", [])
-            if (
-                not isinstance(rationale, str)
-                or not 20 <= len(rationale.strip()) <= 2_000
-            ):
+            if not isinstance(rationale, str) or len(rationale.strip()) > 2_000:
                 raise ReviewValidationError(
-                    "Rubric rationale must contain 20 to 2000 characters."
+                    "Rubric rationale cannot exceed 2000 characters."
                 )
             if not isinstance(media_ids, (list, tuple)):
                 raise ReviewValidationError("Rubric evidence is invalid.")
@@ -756,8 +748,6 @@ class ReviewService:
                 or any(not isinstance(item, UUID) for item in parsed_ids)
             ):
                 raise ReviewValidationError("Rubric evidence is invalid.")
-            if evidence_required and not parsed_ids:
-                raise ReviewValidationError("Specialist criteria require evidence.")
             normalized: dict[str, object] = {
                 "rationale": rationale.strip(),
                 "evidence_media_ids": [str(item) for item in parsed_ids],
@@ -889,6 +879,15 @@ class ReviewService:
             raise ReviewValidationError(
                 "Every file in this dossier version must be assessed before submission."
             )
+        if any(
+            assessment.get("status") == "NEEDS_CLARIFICATION"
+            and len(str(assessment.get("note", "")).strip()) < 10
+            for assessment in assessments.values()
+            if isinstance(assessment, Mapping)
+        ):
+            raise ReviewValidationError(
+                "Clarification assessments require a short explanation."
+            )
 
     @staticmethod
     def _rubric_from_snapshot(
@@ -1010,6 +1009,12 @@ class ReviewService:
         gate_keys = {str(item["key"]) for item in gates if isinstance(item, Mapping)}
         if set(review.gate_answers) != gate_keys:
             raise ReviewValidationError("All mandatory rubric gates are required.")
+        if any(
+            not isinstance(answer, Mapping)
+            or len(str(answer.get("rationale", "")).strip()) < 20
+            for answer in review.gate_answers.values()
+        ):
+            raise ReviewValidationError("Every rubric gate requires a clear rationale.")
         if review.recommendation is ReviewRecommendation.APPROVE:
             for gate in gates:
                 if (
@@ -1022,6 +1027,24 @@ class ReviewService:
                     raise ReviewValidationError(
                         "Every required rubric gate must pass before approval."
                     )
+        raw_criteria = rubric.get("criteria", [])
+        if not isinstance(raw_criteria, list):
+            raise ReviewValidationError("Stored specialist rubric is invalid.")
+        criterion_keys = {
+            str(item["key"]) for item in raw_criteria if isinstance(item, Mapping)
+        }
+        if set(review.specialist_answers) != criterion_keys:
+            raise ReviewValidationError("All specialist rubric criteria are required.")
+        if any(
+            not isinstance(answer, Mapping)
+            or len(str(answer.get("rationale", "")).strip()) < 20
+            or not answer.get("evidence_media_ids")
+            for answer in review.specialist_answers.values()
+        ):
+            raise ReviewValidationError(
+                "Every specialist criterion requires a clear rationale and evidence."
+            )
+        if review.recommendation is ReviewRecommendation.APPROVE:
             thresholds = rubric.get("thresholds")
             if not isinstance(thresholds, Mapping) or review.specialist_score is None:
                 raise ReviewValidationError(
@@ -1071,6 +1094,12 @@ class ReviewService:
         gate_answers = review.gate_answers or {}
         if set(gate_answers) != gate_keys:
             raise ReviewValidationError("All mandatory rubric gates are required.")
+        if any(
+            not isinstance(answer, Mapping)
+            or len(str(answer.get("rationale", "")).strip()) < 20
+            for answer in gate_answers.values()
+        ):
+            raise ReviewValidationError("Every rubric gate requires a clear rationale.")
         required_gate_failed = any(
             isinstance(gate, Mapping)
             and gate.get("required", True) is True

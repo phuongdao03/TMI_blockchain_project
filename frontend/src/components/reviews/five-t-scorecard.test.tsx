@@ -78,6 +78,35 @@ describe("FiveTScorecard", () => {
     expect(screen.getByRole("alert").textContent).toContain(
       "Thông tin chủ thể: nhận định cần ít nhất 20 ký tự",
     );
+    expect(document.activeElement).toBe(screen.getAllByRole("textbox")[0]);
+  });
+
+  it("does not claim a failed autosave was persisted", () => {
+    render(
+      <FiveTScorecard
+        evidences={[]}
+        initialReview={null}
+        isSaving={false}
+        isSubmitting={false}
+        onSave={vi
+          .fn()
+          .mockRejectedValue(new Error("Request validation failed."))}
+        onSubmit={vi.fn().mockResolvedValue(undefined)}
+        readOnly={false}
+        saveError={new Error("Request validation failed.")}
+        rubric={{
+          version: "2026.2",
+          title: "Verdict",
+          assessmentMethod: "VERDICT",
+          gates: [],
+          criteria: [],
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("review-save-status").getAttribute("role")).toBe(
+      "alert",
+    );
   });
 
   it("derives a supplement result from criterion conclusions", async () => {

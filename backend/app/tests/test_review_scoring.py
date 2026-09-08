@@ -72,8 +72,16 @@ def test_specialist_rubric_score_and_mandatory_gate_are_server_enforced() -> Non
         "rights": {"outcome": "FAIL", "rationale": "Không đủ căn cứ xác lập quyền."}
     }
     review.specialist_answers = {
-        "originality": {"score": 4, "rationale": "Có đối chứng nguồn gốc rõ ràng."},
-        "cultural_value": {"score": 4, "rationale": "Giá trị văn hóa được chứng minh."},
+        "originality": {
+            "score": 4,
+            "rationale": "Có đối chứng nguồn gốc rõ ràng.",
+            "evidence_media_ids": [str(uuid4())],
+        },
+        "cultural_value": {
+            "score": 4,
+            "rationale": "Giá trị văn hóa được chứng minh.",
+            "evidence_media_ids": [str(uuid4())],
+        },
     }
 
     assert ReviewService._specialist_score(review, rubric, require_complete=True) == 80
@@ -123,6 +131,46 @@ def test_verdict_rubric_enforces_complete_evidence_based_conclusions() -> None:
     del review.criterion_verdicts["identity"]
     with pytest.raises(ReviewValidationError, match="Every rubric criterion"):
         ReviewService._validate_verdict_decision(review, rubric)
+
+
+def test_incomplete_rubric_answers_are_draftable_but_not_submittable() -> None:
+    draft = ReviewDraft(
+        gate_answers={
+            "rights": {
+                "outcome": "PASS",
+                "rationale": "Dang kiem tra",
+                "evidence_media_ids": (),
+            }
+        },
+        specialist_answers={
+            "originality": {
+                "score": 3,
+                "rationale": "Dang doi chieu",
+                "evidence_media_ids": (),
+            }
+        },
+    )
+
+    validated = ReviewService._validated_draft(draft)
+
+    assert validated.gate_answers["rights"]["rationale"] == "Dang kiem tra"
+    review = Review(id=uuid4(), assignment_id=uuid4())
+    review.recommendation = ReviewRecommendation.REJECT
+    review.gate_answers = {
+        key: dict(value) for key, value in validated.gate_answers.items()
+    }
+    review.specialist_answers = {
+        key: dict(value) for key, value in validated.specialist_answers.items()
+    }
+    rubric = {
+        "version": "2026.1",
+        "gates": [{"key": "rights", "required": True}],
+        "criteria": [{"key": "originality", "weight": 100}],
+        "thresholds": {"approveMin": 75, "rejectBelow": 50},
+    }
+
+    with pytest.raises(ReviewValidationError, match="clear rationale"):
+        ReviewService._validate_specialist_decision(review, rubric)
 
 
 def test_snapshot_v2_requires_an_assessment_for_every_frozen_file() -> None:

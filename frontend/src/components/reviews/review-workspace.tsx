@@ -281,6 +281,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
             readOnly={detail.assignment.status === "SUBMITTED"}
             requireEvidenceAssessments={detail.snapshotJson.schemaVersion >= 2}
             rubric={detail.snapshotJson.dossier.dossierType?.reviewRubric}
+            saveError={save.error}
           />
         </div>
       ) : null}

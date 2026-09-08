@@ -1,7 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, LoaderCircle, Save, Send } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  LoaderCircle,
+  Save,
+  Send,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -242,6 +248,7 @@ export function FiveTScorecard(props: {
   readOnly: boolean;
   requireEvidenceAssessments?: boolean;
   rubric?: ReviewRubric;
+  saveError?: Error | null;
 }) {
   if (props.rubric?.assessmentMethod === "VERDICT") {
     return (
@@ -265,6 +272,7 @@ function ScoredReviewForm({
   readOnly,
   requireEvidenceAssessments = true,
   rubric,
+  saveError,
 }: {
   evidences: ReviewEvidenceSnapshot[];
   initialReview: ReviewData | null;
@@ -275,6 +283,7 @@ function ScoredReviewForm({
   readOnly: boolean;
   requireEvidenceAssessments?: boolean;
   rubric?: ReviewRubric;
+  saveError?: Error | null;
 }) {
   const initialValues = useMemo(() => defaults(initialReview), [initialReview]);
   const [criterionEvidence, setCriterionEvidence] = useState<CriterionEvidence>(
@@ -773,11 +782,18 @@ function ScoredReviewForm({
             <p
               aria-live="polite"
               className="flex items-center gap-2 text-xs font-semibold text-neutral-500"
+              data-testid="review-save-status"
+              role={saveError ? "alert" : "status"}
             >
               {readOnly ? (
                 <>
                   <CheckCircle2 className="size-4 text-emerald-600" />
                   Kết quả đã gửi và không thể chỉnh sửa.
+                </>
+              ) : saveError ? (
+                <>
+                  <AlertCircle className="size-4 text-red-700" />
+                  Chưa lưu được bản nháp.
                 </>
               ) : isSaving ? (
                 <>

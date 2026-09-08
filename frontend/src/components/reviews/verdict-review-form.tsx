@@ -1,6 +1,12 @@
 "use client";
 
-import { CheckCircle2, LoaderCircle, Save, Send } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  LoaderCircle,
+  Save,
+  Send,
+} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { ReviewEvidenceAssessments } from "@/components/reviews/review-evidence-assessments";
@@ -71,6 +77,7 @@ export function VerdictReviewForm({
   readOnly,
   requireEvidenceAssessments,
   rubric,
+  saveError,
 }: {
   evidences: ReviewEvidenceSnapshot[];
   initialReview: ReviewData | null;
@@ -81,6 +88,7 @@ export function VerdictReviewForm({
   readOnly: boolean;
   requireEvidenceAssessments: boolean;
   rubric: ReviewRubric;
+  saveError?: Error | null;
 }) {
   const [verdicts, setVerdicts] = useState<Record<string, LocalVerdict>>(() =>
     Object.fromEntries(
@@ -208,9 +216,48 @@ export function VerdictReviewForm({
 
   const complete = validationIssues.length === 0;
 
+  const firstInvalidFieldId = useMemo(() => {
+    for (const criterion of rubric.criteria) {
+      const answer = verdicts[criterion.key];
+      if (!answer?.outcome) return `verdict-outcome-${criterion.key}`;
+      if (answer.rationale.trim().length < 20) {
+        return `verdict-rationale-${criterion.key}`;
+      }
+      if (
+        answer.outcome !== "NOT_APPLICABLE" &&
+        answer.evidenceMediaIds.length === 0
+      ) {
+        return `verdict-outcome-${criterion.key}`;
+      }
+    }
+    for (const gate of rubric.gates) {
+      if ((gates[gate.key]?.rationale.trim().length ?? 0) < 20) {
+        return `verdict-gate-rationale-${gate.key}`;
+      }
+    }
+    if (
+      recommendation !== null &&
+      recommendation !== "APPROVE" &&
+      applicantFeedback.trim().length < 20
+    ) {
+      return "verdict-feedback";
+    }
+    return null;
+  }, [
+    applicantFeedback,
+    gates,
+    recommendation,
+    rubric.criteria,
+    rubric.gates,
+    verdicts,
+  ]);
+
   async function prepareSubmit() {
     if (!complete) {
       setError(validationIssues.join(" "));
+      if (firstInvalidFieldId) {
+        document.getElementById(firstInvalidFieldId)?.focus();
+      }
       return;
     }
     try {
@@ -288,6 +335,7 @@ export function VerdictReviewForm({
                         <textarea
                           aria-label={`Căn cứ ${gate.label}`}
                           className="min-h-20 w-full rounded-lg border bg-[var(--theme-surface)] p-3"
+                          id={`verdict-gate-rationale-${gate.key}`}
                           maxLength={2_000}
                           onChange={(event) =>
                             setGates((current) => ({
@@ -358,6 +406,7 @@ export function VerdictReviewForm({
                     <select
                       aria-label={`Kết luận ${criterion.label}`}
                       className="min-h-11 rounded-lg border bg-[var(--theme-surface)] px-3"
+                      id={`verdict-outcome-${criterion.key}`}
                       onChange={(event) =>
                         setVerdicts((current) => ({
                           ...current,
@@ -381,6 +430,7 @@ export function VerdictReviewForm({
                       <textarea
                         aria-label={`Nhận định ${criterion.label}`}
                         className="min-h-24 w-full rounded-lg border bg-[var(--theme-surface)] p-3"
+                        id={`verdict-rationale-${criterion.key}`}
                         maxLength={2_000}
                         onChange={(event) =>
                           setVerdicts((current) => ({
@@ -467,11 +517,18 @@ export function VerdictReviewForm({
             <p
               aria-live="polite"
               className="flex items-center gap-2 text-xs font-semibold text-neutral-500"
+              data-testid="review-save-status"
+              role={saveError ? "alert" : "status"}
             >
               {readOnly ? (
                 <>
                   <CheckCircle2 className="size-4" />
                   Kết quả đã gửi.
+                </>
+              ) : saveError ? (
+                <>
+                  <AlertCircle className="size-4 text-red-700" />
+                  Chưa lưu được bản nháp.
                 </>
               ) : isSaving ? (
                 <>
