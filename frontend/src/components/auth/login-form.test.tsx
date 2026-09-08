@@ -20,8 +20,12 @@ vi.mock("@/lib/firebase/client", () => ({
   getFirebaseAuth: () => ({ name: "firebase-auth" }),
 }));
 vi.mock("firebase/auth", () => ({
+  getRedirectResult: vi.fn(async () => null),
+  GoogleAuthProvider: vi.fn(),
   sendEmailVerification,
   signInWithEmailAndPassword,
+  signInWithPopup: vi.fn(),
+  signInWithRedirect: vi.fn(),
   signOut,
 }));
 

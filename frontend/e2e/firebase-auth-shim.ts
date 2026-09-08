@@ -87,6 +87,22 @@ export async function signInWithPopup(
   return { user: signedIn };
 }
 
+export async function signInWithRedirect(target: E2EAuth): Promise<void> {
+  const credential = await signInWithPopup(target);
+  sessionStorage.setItem("tmi.e2e.redirect-user", credential.user.email);
+}
+
+export async function getRedirectResult(
+  target: E2EAuth,
+): Promise<{ user: E2EUser } | null> {
+  const email = sessionStorage.getItem("tmi.e2e.redirect-user");
+  if (!email) return null;
+  sessionStorage.removeItem("tmi.e2e.redirect-user");
+  const signedIn = user(email, "e2e-applicant-token");
+  target.currentUser = signedIn;
+  return { user: signedIn };
+}
+
 export async function signOut(target: E2EAuth): Promise<void> {
   target.currentUser = null;
 }
