@@ -17,7 +17,13 @@ export function resolveFirebaseAuthDomain(
   appHostname: string | undefined,
   production: boolean,
 ): string | undefined {
-  return production && appHostname ? appHostname : configuredDomain;
+  // Firebase's Google provider redirects through the auth domain registered
+  // for the Firebase web app. Replacing it with the application hostname
+  // produces redirect_uri_mismatch unless a complete Firebase custom auth
+  // domain has been configured in Google Cloud as well.
+  void appHostname;
+  void production;
+  return configuredDomain;
 }
 
 function firebaseConfig() {

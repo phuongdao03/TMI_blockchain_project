@@ -197,6 +197,16 @@ export function BlockchainSigningWorkspace() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void refreshWalletState();
+    });
+    return () => {
+      active = false;
+    };
+  }, [refreshWalletState]);
+
+  useEffect(() => {
     try {
       return subscribeWalletChanges(() => {
         setMessage(
@@ -848,6 +858,21 @@ export function BlockchainSigningWorkspace() {
             </dl>
           </details>
           <div className="blockchain-signing-action mt-7">
+            {displayedSelected.status === "BROADCAST" ? (
+              <button
+                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-[var(--theme-border)] px-5 text-sm font-bold text-[var(--theme-text)] disabled:opacity-60 sm:w-auto"
+                disabled={transactionStatus.isFetching}
+                onClick={() => void transactionStatus.refetch()}
+                type="button"
+              >
+                <RefreshCw
+                  className={`size-4 ${transactionStatus.isFetching ? "animate-spin" : ""}`}
+                />
+                {transactionStatus.isFetching
+                  ? "Đang kiểm tra Polygon…"
+                  : "Kiểm tra xác nhận ngay"}
+              </button>
+            ) : null}
             <button
               className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary-700 px-5 text-sm font-bold text-white disabled:opacity-60 sm:w-auto"
               disabled={
@@ -855,7 +880,9 @@ export function BlockchainSigningWorkspace() {
                 !connected ||
                 isWrongWallet ||
                 isWrongNetwork ||
-                displayedSelected.status === "CONFIRMED"
+                ["SIGNING", "BROADCAST", "CONFIRMED", "REPLACED"].includes(
+                  displayedSelected.status,
+                )
               }
               onClick={() => void handleSign()}
               type="button"
@@ -865,7 +892,11 @@ export function BlockchainSigningWorkspace() {
               ) : (
                 <FileCheck2 className="size-4" />
               )}
-              Ký và ghi nhận blockchain
+              {displayedSelected.status === "BROADCAST"
+                ? "Đã gửi, đang chờ xác nhận"
+                : displayedSelected.status === "CONFIRMED"
+                  ? "Đã ghi nhận blockchain"
+                  : "Ký và ghi nhận blockchain"}
             </button>
           </div>
         </section>

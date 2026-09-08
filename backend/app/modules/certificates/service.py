@@ -47,6 +47,7 @@ from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.workflow import DossierWorkflowService
 from app.modules.media.gateway import MediaGateway
 from app.modules.media.models import MediaAsset, MediaStatus
+from app.modules.public.backfill import PublicWorkDraftBackfill
 from app.modules.public.share_service import canonical_public_origin
 
 CERTIFICATE_ISSUED_EVENT = "certificate.issued"
@@ -243,6 +244,10 @@ class CertificateService:
                 "Certificate issuance context is unavailable."
             )
         if status is DossierStatus.CERTIFICATE_ISSUED:
+            await PublicWorkDraftBackfill(self._session).ensure_draft(
+                dossier.id,
+                certificate_id=certificate.id,
+            )
             row = await self._required_row(certificate.id)
             return self._view(row)
         if status is not DossierStatus.ANCHORED:
@@ -514,6 +519,10 @@ class CertificateService:
                         allowed_sources={DossierStatus.ANCHORED},
                         reason_code="CERTIFICATE_ISSUED",
                     )
+                await PublicWorkDraftBackfill(self._session).ensure_draft(
+                    dossier.id,
+                    certificate_id=locked.id,
+                )
                 self._add_issued_event(locked, dossier.owner_user_id)
                 self._audit(
                     "certificate.issued",

@@ -8,6 +8,7 @@ import { BlockchainSigningWorkspace } from "@/components/blockchain/blockchain-s
 
 const {
   connectBrowserWallet,
+  currentBrowserWallet,
   currentWallet,
   prepareIntent,
   proofQueue,
@@ -17,6 +18,7 @@ const {
   MockApiError,
 } = vi.hoisted(() => ({
   connectBrowserWallet: vi.fn(),
+  currentBrowserWallet: vi.fn(),
   connectWalletWithConnector: vi.fn(),
   currentWallet: vi.fn(),
   prepareIntent: vi.fn(),
@@ -53,7 +55,7 @@ vi.mock("@/lib/api/client", () => ({
 vi.mock("@/lib/blockchain/eip1193", () => ({
   connectWallet: connectBrowserWallet,
   connectWalletWithConnector: vi.fn(),
-  currentWallet: vi.fn(),
+  currentWallet: currentBrowserWallet,
   sendTransaction: sendBrowserTransaction,
   signWalletChallenge: vi.fn(),
   subscribeWalletChanges: vi.fn(() => () => undefined),
@@ -86,12 +88,32 @@ describe("BlockchainSigningWorkspace", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     currentWallet.mockResolvedValue(null);
+    currentBrowserWallet.mockResolvedValue({ address: null, chainId: 137 });
     proofQueue.mockResolvedValue([]);
     connectBrowserWallet.mockResolvedValue({
       address: "0x3434343434343434343434343434343434343434",
       chainId: 137,
     });
     transactionStatus.mockImplementation(() => new Promise(() => undefined));
+  });
+
+  it("restores an already connected browser wallet after a reload", async () => {
+    currentWallet.mockResolvedValue({
+      id: "wallet-link",
+      walletAddress: "0x3434343434343434343434343434343434343434",
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-26T00:00:00Z",
+    });
+    currentBrowserWallet.mockResolvedValue({
+      address: "0x3434343434343434343434343434343434343434",
+      chainId: 137,
+    });
+
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("0x3434…3434")).toBeDefined();
+    expect(currentBrowserWallet).toHaveBeenCalledOnce();
   });
 
   it("guides an authorized Super Admin to verify a wallet instead of leaving the signing queue loading", async () => {

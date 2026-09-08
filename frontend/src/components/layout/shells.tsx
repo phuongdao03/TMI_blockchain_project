@@ -215,7 +215,11 @@ export function PublicShell({
                 {publicHeaderAction.label}
               </Link>
             ) : (
-              <div className="public-mobile-nav__account">
+              <div
+                aria-label="Tài khoản"
+                className="public-mobile-nav__account"
+                role="group"
+              >
                 <Link
                   className="public-mobile-nav__login"
                   href="/login"

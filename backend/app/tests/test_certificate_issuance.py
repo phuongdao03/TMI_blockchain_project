@@ -40,6 +40,8 @@ from app.modules.dossiers.models import (
 )
 from app.modules.media.gateway import MediaGateway
 from app.modules.media.models import MediaAsset  # noqa: F401
+from app.modules.public.catalog_repository import PublicWorkRepository
+from app.modules.public.models import PublicationStatus, PublicWorkVisibility
 from app.modules.public.share_service import PublicShareConfigurationError
 
 NOW = datetime(2026, 7, 31, 10, 0, tzinfo=UTC)
@@ -110,6 +112,8 @@ async def _issuance_service(
         owner_user_id=user.id,
         category_id=category.id,
         title="Issued asset",
+        slug="issued-asset",
+        summary="Public description approved with the dossier.",
         current_version_no=1,
     )
     dossier._set_status_from_workflow(status)
@@ -336,6 +340,15 @@ def test_successful_issuance_is_audited_once_across_worker_replay() -> None:
         assert first is not None and second is not None
         assert first.id == second.id
         assert first.pdf_ready is True
+
+        async with service._session.begin():  # noqa: SLF001
+            public_work = await PublicWorkRepository(
+                service._session  # noqa: SLF001
+            ).get_by_dossier_id(dossier_id)
+        assert public_work is not None
+        assert public_work.certificate_id == first.id
+        assert public_work.publication_status is PublicationStatus.DRAFT
+        assert public_work.visibility is PublicWorkVisibility.PRIVATE
 
         async with service._session.begin():  # noqa: SLF001
             audit_rows = (

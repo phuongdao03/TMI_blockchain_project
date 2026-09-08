@@ -215,6 +215,11 @@ test("CI has quality, migration, image, staging and manual production gates", as
   assert.doesNotMatch(workflow, /\/opt\/tmi-platform/);
   assert.match(workflow, /--build-arg NEXT_PUBLIC_RELEASE_MODE=full/);
   assert.match(workflow, /--build-arg NEXT_PUBLIC_APP_BASE_URL/);
+  assert.match(
+    workflow,
+    /case "\$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN" in[\s\S]*?\*\.firebaseapp\.com\)/,
+    "image builds must reject a non-Firebase OAuth redirect domain",
+  );
 
   const productionDeployment = workflow.match(
     /  deploy-production:[\s\S]*?(?=\n  [a-z-]+:|\n$)/,
@@ -258,6 +263,11 @@ test("deployment scripts wait for healthy services and preserve an image rollbac
   assert.match(releaseLibrary, /--wait-timeout/);
   assert.match(deploy, /AUTO_ROLLBACK_ON_FAILURE/);
   assert.match(deploy, /validate-preview-environment\.sh/);
+  assert.match(
+    deploy,
+    /python -m app\.scripts\.backfill_public_works --apply/,
+    "deploy must project previously issued certificates into private CMS drafts",
+  );
   assert.ok(
     deploy.indexOf('export IMAGE_TAG="$release_tag"') <
       deploy.indexOf("compose_command config -q"),

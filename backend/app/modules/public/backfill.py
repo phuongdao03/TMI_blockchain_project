@@ -51,6 +51,54 @@ class PublicWorkDraftBackfill:
         async with self._session.begin():
             return await self._run(dry_run=dry_run)
 
+    async def ensure_draft(
+        self,
+        dossier_id: UUID,
+        *,
+        certificate_id: UUID | None,
+    ) -> PublicWork | None:
+        """Create the single editorial draft for an issued dossier.
+
+        This is safe to call from the certificate worker and from a replay.
+        It deliberately creates a private draft; publication remains an
+        explicit content-administration decision.
+        """
+        if self._session.in_transaction():
+            return await self._ensure_draft(
+                dossier_id,
+                certificate_id=certificate_id,
+            )
+        async with self._session.begin():
+            return await self._ensure_draft(
+                dossier_id,
+                certificate_id=certificate_id,
+            )
+
+    async def _ensure_draft(
+        self,
+        dossier_id: UUID,
+        *,
+        certificate_id: UUID | None,
+    ) -> PublicWork | None:
+        existing = await self._repository.get_by_dossier_id(dossier_id)
+        if existing is not None:
+            if existing.certificate_id is None and certificate_id is not None:
+                existing.certificate_id = certificate_id
+            return existing
+        dossier = await self._session.get(Dossier, dossier_id)
+        if dossier is None:
+            return None
+        draft, _ = await self._draft_from_source(
+            dossier,
+            certificate_id=certificate_id,
+            reserved_in_batch=set(),
+        )
+        if draft is None:
+            return None
+        self._repository.add(draft)
+        await self._session.flush()
+        return draft
+
     async def _run(self, *, dry_run: bool) -> PublicWorkBackfillReport:
         reasons: Counter[str] = Counter()
         reserved_in_batch: set[str] = set()

@@ -3,14 +3,14 @@ import { describe, expect, it } from "vitest";
 import { resolveFirebaseAuthDomain } from "@/lib/firebase/client";
 
 describe("resolveFirebaseAuthDomain", () => {
-  it("uses the application hostname in production for same-origin redirect auth", () => {
+  it("keeps Firebase's configured auth domain in production", () => {
     expect(
       resolveFirebaseAuthDomain(
         "project.firebaseapp.com",
         "decu.tinhhoaviet.org.vn",
         true,
       ),
-    ).toBe("decu.tinhhoaviet.org.vn");
+    ).toBe("project.firebaseapp.com");
   });
 
   it("keeps the configured Firebase domain outside production", () => {

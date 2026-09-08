@@ -64,6 +64,7 @@ previous_tag="$(cat "$current_tag_file" 2>/dev/null || true)"
 deploy_release() {
   compose_command pull || return 1
   compose_command run --rm backend alembic upgrade head || return 1
+  compose_command run --rm backend python -m app.scripts.backfill_public_works --apply || return 1
   wait_for_release || return 1
 }
 
