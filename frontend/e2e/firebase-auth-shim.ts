@@ -90,6 +90,10 @@ export async function signInWithPopup(
 export async function signInWithRedirect(target: E2EAuth): Promise<void> {
   const credential = await signInWithPopup(target);
   sessionStorage.setItem("tmi.e2e.redirect-user", credential.user.email);
+  // Firebase leaves the current document for mobile OAuth. Recreate that
+  // boundary so the next mount consumes getRedirectResult just like Safari
+  // or Chrome on a handset does after returning from Google.
+  window.location.reload();
 }
 
 export async function getRedirectResult(
