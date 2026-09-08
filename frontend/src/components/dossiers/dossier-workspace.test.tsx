@@ -176,6 +176,9 @@ describe("DossierWorkspace", () => {
     expect(
       await screen.findByText("Hồ sơ đã nộp và đang ở chế độ chỉ đọc."),
     ).toBeDefined();
+    expect(
+      document.querySelector(".dossier-state-summary")?.className,
+    ).toContain("bg-[var(--theme-elevated)]");
     expect(screen.getByLabelText("Tên hồ sơ").hasAttribute("disabled")).toBe(
       true,
     );

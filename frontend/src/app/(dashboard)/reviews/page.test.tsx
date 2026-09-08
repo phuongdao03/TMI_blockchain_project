@@ -18,6 +18,6 @@ describe("ReviewQueuePage", () => {
     expect(screen.queryByRole("listitem")).toBeNull();
     expect(
       container.querySelector(".review-queue__filters")?.className,
-    ).toContain("sm:grid-cols-[minmax(16rem,28rem)_auto]");
+    ).toContain("sm:grid-cols-[minmax(0,20rem)_auto]");
   });
 });

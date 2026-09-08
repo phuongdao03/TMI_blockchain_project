@@ -305,7 +305,6 @@ class ReviewRepository:
                 ReviewAssignment.dossier_version_id == dossier_version_id,
                 ReviewAssignment.status == ReviewAssignmentStatus.SUBMITTED,
                 Review.submitted_at.is_not(None),
-                Review.total_score.is_not(None),
                 Review.recommendation.is_not(None),
             )
         )

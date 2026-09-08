@@ -420,6 +420,34 @@ def test_admin_final_decision_records_minutes_and_approves_completed_review() ->
     asyncio.run(exercise())
 
 
+def test_admin_final_decision_accepts_verdict_report_without_legacy_score() -> None:
+    async def exercise() -> None:
+        service, sessions, engine, users, dossier, _ = await _setup()
+        async with sessions.begin() as session:
+            review = await session.scalar(select(Review))
+            assert review is not None
+            review.truth_score = None
+            review.transparency_score = None
+            review.ownership_score = None
+            review.professionalism_score = None
+            review.respect_score = None
+            review.total_score = None
+
+        result = await service.record_admin_decision(
+            _principal(users["secretary"], "SUPER_ADMIN"),
+            dossier.id,
+            decision=CouncilCaseDecision.APPROVE,
+            reason="The completed verdict report supports final approval.",
+            confirm_no_conflict=True,
+        )
+
+        assert result.status is DossierStatus.APPROVED
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 def test_admin_final_decision_requires_explicit_no_conflict_confirmation() -> None:
     async def exercise() -> None:
         service, _, engine, users, dossier, _ = await _setup()

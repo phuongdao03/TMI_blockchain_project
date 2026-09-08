@@ -472,7 +472,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
               {dossier.code}
             </span>
           </div>
-          <h1 className="mt-3 truncate text-3xl font-bold tracking-[-0.03em] text-neutral-950 sm:text-4xl">
+          <h1 className="mt-3 break-words text-3xl font-bold tracking-[-0.03em] text-neutral-950 sm:text-4xl">
             {dossier.title}
           </h1>
         </div>
@@ -501,7 +501,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
               </Button>
             ) : null}
           </div>
-          <div className="rounded-xl border border-primary-200 bg-white/80 p-4 text-sm">
+          <div className="dossier-state-summary rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 text-sm text-[var(--theme-text)]">
             <p className="font-bold text-neutral-950">
               {dossierStatusLabel(dossier.status)}
             </p>

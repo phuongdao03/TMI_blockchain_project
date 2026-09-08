@@ -1,7 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clock3, FileCheck2, UserCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock3,
+  FileCheck2,
+  UserCheck,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -29,10 +35,27 @@ const assignmentLabels = {
 
 const routingReason = "Hệ thống chuyển hồ sơ đến người kiểm duyệt.";
 
+function decisionErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  if (message.includes("complete submitted review")) {
+    return "Hệ thống chưa ghi nhận báo cáo đã hoàn tất. Hãy tải lại trang và thử lại.";
+  }
+  if (message.includes("Every assigned reviewer")) {
+    return "Vẫn còn người kiểm duyệt chưa gửi báo cáo hoặc khai báo xung đột lợi ích.";
+  }
+  if (message.includes("integrity") || message.includes("reverified")) {
+    return "Bằng chứng cần được hệ thống kiểm tra lại tính toàn vẹn trước khi phê duyệt.";
+  }
+  if (message.includes("UNDER_REVIEW")) {
+    return "Trạng thái hồ sơ đã thay đổi. Hãy tải lại trang trước khi ra quyết định.";
+  }
+  return "Chưa thể ghi nhận quyết định. Nội dung trên màn hình vẫn được giữ lại; vui lòng thử lại.";
+}
+
 function ReviewReport({ item }: { item: AdminReviewAssignment }) {
   const { assignment, review, reviewerEmail } = item;
   return (
-    <article className="rounded-xl border border-[var(--theme-border)] p-4">
+    <article className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-bold">{reviewerEmail}</p>
@@ -176,8 +199,8 @@ export function ReviewLifecyclePanel({
   });
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5">
+    <div className="space-y-5">
+      <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <UserCheck className="mt-0.5 size-5 text-primary-700" />
           <div>
@@ -246,7 +269,7 @@ export function ReviewLifecyclePanel({
       </section>
 
       {dossier.assignments.length > 0 ? (
-        <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5">
+        <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5">
           <div className="flex items-start gap-3">
             {dossier.assignments.every(
               (item) =>
@@ -279,17 +302,39 @@ export function ReviewLifecyclePanel({
       )}
 
       {dossier.assignments.length > 0 ? (
-        <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5">
-          <h2 className="text-xl font-bold">Quyết định cuối của Admin</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            Chỉ mở sau khi mọi người kiểm duyệt đã hoàn tất. Quyết định được lưu
-            thành biên bản trước khi chuyển sang ký blockchain.
-          </p>
+        <section className="admin-decision-panel rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-700">
+              <FileCheck2 aria-hidden="true" className="size-5" />
+            </span>
+            <div>
+              <h2 className="text-lg font-bold sm:text-xl">
+                Quyết định cuối của Admin
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-neutral-500">
+                Đọc báo cáo của người kiểm duyệt, ghi rõ căn cứ và chọn quyết
+                định cuối.
+              </p>
+            </div>
+          </div>
+          {!isDecisionReady ? (
+            <div
+              className="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+              role="status"
+            >
+              <Clock3 aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+              <p>
+                Chức năng ra quyết định sẽ mở khi tất cả phân công đã hoàn tất.
+              </p>
+            </div>
+          ) : null}
           <label className="mt-5 block text-sm font-semibold">
             Lý do quyết định cuối
             <textarea
-              className="mt-2 min-h-24 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3"
+              aria-describedby="final-reason-help"
+              className="mt-2 min-h-28 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-3 leading-6"
               disabled={!isDecisionReady || decide.isPending}
+              maxLength={2000}
               onChange={(event) => setFinalReason(event.target.value)}
               placeholder={
                 isDecisionReady
@@ -299,6 +344,15 @@ export function ReviewLifecyclePanel({
               value={finalReason}
             />
           </label>
+          <div
+            className="mt-2 flex items-start justify-between gap-4 text-xs text-neutral-500"
+            id="final-reason-help"
+          >
+            <span>Căn cứ nên nêu rõ báo cáo và bằng chứng đã xem.</span>
+            <span className="shrink-0 tabular-nums">
+              {finalReason.length}/2000
+            </span>
+          </div>
           <label className="mt-4 flex items-start gap-3 text-sm font-medium">
             <input
               checked={confirmNoConflict}
@@ -312,9 +366,9 @@ export function ReviewLifecyclePanel({
               lợi ích khi ra quyết định cuối.
             </span>
           </label>
-          <div className="mt-4 flex flex-wrap gap-3">
+          <div className="mt-5 grid gap-3 sm:flex sm:flex-wrap">
             <button
-              className="min-h-11 rounded-xl bg-primary-700 px-5 font-bold text-white disabled:opacity-50"
+              className="min-h-11 rounded-xl bg-primary-700 px-5 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
               disabled={
                 !isDecisionReady ||
                 !finalReason.trim() ||
@@ -327,7 +381,7 @@ export function ReviewLifecyclePanel({
               Phê duyệt hồ sơ
             </button>
             <button
-              className="min-h-11 rounded-xl border border-[var(--theme-border)] px-5 font-bold disabled:opacity-50"
+              className="min-h-11 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-5 font-bold disabled:cursor-not-allowed disabled:opacity-50"
               disabled={
                 !isDecisionReady ||
                 !finalReason.trim() ||
@@ -340,7 +394,7 @@ export function ReviewLifecyclePanel({
               Yêu cầu bổ sung
             </button>
             <button
-              className="min-h-11 rounded-xl border border-red-300 px-5 font-bold text-red-700 disabled:opacity-50"
+              className="min-h-11 rounded-xl border border-red-300 px-5 font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={
                 !isDecisionReady ||
                 !finalReason.trim() ||
@@ -354,9 +408,20 @@ export function ReviewLifecyclePanel({
             </button>
           </div>
           {decide.isError || requestFinalSupplement.isError ? (
-            <p className="mt-4 text-sm font-semibold text-red-700" role="alert">
-              Chưa thể ghi nhận quyết định. Hãy kiểm tra báo cáo và thử lại.
-            </p>
+            <div
+              className="review-workspace__error mt-4 flex items-start gap-3 rounded-xl border p-3 text-sm font-semibold"
+              role="alert"
+            >
+              <AlertTriangle
+                aria-hidden="true"
+                className="mt-0.5 size-4 shrink-0"
+              />
+              <p>
+                {decisionErrorMessage(
+                  decide.error ?? requestFinalSupplement.error,
+                )}
+              </p>
+            </div>
           ) : null}
         </section>
       ) : null}

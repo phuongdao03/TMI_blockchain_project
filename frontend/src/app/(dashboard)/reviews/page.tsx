@@ -22,7 +22,7 @@ export default async function ReviewQueuePage({
     : undefined;
 
   return (
-    <div className="review-queue mx-auto max-w-7xl space-y-8">
+    <div className="review-queue mx-auto max-w-7xl space-y-6 sm:space-y-8">
       <header className="review-queue__intro border-b border-neutral-200 pb-7">
         <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
           <ClipboardCheck aria-hidden="true" className="size-4" />
@@ -36,7 +36,7 @@ export default async function ReviewQueuePage({
           gửi báo cáo độc lập để Admin ra quyết định cuối.
         </p>
       </header>
-      <form className="review-queue__filters grid gap-3 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4 sm:grid-cols-[minmax(16rem,28rem)_auto] sm:items-end sm:justify-start">
+      <form className="review-queue__filters grid gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:grid-cols-[minmax(0,20rem)_auto] sm:items-end sm:justify-start">
         <div>
           <label
             className="text-xs font-bold uppercase tracking-wider text-neutral-500"
@@ -45,7 +45,7 @@ export default async function ReviewQueuePage({
             Trạng thái phân công
           </label>
           <SelectControl
-            className="mt-2 min-h-11 w-full rounded-xl border bg-white px-3 text-sm font-semibold sm:max-w-xs"
+            className="mt-2 min-h-11 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-3 text-sm font-semibold"
             defaultValue={status ?? ""}
             id="review-status"
             name="status"
@@ -58,7 +58,7 @@ export default async function ReviewQueuePage({
           </SelectControl>
         </div>
         <button
-          className="min-h-11 rounded-xl bg-neutral-950 px-5 text-sm font-bold text-white hover:bg-neutral-800"
+          className="min-h-11 rounded-lg bg-neutral-950 px-5 text-sm font-bold text-white hover:bg-neutral-800"
           type="submit"
         >
           Áp dụng bộ lọc

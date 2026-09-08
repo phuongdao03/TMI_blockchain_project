@@ -316,4 +316,51 @@ describe("ReviewAssignmentQueue", () => {
     );
     expect(push).toHaveBeenCalledWith("/blockchain");
   });
+
+  it("explains when the backend still considers the reviewer report incomplete", async () => {
+    get.mockResolvedValue({
+      dossierId: "dossier-1",
+      dossierCode: "TMI-001",
+      dossierTitle: "Hồ sơ cần duyệt",
+      status: "UNDER_REVIEW",
+      versionNo: 1,
+      submittedAt: "2026-09-07T00:00:00Z",
+      assignmentCount: 1,
+      canonicalHash: "hash",
+      snapshotJson: { schemaVersion: 1, dossier: {}, evidences: [] },
+      assignments: [
+        {
+          reviewerEmail: "reviewer@tmi.vn",
+          assignment: { id: "assignment-1", status: "SUBMITTED" },
+          review: {
+            recommendation: "APPROVE",
+            totalScore: null,
+            submittedAt: "2026-09-07T01:00:00Z",
+            applicantFeedback: "Hồ sơ đạt yêu cầu.",
+            privateNote: null,
+            findings: [],
+          },
+        },
+      ],
+    });
+    listStaff.mockResolvedValue({ data: [], meta: { total: 0 } });
+    decide.mockRejectedValue(
+      new Error("At least one complete submitted review is required."),
+    );
+    const user = userEvent.setup();
+
+    renderQueue("dossier-1");
+    await user.type(
+      await screen.findByLabelText("Lý do quyết định cuối"),
+      "Đồng ý với kết luận của người kiểm duyệt.",
+    );
+    await user.click(screen.getByLabelText(/không có xung đột lợi ích/i));
+    await user.click(screen.getByRole("button", { name: "Phê duyệt hồ sơ" }));
+
+    expect(
+      await screen.findByText(
+        "Hệ thống chưa ghi nhận báo cáo đã hoàn tất. Hãy tải lại trang và thử lại.",
+      ),
+    ).toBeDefined();
+  });
 });
