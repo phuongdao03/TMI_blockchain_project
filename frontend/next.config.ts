@@ -109,7 +109,19 @@ const nextConfig: NextConfig = {
       process.env.BACKEND_URL ??
       "http://localhost:8000"
     ).replace(/\/$/, "");
+    const firebaseAuthDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+    const firebaseAuthRewrite =
+      firebaseAuthDomain &&
+      /^[a-z0-9-]+\.firebaseapp\.com$/i.test(firebaseAuthDomain)
+        ? [
+            {
+              source: "/__/auth/:path*",
+              destination: `https://${firebaseAuthDomain}/__/auth/:path*`,
+            },
+          ]
+        : [];
     return [
+      ...firebaseAuthRewrite,
       {
         source: "/api/:path*",
         destination: `${apiBaseUrl}/api/:path*`,

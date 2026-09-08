@@ -1,7 +1,7 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth } from "firebase/auth";
 
-const firebaseConfig = {
+const configuredFirebase = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -12,12 +12,31 @@ const firebaseConfig = {
 
 let emulatorConnected = false;
 
+export function resolveFirebaseAuthDomain(
+  configuredDomain: string | undefined,
+  appHostname: string | undefined,
+  production: boolean,
+): string | undefined {
+  return production && appHostname ? appHostname : configuredDomain;
+}
+
+function firebaseConfig() {
+  return {
+    ...configuredFirebase,
+    authDomain: resolveFirebaseAuthDomain(
+      configuredFirebase.authDomain,
+      typeof window === "undefined" ? undefined : window.location.hostname,
+      process.env.NODE_ENV === "production",
+    ),
+  };
+}
+
 export function firebaseConfigured(): boolean {
   return Boolean(
-    firebaseConfig.apiKey &&
-      firebaseConfig.authDomain &&
-      firebaseConfig.projectId &&
-      firebaseConfig.appId,
+    configuredFirebase.apiKey &&
+      configuredFirebase.authDomain &&
+      configuredFirebase.projectId &&
+      configuredFirebase.appId,
   );
 }
 
@@ -25,7 +44,7 @@ export function getFirebaseAuth() {
   if (!firebaseConfigured()) {
     throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
   }
-  const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig());
   const auth = getAuth(app);
   const emulatorUrl = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_URL;
   if (

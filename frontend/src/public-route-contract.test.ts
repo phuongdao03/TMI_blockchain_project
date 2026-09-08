@@ -40,6 +40,20 @@ describe("public route compatibility", () => {
     );
   });
 
+  it("proxies Firebase auth helpers through the application origin", async () => {
+    vi.stubEnv("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN", "project.firebaseapp.com");
+    const rewrites = await nextConfig.rewrites?.();
+
+    expect(rewrites).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: "/__/auth/:path*",
+          destination: "https://project.firebaseapp.com/__/auth/:path*",
+        }),
+      ]),
+    );
+  });
+
   it("prevents an opaque QR token from being cached or forwarded as a referrer", async () => {
     const headers = await nextConfig.headers?.();
 

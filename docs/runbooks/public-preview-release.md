@@ -55,7 +55,11 @@ NEXT_PUBLIC_FIREBASE_APP_ID
 These identify the Firebase web application and are not server private keys.
 Restrict the API key in Google Cloud and add the production domain to Firebase
 Authentication authorized domains. Enable only the intended Firebase sign-in
-providers.
+providers. Keep `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` set to the project's
+`<project>.firebaseapp.com` domain; production proxies `/__/auth/` through the
+application origin so redirect sign-in works when Safari blocks third-party
+storage. Add `https://<APP_DOMAIN>/__/auth/handler` to the Google OAuth web
+client's authorized redirect URIs before releasing.
 
 ## VPS prerequisites
 

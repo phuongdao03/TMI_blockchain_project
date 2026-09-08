@@ -28,12 +28,14 @@ vi.mock("@/lib/firebase/client", () => ({
 
 vi.mock("firebase/auth", () => ({
   createUserWithEmailAndPassword: firebaseMocks.createUserWithEmailAndPassword,
+  getRedirectResult: vi.fn(async () => null),
   GoogleAuthProvider: vi.fn(),
   sendEmailVerification: firebaseMocks.sendEmailVerification,
   signOut: firebaseMocks.signOut,
   signInWithPopup: vi.fn(async () => ({
     user: { getIdToken: vi.fn(async () => "firebase-test-token") },
   })),
+  signInWithRedirect: vi.fn(),
 }));
 
 describe("RegisterForm", () => {

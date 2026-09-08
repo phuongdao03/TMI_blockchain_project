@@ -1,15 +1,50 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { GoogleAuthProvider, signInWithPopup, type User } from "firebase/auth";
+import {
+  getRedirectResult,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  type User,
+} from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { ApiError, authApi } from "@/lib/api/client";
 import { resolveDefaultWorkspace } from "@/lib/auth/role-workspaces";
 import { getFirebaseAuth, firebaseConfigured } from "@/lib/firebase/client";
 import type { AccountType } from "@/lib/api/types";
+
+const GOOGLE_REDIRECT_PENDING_KEY = "tmi.google-oauth.redirect-pending";
+
+function prefersRedirectSignIn(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (
+    /Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(
+      navigator.userAgent,
+    ) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
+function hasPendingRedirect(): boolean {
+  try {
+    return sessionStorage.getItem(GOOGLE_REDIRECT_PENDING_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function setPendingRedirect(pending: boolean): void {
+  try {
+    if (pending) sessionStorage.setItem(GOOGLE_REDIRECT_PENDING_KEY, "1");
+    else sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
+  } catch {
+    // Redirect authentication can still complete when storage is unavailable.
+  }
+}
 
 function safeDestination(value: string | undefined, fallback: string): string {
   return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
@@ -59,23 +94,63 @@ export function GoogleOAuthButton({
   const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string>();
+  const [redirectWasStarted] = useState(hasPendingRedirect);
 
-  async function finishSignIn(user: User) {
-    const idToken = await user.getIdToken(true);
-    const result = await authApi.exchangeFirebaseToken(
-      idToken,
-      accountType,
-      next,
-    );
-    queryClient.setQueryData(["auth", "me"], result.user);
-    router.replace(
-      safeDestination(
+  const finishSignIn = useCallback(
+    async (user: User) => {
+      const idToken = await user.getIdToken(true);
+      const result = await authApi.exchangeFirebaseToken(
+        idToken,
+        accountType,
         next,
-        resolveDefaultWorkspace(result.user.roles, result.user.permissions),
-      ),
-    );
-    router.refresh();
-  }
+      );
+      queryClient.setQueryData(["auth", "me"], result.user);
+      router.replace(
+        safeDestination(
+          next,
+          resolveDefaultWorkspace(result.user.roles, result.user.permissions),
+        ),
+      );
+      router.refresh();
+    },
+    [accountType, next, queryClient, router],
+  );
+
+  useEffect(() => {
+    if (!firebaseConfigured()) return;
+    let active = true;
+
+    if (redirectWasStarted) {
+      queueMicrotask(() => {
+        if (active) setIsPending(true);
+      });
+    }
+
+    void getRedirectResult(getFirebaseAuth())
+      .then(async (credential) => {
+        if (!active) return;
+        if (credential) {
+          setPendingRedirect(false);
+          await finishSignIn(credential.user);
+          return;
+        }
+        if (redirectWasStarted) {
+          setPendingRedirect(false);
+          setError("Phiên đăng nhập Google chưa hoàn tất. Vui lòng thử lại.");
+          setIsPending(false);
+        }
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        setPendingRedirect(false);
+        setError(oauthErrorMessage(cause));
+        setIsPending(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [finishSignIn, redirectWasStarted]);
 
   async function startGoogleOAuth() {
     setError(undefined);
@@ -83,12 +158,17 @@ export function GoogleOAuthButton({
     try {
       if (!firebaseConfigured())
         throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
-      const credential = await signInWithPopup(
-        getFirebaseAuth(),
-        new GoogleAuthProvider(),
-      );
+      const auth = getFirebaseAuth();
+      const provider = new GoogleAuthProvider();
+      if (prefersRedirectSignIn()) {
+        setPendingRedirect(true);
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+      const credential = await signInWithPopup(auth, provider);
       await finishSignIn(credential.user);
     } catch (cause) {
+      setPendingRedirect(false);
       setError(oauthErrorMessage(cause));
       setIsPending(false);
     }
