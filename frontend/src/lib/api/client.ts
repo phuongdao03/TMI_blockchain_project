@@ -125,6 +125,7 @@ export class ApiError extends Error {
     message: string,
     readonly code: string,
     readonly status: number,
+    readonly requestId?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -165,6 +166,7 @@ async function parseResponse<Data>(
       error?.message ?? "Yêu cầu không thành công. Vui lòng thử lại.",
       error?.code ?? "REQUEST_FAILED",
       response.status,
+      error?.request_id ?? response.headers.get("X-Request-Id") ?? undefined,
     );
   }
   return payload;

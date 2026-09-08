@@ -184,6 +184,30 @@ describe("auth API client", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
+  it("keeps the backend request id on API errors for support tracing", async () => {
+    document.cookie = "tmi_csrf=; Max-Age=0; Path=/";
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      response(
+        {
+          success: false,
+          error: {
+            code: "INTERNAL_SERVER_ERROR",
+            message: "An unexpected error occurred.",
+            details: {},
+            request_id: "decision-request-123",
+          },
+        },
+        500,
+      ),
+    );
+
+    await expect(authApi.currentUser()).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      requestId: "decision-request-123",
+      status: 500,
+    });
+  });
+
   it("shares one refresh across concurrent authenticated requests", async () => {
     let resourceCalls = 0;
     let refreshCalls = 0;

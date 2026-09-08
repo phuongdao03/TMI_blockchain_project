@@ -339,8 +339,13 @@ class CouncilService:
                 voted_at=now,
             )
             self._council.add_session(council_session)
+            # These models intentionally expose IDs instead of ORM relationships.
+            # Flush each foreign-key layer explicitly so PostgreSQL never attempts
+            # to insert a case before its generated final-decision session.
+            await self._session.flush()
             self._council.add_member(member)
             self._council.add_case(council_case)
+            await self._session.flush()
             self._council.add_conflict(conflict)
             self._council.add_vote(vote)
 
