@@ -91,7 +91,7 @@ class ReviewFindingData(ReviewSchema):
 
 class ReviewGateAnswerData(ReviewSchema):
     outcome: Literal["PASS", "FAIL", "NOT_APPLICABLE"]
-    rationale: Annotated[str, Field(min_length=20, max_length=2_000)]
+    rationale: Annotated[str, Field(max_length=2_000)]
     evidence_media_ids: Annotated[list[UUID], Field(max_length=10)] = Field(
         default_factory=list
     )
@@ -99,8 +99,8 @@ class ReviewGateAnswerData(ReviewSchema):
 
 class SpecialistCriterionAnswerData(ReviewSchema):
     score: Annotated[int, Field(ge=0, le=5)]
-    rationale: Annotated[str, Field(min_length=20, max_length=2_000)]
-    evidence_media_ids: Annotated[list[UUID], Field(min_length=1, max_length=10)]
+    rationale: Annotated[str, Field(max_length=2_000)]
+    evidence_media_ids: Annotated[list[UUID], Field(max_length=10)]
 
 
 class CriterionVerdictData(ReviewSchema):

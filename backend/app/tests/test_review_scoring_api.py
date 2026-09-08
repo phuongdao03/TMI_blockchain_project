@@ -271,3 +271,45 @@ def test_reviewer_conflict_draft_and_submit_contract() -> None:
         assert submitted.json()["data"]["submittedAt"] == "2026-08-02T08:00:00Z"
 
     asyncio.run(exercise())
+
+
+def test_reviewer_can_persist_an_incomplete_rubric_draft() -> None:
+    async def exercise() -> None:
+        service = StubScoringService()
+        base = f"/api/v1/reviewer/assignments/{service.assignment.id}"
+
+        response = await _request(
+            service,
+            "PUT",
+            f"{base}/draft",
+            json={
+                "gateAnswers": {
+                    "eligibility": {
+                        "outcome": "PASS",
+                        "rationale": "Dang kiem tra",
+                        "evidenceMediaIds": [],
+                    }
+                },
+                "specialistAnswers": {
+                    "originality": {
+                        "score": 3,
+                        "rationale": "Dang doi chieu",
+                        "evidenceMediaIds": [],
+                    }
+                },
+            },
+        )
+
+        assert response.status_code == 200
+        assert service.received_draft is not None
+        assert service.received_draft.gate_answers["eligibility"]["rationale"] == (
+            "Dang kiem tra"
+        )
+        assert (
+            service.received_draft.specialist_answers["originality"][
+                "evidence_media_ids"
+            ]
+            == []
+        )
+
+    asyncio.run(exercise())
