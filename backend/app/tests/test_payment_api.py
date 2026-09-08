@@ -12,10 +12,15 @@ from app.modules.auth.dependencies import (
     get_current_principal,
 )
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.dossiers.models import DossierStatus
 from app.modules.payments.dependencies import get_payment_service
 from app.modules.payments.errors import PaymentNotFoundError
 from app.modules.payments.models import PaymentStatus
-from app.modules.payments.types import PaymentOrderView
+from app.modules.payments.types import (
+    PaymentCandidateView,
+    PaymentOrderView,
+    PaymentWaiverView,
+)
 
 NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
 
@@ -58,6 +63,20 @@ class StubPaymentService:
         del principal, dossier_id, idempotency_key
         return self.view()
 
+    async def list_payment_candidates(
+        self,
+        principal: AuthPrincipal,
+    ) -> tuple[PaymentCandidateView, ...]:
+        del principal
+        return (
+            PaymentCandidateView(
+                dossier_id=self.dossier_id,
+                dossier_code="TMI-2026-TEST",
+                dossier_title="Ho so da duyet",
+                version_no=2,
+            ),
+        )
+
     async def issue_order(
         self,
         principal: AuthPrincipal,
@@ -72,6 +91,21 @@ class StubPaymentService:
         del principal, dossier_id, idempotency_key
         del amount_minor, currency, description, due_at
         return self.view()
+
+    async def waive_payment(
+        self,
+        principal: AuthPrincipal,
+        dossier_id: UUID,
+        *,
+        idempotency_key: str,
+        reason: str,
+    ) -> PaymentWaiverView:
+        del principal, idempotency_key
+        return PaymentWaiverView(
+            dossier_id=dossier_id,
+            status=DossierStatus.PAID,
+            reason=reason,
+        )
 
     async def get_order(
         self,
@@ -221,6 +255,42 @@ def test_payment_api_create_get_and_preserve_raw_webhook_body() -> None:
     assert active.status_code == 200
     assert webhook.status_code == 200
     assert service.raw_body == body
+
+
+def test_admin_can_mark_an_approved_dossier_as_free() -> None:
+    service = StubPaymentService()
+    response = asyncio.run(
+        _request(
+            "POST",
+            f"/api/v1/admin/dossiers/{service.dossier_id}/payment-waiver",
+            service,
+            content=b'{"reason":"Ho so thuoc dien mien phi"}',
+            headers={
+                "Idempotency-Key": "waive-payment-1",
+                "Content-Type": "application/json",
+            },
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"] == {
+        "dossierId": str(service.dossier_id),
+        "status": "PAID",
+        "reason": "Ho so thuoc dien mien phi",
+    }
+
+
+def test_admin_can_list_approved_payment_candidates() -> None:
+    service = StubPaymentService()
+    response = asyncio.run(_request("GET", "/api/v1/admin/payment-candidates", service))
+
+    assert response.status_code == 200
+    assert response.json()["data"][0] == {
+        "dossierId": str(service.dossier_id),
+        "dossierCode": "TMI-2026-TEST",
+        "dossierTitle": "Ho so da duyet",
+        "versionNo": 2,
+    }
 
 
 def test_payos_webhook_acknowledges_signed_registration_probe() -> None:

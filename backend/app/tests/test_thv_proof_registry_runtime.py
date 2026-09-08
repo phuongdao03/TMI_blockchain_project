@@ -320,7 +320,7 @@ def test_static_abi_encodes_the_contract_record_proof_signature() -> None:
     assert len(payload) == 4 + (32 * 3)
 
 
-def test_thv_proof_intent_requires_an_approved_dossier_version() -> None:
+def test_thv_proof_intent_requires_a_payment_ready_dossier_version() -> None:
     async def exercise() -> None:
         engine = create_async_engine("sqlite+aiosqlite://")
         sessions = async_sessionmaker(engine, expire_on_commit=False)
@@ -408,6 +408,21 @@ def test_thv_proof_intent_requires_an_approved_dossier_version() -> None:
             intent_ttl=timedelta(minutes=10),
             clock=lambda: NOW,
         )
+        assert await service.signing_queue(principal) == []
+        with pytest.raises(BlockchainConflictError, match="payment-ready"):
+            await service.prepare_record_proof_intent(
+                principal,
+                dossier_id=dossier.id,
+                version_no=1,
+                connected_wallet=WALLET,
+            )
+
+        async with sessions() as session:
+            stored = await session.get(Dossier, dossier.id)
+            assert stored is not None
+            stored._set_status_from_workflow(DossierStatus.PAID)
+            await session.commit()
+
         pending = await service.signing_queue(principal)
         assert len(pending) == 1
         assert pending[0].dossier_id == dossier.id
@@ -421,10 +436,11 @@ def test_thv_proof_intent_requires_an_approved_dossier_version() -> None:
             connected_wallet=WALLET,
         )
         assert intent.transaction_request == {
+            "from": WALLET,
             "to": CONTRACT,
             "data": "0x" + PAYLOAD.hex(),
-            "chainId": "31337",
-            "value": "0",
+            "chainId": "0x7a69",
+            "value": "0x0",
         }
         assert intent.proof_hash == "0x" + "ab" * 32
         assert intent.version == 1
@@ -510,7 +526,7 @@ def test_thv_proof_intent_requires_an_approved_dossier_version() -> None:
             stored._set_status_from_workflow(DossierStatus.UNDER_REVIEW)
             await session.commit()
 
-        with pytest.raises(BlockchainConflictError, match="approved dossier"):
+        with pytest.raises(BlockchainConflictError, match="payment-ready"):
             await service.prepare_record_proof_intent(
                 principal,
                 dossier_id=dossier.id,

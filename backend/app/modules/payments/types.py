@@ -2,7 +2,23 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+from app.modules.dossiers.models import DossierStatus
 from app.modules.payments.models import PaymentStatus
+
+
+@dataclass(frozen=True, slots=True)
+class PaymentWaiverView:
+    dossier_id: UUID
+    status: DossierStatus
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class PaymentCandidateView:
+    dossier_id: UUID
+    dossier_code: str
+    dossier_title: str
+    version_no: int
 
 
 @dataclass(frozen=True, slots=True)

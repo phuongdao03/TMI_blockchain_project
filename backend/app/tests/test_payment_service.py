@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.db.base import Base
 from app.modules.audit.models import AuditActorType, AuditLog
-from app.modules.auth.models import User, UserStatus
+from app.modules.auth.models import Role, User, UserRole, UserStatus
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.models import Category, Dossier, DossierStatus
 from app.modules.media.models import MediaAsset  # noqa: F401
@@ -32,6 +32,7 @@ from app.modules.payments.service import PaymentService
 
 NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
 DOSSIER_ID = UUID("1d561c46-c710-494b-9b11-402af341acbd")
+ADMIN_ID = UUID("70fe624c-6706-4f3a-97fb-0d12f1a33db2")
 
 
 class ReconciliationGateway(MockPaymentGateway):
@@ -86,6 +87,13 @@ async def _service(
         password_hash="not-used",
         status=UserStatus.ACTIVE,
     )
+    admin = User(
+        id=ADMIN_ID,
+        email="admin@tmigroup.vn",
+        password_hash="not-used",
+        status=UserStatus.ACTIVE,
+    )
+    admin_role = Role(id=uuid4(), code="SUPER_ADMIN")
     category = Category(id=uuid4(), code="PAYABLE", name="Payable")
     dossier = Dossier(
         id=DOSSIER_ID,
@@ -96,7 +104,16 @@ async def _service(
     )
     dossier._set_status_from_workflow(DossierStatus.APPROVED)
     async with sessions() as session:
-        session.add_all([user, category, dossier])
+        session.add_all(
+            [
+                user,
+                admin,
+                admin_role,
+                UserRole(user_id=admin.id, role_id=admin_role.id),
+                category,
+                dossier,
+            ]
+        )
         await session.commit()
     ids = iter(
         (
@@ -193,6 +210,7 @@ def test_admin_issues_exact_payment_amount_and_notifies_owner() -> None:
             assert notification is not None
             assert notification.user_id == applicant.user_id
             assert notification.type == "PAYMENT_REQUEST_ISSUED"
+            assert notification.data_json["actionPath"] == f"/payments/{order.id}"
             dossier = await session.get(Dossier, DOSSIER_ID)
             assert dossier is not None
             assert dossier.status is DossierStatus.PAYMENT_PENDING
@@ -215,6 +233,65 @@ def test_applicant_cannot_issue_own_payment_amount() -> None:
                 description="Phí xác lập và phát hành chứng thư",
                 due_at=NOW.replace(day=7, month=8),
             )
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_admin_can_waive_payment_and_make_dossier_ready_for_signing() -> None:
+    async def exercise() -> None:
+        issue_queue: list[UUID] = []
+        service, sessions, engine, _ = await _service(issue_queue=issue_queue)
+        admin = AuthPrincipal(
+            user_id=ADMIN_ID,
+            session_id=uuid4(),
+            email="admin@tmigroup.vn",
+            roles=("SUPER_ADMIN",),
+            permissions=("payments.issue",),
+        )
+
+        candidates = await service.list_payment_candidates(admin)
+        assert [(item.dossier_id, item.dossier_code) for item in candidates] == [
+            (DOSSIER_ID, "DOS-PAYABLE")
+        ]
+
+        waived = await service.waive_payment(
+            admin,
+            DOSSIER_ID,
+            idempotency_key="waive-payment-1",
+            reason="Hồ sơ thuộc chương trình hỗ trợ miễn phí.",
+        )
+
+        assert waived.dossier_id == DOSSIER_ID
+        assert waived.status is DossierStatus.PAID
+        assert issue_queue == [DOSSIER_ID]
+        async with sessions() as session:
+            dossier = await session.get(Dossier, DOSSIER_ID)
+            assert dossier is not None
+            assert dossier.status is DossierStatus.PAID
+            notifications = tuple((await session.scalars(select(Notification))).all())
+            assert {item.type for item in notifications} == {
+                "PAYMENT_WAIVED",
+                "DOSSIER_READY_FOR_BLOCKCHAIN",
+            }
+            notification_actions = {
+                item.type: item.data_json["actionPath"] for item in notifications
+            }
+            assert notification_actions == {
+                "PAYMENT_WAIVED": f"/dossiers/{DOSSIER_ID}",
+                "DOSSIER_READY_FOR_BLOCKCHAIN": "/blockchain",
+            }
+
+        replay = await service.waive_payment(
+            admin,
+            DOSSIER_ID,
+            idempotency_key="waive-payment-1",
+            reason="Hồ sơ thuộc chương trình hỗ trợ miễn phí.",
+        )
+        assert replay.status is DossierStatus.PAID
+        assert issue_queue == [DOSSIER_ID]
+
         await service.close()
         await engine.dispose()
 

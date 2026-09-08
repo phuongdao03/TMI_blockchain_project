@@ -3,15 +3,17 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4, uuid5
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.audit.service import AuditService
 from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
+from app.modules.auth.repositories import AuthRepository
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.billing.models import FeeObligationStatus
 from app.modules.billing.repository import BillingRepository
 from app.modules.billing.service import FeeObligationView
-from app.modules.dossiers.models import Dossier, DossierStatus
+from app.modules.dossiers.models import Dossier, DossierStatus, DossierStatusHistory
 from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.workflow import DossierWorkflowService
 from app.modules.notifications.models import Notification
@@ -31,7 +33,11 @@ from app.modules.payments.gateway import (
 )
 from app.modules.payments.models import PaymentEvent, PaymentOrder, PaymentStatus
 from app.modules.payments.repository import PaymentRepository
-from app.modules.payments.types import PaymentOrderView
+from app.modules.payments.types import (
+    PaymentCandidateView,
+    PaymentOrderView,
+    PaymentWaiverView,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +88,7 @@ class PaymentService:
         self._clock = clock or (lambda: datetime.now(UTC))
         self._uuid_factory = uuid_factory or uuid4
         self._payments = PaymentRepository(session)
+        self._auth = AuthRepository(session)
         self._billing = BillingRepository(session)
         self._audit_service = AuditService(session)
         self._dossiers = DossierRepository(session)
@@ -230,7 +237,7 @@ class PaymentService:
                         active.status = PaymentStatus.PAID
                         active.paid_at = self._clock()
                         await self._settle_fee_obligation(active)
-                        self._add_paid_notification(
+                        await self._add_paid_notification(
                             dossier,
                             active,
                             source_event_id=uuid5(active.id, "payment-paid"),
@@ -398,6 +405,7 @@ class PaymentService:
                     data_json={
                         "dossierId": str(dossier.id),
                         "paymentOrderId": str(order_id),
+                        "actionPath": f"/payments/{order_id}",
                     },
                     created_at=now,
                 )
@@ -411,6 +419,137 @@ class PaymentService:
             )
             await self._session.flush()
             return self._view(order)
+
+    async def list_payment_candidates(
+        self,
+        principal: AuthPrincipal,
+    ) -> tuple[PaymentCandidateView, ...]:
+        AuthorizationPolicy.require_capability(
+            principal,
+            ISSUE_PAYMENT_REQUIREMENT,
+            PaymentForbiddenError,
+        )
+        async with self._session.begin():
+            dossiers = tuple(
+                (
+                    await self._session.scalars(
+                        select(Dossier)
+                        .where(
+                            Dossier.status == DossierStatus.APPROVED,
+                            Dossier.deleted_at.is_(None),
+                        )
+                        .order_by(Dossier.updated_at.desc(), Dossier.id.desc())
+                        .limit(100)
+                    )
+                ).all()
+            )
+            return tuple(
+                PaymentCandidateView(
+                    dossier_id=dossier.id,
+                    dossier_code=dossier.code,
+                    dossier_title=dossier.title,
+                    version_no=dossier.current_version_no,
+                )
+                for dossier in dossiers
+            )
+
+    async def waive_payment(
+        self,
+        principal: AuthPrincipal,
+        dossier_id: UUID,
+        *,
+        idempotency_key: str,
+        reason: str,
+    ) -> PaymentWaiverView:
+        AuthorizationPolicy.require_capability(
+            principal,
+            ISSUE_PAYMENT_REQUIREMENT,
+            PaymentForbiddenError,
+        )
+        normalized_key = idempotency_key.strip()
+        normalized_reason = reason.strip()
+        if not normalized_key or len(normalized_key) > 128:
+            raise PaymentConflictError("Idempotency key is invalid.")
+        if not 5 <= len(normalized_reason) <= 500:
+            raise PaymentConflictError("Payment waiver reason is invalid.")
+
+        should_issue = False
+        async with self._session.begin():
+            dossier = await self._required_dossier(dossier_id, for_update=True)
+            prior_waiver = await self._session.scalar(
+                select(DossierStatusHistory).where(
+                    DossierStatusHistory.dossier_id == dossier.id,
+                    DossierStatusHistory.reason_code == "PAYMENT_WAIVED",
+                )
+            )
+            if prior_waiver is not None and dossier.status in {
+                DossierStatus.PAID,
+                DossierStatus.ANCHOR_PENDING,
+                DossierStatus.ANCHORED,
+                DossierStatus.CERTIFICATE_ISSUED,
+                DossierStatus.PUBLISHED,
+            }:
+                return PaymentWaiverView(
+                    dossier_id=dossier.id,
+                    status=dossier.status,
+                    reason=prior_waiver.note or normalized_reason,
+                )
+            if dossier.status is not DossierStatus.APPROVED:
+                raise PaymentConflictError(
+                    "Only an approved dossier can have its payment waived."
+                )
+            if await self._payments.get_active_for_dossier(dossier.id):
+                raise PaymentConflictError(
+                    "This dossier already has an active payment request."
+                )
+
+            self._workflow.transition(
+                dossier,
+                target=DossierStatus.PAID,
+                actor_user_id=principal.user_id,
+                allowed_sources={DossierStatus.APPROVED},
+                reason_code="PAYMENT_WAIVED",
+                note=normalized_reason,
+            )
+            now = self._clock()
+            self._session.add(
+                Notification(
+                    user_id=dossier.owner_user_id,
+                    source_event_id=uuid5(dossier.id, "payment-waived-owner"),
+                    type="PAYMENT_WAIVED",
+                    title="Hồ sơ được miễn phí",
+                    body=(
+                        "Hồ sơ không cần thanh toán và đã được chuyển sang "
+                        "bước ký blockchain."
+                    ),
+                    data_json={
+                        "dossierId": str(dossier.id),
+                        "actionPath": f"/dossiers/{dossier.id}",
+                    },
+                    created_at=now,
+                )
+            )
+            await self._add_admin_ready_notifications(
+                dossier,
+                source_event_id=uuid5(dossier.id, "payment-waived-admin"),
+                body="Hồ sơ đã được miễn phí và sẵn sàng để ký blockchain.",
+            )
+            self._audit(
+                "payment.waiver.issued",
+                dossier.id,
+                user_id=principal.user_id,
+                reason=normalized_reason,
+            )
+            await self._session.flush()
+            result = PaymentWaiverView(
+                dossier_id=dossier.id,
+                status=dossier.status,
+                reason=normalized_reason,
+            )
+            should_issue = True
+        if should_issue and self._enqueue_certificate_issue is not None:
+            self._enqueue_certificate_issue(dossier_id)
+        return result
 
     async def get_order(
         self,
@@ -611,7 +750,7 @@ class PaymentService:
                     order.status = PaymentStatus.PAID
                     order.paid_at = self._clock()
                     await self._settle_fee_obligation(order)
-                    self._add_paid_notification(
+                    await self._add_paid_notification(
                         dossier,
                         order,
                         source_event_id=payment_event.id,
@@ -738,7 +877,7 @@ class PaymentService:
                     order.paid_at = self._clock()
                     await self._settle_fee_obligation(order)
                     should_issue = True
-                    self._add_paid_notification(
+                    await self._add_paid_notification(
                         dossier,
                         order,
                         source_event_id=uuid5(order.id, "payment-paid"),
@@ -762,6 +901,8 @@ class PaymentService:
             elif provider_order.status == PaymentStatus.FAILED.value:
                 order.status = PaymentStatus.FAILED
             self._expire_if_needed(order)
+            await self._session.flush()
+            await self._session.refresh(order)
             result = self._view(order)
             if result.status is not previous_status:
                 self._audit(
@@ -814,6 +955,13 @@ class PaymentService:
                 **order.metadata_json,
                 "manual_evidence_reference": evidence,
             }
+            await self._add_paid_notification(
+                dossier,
+                order,
+                source_event_id=uuid5(order.id, "manual-payment-paid"),
+            )
+            await self._session.flush()
+            await self._session.refresh(order)
             result = self._view(order)
             self._audit(
                 "payment.order.manually_confirmed",
@@ -944,7 +1092,7 @@ class PaymentService:
         except ValueError:
             return None
 
-    def _add_paid_notification(
+    async def _add_paid_notification(
         self,
         dossier: Dossier,
         order: PaymentOrder,
@@ -964,10 +1112,42 @@ class PaymentService:
                 data_json={
                     "dossierId": str(dossier.id),
                     "paymentOrderId": str(order.id),
+                    "actionPath": f"/dossiers/{dossier.id}",
                 },
                 created_at=self._clock(),
             )
         )
+        await self._add_admin_ready_notifications(
+            dossier,
+            source_event_id=uuid5(source_event_id, "admin-ready"),
+            body=(
+                f"Đã xác nhận {order.amount_minor:,} {order.currency}; "
+                "hồ sơ sẵn sàng để ký blockchain."
+            ),
+        )
+
+    async def _add_admin_ready_notifications(
+        self,
+        dossier: Dossier,
+        *,
+        source_event_id: UUID,
+        body: str,
+    ) -> None:
+        for user_id in await self._auth.list_user_ids_by_role_codes(FINANCE_ROLES):
+            self._session.add(
+                Notification(
+                    user_id=user_id,
+                    source_event_id=source_event_id,
+                    type="DOSSIER_READY_FOR_BLOCKCHAIN",
+                    title="Hồ sơ sẵn sàng ký blockchain",
+                    body=body,
+                    data_json={
+                        "dossierId": str(dossier.id),
+                        "actionPath": "/blockchain",
+                    },
+                    created_at=self._clock(),
+                )
+            )
 
     async def _settle_fee_obligation(self, order: PaymentOrder) -> None:
         if order.fee_obligation_id is None:
