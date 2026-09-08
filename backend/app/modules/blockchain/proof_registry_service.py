@@ -54,8 +54,6 @@ _HEX_BYTES32 = re.compile(r"0x[0-9a-fA-F]{64}")
 _CANONICAL_HASH = re.compile(r"[0-9a-fA-F]{64}")
 _PROOF_CONFIRMED_EVENT = "blockchain.anchored"
 _PROOF_ELIGIBLE_DOSSIER_STATUSES = (
-    DossierStatus.APPROVED,
-    DossierStatus.PAYMENT_PENDING,
     DossierStatus.PAID,
     DossierStatus.ANCHORED,
     DossierStatus.CERTIFICATE_ISSUED,
@@ -368,10 +366,11 @@ class THVProofRegistryService:
             chain_id=self._chain_id,
             contract_address=self._contract_address,
             transaction_request={
+                "from": wallet.wallet_address,
                 "to": self._contract_address,
                 "data": self._as_hex(payload),
-                "chainId": str(self._chain_id),
-                "value": "0",
+                "chainId": hex(self._chain_id),
+                "value": "0x0",
             },
             estimated_gas=estimated_gas,
             gas_price_wei=gas_price,
@@ -760,11 +759,11 @@ class THVProofRegistryService:
                 raise DossierNotFoundError()
             if dossier.status not in _PROOF_ELIGIBLE_DOSSIER_STATUSES:
                 raise BlockchainConflictError(
-                    "A THV proof can be recorded only for an approved dossier."
+                    "A THV proof can be recorded only for a payment-ready dossier."
                 )
             if dossier.current_version_no != normalized_version:
                 raise BlockchainConflictError(
-                    "Only the current approved dossier version can be recorded."
+                    "Only the current payment-ready dossier version can be recorded."
                 )
             version = await self._session.scalar(
                 select(DossierVersion).where(

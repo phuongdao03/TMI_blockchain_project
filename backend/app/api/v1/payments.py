@@ -15,7 +15,10 @@ from app.modules.payments.schemas import (
     FeeObligationData,
     IssuePaymentOrderRequest,
     ManualPaymentConfirmationRequest,
+    PaymentCandidateData,
     PaymentOrderData,
+    PaymentWaiverData,
+    PaymentWaiverRequest,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["payments"])
@@ -28,6 +31,23 @@ PRIVATE_RESPONSES: dict[int | str, dict[str, Any]] = {
     422: {"description": "Payment request is invalid.", "model": ErrorEnvelope},
     503: {"description": "Payment provider unavailable.", "model": ErrorEnvelope},
 }
+
+
+@router.get(
+    "/admin/payment-candidates",
+    response_model=SuccessEnvelope[list[PaymentCandidateData]],
+    responses=PRIVATE_RESPONSES,
+)
+async def list_payment_candidates(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: PaymentServiceDependency,
+) -> SuccessEnvelope[list[PaymentCandidateData]]:
+    candidates = await service.list_payment_candidates(principal)
+    return SuccessEnvelope(
+        data=[PaymentCandidateData.model_validate(item) for item in candidates],
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
 
 
 @router.post(
@@ -58,6 +78,34 @@ async def create_payment_order(
     )
     return SuccessEnvelope(
         data=PaymentOrderData.model_validate(order),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/admin/dossiers/{dossier_id}/payment-waiver",
+    response_model=SuccessEnvelope[PaymentWaiverData],
+    responses=PRIVATE_RESPONSES,
+)
+async def waive_dossier_payment(
+    dossier_id: UUID,
+    payload: PaymentWaiverRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: PaymentServiceDependency,
+    idempotency_key: Annotated[
+        str,
+        Header(alias="Idempotency-Key", min_length=1, max_length=128),
+    ],
+) -> SuccessEnvelope[PaymentWaiverData]:
+    waiver = await service.waive_payment(
+        principal,
+        dossier_id,
+        idempotency_key=idempotency_key,
+        reason=payload.reason,
+    )
+    return SuccessEnvelope(
+        data=PaymentWaiverData.model_validate(waiver),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 

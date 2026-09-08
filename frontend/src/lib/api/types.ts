@@ -521,6 +521,19 @@ export type DossierStatus =
   | "CANCELLED";
 
 export type DossierVisibility = "PRIVATE" | "UNLISTED" | "PUBLIC";
+
+export interface PaymentWaiver {
+  dossierId: string;
+  status: DossierStatus;
+  reason: string;
+}
+
+export interface PaymentCandidate {
+  dossierId: string;
+  dossierCode: string;
+  dossierTitle: string;
+  versionNo: number;
+}
 export type EvidenceAccessScope =
   | "PRIVATE"
   | "INTERNAL"

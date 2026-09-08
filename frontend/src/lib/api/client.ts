@@ -57,6 +57,8 @@ import type {
   NotificationItem,
   OperationsMetrics,
   PaymentOrder,
+  PaymentCandidate,
+  PaymentWaiver,
   FeeObligation,
   ProfileUpdate,
   PublicAsset,
@@ -879,6 +881,9 @@ export const dossierApi = {
 };
 
 export const paymentApi = {
+  listCandidates() {
+    return request<PaymentCandidate[]>("/admin/payment-candidates");
+  },
   getFeeObligation(dossierId: string) {
     return request<FeeObligation>(`/dossiers/${dossierId}/fee-obligation`);
   },
@@ -907,6 +912,16 @@ export const paymentApi = {
         method: "POST",
         headers: { "Idempotency-Key": idempotencyKey },
         body: JSON.stringify(input),
+      },
+    );
+  },
+  waive(dossierId: string, reason: string, idempotencyKey: string) {
+    return request<PaymentWaiver>(
+      `/admin/dossiers/${dossierId}/payment-waiver`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ reason }),
       },
     );
   },

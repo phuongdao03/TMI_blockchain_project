@@ -384,9 +384,14 @@ describe("BlockchainSigningWorkspace", () => {
 
     expect(
       await screen.findByText(
-        "Ví không đủ MATIC để trả phí gas. Hãy nạp thêm MATIC rồi thử lại.",
+        "Ví không đủ POL để trả phí gas. Hãy nạp thêm POL rồi thử lại.",
       ),
     ).toBeDefined();
+    expect(sendBrowserTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: "0x3434343434343434343434343434343434343434",
+      }),
+    );
     expect(submitTransaction).not.toHaveBeenCalled();
     expect(
       screen.queryByText("Tài liệu đã được ghi nhận và chưa bị thay đổi."),

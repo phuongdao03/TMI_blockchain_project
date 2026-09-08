@@ -58,6 +58,26 @@ const EVENT_PRESENTATION: Record<
     groupLabel: "Quyền kiểm duyệt",
     tone: "action",
   },
+  PAYMENT_REQUEST_ISSUED: {
+    actionLabel: "Thanh toán ngay",
+    groupLabel: "Thanh toán",
+    tone: "action",
+  },
+  PAYMENT_WAIVED: {
+    actionLabel: "Xem hồ sơ",
+    groupLabel: "Thanh toán",
+    tone: "success",
+  },
+  PAYMENT_CONFIRMED: {
+    actionLabel: "Xem tiến trình",
+    groupLabel: "Thanh toán",
+    tone: "success",
+  },
+  DOSSIER_READY_FOR_BLOCKCHAIN: {
+    actionLabel: "Mở hàng đợi ký",
+    groupLabel: "Blockchain",
+    tone: "action",
+  },
 };
 
 function safeInternalPath(value: unknown): string | null {

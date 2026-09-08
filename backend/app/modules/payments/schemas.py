@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.modules.billing.models import FeeObligationStatus
+from app.modules.dossiers.models import DossierStatus
 from app.modules.payments.models import PaymentStatus
 
 
@@ -63,6 +64,23 @@ class IssuePaymentOrderRequest(PaymentSchema):
     currency: Annotated[str, Field(pattern="^VND$")] = "VND"
     description: Annotated[str, Field(min_length=5, max_length=255)]
     due_at: datetime | None = None
+
+
+class PaymentWaiverRequest(PaymentSchema):
+    reason: Annotated[str, Field(min_length=5, max_length=500)]
+
+
+class PaymentWaiverData(PaymentSchema):
+    dossier_id: UUID
+    status: DossierStatus
+    reason: str
+
+
+class PaymentCandidateData(PaymentSchema):
+    dossier_id: UUID
+    dossier_code: str
+    dossier_title: str
+    version_no: int
 
 
 class ManualPaymentConfirmationRequest(PaymentSchema):

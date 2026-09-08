@@ -65,6 +65,34 @@ describe("notification presentation", () => {
     ).toBeNull();
   });
 
+  it("presents the payment-to-signing lifecycle with direct actions", () => {
+    expect(
+      presentNotification({
+        ...base,
+        type: "PAYMENT_REQUEST_ISSUED",
+        data: { actionPath: "/payments/order-1" },
+      }),
+    ).toMatchObject({
+      actionLabel: "Thanh toán ngay",
+      actionPath: "/payments/order-1",
+      groupLabel: "Thanh toán",
+      tone: "action",
+    });
+
+    expect(
+      presentNotification({
+        ...base,
+        type: "DOSSIER_READY_FOR_BLOCKCHAIN",
+        data: { actionPath: "/blockchain" },
+      }),
+    ).toMatchObject({
+      actionLabel: "Mở hàng đợi ký",
+      actionPath: "/blockchain",
+      groupLabel: "Blockchain",
+      tone: "action",
+    });
+  });
+
   it("formats recent times for quick scanning", () => {
     expect(
       formatNotificationTime(
