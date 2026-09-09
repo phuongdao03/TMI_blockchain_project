@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { selectWorkspaceTheme } from "./workspace-theme";
+
 test.beforeEach(async ({ context }) => {
   await context.addCookies([
     {
@@ -24,7 +26,7 @@ test("operations surfaces switch cleanly between light and dark themes", async (
   page,
 }) => {
   await page.goto("/admin/content");
-  await page.getByRole("button", { name: "Giao diện tối" }).click();
+  await selectWorkspaceTheme(page, "Giao diện tối");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
   const editor = page.locator(".cms-workspace").locator("section").first();
@@ -33,7 +35,7 @@ test("operations surfaces switch cleanly between light and dark themes", async (
   );
   expect(darkBackground).not.toBe("rgb(255, 255, 255)");
 
-  await page.getByRole("button", { name: "Giao diện sáng" }).click();
+  await selectWorkspaceTheme(page, "Giao diện sáng");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   const lightBackground = await editor.evaluate(
     (element) => getComputedStyle(element).backgroundColor,

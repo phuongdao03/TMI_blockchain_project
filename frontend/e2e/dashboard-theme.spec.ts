@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { selectWorkspaceTheme } from "./workspace-theme";
+
 test.beforeEach(async ({ context }) => {
   await context.addCookies([
     {
@@ -41,7 +43,7 @@ test("dark mode keeps applicant dashboard surfaces and labels readable", async (
   page,
 }) => {
   await page.goto("/dashboard");
-  await page.getByRole("button", { name: "Giao diện tối" }).click();
+  await selectWorkspaceTheme(page, "Giao diện tối");
 
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   const metrics = page.getByRole("region", { name: "Chỉ số tổng quan" });

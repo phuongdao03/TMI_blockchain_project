@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { selectWorkspaceTheme } from "./workspace-theme";
+
 test.beforeEach(async ({ context }) => {
   await context.addCookies([
     {
@@ -46,7 +48,7 @@ test("admin charts stay readable and refresh on desktop and mobile", async ({
   await page.getByRole("button", { name: "Làm mới dữ liệu" }).click();
   await refreshed;
 
-  await page.getByRole("button", { name: "Giao diện tối" }).click();
+  await selectWorkspaceTheme(page, "Giao diện tối");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.locator("body")).not.toHaveCSS("overflow-x", "scroll");
 });

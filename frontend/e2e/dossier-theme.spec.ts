@@ -1,12 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+import { selectWorkspaceTheme } from "./workspace-theme";
+
 test("dark mode keeps submitted dossier notices and workflow readable", async ({
   page,
   request,
 }) => {
   await request.post("http://127.0.0.1:4010/api/e2e/reset-payment");
   await page.goto("/dossiers/9155dbf5-bb3e-449d-8bf0-9572cc642cac");
-  await page.getByRole("button", { name: "Giao diện tối" }).click();
+  await selectWorkspaceTheme(page, "Giao diện tối");
 
   const summary = page.locator(".dossier-state-card");
   const readonlyNotice = page.locator(".dossier-readonly-notice");
@@ -74,7 +76,7 @@ test("dark mode keeps the selected dossier visibility card readable", async ({
   page,
 }) => {
   await page.goto("/dossiers/new");
-  await page.getByRole("button", { name: "Giao diện tối" }).click();
+  await selectWorkspaceTheme(page, "Giao diện tối");
 
   const privateOption = page
     .locator(".dossier-visibility-option")

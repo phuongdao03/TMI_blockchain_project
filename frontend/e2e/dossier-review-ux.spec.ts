@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { selectWorkspaceTheme } from "./workspace-theme";
+
 const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
 
 const baseCookies = [
@@ -34,7 +36,7 @@ test("applicant sees a server-driven preparation journey", async ({ page }) => {
   await expect(
     page.getByText(/tệp được tải lên sau khi bản nháp/i),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Giao diện tối" }).click();
+  await selectWorkspaceTheme(page, "Giao diện tối");
   const preparation = page
     .getByRole("heading", {
       name: "Tài liệu cần chuẩn bị",

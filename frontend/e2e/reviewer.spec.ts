@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { selectWorkspaceTheme } from "./workspace-theme";
+
 const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
 
 test.beforeEach(async ({ context, request }) => {
@@ -142,7 +144,7 @@ test("retired similarity route returns reviewer to the main queue", async ({
 
 test("reviewer assessment remains legible in dark mode", async ({ page }) => {
   await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
-  await page.getByRole("button", { name: "Giao diện tối" }).click();
+  await selectWorkspaceTheme(page, "Giao diện tối");
 
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   const controlSummary = page.getByRole("region", {
@@ -162,7 +164,7 @@ test("reviewer assessment remains legible in dark mode", async ({ page }) => {
   );
   await expect(firstCriterion).toBeVisible();
 
-  await page.getByRole("button", { name: "Giao diện sáng" }).click();
+  await selectWorkspaceTheme(page, "Giao diện sáng");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(controlSummary).toHaveCSS(
     "background-color",
