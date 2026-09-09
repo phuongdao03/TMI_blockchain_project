@@ -64,7 +64,7 @@ export function DashboardContextHeader({
         </h1>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="dashboard-context-header__actions flex shrink-0 items-center gap-2">
         <button
           aria-controls={
             navigationOpen ? "dashboard-workspace-navigation" : undefined

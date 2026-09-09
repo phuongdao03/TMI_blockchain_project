@@ -101,7 +101,7 @@ export function DashboardOverview() {
   const primaryAction = primaryDossier ? nextAction(primaryDossier) : null;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="dashboard-overview mx-auto max-w-7xl space-y-8">
       <header>
         <div>
           <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-primary-700">
@@ -129,7 +129,7 @@ export function DashboardOverview() {
         </div>
       ) : null}
 
-      <section className="hero-grid-surface relative overflow-hidden rounded-2xl border border-white/8 bg-neutral-950 px-6 py-8 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:min-h-72 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-12 lg:px-10 lg:py-10">
+      <section className="dashboard-overview__hero hero-grid-surface relative overflow-hidden rounded-2xl border border-white/8 bg-neutral-950 px-6 py-8 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:min-h-72 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-12 lg:px-10 lg:py-10">
         <div className="relative z-10 max-w-3xl">
           <span className="mb-7 grid size-11 place-items-center rounded-lg border border-gold-300/30 bg-gold-300/10 text-gold-300">
             {primaryDossier && attentionStatuses.has(primaryDossier.status) ? (
@@ -166,7 +166,7 @@ export function DashboardOverview() {
 
       <section
         aria-label="Chỉ số tổng quan"
-        className="dashboard-surface grid overflow-hidden rounded-xl border md:grid-cols-3"
+        className="dashboard-overview__metrics dashboard-surface grid overflow-hidden rounded-xl border md:grid-cols-3"
       >
         {[
           {

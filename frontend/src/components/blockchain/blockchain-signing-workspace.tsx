@@ -106,8 +106,11 @@ function verificationMessage(status: string) {
   if (status === "CONFIRMED") {
     return "Tài liệu đã được ghi nhận và chưa bị thay đổi.";
   }
-  if (status === "BROADCAST" || status === "SIGNING") {
+  if (status === "BROADCAST") {
     return "Giao dịch đã gửi, đang chờ mạng Polygon xác nhận.";
+  }
+  if (status === "SIGNING") {
+    return "MetaMask chưa trả về mã giao dịch. Bạn có thể mở lại ví để tiếp tục ký.";
   }
   if (status === "FAILED") {
     return "Giao dịch chưa được ghi nhận. Vui lòng kiểm tra lỗi và thử lại.";
@@ -681,8 +684,8 @@ export function BlockchainSigningWorkspace() {
       </section>
 
       {displayedSelected ? (
-        <section className="blockchain-surface rounded-2xl border p-6 sm:p-8">
-          <div className="flex items-start justify-between gap-5">
+        <section className="blockchain-signing-panel blockchain-surface rounded-2xl border p-6 sm:p-8">
+          <div className="blockchain-signing-heading flex items-start justify-between gap-5">
             <div>
               <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
                 Xác nhận trước khi ký
@@ -702,7 +705,7 @@ export function BlockchainSigningWorkspace() {
           </div>
           <ol
             aria-label="Tiến trình ký"
-            className="mt-7 grid gap-2 sm:grid-cols-4"
+            className="blockchain-signing-steps mt-7 grid gap-2 sm:grid-cols-4"
           >
             {signingSteps.map((step, index) => {
               const currentStep = signingStep(displayedSelected.status, busy);
@@ -754,7 +757,7 @@ export function BlockchainSigningWorkspace() {
             ) : null}
           </div>
 
-          <dl className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <dl className="blockchain-signing-metadata mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="blockchain-soft-surface rounded-xl p-4">
               <dt className="text-xs text-neutral-500">Mạng blockchain</dt>
               <dd className="mt-2 font-bold text-neutral-950">
@@ -832,7 +835,7 @@ export function BlockchainSigningWorkspace() {
               ) : null}
             </div>
           ) : null}
-          <details className="mt-5 rounded-xl border border-neutral-200 p-4">
+          <details className="blockchain-signing-details mt-5 rounded-xl border border-neutral-200 p-4">
             <summary className="cursor-pointer font-bold text-neutral-950">
               Chi tiết nâng cao
             </summary>
@@ -889,7 +892,7 @@ export function BlockchainSigningWorkspace() {
                 !connected ||
                 isWrongWallet ||
                 isWrongNetwork ||
-                ["SIGNING", "BROADCAST", "CONFIRMED", "REPLACED"].includes(
+                ["BROADCAST", "CONFIRMED", "REPLACED"].includes(
                   displayedSelected.status,
                 )
               }
@@ -901,11 +904,15 @@ export function BlockchainSigningWorkspace() {
               ) : (
                 <FileCheck2 className="size-4" />
               )}
-              {displayedSelected.status === "BROADCAST"
-                ? "Đã gửi, đang chờ xác nhận"
-                : displayedSelected.status === "CONFIRMED"
-                  ? "Đã ghi nhận blockchain"
-                  : "Ký và ghi nhận blockchain"}
+              {busy === "sign"
+                ? "Đang mở MetaMask…"
+                : displayedSelected.status === "BROADCAST"
+                  ? "Đã gửi, đang chờ xác nhận"
+                  : displayedSelected.status === "CONFIRMED"
+                    ? "Đã ghi nhận blockchain"
+                    : displayedSelected.status === "SIGNING"
+                      ? "Mở lại MetaMask để ký"
+                      : "Ký và ghi nhận blockchain"}
             </button>
           </div>
         </section>

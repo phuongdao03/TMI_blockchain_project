@@ -162,6 +162,83 @@ describe("BlockchainSigningWorkspace", () => {
     ).toBe(false);
   });
 
+  it("lets an operator reopen MetaMask when an intent is still SIGNING without a transaction hash", async () => {
+    const user = userEvent.setup();
+    const walletAddress = "0x3434343434343434343434343434343434343434";
+    currentWallet.mockResolvedValue({
+      id: "wallet-link",
+      walletAddress,
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-26T00:00:00Z",
+    });
+    currentBrowserWallet.mockResolvedValue({
+      address: walletAddress,
+      chainId: 137,
+    });
+    proofQueue.mockResolvedValue([
+      {
+        transactionId: "transaction-signing",
+        dossierId: "dossier-signing",
+        dossierCode: "THV-2026-SIGNING",
+        dossierTitle: "Hồ sơ đang chờ ví",
+        version: 2,
+        proofHash: `0x${"ab".repeat(32)}`,
+        status: "SIGNING",
+        txHash: null,
+        confirmations: 0,
+        errorCode: null,
+        createdAt: "2026-08-26T00:00:00Z",
+      },
+    ]);
+    prepareIntent.mockResolvedValue({
+      intentId: "intent-signing",
+      transactionId: "transaction-signing",
+      dossierId: "dossier-signing",
+      dossierCode: "THV-2026-SIGNING",
+      dossierTitle: "Hồ sơ đang chờ ví",
+      version: 2,
+      assetId: `0x${"11".repeat(32)}`,
+      proofHash: `0x${"ab".repeat(32)}`,
+      network: "polygon-mainnet",
+      chainId: 137,
+      contractAddress: "0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F",
+      transactionRequest: {
+        to: "0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F",
+      },
+      estimatedGas: 100000,
+      gasPriceWei: 30000000000,
+      walletBalanceWei: 1000000000000000000,
+      expiresAt: "2026-08-26T00:10:00Z",
+    });
+    sendBrowserTransaction.mockRejectedValue(
+      Object.assign(new Error("User rejected the request"), { code: 4001 }),
+    );
+
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: /Hồ sơ đang chờ ví/ }),
+    );
+
+    expect(
+      screen.getByText(
+        "MetaMask chưa trả về mã giao dịch. Bạn có thể mở lại ví để tiếp tục ký.",
+      ),
+    ).toBeDefined();
+    const retryButton = screen.getByRole("button", {
+      name: "Mở lại MetaMask để ký",
+    });
+    expect(retryButton.hasAttribute("disabled")).toBe(false);
+
+    await user.click(retryButton);
+    expect(prepareIntent).toHaveBeenCalledWith(
+      "dossier-signing",
+      2,
+      walletAddress,
+    );
+    expect(sendBrowserTransaction).toHaveBeenCalledOnce();
+  });
+
   it("guides an authorized Super Admin to verify a wallet instead of leaving the signing queue loading", async () => {
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
 
