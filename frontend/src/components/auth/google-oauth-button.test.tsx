@@ -91,6 +91,48 @@ describe("GoogleOAuthButton", () => {
     expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
   });
 
+  it("finishes a consumed redirect credential after the effect is cleaned up", async () => {
+    sessionStorage.setItem("tmi.google-oauth.redirect-pending", "1");
+    let resolveRedirect!: (credential: {
+      user: { getIdToken: () => Promise<string> };
+    }) => void;
+    mocks.getRedirectResult.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRedirect = resolve;
+      }),
+    );
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            user: {
+              id: "user-mobile-remount",
+              email: "mobile-remount@tmi.vn",
+              roles: ["PUBLIC_USER"],
+            },
+          },
+          meta: { request_id: "request-mobile-remount" },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const view = render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
+    view.unmount();
+    resolveRedirect({
+      user: { getIdToken: vi.fn(async () => "redirect-remount-token") },
+    });
+
+    await waitFor(() =>
+      expect(mocks.setQueryData).toHaveBeenCalledWith(
+        ["auth", "me"],
+        expect.objectContaining({ email: "mobile-remount@tmi.vn" }),
+      ),
+    );
+    expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
+  });
+
   it("clears the pending marker when a mobile redirect cannot start", async () => {
     vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
       "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Safari/604.1",

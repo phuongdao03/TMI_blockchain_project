@@ -128,12 +128,12 @@ export function GoogleOAuthButton({
 
     void getRedirectResult(getFirebaseAuth())
       .then(async (credential) => {
-        if (!active) return;
         if (credential) {
           setPendingRedirect(false);
           await finishSignIn(credential.user);
           return;
         }
+        if (!active) return;
         if (redirectWasStarted) {
           setPendingRedirect(false);
           setError("Phiên đăng nhập Google chưa hoàn tất. Vui lòng thử lại.");
