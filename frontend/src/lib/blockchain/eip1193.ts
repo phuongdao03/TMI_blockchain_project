@@ -29,7 +29,9 @@ export function walletAddressesMatch(
   actual: string | null | undefined,
 ): boolean {
   return Boolean(
-    expected && actual && expected.trim().toLowerCase() === actual.trim().toLowerCase(),
+    expected &&
+      actual &&
+      expected.trim().toLowerCase() === actual.trim().toLowerCase(),
   );
 }
 
@@ -153,7 +155,9 @@ export async function switchChain(chainId: number): Promise<void> {
     });
     return;
   }
-  await (await activeProvider()).request({
+  await (
+    await activeProvider()
+  ).request({
     method: "wallet_switchEthereumChain",
     params: [{ chainId: `0x${chainId.toString(16)}` }],
   });

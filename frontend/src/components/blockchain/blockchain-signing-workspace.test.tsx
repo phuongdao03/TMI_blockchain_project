@@ -61,10 +61,10 @@ vi.mock("@/lib/blockchain/eip1193", () => ({
   subscribeWalletChanges: vi.fn(() => () => undefined),
   switchChain: vi.fn(),
   walletOptions: vi.fn(() => []),
-  walletAddressesMatch: (
-    expected?: string | null,
-    actual?: string | null,
-  ) => Boolean(expected && actual && expected.toLowerCase() === actual.toLowerCase()),
+  walletAddressesMatch: (expected?: string | null, actual?: string | null) =>
+    Boolean(
+      expected && actual && expected.toLowerCase() === actual.toLowerCase(),
+    ),
   walletErrorCode: (error: { code?: number | string; message?: string }) => {
     if (error?.code === 4001) return "USER_REJECTED";
     if (error?.code === -32002) return "REQUEST_PENDING";
@@ -150,7 +150,9 @@ describe("BlockchainSigningWorkspace", () => {
     ]);
 
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
-    await user.click(await screen.findByRole("button", { name: /Tác phẩm chờ ký/ }));
+    await user.click(
+      await screen.findByRole("button", { name: /Tác phẩm chờ ký/ }),
+    );
 
     expect(screen.queryByText("Sai tài khoản ví")).toBeNull();
     expect(

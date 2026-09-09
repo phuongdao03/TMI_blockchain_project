@@ -68,9 +68,7 @@ describe("GoogleOAuthButton", () => {
       screen.getByRole("button", { name: "Tiếp tục với Google" }),
     );
 
-    await waitFor(() =>
-      expect(mocks.signInWithPopup).toHaveBeenCalledOnce(),
-    );
+    await waitFor(() => expect(mocks.signInWithPopup).toHaveBeenCalledOnce());
     expect(mocks.setCustomParameters).toHaveBeenCalledWith({
       prompt: "select_account",
     });

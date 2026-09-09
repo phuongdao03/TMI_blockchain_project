@@ -79,8 +79,9 @@ def test_operations_metrics_are_server_aggregated_and_role_protected() -> None:
     asyncio.run(exercise())
 
 
-def test_operations_metrics_keep_core_dashboard_available_when_job_metrics_fail(
-) -> None:
+def test_operations_metrics_keep_core_dashboard_available_when_job_metrics_fail() -> (
+    None
+):
     async def exercise() -> None:
         engine = create_async_engine("sqlite+aiosqlite:///:memory:")
         async with AsyncSession(engine) as session:

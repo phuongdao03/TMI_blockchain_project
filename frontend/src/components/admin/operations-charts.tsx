@@ -174,7 +174,10 @@ export function OperationsJobHealthChart({
     >
       {rows.length ? (
         rows.map(([status, value]) => (
-          <div className="grid grid-cols-[7rem_1fr_auto] items-center gap-3" key={status}>
+          <div
+            className="grid grid-cols-[7rem_1fr_auto] items-center gap-3"
+            key={status}
+          >
             <span className="truncate text-xs font-semibold text-neutral-600">
               {jobStatusLabels[status] ?? "Trạng thái khác"}
             </span>

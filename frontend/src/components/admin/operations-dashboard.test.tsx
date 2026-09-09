@@ -9,19 +9,19 @@ import { OperationsDashboard } from "@/components/admin/operations-dashboard";
 const metrics = vi.hoisted(() => vi.fn());
 
 const metricsPayload = {
-      dossierFunnel: { UNDER_REVIEW: 4, CERTIFICATE_ISSUED: 2 },
-      overdueReviews: 3,
-      reviewerWorkload: [
-        { reviewerEmail: "reviewer@tmigroup.vn", activeAssignments: 4 },
-      ],
-      paymentFailures: 1,
-      blockchainFailures: 2,
-      publicCatalogCacheHitRatio: 0.91,
-      publicCatalogCacheOperations: {},
-      jobStatusCounts: { QUEUED: 2, DEAD_LETTERED: 1 },
-      oldestQueuedJobAgeSeconds: 120,
-      jobRetryFailures: 3,
-      deadLetteredJobsByTask: { "blockchain.broadcast": 1 },
+  dossierFunnel: { UNDER_REVIEW: 4, CERTIFICATE_ISSUED: 2 },
+  overdueReviews: 3,
+  reviewerWorkload: [
+    { reviewerEmail: "reviewer@tmigroup.vn", activeAssignments: 4 },
+  ],
+  paymentFailures: 1,
+  blockchainFailures: 2,
+  publicCatalogCacheHitRatio: 0.91,
+  publicCatalogCacheOperations: {},
+  jobStatusCounts: { QUEUED: 2, DEAD_LETTERED: 1 },
+  oldestQueuedJobAgeSeconds: 120,
+  jobRetryFailures: 3,
+  deadLetteredJobsByTask: { "blockchain.broadcast": 1 },
 };
 
 vi.mock("@/lib/api/client", () => ({
@@ -31,7 +31,9 @@ vi.mock("@/lib/api/client", () => ({
 function Wrapper({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
     >
       {children}
     </QueryClientProvider>

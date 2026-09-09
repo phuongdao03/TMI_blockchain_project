@@ -260,7 +260,8 @@ export function OperationsDashboard({
             <h2 className="mt-2 text-xl font-bold">Sức khỏe tác vụ</h2>
           </div>
           <p className="text-xs text-neutral-500">
-            Hàng đợi lâu nhất: {Math.round(metrics.data.oldestQueuedJobAgeSeconds / 60)} phút
+            Hàng đợi lâu nhất:{" "}
+            {Math.round(metrics.data.oldestQueuedJobAgeSeconds / 60)} phút
           </p>
         </div>
         <div className="mt-6">
