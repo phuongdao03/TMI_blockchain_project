@@ -4,7 +4,7 @@ export function GET(): Response {
   const origin = canonicalSiteUrl();
   return xmlResponse(
     sitemapUrlSetXml(
-      ["/", "/works", "/map", "/verify"].map((path) => ({
+      ["/", "/works", "/verify"].map((path) => ({
         url: new URL(path, origin),
       })),
     ),

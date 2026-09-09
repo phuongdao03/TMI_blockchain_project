@@ -34,6 +34,9 @@ test("admin charts stay readable and refresh on desktop and mobile", async ({
   await expect(
     page.getByRole("img", { name: "Biểu đồ khối lượng theo chuyên viên" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: "Biểu đồ sức khỏe tác vụ nền" }),
+  ).toBeVisible();
 
   const refreshed = page.waitForResponse(
     (response) =>

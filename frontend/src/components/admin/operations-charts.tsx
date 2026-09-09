@@ -149,3 +149,52 @@ export function ReviewerWorkloadChart({
     </div>
   );
 }
+
+const jobStatusLabels: Record<string, string> = {
+  QUEUED: "Đang chờ",
+  RUNNING: "Đang chạy",
+  SUCCEEDED: "Hoàn tất",
+  DEAD_LETTERED: "Cần can thiệp",
+  CANCELLED: "Đã hủy",
+};
+
+export function OperationsJobHealthChart({
+  counts,
+}: {
+  counts: Record<string, number>;
+}) {
+  const rows = Object.entries(counts).filter(([, value]) => value > 0);
+  const max = Math.max(1, ...rows.map(([, value]) => value));
+
+  return (
+    <div
+      aria-label="Biểu đồ sức khỏe tác vụ nền"
+      className="space-y-3"
+      role="img"
+    >
+      {rows.length ? (
+        rows.map(([status, value]) => (
+          <div className="grid grid-cols-[7rem_1fr_auto] items-center gap-3" key={status}>
+            <span className="truncate text-xs font-semibold text-neutral-600">
+              {jobStatusLabels[status] ?? "Trạng thái khác"}
+            </span>
+            <div className="h-2.5 overflow-hidden rounded-full bg-[var(--theme-elevated)]">
+              <div
+                aria-hidden="true"
+                className={`h-full rounded-full ${
+                  status === "DEAD_LETTERED" ? "bg-error" : "bg-primary-600"
+                }`}
+                style={{ width: `${Math.max(6, (value / max) * 100)}%` }}
+              />
+            </div>
+            <strong className="font-mono text-sm tabular-nums">{value}</strong>
+          </div>
+        ))
+      ) : (
+        <p className="rounded-xl border border-dashed border-[var(--theme-border)] p-5 text-center text-sm text-neutral-500">
+          Chưa có số liệu tác vụ nền.
+        </p>
+      )}
+    </div>
+  );
+}

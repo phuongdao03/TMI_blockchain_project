@@ -425,11 +425,14 @@ describe("layout shells", () => {
     );
 
     const links = screen.getAllByRole("link");
-    for (const href of ["/dashboard", "/search", "/works", "/map"]) {
+    for (const href of ["/dashboard", "/search", "/works"]) {
       expect(links.some((link) => link.getAttribute("href") === href)).toBe(
         true,
       );
     }
+    expect(links.some((link) => link.getAttribute("href") === "/map")).toBe(
+      false,
+    );
     expect(
       links.some((link) => link.getAttribute("href") === "/dossiers"),
     ).toBe(false);

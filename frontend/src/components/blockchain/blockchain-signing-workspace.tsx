@@ -35,6 +35,7 @@ import {
   subscribeWalletChanges,
   switchChain,
   walletOptions,
+  walletAddressesMatch,
   walletErrorCode,
 } from "@/lib/blockchain/eip1193";
 
@@ -218,7 +219,7 @@ export function BlockchainSigningWorkspace() {
     } catch {
       return undefined;
     }
-  }, [queryClient, refreshWalletState]);
+  }, [connected?.address, queryClient, refreshWalletState]);
 
   async function handleConnect() {
     setBusy("connect");
@@ -253,7 +254,10 @@ export function BlockchainSigningWorkspace() {
 
   async function handleVerifyWallet() {
     if (!connected) return;
-    if (wallet.data && wallet.data.walletAddress !== connected.address) {
+    if (
+      wallet.data &&
+      !walletAddressesMatch(wallet.data.walletAddress, connected.address)
+    ) {
       setMessage("Ví đang kết nối không trùng với ví đã được xác minh.");
       return;
     }
@@ -296,7 +300,10 @@ export function BlockchainSigningWorkspace() {
 
   async function handleSign() {
     if (!selected || !connected) return;
-    if (!wallet.data || wallet.data.walletAddress !== connected.address) {
+    if (
+      !wallet.data ||
+      !walletAddressesMatch(wallet.data.walletAddress, connected.address)
+    ) {
       setMessage("Hãy kết nối đúng ví đã được xác minh trước khi ký.");
       return;
     }
@@ -355,7 +362,9 @@ export function BlockchainSigningWorkspace() {
     connected && requiredChain && connected.chainId !== requiredChain,
   );
   const isWrongWallet = Boolean(
-    connected && wallet.data && connected.address !== wallet.data.walletAddress,
+    connected &&
+      wallet.data &&
+      !walletAddressesMatch(connected.address, wallet.data.walletAddress),
   );
 
   if (wallet.isPending)

@@ -2,6 +2,7 @@ import asyncio
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.core.errors import DomainError
@@ -39,6 +40,11 @@ class FixedMetricsRepository:
         return {"blockchain.broadcast": 1}
 
 
+class MissingJobTablesRepository(FixedMetricsRepository):
+    async def job_status_counts(self) -> dict[str, int]:
+        raise SQLAlchemyError("job metrics unavailable")
+
+
 def _principal(role: str, *permissions: str) -> AuthPrincipal:
     return AuthPrincipal(
         user_id=uuid4(),
@@ -68,6 +74,27 @@ def test_operations_metrics_are_server_aggregated_and_role_protected() -> None:
             with pytest.raises(DomainError) as error:
                 await service.metrics(_principal("APPLICANT"))
             assert error.value.code == "OPERATIONS_FORBIDDEN"
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_operations_metrics_keep_core_dashboard_available_when_job_metrics_fail(
+) -> None:
+    async def exercise() -> None:
+        engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+        async with AsyncSession(engine) as session:
+            service = OperationsService(
+                session,
+                repository=MissingJobTablesRepository(),
+            )
+            metrics = await service.metrics(_principal("SUPER_ADMIN"))
+            assert metrics.dossier_funnel == {"DRAFT": 4, "APPROVED": 2}
+            assert metrics.overdue_reviews == 3
+            assert metrics.job_status_counts == {}
+            assert metrics.oldest_queued_job_age_seconds == 0
+            assert metrics.job_retry_failures == 0
+            assert metrics.dead_lettered_jobs_by_task == {}
         await engine.dispose()
 
     asyncio.run(exercise())

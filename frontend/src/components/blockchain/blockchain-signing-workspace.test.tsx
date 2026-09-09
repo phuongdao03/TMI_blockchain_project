@@ -61,6 +61,10 @@ vi.mock("@/lib/blockchain/eip1193", () => ({
   subscribeWalletChanges: vi.fn(() => () => undefined),
   switchChain: vi.fn(),
   walletOptions: vi.fn(() => []),
+  walletAddressesMatch: (
+    expected?: string | null,
+    actual?: string | null,
+  ) => Boolean(expected && actual && expected.toLowerCase() === actual.toLowerCase()),
   walletErrorCode: (error: { code?: number | string; message?: string }) => {
     if (error?.code === 4001) return "USER_REJECTED";
     if (error?.code === -32002) return "REQUEST_PENDING";
@@ -114,6 +118,46 @@ describe("BlockchainSigningWorkspace", () => {
 
     expect(await screen.findByText("0x3434…3434")).toBeDefined();
     expect(currentBrowserWallet).toHaveBeenCalledOnce();
+  });
+
+  it("accepts checksum casing differences for the authorized wallet", async () => {
+    const user = userEvent.setup();
+    currentWallet.mockResolvedValue({
+      id: "wallet-link",
+      walletAddress: "0xBfA38182f0D24589e7898DD4892C58c3FDa58042",
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-26T00:00:00Z",
+    });
+    currentBrowserWallet.mockResolvedValue({
+      address: "0xbfa38182f0d24589e7898dd4892c58c3fda58042",
+      chainId: 137,
+    });
+    proofQueue.mockResolvedValue([
+      {
+        transactionId: null,
+        dossierId: "dossier-case",
+        dossierCode: "THV-2026-CASE",
+        dossierTitle: "Tác phẩm chờ ký",
+        version: 1,
+        proofHash: `0x${"ab".repeat(32)}`,
+        status: "CREATED",
+        txHash: null,
+        confirmations: 0,
+        errorCode: null,
+        createdAt: "2026-08-26T00:00:00Z",
+      },
+    ]);
+
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+    await user.click(await screen.findByRole("button", { name: /Tác phẩm chờ ký/ }));
+
+    expect(screen.queryByText("Sai tài khoản ví")).toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: "Ký và ghi nhận blockchain" })
+        .hasAttribute("disabled"),
+    ).toBe(false);
   });
 
   it("guides an authorized Super Admin to verify a wallet instead of leaving the signing queue loading", async () => {

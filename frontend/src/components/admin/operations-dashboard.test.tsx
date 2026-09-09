@@ -1,13 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OperationsDashboard } from "@/components/admin/operations-dashboard";
 
-vi.mock("@/lib/api/client", () => ({
-  operationsApi: {
-    metrics: vi.fn(async () => ({
+const metrics = vi.hoisted(() => vi.fn());
+
+const metricsPayload = {
       dossierFunnel: { UNDER_REVIEW: 4, CERTIFICATE_ISSUED: 2 },
       overdueReviews: 3,
       reviewerWorkload: [
@@ -21,19 +22,27 @@ vi.mock("@/lib/api/client", () => ({
       oldestQueuedJobAgeSeconds: 120,
       jobRetryFailures: 3,
       deadLetteredJobsByTask: { "blockchain.broadcast": 1 },
-    })),
-  },
+};
+
+vi.mock("@/lib/api/client", () => ({
+  operationsApi: { metrics },
 }));
 
 function Wrapper({ children }: { children: ReactNode }) {
   return (
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       {children}
     </QueryClientProvider>
   );
 }
 
 describe("OperationsDashboard", () => {
+  beforeEach(() => {
+    metrics.mockReset().mockResolvedValue(metricsPayload);
+  });
+
   it("presents work queues without raw status, IDs or infrastructure metrics", async () => {
     render(<OperationsDashboard />, { wrapper: Wrapper });
 
@@ -52,10 +61,28 @@ describe("OperationsDashboard", () => {
       screen.getByRole("img", { name: "Biểu đồ khối lượng theo chuyên viên" }),
     ).toBeDefined();
     expect(
+      screen.getByRole("img", { name: "Biểu đồ sức khỏe tác vụ nền" }),
+    ).toBeDefined();
+    expect(
       screen.getByRole("button", { name: "Làm mới dữ liệu" }),
     ).toBeDefined();
     expect(screen.queryByText("UNDER_REVIEW")).toBeNull();
     expect(screen.queryByText(/cache/i)).toBeNull();
     expect(screen.queryByText(/blockchain/i)).toBeNull();
+  });
+
+  it("offers an in-place retry when the overview request fails", async () => {
+    const user = userEvent.setup();
+    metrics
+      .mockRejectedValueOnce(new Error("temporary outage"))
+      .mockResolvedValueOnce(metricsPayload);
+
+    render(<OperationsDashboard />, { wrapper: Wrapper });
+
+    await user.click(
+      await screen.findByRole("button", { name: "Thử tải lại tổng quan" }),
+    );
+    expect(await screen.findByText("Đang thẩm định")).toBeDefined();
+    expect(metrics).toHaveBeenCalledTimes(2);
   });
 });

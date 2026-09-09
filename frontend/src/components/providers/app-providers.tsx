@@ -9,13 +9,10 @@ import { type ReactNode, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { authApi } from "@/lib/api/client";
-import { wagmiConfig } from "@/lib/blockchain/wagmi-config";
-import { WagmiProvider } from "wagmi";
 
 const sessionlessPrefixes = [
   "/works",
   "/search",
-  "/map",
   "/verify",
   "/voting",
   "/process",
@@ -58,11 +55,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
   );
 
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <SessionBootstrap />
-        {children}
-      </QueryClientProvider>
-    </WagmiProvider>
+    <QueryClientProvider client={queryClient}>
+      <SessionBootstrap />
+      {children}
+    </QueryClientProvider>
   );
 }

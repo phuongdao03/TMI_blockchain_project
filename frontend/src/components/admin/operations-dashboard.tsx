@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import {
+  OperationsJobHealthChart,
   OperationsRiskChart,
   ReviewerWorkloadChart,
 } from "@/components/admin/operations-charts";
@@ -42,12 +43,47 @@ export function OperationsDashboard({
     queryFn: operationsApi.metrics,
   });
   if (metrics.isPending)
-    return <p role="status">Đang tổng hợp dữ liệu vận hành...</p>;
+    return (
+      <section
+        aria-label="Đang tải tổng quan vận hành"
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        role="status"
+      >
+        <span className="sr-only">Đang tổng hợp dữ liệu vận hành...</span>
+        {Array.from({ length: 4 }, (_, index) => (
+          <span
+            aria-hidden="true"
+            className="h-28 animate-pulse rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)]"
+            key={index}
+          />
+        ))}
+      </section>
+    );
   if (!metrics.data)
     return (
-      <p className="text-error" role="alert">
-        Không thể tải tổng quan vận hành. Vui lòng thử lại.
-      </p>
+      <section
+        className="rounded-xl border border-error/30 bg-[var(--theme-surface)] p-5"
+        role="alert"
+      >
+        <h2 className="font-bold text-[var(--theme-text)]">
+          Chưa tải được tổng quan vận hành
+        </h2>
+        <p className="mt-2 text-sm text-[var(--theme-muted)]">
+          Dữ liệu chưa bị mất. Hãy thử kết nối lại với dịch vụ vận hành.
+        </p>
+        <button
+          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary-700 px-4 text-sm font-bold text-white disabled:opacity-60"
+          disabled={metrics.isFetching}
+          onClick={() => void metrics.refetch()}
+          type="button"
+        >
+          <RefreshCw
+            aria-hidden="true"
+            className={`size-4 ${metrics.isFetching ? "animate-spin" : ""}`}
+          />
+          {metrics.isFetching ? "Đang tải lại" : "Thử tải lại tổng quan"}
+        </button>
+      </section>
     );
   const activeDossiers = Object.entries(metrics.data.dossierFunnel)
     .filter(([status]) => !["REJECTED", "CERTIFICATE_ISSUED"].includes(status))
@@ -213,6 +249,22 @@ export function OperationsDashboard({
         </div>
         <div className="mt-6">
           <ReviewerWorkloadChart rows={metrics.data.reviewerWorkload} />
+        </div>
+      </section>
+      <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
+              Hệ thống nền
+            </p>
+            <h2 className="mt-2 text-xl font-bold">Sức khỏe tác vụ</h2>
+          </div>
+          <p className="text-xs text-neutral-500">
+            Hàng đợi lâu nhất: {Math.round(metrics.data.oldestQueuedJobAgeSeconds / 60)} phút
+          </p>
+        </div>
+        <div className="mt-6">
+          <OperationsJobHealthChart counts={metrics.data.jobStatusCounts} />
         </div>
       </section>
       {user?.roles.includes("SUPER_ADMIN") ? <JobOperationsWorkspace /> : null}

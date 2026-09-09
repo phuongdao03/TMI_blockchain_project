@@ -64,14 +64,6 @@ class PublicAssetDetailData(PublicSchema):
     confirmations: int
 
 
-class PublicMapMarkerData(PublicSchema):
-    slug: str
-    title: str
-    category_name: str
-    latitude: float
-    longitude: float
-
-
 class PublicHomeData(PublicSchema):
     certificate_count: int
     category_count: int

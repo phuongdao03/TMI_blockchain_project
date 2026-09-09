@@ -67,7 +67,6 @@ import type {
   PublicCatalogFilters,
   PublicCatalogWork,
   PublicCertificateVersion,
-  PublicMapMarker,
   PublicationStatus,
   PublicWorkAdmin,
   PublicWorkCategory,
@@ -1192,10 +1191,6 @@ export const publicApi = {
     return request<PublicAssetDetail>(
       `/public/assets/${encodeURIComponent(slug)}`,
     );
-  },
-  map(category?: string) {
-    const suffix = category ? `?category=${encodeURIComponent(category)}` : "";
-    return request<PublicMapMarker[]>(`/public/map${suffix}`);
   },
   works(filters: PublicCatalogFilters = {}) {
     const parameters = new URLSearchParams({

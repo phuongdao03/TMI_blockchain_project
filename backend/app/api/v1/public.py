@@ -65,7 +65,6 @@ from app.modules.public.schemas import (
     PublicCertificateVersionData,
     PublicDossierVerificationData,
     PublicHomeData,
-    PublicMapMarkerData,
     PublicSitemapEntryData,
     PublicSitemapManifestData,
     PublicWorkCardData,
@@ -479,44 +478,6 @@ async def public_asset(
             contract_address=detail.contract_address,
             confirmations=detail.confirmations,
         ),
-        meta=ResponseMeta(request_id=request.state.request_id),
-    )
-
-
-@router.get(
-    "/public/map",
-    response_model=SuccessEnvelope[list[PublicMapMarkerData]],
-)
-async def public_map(
-    request: Request,
-    service: PublicCatalogDependency,
-    category: Annotated[str | None, Query(max_length=64)] = None,
-    min_latitude: Annotated[
-        float | None,
-        Query(alias="minLat", ge=-90, le=90),
-    ] = None,
-    max_latitude: Annotated[
-        float | None,
-        Query(alias="maxLat", ge=-90, le=90),
-    ] = None,
-    min_longitude: Annotated[
-        float | None,
-        Query(alias="minLng", ge=-180, le=180),
-    ] = None,
-    max_longitude: Annotated[
-        float | None,
-        Query(alias="maxLng", ge=-180, le=180),
-    ] = None,
-) -> SuccessEnvelope[list[PublicMapMarkerData]]:
-    markers = await service.map_markers(
-        category=category,
-        min_latitude=min_latitude,
-        max_latitude=max_latitude,
-        min_longitude=min_longitude,
-        max_longitude=max_longitude,
-    )
-    return SuccessEnvelope(
-        data=[PublicMapMarkerData.model_validate(item) for item in markers],
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 

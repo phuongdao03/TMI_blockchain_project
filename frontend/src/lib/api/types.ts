@@ -1183,14 +1183,6 @@ export interface PublicAssetDetail {
   confirmations: number;
 }
 
-export interface PublicMapMarker {
-  slug: string;
-  title: string;
-  categoryName: string;
-  latitude: number;
-  longitude: number;
-}
-
 export type VerificationStatus =
   | "VALID"
   | "MISMATCH"

@@ -9,8 +9,8 @@ const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
   setQueryData: vi.fn(),
   getRedirectResult: vi.fn(),
+  setCustomParameters: vi.fn(),
   signInWithPopup: vi.fn(),
-  signInWithRedirect: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -24,10 +24,11 @@ vi.mock("@/lib/firebase/client", () => ({
   getFirebaseAuth: () => ({ name: "firebase-auth" }),
 }));
 vi.mock("firebase/auth", () => ({
-  GoogleAuthProvider: vi.fn(),
+  GoogleAuthProvider: class {
+    setCustomParameters = mocks.setCustomParameters;
+  },
   getRedirectResult: mocks.getRedirectResult,
   signInWithPopup: mocks.signInWithPopup,
-  signInWithRedirect: mocks.signInWithRedirect,
 }));
 
 describe("GoogleOAuthButton", () => {
@@ -38,11 +39,29 @@ describe("GoogleOAuthButton", () => {
     mocks.getRedirectResult.mockResolvedValue(null);
   });
 
-  it("uses a full-page redirect for Google sign-in on mobile browsers", async () => {
+  it("opens the account chooser popup from the mobile user gesture", async () => {
     vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
       "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
     );
-    mocks.signInWithRedirect.mockResolvedValue(undefined);
+    mocks.signInWithPopup.mockResolvedValue({
+      user: { getIdToken: vi.fn(async () => "mobile-popup-token") },
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            user: {
+              id: "user-mobile",
+              email: "mobile@tmi.vn",
+              roles: ["PUBLIC_USER"],
+            },
+          },
+          meta: { request_id: "request-mobile" },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
 
     render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
     await userEvent.click(
@@ -50,9 +69,11 @@ describe("GoogleOAuthButton", () => {
     );
 
     await waitFor(() =>
-      expect(mocks.signInWithRedirect).toHaveBeenCalledOnce(),
+      expect(mocks.signInWithPopup).toHaveBeenCalledOnce(),
     );
-    expect(mocks.signInWithPopup).not.toHaveBeenCalled();
+    expect(mocks.setCustomParameters).toHaveBeenCalledWith({
+      prompt: "select_account",
+    });
   });
 
   it("finishes authentication after returning from the mobile redirect", async () => {
@@ -133,11 +154,11 @@ describe("GoogleOAuthButton", () => {
     expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
   });
 
-  it("clears the pending marker when a mobile redirect cannot start", async () => {
+  it("shows a configuration error when a mobile popup cannot start", async () => {
     vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
       "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Safari/604.1",
     );
-    mocks.signInWithRedirect.mockRejectedValue({
+    mocks.signInWithPopup.mockRejectedValue({
       code: "auth/unauthorized-domain",
     });
 

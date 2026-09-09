@@ -5,7 +5,6 @@ import {
   getRedirectResult,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
   type User,
 } from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
@@ -18,16 +17,6 @@ import { getFirebaseAuth, firebaseConfigured } from "@/lib/firebase/client";
 import type { AccountType } from "@/lib/api/types";
 
 const GOOGLE_REDIRECT_PENDING_KEY = "tmi.google-oauth.redirect-pending";
-
-function prefersRedirectSignIn(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return (
-    /Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(
-      navigator.userAgent,
-    ) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
-}
 
 function hasPendingRedirect(): boolean {
   try {
@@ -117,14 +106,12 @@ export function GoogleOAuthButton({
   );
 
   useEffect(() => {
-    if (!firebaseConfigured()) return;
+    if (!firebaseConfigured() || !redirectWasStarted) return;
     let active = true;
 
-    if (redirectWasStarted) {
-      queueMicrotask(() => {
-        if (active) setIsPending(true);
-      });
-    }
+    queueMicrotask(() => {
+      if (active) setIsPending(true);
+    });
 
     void getRedirectResult(getFirebaseAuth())
       .then(async (credential) => {
@@ -134,11 +121,9 @@ export function GoogleOAuthButton({
           return;
         }
         if (!active) return;
-        if (redirectWasStarted) {
-          setPendingRedirect(false);
-          setError("Phiên đăng nhập Google chưa hoàn tất. Vui lòng thử lại.");
-          setIsPending(false);
-        }
+        setPendingRedirect(false);
+        setError("Phiên đăng nhập Google chưa hoàn tất. Vui lòng thử lại.");
+        setIsPending(false);
       })
       .catch((cause: unknown) => {
         if (!active) return;
@@ -160,11 +145,7 @@ export function GoogleOAuthButton({
         throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
       const auth = getFirebaseAuth();
       const provider = new GoogleAuthProvider();
-      if (prefersRedirectSignIn()) {
-        setPendingRedirect(true);
-        await signInWithRedirect(auth, provider);
-        return;
-      }
+      provider.setCustomParameters({ prompt: "select_account" });
       const credential = await signInWithPopup(auth, provider);
       await finishSignIn(credential.user);
     } catch (cause) {

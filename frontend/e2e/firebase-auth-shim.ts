@@ -18,7 +18,9 @@ function authError(code: string): Error & { code: string } {
   return Object.assign(new Error(code), { code });
 }
 
-export class GoogleAuthProvider {}
+export class GoogleAuthProvider {
+  setCustomParameters(): void {}
+}
 
 export function getAuth(): E2EAuth {
   return auth;
@@ -85,16 +87,6 @@ export async function signInWithPopup(
     : user("applicant@tmigroup.vn", "e2e-applicant-token");
   target.currentUser = signedIn;
   return { user: signedIn };
-}
-
-export async function signInWithRedirect(target: E2EAuth): Promise<void> {
-  await signInWithPopup(target);
-  // Firebase leaves the current document for mobile OAuth. Recreate that
-  // boundary with a callback marker that survives the development-server
-  // reload. The component removes it before entering the authenticated area.
-  const callback = new URL(window.location.href);
-  callback.searchParams.set("__tmi_e2e_firebase_redirect", "1");
-  window.location.assign(callback);
 }
 
 export async function getRedirectResult(

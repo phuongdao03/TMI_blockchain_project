@@ -11,7 +11,6 @@ import {
   CircleHelp,
   History,
   LayoutDashboard,
-  Map,
   Menu,
   Search,
   Settings,
@@ -48,7 +47,6 @@ const discoveryItems: NavigationItem[] = [
   { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
   { href: "/search", label: "Tìm đề cử", icon: Search },
   { href: "/works", label: "Thư viện đề cử", icon: BookOpen },
-  { href: "/map", label: "Bản đồ đề cử", icon: Map },
   { href: "/verify", label: "Tra cứu chứng thư", icon: ShieldCheck },
 ];
 
@@ -202,7 +200,7 @@ function mobileItemsFor(
     (item) => item.href.startsWith("/admin/") || item.href === "/blockchain",
   );
   const priorities: Record<WorkspacePersona, string[]> = {
-    VIEWER: ["/dashboard", "/search", "/works", "/map"],
+    VIEWER: ["/dashboard", "/search", "/works"],
     USER: ["/dashboard", "/dossiers", "/notifications", "/search"],
     MODERATOR: ["/reviews", "/notifications", "/search", "/works"],
     SUPER_ADMIN: [

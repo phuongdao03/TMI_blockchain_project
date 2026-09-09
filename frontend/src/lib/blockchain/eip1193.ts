@@ -24,6 +24,15 @@ let connectedConnectorUid: string | undefined;
 
 export type WalletRpcError = Error & { code?: number | string };
 
+export function walletAddressesMatch(
+  expected: string | null | undefined,
+  actual: string | null | undefined,
+): boolean {
+  return Boolean(
+    expected && actual && expected.trim().toLowerCase() === actual.trim().toLowerCase(),
+  );
+}
+
 function provider(): Eip1193Provider {
   const injected =
     typeof window === "undefined"
@@ -144,7 +153,7 @@ export async function switchChain(chainId: number): Promise<void> {
     });
     return;
   }
-  await provider().request({
+  await (await activeProvider()).request({
     method: "wallet_switchEthereumChain",
     params: [{ chainId: `0x${chainId.toString(16)}` }],
   });
@@ -170,13 +179,23 @@ export async function sendTransaction(
 }
 
 export function subscribeWalletChanges(onChange: () => void): () => void {
-  const active = provider();
-  active.on?.("accountsChanged", onChange);
-  active.on?.("chainChanged", onChange);
-  active.on?.("disconnect", onChange);
+  let active: Eip1193Provider | undefined;
+  let disposed = false;
+
+  void activeProvider()
+    .then((resolved) => {
+      if (disposed) return;
+      active = resolved;
+      active.on?.("accountsChanged", onChange);
+      active.on?.("chainChanged", onChange);
+      active.on?.("disconnect", onChange);
+    })
+    .catch(() => undefined);
+
   return () => {
-    active.removeListener?.("accountsChanged", onChange);
-    active.removeListener?.("chainChanged", onChange);
-    active.removeListener?.("disconnect", onChange);
+    disposed = true;
+    active?.removeListener?.("accountsChanged", onChange);
+    active?.removeListener?.("chainChanged", onChange);
+    active?.removeListener?.("disconnect", onChange);
   };
 }

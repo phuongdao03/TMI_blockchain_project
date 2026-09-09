@@ -1,7 +1,9 @@
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import DomainError
@@ -15,6 +17,7 @@ from app.modules.public.telemetry import (
 )
 
 OPERATIONS_ROLES = frozenset({"SUPER_ADMIN"})
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,25 +85,50 @@ class OperationsService:
 
     async def _result(self, catalog: CatalogMetricSnapshot) -> OperationsMetrics:
         now = datetime.now(UTC)
-        oldest_queued_at = await self._repository.oldest_queued_at()
+        dossier_funnel = await self._repository.dossier_funnel()
+        overdue_reviews = await self._repository.overdue_reviews(now)
+        reviewer_workload = await self._repository.reviewer_workload()
+        payment_failures = await self._repository.payment_failures()
+        blockchain_failures = await self._repository.blockchain_failures()
+
+        job_status_counts: dict[str, int] = {}
+        oldest_queued_at: datetime | None = None
+        job_retry_failures = 0
+        dead_lettered_jobs_by_task: dict[str, int] = {}
+        try:
+            # Job telemetry was introduced after the core dashboard. Keep the
+            # core operational view available while a deployment catches up
+            # with that optional schema, and preserve the outer transaction.
+            async with self._session.begin_nested():
+                job_status_counts = await self._repository.job_status_counts()
+                oldest_queued_at = await self._repository.oldest_queued_at()
+                job_retry_failures = await self._repository.job_retry_failures()
+                dead_lettered_jobs_by_task = (
+                    await self._repository.dead_lettered_jobs_by_task()
+                )
+        except SQLAlchemyError:
+            logger.warning("operations_job_metrics_unavailable", exc_info=True)
+            job_status_counts = {}
+            oldest_queued_at = None
+            job_retry_failures = 0
+            dead_lettered_jobs_by_task = {}
+
         if oldest_queued_at is not None and oldest_queued_at.tzinfo is None:
             oldest_queued_at = oldest_queued_at.replace(tzinfo=UTC)
         return OperationsMetrics(
-            dossier_funnel=await self._repository.dossier_funnel(),
-            overdue_reviews=await self._repository.overdue_reviews(datetime.now(UTC)),
-            reviewer_workload=await self._repository.reviewer_workload(),
-            payment_failures=await self._repository.payment_failures(),
-            blockchain_failures=await self._repository.blockchain_failures(),
+            dossier_funnel=dossier_funnel,
+            overdue_reviews=overdue_reviews,
+            reviewer_workload=reviewer_workload,
+            payment_failures=payment_failures,
+            blockchain_failures=blockchain_failures,
             public_catalog_cache_hit_ratio=catalog.cache_hit_ratio,
             public_catalog_cache_operations=catalog.cache_operations,
-            job_status_counts=await self._repository.job_status_counts(),
+            job_status_counts=job_status_counts,
             oldest_queued_job_age_seconds=(
                 max(0, int((now - oldest_queued_at).total_seconds()))
                 if oldest_queued_at is not None
                 else 0
             ),
-            job_retry_failures=await self._repository.job_retry_failures(),
-            dead_lettered_jobs_by_task=(
-                await self._repository.dead_lettered_jobs_by_task()
-            ),
+            job_retry_failures=job_retry_failures,
+            dead_lettered_jobs_by_task=dead_lettered_jobs_by_task,
         )

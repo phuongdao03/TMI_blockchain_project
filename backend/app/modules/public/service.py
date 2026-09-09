@@ -15,7 +15,6 @@ from app.modules.public.types import (
     PublicCategoryView,
     PublicCertificateVersionView,
     PublicHomeView,
-    PublicMapMarkerView,
 )
 from app.modules.public.verification import (
     public_evidence_metadata,
@@ -149,53 +148,6 @@ class PublicCatalogService:
             ),
             confirmations=(transaction.confirmations if transaction is not None else 0),
         )
-
-    async def map_markers(
-        self,
-        *,
-        category: str | None,
-        min_latitude: float | None = None,
-        max_latitude: float | None = None,
-        min_longitude: float | None = None,
-        max_longitude: float | None = None,
-    ) -> tuple[PublicMapMarkerView, ...]:
-        async with self._session.begin():
-            rows, _ = await self.repository.list_assets(
-                query=None,
-                category=category,
-                offset=0,
-                limit=500,
-            )
-        markers: list[PublicMapMarkerView] = []
-        for row in rows:
-            location = row[1].metadata_json.get("location")
-            if not isinstance(location, dict):
-                continue
-            latitude = location.get("latitude")
-            longitude = location.get("longitude")
-            if not isinstance(latitude, (float, int)) or not isinstance(
-                longitude, (float, int)
-            ):
-                continue
-            if min_latitude is not None and latitude < min_latitude:
-                continue
-            if max_latitude is not None and latitude > max_latitude:
-                continue
-            if min_longitude is not None and longitude < min_longitude:
-                continue
-            if max_longitude is not None and longitude > max_longitude:
-                continue
-            asset = self._asset(row)
-            markers.append(
-                PublicMapMarkerView(
-                    slug=asset.slug,
-                    title=asset.title,
-                    category_name=asset.category_name,
-                    latitude=float(latitude),
-                    longitude=float(longitude),
-                )
-            )
-        return tuple(markers)
 
     @staticmethod
     def _asset(row: PublicRow) -> PublicAssetView:

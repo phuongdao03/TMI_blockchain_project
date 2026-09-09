@@ -39,15 +39,6 @@ class PublicAssetDetailView:
 
 
 @dataclass(frozen=True, slots=True)
-class PublicMapMarkerView:
-    slug: str
-    title: str
-    category_name: str
-    latitude: float
-    longitude: float
-
-
-@dataclass(frozen=True, slots=True)
 class PublicHomeView:
     certificate_count: int
     category_count: int

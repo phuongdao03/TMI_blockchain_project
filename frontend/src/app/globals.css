@@ -1632,6 +1632,161 @@ summary {
   }
 }
 
+/* Mobile stability pass --------------------------------------------------
+   Keep auth visually separate from the public burgundy campaign surface,
+   and avoid expensive staged/blur motion on constrained devices. */
+.auth-shell {
+  --theme-bg: #f3f5f7;
+  --theme-surface: #ffffff;
+  --theme-elevated: #f8fafc;
+  --theme-text: #172033;
+  --theme-muted: #5d6778;
+  --theme-border: #d9dee7;
+  --theme-accent: #334155;
+  --theme-accent-contrast: #ffffff;
+  --theme-shadow-color: rgb(15 23 42 / 9%);
+  background: var(--theme-bg);
+}
+
+html[data-theme="dark"] .auth-shell {
+  --theme-bg: #111722;
+  --theme-surface: #192231;
+  --theme-elevated: #202b3c;
+  --theme-text: #f7f8fa;
+  --theme-muted: #b8c0cc;
+  --theme-border: #344155;
+  --theme-accent: #f6c515;
+  --theme-accent-contrast: #172033;
+  --theme-shadow-color: rgb(0 0 0 / 28%);
+}
+
+.auth-shell .auth-header {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+}
+
+.auth-shell .auth-footer {
+  border-color: var(--theme-border);
+  background: var(--theme-bg);
+  color: var(--theme-muted);
+}
+
+.auth-shell .auth-card {
+  max-width: 31rem;
+  border-color: var(--theme-border) !important;
+  background: var(--theme-surface) !important;
+  box-shadow: 0 1.25rem 3.5rem var(--theme-shadow-color);
+  backdrop-filter: none;
+}
+
+.auth-shell .auth-card-kicker,
+.auth-shell .auth-link {
+  color: var(--theme-accent) !important;
+}
+
+.auth-shell .auth-field-control {
+  border-color: var(--theme-border) !important;
+  background: var(--theme-elevated) !important;
+}
+
+.auth-shell .auth-google-button {
+  border-color: var(--theme-border) !important;
+  background: var(--theme-surface) !important;
+  color: var(--theme-text) !important;
+}
+
+.auth-shell button[type="submit"] {
+  background: #263449;
+  color: #ffffff;
+}
+
+.auth-shell button[type="submit"]:hover:not(:disabled) {
+  background: #172033;
+}
+
+html[data-theme="dark"] .auth-shell button[type="submit"] {
+  background: var(--theme-accent);
+  color: var(--theme-accent-contrast);
+}
+
+@media (max-width: 48rem) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .dashboard-page-stage,
+  .dashboard-page-stage > * > :where(header, section, form, ol) {
+    animation: none;
+  }
+}
+
+@media (max-width: 38rem) {
+  .public-mobile-drawer {
+    inset: 4.75rem 0 0;
+    padding: 0.75rem;
+  }
+
+  .public-mobile-nav {
+    width: min(100%, 22rem);
+    max-height: calc(100dvh - 6.25rem);
+    margin: 0 0 0 auto;
+    padding: 0.625rem;
+    border-radius: 1rem;
+    contain: layout paint;
+    box-shadow: 0 1rem 2.5rem rgb(15 23 42 / 18%);
+  }
+
+  .public-mobile-nav > a {
+    min-height: 2.75rem;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.9375rem;
+  }
+
+  .public-mobile-nav__account {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.375rem;
+    padding-top: 0.625rem;
+  }
+
+  .public-mobile-nav__account a {
+    min-height: 3rem;
+    padding: 0.625rem;
+    font-size: 0.875rem;
+  }
+
+  .auth-shell > main {
+    padding: 0.875rem 0.75rem 1.5rem;
+  }
+
+  .auth-shell .auth-header {
+    min-height: 4.25rem;
+    padding-block: 0.625rem;
+  }
+
+  .auth-shell .auth-card {
+    border-radius: 1rem !important;
+    box-shadow: 0 0.75rem 2rem var(--theme-shadow-color);
+  }
+
+  .auth-shell .auth-card > :first-child {
+    padding: 1.25rem 1.125rem 1rem;
+  }
+
+  .auth-shell .auth-card > :last-child {
+    padding: 0 1.125rem 1.25rem;
+  }
+
+  .auth-shell .auth-card-title {
+    font-size: 1.85rem;
+  }
+
+  .auth-shell .auth-card-description {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
+}
+
 /* Semantic workspace surfaces must remain readable in both color schemes. */
 .workspace-action-grid {
   background: var(--theme-surface);

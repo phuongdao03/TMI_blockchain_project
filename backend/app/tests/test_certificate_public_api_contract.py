@@ -23,7 +23,6 @@ def test_certificate_and_public_routes_match_the_planned_contract() -> None:
         "/api/v1/public/categories",
         "/api/v1/public/assets",
         "/api/v1/public/assets/{slug}",
-        "/api/v1/public/map",
         "/api/v1/public/dossiers/{code}/verification",
         "/api/v1/verify/{token}",
         "/api/v1/verify/certificate/{number}",
@@ -31,6 +30,8 @@ def test_certificate_and_public_routes_match_the_planned_contract() -> None:
         "/api/v1/verify/transaction/{tx_hash}",
     ):
         assert path in paths
+
+    assert "/api/v1/public/map" not in paths
 
     certificate_paths = [path for path in paths if "certificate" in path]
     assert all("chung-thu" not in path for path in certificate_paths)
