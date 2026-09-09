@@ -1,14 +1,11 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { signOut } from "firebase/auth";
 import { LoaderCircle, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { authApi } from "@/lib/api/client";
-import { getFirebaseAuth } from "@/lib/firebase/client";
-
 export function LogoutButton() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -21,6 +18,10 @@ export function LogoutButton() {
     try {
       await authApi.logout();
       try {
+        const [{ signOut }, { getFirebaseAuth }] = await Promise.all([
+          import("firebase/auth"),
+          import("@/lib/firebase/client"),
+        ]);
         await signOut(getFirebaseAuth());
       } catch {
         // The authoritative backend session is already revoked.

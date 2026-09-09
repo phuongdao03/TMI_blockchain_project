@@ -17,12 +17,18 @@ export function resolveFirebaseAuthDomain(
   appHostname: string | undefined,
   production: boolean,
 ): string | undefined {
-  // Firebase's Google provider redirects through the auth domain registered
-  // for the Firebase web app. Replacing it with the application hostname
-  // produces redirect_uri_mismatch unless a complete Firebase custom auth
-  // domain has been configured in Google Cloud as well.
-  void appHostname;
-  void production;
+  // Production serves Firebase's /__/auth helpers through the existing Next.js
+  // reverse proxy. Keeping the helper on the application origin avoids the
+  // third-party storage partition that breaks redirect sign-in on mobile Safari.
+  if (
+    production &&
+    configuredDomain &&
+    /^[a-z0-9-]+\.firebaseapp\.com$/i.test(configuredDomain) &&
+    appHostname &&
+    /^[a-z0-9.-]+$/i.test(appHostname)
+  ) {
+    return appHostname;
+  }
   return configuredDomain;
 }
 

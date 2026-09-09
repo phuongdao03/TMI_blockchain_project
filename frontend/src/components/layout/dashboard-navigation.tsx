@@ -201,7 +201,7 @@ function mobileItemsFor(
   );
   const priorities: Record<WorkspacePersona, string[]> = {
     VIEWER: ["/dashboard", "/search", "/works"],
-    USER: ["/dashboard", "/dossiers", "/notifications", "/search"],
+    USER: ["/dashboard", "/dossiers", "/certificates", "/search"],
     MODERATOR: ["/reviews", "/notifications", "/search", "/works"],
     SUPER_ADMIN: [
       "/admin/dashboard",

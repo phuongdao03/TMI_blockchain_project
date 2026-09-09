@@ -3909,6 +3909,12 @@ html[data-theme="dark"] .dashboard-navigation__link--active:hover {
   backdrop-filter: blur(14px);
 }
 
+.dashboard-context-header__desktop-account {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 @supports not (backdrop-filter: blur(1px)) {
   .dashboard-context-header {
     background: var(--theme-surface);
@@ -7306,6 +7312,24 @@ html[data-theme="dark"] .review-workspace__error {
     width: 100%;
     justify-content: space-between;
     gap: 0.25rem !important;
+  }
+
+  .dashboard-context-header__desktop-account {
+    display: none;
+  }
+
+  .dashboard-workspace-drawer__account {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--theme-border);
+  }
+
+  .dashboard-workspace-drawer__account > div:last-child span {
+    display: inline;
   }
 
   .dashboard-context-header__menu,

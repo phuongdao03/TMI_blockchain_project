@@ -54,6 +54,10 @@ async def _with_service(transaction_id: UUID | None = None) -> None:
                 intent_ttl=timedelta(
                     seconds=settings.blockchain_transaction_intent_ttl_seconds
                 ),
+                enqueue_certificate_issue=lambda dossier_id: celery_app.send_task(
+                    "app.workers.certificate_tasks.issue_certificate",
+                    args=[str(dossier_id)],
+                ),
             )
             if transaction_id is None:
                 await service.reconcile_pending()

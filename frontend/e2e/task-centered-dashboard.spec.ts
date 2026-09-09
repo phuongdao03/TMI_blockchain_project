@@ -125,6 +125,13 @@ test("mobile workspace drawer exposes complete navigation and restores focus", a
   await expect(
     drawer.getByRole("link", { name: "Hoạt động gần đây" }),
   ).toBeVisible();
+  await expect(
+    drawer.getByRole("link", { name: "Chứng thư", exact: true }),
+  ).toBeVisible();
+  await expect(
+    drawer.getByRole("group", { name: "Chọn giao diện" }),
+  ).toBeVisible();
+  await expect(drawer.getByRole("button", { name: "Đăng xuất" })).toBeVisible();
   await expectResponsivePage(page);
 
   await page.keyboard.press("Escape");
@@ -152,6 +159,9 @@ test("mobile workspace navigation stays compact, centered and touch friendly", a
   ).toBeLessThanOrEqual(1);
 
   const controls = navigation.locator(".dashboard-mobile-navigation__link");
+  await expect(
+    navigation.getByRole("link", { name: "Chứng thư", exact: true }),
+  ).toBeVisible();
   for (const control of await controls.all()) {
     const box = await control.boundingBox();
     expect(box).not.toBeNull();

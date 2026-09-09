@@ -89,8 +89,10 @@ export function DashboardContextHeader({
           </span>
         ) : null}
         {user ? <NotificationBell /> : null}
-        <ThemeToggle />
-        {user ? <LogoutButton /> : null}
+        <div className="dashboard-context-header__desktop-account">
+          <ThemeToggle />
+          {user ? <LogoutButton /> : null}
+        </div>
       </div>
     </header>
   );

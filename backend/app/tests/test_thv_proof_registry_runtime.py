@@ -3,7 +3,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from pydantic import ValidationError
@@ -445,6 +445,7 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version() -> None:
             permissions=("blockchain.sign",),
         )
         gateway = ProofRegistryGateway()
+        issuance_requests: list[UUID] = []
         service = THVProofRegistryService(
             session=sessions(),
             gateway=cast(THVProofRegistryGateway, gateway),
@@ -456,6 +457,7 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version() -> None:
             required_confirmations=2,
             intent_ttl=timedelta(minutes=10),
             clock=lambda: NOW,
+            enqueue_certificate_issue=issuance_requests.append,
         )
         assert await service.signing_queue(principal) == []
         with pytest.raises(BlockchainConflictError, match="payment-ready"):
@@ -538,6 +540,7 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version() -> None:
             reconcile=True,
         )
         assert confirmed_again.status is BlockchainTransactionStatus.CONFIRMED
+        assert issuance_requests == [dossier.id]
         assert await service.signing_queue(principal) == []
         async with sessions() as session:
             stored_transaction = await session.get(

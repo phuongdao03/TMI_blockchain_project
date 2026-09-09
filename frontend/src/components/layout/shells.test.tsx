@@ -306,8 +306,9 @@ describe("layout shells", () => {
     });
     closeButton.focus();
     await user.keyboard("{Shift>}{Tab}{/Shift}");
-    const drawerLinks = within(drawer).getAllByRole("link");
-    expect(document.activeElement).toBe(drawerLinks.at(-1));
+    expect(document.activeElement).toBe(
+      within(drawer).getByRole("button", { name: "Đăng xuất" }),
+    );
 
     await user.keyboard("{Escape}");
     expect(
@@ -342,6 +343,16 @@ describe("layout shells", () => {
         .getAllByRole("link")
         .some((link) => link.getAttribute("href") === "/dossiers"),
     ).toBe(true);
+    expect(
+      within(quickNavigation)
+        .getAllByRole("link")
+        .some((link) => link.getAttribute("href") === "/certificates"),
+    ).toBe(true);
+    expect(
+      within(quickNavigation)
+        .getAllByRole("link")
+        .some((link) => link.getAttribute("href") === "/notifications"),
+    ).toBe(false);
 
     const moreButton = within(quickNavigation).getByRole("button", {
       name: "Mở tất cả chức năng",
@@ -350,6 +361,15 @@ describe("layout shells", () => {
 
     expect(
       screen.getByRole("dialog", { name: "Điều hướng workspace" }),
+    ).toBeDefined();
+    const drawer = screen.getByRole("dialog", {
+      name: "Điều hướng workspace",
+    });
+    expect(
+      within(drawer).getByRole("group", { name: "Chọn giao diện" }),
+    ).toBeDefined();
+    expect(
+      within(drawer).getByRole("button", { name: "Đăng xuất" }),
     ).toBeDefined();
     await user.keyboard("{Escape}");
     await waitFor(() => expect(document.activeElement).toBe(moreButton));

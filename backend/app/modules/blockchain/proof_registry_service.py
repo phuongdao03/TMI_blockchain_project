@@ -154,6 +154,7 @@ class THVProofRegistryService:
         required_confirmations: int = 1,
         intent_ttl: timedelta = timedelta(minutes=10),
         clock: Callable[[], datetime] | None = None,
+        enqueue_certificate_issue: Callable[[UUID], object] | None = None,
     ) -> None:
         if gateway.contract_address.lower() != contract_address.lower():
             raise ValueError("THV proof registry contract address is inconsistent.")
@@ -168,6 +169,7 @@ class THVProofRegistryService:
         self._required_confirmations = required_confirmations
         self._intent_ttl = intent_ttl
         self._clock = clock or (lambda: datetime.now(UTC))
+        self._enqueue_certificate_issue = enqueue_certificate_issue
 
     async def signing_queue(
         self, principal: AuthPrincipal
@@ -494,6 +496,7 @@ class THVProofRegistryService:
             await self._reconcile(transaction_id)
 
     async def _reconcile(self, transaction_id: UUID) -> None:
+        certificate_dossier_id: UUID | None = None
         async with self._session.begin():
             transaction = await self._required_transaction(transaction_id)
             if (
@@ -506,6 +509,7 @@ class THVProofRegistryService:
             ):
                 return
             tx_hash = transaction.tx_hash
+            was_confirmed = transaction.status is BlockchainTransactionStatus.CONFIRMED
             dossier_id = transaction.dossier_id
             version_id = transaction.dossier_version_id
             proof_hash = transaction.payload_hash
@@ -609,6 +613,22 @@ class THVProofRegistryService:
                     dossier.owner_user_id,
                     certificate_version_id=promoted_version_id,
                 )
+            if (
+                was_confirmed
+                and transaction.status is BlockchainTransactionStatus.CONFIRMED
+            ):
+                dossier = await self._session.get(Dossier, transaction.dossier_id)
+                if dossier is not None and dossier.status in {
+                    DossierStatus.PAID,
+                    DossierStatus.ANCHORED,
+                }:
+                    certificate_dossier_id = dossier.id
+
+        if (
+            certificate_dossier_id is not None
+            and self._enqueue_certificate_issue is not None
+        ):
+            self._enqueue_certificate_issue(certificate_dossier_id)
 
     def _add_confirmed_event(
         self,

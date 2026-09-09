@@ -56,12 +56,12 @@ These identify the Firebase web application and are not server private keys.
 Restrict the API key in Google Cloud and add the production domain to Firebase
 Authentication authorized domains. Enable only the intended Firebase sign-in
 providers. Keep `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` set to the project's
-`<project>.firebaseapp.com` domain. The default Firebase Google OAuth client
-must authorize `https://<project>.firebaseapp.com/__/auth/handler`. The
-application also proxies `/__/auth/` so a fully configured custom Firebase auth
-domain can be introduced later; do not switch the runtime `authDomain` to the
-application hostname until that hostname and its handler URI have both been
-registered in Firebase and Google Cloud.
+`<project>.firebaseapp.com` domain; Next.js uses it as the upstream for the
+same-origin `/__/auth/` proxy. In production, the browser-facing Firebase
+`authDomain` is the application hostname so redirect sign-in continues to work
+in storage-partitioned mobile browsers. Register the application hostname in
+Firebase Authentication and authorize
+`https://<application-hostname>/__/auth/handler` on the Google OAuth client.
 
 ## VPS prerequisites
 

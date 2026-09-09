@@ -5,7 +5,7 @@ const password = "correct horse battery staple";
 test("applicant signs in with Firebase email and securely signs out", async ({
   page,
   context,
-}) => {
+}, testInfo) => {
   await page.goto("/login?accountType=INDIVIDUAL_APPLICANT");
   await page
     .getByRole("textbox", { name: "Email" })
@@ -30,6 +30,9 @@ test("applicant signs in with Firebase email and securely signs out", async ({
   expect(visibleText).not.toMatch(
     /\b(?:APPLICANT|REVIEWER|COUNCIL_MEMBER|SUPER_ADMIN)\b/,
   );
+  if (testInfo.project.name === "mobile-chrome") {
+    await page.getByRole("button", { name: "Mở điều hướng workspace" }).click();
+  }
   await page.getByRole("button", { name: "Đăng xuất" }).click();
   await expect(page).toHaveURL(/\/login$/);
   expect(

@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation";
 import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { LogoutButton } from "@/components/auth/logout-button";
 import { resolvePublicHeaderAction } from "@/lib/auth/role-workspaces";
 import { useAuthUser } from "@/lib/auth/user-context";
 import type { AuthUser } from "@/lib/api/types";
@@ -399,6 +400,10 @@ export function DashboardShell({ children }: PropsWithChildren) {
               roles={roles}
               showQuickNavigation={false}
             />
+            <div className="dashboard-workspace-drawer__account">
+              <ThemeToggle />
+              <LogoutButton />
+            </div>
           </div>
         </div>
       ) : null}
