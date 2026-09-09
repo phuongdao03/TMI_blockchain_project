@@ -278,8 +278,9 @@ jobs:
           # Firebase Admin synchronization adds the Google Auth runtime. Keep a
           # strict ceiling above the measured production image size (289 MiB).
           bash infrastructure/scripts/check-image-size.sh "$REGISTRY/tmi-certificate-backend:$TAG" 300
-          # Next.js standalone output includes the public Firebase runtime bundle.
-          bash infrastructure/scripts/check-image-size.sh "$REGISTRY/tmi-certificate-frontend:$TAG" 200
+          # Next.js 16.3 standalone output measures 215 MiB with the Firebase
+          # and WalletConnect runtimes. Retain a narrow 10 MiB regression margin.
+          bash infrastructure/scripts/check-image-size.sh "$REGISTRY/tmi-certificate-frontend:$TAG" 225
           docker run -d --rm --name tmi-backend-smoke -p 18000:8000 "$REGISTRY/tmi-certificate-backend:$TAG"
           docker run -d --rm --name tmi-frontend-smoke -p 13000:3000 "$REGISTRY/tmi-certificate-frontend:$TAG"
           trap 'docker stop tmi-backend-smoke tmi-frontend-smoke >/dev/null 2>&1 || true' EXIT

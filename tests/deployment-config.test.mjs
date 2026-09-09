@@ -217,6 +217,11 @@ test("CI has quality, migration, image, staging and manual production gates", as
   assert.match(workflow, /--build-arg NEXT_PUBLIC_APP_BASE_URL/);
   assert.match(
     workflow,
+    /check-image-size\.sh "\$REGISTRY\/tmi-certificate-frontend:\$TAG" 225/,
+    "frontend image budget must accommodate the measured Next.js 16.3 runtime without removing the size gate",
+  );
+  assert.match(
+    workflow,
     /case "\$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN" in[\s\S]*?\*\.firebaseapp\.com\)/,
     "image builds must reject a non-Firebase OAuth redirect domain",
   );
