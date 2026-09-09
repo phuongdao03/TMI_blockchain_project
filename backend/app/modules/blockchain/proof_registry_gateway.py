@@ -14,6 +14,7 @@ from typing import cast
 from hexbytes import HexBytes
 from web3 import AsyncHTTPProvider, AsyncWeb3, Web3
 from web3.exceptions import TransactionNotFound
+from web3.middleware import ExtraDataToPOAMiddleware
 from web3.types import TxReceipt
 
 from app.modules.blockchain.transport import (
@@ -75,6 +76,8 @@ class THVProofRegistryGateway:
         self.chain_id = chain_id
         self.contract_address = Web3.to_checksum_address(contract_address)
         self._web3 = AsyncWeb3(AsyncHTTPProvider(rpc_url))
+        if network in {"amoy", "polygon"}:
+            self._web3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
         self._contract = self._web3.eth.contract(
             address=self.contract_address,
             abi=abi_payload,

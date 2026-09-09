@@ -2,7 +2,7 @@ import asyncio
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -10,7 +10,10 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from web3 import Web3
+from web3.providers import AsyncBaseProvider
+from web3.types import RPCEndpoint, RPCResponse
 
+import app.modules.blockchain.proof_registry_gateway as proof_registry_gateway
 from app.core.config import Settings
 from app.db.base import Base
 from app.db.outbox import OutboxEvent
@@ -196,6 +199,52 @@ def test_gateway_decodes_full_proof_recorded_event_payload() -> None:
         signer=WALLET,
         timestamp=timestamp,
     )
+
+
+def test_gateway_reads_polygon_bor_block_with_extended_extra_data(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class PolygonBlockProvider(AsyncBaseProvider):
+        async def make_request(self, method: RPCEndpoint, params: Any) -> RPCResponse:
+            del params
+            if method == "eth_chainId":
+                return {"jsonrpc": "2.0", "id": 1, "result": "0x89"}
+            if method == "eth_getBlockByNumber":
+                return {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "result": {
+                        "number": "0x2a",
+                        "hash": "0x" + "77" * 32,
+                        "extraData": "0x" + "11" * 105,
+                    },
+                }
+            raise AssertionError(f"Unexpected RPC method: {method}")
+
+    provider = PolygonBlockProvider()
+    monkeypatch.setattr(
+        proof_registry_gateway,
+        "AsyncHTTPProvider",
+        lambda _rpc_url: provider,
+    )
+    gateway = THVProofRegistryGateway(
+        rpc_url="https://polygon-rpc.example",
+        network="polygon",
+        chain_id=137,
+        contract_address=CONTRACT,
+        abi_path=(
+            Path(__file__).resolve().parents[3]
+            / "contracts"
+            / "artifacts"
+            / "THVProofRegistry.abi.json"
+        ),
+        allowed_networks={"polygon": 137},
+        allowed_contracts={"polygon": {CONTRACT}},
+    )
+
+    block_hash = asyncio.run(gateway.block_hash(42))
+
+    assert block_hash == "0x" + "77" * 32
 
 
 def test_thv_proof_registry_is_disabled_without_a_contract_address() -> None:
