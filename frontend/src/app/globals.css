@@ -1827,7 +1827,11 @@ summary {
 }
 
 .blockchain-confirmation-warning {
-  border-color: color-mix(in srgb, var(--theme-warning) 48%, var(--theme-border));
+  border-color: color-mix(
+    in srgb,
+    var(--theme-warning) 48%,
+    var(--theme-border)
+  );
   background: color-mix(in srgb, var(--theme-warning) 9%, var(--theme-surface));
   color: var(--theme-text);
 }
@@ -1837,11 +1841,16 @@ summary {
 }
 
 .blockchain-confirmation-warning button {
-  border-color: color-mix(in srgb, var(--theme-warning) 52%, var(--theme-border));
+  border-color: color-mix(
+    in srgb,
+    var(--theme-warning) 52%,
+    var(--theme-border)
+  );
 }
 
 .blockchain-status-pill {
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 24%, var(--theme-border));
+  border: 1px solid
+    color-mix(in srgb, var(--theme-accent) 24%, var(--theme-border));
   background: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface));
   color: var(--theme-text);
 }
@@ -1853,14 +1862,26 @@ summary {
 }
 
 .blockchain-signing-steps > li[data-complete="true"] {
-  border-color: color-mix(in srgb, var(--theme-accent) 38%, var(--theme-border)) !important;
-  background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface)) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--theme-accent) 38%,
+    var(--theme-border)
+  ) !important;
+  background: color-mix(
+    in srgb,
+    var(--theme-accent) 9%,
+    var(--theme-surface)
+  ) !important;
   color: var(--theme-text) !important;
 }
 
 .blockchain-signing-steps > li[aria-current="step"] {
   border-color: var(--theme-accent) !important;
-  background: color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface)) !important;
+  background: color-mix(
+    in srgb,
+    var(--theme-accent) 15%,
+    var(--theme-surface)
+  ) !important;
   color: var(--theme-text) !important;
 }
 
@@ -7428,6 +7449,7 @@ html[data-theme="dark"] .review-workspace__error {
   }
 
   .blockchain-wallet-panel dl {
+    grid-template-columns: minmax(0, 1fr);
     margin-top: 1rem;
     gap: 0.5rem;
   }
