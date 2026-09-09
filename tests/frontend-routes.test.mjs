@@ -11,7 +11,6 @@ const routeMigrations = [
   ["(public)/chinh-sach", "(public)/policies"],
   ["(public)/thu-vien", "(public)/works"],
   ["(public)/tai-san", "(public)/works"],
-  ["(public)/ban-do", "(public)/map"],
   ["(public)/kiem-tra", "(public)/verify"],
   ["(public)/binh-chon", "(public)/voting"],
   ["(public)/tim-kiem", "(public)/search"],
