@@ -56,9 +56,9 @@ test("Super Admin sends a THV proof and sees Polygon confirmation progress", asy
   await expect(
     page.getByText("Polygon Mainnet", { exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Kết nối ví" }).click();
+  await expect(page.getByText("0x3434…3434", { exact: true })).toBeVisible();
   const verifyWallet = page.getByRole("button", {
-    name: "Ký xác minh quyền sở hữu ví",
+    name: "Xác minh ví của tổ chức",
   });
   if (await verifyWallet.isVisible()) await verifyWallet.click();
   await page
