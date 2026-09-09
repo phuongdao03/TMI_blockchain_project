@@ -5,6 +5,7 @@ import {
   getRedirectResult,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
   type User,
 } from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
@@ -33,6 +34,14 @@ function setPendingRedirect(pending: boolean): void {
   } catch {
     // Redirect authentication can still complete when storage is unavailable.
   }
+}
+
+function prefersRedirectSignIn(): boolean {
+  const userAgent = navigator.userAgent;
+  return (
+    /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent) ||
+    (/Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1)
+  );
 }
 
 function safeDestination(value: string | undefined, fallback: string): string {
@@ -146,6 +155,11 @@ export function GoogleOAuthButton({
       const auth = getFirebaseAuth();
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
+      if (prefersRedirectSignIn()) {
+        setPendingRedirect(true);
+        await signInWithRedirect(auth, provider);
+        return;
+      }
       const credential = await signInWithPopup(auth, provider);
       await finishSignIn(credential.user);
     } catch (cause) {

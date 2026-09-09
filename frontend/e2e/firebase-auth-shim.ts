@@ -89,6 +89,13 @@ export async function signInWithPopup(
   return { user: signedIn };
 }
 
+export async function signInWithRedirect(): Promise<never> {
+  const callback = new URL(window.location.href);
+  callback.searchParams.set("__tmi_e2e_firebase_redirect", "1");
+  window.location.assign(callback);
+  return new Promise<never>(() => undefined);
+}
+
 export async function getRedirectResult(
   target: E2EAuth,
 ): Promise<{ user: E2EUser } | null> {

@@ -162,10 +162,13 @@ export function BlockchainSigningWorkspace() {
       selected?.transactionId && !terminalStatuses.has(selected.status),
     ),
     retry: false,
-    refetchInterval: (query) =>
-      query.state.data && terminalStatuses.has(query.state.data.status)
-        ? false
-        : 5_000,
+    refetchInterval: (query) => {
+      if (query.state.data && terminalStatuses.has(query.state.data.status)) {
+        return false;
+      }
+      return query.state.error ? 30_000 : 8_000;
+    },
+    refetchIntervalInBackground: false,
   });
 
   const displayedSelected =
@@ -178,6 +181,9 @@ export function BlockchainSigningWorkspace() {
           errorCode: transactionStatus.data.errorCode,
         }
       : selected;
+  const confirmationUnavailable =
+    transactionStatus.error instanceof ApiError &&
+    transactionStatus.error.status === 503;
 
   useEffect(() => {
     const next = transactionStatus.data;
@@ -415,7 +421,7 @@ export function BlockchainSigningWorkspace() {
 
   return (
     <div className="blockchain-signing-workspace mx-auto max-w-7xl space-y-6">
-      <header className="rounded-3xl bg-neutral-950 px-7 py-8 text-white sm:px-10 sm:py-10">
+      <header className="blockchain-signing-hero rounded-3xl bg-neutral-950 px-7 py-8 text-white sm:px-10 sm:py-10">
         <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-primary-300">
           Ghi nhận hồ sơ đã phê duyệt
         </p>
@@ -526,7 +532,7 @@ export function BlockchainSigningWorkspace() {
       ) : null}
 
       <section>
-        <article className="blockchain-surface rounded-2xl border p-6">
+        <article className="blockchain-wallet-panel blockchain-surface rounded-2xl border p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
@@ -619,7 +625,7 @@ export function BlockchainSigningWorkspace() {
         </article>
       </section>
 
-      <section className="blockchain-surface rounded-2xl border">
+      <section className="blockchain-queue-panel blockchain-surface rounded-2xl border">
         <div className="flex items-center justify-between gap-4 border-b border-[var(--theme-border)] px-6 py-5">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
@@ -675,7 +681,7 @@ export function BlockchainSigningWorkspace() {
                   Được chuyển sang chờ ghi nhận lúc {formatDate(item.createdAt)}
                 </p>
               </div>
-              <span className="rounded-full bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary-800">
+              <span className="blockchain-status-pill rounded-full px-3 py-1.5 text-xs font-bold">
                 {statusLabel[item.status] ?? item.status}
               </span>
             </button>
@@ -698,7 +704,7 @@ export function BlockchainSigningWorkspace() {
                 {displayedSelected.version}
               </p>
             </div>
-            <span className="rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-bold text-neutral-700">
+            <span className="blockchain-status-pill rounded-full px-3 py-1.5 text-xs font-bold">
               {statusLabel[displayedSelected.status] ??
                 displayedSelected.status}
             </span>
@@ -714,6 +720,7 @@ export function BlockchainSigningWorkspace() {
               return (
                 <li
                   aria-current={current ? "step" : undefined}
+                  data-complete={complete ? "true" : undefined}
                   className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ${
                     current
                       ? "border-primary-600 bg-primary-50 text-primary-950"
@@ -749,13 +756,53 @@ export function BlockchainSigningWorkspace() {
             <p className="font-bold text-neutral-950">
               {verificationMessage(displayedSelected.status)}
             </p>
-            {displayedSelected.status === "BROADCAST" ? (
+            {displayedSelected.status === "BROADCAST" &&
+            !transactionStatus.error ? (
               <p className="mt-1 text-sm text-neutral-600">
                 Hệ thống tự kiểm tra kết quả định kỳ. Trạng thái chỉ chuyển
                 thành “Đã ghi nhận” sau khi mạng Polygon xác nhận hoàn tất.
               </p>
             ) : null}
           </div>
+
+          {transactionStatus.error ? (
+            <div
+              className="blockchain-confirmation-warning mt-4 rounded-xl border p-4"
+              role="alert"
+            >
+              <div className="flex items-start gap-3">
+                <AlertTriangle
+                  className="mt-0.5 size-5 shrink-0"
+                  aria-hidden="true"
+                />
+                <div>
+                  <h3 className="font-bold">
+                    {confirmationUnavailable
+                      ? "Polygon tạm thời chưa phản hồi"
+                      : "Chưa cập nhật được trạng thái"}
+                  </h3>
+                  <p className="mt-1 text-sm leading-6">
+                    Giao dịch vẫn được giữ an toàn. Hệ thống sẽ tự kiểm tra lại;
+                    bạn cũng có thể thử ngay mà không cần ký lại.
+                  </p>
+                  <button
+                    className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm font-bold"
+                    disabled={transactionStatus.isFetching}
+                    onClick={() => void transactionStatus.refetch()}
+                    type="button"
+                  >
+                    <RefreshCw
+                      className={`size-4 ${transactionStatus.isFetching ? "animate-spin" : ""}`}
+                      aria-hidden="true"
+                    />
+                    {transactionStatus.isFetching
+                      ? "Đang kiểm tra…"
+                      : "Thử kiểm tra lại"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <dl className="blockchain-signing-metadata mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="blockchain-soft-surface rounded-xl p-4">
@@ -807,7 +854,7 @@ export function BlockchainSigningWorkspace() {
               <p className="mt-2 break-all font-mono text-xs text-neutral-700">
                 {displayedSelected.txHash}
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="blockchain-transaction-actions mt-3 flex flex-wrap gap-2">
                 <button
                   className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-sm font-bold text-neutral-800"
                   onClick={() =>
@@ -885,35 +932,32 @@ export function BlockchainSigningWorkspace() {
                   : "Kiểm tra xác nhận ngay"}
               </button>
             ) : null}
-            <button
-              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary-700 px-5 text-sm font-bold text-white disabled:opacity-60 sm:w-auto"
-              disabled={
-                busy === "sign" ||
-                !connected ||
-                isWrongWallet ||
-                isWrongNetwork ||
-                ["BROADCAST", "CONFIRMED", "REPLACED"].includes(
-                  displayedSelected.status,
-                )
-              }
-              onClick={() => void handleSign()}
-              type="button"
-            >
-              {busy === "sign" ? (
-                <LoaderCircle className="size-4 animate-spin" />
-              ) : (
-                <FileCheck2 className="size-4" />
-              )}
-              {busy === "sign"
-                ? "Đang mở MetaMask…"
-                : displayedSelected.status === "BROADCAST"
-                  ? "Đã gửi, đang chờ xác nhận"
-                  : displayedSelected.status === "CONFIRMED"
-                    ? "Đã ghi nhận blockchain"
-                    : displayedSelected.status === "SIGNING"
-                      ? "Mở lại MetaMask để ký"
-                      : "Ký và ghi nhận blockchain"}
-            </button>
+            {!["BROADCAST", "CONFIRMED", "REPLACED"].includes(
+              displayedSelected.status,
+            ) ? (
+              <button
+                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary-700 px-5 text-sm font-bold text-white disabled:opacity-60 sm:w-auto"
+                disabled={
+                  busy === "sign" ||
+                  !connected ||
+                  isWrongWallet ||
+                  isWrongNetwork
+                }
+                onClick={() => void handleSign()}
+                type="button"
+              >
+                {busy === "sign" ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <FileCheck2 className="size-4" />
+                )}
+                {busy === "sign"
+                  ? "Đang mở MetaMask…"
+                  : displayedSelected.status === "SIGNING"
+                    ? "Mở lại MetaMask để ký"
+                    : "Ký và ghi nhận blockchain"}
+              </button>
+            ) : null}
           </div>
         </section>
       ) : null}

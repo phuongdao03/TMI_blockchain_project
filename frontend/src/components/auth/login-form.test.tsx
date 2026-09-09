@@ -27,6 +27,7 @@ vi.mock("firebase/auth", () => ({
   sendEmailVerification,
   signInWithEmailAndPassword,
   signInWithPopup: vi.fn(),
+  signInWithRedirect: vi.fn(),
   signOut,
 }));
 

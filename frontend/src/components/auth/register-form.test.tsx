@@ -37,6 +37,7 @@ vi.mock("firebase/auth", () => ({
   signInWithPopup: vi.fn(async () => ({
     user: { getIdToken: vi.fn(async () => "firebase-test-token") },
   })),
+  signInWithRedirect: vi.fn(),
 }));
 
 describe("RegisterForm", () => {

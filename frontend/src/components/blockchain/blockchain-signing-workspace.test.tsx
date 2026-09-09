@@ -423,6 +423,55 @@ describe("BlockchainSigningWorkspace", () => {
     ).toBeNull();
   });
 
+  it("keeps the transaction visible and offers a retry when Polygon status is unavailable", async () => {
+    const user = userEvent.setup();
+    const transactionHash = `0x${"ef".repeat(32)}`;
+    currentWallet.mockResolvedValue({
+      id: "wallet-link",
+      walletAddress: "0x3434343434343434343434343434343434343434",
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-26T00:00:00Z",
+    });
+    proofQueue.mockResolvedValue([
+      {
+        transactionId: "transaction-unavailable",
+        dossierId: "dossier-1",
+        dossierCode: "THV-2026-001",
+        dossierTitle: "Tác phẩm đang xác nhận",
+        version: 2,
+        proofHash: `0x${"ab".repeat(32)}`,
+        status: "BROADCAST",
+        txHash: transactionHash,
+        confirmations: 0,
+        errorCode: null,
+        createdAt: "2026-08-26T00:00:00Z",
+      },
+    ]);
+    transactionStatus.mockRejectedValue(
+      new MockApiError(
+        "Proof registry is unavailable.",
+        "BLOCKCHAIN_UNAVAILABLE",
+        503,
+      ),
+    );
+
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: /Tác phẩm đang xác nhận/ }),
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Polygon tạm thời chưa phản hồi",
+      }),
+    ).toBeDefined();
+    expect(screen.getByText(transactionHash)).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Thử kiểm tra lại" }),
+    ).toBeDefined();
+  });
+
   it("explains when the user rejects MetaMask", async () => {
     const user = userEvent.setup();
     connectBrowserWallet.mockRejectedValue(
