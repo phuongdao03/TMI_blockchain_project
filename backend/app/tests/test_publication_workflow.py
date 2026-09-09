@@ -25,8 +25,11 @@ from app.modules.public.errors import (
     PublicWorkVersionConflictError,
 )
 from app.modules.public.models import (
+    DerivativeStatus,
     PublicationStatus,
+    PublicMediaKind,
     PublicWork,
+    PublicWorkMedia,
     PublicWorkVisibility,
 )
 from app.modules.public.publication_service import (
@@ -217,6 +220,66 @@ def test_publish_checklist_permission_version_and_reason(tmp_path: Path) -> None
                 select(func.count()).select_from(OutboxEvent)
             )
             assert event_count == 2
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_video_only_work_can_be_published_without_an_image_thumbnail(
+    tmp_path: Path,
+) -> None:
+    async def exercise() -> None:
+        engine = create_async_engine(
+            f"sqlite+aiosqlite:///{(tmp_path / 'video-publication.sqlite3').as_posix()}"
+        )
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        async with factory() as session:
+            work_id, owner_id = await _seed(session, thumbnail=False)
+            async with session.begin():
+                video = MediaAsset(
+                    owner_user_id=owner_id,
+                    cloudinary_public_id="private/owner/welcome-video",
+                    resource_type="video",
+                    access_mode="authenticated",
+                    original_filename="welcome.mp4",
+                    mime_type="video/mp4",
+                    bytes=4096,
+                    status=MediaStatus.ACTIVE,
+                )
+                session.add(video)
+                await session.flush()
+                session.add(
+                    PublicWorkMedia(
+                        public_work_id=work_id,
+                        media_asset_id=video.id,
+                        media_kind=PublicMediaKind.VIDEO,
+                        sort_order=0,
+                        derivative_status=DerivativeStatus.READY,
+                        derivative_url=(
+                            "https://res.cloudinary.com/demo/video/upload/"
+                            "public/welcome.mp4"
+                        ),
+                        derivative_mime_type="video/mp4",
+                    )
+                )
+
+            published = await _service(session).publish(
+                _principal(owner_id, "SUPER_ADMIN"),
+                work_id,
+                expected_version=1,
+                visibility=PublicWorkVisibility.PUBLIC,
+                request_id="request-video-publish",
+            )
+
+            assert published.publication_status is PublicationStatus.PUBLISHED
+            audit = await session.scalar(
+                select(AuditLog).where(AuditLog.action == "public_work.published")
+            )
+            assert audit is not None
+            assert audit.after_json is not None
+            assert audit.after_json["title"] == "Approved work"
         await engine.dispose()
 
     asyncio.run(exercise())

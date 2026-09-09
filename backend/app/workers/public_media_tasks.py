@@ -1,6 +1,7 @@
 import asyncio
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 
 from app.core.config import get_settings
@@ -9,6 +10,7 @@ from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.media.errors import MediaProviderUnavailableError
 from app.modules.media.gateway import CloudinaryMediaGateway
 from app.modules.public.media_service import PublicMediaWorker
+from app.modules.public.models import DerivativeStatus, PublicWorkMedia
 from app.workers.celery_app import celery_app
 
 
@@ -41,6 +43,20 @@ async def _generate(relation_id: UUID) -> None:
         await gateway.close()
 
 
+async def _reconcile_pending(*, limit: int = 100) -> None:
+    async with get_session_factory()() as session:
+        relation_ids = tuple(
+            await session.scalars(
+                select(PublicWorkMedia.id)
+                .where(PublicWorkMedia.derivative_status == DerivativeStatus.PENDING)
+                .order_by(PublicWorkMedia.created_at, PublicWorkMedia.id)
+                .limit(limit)
+            )
+        )
+    for relation_id in relation_ids:
+        generate_public_media_derivative.delay(str(relation_id))
+
+
 @celery_app.task(
     autoretry_for=(OperationalError, MediaProviderUnavailableError),
     max_retries=5,
@@ -49,3 +65,13 @@ async def _generate(relation_id: UUID) -> None:
 )  # type: ignore[untyped-decorator]
 def generate_public_media_derivative(relation_id: str) -> None:
     asyncio.run(_generate(UUID(relation_id)))
+
+
+@celery_app.task(
+    autoretry_for=(OperationalError,),
+    max_retries=5,
+    retry_backoff=True,
+    retry_jitter=True,
+)  # type: ignore[untyped-decorator]
+def reconcile_pending_public_media() -> None:
+    asyncio.run(_reconcile_pending())

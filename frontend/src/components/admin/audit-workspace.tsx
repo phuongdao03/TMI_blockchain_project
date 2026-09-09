@@ -270,10 +270,10 @@ export function AuditWorkspace() {
               <thead className="bg-neutral-50 text-xs tracking-wide text-neutral-500 uppercase">
                 <tr>
                   <th className="px-5 py-3">Thời gian</th>
-                  <th className="px-5 py-3">Hoạt động</th>
-                  <th className="px-5 py-3">Thực hiện bởi</th>
-                  <th className="px-5 py-3">Trạng thái</th>
-                  <th className="px-5 py-3">Thông tin</th>
+                  <th className="px-5 py-3">Việc đã xảy ra</th>
+                  <th className="px-5 py-3">Người thực hiện</th>
+                  <th className="px-5 py-3">Kết quả</th>
+                  <th className="px-5 py-3">Chi tiết kỹ thuật</th>
                 </tr>
               </thead>
               <tbody>

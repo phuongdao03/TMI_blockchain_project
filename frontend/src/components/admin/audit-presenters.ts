@@ -35,6 +35,10 @@ const exactActionLabels: Record<string, string> = {
   "blockchain.wallet.revoked": "Đã thu hồi ví ký blockchain",
   "blockchain.signature.requested": "Đã tạo yêu cầu ký blockchain",
   "blockchain.transaction.submitted": "Đã gửi giao dịch blockchain",
+  "public.verification.completed": "Đã kiểm tra chứng thư công khai",
+  "public_work.published": "Đã công bố tác phẩm",
+  "public_work.media_attached": "Đã thêm nội dung công khai",
+  "certificate.issued": "Đã cấp chứng thư",
 };
 
 const actionLabels: Record<string, string> = {
@@ -55,6 +59,7 @@ const resourceLabels: Record<string, string> = {
   audit_log: "Lịch sử vận hành",
   blockchain_transaction: "Giao dịch blockchain",
   certificate: "Chứng thư",
+  certificate_verification: "Tra cứu chứng thư",
   certificate_version: "Phiên bản chứng thư",
   dossier: "Hồ sơ",
   document: "Tài liệu",
@@ -73,6 +78,9 @@ const resourceLabels: Record<string, string> = {
   cms_page: "Trang nội dung",
   cms_banner: "Banner",
   cms_category: "Danh mục",
+  public_work: "Tác phẩm công khai",
+  public_category: "Danh mục công khai",
+  public_tag: "Nhãn công khai",
 };
 
 const roleLabels: Record<string, string> = {
@@ -95,6 +103,7 @@ const serviceLabels: Record<string, string> = {
   "certificate-worker": "Hệ thống cấp chứng thư",
   "payment-worker": "Hệ thống thanh toán",
   "notification-worker": "Hệ thống thông báo",
+  "certificate-issuance-worker": "Hệ thống cấp chứng thư",
 };
 
 export const integrityLabels: Record<
@@ -118,6 +127,48 @@ export const integrityLabels: Record<
     className: "border-neutral-300 bg-neutral-100 text-neutral-700",
   },
 };
+
+const outcomeLabels: Record<string, { label: string; className: string }> = {
+  VALID: {
+    label: "Hợp lệ",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  },
+  CONFIRMED: {
+    label: "Đã xác nhận",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  },
+  PUBLISHED: {
+    label: "Đã công bố",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  },
+  FAILED: {
+    label: "Chưa thành công",
+    className: "border-red-200 bg-red-50 text-red-800",
+  },
+  REJECTED: {
+    label: "Đã từ chối",
+    className: "border-red-200 bg-red-50 text-red-800",
+  },
+  REVOKED: {
+    label: "Đã thu hồi",
+    className: "border-amber-200 bg-amber-50 text-amber-800",
+  },
+};
+
+export function auditOutcome(row: AuditLogItem): {
+  label: string;
+  className: string;
+} {
+  const status = (
+    stringValue(row.after, "status") ??
+    stringValue(row.after, "publication_status")
+  )?.toUpperCase();
+  if (status && outcomeLabels[status]) return outcomeLabels[status];
+  if (row.action.endsWith(".published")) return outcomeLabels.PUBLISHED!;
+  if (row.action.endsWith(".rejected")) return outcomeLabels.REJECTED!;
+  if (row.action.endsWith(".failed")) return outcomeLabels.FAILED!;
+  return integrityLabels[row.integrityStatus];
+}
 
 export function actionLabel(action: string): string {
   const normalized = action.toLowerCase();
@@ -178,6 +229,19 @@ export function auditEventSummary(row: AuditLogItem): string {
     row.action === "payment.confirmed";
 
   return actionAlreadyNamesResource ? action : `${action} ${resource}`;
+}
+
+export function auditTargetLabel(row: AuditLogItem): string {
+  const value =
+    stringValue(row.after, "certificate_number") ??
+    stringValue(row.after, "dossier_code") ??
+    stringValue(row.after, "title") ??
+    stringValue(row.before, "certificate_number") ??
+    stringValue(row.before, "dossier_code") ??
+    stringValue(row.before, "title");
+  return value
+    ? `${resourceLabel(row.resourceType)} · ${value}`
+    : resourceLabel(row.resourceType);
 }
 
 export function formatAuditTimestamp(value: string): {

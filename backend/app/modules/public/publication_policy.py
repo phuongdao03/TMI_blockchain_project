@@ -38,7 +38,7 @@ def publication_checklist(
         reasons.append("description_required")
     if not context.category.is_active:
         reasons.append("category_inactive")
-    if (
+    if not context.has_ready_video and (
         context.thumbnail is None
         or context.thumbnail.status is not MediaStatus.ACTIVE
         or context.thumbnail.deleted_at is not None

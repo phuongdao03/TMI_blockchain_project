@@ -4,13 +4,27 @@ from collections import Counter
 from dataclasses import dataclass
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.dossiers.models import Dossier
+from app.modules.blockchain.models import (
+    Certificate,
+    CertificateStatus,
+    CertificateVersion,
+)
+from app.modules.dossiers.models import (
+    Dossier,
+    DossierEvidence,
+    DossierStatus,
+    EvidenceVisibility,
+)
+from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.public.catalog_repository import PublicWorkRepository
 from app.modules.public.models import (
     PublicationStatus,
+    PublicMediaKind,
     PublicWork,
+    PublicWorkMedia,
     PublicWorkVisibility,
 )
 
@@ -26,6 +40,21 @@ RESERVED_SLUGS = frozenset(
         "verify",
     }
 )
+PUBLIC_EVIDENCE_SCOPES = (
+    EvidenceVisibility.PUBLIC,
+    EvidenceVisibility.PUBLIC_PREVIEW,
+)
+PUBLIC_MEDIA_KINDS = {
+    "image/jpeg": PublicMediaKind.IMAGE,
+    "image/png": PublicMediaKind.IMAGE,
+    "image/webp": PublicMediaKind.IMAGE,
+    "audio/mpeg": PublicMediaKind.AUDIO,
+    "audio/mp4": PublicMediaKind.AUDIO,
+    "audio/ogg": PublicMediaKind.AUDIO,
+    "video/mp4": PublicMediaKind.VIDEO,
+    "video/webm": PublicMediaKind.VIDEO,
+    "application/pdf": PublicMediaKind.DOCUMENT,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +113,7 @@ class PublicWorkDraftBackfill:
         if existing is not None:
             if existing.certificate_id is None and certificate_id is not None:
                 existing.certificate_id = certificate_id
+            await self._sync_public_evidence(existing, certificate_id=certificate_id)
             return existing
         dossier = await self._session.get(Dossier, dossier_id)
         if dossier is None:
@@ -97,6 +127,7 @@ class PublicWorkDraftBackfill:
             return None
         self._repository.add(draft)
         await self._session.flush()
+        await self._sync_public_evidence(draft, certificate_id=certificate_id)
         return draft
 
     async def _run(self, *, dry_run: bool) -> PublicWorkBackfillReport:
@@ -126,10 +157,18 @@ class PublicWorkDraftBackfill:
                 reserved_in_batch.add(draft.slug)
                 if not dry_run:
                     self._repository.add(draft)
+                    await self._session.flush()
+                    await self._sync_public_evidence(
+                        draft,
+                        certificate_id=source.certificate_id,
+                    )
             if not dry_run:
                 await self._session.flush()
             last_dossier = sources[-1].dossier
             cursor = last_dossier.id
+
+        if not dry_run:
+            await self._sync_existing_drafts()
 
         return PublicWorkBackfillReport(
             scanned=scanned,
@@ -138,6 +177,89 @@ class PublicWorkDraftBackfill:
             skipped=sum(reasons.values()),
             skip_reasons=dict(sorted(reasons.items())),
         )
+
+    async def _sync_existing_drafts(self) -> None:
+        cursor: UUID | None = None
+        while True:
+            statement = (
+                select(PublicWork)
+                .join(Dossier, Dossier.id == PublicWork.dossier_id)
+                .where(
+                    Dossier.status.in_(
+                        (DossierStatus.CERTIFICATE_ISSUED, DossierStatus.PUBLISHED)
+                    ),
+                    PublicWork.deleted_at.is_(None),
+                    PublicWork.certificate_id.is_not(None),
+                )
+                .order_by(PublicWork.id)
+                .limit(self._batch_size)
+            )
+            if cursor is not None:
+                statement = statement.where(PublicWork.id > cursor)
+            works = tuple(await self._session.scalars(statement))
+            if not works:
+                break
+            for work in works:
+                await self._sync_public_evidence(
+                    work,
+                    certificate_id=work.certificate_id,
+                )
+            await self._session.flush()
+            cursor = works[-1].id
+
+    async def _sync_public_evidence(
+        self,
+        work: PublicWork,
+        *,
+        certificate_id: UUID | None,
+    ) -> None:
+        if certificate_id is None:
+            return
+        certificate = await self._session.get(Certificate, certificate_id)
+        if certificate is None or certificate.status is not CertificateStatus.ACTIVE:
+            return
+        version_id = await self._session.scalar(
+            select(CertificateVersion.dossier_version_id).where(
+                CertificateVersion.certificate_id == certificate.id,
+                CertificateVersion.version_no == certificate.current_version_no,
+            )
+        )
+        if version_id is None:
+            return
+        existing_ids = set(
+            await self._session.scalars(
+                select(PublicWorkMedia.media_asset_id).where(
+                    PublicWorkMedia.public_work_id == work.id
+                )
+            )
+        )
+        rows = await self._session.execute(
+            select(DossierEvidence, MediaAsset)
+            .join(MediaAsset, MediaAsset.id == DossierEvidence.media_asset_id)
+            .where(
+                DossierEvidence.dossier_id == work.dossier_id,
+                DossierEvidence.dossier_version_id == version_id,
+                DossierEvidence.access_scope.in_(PUBLIC_EVIDENCE_SCOPES),
+                MediaAsset.status == MediaStatus.ACTIVE,
+                MediaAsset.deleted_at.is_(None),
+            )
+            .order_by(DossierEvidence.display_order, DossierEvidence.id)
+        )
+        for evidence, asset in rows.tuples():
+            kind = PUBLIC_MEDIA_KINDS.get(asset.mime_type)
+            if kind is None or asset.id in existing_ids:
+                continue
+            self._session.add(
+                PublicWorkMedia(
+                    public_work_id=work.id,
+                    media_asset_id=asset.id,
+                    media_kind=kind,
+                    sort_order=evidence.display_order,
+                    caption=evidence.title,
+                    alt_text=evidence.title if kind is PublicMediaKind.IMAGE else None,
+                )
+            )
+            existing_ids.add(asset.id)
 
     async def _draft_from_source(
         self,
@@ -149,9 +271,7 @@ class PublicWorkDraftBackfill:
         title = dossier.title.strip()
         if not title:
             return None, "missing_public_title"
-        description = (dossier.summary or "").strip()
-        if not description:
-            return None, "missing_public_description"
+        description = (dossier.summary or "").strip() or title
         slug = await self._available_slug(dossier, reserved_in_batch)
         if slug is None:
             return None, "invalid_public_slug"

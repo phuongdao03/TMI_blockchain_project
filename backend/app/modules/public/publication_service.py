@@ -481,6 +481,7 @@ class PublicationService:
     def _serialize(work: PublicWork) -> dict[str, object]:
         return {
             "id": str(work.id),
+            "title": work.title,
             "publication_status": work.publication_status.value,
             "visibility": work.visibility.value,
             "version": work.version,

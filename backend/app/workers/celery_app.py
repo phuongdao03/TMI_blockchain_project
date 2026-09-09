@@ -55,6 +55,10 @@ celery_app.conf.update(
             "task": "app.workers.public_work_tasks.publish_scheduled_public_works",
             "schedule": 30.0,
         },
+        "reconcile-pending-public-media": {
+            "task": "app.workers.public_media_tasks.reconcile_pending_public_media",
+            "schedule": 30.0,
+        },
         "rebuild-public-sitemap-fallback": {
             "task": "app.workers.public_work_tasks.rebuild_public_sitemap",
             "schedule": 3600.0,

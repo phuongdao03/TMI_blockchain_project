@@ -101,10 +101,14 @@ describe("VerificationPanel", () => {
     renderPanel();
 
     expect(
-      await screen.findByText("Tài liệu đã được ghi nhận và chưa bị thay đổi."),
+      await screen.findByText(
+        "Chứng thư hợp lệ và đã được xác nhận trên blockchain.",
+      ),
     ).toBeDefined();
     expect(await screen.findByText("Lịch sử xác nhận")).toBeDefined();
     expect(screen.getByText("Bộ nhận diện TMI")).toBeDefined();
+    expect(screen.getByText("Polygon (sổ ghi nhận công khai)")).toBeDefined();
+    expect(screen.getByText("32 lượt xác nhận từ mạng")).toBeDefined();
     expect(screen.queryByText(/database|role|schema|endpoint/i)).toBeNull();
     expect(screen.getByText("Blockchain là gì?")).toBeDefined();
     expect(screen.getByText("Chi tiết nâng cao")).toBeDefined();
@@ -113,6 +117,11 @@ describe("VerificationPanel", () => {
     expect(screen.getByText("Số lượt mạng đã xác nhận")).toBeDefined();
     expect(screen.getByText("Số khối ghi nhận")).toBeDefined();
     expect(screen.getByText("Địa chỉ sổ đăng ký công khai")).toBeDefined();
+    expect(
+      screen.queryByText(
+        /Nó không tự chứng minh tính xác thực vật lý, quyền sở hữu hoặc tính hợp pháp/,
+      ),
+    ).toBeNull();
   });
 
   it("compares a selected file locally", async () => {

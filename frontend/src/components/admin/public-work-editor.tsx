@@ -78,7 +78,7 @@ const checklistLabels: Record<string, string> = {
   ACTIVE_CATEGORY_REQUIRED: "Danh mục đang hoạt động",
   APPROVED_DOSSIER_REQUIRED: "Hồ sơ đã được phê duyệt",
   ACTIVE_CERTIFICATE_REQUIRED: "Chứng nhận còn hiệu lực",
-  READY_THUMBNAIL_REQUIRED: "Ảnh đại diện đã sẵn sàng",
+  READY_THUMBNAIL_REQUIRED: "Ảnh bìa hoặc video công khai đã sẵn sàng",
 };
 
 function defaults(work: PublicWorkEditorData): EditorValues {

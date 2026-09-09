@@ -36,14 +36,6 @@ function setPendingRedirect(pending: boolean): void {
   }
 }
 
-function prefersRedirectSignIn(): boolean {
-  const userAgent = navigator.userAgent;
-  return (
-    /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent) ||
-    (/Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1)
-  );
-}
-
 function safeDestination(value: string | undefined, fallback: string): string {
   return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
 }
@@ -92,7 +84,6 @@ export function GoogleOAuthButton({
   const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string>();
-  const [redirectWasStarted] = useState(hasPendingRedirect);
 
   const finishSignIn = useCallback(
     async (user: User) => {
@@ -115,12 +106,15 @@ export function GoogleOAuthButton({
   );
 
   useEffect(() => {
-    if (!firebaseConfigured() || !redirectWasStarted) return;
+    if (!firebaseConfigured()) return;
+    const redirectWasStarted = hasPendingRedirect();
     let active = true;
 
-    queueMicrotask(() => {
-      if (active) setIsPending(true);
-    });
+    if (redirectWasStarted) {
+      queueMicrotask(() => {
+        if (active) setIsPending(true);
+      });
+    }
 
     void getRedirectResult(getFirebaseAuth())
       .then(async (credential) => {
@@ -129,7 +123,7 @@ export function GoogleOAuthButton({
           await finishSignIn(credential.user);
           return;
         }
-        if (!active) return;
+        if (!active || !redirectWasStarted) return;
         setPendingRedirect(false);
         setError("Phiên đăng nhập Google chưa hoàn tất. Vui lòng thử lại.");
         setIsPending(false);
@@ -144,7 +138,7 @@ export function GoogleOAuthButton({
     return () => {
       active = false;
     };
-  }, [finishSignIn, redirectWasStarted]);
+  }, [finishSignIn]);
 
   async function startGoogleOAuth() {
     setError(undefined);
@@ -155,13 +149,19 @@ export function GoogleOAuthButton({
       const auth = getFirebaseAuth();
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
-      if (prefersRedirectSignIn()) {
+      try {
+        const credential = await signInWithPopup(auth, provider);
+        await finishSignIn(credential.user);
+      } catch (popupError) {
+        if (
+          (popupError as { code?: string } | null)?.code !==
+          "auth/popup-blocked"
+        ) {
+          throw popupError;
+        }
         setPendingRedirect(true);
         await signInWithRedirect(auth, provider);
-        return;
       }
-      const credential = await signInWithPopup(auth, provider);
-      await finishSignIn(credential.user);
     } catch (cause) {
       setPendingRedirect(false);
       setError(oauthErrorMessage(cause));

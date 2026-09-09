@@ -37,6 +37,8 @@ from app.modules.public.models import (
     PublicWork,
     PublicWorkMedia,
 )
+from app.workers.celery_app import celery_app
+from app.workers.public_media_tasks import reconcile_pending_public_media
 
 
 class RecordingDispatcher:
@@ -45,6 +47,14 @@ class RecordingDispatcher:
 
     def enqueue(self, relation_id: UUID) -> None:
         self.ids.append(relation_id)
+
+
+def test_pending_public_media_reconciliation_is_scheduled() -> None:
+    assert reconcile_pending_public_media.name in celery_app.tasks
+    assert (
+        celery_app.conf.beat_schedule["reconcile-pending-public-media"]["task"]
+        == reconcile_pending_public_media.name
+    )
 
 
 class DerivativeGateway:
@@ -265,6 +275,103 @@ def test_public_media_permissions_validation_order_removal_and_retry(
                 select(func.count()).select_from(AuditLog)
             )
             assert audit_count == 4
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) -> None:
+    class VideoGateway:
+        async def create_public_derivative(
+            self, **kwargs: object
+        ) -> PublicDerivativeMetadata:
+            assert kwargs["source_resource_type"] == "video"
+            assert kwargs["source_format"] == "mp4"
+            return PublicDerivativeMetadata(
+                public_id="ip-certificate/public/derivatives/video-relation",
+                url=(
+                    "https://res.cloudinary.com/demo/video/upload/"
+                    "ip-certificate/public/derivatives/video-relation.mp4"
+                ),
+                mime_type="video/mp4",
+                bytes=4096,
+                width=1920,
+                height=1080,
+                duration_ms=12_000,
+            )
+
+    async def exercise() -> None:
+        engine = create_async_engine(
+            f"sqlite+aiosqlite:///{(tmp_path / 'public-video.sqlite3').as_posix()}"
+        )
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        owner_id = uuid4()
+        work_id = uuid4()
+        relation_id = uuid4()
+        async with factory() as session:
+            async with session.begin():
+                session.add(
+                    User(
+                        id=owner_id,
+                        email="video-owner@example.test",
+                        password_hash="hash",
+                        status=UserStatus.ACTIVE,
+                    )
+                )
+                category = Category(code="VIDEO", name="Video", slug="video")
+                session.add(category)
+                await session.flush()
+                work = PublicWork(
+                    id=work_id,
+                    dossier_id=uuid4(),
+                    owner_user_id=owner_id,
+                    slug="welcome-video",
+                    title="Welcome video",
+                    short_description="Approved public video",
+                    category_id=category.id,
+                )
+                video = MediaAsset(
+                    owner_user_id=owner_id,
+                    cloudinary_public_id="private/owner/welcome-video",
+                    cloudinary_version=1,
+                    resource_type="video",
+                    access_mode="authenticated",
+                    original_filename="welcome.mp4",
+                    mime_type="video/mp4",
+                    bytes=4096,
+                    status=MediaStatus.ACTIVE,
+                )
+                session.add_all([work, video])
+                await session.flush()
+                session.add(
+                    PublicWorkMedia(
+                        id=relation_id,
+                        public_work_id=work_id,
+                        media_asset_id=video.id,
+                        media_kind=PublicMediaKind.VIDEO,
+                        sort_order=0,
+                    )
+                )
+
+            worker = PublicMediaWorker(
+                session=session,
+                gateway=cast(PublicDerivativeGateway, VideoGateway()),
+                environment="local",
+                payload_cipher=OutboxPayloadCipher.from_base64(
+                    encoded_key=base64.b64encode(b"v" * 32).decode(),
+                    key_id="video-test-v1",
+                ),
+            )
+            await worker.process(relation_id)
+
+            relation = await session.get(PublicWorkMedia, relation_id)
+            assert relation is not None
+            assert relation.derivative_status is DerivativeStatus.READY
+            assert relation.derivative_url is not None
+            assert "private/owner/welcome-video" not in relation.derivative_url
+            assert relation.derivative_mime_type == "video/mp4"
         await engine.dispose()
 
     asyncio.run(exercise())

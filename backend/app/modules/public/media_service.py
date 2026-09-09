@@ -44,8 +44,11 @@ _SOURCE_FORMATS = {
     "image/jpeg": "jpg",
     "image/png": "png",
     "image/webp": "webp",
+    "video/mp4": "mp4",
+    "video/webm": "webm",
 }
 IMAGE_DERIVATIVE_TRANSFORMATION = "c_limit,w_1600,h_1600,q_auto,f_webp"
+VIDEO_DERIVATIVE_TRANSFORMATION = "c_limit,w_1920,h_1080,q_auto"
 
 
 class PublicMediaDispatcher(Protocol):
@@ -321,7 +324,7 @@ class PublicMediaWorker:
             duration_ms = asset.duration_ms
             width = asset.width
             height = asset.height
-        if media_kind is not PublicMediaKind.IMAGE:
+        if media_kind not in {PublicMediaKind.IMAGE, PublicMediaKind.VIDEO}:
             async with self._session.begin():
                 current = await self._repository.get_relation(
                     relation_id, for_update=True
@@ -336,7 +339,7 @@ class PublicMediaWorker:
             return
         if source_format is None:
             await self._mark_failed(relation_id, "UNSUPPORTED_MIME")
-            raise PublicMediaValidationError("Image MIME type is unsupported.")
+            raise PublicMediaValidationError("Public media MIME type is unsupported.")
         derivative_public_id = (
             f"ip-certificate/{self._environment}/public/derivatives/{relation_id}"
         )
@@ -346,7 +349,11 @@ class PublicMediaWorker:
                 source_resource_type=source_resource_type,
                 source_format=source_format,
                 derivative_public_id=derivative_public_id,
-                transformation=IMAGE_DERIVATIVE_TRANSFORMATION,
+                transformation=(
+                    IMAGE_DERIVATIVE_TRANSFORMATION
+                    if media_kind is PublicMediaKind.IMAGE
+                    else VIDEO_DERIVATIVE_TRANSFORMATION
+                ),
             )
         except MediaProviderUnavailableError:
             await self._mark_failed(relation_id, "PROVIDER_UNAVAILABLE")

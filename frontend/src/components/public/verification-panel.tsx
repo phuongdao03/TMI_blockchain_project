@@ -32,9 +32,9 @@ const resultCopy: Record<
   { title: string; detail: string; tone: string; icon: typeof CheckCircle2 }
 > = {
   VALID: {
-    title: "Tài liệu đã được ghi nhận và chưa bị thay đổi.",
+    title: "Chứng thư hợp lệ và đã được xác nhận trên blockchain.",
     detail:
-      "Dấu vân tay số hiện tại trùng với bản đã được công bố trên blockchain.",
+      "Thông tin chứng thư trùng khớp với bản ghi công khai. Bạn có thể xem tài sản, thời điểm xác nhận và mã giao dịch ở bên cạnh.",
     tone: "text-success",
     icon: CheckCircle2,
   },
@@ -76,6 +76,13 @@ function formatDate(value: string | null) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function networkLabel(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return value.toLowerCase() === "polygon"
+    ? "Polygon (sổ ghi nhận công khai)"
+    : value;
 }
 
 function localComparisonError(error: unknown): string {
@@ -347,12 +354,6 @@ export function VerificationPanel({
                 </section>
               </div>
             ) : null}
-
-            <p className="border-t border-white/10 pt-5 text-xs leading-5 text-slate-400">
-              Kết quả xác nhận dữ liệu số đã được ghi nhận tại một thời điểm. Nó
-              không tự chứng minh tính xác thực vật lý, quyền sở hữu hoặc tính
-              hợp pháp của tài sản.
-            </p>
           </div>
         ) : (
           <div
@@ -404,6 +405,18 @@ function VerificationResult({
           <Fact
             label="Thời điểm xác nhận"
             value={formatDate(data.confirmedAt)}
+          />
+          <Fact
+            label="Nơi ghi nhận công khai"
+            value={networkLabel(data.network)}
+          />
+          <Fact
+            label="Mức xác nhận"
+            value={
+              data.confirmations !== undefined
+                ? `${data.confirmations} lượt xác nhận từ mạng`
+                : null
+            }
           />
         </dl>
         <details className="mt-6 border-t border-white/10 pt-4 text-sm">

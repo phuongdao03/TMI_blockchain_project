@@ -3,19 +3,22 @@ import { Clock3 } from "lucide-react";
 import {
   actorLabel,
   auditEventSummary,
+  auditOutcome,
+  auditTargetLabel,
   formatAuditTimestamp,
   integrityLabels,
-  resourceLabel,
 } from "@/components/admin/audit-presenters";
 import type { AuditLogItem } from "@/lib/api/types";
 
 function IntegrityBadge({ row }: { row: AuditLogItem }) {
+  const outcome = auditOutcome(row);
   const integrity = integrityLabels[row.integrityStatus];
   return (
     <span
-      className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-semibold ${integrity.className}`}
+      className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-semibold ${outcome.className}`}
+      title={`Tính toàn vẹn bản ghi: ${integrity.label}`}
     >
-      {integrity.label}
+      {outcome.label}
     </span>
   );
 }
@@ -59,7 +62,7 @@ export function AuditRow({ row }: { row: AuditLogItem }) {
           {auditEventSummary(row)}
         </span>
         <span className="mt-1 block text-xs text-neutral-500">
-          {resourceLabel(row.resourceType)}
+          {auditTargetLabel(row)}
         </span>
         <span className="mt-1 block text-xs text-neutral-500">
           {actorLabel(row.actorType, row.actorService)}
@@ -95,8 +98,7 @@ export function AuditCard({ row }: { row: AuditLogItem }) {
         {auditEventSummary(row)}
       </h3>
       <p className="mt-1 text-sm leading-6 text-neutral-600">
-        {resourceLabel(row.resourceType)} ·{" "}
-        {actorLabel(row.actorType, row.actorService)}
+        {auditTargetLabel(row)} · {actorLabel(row.actorType, row.actorService)}
       </p>
       <time
         className="mt-3 block text-xs font-medium text-neutral-500"

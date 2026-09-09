@@ -45,6 +45,7 @@ class PublicWorkPublicationContext:
     certificate: Certificate | None
     category: Category
     thumbnail: MediaAsset | None
+    has_ready_video: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -210,8 +211,23 @@ class PublicWorkRepository:
         *,
         for_update: bool = False,
     ) -> PublicWorkPublicationContext | None:
+        ready_video = exists(
+            select(PublicWorkMedia.id).where(
+                PublicWorkMedia.public_work_id == PublicWork.id,
+                PublicWorkMedia.media_kind == PublicMediaKind.VIDEO,
+                PublicWorkMedia.derivative_status == DerivativeStatus.READY,
+                PublicWorkMedia.derivative_url.is_not(None),
+            )
+        )
         statement = (
-            select(PublicWork, Dossier, Certificate, Category, MediaAsset)
+            select(
+                PublicWork,
+                Dossier,
+                Certificate,
+                Category,
+                MediaAsset,
+                ready_video.label("has_ready_video"),
+            )
             .join(Dossier, Dossier.id == PublicWork.dossier_id)
             .join(Category, Category.id == PublicWork.category_id)
             .outerjoin(Certificate, Certificate.id == PublicWork.certificate_id)
@@ -234,6 +250,7 @@ class PublicWorkRepository:
             certificate=row[2],
             category=row[3],
             thumbnail=row[4],
+            has_ready_video=bool(row[5]),
         )
 
     async def claim_version(self, work: PublicWork, expected_version: int) -> bool:

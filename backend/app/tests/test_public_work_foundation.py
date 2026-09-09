@@ -8,14 +8,27 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.db.base import Base
 from app.modules.auth.models import User, UserStatus
-from app.modules.blockchain.models import Certificate, CertificateStatus
-from app.modules.dossiers.models import Category, Dossier, DossierStatus
-from app.modules.media.models import MediaAsset  # noqa: F401
+from app.modules.blockchain.models import (
+    Certificate,
+    CertificateStatus,
+    CertificateVersion,
+)
+from app.modules.dossiers.models import (
+    Category,
+    Dossier,
+    DossierEvidence,
+    DossierStatus,
+    DossierVersion,
+    EvidenceVisibility,
+)
+from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.public.backfill import PublicWorkDraftBackfill
 from app.modules.public.catalog_repository import PublicWorkRepository
 from app.modules.public.models import (
     PublicationStatus,
+    PublicMediaKind,
     PublicWork,
+    PublicWorkMedia,
     PublicWorkSlugHistory,
     PublicWorkVisibility,
 )
@@ -35,6 +48,9 @@ def test_public_work_repository_and_draft_backfill_are_safe(tmp_path: Path) -> N
         eligible_dossier_id = uuid4()
         incomplete_dossier_id = uuid4()
         certificate_id = uuid4()
+        dossier_version_id = uuid4()
+        public_video_id = uuid4()
+        private_document_id = uuid4()
         async with factory() as session:
             async with session.begin():
                 session.add(
@@ -62,6 +78,7 @@ def test_public_work_repository_and_draft_backfill_are_safe(tmp_path: Path) -> N
                             title="Tác phẩm đủ điều kiện",
                             slug="tac-pham-du-dieu-kien",
                             summary="Mô tả công khai đã được duyệt.",
+                            current_version_no=1,
                             _status=DossierStatus.CERTIFICATE_ISSUED,
                         ),
                         Dossier(
@@ -77,6 +94,42 @@ def test_public_work_repository_and_draft_backfill_are_safe(tmp_path: Path) -> N
                     ]
                 )
                 session.add(
+                    DossierVersion(
+                        id=dossier_version_id,
+                        dossier_id=eligible_dossier_id,
+                        version_no=1,
+                        snapshot_json={},
+                        canonical_hash="c" * 64,
+                        submitted_by=owner_id,
+                    )
+                )
+                session.add_all(
+                    [
+                        MediaAsset(
+                            id=public_video_id,
+                            owner_user_id=owner_id,
+                            cloudinary_public_id="private/owner/welcome-video",
+                            resource_type="video",
+                            access_mode="authenticated",
+                            original_filename="welcome.mp4",
+                            mime_type="video/mp4",
+                            bytes=4096,
+                            status=MediaStatus.ACTIVE,
+                        ),
+                        MediaAsset(
+                            id=private_document_id,
+                            owner_user_id=owner_id,
+                            cloudinary_public_id="private/owner/identity-card",
+                            resource_type="image",
+                            access_mode="authenticated",
+                            original_filename="identity.png",
+                            mime_type="image/png",
+                            bytes=1024,
+                            status=MediaStatus.ACTIVE,
+                        ),
+                    ]
+                )
+                session.add(
                     Certificate(
                         id=certificate_id,
                         certificate_number="TMI-2026-1501",
@@ -88,20 +141,55 @@ def test_public_work_repository_and_draft_backfill_are_safe(tmp_path: Path) -> N
                         qr_payload="https://example.test/verify/public",
                     )
                 )
+                session.add(
+                    CertificateVersion(
+                        certificate_id=certificate_id,
+                        version_no=1,
+                        dossier_version_id=dossier_version_id,
+                        metadata_json={},
+                        metadata_hash="d" * 64,
+                    )
+                )
+                session.add_all(
+                    [
+                        DossierEvidence(
+                            dossier_id=eligible_dossier_id,
+                            dossier_version_id=dossier_version_id,
+                            media_asset_id=public_video_id,
+                            evidence_type="INTRO_VIDEO",
+                            evidence_role="PRIMARY_WORK",
+                            access_scope=EvidenceVisibility.PUBLIC,
+                            title="Video chào mừng Tinh hoa Việt",
+                            display_order=0,
+                            is_public=True,
+                        ),
+                        DossierEvidence(
+                            dossier_id=eligible_dossier_id,
+                            dossier_version_id=dossier_version_id,
+                            media_asset_id=private_document_id,
+                            evidence_type="IDENTITY_DOCUMENT",
+                            evidence_role="IDENTITY",
+                            access_scope=EvidenceVisibility.PRIVATE,
+                            title="Giấy tờ riêng tư",
+                            display_order=1,
+                            is_public=False,
+                        ),
+                    ]
+                )
 
             backfill = PublicWorkDraftBackfill(session, batch_size=1)
             dry_run = await backfill.run(dry_run=True)
             assert dry_run.scanned == 2
-            assert dry_run.eligible == 1
+            assert dry_run.eligible == 2
             assert dry_run.created == 0
-            assert dry_run.skipped == 1
-            assert dry_run.skip_reasons == {"missing_public_description": 1}
+            assert dry_run.skipped == 0
+            assert dry_run.skip_reasons == {}
             assert (
                 await session.scalar(select(func.count()).select_from(PublicWork)) == 0
             )
 
             applied = await backfill.run(dry_run=False)
-            assert applied.created == 1
+            assert applied.created == 2
             work = await PublicWorkRepository(session).get_by_dossier_id(
                 eligible_dossier_id
             )
@@ -111,6 +199,31 @@ def test_public_work_repository_and_draft_backfill_are_safe(tmp_path: Path) -> N
             assert work.certificate_id == certificate_id
             assert work.published_at is None
             assert work.slug == "tac-pham-du-dieu-kien"
+            incomplete_work = await PublicWorkRepository(session).get_by_dossier_id(
+                incomplete_dossier_id
+            )
+            assert incomplete_work is not None
+            assert incomplete_work.short_description == "Thiếu mô tả"
+            public_media = tuple(
+                await session.scalars(
+                    select(PublicWorkMedia).where(
+                        PublicWorkMedia.public_work_id == work.id
+                    )
+                )
+            )
+            assert len(public_media) == 1
+            assert public_media[0].media_asset_id == public_video_id
+            assert public_media[0].media_kind is PublicMediaKind.VIDEO
+            assert public_media[0].caption == "Video chào mừng Tinh hoa Việt"
+
+            await backfill.ensure_draft(
+                eligible_dossier_id,
+                certificate_id=certificate_id,
+            )
+            assert (
+                await session.scalar(select(func.count()).select_from(PublicWorkMedia))
+                == 1
+            )
 
             history = PublicWorkSlugHistory(
                 public_work_id=work.id,

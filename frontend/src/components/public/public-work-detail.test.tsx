@@ -127,6 +127,37 @@ describe("PublicWorkDetailPage", () => {
     expect(screen.getByText("Hình ảnh đang được cập nhật")).toBeTruthy();
   });
 
+  it("renders an approved public video with native playback controls", () => {
+    const videoDetail: PublicWorkDetail = {
+      ...detail,
+      media: [
+        {
+          id: "video-1",
+          kind: "VIDEO",
+          sortOrder: 0,
+          caption: "Video chào mừng Tinh hoa Việt",
+          altText: null,
+          url: "https://res.cloudinary.com/demo/video/upload/welcome.mp4",
+          mimeType: "video/mp4",
+          width: 1920,
+          height: 1080,
+          durationMs: 12_000,
+          isThumbnail: false,
+        },
+      ],
+    };
+
+    const { container } = render(
+      <PublicWorkDetailPage initialDetail={videoDetail} slug={detail.slug} />,
+      { wrapper },
+    );
+
+    const video = container.querySelector("video");
+    expect(video?.controls).toBe(true);
+    expect(video?.getAttribute("src")).toContain("welcome.mp4");
+    expect(screen.getByText("Video chào mừng Tinh hoa Việt")).toBeDefined();
+  });
+
   it("distinguishes published proof from temporarily unavailable verification", async () => {
     render(<PublicWorkDetailPage initialDetail={detail} slug={detail.slug} />, {
       wrapper,

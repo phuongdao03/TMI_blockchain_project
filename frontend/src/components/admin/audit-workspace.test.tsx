@@ -201,4 +201,77 @@ describe("AuditWorkspace", () => {
     );
     expect(screen.queryByText("Đã ghi nhận thay đổi tài khoản")).toBeNull();
   });
+
+  it("explains public certificate checks in business language", async () => {
+    vi.mocked(auditApi.list).mockResolvedValueOnce({
+      success: true,
+      data: [
+        {
+          id: "audit-verification",
+          actorUserId: null,
+          actorType: "ANONYMOUS",
+          actorService: null,
+          action: "public.verification.completed",
+          resourceType: "certificate_verification",
+          resourceId: "certificate-1",
+          before: null,
+          after: { certificate_number: "TMI-2026-0001", status: "VALID" },
+          requestId: "request-verification",
+          integrityStatus: "VERIFIED",
+          retentionUntil: null,
+          createdAt: "2026-09-01T04:00:00Z",
+        },
+      ],
+      meta: { page: 1, pageSize: 20, total: 1 },
+    });
+
+    render(<AuditWorkspace />, { wrapper: Wrapper });
+
+    expect(
+      await screen.findAllByText("Đã kiểm tra chứng thư công khai"),
+    ).toHaveLength(2);
+    expect(screen.getAllByText(/TMI-2026-0001/)).toHaveLength(2);
+    expect(screen.getAllByText(/Tra cứu chứng thư/)).toHaveLength(2);
+    expect(screen.getAllByText("Hợp lệ")).toHaveLength(2);
+    expect(
+      (await screen.findByTestId("audit-row-summary")).textContent,
+    ).not.toContain("public.verification.completed");
+    expect(
+      screen.getByTestId("audit-row-technical-details").textContent,
+    ).toContain("public.verification.completed");
+  });
+
+  it("shows publication as the business outcome", async () => {
+    vi.mocked(auditApi.list).mockResolvedValueOnce({
+      success: true,
+      data: [
+        {
+          id: "audit-published",
+          actorUserId: "admin-1",
+          actorType: "USER",
+          actorService: null,
+          action: "public_work.published",
+          resourceType: "public_work",
+          resourceId: "work-1",
+          before: null,
+          after: {
+            title: "Video chào mừng Tinh hoa Việt",
+            publication_status: "PUBLISHED",
+          },
+          requestId: "request-published",
+          integrityStatus: "VERIFIED",
+          retentionUntil: null,
+          createdAt: "2026-09-01T04:00:00Z",
+        },
+      ],
+      meta: { page: 1, pageSize: 20, total: 1 },
+    });
+
+    render(<AuditWorkspace />, { wrapper: Wrapper });
+
+    expect(await screen.findAllByText("Đã công bố")).toHaveLength(2);
+    expect(
+      screen.getAllByText(/Tác phẩm công khai · Video chào mừng/),
+    ).toHaveLength(2);
+  });
 });
