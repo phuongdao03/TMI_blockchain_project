@@ -161,7 +161,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       .fill("TMI-2026-7EAEC2D2C99A");
     await page.getByRole("button", { name: "Kiểm tra" }).click();
     await expect(
-      page.getByText("Tài liệu đã được ghi nhận và chưa bị thay đổi."),
+      page.getByText("Chứng thư hợp lệ và đã được xác nhận trên blockchain."),
     ).toBeVisible();
   });
 

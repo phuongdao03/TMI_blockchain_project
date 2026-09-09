@@ -6,7 +6,7 @@ test("public verification explains provenance and compares a file locally", asyn
   await page.goto("/verify/demo-token");
 
   await expect(
-    page.getByText("Tài liệu đã được ghi nhận và chưa bị thay đổi."),
+    page.getByText("Chứng thư hợp lệ và đã được xác nhận trên blockchain."),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Lịch sử xác nhận" }),
