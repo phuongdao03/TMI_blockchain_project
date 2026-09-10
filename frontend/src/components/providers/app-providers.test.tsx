@@ -17,7 +17,7 @@ beforeEach(() => {
 });
 
 describe("AppProviders", () => {
-  it("does not bootstrap a private session on the public search route", async () => {
+  it("leaves private session bootstrap to the dashboard auth guard", async () => {
     const view = render(
       <AppProviders>
         <p>Public search</p>
@@ -33,7 +33,8 @@ describe("AppProviders", () => {
         <p>Dashboard</p>
       </AppProviders>,
     );
-    await waitFor(() => expect(authApi.currentUser).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByText("Dashboard")).toBeTruthy());
+    expect(authApi.currentUser).not.toHaveBeenCalled();
   });
 
   it.each(["/process", "/policies", "/login", "/register"])(

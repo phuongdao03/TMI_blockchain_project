@@ -76,7 +76,8 @@ export function NotificationBell() {
     queryKey: ["notifications", "unread-count"],
     queryFn: notificationApi.unreadCount,
     refetchInterval: 45_000,
-    refetchOnWindowFocus: true,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
   const recent = useQuery({
     queryKey: ["notifications", "recent"],

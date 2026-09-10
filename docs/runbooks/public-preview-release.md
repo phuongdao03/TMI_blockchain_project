@@ -1,10 +1,10 @@
 # Đề cử Tinh Hoa Việt V1 public preview
 
 The canonical production hostname is `decu.tinhhoaviet.org.vn`. This release is
-a controlled product preview. It serves the public nomination catalog,
-Firebase registration/login and basic account access. Dossier uploads, object
-storage, payment, internal operations, workers and blockchain transactions are
-not available. The backend denies those mutations even if a client calls the API
+a controlled product preview. It serves the public nomination catalog, Firebase
+registration/login and basic account access. Dossier uploads, object storage,
+payment, internal operations, workers and blockchain transactions are not
+available. The backend denies those mutations even if a client calls the API
 directly.
 
 > Account data is real. Enabling registration does store real account data: a
@@ -56,12 +56,11 @@ These identify the Firebase web application and are not server private keys.
 Restrict the API key in Google Cloud and add the production domain to Firebase
 Authentication authorized domains. Enable only the intended Firebase sign-in
 providers. Keep `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` set to the project's
-`<project>.firebaseapp.com` domain; Next.js uses it as the upstream for the
-same-origin `/__/auth/` proxy. In production, the browser-facing Firebase
-`authDomain` is the application hostname so redirect sign-in continues to work
-in storage-partitioned mobile browsers. Register the application hostname in
-Firebase Authentication and authorize
-`https://<application-hostname>/__/auth/handler` on the Google OAuth client.
+`<project>.firebaseapp.com` domain. The browser must use that exact value as
+Firebase's OAuth handler; replacing it with the application hostname causes
+Google `redirect_uri_mismatch`. Register the application hostname in Firebase
+Authentication and ensure the Google OAuth client authorizes
+`https://<project>.firebaseapp.com/__/auth/handler`.
 
 ## VPS prerequisites
 
@@ -79,8 +78,8 @@ Firebase Authentication and authorize
 
 This VPS already uses the operating-system Nginx for other applications. Do not
 stop it and do not publish the project Nginx container on ports 80/443. The
-preview Compose override binds frontend and backend only to
-`127.0.0.1:3100` and `127.0.0.1:8100`; the host Nginx owns TLS and routing.
+preview Compose override binds frontend and backend only to `127.0.0.1:3100` and
+`127.0.0.1:8100`; the host Nginx owns TLS and routing.
 
 After DNS points to the VPS, bootstrap the certificate without interrupting the
 existing virtual hosts:
@@ -110,8 +109,8 @@ and keep the Nginx reload hook enabled for renewed certificates.
 
 Keep the release under `/var/www/tmi_blockchain`. Copy
 `infrastructure/.env.preview.example` to
-`/var/www/tmi_blockchain/infrastructure/.env.preview`, fill every placeholder and
-protect it:
+`/var/www/tmi_blockchain/infrastructure/.env.preview`, fill every placeholder
+and protect it:
 
 ```bash
 chmod 600 /var/www/tmi_blockchain/infrastructure/.env.preview
@@ -188,15 +187,15 @@ release record.
 
 ## Content and promotion rules
 
-Publish only introductory nominations TMI has permission to display. Do not invent a
-certificate number, transaction hash or verification status. Preview content
-must remain labelled as introductory.
+Publish only introductory nominations TMI has permission to display. Do not
+invent a certificate number, transaction hash or verification status. Preview
+content must remain labelled as introductory.
 
 Promotion to `full` is a separate release. It requires payOS qualification,
-staff access controls, document storage and malware scanning, Polygon contract/signing,
-security/E2E evidence and the existing production go/no-go approval. Rebuild the
-frontend with `NEXT_PUBLIC_RELEASE_MODE=full`; changing the VPS environment
-alone is insufficient.
+staff access controls, document storage and malware scanning, Polygon
+contract/signing, security/E2E evidence and the existing production go/no-go
+approval. Rebuild the frontend with `NEXT_PUBLIC_RELEASE_MODE=full`; changing
+the VPS environment alone is insufficient.
 
 ## Pre-DNS qualification
 

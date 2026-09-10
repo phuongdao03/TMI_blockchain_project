@@ -1,9 +1,19 @@
 import asyncio
+import logging
 from uuid import UUID
+
+from sqlalchemy import and_, select
 
 from app.core.config import get_settings
 from app.db.session import get_session_factory
 from app.modules.auth.security import OutboxPayloadCipher
+from app.modules.blockchain.models import (
+    BlockchainTransaction,
+    BlockchainTransactionStatus,
+    Certificate,
+    CertificateStatus,
+    CertificateVersion,
+)
 from app.modules.certificates.errors import CertificateGenerationError
 from app.modules.certificates.metadata import (
     CertificateMetadataBuilder,
@@ -12,8 +22,12 @@ from app.modules.certificates.metadata import (
 from app.modules.certificates.pdf import CertificatePdfRenderer
 from app.modules.certificates.service import CertificateService
 from app.modules.certificates.storage import CloudinaryCertificateStorage
+from app.modules.dossiers.models import Dossier, DossierStatus
 from app.modules.media.gateway import CloudinaryMediaGateway
+from app.modules.public.backfill import PublicWorkDraftBackfill
 from app.workers.celery_app import celery_app
+
+logger = logging.getLogger(__name__)
 
 
 async def _process(
@@ -93,3 +107,55 @@ def issue_certificate(dossier_id: str) -> None:
 )  # type: ignore[untyped-decorator]
 def render_certificate_version(certificate_version_id: str) -> None:
     asyncio.run(_process(certificate_version_id=UUID(certificate_version_id)))
+
+
+async def _repair_publication(*, batch_size: int = 100) -> None:
+    """Resume issued PDFs and rebuild missing editorial drafts independently of RPC."""
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        candidate_ids = tuple(
+            await session.scalars(
+                select(Dossier.id)
+                .join(Certificate, Certificate.dossier_id == Dossier.id)
+                .join(
+                    CertificateVersion,
+                    and_(
+                        CertificateVersion.certificate_id == Certificate.id,
+                        CertificateVersion.version_no == Certificate.current_version_no,
+                    ),
+                )
+                .join(
+                    BlockchainTransaction,
+                    BlockchainTransaction.id
+                    == CertificateVersion.blockchain_transaction_id,
+                )
+                .where(
+                    Dossier.status == DossierStatus.ANCHORED,
+                    Dossier.deleted_at.is_(None),
+                    Certificate.status == CertificateStatus.ACTIVE,
+                    Certificate.pdf_media_id.is_not(None),
+                    BlockchainTransaction.status
+                    == BlockchainTransactionStatus.CONFIRMED,
+                    BlockchainTransaction.tx_hash.is_not(None),
+                )
+                .order_by(Dossier.id)
+                .limit(batch_size)
+            )
+        )
+
+    for dossier_id in candidate_ids:
+        try:
+            await _process(dossier_id=dossier_id)
+        except Exception:
+            logger.exception(
+                "Certificate publication recovery failed for dossier %s",
+                dossier_id,
+            )
+
+    async with session_factory() as session:
+        await PublicWorkDraftBackfill(session, batch_size=batch_size).run(dry_run=False)
+
+
+@celery_app.task  # type: ignore[untyped-decorator]
+def repair_certificate_publication() -> None:
+    asyncio.run(_repair_publication())

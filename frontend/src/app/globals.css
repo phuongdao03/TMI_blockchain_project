@@ -4418,7 +4418,9 @@ html[data-theme="dark"] .dashboard-main .text-error {
     appearance: none;
     display: grid;
     min-height: 3.5rem;
-    place-items: center;
+    grid-template-rows: 1.875rem minmax(1.15rem, auto);
+    align-content: center;
+    justify-items: center;
     gap: 0.2rem;
     padding: 0.35rem 0.2rem;
     border: 0;
@@ -4515,7 +4517,7 @@ html[data-theme="dark"] .dashboard-main .text-error {
     font-size: 0.625rem;
     line-height: 1.15;
   }
-  .dashboard-mobile-navigation__link span {
+  .dashboard-mobile-navigation__link > .dashboard-mobile-navigation__label {
     display: -webkit-box;
     max-width: 100%;
     overflow: hidden;
@@ -7206,6 +7208,11 @@ html[data-theme="dark"] .review-workspace__error {
 }
 
 @media (max-width: 54rem) {
+  .dashboard-page-stage,
+  .dashboard-page-stage > * > :where(header, section, form, ol) {
+    animation: none;
+  }
+
   .dashboard-main {
     padding-inline: clamp(0.875rem, 4vw, 1.25rem);
   }
@@ -7270,7 +7277,7 @@ html[data-theme="dark"] .review-workspace__error {
     padding-inline: 0.1rem;
   }
 
-  .dashboard-mobile-navigation__link span {
+  .dashboard-mobile-navigation__link > .dashboard-mobile-navigation__label {
     max-width: 4.25rem;
     overflow: hidden;
     text-overflow: ellipsis;

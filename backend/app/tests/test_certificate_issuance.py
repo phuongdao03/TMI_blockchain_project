@@ -5,7 +5,7 @@ from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -41,7 +41,11 @@ from app.modules.dossiers.models import (
 from app.modules.media.gateway import MediaGateway
 from app.modules.media.models import MediaAsset  # noqa: F401
 from app.modules.public.catalog_repository import PublicWorkRepository
-from app.modules.public.models import PublicationStatus, PublicWorkVisibility
+from app.modules.public.models import (
+    PublicationStatus,
+    PublicWork,
+    PublicWorkVisibility,
+)
 from app.modules.public.share_service import PublicShareConfigurationError
 
 NOW = datetime(2026, 7, 31, 10, 0, tzinfo=UTC)
@@ -363,6 +367,66 @@ def test_successful_issuance_is_audited_once_across_worker_replay() -> None:
             "status": "ACTIVE",
             "pdf_ready": True,
         }
+        await service._session.close()  # noqa: SLF001
+        await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_existing_pdf_repairs_interrupted_issuance_and_public_draft() -> None:
+    async def scenario() -> None:
+        service, engine, dossier_id = await _issuance_service(DossierStatus.ANCHORED)
+        service._renderer = cast(CertificatePdfRenderer, SuccessfulRenderer())  # noqa: SLF001
+        service._storage = cast(CertificateStorage, SuccessfulStorage())  # noqa: SLF001
+
+        issued = await service.process_issuance(dossier_id)
+        assert issued is not None and issued.pdf_ready is True
+
+        # Reproduce a legacy/interrupted deployment: the PDF upload committed,
+        # but the dossier transition and editorial draft did not.
+        async with service._session.begin():  # noqa: SLF001
+            dossier = await service._dossiers.get_by_id(dossier_id)  # noqa: SLF001
+            assert dossier is not None
+            dossier._set_status_from_workflow(DossierStatus.ANCHORED)
+            certificate = await service._certificates.get_by_dossier(  # noqa: SLF001
+                dossier_id
+            )
+            assert certificate is not None
+            version = (
+                await service._certificates.list_versions(certificate.id)  # noqa: SLF001
+            )[0]
+            version.pdf_media_id = None
+            await service._session.execute(  # noqa: SLF001
+                delete(PublicWork).where(PublicWork.dossier_id == dossier_id)
+            )
+
+        repaired = await service.process_issuance(dossier_id)
+        assert repaired is not None and repaired.id == issued.id
+
+        async with service._session.begin():  # noqa: SLF001
+            dossier = await service._dossiers.get_by_id(dossier_id)  # noqa: SLF001
+            public_work = await PublicWorkRepository(
+                service._session  # noqa: SLF001
+            ).get_by_dossier_id(dossier_id)
+            certificate = await service._certificates.get_by_dossier(  # noqa: SLF001
+                dossier_id
+            )
+            assert certificate is not None
+            version = (
+                await service._certificates.list_versions(certificate.id)  # noqa: SLF001
+            )[0]
+            audit_rows = (
+                await service._session.scalars(  # noqa: SLF001
+                    select(AuditLog).where(AuditLog.action == "certificate.issued")
+                )
+            ).all()
+        assert dossier is not None
+        assert dossier.status is DossierStatus.CERTIFICATE_ISSUED
+        assert public_work is not None
+        assert public_work.certificate_id == repaired.id
+        assert public_work.publication_status is PublicationStatus.DRAFT
+        assert version.pdf_media_id == certificate.pdf_media_id
+        assert len(audit_rows) == 2
         await service._session.close()  # noqa: SLF001
         await engine.dispose()
 

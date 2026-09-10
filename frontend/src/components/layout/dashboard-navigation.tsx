@@ -338,11 +338,14 @@ export function DashboardNavigation({
                 onClick={onNavigate}
               >
                 <IconFrame
+                  className="dashboard-mobile-navigation__icon"
                   icon={Icon}
                   size="sm"
                   tone={active ? "brand" : "neutral"}
                 />
-                <span>{item.label}</span>
+                <span className="dashboard-mobile-navigation__label">
+                  {item.label}
+                </span>
               </Link>
             );
           })}
@@ -359,11 +362,12 @@ export function DashboardNavigation({
             type="button"
           >
             <IconFrame
+              className="dashboard-mobile-navigation__icon"
               icon={Menu}
               size="sm"
               tone={mobileMenuContainsActiveItem ? "brand" : "neutral"}
             />
-            <span>Thêm</span>
+            <span className="dashboard-mobile-navigation__label">Thêm</span>
           </button>
         </nav>
       ) : null}

@@ -164,9 +164,16 @@ test("mobile workspace navigation stays compact, centered and touch friendly", a
   ).toBeVisible();
   for (const control of await controls.all()) {
     const box = await control.boundingBox();
+    const iconBox = await control
+      .locator(".dashboard-mobile-navigation__icon")
+      .boundingBox();
     expect(box).not.toBeNull();
+    expect(iconBox).not.toBeNull();
     expect(box!.width).toBeGreaterThanOrEqual(44);
     expect(box!.height).toBeGreaterThanOrEqual(56);
+    expect(
+      Math.abs(iconBox!.x + iconBox!.width / 2 - (box!.x + box!.width / 2)),
+    ).toBeLessThanOrEqual(1);
   }
 
   const labelWhiteSpace = await controls

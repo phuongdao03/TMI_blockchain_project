@@ -72,6 +72,7 @@ export function DashboardOverview() {
     queryKey: dossierKeys.list(filters),
     queryFn: () => dossierApi.list(filters),
     enabled: isUser,
+    staleTime: 30_000,
   });
   if (!isUser) {
     return (

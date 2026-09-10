@@ -98,6 +98,26 @@ describe("GoogleOAuthButton", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("does not use redirect fallback on mobile browsers", async () => {
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+    );
+    mocks.signInWithPopup.mockRejectedValue({ code: "auth/popup-blocked" });
+
+    render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Tiếp tục với Google" }),
+    );
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "cho phép cửa sổ bật lên",
+    );
+    expect(mocks.signInWithRedirect).not.toHaveBeenCalled();
+    expect(
+      sessionStorage.getItem("tmi.google-oauth.redirect-pending"),
+    ).toBeNull();
+  });
+
   it("finishes authentication after returning from the mobile redirect", async () => {
     sessionStorage.setItem("tmi.google-oauth.redirect-pending", "1");
     mocks.getRedirectResult.mockResolvedValue({
@@ -207,14 +227,11 @@ describe("GoogleOAuthButton", () => {
     expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
   });
 
-  it("shows a configuration error when a mobile redirect cannot start", async () => {
+  it("explains how to recover when a mobile popup cannot start", async () => {
     vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
       "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Safari/604.1",
     );
     mocks.signInWithPopup.mockRejectedValue({ code: "auth/popup-blocked" });
-    mocks.signInWithRedirect.mockRejectedValue({
-      code: "auth/unauthorized-domain",
-    });
 
     render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
     await userEvent.click(
@@ -222,8 +239,9 @@ describe("GoogleOAuthButton", () => {
     );
 
     expect((await screen.findByRole("alert")).textContent).toContain(
-      "Tên miền hiện tại chưa được cho phép đăng nhập Google.",
+      "cho phép cửa sổ bật lên",
     );
+    expect(mocks.signInWithRedirect).not.toHaveBeenCalled();
     expect(
       sessionStorage.getItem("tmi.google-oauth.redirect-pending"),
     ).toBeNull();

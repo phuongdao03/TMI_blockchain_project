@@ -448,38 +448,38 @@ class CertificateService:
     ) -> CertificateView:
         row = await self._required_row(certificate_id)
         certificate, version, dossier, _, transaction = row
-        if certificate.pdf_media_id is not None:
-            return self._view(row)
         if (
             transaction is None
             or transaction.status is not BlockchainTransactionStatus.CONFIRMED
             or transaction.tx_hash is None
         ):
             raise CertificateConflictError("Blockchain anchor is not confirmed.")
-        display_metadata = {
-            **version.metadata_json,
-            "blockchain": {
-                "network": transaction.network,
-                "contractAddress": transaction.contract_address,
-                "transactionHash": transaction.tx_hash,
-            },
-        }
-        try:
-            rendered = self._renderer.render(
-                metadata=display_metadata,
-                verification_url=version.qr_payload or certificate.qr_payload,
-            )
-            stored = await self._storage.upload_pdf(
-                public_id=(
-                    f"ip-certificate/{self._environment}/certificates/"
-                    f"{certificate.id}/v{certificate.current_version_no}"
-                ),
-                content=rendered.content,
-            )
-        except Exception as exc:
-            raise CertificateGenerationError(
-                "Certificate PDF generation failed."
-            ) from exc
+        stored = None
+        if certificate.pdf_media_id is None:
+            display_metadata = {
+                **version.metadata_json,
+                "blockchain": {
+                    "network": transaction.network,
+                    "contractAddress": transaction.contract_address,
+                    "transactionHash": transaction.tx_hash,
+                },
+            }
+            try:
+                rendered = self._renderer.render(
+                    metadata=display_metadata,
+                    verification_url=version.qr_payload or certificate.qr_payload,
+                )
+                stored = await self._storage.upload_pdf(
+                    public_id=(
+                        f"ip-certificate/{self._environment}/certificates/"
+                        f"{certificate.id}/v{certificate.current_version_no}"
+                    ),
+                    content=rendered.content,
+                )
+            except Exception as exc:
+                raise CertificateGenerationError(
+                    "Certificate PDF generation failed."
+                ) from exc
         async with self._session.begin():
             locked = await self._certificates.get_by_dossier(
                 dossier.id,
@@ -488,6 +488,10 @@ class CertificateService:
             if locked is None:
                 raise CertificateNotFoundError()
             if locked.pdf_media_id is None:
+                if stored is None:
+                    raise CertificateGenerationError(
+                        "Certificate PDF upload result is unavailable."
+                    )
                 media = MediaAsset(
                     id=self._uuid_factory(),
                     owner_user_id=dossier.owner_user_id,
@@ -504,25 +508,30 @@ class CertificateService:
                 self._session.add(media)
                 locked.pdf_media_id = media.id
                 version.pdf_media_id = media.id
-                active_dossier = await self._dossiers.get_by_id(
-                    dossier.id,
-                    for_update=True,
+            elif version.pdf_media_id is None:
+                version.pdf_media_id = locked.pdf_media_id
+            active_dossier = await self._dossiers.get_by_id(
+                dossier.id,
+                for_update=True,
+            )
+            transitioned = False
+            if (
+                active_dossier is not None
+                and active_dossier.status is DossierStatus.ANCHORED
+            ):
+                self._workflow.transition(
+                    active_dossier,
+                    target=DossierStatus.CERTIFICATE_ISSUED,
+                    actor_user_id=active_dossier.owner_user_id,
+                    allowed_sources={DossierStatus.ANCHORED},
+                    reason_code="CERTIFICATE_ISSUED",
                 )
-                if (
-                    active_dossier is not None
-                    and active_dossier.status is DossierStatus.ANCHORED
-                ):
-                    self._workflow.transition(
-                        active_dossier,
-                        target=DossierStatus.CERTIFICATE_ISSUED,
-                        actor_user_id=active_dossier.owner_user_id,
-                        allowed_sources={DossierStatus.ANCHORED},
-                        reason_code="CERTIFICATE_ISSUED",
-                    )
-                await PublicWorkDraftBackfill(self._session).ensure_draft(
-                    dossier.id,
-                    certificate_id=locked.id,
-                )
+                transitioned = True
+            await PublicWorkDraftBackfill(self._session).ensure_draft(
+                dossier.id,
+                certificate_id=locked.id,
+            )
+            if transitioned:
                 self._add_issued_event(locked, dossier.owner_user_id)
                 self._audit(
                     "certificate.issued",
@@ -531,7 +540,7 @@ class CertificateService:
                     status=locked.status,
                     pdf_ready=True,
                 )
-                await self._session.flush()
+            await self._session.flush()
         final_row = await self._required_row(certificate_id)
         return self._view(final_row)
 

@@ -3,8 +3,8 @@
 ## Objective
 
 Make a confirmed Polygon proof reliably produce a visible certificate, give
-mobile applicants a direct path to that certificate, and keep Google sign-in
-inside the application origin on storage-partitioned browsers.
+mobile applicants a direct path to that certificate, and keep Google sign-in on
+Firebase's registered OAuth callback domain.
 
 ## Required behavior
 
@@ -21,30 +21,32 @@ inside the application origin on storage-partitioned browsers.
 - Reconciliation re-enqueues certificate issuance while a confirmed proof is
   still attached to a `PAID` or `ANCHORED` dossier. Issuance remains idempotent
   and stops being requeued after the dossier reaches `CERTIFICATE_ISSUED`.
+- A separate recovery worker finalizes confirmed records whose PDF was already
+  uploaded and backfills missing editorial drafts without depending on Polygon
+  RPC availability.
 - Applicant mobile navigation exposes **Chứng thư** directly; notifications
   remain available from the header bell and full navigation drawer.
 - Compact mobile headers show only navigation and notification actions. Theme
   and logout actions remain available in the full drawer.
-- Production Firebase Auth uses the application hostname as `authDomain` and
-  proxies `/__/auth/*` to the configured Firebase Hosting domain. Popup stays
-  first; same-origin redirect remains the blocked-popup fallback.
+- Production Firebase Auth keeps the configured `<project>.firebaseapp.com`
+  `authDomain`, matching the callback registered by Firebase and Google. Popup
+  stays first; mobile browsers show recovery guidance instead of starting the
+  redirect flow that can lose state in storage-partitioned sessions.
 - Login and registration actions remain full-width, readable, and touch-safe on
   narrow screens, with no raw Firebase error page.
 
 ## Configuration contract
 
-- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=<firebase-project>.firebaseapp.com` remains
-  the trusted proxy upstream baked into the frontend image.
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=<firebase-project>.firebaseapp.com` is the
+  browser-facing Firebase Auth handler domain baked into the frontend image.
 - Firebase Authentication Authorized domains includes `decu.tinhhoaviet.org.vn`.
 - The Google OAuth client used by Firebase includes
-  `https://decu.tinhhoaviet.org.vn/__/auth/handler`.
-- Next.js transparently proxies `/__/auth/*` to the configured
-  `<firebase-project>.firebaseapp.com` origin; it must not issue a 302 redirect.
+  `https://<firebase-project>.firebaseapp.com/__/auth/handler`.
 
 ## Verification
 
-- Unit: production Firebase config resolves to the application hostname while
-  local/test builds preserve the configured Firebase domain.
+- Unit: production and local Firebase config preserve the configured Firebase
+  Auth domain.
 - Backend: reconciling an already-confirmed proof requeues unfinished
   certificate issuance without creating another blockchain event.
 - Component: applicant quick navigation contains **Chứng thư**, and mobile

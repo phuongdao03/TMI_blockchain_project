@@ -40,6 +40,14 @@ function safeDestination(value: string | undefined, fallback: string): string {
   return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
 }
 
+function isMobileBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
 function oauthErrorMessage(error: unknown): string {
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     return "Bạn đang ngoại tuyến. Hãy kiểm tra kết nối mạng rồi thử lại.";
@@ -66,6 +74,8 @@ function oauthErrorMessage(error: unknown): string {
     return "Bạn đã đóng cửa sổ đăng nhập Google.";
   if (code === "auth/popup-blocked")
     return "Trình duyệt đã chặn cửa sổ đăng nhập. Hãy cho phép popup rồi thử lại.";
+  if (code === "auth/mobile-popup-blocked")
+    return "Trình duyệt đã chặn đăng nhập Google. Hãy cho phép cửa sổ bật lên cho trang này rồi thử lại, hoặc đăng nhập bằng email.";
   if (code === "auth/unauthorized-domain")
     return "Tên miền hiện tại chưa được cho phép đăng nhập Google.";
   return "Không thể kết nối Google lúc này. Vui lòng thử lại.";
@@ -158,6 +168,9 @@ export function GoogleOAuthButton({
           "auth/popup-blocked"
         ) {
           throw popupError;
+        }
+        if (isMobileBrowser()) {
+          throw { code: "auth/mobile-popup-blocked" };
         }
         setPendingRedirect(true);
         await signInWithRedirect(auth, provider);

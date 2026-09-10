@@ -337,6 +337,14 @@ describe("layout shells", () => {
     const quickNavigation = screen.getByRole("navigation", {
       name: "Điều hướng nhanh",
     });
+    for (const item of Array.from(quickNavigation.children)) {
+      expect(
+        item.querySelector(".dashboard-mobile-navigation__icon"),
+      ).not.toBeNull();
+      expect(
+        item.querySelector(".dashboard-mobile-navigation__label"),
+      ).not.toBeNull();
+    }
     expect(within(quickNavigation).getAllByRole("link")).toHaveLength(4);
     expect(
       within(quickNavigation)

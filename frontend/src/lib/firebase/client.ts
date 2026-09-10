@@ -14,32 +14,16 @@ let emulatorConnected = false;
 
 export function resolveFirebaseAuthDomain(
   configuredDomain: string | undefined,
-  appHostname: string | undefined,
-  production: boolean,
 ): string | undefined {
-  // Production serves Firebase's /__/auth helpers through the existing Next.js
-  // reverse proxy. Keeping the helper on the application origin avoids the
-  // third-party storage partition that breaks redirect sign-in on mobile Safari.
-  if (
-    production &&
-    configuredDomain &&
-    /^[a-z0-9-]+\.firebaseapp\.com$/i.test(configuredDomain) &&
-    appHostname &&
-    /^[a-z0-9.-]+$/i.test(appHostname)
-  ) {
-    return appHostname;
-  }
+  // Google OAuth validates this exact Firebase handler domain. Replacing it
+  // with the application hostname causes redirect_uri_mismatch in production.
   return configuredDomain;
 }
 
 function firebaseConfig() {
   return {
     ...configuredFirebase,
-    authDomain: resolveFirebaseAuthDomain(
-      configuredFirebase.authDomain,
-      typeof window === "undefined" ? undefined : window.location.hostname,
-      process.env.NODE_ENV === "production",
-    ),
+    authDomain: resolveFirebaseAuthDomain(configuredFirebase.authDomain),
   };
 }
 

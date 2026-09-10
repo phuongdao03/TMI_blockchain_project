@@ -39,6 +39,10 @@ celery_app.conf.update(
             "task": "app.workers.proof_registry_tasks.reconcile_proof_registry_transactions",  # noqa: E501
             "schedule": 30.0,
         },
+        "repair-certificate-publication": {
+            "task": ("app.workers.certificate_tasks.repair_certificate_publication"),
+            "schedule": 60.0,
+        },
         "process-notification-outbox": {
             "task": "app.workers.notification_tasks.process_notification_outbox",
             "schedule": 5.0,
