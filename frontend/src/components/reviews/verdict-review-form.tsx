@@ -304,7 +304,7 @@ export function VerdictReviewForm({
                   };
                   return (
                     <fieldset
-                      className="border-0 py-5"
+                      className="border-0 bg-[var(--theme-elevated)] py-5"
                       disabled={readOnly}
                       key={gate.key}
                     >
@@ -392,7 +392,7 @@ export function VerdictReviewForm({
                 };
                 return (
                   <fieldset
-                    className="border-0 py-5"
+                    className="border-0 bg-[var(--theme-elevated)] py-5"
                     disabled={readOnly}
                     key={criterion.key}
                   >
