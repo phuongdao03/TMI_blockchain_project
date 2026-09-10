@@ -2,6 +2,7 @@ import asyncio
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 from uuid import UUID, uuid4
 
@@ -153,6 +154,28 @@ class ProofRegistryGateway:
     async def latest_block_number(self) -> int:
         return self.latest_block
 
+    async def find_recording(
+        self,
+        *,
+        asset_id: bytes,
+        proof_hash: bytes,
+        version: int,
+        recorded_at: int,
+    ) -> object | None:
+        if not self.recorded:
+            return None
+        assert asset_id == self.asset_id
+        assert proof_hash == self.proof_hash
+        assert version == self.version
+        assert recorded_at == int(NOW.timestamp())
+        return SimpleNamespace(
+            transaction_hash=self.transaction_hash,
+            block_number=10,
+            block_hash="0x" + "77" * 32,
+            signer=WALLET,
+            recorded_at=recorded_at,
+        )
+
     async def block_hash(self, block_number: int) -> str:
         assert block_number == 10
         return "0x" + "77" * 32
@@ -246,6 +269,112 @@ def test_gateway_reads_polygon_bor_block_with_extended_extra_data(
     block_hash = asyncio.run(gateway.block_hash(42))
 
     assert block_hash == "0x" + "77" * 32
+
+
+def test_gateway_recovers_exact_recording_from_indexed_event(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asset_id = bytes.fromhex("ab" * 32)
+    proof_hash = bytes.fromhex("cd" * 32)
+    version = 7
+    recorded_at = int(NOW.timestamp())
+    transaction_hash = "0x" + "90" * 32
+    block_hash = "0x" + "77" * 32
+
+    class RecordingProvider(AsyncBaseProvider):
+        def __init__(self) -> None:
+            super().__init__()
+            self.block_lookups = 0
+
+        async def make_request(self, method: RPCEndpoint, params: Any) -> RPCResponse:
+            if method == "eth_chainId":
+                return {"jsonrpc": "2.0", "id": 1, "result": "0x89"}
+            if method == "eth_blockNumber":
+                return {"jsonrpc": "2.0", "id": 1, "result": "0x14"}
+            if method == "eth_getBlockByNumber":
+                self.block_lookups += 1
+                block_number = int(str(params[0]), 16)
+                timestamp = recorded_at - 1 if block_number < 10 else recorded_at
+                return {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "result": {
+                        "number": hex(block_number),
+                        "hash": block_hash,
+                        "timestamp": hex(timestamp),
+                        "extraData": "0x" + "11" * 105,
+                    },
+                }
+            if method == "eth_getLogs":
+                topics = cast(dict[str, object], params[0])["topics"]
+                assert topics == [
+                    Web3.keccak(
+                        text="ProofRecorded(bytes32,bytes32,uint64,address,uint64)"
+                    ).to_0x_hex(),
+                    "0x" + asset_id.hex(),
+                    "0x" + proof_hash.hex(),
+                    "0x" + version.to_bytes(32, "big").hex(),
+                ]
+                return {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "result": [
+                        {
+                            "address": CONTRACT,
+                            "topics": topics,
+                            "data": "0x"
+                            + (
+                                bytes(12)
+                                + bytes.fromhex(WALLET.removeprefix("0x"))
+                                + recorded_at.to_bytes(32, "big")
+                            ).hex(),
+                            "blockNumber": "0xa",
+                            "blockHash": block_hash,
+                            "transactionHash": transaction_hash,
+                            "transactionIndex": "0x0",
+                            "logIndex": "0x0",
+                            "removed": False,
+                        }
+                    ],
+                }
+            raise AssertionError(f"Unexpected RPC method: {method}")
+
+    provider = RecordingProvider()
+    monkeypatch.setattr(
+        proof_registry_gateway,
+        "AsyncHTTPProvider",
+        lambda _rpc_url: provider,
+    )
+    gateway = THVProofRegistryGateway(
+        rpc_url="https://polygon-rpc.example",
+        network="polygon",
+        chain_id=137,
+        contract_address=CONTRACT,
+        abi_path=(
+            Path(__file__).resolve().parents[3]
+            / "contracts"
+            / "artifacts"
+            / "THVProofRegistry.abi.json"
+        ),
+        allowed_networks={"polygon": 137},
+        allowed_contracts={"polygon": {CONTRACT}},
+    )
+
+    recording = asyncio.run(
+        gateway.find_recording(
+            asset_id=asset_id,
+            proof_hash=proof_hash,
+            version=version,
+            recorded_at=recorded_at,
+        )
+    )
+
+    assert recording is not None
+    assert recording.transaction_hash == transaction_hash
+    assert recording.block_number == 10
+    assert recording.block_hash == block_hash
+    assert recording.signer == WALLET
+    assert provider.block_lookups == 0
 
 
 def test_thv_proof_registry_is_disabled_without_a_contract_address() -> None:
@@ -583,6 +712,74 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version() -> None:
                 "transaction_hash": gateway.transaction_hash,
                 "transaction_id": str(intent.transaction_id),
             }
+
+        # A wallet can mine the transaction while the browser loses the returned
+        # hash. Reconciliation must recover the exact ProofRecorded event instead
+        # of leaving the operator stuck at "waiting for MetaMask".
+        gateway.recorded = False
+        recovered_dossier = Dossier(
+            id=uuid4(),
+            code="THV-2026-PROOF-RECOVERED",
+            owner_user_id=user.id,
+            category_id=category.id,
+            title="Proof mined while browser callback was lost",
+            current_version_no=1,
+        )
+        recovered_dossier._set_status_from_workflow(DossierStatus.APPROVED)
+        recovered_dossier._set_status_from_workflow(DossierStatus.PAID)
+        recovered_version = DossierVersion(
+            id=uuid4(),
+            dossier_id=recovered_dossier.id,
+            version_no=1,
+            snapshot_json={},
+            canonical_hash="ab" * 32,
+            submitted_by=user.id,
+            submitted_at=NOW,
+        )
+        recovered_case = CouncilCase(
+            id=uuid4(),
+            session_id=council_session.id,
+            dossier_id=recovered_dossier.id,
+            dossier_version_id=recovered_version.id,
+            decision=CouncilCaseDecision.APPROVE,
+        )
+        async with sessions() as session:
+            session.add_all([recovered_dossier, recovered_version, recovered_case])
+            await session.commit()
+
+        recovered_intent = await service.prepare_record_proof_intent(
+            principal,
+            dossier_id=recovered_dossier.id,
+            version_no=1,
+            connected_wallet=WALLET,
+        )
+        gateway.transaction_hash = "0x" + "91" * 32
+        gateway.recorded = True
+        with pytest.raises(BlockchainConflictError, match="already confirmed"):
+            await service.prepare_record_proof_intent(
+                principal,
+                dossier_id=recovered_dossier.id,
+                version_no=1,
+                connected_wallet=WALLET,
+            )
+        recovered = await service.transaction_status(
+            principal,
+            transaction_id=recovered_intent.transaction_id,
+            reconcile=False,
+        )
+        assert recovered.status is BlockchainTransactionStatus.CONFIRMED
+        assert recovered.tx_hash == gateway.transaction_hash
+        assert recovered.confirmations == 2
+        assert issuance_requests == [dossier.id, recovered_dossier.id]
+        async with sessions() as session:
+            stored_recovered = await session.get(
+                BlockchainTransaction, recovered_intent.transaction_id
+            )
+            assert stored_recovered is not None
+            assert stored_recovered.receipt_event_name == "ProofRecorded"
+            assert stored_recovered.tx_hash == gateway.transaction_hash
+
+        gateway.recorded = False
 
         async with sessions() as session:
             stored = await session.get(Dossier, dossier.id)

@@ -239,6 +239,66 @@ describe("BlockchainSigningWorkspace", () => {
     expect(sendBrowserTransaction).toHaveBeenCalledOnce();
   });
 
+  it("recovers an already-mined proof after prepare returns a conflict", async () => {
+    const user = userEvent.setup();
+    const walletAddress = "0x3434343434343434343434343434343434343434";
+    const transactionHash = `0x${"91".repeat(32)}`;
+    currentWallet.mockResolvedValue({
+      id: "wallet-link",
+      walletAddress,
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-26T00:00:00Z",
+    });
+    currentBrowserWallet.mockResolvedValue({
+      address: walletAddress,
+      chainId: 137,
+    });
+    proofQueue.mockResolvedValue([
+      {
+        transactionId: "transaction-recovery",
+        dossierId: "dossier-recovery",
+        dossierCode: "THV-2026-RECOVERY",
+        dossierTitle: "Proof awaiting wallet recovery",
+        version: 1,
+        proofHash: `0x${"ab".repeat(32)}`,
+        status: "SIGNING",
+        txHash: null,
+        confirmations: 0,
+        errorCode: null,
+        createdAt: "2026-08-26T00:00:00Z",
+      },
+    ]);
+    transactionStatus
+      .mockImplementationOnce(() => new Promise(() => undefined))
+      .mockResolvedValue({
+        transactionId: "transaction-recovery",
+        status: "CONFIRMED",
+        txHash: transactionHash,
+        confirmations: 24,
+        errorCode: null,
+        errorMessage: null,
+        confirmedAt: "2026-08-26T00:01:00Z",
+      });
+    prepareIntent.mockRejectedValue(
+      new MockApiError("Proof already exists.", "BLOCKCHAIN_CONFLICT", 409),
+    );
+
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Proof awaiting wallet recovery/,
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: /MetaMask/ }));
+
+    expect(
+      await screen.findByRole("link", { name: /PolygonScan/ }),
+    ).toBeDefined();
+    expect(screen.getByText(transactionHash)).toBeDefined();
+    expect(sendBrowserTransaction).not.toHaveBeenCalled();
+  });
+
   it("shows Polygon confirmation immediately after MetaMask returns a transaction hash", async () => {
     const user = userEvent.setup();
     const walletAddress = "0x3434343434343434343434343434343434343434";
@@ -449,6 +509,11 @@ describe("BlockchainSigningWorkspace", () => {
     expect(
       screen.getByText("Tài liệu đã được ghi nhận và chưa bị thay đổi."),
     ).toBeDefined();
+    expect(screen.getByText("Bằng chứng có thể tự kiểm tra")).toBeDefined();
+    expect(screen.getByText("Dấu vân tay nội dung")).toBeDefined();
+    expect(screen.getByText("Chữ ký của tổ chức")).toBeDefined();
+    expect(screen.getByText("Xác nhận công khai")).toBeDefined();
+    expect(screen.getByText(/không đưa tệp gốc lên blockchain/i)).toBeDefined();
     const explorerLink = screen.getByRole("link", {
       name: "Mở giao dịch trên PolygonScan",
     });

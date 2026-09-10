@@ -260,8 +260,30 @@ class THVProofRegistryService:
         proof_hash = bytes.fromhex(context.canonical_hash)
         existing = await self._read_proof(asset_id, context.version)
         if existing.exists:
+            async with self._session.begin():
+                existing_transaction_id = cast(
+                    UUID | None,
+                    await self._session.scalar(
+                        select(BlockchainTransaction.id).where(
+                            BlockchainTransaction.dossier_version_id
+                            == context.version_id,
+                            BlockchainTransaction.network == self._network,
+                            BlockchainTransaction.contract_address
+                            == self._contract_address,
+                            BlockchainTransaction.method == "recordProof",
+                            BlockchainTransaction.payload_hash
+                            == context.canonical_hash,
+                        )
+                    ),
+                )
+            if existing_transaction_id is not None:
+                await self._recover_missing_transaction_hash(
+                    existing_transaction_id,
+                    proof=existing,
+                )
             raise BlockchainConflictError(
-                "This approved dossier version already has an immutable proof."
+                "This dossier version is already confirmed on-chain. Refresh its "
+                "status instead of signing it again."
             )
 
         try:
@@ -536,6 +558,8 @@ class THVProofRegistryService:
     async def _reconcile(self, transaction_id: UUID) -> None:
         certificate_dossier_id: UUID | None = None
         await self._promote_visible_signing_transaction(transaction_id)
+        if await self._recover_missing_transaction_hash(transaction_id):
+            return
         async with self._session.begin():
             transaction = await self._required_transaction(transaction_id)
             if (
@@ -668,6 +692,155 @@ class THVProofRegistryService:
             and self._enqueue_certificate_issue is not None
         ):
             self._enqueue_certificate_issue(certificate_dossier_id)
+
+    async def _recover_missing_transaction_hash(
+        self,
+        transaction_id: UUID,
+        *,
+        proof: THVProofRecord | None = None,
+    ) -> bool:
+        """Recover a mined proof when the wallet callback never reached the API."""
+        async with self._session.begin():
+            transaction = await self._required_transaction(transaction_id)
+            if (
+                transaction.status
+                not in {
+                    BlockchainTransactionStatus.CREATED,
+                    BlockchainTransactionStatus.SIGNING,
+                }
+                or transaction.tx_hash is not None
+                or transaction.method != "recordProof"
+                or transaction.contract_address.lower() != self._contract_address
+            ):
+                return False
+            version = await self._session.get(
+                DossierVersion, transaction.dossier_version_id
+            )
+            dossier = await self._session.get(Dossier, transaction.dossier_id)
+            intent = cast(
+                BlockchainTransactionIntent | None,
+                await self._session.scalar(
+                    select(BlockchainTransactionIntent)
+                    .where(
+                        BlockchainTransactionIntent.transaction_id == transaction_id,
+                        BlockchainTransactionIntent.status.in_(
+                            (
+                                BlockchainTransactionIntentStatus.PREPARED,
+                                BlockchainTransactionIntentStatus.SUBMITTED,
+                            )
+                        ),
+                    )
+                    .order_by(BlockchainTransactionIntent.created_at.desc())
+                ),
+            )
+            if (
+                version is None
+                or version.dossier_id != transaction.dossier_id
+                or dossier is None
+                or intent is None
+            ):
+                return False
+            dossier_id = transaction.dossier_id
+            version_no = version.version_no
+            expected_hash = bytes.fromhex(transaction.payload_hash)
+            expected_signer = intent.expected_wallet_address
+            signer_user_id = intent.signer_user_id
+
+        asset_id = derive_thv_asset_id(dossier_id)
+        try:
+            chain_proof = proof or await self._gateway.get_proof(asset_id, version_no)
+            if not chain_proof.exists:
+                return False
+            if (
+                chain_proof.asset_id != asset_id
+                or chain_proof.proof_hash != expected_hash
+                or chain_proof.version != version_no
+                or chain_proof.signer.lower() != expected_signer.lower()
+            ):
+                await self._fail_transaction(
+                    transaction_id,
+                    "CHAIN_STATE_MISMATCH",
+                    "On-chain proof does not match the frozen dossier proof.",
+                )
+                return True
+            recording = await self._gateway.find_recording(
+                asset_id=asset_id,
+                proof_hash=expected_hash,
+                version=version_no,
+                recorded_at=chain_proof.recorded_at,
+            )
+            if recording is None:
+                raise BlockchainGatewayError(
+                    "The canonical ProofRecorded event could not be located."
+                )
+            if recording.signer.lower() != expected_signer.lower():
+                await self._fail_transaction(
+                    transaction_id,
+                    "PROOF_EVENT_MISMATCH",
+                    "ProofRecorded signer does not match the authorized wallet.",
+                )
+                return True
+            canonical_hash = await self._gateway.block_hash(recording.block_number)
+            if canonical_hash.lower() != recording.block_hash.lower():
+                raise BlockchainGatewayError(
+                    "The recovered ProofRecorded block is not canonical."
+                )
+            latest_block = await self._gateway.latest_block_number()
+        except BlockchainGatewayError as exc:
+            raise BlockchainUnavailableError(
+                "THV proof recovery lookup is unavailable."
+            ) from exc
+
+        confirmations = max(0, latest_block - recording.block_number + 1)
+        recorded_at = datetime.fromtimestamp(recording.recorded_at, tz=UTC)
+        certificate_dossier_id: UUID | None = None
+        async with self._session.begin():
+            transaction = await self._required_transaction(
+                transaction_id, for_update=True
+            )
+            if transaction.tx_hash is not None:
+                return False
+            intent = await self._required_intent(intent.id, for_update=True)
+            transaction.tx_hash = recording.transaction_hash.lower()
+            transaction.signer_user_id = signer_user_id
+            transaction.signer_wallet_address = expected_signer
+            transaction.status = (
+                BlockchainTransactionStatus.CONFIRMED
+                if confirmations >= self._required_confirmations
+                else BlockchainTransactionStatus.BROADCAST
+            )
+            transaction.confirmations = confirmations
+            transaction.receipt_block_number = recording.block_number
+            transaction.receipt_block_hash = recording.block_hash.lower()
+            transaction.receipt_event_name = "ProofRecorded"
+            transaction.broadcast_at = transaction.broadcast_at or recorded_at
+            transaction.error_code = None
+            transaction.error_message = None
+            if intent.status is BlockchainTransactionIntentStatus.PREPARED:
+                intent.status = BlockchainTransactionIntentStatus.SUBMITTED
+                intent.submitted_at = recorded_at
+            if transaction.status is BlockchainTransactionStatus.CONFIRMED:
+                transaction.confirmed_at = recorded_at
+                dossier = await self._session.get(Dossier, dossier_id)
+                if dossier is None:
+                    raise BlockchainNotFoundError()
+                promoted_version_id = await self._promote_certificate_version(
+                    transaction
+                )
+                self._add_confirmed_event(
+                    transaction,
+                    dossier.owner_user_id,
+                    certificate_version_id=promoted_version_id,
+                )
+                if dossier.status in {DossierStatus.PAID, DossierStatus.ANCHORED}:
+                    certificate_dossier_id = dossier.id
+
+        if (
+            certificate_dossier_id is not None
+            and self._enqueue_certificate_issue is not None
+        ):
+            self._enqueue_certificate_issue(certificate_dossier_id)
+        return True
 
     async def _promote_visible_signing_transaction(self, transaction_id: UUID) -> None:
         async with self._session.begin():

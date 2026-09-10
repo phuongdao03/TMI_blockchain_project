@@ -414,6 +414,53 @@ export function BlockchainSigningWorkspace() {
         queryKey: ["blockchain", "proof-registry", "signing-queue"],
       });
     } catch (error) {
+      if (
+        !transactionHash &&
+        error instanceof ApiError &&
+        error.status === 409 &&
+        selected.transactionId
+      ) {
+        try {
+          const recovered = await proofRegistrySigningApi.status(
+            selected.transactionId,
+          );
+          setSelected((current) =>
+            current
+              ? {
+                  ...current,
+                  transactionId: recovered.transactionId,
+                  status: recovered.status,
+                  txHash: recovered.txHash,
+                  confirmations: recovered.confirmations,
+                  errorCode: recovered.errorCode,
+                }
+              : current,
+          );
+          queryClient.setQueryData(
+            [
+              "blockchain",
+              "proof-registry",
+              "transaction",
+              selected.transactionId,
+            ],
+            recovered,
+          );
+          setMessage(
+            recovered.status === "CONFIRMED"
+              ? "Đã tìm thấy giao dịch đã ghi nhận trên Polygon. Bạn không cần ký lại."
+              : "Đã tìm thấy giao dịch trước đó. Hệ thống đang tiếp tục kiểm tra xác nhận; bạn không cần ký lại.",
+          );
+          await queryClient.invalidateQueries({
+            queryKey: ["blockchain", "proof-registry", "signing-queue"],
+          });
+          return;
+        } catch {
+          setMessage(
+            "Giao dịch có thể đã được gửi trước đó. Hãy chọn “Kiểm tra xác nhận ngay”; không ký lại khi chưa kiểm tra Polygon.",
+          );
+          return;
+        }
+      }
       setMessage(
         transactionHash
           ? "Giao dịch đã được gửi từ MetaMask. Hệ thống sẽ tiếp tục tự đồng bộ; không cần ký lại."
@@ -831,6 +878,52 @@ export function BlockchainSigningWorkspace() {
               </p>
             ) : null}
           </div>
+
+          {displayedSelected.status === "CONFIRMED" ? (
+            <section className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/70 p-5 text-neutral-950">
+              <div className="flex items-center gap-3">
+                <ShieldCheck
+                  className="size-6 shrink-0 text-emerald-700"
+                  aria-hidden="true"
+                />
+                <div>
+                  <h3 className="font-bold">Bằng chứng có thể tự kiểm tra</h3>
+                  {transactionStatus.data?.confirmedAt ? (
+                    <p className="mt-1 text-sm text-neutral-600">
+                      Polygon ghi nhận lúc{" "}
+                      {formatDate(transactionStatus.data.confirmedAt)}.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+              <ol className="mt-4 grid gap-0 overflow-hidden rounded-lg border border-emerald-200 bg-white sm:grid-cols-3 sm:divide-x sm:divide-emerald-200">
+                <li className="p-4">
+                  <p className="text-sm font-bold">Dấu vân tay nội dung</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-600">
+                    SHA-256 đại diện chính xác cho phiên bản hồ sơ đã khóa.
+                  </p>
+                </li>
+                <li className="border-t border-emerald-200 p-4 sm:border-t-0">
+                  <p className="text-sm font-bold">Chữ ký của tổ chức</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-600">
+                    Ví ký đã được cấp quyền và được ghi trong giao dịch.
+                  </p>
+                </li>
+                <li className="border-t border-emerald-200 p-4 sm:border-t-0">
+                  <p className="text-sm font-bold">Xác nhận công khai</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-600">
+                    {displayedSelected.confirmations} lượt xác nhận trên
+                    Polygon; có thể đối chiếu độc lập.
+                  </p>
+                </li>
+              </ol>
+              <p className="mt-4 text-xs leading-5 text-neutral-600">
+                Hệ thống không đưa tệp gốc lên blockchain. Blockchain lưu dấu
+                vân tay số và lịch sử xác nhận; chỉ cần nội dung tệp thay đổi,
+                dấu vân tay đối chiếu sẽ khác.
+              </p>
+            </section>
+          ) : null}
 
           {transactionStatus.error ? (
             <div

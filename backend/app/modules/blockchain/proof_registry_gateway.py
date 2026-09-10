@@ -39,6 +39,17 @@ class THVProofRecord:
     exists: bool
 
 
+@dataclass(frozen=True, slots=True)
+class THVProofRecording:
+    """Canonical transaction location for one exact ``ProofRecorded`` event."""
+
+    transaction_hash: str
+    block_number: int
+    block_hash: str
+    signer: str
+    recorded_at: int
+
+
 class THVProofRegistryGateway:
     """Constrained transport for one known THVProofRegistry deployment."""
 
@@ -234,6 +245,114 @@ class THVProofRegistryGateway:
             proof_recorded_events=proof_events,
         )
 
+    async def find_recording(
+        self,
+        *,
+        asset_id: bytes,
+        proof_hash: bytes,
+        version: int,
+        recorded_at: int,
+    ) -> THVProofRecording | None:
+        """Find an exact registry event when a browser lost the wallet callback.
+
+        The contract stores the block timestamp in the proof. A timestamp-guided
+        block search avoids scanning chain history and the indexed topics ensure
+        that an unrelated transaction can never be attached to the dossier.
+        """
+        asset_id = self._bytes32(asset_id, nonzero=True)
+        proof_hash = self._bytes32(proof_hash, nonzero=True)
+        version = self._version(version)
+        if recorded_at <= 0:
+            raise BlockchainGatewayError("Proof recording timestamp is invalid.")
+        await self.validate_chain()
+        try:
+            latest_block = int(await self._web3.eth.block_number)
+            topics = [
+                _PROOF_RECORDED_TOPIC,
+                self._as_topic(asset_id),
+                self._as_topic(proof_hash),
+                self._as_topic(version.to_bytes(32, "big")),
+            ]
+            recent_from_block = max(0, latest_block - 9_999)
+            logs = await self._web3.eth.get_logs(
+                {
+                    "address": self.contract_address,
+                    "fromBlock": recent_from_block,
+                    "toBlock": latest_block,
+                    "topics": topics,
+                }
+            )
+            if not logs and recent_from_block > 0:
+                candidate = await self._first_block_at_or_after(
+                    recorded_at,
+                    latest_block=latest_block,
+                )
+                if candidate < recent_from_block:
+                    # Polygon normally produces a block every few seconds. The
+                    # bounded window handles blocks sharing the same timestamp
+                    # while remaining below common public-RPC log-range limits.
+                    logs = await self._web3.eth.get_logs(
+                        {
+                            "address": self.contract_address,
+                            "fromBlock": max(0, candidate - 16),
+                            "toBlock": min(
+                                recent_from_block - 1,
+                                candidate + 512,
+                            ),
+                            "topics": topics,
+                        }
+                    )
+        except BlockchainGatewayError:
+            raise
+        except Exception as exc:
+            raise BlockchainGatewayError("ProofRecorded event lookup failed.") from exc
+
+        matches: list[THVProofRecording] = []
+        for log in logs:
+            event = self._proof_recorded_event(log)
+            if (
+                event is None
+                or event.asset_id != asset_id
+                or event.proof_hash != proof_hash
+                or event.version != version
+                or event.timestamp != recorded_at
+            ):
+                continue
+            try:
+                matches.append(
+                    THVProofRecording(
+                        transaction_hash=HexBytes(log["transactionHash"]).to_0x_hex(),
+                        block_number=int(log["blockNumber"]),
+                        block_hash=HexBytes(log["blockHash"]).to_0x_hex(),
+                        signer=event.signer,
+                        recorded_at=event.timestamp,
+                    )
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                raise BlockchainGatewayError(
+                    "ProofRecorded event location is invalid."
+                ) from exc
+        if len(matches) > 1:
+            raise BlockchainGatewayError("ProofRecorded event is not unique.")
+        return matches[0] if matches else None
+
+    async def _first_block_at_or_after(
+        self,
+        timestamp: int,
+        *,
+        latest_block: int,
+    ) -> int:
+        low = 0
+        high = latest_block
+        while low < high:
+            midpoint = (low + high) // 2
+            block = await self._web3.eth.get_block(midpoint)
+            if int(block["timestamp"]) < timestamp:
+                low = midpoint + 1
+            else:
+                high = midpoint
+        return low
+
     def _proof_recorded_event(self, log: object) -> ProofRecordedEvent | None:
         try:
             if not isinstance(log, Mapping):
@@ -323,6 +442,10 @@ class THVProofRegistryGateway:
         ):
             raise BlockchainGatewayError("Proof version is invalid.")
         return value
+
+    @staticmethod
+    def _as_topic(value: bytes) -> str:
+        return HexBytes(value).to_0x_hex()
 
     async def close(self) -> None:
         provider = self._web3.provider
