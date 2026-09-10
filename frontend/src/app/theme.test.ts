@@ -156,6 +156,15 @@ describe("THV identity theme", () => {
     expect(stylesheet).toContain(".dashboard-main .text-red-800");
   });
 
+  it("keeps neutral dashboard badges readable and the mobile header opaque", () => {
+    expect(stylesheet).toContain(
+      'html[data-theme="dark"] .dashboard-main .bg-neutral-100',
+    );
+    expect(stylesheet).toContain(
+      ".dashboard-context-header {\n    gap: 0.375rem;\n    padding: 0.5rem 0.625rem;\n    background: var(--theme-surface);",
+    );
+  });
+
   it("keeps public search on semantic surfaces instead of a permanently dark panel", () => {
     expect(publicSearchPage).not.toContain("bg-[#151515]");
     expect(publicSearchPage).not.toContain("text-white");

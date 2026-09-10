@@ -275,7 +275,7 @@ function InformationStep({ dossier }: { dossier: DossierDetail }) {
           </p>
         </div>
         <span
-          className="inline-flex min-h-8 items-center gap-2 rounded-full bg-neutral-100 px-3 text-xs font-bold text-neutral-600"
+          className="dossier-autosave-status inline-flex min-h-8 items-center gap-2 rounded-full px-3 text-xs font-bold"
           role="status"
         >
           {update.isPending ? (

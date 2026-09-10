@@ -158,7 +158,7 @@ def test_public_work_repository_and_draft_backfill_are_safe(tmp_path: Path) -> N
                             media_asset_id=public_video_id,
                             evidence_type="INTRO_VIDEO",
                             evidence_role="PRIMARY_WORK",
-                            access_scope=EvidenceVisibility.PUBLIC,
+                            access_scope=EvidenceVisibility.PUBLIC_PREVIEW,
                             title="Video chào mừng Tinh hoa Việt",
                             display_order=0,
                             is_public=True,

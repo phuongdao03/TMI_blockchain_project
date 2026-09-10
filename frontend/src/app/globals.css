@@ -3932,6 +3932,21 @@ html[data-theme="dark"] .dashboard-main .bg-\[\#f8f8f4\] {
   color: var(--theme-text);
 }
 
+html[data-theme="dark"] .dashboard-main .bg-neutral-100,
+html[data-theme="dark"] .dashboard-main .disabled\:bg-neutral-100:disabled {
+  background-color: color-mix(
+    in srgb,
+    var(--theme-text) 9%,
+    var(--theme-surface)
+  ) !important;
+}
+
+.dossier-autosave-status {
+  border: 1px solid var(--theme-border);
+  background: color-mix(in srgb, var(--theme-text) 7%, var(--theme-surface));
+  color: var(--theme-muted);
+}
+
 html[data-theme="dark"] .dashboard-main .border-neutral-100,
 html[data-theme="dark"] .dashboard-main .border-neutral-200,
 html[data-theme="dark"] .dashboard-main .border-neutral-300 {
@@ -7308,6 +7323,7 @@ html[data-theme="dark"] .review-workspace__error {
   .dashboard-context-header {
     gap: 0.375rem;
     padding: 0.5rem 0.625rem;
+    background: var(--theme-surface);
     backdrop-filter: none;
   }
 

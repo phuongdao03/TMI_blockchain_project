@@ -105,6 +105,9 @@ describe("DossierWorkspace", () => {
       }),
     ).toBeDefined();
     expect(screen.getByText("Hồ sơ đang được bạn chuẩn bị.")).toBeDefined();
+    expect(screen.getByRole("status").className).toContain(
+      "dossier-autosave-status",
+    );
     expect(
       screen.queryByText(/SHA-256|snapshot|blockchain|database|backend/i),
     ).toBeNull();

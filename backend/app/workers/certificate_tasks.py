@@ -3,6 +3,7 @@ import logging
 from uuid import UUID
 
 from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.db.session import get_session_factory
@@ -113,34 +114,9 @@ async def _repair_publication(*, batch_size: int = 100) -> None:
     """Resume issued PDFs and rebuild missing editorial drafts independently of RPC."""
     session_factory = get_session_factory()
     async with session_factory() as session:
-        candidate_ids = tuple(
-            await session.scalars(
-                select(Dossier.id)
-                .join(Certificate, Certificate.dossier_id == Dossier.id)
-                .join(
-                    CertificateVersion,
-                    and_(
-                        CertificateVersion.certificate_id == Certificate.id,
-                        CertificateVersion.version_no == Certificate.current_version_no,
-                    ),
-                )
-                .join(
-                    BlockchainTransaction,
-                    BlockchainTransaction.id
-                    == CertificateVersion.blockchain_transaction_id,
-                )
-                .where(
-                    Dossier.status == DossierStatus.ANCHORED,
-                    Dossier.deleted_at.is_(None),
-                    Certificate.status == CertificateStatus.ACTIVE,
-                    Certificate.pdf_media_id.is_not(None),
-                    BlockchainTransaction.status
-                    == BlockchainTransactionStatus.CONFIRMED,
-                    BlockchainTransaction.tx_hash.is_not(None),
-                )
-                .order_by(Dossier.id)
-                .limit(batch_size)
-            )
+        candidate_ids = await _publication_recovery_candidate_ids(
+            session,
+            batch_size=batch_size,
         )
 
     for dossier_id in candidate_ids:
@@ -154,6 +130,41 @@ async def _repair_publication(*, batch_size: int = 100) -> None:
 
     async with session_factory() as session:
         await PublicWorkDraftBackfill(session, batch_size=batch_size).run(dry_run=False)
+
+
+async def _publication_recovery_candidate_ids(
+    session: AsyncSession,
+    *,
+    batch_size: int,
+) -> tuple[UUID, ...]:
+    """Return anchored dossiers whose confirmed certificate issue can be resumed."""
+    return tuple(
+        await session.scalars(
+            select(Dossier.id)
+            .join(Certificate, Certificate.dossier_id == Dossier.id)
+            .join(
+                CertificateVersion,
+                and_(
+                    CertificateVersion.certificate_id == Certificate.id,
+                    CertificateVersion.version_no == Certificate.current_version_no,
+                ),
+            )
+            .join(
+                BlockchainTransaction,
+                BlockchainTransaction.id
+                == CertificateVersion.blockchain_transaction_id,
+            )
+            .where(
+                Dossier.status == DossierStatus.ANCHORED,
+                Dossier.deleted_at.is_(None),
+                Certificate.status == CertificateStatus.ACTIVE,
+                BlockchainTransaction.status == BlockchainTransactionStatus.CONFIRMED,
+                BlockchainTransaction.tx_hash.is_not(None),
+            )
+            .order_by(Dossier.id)
+            .limit(batch_size)
+        )
+    )
 
 
 @celery_app.task  # type: ignore[untyped-decorator]

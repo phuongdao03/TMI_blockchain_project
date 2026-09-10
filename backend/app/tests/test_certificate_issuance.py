@@ -47,6 +47,7 @@ from app.modules.public.models import (
     PublicWorkVisibility,
 )
 from app.modules.public.share_service import PublicShareConfigurationError
+from app.workers.certificate_tasks import _publication_recovery_candidate_ids
 
 NOW = datetime(2026, 7, 31, 10, 0, tzinfo=UTC)
 
@@ -278,6 +279,23 @@ def test_failed_pdf_keeps_issuance_recoverable() -> None:
         service, engine, dossier_id = await _issuance_service(DossierStatus.ANCHORED)
         with pytest.raises(CertificateGenerationError):
             await service.process_issuance(dossier_id)
+        await service._session.close()  # noqa: SLF001
+        await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_recovery_selects_confirmed_anchor_before_pdf_exists() -> None:
+    async def scenario() -> None:
+        service, engine, dossier_id = await _issuance_service(DossierStatus.ANCHORED)
+
+        async with service._session.begin():  # noqa: SLF001
+            candidate_ids = await _publication_recovery_candidate_ids(
+                service._session,  # noqa: SLF001
+                batch_size=100,
+            )
+
+        assert candidate_ids == (dossier_id,)
         await service._session.close()  # noqa: SLF001
         await engine.dispose()
 
