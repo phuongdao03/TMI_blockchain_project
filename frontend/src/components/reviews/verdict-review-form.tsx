@@ -282,7 +282,7 @@ export function VerdictReviewForm({
             Phiếu này không sử dụng điểm số.
           </p>
         </header>
-        <form className="space-y-6 p-5 sm:p-8">
+        <form className="space-y-8 p-5 sm:p-8">
           <ReviewEvidenceAssessments
             assessments={assessments}
             evidences={evidences}
@@ -295,80 +295,82 @@ export function VerdictReviewForm({
               <h3 className="text-lg font-bold" id="review-conditions">
                 Điều kiện tiếp nhận
               </h3>
-              {rubric.gates.map((gate) => {
-                const answer = gates[gate.key] ?? {
-                  outcome: "PASS" as const,
-                  rationale: "",
-                  evidenceMediaIds: [],
-                };
-                return (
-                  <fieldset
-                    className="rounded-xl border p-4"
-                    disabled={readOnly}
-                    key={gate.key}
-                  >
-                    <legend className="px-1 font-bold">{gate.label}</legend>
-                    <p className="text-sm text-neutral-600">
-                      {gate.description}
-                    </p>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-[13rem_1fr]">
-                      <select
-                        aria-label={`Kết quả ${gate.label}`}
-                        className="min-h-11 rounded-lg border bg-[var(--theme-surface)] px-3"
-                        onChange={(event) =>
-                          setGates((current) => ({
-                            ...current,
-                            [gate.key]: {
-                              ...answer,
-                              outcome: event.target
-                                .value as ReviewGateAnswer["outcome"],
-                            },
-                          }))
-                        }
-                        value={answer.outcome}
-                      >
-                        <option value="PASS">Đáp ứng</option>
-                        <option value="FAIL">Không đáp ứng</option>
-                        <option value="NOT_APPLICABLE">Không áp dụng</option>
-                      </select>
-                      <div>
-                        <textarea
-                          aria-label={`Căn cứ ${gate.label}`}
-                          className="min-h-20 w-full rounded-lg border bg-[var(--theme-surface)] p-3"
-                          id={`verdict-gate-rationale-${gate.key}`}
-                          maxLength={2_000}
+              <div className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]">
+                {rubric.gates.map((gate) => {
+                  const answer = gates[gate.key] ?? {
+                    outcome: "PASS" as const,
+                    rationale: "",
+                    evidenceMediaIds: [],
+                  };
+                  return (
+                    <fieldset
+                      className="border-0 py-5"
+                      disabled={readOnly}
+                      key={gate.key}
+                    >
+                      <legend className="px-1 font-bold">{gate.label}</legend>
+                      <p className="text-sm text-neutral-600">
+                        {gate.description}
+                      </p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-[13rem_1fr]">
+                        <select
+                          aria-label={`Kết quả ${gate.label}`}
+                          className="min-h-11 rounded-lg border bg-[var(--theme-surface)] px-3"
                           onChange={(event) =>
                             setGates((current) => ({
                               ...current,
                               [gate.key]: {
                                 ...answer,
-                                rationale: event.target.value,
+                                outcome: event.target
+                                  .value as ReviewGateAnswer["outcome"],
                               },
                             }))
                           }
-                          placeholder="Nêu kết quả đối chiếu (tối thiểu 20 ký tự)"
-                          value={answer.rationale}
-                        />
-                        <p className="mt-1 text-right text-xs text-[var(--theme-muted)]">
-                          {answer.rationale.trim().length}/20 ký tự tối thiểu
-                        </p>
+                          value={answer.outcome}
+                        >
+                          <option value="PASS">Đáp ứng</option>
+                          <option value="FAIL">Không đáp ứng</option>
+                          <option value="NOT_APPLICABLE">Không áp dụng</option>
+                        </select>
+                        <div>
+                          <textarea
+                            aria-label={`Căn cứ ${gate.label}`}
+                            className="min-h-20 w-full rounded-lg border bg-[var(--theme-surface)] p-3"
+                            id={`verdict-gate-rationale-${gate.key}`}
+                            maxLength={2_000}
+                            onChange={(event) =>
+                              setGates((current) => ({
+                                ...current,
+                                [gate.key]: {
+                                  ...answer,
+                                  rationale: event.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="Nêu kết quả đối chiếu (tối thiểu 20 ký tự)"
+                            value={answer.rationale}
+                          />
+                          <p className="mt-1 text-right text-xs text-[var(--theme-muted)]">
+                            {answer.rationale.trim().length}/20 ký tự tối thiểu
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <ReviewEvidenceSelect
-                      disabled={readOnly}
-                      evidences={evidences}
-                      label={gate.label}
-                      onChange={(ids) =>
-                        setGates((current) => ({
-                          ...current,
-                          [gate.key]: { ...answer, evidenceMediaIds: ids },
-                        }))
-                      }
-                      value={answer.evidenceMediaIds}
-                    />
-                  </fieldset>
-                );
-              })}
+                      <ReviewEvidenceSelect
+                        disabled={readOnly}
+                        evidences={evidences}
+                        label={gate.label}
+                        onChange={(ids) =>
+                          setGates((current) => ({
+                            ...current,
+                            [gate.key]: { ...answer, evidenceMediaIds: ids },
+                          }))
+                        }
+                        value={answer.evidenceMediaIds}
+                      />
+                    </fieldset>
+                  );
+                })}
+              </div>
             </section>
           ) : null}
 
@@ -381,89 +383,91 @@ export function VerdictReviewForm({
                 Đánh giá dựa trên tài liệu thực tế của hồ sơ.
               </p>
             </div>
-            {rubric.criteria.map((criterion, index) => {
-              const answer = verdicts[criterion.key] ?? {
-                outcome: "",
-                rationale: "",
-                evidenceMediaIds: [],
-              };
-              return (
-                <fieldset
-                  className="rounded-2xl border bg-[var(--theme-elevated)] p-4 sm:p-5"
-                  disabled={readOnly}
-                  key={criterion.key}
-                >
-                  <legend className="px-1 font-bold">
-                    <span className="mr-2 text-primary-700">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    {criterion.label}
-                  </legend>
-                  <p className="text-sm text-neutral-600">
-                    {criterion.description}
-                  </p>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-[15rem_1fr]">
-                    <select
-                      aria-label={`Kết luận ${criterion.label}`}
-                      className="min-h-11 rounded-lg border bg-[var(--theme-surface)] px-3"
-                      id={`verdict-outcome-${criterion.key}`}
-                      onChange={(event) =>
-                        setVerdicts((current) => ({
-                          ...current,
-                          [criterion.key]: {
-                            ...answer,
-                            outcome: event.target
-                              .value as LocalVerdict["outcome"],
-                          },
-                        }))
-                      }
-                      value={answer.outcome}
-                    >
-                      <option value="">Chọn kết luận</option>
-                      {outcomeOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <div>
-                      <textarea
-                        aria-label={`Nhận định ${criterion.label}`}
-                        className="min-h-24 w-full rounded-lg border bg-[var(--theme-surface)] p-3"
-                        id={`verdict-rationale-${criterion.key}`}
-                        maxLength={2_000}
+            <div className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]">
+              {rubric.criteria.map((criterion, index) => {
+                const answer = verdicts[criterion.key] ?? {
+                  outcome: "",
+                  rationale: "",
+                  evidenceMediaIds: [],
+                };
+                return (
+                  <fieldset
+                    className="border-0 py-5"
+                    disabled={readOnly}
+                    key={criterion.key}
+                  >
+                    <legend className="px-1 font-bold">
+                      <span className="mr-2 text-primary-700">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      {criterion.label}
+                    </legend>
+                    <p className="text-sm text-neutral-600">
+                      {criterion.description}
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-[15rem_1fr]">
+                      <select
+                        aria-label={`Kết luận ${criterion.label}`}
+                        className="min-h-11 rounded-lg border bg-[var(--theme-surface)] px-3"
+                        id={`verdict-outcome-${criterion.key}`}
                         onChange={(event) =>
                           setVerdicts((current) => ({
                             ...current,
                             [criterion.key]: {
                               ...answer,
-                              rationale: event.target.value,
+                              outcome: event.target
+                                .value as LocalVerdict["outcome"],
                             },
                           }))
                         }
-                        placeholder="Nêu điều đã kiểm tra và căn cứ kết luận (tối thiểu 20 ký tự)"
-                        value={answer.rationale}
-                      />
-                      <p className="mt-1 text-right text-xs text-[var(--theme-muted)]">
-                        {answer.rationale.trim().length}/20 ký tự tối thiểu
-                      </p>
+                        value={answer.outcome}
+                      >
+                        <option value="">Chọn kết luận</option>
+                        {outcomeOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div>
+                        <textarea
+                          aria-label={`Nhận định ${criterion.label}`}
+                          className="min-h-24 w-full rounded-lg border bg-[var(--theme-surface)] p-3"
+                          id={`verdict-rationale-${criterion.key}`}
+                          maxLength={2_000}
+                          onChange={(event) =>
+                            setVerdicts((current) => ({
+                              ...current,
+                              [criterion.key]: {
+                                ...answer,
+                                rationale: event.target.value,
+                              },
+                            }))
+                          }
+                          placeholder="Nêu điều đã kiểm tra và căn cứ kết luận (tối thiểu 20 ký tự)"
+                          value={answer.rationale}
+                        />
+                        <p className="mt-1 text-right text-xs text-[var(--theme-muted)]">
+                          {answer.rationale.trim().length}/20 ký tự tối thiểu
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <ReviewEvidenceSelect
-                    disabled={readOnly || answer.outcome === "NOT_APPLICABLE"}
-                    evidences={evidences}
-                    label={criterion.label}
-                    onChange={(ids) =>
-                      setVerdicts((current) => ({
-                        ...current,
-                        [criterion.key]: { ...answer, evidenceMediaIds: ids },
-                      }))
-                    }
-                    value={answer.evidenceMediaIds}
-                  />
-                </fieldset>
-              );
-            })}
+                    <ReviewEvidenceSelect
+                      disabled={readOnly || answer.outcome === "NOT_APPLICABLE"}
+                      evidences={evidences}
+                      label={criterion.label}
+                      onChange={(ids) =>
+                        setVerdicts((current) => ({
+                          ...current,
+                          [criterion.key]: { ...answer, evidenceMediaIds: ids },
+                        }))
+                      }
+                      value={answer.evidenceMediaIds}
+                    />
+                  </fieldset>
+                );
+              })}
+            </div>
           </section>
 
           <section className="grid gap-4 rounded-2xl border p-5 md:grid-cols-2">

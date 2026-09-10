@@ -149,6 +149,7 @@ async def download_content(
         media_type=delivery.mime_type,
         headers={
             "Content-Disposition": f"attachment; filename*=UTF-8''{filename}",
+            "Content-Length": str(len(delivery.content)),
             "Cache-Control": "private, no-store",
         },
     )

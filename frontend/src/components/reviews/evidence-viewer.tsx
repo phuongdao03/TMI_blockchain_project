@@ -31,6 +31,10 @@ function formatBytes(bytes: number) {
   }).format(bytes / divisor)} ${divisor === 1_048_576 ? "MB" : "KB"}`;
 }
 
+function isDeliveryFresh(expiresAt: number) {
+  return expiresAt > Date.now() / 1_000 + 30;
+}
+
 export function EvidenceViewer({
   documentRules = [],
   evidences,
@@ -43,13 +47,26 @@ export function EvidenceViewer({
     evidence: ReviewEvidenceSnapshot;
     url: string;
   } | null>(null);
+  const [deliveries, setDeliveries] = useState<
+    Record<string, { expiresAt: number; url: string }>
+  >({});
   const mutation = useMutation({
     mutationFn: mediaApi.signedUrl,
     onSuccess: (delivery, mediaId) => {
       const evidence = evidences.find((item) => item.mediaAssetId === mediaId);
+      setDeliveries((current) => ({ ...current, [mediaId]: delivery }));
       if (evidence) setPreview({ evidence, url: delivery.url });
     },
   });
+  const openEvidence = (evidence: ReviewEvidenceSnapshot) => {
+    const cached = deliveries[evidence.mediaAssetId];
+    if (cached && isDeliveryFresh(cached.expiresAt)) {
+      setPreview({ evidence, url: cached.url });
+      return;
+    }
+    setActiveMediaId(evidence.mediaAssetId);
+    mutation.mutate(evidence.mediaAssetId);
+  };
   const grouped = documentRules
     .map((rule) => ({
       key: rule.key,
@@ -147,10 +164,7 @@ export function EvidenceViewer({
                         aria-label={`Xem ${evidence.title}`}
                         className="col-span-2 w-full"
                         disabled={mutation.isPending}
-                        onClick={() => {
-                          setActiveMediaId(evidence.mediaAssetId);
-                          mutation.mutate(evidence.mediaAssetId);
-                        }}
+                        onClick={() => openEvidence(evidence)}
                         variant="outline"
                       >
                         {opening ? (
@@ -235,7 +249,12 @@ export function EvidenceViewer({
               </div>
             ) : preview.evidence.media.mimeType.startsWith("audio/") ? (
               <div className="grid min-h-44 place-items-center p-6">
-                <audio className="w-full" controls src={preview.url}>
+                <audio
+                  className="w-full"
+                  controls
+                  preload="none"
+                  src={preview.url}
+                >
                   Trình duyệt không hỗ trợ phát tệp âm thanh này.
                 </audio>
               </div>
@@ -243,6 +262,8 @@ export function EvidenceViewer({
               <video
                 className="max-h-[65vh] w-full bg-black"
                 controls
+                playsInline
+                preload="none"
                 src={preview.url}
               >
                 Trình duyệt không hỗ trợ phát tệp video này.

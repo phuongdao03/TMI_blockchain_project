@@ -113,6 +113,51 @@ describe("EvidenceViewer", () => {
     expect(screen.getByText("Định dạng: MP4")).toBeDefined();
   });
 
+  it("does not download a private video before the reviewer starts playback", async () => {
+    const user = userEvent.setup();
+    signedUrl.mockClear();
+    signedUrl.mockResolvedValue({
+      url: "/api/v1/media/media-video/content",
+      expiresAt: 1_800_000_000,
+    });
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <EvidenceViewer
+          evidences={[
+            {
+              id: "evidence-video",
+              mediaAssetId: "media-video",
+              evidenceType: "SOURCE_DOCUMENT",
+              title: "Video giới thiệu",
+              description: null,
+              issuedAt: null,
+              displayOrder: 1,
+              isPublic: false,
+              media: {
+                mimeType: "video/mp4",
+                bytes: 2_048,
+                sha256: "c".repeat(64),
+              },
+            },
+          ]}
+        />
+      </QueryClientProvider>,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Xem Video giới thiệu" }),
+    );
+
+    const video = container.querySelector("video");
+    expect(video?.preload).toBe("none");
+    expect(video?.playsInline).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Đóng xem trước" }));
+    await user.click(
+      screen.getByRole("button", { name: "Xem Video giới thiệu" }),
+    );
+    expect(signedUrl).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps a PDF out of an iframe and opens its signed link in a new tab", async () => {
     const user = userEvent.setup();
     signedUrl.mockResolvedValue({

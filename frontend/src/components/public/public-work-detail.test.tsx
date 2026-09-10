@@ -154,6 +154,8 @@ describe("PublicWorkDetailPage", () => {
 
     const video = container.querySelector("video");
     expect(video?.controls).toBe(true);
+    expect(video?.preload).toBe("metadata");
+    expect(video?.playsInline).toBe(true);
     expect(video?.getAttribute("src")).toContain("welcome.mp4");
     expect(screen.getByText("Video chào mừng Tinh hoa Việt")).toBeDefined();
   });

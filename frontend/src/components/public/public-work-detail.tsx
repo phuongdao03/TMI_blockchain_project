@@ -41,7 +41,6 @@ export function PublicWorkDetailPage({
     queryFn: () => publicApi.work(slug),
     initialData: initialDetail,
     retry: false,
-    refetchInterval: 30_000,
     refetchOnWindowFocus: true,
   });
   const error = detail.error as ApiError | null;
@@ -283,12 +282,23 @@ function PublicGallery({
           />
         ) : null}
         {selected.kind === "VIDEO" && selected.url ? (
-          <video className="max-h-[42rem] w-full" controls src={selected.url}>
+          <video
+            className="max-h-[42rem] w-full"
+            controls
+            playsInline
+            preload="metadata"
+            src={selected.url}
+          >
             <track kind="captions" />
           </video>
         ) : null}
         {selected.kind === "AUDIO" && selected.url ? (
-          <audio className="w-[min(90%,40rem)]" controls src={selected.url} />
+          <audio
+            className="w-[min(90%,40rem)]"
+            controls
+            preload="metadata"
+            src={selected.url}
+          />
         ) : null}
         {selected.kind === "DOCUMENT" && selected.url ? (
           <a

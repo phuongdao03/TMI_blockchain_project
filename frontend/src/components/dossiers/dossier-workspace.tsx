@@ -188,8 +188,8 @@ function EvidenceItem({
   onRemove: (id: string) => void;
 }) {
   return (
-    <article className="grid gap-4 rounded-xl border border-neutral-200 bg-white p-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
-      <span className="grid size-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700">
+    <article className="grid gap-4 border-b border-[var(--theme-border)] py-4 last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
+      <span className="grid size-10 place-items-center rounded-full bg-emerald-50 text-emerald-700">
         <FileCheck2 aria-hidden="true" className="size-5" />
       </span>
       <div className="min-w-0">
@@ -294,7 +294,7 @@ function InformationStep({ dossier }: { dossier: DossierDetail }) {
           Tên hồ sơ
         </label>
         <input
-          className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 px-4 text-sm outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100 disabled:bg-neutral-100 disabled:text-neutral-500"
+          className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm text-[var(--theme-text)] outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100 disabled:bg-[var(--theme-elevated)] disabled:text-[var(--theme-muted)]"
           disabled={!dossier.canEdit}
           id="workspace-title"
           {...form.register("title")}
@@ -305,7 +305,7 @@ function InformationStep({ dossier }: { dossier: DossierDetail }) {
           Mô tả
         </label>
         <textarea
-          className="mt-2 min-h-40 w-full resize-y rounded-xl border border-neutral-200 px-4 py-3 text-sm leading-6 outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100 disabled:bg-neutral-100 disabled:text-neutral-500"
+          className="mt-2 min-h-40 w-full resize-y rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 text-sm leading-6 text-[var(--theme-text)] outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100 disabled:bg-[var(--theme-elevated)] disabled:text-[var(--theme-muted)]"
           disabled={!dossier.canEdit}
           id="workspace-summary"
           {...form.register("summary")}
@@ -316,7 +316,7 @@ function InformationStep({ dossier }: { dossier: DossierDetail }) {
           Chế độ hiển thị
         </label>
         <select
-          className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100 disabled:bg-neutral-100"
+          className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm text-[var(--theme-text)] outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100 disabled:bg-[var(--theme-elevated)]"
           disabled={!dossier.canEdit}
           id="workspace-visibility"
           {...form.register("visibility")}
@@ -476,7 +476,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
             {dossier.title}
           </h1>
         </div>
-        <p className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-bold text-neutral-600">
+        <p className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-2 text-xs font-bold text-[var(--theme-muted)]">
           Phiên bản: {dossier.currentVersionNo || "Chưa nộp"}
         </p>
       </div>
@@ -538,7 +538,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
       <div className="space-y-4">
         <nav
           aria-label="Các bước hoàn thiện hồ sơ"
-          className="grid gap-2 rounded-2xl border border-neutral-200 bg-white p-2 md:grid-cols-3"
+          className="grid border-b border-[var(--theme-border)] bg-[var(--theme-surface)] md:grid-cols-3"
         >
           {steps.map((item, index) => {
             const Icon = item.icon;
@@ -547,10 +547,10 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
               <button
                 aria-current={active ? "step" : undefined}
                 className={cn(
-                  "flex min-h-16 w-full items-center gap-3 rounded-xl px-3 text-left transition",
+                  "flex min-h-16 w-full items-center gap-3 border-b-2 px-3 text-left transition-colors duration-150 md:border-b-2",
                   active
-                    ? "bg-primary-50 text-primary-800"
-                    : "text-neutral-600 hover:bg-neutral-50",
+                    ? "border-primary-600 text-primary-800"
+                    : "border-transparent text-[var(--theme-muted)] hover:bg-[var(--theme-elevated)]",
                 )}
                 key={item.id}
                 onClick={() => setStep(item.id)}
@@ -558,10 +558,10 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
               >
                 <span
                   className={cn(
-                    "grid size-9 shrink-0 place-items-center rounded-lg",
+                    "grid size-9 shrink-0 place-items-center rounded-full",
                     active
                       ? "bg-primary-600 text-white"
-                      : "bg-neutral-100 text-neutral-500",
+                      : "bg-[var(--theme-elevated)] text-[var(--theme-muted)]",
                   )}
                 >
                   <Icon aria-hidden="true" className="size-4" />
@@ -579,7 +579,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
           })}
         </nav>
 
-        <div className="min-w-0 rounded-2xl border border-neutral-200 bg-white p-5 sm:p-7 lg:p-8">
+        <div className="min-w-0 bg-[var(--theme-surface)] px-1 py-5 text-[var(--theme-text)] sm:px-3 sm:py-7 lg:px-5 lg:py-8">
           {step === "information" ? (
             <InformationStep dossier={dossier} />
           ) : null}
@@ -596,7 +596,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                 </p>
               </div>
               {dossier.canEdit ? (
-                <div className="space-y-5 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 sm:p-5">
+                <div className="space-y-5 border-t border-[var(--theme-border)] pt-5">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label
@@ -606,7 +606,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                         1. Chọn loại tài liệu
                       </label>
                       <select
-                        className="mt-2 min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm font-semibold"
+                        className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm font-semibold text-[var(--theme-text)]"
                         id="evidence-type"
                         onChange={(event) =>
                           setEvidenceType(event.target.value)
@@ -639,7 +639,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                         2. Tên tài liệu
                       </label>
                       <input
-                        className="mt-2 min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm"
+                        className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm text-[var(--theme-text)]"
                         id="evidence-title"
                         onChange={(event) =>
                           setEvidenceTitle(event.target.value)
@@ -652,7 +652,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                     </div>
                   </div>
                   {selectedRule ? (
-                    <div className="flex flex-col gap-2 rounded-xl border border-primary-100 bg-white px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-2 border-l-2 border-primary-500 py-1 pl-4 text-sm sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="font-bold text-neutral-900">
                           {selectedRule.required

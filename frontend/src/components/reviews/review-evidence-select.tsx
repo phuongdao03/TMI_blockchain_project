@@ -1,7 +1,5 @@
 "use client";
 
-import { FileCheck2 } from "lucide-react";
-
 import type { ReviewEvidenceSnapshot } from "@/lib/api/types";
 
 function toggle(values: string[], value: string) {
@@ -33,47 +31,44 @@ export function ReviewEvidenceSelect({
   }
 
   return (
-    <fieldset className="mt-4">
-      <legend className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-600">
-        <FileCheck2 aria-hidden="true" className="size-4 text-primary-700" />
-        Bằng chứng căn cứ cho {label}
-      </legend>
-      <p className="mt-1 text-xs leading-5 text-neutral-500">
-        Chọn ít nhất một tài liệu thuộc phiên bản hồ sơ đã khóa.
-      </p>
-      <div className="mt-3 space-y-2">
+    <div
+      aria-label={`Bằng chứng căn cứ cho ${label}`}
+      className="mt-4"
+      role="group"
+    >
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p className="text-xs font-bold uppercase tracking-wider text-neutral-600">
+          Tài liệu làm căn cứ
+        </p>
+        <p className="text-xs leading-5 text-neutral-500">
+          Chọn ít nhất một tệp đã khóa.
+        </p>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2">
         {evidences.map((evidence) => {
           const inputId = `${label}-${evidence.mediaAssetId}`;
           const checked = value.includes(evidence.mediaAssetId);
           return (
             <label
-              className="flex cursor-pointer items-start gap-3 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm transition hover:border-primary-300 has-[:checked]:border-primary-400 has-[:checked]:bg-primary-50/60"
+              className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm transition-colors duration-150 hover:border-primary-400 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 has-[:checked]:text-primary-900"
               htmlFor={inputId}
               key={evidence.mediaAssetId}
             >
               <input
                 checked={checked}
-                className="mt-0.5 size-4 accent-primary-700"
+                className="size-4 accent-primary-700"
                 disabled={disabled}
                 id={inputId}
                 onChange={() => onChange(toggle(value, evidence.mediaAssetId))}
                 type="checkbox"
               />
-              <span className="min-w-0">
-                <span className="block font-semibold text-neutral-900">
-                  {evidence.title}
-                </span>
-                <span className="mt-0.5 block text-xs text-neutral-500">
-                  Tài liệu trong hồ sơ
-                  {evidence.issuedAt
-                    ? ` · Ngày tài liệu ${new Intl.DateTimeFormat("vi-VN").format(new Date(evidence.issuedAt))}`
-                    : ""}
-                </span>
+              <span className="max-w-72 truncate font-semibold">
+                {evidence.title}
               </span>
             </label>
           );
         })}
       </div>
-    </fieldset>
+    </div>
   );
 }

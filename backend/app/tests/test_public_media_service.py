@@ -287,6 +287,9 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
         ) -> PublicDerivativeMetadata:
             assert kwargs["source_resource_type"] == "video"
             assert kwargs["source_format"] == "mp4"
+            assert kwargs["transformation"] == (
+                "c_limit,w_1280,h_720,q_auto:eco,vc_auto"
+            )
             return PublicDerivativeMetadata(
                 public_id="ip-certificate/public/derivatives/video-relation",
                 url=(

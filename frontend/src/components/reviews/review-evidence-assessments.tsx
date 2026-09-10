@@ -37,9 +37,9 @@ export function ReviewEvidenceAssessments({
   return (
     <section
       aria-labelledby="evidence-assessment-title"
-      className="rounded-2xl border border-[var(--theme-border)]"
+      className="border-b border-[var(--theme-border)] pb-6"
     >
-      <div className="border-b border-[var(--theme-border)] p-4 sm:p-5">
+      <div>
         <h3
           className="flex items-center gap-2 font-bold"
           id="evidence-assessment-title"
@@ -51,14 +51,14 @@ export function ReviewEvidenceAssessments({
           Ghi nhận tệp phù hợp, cần làm rõ hoặc không liên quan.
         </p>
       </div>
-      <div className="divide-y divide-[var(--theme-border)]">
+      <div className="mt-4 divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]">
         {evidences.map((evidence) => {
           const assessment = assessments[evidence.mediaAssetId] ?? {
             status: "UNREVIEWED" as const,
             note: "",
           };
           return (
-            <article className="grid gap-3 p-4 sm:p-5" key={evidence.id}>
+            <article className="grid gap-3 py-4" key={evidence.id}>
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_13rem] sm:items-center">
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{evidence.title}</p>

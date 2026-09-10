@@ -239,6 +239,84 @@ describe("BlockchainSigningWorkspace", () => {
     expect(sendBrowserTransaction).toHaveBeenCalledOnce();
   });
 
+  it("shows Polygon confirmation immediately after MetaMask returns a transaction hash", async () => {
+    const user = userEvent.setup();
+    const walletAddress = "0x3434343434343434343434343434343434343434";
+    const transactionHash = `0x${"cd".repeat(32)}`;
+    currentWallet.mockResolvedValue({
+      id: "wallet-link",
+      walletAddress,
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-26T00:00:00Z",
+    });
+    currentBrowserWallet.mockResolvedValue({
+      address: walletAddress,
+      chainId: 137,
+    });
+    proofQueue.mockResolvedValue([
+      {
+        transactionId: null,
+        dossierId: "dossier-ready",
+        dossierCode: "THV-2026-READY",
+        dossierTitle: "Hồ sơ sẵn sàng ký",
+        version: 1,
+        proofHash: `0x${"ab".repeat(32)}`,
+        status: "CREATED",
+        txHash: null,
+        confirmations: 0,
+        errorCode: null,
+        createdAt: "2026-08-26T00:00:00Z",
+      },
+    ]);
+    prepareIntent.mockResolvedValue({
+      intentId: "intent-ready",
+      transactionId: "transaction-ready",
+      dossierId: "dossier-ready",
+      dossierCode: "THV-2026-READY",
+      dossierTitle: "Hồ sơ sẵn sàng ký",
+      version: 1,
+      assetId: `0x${"11".repeat(32)}`,
+      proofHash: `0x${"ab".repeat(32)}`,
+      network: "polygon-mainnet",
+      chainId: 137,
+      contractAddress: "0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F",
+      transactionRequest: {
+        to: "0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F",
+      },
+      estimatedGas: 100000,
+      gasPriceWei: 30000000000,
+      walletBalanceWei: 1000000000000000000,
+      expiresAt: "2026-08-26T00:10:00Z",
+    });
+    sendBrowserTransaction.mockResolvedValue(transactionHash);
+    submitTransaction.mockImplementation(() => new Promise(() => undefined));
+
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: /Hồ sơ sẵn sàng ký/ }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Ký và ghi nhận blockchain" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "Đã nhận mã giao dịch. Hệ thống đang đồng bộ với mạng Polygon.",
+      ),
+    ).toBeDefined();
+    expect(screen.getByText(transactionHash)).toBeDefined();
+    expect(
+      screen.queryByRole("button", { name: "Mở lại MetaMask để ký" }),
+    ).toBeNull();
+    expect(submitTransaction).toHaveBeenCalledWith({
+      transactionId: "transaction-ready",
+      intentId: "intent-ready",
+      transactionHash,
+      connectedWallet: walletAddress,
+    });
+  });
+
   it("guides an authorized Super Admin to verify a wallet instead of leaving the signing queue loading", async () => {
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
 

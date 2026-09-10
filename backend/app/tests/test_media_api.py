@@ -231,6 +231,7 @@ def test_media_api_contract_and_validation() -> None:
     )
     assert content.content == b"original bytes"
     assert content.headers["cache-control"] == "private, no-store"
+    assert content.headers["content-length"] == str(len(b"original bytes"))
     assert content.headers["content-disposition"].endswith("evidence.pdf")
     assert deleted.json()["data"] == {"status": "deleted"}
     assert invalid.status_code == 422

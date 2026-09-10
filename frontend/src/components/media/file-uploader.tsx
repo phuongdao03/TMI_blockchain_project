@@ -159,9 +159,9 @@ export function FileUploader({
   return (
     <section
       aria-labelledby={`${inputId}-label`}
-      className="media-uploader overflow-hidden rounded-2xl border border-neutral-200 bg-white"
+      className="media-uploader border-y border-[var(--theme-border)] bg-[var(--theme-surface)]"
     >
-      <div className="flex flex-col gap-3 border-b border-neutral-200 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
+      <div className="flex flex-col gap-3 border-b border-[var(--theme-border)] py-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-success/10 text-success">
@@ -189,7 +189,7 @@ export function FileUploader({
         ) : null}
       </div>
 
-      <div className="space-y-4 p-4 sm:p-5">
+      <div className="space-y-4 py-4">
         <input
           accept={allowedMimeTypes.join(",") || policy.accept}
           aria-describedby={descriptionId}
@@ -210,7 +210,7 @@ export function FileUploader({
             "media-uploader__dropzone rounded-xl border border-dashed p-4 sm:p-5",
             isDragging
               ? "border-primary-600 bg-primary-50"
-              : "border-neutral-300 bg-neutral-50",
+              : "border-[var(--theme-border)] bg-[var(--theme-elevated)]",
             disabled && "opacity-60",
           )}
           onDragEnter={(event) => {
@@ -261,7 +261,7 @@ export function FileUploader({
                 Có thể thêm nhiều lần trước khi tải
               </p>
             </div>
-            <ul className="space-y-2">
+            <ul className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]">
               {items.map((item) => {
                 const hasError = item.status === "failed";
                 const isItemBusy = [
@@ -273,10 +273,8 @@ export function FileUploader({
                 return (
                   <li
                     className={cn(
-                      "media-uploader__item rounded-xl border bg-white p-3",
-                      hasError
-                        ? "border-error/40 bg-error/5"
-                        : "border-neutral-200",
+                      "media-uploader__item py-3",
+                      hasError ? "bg-error/5" : "bg-[var(--theme-surface)]",
                     )}
                     key={item.id}
                   >

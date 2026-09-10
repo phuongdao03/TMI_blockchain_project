@@ -68,6 +68,7 @@ class ProofRegistryGateway:
 
     def __init__(self) -> None:
         self.recorded = False
+        self.transaction_available = True
         self.receipt_available = True
         self.latest_block = 11
         self.transaction_hash = "0x" + "90" * 32
@@ -116,7 +117,7 @@ class ProofRegistryGateway:
         return 10**18
 
     async def transaction(self, tx_hash: str) -> ChainTransaction | None:
-        if tx_hash != self.transaction_hash:
+        if tx_hash != self.transaction_hash or not self.transaction_available:
             return None
         self.recorded = True
         return ChainTransaction(
@@ -498,6 +499,7 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version() -> None:
         assert intent.transaction_id is not None
         assert intent.intent_id is not None
 
+        gateway.transaction_available = False
         submitted = await service.submit_transaction(
             principal,
             transaction_id=intent.transaction_id,
@@ -505,9 +507,19 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version() -> None:
             transaction_hash=gateway.transaction_hash,
             connected_wallet=WALLET,
         )
-        assert submitted.status is BlockchainTransactionStatus.BROADCAST
+        assert submitted.status is BlockchainTransactionStatus.SIGNING
+        assert submitted.tx_hash == gateway.transaction_hash
 
+        gateway.transaction_available = True
         gateway.receipt_available = False
+        submitted = await service.transaction_status(
+            principal,
+            transaction_id=intent.transaction_id,
+            reconcile=True,
+        )
+        assert submitted.status is BlockchainTransactionStatus.BROADCAST
+        assert submitted.tx_hash == gateway.transaction_hash
+
         without_receipt = await service.transaction_status(
             principal,
             transaction_id=intent.transaction_id,

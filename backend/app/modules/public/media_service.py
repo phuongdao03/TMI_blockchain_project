@@ -48,7 +48,7 @@ _SOURCE_FORMATS = {
     "video/webm": "webm",
 }
 IMAGE_DERIVATIVE_TRANSFORMATION = "c_limit,w_1600,h_1600,q_auto,f_webp"
-VIDEO_DERIVATIVE_TRANSFORMATION = "c_limit,w_1920,h_1080,q_auto"
+VIDEO_DERIVATIVE_TRANSFORMATION = "c_limit,w_1280,h_720,q_auto:eco,vc_auto"
 
 
 class PublicMediaDispatcher(Protocol):

@@ -95,14 +95,24 @@ function errorMessage(error: unknown) {
   return "Chưa thể hoàn tất thao tác. Vui lòng thử lại hoặc liên hệ bộ phận vận hành.";
 }
 
-function signingStep(status: string, busy: "connect" | "link" | "sign" | null) {
+function signingStep(
+  status: string,
+  busy: "connect" | "link" | "sign" | null,
+  transactionHash?: string | null,
+) {
   if (status === "CONFIRMED") return 3;
-  if (status === "BROADCAST" || status === "FAILED") return 2;
+  if (
+    status === "BROADCAST" ||
+    status === "FAILED" ||
+    (status === "SIGNING" && transactionHash)
+  ) {
+    return 2;
+  }
   if (status === "SIGNING" || busy === "sign") return 1;
   return 0;
 }
 
-function verificationMessage(status: string) {
+function verificationMessage(status: string, transactionHash?: string | null) {
   if (status === "CONFIRMED") {
     return "Tài liệu đã được ghi nhận và chưa bị thay đổi.";
   }
@@ -110,6 +120,9 @@ function verificationMessage(status: string) {
     return "Giao dịch đã gửi, đang chờ mạng Polygon xác nhận.";
   }
   if (status === "SIGNING") {
+    if (transactionHash) {
+      return "Đã nhận mã giao dịch. Hệ thống đang đồng bộ với mạng Polygon.";
+    }
     return "MetaMask chưa trả về mã giao dịch. Bạn có thể mở lại ví để tiếp tục ký.";
   }
   if (status === "FAILED") {
@@ -166,7 +179,7 @@ export function BlockchainSigningWorkspace() {
       if (query.state.data && terminalStatuses.has(query.state.data.status)) {
         return false;
       }
-      return query.state.error ? 30_000 : 8_000;
+      return query.state.error ? 15_000 : 4_000;
     },
     refetchIntervalInBackground: false,
   });
@@ -215,6 +228,31 @@ export function BlockchainSigningWorkspace() {
       active = false;
     };
   }, [refreshWalletState]);
+
+  useEffect(() => {
+    const refreshAfterWallet = () => {
+      void refreshWalletState();
+      if (selected?.transactionId) {
+        void queryClient.invalidateQueries({
+          queryKey: [
+            "blockchain",
+            "proof-registry",
+            "transaction",
+            selected.transactionId,
+          ],
+        });
+      }
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshAfterWallet();
+    };
+    window.addEventListener("focus", refreshAfterWallet);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.removeEventListener("focus", refreshAfterWallet);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [queryClient, refreshWalletState, selected?.transactionId]);
 
   useEffect(() => {
     try {
@@ -324,6 +362,7 @@ export function BlockchainSigningWorkspace() {
     }
     setBusy("sign");
     setMessage(null);
+    let transactionHash: string | null = null;
     try {
       const intent = await proofRegistrySigningApi.prepareIntent(
         selected.dossierId,
@@ -331,10 +370,25 @@ export function BlockchainSigningWorkspace() {
         connected.address,
       );
       setPreparedIntent(intent);
-      const transactionHash = await sendTransaction({
+      transactionHash = await sendTransaction({
         ...intent.transactionRequest,
         from: connected.address,
       });
+      setSelected((current) =>
+        current
+          ? {
+              ...current,
+              transactionId: intent.transactionId,
+              status: "SIGNING",
+              txHash: transactionHash,
+              confirmations: 0,
+              errorCode: null,
+            }
+          : current,
+      );
+      setMessage(
+        "MetaMask đã gửi giao dịch. Hệ thống đang đồng bộ với mạng Polygon.",
+      );
       const submitted = await proofRegistrySigningApi.submitTransaction({
         transactionId: intent.transactionId,
         intentId: intent.intentId,
@@ -360,7 +414,11 @@ export function BlockchainSigningWorkspace() {
         queryKey: ["blockchain", "proof-registry", "signing-queue"],
       });
     } catch (error) {
-      setMessage(errorMessage(error));
+      setMessage(
+        transactionHash
+          ? "Giao dịch đã được gửi từ MetaMask. Hệ thống sẽ tiếp tục tự đồng bộ; không cần ký lại."
+          : errorMessage(error),
+      );
     } finally {
       setBusy(null);
     }
@@ -714,14 +772,18 @@ export function BlockchainSigningWorkspace() {
             className="blockchain-signing-steps mt-7 grid gap-2 sm:grid-cols-4"
           >
             {signingSteps.map((step, index) => {
-              const currentStep = signingStep(displayedSelected.status, busy);
+              const currentStep = signingStep(
+                displayedSelected.status,
+                busy,
+                displayedSelected.txHash,
+              );
               const complete = index < currentStep || currentStep === 3;
               const current = index === currentStep;
               return (
                 <li
                   aria-current={current ? "step" : undefined}
                   data-complete={complete ? "true" : undefined}
-                  className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ${
+                  className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition-[background-color,border-color,color] duration-150 ${
                     current
                       ? "border-primary-600 bg-primary-50 text-primary-950"
                       : complete
@@ -754,9 +816,14 @@ export function BlockchainSigningWorkspace() {
             role="status"
           >
             <p className="font-bold text-neutral-950">
-              {verificationMessage(displayedSelected.status)}
+              {verificationMessage(
+                displayedSelected.status,
+                displayedSelected.txHash,
+              )}
             </p>
-            {displayedSelected.status === "BROADCAST" &&
+            {(displayedSelected.status === "BROADCAST" ||
+              (displayedSelected.status === "SIGNING" &&
+                displayedSelected.txHash)) &&
             !transactionStatus.error ? (
               <p className="mt-1 text-sm text-neutral-600">
                 Hệ thống tự kiểm tra kết quả định kỳ. Trạng thái chỉ chuyển
@@ -917,7 +984,9 @@ export function BlockchainSigningWorkspace() {
             </dl>
           </details>
           <div className="blockchain-signing-action mt-7">
-            {displayedSelected.status === "BROADCAST" ? (
+            {displayedSelected.status === "BROADCAST" ||
+            (displayedSelected.status === "SIGNING" &&
+              displayedSelected.txHash) ? (
               <button
                 className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-[var(--theme-border)] px-5 text-sm font-bold text-[var(--theme-text)] disabled:opacity-60 sm:w-auto"
                 disabled={transactionStatus.isFetching}
@@ -932,7 +1001,8 @@ export function BlockchainSigningWorkspace() {
                   : "Kiểm tra xác nhận ngay"}
               </button>
             ) : null}
-            {!["BROADCAST", "CONFIRMED", "REPLACED"].includes(
+            {!displayedSelected.txHash &&
+            !["BROADCAST", "CONFIRMED", "REPLACED"].includes(
               displayedSelected.status,
             ) ? (
               <button
