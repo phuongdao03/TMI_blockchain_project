@@ -27,6 +27,7 @@ from app.modules.blockchain.transport import (
 _PROOF_RECORDED_TOPIC = Web3.keccak(
     text="ProofRecorded(bytes32,bytes32,uint64,address,uint64)"
 ).to_0x_hex()
+_MAX_LOG_BLOCK_SPAN = 10
 
 
 @dataclass(frozen=True, slots=True)
@@ -273,35 +274,37 @@ class THVProofRegistryGateway:
                 self._as_topic(proof_hash),
                 self._as_topic(version.to_bytes(32, "big")),
             ]
-            recent_from_block = max(0, latest_block - 9_999)
-            logs = await self._web3.eth.get_logs(
-                {
-                    "address": self.contract_address,
-                    "fromBlock": recent_from_block,
-                    "toBlock": latest_block,
-                    "topics": topics,
-                }
+            candidate = await self._first_block_at_or_after(
+                recorded_at,
+                latest_block=latest_block,
             )
-            if not logs and recent_from_block > 0:
-                candidate = await self._first_block_at_or_after(
-                    recorded_at,
-                    latest_block=latest_block,
+            candidate_block = await self._web3.eth.get_block(candidate)
+            if int(candidate_block["timestamp"]) != recorded_at:
+                return None
+
+            logs = []
+            from_block = candidate
+            while from_block <= latest_block:
+                to_block = min(
+                    latest_block,
+                    from_block + _MAX_LOG_BLOCK_SPAN - 1,
                 )
-                if candidate < recent_from_block:
-                    # Polygon normally produces a block every few seconds. The
-                    # bounded window handles blocks sharing the same timestamp
-                    # while remaining below common public-RPC log-range limits.
-                    logs = await self._web3.eth.get_logs(
+                logs.extend(
+                    await self._web3.eth.get_logs(
                         {
                             "address": self.contract_address,
-                            "fromBlock": max(0, candidate - 16),
-                            "toBlock": min(
-                                recent_from_block - 1,
-                                candidate + 512,
-                            ),
+                            "fromBlock": from_block,
+                            "toBlock": to_block,
                             "topics": topics,
                         }
                     )
+                )
+                if to_block >= latest_block:
+                    break
+                last_block = await self._web3.eth.get_block(to_block)
+                if int(last_block["timestamp"]) > recorded_at:
+                    break
+                from_block = to_block + 1
         except BlockchainGatewayError:
             raise
         except Exception as exc:

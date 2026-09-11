@@ -271,7 +271,7 @@ def test_gateway_reads_polygon_bor_block_with_extended_extra_data(
     assert block_hash == "0x" + "77" * 32
 
 
-def test_gateway_recovers_exact_recording_from_indexed_event(
+def test_gateway_recovers_recording_with_ten_block_log_windows(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     asset_id = bytes.fromhex("ab" * 32)
@@ -285,16 +285,23 @@ def test_gateway_recovers_exact_recording_from_indexed_event(
         def __init__(self) -> None:
             super().__init__()
             self.block_lookups = 0
+            self.log_ranges: list[tuple[int, int]] = []
 
         async def make_request(self, method: RPCEndpoint, params: Any) -> RPCResponse:
             if method == "eth_chainId":
                 return {"jsonrpc": "2.0", "id": 1, "result": "0x89"}
             if method == "eth_blockNumber":
-                return {"jsonrpc": "2.0", "id": 1, "result": "0x14"}
+                return {"jsonrpc": "2.0", "id": 1, "result": "0x28"}
             if method == "eth_getBlockByNumber":
                 self.block_lookups += 1
                 block_number = int(str(params[0]), 16)
-                timestamp = recorded_at - 1 if block_number < 10 else recorded_at
+                timestamp = (
+                    recorded_at - 1
+                    if block_number < 10
+                    else recorded_at
+                    if block_number <= 20
+                    else recorded_at + 1
+                )
                 return {
                     "jsonrpc": "2.0",
                     "id": 1,
@@ -306,7 +313,23 @@ def test_gateway_recovers_exact_recording_from_indexed_event(
                     },
                 }
             if method == "eth_getLogs":
-                topics = cast(dict[str, object], params[0])["topics"]
+                log_filter = cast(dict[str, object], params[0])
+                from_block = int(str(log_filter["fromBlock"]), 16)
+                to_block = int(str(log_filter["toBlock"]), 16)
+                self.log_ranges.append((from_block, to_block))
+                if to_block - from_block + 1 > 10:
+                    return {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "error": {
+                            "code": -32600,
+                            "message": (
+                                "Under the Free tier plan, you can make "
+                                "eth_getLogs requests with up to a 10 block range."
+                            ),
+                        },
+                    }
+                topics = log_filter["topics"]
                 assert topics == [
                     Web3.keccak(
                         text="ProofRecorded(bytes32,bytes32,uint64,address,uint64)"
@@ -315,10 +338,9 @@ def test_gateway_recovers_exact_recording_from_indexed_event(
                     "0x" + proof_hash.hex(),
                     "0x" + version.to_bytes(32, "big").hex(),
                 ]
-                return {
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "result": [
+                logs = []
+                if from_block <= 20 <= to_block:
+                    logs = [
                         {
                             "address": CONTRACT,
                             "topics": topics,
@@ -328,14 +350,18 @@ def test_gateway_recovers_exact_recording_from_indexed_event(
                                 + bytes.fromhex(WALLET.removeprefix("0x"))
                                 + recorded_at.to_bytes(32, "big")
                             ).hex(),
-                            "blockNumber": "0xa",
+                            "blockNumber": "0x14",
                             "blockHash": block_hash,
                             "transactionHash": transaction_hash,
                             "transactionIndex": "0x0",
                             "logIndex": "0x0",
                             "removed": False,
                         }
-                    ],
+                    ]
+                return {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "result": logs,
                 }
             raise AssertionError(f"Unexpected RPC method: {method}")
 
@@ -371,10 +397,11 @@ def test_gateway_recovers_exact_recording_from_indexed_event(
 
     assert recording is not None
     assert recording.transaction_hash == transaction_hash
-    assert recording.block_number == 10
+    assert recording.block_number == 20
     assert recording.block_hash == block_hash
     assert recording.signer == WALLET
-    assert provider.block_lookups == 0
+    assert provider.block_lookups > 0
+    assert provider.log_ranges == [(10, 19), (20, 29)]
 
 
 def test_thv_proof_registry_is_disabled_without_a_contract_address() -> None:
