@@ -194,10 +194,10 @@ describe("PublicWorkEditor", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const user = userEvent.setup();
     render(<PublicWorkEditor />, { wrapper });
-    await user.click(
-      await screen.findByRole("button", { name: /ban-mau/ }),
+    await user.click(await screen.findByRole("button", { name: /ban-mau/ }));
+    const privateRow = (await screen.findByText("Identity document")).closest(
+      "li",
     );
-    const privateRow = (await screen.findByText("Identity document")).closest("li");
     expect(privateRow).not.toBeNull();
     await user.click(within(privateRow!).getByRole("button"));
     expect(confirm).toHaveBeenCalledOnce();
