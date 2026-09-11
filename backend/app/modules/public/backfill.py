@@ -4,10 +4,12 @@ from collections import Counter
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.blockchain.models import (
+    BlockchainTransaction,
+    BlockchainTransactionStatus,
     Certificate,
     CertificateStatus,
     CertificateVersion,
@@ -16,6 +18,7 @@ from app.modules.dossiers.models import (
     Dossier,
     DossierEvidence,
     DossierStatus,
+    DossierVersion,
     EvidenceVisibility,
 )
 from app.modules.media.models import MediaAsset, MediaStatus
@@ -86,7 +89,7 @@ class PublicWorkDraftBackfill:
         *,
         certificate_id: UUID | None,
     ) -> PublicWork | None:
-        """Create the single editorial draft for an issued dossier.
+        """Create or repair the single private editorial draft for a dossier.
 
         This is safe to call from the certificate worker and from a replay.
         It deliberately creates a private draft; publication remains an
@@ -181,31 +184,66 @@ class PublicWorkDraftBackfill:
     async def _sync_existing_drafts(self) -> None:
         cursor: UUID | None = None
         while True:
+            latest_certificate_id = (
+                select(Certificate.id)
+                .where(Certificate.dossier_id == PublicWork.dossier_id)
+                .order_by(Certificate.issued_at.desc(), Certificate.id.desc())
+                .limit(1)
+                .scalar_subquery()
+            )
+            confirmed_current_proof = exists(
+                select(BlockchainTransaction.id)
+                .join(
+                    DossierVersion,
+                    DossierVersion.id == BlockchainTransaction.dossier_version_id,
+                )
+                .where(
+                    BlockchainTransaction.dossier_id == PublicWork.dossier_id,
+                    DossierVersion.dossier_id == PublicWork.dossier_id,
+                    DossierVersion.version_no == Dossier.current_version_no,
+                    BlockchainTransaction.method.in_(
+                        ("recordProof", "issueCertificate")
+                    ),
+                    BlockchainTransaction.status
+                    == BlockchainTransactionStatus.CONFIRMED,
+                    BlockchainTransaction.tx_hash.is_not(None),
+                )
+            )
             statement = (
-                select(PublicWork)
+                select(
+                    PublicWork,
+                    latest_certificate_id.label("latest_certificate_id"),
+                )
                 .join(Dossier, Dossier.id == PublicWork.dossier_id)
                 .where(
-                    Dossier.status.in_(
-                        (DossierStatus.CERTIFICATE_ISSUED, DossierStatus.PUBLISHED)
+                    or_(
+                        Dossier.status.in_(
+                            (
+                                DossierStatus.CERTIFICATE_ISSUED,
+                                DossierStatus.PUBLISHED,
+                            )
+                        ),
+                        confirmed_current_proof,
                     ),
                     PublicWork.deleted_at.is_(None),
-                    PublicWork.certificate_id.is_not(None),
                 )
                 .order_by(PublicWork.id)
                 .limit(self._batch_size)
             )
             if cursor is not None:
                 statement = statement.where(PublicWork.id > cursor)
-            works = tuple(await self._session.scalars(statement))
-            if not works:
+            rows = tuple((await self._session.execute(statement)).tuples())
+            if not rows:
                 break
-            for work in works:
+            for work, certificate_id in rows:
+                if work.certificate_id is None and certificate_id is not None:
+                    work.certificate_id = certificate_id
                 await self._sync_public_evidence(
                     work,
                     certificate_id=work.certificate_id,
                 )
             await self._session.flush()
-            cursor = works[-1].id
+            cursor = rows[-1][0].id
 
     async def _sync_public_evidence(
         self,
@@ -213,17 +251,28 @@ class PublicWorkDraftBackfill:
         *,
         certificate_id: UUID | None,
     ) -> None:
-        if certificate_id is None:
-            return
-        certificate = await self._session.get(Certificate, certificate_id)
-        if certificate is None or certificate.status is not CertificateStatus.ACTIVE:
-            return
-        version_id = await self._session.scalar(
-            select(CertificateVersion.dossier_version_id).where(
-                CertificateVersion.certificate_id == certificate.id,
-                CertificateVersion.version_no == certificate.current_version_no,
-            )
+        certificate = (
+            await self._session.get(Certificate, certificate_id)
+            if certificate_id is not None
+            else None
         )
+        version_id = None
+        if certificate is not None and certificate.status is CertificateStatus.ACTIVE:
+            version_id = await self._session.scalar(
+                select(CertificateVersion.dossier_version_id).where(
+                    CertificateVersion.certificate_id == certificate.id,
+                    CertificateVersion.version_no == certificate.current_version_no,
+                )
+            )
+        if version_id is None:
+            version_id = await self._session.scalar(
+                select(DossierVersion.id)
+                .join(Dossier, Dossier.id == DossierVersion.dossier_id)
+                .where(
+                    DossierVersion.dossier_id == work.dossier_id,
+                    DossierVersion.version_no == Dossier.current_version_no,
+                )
+            )
         if version_id is None:
             return
         existing_ids = set(
@@ -239,7 +288,10 @@ class PublicWorkDraftBackfill:
             .where(
                 DossierEvidence.dossier_id == work.dossier_id,
                 DossierEvidence.dossier_version_id == version_id,
-                DossierEvidence.access_scope.in_(PUBLIC_EVIDENCE_SCOPES),
+                or_(
+                    DossierEvidence.access_scope.in_(PUBLIC_EVIDENCE_SCOPES),
+                    DossierEvidence.evidence_role == "PRIMARY_WORK",
+                ),
                 MediaAsset.status == MediaStatus.ACTIVE,
                 MediaAsset.deleted_at.is_(None),
             )

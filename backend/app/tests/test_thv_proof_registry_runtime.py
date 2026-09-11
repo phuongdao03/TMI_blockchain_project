@@ -702,6 +702,7 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version() -> None:
         )
         assert confirmed.status is BlockchainTransactionStatus.CONFIRMED
         assert confirmed.confirmations == 2
+        assert issuance_requests == [dossier.id]
         confirmed_again = await service.transaction_status(
             principal,
             transaction_id=intent.transaction_id,

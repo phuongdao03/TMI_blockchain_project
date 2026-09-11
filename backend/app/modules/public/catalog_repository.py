@@ -9,10 +9,11 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from app.modules.blockchain.models import (
     BlockchainTransaction,
+    BlockchainTransactionStatus,
     Certificate,
     CertificateVersion,
 )
-from app.modules.dossiers.models import Category, Dossier, DossierStatus
+from app.modules.dossiers.models import Category, Dossier, DossierStatus, DossierVersion
 from app.modules.media.models import MediaAsset
 from app.modules.organizations.models import Organization
 from app.modules.public.models import (
@@ -769,15 +770,33 @@ class PublicWorkRepository:
             .limit(1)
             .scalar_subquery()
         )
+        confirmed_current_proof = exists(
+            select(BlockchainTransaction.id)
+            .join(
+                DossierVersion,
+                DossierVersion.id == BlockchainTransaction.dossier_version_id,
+            )
+            .where(
+                BlockchainTransaction.dossier_id == Dossier.id,
+                DossierVersion.dossier_id == Dossier.id,
+                DossierVersion.version_no == Dossier.current_version_no,
+                BlockchainTransaction.method.in_(("recordProof", "issueCertificate")),
+                BlockchainTransaction.status == BlockchainTransactionStatus.CONFIRMED,
+                BlockchainTransaction.tx_hash.is_not(None),
+            )
+        )
         cursor_filter = () if after is None else (Dossier.id > after,)
         rows = await self._session.execute(
             select(Dossier, certificate_id.label("certificate_id"))
             .where(
-                Dossier.status.in_(
-                    (
-                        DossierStatus.CERTIFICATE_ISSUED,
-                        DossierStatus.PUBLISHED,
-                    )
+                or_(
+                    Dossier.status.in_(
+                        (
+                            DossierStatus.CERTIFICATE_ISSUED,
+                            DossierStatus.PUBLISHED,
+                        )
+                    ),
+                    confirmed_current_proof,
                 ),
                 Dossier.deleted_at.is_(None),
                 ~exists(

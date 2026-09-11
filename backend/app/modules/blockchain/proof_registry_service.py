@@ -572,7 +572,6 @@ class THVProofRegistryService:
             ):
                 return
             tx_hash = transaction.tx_hash
-            was_confirmed = transaction.status is BlockchainTransactionStatus.CONFIRMED
             dossier_id = transaction.dossier_id
             version_id = transaction.dossier_version_id
             proof_hash = transaction.payload_hash
@@ -676,12 +675,7 @@ class THVProofRegistryService:
                     dossier.owner_user_id,
                     certificate_version_id=promoted_version_id,
                 )
-            if (
-                was_confirmed
-                and transaction.status is BlockchainTransactionStatus.CONFIRMED
-            ):
-                dossier = await self._session.get(Dossier, transaction.dossier_id)
-                if dossier is not None and dossier.status in {
+                if dossier.status in {
                     DossierStatus.PAID,
                     DossierStatus.ANCHORED,
                 }:
