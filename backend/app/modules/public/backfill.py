@@ -201,9 +201,7 @@ class PublicWorkDraftBackfill:
                     BlockchainTransaction.dossier_id == PublicWork.dossier_id,
                     DossierVersion.dossier_id == PublicWork.dossier_id,
                     DossierVersion.version_no == Dossier.current_version_no,
-                    BlockchainTransaction.method.in_(
-                        ("recordProof", "issueCertificate")
-                    ),
+                    BlockchainTransaction.method == "recordProof",
                     BlockchainTransaction.status
                     == BlockchainTransactionStatus.CONFIRMED,
                     BlockchainTransaction.tx_hash.is_not(None),
