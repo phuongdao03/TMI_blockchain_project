@@ -24,6 +24,7 @@ from app.modules.dossiers.models import (
 from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.public.backfill import PublicWorkDraftBackfill
 from app.modules.public.catalog_repository import PublicWorkRepository
+from app.modules.public.media_repository import PublicMediaRepository
 from app.modules.public.models import (
     PublicationStatus,
     PublicMediaKind,
@@ -214,6 +215,13 @@ def test_public_work_repository_and_draft_backfill_are_safe(tmp_path: Path) -> N
             assert len(public_media) == 1
             assert public_media[0].media_asset_id == public_video_id
             assert public_media[0].media_kind is PublicMediaKind.VIDEO
+            source_candidates = await PublicMediaRepository(
+                session
+            ).list_current_evidence_assets(eligible_dossier_id)
+            assert tuple(asset.id for _, asset in source_candidates) == (
+                public_video_id,
+                private_document_id,
+            )
             assert public_media[0].caption == "Video chào mừng Tinh hoa Việt"
 
             await backfill.ensure_draft(

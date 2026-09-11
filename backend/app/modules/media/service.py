@@ -160,7 +160,7 @@ class MediaService:
         media_id = uuid4()
         purpose_segment = intent.purpose.value.lower().replace("_", "-")
         public_id = (
-            f"ip-certificate/{self._environment}/{principal.user_id}/"
+            f"tmi/{self._environment}/owners/{principal.user_id}/uploads/"
             f"{purpose_segment}/{media_id}"
         )
         authorization = await self._gateway.create_upload_signature(
@@ -253,6 +253,7 @@ class MediaService:
                 raise MediaInvalidStateError()
             self._validate_provider_metadata(asset, completion, metadata)
             asset.cloudinary_version = metadata.version
+            asset.provider_asset_id = metadata.provider_asset_id
             asset.bytes = metadata.bytes
             asset.width = metadata.width
             asset.height = metadata.height

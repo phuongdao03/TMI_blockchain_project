@@ -32,6 +32,8 @@ import type {
   PublicationStatus,
   PublicWorkEditor as PublicWorkEditorData,
   PublicWorkMedia,
+  PublicVideoPresentationInput,
+  PublicMediaCandidate,
 } from "@/lib/api/types";
 
 const editorSchema = z.object({
@@ -132,6 +134,11 @@ export function PublicWorkEditor() {
   const media = useQuery({
     queryKey: ["admin", "public-work-media", selectedId],
     queryFn: () => publicWorkAdminApi.media(selectedId!),
+    enabled: Boolean(selectedId),
+  });
+  const mediaCandidates = useQuery({
+    queryKey: ["admin", "public-work-media-candidates", selectedId],
+    queryFn: () => publicWorkAdminApi.mediaCandidates(selectedId!),
     enabled: Boolean(selectedId),
   });
   const preview = useQuery({
@@ -516,13 +523,21 @@ export function PublicWorkEditor() {
                     </div>
                   </fieldset>
                   <Gallery
+                    candidates={mediaCandidates.data ?? []}
                     items={media.data ?? []}
                     onAttach={(assetId) => mediaMutation.mutate(assetId)}
-                    onChanged={() =>
-                      queryClient.invalidateQueries({
+                    onChanged={() => {
+                      void queryClient.invalidateQueries({
                         queryKey: ["admin", "public-work-media", selectedId],
-                      })
-                    }
+                      });
+                      void queryClient.invalidateQueries({
+                        queryKey: [
+                          "admin",
+                          "public-work-media-candidates",
+                          selectedId,
+                        ],
+                      });
+                    }}
                     onThumbnail={(assetId) =>
                       setValue("thumbnailMediaId", assetId, {
                         shouldDirty: true,
@@ -687,6 +702,7 @@ function EditorField({
 }
 
 function Gallery({
+  candidates,
   items,
   onAttach,
   onChanged,
@@ -694,6 +710,7 @@ function Gallery({
   selectedThumbnail,
   workId,
 }: {
+  candidates: PublicMediaCandidate[];
   items: PublicWorkMedia[];
   onAttach: (assetId: string) => void;
   onChanged: () => void;
@@ -713,6 +730,27 @@ function Gallery({
     await publicWorkAdminApi.removeMedia(workId, relationId);
     onChanged();
   };
+  const attachCandidate = async (candidate: PublicMediaCandidate) => {
+    if (
+      candidate.accessScope !== "PUBLIC" &&
+      candidate.accessScope !== "PUBLIC_PREVIEW" &&
+      !window.confirm(
+        "Tài liệu này đang được phân loại riêng tư. Chỉ tiếp tục nếu đây chính là tác phẩm cần công bố, không phải giấy tờ định danh hoặc bằng chứng quyền sở hữu.",
+      )
+    ) {
+      return;
+    }
+    await publicWorkAdminApi.attachMedia(
+      workId,
+      candidate.mediaAssetId,
+      items.length,
+      {
+        caption: candidate.title,
+        altText: candidate.kind === "IMAGE" ? candidate.title : undefined,
+      },
+    );
+    onChanged();
+  };
   return (
     <section className="rounded-2xl border border-neutral-200 p-4">
       <div className="flex items-center gap-2">
@@ -726,59 +764,293 @@ function Gallery({
           purpose="PUBLIC_WORK"
         />
       </div>
+      {candidates.some((candidate) => !candidate.alreadyAttached) ? (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <p className="text-sm font-bold text-amber-950">
+            Tài liệu gốc từ hồ sơ đã ký
+          </p>
+          <p className="mt-1 text-xs text-amber-900">
+            Chọn “Chuẩn bị công bố” để tạo bản trình chiếu tối ưu; tệp gốc và
+            dấu vân tay không bị thay đổi.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {candidates
+              .filter((candidate) => !candidate.alreadyAttached)
+              .map((candidate) => (
+                <li
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-2"
+                  key={candidate.mediaAssetId}
+                >
+                  <span className="min-w-0 text-sm">
+                    <strong>{candidate.title}</strong>
+                    <span className="ml-2 text-xs text-neutral-500">
+                      {candidate.filename}
+                    </span>
+                    <span
+                      className={`ml-2 rounded-full px-2 py-0.5 text-[0.68rem] font-bold ${candidate.accessScope === "PUBLIC" || candidate.accessScope === "PUBLIC_PREVIEW" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}
+                    >
+                      {candidate.accessScope === "PUBLIC" ||
+                      candidate.accessScope === "PUBLIC_PREVIEW"
+                        ? "Được phép xem trước"
+                        : "Tài liệu riêng tư"}
+                    </span>
+                  </span>
+                  <Button
+                    onClick={() => void attachCandidate(candidate)}
+                    type="button"
+                    variant="outline"
+                  >
+                    Chuẩn bị công bố
+                  </Button>
+                </li>
+              ))}
+          </ul>
+        </div>
+      ) : null}
       <ul className="mt-4 divide-y divide-neutral-200">
         {items.map((item, index) => (
-          <li className="flex flex-wrap items-center gap-3 py-3" key={item.id}>
-            <span className="grid size-10 place-items-center rounded-lg bg-neutral-100 text-xs font-bold text-neutral-600">
-              {item.mediaKind.slice(0, 3)}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-bold">
-                {item.caption || item.altText || `Media ${index + 1}`}
+          <li className="py-3" key={item.id}>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="grid size-10 place-items-center rounded-lg bg-neutral-100 text-xs font-bold text-neutral-600">
+                {item.mediaKind.slice(0, 3)}
               </span>
-              <span className="text-xs text-neutral-500">
-                {item.derivativeStatus}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-bold">
+                  {item.caption || item.altText || `Media ${index + 1}`}
+                </span>
+                <span className="text-xs text-neutral-500">
+                  {item.derivativeStatus}
+                </span>
               </span>
-            </span>
-            {item.mediaKind === "IMAGE" ? (
+              {item.mediaKind === "IMAGE" ? (
+                <button
+                  className={`rounded-lg px-2 py-1 text-xs font-bold ${selectedThumbnail === item.mediaAssetId ? "bg-primary-50 text-primary-700" : "text-neutral-600"}`}
+                  onClick={() => onThumbnail(item.mediaAssetId)}
+                  type="button"
+                >
+                  {selectedThumbnail === item.mediaAssetId
+                    ? "Ảnh bìa"
+                    : "Đặt ảnh bìa"}
+                </button>
+              ) : null}
               <button
-                className={`rounded-lg px-2 py-1 text-xs font-bold ${selectedThumbnail === item.mediaAssetId ? "bg-primary-50 text-primary-700" : "text-neutral-600"}`}
-                onClick={() => onThumbnail(item.mediaAssetId)}
+                aria-label="Di chuyển lên"
+                disabled={index === 0}
+                onClick={() => void reorder(index, -1)}
                 type="button"
               >
-                {selectedThumbnail === item.mediaAssetId
-                  ? "Ảnh bìa"
-                  : "Đặt ảnh bìa"}
+                <ArrowUp className="size-4" />
               </button>
+              <button
+                aria-label="Di chuyển xuống"
+                disabled={index === items.length - 1}
+                onClick={() => void reorder(index, 1)}
+                type="button"
+              >
+                <ArrowDown className="size-4" />
+              </button>
+              <button
+                aria-label="Xóa hình ảnh hoặc video"
+                className="text-red-700"
+                onClick={() => void remove(item.id)}
+                type="button"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+            {item.mediaKind === "VIDEO" ? (
+              <VideoPresentationSettings
+                images={items.filter(
+                  (candidate) => candidate.mediaKind === "IMAGE",
+                )}
+                item={item}
+                onChanged={onChanged}
+                workId={workId}
+              />
             ) : null}
-            <button
-              aria-label="Di chuyển lên"
-              disabled={index === 0}
-              onClick={() => void reorder(index, -1)}
-              type="button"
-            >
-              <ArrowUp className="size-4" />
-            </button>
-            <button
-              aria-label="Di chuyển xuống"
-              disabled={index === items.length - 1}
-              onClick={() => void reorder(index, 1)}
-              type="button"
-            >
-              <ArrowDown className="size-4" />
-            </button>
-            <button
-              aria-label="Xóa hình ảnh hoặc video"
-              className="text-red-700"
-              onClick={() => void remove(item.id)}
-              type="button"
-            >
-              <Trash2 className="size-4" />
-            </button>
           </li>
         ))}
       </ul>
     </section>
+  );
+}
+
+function VideoPresentationSettings({
+  images,
+  item,
+  onChanged,
+  workId,
+}: {
+  images: PublicWorkMedia[];
+  item: PublicWorkMedia;
+  onChanged: () => void;
+  workId: string;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [settings, setSettings] = useState<PublicVideoPresentationInput>({
+    posterMediaAssetId: item.posterMediaAssetId,
+    controlsPreset: item.videoControlsPreset,
+    fitMode: item.videoFitMode,
+    qualityProfile: item.videoQualityProfile,
+    maxWidth: item.videoMaxWidth as PublicVideoPresentationInput["maxWidth"],
+    autoplay: item.videoAutoplay,
+    loop: item.videoLoop,
+    muted: item.videoMuted,
+  });
+
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await publicWorkAdminApi.configureVideo(workId, item.id, settings);
+      onChanged();
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Không thể lưu cấu hình video.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <details className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+      <summary className="cursor-pointer text-sm font-bold">
+        Cấu hình trình phát video
+      </summary>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">
+          Poster
+          <select
+            className="mt-1 h-10 w-full rounded-lg border border-neutral-300 bg-white px-2 text-sm"
+            onChange={(event) =>
+              setSettings({
+                ...settings,
+                posterMediaAssetId: event.target.value || null,
+              })
+            }
+            value={settings.posterMediaAssetId ?? ""}
+          >
+            <option value="">Tự động / không dùng</option>
+            {images
+              .filter((image) => image.derivativeStatus === "READY")
+              .map((image, index) => (
+                <option key={image.id} value={image.mediaAssetId}>
+                  {image.caption || image.altText || `Ảnh ${index + 1}`}
+                </option>
+              ))}
+          </select>
+        </label>
+        <label className="text-xs font-bold">
+          Điều khiển
+          <select
+            className="mt-1 h-10 w-full rounded-lg border border-neutral-300 bg-white px-2 text-sm"
+            onChange={(event) =>
+              setSettings({
+                ...settings,
+                controlsPreset: event.target
+                  .value as PublicVideoPresentationInput["controlsPreset"],
+              })
+            }
+            value={settings.controlsPreset}
+          >
+            <option value="FULL">Đầy đủ</option>
+            <option value="MINIMAL">Tối giản</option>
+            <option value="NONE">Ẩn</option>
+          </select>
+        </label>
+        <label className="text-xs font-bold">
+          Hiển thị khung
+          <select
+            className="mt-1 h-10 w-full rounded-lg border border-neutral-300 bg-white px-2 text-sm"
+            onChange={(event) =>
+              setSettings({
+                ...settings,
+                fitMode: event.target
+                  .value as PublicVideoPresentationInput["fitMode"],
+              })
+            }
+            value={settings.fitMode}
+          >
+            <option value="CONTAIN">Hiện đầy đủ</option>
+            <option value="COVER">Lấp đầy khung</option>
+          </select>
+        </label>
+        <label className="text-xs font-bold">
+          Tối ưu chất lượng
+          <select
+            className="mt-1 h-10 w-full rounded-lg border border-neutral-300 bg-white px-2 text-sm"
+            onChange={(event) =>
+              setSettings({
+                ...settings,
+                qualityProfile: event.target
+                  .value as PublicVideoPresentationInput["qualityProfile"],
+              })
+            }
+            value={settings.qualityProfile}
+          >
+            <option value="DATA_SAVER">Tiết kiệm dữ liệu</option>
+            <option value="BALANCED">Cân bằng</option>
+            <option value="HIGH">Chất lượng cao</option>
+          </select>
+        </label>
+        <label className="text-xs font-bold">
+          Độ rộng tối đa
+          <select
+            className="mt-1 h-10 w-full rounded-lg border border-neutral-300 bg-white px-2 text-sm"
+            onChange={(event) =>
+              setSettings({
+                ...settings,
+                maxWidth: Number(
+                  event.target.value,
+                ) as PublicVideoPresentationInput["maxWidth"],
+              })
+            }
+            value={settings.maxWidth}
+          >
+            <option value={640}>640px</option>
+            <option value={960}>960px</option>
+            <option value={1280}>1280px</option>
+            <option value={1920}>1920px</option>
+          </select>
+        </label>
+        <div className="flex flex-wrap items-center gap-4 text-sm">
+          {(["autoplay", "loop", "muted"] as const).map((key) => (
+            <label className="flex items-center gap-2" key={key}>
+              <input
+                checked={settings[key]}
+                onChange={(event) =>
+                  setSettings({ ...settings, [key]: event.target.checked })
+                }
+                type="checkbox"
+              />
+              {key === "autoplay"
+                ? "Tự phát"
+                : key === "loop"
+                  ? "Lặp lại"
+                  : "Tắt tiếng"}
+            </label>
+          ))}
+        </div>
+      </div>
+      {settings.autoplay && !settings.muted ? (
+        <p className="mt-2 text-xs text-red-700">
+          Video tự phát phải tắt tiếng để hoạt động ổn định trên điện thoại.
+        </p>
+      ) : null}
+      {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
+      <Button
+        className="mt-3"
+        disabled={saving || (settings.autoplay && !settings.muted)}
+        onClick={() => void save()}
+        type="button"
+      >
+        {saving ? "Đang lưu…" : "Lưu cấu hình video"}
+      </Button>
+    </details>
   );
 }
 

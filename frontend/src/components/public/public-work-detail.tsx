@@ -283,9 +283,18 @@ function PublicGallery({
         ) : null}
         {selected.kind === "VIDEO" && selected.url ? (
           <video
-            className="max-h-[42rem] w-full"
-            controls
+            autoPlay={selected.autoplay}
+            className={`max-h-[42rem] w-full ${selected.fitMode === "COVER" ? "object-cover" : "object-contain"}`}
+            controls={selected.controlsPreset !== "NONE"}
+            controlsList={
+              selected.controlsPreset === "MINIMAL"
+                ? "nodownload noplaybackrate"
+                : undefined
+            }
+            loop={selected.loop}
+            muted={selected.muted}
             playsInline
+            poster={selected.posterUrl ?? undefined}
             preload="metadata"
             src={selected.url}
           >

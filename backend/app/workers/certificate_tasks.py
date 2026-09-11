@@ -1,8 +1,9 @@
 import asyncio
 import logging
+from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -12,7 +13,6 @@ from app.modules.blockchain.models import (
     BlockchainTransaction,
     BlockchainTransactionStatus,
     Certificate,
-    CertificateStatus,
     CertificateVersion,
 )
 from app.modules.certificates.errors import CertificateGenerationError
@@ -23,12 +23,19 @@ from app.modules.certificates.metadata import (
 from app.modules.certificates.pdf import CertificatePdfRenderer
 from app.modules.certificates.service import CertificateService
 from app.modules.certificates.storage import CloudinaryCertificateStorage
-from app.modules.dossiers.models import Dossier, DossierStatus
+from app.modules.dossiers.models import Dossier, DossierStatus, DossierVersion
 from app.modules.media.gateway import CloudinaryMediaGateway
 from app.modules.public.backfill import PublicWorkDraftBackfill
 from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class PublicationRecoveryReport:
+    candidates: int
+    recovered: int
+    failed: int
 
 
 async def _process(
@@ -110,57 +117,92 @@ def render_certificate_version(certificate_version_id: str) -> None:
     asyncio.run(_process(certificate_version_id=UUID(certificate_version_id)))
 
 
-async def _repair_publication(*, batch_size: int = 100) -> None:
+async def _repair_publication(*, batch_size: int = 100) -> PublicationRecoveryReport:
     """Resume issued PDFs and rebuild missing editorial drafts independently of RPC."""
     session_factory = get_session_factory()
-    async with session_factory() as session:
-        candidate_ids = await _publication_recovery_candidate_ids(
-            session,
-            batch_size=batch_size,
-        )
-
-    for dossier_id in candidate_ids:
-        try:
-            await _process(dossier_id=dossier_id)
-        except Exception:
-            logger.exception(
-                "Certificate publication recovery failed for dossier %s",
-                dossier_id,
+    candidates = 0
+    recovered = 0
+    failed = 0
+    cursor: UUID | None = None
+    while True:
+        async with session_factory() as session:
+            candidate_ids = await _publication_recovery_candidate_ids(
+                session,
+                batch_size=batch_size,
+                after=cursor,
             )
+        if not candidate_ids:
+            break
+        candidates += len(candidate_ids)
+        for dossier_id in candidate_ids:
+            try:
+                await _process(dossier_id=dossier_id)
+                recovered += 1
+            except Exception:
+                failed += 1
+                logger.exception(
+                    "Certificate publication recovery failed for dossier %s",
+                    dossier_id,
+                )
+        cursor = candidate_ids[-1]
 
     async with session_factory() as session:
         await PublicWorkDraftBackfill(session, batch_size=batch_size).run(dry_run=False)
+    return PublicationRecoveryReport(
+        candidates=candidates,
+        recovered=recovered,
+        failed=failed,
+    )
 
 
 async def _publication_recovery_candidate_ids(
     session: AsyncSession,
     *,
     batch_size: int,
+    after: UUID | None = None,
 ) -> tuple[UUID, ...]:
-    """Return anchored dossiers whose confirmed certificate issue can be resumed."""
+    """Return current dossiers whose confirmed proof issuance can be resumed."""
     return tuple(
         await session.scalars(
             select(Dossier.id)
-            .join(Certificate, Certificate.dossier_id == Dossier.id)
             .join(
-                CertificateVersion,
+                DossierVersion,
                 and_(
-                    CertificateVersion.certificate_id == Certificate.id,
-                    CertificateVersion.version_no == Certificate.current_version_no,
+                    DossierVersion.dossier_id == Dossier.id,
+                    DossierVersion.version_no == Dossier.current_version_no,
                 ),
             )
             .join(
                 BlockchainTransaction,
-                BlockchainTransaction.id
-                == CertificateVersion.blockchain_transaction_id,
+                and_(
+                    BlockchainTransaction.dossier_version_id == DossierVersion.id,
+                    or_(
+                        BlockchainTransaction.method == "recordProof",
+                        exists(
+                            select(CertificateVersion.id)
+                            .join(
+                                Certificate,
+                                Certificate.id == CertificateVersion.certificate_id,
+                            )
+                            .where(
+                                Certificate.dossier_id == Dossier.id,
+                                CertificateVersion.version_no
+                                == Certificate.current_version_no,
+                                CertificateVersion.blockchain_transaction_id
+                                == BlockchainTransaction.id,
+                            )
+                        ),
+                    ),
+                ),
             )
             .where(
-                Dossier.status == DossierStatus.ANCHORED,
+                Dossier.status.in_((DossierStatus.PAID, DossierStatus.ANCHORED)),
                 Dossier.deleted_at.is_(None),
-                Certificate.status == CertificateStatus.ACTIVE,
                 BlockchainTransaction.status == BlockchainTransactionStatus.CONFIRMED,
                 BlockchainTransaction.tx_hash.is_not(None),
+                *((Dossier.id > after,) if after is not None else ()),
             )
+            .distinct()
             .order_by(Dossier.id)
             .limit(batch_size)
         )

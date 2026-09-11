@@ -302,6 +302,43 @@ def test_recovery_selects_confirmed_anchor_before_pdf_exists() -> None:
     asyncio.run(scenario())
 
 
+def test_recovery_selects_paid_dossier_before_certificate_was_prepared() -> None:
+    async def scenario() -> None:
+        service, engine, dossier_id = await _issuance_service(DossierStatus.PAID)
+
+        async with service._session.begin():  # noqa: SLF001
+            certificate = await service._certificates.get_by_dossier(dossier_id)  # noqa: SLF001
+            assert certificate is not None
+            version = await service._session.scalar(  # noqa: SLF001
+                select(CertificateVersion).where(
+                    CertificateVersion.certificate_id == certificate.id,
+                    CertificateVersion.version_no == certificate.current_version_no,
+                )
+            )
+            assert version is not None
+            transaction = await service._session.get(  # noqa: SLF001
+                BlockchainTransaction,
+                version.blockchain_transaction_id,
+            )
+            assert transaction is not None
+            transaction.method = "recordProof"
+            version.blockchain_transaction_id = None
+            await service._session.delete(version)  # noqa: SLF001
+            await service._session.delete(certificate)  # noqa: SLF001
+
+        async with service._session.begin():  # noqa: SLF001
+            candidate_ids = await _publication_recovery_candidate_ids(
+                service._session,  # noqa: SLF001
+                batch_size=100,
+            )
+
+        assert candidate_ids == (dossier_id,)
+        await service._session.close()  # noqa: SLF001
+        await engine.dispose()
+
+    asyncio.run(scenario())
+
+
 def test_version_pdf_preserves_anchored_metadata() -> None:
     async def scenario() -> None:
         service, engine, dossier_id = await _issuance_service(

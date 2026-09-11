@@ -9,6 +9,7 @@ from app.modules.blockchain.models import (
     CertificateStatus,
     CertificateVersionStatus,
 )
+from app.modules.dossiers.models import EvidenceVisibility
 from app.modules.public.models import (
     ContentReportReason,
     ContentReportStatus,
@@ -16,6 +17,9 @@ from app.modules.public.models import (
     PublicationStatus,
     PublicMediaKind,
     PublicWorkVisibility,
+    VideoControlsPreset,
+    VideoFitMode,
+    VideoQualityProfile,
 )
 from app.modules.public.verification import VerificationStatus
 
@@ -292,6 +296,17 @@ class PublicMediaOrderRequest(PublicSchema):
     relation_ids: list[UUID] = Field(max_length=100)
 
 
+class PublicVideoPresentationRequest(PublicSchema):
+    poster_media_asset_id: UUID | None = None
+    controls_preset: VideoControlsPreset = VideoControlsPreset.FULL
+    fit_mode: VideoFitMode = VideoFitMode.CONTAIN
+    quality_profile: VideoQualityProfile = VideoQualityProfile.BALANCED
+    max_width: Literal[640, 960, 1280, 1920] = 1280
+    autoplay: bool = False
+    loop: bool = False
+    muted: bool = False
+
+
 class PublicMediaAdminData(PublicSchema):
     id: UUID
     media_asset_id: UUID
@@ -306,6 +321,29 @@ class PublicMediaAdminData(PublicSchema):
     duration_ms: int | None
     attempt_count: int
     failure_code: str | None
+    poster_media_asset_id: UUID | None
+    video_controls_preset: VideoControlsPreset
+    video_fit_mode: VideoFitMode
+    video_quality_profile: VideoQualityProfile
+    video_max_width: int
+    video_autoplay: bool
+    video_loop: bool
+    video_muted: bool
+
+
+class PublicMediaCandidateData(PublicSchema):
+    media_asset_id: UUID
+    kind: PublicMediaKind
+    title: str
+    filename: str
+    mime_type: str
+    bytes: int
+    width: int | None
+    height: int | None
+    duration_ms: int | None
+    evidence_role: str | None
+    access_scope: EvidenceVisibility
+    already_attached: bool
 
 
 class PublicWorkTagData(PublicSchema):
@@ -355,6 +393,12 @@ class PublicMediaData(PublicSchema):
     height: int | None
     duration_ms: int | None
     is_thumbnail: bool
+    poster_url: str | None
+    controls_preset: VideoControlsPreset
+    fit_mode: VideoFitMode
+    autoplay: bool
+    loop: bool
+    muted: bool
 
 
 class PublicWorkDetailProjectionData(PublicSchema):

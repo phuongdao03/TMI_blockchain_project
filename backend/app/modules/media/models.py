@@ -15,6 +15,7 @@ from sqlalchemy import (
     LargeBinary,
     String,
     Text,
+    UniqueConstraint,
     Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -86,6 +87,11 @@ class MediaAsset(UtcTimestampMixin, Base):
             "status",
             "created_at",
         ),
+        UniqueConstraint(
+            "storage_provider",
+            "provider_asset_id",
+            name="uq_media_assets_provider_asset",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
@@ -100,6 +106,10 @@ class MediaAsset(UtcTimestampMixin, Base):
         unique=True,
     )
     cloudinary_version: Mapped[int | None] = mapped_column(BigInteger)
+    storage_provider: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="CLOUDINARY", server_default="CLOUDINARY"
+    )
+    provider_asset_id: Mapped[str | None] = mapped_column(String(255))
     resource_type: Mapped[str] = mapped_column(String(32), nullable=False)
     access_mode: Mapped[str] = mapped_column(String(32), nullable=False)
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)

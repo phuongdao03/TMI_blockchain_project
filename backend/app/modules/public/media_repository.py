@@ -4,7 +4,8 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.media.models import MediaAsset
+from app.modules.dossiers.models import Dossier, DossierEvidence, DossierVersion
+from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.public.models import PublicWork, PublicWorkMedia
 
 
@@ -66,6 +67,27 @@ class PublicMediaRepository:
             )
         )
         return tuple(rows)
+
+    async def list_current_evidence_assets(
+        self, dossier_id: UUID
+    ) -> tuple[tuple[DossierEvidence, MediaAsset], ...]:
+        rows = await self._session.execute(
+            select(DossierEvidence, MediaAsset)
+            .join(MediaAsset, MediaAsset.id == DossierEvidence.media_asset_id)
+            .join(Dossier, Dossier.id == DossierEvidence.dossier_id)
+            .join(
+                DossierVersion,
+                (DossierVersion.id == DossierEvidence.dossier_version_id)
+                & (DossierVersion.version_no == Dossier.current_version_no),
+            )
+            .where(
+                DossierEvidence.dossier_id == dossier_id,
+                MediaAsset.status == MediaStatus.ACTIVE,
+                MediaAsset.deleted_at.is_(None),
+            )
+            .order_by(DossierEvidence.display_order, DossierEvidence.id)
+        )
+        return tuple(rows.tuples())
 
     def add(self, relation: PublicWorkMedia) -> None:
         self._session.add(relation)

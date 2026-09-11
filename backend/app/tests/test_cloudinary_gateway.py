@@ -66,6 +66,7 @@ def test_cloudinary_metadata_and_delete_contract() -> None:
                 return httpx.Response(
                     200,
                     json={
+                        "asset_id": "cloudinary-immutable-asset-id",
                         "public_id": "folder/asset",
                         "version": 17,
                         "resource_type": "image",
@@ -90,6 +91,7 @@ def test_cloudinary_metadata_and_delete_contract() -> None:
             public_id="folder/asset",
             resource_type="image",
         )
+        assert metadata.provider_asset_id == "cloudinary-immutable-asset-id"
         await gateway.delete_asset(
             public_id="folder/asset",
             resource_type="image",

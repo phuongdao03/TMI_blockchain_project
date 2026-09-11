@@ -11,6 +11,7 @@ from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequiremen
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.dossiers.models import EvidenceVisibility
 from app.modules.media.errors import MediaProviderUnavailableError
 from app.modules.media.gateway import PublicDerivativeGateway
 from app.modules.media.models import MediaAsset, MediaStatus
@@ -26,6 +27,9 @@ from app.modules.public.models import (
     DerivativeStatus,
     PublicMediaKind,
     PublicWorkMedia,
+    VideoControlsPreset,
+    VideoFitMode,
+    VideoQualityProfile,
 )
 
 PUBLIC_MEDIA_ADMIN_ROLES = frozenset({"SUPER_ADMIN"})
@@ -48,7 +52,11 @@ _SOURCE_FORMATS = {
     "video/webm": "webm",
 }
 IMAGE_DERIVATIVE_TRANSFORMATION = "c_limit,w_1600,h_1600,q_auto,f_webp"
-VIDEO_DERIVATIVE_TRANSFORMATION = "c_limit,w_1280,h_720,q_auto:eco,vc_auto"
+VIDEO_QUALITY_TRANSFORMATIONS = {
+    VideoQualityProfile.DATA_SAVER: "q_auto:eco",
+    VideoQualityProfile.BALANCED: "q_auto:good",
+    VideoQualityProfile.HIGH: "q_auto:best",
+}
 
 
 class PublicMediaDispatcher(Protocol):
@@ -64,6 +72,34 @@ class PublicMediaInput:
 
 
 @dataclass(frozen=True, slots=True)
+class PublicVideoPresentationInput:
+    poster_media_asset_id: UUID | None
+    controls_preset: VideoControlsPreset
+    fit_mode: VideoFitMode
+    quality_profile: VideoQualityProfile
+    max_width: int
+    autoplay: bool
+    loop: bool
+    muted: bool
+
+
+@dataclass(frozen=True, slots=True)
+class PublicMediaCandidateView:
+    media_asset_id: UUID
+    kind: PublicMediaKind
+    title: str
+    filename: str
+    mime_type: str
+    bytes: int
+    width: int | None
+    height: int | None
+    duration_ms: int | None
+    evidence_role: str | None
+    access_scope: EvidenceVisibility
+    already_attached: bool
+
+
+@dataclass(frozen=True, slots=True)
 class PublicMediaView:
     id: UUID
     kind: PublicMediaKind
@@ -76,6 +112,12 @@ class PublicMediaView:
     height: int | None
     duration_ms: int | None
     is_thumbnail: bool
+    poster_url: str | None = None
+    controls_preset: VideoControlsPreset = VideoControlsPreset.FULL
+    fit_mode: VideoFitMode = VideoFitMode.CONTAIN
+    autoplay: bool = False
+    loop: bool = False
+    muted: bool = False
 
 
 class PublicMediaQueryService:
@@ -100,6 +142,11 @@ class PublicMediaQueryService:
         selected = next(
             (row for row in rows if row.media_asset_id == thumbnail_id), fallback
         )
+        ready_images = {
+            row.media_asset_id: row.derivative_url
+            for row in rows
+            if row.media_kind is PublicMediaKind.IMAGE and row.derivative_url
+        }
         return tuple(
             PublicMediaView(
                 id=row.id,
@@ -113,6 +160,16 @@ class PublicMediaQueryService:
                 height=row.derivative_height,
                 duration_ms=row.duration_ms,
                 is_thumbnail=selected is not None and row.id == selected.id,
+                poster_url=(
+                    ready_images.get(row.poster_media_asset_id)
+                    if row.poster_media_asset_id is not None
+                    else None
+                ),
+                controls_preset=row.video_controls_preset,
+                fit_mode=row.video_fit_mode,
+                autoplay=row.video_autoplay,
+                loop=row.video_loop,
+                muted=row.video_muted,
             )
             for row in rows
         )
@@ -245,8 +302,109 @@ class PublicMediaService:
                 raise PublicWorkNotFoundError()
             return await self._repository.list_for_work(work_id)
 
+    async def list_admin_candidates(
+        self, principal: AuthPrincipal, work_id: UUID
+    ) -> tuple[PublicMediaCandidateView, ...]:
+        self._require_admin(principal)
+        async with self._session.begin():
+            work = await self._repository.get_work(work_id)
+            if work is None:
+                raise PublicWorkNotFoundError()
+            attached = {
+                row.media_asset_id
+                for row in await self._repository.list_for_work(work_id)
+            }
+            rows = await self._repository.list_current_evidence_assets(work.dossier_id)
+            return tuple(
+                PublicMediaCandidateView(
+                    media_asset_id=asset.id,
+                    kind=self._validate_asset(asset),
+                    title=evidence.title,
+                    filename=asset.original_filename,
+                    mime_type=asset.mime_type,
+                    bytes=asset.bytes,
+                    width=asset.width,
+                    height=asset.height,
+                    duration_ms=asset.duration_ms,
+                    evidence_role=evidence.evidence_role,
+                    access_scope=evidence.access_scope,
+                    already_attached=asset.id in attached,
+                )
+                for evidence, asset in rows
+                if asset.mime_type in PUBLIC_MEDIA_MIME_KINDS
+            )
+
     async def list_public(self, work_id: UUID) -> tuple[PublicMediaView, ...]:
         return await PublicMediaQueryService(self._session).list_public(work_id)
+
+    async def configure_video(
+        self,
+        principal: AuthPrincipal,
+        work_id: UUID,
+        relation_id: UUID,
+        data: PublicVideoPresentationInput,
+        *,
+        request_id: str,
+    ) -> PublicWorkMedia:
+        self._require_admin(principal)
+        if data.max_width not in {640, 960, 1280, 1920}:
+            raise PublicMediaValidationError("Video maximum width is unsupported.")
+        if data.autoplay and not data.muted:
+            raise PublicMediaValidationError("Autoplay video must be muted.")
+        regenerate = False
+        async with self._session.begin():
+            relation = await self._repository.get_relation(relation_id, for_update=True)
+            if relation is None or relation.public_work_id != work_id:
+                raise PublicMediaNotFoundError()
+            if relation.media_kind is not PublicMediaKind.VIDEO:
+                raise PublicMediaValidationError("Only video media can be configured.")
+            if data.poster_media_asset_id is not None:
+                rows = await self._repository.list_for_work(work_id)
+                if not any(
+                    row.media_asset_id == data.poster_media_asset_id
+                    and row.media_kind is PublicMediaKind.IMAGE
+                    and row.derivative_status is DerivativeStatus.READY
+                    for row in rows
+                ):
+                    raise PublicMediaValidationError(
+                        "Poster must be a ready image from the same public work."
+                    )
+            regenerate = (
+                relation.video_quality_profile != data.quality_profile
+                or relation.video_max_width != data.max_width
+            )
+            before: dict[str, object] = {
+                "quality_profile": relation.video_quality_profile.value,
+                "max_width": relation.video_max_width,
+            }
+            relation.poster_media_asset_id = data.poster_media_asset_id
+            relation.video_controls_preset = data.controls_preset
+            relation.video_fit_mode = data.fit_mode
+            relation.video_quality_profile = data.quality_profile
+            relation.video_max_width = data.max_width
+            relation.video_autoplay = data.autoplay
+            relation.video_loop = data.loop
+            relation.video_muted = data.muted
+            if regenerate:
+                relation.derivative_status = DerivativeStatus.PENDING
+                relation.failure_code = None
+            self._audit.record(
+                actor_user_id=principal.user_id,
+                action="public_work.video_presentation_updated",
+                resource_type="public_work",
+                resource_id=str(work_id),
+                before=before,
+                after={
+                    "relation_id": str(relation_id),
+                    "quality_profile": data.quality_profile.value,
+                    "max_width": data.max_width,
+                },
+                request_id=request_id,
+            )
+            self._event(work_id, "public_work.video_presentation_updated")
+        if regenerate:
+            self._dispatcher.enqueue(relation_id)
+        return relation
 
     @staticmethod
     def _validate_asset(asset: MediaAsset | None) -> PublicMediaKind:
@@ -324,6 +482,8 @@ class PublicMediaWorker:
             duration_ms = asset.duration_ms
             width = asset.width
             height = asset.height
+            video_quality_profile = relation.video_quality_profile
+            video_max_width = relation.video_max_width
         if media_kind not in {PublicMediaKind.IMAGE, PublicMediaKind.VIDEO}:
             async with self._session.begin():
                 current = await self._repository.get_relation(
@@ -341,7 +501,8 @@ class PublicMediaWorker:
             await self._mark_failed(relation_id, "UNSUPPORTED_MIME")
             raise PublicMediaValidationError("Public media MIME type is unsupported.")
         derivative_public_id = (
-            f"ip-certificate/{self._environment}/public/derivatives/{relation_id}"
+            f"tmi/{self._environment}/public/works/{relation.public_work_id}/"
+            f"media/{relation_id}"
         )
         try:
             derivative = await self._gateway.create_public_derivative(
@@ -352,7 +513,10 @@ class PublicMediaWorker:
                 transformation=(
                     IMAGE_DERIVATIVE_TRANSFORMATION
                     if media_kind is PublicMediaKind.IMAGE
-                    else VIDEO_DERIVATIVE_TRANSFORMATION
+                    else (
+                        f"c_limit,w_{video_max_width},"
+                        f"{VIDEO_QUALITY_TRANSFORMATIONS[video_quality_profile]},vc_auto"
+                    )
                 ),
             )
         except MediaProviderUnavailableError:

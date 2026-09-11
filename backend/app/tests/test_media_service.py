@@ -211,7 +211,7 @@ def test_signed_upload_completion_delivery_and_delete() -> None:
             ),
         )
         assert issued.public_id.startswith(
-            f"ip-certificate/local/{owner.user_id}/avatar/"
+            f"tmi/local/owners/{owner.user_id}/uploads/avatar/"
         )
         assert issued.parameters["public_id"] == issued.public_id
         assert issued.expires_at == int(NOW.timestamp()) + 3_600
@@ -226,6 +226,7 @@ def test_signed_upload_completion_delivery_and_delete() -> None:
             width=512,
             height=512,
             sha256="f" * 64,
+            provider_asset_id="cloudinary-immutable-asset-id",
         )
         completed = await service.complete_upload(
             owner,
@@ -242,6 +243,8 @@ def test_signed_upload_completion_delivery_and_delete() -> None:
             quarantined = await session.get(MediaAsset, issued.media_id)
             assert quarantined is not None
             assert quarantined.sha256 is None
+            assert quarantined.storage_provider == "CLOUDINARY"
+            assert quarantined.provider_asset_id == "cloudinary-immutable-asset-id"
             assert quarantined.confidentiality is MediaConfidentiality.PRIVATE
 
         assert gateway.inspection_jobs == [str(issued.media_id)]

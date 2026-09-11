@@ -53,6 +53,23 @@ class DerivativeStatus(StrEnum):
     FAILED = "FAILED"
 
 
+class VideoControlsPreset(StrEnum):
+    FULL = "FULL"
+    MINIMAL = "MINIMAL"
+    NONE = "NONE"
+
+
+class VideoFitMode(StrEnum):
+    CONTAIN = "CONTAIN"
+    COVER = "COVER"
+
+
+class VideoQualityProfile(StrEnum):
+    DATA_SAVER = "DATA_SAVER"
+    BALANCED = "BALANCED"
+    HIGH = "HIGH"
+
+
 class ContentReportReason(StrEnum):
     COPYRIGHT = "COPYRIGHT"
     INCORRECT_INFORMATION = "INCORRECT_INFORMATION"
@@ -260,6 +277,10 @@ class PublicWorkMedia(UtcTimestampMixin, Base):
         ),
         CheckConstraint("sort_order >= 0", name="sort_order_non_negative"),
         CheckConstraint("attempt_count >= 0", name="attempt_count_non_negative"),
+        CheckConstraint(
+            "video_max_width IN (640, 960, 1280, 1920)",
+            name="video_max_width_supported",
+        ),
         Index(
             "ix_public_work_media_work_order",
             "public_work_id",
@@ -291,6 +312,43 @@ class PublicWorkMedia(UtcTimestampMixin, Base):
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     caption: Mapped[str | None] = mapped_column(String(500))
     alt_text: Mapped[str | None] = mapped_column(String(500))
+    poster_media_asset_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("media_assets.id", ondelete="RESTRICT"),
+    )
+    video_controls_preset: Mapped[VideoControlsPreset] = mapped_column(
+        _enum(VideoControlsPreset, "public_video_controls_preset"),
+        nullable=False,
+        default=VideoControlsPreset.FULL,
+        server_default=VideoControlsPreset.FULL.value,
+    )
+    video_fit_mode: Mapped[VideoFitMode] = mapped_column(
+        _enum(VideoFitMode, "public_video_fit_mode"),
+        nullable=False,
+        default=VideoFitMode.CONTAIN,
+        server_default=VideoFitMode.CONTAIN.value,
+    )
+    video_quality_profile: Mapped[VideoQualityProfile] = mapped_column(
+        _enum(VideoQualityProfile, "public_video_quality_profile"),
+        nullable=False,
+        default=VideoQualityProfile.BALANCED,
+        server_default=VideoQualityProfile.BALANCED.value,
+    )
+    video_max_width: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1280,
+        server_default="1280",
+    )
+    video_autoplay: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+    video_loop: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+    video_muted: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
     derivative_status: Mapped[DerivativeStatus] = mapped_column(
         _enum(DerivativeStatus, "public_media_derivative_status"),
         nullable=False,

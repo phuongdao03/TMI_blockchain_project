@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,9 +28,11 @@ vi.mock("@/lib/api/client", () => {
       assignTags: vi.fn(),
       attachMedia: vi.fn(),
       categories: vi.fn(),
+      configureVideo: vi.fn(),
       get: vi.fn(),
       list: vi.fn(),
       media: vi.fn(),
+      mediaCandidates: vi.fn(),
       preview: vi.fn(),
       publish: vi.fn(),
       removeMedia: vi.fn(),
@@ -93,6 +95,30 @@ beforeEach(() => {
   ]);
   vi.mocked(publicWorkAdminApi.tags).mockResolvedValue([]);
   vi.mocked(publicWorkAdminApi.media).mockResolvedValue([]);
+  vi.mocked(publicWorkAdminApi.mediaCandidates).mockResolvedValue([]);
+  vi.mocked(publicWorkAdminApi.attachMedia).mockResolvedValue({
+    id: "relation-1",
+    mediaAssetId: "asset-1",
+    mediaKind: "VIDEO",
+    sortOrder: 0,
+    caption: "Video source",
+    altText: null,
+    derivativeStatus: "PENDING",
+    derivativeMimeType: null,
+    derivativeWidth: null,
+    derivativeHeight: null,
+    durationMs: null,
+    attemptCount: 0,
+    failureCode: null,
+    posterMediaAssetId: null,
+    videoControlsPreset: "FULL",
+    videoFitMode: "CONTAIN",
+    videoQualityProfile: "BALANCED",
+    videoMaxWidth: 1280,
+    videoAutoplay: false,
+    videoLoop: false,
+    videoMuted: false,
+  });
   vi.mocked(publicWorkAdminApi.assignTags).mockResolvedValue(undefined);
   vi.mocked(publicWorkAdminApi.update).mockResolvedValue({
     ...work,
@@ -113,6 +139,72 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("PublicWorkEditor", () => {
+  it("offers signed dossier source media for explicit publication preparation", async () => {
+    vi.mocked(publicWorkAdminApi.mediaCandidates).mockResolvedValueOnce([
+      {
+        mediaAssetId: "asset-1",
+        kind: "VIDEO",
+        title: "Video source",
+        filename: "source.mp4",
+        mimeType: "video/mp4",
+        bytes: 2048,
+        width: 1920,
+        height: 1080,
+        durationMs: 12000,
+        evidenceRole: "PRIMARY_WORK",
+        accessScope: "PUBLIC_PREVIEW",
+        alreadyAttached: false,
+      },
+    ]);
+    const user = userEvent.setup();
+    render(<PublicWorkEditor />, { wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: /Bản mẫu công khai/ }),
+    );
+    const sourceRow = (await screen.findByText("Video source")).closest("li");
+    expect(sourceRow).not.toBeNull();
+    await user.click(within(sourceRow!).getByRole("button"));
+    await waitFor(() =>
+      expect(publicWorkAdminApi.attachMedia).toHaveBeenCalledWith(
+        work.id,
+        "asset-1",
+        0,
+        { caption: "Video source", altText: undefined },
+      ),
+    );
+  });
+
+  it("requires confirmation before preparing private dossier evidence", async () => {
+    vi.mocked(publicWorkAdminApi.mediaCandidates).mockResolvedValueOnce([
+      {
+        mediaAssetId: "private-asset",
+        kind: "DOCUMENT",
+        title: "Identity document",
+        filename: "identity.pdf",
+        mimeType: "application/pdf",
+        bytes: 1024,
+        width: null,
+        height: null,
+        durationMs: null,
+        evidenceRole: "IDENTITY_DOCUMENT",
+        accessScope: "PRIVATE",
+        alreadyAttached: false,
+      },
+    ]);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const user = userEvent.setup();
+    render(<PublicWorkEditor />, { wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: /ban-mau/ }),
+    );
+    const privateRow = (await screen.findByText("Identity document")).closest("li");
+    expect(privateRow).not.toBeNull();
+    await user.click(within(privateRow!).getByRole("button"));
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(publicWorkAdminApi.attachMedia).not.toHaveBeenCalled();
+    confirm.mockRestore();
+  });
+
   it("validates metadata and saves the server version contract", async () => {
     const user = userEvent.setup();
     render(<PublicWorkEditor />, { wrapper });

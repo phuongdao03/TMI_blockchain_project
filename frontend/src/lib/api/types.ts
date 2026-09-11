@@ -1254,6 +1254,9 @@ export type PublicationStatus =
 export type PublicWorkVisibility = "PRIVATE" | "UNLISTED" | "PUBLIC";
 export type PublicMediaKind = "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT";
 export type DerivativeStatus = "PENDING" | "PROCESSING" | "READY" | "FAILED";
+export type VideoControlsPreset = "FULL" | "MINIMAL" | "NONE";
+export type VideoFitMode = "CONTAIN" | "COVER";
+export type VideoQualityProfile = "DATA_SAVER" | "BALANCED" | "HIGH";
 
 export interface PublicationChecklistItem {
   code: string;
@@ -1331,6 +1334,40 @@ export interface PublicWorkMedia {
   durationMs: number | null;
   attemptCount: number;
   failureCode: string | null;
+  posterMediaAssetId: string | null;
+  videoControlsPreset: VideoControlsPreset;
+  videoFitMode: VideoFitMode;
+  videoQualityProfile: VideoQualityProfile;
+  videoMaxWidth: number;
+  videoAutoplay: boolean;
+  videoLoop: boolean;
+  videoMuted: boolean;
+}
+
+export interface PublicVideoPresentationInput {
+  posterMediaAssetId: string | null;
+  controlsPreset: VideoControlsPreset;
+  fitMode: VideoFitMode;
+  qualityProfile: VideoQualityProfile;
+  maxWidth: 640 | 960 | 1280 | 1920;
+  autoplay: boolean;
+  loop: boolean;
+  muted: boolean;
+}
+
+export interface PublicMediaCandidate {
+  mediaAssetId: string;
+  kind: PublicMediaKind;
+  title: string;
+  filename: string;
+  mimeType: string;
+  bytes: number;
+  width: number | null;
+  height: number | null;
+  durationMs: number | null;
+  evidenceRole: string | null;
+  accessScope: EvidenceAccessScope;
+  alreadyAttached: boolean;
 }
 
 export interface PublicWorkPreviewMedia {
@@ -1345,6 +1382,12 @@ export interface PublicWorkPreviewMedia {
   height: number | null;
   durationMs: number | null;
   isThumbnail: boolean;
+  posterUrl: string | null;
+  controlsPreset: VideoControlsPreset;
+  fitMode: VideoFitMode;
+  autoplay: boolean;
+  loop: boolean;
+  muted: boolean;
 }
 
 export interface PublicWorkPreview {
@@ -1541,6 +1584,12 @@ export interface PublicWorkDetailMedia {
   height: number | null;
   durationMs: number | null;
   isThumbnail: boolean;
+  posterUrl: string | null;
+  controlsPreset: VideoControlsPreset;
+  fitMode: VideoFitMode;
+  autoplay: boolean;
+  loop: boolean;
+  muted: boolean;
 }
 
 export interface PublicWorkDetail {

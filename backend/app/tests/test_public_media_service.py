@@ -30,12 +30,16 @@ from app.modules.public.media_service import (
     PublicMediaInput,
     PublicMediaService,
     PublicMediaWorker,
+    PublicVideoPresentationInput,
 )
 from app.modules.public.models import (
     DerivativeStatus,
     PublicMediaKind,
     PublicWork,
     PublicWorkMedia,
+    VideoControlsPreset,
+    VideoFitMode,
+    VideoQualityProfile,
 )
 from app.workers.celery_app import celery_app
 from app.workers.public_media_tasks import reconcile_pending_public_media
@@ -287,8 +291,9 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
         ) -> PublicDerivativeMetadata:
             assert kwargs["source_resource_type"] == "video"
             assert kwargs["source_format"] == "mp4"
-            assert kwargs["transformation"] == (
-                "c_limit,w_1280,h_720,q_auto:eco,vc_auto"
+            assert kwargs["transformation"] == "c_limit,w_640,q_auto:eco,vc_auto"
+            assert str(kwargs["derivative_public_id"]).startswith(
+                "tmi/local/public/works/"
             )
             return PublicDerivativeMetadata(
                 public_id="ip-certificate/public/derivatives/video-relation",
@@ -358,6 +363,35 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
                     )
                 )
 
+            dispatcher = RecordingDispatcher()
+            service = PublicMediaService(
+                session=session,
+                audit=AuditService(session),
+                dispatcher=dispatcher,
+                payload_cipher=OutboxPayloadCipher.from_base64(
+                    encoded_key=base64.b64encode(b"v" * 32).decode(),
+                    key_id="video-test-v1",
+                ),
+            )
+            configured = await service.configure_video(
+                _principal(owner_id, "SUPER_ADMIN"),
+                work_id,
+                relation_id,
+                PublicVideoPresentationInput(
+                    poster_media_asset_id=None,
+                    controls_preset=VideoControlsPreset.MINIMAL,
+                    fit_mode=VideoFitMode.COVER,
+                    quality_profile=VideoQualityProfile.DATA_SAVER,
+                    max_width=640,
+                    autoplay=True,
+                    loop=True,
+                    muted=True,
+                ),
+                request_id="video-presentation",
+            )
+            assert configured.derivative_status is DerivativeStatus.PENDING
+            assert dispatcher.ids == [relation_id]
+
             worker = PublicMediaWorker(
                 session=session,
                 gateway=cast(PublicDerivativeGateway, VideoGateway()),
@@ -375,6 +409,11 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert relation.derivative_url is not None
             assert "private/owner/welcome-video" not in relation.derivative_url
             assert relation.derivative_mime_type == "video/mp4"
+            public_video = (await service.list_public(work_id))[0]
+            assert public_video.controls_preset is VideoControlsPreset.MINIMAL
+            assert public_video.fit_mode is VideoFitMode.COVER
+            assert public_video.autoplay is True
+            assert public_video.muted is True
         await engine.dispose()
 
     asyncio.run(exercise())

@@ -43,6 +43,7 @@ class ProviderAssetMetadata:
     height: int | None = None
     duration_ms: int | None = None
     sha256: str | None = None
+    provider_asset_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -243,6 +244,7 @@ class CloudinaryMediaGateway:
             height=self._optional_int(payload, "height"),
             duration_ms=round(duration * 1_000) if duration is not None else None,
             sha256=sha256.lower() if isinstance(sha256, str) else None,
+            provider_asset_id=self._optional_str(payload, "asset_id"),
         )
 
     def create_signed_delivery_url(
@@ -644,6 +646,12 @@ class CloudinaryMediaGateway:
         if not isinstance(value, int) or isinstance(value, bool) or value < 0:
             raise MediaProviderUnavailableError()
         return value
+
+    @classmethod
+    def _optional_str(cls, payload: Mapping[str, object], field: str) -> str | None:
+        if payload.get(field) is None:
+            return None
+        return cls._required_str(payload, field)
 
     @classmethod
     def _optional_int(

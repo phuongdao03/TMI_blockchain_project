@@ -17,7 +17,10 @@ from app.modules.public.editor_service import (
     PublicWorkEditorInput,
     PublicWorkEditorView,
 )
-from app.modules.public.media_service import PublicMediaInput
+from app.modules.public.media_service import (
+    PublicMediaInput,
+    PublicVideoPresentationInput,
+)
 from app.modules.public.models import PublicationStatus
 from app.modules.public.publication_dependencies import (
     PublicationServiceDependency,
@@ -34,7 +37,9 @@ from app.modules.public.schemas import (
     PublicationVersionRequest,
     PublicMediaAdminData,
     PublicMediaAttachRequest,
+    PublicMediaCandidateData,
     PublicMediaOrderRequest,
+    PublicVideoPresentationRequest,
     PublicWorkAdminData,
     PublicWorkEditorData,
     PublicWorkEditorRequest,
@@ -353,6 +358,23 @@ async def list_public_work_media(
     )
 
 
+@router.get(
+    "/{work_id}/media-candidates",
+    response_model=SuccessEnvelope[list[PublicMediaCandidateData]],
+)
+async def list_public_work_media_candidates(
+    work_id: UUID,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: PublicMediaServiceDependency,
+) -> SuccessEnvelope[list[PublicMediaCandidateData]]:
+    rows = await service.list_admin_candidates(principal, work_id)
+    return SuccessEnvelope(
+        data=[PublicMediaCandidateData.model_validate(row) for row in rows],
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
 @router.post(
     "/{work_id}/media",
     status_code=status.HTTP_201_CREATED,
@@ -395,6 +417,40 @@ async def reorder_public_work_media(
         work_id,
         tuple(payload.relation_ids),
         request_id=request.state.request_id,
+    )
+
+
+@router.patch(
+    "/{work_id}/media/{relation_id}/video-presentation",
+    response_model=SuccessEnvelope[PublicMediaAdminData],
+)
+async def configure_public_work_video(
+    work_id: UUID,
+    relation_id: UUID,
+    payload: PublicVideoPresentationRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: PublicMediaServiceDependency,
+) -> SuccessEnvelope[PublicMediaAdminData]:
+    row = await service.configure_video(
+        principal,
+        work_id,
+        relation_id,
+        PublicVideoPresentationInput(
+            poster_media_asset_id=payload.poster_media_asset_id,
+            controls_preset=payload.controls_preset,
+            fit_mode=payload.fit_mode,
+            quality_profile=payload.quality_profile,
+            max_width=payload.max_width,
+            autoplay=payload.autoplay,
+            loop=payload.loop,
+            muted=payload.muted,
+        ),
+        request_id=request.state.request_id,
+    )
+    return SuccessEnvelope(
+        data=PublicMediaAdminData.model_validate(row),
+        meta=ResponseMeta(request_id=request.state.request_id),
     )
 
 

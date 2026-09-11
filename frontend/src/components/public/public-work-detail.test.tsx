@@ -143,6 +143,12 @@ describe("PublicWorkDetailPage", () => {
           height: 1080,
           durationMs: 12_000,
           isThumbnail: false,
+          posterUrl: "https://res.cloudinary.com/demo/image/upload/poster.webp",
+          controlsPreset: "MINIMAL",
+          fitMode: "COVER",
+          autoplay: false,
+          loop: true,
+          muted: true,
         },
       ],
     };
@@ -154,6 +160,10 @@ describe("PublicWorkDetailPage", () => {
 
     const video = container.querySelector("video");
     expect(video?.controls).toBe(true);
+    expect(video?.loop).toBe(true);
+    expect(video?.muted).toBe(true);
+    expect(video?.poster).toContain("poster.webp");
+    expect(video?.getAttribute("controlslist")).toContain("nodownload");
     expect(video?.preload).toBe("metadata");
     expect(video?.playsInline).toBe(true);
     expect(video?.getAttribute("src")).toContain("welcome.mp4");

@@ -74,6 +74,8 @@ import type {
   PublicWorkDetail,
   PublicWorkEditorInput,
   PublicWorkMedia,
+  PublicMediaCandidate,
+  PublicVideoPresentationInput,
   PublicWorkPreview,
   SearchAutocompleteSuggestion,
   SearchFacets,
@@ -1455,10 +1457,20 @@ export const publicWorkAdminApi = {
   media(workId: string) {
     return request<PublicWorkMedia[]>(`/admin/public-works/${workId}/media`);
   },
-  attachMedia(workId: string, mediaAssetId: string, sortOrder: number) {
+  mediaCandidates(workId: string) {
+    return request<PublicMediaCandidate[]>(
+      `/admin/public-works/${workId}/media-candidates`,
+    );
+  },
+  attachMedia(
+    workId: string,
+    mediaAssetId: string,
+    sortOrder: number,
+    metadata?: { caption?: string; altText?: string },
+  ) {
     return request<PublicWorkMedia>(`/admin/public-works/${workId}/media`, {
       method: "POST",
-      body: JSON.stringify({ mediaAssetId, sortOrder }),
+      body: JSON.stringify({ mediaAssetId, sortOrder, ...metadata }),
     });
   },
   reorderMedia(workId: string, relationIds: string[]) {
@@ -1471,6 +1483,16 @@ export const publicWorkAdminApi = {
     return request<void>(`/admin/public-works/${workId}/media/${relationId}`, {
       method: "DELETE",
     });
+  },
+  configureVideo(
+    workId: string,
+    relationId: string,
+    input: PublicVideoPresentationInput,
+  ) {
+    return request<PublicWorkMedia>(
+      `/admin/public-works/${workId}/media/${relationId}/video-presentation`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
   },
   publish(workId: string, expectedVersion: number) {
     return request<PublicWorkAdmin>(`/admin/public-works/${workId}/publish`, {
