@@ -4,7 +4,6 @@ export type PublicFeatureKey =
   | "catalog"
   | "authentication"
   | "verification"
-  | "voting"
   | "submission"
   | "payment";
 
@@ -38,13 +37,6 @@ const features: PublicFeature[] = [
     label: "Minh bạch",
     href: "/verify",
     preview: "enabled",
-    full: "enabled",
-  },
-  {
-    key: "voting",
-    label: "Bình chọn",
-    href: "/coming-soon/voting",
-    preview: "coming-soon",
     full: "enabled",
   },
   {

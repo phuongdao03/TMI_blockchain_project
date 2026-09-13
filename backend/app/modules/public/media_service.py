@@ -113,6 +113,7 @@ class PublicMediaView:
     duration_ms: int | None
     is_thumbnail: bool
     poster_url: str | None = None
+    streaming_url: str | None = None
     controls_preset: VideoControlsPreset = VideoControlsPreset.FULL
     fit_mode: VideoFitMode = VideoFitMode.CONTAIN
     autoplay: bool = False
@@ -163,6 +164,25 @@ class PublicMediaQueryService:
                 poster_url=(
                     ready_images.get(row.poster_media_asset_id)
                     if row.poster_media_asset_id is not None
+                    else _cloudinary_video_variant(
+                        row.derivative_url,
+                        transformation="so_auto,q_auto,f_webp",
+                        extension="webp",
+                    )
+                    if row.media_kind is PublicMediaKind.VIDEO
+                    else None
+                ),
+                streaming_url=(
+                    _cloudinary_video_variant(
+                        row.derivative_url,
+                        transformation=(
+                            "sp_auto:maxres_1080"
+                            if row.video_max_width == 1920
+                            else "sp_auto:maxres_720"
+                        ),
+                        extension="m3u8",
+                    )
+                    if row.media_kind is PublicMediaKind.VIDEO
                     else None
                 ),
                 controls_preset=row.video_controls_preset,
@@ -173,6 +193,17 @@ class PublicMediaQueryService:
             )
             for row in rows
         )
+
+
+def _cloudinary_video_variant(
+    url: str | None, *, transformation: str, extension: str
+) -> str | None:
+    marker = "/video/upload/"
+    if not url or marker not in url or not url.startswith("https://res.cloudinary.com/"):
+        return None
+    prefix, path = url.split(marker, 1)
+    base = path.rsplit(".", 1)[0]
+    return f"{prefix}{marker}{transformation}/{base}.{extension}"
 
 
 class PublicMediaService:

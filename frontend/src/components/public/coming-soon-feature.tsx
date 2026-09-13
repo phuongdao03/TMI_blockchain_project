@@ -2,12 +2,6 @@ import { ArrowLeft, BellRing, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 const content = {
-  voting: {
-    eyebrow: "Giai đoạn tiếp theo",
-    title: "Bình chọn sẽ sớm ra mắt",
-    description:
-      "Không gian bình chọn đang được hoàn thiện để mỗi lượt tham gia rõ ràng, công bằng và dễ theo dõi. Hiện tại, bạn có thể khám phá các đề cử đã được công bố.",
-  },
   submission: {
     eyebrow: "Đang chuẩn bị mở",
     title: "Cổng gửi đề cử sẽ sớm ra mắt",

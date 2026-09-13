@@ -503,17 +503,17 @@ def test_upload_policy_rejects_disallowed_type_size_and_extension() -> None:
             with pytest.raises(MediaValidationError):
                 await service.create_upload_signature(owner, intent)
 
-        public_video = await service.create_upload_signature(
-            owner,
-            UploadIntent(
-                purpose=MediaPurpose.PUBLIC_WORK,
-                filename="presentation.webm",
-                mime_type="video/webm",
-                size=2_048,
-                confidentiality=MediaConfidentiality.PUBLIC,
-            ),
-        )
-        assert public_video.parameters["allowed_formats"] == "webm"
+        with pytest.raises(MediaValidationError, match="reuse an inspected"):
+            await service.create_upload_signature(
+                owner,
+                UploadIntent(
+                    purpose=MediaPurpose.PUBLIC_WORK,
+                    filename="presentation.webm",
+                    mime_type="video/webm",
+                    size=2_048,
+                    confidentiality=MediaConfidentiality.PUBLIC,
+                ),
+            )
 
         await service.close()
         await engine.dispose()

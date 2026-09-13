@@ -17,7 +17,6 @@ import {
   ShieldCheck,
   Signature,
   UsersRound,
-  Vote,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -53,7 +52,6 @@ const discoveryItems: NavigationItem[] = [
 const personalItems: NavigationItem[] = [
   { href: "/notifications", label: "Thông báo", icon: Bell },
   { href: "/account", label: "Tài khoản", icon: Settings },
-  { href: "/vote-history", label: "Bình chọn của tôi", icon: Vote },
   { href: "/activity", label: "Hoạt động gần đây", icon: History },
 ];
 

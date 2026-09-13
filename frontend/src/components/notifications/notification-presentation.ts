@@ -100,10 +100,17 @@ export function presentNotification(
     ["dossier.submitted", "review.completed"].includes(item.type)
       ? (item.data.dossierId ?? item.data.dossier_id)
       : null;
+  const certificateId = ["certificate.issued", "certificate.revoked"].includes(
+    item.type,
+  )
+    ? (item.data.certificateId ?? item.data.certificate_id)
+    : null;
   const actionPath =
     typeof submittedDossierId === "string"
       ? `/admin/reviews/${encodeURIComponent(submittedDossierId)}`
-      : safeInternalPath(item.data.actionPath);
+      : typeof certificateId === "string"
+        ? `/certificates/${encodeURIComponent(certificateId)}`
+        : safeInternalPath(item.data.actionPath);
   return {
     ...configured,
     actionPath,

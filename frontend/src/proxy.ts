@@ -21,6 +21,5 @@ export const config = {
     "/notifications/:path*",
     "/payments/:path*",
     "/reviews/:path*",
-    "/vote-history/:path*",
   ],
 };

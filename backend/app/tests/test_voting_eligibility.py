@@ -112,13 +112,4 @@ def test_eligibility_api_returns_only_current_user_summary() -> None:
             params={"workId": str(work_id)},
         )
 
-    assert response.status_code == 200
-    assert response.json()["data"] == {
-        "canVote": False,
-        "reasons": ["EMAIL_NOT_VERIFIED"],
-        "remainingQuota": 2,
-        "ruleVersion": 7,
-        "serverTime": "2026-08-03T08:00:00Z",
-    }
-    assert "email" not in response.text
-    assert str(principal.user_id) not in response.text
+    assert response.status_code == 404

@@ -23,7 +23,6 @@ import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
-import { FileUploader } from "@/components/media/file-uploader";
 import { Button } from "@/components/ui/button";
 import { SelectControl } from "@/components/ui/form-controls";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -151,6 +150,7 @@ export function PublicWorkEditor() {
     control,
     formState: { errors, isDirty },
     handleSubmit,
+    getValues,
     register,
     reset,
     setValue,
@@ -234,22 +234,6 @@ export function PublicWorkEditor() {
       setPendingAction(undefined);
       setReason("");
       await refreshWork();
-    },
-  });
-
-  const mediaMutation = useMutation({
-    mutationFn: async (assetId: string) => {
-      if (!selectedId) throw new Error("Chưa chọn tác phẩm.");
-      return publicWorkAdminApi.attachMedia(
-        selectedId,
-        assetId,
-        media.data?.length ?? 0,
-      );
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["admin", "public-work-media", selectedId],
-      });
     },
   });
 
@@ -412,6 +396,24 @@ export function PublicWorkEditor() {
                 onSubmit={handleSubmit((values) => save.mutate(values))}
               >
                 <div className="space-y-5">
+                  <SourceFieldsPanel
+                    fields={detail.data.sourceFields}
+                    onDescription={(value) =>
+                      setValue("shortDescription", value, { shouldDirty: true })
+                    }
+                    onFullDescription={(value) => {
+                      const current = getValues("fullDescription");
+                      setValue(
+                        "fullDescription",
+                        current ? `${current}\n\n${value}` : value,
+                        { shouldDirty: true },
+                      );
+                    }}
+                    onTitle={(value) =>
+                      setValue("title", value, { shouldDirty: true })
+                    }
+                    version={detail.data.sourceVersionNo}
+                  />
                   <EditorField
                     error={errors.title?.message}
                     label="Tiêu đề công khai"
@@ -525,7 +527,6 @@ export function PublicWorkEditor() {
                   <Gallery
                     candidates={mediaCandidates.data ?? []}
                     items={media.data ?? []}
-                    onAttach={(assetId) => mediaMutation.mutate(assetId)}
                     onChanged={() => {
                       void queryClient.invalidateQueries({
                         queryKey: ["admin", "public-work-media", selectedId],
@@ -679,6 +680,64 @@ export function PublicWorkEditor() {
   );
 }
 
+function SourceFieldsPanel({
+  fields,
+  onDescription,
+  onFullDescription,
+  onTitle,
+  version,
+}: {
+  fields: PublicWorkEditorData["sourceFields"];
+  onDescription: (value: string) => void;
+  onFullDescription: (value: string) => void;
+  onTitle: (value: string) => void;
+  version: number;
+}) {
+  return (
+    <section className="rounded-2xl border border-primary-200 bg-primary-50/50 p-4">
+      <p className="text-sm font-bold text-primary-950">
+        Dữ liệu hồ sơ gốc · Phiên bản {version}
+      </p>
+      <p className="mt-1 text-xs leading-5 text-primary-800">
+        Chọn thông tin người dùng đã khai trong phiên bản được ký. Dữ liệu gốc
+        và dấu vân tay không bị thay đổi.
+      </p>
+      <ul className="mt-3 grid gap-2">
+        {fields.map((field, index) => (
+          <li
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary-100 bg-white p-3"
+            key={`${field.key}-${index}`}
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-bold text-neutral-500">
+                {field.label}
+              </span>
+              <span className="mt-1 block line-clamp-2 text-sm text-neutral-950">
+                {field.value}
+              </span>
+            </span>
+            <Button
+              onClick={() => {
+                if (field.key === "title") onTitle(field.value);
+                else if (field.key === "summary") onDescription(field.value);
+                else onFullDescription(`${field.label}: ${field.value}`);
+              }}
+              type="button"
+              variant="outline"
+            >
+              {field.key === "title"
+                ? "Dùng tiêu đề này"
+                : field.key === "summary"
+                  ? "Dùng mô tả này"
+                  : "Thêm vào giới thiệu"}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function EditorField({
   children,
   error,
@@ -704,7 +763,6 @@ function EditorField({
 function Gallery({
   candidates,
   items,
-  onAttach,
   onChanged,
   onThumbnail,
   selectedThumbnail,
@@ -712,7 +770,6 @@ function Gallery({
 }: {
   candidates: PublicMediaCandidate[];
   items: PublicWorkMedia[];
-  onAttach: (assetId: string) => void;
   onChanged: () => void;
   onThumbnail: (assetId: string) => void;
   selectedThumbnail: string | null;
@@ -756,13 +813,6 @@ function Gallery({
       <div className="flex items-center gap-2">
         <ImageIcon className="size-4 text-primary-700" />
         <h3 className="font-bold">Thư viện trưng bày</h3>
-      </div>
-      <div className="mt-4">
-        <FileUploader
-          label="Tải hình ảnh hoặc video công khai"
-          onComplete={(asset) => onAttach(asset.id)}
-          purpose="PUBLIC_WORK"
-        />
       </div>
       {candidates.some((candidate) => !candidate.alreadyAttached) ? (
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
@@ -822,15 +872,17 @@ function Gallery({
                   {item.derivativeStatus}
                 </span>
               </span>
-              {item.mediaKind === "IMAGE" ? (
+              {item.mediaKind === "IMAGE" || item.mediaKind === "VIDEO" ? (
                 <button
                   className={`rounded-lg px-2 py-1 text-xs font-bold ${selectedThumbnail === item.mediaAssetId ? "bg-primary-50 text-primary-700" : "text-neutral-600"}`}
                   onClick={() => onThumbnail(item.mediaAssetId)}
                   type="button"
                 >
                   {selectedThumbnail === item.mediaAssetId
-                    ? "Ảnh bìa"
-                    : "Đặt ảnh bìa"}
+                    ? "Đang làm bìa"
+                    : item.mediaKind === "VIDEO"
+                      ? "Dùng khung video làm bìa"
+                      : "Đặt ảnh bìa"}
                 </button>
               ) : null}
               <button
@@ -934,7 +986,7 @@ function VideoPresentationSettings({
             }
             value={settings.posterMediaAssetId ?? ""}
           >
-            <option value="">Tự động / không dùng</option>
+            <option value="">Khung hình tự động từ video</option>
             {images
               .filter((image) => image.derivativeStatus === "READY")
               .map((image, index) => (

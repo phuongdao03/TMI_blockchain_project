@@ -93,11 +93,9 @@ _EVIDENCE_ONLY_MIME_TYPES = frozenset(
         "application/zip",
     }
 )
-_PUBLIC_MEDIA_MIME_TYPES = frozenset(_FORMATS) - _EVIDENCE_ONLY_MIME_TYPES
 _PURPOSE_MIME_TYPES = {
     MediaPurpose.AVATAR: frozenset({"image/jpeg", "image/png", "image/webp"}),
     MediaPurpose.DOSSIER_EVIDENCE: frozenset(_FORMATS),
-    MediaPurpose.PUBLIC_WORK: _PUBLIC_MEDIA_MIME_TYPES,
 }
 _DANGEROUS_INNER_EXTENSIONS = frozenset(
     {
@@ -143,7 +141,6 @@ class MediaService:
         self._max_bytes = {
             MediaPurpose.AVATAR: avatar_max_bytes,
             MediaPurpose.DOSSIER_EVIDENCE: evidence_max_bytes,
-            MediaPurpose.PUBLIC_WORK: evidence_max_bytes,
         }
         self._delivery_access_policy = delivery_access_policy
         self._enqueue_inspection = enqueue_inspection or (lambda _media_id: None)
@@ -430,11 +427,11 @@ class MediaService:
             )
 
     def _validate_intent(self, intent: UploadIntent) -> _FormatPolicy:
-        expected_confidentiality = (
-            MediaConfidentiality.PUBLIC
-            if intent.purpose is MediaPurpose.PUBLIC_WORK
-            else MediaConfidentiality.PRIVATE
-        )
+        if intent.purpose is MediaPurpose.PUBLIC_WORK:
+            raise MediaValidationError(
+                "Public works must reuse an inspected dossier evidence asset."
+            )
+        expected_confidentiality = MediaConfidentiality.PRIVATE
         if intent.confidentiality is not expected_confidentiality:
             raise MediaValidationError(
                 "Confidentiality does not match the requested purpose."

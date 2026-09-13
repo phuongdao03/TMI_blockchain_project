@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   BadgeCheck,
-  Download,
   ExternalLink,
   FileClock,
   LoaderCircle,
@@ -12,6 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useMemo, useState } from "react";
 
 import { Feedback } from "@/components/ui/feedback";
@@ -147,10 +147,6 @@ export function CertificateDetail({ id }: { id: string }) {
     queryKey: ["dossier", detail.data?.certificate.dossierId, "versions"],
     queryFn: () => dossierApi.versions(detail.data!.certificate.dossierId),
     enabled: Boolean(detail.data?.certificate.dossierId),
-  });
-  const download = useMutation({
-    mutationFn: () => certificateApi.download(id),
-    onSuccess: ({ url }) => window.open(url, "_blank", "noopener,noreferrer"),
   });
   const activeVersion = versions.data?.find((item) => item.status === "ACTIVE");
   const activeDossierVersion = dossierVersions.data?.find(
@@ -325,26 +321,30 @@ export function CertificateDetail({ id }: { id: string }) {
           </section>
 
           <section className="rounded-3xl border border-neutral-200 bg-white p-6">
-            <h2 className="font-bold">Tệp chứng thư hiện tại</h2>
-            <p className="mt-2 text-sm leading-6 text-neutral-500">
-              Liên kết tải chỉ có hiệu lực trong thời gian ngắn để bảo vệ tài
-              liệu.
-            </p>
-            <button
-              className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 text-sm font-bold text-white disabled:opacity-50"
-              disabled={!certificate.pdfReady || download.isPending}
-              onClick={() => download.mutate()}
-              type="button"
-            >
-              {download.isPending ? (
-                <LoaderCircle className="size-4 animate-spin" />
-              ) : (
-                <Download className="size-4" />
-              )}
-              Tải chứng thư PDF
-            </button>
+            <div className="grid gap-5 sm:grid-cols-[8rem_1fr] sm:items-center">
+              <div className="rounded-2xl border border-neutral-200 bg-white p-2 shadow-sm">
+                <Image
+                  alt="Mã QR kiểm tra chứng thư"
+                  className="aspect-square size-full"
+                  height={240}
+                  src={`/api/v1/certificates/${encodeURIComponent(id)}/qr`}
+                  unoptimized
+                  width={240}
+                />
+              </div>
+              <div>
+                <h2 className="font-bold">Kiểm tra chứng thư độc lập</h2>
+                <p className="mt-2 text-sm leading-6 text-neutral-600">
+                  Quét QR hoặc mở liên kết để đối chiếu mã toàn vẹn và giao
+                  dịch blockchain. Tài liệu gốc không được đưa lên blockchain.
+                </p>
+                <p className="mt-2 break-all font-mono text-xs text-neutral-500">
+                  {detail.data.qrPayload}
+                </p>
+              </div>
+            </div>
             <a
-              className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-neutral-300 text-sm font-bold"
+              className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 text-sm font-bold text-white"
               href={detail.data.qrPayload}
               rel="noreferrer"
               target="_blank"

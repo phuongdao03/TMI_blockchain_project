@@ -65,6 +65,11 @@ const work: PublicWorkEditorData = {
   featuredUntil: null,
   version: 2,
   checklist: [{ code: "TITLE_REQUIRED", passed: true }],
+  sourceVersionNo: 1,
+  sourceFields: [
+    { key: "title", label: "Tiêu đề hồ sơ", value: "Tiêu đề đã nộp" },
+    { key: "summary", label: "Mô tả hồ sơ", value: "Mô tả đã nộp đủ dài" },
+  ],
 };
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -139,6 +144,19 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("PublicWorkEditor", () => {
+  it("reuses locked dossier fields and does not offer a second upload", async () => {
+    const user = userEvent.setup();
+    render(<PublicWorkEditor />, { wrapper });
+    await user.click(await screen.findByRole("button", { name: /ban-mau/ }));
+
+    expect(await screen.findByText("Dữ liệu hồ sơ gốc · Phiên bản 1")).toBeTruthy();
+    expect(screen.queryByTestId("media-uploader")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Dùng tiêu đề này" }));
+    expect(
+      (screen.getByLabelText("Tiêu đề công khai") as HTMLInputElement).value,
+    ).toBe("Tiêu đề đã nộp");
+  });
+
   it("offers signed dossier source media for explicit publication preparation", async () => {
     vi.mocked(publicWorkAdminApi.mediaCandidates).mockResolvedValueOnce([
       {
@@ -172,6 +190,48 @@ describe("PublicWorkEditor", () => {
         { caption: "Video source", altText: undefined },
       ),
     );
+  });
+
+  it("allows a ready video frame to be selected as the public cover", async () => {
+    vi.mocked(publicWorkAdminApi.media).mockResolvedValueOnce([
+      {
+        id: "relation-video",
+        mediaAssetId: "asset-video",
+        mediaKind: "VIDEO",
+        sortOrder: 0,
+        caption: "Video source",
+        altText: null,
+        derivativeStatus: "READY",
+        derivativeMimeType: "video/mp4",
+        derivativeWidth: 1280,
+        derivativeHeight: 720,
+        durationMs: 12000,
+        attemptCount: 1,
+        failureCode: null,
+        posterMediaAssetId: null,
+        videoControlsPreset: "FULL",
+        videoFitMode: "CONTAIN",
+        videoQualityProfile: "BALANCED",
+        videoMaxWidth: 1280,
+        videoAutoplay: false,
+        videoLoop: false,
+        videoMuted: false,
+      },
+    ]);
+    const user = userEvent.setup();
+    render(<PublicWorkEditor />, { wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: /Bản mẫu công khai/ }),
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Dùng khung video làm bìa",
+      }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Đang làm bìa" }),
+    ).toBeTruthy();
   });
 
   it("requires confirmation before preparing private dossier evidence", async () => {

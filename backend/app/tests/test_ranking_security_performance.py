@@ -104,7 +104,7 @@ def test_public_ranking_dto_rejects_unexpected_private_fields() -> None:
         PublicRankingData.model_validate(payload)
 
 
-def test_public_ranking_input_limits_reject_oversized_slug_and_page() -> None:
+def test_retired_public_ranking_route_rejects_all_inputs_without_service_call() -> None:
     app = create_application()
     called = False
 
@@ -124,8 +124,8 @@ def test_public_ranking_input_limits_reject_oversized_slug_and_page() -> None:
             params={"pageSize": 101},
         )
 
-    assert oversized_slug.status_code == 422
-    assert oversized_page.status_code == 422
+    assert oversized_slug.status_code == 404
+    assert oversized_page.status_code == 404
     assert called is False
 
 

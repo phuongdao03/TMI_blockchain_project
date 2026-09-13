@@ -38,12 +38,6 @@ class CertificateDetailView:
 
 
 @dataclass(frozen=True, slots=True)
-class CertificateDownloadView:
-    url: str
-    expires_at: int
-
-
-@dataclass(frozen=True, slots=True)
 class CertificateVersionView:
     id: UUID
     certificate_id: UUID

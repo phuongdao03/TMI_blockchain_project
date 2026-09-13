@@ -101,25 +101,6 @@ export const mediaPolicies: Record<MediaPurpose, MediaPolicy> = {
       "video/webm": [".webm"],
     },
   },
-  PUBLIC_WORK: {
-    accept:
-      "image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/ogg,video/mp4,video/webm",
-    maxBytes: 20_971_520,
-    maxMegabytes: 20,
-    formats: {
-      "application/pdf": [".pdf"],
-      "audio/mpeg": [".mp3"],
-      "audio/mp4": [".m4a", ".mp4"],
-      "audio/ogg": [".ogg"],
-      "audio/wav": [".wav"],
-      "audio/x-wav": [".wav"],
-      "image/jpeg": [".jpg", ".jpeg"],
-      "image/png": [".png"],
-      "image/webp": [".webp"],
-      "video/mp4": [".mp4"],
-      "video/webm": [".webm"],
-    },
-  },
 };
 
 const cloudinaryResponseSchema = z.object({
@@ -269,7 +250,7 @@ export async function uploadMedia(
 ): Promise<MediaAsset> {
   validateMediaFile(file, purpose, constraints);
   const authorization = await mediaApi.createUploadSignature({
-    confidentiality: purpose === "PUBLIC_WORK" ? "PUBLIC" : "PRIVATE",
+    confidentiality: "PRIVATE",
     purpose,
     filename: file.name,
     mimeType: file.type,

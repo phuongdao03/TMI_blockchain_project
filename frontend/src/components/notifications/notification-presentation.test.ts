@@ -44,6 +44,16 @@ describe("notification presentation", () => {
     ).toBe("/admin/reviews/dossier-1");
   });
 
+  it("repairs historical certificate notifications without an action path", () => {
+    expect(
+      presentNotification({
+        ...base,
+        type: "certificate.issued",
+        data: { certificate_id: "certificate-1" },
+      }).actionPath,
+    ).toBe("/certificates/certificate-1");
+  });
+
   it("maps a reviewer job to a safe internal action", () => {
     expect(presentNotification(base)).toMatchObject({
       actionLabel: "Bắt đầu thẩm định",

@@ -5,10 +5,7 @@ import {
   type ComingSoonFeatureName,
 } from "@/components/public/coming-soon-feature";
 
-const supportedFeatures = new Set<ComingSoonFeatureName>([
-  "voting",
-  "submission",
-]);
+const supportedFeatures = new Set<ComingSoonFeatureName>(["submission"]);
 
 export function generateStaticParams() {
   return [...supportedFeatures].map((feature) => ({ feature }));

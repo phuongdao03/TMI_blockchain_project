@@ -133,7 +133,7 @@ def test_repository_lists_only_closed_quarterly_campaigns_without_snapshot(
     asyncio.run(exercise())
 
 
-def test_quarterly_worker_and_hourly_schedule_are_registered(
+def test_quarterly_worker_is_not_scheduled_after_voting_retirement(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     async def fake_reconcile() -> int:
@@ -143,6 +143,4 @@ def test_quarterly_worker_and_hourly_schedule_are_registered(
 
     assert ranking_tasks.reconcile_quarterly_rankings.run() == 2
     assert ranking_tasks.reconcile_quarterly_rankings.max_retries == 5
-    schedule = celery_app.conf.beat_schedule["reconcile-quarterly-rankings"]
-    assert schedule["task"] == ranking_tasks.reconcile_quarterly_rankings.name
-    assert schedule["schedule"] == 3600.0
+    assert "reconcile-quarterly-rankings" not in celery_app.conf.beat_schedule

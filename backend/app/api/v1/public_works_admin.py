@@ -44,6 +44,7 @@ from app.modules.public.schemas import (
     PublicWorkEditorData,
     PublicWorkEditorRequest,
     PublicWorkPreviewData,
+    PublicWorkSourceFieldData,
     TaxonomyCategoryData,
     TaxonomyCategoryRequest,
     TaxonomyTagData,
@@ -527,6 +528,11 @@ def _editor_data(view: PublicWorkEditorView) -> PublicWorkEditorData:
         version=work.version,
         checklist=[
             PublicationChecklistData.model_validate(item) for item in view.checklist
+        ],
+        source_version_no=view.source_version_no,
+        source_fields=[
+            PublicWorkSourceFieldData.model_validate(item)
+            for item in view.source_fields
         ],
     )
 

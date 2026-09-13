@@ -39,7 +39,6 @@ from app.modules.certificates.repository import (
 from app.modules.certificates.storage import CertificateStorage
 from app.modules.certificates.types import (
     CertificateDetailView,
-    CertificateDownloadView,
     CertificateView,
 )
 from app.modules.dossiers.models import DossierStatus, DossierVersion
@@ -136,43 +135,6 @@ class CertificateService:
                 metadata_hash=version.metadata_hash,
                 qr_payload=version.qr_payload or certificate.qr_payload,
             )
-
-    async def download(
-        self,
-        principal: AuthPrincipal,
-        certificate_id: UUID,
-    ) -> CertificateDownloadView:
-        self._require_role(principal)
-        async with self._session.begin():
-            row = await self._certificates.get(certificate_id)
-            if row is None:
-                raise CertificateNotFoundError()
-            if not await self._certificates.can_access(
-                certificate_id,
-                principal.user_id,
-            ):
-                raise CertificateForbiddenError()
-            certificate = row[0]
-            if certificate.pdf_media_id is None:
-                raise CertificateConflictError("Certificate PDF is not ready.")
-            media = await self._session.get(MediaAsset, certificate.pdf_media_id)
-            if media is None or media.status is not MediaStatus.ACTIVE:
-                raise CertificateConflictError("Certificate PDF is not available.")
-            expires_at = int(self._clock().timestamp()) + self._delivery_ttl_seconds
-            url = self._media_gateway.create_signed_delivery_url(
-                public_id=media.cloudinary_public_id,
-                resource_type=media.resource_type,
-                file_format="pdf",
-                expires_at=expires_at,
-            )
-            self._audit(
-                "certificate.download.signed",
-                certificate_id,
-                actor_user_id=principal.user_id,
-                status=certificate.status,
-                pdf_ready=True,
-            )
-        return CertificateDownloadView(url=url, expires_at=expires_at)
 
     async def process_issuance(self, dossier_id: UUID) -> CertificateView | None:
         async with self._session.begin():

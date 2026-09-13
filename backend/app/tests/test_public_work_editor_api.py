@@ -13,6 +13,7 @@ from app.modules.public.editor_service import (
     PublicWorkEditorInput,
     PublicWorkEditorView,
     PublicWorkPreviewView,
+    SourceField,
 )
 from app.modules.public.media_service import PublicMediaView
 from app.modules.public.models import (
@@ -55,6 +56,8 @@ class StubEditorService:
             category_name="Digital Art",
             tag_ids=(),
             checklist=(ChecklistItem("TITLE_REQUIRED", True),),
+            source_version_no=1,
+            source_fields=(SourceField("title", "Tiêu đề hồ sơ", "API editor work"),),
         )
 
     async def update(

@@ -5,10 +5,10 @@ import { ComingSoonFeature } from "./coming-soon-feature";
 
 describe("ComingSoonFeature", () => {
   it("explains the unavailable feature and provides a working return action", () => {
-    const { container } = render(<ComingSoonFeature feature="voting" />);
+    const { container } = render(<ComingSoonFeature feature="submission" />);
 
     expect(
-      screen.getByRole("heading", { name: "Bình chọn sẽ sớm ra mắt" }),
+      screen.getByRole("heading", { name: "Cổng gửi đề cử sẽ sớm ra mắt" }),
     ).toBeDefined();
     expect(
       screen

@@ -31,9 +31,6 @@ from app.api.v1.payments import router as payments_router
 from app.api.v1.proof_registry import router as proof_registry_router
 from app.api.v1.public import router as public_router
 from app.api.v1.public_works_admin import router as public_works_admin_router
-from app.api.v1.ranking_admin import router as ranking_admin_router
-from app.api.v1.ranking_admin_publish import router as ranking_admin_publish_router
-from app.api.v1.ranking_public import router as ranking_public_router
 from app.api.v1.reviews import router as reviews_router
 from app.api.v1.search import router as search_router
 from app.api.v1.search_discovery import router as search_discovery_router
@@ -42,10 +39,6 @@ from app.api.v1.share_redirect import router as share_redirect_router
 from app.api.v1.staff_accounts import router as staff_accounts_router
 from app.api.v1.staff_invitations import router as staff_invitations_router
 from app.api.v1.users import router as users_router
-from app.api.v1.voting import router as voting_router
-from app.api.v1.voting_admin import router as voting_admin_router
-from app.api.v1.voting_me import router as voting_me_router
-from app.api.v1.voting_public import router as voting_public_router
 from app.core.config import Settings, get_settings
 from app.core.errors import install_exception_handlers
 from app.core.health import DependencyProbe, HealthService
@@ -270,9 +263,6 @@ def create_application(
     app.include_router(payments_router)
     app.include_router(public_router)
     app.include_router(public_works_admin_router)
-    app.include_router(ranking_public_router)
-    app.include_router(ranking_admin_router)
-    app.include_router(ranking_admin_publish_router)
     app.include_router(reviews_router)
     app.include_router(search_router)
     app.include_router(search_history_router)
@@ -281,10 +271,6 @@ def create_application(
     app.include_router(staff_invitations_router)
     app.include_router(search_discovery_router)
     app.include_router(users_router)
-    app.include_router(voting_admin_router)
-    app.include_router(voting_router)
-    app.include_router(voting_me_router)
-    app.include_router(voting_public_router)
     return app
 
 

@@ -17,14 +17,11 @@ celery_app = Celery(
         "app.workers.similarity_tasks",
         "app.workers.public_work_tasks",
         "app.workers.public_media_tasks",
-        "app.workers.ranking_tasks",
         "app.workers.trending_tasks",
         "app.workers.search_history_tasks",
         "app.workers.search_discovery_tasks",
         "app.workers.engagement_tasks",
         "app.workers.engagement_velocity_tasks",
-        "app.workers.voting_lifecycle_tasks",
-        "app.workers.voting_aggregate_tasks",
     ],
 )
 celery_app.conf.update(
@@ -82,28 +79,6 @@ celery_app.conf.update(
                 "app.workers.search_discovery_tasks.materialize_daily_search_discovery"
             ),
             "schedule": 86400.0,
-        },
-        "reconcile-voting-campaign-lifecycle": {
-            "task": (
-                "app.workers.voting_lifecycle_tasks.reconcile_voting_campaign_lifecycle"
-            ),
-            "schedule": 15.0,
-        },
-        "reconcile-vote-aggregates": {
-            "task": "app.workers.voting_aggregate_tasks.reconcile_vote_aggregates",
-            "schedule": 300.0,
-        },
-        "reconcile-monthly-rankings": {
-            "task": "app.workers.ranking_tasks.reconcile_monthly_rankings",
-            "schedule": 3600.0,
-        },
-        "reconcile-quarterly-rankings": {
-            "task": "app.workers.ranking_tasks.reconcile_quarterly_rankings",
-            "schedule": 3600.0,
-        },
-        "reconcile-yearly-rankings": {
-            "task": "app.workers.ranking_tasks.reconcile_yearly_rankings",
-            "schedule": 3600.0,
         },
         "generate-trending-snapshot": {
             "task": "app.workers.trending_tasks.generate_trending_snapshot",

@@ -234,117 +234,6 @@ export interface NotificationItem {
   createdAt: string;
 }
 
-export type VoteStatus =
-  | "VALID"
-  | "SUSPICIOUS"
-  | "REVOKED_BY_USER"
-  | "INVALIDATED"
-  | "REJECTED";
-
-export interface VoteHistoryItem {
-  voteId: string;
-  campaignId: string;
-  campaignName: string;
-  campaignSlug: string;
-  workId: string;
-  workTitle: string;
-  workSlug: string;
-  status: VoteStatus;
-  createdAt: string;
-  revokedAt: string | null;
-  canChange: boolean;
-  canRevoke: boolean;
-}
-
-export interface PublicVotingCampaign {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  status: VotingCampaignStatus;
-  timezone: string;
-  startAt: string;
-  endAt: string;
-  maxVotesPerUser: number;
-  allowVoteChange: boolean;
-  allowVoteRevoke: boolean;
-  ruleVersion: number;
-  serverTime: string;
-}
-
-export interface PublicCampaignWork {
-  workId: string;
-  title: string;
-  slug: string;
-  shortDescription: string;
-}
-
-export interface PublicVoteSummary {
-  workId: string;
-  workTitle: string;
-  workSlug: string;
-  effectiveCount: number;
-  refreshedAt: string;
-}
-
-export interface PublicRankingSnapshot {
-  id: string;
-  campaignId: string;
-  version: number;
-  formulaVersion: string;
-  campaignRuleVersion: number;
-  sourceDigest: string;
-  resultDigest: string;
-  candidateCount: number;
-  totalValidVotes: number;
-  createdAt: string;
-}
-
-export interface PublicRankingItem {
-  workId: string;
-  slug: string;
-  title: string;
-  shortDescription: string;
-  authorDisplayName: string | null;
-  categoryId: string;
-  categoryName: string;
-  categorySlug: string | null;
-  rank: number;
-  categoryRank: number;
-  displayOrder: number;
-  score: number;
-  effectiveVoteCount: number;
-}
-
-export interface PublicRankingData {
-  snapshot: PublicRankingSnapshot;
-  items: PublicRankingItem[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-  };
-}
-
-export interface VotingEligibility {
-  canVote: boolean;
-  reasons: string[];
-  remainingQuota: number;
-  ruleVersion: number;
-  serverTime: string;
-}
-
-export interface VoteMutationResult {
-  voteId: string;
-  campaignId: string;
-  workId: string;
-  status: VoteStatus;
-  remainingQuota: number;
-  ruleVersion: number;
-  createdAt: string;
-  previousVoteId: string | null;
-}
-
 export interface AuditLogItem {
   id: string;
   actorUserId: string | null;
@@ -412,7 +301,7 @@ export interface ProfileAvatarUpdate {
   avatarMediaId: string;
 }
 
-export type MediaPurpose = "AVATAR" | "DOSSIER_EVIDENCE" | "PUBLIC_WORK";
+export type MediaPurpose = "AVATAR" | "DOSSIER_EVIDENCE";
 export type MediaConfidentiality = "PRIVATE" | "PUBLIC";
 export type MediaStatus =
   | "PENDING"
@@ -1121,11 +1010,6 @@ export interface CertificateDetail {
   qrPayload: string;
 }
 
-export interface CertificateDownload {
-  url: string;
-  expiresAt: number;
-}
-
 export type CertificateVersionStatus =
   | "PENDING_APPROVAL"
   | "REJECTED"
@@ -1287,6 +1171,8 @@ export interface PublicWorkEditor extends PublicWorkAdmin {
   tagIds: string[];
   thumbnailMediaId: string | null;
   checklist: PublicationChecklistItem[];
+  sourceVersionNo: number;
+  sourceFields: Array<{ key: string; label: string; value: string }>;
 }
 
 export interface PublicWorkEditorInput {
@@ -1383,6 +1269,7 @@ export interface PublicWorkPreviewMedia {
   durationMs: number | null;
   isThumbnail: boolean;
   posterUrl: string | null;
+  streamingUrl?: string | null;
   controlsPreset: VideoControlsPreset;
   fitMode: VideoFitMode;
   autoplay: boolean;
@@ -1585,6 +1472,7 @@ export interface PublicWorkDetailMedia {
   durationMs: number | null;
   isThumbnail: boolean;
   posterUrl: string | null;
+  streamingUrl?: string | null;
   controlsPreset: VideoControlsPreset;
   fitMode: VideoFitMode;
   autoplay: boolean;
@@ -1645,54 +1533,6 @@ export interface ContentReportAdmin {
   assignedToUserId: string | null;
   resolutionNote: string | null;
   resolvedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type VotingCampaignStatus =
-  | "DRAFT"
-  | "SCHEDULED"
-  | "ACTIVE"
-  | "PAUSED"
-  | "ENDED"
-  | "RESULT_PENDING"
-  | "PUBLISHED"
-  | "CANCELLED";
-
-export interface VotingCampaign {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  status: VotingCampaignStatus;
-  campaignType: "PERIODIC" | "SPECIAL";
-  periodType: "WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
-  timezone: string;
-  startAt: string;
-  endAt: string;
-  maxVotesPerUser: number;
-  maxVotesPerWorkPerUser: number;
-  allowVoteChange: boolean;
-  allowVoteRevoke: boolean;
-  requireVerifiedEmail: boolean;
-  minAccountAgeHours: number;
-  eligibilityRules: { organizationIds: string[]; allowedRoles: string[] };
-  ruleVersion: number;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type CampaignParticipantStatus = "PENDING" | "APPROVED" | "REMOVED";
-
-export interface CampaignParticipant {
-  id: string;
-  campaignId: string;
-  workId: string;
-  status: CampaignParticipantStatus;
-  title: string;
-  slug: string;
-  approvedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -23,7 +23,6 @@ import type {
   CmsPostInput,
   Certificate,
   CertificateDetail,
-  CertificateDownload,
   CertificateVersion,
   ContentReportAccepted,
   ContentReportAdmin,
@@ -99,16 +98,6 @@ import type {
   ReviewDraft,
   ReviewListFilters,
   Verification,
-  VotingCampaign,
-  VoteHistoryItem,
-  PublicVotingCampaign,
-  PublicCampaignWork,
-  PublicVoteSummary,
-  PublicRankingData,
-  VotingEligibility,
-  VoteMutationResult,
-  CampaignParticipant,
-  CampaignParticipantStatus,
   StaffAccount,
   StaffAccountRole,
   StaffAccountStatus,
@@ -466,89 +455,6 @@ export const notificationApi = {
     return request<{ updatedCount: number }>("/notifications/read-all", {
       method: "PATCH",
     });
-  },
-};
-
-export const votingApi = {
-  campaigns(page = 1) {
-    return requestPaginated<PublicVotingCampaign[]>(
-      `/public/campaigns?page=${page}&pageSize=20`,
-    );
-  },
-  campaign(slug: string) {
-    return request<PublicVotingCampaign>(`/public/campaigns/${slug}`);
-  },
-  works(slug: string) {
-    return request<PublicCampaignWork[]>(`/public/campaigns/${slug}/works`);
-  },
-  summary(slug: string) {
-    return request<PublicVoteSummary[]>(
-      `/public/campaigns/${slug}/vote-summary`,
-    );
-  },
-  eligibility(campaignId: string, workId?: string) {
-    const query = workId ? `?workId=${encodeURIComponent(workId)}` : "";
-    return request<VotingEligibility>(
-      `/campaigns/${campaignId}/eligibility${query}`,
-    );
-  },
-  createVote(campaignId: string, workId: string, idempotencyKey: string) {
-    return request<VoteMutationResult>(
-      `/campaigns/${campaignId}/works/${workId}/votes`,
-      { method: "POST", headers: { "Idempotency-Key": idempotencyKey } },
-    );
-  },
-  changeVote(
-    campaignId: string,
-    sourceVoteId: string,
-    targetWorkId: string,
-    idempotencyKey: string,
-  ) {
-    return request<VoteMutationResult>(
-      `/campaigns/${campaignId}/votes/change`,
-      {
-        method: "POST",
-        headers: { "Idempotency-Key": idempotencyKey },
-        body: JSON.stringify({ sourceVoteId, targetWorkId }),
-      },
-    );
-  },
-  revokeVote(campaignId: string, workId: string, idempotencyKey: string) {
-    return request<VoteMutationResult>(
-      `/campaigns/${campaignId}/works/${workId}/votes`,
-      { method: "DELETE", headers: { "Idempotency-Key": idempotencyKey } },
-    );
-  },
-  myVotes(page = 1, campaignId?: string) {
-    const filter = campaignId
-      ? `&campaignId=${encodeURIComponent(campaignId)}`
-      : "";
-    return requestPaginated<VoteHistoryItem[]>(
-      `/me/votes?page=${page}&pageSize=20${filter}`,
-    );
-  },
-};
-
-export const rankingApi = {
-  public(
-    campaignSlug: string,
-    options: {
-      page?: number;
-      pageSize?: number;
-      version?: number;
-      categoryId?: string;
-    } = {},
-  ) {
-    const parameters = new URLSearchParams({
-      page: String(options.page ?? 1),
-      pageSize: String(options.pageSize ?? 20),
-    });
-    if (options.version !== undefined)
-      parameters.set("version", String(options.version));
-    if (options.categoryId) parameters.set("categoryId", options.categoryId);
-    return request<PublicRankingData>(
-      `/public/campaigns/${encodeURIComponent(campaignSlug)}/ranking?${parameters.toString()}`,
-    );
   },
 };
 
@@ -1096,11 +1002,6 @@ export const certificateApi = {
   get(certificateId: string) {
     return request<CertificateDetail>(`/certificates/${certificateId}`);
   },
-  download(certificateId: string) {
-    return request<CertificateDownload>(
-      `/certificates/${certificateId}/download`,
-    );
-  },
   versions(certificateId: string) {
     return request<CertificateVersion[]>(
       `/certificates/${certificateId}/versions`,
@@ -1510,43 +1411,5 @@ export const publicWorkAdminApi = {
       method: "POST",
       body: JSON.stringify({ expectedVersion, ...(reason ? { reason } : {}) }),
     });
-  },
-};
-
-export const votingCampaignAdminApi = {
-  list() {
-    return requestPaginated<VotingCampaign[]>(
-      "/admin/voting/campaigns?page=1&pageSize=100",
-    );
-  },
-  participants(campaignId: string, status?: CampaignParticipantStatus) {
-    const parameters = new URLSearchParams({ page: "1", pageSize: "100" });
-    if (status) parameters.set("status", status);
-    return requestPaginated<CampaignParticipant[]>(
-      `/admin/voting/campaigns/${campaignId}/participants?${parameters.toString()}`,
-    );
-  },
-  add(campaignId: string, workId: string, reason: string) {
-    return request<CampaignParticipant>(
-      `/admin/voting/campaigns/${campaignId}/participants`,
-      { method: "POST", body: JSON.stringify({ workId, reason }) },
-    );
-  },
-  bulkAdd(campaignId: string, workIds: string[], reason: string) {
-    return request<CampaignParticipant[]>(
-      `/admin/voting/campaigns/${campaignId}/participants/bulk`,
-      { method: "POST", body: JSON.stringify({ workIds, reason }) },
-    );
-  },
-  transition(
-    campaignId: string,
-    participantId: string,
-    action: "approve" | "remove",
-    reason: string,
-  ) {
-    return request<CampaignParticipant>(
-      `/admin/voting/campaigns/${campaignId}/participants/${participantId}/${action}`,
-      { method: "POST", body: JSON.stringify({ reason }) },
-    );
   },
 };

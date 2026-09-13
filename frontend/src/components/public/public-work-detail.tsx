@@ -296,8 +296,14 @@ function PublicGallery({
             playsInline
             poster={selected.posterUrl ?? undefined}
             preload="metadata"
-            src={selected.url}
           >
+            {selected.streamingUrl ? (
+              <source
+                src={selected.streamingUrl}
+                type="application/vnd.apple.mpegurl"
+              />
+            ) : null}
+            <source src={selected.url} type={selected.mimeType ?? "video/mp4"} />
             <track kind="captions" />
           </video>
         ) : null}

@@ -8,7 +8,6 @@ const restrictedPrefixes = [
   "/notifications",
   "/payments",
   "/reviews",
-  "/vote-history",
 ] as const;
 
 export function releaseMode(value?: string): ReleaseMode {

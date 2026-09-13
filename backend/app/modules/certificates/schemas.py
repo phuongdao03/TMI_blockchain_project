@@ -52,11 +52,6 @@ class CertificateDetailData(CertificateSchema):
     qr_payload: str
 
 
-class CertificateDownloadData(CertificateSchema):
-    url: str
-    expires_at: int
-
-
 class CertificateVersionData(CertificateSchema):
     id: UUID
     certificate_id: UUID

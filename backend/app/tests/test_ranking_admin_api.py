@@ -32,7 +32,7 @@ class StubRankingRecountService:
         return RankingRecountRequest(campaign_id=campaign_id)
 
 
-def test_ranking_recount_admin_api_enqueues_with_request_context() -> None:
+def test_ranking_recount_admin_api_is_retired() -> None:
     service = StubRankingRecountService()
     principal = AuthPrincipal(
         user_id=uuid4(),
@@ -60,17 +60,11 @@ def test_ranking_recount_admin_api_enqueues_with_request_context() -> None:
 
     response = asyncio.run(request())
 
-    assert response.status_code == 202
-    assert response.json()["data"] == {
-        "campaignId": str(CAMPAIGN_ID),
-        "status": "queued",
-    }
-    assert service.received is not None
-    assert service.received[:2] == (principal.user_id, CAMPAIGN_ID)
-    assert isinstance(service.received[2], str)
+    assert response.status_code == 404
+    assert service.received is None
 
 
-def test_ranking_recount_admin_api_rejects_non_system_admin() -> None:
+def test_retired_ranking_recount_route_is_not_authorized_for_any_role() -> None:
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
@@ -98,5 +92,4 @@ def test_ranking_recount_admin_api_rejects_non_system_admin() -> None:
 
     response = asyncio.run(request())
 
-    assert response.status_code == 403
-    assert response.json()["error"]["code"] == "RANKING_RECOUNT_FORBIDDEN"
+    assert response.status_code == 404

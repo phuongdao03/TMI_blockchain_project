@@ -75,24 +75,17 @@ def _client() -> TestClient:
     return TestClient(app)
 
 
-def test_public_ranking_contract_is_allowlisted_and_versioned() -> None:
+def test_public_ranking_route_is_retired() -> None:
     with _client() as client:
         response = client.get(
             "/api/v1/public/campaigns/heritage-campaign/ranking",
             params={"version": 2, "categoryId": str(CATEGORY_ID)},
         )
 
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["success"] is True
-    assert payload["data"]["snapshot"]["version"] == 2
-    assert payload["data"]["items"][0]["displayOrder"] == 1
-    assert payload["data"]["pagination"] == {"page": 1, "pageSize": 20, "total": 1}
-    assert "ownerUserId" not in response.text
-    assert "dossierId" not in response.text
+    assert response.status_code == 404
 
 
-def test_public_ranking_rejects_invalid_pagination_before_service() -> None:
+def test_retired_public_ranking_route_never_calls_service() -> None:
     app = create_application()
     called = False
 
@@ -110,6 +103,5 @@ def test_public_ranking_rejects_invalid_pagination_before_service() -> None:
             params={"pageSize": 0},
         )
 
-    assert response.status_code == 422
-    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert response.status_code == 404
     assert called is False

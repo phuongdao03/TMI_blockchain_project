@@ -1,7 +1,7 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request, status
+from fastapi import APIRouter, Query, Request, Response, status
 
 from app.core.schemas import (
     ErrorEnvelope,
@@ -18,10 +18,10 @@ from app.modules.certificates.dependencies import (
 from app.modules.certificates.schemas import (
     CertificateData,
     CertificateDetailData,
-    CertificateDownloadData,
     CertificateVersionData,
     CertificateVersionRequest,
 )
+from app.modules.public.share_service import QrCodePngRenderer
 
 router = APIRouter(prefix="/api/v1/certificates", tags=["certificates"])
 
@@ -84,21 +84,22 @@ async def get_certificate(
     )
 
 
-@router.get(
-    "/{certificate_id}/download",
-    response_model=SuccessEnvelope[CertificateDownloadData],
-    responses=RESPONSES,
-)
-async def download_certificate(
+@router.get("/{certificate_id}/qr", response_class=Response, responses=RESPONSES)
+async def certificate_qr(
     certificate_id: UUID,
     request: Request,
     principal: CurrentPrincipalDependency,
     service: CertificateServiceDependency,
-) -> SuccessEnvelope[CertificateDownloadData]:
-    download = await service.download(principal, certificate_id)
-    return SuccessEnvelope(
-        data=CertificateDownloadData.model_validate(download),
-        meta=ResponseMeta(request_id=request.state.request_id),
+) -> Response:
+    detail = await service.get(principal, certificate_id)
+    return Response(
+        content=QrCodePngRenderer().render(detail.qr_payload),
+        media_type="image/png",
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": 'inline; filename="certificate-qr.png"',
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

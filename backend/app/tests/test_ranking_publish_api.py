@@ -40,7 +40,7 @@ class StubRankingPublicationService:
         )
 
 
-def test_ranking_publish_api_returns_selected_snapshot() -> None:
+def test_ranking_publish_api_is_retired() -> None:
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
@@ -70,10 +70,4 @@ def test_ranking_publish_api_returns_selected_snapshot() -> None:
 
     response = asyncio.run(request())
 
-    assert response.status_code == 200
-    assert response.json()["data"] == {
-        "campaignId": str(CAMPAIGN_ID),
-        "snapshotId": str(SNAPSHOT_ID),
-        "version": 3,
-        "publishedAt": "2026-08-03T08:00:00Z",
-    }
+    assert response.status_code == 404

@@ -12,7 +12,6 @@ const routeMigrations = [
   ["(public)/thu-vien", "(public)/works"],
   ["(public)/tai-san", "(public)/works"],
   ["(public)/kiem-tra", "(public)/verify"],
-  ["(public)/binh-chon", "(public)/voting"],
   ["(public)/tim-kiem", "(public)/search"],
   ["(dashboard)/ho-so", "(dashboard)/dossiers"],
   ["(dashboard)/tham-dinh", "(dashboard)/reviews"],
@@ -20,10 +19,8 @@ const routeMigrations = [
   ["(dashboard)/thanh-toan", "(dashboard)/payments"],
   ["(dashboard)/thong-bao", "(dashboard)/notifications"],
   ["(dashboard)/tai-khoan", "(dashboard)/account"],
-  ["(dashboard)/lich-su-binh-chon", "(dashboard)/vote-history"],
   ["(dashboard)/lich-su-hoat-dong", "(dashboard)/activity"],
   ["(dashboard)/admin/bao-cao", "(dashboard)/admin/reports"],
-  ["(dashboard)/admin/binh-chon", "(dashboard)/admin/voting"],
   ["(dashboard)/admin/noi-dung", "(dashboard)/admin/content"],
   ["(dashboard)/admin/tim-kiem", "(dashboard)/admin/search"],
 ];

@@ -51,7 +51,6 @@ from app.modules.voting.service import (
 )
 from app.modules.voting.telemetry import voting_lifecycle_telemetry
 from app.workers.celery_app import celery_app
-from app.workers.voting_lifecycle_tasks import reconcile_voting_campaign_lifecycle
 
 NOW = datetime(2026, 8, 3, 8, tzinfo=UTC)
 
@@ -476,7 +475,7 @@ def test_lifecycle_admin_api_contract_validates_reason_and_dispatches() -> None:
             f"/api/v1/admin/voting/campaigns/{{campaign_id}}/{action}"
             for action in ("schedule", "activate", "pause", "resume", "end", "cancel")
         }
-        assert expected_paths.issubset(app.openapi()["paths"])
+        assert expected_paths.isdisjoint(app.openapi()["paths"])
         with TestClient(app) as client:
             schedule = client.post(
                 f"/api/v1/admin/voting/campaigns/{service.row.id}/schedule"
@@ -489,19 +488,16 @@ def test_lifecycle_admin_api_contract_validates_reason_and_dispatches() -> None:
                 f"/api/v1/admin/voting/campaigns/{service.row.id}/pause",
                 json={"reason": "Sự cố vận hành"},
             )
-        assert schedule.status_code == 200
-        assert invalid_pause.status_code == 422
-        assert pause.status_code == 200
-        assert service.calls == [
-            (CampaignLifecycleAction.SCHEDULE, None),
-            (CampaignLifecycleAction.PAUSE, "Sự cố vận hành"),
-        ]
+        assert {
+            schedule.status_code,
+            invalid_pause.status_code,
+            pause.status_code,
+        } == {404}
+        assert service.calls == []
     finally:
         app.dependency_overrides.clear()
 
 
 def test_lifecycle_worker_has_retry_and_beat_configuration() -> None:
-    schedule = celery_app.conf.beat_schedule["reconcile-voting-campaign-lifecycle"]
-    assert schedule["schedule"] == 15.0
-    assert schedule["task"] == reconcile_voting_campaign_lifecycle.name
-    assert reconcile_voting_campaign_lifecycle.max_retries == 5
+    assert "reconcile-voting-campaign-lifecycle" not in celery_app.conf.beat_schedule
+    assert "reconcile-vote-aggregates" not in celery_app.conf.beat_schedule

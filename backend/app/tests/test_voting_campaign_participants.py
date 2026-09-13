@@ -160,20 +160,8 @@ def test_participant_admin_api_uses_safe_contract_and_csrf_dependency() -> None:
             json={"workIds": [str(work_id)], "reason": "Đã kiểm tra"},
         )
 
-    assert listed.status_code == 200
-    assert listed.json()["data"][0] == {
-        "id": str(participant.id),
-        "campaignId": str(campaign_id),
-        "workId": str(work_id),
-        "status": "PENDING",
-        "title": "Tác phẩm công khai",
-        "slug": "tac-pham-cong-khai",
-        "approvedAt": None,
-        "createdAt": NOW.isoformat().replace("+00:00", "Z"),
-        "updatedAt": NOW.isoformat().replace("+00:00", "Z"),
-    }
-    assert added.status_code == 201
-    assert service.bulk_work_ids == (work_id,)
+    assert listed.status_code == added.status_code == 404
+    assert service.bulk_work_ids == ()
 
 
 def test_participant_service_enforces_eligibility_freeze_and_audit(

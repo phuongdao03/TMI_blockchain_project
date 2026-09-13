@@ -414,6 +414,11 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert public_video.fit_mode is VideoFitMode.COVER
             assert public_video.autoplay is True
             assert public_video.muted is True
+            assert public_video.streaming_url is not None
+            assert public_video.streaming_url.endswith(".m3u8")
+            assert "/sp_auto:maxres_720/" in public_video.streaming_url
+            assert public_video.poster_url is not None
+            assert public_video.poster_url.endswith(".webp")
         await engine.dispose()
 
     asyncio.run(exercise())

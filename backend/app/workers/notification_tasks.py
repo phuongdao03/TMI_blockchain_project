@@ -295,25 +295,6 @@ async def _consume(event_id: UUID) -> None:
             from app.workers.public_work_tasks import rebuild_public_sitemap
 
             rebuild_public_sitemap.delay()
-        if aggregate_type in {"vote", "voting_campaign", "public_work"}:
-            from app.workers.voting_aggregate_tasks import (
-                handle_voting_aggregate_event,
-            )
-
-            await handle_voting_aggregate_event(
-                aggregate_type=aggregate_type,
-                payload=payload,
-                settings=settings,
-            )
-        if aggregate_type == "voting_campaign":
-            from app.workers.ranking_tasks import (
-                enqueue_ranking_for_campaign_event,
-            )
-
-            enqueue_ranking_for_campaign_event(
-                event_type=event_type,
-                payload=payload,
-            )
         async with session.begin():
             event = await session.get(OutboxEvent, event_id)
             if event is not None:

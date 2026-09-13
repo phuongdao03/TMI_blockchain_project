@@ -138,6 +138,8 @@ describe("PublicWorkDetailPage", () => {
           caption: "Video chào mừng Tinh hoa Việt",
           altText: null,
           url: "https://res.cloudinary.com/demo/video/upload/welcome.mp4",
+          streamingUrl:
+            "https://res.cloudinary.com/demo/video/upload/sp_auto/welcome.m3u8",
           mimeType: "video/mp4",
           width: 1920,
           height: 1080,
@@ -166,7 +168,12 @@ describe("PublicWorkDetailPage", () => {
     expect(video?.getAttribute("controlslist")).toContain("nodownload");
     expect(video?.preload).toBe("metadata");
     expect(video?.playsInline).toBe(true);
-    expect(video?.getAttribute("src")).toContain("welcome.mp4");
+    expect(video?.getAttribute("src")).toBeNull();
+    const sources = video?.querySelectorAll("source");
+    expect(sources?.[0]?.getAttribute("type")).toBe(
+      "application/vnd.apple.mpegurl",
+    );
+    expect(sources?.[1]?.getAttribute("src")).toContain("welcome.mp4");
     expect(screen.getByText("Video chào mừng Tinh hoa Việt")).toBeDefined();
   });
 

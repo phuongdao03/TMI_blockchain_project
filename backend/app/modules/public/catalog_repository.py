@@ -29,6 +29,21 @@ from app.modules.public.models import (
 )
 
 
+def _thumbnail_url(media: PublicWorkMedia | None) -> str | None:
+    if media is None or not media.derivative_url:
+        return None
+    if media.media_kind is not PublicMediaKind.VIDEO:
+        return media.derivative_url
+    marker = "/video/upload/"
+    if (
+        marker not in media.derivative_url
+        or not media.derivative_url.startswith("https://res.cloudinary.com/")
+    ):
+        return None
+    prefix, path = media.derivative_url.split(marker, 1)
+    return f"{prefix}{marker}so_auto,q_auto,f_webp/{path.rsplit('.', 1)[0]}.webp"
+
+
 def _as_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
@@ -47,6 +62,7 @@ class PublicWorkPublicationContext:
     category: Category
     thumbnail: MediaAsset | None
     has_ready_video: bool
+    dossier_version: DossierVersion | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,7 +110,9 @@ class PublicWorkRepository:
             select(PublicWorkMedia)
             .where(
                 PublicWorkMedia.public_work_id.in_(work_ids),
-                PublicWorkMedia.media_kind == PublicMediaKind.IMAGE,
+                PublicWorkMedia.media_kind.in_(
+                    (PublicMediaKind.IMAGE, PublicMediaKind.VIDEO)
+                ),
                 PublicWorkMedia.derivative_status == DerivativeStatus.READY,
                 PublicWorkMedia.derivative_url.is_not(None),
             )
@@ -119,11 +137,37 @@ class PublicWorkRepository:
                 (
                     media
                     for media in work_candidates
-                    if media.media_asset_id == work.thumbnail_media_id
+                    if media.media_kind is PublicMediaKind.IMAGE
+                    and media.media_asset_id == work.thumbnail_media_id
                 ),
-                work_candidates[0],
+                next(
+                    (
+                        media
+                        for media in work_candidates
+                        if media.media_kind is PublicMediaKind.IMAGE
+                    ),
+                    work_candidates[0],
+                ),
             )
         return selected
+
+    async def ready_cover_kind(
+        self, work_id: UUID, media_asset_id: UUID
+    ) -> PublicMediaKind | None:
+        return cast(
+            PublicMediaKind | None,
+            await self._session.scalar(
+                select(PublicWorkMedia.media_kind).where(
+                    PublicWorkMedia.public_work_id == work_id,
+                    PublicWorkMedia.media_asset_id == media_asset_id,
+                    PublicWorkMedia.media_kind.in_(
+                        (PublicMediaKind.IMAGE, PublicMediaKind.VIDEO)
+                    ),
+                    PublicWorkMedia.derivative_status == DerivativeStatus.READY,
+                    PublicWorkMedia.derivative_url.is_not(None),
+                )
+            ),
+        )
 
     async def get_by_id(
         self,
@@ -228,11 +272,19 @@ class PublicWorkRepository:
                 Category,
                 MediaAsset,
                 ready_video.label("has_ready_video"),
+                DossierVersion,
             )
             .join(Dossier, Dossier.id == PublicWork.dossier_id)
             .join(Category, Category.id == PublicWork.category_id)
             .outerjoin(Certificate, Certificate.id == PublicWork.certificate_id)
             .outerjoin(MediaAsset, MediaAsset.id == PublicWork.thumbnail_media_id)
+            .outerjoin(
+                DossierVersion,
+                and_(
+                    DossierVersion.dossier_id == Dossier.id,
+                    DossierVersion.version_no == Dossier.current_version_no,
+                ),
+            )
             .where(
                 PublicWork.id == work_id,
                 PublicWork.deleted_at.is_(None),
@@ -252,6 +304,7 @@ class PublicWorkRepository:
             category=row[3],
             thumbnail=row[4],
             has_ready_video=bool(row[5]),
+            dossier_version=row[6],
         )
 
     async def claim_version(self, work: PublicWork, expected_version: int) -> bool:
@@ -495,7 +548,7 @@ class PublicWorkRepository:
                 work,
                 category,
                 tuple(tags_by_work[work.id]),
-                selected.derivative_url if selected else None,
+                _thumbnail_url(selected),
                 selected.alt_text if selected else None,
             )
 
@@ -675,7 +728,7 @@ class PublicWorkRepository:
                 work,
                 category,
                 tuple(tags_by_work[work.id]),
-                thumbnails[work.id].derivative_url if work.id in thumbnails else None,
+                _thumbnail_url(thumbnails.get(work.id)),
                 thumbnails[work.id].alt_text if work.id in thumbnails else None,
             )
             for work, category in selected_rows

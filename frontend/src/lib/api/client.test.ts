@@ -10,7 +10,6 @@ import {
   organizationApi,
   profileApi,
   publicApi,
-  rankingApi,
   staffAccountsApi,
   staffInvitationsApi,
 } from "@/lib/api/client";
@@ -538,37 +537,6 @@ describe("audit API client", () => {
     expect(url).toBe("/api/v1/admin/audit/integrity-checks?limit=250");
     expect(init?.method).toBe("POST");
     expect(new Headers(init?.headers).get("X-CSRF-Token")).toBe("csrf-value");
-  });
-});
-
-describe("ranking API client", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("requests the public snapshot with stable filters", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      response({
-        success: true,
-        data: {
-          snapshot: {},
-          items: [],
-          pagination: { page: 2, pageSize: 10, total: 0 },
-        },
-        meta: { request_id: "ranking-request" },
-      }),
-    );
-
-    await rankingApi.public("heritage campaign", {
-      page: 2,
-      pageSize: 10,
-      version: 3,
-      categoryId: "category-1",
-    });
-
-    expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      "/api/v1/public/campaigns/heritage%20campaign/ranking?page=2&pageSize=10&version=3&categoryId=category-1",
-    );
   });
 });
 

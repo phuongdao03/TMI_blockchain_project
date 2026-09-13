@@ -213,6 +213,12 @@ class PublicationChecklistData(PublicSchema):
     passed: bool
 
 
+class PublicWorkSourceFieldData(PublicSchema):
+    key: str
+    label: str
+    value: str
+
+
 class PublicWorkEditorData(PublicSchema):
     id: UUID
     dossier_id: UUID
@@ -234,6 +240,8 @@ class PublicWorkEditorData(PublicSchema):
     featured_until: datetime | None
     version: int
     checklist: list[PublicationChecklistData]
+    source_version_no: int
+    source_fields: list[PublicWorkSourceFieldData]
 
 
 class PublicWorkPreviewData(PublicSchema):
@@ -394,6 +402,7 @@ class PublicMediaData(PublicSchema):
     duration_ms: int | None
     is_thumbnail: bool
     poster_url: str | None
+    streaming_url: str | None
     controls_preset: VideoControlsPreset
     fit_mode: VideoFitMode
     autoplay: bool

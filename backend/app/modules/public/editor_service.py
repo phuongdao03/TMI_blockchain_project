@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -10,10 +11,11 @@ from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequiremen
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
-from app.modules.media.models import MediaStatus
-from app.modules.media.repository import MediaAssetRepository
 from app.modules.public.backfill import RESERVED_SLUGS, SLUG_PATTERN
-from app.modules.public.catalog_repository import PublicWorkRepository
+from app.modules.public.catalog_repository import (
+    PublicWorkPublicationContext,
+    PublicWorkRepository,
+)
 from app.modules.public.errors import (
     PublicWorkForbiddenError,
     PublicWorkMetadataValidationError,
@@ -66,11 +68,20 @@ class ChecklistItem:
 
 
 @dataclass(frozen=True, slots=True)
+class SourceField:
+    key: str
+    label: str
+    value: str
+
+
+@dataclass(frozen=True, slots=True)
 class PublicWorkEditorView:
     work: PublicWork
     category_name: str
     tag_ids: tuple[UUID, ...]
     checklist: tuple[ChecklistItem, ...]
+    source_version_no: int
+    source_fields: tuple[SourceField, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,6 +96,65 @@ class PublicWorkPreviewView:
     can_publish: bool
 
 
+def _source_fields(
+    context: PublicWorkPublicationContext,
+) -> tuple[int, tuple[SourceField, ...]]:
+    version = context.dossier_version
+    fields = [
+        SourceField("title", "Tiêu đề hồ sơ", context.dossier.title),
+    ]
+    if context.dossier.summary:
+        fields.append(SourceField("summary", "Mô tả hồ sơ", context.dossier.summary))
+    if version is None:
+        return context.dossier.current_version_no, tuple(fields)
+
+    dossier_snapshot = version.snapshot_json.get("dossier")
+    if not isinstance(dossier_snapshot, dict):
+        return version.version_no, tuple(fields)
+    snapshot_title = dossier_snapshot.get("title")
+    snapshot_summary = dossier_snapshot.get("summary")
+    if isinstance(snapshot_title, str) and snapshot_title.strip():
+        fields[0] = SourceField("title", "Tiêu đề hồ sơ", snapshot_title.strip())
+    if isinstance(snapshot_summary, str) and snapshot_summary.strip():
+        summary = SourceField("summary", "Mô tả hồ sơ", snapshot_summary.strip())
+        if len(fields) == 1:
+            fields.append(summary)
+        else:
+            fields[1] = summary
+
+    dossier_type = dossier_snapshot.get("dossierType")
+    public_fields = (
+        dossier_type.get("publicFields") if isinstance(dossier_type, dict) else None
+    )
+    if not isinstance(public_fields, list):
+        return version.version_no, tuple(fields)
+    for index, item in enumerate(public_fields):
+        if not isinstance(item, dict):
+            continue
+        raw_value = item.get("value")
+        if raw_value in (None, "", [], {}):
+            continue
+        value = (
+            raw_value.strip()
+            if isinstance(raw_value, str)
+            else json.dumps(raw_value, ensure_ascii=False, separators=(",", ":"))
+        )
+        key = item.get("key")
+        label = item.get("label")
+        fields.append(
+            SourceField(
+                key=key if isinstance(key, str) and key else f"field-{index + 1}",
+                label=(
+                    label
+                    if isinstance(label, str) and label
+                    else f"Thông tin {index + 1}"
+                ),
+                value=value,
+            )
+        )
+    return version.version_no, tuple(fields)
+
+
 class PublicWorkEditorService:
     def __init__(
         self,
@@ -95,7 +165,6 @@ class PublicWorkEditorService:
     ) -> None:
         self._session = session
         self._repository = PublicWorkRepository(session)
-        self._media_repository = MediaAssetRepository(session)
         self._media_query = PublicMediaQueryService(session)
         self._audit = audit
         self._outbox = OutboxRepository(session)
@@ -134,11 +203,14 @@ class PublicWorkEditorService:
                 ChecklistItem(code, code not in failed)
                 for code in PUBLICATION_CHECK_CODES
             )
+            source_version_no, source_fields = _source_fields(context)
             return PublicWorkEditorView(
                 work=context.work,
                 category_name=context.category.name,
                 tag_ids=await self._repository.list_work_tag_ids(work_id),
                 checklist=checklist,
+                source_version_no=source_version_no,
+                source_fields=source_fields,
             )
 
     async def update(
@@ -168,19 +240,17 @@ class PublicWorkEditorService:
                     raise PublicWorkMetadataValidationError(
                         "An active category is required."
                     )
-                if data.thumbnail_media_id is not None:
-                    thumbnail = await self._media_repository.get_by_id(
-                        data.thumbnail_media_id
+                if (
+                    data.thumbnail_media_id is not None
+                    and data.thumbnail_media_id != work.thumbnail_media_id
+                    and await self._repository.ready_cover_kind(
+                        work.id, data.thumbnail_media_id
                     )
-                    if (
-                        thumbnail is None
-                        or thumbnail.status is not MediaStatus.ACTIVE
-                        or thumbnail.deleted_at is not None
-                        or not thumbnail.mime_type.startswith("image/")
-                    ):
-                        raise PublicWorkMetadataValidationError(
-                            "Thumbnail must be an active image asset."
-                        )
+                    is None
+                ):
+                    raise PublicWorkMetadataValidationError(
+                        "Cover must be a ready image or video attached to the work."
+                    )
                 unique_tag_ids = tuple(dict.fromkeys(data.tag_ids))
                 if len(unique_tag_ids) > 50:
                     raise PublicWorkMetadataValidationError(
