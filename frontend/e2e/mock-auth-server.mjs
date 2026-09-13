@@ -451,6 +451,15 @@ const initialPublicWork = {
   featuredUntil: null,
   version: 1,
   checklist: [{ code: "TITLE_REQUIRED", passed: true }],
+  sourceVersionNo: 1,
+  sourceFields: [
+    { key: "title", label: "Tiêu đề hồ sơ", value: "Di sản số TMI" },
+    {
+      key: "summary",
+      label: "Mô tả hồ sơ",
+      value: "Tác phẩm số đã hoàn tất quy trình xác lập minh bạch.",
+    },
+  ],
 };
 let publicWork = { ...initialPublicWork };
 
@@ -2551,6 +2560,14 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "GET" &&
     path === `/api/v1/admin/public-works/${publicWorkId}/media` &&
+    authenticated
+  ) {
+    send(response, 200, envelope([]));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === `/api/v1/admin/public-works/${publicWorkId}/media-candidates` &&
     authenticated
   ) {
     send(response, 200, envelope([]));

@@ -45,8 +45,11 @@ test("applicant sees a task-focused certificate history", async ({ page }) => {
   await expect(
     page.getByText(/SUPER_ADMIN|database|schema|endpoint/i),
   ).toHaveCount(0);
-  await expect(page.getByText("Mã toàn vẹn")).not.toBeVisible();
+  await expect(
+    page.getByText("Mã toàn vẹn", { exact: true }),
+  ).not.toBeVisible();
+  await expect(page.getByAltText("Mã QR kiểm tra chứng thư")).toBeVisible();
 
   await page.getByText("Xem thông tin đối chiếu nâng cao").click();
-  await expect(page.getByText("Mã toàn vẹn")).toBeVisible();
+  await expect(page.getByText("Mã toàn vẹn", { exact: true })).toBeVisible();
 });

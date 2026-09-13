@@ -335,8 +335,8 @@ export function CertificateDetail({ id }: { id: string }) {
               <div>
                 <h2 className="font-bold">Kiểm tra chứng thư độc lập</h2>
                 <p className="mt-2 text-sm leading-6 text-neutral-600">
-                  Quét QR hoặc mở liên kết để đối chiếu mã toàn vẹn và giao
-                  dịch blockchain. Tài liệu gốc không được đưa lên blockchain.
+                  Quét QR hoặc mở liên kết để đối chiếu mã toàn vẹn và giao dịch
+                  blockchain. Tài liệu gốc không được đưa lên blockchain.
                 </p>
                 <p className="mt-2 break-all font-mono text-xs text-neutral-500">
                   {detail.data.qrPayload}

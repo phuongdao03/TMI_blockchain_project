@@ -303,7 +303,10 @@ function PublicGallery({
                 type="application/vnd.apple.mpegurl"
               />
             ) : null}
-            <source src={selected.url} type={selected.mimeType ?? "video/mp4"} />
+            <source
+              src={selected.url}
+              type={selected.mimeType ?? "video/mp4"}
+            />
             <track kind="captions" />
           </video>
         ) : null}

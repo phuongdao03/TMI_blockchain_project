@@ -149,7 +149,9 @@ describe("PublicWorkEditor", () => {
     render(<PublicWorkEditor />, { wrapper });
     await user.click(await screen.findByRole("button", { name: /ban-mau/ }));
 
-    expect(await screen.findByText("Dữ liệu hồ sơ gốc · Phiên bản 1")).toBeTruthy();
+    expect(
+      await screen.findByText("Dữ liệu hồ sơ gốc · Phiên bản 1"),
+    ).toBeTruthy();
     expect(screen.queryByTestId("media-uploader")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Dùng tiêu đề này" }));
     expect(
@@ -229,9 +231,7 @@ describe("PublicWorkEditor", () => {
         name: "Dùng khung video làm bìa",
       }),
     );
-    expect(
-      screen.getByRole("button", { name: "Đang làm bìa" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Đang làm bìa" })).toBeTruthy();
   });
 
   it("requires confirmation before preparing private dossier evidence", async () => {
