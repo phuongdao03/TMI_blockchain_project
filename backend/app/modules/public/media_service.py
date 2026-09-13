@@ -199,7 +199,11 @@ def _cloudinary_video_variant(
     url: str | None, *, transformation: str, extension: str
 ) -> str | None:
     marker = "/video/upload/"
-    if not url or marker not in url or not url.startswith("https://res.cloudinary.com/"):
+    if (
+        not url
+        or marker not in url
+        or not url.startswith("https://res.cloudinary.com/")
+    ):
         return None
     prefix, path = url.split(marker, 1)
     base = path.rsplit(".", 1)[0]

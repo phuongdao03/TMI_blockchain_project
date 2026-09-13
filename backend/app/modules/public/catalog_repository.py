@@ -35,9 +35,8 @@ def _thumbnail_url(media: PublicWorkMedia | None) -> str | None:
     if media.media_kind is not PublicMediaKind.VIDEO:
         return media.derivative_url
     marker = "/video/upload/"
-    if (
-        marker not in media.derivative_url
-        or not media.derivative_url.startswith("https://res.cloudinary.com/")
+    if marker not in media.derivative_url or not media.derivative_url.startswith(
+        "https://res.cloudinary.com/"
     ):
         return None
     prefix, path = media.derivative_url.split(marker, 1)
