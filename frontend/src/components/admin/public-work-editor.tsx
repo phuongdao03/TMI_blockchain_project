@@ -440,9 +440,7 @@ export function PublicWorkEditor() {
                     }
                     selectedThumbnail={selectedThumbnail}
                     sourceError={mediaCandidates.error ?? media.error}
-                    sourceLoading={
-                      mediaCandidates.isPending || media.isPending
-                    }
+                    sourceLoading={mediaCandidates.isPending || media.isPending}
                     workId={selectedId}
                   />
                   <EditorField
@@ -892,39 +890,37 @@ function Gallery({
           </p>
           <ul className="mt-3 space-y-2">
             {availableCandidates.map((candidate) => (
-                <li
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-2"
-                  key={candidate.mediaAssetId}
-                >
-                  <span className="min-w-0 flex-1 text-sm">
-                    <strong className="block truncate">
-                      {candidate.title}
-                    </strong>
-                    <span className="mt-1 block text-xs text-neutral-500">
-                      {candidate.filename} · {formatBytes(candidate.bytes)} ·{" "}
-                      {candidate.mimeType}
-                    </span>
-                    <span
-                      className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[0.68rem] font-bold ${candidate.accessScope === "PUBLIC" || candidate.accessScope === "PUBLIC_PREVIEW" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}
-                    >
-                      {candidate.accessScope === "PUBLIC" ||
-                      candidate.accessScope === "PUBLIC_PREVIEW"
-                        ? "Được phép xem trước"
-                        : "Tài liệu riêng tư"}
-                    </span>
+              <li
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-2"
+                key={candidate.mediaAssetId}
+              >
+                <span className="min-w-0 flex-1 text-sm">
+                  <strong className="block truncate">{candidate.title}</strong>
+                  <span className="mt-1 block text-xs text-neutral-500">
+                    {candidate.filename} · {formatBytes(candidate.bytes)} ·{" "}
+                    {candidate.mimeType}
                   </span>
-                  <Button
-                    disabled={attachingId !== null}
-                    onClick={() => void attachCandidate(candidate)}
-                    type="button"
-                    variant="outline"
+                  <span
+                    className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[0.68rem] font-bold ${candidate.accessScope === "PUBLIC" || candidate.accessScope === "PUBLIC_PREVIEW" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}
                   >
-                    {attachingId === candidate.mediaAssetId
-                      ? "Đang chọn…"
-                      : "Chọn để công bố"}
-                  </Button>
-                </li>
-              ))}
+                    {candidate.accessScope === "PUBLIC" ||
+                    candidate.accessScope === "PUBLIC_PREVIEW"
+                      ? "Được phép xem trước"
+                      : "Tài liệu riêng tư"}
+                  </span>
+                </span>
+                <Button
+                  disabled={attachingId !== null}
+                  onClick={() => void attachCandidate(candidate)}
+                  type="button"
+                  variant="outline"
+                >
+                  {attachingId === candidate.mediaAssetId
+                    ? "Đang chọn…"
+                    : "Chọn để công bố"}
+                </Button>
+              </li>
+            ))}
           </ul>
         </div>
       ) : items.length === 0 ? (
@@ -954,68 +950,68 @@ function Gallery({
           </h4>
           <ul className="mt-2 divide-y divide-neutral-200">
             {items.map((item, index) => (
-          <li className="py-3" key={item.id}>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-lg bg-neutral-100 text-xs font-bold text-neutral-600">
-                {item.mediaKind.slice(0, 3)}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-bold">
-                  {item.caption || item.altText || `Media ${index + 1}`}
-                </span>
-                <span className="text-xs text-neutral-500">
-                  {item.derivativeStatus}
-                </span>
-              </span>
-              {item.mediaKind === "IMAGE" || item.mediaKind === "VIDEO" ? (
-                <button
-                  className={`rounded-lg px-2 py-1 text-xs font-bold ${selectedThumbnail === item.mediaAssetId ? "bg-primary-50 text-primary-700" : "text-neutral-600"}`}
-                  onClick={() => onThumbnail(item.mediaAssetId)}
-                  type="button"
-                >
-                  {selectedThumbnail === item.mediaAssetId
-                    ? "Đang làm bìa"
-                    : item.mediaKind === "VIDEO"
-                      ? "Dùng khung video làm bìa"
-                      : "Đặt ảnh bìa"}
-                </button>
-              ) : null}
-              <button
-                aria-label="Di chuyển lên"
-                disabled={index === 0}
-                onClick={() => void reorder(index, -1)}
-                type="button"
-              >
-                <ArrowUp className="size-4" />
-              </button>
-              <button
-                aria-label="Di chuyển xuống"
-                disabled={index === items.length - 1}
-                onClick={() => void reorder(index, 1)}
-                type="button"
-              >
-                <ArrowDown className="size-4" />
-              </button>
-              <button
-                aria-label="Xóa hình ảnh hoặc video"
-                className="text-red-700"
-                onClick={() => void remove(item.id)}
-                type="button"
-              >
-                <Trash2 className="size-4" />
-              </button>
-            </div>
-            {item.mediaKind === "VIDEO" ? (
-              <VideoPresentationSettings
-                images={items.filter(
-                  (candidate) => candidate.mediaKind === "IMAGE",
-                )}
-                item={item}
-                onChanged={onChanged}
-                workId={workId}
-              />
-            ) : null}
-          </li>
+              <li className="py-3" key={item.id}>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="grid size-10 place-items-center rounded-lg bg-neutral-100 text-xs font-bold text-neutral-600">
+                    {item.mediaKind.slice(0, 3)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold">
+                      {item.caption || item.altText || `Media ${index + 1}`}
+                    </span>
+                    <span className="text-xs text-neutral-500">
+                      {item.derivativeStatus}
+                    </span>
+                  </span>
+                  {item.mediaKind === "IMAGE" || item.mediaKind === "VIDEO" ? (
+                    <button
+                      className={`rounded-lg px-2 py-1 text-xs font-bold ${selectedThumbnail === item.mediaAssetId ? "bg-primary-50 text-primary-700" : "text-neutral-600"}`}
+                      onClick={() => onThumbnail(item.mediaAssetId)}
+                      type="button"
+                    >
+                      {selectedThumbnail === item.mediaAssetId
+                        ? "Đang làm bìa"
+                        : item.mediaKind === "VIDEO"
+                          ? "Dùng khung video làm bìa"
+                          : "Đặt ảnh bìa"}
+                    </button>
+                  ) : null}
+                  <button
+                    aria-label="Di chuyển lên"
+                    disabled={index === 0}
+                    onClick={() => void reorder(index, -1)}
+                    type="button"
+                  >
+                    <ArrowUp className="size-4" />
+                  </button>
+                  <button
+                    aria-label="Di chuyển xuống"
+                    disabled={index === items.length - 1}
+                    onClick={() => void reorder(index, 1)}
+                    type="button"
+                  >
+                    <ArrowDown className="size-4" />
+                  </button>
+                  <button
+                    aria-label="Xóa hình ảnh hoặc video"
+                    className="text-red-700"
+                    onClick={() => void remove(item.id)}
+                    type="button"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+                {item.mediaKind === "VIDEO" ? (
+                  <VideoPresentationSettings
+                    images={items.filter(
+                      (candidate) => candidate.mediaKind === "IMAGE",
+                    )}
+                    item={item}
+                    onChanged={onChanged}
+                    workId={workId}
+                  />
+                ) : null}
+              </li>
             ))}
           </ul>
         </div>

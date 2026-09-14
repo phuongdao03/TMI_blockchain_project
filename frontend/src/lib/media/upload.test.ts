@@ -258,10 +258,11 @@ describe("uploadMedia", () => {
     await uploadMedia(file, "DOSSIER_EVIDENCE");
 
     expect(FakeXMLHttpRequest.instances).toHaveLength(6);
-    const ranges = FakeXMLHttpRequest.instances.map((request) =>
-      request.setRequestHeader.mock.calls.find(
-        ([name]) => name === "Content-Range",
-      )?.[1],
+    const ranges = FakeXMLHttpRequest.instances.map(
+      (request) =>
+        request.setRequestHeader.mock.calls.find(
+          ([name]) => name === "Content-Range",
+        )?.[1],
     );
     expect(ranges).toEqual([
       "bytes 0-20971519/125829120",
