@@ -24,8 +24,10 @@ who need to add several files over multiple selections.
 
 ## Constraints
 
-- The configured size limit remains a per-file limit (currently 100 MB for
+- The configured size limit remains a per-file limit (currently 300 MB for
   dossier evidence).
+- Files larger than 100 MB use sequential 20 MB upload chunks with one stable
+  upload identifier and aggregate progress.
 - Existing MIME allowlists, signed-upload flow, malware inspection,
   authenticated delivery, and dossier attachment rules remain unchanged.
 - The uploader remains reusable for avatars and public work media; multi-file

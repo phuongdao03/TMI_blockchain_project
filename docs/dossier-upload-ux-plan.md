@@ -4,7 +4,7 @@
 
 - Add failing tests for local phone normalization at frontend and API
   boundaries.
-- Add failing tests for the 100 MB evidence policy and production request
+- Add failing tests for the 300 MB evidence policy and chunked browser upload
   boundary.
 - Implement normalization and aligned limits without weakening file validation.
 
@@ -17,15 +17,15 @@
 
 ## Phase 3: Persisted policy and verification
 
-- Add a reversible migration updating video-capable document rules to 100 MB.
+- Add a reversible migration updating video-capable document rules to 300 MB.
 - Run focused tests, formatting, types and production configuration tests.
 - Record the final operational environment changes in the handoff.
 
 ## Risks
 
-- Provider plan may impose a lower video ceiling: keep the limit at 100 MB and
-  surface provider errors.
+- Provider plan may impose a lower video ceiling: surface a provider-neutral
+  error and document that the storage account must permit 300 MB assets.
 - Existing document rules live in JSON: update only video-capable rules and
   provide downgrade logic.
-- Larger inspection work can take longer: keep existing bounded polling and
+- Larger inspection work can take longer: extend bounded polling while keeping
   scanner controls.

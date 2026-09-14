@@ -86,9 +86,9 @@ function sizedFile(name: string, type: string, size: number) {
 }
 
 describe("media upload policy", () => {
-  it("allows dossier video evidence up to 100 MB", () => {
-    expect(mediaPolicies.DOSSIER_EVIDENCE.maxBytes).toBe(104_857_600);
-    expect(mediaPolicies.DOSSIER_EVIDENCE.maxMegabytes).toBe(100);
+  it("allows dossier video evidence up to 300 MB", () => {
+    expect(mediaPolicies.DOSSIER_EVIDENCE.maxBytes).toBe(314_572_800);
+    expect(mediaPolicies.DOSSIER_EVIDENCE.maxMegabytes).toBe(300);
   });
 
   it("rejects disallowed MIME, excessive size and mismatched extension", () => {
@@ -241,6 +241,43 @@ describe("uploadMedia", () => {
     ).not.toHaveBeenCalled();
     const body = FakeXMLHttpRequest.instances[0]?.sent.mock.calls[0]?.[0];
     expect((body as FormData).get("file")).toBe(file);
+  });
+
+  it("uploads videos larger than 100 MB in sequential 20 MB chunks", async () => {
+    vi.spyOn(mediaApi, "createUploadSignature").mockResolvedValue({
+      ...authorization,
+      uploadUrl: "https://api.cloudinary.test/v1_1/demo/video/upload",
+    });
+    vi.spyOn(mediaApi, "completeUpload").mockResolvedValue(activeAsset);
+    const file = sizedFile(
+      "large-evidence.mp4",
+      "video/mp4",
+      120 * 1024 * 1024,
+    );
+
+    await uploadMedia(file, "DOSSIER_EVIDENCE");
+
+    expect(FakeXMLHttpRequest.instances).toHaveLength(6);
+    const ranges = FakeXMLHttpRequest.instances.map((request) =>
+      request.setRequestHeader.mock.calls.find(
+        ([name]) => name === "Content-Range",
+      )?.[1],
+    );
+    expect(ranges).toEqual([
+      "bytes 0-20971519/125829120",
+      "bytes 20971520-41943039/125829120",
+      "bytes 41943040-62914559/125829120",
+      "bytes 62914560-83886079/125829120",
+      "bytes 83886080-104857599/125829120",
+      "bytes 104857600-125829119/125829120",
+    ]);
+    const uploadIds = FakeXMLHttpRequest.instances.map(
+      (request) =>
+        request.setRequestHeader.mock.calls.find(
+          ([name]) => name === "X-Unique-Upload-Id",
+        )?.[1],
+    );
+    expect(new Set(uploadIds).size).toBe(1);
   });
 
   it("keeps waiting for large video inspection beyond the former one-minute limit", async () => {

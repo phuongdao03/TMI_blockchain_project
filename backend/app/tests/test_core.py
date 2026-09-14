@@ -51,6 +51,16 @@ def build_app(
     return create_application(settings=resolved_settings, health_service=service)
 
 
+def test_default_evidence_upload_limit_supports_large_videos(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("MEDIA_EVIDENCE_MAX_BYTES", raising=False)
+
+    settings = Settings(_env_file=None)
+
+    assert settings.media_evidence_max_bytes == 300 * 1024 * 1024
+
+
 def test_settings_accept_legacy_media_key_map_from_env_file(tmp_path: Path) -> None:
     env_file = tmp_path / ".env"
     env_file.write_text(

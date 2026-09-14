@@ -39,7 +39,7 @@ describe("FileUploader", () => {
       />,
     );
 
-    expect(screen.getByText(/Mỗi tệp tối đa 100 MB/)).toBeDefined();
+    expect(screen.getByText(/Mỗi tệp tối đa 300 MB/)).toBeDefined();
     expect(screen.getByText(/kiểm tra an toàn/)).toBeDefined();
     expect(screen.getByRole("button", { name: "Thêm tệp" })).toBeDefined();
   });

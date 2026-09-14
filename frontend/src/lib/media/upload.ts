@@ -25,9 +25,12 @@ export interface MediaFileConstraints {
 }
 
 const DEFAULT_INSPECTION_POLL_INTERVAL_MS = 1_500;
+const MAX_SINGLE_UPLOAD_BYTES = 100 * 1024 * 1024;
+const UPLOAD_CHUNK_BYTES = 20 * 1024 * 1024;
 // Large private files are downloaded, scanned, encrypted and uploaded in parts.
-// Keep polling for up to ten minutes instead of reporting a false upload failure.
-const MAX_INSPECTION_POLLS = 400;
+// Keep polling for up to twenty minutes instead of reporting a false failure
+// while a large video is downloaded, scanned and encrypted.
+const MAX_INSPECTION_POLLS = 800;
 
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
@@ -77,8 +80,8 @@ export const mediaPolicies: Record<MediaPurpose, MediaPolicy> = {
   DOSSIER_EVIDENCE: {
     accept:
       "image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/x-wav,video/mp4,video/webm,application/msword,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip",
-    maxBytes: 104_857_600,
-    maxMegabytes: 100,
+    maxBytes: 314_572_800,
+    maxMegabytes: 300,
     formats: {
       "application/pdf": [".pdf"],
       "application/msword": [".doc"],
@@ -184,14 +187,20 @@ function rejectedUploadMessage(status: number, response: unknown): string {
 }
 
 function sendUploadRequest(
-  file: File,
+  payload: Blob,
+  filename: string,
   authorization: MediaUploadAuthorization,
   onProgress?: (progress: number) => void,
+  headers: Readonly<Record<string, string>> = {},
 ): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const form = new FormData();
-    form.append("file", file);
+    if (payload instanceof File) {
+      form.append("file", payload);
+    } else {
+      form.append("file", payload, filename);
+    }
     form.append("api_key", authorization.apiKey);
     form.append("signature", authorization.signature);
     for (const [name, value] of Object.entries(authorization.parameters)) {
@@ -224,8 +233,49 @@ function sendUploadRequest(
     xhr.responseType = "json";
     xhr.timeout = 600_000;
     xhr.open("POST", authorization.uploadUrl, true);
+    for (const [name, value] of Object.entries(headers)) {
+      xhr.setRequestHeader(name, value);
+    }
     xhr.send(form);
   });
+}
+
+function createUploadId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join(
+    "",
+  );
+}
+
+async function sendChunkedUpload(
+  file: File,
+  authorization: MediaUploadAuthorization,
+  onProgress?: (progress: number) => void,
+): Promise<unknown> {
+  const uploadId = createUploadId();
+  let response: unknown;
+  for (let start = 0; start < file.size; start += UPLOAD_CHUNK_BYTES) {
+    const endExclusive = Math.min(start + UPLOAD_CHUNK_BYTES, file.size);
+    const chunk = file.slice(start, endExclusive, file.type);
+    response = await sendUploadRequest(
+      chunk,
+      file.name,
+      authorization,
+      (chunkProgress) => {
+        const uploadedBytes =
+          start + ((endExclusive - start) * chunkProgress) / 100;
+        onProgress?.(
+          Math.min(100, Math.round((uploadedBytes / file.size) * 100)),
+        );
+      },
+      {
+        "Content-Range": `bytes ${start}-${endExclusive - 1}/${file.size}`,
+        "X-Unique-Upload-Id": uploadId,
+      },
+    );
+    onProgress?.(Math.round((endExclusive / file.size) * 100));
+  }
+  return response;
 }
 
 async function uploadToCloudinary(
@@ -233,7 +283,10 @@ async function uploadToCloudinary(
   authorization: MediaUploadAuthorization,
   onProgress?: (progress: number) => void,
 ): Promise<z.infer<typeof cloudinaryResponseSchema>> {
-  const response = await sendUploadRequest(file, authorization, onProgress);
+  const response =
+    file.size > MAX_SINGLE_UPLOAD_BYTES
+      ? await sendChunkedUpload(file, authorization, onProgress)
+      : await sendUploadRequest(file, file.name, authorization, onProgress);
 
   const result = cloudinaryResponseSchema.safeParse(response);
   if (!result.success) {
