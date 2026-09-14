@@ -292,7 +292,7 @@ def test_public_work_repository_and_draft_backfill_are_safe(tmp_path: Path) -> N
             assert incomplete_media[0].media_asset_id == incomplete_video_id
             source_candidates = await PublicMediaRepository(
                 session
-            ).list_current_evidence_assets(eligible_dossier_id)
+            ).list_source_evidence_assets(work)
             assert tuple(asset.id for _, asset in source_candidates) == (
                 public_video_id,
                 private_document_id,

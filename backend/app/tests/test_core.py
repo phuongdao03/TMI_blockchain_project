@@ -56,7 +56,7 @@ def test_default_evidence_upload_limit_supports_large_videos(
 ) -> None:
     monkeypatch.delenv("MEDIA_EVIDENCE_MAX_BYTES", raising=False)
 
-    settings = Settings(_env_file=None)
+    settings = Settings(_env_file=None)  # type: ignore[call-arg]
 
     assert settings.media_evidence_max_bytes == 300 * 1024 * 1024
 
