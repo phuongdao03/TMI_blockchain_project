@@ -1,69 +1,32 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import UserGuidePage from "@/app/(public)/guide/page";
 
 describe("UserGuidePage", () => {
-  it("helps visitors choose the correct journey and complete core tasks", () => {
+  it("documents the current public and applicant journeys in plain language", () => {
     render(<UserGuidePage />);
-
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: "Hướng dẫn sử dụng Đề cử Tinh Hoa Việt",
-      }),
-    ).toBeDefined();
-
-    const journeys = screen.getByLabelText("Chọn hướng dẫn phù hợp");
-    expect(within(journeys).getByText(/dành cho người xem/i)).toBeDefined();
-    expect(
-      within(journeys).getByText(/dành cho người gửi hồ sơ/i),
-    ).toBeDefined();
-    expect(within(journeys).queryByText(/dành cho nhân sự/i)).toBeNull();
-
+    expect(screen.getByRole("heading", { level: 1, name: "Hướng dẫn sử dụng Đề cử Tinh Hoa Việt" })).toBeDefined();
     for (const heading of [
-      "Khám phá tác phẩm",
+      "Về Tổ chức Đề cử và Xác lập Tinh Hoa Việt",
+      "Khám phá đề cử",
       "Tạo tài khoản và đăng nhập",
-      "Tạo và gửi hồ sơ",
-      "Theo dõi hồ sơ và thông báo",
-      "Thanh toán hồ sơ",
-      "Kết nối ví và ghi nhận hồ sơ",
-      "Tra cứu chứng thư và mã QR",
-      "Bảo vệ tài khoản và dữ liệu",
-      "Khi bạn cần hỗ trợ",
-    ]) {
-      expect(screen.getByRole("heading", { name: heading })).toBeDefined();
-    }
+      "Tạo và gửi hồ sơ đề cử",
+      "Theo dõi hồ sơ, bổ sung và lệ phí",
+      "Tra cứu chứng thư, QR và lưu trữ blockchain",
+      "Cài ứng dụng trên thiết bị",
+      "Bảo vệ tài khoản và nhận hỗ trợ",
+    ]) expect(screen.getByRole("heading", { name: heading })).toBeDefined();
 
-    expect(screen.getByText(/không lưu tệp gốc.*blockchain/i)).toBeDefined();
-    expect(
-      screen.getByText(/số tiền chính xác.*trước khi thanh toán/i),
-    ).toBeDefined();
-    expect(
-      screen.getByText(/MetaMask, Rabby, Coinbase hoặc WalletConnect/i),
-    ).toBeDefined();
-    expect(
-      screen.queryByText(/VERIFIER_ROLE|window\.ethereum|checksum|webhook/i),
-    ).toBeNull();
-    expect(screen.getByText(/không bao giờ yêu cầu.*khóa ví/i)).toBeDefined();
-    expect(screen.queryByText(/không nhận được email xác minh/i)).toBeNull();
-    expect(
-      screen.getByText(
-        /thông báo nghiệp vụ chỉ hiển thị trong tài khoản trên website/i,
-      ),
-    ).toBeDefined();
-    expect(
-      screen.getByText(/quên mật khẩu hoặc chưa nhận được email đặt lại/i),
-    ).toBeDefined();
-    expect(
-      screen
-        .getByRole("link", { name: "Mở thư viện đề cử" })
-        .getAttribute("href"),
-    ).toBe("/works");
-    expect(
-      screen
-        .getAllByRole("link", { name: "Tra cứu chứng thư" })
-        .some((link) => link.getAttribute("href") === "/verify"),
-    ).toBe(true);
+    expect(screen.getByText(/không lưu.*tệp gốc.*tài liệu cá nhân/i)).toBeDefined();
+    expect(screen.getByText(/tìm kiếm, ghi nhận và lan tỏa những giá trị tiêu biểu/i)).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Chứng thư mang lại điều gì?" })).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Thông tin nào được công khai?" })).toBeDefined();
+    expect(screen.getByText(/không thanh toán lần hai/i)).toBeDefined();
+    expect(screen.queryByText(/PayOS|Chrome|Edge|Safari|Google Play|App Store/i)).toBeNull();
+    expect(screen.queryByText(/VERIFIER_ROLE|window\.ethereum|checksum|webhook/i)).toBeNull();
+    expect(screen.getByRole("link", { name: "Mở thư viện đề cử" }).getAttribute("href")).toBe("/works");
+    expect(screen.getByRole("link", { name: "Tra cứu chứng thư" }).getAttribute("href")).toBe("/verify");
+    expect(screen.getByRole("link", { name: "Xem hướng dẫn cài đặt" }).getAttribute("href")).toBe("/install");
   });
 });

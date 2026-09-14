@@ -769,7 +769,7 @@ class PublicWorkRepository:
                         PublicWork.deleted_at.is_(None),
                         Category.is_active.is_(True),
                     )
-                    .order_by(PublicWork.slug, PublicWork.id)
+                    .order_by(PublicWork.id)
                     .offset(offset)
                     .limit(limit)
                 )
@@ -784,6 +784,23 @@ class PublicWorkRepository:
         return bool(await self._session.scalar(select(current | historical)))
 
     async def resolve_slug(self, slug: str) -> tuple[PublicWork, bool] | None:
+        try:
+            work_id = UUID(slug)
+        except ValueError:
+            work_id = None
+        if work_id is not None:
+            current_by_id = cast(
+                PublicWork | None,
+                await self._session.scalar(
+                    select(PublicWork).where(
+                        PublicWork.id == work_id,
+                        PublicWork.deleted_at.is_(None),
+                    )
+                ),
+            )
+            if current_by_id is not None:
+                return current_by_id, False
+
         current = cast(
             PublicWork | None,
             await self._session.scalar(
@@ -794,7 +811,7 @@ class PublicWorkRepository:
             ),
         )
         if current is not None:
-            return current, False
+            return current, True
         historical = await self._session.execute(
             select(PublicWork)
             .join(

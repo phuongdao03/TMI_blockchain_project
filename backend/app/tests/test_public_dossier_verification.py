@@ -325,13 +325,15 @@ def test_public_dossier_verification_projects_only_safe_frozen_documents(
             assert historical.category_name == "Thương hiệu phiên bản 1"
             assert historical.dossier_code == "THV-2026-PUBLIC01"
 
-            # A public verification token/number must stop resolving as soon as
-            # the dossier is no longer public, even though its certificate exists.
+            # Certificate verification is independent from gallery visibility;
+            # only immutable, allowlisted certificate metadata is returned.
             stored_dossier.visibility = DossierVisibility.PRIVATE
             await session.commit()
-            assert (
-                await PublicRepository(session).find_by_number("THV-2026-CERT01")
-            ) is None
+            private_certificate = await PublicRepository(session).find_by_number(
+                "THV-2026-CERT01"
+            )
+            assert private_certificate is not None
+            assert private_certificate.certificate_id == certificate_id
 
         await engine.dispose()
 

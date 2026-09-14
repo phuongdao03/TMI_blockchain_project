@@ -7,6 +7,7 @@ import type { RefObject } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import type { AuthUser } from "@/lib/api/types";
 
 const pageTitles: Record<string, string> = {
@@ -83,6 +84,7 @@ export function DashboardContextHeader({
             strokeWidth={1.75}
           />
         </button>
+        <PwaInstallButton />
         {user?.email ? (
           <span className="hidden max-w-52 truncate text-sm text-[var(--theme-muted)] md:block">
             {user.email}

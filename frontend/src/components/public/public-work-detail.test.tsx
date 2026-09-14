@@ -166,14 +166,10 @@ describe("PublicWorkDetailPage", () => {
     expect(video?.muted).toBe(true);
     expect(video?.poster).toContain("poster.webp");
     expect(video?.getAttribute("controlslist")).toContain("nodownload");
-    expect(video?.preload).toBe("metadata");
+    expect(video?.preload).toBe("none");
     expect(video?.playsInline).toBe(true);
     expect(video?.getAttribute("src")).toBeNull();
-    const sources = video?.querySelectorAll("source");
-    expect(sources?.[0]?.getAttribute("type")).toBe(
-      "application/vnd.apple.mpegurl",
-    );
-    expect(sources?.[1]?.getAttribute("src")).toContain("welcome.mp4");
+    expect(video?.querySelectorAll("source")).toHaveLength(0);
     expect(screen.getByText("Video chào mừng Tinh hoa Việt")).toBeDefined();
   });
 
@@ -183,7 +179,19 @@ describe("PublicWorkDetailPage", () => {
     });
     expect(await screen.findByText("Chưa thể đối chiếu lúc này")).toBeTruthy();
     expect(screen.getByText(detail.proof!.transactionHash!)).toBeTruthy();
-    expect(screen.getByText("Trạng thái xác nhận")).toBeTruthy();
+    expect(screen.getByText("Trạng thái chứng thư")).toBeTruthy();
+  });
+
+  it("links a published nomination to its public certificate", () => {
+    render(<PublicWorkDetailPage initialDetail={detail} slug={detail.slug} />, {
+      wrapper,
+    });
+
+    expect(
+      screen
+        .getByRole("link", { name: "Xem và kiểm tra chứng thư" })
+        .getAttribute("href"),
+    ).toBe(`/verify/${encodeURIComponent(detail.certificate!.certificateNumber)}`);
   });
 
   it("renders long untrusted-looking content as plain text", () => {

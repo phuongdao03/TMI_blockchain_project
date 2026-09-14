@@ -168,7 +168,7 @@ class PublicCatalogQueryService:
             views.append(
                 PublicWorkCardView(
                     id=row.work.id,
-                    slug=row.work.slug,
+                    slug=str(row.work.id),
                     title=row.work.title,
                     short_description=row.work.short_description,
                     author_display_name=row.work.author_display_name,

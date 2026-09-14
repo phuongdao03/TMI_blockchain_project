@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation";
 import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { resolvePublicHeaderAction } from "@/lib/auth/role-workspaces";
 import { useAuthUser } from "@/lib/auth/user-context";
@@ -26,7 +27,7 @@ const publicLinks = [
   { href: "/", label: "Trang chủ" },
   { href: "/works", label: "Đề cử" },
   { href: "/process", label: "Quy trình" },
-  { href: "/verify", label: "Minh bạch" },
+  { href: "/verify", label: "Tra cứu chứng thư" },
   { href: "/guide", label: "Hướng dẫn" },
 ];
 
@@ -105,6 +106,7 @@ export function PublicShell({
           ))}
         </nav>
         <div className="public-header__actions">
+          <PwaInstallButton />
           <ThemeToggle />
           {publicHeaderAction ? (
             <Link

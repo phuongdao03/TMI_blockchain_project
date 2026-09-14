@@ -97,7 +97,7 @@ class FavoriteRepository:
                 FavoriteListRow(
                     favorite_id=favorite.id,
                     public_work_id=work.id,
-                    slug=work.slug,
+                    slug=str(work.id),
                     title=work.title,
                     short_description=work.short_description,
                     created_at=favorite.created_at,

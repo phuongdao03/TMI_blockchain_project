@@ -56,7 +56,7 @@ class ShareLinkRepository:
         if pair is None:
             return None
         link, work = pair
-        return ResolvedShareLink(link.id, work.id, work.slug)
+        return ResolvedShareLink(link.id, work.id, str(work.id))
 
     async def revoke_active_for_work(
         self,

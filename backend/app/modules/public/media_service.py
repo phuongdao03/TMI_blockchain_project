@@ -176,9 +176,9 @@ class PublicMediaQueryService:
                     _cloudinary_video_variant(
                         row.derivative_url,
                         transformation=(
-                            "sp_auto:maxres_1080"
+                            "sp_auto:maxres_1080p"
                             if row.video_max_width == 1920
-                            else "sp_auto:maxres_720"
+                            else "sp_auto:maxres_720p"
                         ),
                         extension="m3u8",
                     )
@@ -526,6 +526,12 @@ class PublicMediaWorker:
             height = asset.height
             video_quality_profile = relation.video_quality_profile
             video_max_width = relation.video_max_width
+            work = await self._repository.get_work(relation.public_work_id)
+            source_version_no = (
+                await self._repository.source_version_number(work)
+                if work is not None
+                else None
+            )
         if media_kind not in {PublicMediaKind.IMAGE, PublicMediaKind.VIDEO}:
             async with self._session.begin():
                 current = await self._repository.get_relation(
@@ -543,8 +549,9 @@ class PublicMediaWorker:
             await self._mark_failed(relation_id, "UNSUPPORTED_MIME")
             raise PublicMediaValidationError("Public media MIME type is unsupported.")
         derivative_public_id = (
-            f"tmi/{self._environment}/public/works/{relation.public_work_id}/"
-            f"media/{relation_id}"
+            f"tmi/{self._environment}/dossiers/"
+            f"{work.dossier_id if work is not None else relation.public_work_id}/"
+            f"versions/{source_version_no or 'unknown'}/public/{relation_id}"
         )
         try:
             derivative = await self._gateway.create_public_derivative(

@@ -75,7 +75,7 @@ describe("VerificationPanel", () => {
       explorerUrl: "https://polygonscan.com/tx/0xabcd",
       metadataHash: "ab".repeat(32),
       blockNumber: 123,
-      issuerLabel: "TMI Certificate",
+      issuerLabel: "Tổ chức Đề cử và xác lập Tinh Hoa Việt",
       documents: [
         {
           title: "Hồ sơ công khai",
@@ -93,7 +93,7 @@ describe("VerificationPanel", () => {
         blockNumber: 123,
         confirmedAt: "2026-08-11T08:00:00Z",
         createdAt: "2026-08-10T08:00:00Z",
-        issuerLabel: "TMI Certificate",
+        issuerLabel: "Tổ chức Đề cử và xác lập Tinh Hoa Việt",
         documents: [],
       },
     ]);
@@ -106,7 +106,7 @@ describe("VerificationPanel", () => {
       ),
     ).toBeDefined();
     expect(await screen.findByText("Lịch sử xác nhận")).toBeDefined();
-    expect(screen.getByText("Bộ nhận diện TMI")).toBeDefined();
+    expect(screen.getAllByText("Bộ nhận diện TMI")).toHaveLength(2);
     expect(screen.getByText("Polygon (sổ ghi nhận công khai)")).toBeDefined();
     expect(screen.getByText("32 lượt xác nhận từ mạng")).toBeDefined();
     expect(screen.queryByText(/database|role|schema|endpoint/i)).toBeNull();

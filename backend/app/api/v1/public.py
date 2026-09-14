@@ -72,6 +72,7 @@ from app.modules.public.schemas import (
     TaxonomyTagData,
     VerificationData,
 )
+from app.modules.public.share_service import QrCodePngRenderer
 
 router = APIRouter(
     prefix="/api/v1",
@@ -579,6 +580,35 @@ async def verify_certificate(
     return await _verification_response(
         request,
         await service.verify_number(number),
+    )
+
+
+@router.get(
+    "/verify/certificate/{number}/qr",
+    response_class=Response,
+    responses={
+        200: {"content": {"image/png": {}}, "description": "Certificate QR."},
+        **PUBLIC_RESPONSES,
+    },
+)
+async def public_certificate_qr(
+    number: CertificateNumberPath,
+    request: Request,
+    service: PublicCatalogDependency,
+) -> Response:
+    versions = await service.certificate_versions(number)
+    if not versions:
+        raise HTTPException(status_code=404, detail="Certificate was not found.")
+    payload = f"{str(request.base_url).rstrip('/')}/verify/{number}"
+    return Response(
+        content=QrCodePngRenderer().render(payload),
+        media_type="image/png",
+        headers={
+            "Cache-Control": "public, max-age=86400, immutable",
+            "Content-Disposition": 'inline; filename="certificate-qr.png"',
+            "Content-Location": payload,
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

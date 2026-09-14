@@ -125,7 +125,7 @@ class PublicWorkDetailService:
         related_works = tuple(
             PublicWorkCardView(
                 id=related.work.id,
-                slug=related.work.slug,
+                slug=str(related.work.id),
                 title=related.work.title,
                 short_description=related.work.short_description,
                 author_display_name=related.work.author_display_name,
@@ -150,7 +150,7 @@ class PublicWorkDetailService:
         media = await self._media.list_public(row.work.id)
         detail = PublicWorkDetailView(
             id=row.work.id,
-            slug=row.work.slug,
+            slug=str(row.work.id),
             title=row.work.title,
             short_description=row.work.short_description,
             full_description=row.work.full_description,
@@ -167,7 +167,7 @@ class PublicWorkDetailService:
             proof=proof,
             media=media,
             related_works=related_works,
-            canonical_slug=row.work.slug,
+            canonical_slug=str(row.work.id),
             redirected=redirected,
         )
         if self._cache is not None:

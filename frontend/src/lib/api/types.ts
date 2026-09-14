@@ -1094,6 +1094,10 @@ export interface Verification {
   metadataHash?: string | null;
   blockNumber?: number | null;
   issuerLabel?: string | null;
+  signerWalletAddress?: string | null;
+  eventName?: string | null;
+  networkAvailable?: boolean | null;
+  recognizedSubject?: string | null;
   documents?: PublicEvidenceProof[];
 }
 

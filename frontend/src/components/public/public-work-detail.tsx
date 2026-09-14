@@ -19,6 +19,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { AdaptiveVideo } from "@/components/public/adaptive-video";
 import { PublicWorkCard } from "@/components/public/public-work-card";
 import { PublicWorkShareControls } from "@/components/public/public-work-share-controls";
 import { Button } from "@/components/ui/button";
@@ -201,7 +202,7 @@ function PublicWorkPresentation({ detail }: { detail: PublicWorkDetail }) {
             </section>
             <PublicWorkShareControls detail={detail} />
           </div>
-          <aside className="space-y-4">
+          <aside className="h-fit divide-y divide-white/10 border-y border-white/10">
             <CertificatePanel certificate={detail.certificate} />
             <ProofPanel
               proof={detail.proof}
@@ -282,7 +283,7 @@ function PublicGallery({
           />
         ) : null}
         {selected.kind === "VIDEO" && selected.url ? (
-          <video
+          <AdaptiveVideo
             autoPlay={selected.autoplay}
             className={`max-h-[42rem] w-full ${selected.fitMode === "COVER" ? "object-cover" : "object-contain"}`}
             controls={selected.controlsPreset !== "NONE"}
@@ -293,22 +294,10 @@ function PublicGallery({
             }
             loop={selected.loop}
             muted={selected.muted}
-            playsInline
             poster={selected.posterUrl ?? undefined}
-            preload="metadata"
-          >
-            {selected.streamingUrl ? (
-              <source
-                src={selected.streamingUrl}
-                type="application/vnd.apple.mpegurl"
-              />
-            ) : null}
-            <source
-              src={selected.url}
-              type={selected.mimeType ?? "video/mp4"}
-            />
-            <track kind="captions" />
-          </video>
+            streamingUrl={selected.streamingUrl}
+            fallbackUrl={selected.url}
+          />
         ) : null}
         {selected.kind === "AUDIO" && selected.url ? (
           <audio
@@ -369,24 +358,32 @@ function CertificatePanel({
   certificate: PublicWorkDetail["certificate"];
 }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+    <section className="py-6">
       <FileCheck2 className="size-7 text-gold-300" />
       <h2 className="mt-4 font-bold text-white">Chứng nhận công khai</h2>
       {certificate ? (
-        <dl className="mt-4 space-y-3 text-sm">
-          <DataRow
-            label="Số chứng nhận"
-            value={certificate.certificateNumber}
-            mono
-          />
-          <DataRow label="Trạng thái xác nhận" value={certificate.status} />
-          <DataRow
-            label="Ngày phát hành"
-            value={new Intl.DateTimeFormat("vi-VN").format(
-              new Date(certificate.issuedAt),
-            )}
-          />
-        </dl>
+        <>
+          <dl className="mt-4 space-y-3 text-sm">
+            <DataRow
+              label="Số chứng thư"
+              value={certificate.certificateNumber}
+              mono
+            />
+            <DataRow label="Trạng thái chứng thư" value={certificate.status} />
+            <DataRow
+              label="Ngày phát hành"
+              value={new Intl.DateTimeFormat("vi-VN").format(
+                new Date(certificate.issuedAt),
+              )}
+            />
+          </dl>
+          <Link
+            className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 text-sm font-bold text-white"
+            href={`/verify/${encodeURIComponent(certificate.certificateNumber)}`}
+          >
+            Xem và kiểm tra chứng thư <ExternalLink className="size-4" />
+          </Link>
+        </>
       ) : (
         <p className="mt-3 text-sm leading-6 text-slate-500">
           Chưa có chứng nhận được phép công bố.
@@ -407,7 +404,7 @@ function ProofPanel({
 }) {
   const state = verificationState(proof, verification, verificationPending);
   return (
-    <section className="rounded-2xl border border-white/10 bg-ink-900 p-5">
+    <section className="py-6">
       <div className="flex items-start justify-between gap-3">
         <Blocks className="size-7 text-gold-300" />
         {state.icon}

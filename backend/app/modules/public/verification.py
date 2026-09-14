@@ -124,6 +124,8 @@ class VerificationContext:
     confirmed_at: datetime | None
     dossier_code: str | None = None
     block_number: int | None = None
+    signer_wallet_address: str | None = None
+    recognized_subject: str | None = None
     is_current_version: bool = True
 
 
@@ -147,6 +149,10 @@ class VerificationView:
     metadata_hash: str | None = None
     block_number: int | None = None
     issuer_label: str | None = None
+    signer_wallet_address: str | None = None
+    event_name: str | None = None
+    network_available: bool | None = None
+    recognized_subject: str | None = None
     documents: tuple[PublicEvidenceProof, ...] = ()
 
 
@@ -265,6 +271,8 @@ class PublicVerificationService:
                 status=VerificationStatus.NOT_FOUND,
                 checked_at=now,
             )
+        signer_wallet_address = context.signer_wallet_address
+        network_available = True
         try:
             canonical_metadata = {
                 key: value
@@ -288,7 +296,9 @@ class PublicVerificationService:
                 record = await self._gateway.get_proof(asset_id, context.proof_version)
         except BlockchainGatewayError:
             status = VerificationStatus.PENDING
+            network_available = False
         else:
+            signer_wallet_address = record.signer or signer_wallet_address
             status = VerificationEvaluator.evaluate(
                 local_status=context.certificate_status,
                 local_dossier_hash=dossier_hash,
@@ -323,6 +333,10 @@ class PublicVerificationService:
             dossier_code=context.dossier_code,
             metadata_hash=context.metadata_hash,
             block_number=context.block_number,
-            issuer_label="TMI Certificate",
+            issuer_label="Tổ chức Đề cử và xác lập Tinh Hoa Việt",
+            signer_wallet_address=signer_wallet_address,
+            event_name="ProofRecorded",
+            network_available=network_available,
+            recognized_subject=context.recognized_subject,
             documents=public_evidence_proofs(context.metadata),
         )

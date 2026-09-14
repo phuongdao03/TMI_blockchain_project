@@ -96,6 +96,19 @@ class PublicMediaRepository:
             for _, asset in await self.list_source_evidence_assets(work)
         )
 
+    async def source_version_number(self, work: PublicWork) -> int | None:
+        version_id = await self._source_version_id(work)
+        if version_id is None:
+            return None
+        return cast(
+            int | None,
+            await self._session.scalar(
+                select(DossierVersion.version_no).where(
+                    DossierVersion.id == version_id,
+                )
+            ),
+        )
+
     async def _source_version_id(self, work: PublicWork) -> UUID | None:
         if work.certificate_id is not None:
             certified_version_id = await self._session.scalar(

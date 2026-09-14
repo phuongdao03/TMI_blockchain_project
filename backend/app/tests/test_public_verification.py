@@ -216,6 +216,8 @@ def test_verification_reports_not_found_and_temporary_chain_unavailability() -> 
         pending_result = await pending_service.verify_number("TMI-2026-7EAEC2D2C99A")
         assert missing_result.status is VerificationStatus.NOT_FOUND
         assert pending_result.status is VerificationStatus.PENDING
+        assert pending_result.network_available is False
+        assert pending_result.event_name == "ProofRecorded"
 
     asyncio.run(scenario())
 
@@ -353,6 +355,7 @@ def test_verification_recomputes_metadata_instead_of_trusting_stored_hash() -> N
         )
 
         result = await service.verify_number(context.certificate_number)
+        assert result.issuer_label == "Tổ chức Đề cử và xác lập Tinh Hoa Việt"
 
         assert result.status is VerificationStatus.MISMATCH
 

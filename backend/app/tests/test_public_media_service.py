@@ -339,9 +339,8 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert kwargs["source_resource_type"] == "video"
             assert kwargs["source_format"] == "mp4"
             assert kwargs["transformation"] == "c_limit,w_640,q_auto:eco,vc_auto"
-            assert str(kwargs["derivative_public_id"]).startswith(
-                "tmi/local/public/works/"
-            )
+            assert str(kwargs["derivative_public_id"]).startswith("tmi/local/dossiers/")
+            assert "/versions/1/public/" in str(kwargs["derivative_public_id"])
             return PublicDerivativeMetadata(
                 public_id="ip-certificate/public/derivatives/video-relation",
                 url=(
@@ -365,6 +364,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
         owner_id = uuid4()
         work_id = uuid4()
         relation_id = uuid4()
+        dossier_id = uuid4()
         async with factory() as session:
             async with session.begin():
                 session.add(
@@ -378,9 +378,26 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
                 category = Category(code="VIDEO", name="Video", slug="video")
                 session.add(category)
                 await session.flush()
+                dossier = Dossier(
+                    id=dossier_id,
+                    code="DOS-VIDEO-PUBLIC",
+                    owner_user_id=owner_id,
+                    category_id=category.id,
+                    title="Welcome video",
+                    summary="Approved public video",
+                    current_version_no=1,
+                    _status=DossierStatus.CERTIFICATE_ISSUED,
+                )
+                dossier_version = DossierVersion(
+                    dossier_id=dossier.id,
+                    version_no=1,
+                    snapshot_json={"dossier": {"title": dossier.title}},
+                    canonical_hash="9" * 64,
+                    submitted_by=owner_id,
+                )
                 work = PublicWork(
                     id=work_id,
-                    dossier_id=uuid4(),
+                    dossier_id=dossier.id,
                     owner_user_id=owner_id,
                     slug="welcome-video",
                     title="Welcome video",
@@ -398,7 +415,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
                     bytes=4096,
                     status=MediaStatus.ACTIVE,
                 )
-                session.add_all([work, video])
+                session.add_all([dossier, dossier_version, work, video])
                 await session.flush()
                 session.add(
                     PublicWorkMedia(
@@ -463,7 +480,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert public_video.muted is True
             assert public_video.streaming_url is not None
             assert public_video.streaming_url.endswith(".m3u8")
-            assert "/sp_auto:maxres_720/" in public_video.streaming_url
+            assert "/sp_auto:maxres_720p/" in public_video.streaming_url
             assert public_video.poster_url is not None
             assert public_video.poster_url.endswith(".webp")
         await engine.dispose()

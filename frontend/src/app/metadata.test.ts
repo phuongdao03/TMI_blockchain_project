@@ -6,6 +6,7 @@ describe("application metadata", () => {
   it("uses the approved THV emblem as the browser icon", () => {
     expect(metadata.icons).toEqual({
       icon: "/assets/brand/thv-brand-emblem.png",
+      apple: "/apple-touch-icon.png",
     });
   });
 });

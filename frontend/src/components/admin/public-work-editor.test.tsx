@@ -144,19 +144,33 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("PublicWorkEditor", () => {
+  it("opens a publication directly from its canonical admin route", async () => {
+    render(<PublicWorkEditor initialSelectedId={work.id} />, { wrapper });
+
+    expect(await screen.findByLabelText("Tiêu đề công khai")).toBeTruthy();
+    expect(publicWorkAdminApi.get).toHaveBeenCalledWith(work.id);
+    expect(screen.getAllByText(`/works/${work.id}`)).toHaveLength(2);
+  });
+
   it("reuses locked dossier fields and does not offer a second upload", async () => {
     const user = userEvent.setup();
     render(<PublicWorkEditor />, { wrapper });
-    await user.click(await screen.findByRole("button", { name: /ban-mau/ }));
+    await user.click(
+      await screen.findByRole("button", { name: /Bản mẫu công khai/ }),
+    );
 
     expect(
       await screen.findByText("Dữ liệu hồ sơ gốc · Phiên bản 1"),
     ).toBeTruthy();
     expect(screen.queryByTestId("media-uploader")).toBeNull();
-    expect(screen.getByText("/works/")).toBeTruthy();
+    expect(screen.getAllByText(`/works/${work.id}`)).toHaveLength(2);
+    expect(
+      screen.queryByRole("textbox", { name: "Đường dẫn công khai" }),
+    ).toBeNull();
     expect(screen.queryByText(/20 MB/)).toBeNull();
     expect(screen.getByText("Tài liệu tác phẩm đã nộp")).toBeTruthy();
     expect(screen.getByText(/Không cần tải lại tệp/)).toBeTruthy();
+    expect(screen.getByText("Chưa có thẻ phân loại khả dụng.")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Dùng tiêu đề này" }));
     expect(
       (screen.getByLabelText("Tiêu đề công khai") as HTMLInputElement).value,
@@ -261,7 +275,9 @@ describe("PublicWorkEditor", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const user = userEvent.setup();
     render(<PublicWorkEditor />, { wrapper });
-    await user.click(await screen.findByRole("button", { name: /ban-mau/ }));
+    await user.click(
+      await screen.findByRole("button", { name: /Bản mẫu công khai/ }),
+    );
     const privateRow = (await screen.findByText("Identity document")).closest(
       "li",
     );

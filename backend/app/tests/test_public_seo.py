@@ -36,15 +36,16 @@ def test_sitemap_is_visibility_safe_and_paginated(tmp_path: Path) -> None:
                         slug="seo-metadata",
                     )
                 )
+                public_works = []
                 for index in range(5):
-                    session.add(
-                        _work(
-                            category_id,
-                            slug=f"public-{index}",
-                            visibility=PublicWorkVisibility.PUBLIC,
-                            status=PublicationStatus.PUBLISHED,
-                        )
+                    public_work = _work(
+                        category_id,
+                        slug=f"public-{index}",
+                        visibility=PublicWorkVisibility.PUBLIC,
+                        status=PublicationStatus.PUBLISHED,
                     )
+                    public_works.append(public_work)
+                    session.add(public_work)
                 session.add_all(
                     [
                         _work(
@@ -74,7 +75,8 @@ def test_sitemap_is_visibility_safe_and_paginated(tmp_path: Path) -> None:
             slugs: tuple[str, ...] = ()
             for page in range(1, manifest.page_count + 1):
                 slugs += tuple(entry.slug for entry in await service.page(page))
-            assert slugs == tuple(f"public-{index}" for index in range(5))
+            expected_ids = tuple(sorted(str(work.id) for work in public_works))
+            assert slugs == expected_ids
             assert not any("secret" in slug for slug in slugs)
 
             first = await service.repository.get_by_slug("public-0")
@@ -86,8 +88,7 @@ def test_sitemap_is_visibility_safe_and_paginated(tmp_path: Path) -> None:
             rebuilt_slugs: tuple[str, ...] = ()
             for page in range(1, rebuilt.page_count + 1):
                 rebuilt_slugs += tuple(entry.slug for entry in await service.page(page))
-            assert "public-0" not in rebuilt_slugs
-            assert "public-renamed" in rebuilt_slugs
+            assert rebuilt_slugs == expected_ids
         await engine.dispose()
 
     asyncio.run(exercise())

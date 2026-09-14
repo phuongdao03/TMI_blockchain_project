@@ -136,7 +136,7 @@ class PublicRepository:
             )
             .where(
                 Certificate.certificate_number == certificate_number,
-                self._published_condition(),
+                self._verification_public_condition(),
                 CertificateVersion.status.in_(
                     (
                         CertificateVersionStatus.ACTIVE,
@@ -201,6 +201,7 @@ class PublicRepository:
         asset_title, category_name, dossier_code = self._frozen_identity(
             version.metadata_json
         )
+        metadata = dict(version.metadata_json)
         return VerificationContext(
             certificate_id=certificate.id,
             certificate_number=certificate.certificate_number,
@@ -214,7 +215,7 @@ class PublicRepository:
             expires_at=certificate.expires_at,
             metadata_hash=version.metadata_hash,
             dossier_hash=dossier_hash,
-            metadata=dict(version.metadata_json),
+            metadata=metadata,
             dossier_snapshot=dict(dossier_snapshot),
             version=version.version_no,
             proof_version=dossier_version_no,
@@ -232,7 +233,21 @@ class PublicRepository:
             block_number=(
                 transaction.receipt_block_number if transaction is not None else None
             ),
+            signer_wallet_address=(
+                transaction.signer_wallet_address if transaction is not None else None
+            ),
+            recognized_subject=self._recognized_subject(metadata),
             is_current_version=(version.version_no == certificate.current_version_no),
+        )
+
+    @staticmethod
+    def _recognized_subject(metadata: dict[str, object]) -> str | None:
+        asset = metadata.get("asset")
+        if not isinstance(asset, Mapping):
+            return None
+        return PublicRepository._safe_metadata_text(
+            asset.get("subject"),
+            fallback=None,
         )
 
     @staticmethod
@@ -308,16 +323,14 @@ class PublicRepository:
 
     @staticmethod
     def _verification_public_condition() -> ColumnElement[bool]:
-        """Verification is public only after the dossier itself is public.
+        """Issued certificates remain independently verifiable.
 
-        A published dossier can be verified by its stable certificate even when
-        it has no catalogue slug.  The public catalogue remains stricter.
+        Publication visibility controls the gallery, not the integrity proof.
+        Only immutable, allowlisted certificate metadata is projected here.
         """
-        return (
-            (Dossier.status == DossierStatus.PUBLISHED)
-            & (Dossier.visibility == DossierVisibility.PUBLIC)
-            & Dossier.deleted_at.is_(None)
-        )
+        return Dossier.status.in_(
+            (DossierStatus.CERTIFICATE_ISSUED, DossierStatus.PUBLISHED)
+        ) & Dossier.deleted_at.is_(None)
 
     @staticmethod
     def _public_statement() -> Select[

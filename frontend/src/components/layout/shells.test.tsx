@@ -67,7 +67,9 @@ describe("layout shells", () => {
       screen.getByRole("navigation", { name: "Điều hướng chính" }),
     ).toBeDefined();
     expect(screen.getAllByRole("link", { name: "Trang chủ" })).toHaveLength(1);
-    expect(screen.getAllByRole("link", { name: "Minh bạch" })).toHaveLength(1);
+    expect(
+      screen.getAllByRole("link", { name: "Tra cứu chứng thư" }),
+    ).toHaveLength(1);
     expect(screen.getAllByRole("link", { name: "Hướng dẫn" })).toHaveLength(1);
     expect(
       screen.queryByRole("complementary", {

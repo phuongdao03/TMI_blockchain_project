@@ -208,15 +208,17 @@ def test_public_detail_visibility_slug_history_and_allowlist(tmp_path: Path) -> 
                 )
             cache = MemoryCache()
             service = PublicWorkDetailService(session, cache=cache)
-            public = await service.get("public-work")
+            public = await service.get(str(public_id))
             assert public is not None
             assert public.redirected is False
+            assert public.slug == str(public_id)
+            assert public.canonical_slug == str(public_id)
             assert public.certificate is None
             assert public.proof is None
             assert not hasattr(public, "owner_user_id")
             assert public.media[0].is_thumbnail is True
             assert tuple(item.slug for item in public.related_works) == (
-                "related-public-work",
+                str(related_id),
             )
             assert public.related_works[0].thumbnail_url is not None
             assert public.related_works[0].thumbnail_url.endswith("related.webp")
@@ -226,7 +228,7 @@ def test_public_detail_visibility_slug_history_and_allowlist(tmp_path: Path) -> 
             ).model_dump_json()
             assert "source-object-key" not in payload
             assert "public/derivatives/safe.webp" in payload
-            assert await service.get("public-work") == public
+            assert await service.get(str(public_id)) == public
             assert len(cache.values) == 1
 
             unlisted = await service.get("unlisted-work")
@@ -236,10 +238,15 @@ def test_public_detail_visibility_slug_history_and_allowlist(tmp_path: Path) -> 
             assert await service.get("suspended-work") is None
             assert await service.get("hidden-work") is None
 
+            current_alias = await service.get("public-work")
+            assert current_alias is not None
+            assert current_alias.redirected is True
+            assert current_alias.canonical_slug == str(public_id)
+
             old = await service.get("old-public-work")
             assert old is not None
             assert old.redirected is True
-            assert old.canonical_slug == "public-work"
+            assert old.canonical_slug == str(public_id)
         await engine.dispose()
 
     asyncio.run(exercise())

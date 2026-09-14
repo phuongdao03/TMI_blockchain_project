@@ -15,6 +15,7 @@ import {
 import { useState } from "react";
 
 import { publicApi } from "@/lib/api/client";
+import { DigitalCertificate } from "@/components/public/digital-certificate";
 import { SelectControl } from "@/components/ui/form-controls";
 import type { VerificationStatus } from "@/lib/api/types";
 import {
@@ -152,7 +153,7 @@ export function VerificationPanel({
         </p>
         <h1
           className={`mt-4 font-bold tracking-tight text-white ${
-            embedded ? "text-3xl sm:text-4xl" : "text-4xl sm:text-6xl"
+            embedded ? "text-3xl sm:text-4xl" : "text-3xl sm:text-6xl"
           }`}
         >
           Kiểm tra chứng thư
@@ -222,6 +223,10 @@ export function VerificationPanel({
         ) : result.data ? (
           <div className="space-y-8">
             <VerificationResult data={result.data} />
+
+            {result.data.status !== "NOT_FOUND" ? (
+              <DigitalCertificate data={result.data} />
+            ) : null}
 
             {result.data.status !== "NOT_FOUND" ? (
               <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
@@ -375,9 +380,13 @@ function VerificationResult({
   data: Awaited<ReturnType<typeof publicApi.verifyNumber>>;
 }) {
   const copy = resultCopy[data.status];
+  const detail =
+    data.status === "PENDING" && data.networkAvailable === false
+      ? "Bản ghi chứng thư vẫn còn trong hệ thống. Polygon đang tạm thời không phản hồi nên chưa thể đối chiếu trực tiếp; vui lòng thử lại sau."
+      : copy.detail;
   const Icon = copy.icon;
   return (
-    <section className="grid gap-6 border border-white/10 bg-white/[0.035] p-6 sm:p-8 lg:grid-cols-[1fr_1fr]">
+    <section className="grid gap-6 border-y border-white/10 py-6 sm:py-8 lg:grid-cols-[1fr_1fr]">
       <div>
         <Icon
           className={`size-10 ${copy.tone} ${data.status === "PENDING" ? "animate-spin" : ""}`}
@@ -390,7 +399,7 @@ function VerificationResult({
         <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
           {copy.title}
         </h2>
-        <p className="mt-3 text-sm leading-6 text-slate-400">{copy.detail}</p>
+        <p className="mt-3 text-sm leading-6 text-slate-400">{detail}</p>
       </div>
       <div>
         <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
@@ -450,7 +459,16 @@ function VerificationResult({
               value={data.contractAddress}
               technical
             />
-            <Fact label="Sự kiện ghi nhận" value="ProofRecorded" technical />
+            <Fact
+              label="Ví tổ chức đã ký"
+              value={data.signerWalletAddress}
+              technical
+            />
+            <Fact
+              label="Sự kiện ghi nhận"
+              value={data.eventName ?? "ProofRecorded"}
+              technical
+            />
           </dl>
           {data.explorerUrl ? (
             <a

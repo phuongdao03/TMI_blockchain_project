@@ -96,11 +96,19 @@ function defaults(work: PublicWorkEditorData): EditorValues {
   };
 }
 
-export function PublicWorkEditor() {
+type PublicWorkEditorProps = {
+  initialSelectedId?: string;
+};
+
+export function PublicWorkEditor({
+  initialSelectedId,
+}: PublicWorkEditorProps = {}) {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<PublicationStatus | "">("DRAFT");
-  const [selectedId, setSelectedId] = useState<string>();
+  const [selectedId, setSelectedId] = useState<string | undefined>(
+    initialSelectedId,
+  );
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">(
     "desktop",
   );
@@ -247,7 +255,7 @@ export function PublicWorkEditor() {
   const saveError = save.error as ApiError | null;
 
   return (
-    <section className="cms-workspace overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
+    <section className="cms-workspace overflow-visible rounded-3xl border border-neutral-200 bg-white shadow-sm">
       <div className="grid min-h-[46rem] lg:grid-cols-[20rem_minmax(0,1fr)]">
         <aside className="cms-list-pane border-b border-neutral-200 bg-neutral-50/80 lg:border-r lg:border-b-0">
           <div className="border-b border-neutral-200 p-4">
@@ -324,7 +332,7 @@ export function PublicWorkEditor() {
                   {work.title}
                 </span>
                 <span className="mt-1 flex items-center justify-between gap-2 text-xs text-neutral-500">
-                  <span className="truncate">/{work.slug}</span>
+                  <span className="truncate">/works/{work.id}</span>
                   <span>{statusLabels[work.publicationStatus]}</span>
                 </span>
               </button>
@@ -449,21 +457,18 @@ export function PublicWorkEditor() {
                   >
                     <input className={fieldClass} {...register("title")} />
                   </EditorField>
+                  <input type="hidden" {...register("slug")} />
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <EditorField
-                      error={errors.slug?.message}
-                      label="Đường dẫn công khai"
-                    >
-                      <div className="flex items-center rounded-xl border border-neutral-200 bg-white focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-100">
-                        <span className="pl-3 text-sm text-neutral-400">
-                          /works/
+                    <div>
+                      <p className="mb-2 text-sm font-bold text-neutral-800">
+                        Đường dẫn công khai
+                      </p>
+                      <output className="flex min-h-11 items-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 px-3 font-mono text-sm text-neutral-700">
+                        <span className="truncate">
+                          /works/{detail.data.id}
                         </span>
-                        <input
-                          className="min-h-11 min-w-0 flex-1 bg-transparent px-1 pr-3 text-sm outline-none"
-                          {...register("slug")}
-                        />
-                      </div>
-                    </EditorField>
+                      </output>
+                    </div>
                     <EditorField
                       error={errors.authorDisplayName?.message}
                       label="Tên tác giả hiển thị"
@@ -522,11 +527,11 @@ export function PublicWorkEditor() {
                       </SelectControl>
                     </EditorField>
                   </div>
-                  <fieldset>
+                  <fieldset className="min-w-0 rounded-2xl border border-neutral-200 p-4">
                     <legend className="text-sm font-bold text-neutral-800">
                       Thẻ phân loại
                     </legend>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-2 flex min-h-10 flex-wrap gap-2">
                       {tags.data
                         ?.filter((tag) => tag.isActive)
                         .map((tag) => {
@@ -551,6 +556,11 @@ export function PublicWorkEditor() {
                             </button>
                           );
                         })}
+                      {tags.data?.filter((tag) => tag.isActive).length === 0 ? (
+                        <p className="self-center text-sm text-neutral-500">
+                          Chưa có thẻ phân loại khả dụng.
+                        </p>
+                      ) : null}
                     </div>
                   </fieldset>
                   {saveError ? (

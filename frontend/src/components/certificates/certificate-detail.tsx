@@ -345,9 +345,7 @@ export function CertificateDetail({ id }: { id: string }) {
             </div>
             <a
               className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 text-sm font-bold text-white"
-              href={detail.data.qrPayload}
-              rel="noreferrer"
-              target="_blank"
+              href={`/verify/${encodeURIComponent(certificate.certificateNumber)}`}
             >
               Kiểm tra công khai <ExternalLink className="size-4" />
             </a>

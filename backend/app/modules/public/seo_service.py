@@ -94,7 +94,7 @@ class PublicSeoService:
             limit=self._page_size,
         )
         return tuple(
-            PublicSitemapEntry(slug=work.slug, last_modified=work.updated_at)
+            PublicSitemapEntry(slug=str(work.id), last_modified=work.updated_at)
             for work in works
         )
 

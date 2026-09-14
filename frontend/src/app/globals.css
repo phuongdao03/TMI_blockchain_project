@@ -1890,15 +1890,16 @@ summary {
 }
 
 .payment-request-workspace > * {
-  animation: payment-workspace-enter 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: payment-workspace-enter var(--duration-fast) var(--ease-smooth-out)
+    both;
 }
 
 .payment-request-workspace > *:nth-child(2) {
-  animation-delay: 45ms;
+  animation-delay: var(--duration-stagger);
 }
 
 .payment-request-workspace > *:nth-child(3) {
-  animation-delay: 90ms;
+  animation-delay: calc(var(--duration-stagger) * 2);
 }
 
 .payment-mode-selected {
@@ -1911,7 +1912,8 @@ summary {
   border-color: color-mix(in srgb, #15803d 55%, var(--theme-border));
   background: color-mix(in srgb, #15803d 10%, var(--theme-surface));
   color: var(--theme-text);
-  animation: payment-feedback-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: payment-feedback-enter var(--duration-fast) var(--ease-smooth-out)
+    both;
 }
 
 .payment-feedback-error {
@@ -3091,9 +3093,9 @@ html[data-theme="light"] .auth-shell footer {
   font-size: 0.875rem;
   font-weight: 700;
   transition:
-    transform 220ms ease,
-    border-color 220ms ease,
-    background-color 220ms ease;
+    transform var(--duration-fast) var(--ease-smooth-out),
+    border-color var(--duration-quick) var(--ease-out),
+    background-color var(--duration-quick) var(--ease-out);
 }
 
 .registry-button:hover {
@@ -6634,6 +6636,7 @@ html[data-theme="dark"] .public-home .home-journey .font-mono {
    modest mobile devices. Every effect has a reduced-motion fallback. */
 :root {
   --duration-stagger: 40ms;
+  --duration-micro: 80ms;
   --duration-quick: 150ms;
   --duration-fast: 250ms;
   --duration-medium: 350ms;
@@ -6641,15 +6644,127 @@ html[data-theme="dark"] .public-home .home-journey .font-mono {
   --duration-very-slow: 500ms;
   --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: ease-in-out;
+  --ease-out: ease-out;
+  --ease-linear: linear;
   --ease-bounce: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --ease-bounce-strong: cubic-bezier(0.34, 3.85, 0.64, 1);
+  --distance-micro: 4px;
+  --distance-small: 6px;
   --distance-base: 8px;
   --distance-medium: 12px;
+  --distance-large: 30px;
+  --scale-large: 0.96;
+  --scale-medium: 0.97;
+  --scale-small: 0.98;
+  --scale-tiny: 0.99;
   --blur-small: 2px;
   --blur-medium: 3px;
+  --blur-large: 8px;
+  --motion-fast: var(--duration-quick);
+  --motion-base: var(--duration-fast);
+  --ease-standard: var(--ease-smooth-out);
   --icon-swap-dur: 250ms;
   --icon-swap-blur: 2px;
   --icon-swap-start-scale: 0.25;
   --icon-swap-ease: ease-in-out;
+}
+
+/* Editorial page motion: one restrained entrance instead of independently
+   animated cards. Transform and opacity keep scrolling smooth on mobile. */
+.project-guide > main,
+.install-guide > main,
+.digital-certificate {
+  animation: editorial-page-enter var(--duration-fast) var(--ease-smooth-out)
+    both;
+}
+
+.project-guide section {
+  animation: editorial-section-enter var(--duration-slow)
+    var(--ease-smooth-out) both;
+}
+
+.project-guide section:nth-of-type(2) {
+  animation-delay: var(--duration-stagger);
+}
+
+.project-guide section:nth-of-type(3) {
+  animation-delay: calc(var(--duration-stagger) * 2);
+}
+
+.guide-cta {
+  transition:
+    transform var(--duration-fast) var(--ease-smooth-out),
+    color var(--duration-quick) var(--ease-out),
+    border-color var(--duration-quick) var(--ease-out),
+    background-color var(--duration-quick) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-smooth-out);
+}
+
+.guide-cta:hover {
+  transform: translateY(-1px);
+}
+
+.guide-cta:active {
+  transform: translateY(1px) scale(var(--scale-tiny));
+  transition-duration: var(--duration-quick);
+}
+
+.guide-cta__icon {
+  transition: transform var(--duration-fast) var(--ease-smooth-out);
+}
+
+.guide-cta:hover .guide-cta__icon {
+  transform: translateX(var(--distance-micro));
+}
+
+@keyframes editorial-page-enter {
+  from {
+    opacity: 0;
+    filter: blur(var(--blur-medium));
+    transform: translateY(var(--distance-base));
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes editorial-section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--distance-medium));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 40rem) {
+  .project-guide section {
+    animation-duration: var(--duration-fast);
+    animation-delay: 0ms !important;
+  }
+
+  .about-columns {
+    border-block: 0;
+    padding-block: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-guide > main,
+  .project-guide section,
+  .install-guide > main,
+  .digital-certificate {
+    animation: none !important;
+  }
+
+  .guide-cta,
+  .guide-cta__icon {
+    transition: none !important;
+  }
 }
 
 .t-icon-swap {

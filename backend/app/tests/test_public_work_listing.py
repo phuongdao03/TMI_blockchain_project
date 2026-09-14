@@ -129,7 +129,7 @@ def test_listing_filters_and_never_leaks_non_public_works(tmp_path: Path) -> Non
             )
             assert total == 1
             assert len(rows) == 1
-            assert rows[0].slug == "visible-work"
+            assert rows[0].slug == str(visible.id)
             assert rows[0].is_featured is True
             assert rows[0].thumbnail_url == (
                 "https://cdn.example.test/public/work.webp"
@@ -224,13 +224,14 @@ def test_featured_query_enforces_window_and_public_state(tmp_path: Path) -> None
         async with factory() as session:
             async with session.begin():
                 session.add(category)
+                active_featured = work(
+                    "active-featured",
+                    featured_at=NOW,
+                    featured_until=NOW + timedelta(seconds=1),
+                )
                 session.add_all(
                     [
-                        work(
-                            "active-featured",
-                            featured_at=NOW,
-                            featured_until=NOW + timedelta(seconds=1),
-                        ),
+                        active_featured,
                         work(
                             "expired-featured",
                             featured_at=NOW - timedelta(days=1),
@@ -251,7 +252,7 @@ def test_featured_query_enforces_window_and_public_state(tmp_path: Path) -> None
                 )
             service = PublicCatalogQueryService(session, clock=lambda: NOW)
             rows = await service.list_featured(limit=12)
-            assert tuple(row.slug for row in rows) == ("active-featured",)
+            assert tuple(row.slug for row in rows) == (str(active_featured.id),)
             assert rows[0].is_featured is True
             assert not hasattr(rows[0], "owner_user_id")
         await engine.dispose()

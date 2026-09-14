@@ -21,8 +21,15 @@ class EngagementRepository:
         self._session = session
 
     async def find_published_public_work_id(self, slug: str) -> UUID | None:
+        try:
+            work_id = UUID(slug)
+        except ValueError:
+            work_id = None
+        identifier = (
+            PublicWork.id == work_id if work_id is not None else PublicWork.slug == slug
+        )
         statement = select(PublicWork.id).where(
-            PublicWork.slug == slug,
+            identifier,
             PublicWork.publication_status == PublicationStatus.PUBLISHED,
             PublicWork.visibility == PublicWorkVisibility.PUBLIC,
             PublicWork.deleted_at.is_(None),

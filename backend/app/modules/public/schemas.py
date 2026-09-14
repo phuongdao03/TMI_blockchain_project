@@ -93,6 +93,10 @@ class VerificationData(PublicSchema):
     metadata_hash: str | None
     block_number: int | None
     issuer_label: str | None
+    signer_wallet_address: str | None
+    event_name: str | None
+    network_available: bool | None
+    recognized_subject: str | None
     documents: list["PublicEvidenceProofData"]
 
 

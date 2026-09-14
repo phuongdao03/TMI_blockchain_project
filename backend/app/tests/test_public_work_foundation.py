@@ -319,6 +319,16 @@ def test_public_work_repository_and_draft_backfill_are_safe(tmp_path: Path) -> N
             assert resolved[0].id == work.id
             assert resolved[1] is True
 
+            canonical = await PublicWorkRepository(session).resolve_slug(str(work.id))
+            assert canonical is not None
+            assert canonical[0].id == work.id
+            assert canonical[1] is False
+
+            current_alias = await PublicWorkRepository(session).resolve_slug(work.slug)
+            assert current_alias is not None
+            assert current_alias[0].id == work.id
+            assert current_alias[1] is True
+
         await engine.dispose()
 
     asyncio.run(exercise())

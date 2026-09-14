@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
 import { AppProviders } from "@/components/providers/app-providers";
@@ -16,12 +16,23 @@ export const metadata: Metadata = {
     "Khám phá những đề cử tiêu biểu, câu chuyện giá trị Việt và thông tin minh bạch của chương trình.",
   icons: {
     icon: "/assets/brand/thv-brand-emblem.png",
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Tinh Hoa Việt",
   },
   openGraph: {
     type: "website",
     locale: "vi_VN",
     siteName: "Đề cử Tinh Hoa Việt",
   },
+};
+
+export const viewport: Viewport = {
+  colorScheme: "light dark",
+  themeColor: "#720000",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
