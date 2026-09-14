@@ -314,6 +314,10 @@ class CertificateService:
                 status=MediaStatus.ACTIVE,
             )
             self._session.add(media)
+            # Persist the referenced row before assigning raw foreign-key IDs.
+            # Otherwise SQLAlchemy may emit certificate UPDATEs before the media
+            # INSERT because these models do not expose ORM relationships.
+            await self._session.flush()
             locked_version.pdf_media_id = media.id
             locked_certificate.pdf_media_id = media.id
             self._audit(
@@ -468,6 +472,10 @@ class CertificateService:
                     status=MediaStatus.ACTIVE,
                 )
                 self._session.add(media)
+                # Persist the referenced row before assigning raw foreign-key IDs.
+                # A following repository query triggers autoflush, and PostgreSQL
+                # rejects the certificate UPDATE if this INSERT has not run yet.
+                await self._session.flush()
                 locked.pdf_media_id = media.id
                 version.pdf_media_id = media.id
             elif version.pdf_media_id is None:

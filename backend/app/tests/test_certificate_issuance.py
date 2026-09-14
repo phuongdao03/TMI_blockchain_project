@@ -97,12 +97,15 @@ async def _issuance_service(
     status: DossierStatus,
     *,
     existing_certificate: bool = True,
+    enforce_foreign_keys: bool = False,
     token_factory: Callable[[], str] | None = None,
     public_base_url: str = "https://tmi.example",
 ) -> tuple[CertificateService, AsyncEngine, UUID]:
     engine = create_async_engine("sqlite+aiosqlite://")
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     async with engine.begin() as connection:
+        if enforce_foreign_keys:
+            await connection.exec_driver_sql("PRAGMA foreign_keys=ON")
         await connection.run_sync(Base.metadata.create_all)
     user = User(
         id=uuid4(),
@@ -168,7 +171,19 @@ async def _issuance_service(
     if existing_certificate:
         fixtures.extend([certificate, transaction, version])
     async with sessions() as session:
-        session.add_all(fixtures)
+        if enforce_foreign_keys:
+            fixture_groups: list[tuple[object, ...]] = [
+                (user, category),
+                (dossier,),
+                (dossier_version,),
+            ]
+            if existing_certificate:
+                fixture_groups.extend(((certificate,), (transaction,), (version,)))
+            for fixture_group in fixture_groups:
+                session.add_all(fixture_group)
+                await session.flush()
+        else:
+            session.add_all(fixtures)
         await session.commit()
     service = CertificateService(
         session=sessions(),
@@ -260,7 +275,8 @@ def test_pending_anchor_is_a_noop_and_safe_to_replay() -> None:
 def test_duplicate_issue_event_returns_one_logical_certificate() -> None:
     async def scenario() -> None:
         service, engine, dossier_id = await _issuance_service(
-            DossierStatus.CERTIFICATE_ISSUED
+            DossierStatus.CERTIFICATE_ISSUED,
+            enforce_foreign_keys=True,
         )
         first = await service.process_issuance(dossier_id)
         second = await service.process_issuance(dossier_id)
@@ -342,7 +358,8 @@ def test_recovery_selects_paid_dossier_before_certificate_was_prepared() -> None
 def test_version_pdf_preserves_anchored_metadata() -> None:
     async def scenario() -> None:
         service, engine, dossier_id = await _issuance_service(
-            DossierStatus.CERTIFICATE_ISSUED
+            DossierStatus.CERTIFICATE_ISSUED,
+            enforce_foreign_keys=True,
         )
         service._renderer = cast(CertificatePdfRenderer, SuccessfulRenderer())  # noqa: SLF001
         service._storage = cast(CertificateStorage, SuccessfulStorage())  # noqa: SLF001
@@ -422,6 +439,40 @@ def test_successful_issuance_is_audited_once_across_worker_replay() -> None:
             "status": "ACTIVE",
             "pdf_ready": True,
         }
+        await service._session.close()  # noqa: SLF001
+        await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_issuance_persists_pdf_media_before_linking_certificate() -> None:
+    async def scenario() -> None:
+        service, engine, dossier_id = await _issuance_service(
+            DossierStatus.ANCHORED,
+            enforce_foreign_keys=True,
+        )
+        service._renderer = cast(  # noqa: SLF001
+            CertificatePdfRenderer,
+            SuccessfulRenderer(),
+        )
+        service._storage = cast(  # noqa: SLF001
+            CertificateStorage,
+            SuccessfulStorage(),
+        )
+
+        issued = await service.process_issuance(dossier_id)
+
+        assert issued is not None and issued.pdf_ready is True
+        async with service._session.begin():  # noqa: SLF001
+            certificate = await service._certificates.get_by_dossier(  # noqa: SLF001
+                dossier_id
+            )
+            assert certificate is not None
+            media = await service._session.get(  # noqa: SLF001
+                MediaAsset,
+                certificate.pdf_media_id,
+            )
+        assert media is not None
         await service._session.close()  # noqa: SLF001
         await engine.dispose()
 
