@@ -239,8 +239,15 @@ class PublicMediaService:
             raise PublicMediaValidationError("Media sort order cannot be negative.")
         try:
             async with self._session.begin():
-                if await self._repository.get_work(work_id, for_update=True) is None:
+                work = await self._repository.get_work(work_id, for_update=True)
+                if work is None:
                     raise PublicWorkNotFoundError()
+                if not await self._repository.is_source_evidence_asset(
+                    work, data.media_asset_id
+                ):
+                    raise PublicMediaValidationError(
+                        "Media must belong to the certified dossier version."
+                    )
                 asset = await self._repository.get_asset(data.media_asset_id)
                 kind = self._validate_asset(asset)
                 caption = self._plain_text(data.caption, "caption")
@@ -349,7 +356,7 @@ class PublicMediaService:
                 row.media_asset_id
                 for row in await self._repository.list_for_work(work_id)
             }
-            rows = await self._repository.list_current_evidence_assets(work.dossier_id)
+            rows = await self._repository.list_source_evidence_assets(work)
             return tuple(
                 PublicMediaCandidateView(
                     media_asset_id=asset.id,

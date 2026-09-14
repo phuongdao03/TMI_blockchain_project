@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.blockchain.models import Certificate, CertificateVersion
 from app.modules.dossiers.models import Dossier, DossierEvidence, DossierVersion
 from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.public.models import PublicWork, PublicWorkMedia
@@ -68,26 +69,56 @@ class PublicMediaRepository:
         )
         return tuple(rows)
 
-    async def list_current_evidence_assets(
-        self, dossier_id: UUID
+    async def list_source_evidence_assets(
+        self, work: PublicWork
     ) -> tuple[tuple[DossierEvidence, MediaAsset], ...]:
+        version_id = await self._source_version_id(work)
+        if version_id is None:
+            return ()
         rows = await self._session.execute(
             select(DossierEvidence, MediaAsset)
             .join(MediaAsset, MediaAsset.id == DossierEvidence.media_asset_id)
-            .join(Dossier, Dossier.id == DossierEvidence.dossier_id)
-            .join(
-                DossierVersion,
-                (DossierVersion.id == DossierEvidence.dossier_version_id)
-                & (DossierVersion.version_no == Dossier.current_version_no),
-            )
             .where(
-                DossierEvidence.dossier_id == dossier_id,
+                DossierEvidence.dossier_id == work.dossier_id,
+                DossierEvidence.dossier_version_id == version_id,
                 MediaAsset.status == MediaStatus.ACTIVE,
                 MediaAsset.deleted_at.is_(None),
             )
             .order_by(DossierEvidence.display_order, DossierEvidence.id)
         )
         return tuple(rows.tuples())
+
+    async def is_source_evidence_asset(
+        self, work: PublicWork, media_asset_id: UUID
+    ) -> bool:
+        return any(
+            asset.id == media_asset_id
+            for _, asset in await self.list_source_evidence_assets(work)
+        )
+
+    async def _source_version_id(self, work: PublicWork) -> UUID | None:
+        if work.certificate_id is not None:
+            certified_version_id = await self._session.scalar(
+                select(CertificateVersion.dossier_version_id)
+                .join(Certificate, Certificate.id == CertificateVersion.certificate_id)
+                .where(
+                    Certificate.id == work.certificate_id,
+                    CertificateVersion.version_no == Certificate.current_version_no,
+                )
+            )
+            if certified_version_id is not None:
+                return cast(UUID, certified_version_id)
+        return cast(
+            UUID | None,
+            await self._session.scalar(
+                select(DossierVersion.id)
+                .join(Dossier, Dossier.id == DossierVersion.dossier_id)
+                .where(
+                    Dossier.id == work.dossier_id,
+                    DossierVersion.version_no == Dossier.current_version_no,
+                )
+            ),
+        )
 
     def add(self, relation: PublicWorkMedia) -> None:
         self._session.add(relation)

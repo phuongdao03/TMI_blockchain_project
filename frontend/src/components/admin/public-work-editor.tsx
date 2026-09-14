@@ -414,6 +414,37 @@ export function PublicWorkEditor() {
                     }
                     version={detail.data.sourceVersionNo}
                   />
+                  <Gallery
+                    candidates={mediaCandidates.data ?? []}
+                    items={media.data ?? []}
+                    onChanged={() => {
+                      void queryClient.invalidateQueries({
+                        queryKey: ["admin", "public-work-media", selectedId],
+                      });
+                      void queryClient.invalidateQueries({
+                        queryKey: [
+                          "admin",
+                          "public-work-media-candidates",
+                          selectedId,
+                        ],
+                      });
+                    }}
+                    onRetry={() => {
+                      void mediaCandidates.refetch();
+                      void media.refetch();
+                    }}
+                    onThumbnail={(assetId) =>
+                      setValue("thumbnailMediaId", assetId, {
+                        shouldDirty: true,
+                      })
+                    }
+                    selectedThumbnail={selectedThumbnail}
+                    sourceError={mediaCandidates.error ?? media.error}
+                    sourceLoading={
+                      mediaCandidates.isPending || media.isPending
+                    }
+                    workId={selectedId}
+                  />
                   <EditorField
                     error={errors.title?.message}
                     label="Tiêu đề công khai"
@@ -427,7 +458,7 @@ export function PublicWorkEditor() {
                     >
                       <div className="flex items-center rounded-xl border border-neutral-200 bg-white focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-100">
                         <span className="pl-3 text-sm text-neutral-400">
-                          /tac-pham/
+                          /works/
                         </span>
                         <input
                           className="min-h-11 min-w-0 flex-1 bg-transparent px-1 pr-3 text-sm outline-none"
@@ -524,29 +555,6 @@ export function PublicWorkEditor() {
                         })}
                     </div>
                   </fieldset>
-                  <Gallery
-                    candidates={mediaCandidates.data ?? []}
-                    items={media.data ?? []}
-                    onChanged={() => {
-                      void queryClient.invalidateQueries({
-                        queryKey: ["admin", "public-work-media", selectedId],
-                      });
-                      void queryClient.invalidateQueries({
-                        queryKey: [
-                          "admin",
-                          "public-work-media-candidates",
-                          selectedId,
-                        ],
-                      });
-                    }}
-                    onThumbnail={(assetId) =>
-                      setValue("thumbnailMediaId", assetId, {
-                        shouldDirty: true,
-                      })
-                    }
-                    selectedThumbnail={selectedThumbnail}
-                    workId={selectedId}
-                  />
                   {saveError ? (
                     <p
                       aria-live="polite"
@@ -764,17 +772,29 @@ function Gallery({
   candidates,
   items,
   onChanged,
+  onRetry,
   onThumbnail,
   selectedThumbnail,
+  sourceError,
+  sourceLoading,
   workId,
 }: {
   candidates: PublicMediaCandidate[];
   items: PublicWorkMedia[];
   onChanged: () => void;
+  onRetry: () => void;
   onThumbnail: (assetId: string) => void;
   selectedThumbnail: string | null;
+  sourceError: unknown;
+  sourceLoading: boolean;
   workId: string;
 }) {
+  const [attachingId, setAttachingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const availableCandidates = candidates.filter(
+    (candidate) => !candidate.alreadyAttached,
+  );
+
   const reorder = async (index: number, direction: -1 | 1) => {
     const target = index + direction;
     if (target < 0 || target >= items.length) return;
@@ -797,47 +817,95 @@ function Gallery({
     ) {
       return;
     }
-    await publicWorkAdminApi.attachMedia(
-      workId,
-      candidate.mediaAssetId,
-      items.length,
-      {
-        caption: candidate.title,
-        altText: candidate.kind === "IMAGE" ? candidate.title : undefined,
-      },
-    );
-    onChanged();
+    setActionError(null);
+    setAttachingId(candidate.mediaAssetId);
+    try {
+      await publicWorkAdminApi.attachMedia(
+        workId,
+        candidate.mediaAssetId,
+        items.length,
+        {
+          caption: candidate.title,
+          altText: candidate.kind === "IMAGE" ? candidate.title : undefined,
+        },
+      );
+      onChanged();
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Không thể chọn tài liệu. Vui lòng thử lại.",
+      );
+    } finally {
+      setAttachingId(null);
+    }
   };
   return (
-    <section className="rounded-2xl border border-neutral-200 p-4">
-      <div className="flex items-center gap-2">
-        <ImageIcon className="size-4 text-primary-700" />
-        <h3 className="font-bold">Thư viện trưng bày</h3>
+    <section
+      aria-labelledby="submitted-media-title"
+      className="rounded-2xl border border-neutral-200 p-4"
+    >
+      <div className="flex items-start gap-3">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-50">
+          <ImageIcon className="size-4 text-primary-700" />
+        </span>
+        <div>
+          <h3 className="font-bold" id="submitted-media-title">
+            Tài liệu tác phẩm đã nộp
+          </h3>
+          <p className="mt-1 text-sm leading-6 text-neutral-600">
+            Chọn trực tiếp tài liệu thuộc phiên bản hồ sơ đã được xác lập. Không
+            cần tải lại tệp; hệ thống giữ nguyên tệp gốc và chỉ tạo bản trình
+            chiếu tối ưu.
+          </p>
+        </div>
       </div>
-      {candidates.some((candidate) => !candidate.alreadyAttached) ? (
+
+      {sourceLoading ? (
+        <p
+          className="mt-4 rounded-xl bg-neutral-50 p-4 text-sm text-neutral-600"
+          role="status"
+        >
+          Đang tải tài liệu của hồ sơ…
+        </p>
+      ) : sourceError ? (
+        <div
+          className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4"
+          role="alert"
+        >
+          <p className="text-sm font-semibold text-red-800">
+            Không thể tải tài liệu đã nộp. Dữ liệu gốc vẫn được giữ nguyên.
+          </p>
+          <Button
+            className="mt-3"
+            onClick={onRetry}
+            type="button"
+            variant="outline"
+          >
+            Thử tải lại
+          </Button>
+        </div>
+      ) : availableCandidates.length > 0 ? (
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
           <p className="text-sm font-bold text-amber-950">
-            Tài liệu gốc từ hồ sơ đã ký
-          </p>
-          <p className="mt-1 text-xs text-amber-900">
-            Chọn “Chuẩn bị công bố” để tạo bản trình chiếu tối ưu; tệp gốc và
-            dấu vân tay không bị thay đổi.
+            Chọn tài liệu dùng để công bố
           </p>
           <ul className="mt-3 space-y-2">
-            {candidates
-              .filter((candidate) => !candidate.alreadyAttached)
-              .map((candidate) => (
+            {availableCandidates.map((candidate) => (
                 <li
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-2"
                   key={candidate.mediaAssetId}
                 >
-                  <span className="min-w-0 text-sm">
-                    <strong>{candidate.title}</strong>
-                    <span className="ml-2 text-xs text-neutral-500">
-                      {candidate.filename}
+                  <span className="min-w-0 flex-1 text-sm">
+                    <strong className="block truncate">
+                      {candidate.title}
+                    </strong>
+                    <span className="mt-1 block text-xs text-neutral-500">
+                      {candidate.filename} · {formatBytes(candidate.bytes)} ·{" "}
+                      {candidate.mimeType}
                     </span>
                     <span
-                      className={`ml-2 rounded-full px-2 py-0.5 text-[0.68rem] font-bold ${candidate.accessScope === "PUBLIC" || candidate.accessScope === "PUBLIC_PREVIEW" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}
+                      className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[0.68rem] font-bold ${candidate.accessScope === "PUBLIC" || candidate.accessScope === "PUBLIC_PREVIEW" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}
                     >
                       {candidate.accessScope === "PUBLIC" ||
                       candidate.accessScope === "PUBLIC_PREVIEW"
@@ -846,19 +914,46 @@ function Gallery({
                     </span>
                   </span>
                   <Button
+                    disabled={attachingId !== null}
                     onClick={() => void attachCandidate(candidate)}
                     type="button"
                     variant="outline"
                   >
-                    Chuẩn bị công bố
+                    {attachingId === candidate.mediaAssetId
+                      ? "Đang chọn…"
+                      : "Chọn để công bố"}
                   </Button>
                 </li>
               ))}
           </ul>
         </div>
+      ) : items.length === 0 ? (
+        <p className="mt-4 rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-600">
+          Chưa tìm thấy hình ảnh, âm thanh hoặc video trong phiên bản hồ sơ đã
+          được xác lập. Hãy kiểm tra lại tài liệu của phiên bản nguồn.
+        </p>
+      ) : (
+        <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">
+          Tất cả tài liệu nguồn phù hợp đã được chọn.
+        </p>
+      )}
+
+      {actionError ? (
+        <p
+          className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-800"
+          role="alert"
+        >
+          {actionError}
+        </p>
       ) : null}
-      <ul className="mt-4 divide-y divide-neutral-200">
-        {items.map((item, index) => (
+
+      {items.length > 0 ? (
+        <div className="mt-5 border-t border-neutral-200 pt-4">
+          <h4 className="text-sm font-bold text-neutral-800">
+            Đang dùng để công bố
+          </h4>
+          <ul className="mt-2 divide-y divide-neutral-200">
+            {items.map((item, index) => (
           <li className="py-3" key={item.id}>
             <div className="flex flex-wrap items-center gap-3">
               <span className="grid size-10 place-items-center rounded-lg bg-neutral-100 text-xs font-bold text-neutral-600">
@@ -921,10 +1016,19 @@ function Gallery({
               />
             ) : null}
           </li>
-        ))}
-      </ul>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  const megabytes = bytes / (1024 * 1024);
+  return `${megabytes >= 10 ? megabytes.toFixed(0) : megabytes.toFixed(1)} MB`;
 }
 
 function VideoPresentationSettings({

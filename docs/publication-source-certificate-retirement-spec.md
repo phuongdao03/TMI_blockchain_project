@@ -21,11 +21,16 @@ Create one continuous path from a user's locked dossier version to review, block
 
 1. The public editor shows the selected locked version and reusable values entered by the user. Administrators can apply those values without retyping them.
 2. The editor's media library lists source evidence from the locked version. The duplicate public upload control is removed.
+   The locked source version is resolved from the active certificate version when a
+   certificate exists, rather than from a later mutable dossier version.
+   Attaching media rejects any asset that is not evidence of that exact source version.
 3. Images from source evidence can be selected as cover art. A selected video can use its automatically generated frame as the cover.
 4. Public video delivery provides adaptive HLS where available and an optimized MP4 fallback. Playback is lazy and uses metadata/poster before play.
 5. Certificate notifications, including historical notifications that only contain `certificate_id`, open the correct certificate.
 6. Certificate detail shows verification state, blockchain identifiers, a stable public verification URL, and a working QR image. The PDF download surface and endpoint are removed.
 7. Public voting pages, user navigation, client APIs, backend routes, and scheduled voting jobs are unavailable. Council adjudication votes are unaffected.
+8. Public work URLs use the English route `/works/{slug}`. Slugs remain lowercase
+   ASCII letters, numbers, and hyphens so links are portable and professional.
 
 ## API contract
 
@@ -45,6 +50,8 @@ Create one continuous path from a user's locked dossier version to review, block
 ## Acceptance criteria
 
 - An approved/signed dossier can be edited and published without another upload or re-entry of its public data.
+- The publication editor presents the signed dossier's existing media as selectable
+  source items and contains no second-upload path or 20 MB publication limit.
 - Public playback starts from an optimized poster and selects HLS on supporting mobile browsers, with MP4 fallback elsewhere.
 - Clicking an old or new certificate notification reaches a populated certificate page whose QR resolves to its verification URL.
 - No voting navigation/page/API route or voting background schedule remains active.

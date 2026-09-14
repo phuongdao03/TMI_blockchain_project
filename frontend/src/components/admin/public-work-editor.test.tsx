@@ -153,6 +153,10 @@ describe("PublicWorkEditor", () => {
       await screen.findByText("Dữ liệu hồ sơ gốc · Phiên bản 1"),
     ).toBeTruthy();
     expect(screen.queryByTestId("media-uploader")).toBeNull();
+    expect(screen.getByText("/works/")).toBeTruthy();
+    expect(screen.queryByText(/20 MB/)).toBeNull();
+    expect(screen.getByText("Tài liệu tác phẩm đã nộp")).toBeTruthy();
+    expect(screen.getByText(/Không cần tải lại tệp/)).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Dùng tiêu đề này" }));
     expect(
       (screen.getByLabelText("Tiêu đề công khai") as HTMLInputElement).value,
@@ -167,7 +171,7 @@ describe("PublicWorkEditor", () => {
         title: "Video source",
         filename: "source.mp4",
         mimeType: "video/mp4",
-        bytes: 2048,
+        bytes: 35 * 1024 * 1024,
         width: 1920,
         height: 1080,
         durationMs: 12000,
@@ -183,7 +187,10 @@ describe("PublicWorkEditor", () => {
     );
     const sourceRow = (await screen.findByText("Video source")).closest("li");
     expect(sourceRow).not.toBeNull();
-    await user.click(within(sourceRow!).getByRole("button"));
+    expect(within(sourceRow!).getByText(/35 MB/)).toBeTruthy();
+    await user.click(
+      within(sourceRow!).getByRole("button", { name: "Chọn để công bố" }),
+    );
     await waitFor(() =>
       expect(publicWorkAdminApi.attachMedia).toHaveBeenCalledWith(
         work.id,

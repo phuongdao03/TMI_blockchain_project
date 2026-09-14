@@ -1,5 +1,6 @@
 import asyncio
 import base64
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 from uuid import UUID, uuid4
@@ -14,8 +15,15 @@ from app.modules.audit.service import AuditService
 from app.modules.auth.models import User, UserStatus
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
-from app.modules.blockchain.models import Certificate  # noqa: F401
-from app.modules.dossiers.models import Category
+from app.modules.blockchain.models import Certificate, CertificateVersion
+from app.modules.dossiers.models import (
+    Category,
+    Dossier,
+    DossierEvidence,
+    DossierStatus,
+    DossierVersion,
+    EvidenceVisibility,
+)
 from app.modules.media.errors import MediaProviderUnavailableError
 from app.modules.media.gateway import (
     PublicDerivativeGateway,
@@ -107,6 +115,8 @@ def test_public_media_permissions_validation_order_removal_and_retry(
         factory = async_sessionmaker(engine, expire_on_commit=False)
         owner_id = uuid4()
         work_id = uuid4()
+        dossier_id = uuid4()
+        dossier_version_id = uuid4()
         first_id = uuid4()
         second_id = uuid4()
         unsupported_id = uuid4()
@@ -124,9 +134,29 @@ def test_public_media_permissions_validation_order_removal_and_retry(
                 session.add(category)
                 await session.flush()
                 session.add(
+                    Dossier(
+                        id=dossier_id,
+                        code="DOS-PUBLIC-MEDIA",
+                        owner_user_id=owner_id,
+                        category_id=category.id,
+                        title="Media work",
+                        current_version_no=1,
+                    )
+                )
+                session.add(
+                    DossierVersion(
+                        id=dossier_version_id,
+                        dossier_id=dossier_id,
+                        version_no=1,
+                        snapshot_json={"dossier": {"title": "Media work"}},
+                        canonical_hash="a" * 64,
+                        submitted_by=owner_id,
+                    )
+                )
+                session.add(
                     PublicWork(
                         id=work_id,
-                        dossier_id=uuid4(),
+                        dossier_id=dossier_id,
                         owner_user_id=owner_id,
                         slug="media-work",
                         title="Media work",
@@ -177,6 +207,23 @@ def test_public_media_permissions_validation_order_removal_and_retry(
                             bytes=1024,
                             status=MediaStatus.ACTIVE,
                         ),
+                    ]
+                )
+                session.add_all(
+                    [
+                        DossierEvidence(
+                            dossier_id=dossier_id,
+                            dossier_version_id=dossier_version_id,
+                            media_asset_id=media_id,
+                            evidence_type="SOURCE",
+                            access_scope=EvidenceVisibility.PUBLIC_PREVIEW,
+                            title=title,
+                        )
+                        for media_id, title in (
+                            (first_id, "First image"),
+                            (second_id, "Second image"),
+                            (unsupported_id, "Unsupported source"),
+                        )
                     ]
                 )
             dispatcher = RecordingDispatcher()
@@ -419,6 +466,173 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert "/sp_auto:maxres_720/" in public_video.streaming_url
             assert public_video.poster_url is not None
             assert public_video.poster_url.endswith(".webp")
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_publication_media_uses_the_certificate_source_version(tmp_path: Path) -> None:
+    async def exercise() -> None:
+        database_path = (tmp_path / "signed-source-media.sqlite3").as_posix()
+        engine = create_async_engine(f"sqlite+aiosqlite:///{database_path}")
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        owner_id = uuid4()
+        work_id = uuid4()
+        category_id = uuid4()
+        dossier_id = uuid4()
+        signed_version_id = uuid4()
+        later_version_id = uuid4()
+        certificate_id = uuid4()
+        signed_asset_id = uuid4()
+        later_asset_id = uuid4()
+        async with factory() as session:
+            async with session.begin():
+                user = User(
+                    id=owner_id,
+                    email="signed-source@example.test",
+                    password_hash="hash",
+                    status=UserStatus.ACTIVE,
+                )
+                category = Category(
+                    id=category_id, code="SIGNED_SOURCE", name="Signed source"
+                )
+                dossier = Dossier(
+                    id=dossier_id,
+                    code="DOS-SIGNED-SOURCE",
+                    owner_user_id=owner_id,
+                    category_id=category.id,
+                    title="Signed source work",
+                    summary="The first version is the certified version.",
+                    current_version_no=2,
+                    _status=DossierStatus.CERTIFICATE_ISSUED,
+                )
+                signed_version = DossierVersion(
+                    id=signed_version_id,
+                    dossier_id=dossier.id,
+                    version_no=1,
+                    snapshot_json={"dossier": {"title": dossier.title}},
+                    canonical_hash="1" * 64,
+                    submitted_by=owner_id,
+                )
+                later_version = DossierVersion(
+                    id=later_version_id,
+                    dossier_id=dossier.id,
+                    version_no=2,
+                    snapshot_json={"dossier": {"title": "Later draft"}},
+                    canonical_hash="2" * 64,
+                    submitted_by=owner_id,
+                )
+                certificate = Certificate(
+                    id=certificate_id,
+                    certificate_number="TMI-2026-SIGNED-SOURCE",
+                    dossier_id=dossier.id,
+                    current_version_no=1,
+                    issued_at=datetime(2026, 9, 14, tzinfo=UTC),
+                    public_token_hash="3" * 64,
+                    qr_payload="https://example.test/verify/signed-source",
+                )
+                certificate_version = CertificateVersion(
+                    certificate_id=certificate.id,
+                    version_no=1,
+                    dossier_version_id=signed_version.id,
+                    metadata_json={"certificateNumber": certificate.certificate_number},
+                    metadata_hash="4" * 64,
+                )
+                signed_asset = MediaAsset(
+                    id=signed_asset_id,
+                    owner_user_id=owner_id,
+                    cloudinary_public_id="private/signed/source-video",
+                    resource_type="video",
+                    access_mode="authenticated",
+                    original_filename="signed-source.mp4",
+                    mime_type="video/mp4",
+                    bytes=35 * 1024 * 1024,
+                    status=MediaStatus.ACTIVE,
+                )
+                later_asset = MediaAsset(
+                    id=later_asset_id,
+                    owner_user_id=owner_id,
+                    cloudinary_public_id="private/later/source-video",
+                    resource_type="video",
+                    access_mode="authenticated",
+                    original_filename="later-source.mp4",
+                    mime_type="video/mp4",
+                    bytes=1024,
+                    status=MediaStatus.ACTIVE,
+                )
+                session.add_all(
+                    [
+                        user,
+                        category,
+                        dossier,
+                        signed_version,
+                        later_version,
+                        certificate,
+                        certificate_version,
+                        signed_asset,
+                        later_asset,
+                        DossierEvidence(
+                            dossier_id=dossier.id,
+                            dossier_version_id=signed_version.id,
+                            media_asset_id=signed_asset_id,
+                            evidence_type="VIDEO",
+                            evidence_role="PRIMARY_WORK",
+                            access_scope=EvidenceVisibility.PUBLIC_PREVIEW,
+                            title="Signed source video",
+                        ),
+                        DossierEvidence(
+                            dossier_id=dossier.id,
+                            dossier_version_id=later_version.id,
+                            media_asset_id=later_asset_id,
+                            evidence_type="VIDEO",
+                            evidence_role="PRIMARY_WORK",
+                            access_scope=EvidenceVisibility.PUBLIC_PREVIEW,
+                            title="Later source video",
+                        ),
+                        PublicWork(
+                            id=work_id,
+                            dossier_id=dossier.id,
+                            certificate_id=certificate.id,
+                            owner_user_id=owner_id,
+                            slug="signed-source-work",
+                            title=dossier.title,
+                            short_description=dossier.summary,
+                            category_id=category.id,
+                        ),
+                    ]
+                )
+
+            service = PublicMediaService(
+                session=session,
+                audit=AuditService(session),
+                dispatcher=RecordingDispatcher(),
+                payload_cipher=OutboxPayloadCipher.from_base64(
+                    encoded_key=base64.b64encode(b"s" * 32).decode(),
+                    key_id="signed-source-test-v1",
+                ),
+            )
+            admin = _principal(owner_id, "SUPER_ADMIN")
+            candidates = await service.list_admin_candidates(admin, work_id)
+            assert tuple(item.media_asset_id for item in candidates) == (
+                signed_asset_id,
+            )
+            assert candidates[0].bytes == 35 * 1024 * 1024
+
+            with pytest.raises(PublicMediaValidationError):
+                await service.attach(
+                    admin,
+                    work_id,
+                    PublicMediaInput(later_asset_id, 0, "Wrong version", None),
+                    request_id="reject-later-version",
+                )
+            await service.attach(
+                admin,
+                work_id,
+                PublicMediaInput(signed_asset_id, 0, "Signed source", None),
+                request_id="attach-signed-source",
+            )
         await engine.dispose()
 
     asyncio.run(exercise())
