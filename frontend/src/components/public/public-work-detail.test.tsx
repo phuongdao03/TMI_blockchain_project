@@ -191,7 +191,9 @@ describe("PublicWorkDetailPage", () => {
       screen
         .getByRole("link", { name: "Xem và kiểm tra chứng thư" })
         .getAttribute("href"),
-    ).toBe(`/verify/${encodeURIComponent(detail.certificate!.certificateNumber)}`);
+    ).toBe(
+      `/verify/${encodeURIComponent(detail.certificate!.certificateNumber)}`,
+    );
   });
 
   it("renders long untrusted-looking content as plain text", () => {

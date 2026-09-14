@@ -55,14 +55,19 @@ export function PwaInstallButton({ className }: { className?: string }) {
       )}
       href="/install"
     >
-      <Download aria-hidden="true" className="size-4 transition-transform group-hover:translate-y-0.5" />
+      <Download
+        aria-hidden="true"
+        className="size-4 transition-transform group-hover:translate-y-0.5"
+      />
       <span className="hidden whitespace-nowrap lg:inline">Cài ứng dụng</span>
     </Link>
   );
 }
 
 export function PwaInstallAction() {
-  const [state, setState] = useState<"idle" | "working" | "installed" | "manual">("idle");
+  const [state, setState] = useState<
+    "idle" | "working" | "installed" | "manual"
+  >("idle");
 
   async function install() {
     if (!deferredPrompt) return setState("manual");
@@ -79,7 +84,11 @@ export function PwaInstallAction() {
   }
 
   if (state === "installed") {
-    return <p className="text-sm font-bold text-emerald-400" role="status">Ứng dụng đã được cài đặt.</p>;
+    return (
+      <p className="text-sm font-bold text-emerald-400" role="status">
+        Ứng dụng đã được cài đặt.
+      </p>
+    );
   }
   return (
     <div>
@@ -93,8 +102,13 @@ export function PwaInstallAction() {
         {state === "working" ? "Đang mở cài đặt…" : "Tiến hành cài đặt"}
       </button>
       {state === "manual" ? (
-        <p className="mt-3 max-w-xl text-sm leading-6 text-slate-400" role="status">
-          Trình duyệt chưa mở hộp thoại tự động. Hãy dùng menu trình duyệt và chọn <strong>Cài đặt ứng dụng</strong> hoặc <strong>Thêm vào màn hình chính</strong>.
+        <p
+          className="mt-3 max-w-xl text-sm leading-6 text-slate-400"
+          role="status"
+        >
+          Trình duyệt chưa mở hộp thoại tự động. Hãy dùng menu trình duyệt và
+          chọn <strong>Cài đặt ứng dụng</strong> hoặc{" "}
+          <strong>Thêm vào màn hình chính</strong>.
         </p>
       ) : null}
     </div>

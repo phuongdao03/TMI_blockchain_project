@@ -11,8 +11,16 @@ test("public verification explains provenance and compares a file locally", asyn
   await expect(
     page.getByRole("heading", { name: "Lịch sử xác nhận" }),
   ).toBeVisible();
-  await expect(page.getByText("Phiên bản 1")).toBeVisible();
-  await expect(page.getByText("Mạng ghi nhận")).not.toBeVisible();
+  await expect(
+    page
+      .getByRole("listitem")
+      .filter({ hasText: "Phiên bản 1" })
+      .getByText("Phiên bản 1"),
+  ).toBeVisible();
+  const advancedDetails = page.locator("details").filter({
+    has: page.getByText("Chi tiết nâng cao", { exact: true }),
+  });
+  await expect(advancedDetails.getByText("Mạng ghi nhận")).not.toBeVisible();
 
   await page.getByLabel("Chọn tài liệu để đối chiếu").setInputFiles({
     name: "proof.txt",
@@ -21,6 +29,6 @@ test("public verification explains provenance and compares a file locally", asyn
   });
   await expect(page.getByText("Tài liệu trùng khớp")).toBeVisible();
 
-  await page.getByText("Chi tiết nâng cao", { exact: true }).click();
-  await expect(page.getByText("Mạng ghi nhận")).toBeVisible();
+  await advancedDetails.getByText("Chi tiết nâng cao", { exact: true }).click();
+  await expect(advancedDetails.getByText("Mạng ghi nhận")).toBeVisible();
 });

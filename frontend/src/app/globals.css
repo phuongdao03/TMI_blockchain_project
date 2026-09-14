@@ -6679,8 +6679,8 @@ html[data-theme="dark"] .public-home .home-journey .font-mono {
 }
 
 .project-guide section {
-  animation: editorial-section-enter var(--duration-slow)
-    var(--ease-smooth-out) both;
+  animation: editorial-section-enter var(--duration-slow) var(--ease-smooth-out)
+    both;
 }
 
 .project-guide section:nth-of-type(2) {

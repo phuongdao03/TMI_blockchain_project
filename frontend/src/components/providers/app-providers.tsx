@@ -19,7 +19,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ServiceWorkerRegistration />
+      <ServiceWorkerRegistration
+        forceEnable={process.env.NEXT_PUBLIC_ENABLE_PWA === "true"}
+      />
       {children}
     </QueryClientProvider>
   );

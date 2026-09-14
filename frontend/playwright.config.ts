@@ -63,6 +63,7 @@ export default defineConfig({
             AUTH_E2E_SHIM: "true",
             NEXT_DIST_DIR: applicationDistDir,
             NEXT_PUBLIC_RELEASE_MODE: previewRun ? "preview" : "full",
+            NEXT_PUBLIC_ENABLE_PWA: "true",
             NEXT_PUBLIC_FIREBASE_API_KEY: "e2e-api-key",
             NEXT_PUBLIC_FIREBASE_APP_ID: "1:123:web:e2e",
             NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "e2e.firebaseapp.com",

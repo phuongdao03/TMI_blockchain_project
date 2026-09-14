@@ -4,25 +4,34 @@ import { useEffect } from "react";
 
 export function shouldRegisterServiceWorker({
   environment,
+  forceEnable = false,
   isSecureContext,
   supported,
 }: {
   environment: string;
+  forceEnable?: boolean;
   isSecureContext: boolean;
   supported: boolean;
 }) {
-  return environment === "production" && isSecureContext && supported;
+  return (
+    (environment === "production" || forceEnable) &&
+    isSecureContext &&
+    supported
+  );
 }
 
 export function ServiceWorkerRegistration({
   environment = process.env.NODE_ENV,
+  forceEnable = false,
 }: {
   environment?: string;
+  forceEnable?: boolean;
 }) {
   useEffect(() => {
     if (
       !shouldRegisterServiceWorker({
         environment,
+        forceEnable,
         isSecureContext: window.isSecureContext,
         supported: "serviceWorker" in navigator,
       })
@@ -43,7 +52,7 @@ export function ServiceWorkerRegistration({
 
     window.addEventListener("load", register, { once: true });
     return () => window.removeEventListener("load", register);
-  }, [environment]);
+  }, [environment, forceEnable]);
 
   return null;
 }

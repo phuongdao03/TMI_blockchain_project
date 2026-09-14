@@ -24,6 +24,14 @@ describe("ServiceWorkerRegistration", () => {
     ).toBe(false);
     expect(
       shouldRegisterServiceWorker({
+        environment: "development",
+        forceEnable: true,
+        isSecureContext: true,
+        supported: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldRegisterServiceWorker({
         environment: "production",
         isSecureContext: false,
         supported: true,
