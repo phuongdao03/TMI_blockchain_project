@@ -23,6 +23,11 @@ from app.modules.public.models import (
     PublicationStatus,
     PublicWorkVisibility,
 )
+from app.modules.public.video_poster import (
+    cached_poster,
+    extract_video_poster,
+    retain_poster,
+)
 
 
 def content_response(
@@ -158,15 +163,20 @@ class PublicMediaDeliveryService:
                 url, status_code=307, headers={"Cache-Control": "private, no-store"}
             )
         if poster:
-            # Ciphertext is not a transformable video. Use a neutral cover until
-            # an existing image is selected; never upload plaintext for a poster.
+            # Authorization above always runs, including on cache hits.
+            digest = getattr(asset, "sha256", None)
+            frame = cached_poster(digest)
+            if frame is None:
+                content = await read_retained_content(asset, self.gateway, self.keyring)
+                frame = await extract_video_poster(content)
+                retain_poster(digest, frame)
             return Response(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" '
-                'viewBox="0 0 960 540"><rect width="960" height="540" '
-                'fill="#4a0808"/><path d="M420 180 L420 360 L580 270 Z" '
-                'fill="#e8c948"/></svg>',
-                media_type="image/svg+xml",
-                headers={"Cache-Control": "private, no-store"},
+                frame,
+                media_type="image/jpeg",
+                headers={
+                    "Cache-Control": "private, no-store",
+                    "X-Content-Type-Options": "nosniff",
+                },
             )
         content = await read_retained_content(asset, self.gateway, self.keyring)
         return content_response(content, asset.mime_type, byte_range)

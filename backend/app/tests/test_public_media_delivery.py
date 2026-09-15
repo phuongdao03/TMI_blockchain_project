@@ -48,6 +48,72 @@ def test_invalid_range(requested: str) -> None:
     assert error.value.status_code == 416
 
 
+def test_encrypted_video_poster_delivers_real_frame_without_upload() -> None:
+    async def exercise() -> None:
+        work_id, dossier_id = uuid4(), uuid4()
+        work = SimpleNamespace(
+            dossier_id=dossier_id,
+            publication_status=PublicationStatus.PUBLISHED,
+            published_at=datetime.now(UTC),
+            visibility=PublicWorkVisibility.PUBLIC,
+        )
+        relation = SimpleNamespace(
+            public_work_id=work_id, derivative_status=DerivativeStatus.READY
+        )
+        asset = SimpleNamespace(
+            id=uuid4(),
+            status=MediaStatus.ACTIVE,
+            deleted_at=None,
+            access_mode="authenticated",
+            encryption_status=MediaEncryptionStatus.ENCRYPTED,
+            mime_type="video/mp4",
+        )
+        session = MagicMock()
+        session.begin.return_value.__aenter__ = AsyncMock()
+        session.begin.return_value.__aexit__ = AsyncMock(return_value=False)
+        gateway = MagicMock()
+        retained_video = b"decrypted retained video"
+        jpeg_frame = b"\xff\xd8real video frame\xff\xd9"
+        with (
+            patch("app.modules.public.media_delivery.PublicMediaRepository") as media,
+            patch("app.modules.public.media_delivery.PublicWorkRepository") as catalog,
+            patch(
+                "app.modules.public.media_delivery.read_retained_content",
+                new=AsyncMock(return_value=retained_video),
+            ),
+            patch(
+                "app.modules.public.media_delivery.extract_video_poster",
+                new=AsyncMock(return_value=jpeg_frame),
+                create=True,
+            ),
+        ):
+            media.return_value.get_relation_with_asset = AsyncMock(
+                return_value=(relation, asset)
+            )
+            media.return_value.is_source_evidence_asset = AsyncMock(return_value=True)
+            catalog.return_value.get_publication_context = AsyncMock(
+                return_value=SimpleNamespace(
+                    work=work,
+                    category=SimpleNamespace(is_active=True),
+                    certificate=SimpleNamespace(
+                        status=CertificateStatus.ACTIVE,
+                        dossier_id=dossier_id,
+                        expires_at=None,
+                    ),
+                )
+            )
+            response = await PublicMediaDeliveryService(session, gateway, None).deliver(
+                work_id, uuid4(), None, None, poster=True
+            )
+            assert response.status_code == 200
+            assert response.headers["content-type"] == "image/jpeg"
+            assert response.body == jpeg_frame
+            assert response.headers["cache-control"] == "private, no-store"
+            assert gateway.mock_calls == []
+
+    asyncio.run(exercise())
+
+
 @pytest.mark.parametrize(
     "blocked",
     [

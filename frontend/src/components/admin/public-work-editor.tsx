@@ -19,6 +19,7 @@ import {
   Smartphone,
   Trash2,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -35,6 +36,8 @@ import type {
   PublicVideoPresentationInput,
   PublicMediaCandidate,
 } from "@/lib/api/types";
+
+type PublicWorkPreview = Awaited<ReturnType<typeof publicWorkAdminApi.preview>>;
 
 const editorSchema = z.object({
   slug: z
@@ -181,8 +184,21 @@ export function PublicWorkEditor({
   const preview = useQuery({
     queryKey: ["admin", "public-work-preview", selectedId],
     queryFn: () => publicWorkAdminApi.preview(selectedId!),
-    enabled: Boolean(selectedId && showPreview),
+    enabled: Boolean(selectedId),
+    staleTime: 60_000,
   });
+  const coverSources = media.data
+    ?.map(
+      (item) =>
+        `${item.id}:${item.derivativeStatus}:${item.posterMediaAssetId ?? ""}`,
+    )
+    .join("|");
+  useEffect(() => {
+    if (!selectedId || coverSources === undefined) return;
+    void queryClient.invalidateQueries({
+      queryKey: ["admin", "public-work-preview", selectedId],
+    });
+  }, [coverSources, queryClient, selectedId]);
 
   const {
     control,
@@ -509,9 +525,13 @@ export function PublicWorkEditor({
                     version={detail.data.sourceVersionNo}
                   />
                   <Gallery
+                    previewMedia={preview.data?.media ?? []}
                     candidates={mediaCandidates.data ?? []}
                     items={media.data ?? []}
                     onChanged={() => {
+                      void queryClient.invalidateQueries({
+                        queryKey: ["admin", "public-work-preview", selectedId],
+                      });
                       void queryClient.invalidateQueries({
                         queryKey: ["admin", "public-work-media", selectedId],
                       });
@@ -917,6 +937,7 @@ function EditorField({
 }
 
 function Gallery({
+  previewMedia,
   candidates,
   items,
   onChanged,
@@ -927,6 +948,7 @@ function Gallery({
   sourceLoading,
   workId,
 }: {
+  previewMedia: PublicWorkPreview["media"];
   candidates: PublicMediaCandidate[];
   items: PublicWorkMedia[];
   onChanged: () => void;
@@ -939,6 +961,12 @@ function Gallery({
 }) {
   const [attachingId, setAttachingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const selectedCover = previewMedia.find((item) =>
+    selectedThumbnail
+      ? items.find((relation) => relation.id === item.id)?.mediaAssetId ===
+        selectedThumbnail
+      : item.isThumbnail,
+  );
   const availableCandidates = candidates.filter(
     (candidate) => !candidate.alreadyAttached,
   );
@@ -1103,6 +1131,20 @@ function Gallery({
               Chọn ảnh đã nộp hoặc dùng khung hình tự động của video. Lựa chọn
               hiện ngay trong bản xem trước; bấm Lưu thay đổi để lưu ảnh bìa.
             </p>
+            {selectedCover ? (
+              <CoverImage
+                key={
+                  selectedCover.id +
+                  (selectedCover.posterUrl ?? selectedCover.url ?? "")
+                }
+                media={selectedCover}
+              />
+            ) : (
+              <p className="mt-3 text-sm text-neutral-600">
+                Chưa chọn ảnh bìa. Chọn ảnh hoặc video bên dưới để xem bìa tại
+                đây.
+              </p>
+            )}
           </div>
           <h4 className="text-sm font-bold text-neutral-800">
             Đang dùng để công bố
@@ -1139,7 +1181,7 @@ function Gallery({
                     >
                       <ImageIcon aria-hidden="true" className="size-4" />
                       {selectedThumbnail === item.mediaAssetId
-                        ? "Đang làm bìa"
+                        ? "Đã chọn làm bìa"
                         : item.mediaKind === "VIDEO"
                           ? "Dùng khung video làm bìa"
                           : "Đặt ảnh bìa"}
@@ -1383,6 +1425,66 @@ function VideoPresentationSettings({
             : "Lưu cấu hình video"}
       </Button>
     </details>
+  );
+}
+
+function CoverImage({ media }: { media: PublicWorkPreview["media"][number] }) {
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(
+    "loading",
+  );
+  const [attempt, setAttempt] = useState(0);
+  const url = media.kind === "VIDEO" ? media.posterUrl : media.url;
+  useEffect(() => {
+    if (status !== "loading") return;
+    const timer = window.setTimeout(() => setStatus("error"), 30_000);
+    return () => window.clearTimeout(timer);
+  }, [status, attempt]);
+  return (
+    <figure className="mt-4 max-w-xl">
+      <div className="relative aspect-video overflow-hidden rounded-xl bg-neutral-100">
+        {url ? (
+          <Image
+            key={attempt}
+            alt="Ảnh bìa đã chọn"
+            className={`object-contain ${status === "ready" ? "" : "invisible"}`}
+            fill
+            onLoad={() => setStatus("ready")}
+            onError={() => setStatus("error")}
+            sizes="(max-width: 640px) 100vw, 576px"
+            src={url}
+            unoptimized
+          />
+        ) : null}
+        {status !== "ready" ? (
+          <div
+            className="absolute inset-0 grid place-content-center gap-3 p-5 text-center text-sm text-neutral-700"
+            role="status"
+          >
+            <p>
+              {status === "loading" && url
+                ? "Đang tải ảnh bìa…"
+                : "Chưa tải được ảnh bìa. Thử lại hoặc chọn ảnh khác."}
+            </p>
+            {status === "error" && url ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setStatus("loading");
+                  setAttempt((value) => value + 1);
+                }}
+              >
+                Tải lại ảnh bìa
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+      <figcaption className="mt-2 text-xs leading-5 text-neutral-600">
+        Đây là bìa đã chọn, không phải trạng thái đang tạo ảnh. Bấm Lưu thay đổi
+        để lưu lựa chọn.
+      </figcaption>
+    </figure>
   );
 }
 

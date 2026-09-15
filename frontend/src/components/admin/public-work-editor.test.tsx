@@ -152,6 +152,60 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("PublicWorkEditor", () => {
+  it("shows the selected cover in the editor without opening page preview", async () => {
+    const relation = await publicWorkAdminApi.attachMedia(
+      work.id,
+      "asset-1",
+      0,
+    );
+    vi.mocked(publicWorkAdminApi.media).mockResolvedValue([
+      { ...relation, derivativeStatus: "READY" },
+    ]);
+    const previewData = await publicWorkAdminApi.preview(work.id);
+    vi.mocked(publicWorkAdminApi.preview).mockResolvedValue({
+      ...previewData,
+      media: [
+        {
+          id: relation.id,
+          kind: "VIDEO",
+          sortOrder: 0,
+          caption: null,
+          altText: null,
+          url: "/video.mp4",
+          mimeType: "video/mp4",
+          width: 1280,
+          height: 720,
+          durationMs: 12000,
+          isThumbnail: false,
+          posterUrl: "/cover.jpg",
+          controlsPreset: "FULL",
+          fitMode: "CONTAIN",
+          autoplay: false,
+          loop: false,
+          muted: false,
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PublicWorkEditor />, { wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: /Bản mẫu công khai/ }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Dùng khung video làm bìa" }),
+    );
+    expect(
+      (
+        await screen.findByRole("img", { name: "Ảnh bìa đã chọn" })
+      ).getAttribute("src"),
+    ).toMatch(/\/cover\.jpg$/);
+    expect(
+      screen
+        .getByRole("button", { name: "Đã chọn làm bìa" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
   it("previews a video with the user gallery rather than an image element", async () => {
     vi.mocked(publicWorkAdminApi.preview).mockResolvedValue({
       slug: work.slug,
@@ -446,7 +500,9 @@ describe("PublicWorkEditor", () => {
         name: "Dùng khung video làm bìa",
       }),
     );
-    expect(screen.getByRole("button", { name: "Đang làm bìa" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Đã chọn làm bìa" }),
+    ).toBeTruthy();
   });
 
   it("requires confirmation before preparing private dossier evidence", async () => {

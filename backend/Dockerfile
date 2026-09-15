@@ -18,6 +18,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH=/home/app/.local/bin:$PATH
 
 RUN apk upgrade --no-cache \
+    && apk add --no-cache ffmpeg \
     && addgroup -g 10001 -S app \
     && adduser -u 10001 -S -D -G app app
 
