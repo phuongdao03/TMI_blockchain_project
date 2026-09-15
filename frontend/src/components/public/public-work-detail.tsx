@@ -79,10 +79,17 @@ export function PublicWorkDetailPage({
   return <PublicWorkPresentation detail={detail.data} />;
 }
 
-function PublicWorkPresentation({ detail }: { detail: PublicWorkDetail }) {
+export function PublicWorkPresentation({
+  detail,
+  preview = false,
+}: {
+  detail: PublicWorkDetail;
+  preview?: boolean;
+}) {
   useEffect(() => {
-    void publicApi.recordView(detail.canonicalSlug).catch(() => undefined);
-  }, [detail.canonicalSlug]);
+    if (!preview)
+      void publicApi.recordView(detail.canonicalSlug).catch(() => undefined);
+  }, [detail.canonicalSlug, preview]);
 
   const verification = useQuery({
     queryKey: [
@@ -91,7 +98,7 @@ function PublicWorkPresentation({ detail }: { detail: PublicWorkDetail }) {
     ],
     queryFn: () =>
       publicApi.verifyNumber(detail.certificate!.certificateNumber),
-    enabled: Boolean(detail.certificate?.certificateNumber),
+    enabled: !preview && Boolean(detail.certificate?.certificateNumber),
     retry: false,
     staleTime: 60_000,
   });
@@ -150,11 +157,15 @@ function PublicWorkPresentation({ detail }: { detail: PublicWorkDetail }) {
                 </dt>
                 <dd className="mt-1 flex items-center gap-2 text-white">
                   <CalendarDays className="size-4 text-gold-300" />
-                  <time dateTime={detail.publishedAt}>
-                    {new Intl.DateTimeFormat("vi-VN", {
-                      dateStyle: "long",
-                    }).format(new Date(detail.publishedAt))}
-                  </time>
+                  {preview ? (
+                    <span>Chưa công bố · bản xem trước</span>
+                  ) : (
+                    <time dateTime={detail.publishedAt}>
+                      {new Intl.DateTimeFormat("vi-VN", {
+                        dateStyle: "long",
+                      }).format(new Date(detail.publishedAt))}
+                    </time>
+                  )}
                 </dd>
               </div>
             </dl>
@@ -200,7 +211,7 @@ function PublicWorkPresentation({ detail }: { detail: PublicWorkDetail }) {
                 ))}
               </div>
             </section>
-            <PublicWorkShareControls detail={detail} />
+            {!preview ? <PublicWorkShareControls detail={detail} /> : null}
           </div>
           <aside className="h-fit divide-y divide-white/10 border-y border-white/10">
             <CertificatePanel certificate={detail.certificate} />

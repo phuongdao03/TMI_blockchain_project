@@ -19,12 +19,12 @@ import {
   Smartphone,
   Trash2,
 } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { PublicWorkPresentation } from "@/components/public/public-work-detail";
 import { SelectControl } from "@/components/ui/form-controls";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ApiError, publicWorkAdminApi } from "@/lib/api/client";
@@ -206,6 +206,7 @@ export function PublicWorkEditor({
       tagIds: [],
     },
   });
+  const liveValues = useWatch({ control });
 
   useEffect(() => {
     if (detail.data) reset(defaults(detail.data));
@@ -276,6 +277,15 @@ export function PublicWorkEditor({
   });
 
   const selectedTags = useWatch({ control, name: "tagIds" }) ?? [];
+  const existingTag = tags.data?.find(
+    (tag) => tag.slug === tagSlug(newTagName) && tag.isActive,
+  );
+  const selectTag = (id: string) => {
+    setValue("tagIds", [...new Set([...getValues("tagIds"), id])], {
+      shouldDirty: true,
+    });
+    setNewTagName("");
+  };
   const createTag = useMutation({
     mutationFn: (name: string) =>
       publicWorkAdminApi.createTag({
@@ -284,8 +294,11 @@ export function PublicWorkEditor({
         isActive: true,
       }),
     onSuccess: async (created) => {
-      setValue("tagIds", [...selectedTags, created.id], { shouldDirty: true });
-      setNewTagName("");
+      selectTag(created.id);
+      queryClient.setQueryData(
+        ["admin", "public-work-tags"],
+        [...(tags.data ?? []).filter((tag) => tag.id !== created.id), created],
+      );
       await queryClient.invalidateQueries({
         queryKey: ["admin", "public-work-tags"],
       });
@@ -442,7 +455,31 @@ export function PublicWorkEditor({
 
             {showPreview ? (
               <PreviewPanel
-                data={preview.data}
+                data={
+                  preview.data
+                    ? {
+                        ...preview.data,
+                        title: liveValues.title ?? preview.data.title,
+                        shortDescription:
+                          liveValues.shortDescription ??
+                          preview.data.shortDescription,
+                        fullDescription: liveValues.fullDescription ?? null,
+                        authorDisplayName: liveValues.authorDisplayName ?? null,
+                        categoryName:
+                          categories.data?.find(
+                            (category) => category.id === liveValues.categoryId,
+                          )?.name ?? preview.data.categoryName,
+                        media: preview.data.media.map((item) => ({
+                          ...item,
+                          isThumbnail: selectedThumbnail
+                            ? media.data?.find(
+                                (relation) => relation.id === item.id,
+                              )?.mediaAssetId === selectedThumbnail
+                            : item.isThumbnail,
+                        })),
+                      }
+                    : undefined
+                }
                 loading={preview.isPending}
                 mode={previewMode}
                 onMode={setPreviewMode}
@@ -618,6 +655,14 @@ export function PublicWorkEditor({
                       <input
                         className={`${fieldClass} min-w-0 flex-1`}
                         id="new-public-work-tag"
+                        maxLength={160}
+                        onKeyDown={(event) => {
+                          if (event.key !== "Enter") return;
+                          event.preventDefault();
+                          if (existingTag) selectTag(existingTag.id);
+                          else if (!createTag.isPending && tagSlug(newTagName))
+                            createTag.mutate(newTagName);
+                        }}
                         onChange={(event) => setNewTagName(event.target.value)}
                         placeholder="Ví dụ: Video thương hiệu"
                         value={newTagName}
@@ -627,17 +672,34 @@ export function PublicWorkEditor({
                           createTag.isPending ||
                           tagSlug(newTagName).length === 0
                         }
-                        onClick={() => createTag.mutate(newTagName)}
+                        onClick={() =>
+                          existingTag
+                            ? selectTag(existingTag.id)
+                            : createTag.mutate(newTagName)
+                        }
                         type="button"
-                        variant="outline"
                       >
                         <Plus className="size-4" />
-                        {createTag.isPending ? "Đang tạo…" : "Tạo thẻ"}
+                        {createTag.isPending
+                          ? "Đang tạo…"
+                          : existingTag
+                            ? "Dùng thẻ có sẵn"
+                            : "Tạo thẻ"}
                       </Button>
                     </div>
+                    <p className="mt-2 text-xs leading-5 text-neutral-600">
+                      Nhập tên rồi nhấn Enter hoặc Tạo thẻ. Thẻ được chọn ngay;
+                      bấm Lưu thay đổi để gắn vào tác phẩm.
+                    </p>
                     {createTag.isError ? (
                       <p className="mt-2 text-sm text-red-700" role="alert">
-                        Không thể tạo thẻ. Hãy kiểm tra tên thẻ hoặc thử lại.
+                        {createTag.error instanceof ApiError &&
+                        createTag.error.status === 403
+                          ? "Tài khoản chưa có quyền quản lý thẻ. Bạn vẫn có thể chọn thẻ đang hoạt động."
+                          : createTag.error instanceof ApiError &&
+                              createTag.error.code === "TAXONOMY_SLUG_CONFLICT"
+                            ? "Tên thẻ đã tồn tại, có thể đang ngừng sử dụng. Kiểm tra trong mục Danh mục trước khi tạo lại."
+                            : "Không thể tạo thẻ. Hãy kiểm tra tên thẻ hoặc thử lại."}
                       </p>
                     ) : null}
                   </fieldset>
@@ -1033,6 +1095,15 @@ function Gallery({
 
       {items.length > 0 ? (
         <div className="mt-5 border-t border-neutral-200 pt-4">
+          <div className="mb-5 border-b border-neutral-200 pb-5">
+            <h4 className="flex items-center gap-2 font-bold">
+              <ImageIcon className="size-5 text-primary-700" /> Chọn ảnh bìa
+            </h4>
+            <p className="mt-2 text-sm leading-6 text-neutral-600">
+              Chọn ảnh đã nộp hoặc dùng khung hình tự động của video. Lựa chọn
+              hiện ngay trong bản xem trước; bấm Lưu thay đổi để lưu ảnh bìa.
+            </p>
+          </div>
           <h4 className="text-sm font-bold text-neutral-800">
             Đang dùng để công bố
           </h4>
@@ -1060,11 +1131,13 @@ function Gallery({
                   </span>
                   {item.mediaKind === "IMAGE" || item.mediaKind === "VIDEO" ? (
                     <button
-                      className={`rounded-lg px-2 py-1 text-xs font-bold ${selectedThumbnail === item.mediaAssetId ? "bg-primary-50 text-primary-700" : "text-neutral-600"}`}
+                      aria-pressed={selectedThumbnail === item.mediaAssetId}
+                      className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition sm:w-auto ${selectedThumbnail === item.mediaAssetId ? "border-primary-200 bg-primary-50 text-primary-700" : "border-primary-700 bg-primary-700 text-white hover:bg-primary-800"}`}
                       disabled={item.derivativeStatus !== "READY"}
                       onClick={() => onThumbnail(item.mediaAssetId)}
                       type="button"
                     >
+                      <ImageIcon aria-hidden="true" className="size-4" />
                       {selectedThumbnail === item.mediaAssetId
                         ? "Đang làm bìa"
                         : item.mediaKind === "VIDEO"
@@ -1074,6 +1147,7 @@ function Gallery({
                   ) : null}
                   <button
                     aria-label="Di chuyển lên"
+                    className="grid size-11 place-items-center"
                     disabled={index === 0}
                     onClick={() => void reorder(index, -1)}
                     type="button"
@@ -1082,6 +1156,7 @@ function Gallery({
                   </button>
                   <button
                     aria-label="Di chuyển xuống"
+                    className="grid size-11 place-items-center"
                     disabled={index === items.length - 1}
                     onClick={() => void reorder(index, 1)}
                     type="button"
@@ -1090,7 +1165,7 @@ function Gallery({
                   </button>
                   <button
                     aria-label="Xóa hình ảnh hoặc video"
-                    className="text-red-700"
+                    className="grid size-11 place-items-center text-red-700"
                     onClick={() => void remove(item.id)}
                     type="button"
                   >
@@ -1326,7 +1401,7 @@ function PreviewPanel({
     <div className="bg-neutral-100 p-5 sm:p-8">
       <div className="mb-5 flex items-center justify-between gap-3">
         <p className="text-sm font-bold text-neutral-700">
-          Bản xem trước an toàn
+          Xem như người dùng · chưa công bố
         </p>
         <div className="flex rounded-xl border border-neutral-200 bg-white p-1">
           <button
@@ -1356,46 +1431,29 @@ function PreviewPanel({
           </p>
         ) : data ? (
           <>
-            <div className="relative aspect-[16/8] bg-ink-950">
-              {data.media.find((item) => item.isThumbnail)?.url ? (
-                <Image
-                  alt={
-                    data.media.find((item) => item.isThumbnail)?.altText ??
-                    data.title
-                  }
-                  className="object-cover opacity-80"
-                  fill
-                  sizes="(max-width: 768px) 100vw, 1024px"
-                  src={data.media.find((item) => item.isThumbnail)?.url ?? ""}
-                  unoptimized
-                />
-              ) : (
-                <div className="grid size-full place-items-center text-sm text-neutral-400">
-                  Chưa có ảnh đại diện sẵn sàng
-                </div>
-              )}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-6 text-white">
-                <p className="text-xs font-bold tracking-[0.2em] text-gold-300 uppercase">
-                  {data.categoryName}
-                </p>
-                <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-4xl">
-                  {data.title}
-                </h2>
-              </div>
-            </div>
-            <div className="p-6 sm:p-8">
-              <p className="text-base leading-7 text-neutral-700">
-                {data.shortDescription}
-              </p>
-              {data.fullDescription ? (
-                <p className="mt-5 whitespace-pre-line text-sm leading-7 text-neutral-600">
-                  {data.fullDescription}
-                </p>
-              ) : null}
-              <p className="mt-6 border-t border-neutral-200 pt-4 text-sm font-bold">
-                {data.authorDisplayName || "Tác giả chưa công bố"}
-              </p>
-            </div>
+            <PublicWorkPresentation
+              preview
+              detail={{
+                id: data.slug,
+                slug: data.slug,
+                canonicalSlug: data.slug,
+                title: data.title,
+                shortDescription: data.shortDescription,
+                fullDescription: data.fullDescription,
+                authorDisplayName: data.authorDisplayName,
+                organizationDisplayName: null,
+                categoryName: data.categoryName,
+                categorySlug: "",
+                tags: [],
+                publishedAt: "",
+                visibility: "PRIVATE",
+                certificate: null,
+                proof: null,
+                media: data.media,
+                relatedWorks: [],
+                redirected: false,
+              }}
+            />
           </>
         ) : (
           <p className="p-8 text-sm text-red-700">

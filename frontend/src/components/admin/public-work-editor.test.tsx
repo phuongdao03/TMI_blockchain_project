@@ -152,6 +152,75 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("PublicWorkEditor", () => {
+  it("previews a video with the user gallery rather than an image element", async () => {
+    vi.mocked(publicWorkAdminApi.preview).mockResolvedValue({
+      slug: work.slug,
+      title: work.title,
+      shortDescription: work.shortDescription,
+      fullDescription: work.fullDescription,
+      authorDisplayName: work.authorDisplayName,
+      categoryName: work.categoryName,
+      canPublish: true,
+      media: [
+        {
+          id: "video-preview",
+          kind: "VIDEO",
+          sortOrder: 0,
+          caption: "Video preview",
+          altText: null,
+          url: "/api/v1/public/works/video/media/preview",
+          mimeType: "video/mp4",
+          width: 1280,
+          height: 720,
+          durationMs: 12000,
+          isThumbnail: true,
+          posterUrl: "/poster.jpg",
+          controlsPreset: "FULL",
+          fitMode: "CONTAIN",
+          autoplay: false,
+          loop: false,
+          muted: false,
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PublicWorkEditor />, { wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: /Bản mẫu công khai/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Xem trước" }));
+    await screen.findByRole("region", { name: "Thư viện nội dung đề cử" });
+    expect(document.querySelector("video")).not.toBeNull();
+    expect(
+      document.querySelector(
+        'img[src="/api/v1/public/works/video/media/preview"]',
+      ),
+    ).toBeNull();
+  });
+
+  it("reuses an existing tag instead of creating a duplicate", async () => {
+    const tag = {
+      id: "abca872b-71ac-4661-b1d1-37674359655f",
+      name: "Video thương hiệu",
+      slug: "video-thuong-hieu",
+      isActive: true,
+    };
+    vi.mocked(publicWorkAdminApi.tags).mockResolvedValue([tag]);
+    const user = userEvent.setup();
+    render(<PublicWorkEditor />, { wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: /Bản mẫu công khai/ }),
+    );
+    await user.type(screen.getByLabelText("Tên thẻ mới"), "Video thương hiệu");
+    await user.click(screen.getByRole("button", { name: /Dùng thẻ có sẵn/ }));
+    expect(publicWorkAdminApi.createTag).not.toHaveBeenCalled();
+    expect(
+      screen
+        .getByRole("button", { name: tag.name })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
   it("opens a publication directly from its canonical admin route", async () => {
     render(<PublicWorkEditor initialSelectedId={work.id} />, { wrapper });
 
