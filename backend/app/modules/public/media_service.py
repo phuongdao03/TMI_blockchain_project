@@ -414,6 +414,7 @@ class PublicMediaService:
             regenerate = (
                 relation.video_quality_profile != data.quality_profile
                 or relation.video_max_width != data.max_width
+                or relation.derivative_status is DerivativeStatus.FAILED
             )
             before: dict[str, object] = {
                 "quality_profile": relation.video_quality_profile.value,

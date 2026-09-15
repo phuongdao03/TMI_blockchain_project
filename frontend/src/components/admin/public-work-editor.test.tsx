@@ -250,6 +250,58 @@ describe("PublicWorkEditor", () => {
     expect(screen.getByText(/Tự động cập nhật trạng thái/)).toBeTruthy();
   });
 
+  it("allows a failed video derivative to be retried without changing settings", async () => {
+    vi.mocked(publicWorkAdminApi.media).mockResolvedValueOnce([
+      {
+        id: "relation-video",
+        mediaAssetId: "asset-video",
+        mediaKind: "VIDEO",
+        sortOrder: 0,
+        caption: "Video source",
+        altText: null,
+        derivativeStatus: "FAILED",
+        derivativeMimeType: null,
+        derivativeWidth: null,
+        derivativeHeight: null,
+        durationMs: null,
+        attemptCount: 5,
+        failureCode: "PROVIDER_UNAVAILABLE",
+        posterMediaAssetId: null,
+        videoControlsPreset: "FULL",
+        videoFitMode: "CONTAIN",
+        videoQualityProfile: "BALANCED",
+        videoMaxWidth: 1280,
+        videoAutoplay: false,
+        videoLoop: false,
+        videoMuted: false,
+      },
+    ]);
+    const user = userEvent.setup();
+    render(<PublicWorkEditor />, { wrapper });
+    await user.click(await screen.findByRole("button", { name: /Bản mẫu/ }));
+
+    await user.click(
+      await screen.findByRole("button", { name: "Thử xử lý lại" }),
+    );
+
+    await waitFor(() =>
+      expect(publicWorkAdminApi.configureVideo).toHaveBeenCalledWith(
+        work.id,
+        "relation-video",
+        {
+          posterMediaAssetId: null,
+          controlsPreset: "FULL",
+          fitMode: "CONTAIN",
+          qualityProfile: "BALANCED",
+          maxWidth: 1280,
+          autoplay: false,
+          loop: false,
+          muted: false,
+        },
+      ),
+    );
+  });
+
   it("offers signed dossier source media for explicit publication preparation", async () => {
     vi.mocked(publicWorkAdminApi.mediaCandidates).mockResolvedValueOnce([
       {

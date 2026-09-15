@@ -1165,7 +1165,10 @@ function VideoPresentationSettings({
   };
 
   return (
-    <details className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+    <details
+      className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3"
+      open={item.derivativeStatus === "FAILED" ? true : undefined}
+    >
       <summary className="cursor-pointer text-sm font-bold">
         Cấu hình trình phát video
       </summary>
@@ -1296,7 +1299,13 @@ function VideoPresentationSettings({
         onClick={() => void save()}
         type="button"
       >
-        {saving ? "Đang lưu…" : "Lưu cấu hình video"}
+        {saving
+          ? item.derivativeStatus === "FAILED"
+            ? "Đang gửi xử lý lại…"
+            : "Đang lưu…"
+          : item.derivativeStatus === "FAILED"
+            ? "Thử xử lý lại"
+            : "Lưu cấu hình video"}
       </Button>
     </details>
   );

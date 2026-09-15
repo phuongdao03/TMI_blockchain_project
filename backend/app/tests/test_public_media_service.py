@@ -456,6 +456,29 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert configured.derivative_status is DerivativeStatus.PENDING
             assert dispatcher.ids == [relation_id]
 
+            configured.derivative_status = DerivativeStatus.FAILED
+            configured.failure_code = "PROVIDER_UNAVAILABLE"
+            await session.commit()
+            retried = await service.configure_video(
+                _principal(owner_id, "SUPER_ADMIN"),
+                work_id,
+                relation_id,
+                PublicVideoPresentationInput(
+                    poster_media_asset_id=None,
+                    controls_preset=VideoControlsPreset.MINIMAL,
+                    fit_mode=VideoFitMode.COVER,
+                    quality_profile=VideoQualityProfile.DATA_SAVER,
+                    max_width=640,
+                    autoplay=True,
+                    loop=True,
+                    muted=True,
+                ),
+                request_id="video-presentation-retry",
+            )
+            assert retried.derivative_status is DerivativeStatus.PENDING
+            assert retried.failure_code is None
+            assert dispatcher.ids == [relation_id, relation_id]
+
             worker = PublicMediaWorker(
                 session=session,
                 gateway=cast(PublicDerivativeGateway, VideoGateway()),
