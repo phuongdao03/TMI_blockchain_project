@@ -4,6 +4,18 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
+test("video posters use a bounded minimal FFmpeg build, not the full runtime package", async () => {
+  const backend = await read("backend/Dockerfile");
+  assert.match(backend, /AS poster-builder/);
+  assert.match(backend, /--disable-autodetect/);
+  assert.match(backend, /--disable-everything/);
+  assert.match(backend, /--enable-decoder=h264,hevc,vp8,vp9,mjpeg,mpeg4/);
+  assert.match(backend, /sha256sum -c/);
+  assert.match(backend, /COPY --from=poster-builder.+ffmpeg/);
+  const runtime = backend.split(/AS runtime/)[1];
+  assert.doesNotMatch(runtime, /apk add[^\n]*ffmpeg/);
+});
+
 test("production images are multi-stage, non-root and health checked", async () => {
   const [backend, frontend] = await Promise.all([
     read("backend/Dockerfile"),
