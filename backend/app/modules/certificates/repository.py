@@ -273,7 +273,7 @@ class CertificateRepository:
         )
 
     @staticmethod
-    def _admin_statement() -> Select:
+    def _admin_statement() -> Select[AdminCertificateRow]:
         return (
             CertificateRepository._detail_statement()
             .add_columns(PublicWork)
