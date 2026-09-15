@@ -50,7 +50,10 @@ test("reviewer reviews each document and submits a criteria verdict", async ({
 }, testInfo) => {
   const consoleIssues: string[] = [];
   page.on("console", (message) => {
-    if (["error", "warning"].includes(message.type())) {
+    const expectedAuthProbe =
+      message.type() === "error" &&
+      message.text().includes("status of 401 (Unauthorized)");
+    if (["error", "warning"].includes(message.type()) && !expectedAuthProbe) {
       consoleIssues.push(`${message.type()}: ${message.text()}`);
     }
   });

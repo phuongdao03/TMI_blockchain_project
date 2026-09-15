@@ -79,6 +79,7 @@ def test_publication_admin_contract_and_allowlisted_response() -> None:
             assert response.json()["data"] == {
                 "id": str(service.row.id),
                 "dossierId": str(service.row.dossier_id),
+                "dossierCode": None,
                 "certificateId": str(service.row.certificate_id),
                 "slug": "api-work",
                 "title": "API work",
