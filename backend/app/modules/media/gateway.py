@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import secrets
 import time
 from collections.abc import Callable, Mapping
@@ -10,6 +11,8 @@ from urllib.parse import quote, urlencode
 import httpx
 
 from app.modules.media.errors import MediaProviderUnavailableError
+
+logger = logging.getLogger(__name__)
 
 
 class MediaContentTooLargeError(Exception):
@@ -157,6 +160,7 @@ class CloudinaryMediaGateway:
         api_key: str,
         api_secret: str,
         timeout_seconds: float = 5.0,
+        derivative_timeout_seconds: float = 180.0,
         clock: Callable[[], float] | None = None,
         client: httpx.AsyncClient | None = None,
     ) -> None:
@@ -168,6 +172,11 @@ class CloudinaryMediaGateway:
         self._clock = clock or time.time
         self._client = client or httpx.AsyncClient(timeout=timeout_seconds)
         self._owns_client = client is None
+        self._derivative_timeout = httpx.Timeout(
+            derivative_timeout_seconds,
+            connect=min(timeout_seconds, 10.0),
+            pool=min(timeout_seconds, 10.0),
+        )
 
     def sign_parameters(self, parameters: Mapping[str, str]) -> str:
         # https://cloudinary.com/documentation/authentication_signatures
@@ -264,6 +273,7 @@ class CloudinaryMediaGateway:
         resource_type: str,
         file_format: str,
         expires_at: int,
+        transformation: str | None = None,
     ) -> str:
         # https://cloudinary.com/documentation/control_access_to_media
         timestamp = int(self._clock())
@@ -274,6 +284,8 @@ class CloudinaryMediaGateway:
             "timestamp": str(timestamp),
             "type": self._DELIVERY_TYPE,
         }
+        if transformation is not None:
+            parameters["transformation"] = transformation
         query = {
             **parameters,
             "api_key": self._api_key,
@@ -595,7 +607,9 @@ class CloudinaryMediaGateway:
         )
         if source_content is None:
             form["file"] = source_url
-            payload = await self._request_json("POST", url, data=form)
+            payload = await self._request_json(
+                "POST", url, data=form, timeout=self._derivative_timeout
+            )
         else:
             payload = await self._request_json(
                 "POST",
@@ -608,6 +622,7 @@ class CloudinaryMediaGateway:
                         "application/octet-stream",
                     )
                 },
+                timeout=self._derivative_timeout,
             )
         public_id = self._required_str(payload, "public_id")
         secure_url = self._required_str(payload, "secure_url")
@@ -641,6 +656,7 @@ class CloudinaryMediaGateway:
         *,
         data: Mapping[str, str] | None = None,
         files: Mapping[str, tuple[str, bytes, str]] | None = None,
+        timeout: httpx.Timeout | None = None,
     ) -> dict[str, object]:
         try:
             response = await self._client.request(
@@ -649,10 +665,19 @@ class CloudinaryMediaGateway:
                 data=data,
                 files=files,
                 auth=(self._api_key, self._api_secret),
+                timeout=timeout if timeout is not None else self._client.timeout,
             )
             response.raise_for_status()
             payload = response.json()
         except (httpx.HTTPError, ValueError) as exc:
+            logger.warning(
+                "media_provider_request_failed operation=%s error_type=%s status=%s",
+                "upload" if httpx.URL(url).path.endswith("/upload") else "media_api",
+                type(exc).__name__,
+                exc.response.status_code
+                if isinstance(exc, httpx.HTTPStatusError)
+                else None,
+            )
             raise MediaProviderUnavailableError() from exc
         if not isinstance(payload, dict):
             raise MediaProviderUnavailableError()

@@ -41,6 +41,7 @@ from app.modules.public.dependencies import (
     EngagementServiceDependency,
     PublicCatalogDependency,
     PublicDossierVerificationDependency,
+    PublicMediaDeliveryDependency,
     PublicVerificationDependency,
     enforce_public_engagement_rate_limit,
     enforce_public_rate_limit,
@@ -84,6 +85,22 @@ PUBLIC_RESPONSES: dict[int | str, dict[str, Any]] = {
     404: {"description": "Public resource was not found.", "model": ErrorEnvelope},
     422: {"description": "Request validation failed.", "model": ErrorEnvelope},
 }
+
+
+@router.get("/public/works/{work_id}/media/{relation_id}", responses=PUBLIC_RESPONSES)
+async def deliver_public_work_media(
+    work_id: UUID,
+    relation_id: UUID,
+    request: Request,
+    principal: OptionalCurrentPrincipalDependency,
+    service: PublicMediaDeliveryDependency,
+    poster: bool = Query(default=False),
+) -> Response:
+    return await service.deliver(
+        work_id, relation_id, principal, request.headers.get("range"), poster=poster
+    )
+
+
 PublicSlugPath = Annotated[str, Path(min_length=1, max_length=180)]
 VerificationTokenPath = Annotated[
     str,

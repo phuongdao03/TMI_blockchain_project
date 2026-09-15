@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 test.beforeEach(async ({ context, request }) => {
-  await request.post("http://127.0.0.1:4010/api/e2e/reset-cms");
+  const mockPort = process.env.E2E_MOCK_PORT ?? "4010";
+  await request.post(`http://127.0.0.1:${mockPort}/api/e2e/reset-cms`);
   await context.addCookies([
     {
       name: "tmi_access",

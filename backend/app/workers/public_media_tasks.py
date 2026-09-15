@@ -23,6 +23,7 @@ async def _generate(relation_id: UUID) -> None:
         api_key=settings.cloudinary_api_key,
         api_secret=secret.get_secret_value() if secret is not None else "",
         timeout_seconds=settings.media_provider_timeout_seconds,
+        derivative_timeout_seconds=settings.media_derivative_timeout_seconds,
     )
     try:
         async with get_session_factory()() as session:
@@ -30,6 +31,7 @@ async def _generate(relation_id: UUID) -> None:
                 session=session,
                 gateway=gateway,
                 environment=settings.app_env,
+                single_copy_storage_enabled=settings.media_single_copy_storage_enabled,
                 encryption_keyring=(
                     DocumentEncryptionKeyring.from_base64_keys(
                         active_key_id=settings.media_private_encryption_active_key_id,

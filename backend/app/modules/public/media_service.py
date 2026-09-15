@@ -206,6 +206,8 @@ def _cloudinary_video_variant(
     url: str | None, *, transformation: str, extension: str
 ) -> str | None:
     marker = "/video/upload/"
+    if url and url.startswith("/api/v1/public/works/"):
+        return f"{url}?poster=true" if extension == "webp" else None
     if (
         not url
         or marker not in url
@@ -505,6 +507,7 @@ class PublicMediaWorker:
         environment: str,
         payload_cipher: OutboxPayloadCipher,
         encryption_keyring: DocumentEncryptionKeyring | None = None,
+        single_copy_storage_enabled: bool = False,
     ) -> None:
         self._session = session
         self._repository = PublicMediaRepository(session)
@@ -513,6 +516,7 @@ class PublicMediaWorker:
         self._outbox = OutboxRepository(session)
         self._payload_cipher = payload_cipher
         self._encryption_keyring = encryption_keyring
+        self._single_copy_storage_enabled = single_copy_storage_enabled
 
     async def process(self, relation_id: UUID) -> None:
         async with self._session.begin():
@@ -523,6 +527,42 @@ class PublicMediaWorker:
                 return
             relation, asset = joined
             if relation.derivative_status is DerivativeStatus.READY:
+                return
+            if self._single_copy_storage_enabled:
+                if (
+                    asset.status is not MediaStatus.ACTIVE
+                    or asset.deleted_at is not None
+                    or asset.access_mode != "authenticated"
+                    or asset.sha256 is None
+                    or asset.encryption_status
+                    not in {
+                        MediaEncryptionStatus.ENCRYPTED,
+                        MediaEncryptionStatus.NOT_REQUIRED,
+                        MediaEncryptionStatus.LEGACY_UNENCRYPTED,
+                    }
+                ):
+                    relation.derivative_status = DerivativeStatus.FAILED
+                    relation.failure_code = "source_not_available"
+                    return
+                work = await self._repository.get_work(relation.public_work_id)
+                if work is None or not await self._repository.is_source_evidence_asset(
+                    work, asset.id
+                ):
+                    relation.derivative_status = DerivativeStatus.FAILED
+                    relation.failure_code = "source_not_certified"
+                    return
+                relation.derivative_status = DerivativeStatus.READY
+                relation.derivative_url = (
+                    f"/api/v1/public/works/{relation.public_work_id}"
+                    f"/media/{relation.id}"
+                )
+                relation.derivative_public_id = None
+                relation.derivative_mime_type = asset.mime_type
+                relation.derivative_width = asset.width
+                relation.derivative_height = asset.height
+                relation.duration_ms = asset.duration_ms
+                relation.failure_code = None
+                self._event(relation.public_work_id)
                 return
             relation.derivative_status = DerivativeStatus.PROCESSING
             relation.attempt_count += 1

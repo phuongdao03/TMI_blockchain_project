@@ -52,7 +52,10 @@ async def _inspect(media_id: UUID) -> None:
                 scanner=scanner,
                 max_attempts=settings.media_inspection_max_attempts,
                 encryption_keyring=_document_keyring(),
-                private_encryption_required=(settings.media_private_encryption_enabled),
+                private_encryption_required=(
+                    settings.media_private_encryption_enabled
+                    and not settings.media_single_copy_storage_enabled
+                ),
             )
             await service.inspect(media_id)
     finally:
@@ -81,7 +84,10 @@ async def _reverify(media_id: UUID) -> None:
                 scanner=scanner,
                 max_attempts=settings.media_inspection_max_attempts,
                 encryption_keyring=_document_keyring(),
-                private_encryption_required=(settings.media_private_encryption_enabled),
+                private_encryption_required=(
+                    settings.media_private_encryption_enabled
+                    and not settings.media_single_copy_storage_enabled
+                ),
             )
             await service.reverify(media_id)
     finally:
@@ -92,7 +98,11 @@ async def _enqueue_provenance_backfill() -> None:
     async with get_session_factory()() as session:
         repository = MediaAssetRepository(session)
         media_ids = await repository.list_untrusted_active_ids(limit=25)
-        legacy_private_ids = await repository.list_legacy_private_ids(limit=25)
+        legacy_private_ids = (
+            ()
+            if get_settings().media_single_copy_storage_enabled
+            else await repository.list_legacy_private_ids(limit=25)
+        )
     for media_id in media_ids:
         reverify_media_asset.delay(str(media_id))
     for media_id in legacy_private_ids:

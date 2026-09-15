@@ -16,14 +16,50 @@ from app.modules.engagement.errors import (
 from app.modules.engagement.redis import RedisShareDeduplicator, RedisViewDeduplicator
 from app.modules.engagement.service import EngagementService
 from app.modules.engagement.visitor import EngagementVisitorContext
+from app.modules.media.encryption import DocumentEncryptionKeyring
+from app.modules.media.gateway import CloudinaryMediaGateway
 from app.modules.public.cache import RedisVerificationCache
 from app.modules.public.catalog_cache import RedisPublicCatalogCache
 from app.modules.public.dossier_verification import (
     PublicDossierVerificationService,
 )
+from app.modules.public.media_delivery import PublicMediaDeliveryService
 from app.modules.public.rate_limit import RedisPublicRateLimiter
 from app.modules.public.service import PublicCatalogService
 from app.modules.public.verification import PublicVerificationService
+
+
+async def get_public_media_delivery(
+    session: SessionDependency,
+    settings: SettingsDependency,
+) -> AsyncIterator[PublicMediaDeliveryService]:
+    secret = settings.cloudinary_api_secret
+    keyring = (
+        DocumentEncryptionKeyring.from_base64_keys(
+            active_key_id=settings.media_private_encryption_active_key_id,
+            encoded_keys={
+                key_id: value.get_secret_value()
+                for key_id, value in settings.media_private_encryption_keys.items()
+            },
+        )
+        if settings.media_private_encryption_enabled
+        else None
+    )
+    gateway = CloudinaryMediaGateway(
+        cloud_name=settings.cloudinary_cloud_name,
+        api_key=settings.cloudinary_api_key,
+        api_secret=secret.get_secret_value() if secret is not None else "",
+        timeout_seconds=settings.media_provider_timeout_seconds,
+    )
+    try:
+        yield PublicMediaDeliveryService(session, gateway, keyring)
+    finally:
+        await gateway.close()
+
+
+PublicMediaDeliveryDependency = Annotated[
+    PublicMediaDeliveryService, Depends(get_public_media_delivery)
+]
 
 
 async def get_public_catalog(

@@ -119,8 +119,7 @@ class PublicMediaRepository:
                     CertificateVersion.version_no == Certificate.current_version_no,
                 )
             )
-            if certified_version_id is not None:
-                return certified_version_id
+            return certified_version_id
         return cast(
             UUID | None,
             await self._session.scalar(

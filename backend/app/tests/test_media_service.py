@@ -144,6 +144,7 @@ class RecordingMediaGateway:
 async def _build_service(
     *,
     encryption_keyring: DocumentEncryptionKeyring | None = None,
+    single_copy_storage_enabled: bool = False,
 ) -> tuple[
     MediaService,
     RecordingMediaGateway,
@@ -183,6 +184,7 @@ async def _build_service(
         ),
         clock=lambda: NOW,
         encryption_keyring=encryption_keyring,
+        single_copy_storage_enabled=single_copy_storage_enabled,
     )
     return service, gateway, session_factory, engine, users
 
@@ -303,14 +305,17 @@ def test_signed_upload_completion_delivery_and_delete() -> None:
     asyncio.run(exercise())
 
 
-def test_private_delivery_decrypts_only_after_owner_authorization() -> None:
+@pytest.mark.parametrize("single_copy", [False, True])
+def test_private_delivery_decrypts_only_after_owner_authorization(
+    single_copy: bool,
+) -> None:
     async def exercise() -> None:
         keyring = DocumentEncryptionKeyring(
             active_key_id="document-v1",
             keys={"document-v1": b"k" * 32},
         )
         service, gateway, session_factory, engine, users = await _build_service(
-            encryption_keyring=keyring
+            encryption_keyring=keyring, single_copy_storage_enabled=single_copy
         )
         owner = _principal(users["owner"])
         media_id = uuid4()
@@ -372,8 +377,18 @@ def test_private_delivery_decrypts_only_after_owner_authorization() -> None:
         async with session_factory() as session:
             session.add(legacy)
             await session.commit()
-        with pytest.raises(MediaInvalidStateError):
-            await service.create_signed_url(owner, legacy.id)
+        if single_copy:
+            signed_delivery = await service.create_signed_url(owner, legacy.id)
+            assert signed_delivery.url.startswith(
+                "https://api.cloudinary.test/download?"
+            )
+            with pytest.raises(MediaForbiddenError):
+                await service.create_signed_url(
+                    _principal(users["stranger"]), legacy.id
+                )
+        else:
+            with pytest.raises(MediaInvalidStateError):
+                await service.create_signed_url(owner, legacy.id)
 
         await service.close()
         await engine.dispose()

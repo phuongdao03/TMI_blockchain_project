@@ -1,4 +1,5 @@
 import asyncio
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
@@ -12,8 +13,10 @@ from app.workers.media_inspection_tasks import (
 )
 
 
+@pytest.mark.parametrize("single_copy", [False, True])
 def test_provenance_backfill_enqueues_legacy_private_media_for_encryption(
     monkeypatch: pytest.MonkeyPatch,
+    single_copy: bool,
 ) -> None:
     untrusted_id = uuid4()
     legacy_private_id = uuid4()
@@ -36,6 +39,7 @@ def test_provenance_backfill_enqueues_legacy_private_media_for_encryption(
             return (untrusted_id,)
 
         async def list_legacy_private_ids(self, *, limit: int) -> tuple[UUID, ...]:
+            assert not single_copy
             assert limit == 25
             return (legacy_private_id,)
 
@@ -45,6 +49,11 @@ def test_provenance_backfill_enqueues_legacy_private_media_for_encryption(
         lambda: lambda: SessionContext(),
     )
     monkeypatch.setattr(media_inspection_tasks, "MediaAssetRepository", Repository)
+    monkeypatch.setattr(
+        media_inspection_tasks,
+        "get_settings",
+        lambda: SimpleNamespace(media_single_copy_storage_enabled=single_copy),
+    )
     monkeypatch.setattr(
         media_inspection_tasks.reverify_media_asset,
         "delay",
@@ -59,7 +68,7 @@ def test_provenance_backfill_enqueues_legacy_private_media_for_encryption(
     asyncio.run(media_inspection_tasks._enqueue_provenance_backfill())
 
     assert reverifications == [str(untrusted_id)]
-    assert inspections == [str(legacy_private_id)]
+    assert inspections == ([] if single_copy else [str(legacy_private_id)])
 
 
 def test_media_inspection_worker_is_registered_and_retryable() -> None:

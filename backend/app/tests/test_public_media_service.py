@@ -4,6 +4,7 @@ import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
+from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -16,7 +17,11 @@ from app.modules.audit.service import AuditService
 from app.modules.auth.models import User, UserStatus
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
-from app.modules.blockchain.models import Certificate, CertificateVersion
+from app.modules.blockchain.models import (
+    Certificate,
+    CertificateStatus,
+    CertificateVersion,
+)
 from app.modules.dossiers.models import (
     Category,
     Dossier,
@@ -28,6 +33,7 @@ from app.modules.dossiers.models import (
 from app.modules.media.encryption import DocumentEncryptionKeyring
 from app.modules.media.errors import MediaProviderUnavailableError
 from app.modules.media.gateway import (
+    CloudinaryMediaGateway,
     PublicDerivativeGateway,
     PublicDerivativeMetadata,
 )
@@ -35,7 +41,9 @@ from app.modules.media.models import MediaAsset, MediaEncryptionStatus, MediaSta
 from app.modules.public.errors import (
     PublicMediaValidationError,
     PublicWorkForbiddenError,
+    PublicWorkNotFoundError,
 )
+from app.modules.public.media_delivery import PublicMediaDeliveryService
 from app.modules.public.media_service import (
     PublicMediaInput,
     PublicMediaService,
@@ -44,9 +52,11 @@ from app.modules.public.media_service import (
 )
 from app.modules.public.models import (
     DerivativeStatus,
+    PublicationStatus,
     PublicMediaKind,
     PublicWork,
     PublicWorkMedia,
+    PublicWorkVisibility,
     VideoControlsPreset,
     VideoFitMode,
     VideoQualityProfile,
@@ -191,6 +201,8 @@ def test_public_media_permissions_validation_order_removal_and_retry(
                             resource_type="image",
                             access_mode="authenticated",
                             original_filename="second.jpg",
+                            sha256="a" * 64,
+                            encryption_status=MediaEncryptionStatus.NOT_REQUIRED,
                             mime_type="image/jpeg",
                             bytes=1024,
                             width=800,
@@ -315,6 +327,22 @@ def test_public_media_permissions_validation_order_removal_and_retry(
             assert "first-source" not in serialized
             assert gallery[0].url is not None
             assert "derivatives/relation" in gallery[0].url
+
+            single_copy_worker = PublicMediaWorker(
+                session=session,
+                gateway=cast(PublicDerivativeGateway, gateway),
+                environment="local",
+                payload_cipher=payload_cipher,
+                single_copy_storage_enabled=True,
+            )
+            await single_copy_worker.process(second.id)
+            assert gateway.calls == 2
+            assert second.derivative_status is DerivativeStatus.READY
+            assert second.derivative_public_id is None
+            assert (
+                second.derivative_url
+                == f"/api/v1/public/works/{work_id}/media/{second.id}"
+            )
 
             await service.remove(
                 admin,
@@ -707,12 +735,56 @@ def test_publication_media_uses_the_certificate_source_version(tmp_path: Path) -
                     PublicMediaInput(later_asset_id, 0, "Wrong version", None),
                     request_id="reject-later-version",
                 )
-            await service.attach(
+            attached = await service.attach(
                 admin,
                 work_id,
                 PublicMediaInput(signed_asset_id, 0, "Signed source", None),
                 request_id="attach-signed-source",
             )
+            attached_id = attached.id
+            async with session.begin():
+                signed_asset.sha256 = "a" * 64
+                signed_asset.encryption_status = MediaEncryptionStatus.NOT_REQUIRED
+                relation = await session.get(PublicWorkMedia, attached_id)
+                assert relation is not None
+                relation.derivative_status = DerivativeStatus.READY
+                work = await session.get(PublicWork, work_id)
+                assert work is not None
+                work.publication_status = PublicationStatus.PUBLISHED
+                work.published_at = datetime.now(UTC)
+                work.visibility = PublicWorkVisibility.PUBLIC
+            provider = MagicMock(spec=CloudinaryMediaGateway)
+            provider.create_signed_delivery_url.return_value = (
+                "https://example.test/temporary"
+            )
+            delivery = PublicMediaDeliveryService(session, provider, None)
+            assert (
+                await delivery.deliver(work_id, attached_id, None, None)
+            ).status_code == 307
+            async with session.begin():
+                work.visibility = PublicWorkVisibility.PRIVATE
+            with pytest.raises(PublicWorkNotFoundError):
+                await delivery.deliver(work_id, attached_id, None, None)
+            assert (
+                await delivery.deliver(work_id, attached_id, admin, None)
+            ).status_code == 307
+            async with session.begin():
+                work = await session.get(PublicWork, work_id)
+                reloaded_certificate = await session.get(Certificate, certificate_id)
+                assert work is not None and reloaded_certificate is not None
+                work.visibility = PublicWorkVisibility.PUBLIC
+                reloaded_certificate.status = CertificateStatus.REVOKED
+            with pytest.raises(PublicWorkNotFoundError):
+                await delivery.deliver(work_id, attached_id, None, None)
+            async with session.begin():
+                reloaded_certificate = await session.get(Certificate, certificate_id)
+                assert reloaded_certificate is not None
+                reloaded_certificate.status = CertificateStatus.ACTIVE
+                reloaded_certificate.current_version_no = 2
+            # Missing certified version must not fall back to the mutable dossier.
+            with pytest.raises(PublicWorkNotFoundError):
+                await delivery.deliver(work_id, attached_id, None, None)
+            assert provider.create_signed_delivery_url.call_count == 2
         await engine.dispose()
 
     asyncio.run(exercise())

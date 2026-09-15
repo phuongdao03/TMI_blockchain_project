@@ -207,23 +207,33 @@ def test_inspection_activates_only_clean_media_and_uses_server_hash() -> None:
             mime_type="image/png",
             bytes=len(PNG),
             status=MediaStatus.QUARANTINED,
+            confidentiality=MediaConfidentiality.PRIVATE,
         )
         async with sessions() as session:
             session.add_all((owner, media))
             await session.commit()
         async with sessions() as session:
+            gateway = RecordingContentGateway(PNG)
             service = MediaInspectionService(
                 session=session,
-                gateway=RecordingContentGateway(PNG),
+                gateway=gateway,
                 scanner=StubScanner(MalwareScanResult.clean()),
                 max_attempts=3,
                 clock=lambda: NOW,
+                encryption_keyring=DocumentEncryptionKeyring(
+                    active_key_id="legacy", keys={"legacy": b"k" * 32}
+                ),
+                private_encryption_required=False,
             )
             await service.inspect(media.id)
+            assert gateway.encrypted_uploads == []
+            assert gateway.deleted == []
         async with sessions() as session:
             stored = await session.get(MediaAsset, media.id)
             assert stored is not None
             assert stored.status is MediaStatus.ACTIVE
+            assert stored.cloudinary_public_id == "private/clean-image"
+            assert stored.encryption_status is MediaEncryptionStatus.LEGACY_UNENCRYPTED
             assert stored.sha256 == (
                 "c6bafdaaa55a1027a9c2a50af22eb72b662aa5b0f36480286c18ded678df4e1b"
             )
@@ -329,7 +339,10 @@ def test_inspection_encrypts_private_original_before_activation() -> None:
     asyncio.run(exercise())
 
 
-def test_private_encryption_retry_reuses_ciphertext_after_delete_failure() -> None:
+@pytest.mark.parametrize("single_copy", [False, True])
+def test_private_encryption_retry_reuses_ciphertext_after_delete_failure(
+    single_copy: bool,
+) -> None:
     async def exercise() -> None:
         engine = create_async_engine("sqlite+aiosqlite://")
         sessions = async_sessionmaker(engine, expire_on_commit=False)
@@ -388,7 +401,7 @@ def test_private_encryption_retry_reuses_ciphertext_after_delete_failure() -> No
                 scanner=StubScanner(MalwareScanResult.clean()),
                 max_attempts=3,
                 encryption_keyring=keyring,
-                private_encryption_required=True,
+                private_encryption_required=not single_copy,
                 clock=lambda: NOW,
             )
             await service.inspect(media.id)

@@ -52,6 +52,7 @@ async def get_media_service(
         ),
         delivery_access_policy=ReviewMediaAccessPolicy(session),
         encryption_keyring=encryption_keyring,
+        single_copy_storage_enabled=settings.media_single_copy_storage_enabled,
     )
     try:
         yield service

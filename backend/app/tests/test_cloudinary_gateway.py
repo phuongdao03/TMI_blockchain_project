@@ -51,6 +51,23 @@ def test_cloudinary_signatures_and_expiring_private_url() -> None:
         assert query["type"] == ["authenticated"]
         assert query["api_key"] == ["api-key"]
         assert query["signature"]
+        transformed = gateway.create_signed_delivery_url(
+            public_id="protected/video",
+            resource_type="video",
+            file_format="jpg",
+            expires_at=expires_at,
+            transformation="so_0,c_limit,w_960,q_auto",
+        )
+        transformed_query = parse_qs(urlparse(transformed).query)
+        assert transformed_query["transformation"] == ["so_0,c_limit,w_960,q_auto"]
+        signed_parameters = {
+            key: values[0]
+            for key, values in transformed_query.items()
+            if key not in {"api_key", "signature"}
+        }
+        assert transformed_query["signature"] == [
+            gateway.sign_parameters(signed_parameters)
+        ]
         await gateway.close()
 
     asyncio.run(exercise())
@@ -121,6 +138,8 @@ def test_cloudinary_creates_isolated_public_derivative(
 
         async def handler(request: httpx.Request) -> httpx.Response:
             requests.append(request)
+            assert request.extensions["timeout"]["read"] == 180.0
+            assert request.extensions["timeout"]["write"] == 180.0
             return httpx.Response(
                 200,
                 json={
@@ -178,6 +197,61 @@ def test_cloudinary_creates_isolated_public_derivative(
         assert "private%2Fowner%2Fsource-id" in form["file"][0]
         assert form["signature"]
         await gateway.close()
+        await client.aclose()
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.parametrize("failure", ["timeout", "http_400"])
+def test_derivative_failure_logs_only_safe_diagnostics(
+    failure: str,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import logging
+
+    # API startup configures a non-propagating structured logger. Capture at
+    # the module boundary so this assertion is independent of collection order.
+    logger = logging.getLogger("app.modules.media.gateway")
+    monkeypatch.setattr(logger, "handlers", [caplog.handler])
+
+    async def exercise() -> None:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            assert request.extensions["timeout"]["read"] == 240.0
+            assert request.extensions["timeout"]["write"] == 240.0
+            if failure == "timeout":
+                raise httpx.ReadTimeout("sensitive-url-and-token", request=request)
+            return httpx.Response(
+                400, json={"error": {"message": "sensitive-provider-body"}}
+            )
+
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        gateway = CloudinaryMediaGateway(
+            cloud_name="demo",
+            api_key="sensitive-api-key",
+            api_secret="sensitive-secret",
+            derivative_timeout_seconds=240,
+            client=client,
+        )
+        from app.modules.media.errors import MediaProviderUnavailableError
+
+        with pytest.raises(MediaProviderUnavailableError):
+            await gateway.create_public_derivative(
+                source_public_id="sensitive-private-source",
+                source_resource_type="video",
+                source_format="mp4",
+                derivative_public_id="public/video",
+                transformation="c_limit,w_1280,q_auto:good,vc_auto",
+                source_content=b"sensitive-video-bytes",
+            )
+        diagnostics = "\n".join(
+            record.getMessage()
+            for record in caplog.records
+            if record.name == "app.modules.media.gateway"
+        )
+        assert "operation=upload" in diagnostics
+        assert ("ReadTimeout" if failure == "timeout" else "status=400") in diagnostics
+        assert "sensitive" not in diagnostics
         await client.aclose()
 
     asyncio.run(exercise())

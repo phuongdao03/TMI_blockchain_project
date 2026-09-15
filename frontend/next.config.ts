@@ -16,6 +16,7 @@ const securityHeaders = [
       } https://apis.google.com`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
+      "media-src 'self' https://api.cloudinary.com https://res.cloudinary.com",
       `connect-src 'self' https:${
         process.env.NODE_ENV === "production"
           ? ""

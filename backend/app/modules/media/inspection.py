@@ -409,7 +409,6 @@ class MediaInspectionService:
         ) = snapshot
         if (
             confidentiality is MediaConfidentiality.PRIVATE
-            and self._private_encryption_required
             and encryption_status is MediaEncryptionStatus.ENCRYPTED
         ):
             await self._delete_plaintext_and_activate(

@@ -149,11 +149,13 @@ class Settings(BaseSettings):
         le=104_857_600,
     )
     media_provider_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
+    media_derivative_timeout_seconds: float = Field(default=180.0, gt=0, le=600)
     media_scanner_host: str = Field(default="clamav", min_length=1, max_length=255)
     media_scanner_port: int = Field(default=3310, ge=1, le=65_535)
     media_scanner_timeout_seconds: float = Field(default=15.0, gt=0, le=120)
     media_inspection_max_attempts: int = Field(default=5, ge=1, le=10)
     media_private_encryption_enabled: bool = False
+    media_single_copy_storage_enabled: bool = False
     media_private_encryption_active_key_id: str = Field(default="", max_length=64)
     media_private_encryption_keys: Annotated[dict[str, SecretStr], NoDecode] = Field(
         default_factory=dict
@@ -384,6 +386,7 @@ class Settings(BaseSettings):
             self.app_env == "production"
             and self.release_mode == "full"
             and not self.media_private_encryption_enabled
+            and not self.media_single_copy_storage_enabled
         ):
             raise ValueError(
                 "Private document encryption must be enabled in production."

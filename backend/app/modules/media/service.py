@@ -130,6 +130,7 @@ class MediaService:
         delivery_access_policy: MediaDeliveryAccessPolicy | None = None,
         clock: Callable[[], datetime] | None = None,
         encryption_keyring: DocumentEncryptionKeyring | None = None,
+        single_copy_storage_enabled: bool = False,
     ) -> None:
         self._session = session
         self._repository = MediaAssetRepository(session)
@@ -146,6 +147,7 @@ class MediaService:
         self._enqueue_inspection = enqueue_inspection or (lambda _media_id: None)
         self._clock = clock or (lambda: datetime.now(UTC))
         self._encryption_keyring = encryption_keyring
+        self._single_copy_storage_enabled = single_copy_storage_enabled
 
     async def create_upload_signature(
         self,
@@ -281,6 +283,7 @@ class MediaService:
                 raise MediaInvalidStateError()
             if (
                 self._encryption_keyring is not None
+                and not self._single_copy_storage_enabled
                 and asset.confidentiality is MediaConfidentiality.PRIVATE
                 and asset.encryption_status is not MediaEncryptionStatus.ENCRYPTED
             ):

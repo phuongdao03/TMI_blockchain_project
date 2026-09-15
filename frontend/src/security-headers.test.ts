@@ -3,6 +3,17 @@ import { describe, expect, it } from "vitest";
 import nextConfig from "../next.config";
 
 describe("frontend security headers", () => {
+  it("allows protected provider media without allowing arbitrary media hosts", async () => {
+    const routes = await nextConfig.headers!();
+    const policy = routes[0]?.headers.find(
+      (header) => header.key === "Content-Security-Policy",
+    )?.value;
+    expect(policy).toContain(
+      "media-src 'self' https://api.cloudinary.com https://res.cloudinary.com",
+    );
+    expect(policy).not.toContain("media-src *");
+  });
+
   it("excludes React Native storage from the browser bundle", () => {
     const config = { resolve: { alias: {} as Record<string, unknown> } };
 
