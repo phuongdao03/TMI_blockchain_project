@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("public verification explains provenance and compares a file locally", async ({
+test("public verification explains provenance without document comparison", async ({
   page,
 }) => {
   await page.goto("/verify/demo-token");
@@ -22,12 +22,8 @@ test("public verification explains provenance and compares a file locally", asyn
   });
   await expect(advancedDetails.getByText("Mạng ghi nhận")).not.toBeVisible();
 
-  await page.getByLabel("Chọn tài liệu để đối chiếu").setInputFiles({
-    name: "proof.txt",
-    mimeType: "text/plain",
-    buffer: Buffer.from("hello"),
-  });
-  await expect(page.getByText("Tài liệu trùng khớp")).toBeVisible();
+  await expect(page.getByText("Đối chiếu tài liệu")).toHaveCount(0);
+  await expect(page.getByLabel("Chọn tài liệu để đối chiếu")).toHaveCount(0);
 
   await advancedDetails.getByText("Chi tiết nâng cao", { exact: true }).click();
   await expect(advancedDetails.getByText("Mạng ghi nhận")).toBeVisible();

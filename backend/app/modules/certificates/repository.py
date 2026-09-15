@@ -186,9 +186,7 @@ class CertificateRepository:
         filters = []
         if search:
             escaped = (
-                search.replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_")
+                search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
             )
             pattern = f"%{escaped}%"
             filters.append(
