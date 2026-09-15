@@ -126,6 +126,15 @@ class MediaGateway(Protocol):
 
 
 class PublicDerivativeGateway(Protocol):
+    async def download_asset(
+        self,
+        *,
+        public_id: str,
+        resource_type: str,
+        file_format: str,
+        max_bytes: int,
+    ) -> bytes: ...
+
     async def create_public_derivative(
         self,
         *,
@@ -134,6 +143,7 @@ class PublicDerivativeGateway(Protocol):
         source_format: str,
         derivative_public_id: str,
         transformation: str,
+        source_content: bytes | None = None,
     ) -> PublicDerivativeMetadata: ...
 
 
@@ -552,6 +562,7 @@ class CloudinaryMediaGateway:
         source_format: str,
         derivative_public_id: str,
         transformation: str,
+        source_content: bytes | None = None,
     ) -> PublicDerivativeMetadata:
         # The transformed copy receives a distinct public identifier. This prevents
         # an authenticated source identifier from appearing in public HTML.
@@ -571,7 +582,6 @@ class CloudinaryMediaGateway:
             "type": "upload",
         }
         form = {
-            "file": source_url,
             **parameters,
             "api_key": self._api_key,
             "signature": self.sign_parameters(parameters),
@@ -583,7 +593,22 @@ class CloudinaryMediaGateway:
             f"https://api.cloudinary.com/v1_1/"
             f"{quote(self._cloud_name, safe='')}/{target_resource_type}/upload"
         )
-        payload = await self._request_json("POST", url, data=form)
+        if source_content is None:
+            form["file"] = source_url
+            payload = await self._request_json("POST", url, data=form)
+        else:
+            payload = await self._request_json(
+                "POST",
+                url,
+                data=form,
+                files={
+                    "file": (
+                        f"source.{source_format}",
+                        source_content,
+                        "application/octet-stream",
+                    )
+                },
+            )
         public_id = self._required_str(payload, "public_id")
         secure_url = self._required_str(payload, "secure_url")
         resource_type = self._required_str(payload, "resource_type")

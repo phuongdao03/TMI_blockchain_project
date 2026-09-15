@@ -7,6 +7,7 @@ from sqlalchemy.exc import OperationalError
 from app.core.config import get_settings
 from app.db.session import get_session_factory
 from app.modules.auth.security import OutboxPayloadCipher
+from app.modules.media.encryption import DocumentEncryptionKeyring
 from app.modules.media.errors import MediaProviderUnavailableError
 from app.modules.media.gateway import CloudinaryMediaGateway
 from app.modules.public.media_service import PublicMediaWorker
@@ -29,6 +30,19 @@ async def _generate(relation_id: UUID) -> None:
                 session=session,
                 gateway=gateway,
                 environment=settings.app_env,
+                encryption_keyring=(
+                    DocumentEncryptionKeyring.from_base64_keys(
+                        active_key_id=settings.media_private_encryption_active_key_id,
+                        encoded_keys={
+                            key_id: value.get_secret_value()
+                            for key_id, value in (
+                                settings.media_private_encryption_keys.items()
+                            )
+                        },
+                    )
+                    if settings.media_private_encryption_enabled
+                    else None
+                ),
                 payload_cipher=OutboxPayloadCipher.from_base64(
                     encoded_key=(
                         settings.auth_outbox_encryption_key.get_secret_value()

@@ -112,7 +112,10 @@ def test_cloudinary_metadata_and_delete_contract() -> None:
     asyncio.run(exercise())
 
 
-def test_cloudinary_creates_isolated_public_derivative() -> None:
+@pytest.mark.parametrize("source_content", [None, b"decrypted retained content"])
+def test_cloudinary_creates_isolated_public_derivative(
+    source_content: bytes | None,
+) -> None:
     async def exercise() -> None:
         requests: list[httpx.Request] = []
 
@@ -148,11 +151,23 @@ def test_cloudinary_creates_isolated_public_derivative() -> None:
             source_format="png",
             derivative_public_id=("ip-certificate/public/derivatives/relation-id"),
             transformation="c_limit,w_1600,h_1600,q_auto,f_webp",
+            source_content=source_content,
         )
 
         assert derivative.mime_type == "image/webp"
         assert derivative.width == 1600
         assert "private/owner/source-id" not in derivative.url
+        if source_content is not None:
+            body = requests[0].content
+            assert requests[0].headers["content-type"].startswith("multipart/form-data")
+            assert source_content in body
+            assert b'filename="source.png"' in body
+            assert b"private%2Fowner%2Fsource-id" not in body
+            assert b"/download?" not in body
+            assert b"c_limit,w_1600,h_1600,q_auto,f_webp" in body
+            await gateway.close()
+            await client.aclose()
+            return
         form = parse_qs(requests[0].content.decode())
         assert requests[0].url.path.endswith("/image/upload")
         assert form["public_id"] == ["ip-certificate/public/derivatives/relation-id"]

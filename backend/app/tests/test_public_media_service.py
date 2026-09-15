@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
@@ -24,12 +25,13 @@ from app.modules.dossiers.models import (
     DossierVersion,
     EvidenceVisibility,
 )
+from app.modules.media.encryption import DocumentEncryptionKeyring
 from app.modules.media.errors import MediaProviderUnavailableError
 from app.modules.media.gateway import (
     PublicDerivativeGateway,
     PublicDerivativeMetadata,
 )
-from app.modules.media.models import MediaAsset, MediaStatus
+from app.modules.media.models import MediaAsset, MediaEncryptionStatus, MediaStatus
 from app.modules.public.errors import (
     PublicMediaValidationError,
     PublicWorkForbiddenError,
@@ -332,12 +334,33 @@ def test_public_media_permissions_validation_order_removal_and_retry(
 
 
 def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) -> None:
+    content = b"retained private video bytes"
+    digest = hashlib.sha256(content).hexdigest()
+    keyring = DocumentEncryptionKeyring(active_key_id="test", keys={"test": b"k" * 32})
+    video_id = uuid4()
+    encrypted = keyring.encrypt(content, media_id=video_id, sha256=digest)
+
     class VideoGateway:
+        corrupt = True
+        upload_count = 0
+
+        async def download_asset(self, **kwargs: object) -> bytes:
+            assert kwargs["public_id"] == "private/encrypted-video.bin"
+            assert kwargs["resource_type"] == "raw"
+            assert kwargs["max_bytes"] == len(encrypted.ciphertext)
+            return (
+                b"x" * len(encrypted.ciphertext)
+                if self.corrupt
+                else encrypted.ciphertext
+            )
+
         async def create_public_derivative(
             self, **kwargs: object
         ) -> PublicDerivativeMetadata:
+            self.upload_count += 1
             assert kwargs["source_resource_type"] == "video"
             assert kwargs["source_format"] == "mp4"
+            assert kwargs["source_content"] == content
             assert kwargs["transformation"] == "c_limit,w_640,q_auto:eco,vc_auto"
             assert str(kwargs["derivative_public_id"]).startswith("tmi/local/dossiers/")
             assert "/versions/1/public/" in str(kwargs["derivative_public_id"])
@@ -405,6 +428,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
                     category_id=category.id,
                 )
                 video = MediaAsset(
+                    id=video_id,
                     owner_user_id=owner_id,
                     cloudinary_public_id="private/owner/welcome-video",
                     cloudinary_version=1,
@@ -414,6 +438,13 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
                     mime_type="video/mp4",
                     bytes=4096,
                     status=MediaStatus.ACTIVE,
+                    sha256=digest,
+                    encryption_status=MediaEncryptionStatus.ENCRYPTED,
+                    encryption_key_id=encrypted.key_id,
+                    encryption_nonce=encrypted.nonce,
+                    encryption_tag=encrypted.tag,
+                    encrypted_object_public_id="private/encrypted-video.bin",
+                    encrypted_bytes=len(encrypted.ciphertext),
                 )
                 session.add_all([dossier, dossier_version, work, video])
                 await session.flush()
@@ -479,16 +510,25 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert retried.failure_code is None
             assert dispatcher.ids == [relation_id, relation_id]
 
+            video_gateway = VideoGateway()
             worker = PublicMediaWorker(
                 session=session,
-                gateway=cast(PublicDerivativeGateway, VideoGateway()),
+                gateway=cast(PublicDerivativeGateway, video_gateway),
+                encryption_keyring=keyring,
                 environment="local",
                 payload_cipher=OutboxPayloadCipher.from_base64(
                     encoded_key=base64.b64encode(b"v" * 32).decode(),
                     key_id="video-test-v1",
                 ),
             )
+            with pytest.raises(PublicMediaValidationError, match="integrity"):
+                await worker.process(relation_id)
+            assert video_gateway.upload_count == 0
+            assert configured.derivative_status is DerivativeStatus.FAILED
+            assert configured.failure_code == "SOURCE_INTEGRITY_FAILED"
+            video_gateway.corrupt = False
             await worker.process(relation_id)
+            assert video_gateway.upload_count == 1
 
             relation = await session.get(PublicWorkMedia, relation_id)
             assert relation is not None

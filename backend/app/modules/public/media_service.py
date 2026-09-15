@@ -1,7 +1,9 @@
+import hashlib
 from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
 
+from cryptography.exceptions import InvalidTag
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,9 +14,14 @@ from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.models import EvidenceVisibility
+from app.modules.media.encryption import (
+    DocumentEncryptionConfigurationError,
+    DocumentEncryptionKeyring,
+    EncryptedDocument,
+)
 from app.modules.media.errors import MediaProviderUnavailableError
-from app.modules.media.gateway import PublicDerivativeGateway
-from app.modules.media.models import MediaAsset, MediaStatus
+from app.modules.media.gateway import MediaContentTooLargeError, PublicDerivativeGateway
+from app.modules.media.models import MediaAsset, MediaEncryptionStatus, MediaStatus
 from app.modules.public.errors import (
     PublicMediaConflictError,
     PublicMediaNotFoundError,
@@ -497,6 +504,7 @@ class PublicMediaWorker:
         gateway: PublicDerivativeGateway,
         environment: str,
         payload_cipher: OutboxPayloadCipher,
+        encryption_keyring: DocumentEncryptionKeyring | None = None,
     ) -> None:
         self._session = session
         self._repository = PublicMediaRepository(session)
@@ -504,6 +512,7 @@ class PublicMediaWorker:
         self._environment = environment
         self._outbox = OutboxRepository(session)
         self._payload_cipher = payload_cipher
+        self._encryption_keyring = encryption_keyring
 
     async def process(self, relation_id: UUID) -> None:
         async with self._session.begin():
@@ -555,10 +564,12 @@ class PublicMediaWorker:
             f"versions/{source_version_no or 'unknown'}/public/{relation_id}"
         )
         try:
+            source_content = await self._read_encrypted_source(asset)
             derivative = await self._gateway.create_public_derivative(
                 source_public_id=source_public_id,
                 source_resource_type=source_resource_type,
                 source_format=source_format,
+                source_content=source_content,
                 derivative_public_id=derivative_public_id,
                 transformation=(
                     IMAGE_DERIVATIVE_TRANSFORMATION
@@ -572,6 +583,17 @@ class PublicMediaWorker:
         except MediaProviderUnavailableError:
             await self._mark_failed(relation_id, "PROVIDER_UNAVAILABLE")
             raise
+        except (
+            InvalidTag,
+            DocumentEncryptionConfigurationError,
+            PublicMediaValidationError,
+            MediaContentTooLargeError,
+            ValueError,
+        ):
+            await self._mark_failed(relation_id, "SOURCE_INTEGRITY_FAILED")
+            raise PublicMediaValidationError(
+                "Retained media integrity verification failed."
+            ) from None
         async with self._session.begin():
             current = await self._repository.get_relation(relation_id, for_update=True)
             if current is None or current.derivative_status is DerivativeStatus.READY:
@@ -585,6 +607,45 @@ class PublicMediaWorker:
             current.duration_ms = derivative.duration_ms
             current.failure_code = None
             self._event(current.public_work_id)
+
+    async def _read_encrypted_source(self, asset: MediaAsset) -> bytes | None:
+        if asset.encryption_status is not MediaEncryptionStatus.ENCRYPTED:
+            return None
+        if (
+            self._encryption_keyring is None
+            or asset.sha256 is None
+            or asset.encryption_key_id is None
+            or asset.encryption_nonce is None
+            or asset.encryption_tag is None
+            or asset.encrypted_object_public_id is None
+            or asset.encrypted_bytes is None
+        ):
+            raise PublicMediaValidationError(
+                "Retained media encryption metadata is incomplete."
+            )
+        ciphertext = await self._gateway.download_asset(
+            public_id=asset.encrypted_object_public_id,
+            resource_type="raw",
+            file_format="bin",
+            max_bytes=asset.encrypted_bytes,
+        )
+        if len(ciphertext) != asset.encrypted_bytes:
+            raise PublicMediaValidationError("Retained media size verification failed.")
+        content = self._encryption_keyring.decrypt(
+            EncryptedDocument(
+                key_id=asset.encryption_key_id,
+                nonce=asset.encryption_nonce,
+                ciphertext=ciphertext,
+                tag=asset.encryption_tag,
+            ),
+            media_id=asset.id,
+            sha256=asset.sha256,
+        )
+        if hashlib.sha256(content).hexdigest() != asset.sha256:
+            raise PublicMediaValidationError(
+                "Retained media digest verification failed."
+            )
+        return content
 
     async def _mark_failed(self, relation_id: UUID, code: str) -> None:
         async with self._session.begin():
