@@ -4,10 +4,11 @@ from math import ceil
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, exists, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.blockchain.models import Certificate, CertificateStatus
 from app.modules.dossiers.models import Category
 from app.modules.public.models import (
     PublicationStatus,
@@ -62,6 +63,12 @@ class SearchDiscoveryRepository:
                 PublicWork.published_at <= datetime.now(UTC),
                 PublicWork.deleted_at.is_(None),
                 Category.is_active.is_(True),
+                ~exists(
+                    select(1).where(
+                        Certificate.id == PublicWork.certificate_id,
+                        Certificate.status == CertificateStatus.REVOKED,
+                    )
+                ),
             )
         )
         if public_work is None:
@@ -223,6 +230,12 @@ class SearchDiscoveryRepository:
                 PublicWork.visibility == PublicWorkVisibility.PUBLIC,
                 PublicWork.deleted_at.is_(None),
                 PublicWork.published_at <= now,
+                ~exists(
+                    select(1).where(
+                        Certificate.id == PublicWork.certificate_id,
+                        Certificate.status == CertificateStatus.REVOKED,
+                    )
+                ),
             )
         )
         if source is None:
@@ -251,6 +264,12 @@ class SearchDiscoveryRepository:
                             PublicWork.deleted_at.is_(None),
                             PublicWork.published_at <= now,
                             Category.is_active.is_(True),
+                            ~exists(
+                                select(1).where(
+                                    Certificate.id == PublicWork.certificate_id,
+                                    Certificate.status == CertificateStatus.REVOKED,
+                                )
+                            ),
                         )
                         .order_by(PublicWork.published_at.desc(), PublicWork.id)
                         .limit(max(limit * 10, 40))

@@ -1003,6 +1003,15 @@ export interface Certificate {
   confirmations: number;
 }
 
+export interface AdminCertificate {
+  certificate: Certificate;
+  publicWorkId: string | null;
+  publicSlug: string | null;
+  publicationStatus: PublicationStatus | null;
+  visibility: PublicWorkVisibility | null;
+  isDiscoverable: boolean;
+}
+
 export interface CertificateDetail {
   certificate: Certificate;
   metadata: Record<string, unknown>;
@@ -1154,6 +1163,7 @@ export interface PublicationChecklistItem {
 export interface PublicWorkAdmin {
   id: string;
   dossierId: string;
+  dossierCode?: string | null;
   certificateId: string | null;
   slug: string;
   title: string;
@@ -1168,6 +1178,7 @@ export interface PublicWorkAdmin {
 }
 
 export interface PublicWorkEditor extends PublicWorkAdmin {
+  dossierCode: string;
   fullDescription: string | null;
   authorDisplayName: string | null;
   categoryId: string;

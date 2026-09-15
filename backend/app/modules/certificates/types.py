@@ -7,6 +7,7 @@ from app.modules.blockchain.models import (
     CertificateStatus,
     CertificateVersionStatus,
 )
+from app.modules.public.models import PublicationStatus, PublicWorkVisibility
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +36,16 @@ class CertificateDetailView:
     metadata: dict[str, object]
     metadata_hash: str
     qr_payload: str
+
+
+@dataclass(frozen=True, slots=True)
+class AdminCertificateView:
+    certificate: CertificateView
+    public_work_id: UUID | None
+    public_slug: str | None
+    publication_status: PublicationStatus | None
+    visibility: PublicWorkVisibility | None
+    is_discoverable: bool
 
 
 @dataclass(frozen=True, slots=True)

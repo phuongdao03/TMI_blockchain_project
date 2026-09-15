@@ -53,6 +53,12 @@ class PublicWorkEditorInput:
 
 
 @dataclass(frozen=True, slots=True)
+class PublicWorkAdminView:
+    work: PublicWork
+    dossier_code: str
+
+
+@dataclass(frozen=True, slots=True)
 class NormalizedEditorInput:
     slug: str
     title: str
@@ -77,6 +83,7 @@ class SourceField:
 @dataclass(frozen=True, slots=True)
 class PublicWorkEditorView:
     work: PublicWork
+    dossier_code: str
     category_name: str
     tag_ids: tuple[UUID, ...]
     checklist: tuple[ChecklistItem, ...]
@@ -178,17 +185,18 @@ class PublicWorkEditorService:
         status: PublicationStatus | None,
         page: int,
         page_size: int,
-    ) -> tuple[tuple[PublicWork, ...], int]:
+    ) -> tuple[tuple[PublicWorkAdminView, ...], int]:
         self._require_editor(principal)
         if page < 1 or not 1 <= page_size <= 100:
             raise ValueError("invalid editor pagination")
         async with self._session.begin():
-            return await self._repository.list_admin_works(
+            rows, total = await self._repository.list_admin_works(
                 query=query.strip() if query else None,
                 status=status,
                 offset=(page - 1) * page_size,
                 limit=page_size,
             )
+            return tuple(PublicWorkAdminView(work, code) for work, code in rows), total
 
     async def get(
         self, principal: AuthPrincipal, work_id: UUID
@@ -206,6 +214,7 @@ class PublicWorkEditorService:
             source_version_no, source_fields = _source_fields(context)
             return PublicWorkEditorView(
                 work=context.work,
+                dossier_code=context.dossier.code,
                 category_name=context.category.name,
                 tag_ids=await self._repository.list_work_tag_ids(work_id),
                 checklist=checklist,

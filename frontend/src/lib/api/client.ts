@@ -1,5 +1,6 @@
 import type {
   AccountType,
+  AdminCertificate,
   AdminReviewDossierDetail,
   AdminReviewDossierStatus,
   AdminReviewDossierSummary,
@@ -23,6 +24,7 @@ import type {
   CmsPostInput,
   Certificate,
   CertificateDetail,
+  CertificateStatus,
   CertificateVersion,
   ContentReportAccepted,
   ContentReportAdmin,
@@ -1021,6 +1023,30 @@ export const certificateApi = {
   },
 };
 
+export const adminCertificateApi = {
+  list(
+    filters: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      status?: CertificateStatus;
+      publicationStatus?: PublicationStatus;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.status) parameters.set("status", filters.status);
+    if (filters.publicationStatus)
+      parameters.set("publicationStatus", filters.publicationStatus);
+    return requestPaginated<AdminCertificate[]>(
+      `/admin/certificates?${parameters.toString()}`,
+    );
+  },
+};
+
 export const certificateVersionRequestApi = {
   list(page = 1, pageSize = 20) {
     return requestPaginated<CertificateVersion[]>(
@@ -1348,6 +1374,12 @@ export const publicWorkAdminApi = {
   },
   tags() {
     return request<PublicWorkTag[]>("/admin/public-works/tags");
+  },
+  createTag(input: { name: string; slug: string; isActive: boolean }) {
+    return request<PublicWorkTag>("/admin/public-works/tags", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
   },
   assignTags(workId: string, tagIds: string[]) {
     return request<void>(`/admin/public-works/${workId}/tags`, {

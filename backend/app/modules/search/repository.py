@@ -22,7 +22,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql import Select
 from sqlalchemy.sql.elements import BindParameter, ColumnElement
 
-from app.modules.blockchain.models import Certificate
+from app.modules.blockchain.models import Certificate, CertificateStatus
 from app.modules.dossiers.models import Category
 from app.modules.organizations.models import Organization, OrganizationStatus
 from app.modules.public.models import (
@@ -297,6 +297,12 @@ class SearchRepository:
             PublicWork.visibility == PublicWorkVisibility.PUBLIC,
             PublicWork.published_at.is_not(None),
             PublicWork.published_at <= now,
+            ~exists(
+                select(1).where(
+                    Certificate.id == PublicWork.certificate_id,
+                    Certificate.status == CertificateStatus.REVOKED,
+                )
+            ),
         )
         work_category = aliased(Category)
         tagged_category = aliased(Category)
@@ -451,6 +457,10 @@ class SearchRepository:
             Category.is_active.is_(True),
             Category.slug.is_not(None),
             PublicWork.published_at.is_not(None),
+            or_(
+                PublicWork.certificate_id.is_(None),
+                Certificate.status != CertificateStatus.REVOKED,
+            ),
             match,
         ]
         if filters.category_slug is not None:

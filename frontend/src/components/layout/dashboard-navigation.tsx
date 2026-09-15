@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BadgeCheck,
   BadgeDollarSign,
   Bell,
   BookOpen,
@@ -111,6 +112,12 @@ const adminItems: NavigationItem[] = [
     href: "/admin/content",
     label: "Nội dung công bố",
     icon: FileText,
+    permission: "public_content.manage",
+  },
+  {
+    href: "/admin/certificates",
+    label: "Quản lý chứng thư",
+    icon: BadgeCheck,
     permission: "public_content.manage",
   },
   {

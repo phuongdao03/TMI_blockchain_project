@@ -12,6 +12,7 @@ import {
   FilePenLine,
   ImageIcon,
   Monitor,
+  Plus,
   Search,
   Send,
   ShieldAlert,
@@ -82,6 +83,27 @@ const checklistLabels: Record<string, string> = {
   READY_THUMBNAIL_REQUIRED: "Ảnh bìa hoặc video công khai đã sẵn sàng",
 };
 
+const derivativeStatusLabels: Record<
+  PublicWorkMedia["derivativeStatus"],
+  string
+> = {
+  PENDING: "Đang chờ xử lý",
+  PROCESSING: "Đang tối ưu bản trình chiếu",
+  READY: "Sẵn sàng công bố",
+  FAILED: "Xử lý chưa thành công",
+};
+
+function tagSlug(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 function defaults(work: PublicWorkEditorData): EditorValues {
   return {
     slug: work.slug,
@@ -115,6 +137,7 @@ export function PublicWorkEditor({
   const [showPreview, setShowPreview] = useState(false);
   const [pendingAction, setPendingAction] = useState<StateAction>();
   const [reason, setReason] = useState("");
+  const [newTagName, setNewTagName] = useState("");
 
   const works = useQuery({
     queryKey: ["admin", "public-works", query, status],
@@ -142,6 +165,13 @@ export function PublicWorkEditor({
     queryKey: ["admin", "public-work-media", selectedId],
     queryFn: () => publicWorkAdminApi.media(selectedId!),
     enabled: Boolean(selectedId),
+    refetchInterval: (query) =>
+      query.state.data?.some((item) =>
+        ["PENDING", "PROCESSING"].includes(item.derivativeStatus),
+      )
+        ? 4_000
+        : false,
+    refetchIntervalInBackground: false,
   });
   const mediaCandidates = useQuery({
     queryKey: ["admin", "public-work-media-candidates", selectedId],
@@ -246,6 +276,21 @@ export function PublicWorkEditor({
   });
 
   const selectedTags = useWatch({ control, name: "tagIds" }) ?? [];
+  const createTag = useMutation({
+    mutationFn: (name: string) =>
+      publicWorkAdminApi.createTag({
+        name: name.trim(),
+        slug: tagSlug(name),
+        isActive: true,
+      }),
+    onSuccess: async (created) => {
+      setValue("tagIds", [...selectedTags, created.id], { shouldDirty: true });
+      setNewTagName("");
+      await queryClient.invalidateQueries({
+        queryKey: ["admin", "public-work-tags"],
+      });
+    },
+  });
   const selectedThumbnail = useWatch({
     control,
     name: "thumbnailMediaId",
@@ -328,11 +373,15 @@ export function PublicWorkEditor({
                 }}
                 type="button"
               >
-                <span className="line-clamp-2 text-sm font-bold text-neutral-950">
+                <span className="block truncate font-mono text-sm font-black text-primary-800">
+                  {work.dossierCode ||
+                    `TP-${work.id.slice(0, 8).toUpperCase()}`}
+                </span>
+                <span className="mt-1 block line-clamp-2 text-xs font-semibold text-neutral-700">
                   {work.title}
                 </span>
-                <span className="mt-1 flex items-center justify-between gap-2 text-xs text-neutral-500">
-                  <span className="truncate">/works/{work.id}</span>
+                <span className="mt-2 flex items-center justify-between gap-2 text-xs text-neutral-500">
+                  <span className="truncate">Mã tác phẩm</span>
                   <span>{statusLabels[work.publicationStatus]}</span>
                 </span>
               </button>
@@ -562,6 +611,35 @@ export function PublicWorkEditor({
                         </p>
                       ) : null}
                     </div>
+                    <div className="mt-4 flex flex-col gap-2 border-t border-neutral-100 pt-4 sm:flex-row">
+                      <label className="sr-only" htmlFor="new-public-work-tag">
+                        Tên thẻ mới
+                      </label>
+                      <input
+                        className={`${fieldClass} min-w-0 flex-1`}
+                        id="new-public-work-tag"
+                        onChange={(event) => setNewTagName(event.target.value)}
+                        placeholder="Ví dụ: Video thương hiệu"
+                        value={newTagName}
+                      />
+                      <Button
+                        disabled={
+                          createTag.isPending ||
+                          tagSlug(newTagName).length === 0
+                        }
+                        onClick={() => createTag.mutate(newTagName)}
+                        type="button"
+                        variant="outline"
+                      >
+                        <Plus className="size-4" />
+                        {createTag.isPending ? "Đang tạo…" : "Tạo thẻ"}
+                      </Button>
+                    </div>
+                    {createTag.isError ? (
+                      <p className="mt-2 text-sm text-red-700" role="alert">
+                        Không thể tạo thẻ. Hãy kiểm tra tên thẻ hoặc thử lại.
+                      </p>
+                    ) : null}
                   </fieldset>
                   {saveError ? (
                     <p
@@ -969,13 +1047,21 @@ function Gallery({
                     <span className="block truncate text-sm font-bold">
                       {item.caption || item.altText || `Media ${index + 1}`}
                     </span>
-                    <span className="text-xs text-neutral-500">
-                      {item.derivativeStatus}
+                    <span className="text-xs font-semibold text-neutral-600">
+                      {derivativeStatusLabels[item.derivativeStatus]}
                     </span>
+                    {item.derivativeStatus === "PENDING" ||
+                    item.derivativeStatus === "PROCESSING" ? (
+                      <span className="mt-1 block text-xs text-neutral-500">
+                        Tự động cập nhật trạng thái, bạn có thể tiếp tục biên
+                        tập.
+                      </span>
+                    ) : null}
                   </span>
                   {item.mediaKind === "IMAGE" || item.mediaKind === "VIDEO" ? (
                     <button
                       className={`rounded-lg px-2 py-1 text-xs font-bold ${selectedThumbnail === item.mediaAssetId ? "bg-primary-50 text-primary-700" : "text-neutral-600"}`}
+                      disabled={item.derivativeStatus !== "READY"}
                       onClick={() => onThumbnail(item.mediaAssetId)}
                       type="button"
                     >

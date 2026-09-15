@@ -494,7 +494,12 @@ async def list_public_work_drafts(
         page_size=page_size,
     )
     return PaginatedSuccessEnvelope(
-        data=[PublicWorkAdminData.model_validate(row) for row in rows],
+        data=[
+            PublicWorkAdminData.model_validate(row.work).model_copy(
+                update={"dossier_code": row.dossier_code}
+            )
+            for row in rows
+        ],
         meta=ListResponseMeta(
             request_id=request.state.request_id,
             page=page,
@@ -509,6 +514,7 @@ def _editor_data(view: PublicWorkEditorView) -> PublicWorkEditorData:
     return PublicWorkEditorData(
         id=work.id,
         dossier_id=work.dossier_id,
+        dossier_code=view.dossier_code,
         certificate_id=work.certificate_id,
         slug=work.slug,
         title=work.title,

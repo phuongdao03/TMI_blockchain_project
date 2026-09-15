@@ -15,6 +15,7 @@ from app.modules.organizations.models import (
     MembershipStatus,
     OrganizationMember,
 )
+from app.modules.public.models import PublicationStatus, PublicWork
 
 CertificateRow = tuple[
     Certificate,
@@ -22,6 +23,14 @@ CertificateRow = tuple[
     Dossier,
     Category,
     BlockchainTransaction | None,
+]
+AdminCertificateRow = tuple[
+    Certificate,
+    CertificateVersion,
+    Dossier,
+    Category,
+    BlockchainTransaction | None,
+    PublicWork | None,
 ]
 
 
@@ -165,6 +174,51 @@ class CertificateRepository:
         )
         return tuple(cast(CertificateRow, row) for row in rows), int(total or 0)
 
+    async def list_admin(
+        self,
+        *,
+        search: str | None,
+        status: str | None,
+        publication_status: PublicationStatus | None,
+        offset: int,
+        limit: int,
+    ) -> tuple[tuple[AdminCertificateRow, ...], int]:
+        filters = []
+        if search:
+            escaped = (
+                search.replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_")
+            )
+            pattern = f"%{escaped}%"
+            filters.append(
+                or_(
+                    Certificate.certificate_number.ilike(pattern, escape="\\"),
+                    Dossier.code.ilike(pattern, escape="\\"),
+                    Dossier.title.ilike(pattern, escape="\\"),
+                )
+            )
+        if status:
+            filters.append(Certificate.status == status)
+        if publication_status:
+            filters.append(PublicWork.publication_status == publication_status)
+        statement = self._admin_statement().where(*filters)
+        rows = (
+            await self._session.execute(
+                statement.order_by(Certificate.issued_at.desc(), Certificate.id)
+                .offset(offset)
+                .limit(limit)
+            )
+        ).all()
+        total = await self._session.scalar(
+            select(func.count())
+            .select_from(Certificate)
+            .join(Dossier, Dossier.id == Certificate.dossier_id)
+            .outerjoin(PublicWork, PublicWork.certificate_id == Certificate.id)
+            .where(*filters)
+        )
+        return tuple(cast(AdminCertificateRow, row) for row in rows), int(total or 0)
+
     async def can_access(self, certificate_id: UUID, user_id: UUID) -> bool:
         membership = (
             select(OrganizationMember.organization_id)
@@ -218,4 +272,12 @@ class CertificateRepository:
                 BlockchainTransaction.id
                 == CertificateVersion.blockchain_transaction_id,
             )
+        )
+
+    @staticmethod
+    def _admin_statement() -> Select:
+        return (
+            CertificateRepository._detail_statement()
+            .add_columns(PublicWork)
+            .outerjoin(PublicWork, PublicWork.certificate_id == Certificate.id)
         )

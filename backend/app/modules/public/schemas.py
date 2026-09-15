@@ -165,6 +165,7 @@ class PublicCertificateVersionData(PublicSchema):
 class PublicWorkAdminData(PublicSchema):
     id: UUID
     dossier_id: UUID
+    dossier_code: str | None = None
     certificate_id: UUID | None
     slug: str
     title: str
@@ -226,6 +227,7 @@ class PublicWorkSourceFieldData(PublicSchema):
 class PublicWorkEditorData(PublicSchema):
     id: UUID
     dossier_id: UUID
+    dossier_code: str
     certificate_id: UUID | None
     slug: str
     title: str

@@ -33,11 +33,13 @@ from app.modules.certificates.metadata import (
 )
 from app.modules.certificates.pdf import CertificatePdfRenderer
 from app.modules.certificates.repository import (
+    AdminCertificateRow,
     CertificateRepository,
     CertificateRow,
 )
 from app.modules.certificates.storage import CertificateStorage
 from app.modules.certificates.types import (
+    AdminCertificateView,
     CertificateDetailView,
     CertificateView,
 )
@@ -47,6 +49,7 @@ from app.modules.dossiers.workflow import DossierWorkflowService
 from app.modules.media.gateway import MediaGateway
 from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.public.backfill import PublicWorkDraftBackfill
+from app.modules.public.models import PublicationStatus, PublicWorkVisibility
 from app.modules.public.share_service import canonical_public_origin
 
 CERTIFICATE_ISSUED_EVENT = "certificate.issued"
@@ -135,6 +138,34 @@ class CertificateService:
                 metadata_hash=version.metadata_hash,
                 qr_payload=version.qr_payload or certificate.qr_payload,
             )
+
+    async def list_admin(
+        self,
+        principal: AuthPrincipal,
+        *,
+        search: str | None,
+        status: str | None,
+        publication_status: PublicationStatus | None,
+        page: int,
+        page_size: int,
+    ) -> tuple[tuple[AdminCertificateView, ...], int]:
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(
+                permission="public_content.manage",
+                compatible_roles=frozenset({"SUPER_ADMIN"}),
+            ),
+            CertificateForbiddenError,
+        )
+        async with self._session.begin():
+            rows, total = await self._certificates.list_admin(
+                search=search,
+                status=status,
+                publication_status=publication_status,
+                offset=(page - 1) * page_size,
+                limit=page_size,
+            )
+            return tuple(self._admin_view(row) for row in rows), total
 
     async def process_issuance(self, dossier_id: UUID) -> CertificateView | None:
         async with self._session.begin():
@@ -565,6 +596,25 @@ class CertificateService:
             transaction_hash=(transaction.tx_hash if transaction is not None else None),
             blockchain_status=(transaction.status if transaction is not None else None),
             confirmations=(transaction.confirmations if transaction is not None else 0),
+        )
+
+    @staticmethod
+    def _admin_view(row: AdminCertificateRow) -> AdminCertificateView:
+        certificate, version, dossier, category, transaction, public_work = row
+        base: CertificateRow = (certificate, version, dossier, category, transaction)
+        discoverable = bool(
+            public_work
+            and public_work.publication_status is PublicationStatus.PUBLISHED
+            and public_work.visibility is PublicWorkVisibility.PUBLIC
+            and certificate.status is not CertificateStatus.REVOKED
+        )
+        return AdminCertificateView(
+            certificate=CertificateService._view(base),
+            public_work_id=public_work.id if public_work else None,
+            public_slug=public_work.slug if public_work else None,
+            publication_status=public_work.publication_status if public_work else None,
+            visibility=public_work.visibility if public_work else None,
+            is_discoverable=discoverable,
         )
 
     @staticmethod

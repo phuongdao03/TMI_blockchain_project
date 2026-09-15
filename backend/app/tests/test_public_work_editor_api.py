@@ -10,6 +10,7 @@ from app.modules.auth.dependencies import (
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.public.editor_service import (
     ChecklistItem,
+    PublicWorkAdminView,
     PublicWorkEditorInput,
     PublicWorkEditorView,
     PublicWorkPreviewView,
@@ -47,12 +48,13 @@ class StubEditorService:
 
     async def list(
         self, _principal: object, **_filters: object
-    ) -> tuple[tuple[PublicWork, ...], int]:
-        return (self.work,), 1
+    ) -> tuple[tuple[PublicWorkAdminView, ...], int]:
+        return (PublicWorkAdminView(self.work, "THV-TP-2026-0042"),), 1
 
     async def get(self, _principal: object, _work_id: UUID) -> PublicWorkEditorView:
         return PublicWorkEditorView(
             work=self.work,
+            dossier_code="THV-TP-2026-0042",
             category_name="Digital Art",
             tag_ids=(),
             checklist=(ChecklistItem("TITLE_REQUIRED", True),),
@@ -125,9 +127,11 @@ def test_editor_api_contract_and_preview_privacy() -> None:
             )
             assert listed.status_code == 200
             assert listed.json()["meta"]["total"] == 1
+            assert listed.json()["data"][0]["dossierCode"] == "THV-TP-2026-0042"
 
             detail = client.get(f"/api/v1/admin/public-works/{service.work.id}")
             assert detail.status_code == 200
+            assert detail.json()["data"]["dossierCode"] == "THV-TP-2026-0042"
             assert detail.json()["data"]["checklist"] == [
                 {"code": "TITLE_REQUIRED", "passed": True}
             ]

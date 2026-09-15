@@ -9,6 +9,7 @@ from app.modules.blockchain.models import (
     CertificateStatus,
     CertificateVersionStatus,
 )
+from app.modules.public.models import PublicationStatus, PublicWorkVisibility
 
 
 def _camel(name: str) -> str:
@@ -50,6 +51,15 @@ class CertificateDetailData(CertificateSchema):
     metadata: dict[str, object]
     metadata_hash: str
     qr_payload: str
+
+
+class AdminCertificateData(CertificateSchema):
+    certificate: CertificateData
+    public_work_id: UUID | None
+    public_slug: str | None
+    publication_status: PublicationStatus | None
+    visibility: PublicWorkVisibility | None
+    is_discoverable: bool
 
 
 class CertificateVersionData(CertificateSchema):

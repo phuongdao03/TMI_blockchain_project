@@ -6,6 +6,7 @@ from uuid import uuid4
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.db.base import Base
+from app.modules.blockchain.models import Certificate, CertificateStatus
 from app.modules.dossiers.models import Category
 from app.modules.public.catalog_query_service import (
     PublicCatalogQueryService,
@@ -72,6 +73,28 @@ def test_listing_filters_and_never_leaks_non_public_works(tmp_path: Path) -> Non
             view_count=10,
             thumbnail_media_id=thumbnail_media_id,
         )
+        revoked_certificate = Certificate(
+            id=uuid4(),
+            certificate_number=f"TMI-2026-{uuid4().hex[:12].upper()}",
+            dossier_id=uuid4(),
+            current_version_no=1,
+            status=CertificateStatus.REVOKED,
+            issued_at=NOW,
+            public_token_hash="ab" * 32,
+            qr_payload="https://tmi.example/verify/revoked-token",
+        )
+        revoked_work = PublicWork(
+            dossier_id=revoked_certificate.dossier_id,
+            owner_user_id=uuid4(),
+            certificate_id=revoked_certificate.id,
+            slug="revoked-work",
+            title="Revoked work",
+            short_description="Must remain verifiable but undiscoverable",
+            category_id=category.id,
+            publication_status=PublicationStatus.PUBLISHED,
+            visibility=PublicWorkVisibility.PUBLIC,
+            published_at=NOW,
+        )
         excluded = [
             PublicWork(
                 dossier_id=uuid4(),
@@ -96,7 +119,17 @@ def test_listing_filters_and_never_leaks_non_public_works(tmp_path: Path) -> Non
         ]
         async with factory() as session:
             async with session.begin():
-                session.add_all([category, inactive_category, tag, visible, *excluded])
+                session.add_all(
+                    [
+                        category,
+                        inactive_category,
+                        tag,
+                        visible,
+                        revoked_certificate,
+                        revoked_work,
+                        *excluded,
+                    ]
+                )
                 session.add(PublicWorkTag(public_work_id=visible.id, tag_id=tag.id))
                 session.add(
                     PublicWorkMedia(
@@ -137,6 +170,19 @@ def test_listing_filters_and_never_leaks_non_public_works(tmp_path: Path) -> Non
             assert rows[0].thumbnail_alt_text == "Approved artwork preview"
             assert tuple(item.slug for item in rows[0].tags) == ("modern",)
             assert not hasattr(rows[0], "owner_user_id")
+            discovery_rows, discovery_total = await service.list_works(
+                query=None,
+                category_slug=None,
+                tag_slug=None,
+                organization_id=None,
+                published_from=None,
+                published_to=None,
+                sort=PublicWorkSort.NEWEST,
+                page=1,
+                page_size=20,
+            )
+            assert discovery_total == 1
+            assert tuple(item.slug for item in discovery_rows) == (str(visible.id),)
             cached_rows, cached_total = await service.list_works(
                 query=None,
                 category_slug="art",
@@ -150,7 +196,7 @@ def test_listing_filters_and_never_leaks_non_public_works(tmp_path: Path) -> Non
             )
             assert cached_rows == rows
             assert cached_total == total
-            assert len(cache.values) == 1
+            assert len(cache.values) == 2
 
             async with session.begin():
                 visible.publication_status = PublicationStatus.HIDDEN
@@ -182,7 +228,7 @@ def test_listing_filters_and_never_leaks_non_public_works(tmp_path: Path) -> Non
             )
             assert fuzzed == ()
             assert fuzzed_total == 0
-            assert len(cache.values) == 2
+            assert len(cache.values) == 3
         await engine.dispose()
 
     asyncio.run(exercise())

@@ -113,10 +113,11 @@ def test_editor_permissions_validation_version_slug_history_and_preview(
                 admin, query="approved", status=None, page=1, page_size=20
             )
             assert total == 1
-            assert rows[0].id == work_id
-            category_id = rows[0].category_id
-            visibility = rows[0].visibility
-            thumbnail_media_id = rows[0].thumbnail_media_id
+            assert rows[0].work.id == work_id
+            assert rows[0].dossier_code == "DOS-1502"
+            category_id = rows[0].work.category_id
+            visibility = rows[0].work.visibility
+            thumbnail_media_id = rows[0].work.thumbnail_media_id
 
             with pytest.raises(PublicWorkMetadataValidationError):
                 await service.update(

@@ -29,6 +29,7 @@ vi.mock("@/lib/api/client", () => {
       attachMedia: vi.fn(),
       categories: vi.fn(),
       configureVideo: vi.fn(),
+      createTag: vi.fn(),
       get: vi.fn(),
       list: vi.fn(),
       media: vi.fn(),
@@ -47,6 +48,7 @@ vi.mock("@/lib/api/client", () => {
 const work: PublicWorkEditorData = {
   id: "a96efbb8-fd76-4431-bc21-24caa83d0bda",
   dossierId: "25e0f889-e4af-499b-ab13-a51ba398375a",
+  dossierCode: "THV-TP-2026-0042",
   certificateId: "5b787209-e11d-4a41-a4ea-f4313e211c61",
   slug: "ban-mau",
   title: "Bản mẫu công khai",
@@ -99,6 +101,12 @@ beforeEach(() => {
     },
   ]);
   vi.mocked(publicWorkAdminApi.tags).mockResolvedValue([]);
+  vi.mocked(publicWorkAdminApi.createTag).mockResolvedValue({
+    id: "abca872b-71ac-4661-b1d1-37674359655f",
+    name: "Video thương hiệu",
+    slug: "video-thuong-hieu",
+    isActive: true,
+  });
   vi.mocked(publicWorkAdminApi.media).mockResolvedValue([]);
   vi.mocked(publicWorkAdminApi.mediaCandidates).mockResolvedValue([]);
   vi.mocked(publicWorkAdminApi.attachMedia).mockResolvedValue({
@@ -149,7 +157,7 @@ describe("PublicWorkEditor", () => {
 
     expect(await screen.findByLabelText("Tiêu đề công khai")).toBeTruthy();
     expect(publicWorkAdminApi.get).toHaveBeenCalledWith(work.id);
-    expect(screen.getAllByText(`/works/${work.id}`)).toHaveLength(2);
+    expect(screen.getByText(`/works/${work.id}`)).toBeTruthy();
   });
 
   it("reuses locked dossier fields and does not offer a second upload", async () => {
@@ -163,7 +171,7 @@ describe("PublicWorkEditor", () => {
       await screen.findByText("Dữ liệu hồ sơ gốc · Phiên bản 1"),
     ).toBeTruthy();
     expect(screen.queryByTestId("media-uploader")).toBeNull();
-    expect(screen.getAllByText(`/works/${work.id}`)).toHaveLength(2);
+    expect(screen.getByText(`/works/${work.id}`)).toBeTruthy();
     expect(
       screen.queryByRole("textbox", { name: "Đường dẫn công khai" }),
     ).toBeNull();
@@ -175,6 +183,71 @@ describe("PublicWorkEditor", () => {
     expect(
       (screen.getByLabelText("Tiêu đề công khai") as HTMLInputElement).value,
     ).toBe("Tiêu đề đã nộp");
+  });
+
+  it("identifies works by dossier code and creates the first tag inline", async () => {
+    vi.mocked(publicWorkAdminApi.tags)
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([
+        {
+          id: "abca872b-71ac-4661-b1d1-37674359655f",
+          name: "Video thương hiệu",
+          slug: "video-thuong-hieu",
+          isActive: true,
+        },
+      ]);
+    const user = userEvent.setup();
+    render(<PublicWorkEditor />, { wrapper });
+
+    expect(await screen.findByText("THV-TP-2026-0042")).toBeTruthy();
+    await user.click(
+      await screen.findByRole("button", { name: /Bản mẫu công khai/ }),
+    );
+    await user.type(screen.getByLabelText("Tên thẻ mới"), "Video thương hiệu");
+    await user.click(screen.getByRole("button", { name: "Tạo thẻ" }));
+
+    await waitFor(() =>
+      expect(publicWorkAdminApi.createTag).toHaveBeenCalledWith({
+        name: "Video thương hiệu",
+        slug: "video-thuong-hieu",
+        isActive: true,
+      }),
+    );
+    expect(await screen.findByText("Video thương hiệu")).toBeTruthy();
+  });
+
+  it("explains pending derivative processing in Vietnamese", async () => {
+    vi.mocked(publicWorkAdminApi.media).mockResolvedValueOnce([
+      {
+        id: "relation-video",
+        mediaAssetId: "asset-video",
+        mediaKind: "VIDEO",
+        sortOrder: 0,
+        caption: "Video source",
+        altText: null,
+        derivativeStatus: "PENDING",
+        derivativeMimeType: null,
+        derivativeWidth: null,
+        derivativeHeight: null,
+        durationMs: null,
+        attemptCount: 0,
+        failureCode: null,
+        posterMediaAssetId: null,
+        videoControlsPreset: "FULL",
+        videoFitMode: "CONTAIN",
+        videoQualityProfile: "BALANCED",
+        videoMaxWidth: 1280,
+        videoAutoplay: false,
+        videoLoop: false,
+        videoMuted: false,
+      },
+    ]);
+    const user = userEvent.setup();
+    render(<PublicWorkEditor />, { wrapper });
+    await user.click(await screen.findByRole("button", { name: /Bản mẫu/ }));
+
+    expect(await screen.findByText("Đang chờ xử lý")).toBeTruthy();
+    expect(screen.getByText(/Tự động cập nhật trạng thái/)).toBeTruthy();
   });
 
   it("offers signed dossier source media for explicit publication preparation", async () => {

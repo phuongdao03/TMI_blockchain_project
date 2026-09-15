@@ -11,6 +11,7 @@ from app.modules.blockchain.models import (
     BlockchainTransaction,
     BlockchainTransactionStatus,
     Certificate,
+    CertificateStatus,
     CertificateVersion,
 )
 from app.modules.dossiers.models import Category, Dossier, DossierStatus, DossierVersion
@@ -222,7 +223,7 @@ class PublicWorkRepository:
         status: PublicationStatus | None,
         offset: int,
         limit: int,
-    ) -> tuple[tuple[PublicWork, ...], int]:
+    ) -> tuple[tuple[tuple[PublicWork, str], ...], int]:
         filters: list[ColumnElement[bool]] = [PublicWork.deleted_at.is_(None)]
         if status is not None:
             filters.append(PublicWork.publication_status == status)
@@ -235,19 +236,24 @@ class PublicWorkRepository:
                 or_(
                     PublicWork.title.ilike(pattern, escape="\\"),
                     PublicWork.slug.ilike(pattern, escape="\\"),
+                    Dossier.code.ilike(pattern, escape="\\"),
                 )
             )
-        rows = await self._session.scalars(
-            select(PublicWork)
+        rows = await self._session.execute(
+            select(PublicWork, Dossier.code)
+            .join(Dossier, Dossier.id == PublicWork.dossier_id)
             .where(*filters)
             .order_by(PublicWork.updated_at.desc(), PublicWork.id.desc())
             .offset(offset)
             .limit(limit)
         )
         total = await self._session.scalar(
-            select(func.count()).select_from(PublicWork).where(*filters)
+            select(func.count())
+            .select_from(PublicWork)
+            .join(Dossier, Dossier.id == PublicWork.dossier_id)
+            .where(*filters)
         )
-        return tuple(rows), int(total or 0)
+        return tuple(rows.tuples()), int(total or 0)
 
     async def get_publication_context(
         self,
@@ -455,6 +461,10 @@ class PublicWorkRepository:
             PublicWork.deleted_at.is_(None),
             PublicWork.published_at.is_not(None),
             Category.is_active.is_(True),
+            or_(
+                PublicWork.certificate_id.is_(None),
+                Certificate.status != CertificateStatus.REVOKED,
+            ),
         ]
         if query:
             escaped = (
@@ -509,8 +519,10 @@ class PublicWorkRepository:
                 PublicWork.id.desc(),
             ),
         }
-        base = select(PublicWork, Category).join(
-            Category, Category.id == PublicWork.category_id
+        base = (
+            select(PublicWork, Category)
+            .join(Category, Category.id == PublicWork.category_id)
+            .outerjoin(Certificate, Certificate.id == PublicWork.certificate_id)
         )
         rows = (
             await self._session.execute(
@@ -521,6 +533,7 @@ class PublicWorkRepository:
             select(func.count())
             .select_from(PublicWork)
             .join(Category, Category.id == PublicWork.category_id)
+            .outerjoin(Certificate, Certificate.id == PublicWork.certificate_id)
             .where(*filters)
         )
         work_ids = tuple(row[0].id for row in rows)
