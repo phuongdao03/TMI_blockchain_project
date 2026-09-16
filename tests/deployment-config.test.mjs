@@ -76,6 +76,17 @@ test("the local environment template enables real workflows instead of preview f
   );
 });
 
+test("production environment templates reference the published CNS images", async () => {
+  const [preview, production] = await Promise.all([
+    read("infrastructure/.env.preview.example"),
+    read("infrastructure/.env.production.example"),
+  ]);
+
+  for (const environment of [preview, production]) {
+    assert.match(environment, /^IMAGE_PREFIX=cns-certificate$/m);
+  }
+});
+
 test("runtime screens do not package a static demonstration catalogue", async () => {
   const runtimeFiles = await Promise.all([
     read("frontend/src/lib/api/public-catalog-server.ts"),
