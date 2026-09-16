@@ -34,7 +34,7 @@
     "test:e2e": "npm --prefix frontend run test:e2e"
   },
   "devDependencies": {
-    "@types/node": "24.10.1",
+    "@types/node": "26.1.2",
     "prettier": "3.6.2",
     "typescript": "5.9.3"
   }
