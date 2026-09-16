@@ -186,6 +186,28 @@ def test_listing_filters_and_never_leaks_non_public_works(tmp_path: Path) -> Non
             )
             assert discovery_total == 1
             assert tuple(item.slug for item in discovery_rows) == (str(visible.id),)
+
+            async with session.begin():
+                category.slug = None
+            missing_slug_rows, missing_slug_total = await PublicCatalogQueryService(
+                session,
+                clock=lambda: NOW,
+            ).list_works(
+                query=None,
+                category_slug=None,
+                tag_slug=None,
+                organization_id=None,
+                published_from=None,
+                published_to=None,
+                sort=PublicWorkSort.NEWEST,
+                page=1,
+                page_size=20,
+            )
+            assert missing_slug_rows == ()
+            assert missing_slug_total == 0
+
+            async with session.begin():
+                category.slug = "art"
             cached_rows, cached_total = await service.list_works(
                 query=None,
                 category_slug="art",

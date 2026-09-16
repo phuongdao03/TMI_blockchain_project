@@ -78,7 +78,7 @@ async def _seed(session: AsyncSession, *, thumbnail: bool = True) -> tuple[UUID,
                 status=UserStatus.ACTIVE,
             )
         )
-        session.add(Category(id=category_id, code="ART", name="Art"))
+        session.add(Category(id=category_id, code="ART", slug="art", name="Art"))
         session.add(
             Dossier(
                 id=dossier_id,
@@ -254,6 +254,35 @@ def test_publish_checklist_permission_version_and_reason(tmp_path: Path) -> None
                 select(func.count()).select_from(OutboxEvent)
             )
             assert event_count == 2
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_publish_requires_a_category_slug(tmp_path: Path) -> None:
+    async def exercise() -> None:
+        engine = create_async_engine(
+            f"sqlite+aiosqlite:///{(tmp_path / 'category-slug.sqlite3').as_posix()}"
+        )
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        async with factory() as session:
+            work_id, owner_id = await _seed(session)
+            async with session.begin():
+                category = await session.scalar(select(Category))
+                assert category is not None
+                category.slug = None
+
+            with pytest.raises(PublicWorkNotPublishableError) as error:
+                await _service(session).publish(
+                    _principal(owner_id, "SUPER_ADMIN"),
+                    work_id,
+                    expected_version=1,
+                    visibility=PublicWorkVisibility.PUBLIC,
+                    request_id="request-category-slug",
+                )
+            assert error.value.details == {"reasons": ["category_slug_required"]}
         await engine.dispose()
 
     asyncio.run(exercise())

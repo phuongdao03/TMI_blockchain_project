@@ -25,7 +25,7 @@ import { DashboardNavigation } from "./dashboard-navigation";
 
 const publicLinks = [
   { href: "/", label: "Trang chủ" },
-  { href: "/works", label: "Đề cử" },
+  { href: "/works", label: "Danh sách đề cử" },
   { href: "/process", label: "Quy trình" },
   { href: "/verify", label: "Tra cứu chứng thư" },
   { href: "/guide", label: "Hướng dẫn" },

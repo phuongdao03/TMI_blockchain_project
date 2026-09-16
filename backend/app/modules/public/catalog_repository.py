@@ -477,6 +477,7 @@ class PublicWorkRepository:
             PublicWork.deleted_at.is_(None),
             PublicWork.published_at.is_not(None),
             Category.is_active.is_(True),
+            Category.slug.is_not(None),
             or_(
                 PublicWork.certificate_id.is_(None),
                 Certificate.status != CertificateStatus.REVOKED,

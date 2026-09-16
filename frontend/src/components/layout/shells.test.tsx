@@ -51,7 +51,9 @@ describe("layout shells", () => {
       </PublicShell>,
     );
 
-    expect(screen.getAllByRole("link", { name: "Đề cử" })).toHaveLength(1);
+    expect(
+      screen.getAllByRole("link", { name: "Danh sách đề cử" }),
+    ).toHaveLength(1);
     expect(screen.queryByRole("link", { name: /Bình chọn/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /Gửi đề cử/ })).toBeNull();
   });

@@ -13,6 +13,7 @@ PUBLICATION_CHECK_CODES = (
     "slug_required",
     "description_required",
     "category_inactive",
+    "category_slug_required",
     "thumbnail_not_ready",
 )
 
@@ -38,6 +39,8 @@ def publication_checklist(
         reasons.append("description_required")
     if not context.category.is_active:
         reasons.append("category_inactive")
+    if not (context.category.slug or "").strip():
+        reasons.append("category_slug_required")
     if not context.has_ready_video and (
         context.thumbnail is None
         or context.thumbnail.status is not MediaStatus.ACTIVE
