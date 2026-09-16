@@ -40,7 +40,7 @@ def _extract(content: bytes, seconds: float = 0) -> bytes:
         raise ValueError("Invalid poster time")
     # A seekable input also supports MP4s whose metadata follows the media data.
     # The directory is private and removed on success, failure and timeout.
-    with TemporaryDirectory(prefix="tmi-poster-") as directory:
+    with TemporaryDirectory(prefix="cns-poster-") as directory:
         source = Path(directory) / "source.video"
         source.write_bytes(content)
         result = subprocess.run(

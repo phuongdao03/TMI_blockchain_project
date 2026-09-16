@@ -10,7 +10,7 @@ const address = `0x${"12".repeat(20)}`;
 const sourceCommit = "a".repeat(40);
 
 async function fixture() {
-  const root = await mkdtemp(resolve(tmpdir(), "tmi-explorer-evidence-"));
+  const root = await mkdtemp(resolve(tmpdir(), "cns-explorer-evidence-"));
   const releaseDirectory = resolve(root, "artifacts/releases/amoy");
   await mkdir(releaseDirectory, { recursive: true });
   await writeFile(

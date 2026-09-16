@@ -22,6 +22,7 @@ class MediaContentTooLargeError(Exception):
 _ENCRYPTED_PART_BYTES = 8 * 1_048_576
 _ENCRYPTED_MANIFEST_MAX_BYTES = 1_048_576
 _ENCRYPTED_ASSET_MAX_BYTES = 314_572_800
+# Immutable persisted wire prefix retained for backward compatibility.
 _ENCRYPTED_MANIFEST_PREFIX = b"TMI-ENCRYPTED-PARTS-V1\n"
 
 

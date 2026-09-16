@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test.beforeEach(async ({ context }) => {
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-access",
       domain: "127.0.0.1",
       path: "/",
@@ -11,7 +11,7 @@ test.beforeEach(async ({ context }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_refresh",
+      name: "cns_refresh",
       value: "e2e-refresh",
       domain: "127.0.0.1",
       path: "/",
@@ -19,7 +19,7 @@ test.beforeEach(async ({ context }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",
@@ -43,7 +43,7 @@ test("an applicant selects a dossier type and creates a draft", async ({
   await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
   await page
     .getByLabel("Tên tài sản hoặc tác phẩm")
-    .fill("Bộ nhận diện thương hiệu TMI");
+    .fill("Bộ nhận diện thương hiệu CNS");
   await page
     .getByLabel("Mô tả ngắn")
     .fill("Hồ sơ xác lập nguồn gốc và quyền sở hữu.");

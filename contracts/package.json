@@ -1,5 +1,5 @@
 {
-  "name": "@tmi/contracts",
+  "name": "@cns/contracts",
   "version": "0.1.0",
   "private": true,
   "scripts": {

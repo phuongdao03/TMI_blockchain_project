@@ -22,7 +22,7 @@ function renderWorkspace() {
   candidateListMock.mockResolvedValue([
     {
       dossierId: "9155dbf5-bb3e-449d-8bf0-9572cc642cac",
-      dossierCode: "TMI-2026-C53E911EDDDA",
+      dossierCode: "CNS-2026-C53E911EDDDA",
       dossierTitle: "Video chào mừng Tinh hoa Việt",
       versionNo: 2,
     },
@@ -55,7 +55,7 @@ describe("PaymentRequestWorkspace", () => {
     });
     renderWorkspace();
 
-    await screen.findByText(/TMI-2026-C53E911EDDDA/);
+    await screen.findByText(/CNS-2026-C53E911EDDDA/);
     fireEvent.change(await screen.findByLabelText("Hồ sơ đã phê duyệt"), {
       target: { value: "9155dbf5-bb3e-449d-8bf0-9572cc642cac" },
     });
@@ -94,7 +94,7 @@ describe("PaymentRequestWorkspace", () => {
     });
     renderWorkspace();
 
-    await screen.findByText(/TMI-2026-C53E911EDDDA/);
+    await screen.findByText(/CNS-2026-C53E911EDDDA/);
     fireEvent.change(await screen.findByLabelText("Hồ sơ đã phê duyệt"), {
       target: { value: "9155dbf5-bb3e-449d-8bf0-9572cc642cac" },
     });
@@ -128,7 +128,7 @@ describe("PaymentRequestWorkspace", () => {
     });
     renderWorkspace();
 
-    await screen.findByText(/TMI-2026-C53E911EDDDA/);
+    await screen.findByText(/CNS-2026-C53E911EDDDA/);
     fireEvent.change(await screen.findByLabelText("Hồ sơ đã phê duyệt"), {
       target: { value: "9155dbf5-bb3e-449d-8bf0-9572cc642cac" },
     });

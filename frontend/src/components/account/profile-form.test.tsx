@@ -14,7 +14,7 @@ describe("ProfileForm", () => {
         onSave={onSave}
         profile={{
           userId: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-          email: "owner@tmigroup.vn",
+          email: "owner@cnsgroup.vn",
           fullName: "Nguyễn Minh Anh",
           phone: "+84901234567",
           avatarMediaId: null,
@@ -45,7 +45,7 @@ describe("ProfileForm", () => {
         onSave={onSave}
         profile={{
           userId: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-          email: "owner@tmigroup.vn",
+          email: "owner@cnsgroup.vn",
           fullName: "Nguyễn Minh Anh",
           phone: null,
           avatarMediaId: null,
@@ -71,7 +71,7 @@ describe("ProfileForm", () => {
         onSave={vi.fn()}
         profile={{
           userId: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-          email: "owner@tmigroup.vn",
+          email: "owner@cnsgroup.vn",
           fullName: null,
           phone: null,
           avatarMediaId: null,

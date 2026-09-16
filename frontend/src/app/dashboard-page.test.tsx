@@ -33,7 +33,7 @@ describe("dashboard overview", () => {
         <AuthUserProvider
           user={{
             id: "preview-user",
-            email: "preview@tmigroup.vn",
+            email: "preview@cnsgroup.vn",
             roles: ["USER"],
             accountType: "INDIVIDUAL_APPLICANT",
           }}
@@ -62,7 +62,7 @@ describe("dashboard overview", () => {
         <AuthUserProvider
           user={{
             id: "applicant-1",
-            email: "owner@tmigroup.vn",
+            email: "owner@cnsgroup.vn",
             roles: ["USER"],
             accountType: "INDIVIDUAL_APPLICANT",
           }}
@@ -96,7 +96,7 @@ describe("dashboard overview", () => {
         data: [
           {
             id: "dossier-1",
-            code: "TMI-001",
+            code: "CNS-001",
             ownerUserId: "applicant-1",
             organizationId: null,
             categoryId: "category-1",
@@ -122,7 +122,7 @@ describe("dashboard overview", () => {
           <AuthUserProvider
             user={{
               id: "applicant-1",
-              email: "owner@tmigroup.vn",
+              email: "owner@cnsgroup.vn",
               roles: ["USER"],
               accountType: "INDIVIDUAL_APPLICANT",
             }}
@@ -152,7 +152,7 @@ describe("dashboard overview", () => {
         <AuthUserProvider
           user={{
             id: "applicant-1",
-            email: "owner@tmigroup.vn",
+            email: "owner@cnsgroup.vn",
             roles: ["USER"],
             accountType: "INDIVIDUAL_APPLICANT",
           }}
@@ -177,7 +177,7 @@ describe("dashboard overview", () => {
         <AuthUserProvider
           user={{
             id: "public-user-1",
-            email: "viewer@tmigroup.vn",
+            email: "viewer@cnsgroup.vn",
             roles: ["PUBLIC_USER"],
             accountType: "PUBLIC_USER",
           }}

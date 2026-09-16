@@ -64,7 +64,7 @@ async def _request(
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         roles=("PUBLIC_USER",),
     )
     app = create_application(health_service=HealthService({}))

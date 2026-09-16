@@ -61,7 +61,7 @@ test("certificate check action remains readable in light and dark themes", async
   await expect(action).toHaveCSS("color", "rgb(255, 255, 255)");
   await action.focus();
   await expect(action).toHaveCSS("outline-width", "3px");
-  await expect(action).toHaveAttribute("href", /\/verify\?lookup=TMI-/);
+  await expect(action).toHaveAttribute("href", /\/verify\?lookup=CNS-/);
   await page.emulateMedia({ colorScheme: "dark" });
   await expect(action).toHaveCSS("color", "rgb(255, 255, 255)");
 });

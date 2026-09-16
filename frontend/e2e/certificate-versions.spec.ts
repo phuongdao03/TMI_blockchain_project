@@ -7,7 +7,7 @@ test.beforeEach(async ({ context, request }) => {
   expect(reset.ok()).toBe(true);
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-access",
       domain: "127.0.0.1",
       path: "/",
@@ -15,7 +15,7 @@ test.beforeEach(async ({ context, request }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_refresh",
+      name: "cns_refresh",
       value: "e2e-refresh",
       domain: "127.0.0.1",
       path: "/",
@@ -23,7 +23,7 @@ test.beforeEach(async ({ context, request }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",
@@ -37,7 +37,7 @@ test("applicant sees a task-focused certificate history", async ({ page }) => {
   await page.goto("/certificates/7eaec2d2-c99a-42c9-8f1e-71462ba01ea0");
 
   await expect(
-    page.getByRole("heading", { level: 1, name: "Bộ nhận diện TMI" }),
+    page.getByRole("heading", { level: 1, name: "Bộ nhận diện CNS" }),
   ).toBeVisible();
   await expect(page.getByText("Lịch sử chứng thư")).toBeVisible();
   await expect(page.getByText("Đang có hiệu lực").first()).toBeVisible();

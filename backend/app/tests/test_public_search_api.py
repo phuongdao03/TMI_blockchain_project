@@ -44,7 +44,7 @@ class RecordingSearchRepository:
                     author_display_name="Nguyễn An",
                     category_name="Mỹ thuật",
                     category_slug="my-thuat",
-                    certificate_number="TMI-2026-001",
+                    certificate_number="CNS-2026-001",
                     certificate_status=CertificateStatus.ACTIVE,
                     published_at=datetime(2026, 8, 1, tzinfo=UTC),
                 ),

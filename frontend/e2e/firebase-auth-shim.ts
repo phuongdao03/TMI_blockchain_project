@@ -43,7 +43,7 @@ export async function sendPasswordResetEmail(
   _target: E2EAuth,
   email: string,
 ): Promise<void> {
-  if (email === "failure@tmigroup.vn")
+  if (email === "failure@cnsgroup.vn")
     throw authError("auth/too-many-requests");
 }
 
@@ -66,11 +66,11 @@ export async function signInWithEmailAndPassword(
   }
   const signedIn = user(
     email,
-    email === "superadmin@tmigroup.vn"
+    email === "superadmin@cnsgroup.vn"
       ? "e2e-super-admin-token"
-      : email === "reviewer@tmigroup.vn"
+      : email === "reviewer@cnsgroup.vn"
         ? "e2e-reviewer-token"
-        : email === "owner@tmigroup.vn"
+        : email === "owner@cnsgroup.vn"
           ? "e2e-admin-token"
           : "e2e-applicant-token",
   );
@@ -83,15 +83,15 @@ export async function signInWithPopup(
 ): Promise<{ user: E2EUser }> {
   const isInvitation = window.location.pathname.includes("staff-invitation");
   const signedIn = isInvitation
-    ? user("reviewer@tmigroup.vn", "e2e-staff-invitation-token")
-    : user("applicant@tmigroup.vn", "e2e-applicant-token");
+    ? user("reviewer@cnsgroup.vn", "e2e-staff-invitation-token")
+    : user("applicant@cnsgroup.vn", "e2e-applicant-token");
   target.currentUser = signedIn;
   return { user: signedIn };
 }
 
 export async function signInWithRedirect(): Promise<never> {
   const callback = new URL(window.location.href);
-  callback.searchParams.set("__tmi_e2e_firebase_redirect", "1");
+  callback.searchParams.set("__cns_e2e_firebase_redirect", "1");
   window.location.assign(callback);
   return new Promise<never>(() => undefined);
 }
@@ -100,12 +100,12 @@ export async function getRedirectResult(
   target: E2EAuth,
 ): Promise<{ user: E2EUser } | null> {
   const callback = new URL(window.location.href);
-  if (callback.searchParams.get("__tmi_e2e_firebase_redirect") !== "1") {
+  if (callback.searchParams.get("__cns_e2e_firebase_redirect") !== "1") {
     return null;
   }
-  callback.searchParams.delete("__tmi_e2e_firebase_redirect");
+  callback.searchParams.delete("__cns_e2e_firebase_redirect");
   window.history.replaceState(null, "", callback);
-  const signedIn = user("applicant@tmigroup.vn", "e2e-applicant-token");
+  const signedIn = user("applicant@cnsgroup.vn", "e2e-applicant-token");
   target.currentUser = signedIn;
   return { user: signedIn };
 }

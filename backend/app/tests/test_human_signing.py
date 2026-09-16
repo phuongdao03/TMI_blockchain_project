@@ -135,21 +135,21 @@ def test_super_admin_can_sign_without_a_duplicated_permission_grant() -> None:
     moderator = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="moderator@tmigroup.vn",
+        email="moderator@cnsgroup.vn",
         roles=("MODERATOR",),
         permissions=("blockchain.sign",),
     )
     super_admin_without_grant = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="superadmin@tmigroup.vn",
+        email="superadmin@cnsgroup.vn",
         roles=("SUPER_ADMIN",),
         permissions=(),
     )
     authorized_super_admin = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="authorized-superadmin@tmigroup.vn",
+        email="authorized-superadmin@cnsgroup.vn",
         roles=("SUPER_ADMIN",),
         permissions=("blockchain.sign",),
     )
@@ -169,7 +169,7 @@ def test_human_signer_links_wallet_and_submits_only_matching_intent() -> None:
 
         user = User(
             id=uuid4(),
-            email="blockchain-signer@tmigroup.vn",
+            email="blockchain-signer@cnsgroup.vn",
             password_hash="unused",
             status=UserStatus.ACTIVE,
         )

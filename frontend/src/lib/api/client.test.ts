@@ -16,7 +16,7 @@ import {
 
 describe("admin review API client", () => {
   beforeEach(() => {
-    document.cookie = "tmi_csrf=csrf-value";
+    document.cookie = "cns_csrf=csrf-value";
     vi.restoreAllMocks();
   });
 
@@ -55,7 +55,7 @@ describe("admin review API client", () => {
 
 describe("admin users API client", () => {
   beforeEach(() => {
-    document.cookie = "tmi_csrf=csrf-value";
+    document.cookie = "cns_csrf=csrf-value";
     vi.restoreAllMocks();
   });
 
@@ -113,14 +113,14 @@ function response(data: unknown, status = 200) {
 
 describe("auth API client", () => {
   beforeEach(() => {
-    document.cookie = "tmi_csrf=csrf-value";
+    document.cookie = "cns_csrf=csrf-value";
     vi.restoreAllMocks();
   });
 
   it("rotates once on an expired access cookie and retries /me", async () => {
     const user = {
       id: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-      email: "owner@tmigroup.vn",
+      email: "owner@cnsgroup.vn",
       roles: ["USER"],
     };
     const fetchMock = vi
@@ -163,7 +163,7 @@ describe("auth API client", () => {
   });
 
   it("does not call refresh while bootstrapping a signed-out browser", async () => {
-    document.cookie = "tmi_csrf=; Max-Age=0; Path=/";
+    document.cookie = "cns_csrf=; Max-Age=0; Path=/";
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       response(
         {
@@ -184,7 +184,7 @@ describe("auth API client", () => {
   });
 
   it("keeps the backend request id on API errors for support tracing", async () => {
-    document.cookie = "tmi_csrf=; Max-Age=0; Path=/";
+    document.cookie = "cns_csrf=; Max-Age=0; Path=/";
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       response(
         {
@@ -275,7 +275,7 @@ describe("auth API client", () => {
         success: true,
         data: {
           id: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-          email: "viewer@tmigroup.vn",
+          email: "viewer@cnsgroup.vn",
           roles: ["USER"],
           accountType: "INDIVIDUAL_APPLICANT",
         },
@@ -298,14 +298,14 @@ describe("auth API client", () => {
 
 describe("account API client", () => {
   beforeEach(() => {
-    document.cookie = "tmi_csrf=csrf-value";
+    document.cookie = "cns_csrf=csrf-value";
     vi.restoreAllMocks();
   });
 
   it("uses the profile contract and CSRF header for updates", async () => {
     const profile = {
       userId: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-      email: "owner@tmigroup.vn",
+      email: "owner@cnsgroup.vn",
       fullName: "Nguyễn Minh Anh",
       phone: "+84901234567",
       avatarMediaId: null,
@@ -407,11 +407,11 @@ describe("account API client", () => {
       type: "application/pdf",
     });
 
-    await publicApi.verifyDocument("TMI-2026-0001", 0, file);
+    await publicApi.verifyDocument("CNS-2026-0001", 0, file);
     await mediaApi.verifyDocument("media-id", file);
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      "/api/v1/public/certificates/TMI-2026-0001/documents/0/verifications",
+      "/api/v1/public/certificates/CNS-2026-0001/documents/0/verifications",
     );
     expect(fetchMock.mock.calls[1]?.[0]).toBe(
       "/api/v1/media/media-id/verifications",
@@ -453,9 +453,9 @@ describe("account API client", () => {
   it("does not send the immutable organization code in PATCH requests", async () => {
     const organization = {
       id: "9155dbf5-bb3e-449d-8bf0-9572cc642cac",
-      code: "TMI-LAB",
-      legalName: "Công ty TNHH TMI Lab",
-      displayName: "TMI Lab",
+      code: "CNS-LAB",
+      legalName: "Công ty TNHH CNS Lab",
+      displayName: "CNS Lab",
       taxCode: "0312345678",
       status: "ACTIVE",
       ownerUserId: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
@@ -483,7 +483,7 @@ describe("account API client", () => {
 
 describe("audit API client", () => {
   beforeEach(() => {
-    document.cookie = "tmi_csrf=csrf-value";
+    document.cookie = "cns_csrf=csrf-value";
     vi.restoreAllMocks();
   });
 
@@ -542,7 +542,7 @@ describe("audit API client", () => {
 
 describe("staff account API client", () => {
   beforeEach(() => {
-    document.cookie = "tmi_csrf=csrf-value";
+    document.cookie = "cns_csrf=csrf-value";
     vi.restoreAllMocks();
   });
 
@@ -565,7 +565,7 @@ describe("staff account API client", () => {
         success: true,
         data: {
           id: "staff-1",
-          email: "reviewer@tmigroup.vn",
+          email: "reviewer@cnsgroup.vn",
           role: "MODERATOR",
           status: "ACTIVE",
           createdAt: null,
@@ -575,7 +575,7 @@ describe("staff account API client", () => {
       }),
     );
     await staffInvitationsApi.create({
-      email: "reviewer@tmigroup.vn",
+      email: "reviewer@cnsgroup.vn",
       role: "MODERATOR",
     });
     expect(
@@ -584,7 +584,7 @@ describe("staff account API client", () => {
 
     const body = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body));
     expect(body).toEqual({
-      email: "reviewer@tmigroup.vn",
+      email: "reviewer@cnsgroup.vn",
       role: "MODERATOR",
     });
   });

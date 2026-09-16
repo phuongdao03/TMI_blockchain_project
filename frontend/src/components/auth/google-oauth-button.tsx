@@ -17,7 +17,7 @@ import { resolveDefaultWorkspace } from "@/lib/auth/role-workspaces";
 import { getFirebaseAuth, firebaseConfigured } from "@/lib/firebase/client";
 import type { AccountType } from "@/lib/api/types";
 
-const GOOGLE_REDIRECT_PENDING_KEY = "tmi.google-oauth.redirect-pending";
+const GOOGLE_REDIRECT_PENDING_KEY = "cns.google-oauth.redirect-pending";
 
 function hasPendingRedirect(): boolean {
   try {

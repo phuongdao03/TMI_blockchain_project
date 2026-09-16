@@ -174,7 +174,7 @@ def test_public_work_repository_and_draft_backfill_are_safe(tmp_path: Path) -> N
                 session.add(
                     Certificate(
                         id=certificate_id,
-                        certificate_number="TMI-2026-1501",
+                        certificate_number="CNS-2026-1501",
                         dossier_id=eligible_dossier_id,
                         current_version_no=1,
                         status=CertificateStatus.ACTIVE,

@@ -18,8 +18,8 @@ describe("public SEO output", () => {
   });
 
   it("uses only a validated canonical origin", () => {
-    expect(canonicalSiteUrl("https://catalog.tmi.vn/path?q=1").href).toBe(
-      "https://catalog.tmi.vn/",
+    expect(canonicalSiteUrl("https://catalog.cns.vn/path?q=1").href).toBe(
+      "https://catalog.cns.vn/",
     );
     expect(canonicalSiteUrl("javascript:alert(1)").href).toBe(
       "http://localhost:3000/",
@@ -31,7 +31,7 @@ describe("public SEO output", () => {
       "&lt;asset title=&quot;A&amp;B&quot;&gt;&apos;",
     );
     const sitemap = sitemapUrlSetXml([
-      { url: new URL("https://tmi.vn/works/a?x=1&y=2") },
+      { url: new URL("https://cns.vn/works/a?x=1&y=2") },
     ]);
     expect(sitemap).toContain("x=1&amp;y=2");
     expect(sitemap).not.toContain("x=1&y=2");
@@ -39,7 +39,7 @@ describe("public SEO output", () => {
 
   it("creates a sitemap index without injecting unescaped URLs", () => {
     const xml = sitemapIndexXml([
-      new URL("https://tmi.vn/sitemaps/works/1.xml?x=1&y=2"),
+      new URL("https://cns.vn/sitemaps/works/1.xml?x=1&y=2"),
     ]);
     expect(xml).toContain("?x=1&amp;y=2");
     expect(xml).toContain("<sitemapindex");

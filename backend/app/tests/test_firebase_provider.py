@@ -45,8 +45,8 @@ def test_firebase_x509_certificate_is_accepted() -> None:
     now = datetime(2026, 8, 6, 8, tzinfo=UTC)
     token = jwt.encode(
         {
-            "iss": "https://securetoken.google.com/tmi-test",
-            "aud": "tmi-test",
+            "iss": "https://securetoken.google.com/cns-test",
+            "aud": "cns-test",
             "sub": "firebase-user-x509",
             "iat": int(now.timestamp()),
             "exp": int((now + timedelta(hours=1)).timestamp()),
@@ -60,7 +60,7 @@ def test_firebase_x509_certificate_is_accepted() -> None:
         headers={"kid": "firebase-key"},
     )
     verifier = FirebaseTokenVerifier.create(
-        project_id="tmi-test",
+        project_id="cns-test",
         jwks_uri="https://firebase.test/certs",
         timeout_seconds=5,
         http_client=FakeFirebaseClient(_firebase_certificate(key, now)),
@@ -80,8 +80,8 @@ def test_firebase_token_is_verified_and_normalized(
     now = datetime(2026, 8, 6, 8, tzinfo=UTC)
     token = jwt.encode(
         {
-            "iss": "https://securetoken.google.com/tmi-test",
-            "aud": "tmi-test",
+            "iss": "https://securetoken.google.com/cns-test",
+            "aud": "cns-test",
             "sub": "firebase-user-1",
             "iat": int(now.timestamp()),
             "exp": int((now + timedelta(hours=1)).timestamp()),
@@ -96,7 +96,7 @@ def test_firebase_token_is_verified_and_normalized(
         headers={"kid": "firebase-key"},
     )
     verifier = FirebaseTokenVerifier.create(
-        project_id="tmi-test",
+        project_id="cns-test",
         jwks_uri="https://firebase.test/certs",
         timeout_seconds=5,
         http_client=FakeFirebaseClient(_firebase_certificate(key, now)),
@@ -114,8 +114,8 @@ def test_unsigned_emulator_token_requires_explicit_local_verifier() -> None:
     now = datetime(2026, 8, 8, 8, tzinfo=UTC)
     token = jwt.encode(
         {
-            "iss": "https://securetoken.google.com/tmi-local",
-            "aud": "tmi-local",
+            "iss": "https://securetoken.google.com/cns-local",
+            "aud": "cns-local",
             "sub": "local-user-1",
             "iat": int(now.timestamp()),
             "exp": int((now + timedelta(hours=1)).timestamp()),
@@ -128,7 +128,7 @@ def test_unsigned_emulator_token_requires_explicit_local_verifier() -> None:
         algorithm="none",
     )
     local_verifier = FirebaseTokenVerifier.create(
-        project_id="tmi-local",
+        project_id="cns-local",
         jwks_uri="https://firebase.test/certs",
         timeout_seconds=5,
         emulator_host="firebase-emulator:9099",
@@ -136,7 +136,7 @@ def test_unsigned_emulator_token_requires_explicit_local_verifier() -> None:
         clock=lambda: now,
     )
     production_verifier = FirebaseTokenVerifier.create(
-        project_id="tmi-local",
+        project_id="cns-local",
         jwks_uri="https://firebase.test/certs",
         timeout_seconds=5,
         http_client=FakeFirebaseClient("unused"),
@@ -153,8 +153,8 @@ def test_local_emulator_preserves_unverified_email_claim() -> None:
     now = datetime(2026, 8, 8, 8, tzinfo=UTC)
     token = jwt.encode(
         {
-            "iss": "https://securetoken.google.com/tmi-local",
-            "aud": "tmi-local",
+            "iss": "https://securetoken.google.com/cns-local",
+            "aud": "cns-local",
             "sub": "local-password-user",
             "iat": int(now.timestamp()),
             "exp": int((now + timedelta(hours=1)).timestamp()),
@@ -167,7 +167,7 @@ def test_local_emulator_preserves_unverified_email_claim() -> None:
         algorithm="none",
     )
     verifier = FirebaseTokenVerifier.create(
-        project_id="tmi-local",
+        project_id="cns-local",
         jwks_uri="https://firebase.test/certs",
         timeout_seconds=5,
         emulator_host="firebase-emulator:9099",

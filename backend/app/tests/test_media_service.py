@@ -160,7 +160,7 @@ async def _build_service(
     users = {
         name: User(
             id=uuid4(),
-            email=f"{name}@tmigroup.vn",
+            email=f"{name}@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -213,7 +213,7 @@ def test_signed_upload_completion_delivery_and_delete() -> None:
             ),
         )
         assert issued.public_id.startswith(
-            f"tmi/local/owners/{owner.user_id}/uploads/avatar/"
+            f"cns/local/owners/{owner.user_id}/uploads/avatar/"
         )
         assert issued.parameters["public_id"] == issued.public_id
         assert issued.expires_at == int(NOW.timestamp()) + 3_600

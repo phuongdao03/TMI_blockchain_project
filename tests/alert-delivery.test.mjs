@@ -76,7 +76,7 @@ test("alert delivery probe rejects insecure remote endpoints", async () => {
 });
 
 test("alert acknowledgement is schema checked and retained with a checksum", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "tmi-alert-ack-"));
+  const directory = await mkdtemp(join(tmpdir(), "cns-alert-ack-"));
   const input = join(directory, "input.json");
   const output = join(directory, "evidence");
   const acknowledgement = {

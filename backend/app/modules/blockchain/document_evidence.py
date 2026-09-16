@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+# These byte domains are immutable protocol identifiers. Renaming them would
+# invalidate every existing commitment, so they intentionally retain v1 bytes.
 EVIDENCE_KEY_DOMAIN = b"TMI:DOCUMENT:EVIDENCE:KEY:V1\0"
 EVIDENCE_COMMITMENT_DOMAIN = b"TMI:DOCUMENT:EVIDENCE:COMMITMENT:V1\0"
 ZERO_HASH = bytes(32)

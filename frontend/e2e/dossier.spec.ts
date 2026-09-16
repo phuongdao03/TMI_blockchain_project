@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test.beforeEach(async ({ context }) => {
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-access",
       domain: "127.0.0.1",
       path: "/",
@@ -11,7 +11,7 @@ test.beforeEach(async ({ context }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_refresh",
+      name: "cns_refresh",
       value: "e2e-refresh",
       domain: "127.0.0.1",
       path: "/",
@@ -19,7 +19,7 @@ test.beforeEach(async ({ context }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",
@@ -55,12 +55,12 @@ test("applicant creates, uploads evidence and submits an immutable dossier", asy
 
   await page
     .getByLabel("Tên tài sản hoặc tác phẩm")
-    .fill("Bộ nhận diện TMI E2E");
+    .fill("Bộ nhận diện CNS E2E");
   await page.getByLabel("Mô tả ngắn").fill("Hồ sơ kiểm thử luồng xác lập.");
   await page.getByRole("button", { name: "Tạo hồ sơ nháp" }).click();
   await expect(page).toHaveURL(/\/dossiers\/9155dbf5-/);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Bộ nhận diện TMI E2E" }),
+    page.getByRole("heading", { level: 1, name: "Bộ nhận diện CNS E2E" }),
   ).toBeVisible();
 
   await page.getByRole("button", { name: /Bằng chứng/ }).click();

@@ -131,7 +131,7 @@ def test_document_verification_routes_are_english_and_return_bounded_statuses() 
     public_response = asyncio.run(
         _request(
             "POST",
-            "/api/v1/public/certificates/TMI-2026-0001/documents/0/verifications",
+            "/api/v1/public/certificates/CNS-2026-0001/documents/0/verifications",
             content=b"hello",
         )
     )
@@ -168,7 +168,7 @@ def test_document_verification_rejects_non_binary_and_oversized_bodies_early() -
     wrong_type = asyncio.run(
         _request(
             "POST",
-            "/api/v1/public/certificates/TMI-2026-0001/documents/0/verifications",
+            "/api/v1/public/certificates/CNS-2026-0001/documents/0/verifications",
             content=b"hello",
             content_type="application/json",
         )

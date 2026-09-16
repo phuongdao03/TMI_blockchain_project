@@ -17,9 +17,9 @@ function Assert-HttpStatus([string]$Name, [string]$Url, [int]$Expected = 200) {
 Assert-HttpStatus "frontend" "http://localhost:3000"
 Assert-HttpStatus "backend" "http://localhost:8000/ready"
 Assert-HttpStatus "mailpit" "http://localhost:8025/api/v1/info"
-Assert-HttpStatus "firebase-emulator" "http://localhost:9099/emulator/v1/projects/tmi-local/config"
+Assert-HttpStatus "firebase-emulator" "http://localhost:9099/emulator/v1/projects/cns-local/config"
 
-$migration = docker compose exec -T postgres psql -U tmi_local -d tmi_local -tAc "select version_num from alembic_version"
+$migration = docker compose exec -T postgres psql -U cns_local -d cns_local -tAc "select version_num from alembic_version"
 if ($LASTEXITCODE -ne 0 -or -not $migration.Trim()) { throw "postgres failed. Inspect 'docker compose logs postgres migrate'." }
 $redis = docker compose exec -T redis redis-cli ping
 if ($LASTEXITCODE -ne 0 -or $redis.Trim() -ne "PONG") { throw "redis failed. Inspect 'docker compose logs redis'." }

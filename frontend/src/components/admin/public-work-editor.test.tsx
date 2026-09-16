@@ -54,7 +54,7 @@ const work: PublicWorkEditorData = {
   title: "Bản mẫu công khai",
   shortDescription: "Mô tả công khai đủ độ dài kiểm tra.",
   fullDescription: "Nội dung giới thiệu.",
-  authorDisplayName: "TMI Studio",
+  authorDisplayName: "CNS Studio",
   categoryId: "d822f66a-05d4-4829-85a0-4206d050480c",
   categoryName: "Nghệ thuật số",
   tagIds: [],
@@ -147,7 +147,7 @@ beforeEach(() => {
     media: [],
     canPublish: true,
     certificate: {
-      certificateNumber: "TMI-2026-0001",
+      certificateNumber: "CNS-2026-0001",
       status: "ACTIVE",
       issuedAt: "2026-09-01T00:00:00Z",
       expiresAt: null,
@@ -641,7 +641,7 @@ describe("PublicWorkEditor", () => {
       screen
         .getByRole("link", { name: /Xem và kiểm tra chứng thư/ })
         .getAttribute("href"),
-    ).toBe("/verify/TMI-2026-0001");
+    ).toBe("/verify/CNS-2026-0001");
     expect(screen.queryByText(work.dossierId)).toBeNull();
     expect(screen.getByRole("button", { name: "Xem bản mobile" })).toBeTruthy();
   });

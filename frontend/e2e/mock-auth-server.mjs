@@ -4,25 +4,25 @@ const mockPort = Number(process.env.E2E_MOCK_PORT ?? 4010);
 
 const user = {
   id: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-  email: "owner@tmigroup.vn",
+  email: "owner@cnsgroup.vn",
   roles: ["USER"],
   accountType: "INDIVIDUAL_APPLICANT",
 };
 const applicantUser = {
   id: "e57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-  email: "applicant@tmigroup.vn",
+  email: "applicant@cnsgroup.vn",
   roles: ["USER"],
   accountType: "INDIVIDUAL_APPLICANT",
 };
 const reviewerUser = {
   id: "f57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-  email: "reviewer@tmigroup.vn",
+  email: "reviewer@cnsgroup.vn",
   roles: ["MODERATOR"],
   accountType: null,
 };
 const superAdminUser = {
   id: "a57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-  email: "superadmin@tmigroup.vn",
+  email: "superadmin@cnsgroup.vn",
   roles: ["SUPER_ADMIN"],
   permissions: ["users.read", "users.suspend"],
   accountType: null,
@@ -370,9 +370,9 @@ const profile = {
 };
 const organization = {
   id: organizationId,
-  code: "TMI-LAB",
-  legalName: "Công ty TNHH TMI Lab",
-  displayName: "TMI Lab",
+  code: "CNS-LAB",
+  legalName: "Công ty TNHH CNS Lab",
+  displayName: "CNS Lab",
   taxCode: "0312345678",
   status: "ACTIVE",
   ownerUserId: user.id,
@@ -389,7 +389,7 @@ const members = [
   },
   {
     userId: "5f81fa20-ec0a-4393-a90c-bf9c6285766d",
-    email: "member@tmigroup.vn",
+    email: "member@cnsgroup.vn",
     roleCode: "MEMBER",
     status: "INVITED",
     joinedAt: null,
@@ -434,11 +434,11 @@ const initialPublicWork = {
   id: publicWorkId,
   dossierId,
   certificateId: "7eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
-  slug: "di-san-so-tmi",
-  title: "Di sản số TMI",
+  slug: "di-san-so-cns",
+  title: "Di sản số CNS",
   shortDescription: "Tác phẩm số đã hoàn tất quy trình xác lập minh bạch.",
   fullDescription: "Một bản giới thiệu công khai chỉ chứa dữ liệu được duyệt.",
-  authorDisplayName: "TMI Studio",
+  authorDisplayName: "CNS Studio",
   categoryId,
   categoryName: "Thương hiệu",
   tagIds: [],
@@ -453,7 +453,7 @@ const initialPublicWork = {
   checklist: [{ code: "TITLE_REQUIRED", passed: true }],
   sourceVersionNo: 1,
   sourceFields: [
-    { key: "title", label: "Tiêu đề hồ sơ", value: "Di sản số TMI" },
+    { key: "title", label: "Tiêu đề hồ sơ", value: "Di sản số CNS" },
     {
       key: "summary",
       label: "Mô tả hồ sơ",
@@ -519,36 +519,36 @@ const server = createServer(async (request, response) => {
   const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
   const cookieHeader = request.headers.cookie ?? "";
   const authenticated =
-    cookieHeader.includes("tmi_access=e2e-access") ||
-    cookieHeader.includes("tmi_access=e2e-super-admin-access") ||
-    cookieHeader.includes("tmi_e2e_persona=super-admin");
+    cookieHeader.includes("cns_access=e2e-access") ||
+    cookieHeader.includes("cns_access=e2e-super-admin-access") ||
+    cookieHeader.includes("cns_e2e_persona=super-admin");
   const superAdminAuthenticated =
-    cookieHeader.includes("tmi_access=e2e-super-admin-access") ||
-    cookieHeader.includes("tmi_e2e_persona=super-admin");
+    cookieHeader.includes("cns_access=e2e-super-admin-access") ||
+    cookieHeader.includes("cns_e2e_persona=super-admin");
   const sessionPersona = cookieHeader
     .split("; ")
-    .find((cookie) => cookie.startsWith("tmi_e2e_persona="))
+    .find((cookie) => cookie.startsWith("cns_e2e_persona="))
     ?.split("=")[1];
   const csrfProtected =
     authenticated && request.headers["x-csrf-token"] === "e2e-csrf";
   const publicAsset = {
-    slug: "bo-nhan-dien-tmi",
-    title: "Bộ nhận diện TMI",
+    slug: "bo-nhan-dien-cns",
+    title: "Bộ nhận diện CNS",
     summary: "Hệ thống nhận diện thương hiệu đã được xác lập.",
     categoryCode: "BRAND",
     categoryName: "Thương hiệu",
-    certificateNumber: "TMI-2026-7EAEC2D2C99A",
+    certificateNumber: "CNS-2026-7EAEC2D2C99A",
     certificateStatus: "ACTIVE",
     issuedAt: "2026-07-31T00:00:00Z",
     transactionHash: `0x${"34".repeat(32)}`,
   };
   const catalogWork = {
     id: "32324c61-89fd-44c2-b803-67d8cf5f203e",
-    slug: "bo-nhan-dien-tmi",
-    title: "Bộ nhận diện TMI",
+    slug: "bo-nhan-dien-cns",
+    title: "Bộ nhận diện CNS",
     shortDescription:
       "Hệ thống nhận diện thương hiệu đã được công bố minh bạch.",
-    authorDisplayName: "TMI Studio",
+    authorDisplayName: "CNS Studio",
     categoryName: "Thương hiệu",
     categorySlug: "brand",
     tags: [{ name: "Tiêu biểu", slug: "featured" }],
@@ -561,10 +561,10 @@ const server = createServer(async (request, response) => {
     ...catalogWork,
     fullDescription:
       "Một câu chuyện công khai dài hơn về giá trị đã được xác lập.",
-    organizationDisplayName: "TMI Group",
+    organizationDisplayName: "CNS Group",
     visibility: "PUBLIC",
     certificate: {
-      certificateNumber: "TMI-2026-7EAEC2D2C99A",
+      certificateNumber: "CNS-2026-7EAEC2D2C99A",
       status: "ACTIVE",
       issuedAt: "2026-07-31T00:00:00Z",
       expiresAt: null,
@@ -666,10 +666,10 @@ const server = createServer(async (request, response) => {
         : "e2e-access";
     send(response, 200, envelope({ user: authenticatedUser }), {
       "Set-Cookie": [
-        `tmi_access=${accessToken}; Path=/; HttpOnly; SameSite=Lax`,
-        "tmi_refresh=e2e-refresh; Path=/; HttpOnly; SameSite=Lax",
-        "tmi_csrf=e2e-csrf; Path=/; SameSite=Lax",
-        `tmi_e2e_persona=${persona}; Path=/; SameSite=Lax`,
+        `cns_access=${accessToken}; Path=/; HttpOnly; SameSite=Lax`,
+        "cns_refresh=e2e-refresh; Path=/; HttpOnly; SameSite=Lax",
+        "cns_csrf=e2e-csrf; Path=/; SameSite=Lax",
+        `cns_e2e_persona=${persona}; Path=/; SameSite=Lax`,
       ],
     });
     return;
@@ -702,7 +702,7 @@ const server = createServer(async (request, response) => {
         roles: ["USER"],
       }),
       {
-        "Set-Cookie": ["tmi_e2e_persona=applicant; Path=/; SameSite=Lax"],
+        "Set-Cookie": ["cns_e2e_persona=applicant; Path=/; SameSite=Lax"],
       },
     );
     return;
@@ -759,10 +759,10 @@ const server = createServer(async (request, response) => {
   ) {
     response.writeHead(204, {
       "Set-Cookie": [
-        "tmi_access=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax",
-        "tmi_refresh=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax",
-        "tmi_csrf=; Path=/; Max-Age=0; SameSite=Lax",
-        "tmi_e2e_persona=; Path=/; Max-Age=0; SameSite=Lax",
+        "cns_access=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax",
+        "cns_refresh=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax",
+        "cns_csrf=; Path=/; Max-Age=0; SameSite=Lax",
+        "cns_e2e_persona=; Path=/; Max-Age=0; SameSite=Lax",
       ],
       "X-Request-Id": "e2e-logout",
     });
@@ -796,7 +796,7 @@ const server = createServer(async (request, response) => {
             authorDisplayName: catalogWork.authorDisplayName,
             categoryName: catalogWork.categoryName,
             categorySlug: catalogWork.categorySlug,
-            certificateNumber: "TMI-2026-7EAEC2D2C99A",
+            certificateNumber: "CNS-2026-7EAEC2D2C99A",
             certificateStatus: "ACTIVE",
             publishedAt: catalogWork.publishedAt,
           },
@@ -817,7 +817,7 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/public/works/bo-nhan-dien-tmi/qr"
+    path === "/api/v1/public/works/bo-nhan-dien-cns/qr"
   ) {
     const png = Buffer.from(
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -825,7 +825,7 @@ const server = createServer(async (request, response) => {
     );
     response.writeHead(200, {
       "Cache-Control": "no-store",
-      "Content-Location": "http://127.0.0.1:3100/works/bo-nhan-dien-tmi",
+      "Content-Location": "http://127.0.0.1:3100/works/bo-nhan-dien-cns",
       "Content-Type": "image/png",
     });
     response.end(png);
@@ -848,7 +848,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "POST" &&
     [
-      "/api/v1/public/works/bo-nhan-dien-tmi/engagement/views",
+      "/api/v1/public/works/bo-nhan-dien-cns/engagement/views",
       "/api/v1/public/works/chia-se-rieng/engagement/views",
     ].includes(path)
   ) {
@@ -858,7 +858,7 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "POST" &&
-    path === "/api/v1/public/works/bo-nhan-dien-tmi/engagement/shares"
+    path === "/api/v1/public/works/bo-nhan-dien-cns/engagement/shares"
   ) {
     send(response, 202, envelope({ accepted: true }));
     return;
@@ -868,14 +868,14 @@ const server = createServer(async (request, response) => {
     path === "/api/v1/public/works/bo-nhan-dien-cu"
   ) {
     response.writeHead(308, {
-      Location: "/api/v1/public/works/bo-nhan-dien-tmi",
+      Location: "/api/v1/public/works/bo-nhan-dien-cns",
     });
     response.end();
     return;
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/public/works/bo-nhan-dien-tmi"
+    path === "/api/v1/public/works/bo-nhan-dien-cns"
   ) {
     send(response, 200, envelope(catalogDetail), {
       "Cache-Control": "no-store",
@@ -956,7 +956,7 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/public/assets/bo-nhan-dien-tmi"
+    path === "/api/v1/public/assets/bo-nhan-dien-cns"
   ) {
     send(
       response,
@@ -976,7 +976,7 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/verify/certificate/TMI-2026-7EAEC2D2C99A"
+    path === "/api/v1/verify/certificate/CNS-2026-7EAEC2D2C99A"
   ) {
     send(
       response,
@@ -996,10 +996,10 @@ const server = createServer(async (request, response) => {
         confirmations: 3,
         confirmedAt: "2026-07-31T10:00:00Z",
         explorerUrl: null,
-        dossierCode: "TMI-2026-DEMO0001",
+        dossierCode: "CNS-2026-DEMO0001",
         metadataHash: "ab".repeat(32),
         blockNumber: 123456,
-        issuerLabel: "TMI Certificate",
+        issuerLabel: "CNS Certificate",
         documents: [
           {
             title: "Hồ sơ công khai",
@@ -1014,7 +1014,7 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/verify/certificate/TMI-2026-7EAEC2D2C99A/versions"
+    path === "/api/v1/verify/certificate/CNS-2026-7EAEC2D2C99A/versions"
   ) {
     send(
       response,
@@ -1028,7 +1028,7 @@ const server = createServer(async (request, response) => {
           blockNumber: 123456,
           confirmedAt: "2026-07-31T10:00:00Z",
           createdAt: "2026-07-31T09:00:00Z",
-          issuerLabel: "TMI Certificate",
+          issuerLabel: "CNS Certificate",
           documents: [],
         },
       ]),
@@ -1037,7 +1037,7 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/verify/certificate/TMI-2026-7EAEC2D2C99A/qr"
+    path === "/api/v1/verify/certificate/CNS-2026-7EAEC2D2C99A/qr"
   ) {
     const png = Buffer.from(
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -1055,7 +1055,7 @@ const server = createServer(async (request, response) => {
     id: "7eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
     certificateNumber: publicAsset.certificateNumber,
     dossierId,
-    dossierCode: "TMI-2026-DEMO0001",
+    dossierCode: "CNS-2026-DEMO0001",
     assetTitle: publicAsset.title,
     categoryName: publicAsset.categoryName,
     currentVersionNo: 1,
@@ -1165,10 +1165,10 @@ const server = createServer(async (request, response) => {
         confirmations: 3,
         confirmedAt: "2026-07-31T10:00:00Z",
         explorerUrl: null,
-        dossierCode: "TMI-2026-DEMO0001",
+        dossierCode: "CNS-2026-DEMO0001",
         metadataHash: "ab".repeat(32),
         blockNumber: 123456,
-        issuerLabel: "TMI Certificate",
+        issuerLabel: "CNS Certificate",
         documents: [
           {
             title: "Hồ sơ công khai",
@@ -1184,7 +1184,7 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && path === "/api/e2e/reset-payment") {
     dossier = {
       id: dossierId,
-      code: "TMI-2026-PAYMENT001",
+      code: "CNS-2026-PAYMENT001",
       ownerUserId: user.id,
       organizationId: null,
       categoryId,
@@ -1272,7 +1272,7 @@ const server = createServer(async (request, response) => {
       expiresAt: "2026-08-01T08:15:00Z",
       paidAt: null,
       checkoutUrl: "http://127.0.0.1:4010/mock-checkout",
-      qrPayload: "TMI|PAY-2026-E2E00003",
+      qrPayload: "CNS|PAY-2026-E2E00003",
       createdAt: "2026-08-01T08:00:00Z",
       updatedAt: "2026-08-01T08:00:00Z",
     };
@@ -1307,8 +1307,8 @@ const server = createServer(async (request, response) => {
         ? "https://pay.payos.vn/web/payos-provider-confirmed"
         : "https://pay.payos.vn/web/payos-provider-pending",
       qrPayload: confirmedScenario
-        ? "TMI|PAY-2026-E2E00005"
-        : "TMI|PAY-2026-E2E00004",
+        ? "CNS|PAY-2026-E2E00005"
+        : "CNS|PAY-2026-E2E00004",
       createdAt: "2026-08-30T08:00:00Z",
       updatedAt: "2026-08-30T08:00:00Z",
     };
@@ -1318,7 +1318,7 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && path === "/api/e2e/reset-needs-supplement") {
     dossier = {
       id: dossierId,
-      code: "TMI-2026-SUPPLEMENT001",
+      code: "CNS-2026-SUPPLEMENT001",
       ownerUserId: user.id,
       organizationId: null,
       categoryId,
@@ -1652,7 +1652,7 @@ const server = createServer(async (request, response) => {
       expiresAt: "2026-08-01T08:15:00Z",
       paidAt: null,
       checkoutUrl: "http://127.0.0.1:4010/mock-checkout",
-      qrPayload: "TMI|PAY-2026-E2E00001",
+      qrPayload: "CNS|PAY-2026-E2E00001",
       createdAt: "2026-08-01T08:00:00Z",
       updatedAt: "2026-08-01T08:00:00Z",
       description: payload.description,
@@ -1762,7 +1762,7 @@ const server = createServer(async (request, response) => {
       ...paymentOrder,
       checkoutUrl:
         paymentOrder.checkoutUrl ?? "http://127.0.0.1:4010/mock-checkout",
-      qrPayload: paymentOrder.qrPayload ?? `TMI|${paymentOrder.orderCode}`,
+      qrPayload: paymentOrder.qrPayload ?? `CNS|${paymentOrder.orderCode}`,
       updatedAt: "2026-08-01T08:00:00Z",
     };
     send(response, 201, envelope(paymentOrder));
@@ -1790,7 +1790,7 @@ const server = createServer(async (request, response) => {
     dossier: {
       id: dossierId,
       code: "HS-2026-REVIEW01",
-      title: "Hồ sơ thương hiệu TMI",
+      title: "Hồ sơ thương hiệu CNS",
       summary: "Hồ sơ kiểm thử thẩm định theo kết luận.",
       dossierType: {
         code: "TRADEMARK_PROFILE",
@@ -1875,7 +1875,7 @@ const server = createServer(async (request, response) => {
     dossierId,
     dossierVersionId: reviewVersionId,
     dossierCode: "HS-2026-COUNCIL",
-    dossierTitle: "Hồ sơ thương hiệu số TMI",
+    dossierTitle: "Hồ sơ thương hiệu số CNS",
     versionNo: 1,
     decision: councilSessionStatus === "CLOSED" ? "APPROVE" : null,
   };
@@ -2131,7 +2131,7 @@ const server = createServer(async (request, response) => {
         {
           assignment: reviewAssignment,
           dossierCode: "HS-2026-REVIEW01",
-          dossierTitle: "Hồ sơ thương hiệu TMI",
+          dossierTitle: "Hồ sơ thương hiệu CNS",
           versionNo: 1,
         },
       ]),
@@ -2152,7 +2152,7 @@ const server = createServer(async (request, response) => {
       envelope({
         assignment: reviewAssignment,
         dossierCode: "HS-2026-REVIEW01",
-        dossierTitle: "Hồ sơ thương hiệu TMI",
+        dossierTitle: "Hồ sơ thương hiệu CNS",
         versionNo: 1,
         canonicalHash: visible ? "b".repeat(64) : null,
         snapshotJson: visible ? reviewSnapshot : null,
@@ -2260,7 +2260,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "GET" &&
     path === "/api/v1/dossiers" &&
-    request.headers.cookie?.includes("tmi_access=e2e-access")
+    request.headers.cookie?.includes("cns_access=e2e-access")
   ) {
     send(response, 200, paginatedEnvelope(dossier ? [dossier] : []));
     return;
@@ -2268,7 +2268,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "POST" &&
     path === "/api/v1/dossiers" &&
-    request.headers.cookie?.includes("tmi_access=e2e-access") &&
+    request.headers.cookie?.includes("cns_access=e2e-access") &&
     request.headers["x-csrf-token"] === "e2e-csrf"
   ) {
     const input = await readJson(request);
@@ -2286,7 +2286,7 @@ const server = createServer(async (request, response) => {
     }
     dossier = {
       id: dossierId,
-      code: "TMI-2026-E2E000000001",
+      code: "CNS-2026-E2E000000001",
       ownerUserId: user.id,
       organizationId: input.organizationId ?? null,
       categoryId: input.categoryId,
@@ -2312,7 +2312,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "GET" &&
     path === `/api/v1/dossiers/${dossierId}` &&
-    request.headers.cookie?.includes("tmi_access=e2e-access") &&
+    request.headers.cookie?.includes("cns_access=e2e-access") &&
     dossier
   ) {
     send(response, 200, envelope({ ...dossier, evidences }));
@@ -2321,7 +2321,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "PATCH" &&
     path === `/api/v1/dossiers/${dossierId}` &&
-    request.headers.cookie?.includes("tmi_access=e2e-access") &&
+    request.headers.cookie?.includes("cns_access=e2e-access") &&
     request.headers["x-csrf-token"] === "e2e-csrf" &&
     dossier
   ) {
@@ -2337,7 +2337,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "POST" &&
     path === `/api/v1/dossiers/${dossierId}/evidences` &&
-    request.headers.cookie?.includes("tmi_access=e2e-access") &&
+    request.headers.cookie?.includes("cns_access=e2e-access") &&
     request.headers["x-csrf-token"] === "e2e-csrf"
   ) {
     const input = await readJson(request);
@@ -2363,7 +2363,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "POST" &&
     path === `/api/v1/dossiers/${dossierId}/submit` &&
-    request.headers.cookie?.includes("tmi_access=e2e-access") &&
+    request.headers.cookie?.includes("cns_access=e2e-access") &&
     request.headers["x-csrf-token"] === "e2e-csrf" &&
     request.headers["idempotency-key"] &&
     dossier
@@ -2407,7 +2407,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "GET" &&
     path === `/api/v1/dossiers/${dossierId}/versions` &&
-    request.headers.cookie?.includes("tmi_access=e2e-access")
+    request.headers.cookie?.includes("cns_access=e2e-access")
   ) {
     send(response, 200, envelope(versions));
     return;
@@ -2415,7 +2415,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "GET" &&
     path === `/api/v1/dossiers/${dossierId}/timeline` &&
-    request.headers.cookie?.includes("tmi_access=e2e-access")
+    request.headers.cookie?.includes("cns_access=e2e-access")
   ) {
     send(response, 200, envelope(timeline));
     return;
@@ -2693,7 +2693,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "POST" &&
     path === "/api/v1/media/upload-signature" &&
-    request.headers.cookie?.includes("tmi_access=e2e-access") &&
+    request.headers.cookie?.includes("cns_access=e2e-access") &&
     request.headers["x-csrf-token"] === "e2e-csrf"
   ) {
     send(
@@ -2703,7 +2703,7 @@ const server = createServer(async (request, response) => {
         mediaId: avatarMediaId,
         publicId: `users/${user.id}/avatar`,
         uploadUrl: "/api/cloudinary/upload",
-        cloudName: "tmi-e2e",
+        cloudName: "cns-e2e",
         apiKey: "e2e-api-key",
         signature: "a".repeat(40),
         parameters: {
@@ -2731,7 +2731,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "POST" &&
     path === "/api/v1/media/complete" &&
-    request.headers.cookie?.includes("tmi_access=e2e-access") &&
+    request.headers.cookie?.includes("cns_access=e2e-access") &&
     request.headers["x-csrf-token"] === "e2e-csrf"
   ) {
     send(
@@ -2752,7 +2752,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "PATCH" &&
     path === "/api/v1/users/me" &&
-    request.headers.cookie?.includes("tmi_access=e2e-access") &&
+    request.headers.cookie?.includes("cns_access=e2e-access") &&
     request.headers["x-csrf-token"] === "e2e-csrf"
   ) {
     send(response, 200, envelope({ ...profile, avatarMediaId }));
@@ -2761,7 +2761,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "GET" &&
     path === "/api/v1/users/me" &&
-    request.headers.cookie?.includes("tmi_access=e2e-access")
+    request.headers.cookie?.includes("cns_access=e2e-access")
   ) {
     send(response, 200, envelope(profile));
     return;
@@ -2769,7 +2769,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "GET" &&
     path === "/api/v1/organizations" &&
-    request.headers.cookie?.includes("tmi_access=e2e-access")
+    request.headers.cookie?.includes("cns_access=e2e-access")
   ) {
     send(response, 200, envelope([organization]));
     return;
@@ -2777,7 +2777,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "GET" &&
     path === `/api/v1/organizations/${organizationId}/members` &&
-    request.headers.cookie?.includes("tmi_access=e2e-access")
+    request.headers.cookie?.includes("cns_access=e2e-access")
   ) {
     send(response, 200, envelope(members));
     return;
@@ -2785,7 +2785,7 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && path === "/api/v1/auth/login") {
     const credentials = await readJson(request);
     if (
-      credentials.email !== "owner@tmigroup.vn" ||
+      credentials.email !== "owner@cnsgroup.vn" ||
       credentials.password !== "correct horse battery staple"
     ) {
       const failure = error(401, "INVALID_CREDENTIALS", "Sai thông tin.");
@@ -2795,9 +2795,9 @@ const server = createServer(async (request, response) => {
     publicWork = { ...initialPublicWork };
     send(response, 200, envelope({ user }), {
       "Set-Cookie": [
-        "tmi_access=e2e-access; Path=/; HttpOnly; SameSite=Lax",
-        "tmi_refresh=e2e-refresh; Path=/; HttpOnly; SameSite=Lax",
-        "tmi_csrf=e2e-csrf; Path=/; SameSite=Lax",
+        "cns_access=e2e-access; Path=/; HttpOnly; SameSite=Lax",
+        "cns_refresh=e2e-refresh; Path=/; HttpOnly; SameSite=Lax",
+        "cns_csrf=e2e-csrf; Path=/; SameSite=Lax",
       ],
     });
     return;
@@ -2805,20 +2805,20 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "POST" &&
     path === "/api/v1/auth/refresh" &&
-    request.headers.cookie?.includes("tmi_refresh=e2e-refresh") &&
-    request.headers.cookie?.includes("tmi_csrf=e2e-csrf") &&
+    request.headers.cookie?.includes("cns_refresh=e2e-refresh") &&
+    request.headers.cookie?.includes("cns_csrf=e2e-csrf") &&
     request.headers["x-csrf-token"] === "e2e-csrf"
   ) {
     const refreshedAccess =
-      request.headers.cookie.includes("tmi_access=e2e-super-admin-access") ||
-      request.headers.cookie.includes("tmi_e2e_persona=super-admin")
+      request.headers.cookie.includes("cns_access=e2e-super-admin-access") ||
+      request.headers.cookie.includes("cns_e2e_persona=super-admin")
         ? "e2e-super-admin-access"
         : "e2e-access";
     send(response, 200, envelope({ status: "refreshed" }), {
       "Set-Cookie": [
-        `tmi_access=${refreshedAccess}; Path=/; HttpOnly; SameSite=Lax`,
-        "tmi_refresh=e2e-refresh; Path=/; HttpOnly; SameSite=Lax",
-        "tmi_csrf=e2e-csrf; Path=/; SameSite=Lax",
+        `cns_access=${refreshedAccess}; Path=/; HttpOnly; SameSite=Lax`,
+        "cns_refresh=e2e-refresh; Path=/; HttpOnly; SameSite=Lax",
+        "cns_csrf=e2e-csrf; Path=/; SameSite=Lax",
       ],
     });
     return;

@@ -177,7 +177,7 @@ class DossierService:
             identifier = self._uuid_factory()
             dossier = Dossier(
                 id=identifier,
-                code=f"TMI-{self._clock().year}-{identifier.hex[:12].upper()}",
+                code=f"CNS-{self._clock().year}-{identifier.hex[:12].upper()}",
                 owner_user_id=principal.user_id,
                 organization_id=payload.organization_id,
                 category_id=payload.category_id,

@@ -76,13 +76,13 @@ def test_listing_filters_and_never_leaks_non_public_works(tmp_path: Path) -> Non
         )
         revoked_certificate = Certificate(
             id=uuid4(),
-            certificate_number=f"TMI-2026-{uuid4().hex[:12].upper()}",
+            certificate_number=f"CNS-2026-{uuid4().hex[:12].upper()}",
             dossier_id=uuid4(),
             current_version_no=1,
             status=CertificateStatus.REVOKED,
             issued_at=NOW,
             public_token_hash="ab" * 32,
-            qr_payload="https://tmi.example/verify/revoked-token",
+            qr_payload="https://cns.example/verify/revoked-token",
         )
         revoked_work = PublicWork(
             dossier_id=revoked_certificate.dossier_id,

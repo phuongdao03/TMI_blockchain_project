@@ -83,7 +83,7 @@ class PayOSGateway:
             raise PaymentGatewayError("Payment order code is invalid.")
         if amount_minor <= 0 or currency.upper() != "VND":
             raise PaymentGatewayError("Payment amount or currency is invalid.")
-        description = f"TMI {order_code}"
+        description = f"CNS {order_code}"
         signed_data: dict[str, object] = {
             "amount": amount_minor,
             "cancelUrl": self._cancel_url,

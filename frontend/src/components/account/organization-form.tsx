@@ -64,7 +64,7 @@ export function OrganizationForm({
           error={errors.code?.message}
           hint={organization ? "Mã tổ chức không thể thay đổi." : undefined}
           label="Mã tổ chức"
-          placeholder="TMI-LAB"
+          placeholder="CNS-LAB"
           {...register("code")}
         />
         <FormField

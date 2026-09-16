@@ -51,7 +51,7 @@ def test_owner_checkout_uses_locked_obligation_amount_and_replays() -> None:
             await connection.run_sync(Base.metadata.create_all)
         owner = User(
             id=uuid4(),
-            email="checkout-owner@tmigroup.vn",
+            email="checkout-owner@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -173,7 +173,7 @@ def test_expired_checkout_rechecks_provider_before_replacement() -> None:
             await connection.run_sync(Base.metadata.create_all)
         owner = User(
             id=uuid4(),
-            email="recheck-owner@tmigroup.vn",
+            email="recheck-owner@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )

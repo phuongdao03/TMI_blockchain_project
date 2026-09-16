@@ -111,7 +111,7 @@ import type {
 } from "@/lib/api/types";
 
 const API_ROOT = "/api/v1";
-const CSRF_COOKIE_NAME = "tmi_csrf";
+const CSRF_COOKIE_NAME = "cns_csrf";
 let sessionRefreshInFlight: Promise<void> | null = null;
 
 export class ApiError extends Error {

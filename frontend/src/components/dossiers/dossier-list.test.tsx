@@ -17,11 +17,11 @@ describe("DossierList", () => {
       data: [
         {
           id: "9155dbf5-bb3e-449d-8bf0-9572cc642cac",
-          code: "TMI-2026-ABCDEF123456",
+          code: "CNS-2026-ABCDEF123456",
           ownerUserId: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
           organizationId: null,
           categoryId: "4d28db19-1507-5a45-a50d-cd0aa83029ec",
-          title: "Bộ nhận diện TMI",
+          title: "Bộ nhận diện CNS",
           slug: null,
           summary: "Hồ sơ quyền sở hữu.",
           status: "DRAFT",
@@ -45,7 +45,7 @@ describe("DossierList", () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText("Bộ nhận diện TMI")).toBeDefined();
+    expect(await screen.findByText("Bộ nhận diện CNS")).toBeDefined();
     expect(screen.getByText("Bản nháp")).toBeDefined();
     expect(
       screen.getByText("Việc tiếp theo: Hoàn thiện thông tin và tài liệu"),

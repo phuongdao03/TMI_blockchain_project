@@ -190,10 +190,10 @@ def test_security_headers_are_present_and_hsts_is_production_only() -> None:
                     "media_private_encryption_keys": {
                         "document-v1": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ="
                     },
-                    "cloudinary_cloud_name": "tmi-production",
+                    "cloudinary_cloud_name": "cns-production",
                     "cloudinary_api_key": "cloudinary-api-key",
                     "cloudinary_api_secret": "cloudinary-api-secret",
-                    "cors_allowed_origins": "https://app.tmigroup.vn",
+                    "cors_allowed_origins": "https://app.cnsgroup.vn",
                     "blockchain_network": "polygon",
                     "blockchain_chain_id": 137,
                     "blockchain_rpc_url": "https://polygon-rpc.example",
@@ -228,7 +228,7 @@ def test_cors_uses_environment_allowlist_and_rejects_unknown_origin() -> None:
         settings=Settings.model_validate(
             {
                 "app_env": "local",
-                "cors_allowed_origins": "https://app.tmigroup.vn",
+                "cors_allowed_origins": "https://app.cnsgroup.vn",
             }
         )
     )
@@ -236,7 +236,7 @@ def test_cors_uses_environment_allowlist_and_rejects_unknown_origin() -> None:
     allowed = get(
         app,
         "/health",
-        headers={"Origin": "https://app.tmigroup.vn"},
+        headers={"Origin": "https://app.cnsgroup.vn"},
     )
     rejected = get(
         app,
@@ -244,12 +244,12 @@ def test_cors_uses_environment_allowlist_and_rejects_unknown_origin() -> None:
         headers={"Origin": "https://evil.example"},
     )
 
-    assert allowed.headers["Access-Control-Allow-Origin"] == "https://app.tmigroup.vn"
+    assert allowed.headers["Access-Control-Allow-Origin"] == "https://app.cnsgroup.vn"
     assert "Access-Control-Allow-Origin" not in rejected.headers
 
 
 def test_production_cors_rejects_wildcard_and_non_tls_origins() -> None:
-    for origin in ("*", "http://app.tmigroup.vn"):
+    for origin in ("*", "http://app.cnsgroup.vn"):
         settings = Settings.model_validate(
             {
                 "app_env": "production",
@@ -259,7 +259,7 @@ def test_production_cors_rejects_wildcard_and_non_tls_origins() -> None:
                 "media_private_encryption_keys": {
                     "document-v1": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ="
                 },
-                "cloudinary_cloud_name": "tmi-production",
+                "cloudinary_cloud_name": "cns-production",
                 "cloudinary_api_key": "cloudinary-api-key",
                 "cloudinary_api_secret": "cloudinary-api-secret",
                 "cors_allowed_origins": origin,
@@ -358,7 +358,7 @@ def test_full_production_readiness_includes_media_provider_and_scanner(
             "media_private_encryption_keys": {
                 "document-v1": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ="
             },
-            "cloudinary_cloud_name": "tmi-production",
+            "cloudinary_cloud_name": "cns-production",
             "cloudinary_api_key": "cloudinary-api-key",
             "cloudinary_api_secret": "cloudinary-api-secret",
             "blockchain_network": "polygon",
@@ -388,13 +388,13 @@ def test_full_production_readiness_includes_media_provider_and_scanner(
 
 def test_cloudinary_readiness_probe_uses_the_minimal_ping_endpoint() -> None:
     probe = CloudinaryProbe(
-        cloud_name="tmi-production",
+        cloud_name="cns-production",
         api_key="cloudinary-api-key",
         api_secret="cloudinary-api-secret",
         timeout_seconds=1,
     )
     try:
-        assert probe._url == "https://api.cloudinary.com/v1_1/tmi-production/ping"
+        assert probe._url == "https://api.cloudinary.com/v1_1/cns-production/ping"
     finally:
         run(probe.close())
 

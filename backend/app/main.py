@@ -156,7 +156,7 @@ footer {{ margin-top: 18px; color: #6e7380; font-size: 13px; }}
 </style>
 </head>
 <body><main>
-<div class="eyebrow">TMI Certificate · API reference</div>
+<div class="eyebrow">CNS Certificate · API reference</div>
 <h1>{title}</h1>
 <p>Danh sách endpoint được hiển thị trực tiếp từ OpenAPI schema.
 Trang này không phụ thuộc JavaScript hoặc CDN bên ngoài.</p>

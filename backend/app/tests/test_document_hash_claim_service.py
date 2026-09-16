@@ -42,13 +42,13 @@ async def _seed_claim_context(
 
     first_user = User(
         id=uuid4(),
-        email="first-claimant@tmigroup.vn",
+        email="first-claimant@cnsgroup.vn",
         password_hash="unused",
         status=UserStatus.ACTIVE,
     )
     second_user = User(
         id=uuid4(),
-        email="second-claimant@tmigroup.vn",
+        email="second-claimant@cnsgroup.vn",
         password_hash="unused",
         status=UserStatus.ACTIVE,
     )
@@ -59,7 +59,7 @@ async def _seed_claim_context(
     for index, owner in enumerate((first_user, first_user, second_user), start=1):
         dossier = Dossier(
             id=uuid4(),
-            code=f"TMI-CLAIM-{index}",
+            code=f"CNS-CLAIM-{index}",
             owner_user_id=owner.id,
             category_id=category.id,
             title=f"Claim dossier {index}",

@@ -174,7 +174,7 @@ export function PublicWorkCard({
       <div className={isLead ? "flex flex-col py-1 xl:py-3" : "min-w-0"}>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
           <span className="font-mono">
-            {String(position).padStart(2, "0")} / TMI
+            {String(position).padStart(2, "0")} / CNS
           </span>
           <span aria-hidden="true">—</span>
           <time dateTime={work.publishedAt}>

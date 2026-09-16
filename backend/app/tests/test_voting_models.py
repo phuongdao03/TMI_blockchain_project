@@ -79,7 +79,7 @@ def test_database_rejects_duplicate_effective_vote() -> None:
         now = datetime.now(UTC)
         user = User(
             id=uuid4(),
-            email="voter@tmigroup.vn",
+            email="voter@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
             email_verified_at=now,

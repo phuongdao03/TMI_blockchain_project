@@ -70,7 +70,7 @@ async def _build_service(
 
     user = User(
         id=UUID("5a5ada41-1cf5-471c-a09a-03ac2ab3fb1d"),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         password_hash="not-used",
         status=UserStatus.ACTIVE,
     )
@@ -146,7 +146,7 @@ async def _draft_with_evidence(
         principal,
         CreateDossier(
             category_id=CATEGORY_ID,
-            title="Tác phẩm số TMI",
+            title="Tác phẩm số CNS",
             summary="Bản mô tả tác phẩm.",
         ),
     )
@@ -192,7 +192,7 @@ def test_submit_is_atomic_idempotent_and_locks_canonical_snapshot() -> None:
             == submitted.version.canonical_hash
         )
         assert submitted.version.canonical_hash == (
-            "1e78af4a1c2de118ee9427ccf47e3048089f54b09b288c5d80a9ae7d29f49a71"
+            "c90f5a3b2a32ca885687718d728a882cbec1ed57cc22e2a70fff0efe0a54bd0f"
         )
         evidences = submitted.version.snapshot_json["evidences"]
         assert isinstance(evidences, list)
@@ -520,7 +520,7 @@ def test_exact_duplicate_content_is_rejected_across_dossiers() -> None:
         service, session_factory, engine, user, media = await _build_service()
         second_user = User(
             id=UUID("7a5ada41-1cf5-471c-a09a-03ac2ab3fb1d"),
-            email="second-owner@tmigroup.vn",
+            email="second-owner@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -583,13 +583,13 @@ def test_exact_document_collision_requires_privileged_reasoned_override() -> Non
         service, session_factory, engine, user, media = await _build_service()
         second_user = User(
             id=uuid4(),
-            email="document-conflict@tmigroup.vn",
+            email="document-conflict@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
         admin_user = User(
             id=uuid4(),
-            email="claim-admin@tmigroup.vn",
+            email="claim-admin@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )

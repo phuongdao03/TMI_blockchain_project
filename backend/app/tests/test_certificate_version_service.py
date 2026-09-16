@@ -134,13 +134,13 @@ async def _fixture() -> tuple[
     )
     certificate = Certificate(
         id=certificate_id,
-        certificate_number="TMI-2026-CORRECTION",
+        certificate_number="CNS-2026-CORRECTION",
         dossier_id=dossier_id,
         current_version_no=1,
         status=CertificateStatus.ACTIVE,
         issued_at=NOW,
         public_token_hash="b" * 64,
-        qr_payload="https://tmi.example/verify/token",
+        qr_payload="https://cns.example/verify/token",
     )
     active_version = CertificateVersion(
         id=uuid4(),
@@ -220,7 +220,7 @@ async def _fixture() -> tuple[
         metadata_builder=CertificateMetadataBuilder(),
         audit=AuditService(session),
         clock=lambda: NOW,
-        public_base_url="https://tmi.example",
+        public_base_url="https://cns.example",
         environment="test",
         token_factory=lambda: "version-token-for-test",
     )
@@ -325,7 +325,7 @@ def test_correction_request_gets_its_own_immutable_qr_token() -> None:
         async with sessions() as check:
             stored = await check.get(CertificateVersion, requested.id)
         assert stored is not None
-        assert stored.qr_payload == "https://tmi.example/verify/version-token-for-test"
+        assert stored.qr_payload == "https://cns.example/verify/version-token-for-test"
         assert stored.public_token_hash == hash_verification_token(
             "version-token-for-test"
         )

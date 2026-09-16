@@ -215,7 +215,7 @@ describe("AuditWorkspace", () => {
           resourceType: "certificate_verification",
           resourceId: "certificate-1",
           before: null,
-          after: { certificate_number: "TMI-2026-0001", status: "VALID" },
+          after: { certificate_number: "CNS-2026-0001", status: "VALID" },
           requestId: "request-verification",
           integrityStatus: "VERIFIED",
           retentionUntil: null,
@@ -230,7 +230,7 @@ describe("AuditWorkspace", () => {
     expect(
       await screen.findAllByText("Đã kiểm tra chứng thư công khai"),
     ).toHaveLength(2);
-    expect(screen.getAllByText(/TMI-2026-0001/)).toHaveLength(2);
+    expect(screen.getAllByText(/CNS-2026-0001/)).toHaveLength(2);
     expect(screen.getAllByText(/Tra cứu chứng thư/)).toHaveLength(2);
     expect(screen.getAllByText("Hợp lệ")).toHaveLength(2);
     expect(

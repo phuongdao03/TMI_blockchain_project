@@ -467,21 +467,21 @@ def test_thv_proof_registry_accepts_super_admin_without_a_duplicate_grant() -> N
     moderator = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="moderator@tmigroup.vn",
+        email="moderator@cnsgroup.vn",
         roles=("MODERATOR",),
         permissions=("blockchain.sign",),
     )
     super_admin_without_grant = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="superadmin@tmigroup.vn",
+        email="superadmin@cnsgroup.vn",
         roles=("SUPER_ADMIN",),
         permissions=(),
     )
     authorized_super_admin = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="authorized-superadmin@tmigroup.vn",
+        email="authorized-superadmin@cnsgroup.vn",
         roles=("SUPER_ADMIN",),
         permissions=("blockchain.sign",),
     )
@@ -535,7 +535,7 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version() -> None:
 
         user = User(
             id=uuid4(),
-            email="proof-signer@tmigroup.vn",
+            email="proof-signer@cnsgroup.vn",
             password_hash="unused",
             status=UserStatus.ACTIVE,
         )

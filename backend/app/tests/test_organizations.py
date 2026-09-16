@@ -47,7 +47,7 @@ async def _build_service() -> tuple[
     users = {
         name: User(
             id=uuid4(),
-            email=f"{name}@tmigroup.vn",
+            email=f"{name}@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -82,14 +82,14 @@ def test_create_organization_adds_owner_and_encrypts_tax_code() -> None:
         created = await service.create_organization(
             owner,
             CreateOrganization(
-                code="tmi-lab",
-                legal_name="Công ty TMI Lab",
-                display_name="TMI Lab",
+                code="cns-lab",
+                legal_name="Công ty CNS Lab",
+                display_name="CNS Lab",
                 tax_code="0312345678",
             ),
         )
 
-        assert created.code == "TMI-LAB"
+        assert created.code == "CNS-LAB"
         assert created.current_role is MembershipRole.OWNER
         assert created.can_manage_members is True
         async with session_factory() as session:
@@ -109,7 +109,7 @@ def test_create_organization_adds_owner_and_encrypts_tax_code() -> None:
             await service.create_organization(
                 owner,
                 CreateOrganization(
-                    code="TMI-LAB",
+                    code="CNS-LAB",
                     legal_name="Tên khác",
                     display_name="Tên khác",
                 ),

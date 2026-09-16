@@ -7,7 +7,7 @@ const paymentOrderId = "a255dbf5-bb3e-449d-8bf0-9572cc642cac";
 test.beforeEach(async ({ context }) => {
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-access",
       domain: "127.0.0.1",
       path: "/",
@@ -15,7 +15,7 @@ test.beforeEach(async ({ context }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",
@@ -33,7 +33,7 @@ test("supplement request remains recoverable for the applicant", async ({
   const response = await request.get(
     `${mockApi}/api/v1/dossiers/${dossierId}`,
     {
-      headers: { Cookie: "tmi_access=e2e-access" },
+      headers: { Cookie: "cns_access=e2e-access" },
     },
   );
   expect(response.ok()).toBeTruthy();
@@ -73,7 +73,7 @@ test("failed chain transaction can be queued for retry", async ({
     `${mockApi}/api/v1/admin/blockchain/transactions/failure-e2e/retry`,
     {
       headers: {
-        Cookie: "tmi_access=e2e-access; tmi_csrf=e2e-csrf",
+        Cookie: "cns_access=e2e-access; cns_csrf=e2e-csrf",
         "X-CSRF-Token": "e2e-csrf",
       },
     },

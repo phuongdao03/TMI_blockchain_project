@@ -39,7 +39,7 @@ def test_wallet_link_requires_thv_verifier_role() -> None:
 
         user = User(
             id=uuid4(),
-            email="proof-signer@tmigroup.vn",
+            email="proof-signer@cnsgroup.vn",
             password_hash="unused",
             status=UserStatus.ACTIVE,
         )

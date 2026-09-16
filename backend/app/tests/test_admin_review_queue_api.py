@@ -44,7 +44,7 @@ class StubReviewService:
             items=(
                 AdminReviewDossierSummaryView(
                     dossier_id=self.dossier_id,
-                    dossier_code="TMI-2026-QUEUE",
+                    dossier_code="CNS-2026-QUEUE",
                     dossier_title="Hồ sơ chờ phân công",
                     status=DossierStatus.SUBMITTED,
                     version_no=1,
@@ -63,7 +63,7 @@ class StubReviewService:
         assert dossier_id == self.dossier_id
         return AdminReviewDossierDetailView(
             dossier_id=dossier_id,
-            dossier_code="TMI-2026-QUEUE",
+            dossier_code="CNS-2026-QUEUE",
             dossier_title="Hồ sơ chờ phân công",
             status=DossierStatus.SUBMITTED,
             version_no=1,
@@ -87,7 +87,7 @@ class StubReviewService:
                         conflict_declared_at=None,
                         conflict_reason=None,
                     ),
-                    reviewer_email="reviewer@tmi.vn",
+                    reviewer_email="reviewer@cns.vn",
                     review=ReviewView(
                         id=uuid4(),
                         assignment_id=self.assignment_id,
@@ -120,7 +120,7 @@ def _principal() -> AuthPrincipal:
     return AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="admin@tmigroup.vn",
+        email="admin@cnsgroup.vn",
         roles=("SUPER_ADMIN",),
         permissions=("review.assign",),
     )
@@ -156,7 +156,7 @@ def test_admin_review_queue_list_and_detail_contract() -> None:
     assert listed.status_code == 200
     assert listed.json()["data"][0] == {
         "dossierId": str(service.dossier_id),
-        "dossierCode": "TMI-2026-QUEUE",
+        "dossierCode": "CNS-2026-QUEUE",
         "dossierTitle": "Hồ sơ chờ phân công",
         "status": "SUBMITTED",
         "versionNo": 1,
@@ -169,6 +169,6 @@ def test_admin_review_queue_list_and_detail_contract() -> None:
     assert detail.json()["data"]["canonicalHash"] == "a" * 64
     assert detail.json()["data"]["snapshotJson"]["evidences"] == []
     report = detail.json()["data"]["assignments"][0]
-    assert report["reviewerEmail"] == "reviewer@tmi.vn"
+    assert report["reviewerEmail"] == "reviewer@cns.vn"
     assert report["assignment"]["status"] == "SUBMITTED"
     assert report["review"]["recommendation"] == "APPROVE"

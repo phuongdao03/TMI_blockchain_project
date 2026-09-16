@@ -12,7 +12,7 @@ def preview_settings(**overrides: object) -> Settings:
         "release_mode": "preview",
         "app_base_url": "https://preview.example.com",
         "cors_allowed_origins": "https://preview.example.com",
-        "firebase_project_id": "tmi-preview",
+        "firebase_project_id": "cns-preview",
         "audit_integrity_key": "audit-integrity-test-key-32-bytes",
         "payment_provider": "disabled",
         "media_private_encryption_enabled": False,
@@ -70,7 +70,7 @@ def test_full_production_keeps_provider_requirements() -> None:
             {
                 "app_env": "production",
                 "release_mode": "full",
-                "firebase_project_id": "tmi-production",
+                "firebase_project_id": "cns-production",
                 "audit_integrity_key": "audit-integrity-test-key-32-bytes",
             }
         )

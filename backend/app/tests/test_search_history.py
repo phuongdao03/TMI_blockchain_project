@@ -27,13 +27,13 @@ def test_search_history_is_opt_in_deduplicated_and_owner_scoped(
                 [
                     User(
                         id=first_user_id,
-                        email="first@tmigroup.vn",
+                        email="first@cnsgroup.vn",
                         password_hash="hash",
                         status=UserStatus.ACTIVE,
                     ),
                     User(
                         id=second_user_id,
-                        email="second@tmigroup.vn",
+                        email="second@cnsgroup.vn",
                         password_hash="hash",
                         status=UserStatus.ACTIVE,
                     ),
@@ -80,7 +80,7 @@ def test_search_history_retention_and_consent_revocation_delete_data(
             session.add(
                 User(
                     id=user_id,
-                    email="owner@tmigroup.vn",
+                    email="owner@cnsgroup.vn",
                     password_hash="hash",
                     status=UserStatus.ACTIVE,
                 )

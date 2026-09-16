@@ -163,9 +163,9 @@ def test_verification_reports_not_found_and_temporary_chain_unavailability() -> 
 
         context = VerificationContext(
             certificate_id=UUID("7eaec2d2-c99a-42c9-8f1e-71462ba01ea0"),
-            certificate_number="TMI-2026-7EAEC2D2C99A",
+            certificate_number="CNS-2026-7EAEC2D2C99A",
             certificate_status=CertificateStatus.ACTIVE,
-            asset_title="TMI",
+            asset_title="CNS",
             category_name="Brand",
             issued_at=datetime.now(UTC),
             expires_at=None,
@@ -213,7 +213,7 @@ def test_verification_reports_not_found_and_temporary_chain_unavailability() -> 
         )
 
         missing_result = await missing_service.verify_number("missing")
-        pending_result = await pending_service.verify_number("TMI-2026-7EAEC2D2C99A")
+        pending_result = await pending_service.verify_number("CNS-2026-7EAEC2D2C99A")
         assert missing_result.status is VerificationStatus.NOT_FOUND
         assert pending_result.status is VerificationStatus.PENDING
         assert pending_result.network_available is False
@@ -299,7 +299,7 @@ def test_public_verification_fails_closed_when_audit_cannot_be_written() -> None
         )
 
         with pytest.raises(RuntimeError, match="audit unavailable"):
-            await service.verify_number("TMI-UNKNOWN")
+            await service.verify_number("CNS-UNKNOWN")
 
     asyncio.run(scenario())
 
@@ -307,7 +307,7 @@ def test_public_verification_fails_closed_when_audit_cannot_be_written() -> None
 def test_verification_recomputes_metadata_instead_of_trusting_stored_hash() -> None:
     async def scenario() -> None:
         original_metadata = {"schemaVersion": 1, "asset": {"title": "Original"}}
-        snapshot: dict[str, object] = {"dossier": {"code": "TMI-1"}}
+        snapshot: dict[str, object] = {"dossier": {"code": "CNS-1"}}
         chain_metadata_hash = bytes.fromhex("22" * 32)
 
         class Gateway:
@@ -320,7 +320,7 @@ def test_verification_recomputes_metadata_instead_of_trusting_stored_hash() -> N
 
         context = VerificationContext(
             certificate_id=UUID("7eaec2d2-c99a-42c9-8f1e-71462ba01ea0"),
-            certificate_number="TMI-2026-7EAEC2D2C99A",
+            certificate_number="CNS-2026-7EAEC2D2C99A",
             certificate_status=CertificateStatus.ACTIVE,
             asset_title="Tampered",
             category_name="Brand",
@@ -338,6 +338,7 @@ def test_verification_recomputes_metadata_instead_of_trusting_stored_hash() -> N
             transaction_hash="0x" + "34" * 32,
             confirmations=1,
             confirmed_at=datetime.now(UTC),
+            public_work_slug="bo-nhan-dien-cns",
         )
 
         async def find(value: str) -> VerificationContext:
@@ -355,9 +356,10 @@ def test_verification_recomputes_metadata_instead_of_trusting_stored_hash() -> N
         )
 
         result = await service.verify_number(context.certificate_number)
-        assert result.issuer_label == "Tổ chức Đề cử và xác lập Tinh Hoa Việt"
+        assert result.issuer_label == "Trung tâm An ninh Công nghệ số – CNS"
 
         assert result.status is VerificationStatus.MISMATCH
+        assert result.public_work_slug == "bo-nhan-dien-cns"
 
     asyncio.run(scenario())
 
@@ -382,7 +384,7 @@ def test_historical_qr_reads_its_immutable_chain_version() -> None:
 
         context = VerificationContext(
             certificate_id=UUID("7eaec2d2-c99a-42c9-8f1e-71462ba01ea0"),
-            certificate_number="TMI-2026-HISTORY",
+            certificate_number="CNS-2026-HISTORY",
             certificate_status=CertificateStatus.ACTIVE,
             asset_title="Historical version",
             category_name="Brand",

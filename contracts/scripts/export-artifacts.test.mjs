@@ -16,7 +16,7 @@ function sha256Hex(value) {
 }
 
 async function fixture() {
-  const root = await mkdtemp(resolve(tmpdir(), "tmi-contract-release-"));
+  const root = await mkdtemp(resolve(tmpdir(), "cns-contract-release-"));
   const artifactDirectory = resolve(root, "out/CertificateRegistry.sol");
   const broadcastDirectory = resolve(
     root,

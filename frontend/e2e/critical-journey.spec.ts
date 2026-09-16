@@ -5,7 +5,7 @@ const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
 test.beforeEach(async ({ context }) => {
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-access",
       domain: "127.0.0.1",
       path: "/",
@@ -13,7 +13,7 @@ test.beforeEach(async ({ context }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_refresh",
+      name: "cns_refresh",
       value: "e2e-refresh",
       domain: "127.0.0.1",
       path: "/",
@@ -21,7 +21,7 @@ test.beforeEach(async ({ context }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",
@@ -60,7 +60,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
     await page
       .getByLabel("Tên tài sản hoặc tác phẩm")
-      .fill("Bộ nhận diện TMI Critical Journey");
+      .fill("Bộ nhận diện CNS Critical Journey");
     await page.getByLabel("Mô tả ngắn").fill("Hồ sơ E2E toàn luồng MVP.");
     const createDossier = page.waitForResponse(
       (response) =>
@@ -94,7 +94,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     await request.post(`${mockApiUrl}/api/e2e/reset-review`);
     await context.addCookies([
       {
-        name: "tmi_e2e_persona",
+        name: "cns_e2e_persona",
         value: "reviewer",
         domain: "127.0.0.1",
         path: "/",
@@ -133,7 +133,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     await request.post(`${mockApiUrl}/api/e2e/reset-payment-confirmed`);
     await context.addCookies([
       {
-        name: "tmi_access",
+        name: "cns_access",
         value: "e2e-access",
         domain: "127.0.0.1",
         path: "/",
@@ -141,7 +141,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
         sameSite: "Lax",
       },
       {
-        name: "tmi_e2e_persona",
+        name: "cns_e2e_persona",
         value: "applicant",
         domain: "127.0.0.1",
         path: "/",
@@ -157,11 +157,11 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
 
   await test.step("anchored certificate is visible and verifiable", async () => {
     await page.goto("/certificates");
-    await expect(page.getByText("TMI-2026-7EAEC2D2C99A")).toBeVisible();
+    await expect(page.getByText("CNS-2026-7EAEC2D2C99A")).toBeVisible();
     await page.goto("/verify");
     await page
       .getByLabel("Thông tin cần tra cứu")
-      .fill("TMI-2026-7EAEC2D2C99A");
+      .fill("CNS-2026-7EAEC2D2C99A");
     await page.getByRole("button", { name: "Kiểm tra" }).click();
     await expect(
       page.getByText("Chứng thư hợp lệ và đã được xác nhận trên blockchain."),

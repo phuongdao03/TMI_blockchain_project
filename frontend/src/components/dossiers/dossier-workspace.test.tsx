@@ -23,14 +23,14 @@ vi.mock("next/navigation", () => ({
 
 const dossier = {
   id: "9155dbf5-bb3e-449d-8bf0-9572cc642cac",
-  code: "TMI-2026-ABCDEF123456",
+  code: "CNS-2026-ABCDEF123456",
   ownerUserId: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
   organizationId: null,
   categoryId: "4d28db19-1507-5a45-a50d-cd0aa83029ec",
   dossierTypeId: "9e1a095a-0cbd-4f3d-8e24-93b1771ec8b7",
   dossierTypeVersionId: "2ece72a5-06d8-4200-8a0c-dc7f7ab7bf40",
   formData: {},
-  title: "Bộ nhận diện TMI",
+  title: "Bộ nhận diện CNS",
   slug: null,
   summary: "Hồ sơ quyền sở hữu.",
   status: "DRAFT" as const,
@@ -101,7 +101,7 @@ describe("DossierWorkspace", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: "Bộ nhận diện TMI",
+        name: "Bộ nhận diện CNS",
       }),
     ).toBeDefined();
     expect(screen.getByText("Hồ sơ đang được bạn chuẩn bị.")).toBeDefined();
@@ -204,7 +204,7 @@ describe("DossierWorkspace", () => {
 
     await screen.findByRole("heading", {
       level: 1,
-      name: "Bộ nhận diện TMI",
+      name: "Bộ nhận diện CNS",
     });
     await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
 

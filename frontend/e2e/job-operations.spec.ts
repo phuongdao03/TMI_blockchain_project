@@ -9,7 +9,7 @@ test("super admin reviews and safely replays failed background work", async ({
   await request.post("http://127.0.0.1:4010/api/e2e/reset-operations-job");
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-super-admin-access",
       domain: "127.0.0.1",
       path: "/",
@@ -17,7 +17,7 @@ test("super admin reviews and safely replays failed background work", async ({
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",

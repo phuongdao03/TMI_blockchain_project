@@ -28,7 +28,7 @@ const payload = {
   schemaVersion: 1,
   name: "operational_readiness_delivery_probe",
   severity: "ticket",
-  source: "tmi-staging",
+  source: "cns-staging",
   synthetic: true,
   testId,
   occurredAt: new Date().toISOString(),

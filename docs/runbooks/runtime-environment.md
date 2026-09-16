@@ -35,7 +35,7 @@ Keep these local-only values:
 
 ```dotenv
 APP_ENV=local
-DATABASE_URL=postgresql+asyncpg://tmi_local:tmi-local-only@postgres:5432/tmi_local
+DATABASE_URL=postgresql+asyncpg://cns_local:cns-local-only@postgres:5432/cns_local
 REDIS_URL=redis://redis:6379/0
 BLOCKCHAIN_NETWORK=local
 BLOCKCHAIN_CHAIN_ID=31337
@@ -43,11 +43,11 @@ BLOCKCHAIN_RPC_URL=http://anvil:8545
 PAYMENT_PROVIDER=mock
 PAYMENT_WEBHOOK_SECRET=<random-local-secret>
 PAYMENT_CHECKOUT_BASE_URL=http://localhost:3000/payments/mock
-FIREBASE_PROJECT_ID=tmi-local
+FIREBASE_PROJECT_ID=cns-local
 FIREBASE_AUTH_EMULATOR_HOST=firebase-emulator:9099
 NEXT_PUBLIC_FIREBASE_API_KEY=<Firebase Web app config>
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=<Firebase Web app config>
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=tmi-local
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=cns-local
 NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_URL=http://localhost:9099
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=<Firebase Web app config>
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=<Firebase Web app config>
@@ -94,16 +94,16 @@ openssl rand -base64 32 # ENGAGEMENT_VISITOR_HMAC_SECRET
 
 Required services and values:
 
-| Area         | Variables                                                                                                                                                                               | What to enter                                                                                                                                                                                                                        |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Database     | `DATABASE_URL`, `DATABASE_DIRECT_URL`                                                                                                                                                   | Managed PostgreSQL async URL and direct migration URL; use TLS.                                                                                                                                                                      |
-| Sessions     | `JWT_SECRET`, `AUTH_CSRF_SECRET`, `AUTH_OUTBOX_ENCRYPTION_KEY`, `PII_ENCRYPTION_KEY`                                                                                                    | Unique random secrets per environment. Rotating them invalidates sessions or encrypted data as documented.                                                                                                                           |
-| Redis        | `REDIS_PASSWORD`, `REDIS_URL`                                                                                                                                                           | Strong password and `redis://:<password>@redis:6379/0`.                                                                                                                                                                              |
-| Google login | `FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_*`                                                                                                                                         | Enable Google in Firebase Authentication, copy the Web app config, and add `localhost` plus the production domain to Authorized domains. The backend verifies Firebase ID tokens; no service-account secret belongs in the frontend. |
-| Media        | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `MEDIA_SCANNER_HOST=clamav`, `MEDIA_SCANNER_PORT=3310`                                                         | Cloudinary production credentials and the internal ClamAV service. A full release fails configuration validation without Cloudinary credentials; `/ready` reports `cloudinary` or `clamav` as down when either integration is unavailable. |
-| Email        | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SENDER`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_USE_TLS`, `SMTP_USE_SSL`, `SMTP_TIMEOUT_SECONDS`                                                       | Verified sender and authenticated SMTP relay. Use STARTTLS with port `587` (`SMTP_USE_TLS=true`) or implicit TLS with port `465` (`SMTP_USE_SSL=true`), never both.                                                                    |
-| Payments     | `PAYMENT_PROVIDER`, `PAYMENT_WEBHOOK_SECRET`, `PAYMENT_CHECKOUT_BASE_URL`                                                                                                               | An implemented provider adapter, its signing secret, and an HTTPS checkout URL. `mock` is rejected outside local.                                                                                                                    |
-| Blockchain   | `BLOCKCHAIN_NETWORK=polygon`, `BLOCKCHAIN_CHAIN_ID=137`, `BLOCKCHAIN_RPC_URL`, `CERTIFICATE_CONTRACT_ADDRESS`, `BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES`, `BLOCKCHAIN_SIGNER_MODE=human`, `BLOCKCHAIN_SIGNING_ENABLED=true` | Polygon RPC over HTTPS, an approved contract address/allowlist and human-controlled wallet signing. Keep `BLOCKCHAIN_SIGNER_PRIVATE_KEY` blank; the active verified signer wallet alone receives `ISSUER_ROLE`. |
+| Area         | Variables                                                                                                                                                                                                                 | What to enter                                                                                                                                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Database     | `DATABASE_URL`, `DATABASE_DIRECT_URL`                                                                                                                                                                                     | Managed PostgreSQL async URL and direct migration URL; use TLS.                                                                                                                                                                            |
+| Sessions     | `JWT_SECRET`, `AUTH_CSRF_SECRET`, `AUTH_OUTBOX_ENCRYPTION_KEY`, `PII_ENCRYPTION_KEY`                                                                                                                                      | Unique random secrets per environment. Rotating them invalidates sessions or encrypted data as documented.                                                                                                                                 |
+| Redis        | `REDIS_PASSWORD`, `REDIS_URL`                                                                                                                                                                                             | Strong password and `redis://:<password>@redis:6379/0`.                                                                                                                                                                                    |
+| Google login | `FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_*`                                                                                                                                                                           | Enable Google in Firebase Authentication, copy the Web app config, and add `localhost` plus the production domain to Authorized domains. The backend verifies Firebase ID tokens; no service-account secret belongs in the frontend.       |
+| Media        | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `MEDIA_SCANNER_HOST=clamav`, `MEDIA_SCANNER_PORT=3310`                                                                                            | Cloudinary production credentials and the internal ClamAV service. A full release fails configuration validation without Cloudinary credentials; `/ready` reports `cloudinary` or `clamav` as down when either integration is unavailable. |
+| Email        | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SENDER`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_USE_TLS`, `SMTP_USE_SSL`, `SMTP_TIMEOUT_SECONDS`                                                                                         | Verified sender and authenticated SMTP relay. Use STARTTLS with port `587` (`SMTP_USE_TLS=true`) or implicit TLS with port `465` (`SMTP_USE_SSL=true`), never both.                                                                        |
+| Payments     | `PAYMENT_PROVIDER`, `PAYMENT_WEBHOOK_SECRET`, `PAYMENT_CHECKOUT_BASE_URL`                                                                                                                                                 | An implemented provider adapter, its signing secret, and an HTTPS checkout URL. `mock` is rejected outside local.                                                                                                                          |
+| Blockchain   | `BLOCKCHAIN_NETWORK=polygon`, `BLOCKCHAIN_CHAIN_ID=137`, `BLOCKCHAIN_RPC_URL`, `CERTIFICATE_CONTRACT_ADDRESS`, `BLOCKCHAIN_ALLOWED_CONTRACT_ADDRESSES`, `BLOCKCHAIN_SIGNER_MODE=human`, `BLOCKCHAIN_SIGNING_ENABLED=true` | Polygon RPC over HTTPS, an approved contract address/allowlist and human-controlled wallet signing. Keep `BLOCKCHAIN_SIGNER_PRIVATE_KEY` blank; the active verified signer wallet alone receives `ISSUER_ROLE`.                            |
 
 ## Current production blocker
 
@@ -125,8 +125,8 @@ provider webhook in staging before production rollout.
 
 `RELEASE_MODE=full` enables the Compose `full` profile during deployment and
 rollback. It starts and waits for ClamAV, the worker and the scheduler in
-addition to the web stack. Keep `RELEASE_MODE=preview` only for preview releases;
-it deliberately does not start those full-profile services.
+addition to the web stack. Keep `RELEASE_MODE=preview` only for preview
+releases; it deliberately does not start those full-profile services.
 
 For production email delivery, verify the sender domain with the SMTP provider,
 store the password only in `.env.production`, and keep the worker running. The

@@ -28,6 +28,11 @@ from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.public.dossier_verification import (
     PublicDossierVerificationService,
 )
+from app.modules.public.models import (
+    PublicationStatus,
+    PublicWork,
+    PublicWorkVisibility,
+)
 from app.modules.public.repository import PublicRepository
 from app.modules.public.schemas import PublicDossierVerificationData
 
@@ -227,6 +232,19 @@ def test_public_dossier_verification_projects_only_safe_frozen_documents(
                         status=CertificateVersionStatus.ACTIVE,
                     )
                 )
+                public_work = PublicWork(
+                    dossier_id=dossier_id,
+                    certificate_id=certificate_id,
+                    owner_user_id=owner_id,
+                    category_id=category_id,
+                    slug="bo-nhan-dien-cong-khai",
+                    title="Bộ nhận diện công khai",
+                    short_description="Tác phẩm đã công bố.",
+                    publication_status=PublicationStatus.PUBLISHED,
+                    visibility=PublicWorkVisibility.PUBLIC,
+                    published_at=NOW,
+                )
+                session.add(public_work)
 
             view = await PublicDossierVerificationService(session).get(
                 "THV-2026-PUBLIC01"
@@ -324,16 +342,19 @@ def test_public_dossier_verification_projects_only_safe_frozen_documents(
             assert historical.asset_title == "Bộ nhận diện phiên bản 1"
             assert historical.category_name == "Thương hiệu phiên bản 1"
             assert historical.dossier_code == "THV-2026-PUBLIC01"
+            assert historical.public_work_slug == "bo-nhan-dien-cong-khai"
 
             # Certificate verification is independent from gallery visibility;
             # only immutable, allowlisted certificate metadata is returned.
             stored_dossier.visibility = DossierVisibility.PRIVATE
+            public_work.visibility = PublicWorkVisibility.PRIVATE
             await session.commit()
             private_certificate = await PublicRepository(session).find_by_number(
                 "THV-2026-CERT01"
             )
             assert private_certificate is not None
             assert private_certificate.certificate_id == certificate_id
+            assert private_certificate.public_work_slug is None
 
         await engine.dispose()
 

@@ -150,7 +150,7 @@ def test_media_api_contract_and_validation() -> None:
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         roles=("APPLICANT",),
     )
     service = StubMediaService()

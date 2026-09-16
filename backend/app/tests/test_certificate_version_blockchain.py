@@ -169,13 +169,13 @@ async def _service(
     )
     certificate = Certificate(
         id=certificate_id,
-        certificate_number="TMI-2026-CHAIN-UPDATE",
+        certificate_number="CNS-2026-CHAIN-UPDATE",
         dossier_id=dossier_id,
         current_version_no=1,
         status=CertificateStatus.ACTIVE,
         issued_at=NOW,
         public_token_hash="b" * 64,
-        qr_payload="https://tmi.example/verify/token",
+        qr_payload="https://cns.example/verify/token",
     )
     active = CertificateVersion(
         id=active_version_id,
@@ -195,7 +195,7 @@ async def _service(
         metadata_json={"certificateVersion": 2},
         metadata_hash="d" * 64,
         public_token_hash="e" * 64,
-        qr_payload="https://tmi.example/verify/version-2-token",
+        qr_payload="https://cns.example/verify/version-2-token",
         status=CertificateVersionStatus.PENDING_APPROVAL,
         change_reason="Correct the approved certificate ownership information.",
         requested_by=owner_id,
@@ -333,7 +333,7 @@ def test_update_anchor_is_idempotent_and_promotes_only_after_confirmation() -> N
         assert active.status is CertificateVersionStatus.SUPERSEDED
         assert certificate is not None and certificate.current_version_no == 2
         assert certificate.public_token_hash == "e" * 64
-        assert certificate.qr_payload == "https://tmi.example/verify/version-2-token"
+        assert certificate.qr_payload == "https://cns.example/verify/version-2-token"
         assert dossier is not None
         assert dossier.status is DossierStatus.CERTIFICATE_ISSUED
         await service._session.close()  # noqa: SLF001

@@ -52,7 +52,7 @@ def test_notification_event_is_idempotent_and_unread_count_changes(
             session.add(
                 User(
                     id=user_id,
-                    email="owner@tmigroup.vn",
+                    email="owner@cnsgroup.vn",
                     password_hash="hash",
                     status=UserStatus.ACTIVE,
                 )
@@ -119,7 +119,7 @@ def test_email_delivery_retries_without_duplicate_delivery(tmp_path: Path) -> No
         factory = async_sessionmaker(engine, expire_on_commit=False)
         user_id = uuid4()
         async with factory() as session:
-            session.add(User(id=user_id, email="owner@tmigroup.vn", password_hash="h"))
+            session.add(User(id=user_id, email="owner@cnsgroup.vn", password_hash="h"))
             await session.commit()
             notification = await NotificationService(session).consume(
                 event_id=uuid4(),
@@ -139,7 +139,7 @@ def test_email_delivery_retries_without_duplicate_delivery(tmp_path: Path) -> No
             assert second.status is DeliveryStatus.SENT
             assert third.id == second.id
             assert gateway.calls == 2
-            assert second.destination_masked == "o***r@tmigroup.vn"
+            assert second.destination_masked == "o***r@cnsgroup.vn"
         await engine.dispose()
 
     asyncio.run(exercise())
@@ -149,13 +149,13 @@ def test_verification_email_contains_escaped_single_use_action_url() -> None:
     text, html = render_email(
         title="Xác minh tài khoản",
         body="Hoàn tất xác minh email.",
-        action_url="https://app.tmigroup.vn/verify-email?token=a&next=b",
+        action_url="https://app.cnsgroup.vn/verify-email?token=a&next=b",
     )
     assert "token=a&next=b" in text
     assert "token=a&amp;next=b" in html
     assert "Trung tâm an ninh công nghệ số - CNS" in text
-    assert "TMI Group" not in text
-    assert "TMI Group" not in html
+    assert "CNS Group" not in text
+    assert "CNS Group" not in html
     assert "Tiếp tục xác minh" in html
 
 
@@ -163,7 +163,7 @@ def test_staff_invitation_email_uses_english_route_and_encodes_token() -> None:
     message = staff_invitation_message(
         email="reviewer@example.com",
         invitation_token="a/b+c",
-        app_base_url="https://app.tmigroup.vn/",
+        app_base_url="https://app.cnsgroup.vn/",
     )
 
     assert message.to == "reviewer@example.com"

@@ -60,7 +60,7 @@ async def _build_session_service(
     async with session_factory.begin() as session:
         session.add(
             User(
-                email="owner@tmigroup.vn",
+                email="owner@cnsgroup.vn",
                 password_hash=await password_hasher.hash(
                     "correct horse battery staple"
                 ),
@@ -75,8 +75,8 @@ async def _build_session_service(
         password_hasher=password_hasher,
         access_tokens=AccessTokenManager(
             secret="a" * 64,
-            issuer="tmi-platform",
-            audience="tmi-web",
+            issuer="cns-platform",
+            audience="cns-web",
             ttl=timedelta(minutes=15),
             clock=clock,
         ),
@@ -99,12 +99,12 @@ def test_login_creates_hashed_refresh_session_and_short_access_token(
         )
         metadata = ClientMetadata(
             client_ip="203.0.113.10",
-            user_agent="TMI test browser",
+            user_agent="CNS test browser",
             device_name="Work laptop",
         )
 
         issued = await service.login(
-            email="OWNER@TMIGROUP.VN",
+            email="OWNER@CNSGROUP.VN",
             password="correct horse battery staple",
             metadata=metadata,
         )
@@ -121,17 +121,17 @@ def test_login_creates_hashed_refresh_session_and_short_access_token(
         assert auth_session.refresh_token_hash
         assert auth_session.user_id == user.id
         assert auth_session.device_name == "Work laptop"
-        assert auth_session.user_agent == "TMI test browser"
+        assert auth_session.user_agent == "CNS test browser"
         assert auth_session.ip_hash != metadata.client_ip
         assert auth_session.expires_at.replace(tzinfo=UTC) == (
             clock.current + timedelta(days=30)
         )
         assert principal.user_id == user.id
         assert principal.session_id == auth_session.id
-        assert principal.email == "owner@tmigroup.vn"
+        assert principal.email == "owner@cnsgroup.vn"
         assert principal.roles == ()
         assert issued.csrf_token
-        assert limiter.calls == [("owner@tmigroup.vn", "203.0.113.10")]
+        assert limiter.calls == [("owner@cnsgroup.vn", "203.0.113.10")]
         assert audit_row is not None
         assert audit_row.actor_user_id == user.id
         assert audit_row.resource_id == str(auth_session.id)
@@ -156,11 +156,11 @@ def test_provider_only_user_cannot_use_password_login(tmp_path: Path) -> None:
 
         with pytest.raises(InvalidCredentialsError):
             await service.login(
-                email="owner@tmigroup.vn",
+                email="owner@cnsgroup.vn",
                 password="correct horse battery staple",
                 metadata=ClientMetadata(
                     client_ip="203.0.113.10",
-                    user_agent="TMI test browser",
+                    user_agent="CNS test browser",
                     device_name="Work laptop",
                 ),
             )
@@ -182,11 +182,11 @@ def test_refresh_rotates_token_and_reuse_revokes_every_session(
         )
         metadata = ClientMetadata(
             client_ip="203.0.113.10",
-            user_agent="TMI test browser",
+            user_agent="CNS test browser",
             device_name="Work laptop",
         )
         first = await service.login(
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             password="correct horse battery staple",
             metadata=metadata,
         )
@@ -253,7 +253,7 @@ def test_session_listing_revoke_and_logout_are_user_scoped(tmp_path: Path) -> No
         clock = MutableClock(datetime.now(UTC).replace(microsecond=0))
         service, _, _, engine = await _build_session_service(tmp_path, clock)
         first = await service.login(
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             password="correct horse battery staple",
             metadata=ClientMetadata(
                 client_ip="203.0.113.10",
@@ -262,7 +262,7 @@ def test_session_listing_revoke_and_logout_are_user_scoped(tmp_path: Path) -> No
             ),
         )
         second = await service.login(
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             password="correct horse battery staple",
             metadata=ClientMetadata(
                 client_ip="203.0.113.11",
@@ -313,16 +313,16 @@ def test_session_revocation_rolls_back_when_audit_fails(
         )
         metadata = ClientMetadata(
             client_ip="203.0.113.10",
-            user_agent="TMI test browser",
+            user_agent="CNS test browser",
             device_name="Work laptop",
         )
         first = await service.login(
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             password="correct horse battery staple",
             metadata=metadata,
         )
         second = await service.login(
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             password="correct horse battery staple",
             metadata=metadata,
         )
@@ -354,8 +354,8 @@ def test_session_revocation_rolls_back_when_audit_fails(
 @pytest.mark.parametrize(
     ("email", "password"),
     [
-        ("owner@tmigroup.vn", "wrong password value"),
-        ("unknown@tmigroup.vn", "correct horse battery staple"),
+        ("owner@cnsgroup.vn", "wrong password value"),
+        ("unknown@cnsgroup.vn", "correct horse battery staple"),
     ],
 )
 def test_login_returns_same_error_for_wrong_password_and_unknown_email(

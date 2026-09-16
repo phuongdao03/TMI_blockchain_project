@@ -131,7 +131,7 @@ def _principal(*roles: str) -> AuthPrincipal:
     return AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="internal@tmigroup.vn",
+        email="internal@cnsgroup.vn",
         roles=roles,
     )
 

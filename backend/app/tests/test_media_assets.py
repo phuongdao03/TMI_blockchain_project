@@ -20,7 +20,7 @@ def test_media_asset_defaults_and_database_constraints() -> None:
 
         owner = User(
             id=uuid4(),
-            email="media-owner@tmigroup.vn",
+            email="media-owner@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )

@@ -12,7 +12,7 @@ const metricsPayload = {
   dossierFunnel: { UNDER_REVIEW: 4, CERTIFICATE_ISSUED: 2 },
   overdueReviews: 3,
   reviewerWorkload: [
-    { reviewerEmail: "reviewer@tmigroup.vn", activeAssignments: 4 },
+    { reviewerEmail: "reviewer@cnsgroup.vn", activeAssignments: 4 },
   ],
   paymentFailures: 1,
   blockchainFailures: 2,
@@ -52,7 +52,7 @@ describe("OperationsDashboard", () => {
       (await screen.findAllByText("Hồ sơ trễ hạn")).length,
     ).toBeGreaterThan(0);
     expect(screen.getByText("Đang thẩm định")).toBeDefined();
-    expect(screen.getByText("reviewer@tmigroup.vn")).toBeDefined();
+    expect(screen.getByText("reviewer@cnsgroup.vn")).toBeDefined();
     expect(
       screen.getByRole("img", { name: "Biểu đồ số hồ sơ theo giai đoạn" }),
     ).toBeDefined();

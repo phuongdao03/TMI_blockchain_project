@@ -51,7 +51,7 @@ test("discovery keeps an authenticated return path across public screens", async
   test.skip(testInfo.project.name !== "desktop-chrome");
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-access",
       domain: "127.0.0.1",
       path: "/",
@@ -59,7 +59,7 @@ test("discovery keeps an authenticated return path across public screens", async
       sameSite: "Lax",
     },
     {
-      name: "tmi_e2e_persona",
+      name: "cns_e2e_persona",
       value: "applicant",
       domain: "127.0.0.1",
       path: "/",

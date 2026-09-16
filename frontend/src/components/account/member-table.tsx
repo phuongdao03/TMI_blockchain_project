@@ -62,7 +62,7 @@ export function MemberTable({
             autoComplete="email"
             error={errors.email?.message}
             label="Email thành viên"
-            placeholder="member@tmigroup.vn"
+            placeholder="member@cnsgroup.vn"
             type="email"
             {...register("email")}
           />

@@ -295,7 +295,7 @@ def test_payos_verifies_webhook_body_before_returning_redacted_event() -> None:
     data = {
         "orderCode": 123456,
         "amount": 10_000,
-        "description": "TMI 123456",
+        "description": "CNS 123456",
         "accountNumber": "private-account",
         "reference": "bank-reference-1",
         "transactionDateTime": "2026-08-08 08:00:00",

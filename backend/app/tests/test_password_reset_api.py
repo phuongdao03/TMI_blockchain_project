@@ -53,7 +53,7 @@ def test_forgot_password_api_always_returns_generic_accepted_response() -> None:
     response = asyncio.run(
         _post(
             "/api/v1/auth/forgot-password",
-            {"email": "Unknown@TMIGroup.vn"},
+            {"email": "Unknown@CNSGroup.vn"},
             service,
         )
     )
@@ -62,7 +62,7 @@ def test_forgot_password_api_always_returns_generic_accepted_response() -> None:
     assert response.json()["data"] == {
         "message": ("If the address exists, password reset instructions will be sent.")
     }
-    assert service.request == ("Unknown@tmigroup.vn", "127.0.0.1")
+    assert service.request == ("Unknown@cnsgroup.vn", "127.0.0.1")
 
 
 def test_reset_password_api_consumes_token_and_clears_auth_cookies() -> None:

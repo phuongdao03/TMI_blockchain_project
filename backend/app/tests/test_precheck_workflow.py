@@ -56,13 +56,13 @@ async def _setup() -> tuple[
 
     owner = User(
         id=uuid4(),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         password_hash="not-used",
         status=UserStatus.ACTIVE,
     )
     admin = User(
         id=uuid4(),
-        email="admin@tmigroup.vn",
+        email="admin@cnsgroup.vn",
         password_hash="not-used",
         status=UserStatus.ACTIVE,
     )

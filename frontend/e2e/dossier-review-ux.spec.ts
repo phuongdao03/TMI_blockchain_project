@@ -5,9 +5,9 @@ import { selectWorkspaceTheme } from "./workspace-theme";
 const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
 
 const baseCookies = [
-  ["tmi_access", "e2e-access", true],
-  ["tmi_refresh", "e2e-refresh", true],
-  ["tmi_csrf", "e2e-csrf", false],
+  ["cns_access", "e2e-access", true],
+  ["cns_refresh", "e2e-refresh", true],
+  ["cns_csrf", "e2e-csrf", false],
 ] as const;
 
 test.beforeEach(async ({ context }) => {
@@ -73,7 +73,7 @@ test("reviewer sees live progress and the next blocking action", async ({
   await request.post(`${mockApiUrl}/api/e2e/reset-review`);
   await context.addCookies([
     {
-      name: "tmi_e2e_persona",
+      name: "cns_e2e_persona",
       value: "reviewer",
       domain: "127.0.0.1",
       path: "/",

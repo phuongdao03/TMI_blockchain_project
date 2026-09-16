@@ -539,7 +539,7 @@ export function BlockchainSigningWorkspace() {
               Dùng ví đã được tổ chức xác minh để ghi nhận hồ sơ đã hoàn tất xét
               duyệt và nghĩa vụ phí. Hệ thống chỉ công bố dấu vân tay số để kiểm
               tra tính toàn vẹn; tài liệu gốc và dữ liệu cá nhân vẫn được lưu
-              trong hệ thống TMI.
+              trong hệ thống CNS.
             </p>
           </div>
           <button

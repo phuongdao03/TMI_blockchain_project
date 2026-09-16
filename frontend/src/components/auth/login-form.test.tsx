@@ -93,7 +93,7 @@ describe("LoginForm", () => {
           data: {
             user: {
               id: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-              email: "owner@tmigroup.vn",
+              email: "owner@cnsgroup.vn",
               roles: ["USER"],
             },
           },
@@ -106,7 +106,7 @@ describe("LoginForm", () => {
 
     await userEvent.type(
       screen.getByRole("textbox", { name: "Email" }),
-      "owner@tmigroup.vn",
+      "owner@cnsgroup.vn",
     );
     await userEvent.type(
       screen.getByLabelText("Mật khẩu"),
@@ -127,7 +127,7 @@ describe("LoginForm", () => {
     });
     expect(signInWithEmailAndPassword).toHaveBeenCalledWith(
       { name: "firebase-auth" },
-      "owner@tmigroup.vn",
+      "owner@cnsgroup.vn",
       "correct horse battery staple",
     );
   });
@@ -169,7 +169,7 @@ describe("LoginForm", () => {
 
     await userEvent.type(
       screen.getByRole("textbox", { name: "Email" }),
-      "owner@tmigroup.vn",
+      "owner@cnsgroup.vn",
     );
     await userEvent.type(screen.getByLabelText("Mật khẩu"), "wrong password");
     await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
@@ -190,7 +190,7 @@ describe("LoginForm", () => {
 
     await userEvent.type(
       screen.getByRole("textbox", { name: "Email" }),
-      "owner@tmigroup.vn",
+      "owner@cnsgroup.vn",
     );
     await userEvent.type(screen.getByLabelText("Mật khẩu"), "valid password");
     await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));

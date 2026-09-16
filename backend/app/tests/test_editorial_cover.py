@@ -27,7 +27,7 @@ def test_crop_cover_rejects_invalid_configuration(x: int, y: int, zoom: int) -> 
 def test_editorial_marker_cannot_match_a_regular_evidence_filename() -> None:
     asset = MediaAsset(
         owner_user_id=uuid4(),
-        cloudinary_public_id="tmi/prod/owners/test/uploads/dossier-evidence/cover.png",
+        cloudinary_public_id="cns/prod/owners/test/uploads/dossier-evidence/cover.png",
         resource_type="image",
         access_mode="authenticated",
         original_filename="public-cover.png",
@@ -35,5 +35,5 @@ def test_editorial_marker_cannot_match_a_regular_evidence_filename() -> None:
         bytes=100,
     )
     assert not is_editorial_cover(asset)
-    asset.cloudinary_public_id = "tmi/prod/owners/test/uploads/public-cover/asset"
+    asset.cloudinary_public_id = "cns/prod/owners/test/uploads/public-cover/asset"
     assert is_editorial_cover(asset)

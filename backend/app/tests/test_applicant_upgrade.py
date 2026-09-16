@@ -32,7 +32,7 @@ def test_public_user_can_upgrade_once_without_privileged_role(tmp_path: Path) ->
         async with factory() as session:
             user = User(
                 id=user_id,
-                email="viewer@tmigroup.vn",
+                email="viewer@cnsgroup.vn",
                 status=UserStatus.ACTIVE,
                 email_verified_at=datetime.now(UTC),
                 account_type=AccountType.PUBLIC_USER,
@@ -93,7 +93,7 @@ def test_public_user_can_upgrade_once_without_privileged_role(tmp_path: Path) ->
             assert audit_rows[0].after_json == {
                 "account_type": "ORGANIZATION_APPLICANT"
             }
-            assert "viewer@tmigroup.vn" not in str(audit_rows[0].after_json)
+            assert "viewer@cnsgroup.vn" not in str(audit_rows[0].after_json)
 
     asyncio.run(exercise())
 
@@ -103,7 +103,7 @@ def test_applicant_upgrade_rejects_non_public_account(tmp_path: Path) -> None:
         factory = await _build_session(tmp_path)
         async with factory() as session:
             user = User(
-                email="applicant@tmigroup.vn",
+                email="applicant@cnsgroup.vn",
                 status=UserStatus.ACTIVE,
                 email_verified_at=datetime.now(UTC),
                 account_type=AccountType.INDIVIDUAL_APPLICANT,

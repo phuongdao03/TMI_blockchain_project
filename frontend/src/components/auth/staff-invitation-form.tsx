@@ -43,7 +43,7 @@ export function StaffInvitationForm({ token }: { token?: string }) {
     <AuthCard
       description="Xác nhận danh tính bằng đúng email đã nhận lời mời để bắt đầu công việc."
       footer={<AuthLink href="/login">Quay lại đăng nhập</AuthLink>}
-      title="Tham gia đội ngũ TMI"
+      title="Tham gia đội ngũ CNS"
     >
       <div className="space-y-5">
         <div className="rounded-xl border border-white/10 bg-white/[0.035] p-4">

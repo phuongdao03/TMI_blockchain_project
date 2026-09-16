@@ -75,7 +75,7 @@ async def _setup(
     users = {
         name: User(
             id=uuid4(),
-            email=f"{name}@tmigroup.vn",
+            email=f"{name}@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -91,7 +91,7 @@ async def _setup(
     category = Category(id=uuid4(), code="COUNCIL", name="Council")
     dossier = Dossier(
         id=uuid4(),
-        code="TMI-2026-COUNCIL0001",
+        code="CNS-2026-COUNCIL0001",
         owner_user_id=users["owner"].id,
         category_id=category.id,
         title="Dossier awaiting council",
@@ -252,7 +252,7 @@ def test_moderator_cannot_manage_or_vote_in_council() -> None:
     moderator = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="moderator@tmigroup.vn",
+        email="moderator@cnsgroup.vn",
         roles=("MODERATOR",),
     )
 

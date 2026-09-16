@@ -55,7 +55,7 @@ describe("GoogleOAuthButton", () => {
           data: {
             user: {
               id: "user-mobile",
-              email: "mobile@tmi.vn",
+              email: "mobile@cns.vn",
               roles: ["PUBLIC_USER"],
             },
           },
@@ -73,7 +73,7 @@ describe("GoogleOAuthButton", () => {
     await waitFor(() => expect(mocks.signInWithPopup).toHaveBeenCalledOnce());
     expect(mocks.signInWithRedirect).not.toHaveBeenCalled();
     expect(
-      sessionStorage.getItem("tmi.google-oauth.redirect-pending"),
+      sessionStorage.getItem("cns.google-oauth.redirect-pending"),
     ).toBeNull();
     expect(mocks.setCustomParameters).toHaveBeenCalledWith({
       prompt: "select_account",
@@ -92,7 +92,7 @@ describe("GoogleOAuthButton", () => {
     await waitFor(() =>
       expect(mocks.signInWithRedirect).toHaveBeenCalledOnce(),
     );
-    expect(sessionStorage.getItem("tmi.google-oauth.redirect-pending")).toBe(
+    expect(sessionStorage.getItem("cns.google-oauth.redirect-pending")).toBe(
       "1",
     );
     expect(screen.queryByRole("alert")).toBeNull();
@@ -114,12 +114,12 @@ describe("GoogleOAuthButton", () => {
     );
     expect(mocks.signInWithRedirect).not.toHaveBeenCalled();
     expect(
-      sessionStorage.getItem("tmi.google-oauth.redirect-pending"),
+      sessionStorage.getItem("cns.google-oauth.redirect-pending"),
     ).toBeNull();
   });
 
   it("finishes authentication after returning from the mobile redirect", async () => {
-    sessionStorage.setItem("tmi.google-oauth.redirect-pending", "1");
+    sessionStorage.setItem("cns.google-oauth.redirect-pending", "1");
     mocks.getRedirectResult.mockResolvedValue({
       user: { getIdToken: vi.fn(async () => "redirect-token") },
     });
@@ -130,7 +130,7 @@ describe("GoogleOAuthButton", () => {
           data: {
             user: {
               id: "user-mobile",
-              email: "mobile@tmi.vn",
+              email: "mobile@cns.vn",
               roles: ["PUBLIC_USER"],
             },
           },
@@ -145,11 +145,11 @@ describe("GoogleOAuthButton", () => {
     await waitFor(() =>
       expect(mocks.setQueryData).toHaveBeenCalledWith(
         ["auth", "me"],
-        expect.objectContaining({ email: "mobile@tmi.vn" }),
+        expect.objectContaining({ email: "mobile@cns.vn" }),
       ),
     );
     expect(
-      sessionStorage.getItem("tmi.google-oauth.redirect-pending"),
+      sessionStorage.getItem("cns.google-oauth.redirect-pending"),
     ).toBeNull();
     expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
   });
@@ -165,7 +165,7 @@ describe("GoogleOAuthButton", () => {
           data: {
             user: {
               id: "user-recovered",
-              email: "recovered@tmi.vn",
+              email: "recovered@cns.vn",
               roles: ["PUBLIC_USER"],
             },
           },
@@ -180,13 +180,13 @@ describe("GoogleOAuthButton", () => {
     await waitFor(() =>
       expect(mocks.setQueryData).toHaveBeenCalledWith(
         ["auth", "me"],
-        expect.objectContaining({ email: "recovered@tmi.vn" }),
+        expect.objectContaining({ email: "recovered@cns.vn" }),
       ),
     );
   });
 
   it("finishes a consumed redirect credential after the effect is cleaned up", async () => {
-    sessionStorage.setItem("tmi.google-oauth.redirect-pending", "1");
+    sessionStorage.setItem("cns.google-oauth.redirect-pending", "1");
     let resolveRedirect!: (credential: {
       user: { getIdToken: () => Promise<string> };
     }) => void;
@@ -202,7 +202,7 @@ describe("GoogleOAuthButton", () => {
           data: {
             user: {
               id: "user-mobile-remount",
-              email: "mobile-remount@tmi.vn",
+              email: "mobile-remount@cns.vn",
               roles: ["PUBLIC_USER"],
             },
           },
@@ -221,7 +221,7 @@ describe("GoogleOAuthButton", () => {
     await waitFor(() =>
       expect(mocks.setQueryData).toHaveBeenCalledWith(
         ["auth", "me"],
-        expect.objectContaining({ email: "mobile-remount@tmi.vn" }),
+        expect.objectContaining({ email: "mobile-remount@cns.vn" }),
       ),
     );
     expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
@@ -243,7 +243,7 @@ describe("GoogleOAuthButton", () => {
     );
     expect(mocks.signInWithRedirect).not.toHaveBeenCalled();
     expect(
-      sessionStorage.getItem("tmi.google-oauth.redirect-pending"),
+      sessionStorage.getItem("cns.google-oauth.redirect-pending"),
     ).toBeNull();
   });
 
@@ -256,7 +256,7 @@ describe("GoogleOAuthButton", () => {
         JSON.stringify({
           success: true,
           data: {
-            user: { id: "user-1", email: "staff@tmi.vn", roles: ["MODERATOR"] },
+            user: { id: "user-1", email: "staff@cns.vn", roles: ["MODERATOR"] },
           },
           meta: { request_id: "request-1" },
         }),
@@ -272,7 +272,7 @@ describe("GoogleOAuthButton", () => {
     await waitFor(() =>
       expect(mocks.setQueryData).toHaveBeenCalledWith(
         ["auth", "me"],
-        expect.objectContaining({ email: "staff@tmi.vn" }),
+        expect.objectContaining({ email: "staff@cns.vn" }),
       ),
     );
     expect(screen.queryByText(/mã 6 số/i)).toBeNull();

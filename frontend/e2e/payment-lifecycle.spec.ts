@@ -6,7 +6,7 @@ const paymentOrderId = "a255dbf5-bb3e-449d-8bf0-9572cc642cac";
 test.beforeEach(async ({ context, request }) => {
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-access",
       domain: "127.0.0.1",
       path: "/",
@@ -14,7 +14,7 @@ test.beforeEach(async ({ context, request }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",

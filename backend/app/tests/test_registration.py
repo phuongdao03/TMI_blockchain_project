@@ -123,7 +123,7 @@ def test_registration_persists_argon2id_token_and_encrypted_outbox(
         )
 
         await service.register(
-            email="Owner@TMIGroup.vn",
+            email="Owner@CNSGroup.vn",
             password="correct horse battery staple",
             client_ip="203.0.113.10",
         )
@@ -138,7 +138,7 @@ def test_registration_persists_argon2id_token_and_encrypted_outbox(
                 .where(UserRole.user_id == user.id)
             )
 
-            assert user.email == "owner@tmigroup.vn"
+            assert user.email == "owner@cnsgroup.vn"
             assert user.status is UserStatus.PENDING
             assert user.password_hash is not None
             assert user.password_hash.startswith("$argon2id$")
@@ -150,15 +150,15 @@ def test_registration_persists_argon2id_token_and_encrypted_outbox(
             assert event.aggregate_id == user.id
             assert user.account_type is AccountType.INDIVIDUAL_APPLICANT
             assert assigned_role == "USER"
-            assert b"owner@tmigroup.vn" not in event.payload_ciphertext
+            assert b"owner@cnsgroup.vn" not in event.payload_ciphertext
 
         payload = await _outbox_payload(session_factory, cipher)
-        assert payload["email"] == "owner@tmigroup.vn"
+        assert payload["email"] == "owner@cnsgroup.vn"
         assert payload["user_id"] == str(user.id)
         assert payload["verification_token"]
         assert token.token_hash != payload["verification_token"]
         assert payload["verification_token"].encode() not in event.payload_ciphertext
-        assert limiter.calls == [("owner@tmigroup.vn", "203.0.113.10")]
+        assert limiter.calls == [("owner@cnsgroup.vn", "203.0.113.10")]
 
         await service.close()
 
@@ -170,7 +170,7 @@ def test_public_user_registration_receives_the_viewer_role(tmp_path: Path) -> No
         clock = MutableClock(datetime(2026, 8, 1, 8, 0, tzinfo=UTC))
         service, session_factory, _, _ = await _build_service(tmp_path, clock)
         await service.register(
-            email="viewer@tmigroup.vn",
+            email="viewer@cnsgroup.vn",
             password="correct horse battery staple",
             client_ip="203.0.113.20",
             account_type=AccountType.PUBLIC_USER,
@@ -212,7 +212,7 @@ def test_registration_rolls_back_when_outbox_encryption_fails(
         monkeypatch.setattr(cipher, "encrypt", fail_encryption)
         with pytest.raises(RuntimeError, match="encryption failed"):
             await service.register(
-                email="rollback@tmigroup.vn",
+                email="rollback@cnsgroup.vn",
                 password="correct horse battery staple",
                 client_ip="203.0.113.10",
             )
@@ -236,12 +236,12 @@ def test_duplicate_registration_returns_without_duplicate_records(
         service, session_factory, _, limiter = await _build_service(tmp_path, clock)
 
         await service.register(
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             password="correct horse battery staple",
             client_ip="203.0.113.10",
         )
         await service.register(
-            email="OWNER@TMIGROUP.VN",
+            email="OWNER@CNSGROUP.VN",
             password="a different valid password",
             client_ip="203.0.113.10",
         )
@@ -265,7 +265,7 @@ def test_verification_token_expires_and_is_one_time(tmp_path: Path) -> None:
         service, session_factory, cipher, _ = await _build_service(tmp_path, clock)
 
         await service.register(
-            email="first@tmigroup.vn",
+            email="first@cnsgroup.vn",
             password="correct horse battery staple",
             client_ip="203.0.113.10",
         )
@@ -278,7 +278,7 @@ def test_verification_token_expires_and_is_one_time(tmp_path: Path) -> None:
             await service.verify_email(first_token)
 
         await service.register(
-            email="expired@tmigroup.vn",
+            email="expired@cnsgroup.vn",
             password="correct horse battery staple",
             client_ip="203.0.113.11",
         )
@@ -296,7 +296,7 @@ def test_verification_token_expires_and_is_one_time(tmp_path: Path) -> None:
                         )
                     )
                 )["email"]
-                == "expired@tmigroup.vn"
+                == "expired@cnsgroup.vn"
             )
 
         clock.current += timedelta(hours=25)
@@ -307,9 +307,9 @@ def test_verification_token_expires_and_is_one_time(tmp_path: Path) -> None:
             users = {
                 user.email: user for user in (await session.scalars(select(User))).all()
             }
-            assert users["first@tmigroup.vn"].status is UserStatus.ACTIVE
-            assert users["first@tmigroup.vn"].email_verified_at is not None
-            assert users["expired@tmigroup.vn"].status is UserStatus.PENDING
+            assert users["first@cnsgroup.vn"].status is UserStatus.ACTIVE
+            assert users["first@cnsgroup.vn"].email_verified_at is not None
+            assert users["expired@cnsgroup.vn"].status is UserStatus.PENDING
 
         await service.close()
 
@@ -327,7 +327,7 @@ def test_registration_rate_limit_blocks_before_database_write(tmp_path: Path) ->
 
         with pytest.raises(RateLimitExceededError):
             await service.register(
-                email="blocked@tmigroup.vn",
+                email="blocked@cnsgroup.vn",
                 password="correct horse battery staple",
                 client_ip="203.0.113.12",
             )
@@ -335,7 +335,7 @@ def test_registration_rate_limit_blocks_before_database_write(tmp_path: Path) ->
         async with session_factory() as session:
             count = await session.scalar(select(func.count()).select_from(User))
         assert count == 0
-        assert limiter.calls == [("blocked@tmigroup.vn", "203.0.113.12")]
+        assert limiter.calls == [("blocked@cnsgroup.vn", "203.0.113.12")]
         await service.close()
 
     asyncio.run(exercise())
@@ -363,12 +363,12 @@ def test_redis_rate_limit_uses_hashed_dimensions_and_enforces_threshold() -> Non
 
         with pytest.raises(RateLimitExceededError) as error:
             await limiter.check(
-                email="owner@tmigroup.vn",
+                email="owner@cnsgroup.vn",
                 client_ip="203.0.113.10",
             )
 
         serialized_arguments = " ".join(map(str, client.arguments))
-        assert "owner@tmigroup.vn" not in serialized_arguments
+        assert "owner@cnsgroup.vn" not in serialized_arguments
         assert "203.0.113.10" not in serialized_arguments
         assert error.value.details == {"retry_after_seconds": 54}
 
@@ -419,7 +419,7 @@ def test_registration_api_returns_generic_accepted_response() -> None:
         _post(
             "/api/v1/auth/register",
             {
-                "email": "Owner@TMIGroup.vn",
+                "email": "Owner@CNSGroup.vn",
                 "password": "correct horse battery staple",
                 "accountType": "INDIVIDUAL_APPLICANT",
             },
@@ -435,7 +435,7 @@ def test_registration_api_returns_generic_accepted_response() -> None:
     }
     assert response.json()["meta"]["request_id"] == response.headers["X-Request-ID"]
     assert service.registration == (
-        "Owner@tmigroup.vn",
+        "Owner@cnsgroup.vn",
         "correct horse battery staple",
         "127.0.0.1",
     )
@@ -463,7 +463,7 @@ def test_registration_api_rejects_short_password_without_echoing_it() -> None:
         _post(
             "/api/v1/auth/register",
             {
-                "email": "owner@tmigroup.vn",
+                "email": "owner@cnsgroup.vn",
                 "password": "abcxyz",
                 "accountType": "INDIVIDUAL_APPLICANT",
             },
@@ -483,7 +483,7 @@ def test_registration_api_rejects_privileged_council_account_type() -> None:
         _post(
             "/api/v1/auth/register",
             {
-                "email": "council@tmigroup.vn",
+                "email": "council@cnsgroup.vn",
                 "password": "correct horse battery staple",
                 "accountType": "COUNCIL_MEMBER",
             },

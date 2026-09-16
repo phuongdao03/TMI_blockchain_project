@@ -146,9 +146,9 @@ def test_environment_example_contains_placeholders_only() -> None:
     ):
         assert entries[secret_name] == ""
     assert entries["DATABASE_URL"].startswith(
-        "postgresql+asyncpg://tmi_local:tmi-local-only@postgres:5432/"
+        "postgresql+asyncpg://cns_local:cns-local-only@postgres:5432/"
     )
-    assert entries["FIREBASE_PROJECT_ID"] == "tmi-local"
+    assert entries["FIREBASE_PROJECT_ID"] == "cns-local"
     assert entries["FIREBASE_AUTH_EMULATOR_HOST"] == "firebase-emulator:9099"
 
 

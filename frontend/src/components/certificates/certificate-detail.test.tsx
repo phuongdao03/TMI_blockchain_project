@@ -23,8 +23,8 @@ describe("CertificateDetail", () => {
       certificate: {
         id: "certificate-1",
         dossierId: "dossier-1",
-        certificateNumber: "TMI-2026-0001",
-        assetTitle: "Bộ nhận diện TMI",
+        certificateNumber: "CNS-2026-0001",
+        assetTitle: "Bộ nhận diện CNS",
         currentVersionNo: 2,
         status: "ACTIVE",
         pdfReady: true,
@@ -33,7 +33,7 @@ describe("CertificateDetail", () => {
         confirmations: 64,
       },
       metadataHash: "a".repeat(64),
-      qrPayload: "/verify/TMI-2026-0001",
+      qrPayload: "/verify/CNS-2026-0001",
     });
     versionsMock.mockResolvedValue([
       {
@@ -73,7 +73,7 @@ describe("CertificateDetail", () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText("Bộ nhận diện TMI")).toBeDefined();
+    expect(await screen.findByText("Bộ nhận diện CNS")).toBeDefined();
     expect(screen.getAllByText("Đang có hiệu lực").length).toBeGreaterThan(0);
     expect(screen.getByText("Đã được cập nhật")).toBeDefined();
     expect(screen.getByText("Chưa có thay đổi cần cập nhật")).toBeDefined();

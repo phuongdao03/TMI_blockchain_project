@@ -9,19 +9,19 @@ test("applicant signs in with Firebase email and securely signs out", async ({
   await page.goto("/login?accountType=INDIVIDUAL_APPLICANT");
   await page
     .getByRole("textbox", { name: "Email" })
-    .fill("applicant@tmigroup.vn");
+    .fill("applicant@cnsgroup.vn");
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
   await expect(page).toHaveURL(/\/dashboard$/);
   const cookies = await context.cookies();
-  expect(cookies.find(({ name }) => name === "tmi_access")?.httpOnly).toBe(
+  expect(cookies.find(({ name }) => name === "cns_access")?.httpOnly).toBe(
     true,
   );
-  expect(cookies.find(({ name }) => name === "tmi_refresh")?.httpOnly).toBe(
+  expect(cookies.find(({ name }) => name === "cns_refresh")?.httpOnly).toBe(
     true,
   );
-  expect(cookies.find(({ name }) => name === "tmi_csrf")?.httpOnly).toBe(false);
+  expect(cookies.find(({ name }) => name === "cns_csrf")?.httpOnly).toBe(false);
   expect(
     await page.evaluate(() => localStorage.getItem("access_token")),
   ).toBeNull();
@@ -36,7 +36,7 @@ test("applicant signs in with Firebase email and securely signs out", async ({
   await page.getByRole("button", { name: "Đăng xuất" }).click();
   await expect(page).toHaveURL(/\/login$/);
   expect(
-    (await context.cookies()).filter(({ name }) => name.startsWith("tmi_")),
+    (await context.cookies()).filter(({ name }) => name.startsWith("cns_")),
   ).toHaveLength(0);
 });
 
@@ -54,7 +54,7 @@ test("a public account can choose an applicant profile without a false expired-s
   await page.goto("/login");
   await page
     .getByRole("textbox", { name: "Email" })
-    .fill("applicant@tmigroup.vn");
+    .fill("applicant@cnsgroup.vn");
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
@@ -75,7 +75,7 @@ test("email signup sends Firebase verification without exposing internal access"
   await page.goto("/register");
   await page
     .getByRole("textbox", { name: "Email" })
-    .fill("new-applicant@tmigroup.vn");
+    .fill("new-applicant@cnsgroup.vn");
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await page.getByLabel("Xác nhận mật khẩu").fill(password);
   await page.getByRole("button", { name: "Đăng ký" }).click();
@@ -95,7 +95,7 @@ test("password recovery uses Firebase one-time action code", async ({
   await page.goto("/forgot-password");
   await page
     .getByRole("textbox", { name: "Email" })
-    .fill("applicant@tmigroup.vn");
+    .fill("applicant@cnsgroup.vn");
   await page.getByRole("button", { name: "Gửi hướng dẫn" }).click();
   await expect(page.getByRole("status")).toContainText(
     "Yêu cầu đặt lại mật khẩu đã được tiếp nhận",
@@ -117,7 +117,7 @@ test("dashboard rotates a refresh-only session before rendering", async ({
 }) => {
   await context.addCookies([
     {
-      name: "tmi_refresh",
+      name: "cns_refresh",
       value: "e2e-refresh",
       domain: "127.0.0.1",
       path: "/",
@@ -125,7 +125,7 @@ test("dashboard rotates a refresh-only session before rendering", async ({
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",
@@ -136,7 +136,7 @@ test("dashboard rotates a refresh-only session before rendering", async ({
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/dashboard$/);
   expect(
-    (await context.cookies()).find(({ name }) => name === "tmi_access")
+    (await context.cookies()).find(({ name }) => name === "cns_access")
       ?.httpOnly,
   ).toBe(true);
 });

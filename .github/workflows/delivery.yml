@@ -142,16 +142,16 @@ jobs:
       postgres:
         image: postgres:17.6-alpine
         env:
-          POSTGRES_DB: tmi_ci
-          POSTGRES_USER: tmi_ci
-          POSTGRES_PASSWORD: tmi-ci-ephemeral-only
+          POSTGRES_DB: cns_ci
+          POSTGRES_USER: cns_ci
+          POSTGRES_PASSWORD: cns-ci-ephemeral-only
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U tmi_ci -d tmi_ci" --health-interval 5s
+          --health-cmd "pg_isready -U cns_ci -d cns_ci" --health-interval 5s
           --health-timeout 3s --health-retries 10
     env:
-      DATABASE_DIRECT_URL: postgresql+asyncpg://tmi_ci:tmi-ci-ephemeral-only@localhost:5432/tmi_ci
+      DATABASE_DIRECT_URL: postgresql+asyncpg://cns_ci:cns-ci-ephemeral-only@localhost:5432/cns_ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -297,25 +297,25 @@ jobs:
             *.firebaseapp.com) ;;
             *) echo "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN must use the Firebase project's firebaseapp.com domain" >&2; exit 1 ;;
           esac
-          docker buildx build --pull --load --platform linux/amd64 --cache-from type=gha,scope=backend --cache-to type=gha,mode=max,scope=backend -t "$REGISTRY/tmi-certificate-backend:$TAG" backend
-          docker buildx build --pull --load --platform linux/amd64 --cache-from type=gha,scope=frontend --cache-to type=gha,mode=max,scope=frontend --build-arg NEXT_PUBLIC_RELEASE_MODE=full --build-arg NEXT_PUBLIC_APP_BASE_URL --build-arg NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID --build-arg NEXT_PUBLIC_FIREBASE_API_KEY --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID --build-arg NEXT_PUBLIC_FIREBASE_APP_ID -t "$REGISTRY/tmi-certificate-frontend:$TAG" frontend
+          docker buildx build --pull --load --platform linux/amd64 --cache-from type=gha,scope=backend --cache-to type=gha,mode=max,scope=backend -t "$REGISTRY/cns-certificate-backend:$TAG" backend
+          docker buildx build --pull --load --platform linux/amd64 --cache-from type=gha,scope=frontend --cache-to type=gha,mode=max,scope=frontend --build-arg NEXT_PUBLIC_RELEASE_MODE=full --build-arg NEXT_PUBLIC_APP_BASE_URL --build-arg NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID --build-arg NEXT_PUBLIC_FIREBASE_API_KEY --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID --build-arg NEXT_PUBLIC_FIREBASE_APP_ID -t "$REGISTRY/cns-certificate-frontend:$TAG" frontend
           # Firebase Admin synchronization adds the Google Auth runtime. Keep a
           # strict ceiling above the measured production image size (289 MiB).
-          bash infrastructure/scripts/check-image-size.sh "$REGISTRY/tmi-certificate-backend:$TAG" 300
+          bash infrastructure/scripts/check-image-size.sh "$REGISTRY/cns-certificate-backend:$TAG" 300
           # Next.js 16.3 standalone output measures 215 MiB with the Firebase
           # and WalletConnect runtimes. Retain a narrow 10 MiB regression margin.
-          bash infrastructure/scripts/check-image-size.sh "$REGISTRY/tmi-certificate-frontend:$TAG" 225
-          docker run -d --rm --name tmi-backend-smoke -p 18000:8000 "$REGISTRY/tmi-certificate-backend:$TAG"
-          docker run -d --rm --name tmi-frontend-smoke -p 13000:3000 "$REGISTRY/tmi-certificate-frontend:$TAG"
-          trap 'docker stop tmi-backend-smoke tmi-frontend-smoke >/dev/null 2>&1 || true' EXIT
+          bash infrastructure/scripts/check-image-size.sh "$REGISTRY/cns-certificate-frontend:$TAG" 225
+          docker run -d --rm --name cns-backend-smoke -p 18000:8000 "$REGISTRY/cns-certificate-backend:$TAG"
+          docker run -d --rm --name cns-frontend-smoke -p 13000:3000 "$REGISTRY/cns-certificate-frontend:$TAG"
+          trap 'docker stop cns-backend-smoke cns-frontend-smoke >/dev/null 2>&1 || true' EXIT
           for attempt in {1..20}; do curl --fail --silent http://127.0.0.1:18000/health && break; sleep 2; done
           for attempt in {1..20}; do curl --fail --silent http://127.0.0.1:13000/ && break; sleep 2; done
           curl --fail --silent http://127.0.0.1:18000/health >/dev/null
           curl --fail --silent http://127.0.0.1:13000/ >/dev/null
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.68.2 image --exit-code 1 --severity HIGH,CRITICAL "$REGISTRY/tmi-certificate-backend:$TAG"
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.68.2 image --exit-code 1 --severity HIGH,CRITICAL "$REGISTRY/tmi-certificate-frontend:$TAG"
-          docker push "$REGISTRY/tmi-certificate-backend:$TAG"
-          docker push "$REGISTRY/tmi-certificate-frontend:$TAG"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.68.2 image --exit-code 1 --severity HIGH,CRITICAL "$REGISTRY/cns-certificate-backend:$TAG"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.68.2 image --exit-code 1 --severity HIGH,CRITICAL "$REGISTRY/cns-certificate-frontend:$TAG"
+          docker push "$REGISTRY/cns-certificate-backend:$TAG"
+          docker push "$REGISTRY/cns-certificate-frontend:$TAG"
       - name: Create rollback artifact
         run:
           tar -czf rollback-bundle.tgz infrastructure/compose.production.yaml

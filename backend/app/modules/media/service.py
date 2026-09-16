@@ -166,7 +166,7 @@ class MediaService:
         media_id = uuid4()
         purpose_segment = intent.purpose.value.lower().replace("_", "-")
         public_id = (
-            f"tmi/{self._environment}/owners/{principal.user_id}/uploads/"
+            f"cns/{self._environment}/owners/{principal.user_id}/uploads/"
             f"{purpose_segment}/{media_id}"
         )
         authorization = await self._gateway.create_upload_signature(

@@ -17,7 +17,7 @@ vi.mock("@/lib/api/client", () => ({
 const row: AdminCertificate = {
   certificate: {
     id: "certificate",
-    certificateNumber: "TMI-2026-0001",
+    certificateNumber: "CNS-2026-0001",
     status: "ACTIVE",
     assetTitle: "Tác phẩm",
     dossierCode: "WORK-001",

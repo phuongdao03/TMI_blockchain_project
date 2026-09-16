@@ -102,7 +102,7 @@ async def _seed(session: AsyncSession, *, thumbnail: bool = True) -> tuple[UUID,
         session.add(
             Certificate(
                 id=certificate_id,
-                certificate_number="TMI-2026-1502",
+                certificate_number="CNS-2026-1502",
                 dossier_id=dossier_id,
                 current_version_no=1,
                 status=CertificateStatus.ACTIVE,

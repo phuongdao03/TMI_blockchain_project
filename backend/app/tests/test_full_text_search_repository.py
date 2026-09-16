@@ -53,40 +53,40 @@ def test_visibility_exact_boost_and_cursor_are_stable(tmp_path: Path) -> None:
                         _work(
                             category_id,
                             slug="exact-certificate",
-                            certificate="TMI-001",
+                            certificate="CNS-001",
                             vector="unrelated words",
                             published_at=NOW - timedelta(days=2),
                         ),
                         _work(
                             category_id,
                             slug="text-newer",
-                            vector="tmi-001 public text",
+                            vector="cns-001 public text",
                             published_at=NOW,
                         ),
                         _work(
                             category_id,
                             slug="text-older",
-                            vector="tmi-001 public text",
+                            vector="cns-001 public text",
                             published_at=NOW - timedelta(days=1),
                         ),
                         _work(
                             category_id,
                             slug="unlisted-secret",
-                            vector="tmi-001 private title",
+                            vector="cns-001 private title",
                             visibility=PublicWorkVisibility.UNLISTED,
                             published_at=NOW,
                         ),
                         _work(
                             category_id,
                             slug="suspended-secret",
-                            vector="tmi-001 private title",
+                            vector="cns-001 private title",
                             status=PublicationStatus.SUSPENDED,
                             published_at=NOW,
                         ),
                     ]
                 )
             repository = SearchRepository(session)
-            query = SearchQueryNormalizer().normalize("TMI-001")
+            query = SearchQueryNormalizer().normalize("CNS-001")
             slugs: list[str] = []
             cursor: str | None = None
             while True:
@@ -176,7 +176,7 @@ def test_filters_and_non_relevance_sort_are_bound_and_visibility_scoped() -> Non
             category_slug="my-thuat",
             tag_slugs=("di-san", "son-mai"),
             tag_match=TagMatchMode.ALL,
-            organization_code="tmi-group",
+            organization_code="cns-group",
             has_blockchain_proof=True,
         ),
         sort=SearchSort.MOST_VIEWED,
@@ -197,7 +197,7 @@ def test_filters_and_non_relevance_sort_are_bound_and_visibility_scoped() -> Non
     assert sql.index("public_works.view_count DESC") < sql.index(
         "public_works.published_at DESC"
     )
-    assert {"my-thuat", "di-san", "son-mai", "tmi-group"}.issubset(
+    assert {"my-thuat", "di-san", "son-mai", "cns-group"}.issubset(
         set(compiled.params.values())
     )
 

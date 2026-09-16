@@ -94,7 +94,7 @@ def test_recount_request_requires_system_admin_and_dispatches_context() -> None:
     principal = AuthPrincipal(
         user_id=ACTOR_ID,
         session_id=uuid4(),
-        email="admin@tmigroup.vn",
+        email="admin@cnsgroup.vn",
         roles=("SUPER_ADMIN",),
     )
 
@@ -116,7 +116,7 @@ def test_recount_request_rejects_non_system_admin() -> None:
     principal = AuthPrincipal(
         user_id=ACTOR_ID,
         session_id=uuid4(),
-        email="content@tmigroup.vn",
+        email="content@cnsgroup.vn",
         roles=("CONTENT_ADMIN",),
     )
 

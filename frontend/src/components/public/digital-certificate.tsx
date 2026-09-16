@@ -18,9 +18,9 @@ export function DigitalCertificate({ data }: { data: Verification }) {
   const [failedQr, setFailedQr] = useState<string | null>(null);
   if (!data.certificateNumber) return null;
   const verifyPath = `/verify/${encodeURIComponent(data.certificateNumber)}`;
-  const publicRecordPath =
-    data.explorerUrl ??
-    `/verify?lookup=${encodeURIComponent(data.certificateNumber)}`;
+  const workPath = data.publicWorkSlug
+    ? `/works/${encodeURIComponent(data.publicWorkSlug)}`
+    : null;
   const valid = data.status === "VALID";
 
   async function share() {
@@ -47,7 +47,7 @@ export function DigitalCertificate({ data }: { data: Verification }) {
       <div className="p-5 sm:p-8 lg:p-12">
         <header className="digital-certificate__header grid gap-5 border-b border-[#d8c798] pb-6 sm:grid-cols-[auto_1fr] sm:items-center lg:grid-cols-[8rem_1fr_auto]">
           <p className="digital-certificate__organization">
-            Tổ chức Đề cử và Xác lập Tinh Hoa Việt
+            Trung tâm An ninh Công nghệ số – CNS
           </p>
           <Image
             alt="Logo Tinh Hoa Việt trên chứng thư"
@@ -161,17 +161,20 @@ export function DigitalCertificate({ data }: { data: Verification }) {
             >
               <Share2 className="size-4" /> Chia sẻ
             </button>
-            <a
-              className="digital-certificate__verify"
-              href={publicRecordPath}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              {data.explorerUrl
-                ? "Kiểm tra trên blockchain"
-                : "Mở trang kiểm tra"}
-              <ExternalLink className="size-4" />
-            </a>
+            {workPath ? (
+              <a className="digital-certificate__verify" href={workPath}>
+                Xem tác phẩm <ExternalLink className="size-4" />
+              </a>
+            ) : data.explorerUrl ? (
+              <a
+                className="digital-certificate__verify"
+                href={data.explorerUrl}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Kiểm tra trên blockchain <ExternalLink className="size-4" />
+              </a>
+            ) : null}
           </div>
         </footer>
       </div>

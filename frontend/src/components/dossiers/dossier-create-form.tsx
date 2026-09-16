@@ -340,7 +340,7 @@ export function DossierCreateForm() {
                 aria-describedby="dossier-title-error"
                 className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
                 id="dossier-title"
-                placeholder="Ví dụ: Bộ nhận diện thương hiệu TMI"
+                placeholder="Ví dụ: Bộ nhận diện thương hiệu CNS"
                 {...form.register("title")}
               />
               {form.formState.errors.title ? (

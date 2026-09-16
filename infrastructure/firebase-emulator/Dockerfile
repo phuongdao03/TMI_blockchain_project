@@ -12,4 +12,4 @@ COPY --chown=node:node firebase.json .firebaserc ./
 USER node
 EXPOSE 9099
 
-CMD ["firebase", "emulators:start", "--only", "auth", "--project", "tmi-local"]
+CMD ["firebase", "emulators:start", "--only", "auth", "--project", "cns-local"]

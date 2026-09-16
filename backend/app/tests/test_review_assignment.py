@@ -60,7 +60,7 @@ async def _setup() -> tuple[
     users = {
         name: User(
             id=uuid4(),
-            email=f"{name}@tmigroup.vn",
+            email=f"{name}@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -69,7 +69,7 @@ async def _setup() -> tuple[
     category = Category(id=uuid4(), code="ASSET", name="Tài sản")
     dossier = Dossier(
         id=uuid4(),
-        code="TMI-2026-REVIEW000001",
+        code="CNS-2026-REVIEW000001",
         owner_user_id=users["owner"].id,
         category_id=category.id,
         title="Hồ sơ chờ thẩm định",

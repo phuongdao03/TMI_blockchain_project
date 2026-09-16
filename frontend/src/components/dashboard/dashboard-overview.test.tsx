@@ -15,7 +15,7 @@ vi.mock("@/lib/api/client", () => ({
 vi.mock("@/lib/auth/user-context", () => ({
   useAuthUser: () => ({
     id: "user-1",
-    email: "user@tmigroup.vn",
+    email: "user@cnsgroup.vn",
     roles: ["USER"],
     accountType: "INDIVIDUAL_APPLICANT",
   }),

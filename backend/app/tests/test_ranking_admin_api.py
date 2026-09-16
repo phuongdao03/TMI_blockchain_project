@@ -37,7 +37,7 @@ def test_ranking_recount_admin_api_is_retired() -> None:
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="admin@tmigroup.vn",
+        email="admin@cnsgroup.vn",
         roles=("SUPER_ADMIN",),
     )
     app = create_application(
@@ -68,7 +68,7 @@ def test_retired_ranking_recount_route_is_not_authorized_for_any_role() -> None:
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="content@tmigroup.vn",
+        email="content@cnsgroup.vn",
         roles=("CONTENT_ADMIN",),
     )
     service = RankingRecountService(enqueue=lambda *_: None)

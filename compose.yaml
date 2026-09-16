@@ -7,8 +7,8 @@ x-backend-service: &backend-service
     ANVIL_RPC_URL: http://anvil:8545
     APP_ENV: local
     APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
-    DATABASE_DIRECT_URL: postgresql+asyncpg://tmi_local:tmi-local-only@postgres:5432/tmi_local
-    DATABASE_URL: postgresql+asyncpg://tmi_local:tmi-local-only@postgres:5432/tmi_local
+    DATABASE_DIRECT_URL: postgresql+asyncpg://cns_local:cns-local-only@postgres:5432/cns_local
+    DATABASE_URL: postgresql+asyncpg://cns_local:cns-local-only@postgres:5432/cns_local
     AUTH_OUTBOX_ENCRYPTION_KEY: ${AUTH_OUTBOX_ENCRYPTION_KEY:-}
     PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY:-}
     AUTH_OUTBOX_KEY_ID: ${AUTH_OUTBOX_KEY_ID:-auth-registration-v1}
@@ -18,13 +18,13 @@ x-backend-service: &backend-service
     AUTH_REGISTRATION_RATE_WINDOW_SECONDS: ${AUTH_REGISTRATION_RATE_WINDOW_SECONDS:-900}
     JWT_SECRET: ${JWT_SECRET:-}
     AUTH_CSRF_SECRET: ${AUTH_CSRF_SECRET:-}
-    AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-tmi-platform}
-    AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-tmi-web}
+    AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-cns-platform}
+    AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-cns-web}
     AUTH_ACCESS_TTL_SECONDS: ${AUTH_ACCESS_TTL_SECONDS:-900}
     AUTH_REFRESH_TTL_SECONDS: ${AUTH_REFRESH_TTL_SECONDS:-2592000}
-    AUTH_ACCESS_COOKIE_NAME: ${AUTH_ACCESS_COOKIE_NAME:-tmi_access}
-    AUTH_REFRESH_COOKIE_NAME: ${AUTH_REFRESH_COOKIE_NAME:-tmi_refresh}
-    AUTH_CSRF_COOKIE_NAME: ${AUTH_CSRF_COOKIE_NAME:-tmi_csrf}
+    AUTH_ACCESS_COOKIE_NAME: ${AUTH_ACCESS_COOKIE_NAME:-cns_access}
+    AUTH_REFRESH_COOKIE_NAME: ${AUTH_REFRESH_COOKIE_NAME:-cns_refresh}
+    AUTH_CSRF_COOKIE_NAME: ${AUTH_CSRF_COOKIE_NAME:-cns_csrf}
     AUTH_LOGIN_IP_LIMIT: ${AUTH_LOGIN_IP_LIMIT:-20}
     AUTH_LOGIN_EMAIL_LIMIT: ${AUTH_LOGIN_EMAIL_LIMIT:-10}
     AUTH_LOGIN_RATE_WINDOW_SECONDS: ${AUTH_LOGIN_RATE_WINDOW_SECONDS:-900}
@@ -32,7 +32,7 @@ x-backend-service: &backend-service
     AUTH_PASSWORD_RESET_IP_LIMIT: ${AUTH_PASSWORD_RESET_IP_LIMIT:-10}
     AUTH_PASSWORD_RESET_EMAIL_LIMIT: ${AUTH_PASSWORD_RESET_EMAIL_LIMIT:-3}
     AUTH_PASSWORD_RESET_RATE_WINDOW_SECONDS: ${AUTH_PASSWORD_RESET_RATE_WINDOW_SECONDS:-900}
-    FIREBASE_PROJECT_ID: tmi-local
+    FIREBASE_PROJECT_ID: cns-local
     FIREBASE_AUTH_EMULATOR_HOST: firebase-emulator:9099
     FIREBASE_JWKS_URI: ${FIREBASE_JWKS_URI:-https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com}
     FIREBASE_TIMEOUT_SECONDS: ${FIREBASE_TIMEOUT_SECONDS:-5}
@@ -88,7 +88,7 @@ x-backend-service: &backend-service
     ENGAGEMENT_ACTIVITY_RETENTION_DAYS: ${ENGAGEMENT_ACTIVITY_RETENTION_DAYS:-365}
     SMTP_HOST: mailpit
     SMTP_PORT: ${SMTP_PORT:-1025}
-    SMTP_SENDER: ${SMTP_SENDER:-no-reply@tmigroup.vn}
+    SMTP_SENDER: ${SMTP_SENDER:-no-reply@cnsgroup.vn}
     LOG_LEVEL: INFO
     REDIS_URL: redis://redis:6379/0
   env_file:
@@ -167,11 +167,11 @@ services:
   postgres:
     image: postgres:17.6-alpine
     environment:
-      POSTGRES_DB: tmi_local
-      POSTGRES_PASSWORD: tmi-local-only
-      POSTGRES_USER: tmi_local
+      POSTGRES_DB: cns_local
+      POSTGRES_PASSWORD: cns-local-only
+      POSTGRES_USER: cns_local
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tmi_local -d tmi_local"]
+      test: ["CMD-SHELL", "pg_isready -U cns_local -d cns_local"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -223,7 +223,7 @@ services:
         - node
         - -e
         - >-
-          fetch("http://127.0.0.1:9099/emulator/v1/projects/tmi-local/config")
+          fetch("http://127.0.0.1:9099/emulator/v1/projects/cns-local/config")
           .then(response => process.exit(response.ok ? 0 : 1)) .catch(() =>
           process.exit(1))
       interval: 5s
@@ -322,8 +322,8 @@ services:
       API_BASE_URL: http://backend:8000
       NPM_CONFIG_CACHE: /tmp/npm-cache
       NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:-local-api-key}
-      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-tmi-local.firebaseapp.com}
-      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-tmi-local}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-cns-local.firebaseapp.com}
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-cns-local}
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:-}
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:-}
       NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:-1:123456789:web:local}

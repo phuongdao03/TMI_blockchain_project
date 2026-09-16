@@ -159,7 +159,7 @@ def test_view_api_sets_only_a_signed_http_only_visitor_cookie() -> None:
             created = client.post("/api/v1/public/works/public-work/engagement/views")
             assert created.status_code == 204
             cookie = created.headers["set-cookie"]
-            assert "tmi_engagement_visitor=" in cookie
+            assert "cns_engagement_visitor=" in cookie
             assert "HttpOnly" in cookie
             assert "SameSite=lax" in cookie
 

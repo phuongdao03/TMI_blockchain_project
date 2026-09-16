@@ -45,7 +45,7 @@ beforeEach(() => {
         authorDisplayName: "Nguyễn An",
         categoryName: "Mỹ thuật",
         categorySlug: "my-thuat",
-        certificateNumber: "TMI-2026-001",
+        certificateNumber: "CNS-2026-001",
         certificateStatus: "ACTIVE",
         publishedAt: "2026-08-01T00:00:00Z",
       },
@@ -82,7 +82,7 @@ describe("SearchResultsPage", () => {
     expect(
       screen.queryByRole("link", { name: /Quay lại thư viện/ }),
     ).toBeNull();
-    expect(screen.queryByText("TMI Search Index")).toBeNull();
+    expect(screen.queryByText("CNS Search Index")).toBeNull();
   });
 
   it("keeps query state in links and renders backend text without raw HTML", async () => {

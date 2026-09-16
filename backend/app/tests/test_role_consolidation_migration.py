@@ -29,10 +29,10 @@ def test_role_consolidation_keeps_moderator_review_only_and_super_admin_signing(
         connection.executemany(
             "INSERT INTO users (id, email, status, account_type) VALUES (?, ?, ?, ?)",
             [
-                ("0" * 31 + "1", "viewer@tmigroup.vn", "ACTIVE", "PUBLIC_USER"),
-                ("0" * 31 + "2", "user@tmigroup.vn", "ACTIVE", "INDIVIDUAL_APPLICANT"),
-                ("0" * 31 + "3", "moderator@tmigroup.vn", "ACTIVE", None),
-                ("0" * 31 + "4", "superadmin@tmigroup.vn", "ACTIVE", None),
+                ("0" * 31 + "1", "viewer@cnsgroup.vn", "ACTIVE", "PUBLIC_USER"),
+                ("0" * 31 + "2", "user@cnsgroup.vn", "ACTIVE", "INDIVIDUAL_APPLICANT"),
+                ("0" * 31 + "3", "moderator@cnsgroup.vn", "ACTIVE", None),
+                ("0" * 31 + "4", "superadmin@cnsgroup.vn", "ACTIVE", None),
             ],
         )
         connection.executemany(
@@ -101,9 +101,9 @@ def test_role_consolidation_keeps_moderator_review_only_and_super_admin_signing(
     assert blockchain_signers == {"SUPER_ADMIN"}
     assert moderator_permissions == {"review.submit", "similarity.review"}
     assert user_roles == {
-        "viewer@tmigroup.vn": "VIEWER",
-        "user@tmigroup.vn": "USER",
-        "moderator@tmigroup.vn": "MODERATOR",
-        "superadmin@tmigroup.vn": "SUPER_ADMIN",
+        "viewer@cnsgroup.vn": "VIEWER",
+        "user@cnsgroup.vn": "USER",
+        "moderator@cnsgroup.vn": "MODERATOR",
+        "superadmin@cnsgroup.vn": "SUPER_ADMIN",
     }
     get_settings.cache_clear()

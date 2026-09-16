@@ -100,7 +100,7 @@ class MockPaymentGateway:
         order = ProviderOrder(
             provider_order_id=provider_order_id,
             checkout_url=f"{self._checkout_base_url}/{provider_order_id}",
-            qr_payload=f"TMI|{order_code}|{provider_order_id}",
+            qr_payload=f"CNS|{order_code}|{provider_order_id}",
             status=PaymentStatusName.PENDING,
         )
         self._orders[provider_order_id] = order

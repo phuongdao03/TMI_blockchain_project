@@ -1,9 +1,9 @@
-# TMI Certificate Platform
+# CNS Certificate Platform
 
 [![Delivery](https://github.com/phuongdao03/TMI_blockchain_project/actions/workflows/delivery.yml/badge.svg)](https://github.com/phuongdao03/TMI_blockchain_project/actions/workflows/delivery.yml)
 [![Contract release](https://github.com/phuongdao03/TMI_blockchain_project/actions/workflows/contract-release.yml/badge.svg)](https://github.com/phuongdao03/TMI_blockchain_project/actions/workflows/contract-release.yml)
 
-TMI Certificate is a digital-asset registration and certificate platform for
+CNS Certificate is a digital-asset registration and certificate platform for
 submitting evidence, conducting controlled reviews, issuing verifiable
 certificates and independently checking document integrity.
 

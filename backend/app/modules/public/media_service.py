@@ -686,7 +686,7 @@ class PublicMediaWorker:
             await self._mark_failed(relation_id, "UNSUPPORTED_MIME")
             raise PublicMediaValidationError("Public media MIME type is unsupported.")
         derivative_public_id = (
-            f"tmi/{self._environment}/dossiers/"
+            f"cns/{self._environment}/dossiers/"
             f"{work.dossier_id if work is not None else relation.public_work_id}/"
             f"versions/{source_version_no or 'unknown'}/public/{relation_id}"
         )

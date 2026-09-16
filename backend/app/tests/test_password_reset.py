@@ -58,7 +58,7 @@ async def _build_service(
     hasher = Argon2PasswordHasher()
     async with session_factory.begin() as session:
         user = User(
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             password_hash=await hasher.hash("correct horse battery staple"),
             status=UserStatus.ACTIVE,
             email_verified_at=clock(),
@@ -117,7 +117,7 @@ def test_unknown_email_is_safe_and_returns_without_records(tmp_path: Path) -> No
         )
 
         await service.request_reset(
-            email="UNKNOWN@tmigroup.vn",
+            email="UNKNOWN@cnsgroup.vn",
             client_ip="203.0.113.10",
         )
 
@@ -131,8 +131,8 @@ def test_unknown_email_is_safe_and_returns_without_records(tmp_path: Path) -> No
         assert audit_row.actor_type is AuditActorType.ANONYMOUS
         assert audit_row.resource_id == "credential"
         assert audit_row.after_json == {"outcome": "accepted"}
-        assert "unknown@tmigroup.vn" not in str(audit_row.after_json)
-        assert limiter.calls == [("unknown@tmigroup.vn", "203.0.113.10")]
+        assert "unknown@cnsgroup.vn" not in str(audit_row.after_json)
+        assert limiter.calls == [("unknown@cnsgroup.vn", "203.0.113.10")]
         await service.close()
         await engine.dispose()
 
@@ -148,7 +148,7 @@ def test_reset_token_is_hashed_and_outbox_payload_is_encrypted(tmp_path: Path) -
         )
 
         await service.request_reset(
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             client_ip="203.0.113.10",
         )
         raw_token = await _reset_token(session_factory, cipher)
@@ -166,7 +166,7 @@ def test_reset_token_is_hashed_and_outbox_payload_is_encrypted(tmp_path: Path) -
         assert raw_token.encode() not in event.payload_ciphertext
         assert audit_row.actor_type is AuditActorType.ANONYMOUS
         assert audit_row.resource_id == "credential"
-        assert "owner@tmigroup.vn" not in str(audit_row.after_json)
+        assert "owner@cnsgroup.vn" not in str(audit_row.after_json)
         assert raw_token not in str(audit_row.after_json)
         await service.close()
         await engine.dispose()
@@ -184,7 +184,7 @@ def test_reset_consumes_token_changes_password_and_revokes_sessions(
             clock,
         )
         await service.request_reset(
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             client_ip="203.0.113.10",
         )
         raw_token = await _reset_token(session_factory, cipher)
@@ -236,7 +236,7 @@ def test_expired_reset_token_is_rejected_without_changing_password(
             clock,
         )
         await service.request_reset(
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             client_ip="203.0.113.10",
         )
         raw_token = await _reset_token(session_factory, cipher)
@@ -282,7 +282,7 @@ def test_password_reset_rolls_back_when_audit_fails(
             clock,
         )
         await service.request_reset(
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             client_ip="203.0.113.10",
         )
         raw_token = await _reset_token(session_factory, cipher)

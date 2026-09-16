@@ -19,7 +19,7 @@ describe("ApplicantUpgradeCard", () => {
   it("reveals sender choices only after the user starts a submission", async () => {
     const upgraded: AuthUser = {
       id: "user-1",
-      email: "viewer@tmigroup.vn",
+      email: "viewer@cnsgroup.vn",
       roles: ["USER"],
       accountType: "INDIVIDUAL_APPLICANT",
     };

@@ -68,7 +68,7 @@ location and verifies both schema gates and signature before attaching the
 artifacts to the release ticket:
 
 ```bash
-READINESS_EVIDENCE_PUBLIC_KEY_FILE=/etc/tmi/readiness-evidence-public.pem \
+READINESS_EVIDENCE_PUBLIC_KEY_FILE=/etc/cns/readiness-evidence-public.pem \
   node infrastructure/scripts/verify-readiness-evidence.mjs \
   restore-evidence.json restore-evidence.sig
 ```

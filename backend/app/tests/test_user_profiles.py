@@ -31,7 +31,7 @@ async def _build_service() -> tuple[
 
     user = User(
         id=uuid4(),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         password_hash="not-used",
         status=UserStatus.ACTIVE,
     )

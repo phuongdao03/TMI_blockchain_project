@@ -91,7 +91,7 @@ def test_user_email_is_unique_without_case_sensitivity(tmp_path: Path) -> None:
         async with session_factory.begin() as session:
             session.add(
                 User(
-                    email="owner@tmigroup.vn",
+                    email="owner@cnsgroup.vn",
                     password_hash="argon2id-hash-one",
                 )
             )
@@ -100,7 +100,7 @@ def test_user_email_is_unique_without_case_sensitivity(tmp_path: Path) -> None:
             async with session_factory.begin() as session:
                 session.add(
                     User(
-                        email="OWNER@TMIGROUP.VN",
+                        email="OWNER@CNSGROUP.VN",
                         password_hash="argon2id-hash-two",
                     )
                 )
@@ -134,7 +134,7 @@ def test_auth_migration_upgrades_and_downgrades(tmp_path: Path) -> None:
                 """,
                 (
                     uuid4().hex,
-                    "migration@tmigroup.vn",
+                    "migration@cnsgroup.vn",
                     "argon2id-hash-one",
                     "PENDING",
                 ),
@@ -154,7 +154,7 @@ def test_auth_migration_upgrades_and_downgrades(tmp_path: Path) -> None:
                 """,
                 (
                     uuid4().hex,
-                    "MIGRATION@TMIGROUP.VN",
+                    "MIGRATION@CNSGROUP.VN",
                     "argon2id-hash-two",
                     "PENDING",
                 ),

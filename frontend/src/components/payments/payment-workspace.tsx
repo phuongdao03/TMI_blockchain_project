@@ -166,7 +166,7 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                   <p className="mt-1 text-sm leading-6 text-emerald-800">
                     Thanh toán được ghi nhận
                     {payment.paidAt ? ` lúc ${formatTime(payment.paidAt)}` : ""}
-                    . TMI đang chuẩn bị và phát hành chứng thư cho hồ sơ của
+                    . CNS đang chuẩn bị và phát hành chứng thư cho hồ sơ của
                     bạn.
                   </p>
                 </div>
@@ -261,7 +261,7 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                 aria-hidden="true"
                 className="size-5 shrink-0 text-primary-700"
               />
-              TMI không yêu cầu mật khẩu hay mã xác nhận ngân hàng của bạn.
+              CNS không yêu cầu mật khẩu hay mã xác nhận ngân hàng của bạn.
             </div>
           </aside>
         </div>

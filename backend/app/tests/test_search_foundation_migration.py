@@ -54,7 +54,7 @@ def test_search_foundation_upgrade_backfill_and_downgrade(
                 "Di sản số Việt Nam",
                 "Mô tả công khai",
                 "Nội dung dài",
-                "TMI Studio",
+                "CNS Studio",
                 uuid4().hex,
                 "PUBLISHED",
                 "PUBLIC",

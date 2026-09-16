@@ -26,7 +26,7 @@ test("restore runbook requires independent signature verification", async () => 
 });
 
 test("recovery evidence is validated, signed and tamper evident", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "tmi-readiness-"));
+  const directory = await mkdtemp(join(tmpdir(), "cns-readiness-"));
   const evidencePath = join(directory, "restore-evidence.json");
   const signaturePath = join(directory, "restore-evidence.sig");
   const privateKeyPath = join(directory, "private.pem");

@@ -146,7 +146,7 @@ def test_editor_permissions_validation_version_slug_history_and_preview(
                     title="Approved work — curated",
                     short_description="Public summary for catalog visitors.",
                     full_description="A plain-text editorial description.",
-                    author_display_name="TMI Studio",
+                    author_display_name="CNS Studio",
                     category_id=category_id,
                     tag_ids=(),
                     visibility=visibility,

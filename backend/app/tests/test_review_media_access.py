@@ -123,25 +123,25 @@ def test_delivery_requires_acknowledged_owned_assignment() -> None:
 
         owner = User(
             id=uuid4(),
-            email="owner-review-media@tmigroup.vn",
+            email="owner-review-media@cnsgroup.vn",
             password_hash="unused",
             status=UserStatus.ACTIVE,
         )
         reviewer = User(
             id=uuid4(),
-            email="reviewer-media@tmigroup.vn",
+            email="reviewer-media@cnsgroup.vn",
             password_hash="unused",
             status=UserStatus.ACTIVE,
         )
         other = User(
             id=uuid4(),
-            email="other-reviewer-media@tmigroup.vn",
+            email="other-reviewer-media@cnsgroup.vn",
             password_hash="unused",
             status=UserStatus.ACTIVE,
         )
         super_admin = User(
             id=uuid4(),
-            email="super-admin-review-media@tmigroup.vn",
+            email="super-admin-review-media@cnsgroup.vn",
             password_hash="unused",
             status=UserStatus.ACTIVE,
         )

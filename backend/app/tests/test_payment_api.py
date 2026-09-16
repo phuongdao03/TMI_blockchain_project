@@ -48,7 +48,7 @@ class StubPaymentService:
             expires_at=NOW,
             paid_at=None,
             checkout_url="https://payments.example/checkout",
-            qr_payload="TMI|PAY-000001",
+            qr_payload="CNS|PAY-000001",
             created_at=NOW,
             updated_at=NOW,
         )
@@ -71,7 +71,7 @@ class StubPaymentService:
         return (
             PaymentCandidateView(
                 dossier_id=self.dossier_id,
-                dossier_code="TMI-2026-TEST",
+                dossier_code="CNS-2026-TEST",
                 dossier_title="Ho so da duyet",
                 version_no=2,
             ),
@@ -172,7 +172,7 @@ async def _request(
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         roles=("APPLICANT",),
     )
     app = create_application(
@@ -287,7 +287,7 @@ def test_admin_can_list_approved_payment_candidates() -> None:
     assert response.status_code == 200
     assert response.json()["data"][0] == {
         "dossierId": str(service.dossier_id),
-        "dossierCode": "TMI-2026-TEST",
+        "dossierCode": "CNS-2026-TEST",
         "dossierTitle": "Ho so da duyet",
         "versionNo": 2,
     }

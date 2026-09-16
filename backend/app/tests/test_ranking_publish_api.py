@@ -44,7 +44,7 @@ def test_ranking_publish_api_is_retired() -> None:
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="admin@tmigroup.vn",
+        email="admin@cnsgroup.vn",
         roles=("SUPER_ADMIN",),
     )
     app = create_application(

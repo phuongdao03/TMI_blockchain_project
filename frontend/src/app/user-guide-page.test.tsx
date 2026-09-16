@@ -13,7 +13,7 @@ describe("UserGuidePage", () => {
       }),
     ).toBeDefined();
     for (const heading of [
-      "Về Tổ chức Đề cử và Xác lập Tinh Hoa Việt",
+      "Về Trung tâm An ninh Công nghệ số – CNS",
       "Khám phá đề cử",
       "Tạo tài khoản và đăng nhập",
       "Tạo và gửi hồ sơ đề cử",

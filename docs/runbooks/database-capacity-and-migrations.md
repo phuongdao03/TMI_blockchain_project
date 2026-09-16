@@ -36,7 +36,7 @@ k6 run \
   -e BASE_URL=https://staging.example \
   -e LOAD_ENVIRONMENT=staging \
   -e STAGING_READINESS_APPROVED=1 \
-  -e VERIFY_CERTIFICATE_NUMBER=TMI-STAGING-SENTINEL \
+  -e VERIFY_CERTIFICATE_NUMBER=CNS-STAGING-SENTINEL \
   tests/load/operational-readiness.k6.js
 ```
 

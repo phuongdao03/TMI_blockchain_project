@@ -59,7 +59,7 @@ def _principal() -> AuthPrincipal:
     return AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="admin@tmigroup.vn",
+        email="admin@cnsgroup.vn",
         roles=("SUPER_ADMIN",),
     )
 

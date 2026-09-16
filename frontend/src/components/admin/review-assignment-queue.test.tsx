@@ -50,7 +50,7 @@ describe("ReviewAssignmentQueue", () => {
       data: [
         {
           dossierId: "dossier-1",
-          dossierCode: "TMI-001",
+          dossierCode: "CNS-001",
           dossierTitle: "Hồ sơ cần duyệt",
           status: "SUBMITTED",
           versionNo: 1,
@@ -74,7 +74,7 @@ describe("ReviewAssignmentQueue", () => {
   it("lets an admin assign an active reviewer", async () => {
     get.mockResolvedValue({
       dossierId: "dossier-1",
-      dossierCode: "TMI-001",
+      dossierCode: "CNS-001",
       dossierTitle: "Hồ sơ cần duyệt",
       status: "UNDER_REVIEW",
       versionNo: 1,
@@ -83,7 +83,7 @@ describe("ReviewAssignmentQueue", () => {
       canonicalHash: "hash",
       snapshotJson: {
         schemaVersion: 1,
-        dossier: { id: "dossier-1", code: "TMI-001", title: "Hồ sơ cần duyệt" },
+        dossier: { id: "dossier-1", code: "CNS-001", title: "Hồ sơ cần duyệt" },
         evidences: [],
       },
       assignments: [],
@@ -92,7 +92,7 @@ describe("ReviewAssignmentQueue", () => {
       data: [
         {
           id: "reviewer-1",
-          email: "reviewer@tmi.vn",
+          email: "reviewer@cns.vn",
           role: "MODERATOR",
           status: "ACTIVE",
         },
@@ -104,7 +104,7 @@ describe("ReviewAssignmentQueue", () => {
 
     renderQueue("dossier-1");
 
-    await screen.findByRole("option", { name: "reviewer@tmi.vn" });
+    await screen.findByRole("option", { name: "reviewer@cns.vn" });
     await user.selectOptions(
       await screen.findByLabelText("Người kiểm duyệt"),
       "reviewer-1",
@@ -118,7 +118,7 @@ describe("ReviewAssignmentQueue", () => {
   it("assigns a reviewer without asking the admin to inspect evidence", async () => {
     get.mockResolvedValue({
       dossierId: "dossier-1",
-      dossierCode: "TMI-001",
+      dossierCode: "CNS-001",
       dossierTitle: "Hồ sơ cần duyệt",
       status: "PRECHECK",
       versionNo: 1,
@@ -127,7 +127,7 @@ describe("ReviewAssignmentQueue", () => {
       canonicalHash: "hash",
       snapshotJson: {
         schemaVersion: 1,
-        dossier: { id: "dossier-1", code: "TMI-001", title: "Hồ sơ cần duyệt" },
+        dossier: { id: "dossier-1", code: "CNS-001", title: "Hồ sơ cần duyệt" },
         evidences: [],
       },
       assignments: [],
@@ -136,7 +136,7 @@ describe("ReviewAssignmentQueue", () => {
       data: [
         {
           id: "reviewer-1",
-          email: "reviewer@tmi.vn",
+          email: "reviewer@cns.vn",
           role: "MODERATOR",
           status: "ACTIVE",
         },
@@ -152,7 +152,7 @@ describe("ReviewAssignmentQueue", () => {
 
     renderQueue("dossier-1");
 
-    await screen.findByRole("option", { name: "reviewer@tmi.vn" });
+    await screen.findByRole("option", { name: "reviewer@cns.vn" });
     await user.selectOptions(
       await screen.findByLabelText("Người kiểm duyệt"),
       "reviewer-1",
@@ -173,7 +173,7 @@ describe("ReviewAssignmentQueue", () => {
   it("routes a newly submitted dossier to the reviewer in one action", async () => {
     get.mockResolvedValue({
       dossierId: "dossier-1",
-      dossierCode: "TMI-001",
+      dossierCode: "CNS-001",
       dossierTitle: "Hồ sơ cần duyệt",
       status: "SUBMITTED",
       versionNo: 1,
@@ -182,7 +182,7 @@ describe("ReviewAssignmentQueue", () => {
       canonicalHash: "hash",
       snapshotJson: {
         schemaVersion: 1,
-        dossier: { id: "dossier-1", code: "TMI-001", title: "Hồ sơ cần duyệt" },
+        dossier: { id: "dossier-1", code: "CNS-001", title: "Hồ sơ cần duyệt" },
         evidences: [],
       },
       assignments: [],
@@ -191,7 +191,7 @@ describe("ReviewAssignmentQueue", () => {
       data: [
         {
           id: "reviewer-1",
-          email: "reviewer@tmi.vn",
+          email: "reviewer@cns.vn",
           role: "MODERATOR",
           status: "ACTIVE",
         },
@@ -210,7 +210,7 @@ describe("ReviewAssignmentQueue", () => {
     const user = userEvent.setup();
 
     renderQueue("dossier-1");
-    await screen.findByRole("option", { name: "reviewer@tmi.vn" });
+    await screen.findByRole("option", { name: "reviewer@cns.vn" });
     await user.selectOptions(
       await screen.findByLabelText("Người kiểm duyệt"),
       "reviewer-1",
@@ -228,7 +228,7 @@ describe("ReviewAssignmentQueue", () => {
   it("shows the submitted reviewer report to the admin", async () => {
     get.mockResolvedValue({
       dossierId: "dossier-1",
-      dossierCode: "TMI-001",
+      dossierCode: "CNS-001",
       dossierTitle: "Hồ sơ cần duyệt",
       status: "UNDER_REVIEW",
       versionNo: 1,
@@ -237,12 +237,12 @@ describe("ReviewAssignmentQueue", () => {
       canonicalHash: "hash",
       snapshotJson: {
         schemaVersion: 1,
-        dossier: { id: "dossier-1", code: "TMI-001", title: "Hồ sơ cần duyệt" },
+        dossier: { id: "dossier-1", code: "CNS-001", title: "Hồ sơ cần duyệt" },
         evidences: [],
       },
       assignments: [
         {
-          reviewerEmail: "reviewer@tmi.vn",
+          reviewerEmail: "reviewer@cns.vn",
           assignment: { id: "assignment-1", status: "SUBMITTED" },
           review: {
             recommendation: "APPROVE",
@@ -260,7 +260,7 @@ describe("ReviewAssignmentQueue", () => {
     renderQueue("dossier-1");
 
     expect(await screen.findByText("Báo cáo kiểm duyệt")).toBeDefined();
-    expect(screen.getByText("reviewer@tmi.vn")).toBeDefined();
+    expect(screen.getByText("reviewer@cns.vn")).toBeDefined();
     expect(screen.getByText("Đề nghị phê duyệt")).toBeDefined();
     expect(screen.getByText("Hồ sơ đạt yêu cầu.")).toBeDefined();
   });
@@ -268,7 +268,7 @@ describe("ReviewAssignmentQueue", () => {
   it("allows final admin approval only after reviewer reports are complete", async () => {
     get.mockResolvedValue({
       dossierId: "dossier-1",
-      dossierCode: "TMI-001",
+      dossierCode: "CNS-001",
       dossierTitle: "Hồ sơ cần duyệt",
       status: "UNDER_REVIEW",
       versionNo: 1,
@@ -277,12 +277,12 @@ describe("ReviewAssignmentQueue", () => {
       canonicalHash: "hash",
       snapshotJson: {
         schemaVersion: 1,
-        dossier: { id: "dossier-1", code: "TMI-001", title: "Hồ sơ cần duyệt" },
+        dossier: { id: "dossier-1", code: "CNS-001", title: "Hồ sơ cần duyệt" },
         evidences: [],
       },
       assignments: [
         {
-          reviewerEmail: "reviewer@tmi.vn",
+          reviewerEmail: "reviewer@cns.vn",
           assignment: { id: "assignment-1", status: "SUBMITTED" },
           review: {
             recommendation: "APPROVE",
@@ -324,7 +324,7 @@ describe("ReviewAssignmentQueue", () => {
       | undefined;
     get.mockResolvedValue({
       dossierId: "dossier-1",
-      dossierCode: "TMI-001",
+      dossierCode: "CNS-001",
       dossierTitle: "Hồ sơ cần duyệt",
       status: "UNDER_REVIEW",
       versionNo: 1,
@@ -334,7 +334,7 @@ describe("ReviewAssignmentQueue", () => {
       snapshotJson: { schemaVersion: 1, dossier: {}, evidences: [] },
       assignments: [
         {
-          reviewerEmail: "reviewer@tmi.vn",
+          reviewerEmail: "reviewer@cns.vn",
           assignment: { id: "assignment-1", status: "SUBMITTED" },
           review: {
             recommendation: "APPROVE",
@@ -376,7 +376,7 @@ describe("ReviewAssignmentQueue", () => {
   it("explains when the backend still considers the reviewer report incomplete", async () => {
     get.mockResolvedValue({
       dossierId: "dossier-1",
-      dossierCode: "TMI-001",
+      dossierCode: "CNS-001",
       dossierTitle: "Hồ sơ cần duyệt",
       status: "UNDER_REVIEW",
       versionNo: 1,
@@ -386,7 +386,7 @@ describe("ReviewAssignmentQueue", () => {
       snapshotJson: { schemaVersion: 1, dossier: {}, evidences: [] },
       assignments: [
         {
-          reviewerEmail: "reviewer@tmi.vn",
+          reviewerEmail: "reviewer@cns.vn",
           assignment: { id: "assignment-1", status: "SUBMITTED" },
           review: {
             recommendation: "APPROVE",

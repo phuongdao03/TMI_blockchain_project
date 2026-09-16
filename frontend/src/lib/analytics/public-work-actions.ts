@@ -6,7 +6,7 @@ export interface PublicWorkActionEvent {
   slug: string;
 }
 
-export const PUBLIC_WORK_ACTION_EVENT = "tmi:public-work-action";
+export const PUBLIC_WORK_ACTION_EVENT = "cns:public-work-action";
 
 export function emitPublicWorkAction(detail: PublicWorkActionEvent): void {
   if (typeof window === "undefined") return;

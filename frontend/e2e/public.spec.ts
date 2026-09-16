@@ -78,7 +78,7 @@ test("public portal is professional, responsive and verifiable", async ({
   ).toBeVisible();
   await autocomplete.press("ArrowDown");
   await autocomplete.press("Enter");
-  await expect(page).toHaveURL(/\/works\/bo-nhan-dien-tmi$/);
+  await expect(page).toHaveURL(/\/works\/bo-nhan-dien-cns$/);
   await page.goto("/works");
   await page.goto("/search?q=bo&category=brand&sort=relevance");
   await expect(
@@ -91,7 +91,7 @@ test("public portal is professional, responsive and verifiable", async ({
     "href",
     /cursor=e2e-next-cursor/,
   );
-  await expect(page.getByText("TMI-2026-7EAEC2D2C99A")).toBeVisible();
+  await expect(page.getByText("CNS-2026-7EAEC2D2C99A")).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     "content",
     /noindex/,
@@ -127,19 +127,19 @@ test("public portal is professional, responsive and verifiable", async ({
     await expect(page.getByRole("dialog")).toBeHidden();
   }
 
-  await page.goto("/works/bo-nhan-dien-tmi");
+  await page.goto("/works/bo-nhan-dien-cns");
   await expect(
-    page.getByRole("heading", { name: "Bộ nhận diện TMI" }),
+    page.getByRole("heading", { name: "Bộ nhận diện CNS" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Bìa mặc định: Bộ nhận diện TMI")).toBeVisible();
+  await expect(page.getByLabel("Bìa mặc định: Bộ nhận diện CNS")).toBeVisible();
   await expect(page.getByText("Thông tin đã được đối chiếu")).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
-    new URL("/works/bo-nhan-dien-tmi", page.url()).toString(),
+    new URL("/works/bo-nhan-dien-cns", page.url()).toString(),
   );
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
     "content",
-    /Bộ nhận diện TMI/,
+    /Bộ nhận diện CNS/,
   );
   await page.getByRole("button", { name: "QR" }).click();
   await expect(
@@ -148,7 +148,7 @@ test("public portal is professional, responsive and verifiable", async ({
   await expect(page.getByRole("button", { name: "Đóng mã QR" })).toBeFocused();
   await expect(page.getByRole("link", { name: "Tải mã QR" })).toHaveAttribute(
     "href",
-    "/api/v1/public/works/bo-nhan-dien-tmi/qr",
+    "/api/v1/public/works/bo-nhan-dien-cns/qr",
   );
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
@@ -169,7 +169,7 @@ test("public portal is professional, responsive and verifiable", async ({
   });
 
   await page.goto("/works/bo-nhan-dien-cu");
-  await expect(page).toHaveURL(/\/works\/bo-nhan-dien-tmi$/);
+  await expect(page).toHaveURL(/\/works\/bo-nhan-dien-cns$/);
 
   await page.goto("/works/chia-se-rieng");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
@@ -178,7 +178,7 @@ test("public portal is professional, responsive and verifiable", async ({
   );
 
   await page.goto("/verify");
-  await page.getByLabel("Thông tin cần tra cứu").fill("TMI-2026-7EAEC2D2C99A");
+  await page.getByLabel("Thông tin cần tra cứu").fill("CNS-2026-7EAEC2D2C99A");
   await page.getByRole("button", { name: "Kiểm tra" }).click();
   await expect(
     page.getByText("Chứng thư hợp lệ và đã được xác nhận trên blockchain."),
@@ -192,7 +192,7 @@ test("public portal is professional, responsive and verifiable", async ({
   expect(await sitemapIndex.text()).toContain("/sitemaps/works/1.xml");
   const worksSitemap = await page.request.get("/sitemaps/works/1.xml");
   const worksXml = await worksSitemap.text();
-  expect(worksXml).toContain("/works/bo-nhan-dien-tmi");
+  expect(worksXml).toContain("/works/bo-nhan-dien-cns");
   expect(worksXml).not.toContain("chia-se-rieng");
 
   expect(consoleProblems).toEqual([]);

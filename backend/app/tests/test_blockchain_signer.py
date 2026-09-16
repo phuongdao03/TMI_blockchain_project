@@ -35,7 +35,7 @@ def test_managed_signer_verifies_returned_signature_and_identity() -> None:
 
         def handler(request: httpx.Request) -> httpx.Response:
             payload = request.read().decode()
-            assert '"keyId":"projects/tmi/keys/certificate-issuer"' in payload
+            assert '"keyId":"projects/cns/keys/certificate-issuer"' in payload
             signed = account.sign_transaction(TRANSACTION)
             return httpx.Response(
                 200,
@@ -48,7 +48,7 @@ def test_managed_signer_verifies_returned_signature_and_identity() -> None:
         client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
         signer = ManagedKeySigner(
             endpoint="https://signer.internal.example/v1/sign",
-            key_id="projects/tmi/keys/certificate-issuer",
+            key_id="projects/cns/keys/certificate-issuer",
             expected_address=account.address,
             client=client,
         )

@@ -43,7 +43,7 @@ describe("DossierCreateForm", () => {
     const user = userEvent.setup();
     createMock.mockResolvedValue({
       id: "9155dbf5-bb3e-449d-8bf0-9572cc642cac",
-      title: "Bộ nhận diện TMI",
+      title: "Bộ nhận diện CNS",
     });
     listTypesMock.mockResolvedValue([
       {
@@ -91,7 +91,7 @@ describe("DossierCreateForm", () => {
 
     await user.type(
       await screen.findByLabelText("Tên tài sản hoặc tác phẩm"),
-      "Bộ nhận diện TMI",
+      "Bộ nhận diện CNS",
     );
     await user.click(screen.getByRole("radio", { name: /Tác phẩm văn hóa/ }));
     expect(
@@ -114,7 +114,7 @@ describe("DossierCreateForm", () => {
 
     expect(createMock.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
-        title: "Bộ nhận diện TMI",
+        title: "Bộ nhận diện CNS",
         summary: "Hồ sơ xác lập quyền sở hữu.",
         visibility: "PRIVATE",
         dossierTypeVersionId: "v1",

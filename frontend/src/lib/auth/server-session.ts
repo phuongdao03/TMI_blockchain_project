@@ -10,8 +10,8 @@ export interface ServerAuthState {
 
 export async function getServerAuthState(): Promise<ServerAuthState> {
   const cookieStore = await cookies();
-  const hasRefreshCookie = Boolean(cookieStore.get("tmi_refresh"));
-  if (!cookieStore.get("tmi_access")) {
+  const hasRefreshCookie = Boolean(cookieStore.get("cns_refresh"));
+  if (!cookieStore.get("cns_access")) {
     return { user: null, hasRefreshCookie };
   }
   const cookieHeader = cookieStore

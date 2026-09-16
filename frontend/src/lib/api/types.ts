@@ -1110,6 +1110,7 @@ export interface Verification {
   networkAvailable?: boolean | null;
   recognizedSubject?: string | null;
   documents?: PublicEvidenceProof[];
+  publicWorkSlug?: string | null;
 }
 
 export interface PublicEvidenceProof {

@@ -60,15 +60,15 @@ export default function UserGuidePage() {
             icon={Building2}
             id="about"
             number="01"
-            title="Về Tổ chức Đề cử và Xác lập Tinh Hoa Việt"
+            title="Về Trung tâm An ninh Công nghệ số – CNS"
             wide
           >
             <p className="max-w-4xl text-base leading-8">
-              Tổ chức Đề cử và Xác lập Tinh Hoa Việt được hình thành với mong
-              muốn tìm kiếm, ghi nhận và lan tỏa những giá trị tiêu biểu do
-              người Việt kiến tạo. Đó có thể là một tác phẩm, sản phẩm, sáng
-              kiến, di sản hoặc câu chuyện mang giá trị văn hóa và đóng góp tích
-              cực cho cộng đồng.
+              Trung tâm An ninh Công nghệ số – CNS được hình thành với mong muốn
+              tìm kiếm, ghi nhận và lan tỏa những giá trị tiêu biểu do người
+              Việt kiến tạo. Đó có thể là một tác phẩm, sản phẩm, sáng kiến, di
+              sản hoặc câu chuyện mang giá trị văn hóa và đóng góp tích cực cho
+              cộng đồng.
             </p>
             <p className="max-w-4xl text-base leading-8">
               Tổ chức đồng hành trong toàn bộ hành trình: tiếp nhận thông tin đề

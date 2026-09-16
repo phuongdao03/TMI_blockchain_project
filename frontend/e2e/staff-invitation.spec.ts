@@ -30,7 +30,7 @@ test("reviewer signs in directly after Firebase authentication", async ({
   await page.goto("/login");
   await page
     .getByRole("textbox", { name: "Email" })
-    .fill("reviewer@tmigroup.vn");
+    .fill("reviewer@cnsgroup.vn");
   await page
     .getByLabel("Mật khẩu", { exact: true })
     .fill("correct horse battery staple");

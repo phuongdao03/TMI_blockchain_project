@@ -127,6 +127,7 @@ class VerificationContext:
     signer_wallet_address: str | None = None
     recognized_subject: str | None = None
     is_current_version: bool = True
+    public_work_slug: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,6 +155,7 @@ class VerificationView:
     network_available: bool | None = None
     recognized_subject: str | None = None
     documents: tuple[PublicEvidenceProof, ...] = ()
+    public_work_slug: str | None = None
 
 
 class VerificationEvaluator:
@@ -333,10 +335,11 @@ class PublicVerificationService:
             dossier_code=context.dossier_code,
             metadata_hash=context.metadata_hash,
             block_number=context.block_number,
-            issuer_label="Tổ chức Đề cử và xác lập Tinh Hoa Việt",
+            issuer_label="Trung tâm An ninh Công nghệ số – CNS",
             signer_wallet_address=signer_wallet_address,
             event_name="ProofRecorded",
             network_available=network_available,
             recognized_subject=context.recognized_subject,
             documents=public_evidence_proofs(context.metadata),
+            public_work_slug=context.public_work_slug,
         )

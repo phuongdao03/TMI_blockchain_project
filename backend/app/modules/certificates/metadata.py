@@ -85,7 +85,7 @@ class CertificateNumberingService:
     """Generates a collision-resistant number without a shared counter."""
 
     def generate(self, certificate_id: UUID, issued_at: datetime) -> str:
-        return f"TMI-{issued_at.astimezone(UTC).year}-{certificate_id.hex[:12].upper()}"
+        return f"CNS-{issued_at.astimezone(UTC).year}-{certificate_id.hex[:12].upper()}"
 
 
 class CertificateMetadataBuilder:
@@ -110,7 +110,7 @@ class CertificateMetadataBuilder:
         snapshot: Mapping[str, object],
         issued_at: datetime,
         expires_at: datetime | None,
-        subject: str = "Chủ thể hồ sơ TMI",
+        subject: str = "Chủ thể hồ sơ CNS",
         blockchain: Mapping[str, object] | None = None,
     ) -> tuple[dict[str, object], str]:
         dossier_value = snapshot.get("dossier")

@@ -67,7 +67,7 @@ def _principal(roles: tuple[str, ...] = ("SUPER_ADMIN",)) -> AuthPrincipal:
     return AuthPrincipal(
         user_id=ACTOR_ID,
         session_id=uuid4(),
-        email="admin@tmigroup.vn",
+        email="admin@cnsgroup.vn",
         roles=roles,
     )
 

@@ -155,7 +155,7 @@ export function VerificationPanel({
             id="verification-value"
             name="lookup"
             onChange={(event) => setValue(event.target.value)}
-            placeholder={mode === "number" ? "Ví dụ: TMI-2026-…" : "Ví dụ: 0x…"}
+            placeholder={mode === "number" ? "Ví dụ: CNS-2026-…" : "Ví dụ: 0x…"}
             required
             value={value}
           />

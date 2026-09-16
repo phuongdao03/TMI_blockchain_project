@@ -19,7 +19,7 @@ const detail: PublicWorkDetail = {
   title: "Public work",
   shortDescription: "A verified public work.",
   fullDescription: null,
-  authorDisplayName: "TMI Studio",
+  authorDisplayName: "CNS Studio",
   organizationDisplayName: null,
   categoryName: "Digital art",
   categorySlug: "digital-art",

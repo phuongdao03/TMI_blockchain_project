@@ -32,7 +32,7 @@ describe("Firebase password recovery", () => {
 
     await userEvent.type(
       screen.getByRole("textbox", { name: "Email" }),
-      "owner@tmigroup.vn",
+      "owner@cnsgroup.vn",
     );
     await userEvent.click(
       screen.getByRole("button", { name: "Gửi hướng dẫn" }),
@@ -44,7 +44,7 @@ describe("Firebase password recovery", () => {
     expect(status.textContent).not.toContain("Nếu địa chỉ tồn tại");
     expect(firebaseMocks.sendPasswordResetEmail).toHaveBeenCalledWith(
       { name: "firebase-auth" },
-      "owner@tmigroup.vn",
+      "owner@cnsgroup.vn",
       {
         handleCodeInApp: false,
         url: `${window.location.origin}/login`,
@@ -60,7 +60,7 @@ describe("Firebase password recovery", () => {
 
     await userEvent.type(
       screen.getByRole("textbox", { name: "Email" }),
-      "owner@tmigroup.vn",
+      "owner@cnsgroup.vn",
     );
     await userEvent.click(
       screen.getByRole("button", { name: "Gửi hướng dẫn" }),
@@ -79,7 +79,7 @@ describe("Firebase password recovery", () => {
 
     await userEvent.type(
       screen.getByRole("textbox", { name: "Email" }),
-      "missing@tmigroup.vn",
+      "missing@cnsgroup.vn",
     );
     await userEvent.click(
       screen.getByRole("button", { name: "Gửi hướng dẫn" }),

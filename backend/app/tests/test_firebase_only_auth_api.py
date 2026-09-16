@@ -56,7 +56,7 @@ class FakeSessionService:
 
 def test_firebase_exchange_is_the_only_google_auth_surface() -> None:
     async def scenario() -> None:
-        settings = Settings(app_env="local", firebase_project_id="tmi-local")
+        settings = Settings(app_env="local", firebase_project_id="cns-local")
         runtime = type(
             "Runtime",
             (),

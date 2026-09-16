@@ -243,7 +243,7 @@ describe("layout shells", () => {
       <AuthUserProvider
         user={{
           id: "user-1",
-          email: "owner@tmigroup.vn",
+          email: "owner@cnsgroup.vn",
           roles: ["USER"],
           accountType: "INDIVIDUAL_APPLICANT",
         }}
@@ -447,7 +447,7 @@ describe("layout shells", () => {
       <AuthUserProvider
         user={{
           id: "user-2",
-          email: "reader@tmigroup.vn",
+          email: "reader@cnsgroup.vn",
           roles: [],
           accountType: "PUBLIC_USER",
         }}
@@ -477,7 +477,7 @@ describe("layout shells", () => {
       <PublicShell
         user={{
           id: "user-3",
-          email: "reviewer@tmigroup.vn",
+          email: "reviewer@cnsgroup.vn",
           roles: ["MODERATOR"],
           accountType: "PUBLIC_USER",
         }}
@@ -491,7 +491,7 @@ describe("layout shells", () => {
         .getByRole("link", { name: "Khu vực thẩm định" })
         .getAttribute("href"),
     ).toBe("/reviews");
-    expect(screen.queryByText("reviewer@tmigroup.vn")).toBeNull();
+    expect(screen.queryByText("reviewer@cnsgroup.vn")).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng nhập" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng ký" })).toBeNull();
   });
@@ -501,7 +501,7 @@ describe("layout shells", () => {
       <AuthUserProvider
         user={{
           id: "reviewer-navigation",
-          email: "reviewer@tmigroup.vn",
+          email: "reviewer@cnsgroup.vn",
           roles: ["MODERATOR"],
           accountType: null,
         }}
@@ -526,7 +526,7 @@ describe("layout shells", () => {
       <AuthUserProvider
         user={{
           id: "finance-navigation",
-          email: "finance@tmigroup.vn",
+          email: "finance@cnsgroup.vn",
           roles: ["USER"],
           permissions: ["payments.read", "payments.reconcile"],
           accountType: null,
@@ -553,7 +553,7 @@ describe("layout shells", () => {
       <AuthUserProvider
         user={{
           id: "review-coordinator",
-          email: "coordinator@tmigroup.vn",
+          email: "coordinator@cnsgroup.vn",
           roles: ["USER"],
           permissions: ["review.assign"],
           accountType: null,
@@ -576,7 +576,7 @@ describe("layout shells", () => {
       <PublicShell
         user={{
           id: "reviewer-library",
-          email: "reviewer@tmigroup.vn",
+          email: "reviewer@cnsgroup.vn",
           roles: ["MODERATOR"],
           accountType: null,
         }}
@@ -599,7 +599,7 @@ describe("layout shells", () => {
       <PublicShell
         user={{
           id: "user-public",
-          email: "reader@tmigroup.vn",
+          email: "reader@cnsgroup.vn",
           roles: [],
           accountType: "PUBLIC_USER",
         }}
@@ -624,7 +624,7 @@ describe("layout shells", () => {
       <AuthUserProvider
         user={{
           id: "user-content-admin",
-          email: "content@tmigroup.vn",
+          email: "content@cnsgroup.vn",
           roles: ["SUPER_ADMIN"],
           accountType: null,
         }}
@@ -646,7 +646,7 @@ describe("layout shells", () => {
       <PublicExperienceShell
         user={{
           id: "user-4",
-          email: "reader@tmigroup.vn",
+          email: "reader@cnsgroup.vn",
           roles: [],
           accountType: "PUBLIC_USER",
         }}

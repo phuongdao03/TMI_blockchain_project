@@ -36,7 +36,7 @@ class FirebaseAdminGateway:
         try:
             firebase_admin = importlib.import_module("firebase_admin")
             auth_module = importlib.import_module("firebase_admin.auth")
-            app_name = "tmi-admin-" + re.sub(
+            app_name = "cns-admin-" + re.sub(
                 r"[^a-zA-Z0-9_-]", "-", settings.firebase_project_id
             )
             try:

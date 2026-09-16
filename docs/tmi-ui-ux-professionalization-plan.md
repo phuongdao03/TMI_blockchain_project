@@ -1,4 +1,4 @@
-# Implementation plan: TMI UI/UX professionalization
+# Implementation plan: CNS UI/UX professionalization
 
 ## Phase 1 — Foundation and navigation
 

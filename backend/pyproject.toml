@@ -3,9 +3,9 @@ requires = ["hatchling==1.27.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "tmi-platform-backend"
+name = "cns-platform-backend"
 version = "0.1.0"
-description = "Backend for the TMI blockchain certificate platform"
+description = "Backend for the CNS blockchain certificate platform"
 requires-python = "==3.12.13"
 dependencies = [
   "alembic==1.18.5",

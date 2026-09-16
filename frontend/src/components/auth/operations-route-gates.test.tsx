@@ -7,7 +7,7 @@ import { AuthUserProvider } from "@/lib/auth/user-context";
 function userWith(roles: string[]) {
   return {
     id: "user-1",
-    email: "user@tmigroup.vn",
+    email: "user@cnsgroup.vn",
     roles,
     accountType: "PUBLIC_USER" as const,
   };

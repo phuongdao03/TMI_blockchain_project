@@ -179,7 +179,7 @@ export function DashboardOverview() {
           {
             label: "Đang xử lý",
             value: dossiers.isPending ? "—" : String(processingCount),
-            detail: "Hồ sơ đã gửi và đang được TMI xử lý",
+            detail: "Hồ sơ đã gửi và đang được CNS xử lý",
             icon: Clock3,
           },
           {

@@ -187,7 +187,7 @@ release record.
 
 ## Content and promotion rules
 
-Publish only introductory nominations TMI has permission to display. Do not
+Publish only introductory nominations CNS has permission to display. Do not
 invent a certificate number, transaction hash or verification status. Preview
 content must remain labelled as introductory.
 

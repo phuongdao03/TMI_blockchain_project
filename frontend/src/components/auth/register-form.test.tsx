@@ -68,7 +68,7 @@ describe("RegisterForm", () => {
 
     await userEvent.type(
       screen.getByRole("textbox", { name: "Email" }),
-      "owner@tmigroup.vn",
+      "owner@cnsgroup.vn",
     );
     await userEvent.type(
       screen.getByLabelText("Mật khẩu"),
@@ -95,7 +95,7 @@ describe("RegisterForm", () => {
 
     await userEvent.type(
       screen.getByRole("textbox", { name: "Email" }),
-      "owner@tmigroup.vn",
+      "owner@cnsgroup.vn",
     );
     await userEvent.type(
       screen.getByLabelText("Mật khẩu"),
@@ -111,7 +111,7 @@ describe("RegisterForm", () => {
     expect(screen.getByText(/hướng dẫn xác minh đã được gửi/i)).toBeDefined();
     expect(firebaseMocks.createUserWithEmailAndPassword).toHaveBeenCalledWith(
       {},
-      "owner@tmigroup.vn",
+      "owner@cnsgroup.vn",
       "correct horse battery staple",
     );
     expect(firebaseMocks.sendEmailVerification).toHaveBeenCalledWith(

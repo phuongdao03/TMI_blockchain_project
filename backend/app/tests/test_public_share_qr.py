@@ -57,7 +57,7 @@ class StubQrService:
             return None
         return RenderedPublicQr(
             png=b"\x89PNG\r\n\x1a\napi-qr",
-            payload=f"https://catalog.tmi.vn/r/{'a' * 43}",
+            payload=f"https://catalog.cns.vn/r/{'a' * 43}",
         )
 
 
@@ -70,15 +70,15 @@ class StubRedirectService:
 def test_canonical_share_domain_and_unicode_slug() -> None:
     assert (
         canonical_public_work_url(
-            "https://catalog.tmi.vn/",
+            "https://catalog.cns.vn/",
             "di-sản-số",
             allow_local_http=False,
         )
-        == "https://catalog.tmi.vn/works/di-s%E1%BA%A3n-s%E1%BB%91"
+        == "https://catalog.cns.vn/works/di-s%E1%BA%A3n-s%E1%BB%91"
     )
     with pytest.raises(PublicShareConfigurationError):
         canonical_public_work_url(
-            "http://catalog.tmi.vn",
+            "http://catalog.cns.vn",
             "unsafe",
             allow_local_http=False,
         )
@@ -92,7 +92,7 @@ def test_canonical_share_domain_and_unicode_slug() -> None:
     )
     assert (
         QrCodePngRenderer()
-        .render("https://catalog.tmi.vn/works/scan-ready")
+        .render("https://catalog.cns.vn/works/scan-ready")
         .startswith(b"\x89PNG\r\n\x1a\n")
     )
 
@@ -100,9 +100,9 @@ def test_canonical_share_domain_and_unicode_slug() -> None:
 @pytest.mark.parametrize(
     "unsafe_origin",
     (
-        "https://user:password@catalog.tmi.vn",
-        "https://catalog.tmi.vn/?tracking=1",
-        "https://catalog.tmi.vn/#section",
+        "https://user:password@catalog.cns.vn",
+        "https://catalog.cns.vn/?tracking=1",
+        "https://catalog.cns.vn/#section",
     ),
 )
 def test_public_origin_rejects_credentials_and_non_origin_parts(
@@ -150,7 +150,7 @@ def test_qr_uses_opaque_payload_and_rejects_non_public_work(tmp_path: Path) -> N
             renderer = CapturingRenderer()
             service = PublicQrCodeService(
                 session,
-                public_base_url="https://catalog.tmi.vn",
+                public_base_url="https://catalog.cns.vn",
                 allow_local_http=False,
                 renderer=renderer,
                 share_links=cast(QrShareLinkService, StubShareLinks()),
@@ -158,7 +158,7 @@ def test_qr_uses_opaque_payload_and_rejects_non_public_work(tmp_path: Path) -> N
             rendered = await service.render("public-work")
             assert rendered is not None
             assert rendered.png.startswith(b"\x89PNG")
-            assert rendered.payload == ("https://catalog.tmi.vn/r/opaque-share-token")
+            assert rendered.payload == ("https://catalog.cns.vn/r/opaque-share-token")
             assert renderer.payloads == [rendered.payload]
             assert await service.render("suspended") is None
         await engine.dispose()
@@ -178,7 +178,7 @@ def test_public_qr_api_headers_and_not_found_policy() -> None:
             assert response.headers["cache-control"] == "no-store"
             assert response.headers["x-robots-tag"] == "noindex, nofollow"
             assert response.headers["content-location"] == (
-                f"https://catalog.tmi.vn/r/{'a' * 43}"
+                f"https://catalog.cns.vn/r/{'a' * 43}"
             )
             assert response.content.startswith(b"\x89PNG")
             assert client.get("/api/v1/public/works/suspended/qr").status_code == 404
@@ -189,7 +189,7 @@ def test_public_qr_api_headers_and_not_found_policy() -> None:
 def test_certificate_qr_uses_configured_public_origin_not_backend_host() -> None:
     class Catalog:
         async def certificate_versions(self, number: str) -> list[object]:
-            return [object()] if number == "TMI-2026-0001" else []
+            return [object()] if number == "CNS-2026-0001" else []
 
     app = create_application(
         settings=Settings(app_base_url="https://www.tinhhoaviet.org.vn")
@@ -197,15 +197,15 @@ def test_certificate_qr_uses_configured_public_origin_not_backend_host() -> None
     app.dependency_overrides[get_public_catalog] = lambda: Catalog()
     app.dependency_overrides[enforce_public_rate_limit] = lambda: None
     with TestClient(app, base_url="http://backend:8000") as client:
-        response = client.get("/api/v1/verify/certificate/TMI-2026-0001/qr")
+        response = client.get("/api/v1/verify/certificate/CNS-2026-0001/qr")
         assert response.status_code == 200
         assert response.content.startswith(b"\x89PNG\r\n\x1a\n")
         assert (
             response.headers["content-location"]
-            == "https://www.tinhhoaviet.org.vn/verify/TMI-2026-0001"
+            == "https://www.tinhhoaviet.org.vn/verify/CNS-2026-0001"
         )
         assert (
-            client.get("/api/v1/verify/certificate/TMI-2026-unknown/qr").status_code
+            client.get("/api/v1/verify/certificate/CNS-2026-unknown/qr").status_code
             == 404
         )
 

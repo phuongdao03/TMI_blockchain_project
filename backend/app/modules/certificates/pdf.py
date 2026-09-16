@@ -27,7 +27,7 @@ class CertificatePdfRenderer:
         "Chứng thư xác nhận trạng thái dữ liệu tại thời điểm phát hành. "
         "Chứng thư không thay thế văn bản xác lập quyền của cơ quan nhà nước."
     )
-    FONT_NAME = "TMI-NotoSans"
+    FONT_NAME = "CNS-NotoSans"
 
     def __init__(self, *, template_version: str, generator_version: str) -> None:
         self._template_version = template_version
@@ -84,7 +84,7 @@ class CertificatePdfRenderer:
 
         pdf.setFillColor(colors.HexColor("#b91c1c"))
         pdf.setFont(self.FONT_NAME, 13)
-        pdf.drawString(62, height - 80, "TMI GROUP")
+        pdf.drawString(62, height - 80, "CNS GROUP")
         pdf.setFillColor(colors.HexColor("#0f172a"))
         pdf.setFont(self.FONT_NAME, 28)
         pdf.drawCentredString(width / 2, height - 128, "CHỨNG THƯ TÀI SẢN SỐ")

@@ -31,7 +31,7 @@ def test_payment_order_uses_minor_units_and_unique_idempotency() -> None:
         session_factory, engine = await _database()
         user = User(
             id=uuid4(),
-            email="payment-owner@tmigroup.vn",
+            email="payment-owner@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )

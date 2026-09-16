@@ -18,7 +18,7 @@ from app.modules.cms.service import CmsPostInput, CmsService
 def _principal(*roles: str) -> AuthPrincipal:
     return AuthPrincipal(
         user_id=uuid4(),
-        email="content@tmigroup.vn",
+        email="content@cnsgroup.vn",
         roles=roles,
         session_id=uuid4(),
     )

@@ -1,8 +1,8 @@
-# Spec: TMI UI/UX professionalization
+# Spec: CNS UI/UX professionalization
 
 ## Objective
 
-Nâng cấp toàn bộ trải nghiệm TMI theo hướng dễ hiểu, nhất quán, accessible và
+Nâng cấp toàn bộ trải nghiệm CNS theo hướng dễ hiểu, nhất quán, accessible và
 responsive mà không thay đổi nghiệp vụ, API, database hoặc cơ chế lưu file.
 Blockchain chỉ dùng `THVProofRegistry` trên Polygon Mainnet tại
 `0x4B7fFF9e719a55cA3792cF96fbb229611e505b5F` để lưu dấu vân tay số.

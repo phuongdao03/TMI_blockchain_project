@@ -98,6 +98,7 @@ class VerificationData(PublicSchema):
     network_available: bool | None
     recognized_subject: str | None
     documents: list["PublicEvidenceProofData"]
+    public_work_slug: str | None
 
 
 class PublicEvidenceProofData(PublicSchema):

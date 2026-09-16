@@ -24,7 +24,7 @@ def principal(*roles: str, permissions: tuple[str, ...] = ()) -> AuthPrincipal:
     return AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="admin@tmigroup.vn",
+        email="admin@cnsgroup.vn",
         roles=roles,
         permissions=permissions,
     )
@@ -68,7 +68,7 @@ def test_staff_update_rejects_self_suspend_before_database_work() -> None:
 def test_staff_data_mapping_never_contains_password_fields() -> None:
     user = User(
         id=uuid4(),
-        email="reviewer@tmigroup.vn",
+        email="reviewer@cnsgroup.vn",
         password_hash="hashed-secret",
         status=UserStatus.ACTIVE,
         created_at=datetime.now(UTC),
@@ -76,7 +76,7 @@ def test_staff_data_mapping_never_contains_password_fields() -> None:
 
     data = StaffAccountService._to_data(user, "REVIEWER")
 
-    assert data.email == "reviewer@tmigroup.vn"
+    assert data.email == "reviewer@cnsgroup.vn"
     assert "password" not in data.model_dump()
 
 

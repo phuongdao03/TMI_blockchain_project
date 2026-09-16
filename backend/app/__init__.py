@@ -1,1 +1,1 @@
-"""TMI platform backend application."""
+"""CNS platform backend application."""

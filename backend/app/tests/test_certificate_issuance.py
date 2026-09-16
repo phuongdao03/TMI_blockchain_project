@@ -99,7 +99,7 @@ async def _issuance_service(
     existing_certificate: bool = True,
     enforce_foreign_keys: bool = False,
     token_factory: Callable[[], str] | None = None,
-    public_base_url: str = "https://tmi.example",
+    public_base_url: str = "https://cns.example",
 ) -> tuple[CertificateService, AsyncEngine, UUID]:
     engine = create_async_engine("sqlite+aiosqlite://")
     sessions = async_sessionmaker(engine, expire_on_commit=False)
@@ -109,7 +109,7 @@ async def _issuance_service(
         await connection.run_sync(Base.metadata.create_all)
     user = User(
         id=uuid4(),
-        email=f"{uuid4().hex}@tmigroup.vn",
+        email=f"{uuid4().hex}@cnsgroup.vn",
         password_hash="unused",
         status=UserStatus.ACTIVE,
     )
@@ -135,13 +135,13 @@ async def _issuance_service(
     )
     certificate = Certificate(
         id=uuid4(),
-        certificate_number=f"TMI-2026-{uuid4().hex[:12].upper()}",
+        certificate_number=f"CNS-2026-{uuid4().hex[:12].upper()}",
         dossier_id=dossier.id,
         current_version_no=1,
         status=CertificateStatus.ACTIVE,
         issued_at=NOW,
         public_token_hash="22" * 32,
-        qr_payload="https://tmi.example/kiem-tra/token",
+        qr_payload="https://cns.example/kiem-tra/token",
     )
     transaction = BlockchainTransaction(
         id=uuid4(),
@@ -217,7 +217,7 @@ def test_prepare_certificate_uses_the_canonical_public_verify_route() -> None:
 
         certificate = await service._prepare_certificate(dossier_id)  # noqa: SLF001
 
-        assert certificate.qr_payload == f"https://tmi.example/verify/{token}"
+        assert certificate.qr_payload == f"https://cns.example/verify/{token}"
         versions = await service._certificates.list_versions(certificate.id)  # noqa: SLF001
         assert len(versions) == 1
         assert versions[0].qr_payload == certificate.qr_payload
@@ -231,10 +231,10 @@ def test_prepare_certificate_uses_the_canonical_public_verify_route() -> None:
 @pytest.mark.parametrize(
     "public_base_url",
     (
-        "http://tmi.example",
-        "https://user:password@tmi.example",
-        "https://tmi.example/?tracking=1",
-        "https://tmi.example/#section",
+        "http://cns.example",
+        "https://user:password@cns.example",
+        "https://cns.example/?tracking=1",
+        "https://cns.example/#section",
     ),
 )
 def test_certificate_qr_rejects_an_unsafe_public_origin(

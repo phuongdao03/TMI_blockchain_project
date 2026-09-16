@@ -45,7 +45,7 @@ describe("SimilarityCaseQueue", () => {
       data: [
         {
           id: "reviewer-1",
-          email: "reviewer@tmi.vn",
+          email: "reviewer@cns.vn",
           role: "MODERATOR",
           status: "ACTIVE",
         },
@@ -63,7 +63,7 @@ describe("SimilarityCaseQueue", () => {
 
     expect(await screen.findByText("Sắc thu")).toBeDefined();
     expect(screen.queryByText("near-duplicate-v1")).toBeNull();
-    await screen.findByRole("option", { name: "reviewer@tmi.vn" });
+    await screen.findByRole("option", { name: "reviewer@cns.vn" });
     await user.selectOptions(
       screen.getByLabelText("Chuyên gia phụ trách"),
       "reviewer-1",

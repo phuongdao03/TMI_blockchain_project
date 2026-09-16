@@ -30,7 +30,7 @@ class StubSessionService:
         self.principal = AuthPrincipal(
             user_id=self.user_id,
             session_id=self.session_id,
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             roles=("APPLICANT",),
         )
         self.login_metadata: ClientMetadata | None = None
@@ -134,9 +134,9 @@ async def _request(
     settings = Settings.model_validate(
         {
             "app_env": "local",
-            "auth_access_cookie_name": "tmi_access",
-            "auth_refresh_cookie_name": "tmi_refresh",
-            "auth_csrf_cookie_name": "tmi_csrf",
+            "auth_access_cookie_name": "cns_access",
+            "auth_refresh_cookie_name": "cns_refresh",
+            "auth_csrf_cookie_name": "cns_csrf",
         }
     )
     app = create_application(
@@ -173,7 +173,7 @@ def test_login_api_sets_secure_cookie_contract_without_returning_tokens() -> Non
             "/api/v1/auth/login",
             service,
             json={
-                "email": "owner@tmigroup.vn",
+                "email": "owner@cnsgroup.vn",
                 "password": "correct horse battery staple",
                 "deviceName": "Work laptop",
             },
@@ -183,7 +183,7 @@ def test_login_api_sets_secure_cookie_contract_without_returning_tokens() -> Non
     assert response.status_code == 200
     assert response.json()["data"] == {
         "user": {
-            "email": "owner@tmigroup.vn",
+            "email": "owner@cnsgroup.vn",
             "id": str(service.user_id),
             "roles": ["APPLICANT"],
             "accountType": None,
@@ -192,11 +192,11 @@ def test_login_api_sets_secure_cookie_contract_without_returning_tokens() -> Non
     }
     assert "token" not in response.text.lower()
     cookies = response.headers.get_list("set-cookie")
-    access_cookie = next(value for value in cookies if value.startswith("tmi_access="))
+    access_cookie = next(value for value in cookies if value.startswith("cns_access="))
     refresh_cookie = next(
-        value for value in cookies if value.startswith("tmi_refresh=")
+        value for value in cookies if value.startswith("cns_refresh=")
     )
-    csrf_cookie = next(value for value in cookies if value.startswith("tmi_csrf="))
+    csrf_cookie = next(value for value in cookies if value.startswith("cns_csrf="))
     assert "HttpOnly" in access_cookie
     assert "HttpOnly" in refresh_cookie
     assert "HttpOnly" not in csrf_cookie
@@ -211,7 +211,7 @@ def test_me_and_sessions_api_return_current_user_scope() -> None:
     sessions_response = asyncio.run(_request("GET", "/api/v1/auth/sessions", service))
 
     assert me_response.status_code == 200
-    assert me_response.json()["data"]["email"] == "owner@tmigroup.vn"
+    assert me_response.json()["data"]["email"] == "owner@cnsgroup.vn"
     assert sessions_response.status_code == 200
     assert sessions_response.json()["data"][0]["isCurrent"] is True
 
@@ -219,9 +219,9 @@ def test_me_and_sessions_api_return_current_user_scope() -> None:
 def test_refresh_logout_and_revoke_session_use_cookie_csrf_contract() -> None:
     service = StubSessionService()
     cookies = {
-        "tmi_access": "access-token",
-        "tmi_refresh": "refresh-token",
-        "tmi_csrf": "csrf-token",
+        "cns_access": "access-token",
+        "cns_refresh": "refresh-token",
+        "cns_csrf": "csrf-token",
     }
     headers = {"X-CSRF-Token": "csrf-token"}
 
@@ -277,7 +277,7 @@ def test_applicant_upgrade_api_returns_updated_account_scope() -> None:
     assert response.status_code == 200
     assert response.json()["data"] == {
         "id": str(service.user_id),
-        "email": "owner@tmigroup.vn",
+        "email": "owner@cnsgroup.vn",
         "roles": ["APPLICANT"],
         "accountType": "INDIVIDUAL_APPLICANT",
         "permissions": [],

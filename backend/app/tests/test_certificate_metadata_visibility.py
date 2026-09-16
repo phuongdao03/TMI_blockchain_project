@@ -6,8 +6,8 @@ from app.modules.certificates.metadata import CertificateMetadataBuilder
 def test_metadata_requires_explicit_public_document_access_scope() -> None:
     snapshot: dict[str, object] = {
         "dossier": {
-            "code": "TMI-2026-0001",
-            "title": "Bộ nhận diện TMI",
+            "code": "CNS-2026-0001",
+            "title": "Bộ nhận diện CNS",
             "category": {"code": "BRAND", "name": "Thương hiệu"},
             "dossierType": {
                 "formData": {"ownerEmail": "owner-private@example.test"},
@@ -57,7 +57,7 @@ def test_metadata_requires_explicit_public_document_access_scope() -> None:
     }
 
     metadata, _ = CertificateMetadataBuilder().build(
-        certificate_number="TMI-2026-000000000001",
+        certificate_number="CNS-2026-000000000001",
         certificate_version=1,
         dossier_version=1,
         snapshot=snapshot,

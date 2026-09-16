@@ -115,7 +115,7 @@ async def _request(
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="chain-admin@tmigroup.vn",
+        email="chain-admin@cnsgroup.vn",
         roles=("SUPER_ADMIN",),
         permissions=("blockchain.manage",),
     )

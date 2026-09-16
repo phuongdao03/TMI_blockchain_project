@@ -62,6 +62,8 @@ class DocumentEncryptionKeyring:
     def _associated_data(media_id: UUID, sha256: str) -> bytes:
         if re.fullmatch(r"[0-9a-f]{64}", sha256) is None:
             raise ValueError("Trusted SHA-256 must be lowercase hexadecimal.")
+        # Immutable v1 AAD: changing it makes all existing encrypted media
+        # undecryptable. Product branding is not encoded into new UI output.
         return f"tmi-media-v1:{media_id}:{sha256}".encode("ascii")
 
     def encrypt(

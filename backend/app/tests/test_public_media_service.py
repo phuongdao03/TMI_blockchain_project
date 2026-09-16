@@ -390,7 +390,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert kwargs["source_format"] == "mp4"
             assert kwargs["source_content"] == content
             assert kwargs["transformation"] == "c_limit,w_640,q_auto:eco,vc_auto"
-            assert str(kwargs["derivative_public_id"]).startswith("tmi/local/dossiers/")
+            assert str(kwargs["derivative_public_id"]).startswith("cns/local/dossiers/")
             assert "/versions/1/public/" in str(kwargs["derivative_public_id"])
             return PublicDerivativeMetadata(
                 public_id="ip-certificate/public/derivatives/video-relation",
@@ -634,7 +634,7 @@ def test_publication_media_uses_the_certificate_source_version(tmp_path: Path) -
                 )
                 certificate = Certificate(
                     id=certificate_id,
-                    certificate_number="TMI-2026-SIGNED-SOURCE",
+                    certificate_number="CNS-2026-SIGNED-SOURCE",
                     dossier_id=dossier.id,
                     current_version_no=1,
                     issued_at=datetime(2026, 9, 14, tzinfo=UTC),

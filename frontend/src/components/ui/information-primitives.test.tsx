@@ -35,7 +35,7 @@ describe("information primitives", () => {
         </DataTableHeader>
         <DataTableBody>
           <DataTableRow>
-            <DataTableCell>TMI-1024</DataTableCell>
+            <DataTableCell>CNS-1024</DataTableCell>
           </DataTableRow>
         </DataTableBody>
       </DataTable>,

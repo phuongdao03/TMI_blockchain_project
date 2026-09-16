@@ -4,7 +4,7 @@
 
 1. Complete payOS identity or business verification and link the settlement
    bank.
-2. Create the TMI payment channel and copy Client ID, API Key and Checksum Key
+2. Create the CNS payment channel and copy Client ID, API Key and Checksum Key
    directly into the deployment secret manager. Never put them in Git or CI
    logs.
 3. Deploy the backend behind HTTPS, then register
@@ -13,7 +13,7 @@
    checking.
 5. Set HTTPS return and cancellation URLs to the frontend payment result routes.
 
-For the TMI production domain, register the callback after the backend is
+For the CNS production domain, register the callback after the backend is
 healthy:
 
 ```bash

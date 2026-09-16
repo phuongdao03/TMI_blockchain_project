@@ -5,7 +5,7 @@ test.beforeEach(async ({ context, request }) => {
   await request.post(`http://127.0.0.1:${mockPort}/api/e2e/reset-cms`);
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-super-admin-access",
       domain: "127.0.0.1",
       path: "/",
@@ -13,7 +13,7 @@ test.beforeEach(async ({ context, request }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",
@@ -48,9 +48,9 @@ test("content admin creates, previews and publishes a sanitized post", async ({
 
 test("content admin previews and publishes a public work", async ({ page }) => {
   await page.goto("/admin/content");
-  await page.getByRole("button", { name: /Di sản số TMI/ }).click();
+  await page.getByRole("button", { name: /Di sản số CNS/ }).click();
   await expect(page.getByLabel("Tiêu đề công khai")).toHaveValue(
-    "Di sản số TMI",
+    "Di sản số CNS",
   );
   await page.getByRole("button", { name: "Xem trước" }).click();
   await expect(page.getByText(/Tác phẩm số đã hoàn tất/)).toBeVisible();
@@ -70,7 +70,7 @@ test("mobile work preview uses its own width instead of desktop breakpoints", as
 }) => {
   await page.setViewportSize({ width: isMobile ? 390 : 1440, height: 1000 });
   await page.goto("/admin/content");
-  await page.getByRole("button", { name: /Di sản số TMI/ }).click();
+  await page.getByRole("button", { name: /Di sản số CNS/ }).click();
   await page
     .getByLabel("Tiêu đề công khai")
     .fill("Video chào mừng thương hiệu ĐỀ CỬ TINH HOA VIỆT");
@@ -123,10 +123,10 @@ test("public work stays readable without horizontal scrolling on phones", async 
 }) => {
   for (const width of [320, 390, 430, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 844 });
-    await page.goto("/works/bo-nhan-dien-tmi");
+    await page.goto("/works/bo-nhan-dien-cns");
     const title = page.getByRole("heading", {
       level: 1,
-      name: "Bộ nhận diện TMI",
+      name: "Bộ nhận diện CNS",
       exact: true,
     });
     await expect(title).toBeVisible();

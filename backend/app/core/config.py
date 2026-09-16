@@ -71,8 +71,8 @@ class Settings(BaseSettings):
     )
     jwt_secret: SecretStr | None = None
     auth_csrf_secret: SecretStr | None = None
-    auth_jwt_issuer: str = Field(default="tmi-platform", min_length=1, max_length=128)
-    auth_jwt_audience: str = Field(default="tmi-web", min_length=1, max_length=128)
+    auth_jwt_issuer: str = Field(default="cns-platform", min_length=1, max_length=128)
+    auth_jwt_audience: str = Field(default="cns-web", min_length=1, max_length=128)
     auth_access_ttl_seconds: int = Field(default=900, ge=60, le=3_600)
     auth_refresh_ttl_seconds: int = Field(
         default=2_592_000,
@@ -80,17 +80,17 @@ class Settings(BaseSettings):
         le=7_776_000,
     )
     auth_access_cookie_name: str = Field(
-        default="tmi_access",
+        default="cns_access",
         min_length=1,
         max_length=64,
     )
     auth_refresh_cookie_name: str = Field(
-        default="tmi_refresh",
+        default="cns_refresh",
         min_length=1,
         max_length=64,
     )
     auth_csrf_cookie_name: str = Field(
-        default="tmi_csrf",
+        default="cns_csrf",
         min_length=1,
         max_length=64,
     )
@@ -546,7 +546,7 @@ class Settings(BaseSettings):
         le=172_800,
     )
     engagement_visitor_cookie_name: str = Field(
-        default="tmi_engagement_visitor",
+        default="cns_engagement_visitor",
         min_length=1,
         max_length=64,
     )
@@ -569,7 +569,7 @@ class Settings(BaseSettings):
     smtp_host: str = Field(default="localhost", min_length=1, max_length=255)
     smtp_port: int = Field(default=1025, ge=1, le=65_535)
     smtp_sender: str = Field(
-        default="no-reply@tmigroup.vn", min_length=3, max_length=320
+        default="no-reply@cnsgroup.vn", min_length=3, max_length=320
     )
     smtp_username: str | None = Field(default=None, min_length=1, max_length=320)
     smtp_password: SecretStr | None = None

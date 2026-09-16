@@ -16,14 +16,14 @@ def test_numbering_is_deterministic_and_concurrency_safe() -> None:
 
     values = {service.generate(certificate_id, issued_at) for _ in range(100)}
 
-    assert values == {"TMI-2026-7EAEC2D2C99A"}
+    assert values == {"CNS-2026-7EAEC2D2C99A"}
 
 
 def test_metadata_is_versioned_deterministic_and_excludes_private_fields() -> None:
     snapshot = {
         "dossier": {
-            "code": "TMI-2026-0001",
-            "title": "Bộ nhận diện TMI",
+            "code": "CNS-2026-0001",
+            "title": "Bộ nhận diện CNS",
             "summary": "Tài sản thương hiệu.",
             "visibility": "PUBLIC",
             "ownerUserId": "private-user-id",
@@ -47,7 +47,7 @@ def test_metadata_is_versioned_deterministic_and_excludes_private_fields() -> No
     }
     builder = CertificateMetadataBuilder()
     metadata, digest = builder.build(
-        certificate_number="TMI-2026-7EAEC2D2C99A",
+        certificate_number="CNS-2026-7EAEC2D2C99A",
         certificate_version=1,
         dossier_version=1,
         snapshot=snapshot,
@@ -75,11 +75,11 @@ def test_pdf_contains_certificate_fields_qr_and_stable_hash() -> None:
         generator_version="reportlab-5.0.0",
     )
     metadata = {
-        "certificateNumber": "TMI-2026-7EAEC2D2C99A",
+        "certificateNumber": "CNS-2026-7EAEC2D2C99A",
         "asset": {
-            "title": "Bo nhan dien TMI",
+            "title": "Bo nhan dien CNS",
             "category": "Thuong hieu",
-            "subject": "TMI Group",
+            "subject": "CNS Group",
         },
         "issuedAt": "2026-07-31T00:00:00Z",
         "expiresAt": None,
@@ -91,7 +91,7 @@ def test_pdf_contains_certificate_fields_qr_and_stable_hash() -> None:
     }
     rendered = renderer.render(
         metadata=metadata,
-        verification_url="https://tmi.example/kiem-tra/token",
+        verification_url="https://cns.example/kiem-tra/token",
     )
 
     assert rendered.content.startswith(b"%PDF")

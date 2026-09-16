@@ -32,7 +32,7 @@ class FakeRedis:
 def test_public_serializer_allowlists_metadata_and_removes_rendition() -> None:
     metadata = {
         "schemaVersion": 1,
-        "asset": {"title": "TMI"},
+        "asset": {"title": "CNS"},
         "publicEvidences": [
             {
                 "title": "Tác phẩm công khai",
@@ -63,7 +63,7 @@ def test_public_serializer_allowlists_metadata_and_removes_rendition() -> None:
 
     assert result == {
         "schemaVersion": 1,
-        "asset": {"title": "TMI"},
+        "asset": {"title": "CNS"},
         "publicEvidences": [
             {
                 "title": "Tác phẩm công khai",
@@ -147,7 +147,7 @@ def test_rate_limit_key_is_namespaced_by_scope_and_hashes_identity() -> None:
 def test_public_search_builds_published_query_and_category_filters() -> None:
     statement = PublicRepository._public_statement().where(  # noqa: SLF001
         *PublicRepository._filters(  # noqa: SLF001
-            query="TMI",
+            query="CNS",
             category="BRAND",
         )
     )
@@ -177,7 +177,7 @@ def test_public_version_history_excludes_unconfirmed_workflow_versions() -> None
         session = Session()
         repository = PublicRepository(cast(AsyncSession, session))
 
-        await repository.list_certificate_versions("TMI-2026-0001")
+        await repository.list_certificate_versions("CNS-2026-0001")
 
         assert session.statement is not None
         statement = cast(ClauseElement, session.statement)

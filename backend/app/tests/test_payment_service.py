@@ -83,13 +83,13 @@ async def _service(
         await connection.run_sync(Base.metadata.create_all)
     user = User(
         id=UUID("60fe624c-6706-4f3a-97fb-0d12f1a33db2"),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         password_hash="not-used",
         status=UserStatus.ACTIVE,
     )
     admin = User(
         id=ADMIN_ID,
-        email="admin@tmigroup.vn",
+        email="admin@cnsgroup.vn",
         password_hash="not-used",
         status=UserStatus.ACTIVE,
     )
@@ -187,7 +187,7 @@ def test_admin_issues_exact_payment_amount_and_notifies_owner() -> None:
         operator = AuthPrincipal(
             user_id=uuid4(),
             session_id=uuid4(),
-            email="finance@tmigroup.vn",
+            email="finance@cnsgroup.vn",
             roles=("VIEWER",),
             permissions=("payments.issue",),
         )
@@ -246,7 +246,7 @@ def test_admin_can_waive_payment_and_make_dossier_ready_for_signing() -> None:
         admin = AuthPrincipal(
             user_id=ADMIN_ID,
             session_id=uuid4(),
-            email="admin@tmigroup.vn",
+            email="admin@cnsgroup.vn",
             roles=("SUPER_ADMIN",),
             permissions=("payments.issue",),
         )

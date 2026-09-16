@@ -14,7 +14,7 @@ const addresses = {
 };
 
 async function fixture() {
-  const root = await mkdtemp(resolve(tmpdir(), "tmi-polygon-plan-"));
+  const root = await mkdtemp(resolve(tmpdir(), "cns-polygon-plan-"));
   const releaseDirectory = resolve(root, "artifacts/releases/amoy");
   await mkdir(releaseDirectory, { recursive: true });
   await writeFile(

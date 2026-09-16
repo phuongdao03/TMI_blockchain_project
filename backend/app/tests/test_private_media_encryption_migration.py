@@ -29,7 +29,7 @@ def test_private_media_encryption_metadata_migration_is_reversible(
     with sqlite3.connect(database_path) as connection:
         connection.execute(
             "INSERT INTO users (id, email, password_hash, status) VALUES (?, ?, ?, ?)",
-            (user_id, "legacy-encryption@tmigroup.vn", "unused", "ACTIVE"),
+            (user_id, "legacy-encryption@cnsgroup.vn", "unused", "ACTIVE"),
         )
         for media_id, public_id in (
             (private_media_id, "legacy/dossier-evidence/private-proof"),

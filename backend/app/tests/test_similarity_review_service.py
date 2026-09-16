@@ -47,19 +47,19 @@ def test_similarity_case_assignment_resolution_authorization_and_audit() -> None
 
         admin = User(
             id=uuid4(),
-            email="admin@tmigroup.vn",
+            email="admin@cnsgroup.vn",
             password_hash="unused",
             status=UserStatus.ACTIVE,
         )
         reviewer = User(
             id=uuid4(),
-            email="reviewer@tmigroup.vn",
+            email="reviewer@cnsgroup.vn",
             password_hash="unused",
             status=UserStatus.ACTIVE,
         )
         outsider = User(
             id=uuid4(),
-            email="outsider@tmigroup.vn",
+            email="outsider@cnsgroup.vn",
             password_hash="unused",
             status=UserStatus.ACTIVE,
         )

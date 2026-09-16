@@ -46,9 +46,9 @@ class StubOrganizationService:
     def _organization(self) -> OrganizationView:
         return OrganizationView(
             id=self.organization_id,
-            code="TMI-LAB",
-            legal_name="Công ty TMI Lab",
-            display_name="TMI Lab",
+            code="CNS-LAB",
+            legal_name="Công ty CNS Lab",
+            display_name="CNS Lab",
             tax_code="0312345678",
             status=OrganizationStatus.ACTIVE,
             owner_user_id=self.principal.user_id,
@@ -109,7 +109,7 @@ class StubOrganizationService:
             items=(
                 MemberView(
                     user_id=self.member_id,
-                    email="member@tmigroup.vn",
+                    email="member@cnsgroup.vn",
                     role_code=MembershipRole.MEMBER,
                     status=MembershipStatus.ACTIVE,
                     joined_at=datetime(2026, 7, 30, 8, 0, tzinfo=UTC),
@@ -166,7 +166,7 @@ def test_organization_crud_contract() -> None:
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         roles=("APPLICANT",),
     )
     service = StubOrganizationService(principal)
@@ -179,9 +179,9 @@ def test_organization_crud_contract() -> None:
             service,
             principal,
             json={
-                "code": "TMI-LAB",
-                "legalName": "Công ty TMI Lab",
-                "displayName": "TMI Lab",
+                "code": "CNS-LAB",
+                "legalName": "Công ty CNS Lab",
+                "displayName": "CNS Lab",
                 "taxCode": "0312345678",
             },
         )
@@ -196,7 +196,7 @@ def test_organization_crud_contract() -> None:
             f"{base}/{service.organization_id}",
             service,
             principal,
-            json={"displayName": "TMI Lab mới"},
+            json={"displayName": "CNS Lab mới"},
         )
     )
     archived = asyncio.run(
@@ -223,7 +223,7 @@ def test_membership_contract_and_forbidden_response() -> None:
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         roles=("APPLICANT",),
     )
     service = StubOrganizationService(principal)
@@ -236,7 +236,7 @@ def test_membership_contract_and_forbidden_response() -> None:
             service,
             principal,
             json={
-                "email": "member@tmigroup.vn",
+                "email": "member@cnsgroup.vn",
                 "roleCode": "MEMBER",
                 "status": "INVITED",
             },
@@ -258,7 +258,7 @@ def test_membership_contract_and_forbidden_response() -> None:
             service,
             principal,
             json={
-                "email": "member@tmigroup.vn",
+                "email": "member@cnsgroup.vn",
                 "roleCode": "OWNER",
                 "status": "ACTIVE",
             },

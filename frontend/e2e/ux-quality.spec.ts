@@ -17,7 +17,7 @@ const forbiddenApplicantTerms =
 async function authenticateApplicant(context: BrowserContext) {
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-access",
       domain: "127.0.0.1",
       path: "/",
@@ -25,14 +25,14 @@ async function authenticateApplicant(context: BrowserContext) {
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",
       sameSite: "Lax",
     },
     {
-      name: "tmi_e2e_persona",
+      name: "cns_e2e_persona",
       value: "applicant",
       domain: "127.0.0.1",
       path: "/",

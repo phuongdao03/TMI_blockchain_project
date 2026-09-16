@@ -7,7 +7,7 @@ test.beforeEach(async ({ context, page, request }) => {
   await request.post("http://127.0.0.1:4010/api/e2e/reset-blockchain-signing");
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-super-admin-access",
       domain: "127.0.0.1",
       path: "/",
@@ -15,7 +15,7 @@ test.beforeEach(async ({ context, page, request }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",

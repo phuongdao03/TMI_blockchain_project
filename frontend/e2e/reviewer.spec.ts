@@ -8,7 +8,7 @@ test.beforeEach(async ({ context, request }) => {
   await request.post(`${mockApiUrl}/api/e2e/reset-review`);
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-access",
       domain: "127.0.0.1",
       path: "/",
@@ -16,7 +16,7 @@ test.beforeEach(async ({ context, request }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_refresh",
+      name: "cns_refresh",
       value: "e2e-refresh",
       domain: "127.0.0.1",
       path: "/",
@@ -24,7 +24,7 @@ test.beforeEach(async ({ context, request }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",
@@ -35,7 +35,7 @@ test.beforeEach(async ({ context, request }) => {
       // The mock API uses this non-sensitive test-only marker to return the
       // MODERATOR identity. Access tokens alone intentionally default to a
       // regular applicant, which would exercise the wrong dashboard.
-      name: "tmi_e2e_persona",
+      name: "cns_e2e_persona",
       value: "reviewer",
       domain: "127.0.0.1",
       path: "/",
@@ -71,7 +71,7 @@ test("reviewer reviews each document and submits a criteria verdict", async ({
   );
   await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Hồ sơ thương hiệu TMI" }),
+    page.getByRole("heading", { level: 1, name: "Hồ sơ thương hiệu CNS" }),
   ).toBeVisible();
   await expect(page.getByText("Bằng chứng phiên bản đã khóa")).toBeVisible();
   await expect(

@@ -34,7 +34,7 @@ class StubSubmissionService:
     def _dossier(self) -> DossierView:
         return DossierView(
             id=self.dossier_id,
-            code="TMI-2026-ABCDEF123456",
+            code="CNS-2026-ABCDEF123456",
             owner_user_id=self.principal.user_id,
             organization_id=None,
             category_id=uuid4(),
@@ -138,7 +138,7 @@ def test_submission_version_and_timeline_contract() -> None:
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         roles=("APPLICANT",),
     )
     service = StubSubmissionService(principal)

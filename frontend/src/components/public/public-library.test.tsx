@@ -36,7 +36,7 @@ const work: PublicCatalogWork = {
   slug: "di-san-so",
   title: "Di sản số",
   shortDescription: "Mô tả công khai đã được biên tập an toàn.",
-  authorDisplayName: "TMI Studio",
+  authorDisplayName: "CNS Studio",
   categoryName: "Nghệ thuật số",
   categorySlug: "nghe-thuat-so",
   tags: [{ name: "Đương đại", slug: "duong-dai" }],

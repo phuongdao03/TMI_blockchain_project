@@ -16,7 +16,7 @@ export type PublicCatalogEvent =
       properties: { page: number };
     };
 
-export const PUBLIC_CATALOG_ANALYTICS_EVENT = "tmi:public-catalog";
+export const PUBLIC_CATALOG_ANALYTICS_EVENT = "cns:public-catalog";
 
 export function trackPublicCatalog(event: PublicCatalogEvent): void {
   if (typeof window === "undefined") return;

@@ -10,7 +10,7 @@ from app.main import create_application
 
 class UnavailableDatabaseProbe:
     async def check(self) -> bool:
-        raise OSError("postgresql://user:do-not-expose@private-db.example/tmi")
+        raise OSError("postgresql://user:do-not-expose@private-db.example/cns")
 
     async def close(self) -> None:
         return None

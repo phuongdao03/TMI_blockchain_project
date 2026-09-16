@@ -8,7 +8,7 @@ test("compact public shell keeps the account entry in its drawer and uses a full
 
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-access",
       domain: "127.0.0.1",
       path: "/",
@@ -16,14 +16,14 @@ test("compact public shell keeps the account entry in its drawer and uses a full
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",
       sameSite: "Lax",
     },
     {
-      name: "tmi_e2e_persona",
+      name: "cns_e2e_persona",
       value: "public",
       domain: "127.0.0.1",
       path: "/",
@@ -67,7 +67,7 @@ test("medium public shell keeps a one-tap return to the workspace", async ({
 
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-access",
       domain: "127.0.0.1",
       path: "/",
@@ -75,14 +75,14 @@ test("medium public shell keeps a one-tap return to the workspace", async ({
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",
       sameSite: "Lax",
     },
     {
-      name: "tmi_e2e_persona",
+      name: "cns_e2e_persona",
       value: "public",
       domain: "127.0.0.1",
       path: "/",

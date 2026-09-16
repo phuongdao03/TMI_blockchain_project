@@ -2,7 +2,7 @@ version: 1
 defaults:
   evaluation_interval: 60s
   labels:
-    service: tmi-platform
+    service: cns-platform
   telemetry_redaction:
     deny_fields:
       [password, token, otp, private_key, authorization, cookie, payload]

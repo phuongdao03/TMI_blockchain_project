@@ -119,7 +119,7 @@ async def _pipeline(
         await connection.run_sync(Base.metadata.create_all)
     user = User(
         id=uuid4(),
-        email=f"{uuid4().hex}@tmigroup.vn",
+        email=f"{uuid4().hex}@cnsgroup.vn",
         password_hash="unused",
         status=UserStatus.ACTIVE,
     )
@@ -447,7 +447,7 @@ def test_admin_listing_enforces_blockchain_role() -> None:
         principal = AuthPrincipal(
             user_id=uuid4(),
             session_id=uuid4(),
-            email="applicant@tmigroup.vn",
+            email="applicant@cnsgroup.vn",
             roles=("USER",),
         )
         with pytest.raises(BlockchainForbiddenError):
@@ -472,7 +472,7 @@ def test_retry_rolls_back_when_audit_cannot_be_persisted(
         principal = AuthPrincipal(
             user_id=uuid4(),
             session_id=uuid4(),
-            email="blockchain-admin@tmigroup.vn",
+            email="blockchain-admin@cnsgroup.vn",
             roles=("SUPER_ADMIN",),
         )
 

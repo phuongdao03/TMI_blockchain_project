@@ -57,7 +57,7 @@ async def _build_service() -> tuple[
     users = {
         name: User(
             id=uuid4(),
-            email=f"{name}@tmigroup.vn",
+            email=f"{name}@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -65,9 +65,9 @@ async def _build_service() -> tuple[
     }
     organization = Organization(
         id=uuid4(),
-        code="TMI-LAB",
-        legal_name="TMI Lab",
-        display_name="TMI Lab",
+        code="CNS-LAB",
+        legal_name="CNS Lab",
+        display_name="CNS Lab",
         owner_user_id=users["manager"].id,
     )
     async with session_factory() as session:
@@ -124,13 +124,13 @@ def test_owner_can_create_list_update_and_soft_delete_draft() -> None:
             principal,
             CreateDossier(
                 category_id=CATEGORY_ID,
-                title="  Bộ nhận diện TMI  ",
+                title="  Bộ nhận diện CNS  ",
                 summary="Bản mô tả quyền sở hữu.",
                 visibility=DossierVisibility.PRIVATE,
             ),
         )
-        assert created.code == "TMI-2026-17C53B2935EA"
-        assert created.title == "Bộ nhận diện TMI"
+        assert created.code == "CNS-2026-17C53B2935EA"
+        assert created.title == "Bộ nhận diện CNS"
         assert created.status is DossierStatus.DRAFT
 
         listed = await service.list_dossiers(
@@ -145,12 +145,12 @@ def test_owner_can_create_list_update_and_soft_delete_draft() -> None:
             principal,
             created.id,
             DossierChanges(
-                title="Bộ nhận diện TMI Group",
+                title="Bộ nhận diện CNS Group",
                 summary=None,
                 provided_fields=frozenset({"title", "summary"}),
             ),
         )
-        assert updated.title == "Bộ nhận diện TMI Group"
+        assert updated.title == "Bộ nhận diện CNS Group"
         assert updated.summary is None
 
         await service.delete_dossier(principal, created.id)

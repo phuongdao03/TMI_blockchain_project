@@ -32,7 +32,7 @@ def _production(**overrides: object) -> Settings:
         "payos_checksum_key": "checksum",
         "payos_return_url": "https://app.example/payments/return",
         "payos_cancel_url": "https://app.example/payments/cancel",
-        "cloudinary_cloud_name": "tmi-production",
+        "cloudinary_cloud_name": "cns-production",
         "cloudinary_api_key": "cloudinary-api-key",
         "cloudinary_api_secret": "cloudinary-api-secret",
     }

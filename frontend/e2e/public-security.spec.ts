@@ -14,7 +14,7 @@ const banned = [
 
 test("public visibility and leakage release gate", async ({ page }) => {
   const visible = await page.request.get(
-    "/api/v1/public/works/bo-nhan-dien-tmi",
+    "/api/v1/public/works/bo-nhan-dien-cns",
   );
   expect(visible.status()).toBe(200);
   expect(visible.headers()["cache-control"]).toBe("no-store");
@@ -46,7 +46,7 @@ test("public visibility and leakage release gate", async ({ page }) => {
   const sitemap = await page.request.get("/sitemaps/works/1.xml");
   expect(await sitemap.text()).not.toContain("chia-se-rieng");
 
-  await page.goto("/works/bo-nhan-dien-tmi");
+  await page.goto("/works/bo-nhan-dien-cns");
   const html = await page.locator("html").innerHTML();
   for (const field of banned) expect(html).not.toContain(field);
 });

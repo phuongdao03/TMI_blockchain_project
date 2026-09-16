@@ -38,7 +38,7 @@ def test_detection_creates_explainable_text_and_image_cases_only() -> None:
             await connection.run_sync(Base.metadata.create_all)
         owner = User(
             id=uuid4(),
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             password_hash="unused",
             status=UserStatus.ACTIVE,
         )

@@ -92,7 +92,7 @@ def test_profile_api_reads_and_patches_current_user() -> None:
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         roles=("APPLICANT",),
     )
     service = StubUserProfileService(principal)
@@ -114,7 +114,7 @@ def test_profile_api_reads_and_patches_current_user() -> None:
     )
 
     assert get_response.status_code == 200
-    assert get_response.json()["data"]["email"] == "owner@tmigroup.vn"
+    assert get_response.json()["data"]["email"] == "owner@cnsgroup.vn"
     assert patch_response.status_code == 200
     assert patch_response.json()["data"]["fullName"] == "Nguyễn Minh Anh"
     assert service.changes is not None
@@ -130,7 +130,7 @@ def test_profile_api_enforces_auth_csrf_and_field_validation() -> None:
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         roles=("APPLICANT",),
     )
     service = StubUserProfileService(principal)
@@ -174,7 +174,7 @@ def test_profile_api_normalizes_vietnamese_local_phone() -> None:
     principal = AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         roles=("APPLICANT",),
     )
     service = StubUserProfileService(principal)

@@ -45,15 +45,15 @@ class StubDossierService:
     def _view(self) -> DossierView:
         return DossierView(
             id=self.dossier_id,
-            code="TMI-2026-ABCDEF123456",
+            code="CNS-2026-ABCDEF123456",
             owner_user_id=self.principal.user_id,
             organization_id=None,
             category_id=self.category_id,
             dossier_type_id=None,
             dossier_type_version_id=None,
             form_data={},
-            title="Bộ nhận diện TMI",
-            slug="bo-nhan-dien-tmi",
+            title="Bộ nhận diện CNS",
+            slug="bo-nhan-dien-cns",
             summary="Hồ sơ quyền sở hữu.",
             status=DossierStatus.DRAFT,
             visibility=DossierVisibility.PRIVATE,
@@ -170,7 +170,7 @@ def _principal() -> AuthPrincipal:
     return AuthPrincipal(
         user_id=uuid4(),
         session_id=uuid4(),
-        email="owner@tmigroup.vn",
+        email="owner@cnsgroup.vn",
         roles=("APPLICANT",),
     )
 
@@ -188,8 +188,8 @@ def test_dossier_crud_contract_filters_and_pagination() -> None:
             principal,
             json={
                 "categoryId": str(service.category_id),
-                "title": "Bộ nhận diện TMI",
-                "slug": "bo-nhan-dien-tmi",
+                "title": "Bộ nhận diện CNS",
+                "slug": "bo-nhan-dien-cns",
                 "summary": "Hồ sơ quyền sở hữu.",
                 "visibility": "PRIVATE",
             },
@@ -215,7 +215,7 @@ def test_dossier_crud_contract_filters_and_pagination() -> None:
             f"{base}/{service.dossier_id}",
             service,
             principal,
-            json={"title": "Bộ nhận diện TMI Group", "summary": None},
+            json={"title": "Bộ nhận diện CNS Group", "summary": None},
         )
     )
     deleted = asyncio.run(
@@ -223,7 +223,7 @@ def test_dossier_crud_contract_filters_and_pagination() -> None:
     )
 
     assert created.status_code == 201
-    assert created.json()["data"]["code"] == "TMI-2026-ABCDEF123456"
+    assert created.json()["data"]["code"] == "CNS-2026-ABCDEF123456"
     assert created.json()["data"]["canEdit"] is True
     assert listed.status_code == detail.status_code == updated.status_code == 200
     assert listed.json()["meta"] == {

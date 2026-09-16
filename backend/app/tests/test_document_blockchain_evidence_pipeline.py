@@ -113,7 +113,7 @@ async def _pipeline() -> tuple[
         await connection.run_sync(Base.metadata.create_all)
     user = User(
         id=uuid4(),
-        email="document-owner@tmigroup.vn",
+        email="document-owner@cnsgroup.vn",
         password_hash="unused",
         status=UserStatus.ACTIVE,
     )

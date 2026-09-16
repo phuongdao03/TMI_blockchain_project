@@ -29,7 +29,7 @@ LIMIT 20;
 EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
 SELECT id, certificate_number, status, current_version_no
 FROM certificates
-WHERE certificate_number = 'TMI-READINESS-SENTINEL'
+WHERE certificate_number = 'CNS-READINESS-SENTINEL'
 LIMIT 1;
 
 -- readiness:audit_timeline
@@ -46,7 +46,7 @@ SELECT id, slug, title, published_at
 FROM public_works
 WHERE publication_status = 'PUBLISHED'
   AND visibility = 'PUBLIC'
-  AND search_vector @@ websearch_to_tsquery('simple', 'tmi')
+  AND search_vector @@ websearch_to_tsquery('simple', 'cns')
 ORDER BY published_at DESC, id ASC
 LIMIT 21;
 

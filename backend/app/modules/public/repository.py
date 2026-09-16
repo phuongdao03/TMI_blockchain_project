@@ -9,6 +9,7 @@ from app.modules.blockchain.models import (
     BlockchainTransaction,
     BlockchainTransactionStatus,
     Certificate,
+    CertificateStatus,
     CertificateVersion,
     CertificateVersionStatus,
 )
@@ -18,6 +19,11 @@ from app.modules.dossiers.models import (
     DossierStatus,
     DossierVersion,
     DossierVisibility,
+)
+from app.modules.public.models import (
+    PublicationStatus,
+    PublicWork,
+    PublicWorkVisibility,
 )
 from app.modules.public.verification import VerificationContext
 
@@ -178,6 +184,18 @@ class PublicRepository:
                     DossierVersion.canonical_hash,
                     DossierVersion.snapshot_json,
                     DossierVersion.version_no,
+                    select(PublicWork.slug)
+                    .where(
+                        PublicWork.dossier_id == Dossier.id,
+                        PublicWork.publication_status == PublicationStatus.PUBLISHED,
+                        PublicWork.visibility == PublicWorkVisibility.PUBLIC,
+                        PublicWork.deleted_at.is_(None),
+                        PublicWork.published_at.is_not(None),
+                        Category.is_active.is_(True),
+                        Certificate.status != CertificateStatus.REVOKED,
+                    )
+                    .limit(1)
+                    .scalar_subquery(),
                 )
                 .join(
                     DossierVersion,
@@ -197,6 +215,7 @@ class PublicRepository:
             dossier_hash,
             dossier_snapshot,
             dossier_version_no,
+            public_work_slug,
         ) = row
         asset_title, category_name, dossier_code = self._frozen_identity(
             version.metadata_json
@@ -238,6 +257,7 @@ class PublicRepository:
             ),
             recognized_subject=self._recognized_subject(metadata),
             is_current_version=(version.version_no == certificate.current_version_no),
+            public_work_slug=public_work_slug,
         )
 
     @staticmethod

@@ -5,7 +5,7 @@ import { selectWorkspaceTheme } from "./workspace-theme";
 test.beforeEach(async ({ context }) => {
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: "e2e-access",
       domain: "127.0.0.1",
       path: "/",
@@ -13,7 +13,7 @@ test.beforeEach(async ({ context }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_refresh",
+      name: "cns_refresh",
       value: "e2e-refresh",
       domain: "127.0.0.1",
       path: "/",
@@ -21,7 +21,7 @@ test.beforeEach(async ({ context }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",
@@ -29,7 +29,7 @@ test.beforeEach(async ({ context }) => {
       sameSite: "Lax",
     },
     {
-      name: "tmi_e2e_persona",
+      name: "cns_e2e_persona",
       value: "applicant",
       domain: "127.0.0.1",
       path: "/",

@@ -192,7 +192,7 @@ def test_inspection_activates_only_clean_media_and_uses_server_hash() -> None:
             await connection.run_sync(Base.metadata.create_all)
         owner = User(
             id=uuid4(),
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -271,7 +271,7 @@ def test_inspection_encrypts_private_original_before_activation() -> None:
             await connection.run_sync(Base.metadata.create_all)
         owner = User(
             id=uuid4(),
-            email="private-owner@tmigroup.vn",
+            email="private-owner@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -350,7 +350,7 @@ def test_private_encryption_retry_reuses_ciphertext_after_delete_failure(
             await connection.run_sync(Base.metadata.create_all)
         owner = User(
             id=uuid4(),
-            email="retry-private@tmigroup.vn",
+            email="retry-private@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -426,7 +426,7 @@ def test_inspection_rolls_back_activation_when_audit_fails(
             await connection.run_sync(Base.metadata.create_all)
         owner = User(
             id=uuid4(),
-            email="audit-rollback@tmigroup.vn",
+            email="audit-rollback@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -483,7 +483,7 @@ def test_reverification_rejects_changed_bytes_without_overwriting_hash() -> None
             await connection.run_sync(Base.metadata.create_all)
         owner = User(
             id=uuid4(),
-            email="replacement@tmigroup.vn",
+            email="replacement@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -544,7 +544,7 @@ def test_malware_is_permanently_rejected_and_scanner_outage_stays_quarantined() 
             await connection.run_sync(Base.metadata.create_all)
         owner = User(
             id=uuid4(),
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )

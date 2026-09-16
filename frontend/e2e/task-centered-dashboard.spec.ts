@@ -17,7 +17,7 @@ async function authenticate(
 ) {
   await context.addCookies([
     {
-      name: "tmi_access",
+      name: "cns_access",
       value: accessToken,
       domain: "127.0.0.1",
       path: "/",
@@ -25,7 +25,7 @@ async function authenticate(
       sameSite: "Lax",
     },
     {
-      name: "tmi_csrf",
+      name: "cns_csrf",
       value: "e2e-csrf",
       domain: "127.0.0.1",
       path: "/",
@@ -34,7 +34,7 @@ async function authenticate(
     ...(accessToken === "e2e-access"
       ? [
           {
-            name: "tmi_e2e_persona",
+            name: "cns_e2e_persona",
             value: "applicant",
             domain: "127.0.0.1",
             path: "/",

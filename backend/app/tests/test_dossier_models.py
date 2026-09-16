@@ -37,7 +37,7 @@ def test_dossier_status_defaults_to_draft_and_is_not_publicly_assignable() -> No
         session_factory, engine = await _database()
         user = User(
             id=uuid4(),
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -75,7 +75,7 @@ def test_category_and_dossier_codes_are_unique() -> None:
         session_factory, engine = await _database()
         user = User(
             id=uuid4(),
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -121,7 +121,7 @@ def test_version_number_is_unique_within_each_dossier() -> None:
         session_factory, engine = await _database()
         user = User(
             id=uuid4(),
-            email="owner@tmigroup.vn",
+            email="owner@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )

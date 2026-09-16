@@ -34,7 +34,7 @@ describe("LogoutButton", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     Object.values(mocks).forEach((mock) => mock.mockReset());
-    document.cookie = "tmi_csrf=e2e-csrf; Path=/";
+    document.cookie = "cns_csrf=e2e-csrf; Path=/";
   });
 
   it("revokes the backend session, signs out Firebase and returns to login", async () => {

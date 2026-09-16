@@ -53,7 +53,7 @@ beforeEach(() => {
     data: [
       {
         id: "staff-1",
-        email: "reviewer@tmigroup.vn",
+        email: "reviewer@cnsgroup.vn",
         role: "MODERATOR",
         status: "ACTIVE",
         createdAt: "2026-08-01T00:00:00Z",
@@ -61,7 +61,7 @@ beforeEach(() => {
       },
       {
         id: "staff-2",
-        email: "finance@tmigroup.vn",
+        email: "finance@cnsgroup.vn",
         role: "MODERATOR",
         status: "SUSPENDED",
         createdAt: "2026-08-02T00:00:00Z",
@@ -101,7 +101,7 @@ beforeEach(() => {
   });
   vi.mocked(staffAccountsApi.update).mockResolvedValue({
     id: "staff-1",
-    email: "reviewer@tmigroup.vn",
+    email: "reviewer@cnsgroup.vn",
     role: "MODERATOR",
     status: "SUSPENDED",
     createdAt: "2026-08-01T00:00:00Z",
@@ -109,7 +109,7 @@ beforeEach(() => {
   });
   vi.mocked(staffInvitationsApi.create).mockResolvedValue({
     id: "invite-1",
-    email: "new.staff@tmigroup.vn",
+    email: "new.staff@cnsgroup.vn",
     role: "MODERATOR",
     organizationId: null,
     status: "PENDING",
@@ -134,7 +134,7 @@ describe("StaffAccountWorkspace", () => {
   it("shows a clear summary, account table and filters", async () => {
     render(<StaffAccountWorkspace />, { wrapper });
 
-    expect(await screen.findByText("reviewer@tmigroup.vn")).toBeDefined();
+    expect(await screen.findByText("reviewer@cnsgroup.vn")).toBeDefined();
     expect(screen.getAllByText("Đang hoạt động").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Đã khóa").length).toBeGreaterThan(0);
     expect(screen.getByText("2 tài khoản")).toBeDefined();
@@ -149,10 +149,10 @@ describe("StaffAccountWorkspace", () => {
   it("requires confirmation before suspending an account", async () => {
     const user = userEvent.setup();
     render(<StaffAccountWorkspace />, { wrapper });
-    await screen.findByText("reviewer@tmigroup.vn");
+    await screen.findByText("reviewer@cnsgroup.vn");
 
     await user.click(
-      screen.getByRole("button", { name: "Khóa reviewer@tmigroup.vn" }),
+      screen.getByRole("button", { name: "Khóa reviewer@cnsgroup.vn" }),
     );
     expect(staffAccountsApi.update).not.toHaveBeenCalled();
     expect(
@@ -170,7 +170,7 @@ describe("StaffAccountWorkspace", () => {
   it("lets the administrator select an existing account and confirm the invitation", async () => {
     const user = userEvent.setup();
     render(<StaffAccountWorkspace />, { wrapper });
-    await screen.findByText("reviewer@tmigroup.vn");
+    await screen.findByText("reviewer@cnsgroup.vn");
 
     await user.click(
       screen.getByRole("button", { name: "Chọn làm người kiểm duyệt" }),

@@ -34,13 +34,13 @@ def test_approved_dossier_creates_one_locked_fee_obligation() -> None:
 
         owner = User(
             id=uuid4(),
-            email="billing-owner@tmigroup.vn",
+            email="billing-owner@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
         actor = User(
             id=ACTOR_ID,
-            email="approver@tmigroup.vn",
+            email="approver@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
@@ -133,13 +133,13 @@ def test_missing_price_does_not_move_the_approved_dossier() -> None:
 
         owner = User(
             id=uuid4(),
-            email="no-price@tmigroup.vn",
+            email="no-price@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )
         actor = User(
             id=ACTOR_ID,
-            email="approver@tmigroup.vn",
+            email="approver@cnsgroup.vn",
             password_hash="not-used",
             status=UserStatus.ACTIVE,
         )

@@ -113,7 +113,7 @@ def test_real_money_test_gate_is_bounded_and_never_enabled_in_production(
                 "media_private_encryption_keys": {
                     "document-v1": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ="
                 },
-                "cloudinary_cloud_name": "tmi-production",
+                "cloudinary_cloud_name": "cns-production",
                 "cloudinary_api_key": "cloudinary-api-key",
                 "cloudinary_api_secret": "cloudinary-api-secret",
                 "blockchain_network": "polygon",
