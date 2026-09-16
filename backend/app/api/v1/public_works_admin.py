@@ -439,6 +439,7 @@ async def configure_public_work_video(
         relation_id,
         PublicVideoPresentationInput(
             poster_media_asset_id=payload.poster_media_asset_id,
+            poster_time_ms=payload.poster_time_ms,
             controls_preset=payload.controls_preset,
             fit_mode=payload.fit_mode,
             quality_profile=payload.quality_profile,

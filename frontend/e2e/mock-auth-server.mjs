@@ -1037,7 +1037,7 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/public/verify/certificate/TMI-2026-7EAEC2D2C99A/qr"
+    path === "/api/v1/verify/certificate/TMI-2026-7EAEC2D2C99A/qr"
   ) {
     const png = Buffer.from(
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",

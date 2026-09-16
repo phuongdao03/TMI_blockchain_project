@@ -142,6 +142,10 @@ describe("layout shells", () => {
     ).toBeNull();
 
     const publicFooter = screen.getByRole("contentinfo");
+    expect(publicFooter.querySelector(".public-footer__inner")).not.toBeNull();
+    expect(
+      publicFooter.querySelector(".brand-mark--public-seal"),
+    ).not.toBeNull();
     expect(
       within(publicFooter).getByRole("link", {
         name: "Trung tâm Đề cử Tinh Hoa Việt",

@@ -182,6 +182,9 @@ class PublicWork(UtcTimestampMixin, Base):
         default=1,
         server_default="1",
     )
+    show_certificate: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="1"
+    )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     search_organization_text: Mapped[str] = mapped_column(
         Text,
@@ -278,6 +281,11 @@ class PublicWorkMedia(UtcTimestampMixin, Base):
         CheckConstraint("sort_order >= 0", name="sort_order_non_negative"),
         CheckConstraint("attempt_count >= 0", name="attempt_count_non_negative"),
         CheckConstraint(
+            "poster_time_ms IS NULL OR "
+            "(poster_time_ms >= 0 AND poster_time_ms <= 86400000)",
+            name="poster_time_supported",
+        ),
+        CheckConstraint(
             "video_max_width IN (640, 960, 1280, 1920)",
             name="video_max_width_supported",
         ),
@@ -316,6 +324,7 @@ class PublicWorkMedia(UtcTimestampMixin, Base):
         Uuid,
         ForeignKey("media_assets.id", ondelete="RESTRICT"),
     )
+    poster_time_ms: Mapped[int | None] = mapped_column(Integer)
     video_controls_preset: Mapped[VideoControlsPreset] = mapped_column(
         _enum(VideoControlsPreset, "public_video_controls_preset"),
         nullable=False,

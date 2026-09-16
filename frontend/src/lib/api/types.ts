@@ -1010,6 +1010,8 @@ export interface AdminCertificate {
   publicationStatus: PublicationStatus | null;
   visibility: PublicWorkVisibility | null;
   isDiscoverable: boolean;
+  showCertificate?: boolean;
+  publicWorkVersion?: number | null;
 }
 
 export interface CertificateDetail {
@@ -1236,6 +1238,7 @@ export interface PublicWorkMedia {
   attemptCount: number;
   failureCode: string | null;
   posterMediaAssetId: string | null;
+  posterTimeMs?: number | null;
   videoControlsPreset: VideoControlsPreset;
   videoFitMode: VideoFitMode;
   videoQualityProfile: VideoQualityProfile;
@@ -1247,6 +1250,7 @@ export interface PublicWorkMedia {
 
 export interface PublicVideoPresentationInput {
   posterMediaAssetId: string | null;
+  posterTimeMs?: number | null;
   controlsPreset: VideoControlsPreset;
   fitMode: VideoFitMode;
   qualityProfile: VideoQualityProfile;
@@ -1301,6 +1305,8 @@ export interface PublicWorkPreview {
   categoryName: string;
   media: PublicWorkPreviewMedia[];
   canPublish: boolean;
+  certificate?: PublicWorkDetail["certificate"];
+  proof?: PublicWorkDetail["proof"];
 }
 
 export type PublicWorkSort = "newest" | "featured" | "popular";

@@ -2228,6 +2228,63 @@ html[data-theme="dark"] .public-home {
   color: var(--theme-muted);
 }
 
+/* Certificate actions keep their own contrast in both page themes. */
+.digital-certificate__header {
+  container-type: inline-size;
+}
+
+.digital-certificate__organization {
+  grid-column: 1 / -1;
+  min-width: 0;
+  color: var(--thv-red-dark);
+  font-size: clamp(0.4375rem, 2.35cqi, 0.875rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.digital-certificate .digital-certificate__verify {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid var(--thv-red-dark);
+  border-radius: var(--radius-control);
+  background: var(--thv-red-dark);
+  color: var(--thv-white);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.5;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.digital-certificate .digital-certificate__verify:hover {
+  border-color: var(--thv-red-deep);
+  background: var(--thv-red-deep);
+  color: var(--thv-white);
+}
+
+.digital-certificate .digital-certificate__verify:focus-visible {
+  outline: 3px solid var(--thv-red-dark);
+  outline-offset: 3px;
+}
+
+.digital-certificate .digital-certificate__verify svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  color: inherit;
+}
+
 .verification-panel .border-white\/10,
 .verification-panel .border-white\/15 {
   border-color: var(--theme-border);
@@ -6124,14 +6181,33 @@ html[data-theme="dark"] .public-library-page {
 }
 
 .public-shell .public-footer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 1.5rem 3rem;
+  display: block;
   padding: 2.25rem clamp(1rem, 4vw, 3.75rem);
   border-color: rgb(246 197 21 / 25%);
   background: var(--thv-red-deep);
   color: var(--thv-white);
+}
+
+.public-footer__inner {
+  display: grid;
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  align-items: end;
+  gap: 1.5rem 3rem;
+}
+
+.public-footer__identity {
+  min-width: 0;
+}
+
+.public-footer .brand-mark__public-lockup {
+  width: min(100%, 20rem);
+}
+
+.public-footer .brand-mark__public-wordmark-frame {
+  min-width: 0;
 }
 
 .public-shell .public-footer__brand {
@@ -6172,13 +6248,16 @@ html[data-theme="dark"] .public-library-page {
 .public-shell .public-footer--legal nav {
   grid-template-columns: unset;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem 1.5rem;
 }
 
 .public-shell .public-footer--legal nav a {
-  min-height: auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   color: rgb(255 255 255 / 76%);
 }
 
@@ -6341,7 +6420,7 @@ html[data-theme="dark"] .home-featured .text-primary-800 {
 }
 
 @media (max-width: 48rem) {
-  .public-shell .public-footer {
+  .public-footer__inner {
     grid-template-columns: 1fr;
     align-items: start;
   }

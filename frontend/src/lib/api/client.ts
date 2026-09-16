@@ -1024,6 +1024,15 @@ export const certificateApi = {
 };
 
 export const adminCertificateApi = {
+  configureListing(
+    id: string,
+    input: { expectedWorkVersion: number; showCertificate: boolean },
+  ) {
+    return request<{ showCertificate: boolean; publicWorkVersion: number }>(
+      `/admin/certificates/${encodeURIComponent(id)}/listing`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
   list(
     filters: {
       page?: number;

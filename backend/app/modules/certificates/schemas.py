@@ -60,6 +60,18 @@ class AdminCertificateData(CertificateSchema):
     publication_status: PublicationStatus | None
     visibility: PublicWorkVisibility | None
     is_discoverable: bool
+    show_certificate: bool = True
+    public_work_version: int | None = None
+
+
+class CertificateListingRequest(CertificateSchema):
+    expected_work_version: int = Field(ge=1)
+    show_certificate: bool
+
+
+class CertificateListingData(CertificateSchema):
+    show_certificate: bool
+    public_work_version: int
 
 
 class CertificateVersionData(CertificateSchema):

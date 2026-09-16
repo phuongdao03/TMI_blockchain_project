@@ -46,6 +46,8 @@ class AdminCertificateView:
     publication_status: PublicationStatus | None
     visibility: PublicWorkVisibility | None
     is_discoverable: bool
+    show_certificate: bool = True
+    public_work_version: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

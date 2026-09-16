@@ -36,7 +36,9 @@ export function AdaptiveVideo({
       return () => clearTimeout(fallbackTimer);
     }
     const observer = new IntersectionObserver(
-      ([entry]) => setNearViewport(entry?.isIntersecting ?? false),
+      ([entry]) => {
+        if (entry?.isIntersecting) setNearViewport(true);
+      },
       { rootMargin: "240px" },
     );
     observer.observe(video);
@@ -102,7 +104,7 @@ export function AdaptiveVideo({
       muted={muted}
       playsInline
       poster={poster}
-      preload="none"
+      preload={nearViewport ? "metadata" : "none"}
       ref={videoRef}
     >
       <track kind="captions" />

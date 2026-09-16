@@ -2,6 +2,7 @@
 
 import { ExternalLink, Share2, ShieldCheck } from "lucide-react";
 import Image from "next/image";
+import { useState } from "react";
 
 import type { Verification } from "@/lib/api/types";
 
@@ -14,6 +15,7 @@ function date(value: string | null): string {
 }
 
 export function DigitalCertificate({ data }: { data: Verification }) {
+  const [failedQr, setFailedQr] = useState<string | null>(null);
   if (!data.certificateNumber) return null;
   const verifyPath = `/verify/${encodeURIComponent(data.certificateNumber)}`;
   const publicRecordPath =
@@ -43,7 +45,10 @@ export function DigitalCertificate({ data }: { data: Verification }) {
       <div className="h-2 bg-[#82141d] sm:h-3" />
 
       <div className="p-5 sm:p-8 lg:p-12">
-        <header className="grid gap-5 border-b border-[#d8c798] pb-6 sm:grid-cols-[auto_1fr] sm:items-center lg:grid-cols-[8rem_1fr_auto]">
+        <header className="digital-certificate__header grid gap-5 border-b border-[#d8c798] pb-6 sm:grid-cols-[auto_1fr] sm:items-center lg:grid-cols-[8rem_1fr_auto]">
+          <p className="digital-certificate__organization">
+            Tổ chức Đề cử và Xác lập Tinh Hoa Việt
+          </p>
           <Image
             alt="Logo Tinh Hoa Việt trên chứng thư"
             className="mx-auto size-24 object-contain drop-shadow-[0_8px_14px_rgba(100,18,18,.2)] sm:mx-0 lg:size-28"
@@ -53,9 +58,6 @@ export function DigitalCertificate({ data }: { data: Verification }) {
             width={224}
           />
           <div className="text-center sm:text-left">
-            <p className="text-[0.68rem] font-black tracking-[0.2em] text-[#82141d] uppercase sm:text-xs">
-              Tổ chức Đề cử và Xác lập Tinh Hoa Việt
-            </p>
             <h2 className="mt-2 text-balance font-serif text-3xl leading-none font-black tracking-[-0.035em] text-[#2b1714] sm:text-4xl lg:text-5xl">
               Chứng thư xác lập tài sản số
             </h2>
@@ -111,14 +113,24 @@ export function DigitalCertificate({ data }: { data: Verification }) {
 
           <section className="mx-auto w-full max-w-44 text-center">
             <div className="border border-[#c9ad60] bg-white p-2 shadow-[0_8px_24px_rgba(65,42,20,.12)]">
-              <Image
-                alt={`Mã QR kiểm tra chứng thư ${data.certificateNumber}`}
-                className="aspect-square size-full object-contain"
-                height={320}
-                src={`/api/v1/public/verify/certificate/${encodeURIComponent(data.certificateNumber)}/qr`}
-                unoptimized
-                width={320}
-              />
+              {failedQr !== data.certificateNumber ? (
+                <Image
+                  alt={`Mã QR kiểm tra chứng thư ${data.certificateNumber}`}
+                  className="aspect-square size-full object-contain"
+                  height={320}
+                  src={`/api/v1/verify/certificate/${encodeURIComponent(data.certificateNumber)}/qr`}
+                  onError={() => setFailedQr(data.certificateNumber)}
+                  unoptimized
+                  width={320}
+                />
+              ) : (
+                <a
+                  className="flex aspect-square items-center justify-center p-3 text-sm font-bold text-[#82141d]"
+                  href={verifyPath}
+                >
+                  Mở trang kiểm tra chứng thư
+                </a>
+              )}
             </div>
             <p className="mt-3 text-xs leading-5 font-bold text-[#503d32]">
               Quét mã để mở trang kiểm tra công khai
@@ -150,7 +162,7 @@ export function DigitalCertificate({ data }: { data: Verification }) {
               <Share2 className="size-4" /> Chia sẻ
             </button>
             <a
-              className="inline-flex min-h-11 items-center justify-center gap-2 bg-[#82141d] px-4 text-sm font-bold text-white transition hover:bg-[#641018] active:translate-y-px"
+              className="digital-certificate__verify"
               href={publicRecordPath}
               rel="noopener noreferrer"
               target="_blank"

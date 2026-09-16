@@ -606,7 +606,8 @@ class CertificateService:
             public_work
             and public_work.publication_status is PublicationStatus.PUBLISHED
             and public_work.visibility is PublicWorkVisibility.PUBLIC
-            and certificate.status is not CertificateStatus.REVOKED
+            and public_work.show_certificate
+            and certificate.status is CertificateStatus.ACTIVE
         )
         return AdminCertificateView(
             certificate=CertificateService._view(base),
@@ -615,6 +616,8 @@ class CertificateService:
             publication_status=public_work.publication_status if public_work else None,
             visibility=public_work.visibility if public_work else None,
             is_discoverable=discoverable,
+            show_certificate=public_work.show_certificate if public_work else False,
+            public_work_version=public_work.version if public_work else None,
         )
 
     @staticmethod

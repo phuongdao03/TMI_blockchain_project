@@ -1,7 +1,9 @@
 import json
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,10 +13,15 @@ from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequiremen
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.blockchain.models import CertificateStatus
 from app.modules.public.backfill import RESERVED_SLUGS, SLUG_PATTERN
 from app.modules.public.catalog_repository import (
     PublicWorkPublicationContext,
     PublicWorkRepository,
+)
+from app.modules.public.detail_service import (
+    PublicCertificateSummary,
+    PublicProofSummary,
 )
 from app.modules.public.errors import (
     PublicWorkForbiddenError,
@@ -101,6 +108,8 @@ class PublicWorkPreviewView:
     category_name: str
     media: tuple[PublicMediaView, ...]
     can_publish: bool
+    certificate: PublicCertificateSummary | None = None
+    proof: PublicProofSummary | None = None
 
 
 def _source_fields(
@@ -300,6 +309,18 @@ class PublicWorkEditorService:
     ) -> PublicWorkPreviewView:
         editor = await self.get(principal, work_id)
         media = await self._media_query.list_public(work_id)
+        async with self._session.begin():
+            row = await self._repository.get_public_work_detail(work_id)
+        certificate = row.certificate if row and row.work.show_certificate else None
+        if certificate is not None and (
+            certificate.status is not CertificateStatus.ACTIVE
+            or (
+                certificate.expires_at is not None
+                and certificate.expires_at.replace(tzinfo=UTC) <= datetime.now(UTC)
+            )
+        ):
+            certificate = None
+        transaction = row.transaction if row else None
         return PublicWorkPreviewView(
             slug=editor.work.slug,
             title=editor.work.title,
@@ -309,7 +330,75 @@ class PublicWorkEditorService:
             category_name=editor.category_name,
             media=media,
             can_publish=all(item.passed for item in editor.checklist),
+            certificate=(
+                PublicCertificateSummary(
+                    certificate.certificate_number,
+                    certificate.status,
+                    certificate.issued_at,
+                    certificate.expires_at,
+                )
+                if certificate
+                else None
+            ),
+            proof=(
+                PublicProofSummary(
+                    transaction.network,
+                    transaction.tx_hash,
+                    transaction.status,
+                    transaction.confirmations,
+                    transaction.confirmed_at,
+                )
+                if transaction
+                else None
+            ),
         )
+
+    async def configure_certificate_listing(
+        self,
+        principal: AuthPrincipal,
+        certificate_id: UUID,
+        *,
+        expected_version: int,
+        show: bool,
+        request_id: str,
+    ) -> PublicWork:
+        self._require_editor(principal)
+        async with self._session.begin():
+            work = await self._session.scalar(
+                select(PublicWork)
+                .where(
+                    PublicWork.certificate_id == certificate_id,
+                    PublicWork.deleted_at.is_(None),
+                )
+                .with_for_update()
+            )
+            if work is None:
+                raise PublicWorkNotFoundError()
+            if work.version != expected_version:
+                raise PublicWorkVersionConflictError(current_version=work.version)
+            context = await self._repository.get_publication_context(work.id)
+            certificate = context.certificate if context else None
+            if show and (
+                certificate is None
+                or certificate.status is not CertificateStatus.ACTIVE
+                or (
+                    certificate.expires_at is not None
+                    and certificate.expires_at.replace(tzinfo=UTC) <= datetime.now(UTC)
+                )
+            ):
+                raise PublicWorkMetadataValidationError(
+                    "Only an active certificate may appear with the work."
+                )
+            if not await self._repository.claim_version(work, expected_version):
+                raise PublicWorkVersionConflictError(current_version=work.version)
+            work.show_certificate = show
+            self._record_update(
+                principal,
+                work,
+                await self._repository.list_work_tag_ids(work.id),
+                request_id,
+            )
+            return work
 
     def _record_update(
         self,
@@ -328,6 +417,7 @@ class PublicWorkEditorService:
             ),
             "tag_ids": [str(tag_id) for tag_id in tag_ids],
             "version": work.version,
+            "show_certificate": work.show_certificate,
         }
         self._audit.record(
             actor_user_id=principal.user_id,

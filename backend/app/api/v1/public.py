@@ -73,7 +73,7 @@ from app.modules.public.schemas import (
     TaxonomyTagData,
     VerificationData,
 )
-from app.modules.public.share_service import QrCodePngRenderer
+from app.modules.public.share_service import QrCodePngRenderer, canonical_public_origin
 
 router = APIRouter(
     prefix="/api/v1",
@@ -95,9 +95,17 @@ async def deliver_public_work_media(
     principal: OptionalCurrentPrincipalDependency,
     service: PublicMediaDeliveryDependency,
     poster: bool = Query(default=False),
+    poster_time_ms: int | None = Query(
+        default=None, alias="posterTimeMs", ge=0, le=86_400_000
+    ),
 ) -> Response:
     return await service.deliver(
-        work_id, relation_id, principal, request.headers.get("range"), poster=poster
+        work_id,
+        relation_id,
+        principal,
+        request.headers.get("range"),
+        poster=poster,
+        poster_time_ms=poster_time_ms,
     )
 
 
@@ -616,7 +624,11 @@ async def public_certificate_qr(
     versions = await service.certificate_versions(number)
     if not versions:
         raise HTTPException(status_code=404, detail="Certificate was not found.")
-    payload = f"{str(request.base_url).rstrip('/')}/verify/{number}"
+    settings = request.app.state.settings
+    origin = canonical_public_origin(
+        settings.app_base_url, allow_local_http=settings.app_env == "local"
+    )
+    payload = f"{origin}/verify/{number}"
     return Response(
         content=QrCodePngRenderer().render(payload),
         media_type="image/png",

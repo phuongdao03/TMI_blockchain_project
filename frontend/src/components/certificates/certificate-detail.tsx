@@ -243,7 +243,10 @@ export function CertificateDetail({ id }: { id: string }) {
         </section>
 
         <div className="space-y-6">
-          <section className="rounded-3xl border border-neutral-200 bg-white p-6">
+          <section
+            id="certificate-update"
+            className="scroll-mt-24 rounded-3xl border border-neutral-200 bg-white p-6"
+          >
             <h2 className="flex items-center gap-2 text-lg font-bold">
               <RefreshCw className="size-5 text-primary-700" /> Cập nhật chứng
               thư

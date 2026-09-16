@@ -1,6 +1,7 @@
 """Render a legacy retained video frame without creating a provider copy."""
 
 import asyncio
+import math
 import subprocess
 from collections import OrderedDict
 from pathlib import Path
@@ -34,7 +35,9 @@ def retain_poster(digest: str | None, content: bytes) -> None:
         _posters.popitem(last=False)
 
 
-def _extract(content: bytes) -> bytes:
+def _extract(content: bytes, seconds: float = 0) -> bytes:
+    if not math.isfinite(seconds) or not 0 <= seconds <= 86400:
+        raise ValueError("Invalid poster time")
     # A seekable input also supports MP4s whose metadata follows the media data.
     # The directory is private and removed on success, failure and timeout.
     with TemporaryDirectory(prefix="tmi-poster-") as directory:
@@ -54,6 +57,8 @@ def _extract(content: bytes) -> bytes:
                 "file,pipe",
                 "-format_whitelist",
                 "mov,matroska,webm,avi",
+                "-ss",
+                str(seconds),
                 "-i",
                 str(source),
                 "-map",
@@ -86,10 +91,10 @@ def _extract(content: bytes) -> bytes:
         return result.stdout
 
 
-async def extract_video_poster(content: bytes) -> bytes:
+async def extract_video_poster(content: bytes, seconds: float = 0) -> bytes:
     async with _poster_slots:
         try:
-            task = asyncio.create_task(asyncio.to_thread(_extract, content))
+            task = asyncio.create_task(asyncio.to_thread(_extract, content, seconds))
             try:
                 return await asyncio.shield(task)
             except asyncio.CancelledError:

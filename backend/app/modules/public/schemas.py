@@ -259,6 +259,8 @@ class PublicWorkPreviewData(PublicSchema):
     category_name: str
     media: list["PublicMediaData"]
     can_publish: bool
+    certificate: "PublicCertificateSummaryData | None" = None
+    proof: "PublicProofSummaryData | None" = None
 
 
 class TaxonomyCategoryRequest(PublicSchema):
@@ -312,6 +314,7 @@ class PublicMediaOrderRequest(PublicSchema):
 
 class PublicVideoPresentationRequest(PublicSchema):
     poster_media_asset_id: UUID | None = None
+    poster_time_ms: int | None = Field(default=None, ge=0, le=86_400_000)
     controls_preset: VideoControlsPreset = VideoControlsPreset.FULL
     fit_mode: VideoFitMode = VideoFitMode.CONTAIN
     quality_profile: VideoQualityProfile = VideoQualityProfile.BALANCED
@@ -336,6 +339,7 @@ class PublicMediaAdminData(PublicSchema):
     attempt_count: int
     failure_code: str | None
     poster_media_asset_id: UUID | None
+    poster_time_ms: int | None = None
     video_controls_preset: VideoControlsPreset
     video_fit_mode: VideoFitMode
     video_quality_profile: VideoQualityProfile

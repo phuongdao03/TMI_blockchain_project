@@ -39,6 +39,11 @@ describe("VerificationPanel", () => {
     renderPanel();
 
     await screen.findByText(/Chứng thư hợp lệ/);
+    expect(
+      screen
+        .getByAltText("Mã QR kiểm tra chứng thư TMI-2026-0001")
+        .getAttribute("src"),
+    ).toMatch(/\/api\/v1\/verify\/certificate\/TMI-2026-0001\/qr$/);
     expect(screen.queryByText("Đối chiếu tài liệu")).toBeNull();
     expect(screen.queryByLabelText("Chọn tài liệu để đối chiếu")).toBeNull();
   });

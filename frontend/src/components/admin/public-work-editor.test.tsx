@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -146,12 +146,68 @@ beforeEach(() => {
     categoryName: work.categoryName,
     media: [],
     canPublish: true,
+    certificate: {
+      certificateNumber: "TMI-2026-0001",
+      status: "ACTIVE",
+      issuedAt: "2026-09-01T00:00:00Z",
+      expiresAt: null,
+    },
   });
 });
 
 afterEach(() => vi.clearAllMocks());
 
 describe("PublicWorkEditor", () => {
+  it("preserves an unsaved public title when work details are refetched", async () => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={client}>
+        <PublicWorkEditor initialSelectedId={work.id} />
+      </QueryClientProvider>,
+    );
+    const title = await screen.findByLabelText("Tiêu đề công khai");
+    await waitFor(() =>
+      expect((title as HTMLInputElement).value).toBe(work.title),
+    );
+    await user.clear(title);
+    await user.type(title, "Tiêu đề công khai đang chỉnh sửa");
+    vi.mocked(publicWorkAdminApi.get).mockResolvedValue({
+      ...work,
+      version: 3,
+    });
+
+    await act(async () => {
+      await client.invalidateQueries({
+        queryKey: ["admin", "public-work", work.id],
+      });
+    });
+    await waitFor(() => {
+      expect(
+        client.getQueryData<PublicWorkEditorData>([
+          "admin",
+          "public-work",
+          work.id,
+        ])?.version,
+      ).toBe(3);
+    });
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+
+    await waitFor(() => {
+      expect((title as HTMLInputElement).value).toBe(
+        "Tiêu đề công khai đang chỉnh sửa",
+      );
+    });
+    client.clear();
+  });
+
   it("shows the selected cover in the editor without opening page preview", async () => {
     const relation = await publicWorkAdminApi.attachMedia(
       work.id,
@@ -581,6 +637,11 @@ describe("PublicWorkEditor", () => {
 
     await user.click(screen.getByRole("button", { name: "Xem trước" }));
     expect(await screen.findByText(work.shortDescription)).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: /Xem và kiểm tra chứng thư/ })
+        .getAttribute("href"),
+    ).toBe("/verify/TMI-2026-0001");
     expect(screen.queryByText(work.dossierId)).toBeNull();
     expect(screen.getByRole("button", { name: "Xem bản mobile" })).toBeTruthy();
   });

@@ -65,3 +65,22 @@ def test_rejects_non_image_decoder_output() -> None:
     ):
         with pytest.raises(ValueError):
             _extract(b"video")
+
+
+def test_poster_can_seek_to_selected_time() -> None:
+    with patch(
+        "app.modules.public.video_poster.subprocess.run",
+        return_value=subprocess.CompletedProcess([], 0, b"\xff\xd8frame", b""),
+    ) as render:
+        assert _extract(b"video", 12.5) == b"\xff\xd8frame"
+        command = render.call_args.args[0]
+        assert float(command[command.index("-ss") + 1]) == 12.5
+        assert command.index("-ss") < command.index("-i")
+
+
+@pytest.mark.parametrize("seconds", [-1, float("nan"), float("inf"), 86401])
+def test_poster_rejects_unsafe_time(seconds: float) -> None:
+    with patch("app.modules.public.video_poster.subprocess.run") as render:
+        with pytest.raises(ValueError):
+            _extract(b"video", seconds)
+        render.assert_not_called()

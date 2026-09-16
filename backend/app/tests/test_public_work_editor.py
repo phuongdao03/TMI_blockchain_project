@@ -190,6 +190,8 @@ def test_editor_permissions_validation_version_slug_history_and_preview(
             assert editor.source_fields[-1].value == "Nguyễn Văn A"
             assert "must-not-leak" not in repr(editor)
             preview = await service.preview(admin, work_id)
+            assert preview.certificate is not None
+            assert preview.certificate.certificate_number
             serialized = repr(preview)
             assert "owner_user_id" not in serialized
             assert "private/owner" not in serialized

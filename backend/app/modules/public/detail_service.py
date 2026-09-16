@@ -101,6 +101,8 @@ class PublicWorkDetailService:
                 row.certificate.expires_at,
             )
             if row.certificate is not None
+            and row.work.show_certificate
+            and row.certificate.status is not CertificateStatus.REVOKED
             else None
         )
         transaction = row.transaction

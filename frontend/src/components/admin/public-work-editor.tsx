@@ -20,11 +20,12 @@ import {
   Trash2,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { VideoCoverPicker } from "@/components/admin/video-cover-picker";
 import { PublicWorkPresentation } from "@/components/public/public-work-detail";
 import { SelectControl } from "@/components/ui/form-controls";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -223,9 +224,15 @@ export function PublicWorkEditor({
     },
   });
   const liveValues = useWatch({ control });
+  const loadedWorkId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (detail.data) reset(defaults(detail.data));
+    if (detail.data) {
+      reset(defaults(detail.data), {
+        keepDirtyValues: loadedWorkId.current === detail.data.id,
+      });
+      loadedWorkId.current = detail.data.id;
+    }
   }, [detail.data, reset]);
 
   useEffect(() => {
@@ -506,6 +513,20 @@ export function PublicWorkEditor({
                 onSubmit={handleSubmit((values) => save.mutate(values))}
               >
                 <div className="space-y-5">
+                  <EditorField
+                    error={errors.title?.message}
+                    label="Tiêu đề công khai"
+                  >
+                    <input
+                      aria-label="Tiêu đề công khai"
+                      className={fieldClass}
+                      {...register("title")}
+                    />
+                    <p className="mt-2 text-sm text-neutral-600">
+                      Bạn có thể sửa tiêu đề hiển thị ở đây. Tiêu đề trong hồ sơ
+                      đã ký vẫn được giữ nguyên.
+                    </p>
+                  </EditorField>
                   <SourceFieldsPanel
                     fields={detail.data.sourceFields}
                     onDescription={(value) =>
@@ -557,12 +578,6 @@ export function PublicWorkEditor({
                     sourceLoading={mediaCandidates.isPending || media.isPending}
                     workId={selectedId}
                   />
-                  <EditorField
-                    error={errors.title?.message}
-                    label="Tiêu đề công khai"
-                  >
-                    <input className={fieldClass} {...register("title")} />
-                  </EditorField>
                   <input type="hidden" {...register("slug")} />
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
@@ -1131,7 +1146,20 @@ function Gallery({
               Chọn ảnh đã nộp hoặc dùng khung hình tự động của video. Lựa chọn
               hiện ngay trong bản xem trước; bấm Lưu thay đổi để lưu ảnh bìa.
             </p>
-            {selectedCover ? (
+            {selectedCover?.kind === "VIDEO" &&
+            items.find((item) => item.id === selectedCover.id) ? (
+              <VideoCoverPicker
+                key={
+                  selectedCover.id +
+                  (items.find((item) => item.id === selectedCover.id)
+                    ?.posterTimeMs ?? "auto")
+                }
+                item={items.find((item) => item.id === selectedCover.id)!}
+                workId={workId}
+                posterUrl={selectedCover.posterUrl}
+                onChanged={onChanged}
+              />
+            ) : selectedCover ? (
               <CoverImage
                 key={
                   selectedCover.id +
@@ -1216,6 +1244,7 @@ function Gallery({
                 </div>
                 {item.mediaKind === "VIDEO" ? (
                   <VideoPresentationSettings
+                    key={item.id + (item.posterTimeMs ?? "auto")}
                     images={items.filter(
                       (candidate) => candidate.mediaKind === "IMAGE",
                     )}
@@ -1255,6 +1284,7 @@ function VideoPresentationSettings({
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<PublicVideoPresentationInput>({
     posterMediaAssetId: item.posterMediaAssetId,
+    ...(item.posterTimeMs != null ? { posterTimeMs: item.posterTimeMs } : {}),
     controlsPreset: item.videoControlsPreset,
     fitMode: item.videoFitMode,
     qualityProfile: item.videoQualityProfile,
@@ -1549,8 +1579,8 @@ function PreviewPanel({
                 tags: [],
                 publishedAt: "",
                 visibility: "PRIVATE",
-                certificate: null,
-                proof: null,
+                certificate: data.certificate ?? null,
+                proof: data.proof ?? null,
                 media: data.media,
                 relatedWorks: [],
                 redirected: false,

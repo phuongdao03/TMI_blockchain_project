@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BadgeCheck, ExternalLink, FilePenLine, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -15,6 +15,7 @@ const statusLabels: Record<CertificateStatus, string> = {
 };
 
 export function AdminCertificateManager() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<CertificateStatus | "">("");
   const query = useQuery({
@@ -24,6 +25,28 @@ export function AdminCertificateManager() {
         search: search.trim() || undefined,
         status: status || undefined,
       }),
+  });
+  const listing = useMutation({
+    mutationFn: (input: {
+      id: string;
+      expectedWorkVersion: number;
+      showCertificate: boolean;
+    }) =>
+      adminCertificateApi.configureListing(input.id, {
+        expectedWorkVersion: input.expectedWorkVersion,
+        showCertificate: input.showCertificate,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["admin", "certificates"],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["admin", "public-work-preview"],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["admin", "public-work"],
+      });
+    },
   });
 
   return (
@@ -37,8 +60,9 @@ export function AdminCertificateManager() {
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
           Chứng thư đã cấp không thể xóa hoặc sửa trực tiếp. Điều chỉnh tạo
-          phiên bản mới; trạng thái công khai được quản lý cùng nội dung công
-          bố.
+          phiên bản mới. Bạn có thể chọn cho chứng thư xuất hiện cùng tác phẩm
+          hoặc chỉ cho tra cứu trực tiếp. Bật hiển thị không tự công bố tác
+          phẩm.
         </p>
       </header>
 
@@ -116,24 +140,74 @@ export function AdminCertificateManager() {
                   {certificate.dossierCode} · Phiên bản{" "}
                   {certificate.currentVersionNo}
                 </p>
+                {item.publicationStatus !== "PUBLISHED" ? (
+                  <p className="mt-2 text-xs text-neutral-600">
+                    Tác phẩm chưa công bố; lựa chọn hiển thị chỉ áp dụng khi tác
+                    phẩm được công bố.
+                  </p>
+                ) : null}
+                {listing.variables?.id === certificate.id && listing.isError ? (
+                  <p role="alert" className="mt-2 text-sm text-red-800">
+                    Chưa lưu được quyền hiển thị. Tải lại danh sách nếu dữ liệu
+                    vừa được cập nhật ở nơi khác.
+                  </p>
+                ) : null}
+                {listing.variables?.id === certificate.id &&
+                listing.isSuccess ? (
+                  <p role="status" className="mt-2 text-sm text-green-800">
+                    Đã lưu lựa chọn hiển thị chứng thư.
+                  </p>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
+                {item.publicWorkId &&
+                item.publicWorkVersion != null &&
+                certificate.status === "ACTIVE" ? (
+                  <button
+                    type="button"
+                    aria-pressed={item.showCertificate ?? true}
+                    disabled={listing.isPending}
+                    className="inline-flex min-h-11 items-center rounded-xl border border-primary-200 bg-primary-50 px-3 text-sm font-bold text-primary-800 disabled:opacity-50"
+                    onClick={() =>
+                      listing.mutate({
+                        id: certificate.id,
+                        expectedWorkVersion: item.publicWorkVersion!,
+                        showCertificate: !(item.showCertificate ?? true),
+                      })
+                    }
+                  >
+                    {listing.isPending &&
+                    listing.variables.id === certificate.id
+                      ? "Đang lưu…"
+                      : (item.showCertificate ?? true)
+                        ? "Ẩn khỏi trang tác phẩm"
+                        : "Cho hiển thị cùng tác phẩm"}
+                  </button>
+                ) : null}
+                {certificate.status === "ACTIVE" ? (
+                  <Link
+                    className="inline-flex min-h-11 items-center rounded-xl border px-3 text-sm font-bold"
+                    href={`/certificates/${certificate.id}#certificate-update`}
+                  >
+                    Tạo phiên bản điều chỉnh
+                  </Link>
+                ) : null}
                 <Link
-                  className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-bold"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-bold"
                   href={`/verify/${encodeURIComponent(certificate.certificateNumber)}`}
                 >
                   Xác minh <ExternalLink className="size-4" />
                 </Link>
                 {item.publicWorkId ? (
                   <Link
-                    className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-neutral-950 px-3 text-sm font-bold text-white"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-neutral-950 px-3 text-sm font-bold text-white"
                     href={`/admin/publications/${item.publicWorkId}`}
                   >
                     Nội dung công bố <FilePenLine className="size-4" />
                   </Link>
                 ) : null}
                 <Link
-                  className="inline-flex min-h-10 items-center rounded-xl border px-3 text-sm font-bold"
+                  className="inline-flex min-h-11 items-center rounded-xl border px-3 text-sm font-bold"
                   href={`/certificates/${certificate.id}`}
                 >
                   Lịch sử phiên bản

@@ -88,6 +88,7 @@ class PublicVideoPresentationInput:
     autoplay: bool
     loop: bool
     muted: bool
+    poster_time_ms: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,8 +174,13 @@ class PublicMediaQueryService:
                     if row.poster_media_asset_id is not None
                     else _cloudinary_video_variant(
                         row.derivative_url,
-                        transformation="so_auto,q_auto,f_webp",
+                        transformation=(
+                            f"so_{row.poster_time_ms / 1000:g},q_auto,f_webp"
+                            if row.poster_time_ms is not None
+                            else "so_auto,q_auto,f_webp"
+                        ),
                         extension="webp",
+                        poster_time_ms=row.poster_time_ms,
                     )
                     if row.media_kind is PublicMediaKind.VIDEO
                     else None
@@ -203,11 +209,16 @@ class PublicMediaQueryService:
 
 
 def _cloudinary_video_variant(
-    url: str | None, *, transformation: str, extension: str
+    url: str | None,
+    *,
+    transformation: str,
+    extension: str,
+    poster_time_ms: int | None = None,
 ) -> str | None:
     marker = "/video/upload/"
     if url and url.startswith("/api/v1/public/works/"):
-        return f"{url}?poster=true" if extension == "webp" else None
+        suffix = f"&posterTimeMs={poster_time_ms}" if poster_time_ms is not None else ""
+        return f"{url}?poster=true{suffix}" if extension == "webp" else None
     if (
         not url
         or marker not in url
@@ -409,6 +420,16 @@ class PublicMediaService:
                 raise PublicMediaNotFoundError()
             if relation.media_kind is not PublicMediaKind.VIDEO:
                 raise PublicMediaValidationError("Only video media can be configured.")
+            if data.poster_time_ms is not None and (
+                not 0 <= data.poster_time_ms <= 86_400_000
+                or (
+                    relation.duration_ms is not None
+                    and data.poster_time_ms >= relation.duration_ms
+                )
+            ):
+                raise PublicMediaValidationError(
+                    "Cover time must be inside the video duration."
+                )
             if data.poster_media_asset_id is not None:
                 rows = await self._repository.list_for_work(work_id)
                 if not any(
@@ -428,8 +449,13 @@ class PublicMediaService:
             before: dict[str, object] = {
                 "quality_profile": relation.video_quality_profile.value,
                 "max_width": relation.video_max_width,
+                "poster_time_ms": relation.poster_time_ms,
+                "poster_media_asset_id": str(relation.poster_media_asset_id)
+                if relation.poster_media_asset_id
+                else None,
             }
             relation.poster_media_asset_id = data.poster_media_asset_id
+            relation.poster_time_ms = data.poster_time_ms
             relation.video_controls_preset = data.controls_preset
             relation.video_fit_mode = data.fit_mode
             relation.video_quality_profile = data.quality_profile
@@ -450,6 +476,10 @@ class PublicMediaService:
                     "relation_id": str(relation_id),
                     "quality_profile": data.quality_profile.value,
                     "max_width": data.max_width,
+                    "poster_time_ms": data.poster_time_ms,
+                    "poster_media_asset_id": str(data.poster_media_asset_id)
+                    if data.poster_media_asset_id
+                    else None,
                 },
                 request_id=request_id,
             )

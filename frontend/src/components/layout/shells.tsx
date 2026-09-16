@@ -246,13 +246,15 @@ export function PublicShell({
       ) : null}
       <main id="main-content">{children}</main>
       <footer className="public-footer public-footer--legal">
-        <div className="public-footer__identity">
-          <BrandMark showCredit />
+        <div className="public-footer__inner">
+          <div className="public-footer__identity">
+            <BrandMark showCredit variant="public-seal" />
+          </div>
+          <nav aria-label="Liên kết cuối trang">
+            <Link href="/policies">Điều khoản sử dụng</Link>
+            <Link href="/policies#privacy">Chính sách quyền riêng tư</Link>
+          </nav>
         </div>
-        <nav aria-label="Liên kết cuối trang">
-          <Link href="/policies">Điều khoản sử dụng</Link>
-          <Link href="/policies#privacy">Chính sách quyền riêng tư</Link>
-        </nav>
       </footer>
     </div>
   );

@@ -62,6 +62,7 @@ def test_encrypted_video_poster_delivers_real_frame_without_upload() -> None:
         )
         asset = SimpleNamespace(
             id=uuid4(),
+            sha256=uuid4().hex,
             status=MediaStatus.ACTIVE,
             deleted_at=None,
             access_mode="authenticated",
@@ -80,7 +81,7 @@ def test_encrypted_video_poster_delivers_real_frame_without_upload() -> None:
             patch(
                 "app.modules.public.media_delivery.read_retained_content",
                 new=AsyncMock(return_value=retained_video),
-            ),
+            ) as reader,
             patch(
                 "app.modules.public.media_delivery.extract_video_poster",
                 new=AsyncMock(return_value=jpeg_frame),
@@ -110,6 +111,19 @@ def test_encrypted_video_poster_delivers_real_frame_without_upload() -> None:
             assert response.body == jpeg_frame
             assert response.headers["cache-control"] == "private, no-store"
             assert gateway.mock_calls == []
+            for requested in ("bytes=0-2", "bytes=3-5"):
+                seek = await PublicMediaDeliveryService(session, gateway, None).deliver(
+                    work_id, uuid4(), None, requested
+                )
+                assert seek.status_code == 206
+            assert reader.await_count == 1
+            context = catalog.return_value.get_publication_context.return_value
+            context.certificate.status = CertificateStatus.REVOKED
+            with pytest.raises(PublicWorkNotFoundError):
+                await PublicMediaDeliveryService(session, gateway, None).deliver(
+                    work_id, uuid4(), None, "bytes=0-2"
+                )
+            assert reader.await_count == 1
 
     asyncio.run(exercise())
 

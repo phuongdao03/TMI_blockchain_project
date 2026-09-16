@@ -10,7 +10,10 @@ from app.core.schemas import (
     ResponseMeta,
     SuccessEnvelope,
 )
-from app.modules.auth.dependencies import CurrentPrincipalDependency
+from app.modules.auth.dependencies import (
+    CsrfProtectedPrincipalDependency,
+    CurrentPrincipalDependency,
+)
 from app.modules.blockchain.models import CertificateStatus
 from app.modules.certificates.dependencies import (
     CertificateServiceDependency,
@@ -18,10 +21,15 @@ from app.modules.certificates.dependencies import (
 )
 from app.modules.certificates.schemas import (
     AdminCertificateData,
+    CertificateListingData,
+    CertificateListingRequest,
     CertificateRevocationRequest,
     CertificateVersionData,
 )
 from app.modules.public.models import PublicationStatus
+from app.modules.public.publication_dependencies import (
+    PublicWorkEditorServiceDependency,
+)
 
 router = APIRouter(
     prefix="/api/v1/admin/certificates",
@@ -71,6 +79,33 @@ async def list_admin_certificates(
             page_size=page_size,
             total=total,
         ),
+    )
+
+
+@router.patch(
+    "/{certificate_id}/listing",
+    response_model=SuccessEnvelope[CertificateListingData],
+    responses=RESPONSES,
+)
+async def configure_certificate_listing(
+    certificate_id: UUID,
+    payload: CertificateListingRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: PublicWorkEditorServiceDependency,
+) -> SuccessEnvelope[CertificateListingData]:
+    work = await service.configure_certificate_listing(
+        principal,
+        certificate_id,
+        expected_version=payload.expected_work_version,
+        show=payload.show_certificate,
+        request_id=request.state.request_id,
+    )
+    return SuccessEnvelope(
+        data=CertificateListingData(
+            show_certificate=work.show_certificate, public_work_version=work.version
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
     )
 
 

@@ -36,14 +36,24 @@ def _thumbnail_url(media: PublicWorkMedia | None) -> str | None:
     if media.media_kind is not PublicMediaKind.VIDEO:
         return media.derivative_url
     if media.derivative_url.startswith("/api/v1/public/works/"):
-        return f"{media.derivative_url}?poster=true"
+        suffix = (
+            f"&posterTimeMs={media.poster_time_ms}"
+            if media.poster_time_ms is not None
+            else ""
+        )
+        return f"{media.derivative_url}?poster=true{suffix}"
     marker = "/video/upload/"
     if marker not in media.derivative_url or not media.derivative_url.startswith(
         "https://res.cloudinary.com/"
     ):
         return None
     prefix, path = media.derivative_url.split(marker, 1)
-    return f"{prefix}{marker}so_auto,q_auto,f_webp/{path.rsplit('.', 1)[0]}.webp"
+    offset = (
+        f"so_{media.poster_time_ms / 1000:g}"
+        if media.poster_time_ms is not None
+        else "so_auto"
+    )
+    return f"{prefix}{marker}{offset},q_auto,f_webp/{path.rsplit('.', 1)[0]}.webp"
 
 
 def _as_utc(value: datetime) -> datetime:

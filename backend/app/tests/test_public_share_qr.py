@@ -17,6 +17,7 @@ from app.modules.engagement.qr_service import QrShareLinkService
 from app.modules.public.dependencies import (
     enforce_public_engagement_rate_limit,
     enforce_public_rate_limit,
+    get_public_catalog,
 )
 from app.modules.public.models import (
     PublicationStatus,
@@ -183,6 +184,30 @@ def test_public_qr_api_headers_and_not_found_policy() -> None:
             assert client.get("/api/v1/public/works/suspended/qr").status_code == 404
     finally:
         app.dependency_overrides.clear()
+
+
+def test_certificate_qr_uses_configured_public_origin_not_backend_host() -> None:
+    class Catalog:
+        async def certificate_versions(self, number: str) -> list[object]:
+            return [object()] if number == "TMI-2026-0001" else []
+
+    app = create_application(
+        settings=Settings(app_base_url="https://www.tinhhoaviet.org.vn")
+    )
+    app.dependency_overrides[get_public_catalog] = lambda: Catalog()
+    app.dependency_overrides[enforce_public_rate_limit] = lambda: None
+    with TestClient(app, base_url="http://backend:8000") as client:
+        response = client.get("/api/v1/verify/certificate/TMI-2026-0001/qr")
+        assert response.status_code == 200
+        assert response.content.startswith(b"\x89PNG\r\n\x1a\n")
+        assert (
+            response.headers["content-location"]
+            == "https://www.tinhhoaviet.org.vn/verify/TMI-2026-0001"
+        )
+        assert (
+            client.get("/api/v1/verify/certificate/TMI-2026-unknown/qr").status_code
+            == 404
+        )
 
 
 def test_opaque_share_redirect_uses_server_canonical_relative_path() -> None:
