@@ -2,11 +2,14 @@ import asyncio
 import base64
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
+from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import func, select
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.sql import ClauseElement
 
 from app.db.base import Base
 from app.db.outbox import OutboxEvent
@@ -18,6 +21,7 @@ from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.models import Certificate, CertificateStatus
 from app.modules.dossiers.models import Category, Dossier, DossierStatus
 from app.modules.media.models import MediaAsset, MediaStatus
+from app.modules.public.catalog_repository import PublicWorkRepository
 from app.modules.public.errors import (
     PublicWorkFeaturedWindowError,
     PublicWorkForbiddenError,
@@ -141,6 +145,36 @@ def test_transition_table_rejects_undefined_paths() -> None:
     assert_transition(PublicationStatus.SUSPENDED, PublicationAction.HIDE)
     with pytest.raises(PublicationTransitionError):
         assert_transition(PublicationStatus.ARCHIVED, PublicationAction.PUBLISH)
+
+
+def test_publication_context_locks_only_the_public_work_on_postgresql() -> None:
+    class Result:
+        @staticmethod
+        def one_or_none() -> None:
+            return None
+
+    class Session:
+        statement: object | None = None
+
+        async def execute(self, statement: object) -> Result:
+            self.statement = statement
+            return Result()
+
+    async def exercise() -> None:
+        session = Session()
+        repository = PublicWorkRepository(cast(AsyncSession, session))
+
+        context = await repository.get_publication_context(uuid4(), for_update=True)
+        assert context is None
+        assert session.statement is not None
+        sql = str(
+            cast(ClauseElement, session.statement).compile(
+                dialect=postgresql.dialect()  # type: ignore[no-untyped-call]
+            )
+        )
+        assert "FOR UPDATE OF public_works" in sql
+
+    asyncio.run(exercise())
 
 
 def test_publish_checklist_permission_version_and_reason(tmp_path: Path) -> None:

@@ -312,7 +312,7 @@ class PublicWorkRepository:
             )
         )
         if for_update:
-            statement = statement.with_for_update().execution_options(
+            statement = statement.with_for_update(of=PublicWork).execution_options(
                 populate_existing=True
             )
         row = (await self._session.execute(statement)).one_or_none()
