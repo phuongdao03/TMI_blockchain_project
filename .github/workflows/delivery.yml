@@ -55,11 +55,12 @@ jobs:
         run: |
           npm --prefix frontend run typecheck
           cd backend && python -m mypy app
-      - name: Unit and integration tests
-        run: |
-          node --test tests/*.test.mjs
-          npm --prefix frontend run test
-          python -m pytest backend/app/tests
+      - name: Root configuration tests
+        run: node --test tests/*.test.mjs
+      - name: Frontend unit tests
+        run: npm --prefix frontend run test
+      - name: Backend unit and integration tests
+        run: python -m pytest backend/app/tests
       - name: Production frontend build
         run: npm --prefix frontend run build
       - name: Dependency security audit
