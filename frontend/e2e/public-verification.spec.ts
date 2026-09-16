@@ -4,9 +4,7 @@ test("certificate organization stays on one line without overflow", async ({
   page,
 }) => {
   await page.goto("/verify/demo-token");
-  const organization = page
-    .locator(".digital-certificate header p")
-    .filter({ hasText: "Trung tâm An ninh Công nghệ số – CNS" });
+  const organization = page.locator(".digital-certificate__platform");
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await expect(organization).toHaveCSS("white-space", "nowrap");
