@@ -2246,6 +2246,18 @@ html[data-theme="dark"] .public-home {
   white-space: nowrap;
 }
 
+@media (max-width: 38rem) {
+  .digital-certificate {
+    border-radius: 1rem;
+  }
+
+  .digital-certificate__organization {
+    font-size: clamp(0.5rem, 2.5cqi, 0.7rem);
+    letter-spacing: 0.045em;
+    line-height: 1.35;
+  }
+}
+
 .digital-certificate .digital-certificate__verify {
   display: inline-flex;
   min-height: 3rem;

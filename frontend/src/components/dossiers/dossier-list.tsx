@@ -11,6 +11,7 @@ import Link from "next/link";
 
 import { DossierStatusBadge } from "@/components/dossiers/dossier-status";
 import { dossierApi } from "@/lib/api/client";
+import { displayCnsDossierCode } from "@/lib/brand/identifiers";
 import type { DossierListFilters, DossierStatus } from "@/lib/api/types";
 import { dossierKeys } from "@/lib/dossiers/query-keys";
 
@@ -114,7 +115,7 @@ export function DossierList({
                 <div className="flex flex-wrap items-center gap-2.5">
                   <DossierStatusBadge status={dossier.status} />
                   <span className="font-mono text-xs font-semibold tracking-wide text-neutral-500">
-                    {dossier.code}
+                    {displayCnsDossierCode(dossier.code)}
                   </span>
                 </div>
                 <h2 className="mt-3 truncate text-lg font-bold tracking-tight text-neutral-950">

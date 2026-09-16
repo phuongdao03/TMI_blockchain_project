@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { adminCertificateApi } from "@/lib/api/client";
+import { displayCnsDossierCode } from "@/lib/brand/identifiers";
 import type { CertificateStatus } from "@/lib/api/types";
 
 const statusLabels: Record<CertificateStatus, string> = {
@@ -137,7 +138,7 @@ export function AdminCertificateManager() {
                   {certificate.assetTitle}
                 </h2>
                 <p className="mt-1 text-sm text-neutral-500">
-                  {certificate.dossierCode} · Phiên bản{" "}
+                  {displayCnsDossierCode(certificate.dossierCode)} · Phiên bản{" "}
                   {certificate.currentVersionNo}
                 </p>
                 {item.publicationStatus !== "PUBLISHED" ? (

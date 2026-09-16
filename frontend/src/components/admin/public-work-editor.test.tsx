@@ -48,7 +48,7 @@ vi.mock("@/lib/api/client", () => {
 const work: PublicWorkEditorData = {
   id: "a96efbb8-fd76-4431-bc21-24caa83d0bda",
   dossierId: "25e0f889-e4af-499b-ab13-a51ba398375a",
-  dossierCode: "THV-TP-2026-0042",
+  dossierCode: "TMI-2026-0042",
   certificateId: "5b787209-e11d-4a41-a4ea-f4313e211c61",
   slug: "ban-mau",
   title: "Bản mẫu công khai",
@@ -378,7 +378,8 @@ describe("PublicWorkEditor", () => {
     const user = userEvent.setup();
     render(<PublicWorkEditor />, { wrapper });
 
-    expect(await screen.findByText("THV-TP-2026-0042")).toBeTruthy();
+    expect(await screen.findByText("CNS-2026-0042")).toBeTruthy();
+    expect(screen.queryByText("TMI-2026-0042")).toBeNull();
     await user.click(
       await screen.findByRole("button", { name: /Bản mẫu công khai/ }),
     );

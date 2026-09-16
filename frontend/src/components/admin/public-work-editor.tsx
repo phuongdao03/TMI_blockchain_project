@@ -31,6 +31,7 @@ import { PublicWorkPresentation } from "@/components/public/public-work-detail";
 import { SelectControl } from "@/components/ui/form-controls";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ApiError, publicWorkAdminApi } from "@/lib/api/client";
+import { displayCnsDossierCode } from "@/lib/brand/identifiers";
 import type {
   PublicationStatus,
   PublicWorkEditor as PublicWorkEditorData,
@@ -338,8 +339,8 @@ export function PublicWorkEditor({
 
   return (
     <section className="cms-workspace overflow-visible rounded-3xl border border-neutral-200 bg-white shadow-sm">
-      <div className="grid min-h-[46rem] lg:grid-cols-[20rem_minmax(0,1fr)]">
-        <aside className="cms-list-pane border-b border-neutral-200 bg-neutral-50/80 lg:border-r lg:border-b-0">
+      <div className="grid min-h-[46rem] xl:grid-cols-[24rem_minmax(0,1fr)]">
+        <aside className="cms-list-pane border-b border-neutral-200 bg-neutral-50/80 xl:border-r xl:border-b-0">
           <div className="border-b border-neutral-200 p-4">
             <div className="relative">
               <Search
@@ -370,7 +371,7 @@ export function PublicWorkEditor({
               ))}
             </SelectControl>
           </div>
-          <div className="max-h-80 overflow-y-auto p-2 lg:max-h-[38rem]">
+          <div className="max-h-80 overflow-y-auto p-2 xl:max-h-[38rem]">
             {works.isPending ? (
               <div className="space-y-2 p-2" role="status">
                 <span className="sr-only">Đang tải danh sách…</span>
@@ -411,10 +412,10 @@ export function PublicWorkEditor({
                 type="button"
               >
                 <span className="block truncate font-mono text-sm font-black text-primary-800">
-                  {work.dossierCode ||
+                  {displayCnsDossierCode(work.dossierCode) ||
                     `TP-${work.id.slice(0, 8).toUpperCase()}`}
                 </span>
-                <span className="mt-1 block line-clamp-2 text-xs font-semibold text-neutral-700">
+                <span className="mt-1 block min-h-10 text-pretty text-sm leading-5 font-semibold text-neutral-700">
                   {work.title}
                 </span>
                 <span className="mt-2 flex items-center justify-between gap-2 text-xs text-neutral-500">

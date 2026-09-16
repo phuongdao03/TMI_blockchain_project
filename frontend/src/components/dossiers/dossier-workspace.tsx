@@ -32,6 +32,7 @@ import { DossierPaymentAction } from "@/components/payments/dossier-payment-acti
 import { PrivateDocumentVerification } from "@/components/documents/private-document-verification";
 import { Button } from "@/components/ui/button";
 import { dossierApi } from "@/lib/api/client";
+import { displayCnsDossierCode } from "@/lib/brand/identifiers";
 import type {
   DossierDetail,
   DossierDocumentRule,
@@ -469,7 +470,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <DossierStatusBadge status={dossier.status} />
             <span className="font-mono text-xs font-bold tracking-wider text-neutral-400">
-              {dossier.code}
+              {displayCnsDossierCode(dossier.code)}
             </span>
           </div>
           <h1 className="mt-3 break-words text-3xl font-bold tracking-[-0.03em] text-neutral-950 sm:text-4xl">

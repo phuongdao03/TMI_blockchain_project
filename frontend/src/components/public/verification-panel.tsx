@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 
 import { publicApi } from "@/lib/api/client";
+import { displayCnsDossierCode } from "@/lib/brand/identifiers";
 import { DigitalCertificate } from "@/components/public/digital-certificate";
 import { SelectControl } from "@/components/ui/form-controls";
 import type { VerificationStatus } from "@/lib/api/types";
@@ -275,7 +276,10 @@ function VerificationResult({
       <div>
         <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
           <Fact label="Chứng thư" value={data.certificateNumber} />
-          <Fact label="Mã tài sản" value={data.dossierCode} />
+          <Fact
+            label="Mã tài sản"
+            value={displayCnsDossierCode(data.dossierCode)}
+          />
           <Fact label="Tài sản" value={data.assetTitle} />
           <Fact
             label="Phiên bản"

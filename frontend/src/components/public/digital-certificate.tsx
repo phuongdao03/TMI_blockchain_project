@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useState } from "react";
 
 import type { Verification } from "@/lib/api/types";
+import { displayCnsDossierCode } from "@/lib/brand/identifiers";
 
 function date(value: string | null): string {
   if (!value) return "Đang cập nhật";
@@ -88,7 +89,7 @@ export function DigitalCertificate({ data }: { data: Verification }) {
               <CertificateFact
                 label="Mã tác phẩm"
                 mono
-                value={data.dossierCode}
+                value={displayCnsDossierCode(data.dossierCode)}
               />
               <CertificateFact
                 label="Đơn vị xác lập"
@@ -195,7 +196,7 @@ function CertificateFact({
     <div className="border-l-2 border-[#e1d5b5] pl-3">
       <dt className="text-xs font-bold text-[#765c27]">{label}</dt>
       <dd
-        className={`mt-1 leading-6 font-semibold text-[#2b1714] ${mono ? "break-all font-mono text-xs" : ""}`}
+        className={`mt-1 text-pretty leading-6 font-semibold text-[#2b1714] ${mono ? "break-all font-mono text-xs" : ""}`}
       >
         {value || "Chưa công bố"}
       </dd>
