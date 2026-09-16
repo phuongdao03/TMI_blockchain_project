@@ -55,6 +55,7 @@ def test_listing_filters_and_never_leaks_non_public_works(tmp_path: Path) -> Non
         tag = PublicTag(id=uuid4(), name="Modern", slug="modern")
         organization_id = uuid4()
         thumbnail_media_id = uuid4()
+        thumbnail_relation_id = uuid4()
         visible = PublicWork(
             id=uuid4(),
             dossier_id=uuid4(),
@@ -133,6 +134,7 @@ def test_listing_filters_and_never_leaks_non_public_works(tmp_path: Path) -> Non
                 session.add(PublicWorkTag(public_work_id=visible.id, tag_id=tag.id))
                 session.add(
                     PublicWorkMedia(
+                        id=thumbnail_relation_id,
                         public_work_id=visible.id,
                         media_asset_id=thumbnail_media_id,
                         media_kind=PublicMediaKind.IMAGE,
@@ -165,7 +167,8 @@ def test_listing_filters_and_never_leaks_non_public_works(tmp_path: Path) -> Non
             assert rows[0].slug == str(visible.id)
             assert rows[0].is_featured is True
             assert rows[0].thumbnail_url == (
-                "https://cdn.example.test/public/work.webp"
+                f"/api/v1/public/works/{visible.id}/media/"
+                f"{thumbnail_relation_id}?cover=true"
             )
             assert rows[0].thumbnail_alt_text == "Approved artwork preview"
             assert tuple(item.slug for item in rows[0].tags) == ("modern",)

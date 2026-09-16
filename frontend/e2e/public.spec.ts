@@ -131,7 +131,7 @@ test("public portal is professional, responsive and verifiable", async ({
   await expect(
     page.getByRole("heading", { name: "Bộ nhận diện TMI" }),
   ).toBeVisible();
-  await expect(page.getByText("Hình ảnh đang được cập nhật")).toBeVisible();
+  await expect(page.getByLabel("Bìa mặc định: Bộ nhận diện TMI")).toBeVisible();
   await expect(page.getByText("Thông tin đã được đối chiếu")).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",

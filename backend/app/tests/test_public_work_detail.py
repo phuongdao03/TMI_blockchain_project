@@ -48,6 +48,7 @@ def test_public_detail_visibility_slug_history_and_allowlist(tmp_path: Path) -> 
         media_id = uuid4()
         related_id = uuid4()
         related_media_id = uuid4()
+        related_media_relation_id = uuid4()
         async with factory() as session:
             async with session.begin():
                 session.add(
@@ -183,6 +184,7 @@ def test_public_detail_visibility_slug_history_and_allowlist(tmp_path: Path) -> 
                             derivative_height=900,
                         ),
                         PublicWorkMedia(
+                            id=related_media_relation_id,
                             public_work_id=related_id,
                             media_asset_id=related_media_id,
                             media_kind=PublicMediaKind.IMAGE,
@@ -221,7 +223,10 @@ def test_public_detail_visibility_slug_history_and_allowlist(tmp_path: Path) -> 
                 str(related_id),
             )
             assert public.related_works[0].thumbnail_url is not None
-            assert public.related_works[0].thumbnail_url.endswith("related.webp")
+            assert public.related_works[0].thumbnail_url == (
+                f"/api/v1/public/works/{related_id}/media/"
+                f"{related_media_relation_id}?cover=true"
+            )
             assert public.related_works[0].thumbnail_alt_text == "Related artwork"
             payload = PublicWorkDetailProjectionData.model_validate(
                 public
