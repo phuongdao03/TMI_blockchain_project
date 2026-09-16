@@ -52,8 +52,11 @@ def replacement_metadata(
     if isinstance(dossier_code, str) and dossier_code.startswith(LEGACY_PREFIX):
         metadata["dossierCode"] = f"CNS-{dossier_code[len(LEGACY_PREFIX) :]}"
     asset = metadata.get("asset")
-    if isinstance(asset, dict):
-        asset["subject"] = "Chủ thể hồ sơ CNS"
+    if isinstance(asset, dict) and asset.get("subject") in {
+        "Chủ thể hồ sơ TMI",
+        "Chủ thể hồ sơ CNS",
+    }:
+        asset["subject"] = "Chưa công bố"
     digest = hashlib.sha256(
         CertificateMetadataBuilder.canonical_bytes(metadata)
     ).hexdigest()

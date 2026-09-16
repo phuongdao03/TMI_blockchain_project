@@ -23,7 +23,7 @@ def test_replacement_metadata_uses_cns_identity_without_mutating_source() -> Non
     assert metadata["dossierCode"] == "CNS-2026-DOSSIER"
     assert metadata["asset"] == {
         "title": "Tác phẩm",
-        "subject": "Chủ thể hồ sơ CNS",
+        "subject": "Chưa công bố",
     }
     assert len(digest) == 64
     assert source["certificateNumber"] == "TMI-2026-OLD"

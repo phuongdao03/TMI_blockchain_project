@@ -15,6 +15,12 @@ function date(value: string | null): string {
   }).format(new Date(value));
 }
 
+function recognizedSubject(value: string | null | undefined): string | null {
+  return value === "Chủ thể hồ sơ CNS" || value === "Chủ thể hồ sơ TMI"
+    ? null
+    : (value ?? null);
+}
+
 export function DigitalCertificate({ data }: { data: Verification }) {
   const [failedQr, setFailedQr] = useState<string | null>(null);
   if (!data.certificateNumber) return null;
@@ -48,10 +54,15 @@ export function DigitalCertificate({ data }: { data: Verification }) {
       <div className="p-5 sm:p-8 lg:p-12">
         <header className="digital-certificate__header grid gap-5 border-b border-[#d8c798] pb-6 sm:grid-cols-[auto_1fr] sm:items-center lg:grid-cols-[8rem_1fr_auto]">
           <p className="digital-certificate__organization">
-            Trung tâm An ninh Công nghệ số – CNS
+            <span className="digital-certificate__platform">
+              Đề cử và Xác lập Tinh Hoa Việt
+            </span>
+            <span className="digital-certificate__operator">
+              Phát triển và vận hành công nghệ bởi CNS
+            </span>
           </p>
           <Image
-            alt="Logo Tinh Hoa Việt trên chứng thư"
+            alt="Biểu trưng Đề cử và Xác lập Tinh Hoa Việt"
             className="mx-auto size-24 object-contain drop-shadow-[0_8px_14px_rgba(100,18,18,.2)] sm:mx-0 lg:size-28"
             height={224}
             priority
@@ -84,7 +95,7 @@ export function DigitalCertificate({ data }: { data: Verification }) {
             <dl className="mt-7 grid gap-x-10 gap-y-5 text-sm sm:grid-cols-2">
               <CertificateFact
                 label="Tác giả/người được ghi nhận"
-                value={data.recognizedSubject}
+                value={recognizedSubject(data.recognizedSubject)}
               />
               <CertificateFact
                 label="Mã tác phẩm"

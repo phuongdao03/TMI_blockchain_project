@@ -110,7 +110,7 @@ class CertificateMetadataBuilder:
         snapshot: Mapping[str, object],
         issued_at: datetime,
         expires_at: datetime | None,
-        subject: str = "Chủ thể hồ sơ CNS",
+        subject: str = "Chưa công bố",
         blockchain: Mapping[str, object] | None = None,
     ) -> tuple[dict[str, object], str]:
         dossier_value = snapshot.get("dossier")

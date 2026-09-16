@@ -2240,10 +2240,24 @@ html[data-theme="dark"] .public-home {
   font-size: clamp(0.4375rem, 2.35cqi, 0.875rem);
   font-weight: 900;
   letter-spacing: 0.08em;
-  line-height: 1.5;
+  line-height: 1.35;
   text-align: center;
   text-transform: uppercase;
+}
+
+.digital-certificate__platform,
+.digital-certificate__operator {
+  display: block;
   white-space: nowrap;
+}
+
+.digital-certificate__operator {
+  margin-top: 0.25rem;
+  color: #6d5949;
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: none;
 }
 
 @media (max-width: 38rem) {

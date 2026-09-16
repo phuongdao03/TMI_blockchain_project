@@ -285,7 +285,7 @@ function VerificationResult({
             label="Phiên bản"
             value={data.version ? String(data.version) : null}
           />
-          <Fact label="Đơn vị xác nhận" value={data.issuerLabel} />
+          <Fact label="Đơn vị xác lập" value={data.issuerLabel} />
           <Fact
             label="Thời điểm xác nhận"
             value={formatDate(data.confirmedAt)}

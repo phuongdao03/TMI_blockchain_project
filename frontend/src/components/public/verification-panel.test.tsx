@@ -90,6 +90,7 @@ describe("VerificationPanel", () => {
       metadataHash: "ab".repeat(32),
       blockNumber: 123,
       issuerLabel: "Trung tâm An ninh Công nghệ số – CNS",
+      recognizedSubject: "Chủ thể hồ sơ CNS",
       documents: [
         {
           title: "Hồ sơ công khai",
@@ -127,8 +128,15 @@ describe("VerificationPanel", () => {
     expect(screen.getByText("Blockchain là gì?")).toBeDefined();
     expect(screen.getByText("Chi tiết nâng cao")).toBeDefined();
     expect(
-      screen.getByRole("img", { name: "Logo Tinh Hoa Việt trên chứng thư" }),
+      screen.getByRole("img", {
+        name: "Biểu trưng Đề cử và Xác lập Tinh Hoa Việt",
+      }),
     ).toBeDefined();
+    expect(screen.getByText("Đề cử và Xác lập Tinh Hoa Việt")).toBeDefined();
+    expect(
+      screen.getByText("Phát triển và vận hành công nghệ bởi CNS"),
+    ).toBeDefined();
+    expect(screen.queryByText("Chủ thể hồ sơ CNS")).toBeNull();
     const publicRecord = screen.getByRole("link", {
       name: /Xem tác phẩm/,
     });
