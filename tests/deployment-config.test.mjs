@@ -223,7 +223,7 @@ test("CI has quality, migration, image, staging and manual production gates", as
   assert.match(workflow, /GHCR_PULL_TOKEN/);
   assert.match(workflow, /StrictHostKeyChecking=yes/);
   assert.match(workflow, /rsync -az/);
-  assert.match(workflow, /\/var\/www\/cns_blockchain/);
+  assert.match(workflow, /\/var\/www\/tmi_blockchain/);
   assert.doesNotMatch(workflow, /\/opt\/cns-platform/);
   assert.match(workflow, /--build-arg NEXT_PUBLIC_RELEASE_MODE=full/);
   assert.match(workflow, /--build-arg NEXT_PUBLIC_APP_BASE_URL/);
@@ -292,14 +292,14 @@ test("deployment scripts wait for healthy services and preserve an image rollbac
   );
   assert.match(rollbackWorkflow, /workflow_dispatch:/);
   assert.match(rollbackWorkflow, /GHCR_PULL_TOKEN/);
-  assert.match(rollbackWorkflow, /\/var\/www\/cns_blockchain/);
+  assert.match(rollbackWorkflow, /\/var\/www\/tmi_blockchain/);
   const productionRollback = rollbackWorkflow.match(
     /  rollback-production:[\s\S]*?(?=\n  [a-z-]+:|\n$)/,
   )?.[0];
   assert.ok(productionRollback, "production rollback job is missing");
   assert.match(
     productionRollback,
-    /PRODUCTION_ENV_FILE=\/var\/www\/cns_blockchain\/infrastructure\/\.env\.production/,
+    /PRODUCTION_ENV_FILE=\/var\/www\/tmi_blockchain\/infrastructure\/\.env\.production/,
   );
   assert.doesNotMatch(productionRollback, /\.env\.preview/);
   assert.doesNotMatch(rollbackWorkflow, /\/opt\/cns-platform/);
