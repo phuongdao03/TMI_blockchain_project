@@ -125,12 +125,11 @@ export function DossierCreateForm() {
   return (
     <form className="dossier-create-form space-y-6" onSubmit={submit}>
       <nav aria-label="Các bước gửi hồ sơ">
-        <ol className="dossier-journey grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <ol className="dossier-journey grid grid-cols-3 gap-2">
           {[
-            ["01", "Chọn loại hồ sơ", "Đang thực hiện"],
-            ["02", "Khai thông tin", "Theo biểu mẫu"],
-            ["03", "Tải tài liệu", "Sau khi tạo bản nháp"],
-            ["04", "Kiểm tra & nộp", "Khóa phiên bản"],
+            ["01", "Thông tin", "Chọn loại và khai thông tin"],
+            ["02", "Tài liệu", "Sau khi lưu bản nháp"],
+            ["03", "Kiểm tra & nộp", "Xác nhận để gửi hồ sơ"],
           ].map(([number, label, note], index) => (
             <li
               aria-current={index === 0 ? "step" : undefined}
@@ -147,7 +146,7 @@ export function DossierCreateForm() {
               <strong className="ml-2 text-sm text-[var(--theme-text)]">
                 {label}
               </strong>
-              <span className="mt-1 block pl-7 text-xs text-[var(--theme-muted)]">
+              <span className="mt-1 hidden pl-7 text-xs text-[var(--theme-muted)] sm:block">
                 {note}
               </span>
             </li>

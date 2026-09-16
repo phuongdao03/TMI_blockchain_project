@@ -94,6 +94,7 @@ _EVIDENCE_ONLY_MIME_TYPES = frozenset(
     }
 )
 _PURPOSE_MIME_TYPES = {
+    MediaPurpose.PUBLIC_COVER: frozenset({"image/jpeg", "image/png", "image/webp"}),
     MediaPurpose.AVATAR: frozenset({"image/jpeg", "image/png", "image/webp"}),
     MediaPurpose.DOSSIER_EVIDENCE: frozenset(_FORMATS),
 }
@@ -140,6 +141,7 @@ class MediaService:
         self._signature_ttl_seconds = signature_ttl_seconds
         self._delivery_ttl_seconds = delivery_ttl_seconds
         self._max_bytes = {
+            MediaPurpose.PUBLIC_COVER: 5_242_880,
             MediaPurpose.AVATAR: avatar_max_bytes,
             MediaPurpose.DOSSIER_EVIDENCE: evidence_max_bytes,
         }
@@ -154,6 +156,11 @@ class MediaService:
         principal: AuthPrincipal,
         intent: UploadIntent,
     ) -> UploadSignatureView:
+        if (
+            intent.purpose is MediaPurpose.PUBLIC_COVER
+            and "SUPER_ADMIN" not in principal.roles
+        ):
+            raise MediaForbiddenError()
         policy = self._validate_intent(intent)
         issued_at = int(self._clock().timestamp())
         media_id = uuid4()

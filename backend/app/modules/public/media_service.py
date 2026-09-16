@@ -22,6 +22,7 @@ from app.modules.media.encryption import (
 from app.modules.media.errors import MediaProviderUnavailableError
 from app.modules.media.gateway import MediaContentTooLargeError, PublicDerivativeGateway
 from app.modules.media.models import MediaAsset, MediaEncryptionStatus, MediaStatus
+from app.modules.public.cover import is_editorial_cover
 from app.modules.public.errors import (
     PublicMediaConflictError,
     PublicMediaNotFoundError,
@@ -170,7 +171,9 @@ class PublicMediaQueryService:
                 duration_ms=row.duration_ms,
                 is_thumbnail=selected is not None and row.id == selected.id,
                 poster_url=(
-                    ready_images.get(row.poster_media_asset_id)
+                    f"/api/v1/public/works/{work_id}/media/{row.id}?cover=true"
+                    if row.media_kind is PublicMediaKind.IMAGE
+                    else ready_images.get(row.poster_media_asset_id)
                     if row.poster_media_asset_id is not None
                     else _cloudinary_video_variant(
                         row.derivative_url,
@@ -262,13 +265,21 @@ class PublicMediaService:
                 work = await self._repository.get_work(work_id, for_update=True)
                 if work is None:
                     raise PublicWorkNotFoundError()
-                if not await self._repository.is_source_evidence_asset(
-                    work, data.media_asset_id
+                asset = await self._repository.get_asset(data.media_asset_id)
+                editorial = (
+                    asset is not None
+                    and is_editorial_cover(asset)
+                    and asset.owner_user_id == principal.user_id
+                )
+                if (
+                    not editorial
+                    and not await self._repository.is_source_evidence_asset(
+                        work, data.media_asset_id
+                    )
                 ):
                     raise PublicMediaValidationError(
                         "Media must belong to the certified dossier version."
                     )
-                asset = await self._repository.get_asset(data.media_asset_id)
                 kind = self._validate_asset(asset)
                 caption = self._plain_text(data.caption, "caption")
                 alt_text = self._plain_text(data.alt_text, "alt text")
@@ -286,6 +297,14 @@ class PublicMediaService:
                 )
                 self._repository.add(relation)
                 await self._session.flush()
+                if editorial and asset is not None and asset.sha256 is not None:
+                    relation.derivative_status = DerivativeStatus.READY
+                    relation.derivative_url = (
+                        f"/api/v1/public/works/{work_id}/media/{relation.id}"
+                    )
+                    relation.derivative_mime_type = asset.mime_type
+                    relation.derivative_width = asset.width
+                    relation.derivative_height = asset.height
                 self._audit.record(
                     actor_user_id=principal.user_id,
                     action="public_work.media_attached",
@@ -508,6 +527,41 @@ class PublicMediaService:
             raise PublicMediaValidationError(f"Media {field} is invalid.")
         return normalized or None
 
+    async def configure_cover(
+        self,
+        principal: AuthPrincipal,
+        work_id: UUID,
+        relation_id: UUID,
+        *,
+        x: int,
+        y: int,
+        zoom: int,
+        request_id: str,
+    ) -> PublicWorkMedia:
+        self._require_admin(principal)
+        if not 0 <= x <= 100 or not 0 <= y <= 100 or not 100 <= zoom <= 300:
+            raise PublicMediaValidationError("Invalid cover crop configuration.")
+        async with self._session.begin():
+            row = await self._repository.get_relation(relation_id, for_update=True)
+            if row is None or row.public_work_id != work_id:
+                raise PublicMediaNotFoundError()
+            if (
+                row.media_kind is not PublicMediaKind.IMAGE
+                or row.derivative_status is not DerivativeStatus.READY
+            ):
+                raise PublicMediaValidationError("Cover must be a ready image.")
+            row.cover_x, row.cover_y, row.cover_zoom = x, y, zoom
+            self._audit.record(
+                actor_user_id=principal.user_id,
+                action="public_work.cover_crop_updated",
+                resource_type="public_work",
+                resource_id=str(work_id),
+                after={"relation_id": str(relation_id), "x": x, "y": y, "zoom": zoom},
+                request_id=request_id,
+            )
+            self._event(work_id, "public_work.cover_crop_updated")
+        return row
+
     @staticmethod
     def _require_admin(principal: AuthPrincipal) -> None:
         AuthorizationPolicy.require_capability(
@@ -558,7 +612,7 @@ class PublicMediaWorker:
             relation, asset = joined
             if relation.derivative_status is DerivativeStatus.READY:
                 return
-            if self._single_copy_storage_enabled:
+            if self._single_copy_storage_enabled or is_editorial_cover(asset):
                 if (
                     asset.status is not MediaStatus.ACTIVE
                     or asset.deleted_at is not None
@@ -575,8 +629,11 @@ class PublicMediaWorker:
                     relation.failure_code = "source_not_available"
                     return
                 work = await self._repository.get_work(relation.public_work_id)
-                if work is None or not await self._repository.is_source_evidence_asset(
-                    work, asset.id
+                if work is None or (
+                    not is_editorial_cover(asset)
+                    and not await self._repository.is_source_evidence_asset(
+                        work, asset.id
+                    )
                 ):
                     relation.derivative_status = DerivativeStatus.FAILED
                     relation.failure_code = "source_not_certified"

@@ -24,14 +24,14 @@ export function FileUploaderActions({
   const retryOnly = failedCount > 0 && failedCount === pendingCount;
 
   return (
-    <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
       {canChoose ? (
         <Button
           className="w-full sm:w-auto"
           disabled={disabled || isBusy}
           onClick={onChoose}
           type="button"
-          variant="outline"
+          variant={pendingCount > 0 ? "outline" : "default"}
         >
           <Plus aria-hidden="true" className="size-4" />
           Thêm tệp

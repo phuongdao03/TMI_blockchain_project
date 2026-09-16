@@ -33,6 +33,10 @@ from app.modules.public.models import (
 def _thumbnail_url(media: PublicWorkMedia | None) -> str | None:
     if media is None or not media.derivative_url:
         return None
+    if media.media_kind is PublicMediaKind.IMAGE:
+        return (
+            f"/api/v1/public/works/{media.public_work_id}/media/{media.id}?cover=true"
+        )
     if media.media_kind is not PublicMediaKind.VIDEO:
         return media.derivative_url
     if media.derivative_url.startswith("/api/v1/public/works/"):

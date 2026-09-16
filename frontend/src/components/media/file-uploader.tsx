@@ -235,8 +235,10 @@ export function FileUploader({
                     : "Chọn tệp từ thiết bị"}
               </p>
               <p className="mt-1 text-xs leading-5 text-neutral-500">
-                Kéo thả vào đây hoặc dùng nút Thêm tệp. Hỗ trợ:{" "}
-                {supportedFormats}.
+                Bấm Thêm tệp để chọn từ thiết bị. Hỗ trợ: {supportedFormats}.
+                <span className="hidden sm:block">
+                  Bạn cũng có thể kéo thả tệp vào đây.
+                </span>
               </p>
             </div>
             <FileUploaderActions
@@ -255,7 +257,7 @@ export function FileUploader({
           <div>
             <div className="mb-2 flex items-center justify-between gap-3">
               <p className="text-sm font-bold text-neutral-950">
-                Tệp đang chờ ({items.length})
+                Tệp chưa tải xong ({items.length})
               </p>
               <p className="text-xs text-neutral-500">
                 Có thể thêm nhiều lần trước khi tải
@@ -301,7 +303,7 @@ export function FileUploader({
                         </span>
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-neutral-950">
+                        <p className="break-words text-sm font-bold text-neutral-950">
                           {item.file.name}
                         </p>
                         <p className="mt-0.5 text-xs text-neutral-500">

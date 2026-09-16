@@ -124,7 +124,7 @@ describe("PublicWorkDetailPage", () => {
       wrapper,
     });
     expect(screen.getByRole("heading", { name: detail.title })).toBeTruthy();
-    expect(screen.getByText("Hình ảnh đang được cập nhật")).toBeTruthy();
+    expect(screen.getByLabelText(`Bìa mặc định: ${detail.title}`)).toBeTruthy();
   });
 
   it("renders an approved public video with native playback controls", () => {

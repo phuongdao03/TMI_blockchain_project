@@ -10,7 +10,6 @@ import {
   ExternalLink,
   FileCheck2,
   FileText,
-  ImageOff,
   RotateCcw,
   ShieldCheck,
   UserRound,
@@ -20,6 +19,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AdaptiveVideo } from "@/components/public/adaptive-video";
+import { WorkCoverPlaceholder } from "@/components/public/work-cover-placeholder";
 import { PublicWorkCard } from "@/components/public/public-work-card";
 import { PublicWorkShareControls } from "@/components/public/public-work-share-controls";
 import { Button } from "@/components/ui/button";
@@ -103,15 +103,15 @@ export function PublicWorkPresentation({
     staleTime: 60_000,
   });
   return (
-    <article className="public-theme-surface relative isolate overflow-hidden">
-      <header className="border-b border-white/10 px-4 py-10 sm:px-6 lg:py-16">
+    <article className="public-theme-surface @container/work relative isolate min-w-0 overflow-hidden">
+      <header className="border-b border-white/10 px-4 py-7 @min-[40rem]/work:px-6 @min-[64rem]/work:py-14">
         <div className="mx-auto max-w-[90rem]">
           <nav
             aria-label="Breadcrumb"
-            className="flex items-center gap-2 text-sm text-slate-500"
+            className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-6 text-slate-500"
           >
             <Link
-              className="inline-flex items-center gap-1 hover:text-white"
+              className="inline-flex min-h-11 items-center gap-1 hover:text-white"
               href="/works"
             >
               <ArrowLeft className="size-4" /> Danh sách đề cử
@@ -119,26 +119,28 @@ export function PublicWorkPresentation({
             <span aria-hidden="true">/</span>
             <span>{detail.categoryName}</span>
           </nav>
-          <div className="mt-9 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
-            <div>
+          <div className="mt-5 grid grid-cols-1 gap-6 @min-[64rem]/work:mt-9 @min-[64rem]/work:grid-cols-[minmax(0,1fr)_22rem] @min-[64rem]/work:items-end">
+            <div className="min-w-0">
               <p className="text-xs font-bold tracking-[0.2em] text-gold-300 uppercase">
                 {detail.categoryName}
               </p>
-              <h1 className="mt-4 max-w-5xl text-4xl font-bold tracking-[-0.045em] text-white sm:text-6xl lg:text-7xl">
+              <h1 className="mt-3 max-w-5xl text-3xl leading-tight font-bold break-words tracking-[-0.035em] text-white @min-[40rem]/work:text-5xl @min-[64rem]/work:text-6xl">
                 {detail.title}
               </h1>
-              <p className="mt-6 max-w-3xl text-base leading-8 text-slate-300 sm:text-lg">
+              <p className="mt-4 max-w-3xl text-base leading-7 break-words text-slate-300 @min-[40rem]/work:text-lg">
                 {detail.shortDescription}
               </p>
             </div>
-            <dl className="grid gap-4 border-l border-white/10 pl-5 text-sm">
+            <dl className="grid min-w-0 gap-4 border-t border-white/10 pt-5 text-sm @min-[64rem]/work:border-t-0 @min-[64rem]/work:border-l @min-[64rem]/work:pt-0 @min-[64rem]/work:pl-5">
               <div>
                 <dt className="text-xs tracking-wide text-slate-500 uppercase">
                   Tác giả công khai
                 </dt>
-                <dd className="mt-1 flex items-center gap-2 font-bold text-white">
-                  <UserRound className="size-4 text-gold-300" />
-                  {detail.authorDisplayName || "Chưa công bố"}
+                <dd className="mt-1 flex items-start gap-2 leading-6 font-bold text-white">
+                  <UserRound className="mt-1 size-4 shrink-0 text-gold-300" />
+                  <span className="min-w-0 break-words">
+                    {detail.authorDisplayName || "Chưa công bố"}
+                  </span>
                 </dd>
               </div>
               {detail.organizationDisplayName ? (
@@ -155,8 +157,8 @@ export function PublicWorkPresentation({
                 <dt className="text-xs tracking-wide text-slate-500 uppercase">
                   Ngày công bố
                 </dt>
-                <dd className="mt-1 flex items-center gap-2 text-white">
-                  <CalendarDays className="size-4 text-gold-300" />
+                <dd className="mt-1 flex items-start gap-2 leading-6 text-white">
+                  <CalendarDays className="mt-1 size-4 shrink-0 text-gold-300" />
                   {preview ? (
                     <span>Chưa công bố · bản xem trước</span>
                   ) : (
@@ -173,9 +175,9 @@ export function PublicWorkPresentation({
         </div>
       </header>
 
-      <div className="mx-auto max-w-[90rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+      <div className="mx-auto max-w-[90rem] px-4 py-6 @min-[40rem]/work:px-6 @min-[64rem]/work:px-8 @min-[64rem]/work:py-12">
         <PublicGallery media={detail.media} title={detail.title} />
-        <div className="mt-12 grid gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="mt-8 grid grid-cols-1 gap-8 @min-[64rem]/work:mt-12 @min-[64rem]/work:grid-cols-[minmax(0,1fr)_24rem]">
           <div className="min-w-0">
             <section
               aria-labelledby="about-work-heading"
@@ -213,7 +215,7 @@ export function PublicWorkPresentation({
             </section>
             {!preview ? <PublicWorkShareControls detail={detail} /> : null}
           </div>
-          <aside className="h-fit divide-y divide-white/10 border-y border-white/10">
+          <aside className="h-fit min-w-0 divide-y divide-white/10 border-y border-white/10">
             <CertificatePanel certificate={detail.certificate} />
             <ProofPanel
               proof={detail.proof}
@@ -240,7 +242,7 @@ export function PublicWorkPresentation({
             >
               Tác phẩm liên quan
             </h2>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-6 grid gap-4 @min-[40rem]/work:grid-cols-2 @min-[64rem]/work:grid-cols-3">
               {detail.relatedWorks.map((work, index) => (
                 <PublicWorkCard
                   key={work.id}
@@ -270,18 +272,11 @@ function PublicGallery({
   const selected = media.find((item) => item.id === selectedId) ?? media[0];
   if (!selected)
     return (
-      <div className="grid aspect-[16/8] place-items-center rounded-3xl border border-dashed border-white/15 bg-ink-900">
-        <div className="text-center">
-          <ImageOff className="mx-auto size-9 text-slate-600" />
-          <p className="mt-3 text-sm text-slate-500">
-            Hình ảnh đang được cập nhật
-          </p>
-        </div>
-      </div>
+      <WorkCoverPlaceholder title={title} label="Tác phẩm được ghi nhận" />
     );
   return (
     <section aria-label="Thư viện nội dung đề cử">
-      <div className="relative grid min-h-[22rem] place-items-center overflow-hidden rounded-3xl border border-white/10 bg-ink-900 sm:min-h-[34rem]">
+      <div className="relative grid min-h-[14rem] place-items-center overflow-hidden rounded-xl border border-white/10 bg-ink-900 @min-[40rem]/work:min-h-[28rem] @min-[40rem]/work:rounded-3xl">
         {selected.kind === "IMAGE" && selected.url ? (
           <Image
             alt={selected.altText || title}

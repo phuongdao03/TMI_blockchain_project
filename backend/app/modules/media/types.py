@@ -11,6 +11,7 @@ class MediaPurpose(StrEnum):
     AVATAR = "AVATAR"
     DOSSIER_EVIDENCE = "DOSSIER_EVIDENCE"
     PUBLIC_WORK = "PUBLIC_WORK"
+    PUBLIC_COVER = "PUBLIC_COVER"
 
 
 @dataclass(frozen=True, slots=True)

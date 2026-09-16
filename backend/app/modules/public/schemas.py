@@ -308,6 +308,12 @@ class PublicMediaAttachRequest(PublicSchema):
     alt_text: str | None = Field(default=None, max_length=500)
 
 
+class PublicCoverCropRequest(PublicSchema):
+    x: int = Field(ge=0, le=100)
+    y: int = Field(ge=0, le=100)
+    zoom: int = Field(ge=100, le=300)
+
+
 class PublicMediaOrderRequest(PublicSchema):
     relation_ids: list[UUID] = Field(max_length=100)
 
@@ -340,6 +346,9 @@ class PublicMediaAdminData(PublicSchema):
     failure_code: str | None
     poster_media_asset_id: UUID | None
     poster_time_ms: int | None = None
+    cover_x: int = 50
+    cover_y: int = 50
+    cover_zoom: int = 100
     video_controls_preset: VideoControlsPreset
     video_fit_mode: VideoFitMode
     video_quality_profile: VideoQualityProfile

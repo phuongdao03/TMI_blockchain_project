@@ -67,6 +67,16 @@ interface MediaPolicy {
 }
 
 export const mediaPolicies: Record<MediaPurpose, MediaPolicy> = {
+  PUBLIC_COVER: {
+    accept: "image/jpeg,image/png,image/webp",
+    maxBytes: 5_242_880,
+    maxMegabytes: 5,
+    formats: {
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"],
+      "image/webp": [".webp"],
+    },
+  },
   AVATAR: {
     accept: "image/jpeg,image/png,image/webp",
     maxBytes: 5_242_880,

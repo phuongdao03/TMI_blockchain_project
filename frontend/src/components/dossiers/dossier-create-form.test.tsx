@@ -33,7 +33,7 @@ describe("DossierCreateForm", () => {
       </QueryClientProvider>,
     );
 
-    const activeStep = screen.getByText("Chọn loại hồ sơ").closest("li");
+    const activeStep = screen.getByText("Thông tin").closest("li");
     expect(activeStep?.getAttribute("aria-current")).toBe("step");
     expect(activeStep?.className).toContain("dossier-journey__step--active");
     expect(activeStep?.className).not.toContain("bg-primary-50");

@@ -301,7 +301,7 @@ export interface ProfileAvatarUpdate {
   avatarMediaId: string;
 }
 
-export type MediaPurpose = "AVATAR" | "DOSSIER_EVIDENCE";
+export type MediaPurpose = "AVATAR" | "DOSSIER_EVIDENCE" | "PUBLIC_COVER";
 export type MediaConfidentiality = "PRIVATE" | "PUBLIC";
 export type MediaStatus =
   | "PENDING"
@@ -1239,6 +1239,9 @@ export interface PublicWorkMedia {
   failureCode: string | null;
   posterMediaAssetId: string | null;
   posterTimeMs?: number | null;
+  coverX?: number;
+  coverY?: number;
+  coverZoom?: number;
   videoControlsPreset: VideoControlsPreset;
   videoFitMode: VideoFitMode;
   videoQualityProfile: VideoQualityProfile;

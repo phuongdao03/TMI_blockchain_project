@@ -63,3 +63,92 @@ test("content admin previews and publishes a public work", async ({ page }) => {
     .click();
   await expect(page.getByRole("button", { name: "Ẩn tác phẩm" })).toBeVisible();
 });
+
+test("mobile work preview uses its own width instead of desktop breakpoints", async ({
+  page,
+  isMobile,
+}) => {
+  await page.setViewportSize({ width: isMobile ? 390 : 1440, height: 1000 });
+  await page.goto("/admin/content");
+  await page.getByRole("button", { name: /Di sản số TMI/ }).click();
+  await page
+    .getByLabel("Tiêu đề công khai")
+    .fill("Video chào mừng thương hiệu ĐỀ CỬ TINH HOA VIỆT");
+  await page.getByRole("button", { name: "Xem trước", exact: true }).click();
+  await page.getByRole("button", { name: "Xem bản mobile" }).click();
+  const title = page.getByRole("heading", {
+    level: 1,
+    name: "Video chào mừng thương hiệu ĐỀ CỬ TINH HOA VIỆT",
+    exact: true,
+  });
+  await expect(title).toBeVisible();
+  await expect
+    .poll(() =>
+      title.evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
+    )
+    .toBeLessThanOrEqual(36);
+  await expect
+    .poll(() => title.evaluate((el) => el.getBoundingClientRect().width))
+    .toBeGreaterThan(270);
+  await expect
+    .poll(() =>
+      title.evaluate(
+        (el) =>
+          getComputedStyle(
+            el.parentElement!.parentElement!,
+          ).gridTemplateColumns.split(" ").length,
+      ),
+    )
+    .toBe(1);
+  for (const width of [320, 390, 768]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth - window.innerWidth,
+        ),
+      )
+      .toBeLessThanOrEqual(1);
+    await expect(title).toBeVisible();
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await title.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: test.info().outputPath("mobile-work-preview.png"),
+  });
+});
+
+test("public work stays readable without horizontal scrolling on phones", async ({
+  page,
+}) => {
+  for (const width of [320, 390, 430, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/works/bo-nhan-dien-tmi");
+    const title = page.getByRole("heading", {
+      level: 1,
+      name: "Bộ nhận diện TMI",
+      exact: true,
+    });
+    await expect(title).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth - window.innerWidth,
+        ),
+      )
+      .toBeLessThanOrEqual(1);
+    if (width < 640) {
+      await expect(title).toHaveCSS("font-size", "30px");
+      await expect
+        .poll(() =>
+          title.evaluate(
+            (el) =>
+              getComputedStyle(
+                el.parentElement!.parentElement!,
+              ).gridTemplateColumns.split(" ").length,
+          ),
+        )
+        .toBe(1);
+    }
+  }
+});

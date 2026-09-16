@@ -1421,6 +1421,16 @@ export const publicWorkAdminApi = {
       body: JSON.stringify({ relationIds }),
     });
   },
+  configureCover(
+    workId: string,
+    relationId: string,
+    input: { x: number; y: number; zoom: number },
+  ) {
+    return request<PublicWorkMedia>(
+      `/admin/public-works/${workId}/media/${relationId}/cover-presentation`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
   removeMedia(workId: string, relationId: string) {
     return request<void>(`/admin/public-works/${workId}/media/${relationId}`, {
       method: "DELETE",

@@ -35,6 +35,7 @@ from app.modules.public.schemas import (
     PublicationRequest,
     PublicationScheduleRequest,
     PublicationVersionRequest,
+    PublicCoverCropRequest,
     PublicMediaAdminData,
     PublicMediaAttachRequest,
     PublicMediaCandidateData,
@@ -397,6 +398,33 @@ async def attach_public_work_media(
             caption=payload.caption,
             alt_text=payload.alt_text,
         ),
+        request_id=request.state.request_id,
+    )
+    return SuccessEnvelope(
+        data=PublicMediaAdminData.model_validate(row),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.patch(
+    "/{work_id}/media/{relation_id}/cover-presentation",
+    response_model=SuccessEnvelope[PublicMediaAdminData],
+)
+async def configure_public_work_cover(
+    work_id: UUID,
+    relation_id: UUID,
+    payload: PublicCoverCropRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: PublicMediaServiceDependency,
+) -> SuccessEnvelope[PublicMediaAdminData]:
+    row = await service.configure_cover(
+        principal,
+        work_id,
+        relation_id,
+        x=payload.x,
+        y=payload.y,
+        zoom=payload.zoom,
         request_id=request.state.request_id,
     )
     return SuccessEnvelope(

@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { trackPublicCatalog } from "@/lib/analytics/public-catalog";
 import type { PublicCatalogWork } from "@/lib/api/types";
+import { WorkCoverPlaceholder } from "@/components/public/work-cover-placeholder";
 
 export function PublicWorkCard({
   position,
@@ -36,7 +37,7 @@ export function PublicWorkCard({
             })
           }
         >
-          <div className="relative aspect-[4/3] overflow-hidden bg-ink-800">
+          <div className="relative aspect-video overflow-hidden bg-ink-800">
             {work.thumbnailUrl && !imageFailed ? (
               <>
                 {!imageReady ? (
@@ -58,7 +59,10 @@ export function PublicWorkCard({
                 />
               </>
             ) : (
-              <span className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(246,197,21,.2),transparent_32%),linear-gradient(145deg,#751C19,#240908)]" />
+              <WorkCoverPlaceholder
+                title={work.title}
+                label={work.categoryName}
+              />
             )}
             <span className="absolute inset-0 bg-gradient-to-t from-ink-950/85 via-ink-950/5 to-transparent" />
             <span className="absolute top-3 left-3 border border-white/20 bg-ink-950/80 px-2.5 py-1 text-[0.6rem] font-bold tracking-[0.12em] text-white uppercase backdrop-blur">

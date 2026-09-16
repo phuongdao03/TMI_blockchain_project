@@ -273,6 +273,11 @@ class PublicWorkTag(Base):
 class PublicWorkMedia(UtcTimestampMixin, Base):
     __tablename__ = "public_work_media"
     __table_args__ = (
+        CheckConstraint(
+            "cover_x BETWEEN 0 AND 100 AND cover_y BETWEEN 0 AND 100 "
+            "AND cover_zoom BETWEEN 100 AND 300",
+            name="cover_crop_supported",
+        ),
         UniqueConstraint(
             "public_work_id",
             "media_asset_id",
@@ -377,6 +382,15 @@ class PublicWorkMedia(UtcTimestampMixin, Base):
         server_default="0",
     )
     failure_code: Mapped[str | None] = mapped_column(String(64))
+    cover_x: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=50, server_default="50"
+    )
+    cover_y: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=50, server_default="50"
+    )
+    cover_zoom: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=100, server_default="100"
+    )
 
 
 class ContentReport(UtcTimestampMixin, Base):

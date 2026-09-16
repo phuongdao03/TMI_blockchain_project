@@ -209,6 +209,12 @@ describe("DossierWorkspace", () => {
     await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
 
     expect(screen.getByText("Cần bổ sung trước khi nộp")).toBeDefined();
+    expect(
+      screen.getByText("Chưa đáp ứng các tài liệu bắt buộc"),
+    ).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Bổ sung tài liệu" }));
+    expect(screen.getByText("Tải tệp chưa phải là gửi hồ sơ")).toBeDefined();
+    await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
     expect(screen.getByText("Tài liệu quyền sở hữu")).toBeDefined();
     expect(screen.getByRole("button", { name: "Nộp hồ sơ" })).toHaveProperty(
       "disabled",

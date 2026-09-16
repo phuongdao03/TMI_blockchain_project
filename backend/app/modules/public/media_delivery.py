@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import HTTPException, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.models import CertificateStatus
@@ -12,6 +13,7 @@ from app.modules.media.gateway import CloudinaryMediaGateway
 from app.modules.media.models import MediaAsset, MediaEncryptionStatus, MediaStatus
 from app.modules.media.retained_content import read_retained_content
 from app.modules.public.catalog_repository import PublicWorkRepository
+from app.modules.public.cover import crop_cover, is_editorial_cover
 from app.modules.public.errors import PublicWorkNotFoundError
 from app.modules.public.media_repository import PublicMediaRepository
 from app.modules.public.media_service import (
@@ -84,6 +86,10 @@ class PublicMediaDeliveryService:
         *,
         poster: bool = False,
         poster_time_ms: int | None = None,
+        cover: bool = False,
+        cover_x: int | None = None,
+        cover_y: int | None = None,
+        cover_zoom: int | None = None,
     ) -> Response:
         repository = PublicMediaRepository(self.session)
         async with self.session.begin():
@@ -107,7 +113,10 @@ class PublicMediaDeliveryService:
                     MediaEncryptionStatus.LEGACY_UNENCRYPTED,
                 }
                 or relation.derivative_status is not DerivativeStatus.READY
-                or not await repository.is_source_evidence_asset(work, asset.id)
+                or (
+                    not is_editorial_cover(asset)
+                    and not await repository.is_source_evidence_asset(work, asset.id)
+                )
             ):
                 raise PublicWorkNotFoundError()
             anonymous_allowed = (
@@ -129,6 +138,26 @@ class PublicMediaDeliveryService:
                 if principal is None:
                     raise PublicWorkNotFoundError()
                 PublicMediaService._require_admin(principal)
+        if cover:
+            if not asset.mime_type.startswith("image/"):
+                raise PublicWorkNotFoundError()
+            x = cover_x if cover_x is not None else relation.cover_x
+            y = cover_y if cover_y is not None else relation.cover_y
+            zoom = cover_zoom if cover_zoom is not None else relation.cover_zoom
+            cache_key = f"cover:{asset.sha256}:{x}:{y}:{zoom}" if asset.sha256 else None
+            cached = cached_poster(cache_key)
+            if cached is not None:
+                return content_response(cached, "image/jpeg", None)
+            content = await read_retained_content(asset, self.gateway, self.keyring)
+            cropped = await run_in_threadpool(
+                crop_cover,
+                content,
+                x=cover_x if cover_x is not None else relation.cover_x,
+                y=cover_y if cover_y is not None else relation.cover_y,
+                zoom=cover_zoom if cover_zoom is not None else relation.cover_zoom,
+            )
+            retain_poster(cache_key, cropped)
+            return content_response(cropped, "image/jpeg", None)
         if poster and not asset.mime_type.startswith("video/"):
             raise PublicWorkNotFoundError()
         duration = getattr(relation, "duration_ms", None) or getattr(

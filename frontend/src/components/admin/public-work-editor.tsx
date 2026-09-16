@@ -26,6 +26,7 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { VideoCoverPicker } from "@/components/admin/video-cover-picker";
+import { ImageCoverPicker } from "@/components/admin/image-cover-picker";
 import { PublicWorkPresentation } from "@/components/public/public-work-detail";
 import { SelectControl } from "@/components/ui/form-controls";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -546,6 +547,8 @@ export function PublicWorkEditor({
                     version={detail.data.sourceVersionNo}
                   />
                   <Gallery
+                    title={liveValues.title ?? detail.data.title}
+                    category={detail.data.categoryName}
                     previewMedia={preview.data?.media ?? []}
                     candidates={mediaCandidates.data ?? []}
                     items={media.data ?? []}
@@ -952,6 +955,8 @@ function EditorField({
 }
 
 function Gallery({
+  title,
+  category,
   previewMedia,
   candidates,
   items,
@@ -963,6 +968,8 @@ function Gallery({
   sourceLoading,
   workId,
 }: {
+  title: string;
+  category: string;
   previewMedia: PublicWorkPreview["media"];
   candidates: PublicMediaCandidate[];
   items: PublicWorkMedia[];
@@ -1136,128 +1143,149 @@ function Gallery({
         </p>
       ) : null}
 
-      {items.length > 0 ? (
-        <div className="mt-5 border-t border-neutral-200 pt-4">
-          <div className="mb-5 border-b border-neutral-200 pb-5">
-            <h4 className="flex items-center gap-2 font-bold">
-              <ImageIcon className="size-5 text-primary-700" /> Chọn ảnh bìa
-            </h4>
-            <p className="mt-2 text-sm leading-6 text-neutral-600">
-              Chọn ảnh đã nộp hoặc dùng khung hình tự động của video. Lựa chọn
-              hiện ngay trong bản xem trước; bấm Lưu thay đổi để lưu ảnh bìa.
-            </p>
-            {selectedCover?.kind === "VIDEO" &&
-            items.find((item) => item.id === selectedCover.id) ? (
-              <VideoCoverPicker
-                key={
-                  selectedCover.id +
-                  (items.find((item) => item.id === selectedCover.id)
-                    ?.posterTimeMs ?? "auto")
-                }
-                item={items.find((item) => item.id === selectedCover.id)!}
-                workId={workId}
-                posterUrl={selectedCover.posterUrl}
-                onChanged={onChanged}
-              />
-            ) : selectedCover ? (
-              <CoverImage
-                key={
-                  selectedCover.id +
-                  (selectedCover.posterUrl ?? selectedCover.url ?? "")
-                }
-                media={selectedCover}
-              />
-            ) : (
-              <p className="mt-3 text-sm text-neutral-600">
-                Chưa chọn ảnh bìa. Chọn ảnh hoặc video bên dưới để xem bìa tại
-                đây.
-              </p>
-            )}
-          </div>
-          <h4 className="text-sm font-bold text-neutral-800">
-            Đang dùng để công bố
+      <div className="mt-5 border-t border-neutral-200 pt-4">
+        <div className="mb-5 border-b border-neutral-200 pb-5">
+          <h4 className="flex items-center gap-2 font-bold">
+            <ImageIcon className="size-5 text-primary-700" /> Chọn ảnh bìa
           </h4>
-          <ul className="mt-2 divide-y divide-neutral-200">
-            {items.map((item, index) => (
-              <li className="py-3" key={item.id}>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="grid size-10 place-items-center rounded-lg bg-neutral-100 text-xs font-bold text-neutral-600">
-                    {item.mediaKind.slice(0, 3)}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold">
-                      {item.caption || item.altText || `Media ${index + 1}`}
-                    </span>
-                    <span className="text-xs font-semibold text-neutral-600">
-                      {derivativeStatusLabels[item.derivativeStatus]}
-                    </span>
-                    {item.derivativeStatus === "PENDING" ||
-                    item.derivativeStatus === "PROCESSING" ? (
-                      <span className="mt-1 block text-xs text-neutral-500">
-                        Tự động cập nhật trạng thái, bạn có thể tiếp tục biên
-                        tập.
-                      </span>
-                    ) : null}
-                  </span>
-                  {item.mediaKind === "IMAGE" || item.mediaKind === "VIDEO" ? (
-                    <button
-                      aria-pressed={selectedThumbnail === item.mediaAssetId}
-                      className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition sm:w-auto ${selectedThumbnail === item.mediaAssetId ? "border-primary-200 bg-primary-50 text-primary-700" : "border-primary-700 bg-primary-700 text-white hover:bg-primary-800"}`}
-                      disabled={item.derivativeStatus !== "READY"}
-                      onClick={() => onThumbnail(item.mediaAssetId)}
-                      type="button"
-                    >
-                      <ImageIcon aria-hidden="true" className="size-4" />
-                      {selectedThumbnail === item.mediaAssetId
-                        ? "Đã chọn làm bìa"
-                        : item.mediaKind === "VIDEO"
-                          ? "Dùng khung video làm bìa"
-                          : "Đặt ảnh bìa"}
-                    </button>
-                  ) : null}
-                  <button
-                    aria-label="Di chuyển lên"
-                    className="grid size-11 place-items-center"
-                    disabled={index === 0}
-                    onClick={() => void reorder(index, -1)}
-                    type="button"
-                  >
-                    <ArrowUp className="size-4" />
-                  </button>
-                  <button
-                    aria-label="Di chuyển xuống"
-                    className="grid size-11 place-items-center"
-                    disabled={index === items.length - 1}
-                    onClick={() => void reorder(index, 1)}
-                    type="button"
-                  >
-                    <ArrowDown className="size-4" />
-                  </button>
-                  <button
-                    aria-label="Xóa hình ảnh hoặc video"
-                    className="grid size-11 place-items-center text-red-700"
-                    onClick={() => void remove(item.id)}
-                    type="button"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-                {item.mediaKind === "VIDEO" ? (
-                  <VideoPresentationSettings
-                    key={item.id + (item.posterTimeMs ?? "auto")}
-                    images={items.filter(
-                      (candidate) => candidate.mediaKind === "IMAGE",
-                    )}
-                    item={item}
-                    onChanged={onChanged}
-                    workId={workId}
-                  />
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <p className="mt-2 text-sm leading-6 text-neutral-600">
+            Chọn ảnh đã nộp hoặc dùng khung hình tự động của video. Lựa chọn
+            hiện ngay trong bản xem trước; bấm Lưu thay đổi để lưu ảnh bìa.
+          </p>
+          <ImageCoverPicker
+            workId={workId}
+            title={title}
+            category={category}
+            items={items}
+            initialSelection={
+              selectedCover?.kind === "IMAGE" ? selectedCover.id : undefined
+            }
+            images={previewMedia.filter(
+              (image) =>
+                image.kind === "IMAGE" &&
+                candidates.some(
+                  (candidate) =>
+                    candidate.mediaAssetId ===
+                      items.find((item) => item.id === image.id)
+                        ?.mediaAssetId &&
+                    ["PUBLIC", "PUBLIC_PREVIEW"].includes(
+                      candidate.accessScope,
+                    ),
+                ),
+            )}
+            onThumbnail={onThumbnail}
+            onChanged={onChanged}
+          />
+          {selectedCover?.kind === "VIDEO" &&
+          items.find((item) => item.id === selectedCover.id) ? (
+            <VideoCoverPicker
+              key={
+                selectedCover.id +
+                (items.find((item) => item.id === selectedCover.id)
+                  ?.posterTimeMs ?? "auto")
+              }
+              item={items.find((item) => item.id === selectedCover.id)!}
+              workId={workId}
+              posterUrl={selectedCover.posterUrl}
+              onChanged={onChanged}
+            />
+          ) : selectedCover ? (
+            <CoverImage
+              key={
+                selectedCover.id +
+                (selectedCover.posterUrl ?? selectedCover.url ?? "")
+              }
+              media={selectedCover}
+            />
+          ) : (
+            <p className="mt-3 text-sm text-neutral-600">
+              Chưa chọn ảnh bìa. Chọn ảnh hoặc video bên dưới để xem bìa tại
+              đây.
+            </p>
+          )}
         </div>
-      ) : null}
+        <h4 className="text-sm font-bold text-neutral-800">
+          Đang dùng để công bố
+        </h4>
+        <ul className="mt-2 divide-y divide-neutral-200">
+          {items.map((item, index) => (
+            <li className="py-3" key={item.id}>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="grid size-10 place-items-center rounded-lg bg-neutral-100 text-xs font-bold text-neutral-600">
+                  {item.mediaKind.slice(0, 3)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-bold">
+                    {item.caption || item.altText || `Media ${index + 1}`}
+                  </span>
+                  <span className="text-xs font-semibold text-neutral-600">
+                    {derivativeStatusLabels[item.derivativeStatus]}
+                  </span>
+                  {item.derivativeStatus === "PENDING" ||
+                  item.derivativeStatus === "PROCESSING" ? (
+                    <span className="mt-1 block text-xs text-neutral-500">
+                      Tự động cập nhật trạng thái, bạn có thể tiếp tục biên tập.
+                    </span>
+                  ) : null}
+                </span>
+                {item.mediaKind === "IMAGE" || item.mediaKind === "VIDEO" ? (
+                  <button
+                    aria-pressed={selectedThumbnail === item.mediaAssetId}
+                    className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition sm:w-auto ${selectedThumbnail === item.mediaAssetId ? "border-primary-200 bg-primary-50 text-primary-700" : "border-primary-700 bg-primary-700 text-white hover:bg-primary-800"}`}
+                    disabled={item.derivativeStatus !== "READY"}
+                    onClick={() => onThumbnail(item.mediaAssetId)}
+                    type="button"
+                  >
+                    <ImageIcon aria-hidden="true" className="size-4" />
+                    {selectedThumbnail === item.mediaAssetId
+                      ? "Đã chọn làm bìa"
+                      : item.mediaKind === "VIDEO"
+                        ? "Dùng khung video làm bìa"
+                        : "Đặt ảnh bìa"}
+                  </button>
+                ) : null}
+                <button
+                  aria-label="Di chuyển lên"
+                  className="grid size-11 place-items-center"
+                  disabled={index === 0}
+                  onClick={() => void reorder(index, -1)}
+                  type="button"
+                >
+                  <ArrowUp className="size-4" />
+                </button>
+                <button
+                  aria-label="Di chuyển xuống"
+                  className="grid size-11 place-items-center"
+                  disabled={index === items.length - 1}
+                  onClick={() => void reorder(index, 1)}
+                  type="button"
+                >
+                  <ArrowDown className="size-4" />
+                </button>
+                <button
+                  aria-label="Xóa hình ảnh hoặc video"
+                  className="grid size-11 place-items-center text-red-700"
+                  onClick={() => void remove(item.id)}
+                  type="button"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+              {item.mediaKind === "VIDEO" ? (
+                <VideoPresentationSettings
+                  key={item.id + (item.posterTimeMs ?? "auto")}
+                  images={items.filter(
+                    (candidate) => candidate.mediaKind === "IMAGE",
+                  )}
+                  item={item}
+                  onChanged={onChanged}
+                  workId={workId}
+                />
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }
@@ -1463,7 +1491,7 @@ function CoverImage({ media }: { media: PublicWorkPreview["media"][number] }) {
     "loading",
   );
   const [attempt, setAttempt] = useState(0);
-  const url = media.kind === "VIDEO" ? media.posterUrl : media.url;
+  const url = media.posterUrl ?? media.url;
   useEffect(() => {
     if (status !== "loading") return;
     const timer = window.setTimeout(() => setStatus("error"), 30_000);
@@ -1530,15 +1558,16 @@ function PreviewPanel({
   onMode: (mode: "desktop" | "mobile") => void;
 }) {
   return (
-    <div className="bg-neutral-100 p-5 sm:p-8">
+    <div className="min-w-0 bg-neutral-100 px-2 py-4 sm:p-6">
       <div className="mb-5 flex items-center justify-between gap-3">
         <p className="text-sm font-bold text-neutral-700">
           Xem như người dùng · chưa công bố
         </p>
-        <div className="flex rounded-xl border border-neutral-200 bg-white p-1">
+        <div className="flex shrink-0 rounded-xl border border-neutral-200 bg-white p-1">
           <button
             aria-label="Xem bản desktop"
-            className={`rounded-lg p-2 ${mode === "desktop" ? "bg-neutral-950 text-white" : "text-neutral-500"}`}
+            aria-pressed={mode === "desktop"}
+            className={`grid min-h-11 min-w-11 place-items-center rounded-lg ${mode === "desktop" ? "bg-neutral-950 text-white" : "text-neutral-500"}`}
             onClick={() => onMode("desktop")}
             type="button"
           >
@@ -1546,7 +1575,8 @@ function PreviewPanel({
           </button>
           <button
             aria-label="Xem bản mobile"
-            className={`rounded-lg p-2 ${mode === "mobile" ? "bg-neutral-950 text-white" : "text-neutral-500"}`}
+            aria-pressed={mode === "mobile"}
+            className={`grid min-h-11 min-w-11 place-items-center rounded-lg ${mode === "mobile" ? "bg-neutral-950 text-white" : "text-neutral-500"}`}
             onClick={() => onMode("mobile")}
             type="button"
           >
@@ -1555,7 +1585,7 @@ function PreviewPanel({
         </div>
       </div>
       <article
-        className={`mx-auto overflow-hidden bg-white shadow-xl transition-all ${mode === "mobile" ? "max-w-[23rem] rounded-[2rem]" : "max-w-5xl rounded-2xl"}`}
+        className={`mx-auto w-full min-w-0 overflow-hidden bg-white shadow-sm ${mode === "mobile" ? "max-w-[23rem] rounded-2xl" : "max-w-5xl rounded-2xl"}`}
       >
         {loading ? (
           <p className="p-8 text-sm text-neutral-500">

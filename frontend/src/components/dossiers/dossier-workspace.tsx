@@ -538,7 +538,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
       <div className="space-y-4">
         <nav
           aria-label="Các bước hoàn thiện hồ sơ"
-          className="grid border-b border-[var(--theme-border)] bg-[var(--theme-surface)] md:grid-cols-3"
+          className="grid grid-cols-3 border-b border-[var(--theme-border)] bg-[var(--theme-surface)]"
         >
           {steps.map((item, index) => {
             const Icon = item.icon;
@@ -547,7 +547,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
               <button
                 aria-current={active ? "step" : undefined}
                 className={cn(
-                  "flex min-h-16 w-full items-center gap-3 border-b-2 px-3 text-left transition-colors duration-150 md:border-b-2",
+                  "flex min-h-16 min-w-0 w-full flex-col justify-center gap-1 border-b-2 px-1 py-3 text-center transition-colors duration-150 sm:flex-row sm:gap-3 sm:px-3 sm:text-left",
                   active
                     ? "border-primary-600 text-primary-800"
                     : "border-transparent text-[var(--theme-muted)] hover:bg-[var(--theme-elevated)]",
@@ -567,10 +567,10 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   <Icon aria-hidden="true" className="size-4" />
                 </span>
                 <span>
-                  <span className="block text-sm font-bold">
+                  <span className="block text-xs font-bold sm:text-sm">
                     {index + 1}. {item.label}
                   </span>
-                  <span className="mt-0.5 block text-xs opacity-70">
+                  <span className="mt-0.5 hidden text-xs opacity-70 sm:block">
                     {item.description}
                   </span>
                 </span>
@@ -588,7 +588,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
             <section className="space-y-6">
               <div>
                 <h2 className="text-xl font-bold tracking-tight">
-                  Bằng chứng hồ sơ
+                  Tài liệu cho hồ sơ của bạn
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-neutral-500">
                   Chọn đúng loại, tải tệp lên và chờ hệ thống xác nhận an toàn.
@@ -597,6 +597,50 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
               </div>
               {dossier.canEdit ? (
                 <div className="space-y-5 border-t border-[var(--theme-border)] pt-5">
+                  <div className="text-sm leading-6">
+                    <p className="font-bold">Tải tệp chưa phải là gửi hồ sơ</p>
+                    <p className="mt-1 text-[var(--theme-muted)]">
+                      Chọn loại tài liệu, thêm tệp từ thiết bị rồi bấm Tải lên.
+                      Khi tệp đã được xác nhận, chuyển sang Kiểm tra & nộp để
+                      gửi hồ sơ.
+                    </p>
+                  </div>
+                  {documentRules.length > 0 ? (
+                    <div
+                      aria-label="Tài liệu cần chuẩn bị"
+                      className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]"
+                    >
+                      {documentRules.map((rule) => {
+                        const count = ruleProgress(rule, dossier.evidences);
+                        return (
+                          <button
+                            key={rule.key}
+                            type="button"
+                            aria-pressed={selectedRule?.key === rule.key}
+                            onClick={() => setEvidenceType(rule.key)}
+                            className={cn(
+                              "flex min-h-14 w-full items-center justify-between gap-3 px-3 py-3 text-left",
+                              selectedRule?.key === rule.key &&
+                                "bg-[var(--theme-elevated)]",
+                            )}
+                          >
+                            <span className="min-w-0">
+                              <strong className="block text-sm">
+                                {rule.label}
+                              </strong>
+                              <span className="text-xs text-[var(--theme-muted)]">
+                                {rule.required ? "Bắt buộc" : "Tùy chọn"} · Đã
+                                thêm {count}/{rule.maxCount} tệp
+                              </span>
+                            </span>
+                            <span className="shrink-0 text-xs font-bold">
+                              {count > 0 ? "Đã có" : "Thêm tệp →"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label
@@ -612,6 +656,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                           setEvidenceType(event.target.value)
                         }
                         value={selectedRule?.key ?? evidenceType}
+                        disabled={attach.isPending}
                       >
                         {documentRules.length ? (
                           documentRules.map((rule) => (
@@ -641,6 +686,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                       <input
                         className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm text-[var(--theme-text)]"
                         id="evidence-title"
+                        disabled={attach.isPending}
                         onChange={(event) =>
                           setEvidenceTitle(event.target.value)
                         }
@@ -649,6 +695,9 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                         }
                         value={evidenceTitle}
                       />
+                      <p className="mt-1 text-xs leading-5 text-[var(--theme-muted)]">
+                        Có thể để trống; hệ thống sẽ dùng tên loại tài liệu.
+                      </p>
                     </div>
                   </div>
                   {selectedRule ? (
@@ -748,6 +797,17 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   </div>
                 )}
               </div>
+              <div className="flex flex-wrap justify-between gap-3 border-t border-[var(--theme-border)] pt-5">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep("information")}
+                >
+                  Quay lại thông tin
+                </Button>
+                <Button onClick={() => setStep("review")}>
+                  Tiếp tục kiểm tra →
+                </Button>
+              </div>
             </section>
           ) : null}
 
@@ -769,6 +829,13 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                       <li key={rule.key}>{rule.label}</li>
                     ))}
                   </ul>
+                  <Button
+                    className="mt-3"
+                    variant="outline"
+                    onClick={() => setStep("evidence")}
+                  >
+                    Bổ sung tài liệu
+                  </Button>
                 </div>
               ) : null}
               <div className="grid gap-3 sm:grid-cols-2">
@@ -782,6 +849,16 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                     <p className="mt-1 text-xs text-neutral-500">
                       Tên và danh mục hợp lệ
                     </p>
+                    <p className="mt-2 text-sm font-semibold break-words">
+                      {dossier.title}
+                    </p>
+                    <Button
+                      className="mt-2"
+                      variant="outline"
+                      onClick={() => setStep("information")}
+                    >
+                      Xem / sửa thông tin
+                    </Button>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 rounded-xl border border-neutral-200 p-4">
@@ -800,9 +877,18 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                     <p className="text-sm font-bold">Bằng chứng xác minh</p>
                     <p className="mt-1 text-xs text-neutral-500">
                       {documentRules.length
-                        ? "Đã đáp ứng các tài liệu bắt buộc"
+                        ? evidenceReady
+                          ? "Đã đáp ứng các tài liệu bắt buộc"
+                          : "Chưa đáp ứng các tài liệu bắt buộc"
                         : `${dossier.evidences.length} tệp sẵn sàng`}
                     </p>
+                    <Button
+                      className="mt-2"
+                      variant="outline"
+                      onClick={() => setStep("evidence")}
+                    >
+                      Xem / sửa tài liệu
+                    </Button>
                   </div>
                 </div>
               </div>
