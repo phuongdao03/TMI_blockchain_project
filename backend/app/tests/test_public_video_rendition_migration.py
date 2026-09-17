@@ -105,5 +105,26 @@ def test_video_rendition_migration_requeues_only_published_proxy_videos(
                 "https://res.cloudinary.com/demo/video/upload/rendition.mp4",
             ),
         ]
+
+        command.upgrade(config, "0081_pre_generate_video_posters")
+        with sqlite3.connect(database_path) as connection:
+            warmed = connection.execute(
+                """
+                SELECT derivative_status, derivative_url, failure_code
+                FROM public_work_media WHERE id = 'published-rendition'
+                """
+            ).fetchone()
+            proxy = connection.execute(
+                """
+                SELECT derivative_status, derivative_url
+                FROM public_work_media WHERE id = 'published-video'
+                """
+            ).fetchone()
+        assert warmed == (
+            "PENDING",
+            "https://res.cloudinary.com/demo/video/upload/rendition.mp4",
+            None,
+        )
+        assert proxy == ("PENDING", None)
     finally:
         get_settings.cache_clear()

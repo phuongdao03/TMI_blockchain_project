@@ -159,6 +159,11 @@ export function GoogleOAuthButton({
       const auth = getFirebaseAuth();
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
+      if (isMobileBrowser()) {
+        setPendingRedirect(true);
+        await signInWithRedirect(auth, provider);
+        return;
+      }
       try {
         const credential = await signInWithPopup(auth, provider);
         await finishSignIn(credential.user);
@@ -168,9 +173,6 @@ export function GoogleOAuthButton({
           "auth/popup-blocked"
         ) {
           throw popupError;
-        }
-        if (isMobileBrowser()) {
-          throw { code: "auth/mobile-popup-blocked" };
         }
         setPendingRedirect(true);
         await signInWithRedirect(auth, provider);

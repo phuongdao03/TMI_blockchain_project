@@ -84,7 +84,7 @@ export function DashboardContextHeader({
             strokeWidth={1.75}
           />
         </button>
-        <PwaInstallButton />
+        <PwaInstallButton className="dashboard-context-header__install" />
         {user?.email ? (
           <span className="hidden max-w-52 truncate text-sm text-[var(--theme-muted)] md:block">
             {user.email}

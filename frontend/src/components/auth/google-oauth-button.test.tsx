@@ -41,40 +41,21 @@ describe("GoogleOAuthButton", () => {
     mocks.getRedirectResult.mockResolvedValue(null);
   });
 
-  it("uses a popup on the first mobile tap so Safari does not depend on cross-site redirect storage", async () => {
+  it("starts a redirect on the first mobile tap", async () => {
     vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
       "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
     );
-    mocks.signInWithPopup.mockResolvedValue({
-      user: { getIdToken: vi.fn(async () => "mobile-popup-token") },
-    });
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          success: true,
-          data: {
-            user: {
-              id: "user-mobile",
-              email: "mobile@cns.vn",
-              roles: ["PUBLIC_USER"],
-            },
-          },
-          meta: { request_id: "request-mobile" },
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    );
+    mocks.signInWithRedirect.mockResolvedValue(undefined);
 
     render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
     await userEvent.click(
       screen.getByRole("button", { name: "Tiếp tục với Google" }),
     );
 
-    await waitFor(() => expect(mocks.signInWithPopup).toHaveBeenCalledOnce());
-    expect(mocks.signInWithRedirect).not.toHaveBeenCalled();
-    expect(
-      sessionStorage.getItem("cns.google-oauth.redirect-pending"),
-    ).toBeNull();
+    await waitFor(() =>
+      expect(mocks.signInWithRedirect).toHaveBeenCalledOnce(),
+    );
+    expect(mocks.signInWithPopup).not.toHaveBeenCalled();
     expect(mocks.setCustomParameters).toHaveBeenCalledWith({
       prompt: "select_account",
     });
@@ -98,24 +79,21 @@ describe("GoogleOAuthButton", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("does not use redirect fallback on mobile browsers", async () => {
+  it("does not open a popup before redirecting on mobile browsers", async () => {
     vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
       "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
     );
-    mocks.signInWithPopup.mockRejectedValue({ code: "auth/popup-blocked" });
+    mocks.signInWithRedirect.mockResolvedValue(undefined);
 
     render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
     await userEvent.click(
       screen.getByRole("button", { name: "Tiếp tục với Google" }),
     );
 
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      "cho phép cửa sổ bật lên",
+    await waitFor(() =>
+      expect(mocks.signInWithRedirect).toHaveBeenCalledOnce(),
     );
-    expect(mocks.signInWithRedirect).not.toHaveBeenCalled();
-    expect(
-      sessionStorage.getItem("cns.google-oauth.redirect-pending"),
-    ).toBeNull();
+    expect(mocks.signInWithPopup).not.toHaveBeenCalled();
   });
 
   it("finishes authentication after returning from the mobile redirect", async () => {
@@ -227,24 +205,22 @@ describe("GoogleOAuthButton", () => {
     expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
   });
 
-  it("explains how to recover when a mobile popup cannot start", async () => {
+  it("keeps the mobile flow on redirect when popup errors are configured", async () => {
     vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
       "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Safari/604.1",
     );
     mocks.signInWithPopup.mockRejectedValue({ code: "auth/popup-blocked" });
+    mocks.signInWithRedirect.mockResolvedValue(undefined);
 
     render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
     await userEvent.click(
       screen.getByRole("button", { name: "Tiếp tục với Google" }),
     );
 
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      "cho phép cửa sổ bật lên",
+    await waitFor(() =>
+      expect(mocks.signInWithRedirect).toHaveBeenCalledOnce(),
     );
-    expect(mocks.signInWithRedirect).not.toHaveBeenCalled();
-    expect(
-      sessionStorage.getItem("cns.google-oauth.redirect-pending"),
-    ).toBeNull();
+    expect(mocks.signInWithPopup).not.toHaveBeenCalled();
   });
 
   it("finishes staff sign-in after Firebase authentication", async () => {

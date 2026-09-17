@@ -112,7 +112,13 @@ class PublicMediaDeliveryService:
                     MediaEncryptionStatus.NOT_REQUIRED,
                     MediaEncryptionStatus.LEGACY_UNENCRYPTED,
                 }
-                or relation.derivative_status is not DerivativeStatus.READY
+                or (
+                    relation.derivative_status is not DerivativeStatus.READY
+                    and not (
+                        relation.derivative_status is DerivativeStatus.PENDING
+                        and asset.mime_type.startswith("video/")
+                    )
+                )
                 or (
                     not is_editorial_cover(asset)
                     and not await repository.is_source_evidence_asset(work, asset.id)

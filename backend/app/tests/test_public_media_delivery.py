@@ -48,7 +48,12 @@ def test_invalid_range(requested: str) -> None:
     assert error.value.status_code == 416
 
 
-def test_encrypted_video_poster_delivers_real_frame_without_upload() -> None:
+@pytest.mark.parametrize(
+    "derivative_status", [DerivativeStatus.READY, DerivativeStatus.PENDING]
+)
+def test_encrypted_video_poster_delivers_real_frame_without_upload(
+    derivative_status: DerivativeStatus,
+) -> None:
     async def exercise() -> None:
         work_id, dossier_id = uuid4(), uuid4()
         work = SimpleNamespace(
@@ -58,7 +63,7 @@ def test_encrypted_video_poster_delivers_real_frame_without_upload() -> None:
             visibility=PublicWorkVisibility.PUBLIC,
         )
         relation = SimpleNamespace(
-            public_work_id=work_id, derivative_status=DerivativeStatus.READY
+            public_work_id=work_id, derivative_status=derivative_status
         )
         asset = SimpleNamespace(
             id=uuid4(),

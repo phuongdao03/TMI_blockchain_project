@@ -144,6 +144,10 @@ class PublicMediaQueryService:
                 row
                 for row in await self._repository.list_for_work(work_id)
                 if row.derivative_status is DerivativeStatus.READY
+                or (
+                    row.media_kind is PublicMediaKind.VIDEO
+                    and row.derivative_status is DerivativeStatus.PENDING
+                )
             )
         fallback = next(
             (row for row in rows if row.media_kind is PublicMediaKind.IMAGE), None
@@ -164,8 +168,12 @@ class PublicMediaQueryService:
                 sort_order=row.sort_order,
                 caption=row.caption,
                 alt_text=row.alt_text,
-                url=row.derivative_url,
-                mime_type=row.derivative_mime_type,
+                url=(
+                    row.derivative_url
+                    if row.derivative_status is DerivativeStatus.READY
+                    else f"/api/v1/public/works/{work_id}/media/{row.id}"
+                ),
+                mime_type=row.derivative_mime_type or "video/mp4",
                 width=row.derivative_width,
                 height=row.derivative_height,
                 duration_ms=row.duration_ms,
@@ -185,7 +193,10 @@ class PublicMediaQueryService:
                         extension="webp",
                         poster_time_ms=row.poster_time_ms,
                     )
-                    if row.media_kind is PublicMediaKind.VIDEO
+                    if (
+                        row.media_kind is PublicMediaKind.VIDEO
+                        and row.derivative_status is DerivativeStatus.READY
+                    )
                     else None
                 ),
                 streaming_url=(
@@ -666,6 +677,7 @@ class PublicMediaWorker:
             height = asset.height
             video_quality_profile = relation.video_quality_profile
             video_max_width = relation.video_max_width
+            poster_time_ms = relation.poster_time_ms
             work = await self._repository.get_work(relation.public_work_id)
             source_version_no = (
                 await self._repository.source_version_number(work)
@@ -709,6 +721,15 @@ class PublicMediaWorker:
                         f"{VIDEO_QUALITY_TRANSFORMATIONS[video_quality_profile]},vc_auto,f_mp4"
                     )
                 ),
+                eager_transformations=(
+                    (
+                        f"so_{poster_time_ms / 1000:g},q_auto,f_webp"
+                        if poster_time_ms is not None
+                        else "so_auto,q_auto,f_webp"
+                    ),
+                )
+                if media_kind is PublicMediaKind.VIDEO
+                else (),
             )
         except MediaProviderUnavailableError:
             await self._mark_failed(relation_id, "PROVIDER_UNAVAILABLE")

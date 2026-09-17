@@ -147,6 +147,7 @@ class PublicDerivativeGateway(Protocol):
         source_format: str,
         derivative_public_id: str,
         transformation: str,
+        eager_transformations: tuple[str, ...] = (),
         source_content: bytes | None = None,
     ) -> PublicDerivativeMetadata: ...
 
@@ -575,6 +576,7 @@ class CloudinaryMediaGateway:
         source_format: str,
         derivative_public_id: str,
         transformation: str,
+        eager_transformations: tuple[str, ...] = (),
         source_content: bytes | None = None,
     ) -> PublicDerivativeMetadata:
         # The transformed copy receives a distinct public identifier. This prevents
@@ -594,6 +596,8 @@ class CloudinaryMediaGateway:
             "transformation": transformation,
             "type": "upload",
         }
+        if eager_transformations:
+            parameters["eager"] = "|".join(eager_transformations)
         form = {
             **parameters,
             "api_key": self._api_key,

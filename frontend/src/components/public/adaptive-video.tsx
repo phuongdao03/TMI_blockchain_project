@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 type AdaptiveVideoProps = {
   fallbackUrl: string;
@@ -26,28 +26,9 @@ export function AdaptiveVideo({
   className,
 }: AdaptiveVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [nearViewport, setNearViewport] = useState(false);
-
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (typeof IntersectionObserver === "undefined") {
-      const fallbackTimer = setTimeout(() => setNearViewport(true), 0);
-      return () => clearTimeout(fallbackTimer);
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) setNearViewport(true);
-      },
-      { rootMargin: "240px" },
-    );
-    observer.observe(video);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !nearViewport) return;
     if (!streamingUrl) {
       video.src = fallbackUrl;
       return;
@@ -92,7 +73,7 @@ export function AdaptiveVideo({
       disposed = true;
       destroy?.();
     };
-  }, [fallbackUrl, nearViewport, streamingUrl]);
+  }, [fallbackUrl, streamingUrl]);
 
   return (
     <video
@@ -104,7 +85,7 @@ export function AdaptiveVideo({
       muted={muted}
       playsInline
       poster={poster}
-      preload={nearViewport ? "metadata" : "none"}
+      preload="metadata"
       ref={videoRef}
     >
       <track kind="captions" />

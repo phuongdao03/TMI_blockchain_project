@@ -7640,6 +7640,10 @@ html[data-theme="dark"] .review-workspace__error {
     display: none;
   }
 
+  .dashboard-context-header__install {
+    display: none;
+  }
+
   .dashboard-workspace-drawer__account {
     display: flex;
     align-items: center;

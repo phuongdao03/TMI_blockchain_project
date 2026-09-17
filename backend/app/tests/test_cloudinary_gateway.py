@@ -170,6 +170,7 @@ def test_cloudinary_creates_isolated_public_derivative(
             source_format="png",
             derivative_public_id=("ip-certificate/public/derivatives/relation-id"),
             transformation="c_limit,w_1600,h_1600,q_auto,f_webp",
+            eager_transformations=("so_8,q_auto,f_webp",),
             source_content=source_content,
         )
 
@@ -184,6 +185,7 @@ def test_cloudinary_creates_isolated_public_derivative(
             assert b"private%2Fowner%2Fsource-id" not in body
             assert b"/download?" not in body
             assert b"c_limit,w_1600,h_1600,q_auto,f_webp" in body
+            assert b"so_8,q_auto,f_webp" in body
             await gateway.close()
             await client.aclose()
             return
@@ -194,6 +196,7 @@ def test_cloudinary_creates_isolated_public_derivative(
         assert form["overwrite"] == ["true"]
         assert form["invalidate"] == ["true"]
         assert form["transformation"] == ["c_limit,w_1600,h_1600,q_auto,f_webp"]
+        assert form["eager"] == ["so_8,q_auto,f_webp"]
         assert "private%2Fowner%2Fsource-id" in form["file"][0]
         assert form["signature"]
         await gateway.close()
