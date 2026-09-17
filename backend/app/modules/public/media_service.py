@@ -612,7 +612,10 @@ class PublicMediaWorker:
             relation, asset = joined
             if relation.derivative_status is DerivativeStatus.READY:
                 return
-            if self._single_copy_storage_enabled or is_editorial_cover(asset):
+            if is_editorial_cover(asset) or (
+                self._single_copy_storage_enabled
+                and relation.media_kind is not PublicMediaKind.VIDEO
+            ):
                 if (
                     asset.status is not MediaStatus.ACTIVE
                     or asset.deleted_at is not None
@@ -703,7 +706,7 @@ class PublicMediaWorker:
                     if media_kind is PublicMediaKind.IMAGE
                     else (
                         f"c_limit,w_{video_max_width},"
-                        f"{VIDEO_QUALITY_TRANSFORMATIONS[video_quality_profile]},vc_auto"
+                        f"{VIDEO_QUALITY_TRANSFORMATIONS[video_quality_profile]},vc_auto,f_mp4"
                     )
                 ),
             )

@@ -389,7 +389,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert kwargs["source_resource_type"] == "video"
             assert kwargs["source_format"] == "mp4"
             assert kwargs["source_content"] == content
-            assert kwargs["transformation"] == "c_limit,w_640,q_auto:eco,vc_auto"
+            assert kwargs["transformation"] == "c_limit,w_640,q_auto:eco,vc_auto,f_mp4"
             assert str(kwargs["derivative_public_id"]).startswith("cns/local/dossiers/")
             assert "/versions/1/public/" in str(kwargs["derivative_public_id"])
             return PublicDerivativeMetadata(
@@ -548,6 +548,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
                     encoded_key=base64.b64encode(b"v" * 32).decode(),
                     key_id="video-test-v1",
                 ),
+                single_copy_storage_enabled=True,
             )
             with pytest.raises(PublicMediaValidationError, match="integrity"):
                 await worker.process(relation_id)
