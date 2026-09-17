@@ -62,7 +62,10 @@ compose_command config -q
 previous_tag="$(cat "$current_tag_file" 2>/dev/null || true)"
 
 deploy_release() {
-  compose_command pull || return 1
+  # Third-party service images are pinned and may already be present. Pull only
+  # missing images so a transient Docker Hub outage cannot block a new GHCR app
+  # release or prevent the local rollback images from starting.
+  compose_command pull --policy missing || return 1
   compose_command run --rm backend alembic upgrade head || return 1
   compose_command run --rm backend python -m app.scripts.repair_certificate_publication --apply || return 1
   compose_command run --rm backend python -m app.scripts.backfill_public_works --apply || return 1
@@ -74,7 +77,7 @@ if ! deploy_release; then
   if [[ "$AUTO_ROLLBACK_ON_FAILURE" == "true" && -n "$previous_tag" && "$previous_tag" != "$release_tag" ]]; then
     release_error "restoring previous application images: $previous_tag"
     export IMAGE_TAG="$previous_tag"
-    compose_command pull
+    compose_command pull --policy missing
     wait_for_release
   fi
   exit 70
