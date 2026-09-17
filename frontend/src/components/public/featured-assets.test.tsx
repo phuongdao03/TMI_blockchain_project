@@ -28,8 +28,8 @@ it("shows the newest published works on the home page", async () => {
         tags: [],
         publishedAt: "2026-09-17T00:00:00Z",
         isFeatured: false,
-        thumbnailUrl: null,
-        thumbnailAltText: null,
+        thumbnailUrl: "https://cdn.example.test/public/published-work.webp",
+        thumbnailAltText: "Ảnh bìa tác phẩm vừa công bố",
       },
     ],
     meta: { page: 1, pageSize: 3, total: 1 },
@@ -48,7 +48,10 @@ it("shows the newest published works on the home page", async () => {
   await waitFor(() =>
     expect(publicApi.works).toHaveBeenCalledWith({ page: 1, pageSize: 3 }),
   );
+  expect(screen.getByAltText("Ảnh bìa tác phẩm vừa công bố")).toBeTruthy();
   expect(
-    screen.getByRole("link", { name: /Xem thông tin/ }).getAttribute("href"),
+    screen
+      .getByRole("link", { name: /Tác phẩm vừa công bố/ })
+      .getAttribute("href"),
   ).toBe("/works/published-work");
 });
