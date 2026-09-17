@@ -148,7 +148,7 @@ test("public portal is professional, responsive and verifiable", async ({
   await expect(page.getByRole("button", { name: "Đóng mã QR" })).toBeFocused();
   await expect(page.getByRole("link", { name: "Mở tác phẩm" })).toHaveAttribute(
     "href",
-    "/works/bo-nhan-dien-cns",
+    new URL("/works/bo-nhan-dien-cns", page.url()).toString(),
   );
   await expect(page.getByRole("link", { name: "Tải ảnh QR" })).toHaveAttribute(
     "href",
