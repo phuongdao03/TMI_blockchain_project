@@ -6700,6 +6700,19 @@ html[data-theme="light"] .public-home .registry-search button:hover,
   color: var(--thv-red-dark) !important;
 }
 
+/* Catalogue cards deliberately retain their dark editorial surface inside the
+   light home section. Rebind their copy so the home-level link and muted-text
+   rules cannot lower contrast below WCAG AA. */
+.public-home .home-featured .catalog-album-tile,
+.public-home .home-featured .catalog-album-tile h2,
+.public-home .home-featured .catalog-album-tile a {
+  color: var(--prestige-on-surface) !important;
+}
+
+.public-home .home-featured .catalog-album-tile .text-slate-400 {
+  color: var(--prestige-on-surface-variant) !important;
+}
+
 html[data-theme="dark"] .public-home .registry-hero {
   background:
     radial-gradient(
