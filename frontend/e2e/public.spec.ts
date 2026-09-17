@@ -146,7 +146,11 @@ test("public portal is professional, responsive and verifiable", async ({
     page.getByRole("dialog", { name: "Quét để mở tác phẩm" }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Đóng mã QR" })).toBeFocused();
-  await expect(page.getByRole("link", { name: "Tải mã QR" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Mở tác phẩm" })).toHaveAttribute(
+    "href",
+    "/works/bo-nhan-dien-cns",
+  );
+  await expect(page.getByRole("link", { name: "Tải ảnh QR" })).toHaveAttribute(
     "href",
     "/api/v1/public/works/bo-nhan-dien-cns/qr",
   );
