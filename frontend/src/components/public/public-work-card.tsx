@@ -53,7 +53,7 @@ export function PublicWorkCard({
                   fill
                   onError={() => setImageFailed(true)}
                   onLoad={() => setImageReady(true)}
-                  priority={position === 1}
+                  priority={position === 1 ? true : undefined}
                   sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                   src={work.thumbnailUrl}
                   unoptimized
@@ -148,7 +148,7 @@ export function PublicWorkCard({
               fill
               onError={() => setImageFailed(true)}
               onLoad={() => setImageReady(true)}
-              priority={position === 1}
+              priority={position === 1 ? true : undefined}
               sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
               src={work.thumbnailUrl}
               unoptimized

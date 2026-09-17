@@ -166,7 +166,7 @@ describe("PublicWorkDetailPage", () => {
     expect(video?.muted).toBe(true);
     expect(video?.poster).toContain("poster.webp");
     expect(video?.getAttribute("controlslist")).toContain("nodownload");
-    expect(video?.preload).toBe("none");
+    expect(video?.preload).toBe("metadata");
     expect(video?.playsInline).toBe(true);
     expect(video?.getAttribute("src")).toBeNull();
     expect(video?.querySelectorAll("source")).toHaveLength(0);
