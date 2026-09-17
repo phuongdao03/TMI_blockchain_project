@@ -87,4 +87,14 @@ describe("PublicWorkShareControls", () => {
       );
     });
   });
+
+  it("offers the canonical public page alongside the QR image", () => {
+    render(<PublicWorkShareControls detail={detail} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "QR" }));
+
+    expect(
+      screen.getByRole("link", { name: "Mở tác phẩm" }).getAttribute("href"),
+    ).toBe(`${window.location.origin}/works/public-work`);
+  });
 });

@@ -59,6 +59,7 @@ describe("layout shells", () => {
   });
 
   it("renders public navigation with auth entry points", () => {
+    navigationState.pathname = "/works/published-work";
     render(
       <PublicShell>
         <h1>Nền tảng chứng thư tài sản số</h1>
@@ -91,6 +92,11 @@ describe("layout shells", () => {
     expect(loginLink.querySelector("svg")).not.toBeNull();
     expect(registerLink.querySelector("svg")).not.toBeNull();
     expect(registerLink.classList.contains("button")).toBe(false);
+    expect(
+      screen
+        .getByRole("link", { name: "Danh sách đề cử" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
   });
 
   it("uses the official seal and wordmark together in the public header", () => {

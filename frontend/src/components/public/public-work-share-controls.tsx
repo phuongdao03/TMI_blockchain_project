@@ -130,6 +130,10 @@ function QrDialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const qrUrl = `/api/v1/public/works/${encodeURIComponent(detail.canonicalSlug)}/qr`;
+  const publicUrl = canonicalBrowserWorkUrl(
+    detail.canonicalSlug,
+    window.location.origin,
+  );
 
   useEffect(() => {
     const previousFocus = document.activeElement as HTMLElement | null;
@@ -204,13 +208,21 @@ function QrDialog({
           QR chỉ chứa địa chỉ chính thức của tác phẩm, không chứa token hay dữ
           liệu hồ sơ riêng tư.
         </p>
-        <a
-          className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-bold text-ink-950"
-          download={`${detail.canonicalSlug}-qr.png`}
-          href={qrUrl}
-        >
-          <Download className="size-4" /> Tải mã QR
-        </a>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <a
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-bold text-ink-950"
+            href={publicUrl}
+          >
+            Mở tác phẩm <Link2 className="size-4" />
+          </a>
+          <a
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/20 px-4 text-sm font-bold text-white"
+            download={`${detail.canonicalSlug}-qr.png`}
+            href={qrUrl}
+          >
+            <Download className="size-4" /> Tải ảnh QR
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -9,7 +9,8 @@ import { publicApi } from "@/lib/api/client";
 export function FeaturedAssets() {
   const query = useQuery({
     queryKey: ["public-featured-assets"],
-    queryFn: () => publicApi.assets({ page: 1 }),
+    queryFn: () => publicApi.works({ page: 1, pageSize: 3 }),
+    staleTime: 30_000,
   });
   if (query.isPending) {
     return (
@@ -55,7 +56,7 @@ export function FeaturedAssets() {
       </div>
     );
   }
-  const featured = query.data.data.slice(0, 3);
+  const featured = query.data.data;
   return (
     <div className="grid border-y border-neutral-300 md:grid-cols-3 md:divide-x md:divide-neutral-300">
       {featured.map((asset) => (
@@ -70,7 +71,7 @@ export function FeaturedAssets() {
             {asset.title}
           </h3>
           <p className="mt-3 line-clamp-2 text-sm leading-6 text-neutral-600">
-            {asset.summary}
+            {asset.shortDescription}
           </p>
           <Link
             className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-primary-800"

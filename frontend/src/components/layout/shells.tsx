@@ -35,6 +35,7 @@ export function PublicShell({
   children,
   user,
 }: PropsWithChildren<{ user?: AuthUser | null }>) {
+  const pathname = usePathname();
   const contextUser = useAuthUser();
   const activeUser = user ?? contextUser;
   const publicHeaderAction = activeUser
@@ -99,11 +100,23 @@ export function PublicShell({
       <header className="public-header">
         <BrandMark variant="public-seal" />
         <nav className="public-nav" aria-label="Điều hướng chính">
-          {publicLinks.map((item) => (
-            <Link key={item.href} href={item.href}>
-              {item.label}
-            </Link>
-          ))}
+          {publicLinks.map((item) => {
+            const active =
+              item.href === "/"
+                ? pathname === item.href
+                : pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
+            return (
+              <Link
+                aria-current={active ? "page" : undefined}
+                className="public-nav__link"
+                key={item.href}
+                href={item.href}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
         <div className="public-header__actions">
           <PwaInstallButton />
@@ -200,16 +213,25 @@ export function PublicShell({
             className="public-mobile-nav"
             aria-label="Điều hướng di động"
           >
-            {publicLinks.map((item, index) => (
-              <Link
-                key={item.href}
-                ref={index === 0 ? firstMobileLinkRef : undefined}
-                href={item.href}
-                onClick={() => closeMenu(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {publicLinks.map((item, index) => {
+              const active =
+                item.href === "/"
+                  ? pathname === item.href
+                  : pathname === item.href ||
+                    pathname.startsWith(`${item.href}/`);
+              return (
+                <Link
+                  aria-current={active ? "page" : undefined}
+                  className="public-mobile-nav__link"
+                  key={item.href}
+                  ref={index === 0 ? firstMobileLinkRef : undefined}
+                  href={item.href}
+                  onClick={() => closeMenu(false)}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
             {publicHeaderAction ? (
               <Link
                 href={publicHeaderAction.href}

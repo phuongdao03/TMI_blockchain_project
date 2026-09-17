@@ -131,8 +131,8 @@ export function PublicWorkPresentation({
                 {detail.shortDescription}
               </p>
             </div>
-            <dl className="grid min-w-0 gap-4 border-t border-white/10 pt-5 text-sm @min-[64rem]/work:border-t-0 @min-[64rem]/work:border-l @min-[64rem]/work:pt-0 @min-[64rem]/work:pl-5">
-              <div>
+            <dl className="grid min-w-0 grid-cols-2 gap-x-4 gap-y-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm @min-[64rem]/work:rounded-none @min-[64rem]/work:border-y-0 @min-[64rem]/work:border-r-0 @min-[64rem]/work:border-l @min-[64rem]/work:bg-transparent @min-[64rem]/work:p-0 @min-[64rem]/work:pl-5">
+              <div className="col-span-2">
                 <dt className="text-xs tracking-wide text-slate-500 uppercase">
                   Tác giả công khai
                 </dt>
@@ -144,7 +144,7 @@ export function PublicWorkPresentation({
                 </dd>
               </div>
               {detail.organizationDisplayName ? (
-                <div>
+                <div className="col-span-2">
                   <dt className="text-xs tracking-wide text-slate-500 uppercase">
                     Tổ chức
                   </dt>
@@ -153,7 +153,7 @@ export function PublicWorkPresentation({
                   </dd>
                 </div>
               ) : null}
-              <div>
+              <div className="col-span-2 @min-[30rem]/work:col-span-1">
                 <dt className="text-xs tracking-wide text-slate-500 uppercase">
                   Ngày công bố
                 </dt>
@@ -276,7 +276,7 @@ function PublicGallery({
     );
   return (
     <section aria-label="Thư viện nội dung đề cử">
-      <div className="relative grid min-h-[14rem] place-items-center overflow-hidden rounded-xl border border-white/10 bg-ink-900 @min-[40rem]/work:min-h-[28rem] @min-[40rem]/work:rounded-3xl">
+      <div className="relative grid aspect-video min-h-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-ink-900 @min-[40rem]/work:aspect-auto @min-[40rem]/work:min-h-[28rem] @min-[40rem]/work:rounded-3xl">
         {selected.kind === "IMAGE" && selected.url ? (
           <Image
             alt={selected.altText || title}

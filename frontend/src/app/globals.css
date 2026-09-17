@@ -642,19 +642,63 @@ body {
 
 .public-nav {
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: clamp(0.75rem, 2vw, 1.75rem);
+  gap: clamp(0.35rem, 1vw, 0.75rem);
+  padding: 0.3rem;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 12%);
 }
 
-.public-nav a {
+.public-nav__link {
+  position: relative;
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  padding: 0 0.85rem;
+  border-radius: 999px;
   color: rgb(255 255 255 / 82%);
   font-size: 0.875rem;
   font-weight: 650;
   text-decoration: none;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
-.public-nav a:hover {
+.public-nav__link::after {
+  position: absolute;
+  right: 0.85rem;
+  bottom: 0.38rem;
+  left: 0.85rem;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--thv-gold-light);
+  content: "";
+  opacity: 0;
+  transform: scaleX(0.35);
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-base) var(--ease-standard);
+}
+
+.public-nav__link:hover,
+.public-nav__link:focus-visible {
+  background: rgb(255 255 255 / 9%);
   color: var(--thv-gold-light);
+  transform: translateY(-1px);
+}
+
+.public-nav__link[aria-current="page"] {
+  background: rgb(246 197 21 / 16%);
+  color: var(--thv-gold-light);
+}
+
+.public-nav__link[aria-current="page"]::after {
+  opacity: 1;
+  transform: scaleX(1);
 }
 
 .public-header__actions {
@@ -891,6 +935,28 @@ body {
   .public-mobile-nav > a {
     padding: 0.75rem 0.875rem;
     border-radius: var(--radius-control);
+  }
+
+  .public-mobile-nav__link {
+    position: relative;
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard),
+      transform var(--motion-fast) var(--ease-standard);
+  }
+
+  .public-mobile-nav__link:hover,
+  .public-mobile-nav__link:focus-visible {
+    background: color-mix(in srgb, var(--thv-gold) 12%, transparent);
+    color: var(--theme-accent);
+    transform: translateX(0.2rem);
+  }
+
+  .public-mobile-nav__link[aria-current="page"] {
+    border-left: 0.2rem solid var(--thv-gold);
+    background: color-mix(in srgb, var(--thv-gold) 16%, transparent);
+    color: var(--theme-accent);
+    font-weight: 750;
   }
 
   .public-mobile-nav__account a {

@@ -322,7 +322,10 @@ describe("PublicWorkDetailPage", () => {
         .getAttribute("src"),
     ).toContain("/api/v1/public/works/di-san-so/qr");
     expect(
-      screen.getByRole("link", { name: "Tải mã QR" }).getAttribute("href"),
+      screen.getByRole("link", { name: "Mở tác phẩm" }).getAttribute("href"),
+    ).toBe(`${window.location.origin}/works/di-san-so`);
+    expect(
+      screen.getByRole("link", { name: "Tải ảnh QR" }).getAttribute("href"),
     ).toBe("/api/v1/public/works/di-san-so/qr");
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
