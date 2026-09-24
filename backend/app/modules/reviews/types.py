@@ -6,6 +6,7 @@ from uuid import UUID
 from app.modules.dossiers.models import DossierStatus
 from app.modules.reviews.models import (
     ReviewAssignmentStatus,
+    ReviewAssistanceRequestStatus,
     ReviewFindingAction,
     ReviewFindingSeverity,
     ReviewRecommendation,
@@ -60,6 +61,26 @@ class ReviewAssignmentView:
     status: ReviewAssignmentStatus
     conflict_declared_at: datetime | None
     conflict_reason: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewAssistanceRequestView:
+    id: UUID
+    assignment_id: UUID
+    requested_by_user_id: UUID
+    requested_reviewer_count: int
+    reason: str
+    status: ReviewAssistanceRequestStatus
+    created_at: datetime
+    reviewed_by_user_id: UUID | None
+    decision_reason: str | None
+    reviewed_at: datetime | None
+
+
+@dataclass(frozen=True, slots=True)
+class AdminReviewAssistanceRequestView:
+    request: ReviewAssistanceRequestView
+    requester_email: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,6 +143,7 @@ class AdminReviewDossierDetailView(AdminReviewDossierSummaryView):
     canonical_hash: str
     snapshot_json: Mapping[str, object]
     assignments: tuple[AdminReviewAssignmentView, ...]
+    assistance_requests: tuple[AdminReviewAssistanceRequestView, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,6 +169,7 @@ class ReviewAssignmentDetailView:
     canonical_hash: str | None
     snapshot_json: Mapping[str, object] | None
     review: ReviewView | None
+    assistance_requests: tuple[ReviewAssistanceRequestView, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

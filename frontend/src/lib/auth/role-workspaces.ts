@@ -26,11 +26,11 @@ export function resolveDefaultWorkspace(
   permissions: readonly string[] = [],
 ): string {
   if (roles.includes("SUPER_ADMIN")) return "/admin";
+  if (roles.includes("MODERATOR")) return "/work-allocations";
   const assignedWorkspace = OPERATIONAL_WORKSPACES.find(([permission]) =>
     permissions.includes(permission),
   );
   if (assignedWorkspace) return assignedWorkspace[1];
-  if (roles.includes("MODERATOR")) return "/reviews";
   return "/dashboard";
 }
 
@@ -56,7 +56,7 @@ export function resolvePublicHeaderAction(
   if (persona === "USER" && permissions.length === 0)
     return { href: "/dossiers", label: "Hồ sơ của tôi" };
   if (persona === "MODERATOR")
-    return { href: "/reviews", label: "Khu vực thẩm định" };
+    return { href: "/work-allocations", label: "Công việc được giao" };
   return {
     href: resolveDefaultWorkspace(roles, permissions),
     label: "Khu vực làm việc",

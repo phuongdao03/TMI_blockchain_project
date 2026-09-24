@@ -74,12 +74,15 @@ test("discovery keeps an authenticated return path across public screens", async
   });
   await dashboardNavigation.getByRole("link", { name: "Tìm đề cử" }).click();
   await expect(page).toHaveURL(/\/search$/, { timeout: 30_000 });
-  const publicNavigation = page.getByRole("navigation", {
-    name: "Điều hướng chính",
+  const returnNavigation = page.getByRole("navigation", {
+    name: "Quay lại khu vực làm việc",
   });
-  await expect(publicNavigation).toBeVisible();
+  await expect(returnNavigation).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Hồ sơ của tôi", exact: true }),
+    returnNavigation.getByRole("link", {
+      name: "Quay lại hồ sơ của tôi",
+      exact: true,
+    }),
   ).toHaveAttribute("href", "/dossiers");
   await expect(
     page.getByRole("heading", { name: "Tìm nội dung bạn quan tâm" }),
@@ -93,9 +96,8 @@ test("discovery keeps an authenticated return path across public screens", async
     path: testInfo.outputPath("workspace-search-desktop.png"),
   });
 
-  await publicNavigation.getByRole("link", { name: "Đề cử" }).click();
+  await page.goto("/works");
   await expect(page).toHaveURL(/\/works$/, { timeout: 30_000 });
-  await expect(publicNavigation).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Thư viện đề cử" }),
   ).toBeVisible();

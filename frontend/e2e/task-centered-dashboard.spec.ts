@@ -2,6 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import type { BrowserContext, Page } from "@playwright/test";
 
+const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
+
 const viewports = [
   { width: 320, height: 844 },
   { width: 375, height: 812 },
@@ -45,6 +47,33 @@ async function authenticate(
   ]);
 }
 
+async function authenticateViewer(context: BrowserContext) {
+  await context.addCookies([
+    {
+      name: "cns_access",
+      value: "e2e-access",
+      domain: "127.0.0.1",
+      path: "/",
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+    {
+      name: "cns_csrf",
+      value: "e2e-csrf",
+      domain: "127.0.0.1",
+      path: "/",
+      sameSite: "Lax",
+    },
+    {
+      name: "cns_e2e_persona",
+      value: "public",
+      domain: "127.0.0.1",
+      path: "/",
+      sameSite: "Lax",
+    },
+  ]);
+}
+
 async function expectResponsivePage(page: Page) {
   expect(
     await page.evaluate(
@@ -61,7 +90,7 @@ test("applicant dashboard keeps one clear next action at every breakpoint", asyn
   request,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chrome");
-  await request.post("http://127.0.0.1:4010/api/e2e/reset-needs-supplement");
+  await request.post(`${mockApiUrl}/api/e2e/reset-needs-supplement`);
   await authenticate(context, "e2e-access");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/dashboard");
@@ -78,16 +107,48 @@ test("applicant dashboard keeps one clear next action at every breakpoint", asyn
   }
 });
 
+test("viewer dashboard keeps public discovery as its primary action", async ({
+  context,
+  page,
+}, testInfo) => {
+  await authenticateViewer(context);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/dashboard");
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Khám phá đề cử" }),
+  ).toBeVisible();
+  await expect(page.getByText("Không gian tra cứu")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Tìm kiếm đề cử" }),
+  ).toHaveAttribute("href", "/search");
+
+  const targetViewports =
+    testInfo.project.name === "desktop-chrome"
+      ? viewports
+      : [{ width: 390, height: 844 }];
+  for (const viewport of targetViewports) {
+    await page.setViewportSize(viewport);
+    await expectResponsivePage(page);
+  }
+});
+
 test("operations dashboard prioritizes work without horizontal overflow", async ({
   context,
   page,
   request,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chrome");
-  await request.post("http://127.0.0.1:4010/api/e2e/reset-operations-job");
+  await request.post(`${mockApiUrl}/api/e2e/reset-operations-job`);
   await authenticate(context, "e2e-super-admin-access");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/admin/dashboard");
+  const hrQueue = page.locator(
+    'section[aria-labelledby="hr-dashboard-summary-title"]',
+  );
+  await expect(hrQueue).toBeVisible();
+  await expect(hrQueue.locator('a[href="/admin/leave"]')).toContainText("3");
+  await expect(hrQueue.locator('a[href="/admin/overtime"]')).toContainText("4");
   await expect(
     page
       .getByRole("main")

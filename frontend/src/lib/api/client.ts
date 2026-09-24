@@ -8,6 +8,20 @@ import type {
   AdminUser,
   AdminUserListFilters,
   ActivityPage,
+  AdminAttendance,
+  AdminAttendanceLocationException,
+  AdminLeaveRequest,
+  AdminOvertimeRequest,
+  AttendanceAssignment,
+  AttendanceLocationException,
+  AttendanceLocationExceptionStatus,
+  AttendanceLocationEvidenceReview,
+  Attendance,
+  AttendanceStatus,
+  AttendanceWorkdayContext,
+  AttendanceWorksite,
+  AttendanceWorksitePolicy,
+  AttendanceWorksiteStatus,
   AuditLogItem,
   AuditIntegrityCheck,
   AuditListFilters,
@@ -41,10 +55,28 @@ import type {
   DossierType,
   DossierTimelineItem,
   DossierVersion,
+  Department,
+  Employee,
+  EmploymentStatus,
   DurableJobSummary,
   EvidenceInput,
   ErrorEnvelope,
   ListResponseMeta,
+  LeaveRequest,
+  LeaveRequestStatus,
+  OvertimeRequest,
+  OvertimeRequestStatus,
+  PayrollEntry,
+  HrDashboardSummary,
+  ModeratorHrDashboardSummary,
+  PayrollPeriod,
+  PayrollPeriodDetail,
+  WorkTask,
+  WorkTaskPriority,
+  WorkTaskStatus,
+  WorkAllocation,
+  WorkAllocationCreateInput,
+  WorkAllocationDetail,
   JobActionInput,
   LoginData,
   MediaAsset,
@@ -96,6 +128,7 @@ import type {
   ReviewAssignment,
   ReviewAssignmentDetail,
   ReviewAssignmentSummary,
+  ReviewAssistanceRequest,
   ReviewData,
   ReviewDraft,
   ReviewListFilters,
@@ -235,6 +268,37 @@ async function requestPaginated<Data>(
   >;
 }
 
+async function requestBlob(path: string, allowRefresh = true): Promise<Blob> {
+  const response = await fetch(`${API_ROOT}${path}`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (
+    response.status === 401 &&
+    allowRefresh &&
+    Boolean(readCookie(CSRF_COOKIE_NAME))
+  ) {
+    try {
+      await refreshSession();
+      return requestBlob(path, false);
+    } catch {
+      // Preserve the export endpoint's authentication failure.
+    }
+  }
+  if (!response.ok) {
+    if (response.headers.get("content-type")?.includes("application/json")) {
+      await parseResponse<never>(response);
+    }
+    throw new ApiError(
+      "Không thể tải báo cáo. Vui lòng thử lại.",
+      "REPORT_DOWNLOAD_FAILED",
+      response.status,
+      response.headers.get("X-Request-Id") ?? undefined,
+    );
+  }
+  return response.blob();
+}
+
 export const authApi = {
   exchangeFirebaseToken(
     idToken: string,
@@ -252,6 +316,12 @@ export const authApi = {
   },
   acceptStaffInvitation(invitationToken: string, idToken: string) {
     return request<{ status: "ACTIVE" }>("/auth/staff-invitations/accept", {
+      method: "POST",
+      body: JSON.stringify({ invitationToken, idToken }),
+    });
+  },
+  acceptEmployeeInvitation(invitationToken: string, idToken: string) {
+    return request<{ status: "ACTIVE" }>("/auth/employee-invitations/accept", {
       method: "POST",
       body: JSON.stringify({ invitationToken, idToken }),
     });
@@ -624,6 +694,15 @@ export const staffInvitationsApi = {
   },
 };
 
+export const employeeInvitationsApi = {
+  create(email: string) {
+    return request<StaffInvitation>("/admin/employee-invitations", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+};
+
 export const profileApi = {
   get() {
     return request<UserProfile>("/users/me");
@@ -875,6 +954,15 @@ export const reviewApi = {
       `/reviewer/assignments/${assignmentId}`,
     );
   },
+  requestAssistance(
+    assignmentId: string,
+    input: { reason: string; requestedReviewerCount: number },
+  ) {
+    return request<ReviewAssistanceRequest>(
+      `/reviewer/assignments/${encodeURIComponent(assignmentId)}/assistance-requests`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
   saveDraft(assignmentId: string, draft: ReviewDraft) {
     return request<ReviewData>(`/reviewer/assignments/${assignmentId}/draft`, {
       method: "PUT",
@@ -951,6 +1039,25 @@ export const adminReviewApi = {
         method: "POST",
         body: JSON.stringify({ reviewerUserIds, dueAt: dueAt || null }),
       },
+    );
+  },
+  approveAssistanceRequest(
+    assistanceRequestId: string,
+    reviewerUserIds: string[],
+    dueAt?: string,
+  ) {
+    return request<ReviewAssistanceRequest>(
+      `/admin/review-assistance-requests/${encodeURIComponent(assistanceRequestId)}/approve`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reviewerUserIds, dueAt: dueAt || null }),
+      },
+    );
+  },
+  declineAssistanceRequest(assistanceRequestId: string, reason: string) {
+    return request<ReviewAssistanceRequest>(
+      `/admin/review-assistance-requests/${encodeURIComponent(assistanceRequestId)}/decline`,
+      { method: "POST", body: JSON.stringify({ reason }) },
     );
   },
 };
@@ -1249,6 +1356,732 @@ export const searchAnalyticsApi = {
     });
     if (filters.category) parameters.set("category", filters.category);
     return `${API_ROOT}/admin/search/analytics/export?${parameters.toString()}`;
+  },
+};
+
+export const hrDepartmentApi = {
+  list(filters: { page?: number; pageSize?: number; search?: string } = {}) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.search) parameters.set("search", filters.search);
+    return requestPaginated<Department[]>(
+      `/admin/hr/departments?${parameters.toString()}`,
+    );
+  },
+  create(input: { code: string; name: string; description?: string | null }) {
+    return request<Department>("/admin/hr/departments", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  update(id: string, input: { name: string; description: string | null }) {
+    return request<Department>(
+      `/admin/hr/departments/${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(input),
+      },
+    );
+  },
+  exportXlsx(filters: { search?: string } = {}) {
+    const parameters = new URLSearchParams();
+    if (filters.search) parameters.set("search", filters.search);
+    const query = parameters.size ? `?${parameters.toString()}` : "";
+    return requestBlob(`/admin/hr/reports/departments.xlsx${query}`);
+  },
+};
+
+export const hrEmployeeApi = {
+  list(
+    filters: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      departmentId?: string;
+      employmentStatus?: EmploymentStatus;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.departmentId)
+      parameters.set("departmentId", filters.departmentId);
+    if (filters.employmentStatus)
+      parameters.set("employmentStatus", filters.employmentStatus);
+    return requestPaginated<Employee[]>(
+      `/admin/hr/employees?${parameters.toString()}`,
+    );
+  },
+  exportXlsx(
+    filters: {
+      search?: string;
+      departmentId?: string;
+      employmentStatus?: EmploymentStatus;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams();
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.departmentId)
+      parameters.set("departmentId", filters.departmentId);
+    if (filters.employmentStatus)
+      parameters.set("employmentStatus", filters.employmentStatus);
+    const query = parameters.size ? `?${parameters.toString()}` : "";
+    return requestBlob(`/admin/hr/reports/employees.xlsx${query}`);
+  },
+  create(input: {
+    employeeCode: string;
+    userId?: string | null;
+    fullName: string;
+    email: string;
+    phone?: string | null;
+    departmentId: string;
+    position: string;
+    joinDate: string;
+    contractType?: string | null;
+    baseSalary?: string | null;
+  }) {
+    return request<Employee>("/admin/hr/employees", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  update(
+    employeeId: string,
+    input: Partial<{
+      userId: string | null;
+      fullName: string;
+      email: string;
+      phone: string | null;
+      departmentId: string;
+      position: string;
+      employmentStatus: EmploymentStatus;
+      contractType: string | null;
+      baseSalary: string | null;
+    }>,
+  ) {
+    return request<Employee>(
+      `/admin/hr/employees/${encodeURIComponent(employeeId)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+};
+
+export const hrSelfApi = {
+  listAttendance(filters: { page?: number; pageSize?: number } = {}) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    return requestPaginated<Attendance[]>(
+      `/me/hr/attendance?${parameters.toString()}`,
+    );
+  },
+  getWorkdayContext() {
+    return request<AttendanceWorkdayContext>(
+      "/me/hr/attendance/workday-context",
+    );
+  },
+  listLocationEvidence(attendanceId: string) {
+    return request<AttendanceLocationEvidenceReview[]>(
+      `/me/hr/attendance/${encodeURIComponent(attendanceId)}/location-evidence`,
+    );
+  },
+  checkIn(input: {
+    latitude: number;
+    longitude: number;
+    accuracyMeters: number;
+    clientCapturedAt: string;
+    note?: string | null;
+  }) {
+    return request<Attendance>("/me/hr/attendance/check-in", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  checkOut(input: {
+    latitude: number;
+    longitude: number;
+    accuracyMeters: number;
+    clientCapturedAt: string;
+  }) {
+    return request<Attendance>("/me/hr/attendance/check-out", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  listLeaveRequests(filters: { page?: number; pageSize?: number } = {}) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    return requestPaginated<LeaveRequest[]>(
+      `/me/hr/leave-requests?${parameters.toString()}`,
+    );
+  },
+  createLeaveRequest(input: {
+    leaveType: string;
+    startDate: string;
+    endDate: string;
+    reason: string;
+  }) {
+    return request<LeaveRequest>("/me/hr/leave-requests", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  cancelLeaveRequest(leaveRequestId: string) {
+    return request<LeaveRequest>(
+      `/me/hr/leave-requests/${encodeURIComponent(leaveRequestId)}/cancel`,
+      { method: "POST" },
+    );
+  },
+  listOvertimeRequests(filters: { page?: number; pageSize?: number } = {}) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    return requestPaginated<OvertimeRequest[]>(
+      `/me/hr/overtime-requests?${parameters.toString()}`,
+    );
+  },
+  createOvertimeRequest(input: {
+    startAt: string;
+    endAt: string;
+    reason: string;
+  }) {
+    return request<OvertimeRequest>("/me/hr/overtime-requests", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  cancelOvertimeRequest(overtimeRequestId: string) {
+    return request<OvertimeRequest>(
+      `/me/hr/overtime-requests/${encodeURIComponent(overtimeRequestId)}/cancel`,
+      { method: "POST" },
+    );
+  },
+};
+
+export const hrAdminAttendanceApi = {
+  list(
+    filters: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      departmentId?: string;
+      status?: AttendanceStatus;
+      workDateFrom?: string;
+      workDateTo?: string;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.departmentId)
+      parameters.set("departmentId", filters.departmentId);
+    if (filters.status) parameters.set("status", filters.status);
+    if (filters.workDateFrom)
+      parameters.set("workDateFrom", filters.workDateFrom);
+    if (filters.workDateTo) parameters.set("workDateTo", filters.workDateTo);
+    return requestPaginated<AdminAttendance[]>(
+      `/admin/hr/attendance?${parameters.toString()}`,
+    );
+  },
+  exportXlsx(
+    filters: {
+      search?: string;
+      departmentId?: string;
+      status?: AttendanceStatus;
+      workDateFrom?: string;
+      workDateTo?: string;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams();
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.departmentId)
+      parameters.set("departmentId", filters.departmentId);
+    if (filters.status) parameters.set("status", filters.status);
+    if (filters.workDateFrom)
+      parameters.set("workDateFrom", filters.workDateFrom);
+    if (filters.workDateTo) parameters.set("workDateTo", filters.workDateTo);
+    const query = parameters.size ? `?${parameters.toString()}` : "";
+    return requestBlob(`/admin/hr/reports/attendance.xlsx${query}`);
+  },
+  get(attendanceId: string) {
+    return request<AdminAttendance>(
+      `/admin/hr/attendance/${encodeURIComponent(attendanceId)}`,
+    );
+  },
+  listLocationEvidence(attendanceId: string) {
+    return request<AttendanceLocationEvidenceReview[]>(
+      `/admin/hr/attendance/${encodeURIComponent(attendanceId)}/location-evidence`,
+    );
+  },
+  update(
+    attendanceId: string,
+    input: Partial<{
+      checkInAt: string | null;
+      checkOutAt: string | null;
+      status: AttendanceStatus;
+      lateMinutes: number;
+      earlyLeaveMinutes: number;
+      note: string | null;
+    }>,
+  ) {
+    return request<AdminAttendance>(
+      `/admin/hr/attendance/${encodeURIComponent(attendanceId)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+  listLocationExceptions(
+    filters: {
+      page?: number;
+      pageSize?: number;
+      status?: AttendanceLocationExceptionStatus;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.status) parameters.set("status", filters.status);
+    return requestPaginated<AdminAttendanceLocationException[]>(
+      `/admin/hr/attendance-location-exceptions?${parameters.toString()}`,
+    );
+  },
+  decideLocationException(
+    exceptionId: string,
+    input: {
+      status: Extract<
+        AttendanceLocationExceptionStatus,
+        "APPROVED" | "REJECTED"
+      >;
+      decisionNote: string;
+    },
+  ) {
+    return request<AttendanceLocationException>(
+      `/admin/hr/attendance-location-exceptions/${encodeURIComponent(exceptionId)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+};
+
+export const hrAttendanceConfigurationApi = {
+  listWorksites(
+    filters: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      status?: AttendanceWorksiteStatus;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.status) parameters.set("status", filters.status);
+    return requestPaginated<AttendanceWorksite[]>(
+      `/admin/hr/attendance-worksites?${parameters.toString()}`,
+    );
+  },
+  createWorksite(input: { code: string; name: string }) {
+    return request<AttendanceWorksite>("/admin/hr/attendance-worksites", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updateWorksite(
+    worksiteId: string,
+    input: Partial<{ name: string; status: AttendanceWorksiteStatus }>,
+  ) {
+    return request<AttendanceWorksite>(
+      `/admin/hr/attendance-worksites/${encodeURIComponent(worksiteId)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+  listPolicies(
+    worksiteId: string,
+    filters: { page?: number; pageSize?: number } = {},
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    return requestPaginated<AttendanceWorksitePolicy[]>(
+      `/admin/hr/attendance-worksites/${encodeURIComponent(worksiteId)}/policies?${parameters.toString()}`,
+    );
+  },
+  createPolicy(
+    worksiteId: string,
+    input: {
+      effectiveFrom: string;
+      effectiveTo?: string | null;
+      timezone: string;
+      latitude: string;
+      longitude: string;
+      radiusMeters: number;
+      maxAccuracyMeters: number;
+    },
+  ) {
+    return request<AttendanceWorksitePolicy>(
+      `/admin/hr/attendance-worksites/${encodeURIComponent(worksiteId)}/policies`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  listAssignments(
+    filters: {
+      page?: number;
+      pageSize?: number;
+      employeeId?: string;
+      worksiteId?: string;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.employeeId) parameters.set("employeeId", filters.employeeId);
+    if (filters.worksiteId) parameters.set("worksiteId", filters.worksiteId);
+    return requestPaginated<AttendanceAssignment[]>(
+      `/admin/hr/attendance-assignments?${parameters.toString()}`,
+    );
+  },
+  createAssignment(input: {
+    employeeId: string;
+    worksiteId: string;
+    effectiveFrom: string;
+    effectiveTo?: string | null;
+    scheduleCode: string;
+    holidayCalendarCode: string;
+  }) {
+    return request<AttendanceAssignment>("/admin/hr/attendance-assignments", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+};
+
+export const hrPayrollApi = {
+  exportXlsx(payrollPeriodId: string) {
+    return requestBlob(
+      `/admin/hr/reports/payroll-periods/${encodeURIComponent(payrollPeriodId)}/xlsx`,
+    );
+  },
+  listPeriods(
+    filters: {
+      page?: number;
+      pageSize?: number;
+      worksiteId?: string;
+      periodMonth?: string;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.worksiteId) parameters.set("worksiteId", filters.worksiteId);
+    if (filters.periodMonth) parameters.set("periodMonth", filters.periodMonth);
+    return requestPaginated<PayrollPeriod[]>(
+      `/admin/hr/payroll-periods?${parameters.toString()}`,
+    );
+  },
+  createPeriod(input: {
+    worksiteId: string;
+    periodMonth: string;
+    standardWorkdays: number;
+  }) {
+    return request<PayrollPeriod>("/admin/hr/payroll-periods", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  getPeriod(payrollPeriodId: string) {
+    return request<PayrollPeriodDetail>(
+      `/admin/hr/payroll-periods/${encodeURIComponent(payrollPeriodId)}`,
+    );
+  },
+  updateEntry(
+    payrollPeriodId: string,
+    payrollEntryId: string,
+    input: Partial<{
+      allowance: string;
+      socialInsurance: string;
+      incomeTax: string;
+    }>,
+  ) {
+    return request<PayrollEntry>(
+      `/admin/hr/payroll-periods/${encodeURIComponent(payrollPeriodId)}/entries/${encodeURIComponent(payrollEntryId)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+  recalculate(payrollPeriodId: string) {
+    return request<PayrollEntry[]>(
+      `/admin/hr/payroll-periods/${encodeURIComponent(payrollPeriodId)}/calculations`,
+      { method: "POST" },
+    );
+  },
+  confirmPeriod(payrollPeriodId: string) {
+    return request<PayrollPeriod>(
+      `/admin/hr/payroll-periods/${encodeURIComponent(payrollPeriodId)}/confirmation`,
+      { method: "POST" },
+    );
+  },
+  markPaid(payrollPeriodId: string) {
+    return request<PayrollPeriod>(
+      `/admin/hr/payroll-periods/${encodeURIComponent(payrollPeriodId)}/payment`,
+      { method: "POST" },
+    );
+  },
+};
+
+export const hrDashboardApi = {
+  summary() {
+    return request<HrDashboardSummary>("/admin/hr/dashboard-summary");
+  },
+};
+
+export const hrModeratorDashboardApi = {
+  summary() {
+    return request<ModeratorHrDashboardSummary>("/me/hr/dashboard-summary");
+  },
+};
+
+export const hrAdminLeaveApi = {
+  list(
+    filters: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      departmentId?: string;
+      status?: LeaveRequestStatus;
+      startDateFrom?: string;
+      startDateTo?: string;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.departmentId)
+      parameters.set("departmentId", filters.departmentId);
+    if (filters.status) parameters.set("status", filters.status);
+    if (filters.startDateFrom)
+      parameters.set("startDateFrom", filters.startDateFrom);
+    if (filters.startDateTo) parameters.set("startDateTo", filters.startDateTo);
+    return requestPaginated<AdminLeaveRequest[]>(
+      `/admin/hr/leave-requests?${parameters.toString()}`,
+    );
+  },
+  exportXlsx(
+    filters: {
+      search?: string;
+      departmentId?: string;
+      status?: LeaveRequestStatus;
+      startDateFrom?: string;
+      startDateTo?: string;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams();
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.departmentId)
+      parameters.set("departmentId", filters.departmentId);
+    if (filters.status) parameters.set("status", filters.status);
+    if (filters.startDateFrom)
+      parameters.set("startDateFrom", filters.startDateFrom);
+    if (filters.startDateTo) parameters.set("startDateTo", filters.startDateTo);
+    const query = parameters.size ? `?${parameters.toString()}` : "";
+    return requestBlob(`/admin/hr/reports/leave.xlsx${query}`);
+  },
+  decide(
+    leaveRequestId: string,
+    action: "approve" | "reject",
+    input: { decisionNote?: string | null },
+  ) {
+    return request<AdminLeaveRequest>(
+      `/admin/hr/leave-requests/${encodeURIComponent(leaveRequestId)}/${action}`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+};
+
+export const hrAdminOvertimeApi = {
+  list(
+    filters: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      departmentId?: string;
+      status?: OvertimeRequestStatus;
+      startAtFrom?: string;
+      startAtTo?: string;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.departmentId)
+      parameters.set("departmentId", filters.departmentId);
+    if (filters.status) parameters.set("status", filters.status);
+    if (filters.startAtFrom) parameters.set("startAtFrom", filters.startAtFrom);
+    if (filters.startAtTo) parameters.set("startAtTo", filters.startAtTo);
+    return requestPaginated<AdminOvertimeRequest[]>(
+      `/admin/hr/overtime-requests?${parameters.toString()}`,
+    );
+  },
+  exportXlsx(
+    filters: {
+      search?: string;
+      departmentId?: string;
+      status?: OvertimeRequestStatus;
+      startAtFrom?: string;
+      startAtTo?: string;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams();
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.departmentId)
+      parameters.set("departmentId", filters.departmentId);
+    if (filters.status) parameters.set("status", filters.status);
+    if (filters.startAtFrom) parameters.set("startAtFrom", filters.startAtFrom);
+    if (filters.startAtTo) parameters.set("startAtTo", filters.startAtTo);
+    const query = parameters.size ? `?${parameters.toString()}` : "";
+    return requestBlob(`/admin/hr/reports/overtime.xlsx${query}`);
+  },
+  decide(
+    overtimeRequestId: string,
+    action: "approve" | "reject",
+    input: { decisionNote?: string | null },
+  ) {
+    return request<AdminOvertimeRequest>(
+      `/admin/hr/overtime-requests/${encodeURIComponent(overtimeRequestId)}/${action}`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+};
+
+export const taskAdminApi = {
+  exportXlsx(
+    filters: {
+      search?: string;
+      status?: WorkTaskStatus;
+      priority?: WorkTaskPriority;
+    } = {},
+  ) {
+    const parameters = new URLSearchParams();
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.status) parameters.set("status", filters.status);
+    if (filters.priority) parameters.set("priority", filters.priority);
+    const query = parameters.size ? `?${parameters.toString()}` : "";
+    return requestBlob(`/admin/hr/reports/tasks.xlsx${query}`);
+  },
+  list(
+    filters: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      status?: WorkTaskStatus;
+      priority?: WorkTaskPriority;
+      sortBy?: "createdAt" | "dueAt";
+      sortDirection?: "asc" | "desc";
+    } = {},
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+      sortBy: filters.sortBy ?? "createdAt",
+      sortDirection: filters.sortDirection ?? "desc",
+    });
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.status) parameters.set("status", filters.status);
+    if (filters.priority) parameters.set("priority", filters.priority);
+    return requestPaginated<WorkTask[]>(
+      `/admin/tasks?${parameters.toString()}`,
+    );
+  },
+  create(input: {
+    title: string;
+    description?: string | null;
+    dueAt?: string | null;
+  }) {
+    return request<WorkTask>("/admin/tasks", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  update(
+    taskId: string,
+    input: Partial<{
+      title: string;
+      description: string | null;
+      dueAt: string | null;
+      status: WorkTaskStatus;
+      priority: WorkTaskPriority;
+    }>,
+  ) {
+    return request<WorkTask>(`/admin/tasks/${encodeURIComponent(taskId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+};
+
+export const workAllocationAdminApi = {
+  list(filters: { page?: number; pageSize?: number } = {}) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    return requestPaginated<WorkAllocation[]>(
+      `/admin/work-allocations?${parameters.toString()}`,
+    );
+  },
+  get(allocationId: string) {
+    return request<WorkAllocationDetail>(
+      `/admin/work-allocations/${encodeURIComponent(allocationId)}`,
+    );
+  },
+  create(input: WorkAllocationCreateInput) {
+    return request<WorkAllocation>("/admin/work-allocations", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  activate(
+    allocationId: string,
+    scopeCoverage: Array<{
+      scopeId: string;
+      reviewAssignmentIds: string[];
+    }>,
+  ) {
+    return request<WorkAllocation>(
+      `/admin/work-allocations/${encodeURIComponent(allocationId)}/activate`,
+      {
+        method: "POST",
+        body: JSON.stringify({ scopeCoverage }),
+      },
+    );
+  },
+};
+
+export const workAllocationSelfApi = {
+  list(filters: { page?: number; pageSize?: number } = {}) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    return requestPaginated<WorkAllocation[]>(
+      `/me/work-allocations?${parameters.toString()}`,
+    );
   },
 };
 

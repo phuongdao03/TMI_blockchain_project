@@ -100,6 +100,12 @@ class StaffInvitationRequest(BaseModel):
     organization_id: UUID | None = Field(default=None, alias="organizationId")
 
 
+class EmployeeInvitationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr
+
+
 class StaffInvitationAcceptRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -184,6 +190,7 @@ class AuthUserData(BaseModel):
     roles: tuple[str, ...]
     permissions: tuple[str, ...]
     account_type: AccountType | None = Field(alias="accountType")
+    is_employee: bool = Field(default=False, alias="isEmployee")
 
 
 class LoginData(BaseModel):

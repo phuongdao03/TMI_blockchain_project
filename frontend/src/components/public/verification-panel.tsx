@@ -113,11 +113,7 @@ export function VerificationPanel({
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-gold-300">
           Tra cứu độc lập
         </p>
-        <h1
-          className={`mt-4 font-bold tracking-tight text-white ${
-            embedded ? "text-3xl sm:text-4xl" : "text-3xl sm:text-6xl"
-          }`}
-        >
+        <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
           Kiểm tra chứng thư
         </h1>
         <p className="mt-5 text-base leading-7 text-slate-300">

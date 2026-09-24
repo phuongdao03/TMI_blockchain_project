@@ -42,6 +42,8 @@ htmlcov/
 backend/.pytest-notification-tmp/
 backend/.pytest-notification-tmp-final/
 backend/.pytest-verdict-full/
+backend/.test-tmp-*/
+backend/.tmp-*/
 test-results/
 test-results-*/
 playwright-report/

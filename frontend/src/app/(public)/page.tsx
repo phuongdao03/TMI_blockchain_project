@@ -81,7 +81,7 @@ export default function HomePage() {
               <span aria-hidden="true" className="registry-kicker-dot" />
               Đề cử Tinh Hoa Việt
             </p>
-            <h1 className="mt-7 text-[clamp(2.35rem,10vw,5.65rem)] font-semibold leading-[0.98] tracking-[-0.055em] text-balance sm:mt-10">
+            <h1 className="mt-7 text-3xl font-semibold leading-tight tracking-[-0.04em] text-balance sm:mt-10 sm:text-4xl">
               Nơi những giá trị Việt được giới thiệu,{" "}
               <span className="text-gold-300">ghi nhận và lan tỏa.</span>
             </h1>

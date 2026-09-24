@@ -173,10 +173,15 @@ test("shared VPS deployment binds applications to loopback behind host nginx", a
 });
 
 test("nginx production config enforces TLS, headers and webhook isolation", async () => {
-  const nginx = await read("infrastructure/nginx/production.conf.template");
+  const [nginx, hostNginx] = await Promise.all([
+    read("infrastructure/nginx/production.conf.template"),
+    read("infrastructure/nginx/decu.tinhhoaviet.org.vn.conf.example"),
+  ]);
 
   assert.match(nginx, /ssl_protocols TLSv1\.2 TLSv1\.3/);
   assert.match(nginx, /Strict-Transport-Security/);
+  assert.match(nginx, /Permissions-Policy[^\n]*geolocation=\(self\)/);
+  assert.match(hostNginx, /Permissions-Policy[^\n]*geolocation=\(self\)/);
   assert.match(nginx, /Content-Security-Policy/);
   assert.match(
     nginx,

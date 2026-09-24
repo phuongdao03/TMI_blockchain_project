@@ -84,7 +84,7 @@ export function SearchAnalyticsDashboard() {
             <p className="flex items-center gap-2 text-xs font-bold tracking-[0.2em] text-gold-300 uppercase">
               <Activity className="size-4" /> Search intelligence
             </p>
-            <h1 className="mt-4 text-4xl font-bold tracking-[-0.04em] sm:text-5xl">
+            <h1 className="mt-4 text-3xl font-bold tracking-[-0.04em] sm:text-4xl">
               Hiểu nhu cầu tra cứu, không đánh đổi riêng tư.
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">

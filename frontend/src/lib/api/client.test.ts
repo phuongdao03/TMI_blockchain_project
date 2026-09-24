@@ -6,12 +6,22 @@ import {
   auditApi,
   authApi,
   dossierApi,
+  employeeInvitationsApi,
+  hrAdminAttendanceApi,
+  hrAdminLeaveApi,
+  hrAdminOvertimeApi,
+  hrDepartmentApi,
+  hrDashboardApi,
+  hrEmployeeApi,
+  hrModeratorDashboardApi,
+  hrPayrollApi,
   mediaApi,
   organizationApi,
   profileApi,
   publicApi,
   staffAccountsApi,
   staffInvitationsApi,
+  taskAdminApi,
 } from "@/lib/api/client";
 
 describe("admin review API client", () => {
@@ -587,5 +597,227 @@ describe("staff account API client", () => {
       email: "reviewer@cnsgroup.vn",
       role: "MODERATOR",
     });
+  });
+});
+
+describe("employee invitations API client", () => {
+  beforeEach(() => {
+    document.cookie = "cns_csrf=csrf-value";
+    vi.restoreAllMocks();
+  });
+
+  it("sends only an email; the server fixes the role to USER", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    fetchMock.mockResolvedValueOnce(
+      response({
+        success: true,
+        data: {
+          id: "invite-1",
+          email: "worker@example.com",
+          role: "USER",
+          status: "PENDING",
+        },
+        meta: { requestId: "invite-1" },
+      }),
+    );
+    await employeeInvitationsApi.create("worker@example.com");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
+      "/admin/employee-invitations",
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      email: "worker@example.com",
+    });
+  });
+});
+
+describe("payroll API client", () => {
+  beforeEach(() => {
+    document.cookie = "cns_csrf=csrf-value";
+    vi.restoreAllMocks();
+  });
+
+  it("uses protected worksite-month routes without location payloads", async () => {
+    const success = () =>
+      response({
+        success: true,
+        data: [],
+        meta: { request_id: "payroll-test", page: 1, pageSize: 20, total: 0 },
+      });
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(success())
+      .mockResolvedValueOnce(success());
+
+    await hrPayrollApi.listPeriods({
+      pageSize: 20,
+      worksiteId: "worksite/1",
+      periodMonth: "2026-09-01",
+    });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/v1/admin/hr/payroll-periods?page=1&pageSize=20&worksiteId=worksite%2F1&periodMonth=2026-09-01",
+    );
+
+    await hrPayrollApi.updateEntry("period/1", "entry/1", {
+      allowance: "2000000",
+      socialInsurance: "1890000",
+      incomeTax: "700000",
+    });
+    const [url, init] = fetchMock.mock.calls[1] ?? [];
+    expect(url).toBe(
+      "/api/v1/admin/hr/payroll-periods/period%2F1/entries/entry%2F1",
+    );
+    expect(init?.method).toBe("PATCH");
+    expect(new Headers(init?.headers).get("X-CSRF-Token")).toBe("csrf-value");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      allowance: "2000000",
+      socialInsurance: "1890000",
+      incomeTax: "700000",
+    });
+  });
+});
+
+describe("HR dashboard API client", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("uses the authenticated self endpoint without an employee identifier", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      response({
+        success: true,
+        data: { profileLinked: false },
+        meta: { request_id: "hr-self-dashboard" },
+      }),
+    );
+    await hrModeratorDashboardApi.summary();
+    const [url, options] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("/api/v1/me/hr/dashboard-summary");
+    expect(options?.credentials).toBe("include");
+    expect(options?.body).toBeUndefined();
+  });
+
+  it("requests only the aggregate summary endpoint", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      response({
+        success: true,
+        data: {
+          activeEmployeeCount: 8,
+          attendancePendingCount: 2,
+          locationExceptionPendingCount: 1,
+          leavePendingCount: 3,
+          overtimePendingCount: 4,
+          payrollDraftCount: 1,
+          updatedAt: "2026-09-23T08:00:00Z",
+        },
+        meta: { request_id: "hr-dashboard" },
+      }),
+    );
+
+    await hrDashboardApi.summary();
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/v1/admin/hr/dashboard-summary",
+    );
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      credentials: "include",
+    });
+    expect(fetchMock.mock.calls[0]?.[1]).not.toMatchObject({
+      method: "POST",
+      body: expect.anything(),
+    });
+  });
+});
+
+describe("HR Excel exports", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("downloads filtered reports with the authenticated session", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response("xlsx-data", {
+          headers: {
+            "Content-Type":
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          },
+        }),
+    );
+
+    expect(
+      await (await hrDepartmentApi.exportXlsx({ search: "Kỹ thuật" })).text(),
+    ).toBe("xlsx-data");
+    expect(
+      await (
+        await hrEmployeeApi.exportXlsx({
+          search: "Minh",
+          departmentId: "department/1",
+          employmentStatus: "ACTIVE",
+        })
+      ).text(),
+    ).toBe("xlsx-data");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/v1/admin/hr/reports/departments.xlsx?search=K%E1%BB%B9+thu%E1%BA%ADt",
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/v1/admin/hr/reports/employees.xlsx?search=Minh&departmentId=department%2F1&employmentStatus=ACTIVE",
+    );
+    for (const [, options] of fetchMock.mock.calls) {
+      expect(options).toMatchObject({
+        credentials: "include",
+        cache: "no-store",
+      });
+    }
+  });
+
+  it("uses the same filters for attendance, leave and overtime downloads", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => new Response("xlsx-data"));
+
+    await hrAdminAttendanceApi.exportXlsx({
+      departmentId: "department-1",
+      status: "PENDING",
+      workDateFrom: "2026-09-01",
+      workDateTo: "2026-09-30",
+    });
+    await hrAdminLeaveApi.exportXlsx({
+      search: "Minh",
+      status: "APPROVED",
+      startDateFrom: "2026-09-01",
+    });
+    await hrAdminOvertimeApi.exportXlsx({
+      departmentId: "department-1",
+      status: "APPROVED",
+    });
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/admin/hr/reports/attendance.xlsx?departmentId=department-1&status=PENDING&workDateFrom=2026-09-01&workDateTo=2026-09-30",
+      "/api/v1/admin/hr/reports/leave.xlsx?search=Minh&status=APPROVED&startDateFrom=2026-09-01",
+      "/api/v1/admin/hr/reports/overtime.xlsx?departmentId=department-1&status=APPROVED",
+    ]);
+  });
+
+  it("downloads filtered tasks and a selected payroll period privately", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => new Response("xlsx-data"));
+
+    await taskAdminApi.exportXlsx({
+      search: "Review",
+      status: "IN_PROGRESS",
+      priority: "HIGH",
+    });
+    await hrPayrollApi.exportXlsx("period/1");
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/admin/hr/reports/tasks.xlsx?search=Review&status=IN_PROGRESS&priority=HIGH",
+      "/api/v1/admin/hr/reports/payroll-periods/period%2F1/xlsx",
+    ]);
+    for (const [, options] of fetchMock.mock.calls) {
+      expect(options).toMatchObject({
+        credentials: "include",
+        cache: "no-store",
+      });
+    }
   });
 });

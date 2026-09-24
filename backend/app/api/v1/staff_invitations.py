@@ -17,17 +17,49 @@ from app.modules.auth.dependencies import (
     SessionDependency,
     StaffInvitationServiceDependency,
 )
-from app.modules.auth.schemas import StaffInvitationData, StaffInvitationRequest
+from app.modules.auth.schemas import (
+    EmployeeInvitationRequest,
+    StaffInvitationData,
+    StaffInvitationRequest,
+)
 
 router = APIRouter(
     prefix="/api/v1/admin/staff-invitations",
     tags=["staff invitations"],
+)
+employee_router = APIRouter(
+    prefix="/api/v1/admin/employee-invitations", tags=["employee invitations"]
 )
 
 ADMIN_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     401: {"description": "Authentication is required.", "model": ErrorEnvelope},
     403: {"description": "Administrator access is required.", "model": ErrorEnvelope},
 }
+
+
+@employee_router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SuccessEnvelope[StaffInvitationData],
+    responses=ADMIN_ERROR_RESPONSES,
+)
+async def create_employee_invitation(
+    payload: EmployeeInvitationRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: StaffInvitationServiceDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[StaffInvitationData]:
+    result = await service.create_employee(
+        payload=payload,
+        principal=principal,
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    return SuccessEnvelope(
+        data=result, meta=ResponseMeta(request_id=request.state.request_id)
+    )
 
 
 @router.get(

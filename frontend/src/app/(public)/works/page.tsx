@@ -85,10 +85,10 @@ export default async function LibraryPage({
               Không gian đề cử
             </p>
             <h1
-              className={`mt-4 max-w-5xl font-bold tracking-[-0.045em] text-[var(--theme-text,#fff)] ${
+              className={`mt-4 max-w-5xl font-bold tracking-[-0.035em] text-[var(--theme-text,#fff)] ${
                 embedded
                   ? "text-3xl sm:text-4xl"
-                  : "text-4xl sm:text-6xl lg:text-7xl"
+                  : "text-4xl sm:text-5xl lg:text-6xl"
               }`}
             >
               Thư viện đề cử

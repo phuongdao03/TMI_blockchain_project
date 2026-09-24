@@ -138,7 +138,7 @@ test("public work stays readable without horizontal scrolling on phones", async 
       )
       .toBeLessThanOrEqual(1);
     if (width < 640) {
-      await expect(title).toHaveCSS("font-size", "30px");
+      await expect(title).toHaveCSS("font-size", "24px");
       await expect
         .poll(() =>
           title.evaluate(

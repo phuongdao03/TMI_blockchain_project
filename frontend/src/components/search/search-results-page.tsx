@@ -96,11 +96,7 @@ export function SearchResultsPage({
         <p className="text-xs font-bold tracking-[0.22em] text-gold-300 uppercase">
           Tìm kiếm đề cử
         </p>
-        <h1
-          className={`mt-4 font-bold tracking-[-0.04em] text-white ${
-            embedded ? "text-3xl sm:text-4xl" : "text-4xl sm:text-6xl"
-          }`}
-        >
+        <h1 className="mt-4 text-3xl font-bold tracking-[-0.04em] text-white sm:text-4xl">
           Tìm nội dung bạn quan tâm
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-7 text-slate-400">

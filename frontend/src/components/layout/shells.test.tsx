@@ -368,7 +368,7 @@ describe("layout shells", () => {
     expect(
       within(quickNavigation)
         .getAllByRole("link")
-        .some((link) => link.getAttribute("href") === "/certificates"),
+        .some((link) => link.getAttribute("href") === "/search"),
     ).toBe(true);
     expect(
       within(quickNavigation)
@@ -496,9 +496,9 @@ describe("layout shells", () => {
 
     expect(
       screen
-        .getByRole("link", { name: "Khu vực thẩm định" })
+        .getByRole("link", { name: "Công việc được giao" })
         .getAttribute("href"),
-    ).toBe("/reviews");
+    ).toBe("/work-allocations");
     expect(screen.queryByText("reviewer@cnsgroup.vn")).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng nhập" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng ký" })).toBeNull();
@@ -522,7 +522,7 @@ describe("layout shells", () => {
 
     expect(screen.queryByRole("link", { name: "Phiên xét duyệt" })).toBeNull();
     expect(
-      screen.getAllByRole("link", { name: "Hồ sơ đánh giá" }).length,
+      screen.getAllByRole("link", { name: "Công việc được giao" }).length,
     ).toBeGreaterThan(0);
     expect(
       screen.queryByRole("link", { name: "Đối chiếu nội dung" }),
@@ -556,14 +556,13 @@ describe("layout shells", () => {
     expect(screen.queryByRole("link", { name: "Ký blockchain" })).toBeNull();
   });
 
-  it("shows the review assignment workspace to authorized staff", () => {
+  it("shows the unified work allocation workspace to a super admin", () => {
     render(
       <AuthUserProvider
         user={{
           id: "review-coordinator",
           email: "coordinator@cnsgroup.vn",
-          roles: ["USER"],
-          permissions: ["review.assign"],
+          roles: ["SUPER_ADMIN"],
           accountType: null,
         }}
       >
@@ -574,8 +573,11 @@ describe("layout shells", () => {
     );
 
     expect(
-      screen.getAllByRole("link", { name: "Phân công thẩm định" }).length,
+      screen.getAllByRole("link", { name: "Phân công công việc" }).length,
     ).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole("link", { name: "Phân công thẩm định" }),
+    ).toBeNull();
   });
 
   it("gives a reviewer a visible return path from the public library", () => {
@@ -594,9 +596,9 @@ describe("layout shells", () => {
     );
 
     const returnLink = screen.getByRole("link", {
-      name: "Quay lại khu vực thẩm định",
+      name: "Quay lại công việc được giao",
     });
-    expect(returnLink.getAttribute("href")).toBe("/reviews");
+    expect(returnLink.getAttribute("href")).toBe("/work-allocations");
     expect(returnLink.classList.contains("public-workspace-return__link")).toBe(
       true,
     );

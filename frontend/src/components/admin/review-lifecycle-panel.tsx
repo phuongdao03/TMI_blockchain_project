@@ -8,6 +8,7 @@ import {
   FileCheck2,
   LoaderCircle,
   UserCheck,
+  UserRoundPlus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -16,6 +17,7 @@ import { adminReviewApi, staffAccountsApi } from "@/lib/api/client";
 import type {
   AdminReviewAssignment,
   AdminDossierDecision,
+  AdminReviewAssistanceRequest,
   AdminReviewDossierDetail,
   ReviewRecommendation,
 } from "@/lib/api/types";
@@ -126,6 +128,183 @@ function ReviewReport({ item }: { item: AdminReviewAssignment }) {
           Reviewer chưa gửi báo cáo. Admin sẽ nhận thông báo ngay khi hoàn tất.
         </p>
       )}
+    </article>
+  );
+}
+
+function AssistanceRequestResolution({
+  item,
+  reviewers,
+  assignedIds,
+  onResolved,
+}: {
+  item: AdminReviewAssistanceRequest;
+  reviewers: Array<{ id: string; email: string }>;
+  assignedIds: Set<string>;
+  onResolved: () => Promise<void>;
+}) {
+  const request = item.request;
+  const [selectedReviewerIds, setSelectedReviewerIds] = useState<string[]>([]);
+  const [dueAt, setDueAt] = useState("");
+  const [declineReason, setDeclineReason] = useState("");
+  const active = request.status === "PENDING";
+  const availableReviewers = reviewers.filter(
+    (reviewer) => !assignedIds.has(reviewer.id),
+  );
+  const approve = useMutation({
+    mutationFn: () =>
+      adminReviewApi.approveAssistanceRequest(
+        request.id,
+        selectedReviewerIds,
+        dueAt ? new Date(dueAt).toISOString() : undefined,
+      ),
+    onSuccess: onResolved,
+  });
+  const decline = useMutation({
+    mutationFn: () =>
+      adminReviewApi.declineAssistanceRequest(request.id, declineReason.trim()),
+    onSuccess: onResolved,
+  });
+  const error = approve.error ?? decline.error;
+  const isBusy = approve.isPending || decline.isPending;
+  const exactReviewerCount =
+    selectedReviewerIds.length === request.requestedReviewerCount;
+
+  const toggleReviewer = (reviewerId: string) => {
+    setSelectedReviewerIds((current) => {
+      if (current.includes(reviewerId)) {
+        return current.filter((itemId) => itemId !== reviewerId);
+      }
+      if (current.length >= request.requestedReviewerCount) {
+        return current;
+      }
+      return [...current, reviewerId];
+    });
+  };
+
+  return (
+    <article className="rounded-xl border border-primary-200 bg-[var(--theme-elevated)] p-4 sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-bold text-neutral-900">{item.requesterEmail}</p>
+          <p className="mt-1 text-xs font-bold uppercase tracking-wide text-primary-700">
+            Cần thêm {request.requestedReviewerCount} moderator ·{" "}
+            {request.status}
+          </p>
+        </div>
+        <time className="text-xs text-neutral-500" dateTime={request.createdAt}>
+          {new Date(request.createdAt).toLocaleString("vi-VN")}
+        </time>
+      </div>
+      <p className="mt-4 whitespace-pre-wrap border-y border-[var(--theme-border)] py-4 text-sm leading-6 text-neutral-700">
+        {request.reason}
+      </p>
+
+      {active ? (
+        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_13rem]">
+          <fieldset disabled={isBusy}>
+            <legend className="text-sm font-bold text-neutral-800">
+              Chọn đúng {request.requestedReviewerCount} moderator để bổ sung
+            </legend>
+            {availableReviewers.length > 0 ? (
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {availableReviewers.map((reviewer) => {
+                  const selected = selectedReviewerIds.includes(reviewer.id);
+                  const selectionFull =
+                    selectedReviewerIds.length >=
+                    request.requestedReviewerCount;
+                  return (
+                    <label
+                      className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 text-sm transition ${selected ? "border-primary-500 bg-primary-50 text-primary-900" : "border-[var(--theme-border)] bg-[var(--theme-surface)]"}`}
+                      key={reviewer.id}
+                    >
+                      <input
+                        checked={selected}
+                        className="size-4 accent-primary-700"
+                        disabled={!selected && selectionFull}
+                        onChange={() => toggleReviewer(reviewer.id)}
+                        type="checkbox"
+                      />
+                      <span className="min-w-0 truncate font-medium">
+                        {reviewer.email}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="mt-3 rounded-lg border border-dashed border-[var(--theme-border)] p-3 text-sm text-neutral-500">
+                Không còn moderator phù hợp để bổ sung cho hồ sơ này.
+              </p>
+            )}
+          </fieldset>
+          <label className="text-sm font-semibold">
+            Hạn xử lý
+            <input
+              className="mt-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3"
+              disabled={isBusy}
+              onChange={(event) => setDueAt(event.target.value)}
+              type="datetime-local"
+              value={dueAt}
+            />
+          </label>
+          <div className="lg:col-span-2">
+            <button
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary-700 px-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!exactReviewerCount || isBusy}
+              onClick={() => approve.mutate()}
+              type="button"
+            >
+              {approve.isPending ? (
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-4 animate-spin"
+                />
+              ) : (
+                <UserRoundPlus aria-hidden="true" className="size-4" />
+              )}
+              Thêm {request.requestedReviewerCount} moderator
+            </button>
+          </div>
+          <label className="lg:col-span-2">
+            <span className="text-sm font-semibold">
+              Lý do từ chối (nếu cần)
+            </span>
+            <textarea
+              className="mt-2 min-h-24 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm leading-6"
+              disabled={isBusy}
+              maxLength={2000}
+              onChange={(event) => setDeclineReason(event.target.value)}
+              placeholder="Nêu rõ lý do để moderator có thể tiếp tục xử lý hồ sơ…"
+              value={declineReason}
+            />
+          </label>
+          <div className="lg:col-span-2">
+            <button
+              className="min-h-11 rounded-xl border border-red-300 px-4 text-sm font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={declineReason.trim().length < 20 || isBusy}
+              onClick={() => decline.mutate()}
+              type="button"
+            >
+              {decline.isPending ? "Đang từ chối…" : "Từ chối yêu cầu"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-4 text-sm leading-6 text-neutral-600">
+          {request.status === "APPROVED"
+            ? "Yêu cầu đã được chấp thuận; các moderator mới đã nhận phân công."
+            : `Đã từ chối: ${request.decisionReason ?? "Không có ghi chú."}`}
+        </p>
+      )}
+      {error ? (
+        <p
+          className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800"
+          role="alert"
+        >
+          {error.message || "Không thể xử lý yêu cầu. Vui lòng thử lại."}
+        </p>
+      ) : null}
     </article>
   );
 }
@@ -308,6 +487,34 @@ export function ReviewLifecyclePanel({
           </p>
         ) : null}
       </section>
+
+      {(dossier.assistanceRequests?.length ?? 0) > 0 ? (
+        <section className="rounded-2xl border border-primary-200 bg-[var(--theme-surface)] p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-700">
+              <UserRoundPlus aria-hidden="true" className="size-5" />
+            </span>
+            <div>
+              <h2 className="text-xl font-bold">Yêu cầu phối hợp thẩm định</h2>
+              <p className="mt-1 text-sm leading-6 text-neutral-500">
+                Moderator không tự thêm người. Super Admin xem lý do, chọn đúng
+                số người được yêu cầu và ghi nhận quyết định.
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 space-y-3">
+            {dossier.assistanceRequests?.map((item) => (
+              <AssistanceRequestResolution
+                assignedIds={assignedIds}
+                item={item}
+                key={item.request.id}
+                onResolved={refresh}
+                reviewers={reviewers.data?.data ?? []}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {dossier.assignments.length > 0 ? (
         <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5">

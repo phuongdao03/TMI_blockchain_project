@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { DossierStatusBadge } from "@/components/dossiers/dossier-status";
+import { ModeratorHrDashboardSummary } from "@/components/hr/moderator-hr-dashboard-summary";
 import { RoleDashboardOverview } from "@/components/dashboard/role-dashboard-overview";
 import { dossierApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
@@ -75,7 +76,7 @@ export function DashboardOverview() {
     staleTime: 30_000,
   });
   if (!isUser) {
-    return (
+    const roleDashboard = (
       <RoleDashboardOverview
         accountType={user?.accountType}
         onUpgraded={(upgradedUser) => {
@@ -85,6 +86,15 @@ export function DashboardOverview() {
         persona={persona}
       />
     );
+    if (persona === "MODERATOR") {
+      return (
+        <div className="mx-auto max-w-7xl space-y-8 pb-12">
+          {roleDashboard}
+          <ModeratorHrDashboardSummary />
+        </div>
+      );
+    }
+    return roleDashboard;
   }
   const visibleDossiers = dossiers.data?.data ?? [];
   const processingCount = visibleDossiers.filter(
@@ -108,7 +118,7 @@ export function DashboardOverview() {
           <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-primary-700">
             Trung tâm hồ sơ
           </p>
-          <h1 className="mt-3 text-4xl font-bold tracking-[-0.04em] sm:text-5xl">
+          <h1 className="mt-3 text-3xl font-bold tracking-[-0.04em] sm:text-4xl">
             Việc cần làm
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-neutral-600">

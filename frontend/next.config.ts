@@ -35,7 +35,7 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), geolocation=(), microphone=()",
+    value: "camera=(), geolocation=(self), microphone=()",
   },
   ...(process.env.NODE_ENV === "production"
     ? [

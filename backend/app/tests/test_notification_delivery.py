@@ -1,5 +1,6 @@
 import asyncio
 import smtplib
+from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
 from uuid import uuid4
@@ -7,6 +8,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.api.v1.notifications import _notification_data
 from app.db.base import Base
 from app.modules.auth.models import User, UserStatus
 from app.modules.notifications.email import (
@@ -15,13 +17,15 @@ from app.modules.notifications.email import (
     SmtpEmailGateway,
     render_email,
 )
-from app.modules.notifications.models import DeliveryStatus
+from app.modules.notifications.models import DeliveryStatus, Notification
+from app.modules.notifications.redaction import redact_notification_data
 from app.modules.notifications.service import NotificationService
 from app.workers.notification_tasks import (
     EMAIL_EVENTS,
     EVENT_ROLE_RECIPIENTS,
     _action_path,
     _recipient_action_path,
+    employee_invitation_message,
     staff_invitation_message,
 )
 
@@ -35,6 +39,53 @@ class FailingOnceGateway:
         if self.calls == 1:
             raise RuntimeError("provider unavailable")
         return "provider-42"
+
+
+def test_notification_data_redaction_keeps_only_safe_navigation_metadata() -> None:
+    redacted = redact_notification_data(
+        {
+            "actionPath": "/admin/reviews/dossier-1",
+            "dossierId": "dossier-1",
+            "attendanceId": "attendance-1",
+            "status": "PENDING",
+            "latitude": 10.7769,
+            "longitude": 106.7009,
+            "accuracyMeters": 5,
+            "dossierTitle": "Confidential dossier title",
+            "evidences": [{"title": "Confidential evidence"}],
+        }
+    )
+
+    assert redacted == {
+        "actionPath": "/admin/reviews/dossier-1",
+        "dossierId": "dossier-1",
+        "attendanceId": "attendance-1",
+        "status": "PENDING",
+    }
+
+
+def test_notification_api_data_redacts_legacy_sensitive_metadata() -> None:
+    notification = Notification(
+        id=uuid4(),
+        user_id=uuid4(),
+        source_event_id=uuid4(),
+        type="dossier.submitted",
+        title="Hồ sơ đã gửi",
+        body="Hồ sơ đang chờ thẩm định.",
+        data_json={
+            "actionPath": "/admin/reviews/dossier-1",
+            "dossierId": "dossier-1",
+            "latitude": 10.7769,
+            "longitude": 106.7009,
+            "dossierTitle": "Confidential dossier title",
+        },
+        created_at=datetime(2026, 9, 22, tzinfo=UTC),
+    )
+
+    assert _notification_data(notification).data_json == {
+        "actionPath": "/admin/reviews/dossier-1",
+        "dossierId": "dossier-1",
+    }
 
 
 def test_notification_event_is_idempotent_and_unread_count_changes(
@@ -171,6 +222,17 @@ def test_staff_invitation_email_uses_english_route_and_encodes_token() -> None:
     assert "/staff-invitation?token=a%2Fb%2Bc" in message.html
 
 
+def test_employee_invitation_email_uses_dedicated_route() -> None:
+    message = employee_invitation_message(
+        email="worker@example.com",
+        invitation_token="a/b+c",
+        app_base_url="https://app.cnsgroup.vn/",
+    )
+    assert message.to == "worker@example.com"
+    assert "/employee-invitation?token=a%2Fb%2Bc" in message.text
+    assert "USER" in message.text or "người dùng" in message.text
+
+
 def test_smtp_gateway_uses_starttls_and_authentication(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -267,6 +329,8 @@ def test_critical_workflow_events_are_delivered_by_email() -> None:
         "dossier.submitted",
         "dossier.supplement_requested",
         "review.assignment_created",
+        "review.assistance_requested",
+        "review.assistance_resolved",
         "council.decided",
         "payment.paid",
         "certificate.issued",
@@ -277,6 +341,9 @@ def test_critical_workflow_events_are_delivered_by_email() -> None:
 
 def test_role_notifications_and_action_paths_are_explicit() -> None:
     assert EVENT_ROLE_RECIPIENTS["dossier.submitted"] == frozenset({"SUPER_ADMIN"})
+    assert EVENT_ROLE_RECIPIENTS["review.assistance_requested"] == frozenset(
+        {"SUPER_ADMIN"}
+    )
     assert (
         _action_path("dossier.submitted", {"dossier_id": "dossier-1"})
         == "/dossiers/dossier-1"
@@ -284,6 +351,13 @@ def test_role_notifications_and_action_paths_are_explicit() -> None:
     assert (
         _action_path(
             "review.assignment_created",
+            {"assignment_id": "4b6fe80a-1c87-4cc2-ad03-88decb6ebfab"},
+        )
+        == "/reviews/4b6fe80a-1c87-4cc2-ad03-88decb6ebfab"
+    )
+    assert (
+        _action_path(
+            "review.assistance_resolved",
             {"assignment_id": "4b6fe80a-1c87-4cc2-ad03-88decb6ebfab"},
         )
         == "/reviews/4b6fe80a-1c87-4cc2-ad03-88decb6ebfab"
@@ -309,6 +383,15 @@ def test_role_notifications_and_action_paths_are_explicit() -> None:
             payload,
             recipient_id=admin_id,
             direct_recipient_id=owner_id,
+        )
+        == "/admin/reviews/dossier-1"
+    )
+    assert (
+        _recipient_action_path(
+            "review.assistance_requested",
+            payload,
+            recipient_id=admin_id,
+            direct_recipient_id=None,
         )
         == "/admin/reviews/dossier-1"
     )

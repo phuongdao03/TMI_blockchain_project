@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -19,7 +20,11 @@ from app.modules.audit.models import AuditLog
 from app.modules.audit.service import AuditService
 from app.modules.auth.firebase_provider import FirebaseClaims
 from app.modules.auth.models import AuthIdentity, Role, StaffInvitation, User, UserRole
-from app.modules.auth.schemas import StaffAccountData, StaffInvitationRequest
+from app.modules.auth.schemas import (
+    EmployeeInvitationRequest,
+    StaffAccountData,
+    StaffInvitationRequest,
+)
 from app.modules.auth.security import OutboxPayloadCipher, hash_verification_token
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.auth.staff_invitation_service import StaffInvitationService
@@ -37,7 +42,9 @@ def test_staff_accounts_can_only_be_provisioned_through_invitations() -> None:
 
     assert "post" not in paths["/api/v1/admin/staff-accounts"]
     assert "post" in paths["/api/v1/admin/staff-invitations"]
+    assert "post" in paths["/api/v1/admin/employee-invitations"]
     assert "post" in paths["/api/v1/auth/staff-invitations/accept"]
+    assert "post" in paths["/api/v1/auth/employee-invitations/accept"]
     assert "/api/v1/auth/staff-mfa/recovery/authorize" not in paths
     assert "/api/v1/admin/staff-accounts/{user_id}/mfa-recovery" not in paths
     assert "post" in paths["/api/v1/admin/staff-accounts/{user_id}/privileged-actions"]
@@ -67,6 +74,123 @@ def test_invitation_management_accepts_normalized_permission() -> None:
             permissions=("admin.staff.manage",),
         )
     )
+
+
+def test_employee_invitation_request_cannot_choose_privileged_role() -> None:
+    with pytest.raises(ValidationError):
+        EmployeeInvitationRequest.model_validate(
+            {"email": "worker@example.com", "role": "MODERATOR"}
+        )
+
+
+def test_employee_invitation_grants_only_user_role(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        engine = create_async_engine(
+            f"sqlite+aiosqlite:///{(tmp_path / 'employee-invite.sqlite3').as_posix()}"
+        )
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        cipher = OutboxPayloadCipher.from_base64(
+            encoded_key="MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+            key_id="test-key",
+        )
+        admin = _admin()
+        async with factory() as session:
+            async with session.begin():
+                session.add(User(id=admin.user_id, email=admin.email, status="ACTIVE"))
+                session.add(Role(code="USER"))
+                session.add(Role(code="MODERATOR"))
+            service = StaffInvitationService(
+                session=session,
+                payload_cipher=cipher,
+                invitation_ttl=timedelta(hours=24),
+                clock=lambda: NOW,
+            )
+            invitation = await service.create_employee(
+                payload=EmployeeInvitationRequest(email="Worker@Example.com"),
+                principal=admin,
+                audit=AuditService(session),
+                request_id="employee-invite",
+                user_agent="test",
+            )
+            assert invitation.role == "USER"
+            event = await session.scalar(
+                select(OutboxEvent).where(OutboxEvent.aggregate_id == invitation.id)
+            )
+            assert event is not None
+            assert event.event_type == "employee.invited"
+            token = json.loads(
+                cipher.decrypt(
+                    nonce=event.payload_nonce,
+                    ciphertext=event.payload_ciphertext,
+                    event_type=event.event_type,
+                    aggregate_id=event.aggregate_id,
+                )
+            )["invitation_token"]
+            staff_rows, staff_total = await service.list(page=1, page_size=20)
+            assert staff_rows == [] and staff_total == 0
+            await session.commit()
+
+            claims = FirebaseClaims(
+                subject="firebase-worker",
+                email="worker@example.com",
+                email_verified=True,
+                name=None,
+                picture=None,
+            )
+            with pytest.raises(DomainError):
+                await service.accept(
+                    raw_token=token,
+                    claims=claims,
+                    audit=AuditService(session),
+                    request_id="wrong-flow",
+                    user_agent="test",
+                )
+            with pytest.raises(DomainError):
+                await service.accept_employee(
+                    raw_token=token,
+                    claims=FirebaseClaims(
+                        subject="firebase-other",
+                        email="other@example.com",
+                        email_verified=True,
+                        name=None,
+                        picture=None,
+                    ),
+                    audit=AuditService(session),
+                    request_id="wrong-email",
+                    user_agent="test",
+                )
+            account = await service.accept_employee(
+                raw_token=token,
+                claims=claims,
+                audit=AuditService(session),
+                request_id="employee-accept",
+                user_agent="test",
+            )
+            assert account.role == "USER"
+            roles = tuple(
+                (
+                    await session.scalars(
+                        select(Role.code)
+                        .join(UserRole, UserRole.role_id == Role.id)
+                        .where(UserRole.user_id == account.id)
+                    )
+                ).all()
+            )
+            assert roles == ("USER",)
+            await session.commit()
+            with pytest.raises(DomainError):
+                await service.accept_employee(
+                    raw_token=token,
+                    claims=claims,
+                    audit=AuditService(session),
+                    request_id="replay",
+                    user_agent="test",
+                )
+        await engine.dispose()
+
+    asyncio.run(scenario())
 
 
 def test_admin_invites_existing_verified_user_and_user_accepts(tmp_path: Path) -> None:

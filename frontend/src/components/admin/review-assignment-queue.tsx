@@ -91,7 +91,7 @@ export function ReviewAssignmentQueue({
         <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
           Điều phối kiểm duyệt
         </p>
-        <h1 className="mt-3 text-4xl font-bold">Phân công hồ sơ</h1>
+        <h1 className="mt-3 text-3xl font-bold sm:text-4xl">Phân công hồ sơ</h1>
         <p className="mt-3 text-neutral-600">
           Tiếp nhận hồ sơ đã nộp và giao đúng người kiểm duyệt. Việc kiểm tra
           tài liệu được thực hiện độc lập trong tài khoản người kiểm duyệt.

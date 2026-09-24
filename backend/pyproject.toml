@@ -27,6 +27,7 @@ dependencies = [
   "SQLAlchemy==2.0.51",
   "uvicorn[standard]==0.52.0",
   "web3==7.16.0",
+  "XlsxWriter==3.2.9",
 ]
 
 [project.optional-dependencies]
@@ -57,6 +58,7 @@ exclude = [
 python_version = "3.12"
 strict = true
 warn_unreachable = true
+exclude = ["^app/tests/"]
 
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers"

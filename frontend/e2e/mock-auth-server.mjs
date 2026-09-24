@@ -463,6 +463,121 @@ const initialPublicWork = {
 };
 let publicWork = { ...initialPublicWork };
 
+const attendanceWorksiteId = "6c2d3c10-7e3d-4b21-8b10-2c8f8de1e901";
+const attendancePolicyId = "7d3e4d20-8f4e-4c32-9c21-3d9f9ef2f012";
+const attendanceEmployeeId = "8e4f5e30-9a5f-4d43-ad32-4eafa0f30023";
+const attendanceRecordId = "9f506f40-ab6f-4e54-be43-5fb0b1041134";
+const attendanceExceptionId = "a0617050-bc7f-4f65-cf54-60c1c2152245";
+const attendanceEvidenceId = "b1728160-cd8f-4076-d065-71d2d3263356";
+const demoAttendanceWorksite = {
+  id: attendanceWorksiteId,
+  code: "DEMO-SG",
+  name: "Điểm làm việc Singapore (minh họa)",
+  status: "ACTIVE",
+  createdAt: "2026-09-01T00:00:00Z",
+  updatedAt: "2026-09-01T00:00:00Z",
+};
+const demoAttendancePolicy = {
+  id: attendancePolicyId,
+  worksiteId: attendanceWorksiteId,
+  effectiveFrom: "2026-09-01",
+  effectiveTo: null,
+  timezone: "Asia/Singapore",
+  latitude: "1.352100",
+  longitude: "103.819800",
+  radiusMeters: 250,
+  maxAccuracyMeters: 35,
+  createdAt: "2026-09-01T00:00:00Z",
+  updatedAt: "2026-09-01T00:00:00Z",
+};
+const demoAttendanceEmployee = {
+  id: attendanceEmployeeId,
+  employeeCode: "DEMO-001",
+  userId: reviewerUser.id,
+  fullName: "Avery Patel",
+  email: reviewerUser.email,
+  phone: null,
+  departmentId: "c2839270-de9f-4187-e176-82e3e4374467",
+  departmentName: "Điều hành quốc tế",
+  position: "Chuyên viên thẩm định",
+  employmentStatus: "ACTIVE",
+  joinDate: "2026-08-01",
+  contractType: "FULL_TIME",
+  baseSalary: null,
+  createdAt: "2026-08-01T00:00:00Z",
+  updatedAt: "2026-09-01T00:00:00Z",
+};
+const demoPersonalAttendance = {
+  id: attendanceRecordId,
+  employeeId: attendanceEmployeeId,
+  employeeName: demoAttendanceEmployee.fullName,
+  workDate: "2026-09-22",
+  checkInAt: "2026-09-22T00:30:00Z",
+  checkOutAt: null,
+  status: "PRESENT",
+  lateMinutes: 0,
+  earlyLeaveMinutes: 0,
+  note: "Phiên làm việc minh họa",
+  createdAt: "2026-09-22T00:30:00Z",
+  updatedAt: "2026-09-22T00:30:00Z",
+};
+const demoLocationEvidence = {
+  id: attendanceEvidenceId,
+  eventType: "CHECK_IN",
+  worksitePolicyId: attendancePolicyId,
+  worksiteCode: demoAttendanceWorksite.code,
+  worksiteName: demoAttendanceWorksite.name,
+  clientCapturedAt: "2026-09-22T00:29:57Z",
+  receivedAt: "2026-09-22T00:30:00Z",
+  latitude: "1.352100",
+  longitude: "103.819800",
+  accuracyMeters: "12.40",
+  distanceMeters: "0.00",
+  effectiveTimezone: "Asia/Singapore",
+  permittedRadiusMeters: 250,
+  maxAccuracyMeters: 35,
+  outcome: "ACCEPTED",
+};
+const demoPendingAttendance = {
+  ...demoPersonalAttendance,
+  id: "c2839270-de9f-4187-e176-82e3e4374467",
+  employeeId: "d394a381-ea0f-4298-f287-93f4f5485578",
+  employeeName: "Jordan Lee",
+  workDate: "2026-09-22",
+  checkInAt: "2026-09-22T00:42:00Z",
+  status: "PENDING",
+  note: null,
+  employeeCode: "DEMO-002",
+  departmentName: "Điều hành quốc tế",
+};
+const demoPendingEvidence = {
+  ...demoLocationEvidence,
+  id: "d394a381-ea0f-4298-f287-93f4f5485578",
+  latitude: "1.356500",
+  longitude: "103.825100",
+  accuracyMeters: "18.00",
+  distanceMeters: "840.00",
+  outcome: "OUTSIDE_WORKSITE",
+};
+const demoAttendanceException = {
+  id: attendanceExceptionId,
+  attendanceId: demoPendingAttendance.id,
+  locationEvidenceId: demoPendingEvidence.id,
+  status: "PENDING",
+  requestedByUserId: reviewerUser.id,
+  decisionNote: null,
+  reviewedByUserId: null,
+  reviewedAt: null,
+  createdAt: "2026-09-22T00:42:00Z",
+  updatedAt: "2026-09-22T00:42:00Z",
+  employeeId: demoPendingAttendance.employeeId,
+  employeeCode: demoPendingAttendance.employeeCode,
+  employeeName: demoPendingAttendance.employeeName,
+  workDate: demoPendingAttendance.workDate,
+  attendanceStatus: "PENDING",
+  evidence: demoPendingEvidence,
+};
+
 function envelope(data) {
   return JSON.stringify({
     success: true,
@@ -531,6 +646,34 @@ const server = createServer(async (request, response) => {
     ?.split("=")[1];
   const csrfProtected =
     authenticated && request.headers["x-csrf-token"] === "e2e-csrf";
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/me/work-allocations" &&
+    authenticated &&
+    sessionPersona === "reviewer"
+  ) {
+    send(
+      response,
+      200,
+      paginatedEnvelope([
+        {
+          id: "e2e-review-allocation",
+          kind: "DOSSIER_REVIEW",
+          objective: "Thẩm định hồ sơ thương hiệu CNS",
+          description: "Đánh giá tài liệu trong hồ sơ được phân công.",
+          dossierId: "e2e-dossier",
+          dossierVersionId: "e2e-version",
+          dueAt: "2026-10-02T10:00:00Z",
+          priority: "HIGH",
+          status: "ACTIVE",
+          createdByUserId: "e2e-super-admin",
+          createdAt: "2026-09-20T08:00:00Z",
+          updatedAt: "2026-09-20T08:00:00Z",
+        },
+      ]),
+    );
+    return;
+  }
   const publicAsset = {
     slug: "bo-nhan-dien-cns",
     title: "Bộ nhận diện CNS",
@@ -581,6 +724,182 @@ const server = createServer(async (request, response) => {
     canonicalSlug: catalogWork.slug,
     redirected: false,
   };
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/me/hr/attendance" &&
+    authenticated &&
+    sessionPersona === "reviewer"
+  ) {
+    send(response, 200, paginatedEnvelope([demoPersonalAttendance]));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/me/hr/attendance/workday-context" &&
+    authenticated &&
+    sessionPersona === "reviewer"
+  ) {
+    send(
+      response,
+      200,
+      envelope({ workDate: "2026-09-22", timezone: "Asia/Singapore" }),
+    );
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path ===
+      `/api/v1/me/hr/attendance/${attendanceRecordId}/location-evidence` &&
+    authenticated &&
+    sessionPersona === "reviewer"
+  ) {
+    send(response, 200, envelope([demoLocationEvidence]));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/admin/hr/departments" &&
+    superAdminAuthenticated
+  ) {
+    send(
+      response,
+      200,
+      paginatedEnvelope([
+        {
+          id: demoAttendanceEmployee.departmentId,
+          code: "GLOBAL-OPS",
+          name: demoAttendanceEmployee.departmentName,
+          description: "Dữ liệu xem trước cục bộ",
+          status: "ACTIVE",
+          createdAt: "2026-08-01T00:00:00Z",
+          updatedAt: "2026-08-01T00:00:00Z",
+        },
+      ]),
+    );
+    return;
+  }
+  if (
+    request.method === "PATCH" &&
+    path ===
+      `/api/v1/admin/hr/departments/${demoAttendanceEmployee.departmentId}` &&
+    superAdminAuthenticated &&
+    csrfProtected
+  ) {
+    const payload = await readJson(request);
+    demoAttendanceEmployee.departmentName = payload.name;
+    send(
+      response,
+      200,
+      envelope({
+        id: demoAttendanceEmployee.departmentId,
+        code: "GLOBAL-OPS",
+        name: payload.name,
+        description: payload.description ?? null,
+        status: "ACTIVE",
+        createdAt: "2026-08-01T00:00:00Z",
+        updatedAt: "2026-09-24T00:00:00Z",
+      }),
+    );
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/admin/hr/employees" &&
+    superAdminAuthenticated
+  ) {
+    send(response, 200, paginatedEnvelope([demoAttendanceEmployee]));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/admin/hr/attendance" &&
+    superAdminAuthenticated
+  ) {
+    send(
+      response,
+      200,
+      paginatedEnvelope([
+        {
+          ...demoPersonalAttendance,
+          employeeCode: demoAttendanceEmployee.employeeCode,
+          departmentName: demoAttendanceEmployee.departmentName,
+        },
+        demoPendingAttendance,
+      ]),
+    );
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path ===
+      `/api/v1/admin/hr/attendance/${demoPersonalAttendance.id}/location-evidence` &&
+    superAdminAuthenticated
+  ) {
+    send(response, 200, envelope([demoLocationEvidence]));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path ===
+      `/api/v1/admin/hr/attendance/${demoPendingAttendance.id}/location-evidence` &&
+    superAdminAuthenticated
+  ) {
+    send(response, 200, envelope([demoPendingEvidence]));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/admin/hr/attendance-location-exceptions" &&
+    superAdminAuthenticated
+  ) {
+    send(response, 200, paginatedEnvelope([demoAttendanceException]));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/admin/hr/attendance-worksites" &&
+    superAdminAuthenticated
+  ) {
+    send(response, 200, paginatedEnvelope([demoAttendanceWorksite]));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path ===
+      `/api/v1/admin/hr/attendance-worksites/${attendanceWorksiteId}/policies` &&
+    superAdminAuthenticated
+  ) {
+    send(response, 200, paginatedEnvelope([demoAttendancePolicy]));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/admin/hr/attendance-assignments" &&
+    superAdminAuthenticated
+  ) {
+    send(
+      response,
+      200,
+      paginatedEnvelope([
+        {
+          id: "e4a5b492-fb1f-43a9-0398-a4f5f6596689",
+          employeeId: demoAttendanceEmployee.id,
+          employeeCode: demoAttendanceEmployee.employeeCode,
+          employeeName: demoAttendanceEmployee.fullName,
+          worksiteId: attendanceWorksiteId,
+          worksiteCode: demoAttendanceWorksite.code,
+          worksiteName: demoAttendanceWorksite.name,
+          effectiveFrom: "2026-09-01",
+          effectiveTo: null,
+          scheduleCode: "MON_FRI_8H",
+          holidayCalendarCode: "SG-2026",
+          createdAt: "2026-09-01T00:00:00Z",
+          updatedAt: "2026-09-01T00:00:00Z",
+        },
+      ]),
+    );
+    return;
+  }
   if (request.method === "GET" && path === "/api/v1/public/seo/sitemap") {
     send(
       response,
@@ -1622,7 +1941,7 @@ const server = createServer(async (request, response) => {
       response,
       200,
       envelope(
-        dossier.status === "APPROVED"
+        dossier?.status === "APPROVED"
           ? [
               {
                 dossierId: dossier.id,
@@ -2446,10 +2765,63 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
+    path === "/api/v1/admin/hr/dashboard-summary" &&
+    superAdminAuthenticated
+  ) {
+    send(
+      response,
+      200,
+      envelope({
+        activeEmployeeCount: 8,
+        attendancePendingCount: 2,
+        locationExceptionPendingCount: 1,
+        leavePendingCount: 3,
+        overtimePendingCount: 4,
+        payrollDraftCount: 1,
+        updatedAt: "2026-09-22T00:42:00Z",
+      }),
+    );
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/me/hr/dashboard-summary" &&
+    authenticated &&
+    sessionPersona === "reviewer"
+  ) {
+    send(
+      response,
+      200,
+      envelope({
+        profileLinked: true,
+        workDate: "2026-09-22",
+        timezone: "Asia/Ho_Chi_Minh",
+        attendanceStatus: "PRESENT",
+        checkInAt: "2026-09-22T01:30:00Z",
+        checkOutAt: null,
+        leavePendingCount: 1,
+        overtimePendingCount: 2,
+        updatedAt: "2026-09-22T01:42:00Z",
+      }),
+    );
+    return;
+  }
+  if (
+    request.method === "GET" &&
     path === "/api/v1/notifications/unread-count" &&
     authenticated
   ) {
-    send(response, 200, envelope({ unreadCount: 0 }));
+    send(
+      response,
+      200,
+      envelope({
+        unreadCount: superAdminAuthenticated
+          ? 3
+          : sessionPersona === "reviewer"
+            ? 1
+            : 0,
+      }),
+    );
     return;
   }
   if (
@@ -2457,7 +2829,64 @@ const server = createServer(async (request, response) => {
     path === "/api/v1/notifications" &&
     authenticated
   ) {
-    send(response, 200, paginatedEnvelope([]));
+    send(
+      response,
+      200,
+      paginatedEnvelope(
+        superAdminAuthenticated
+          ? [
+              {
+                id: "f5b6c5a3-0c2f-44ba-14a9-b506076a7790",
+                type: "HR_ATTENDANCE_LOCATION_REVIEW_REQUIRED",
+                title: "Cần xác minh chấm công",
+                body: "Một lượt chấm công cần được xác minh vị trí trước khi chốt trạng thái.",
+                data: {
+                  attendanceId: demoPendingAttendance.id,
+                  actionPath: "/admin/attendance",
+                },
+                readAt: null,
+                createdAt: "2026-09-22T00:42:00Z",
+              },
+              {
+                id: "4be6e26c-691f-49c5-9ed5-9eb1e81c84bf",
+                type: "HR_LEAVE_REQUEST_CREATED",
+                title: "Đơn nghỉ phép mới",
+                body: "Có một yêu cầu nghỉ phép mới cần được xem xét.",
+                data: {
+                  leaveRequestId: "e73f36f5-1c6b-478e-8f42-4a22ed733ef6",
+                  actionPath: "/admin/leave",
+                },
+                readAt: null,
+                createdAt: "2026-09-22T00:41:00Z",
+              },
+              {
+                id: "756b923e-aee4-4d4b-b572-3f37e903d89d",
+                type: "HR_OVERTIME_REQUEST_CREATED",
+                title: "Yêu cầu tăng ca mới",
+                body: "Có một yêu cầu tăng ca mới cần được xem xét.",
+                data: {
+                  overtimeRequestId: "53b6749b-cb8e-4794-92a1-b151d7ddc91a",
+                  actionPath: "/admin/overtime",
+                },
+                readAt: null,
+                createdAt: "2026-09-22T00:40:00Z",
+              },
+            ]
+          : sessionPersona === "reviewer"
+            ? [
+                {
+                  id: "b68fccaf-e6d7-4c5d-83f8-2ee396217d38",
+                  type: "WORK_ALLOCATION_ASSIGNED",
+                  title: "Phân công công việc mới",
+                  body: "Bạn có công việc mới cần thực hiện.",
+                  data: { actionPath: "/work-allocations" },
+                  readAt: null,
+                  createdAt: "2026-09-22T00:39:00Z",
+                },
+              ]
+            : [],
+      ),
+    );
     return;
   }
   if (

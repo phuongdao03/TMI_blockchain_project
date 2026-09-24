@@ -33,6 +33,12 @@ class ReviewAssignmentStatus(StrEnum):
     CANCELLED = "CANCELLED"
 
 
+class ReviewAssistanceRequestStatus(StrEnum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    DECLINED = "DECLINED"
+
+
 class ReviewRecommendation(StrEnum):
     APPROVE = "APPROVE"
     SUPPLEMENT = "SUPPLEMENT"
@@ -152,6 +158,74 @@ class ReviewAssignment(Base):
         DateTime(timezone=True)
     )
     conflict_reason: Mapped[str | None] = mapped_column(Text)
+
+
+class ReviewAssistanceRequest(Base):
+    __tablename__ = "review_assistance_requests"
+    __table_args__ = (
+        CheckConstraint(
+            "requested_reviewer_count BETWEEN 1 AND 10",
+            name="assistance_requested_reviewer_count",
+        ),
+        CheckConstraint(
+            "length(trim(reason)) BETWEEN 20 AND 2000",
+            name="assistance_reason_length",
+        ),
+        CheckConstraint(
+            "(status = 'PENDING' AND reviewed_by_user_id IS NULL "
+            "AND reviewed_at IS NULL AND decision_reason IS NULL) OR "
+            "(status = 'APPROVED' AND reviewed_by_user_id IS NOT NULL "
+            "AND reviewed_at IS NOT NULL) OR "
+            "(status = 'DECLINED' AND reviewed_by_user_id IS NOT NULL "
+            "AND reviewed_at IS NOT NULL "
+            "AND length(trim(decision_reason)) BETWEEN 20 AND 2000)",
+            name="assistance_request_lifecycle",
+        ),
+        Index(
+            "uq_review_assistance_requests_pending_assignment",
+            "assignment_id",
+            unique=True,
+            sqlite_where=text("status = 'PENDING'"),
+            postgresql_where=text("status = 'PENDING'"),
+        ),
+        Index(
+            "ix_review_assistance_requests_status_created",
+            "status",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    assignment_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey(ReviewAssignment.id, ondelete="RESTRICT"),
+        nullable=False,
+    )
+    requested_by_user_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey(User.id, ondelete="RESTRICT"),
+        nullable=False,
+    )
+    requested_reviewer_count: Mapped[int] = mapped_column(
+        SmallInteger,
+        nullable=False,
+    )
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[ReviewAssistanceRequestStatus] = mapped_column(
+        _enum(ReviewAssistanceRequestStatus, "review_assistance_request_status"),
+        nullable=False,
+        default=ReviewAssistanceRequestStatus.PENDING,
+        server_default=ReviewAssistanceRequestStatus.PENDING.value,
+    )
+    reviewed_by_user_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey(User.id, ondelete="RESTRICT"),
+    )
+    decision_reason: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 COMMENTS_TYPE = JSONB().with_variant(JSON(), "sqlite")

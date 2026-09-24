@@ -10,6 +10,7 @@ from app.modules.auth.dependencies import (
     ApplicantUpgradeServiceDependency,
     CsrfProtectedPrincipalDependency,
     CurrentPrincipalDependency,
+    EmployeeProfileLinkDependency,
     FirebaseAuthRuntimeDependency,
     PasswordResetServiceDependency,
     RegistrationServiceDependency,
@@ -285,6 +286,35 @@ async def accept_staff_invitation(
 
 
 @router.post(
+    "/employee-invitations/accept",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=SuccessEnvelope[StaffInvitationAcceptedData],
+    responses=OAUTH_ERROR_RESPONSES,
+)
+async def accept_employee_invitation(
+    payload: StaffInvitationAcceptRequest,
+    request: Request,
+    runtime: FirebaseAuthRuntimeDependency,
+    invitation_service: StaffInvitationServiceDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[StaffInvitationAcceptedData]:
+    client_ip = request.client.host if request.client is not None else "unknown"
+    await runtime.rate_limiter.check(client_ip)
+    claims = await runtime.verifier.validate_id_token(payload.id_token)
+    await invitation_service.accept_employee(
+        raw_token=payload.invitation_token.get_secret_value(),
+        claims=claims,
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    return SuccessEnvelope(
+        data=StaffInvitationAcceptedData(status="ACTIVE"),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
     "/staff-invitations/{invitation_id}/accept",
     response_model=SuccessEnvelope[StaffInvitationDecisionData],
 )
@@ -455,6 +485,7 @@ async def logout(
 async def me(
     request: Request,
     principal: CurrentPrincipalDependency,
+    is_employee: EmployeeProfileLinkDependency,
 ) -> SuccessEnvelope[AuthUserData]:
     return SuccessEnvelope(
         data=AuthUserData(
@@ -463,6 +494,7 @@ async def me(
             roles=principal.roles,
             permissions=principal.permissions,
             accountType=principal.account_type,
+            isEmployee=is_employee,
         ),
         meta=ResponseMeta(request_id=request.state.request_id),
     )

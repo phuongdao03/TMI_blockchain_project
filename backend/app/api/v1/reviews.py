@@ -24,14 +24,18 @@ from app.modules.reviews.models import ReviewAssignmentStatus, SimilarityCaseSta
 from app.modules.reviews.schemas import (
     AdminReviewDossierDetailData,
     AdminReviewDossierSummaryData,
+    ApproveAssistanceRequest,
     AssignReviewersRequest,
     AssignSimilarityCaseRequest,
     ConflictDeclarationRequest,
+    DeclineAssistanceRequest,
     DossierTransitionData,
+    RequestAssistanceRequest,
     ResolveSimilarityCaseRequest,
     ReviewAssignmentData,
     ReviewAssignmentDetailData,
     ReviewAssignmentSummaryData,
+    ReviewAssistanceRequestData,
     ReviewData,
     ReviewDraftRequest,
     SimilarityCaseData,
@@ -40,6 +44,7 @@ from app.modules.reviews.schemas import (
 from app.modules.reviews.types import (
     ReviewAssignmentDetailView,
     ReviewAssignmentSummaryView,
+    ReviewAssistanceRequestView,
     ReviewDraft,
     ReviewFinding,
     ReviewView,
@@ -71,6 +76,12 @@ def _review_data(view: ReviewView) -> ReviewData:
     return ReviewData.model_validate(view)
 
 
+def _assistance_request_data(
+    view: ReviewAssistanceRequestView,
+) -> ReviewAssistanceRequestData:
+    return ReviewAssistanceRequestData.model_validate(view)
+
+
 def _assignment_detail_data(
     view: ReviewAssignmentDetailView,
 ) -> ReviewAssignmentDetailData:
@@ -84,6 +95,9 @@ def _assignment_detail_data(
             dict(view.snapshot_json) if view.snapshot_json is not None else None
         ),
         review=_review_data(view.review) if view.review is not None else None,
+        assistance_requests=tuple(
+            _assistance_request_data(item) for item in view.assistance_requests
+        ),
     )
 
 
@@ -241,6 +255,53 @@ async def assign_reviewers(
     )
 
 
+@router.post(
+    "/api/v1/admin/review-assistance-requests/{assistance_request_id}/approve",
+    response_model=SuccessEnvelope[ReviewAssistanceRequestData],
+    responses=PRIVATE_RESPONSES,
+)
+async def approve_assistance_request(
+    assistance_request_id: UUID,
+    payload: ApproveAssistanceRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: ReviewServiceDependency,
+) -> SuccessEnvelope[ReviewAssistanceRequestData]:
+    result = await service.approve_assistance_request(
+        principal,
+        assistance_request_id,
+        reviewer_user_ids=tuple(payload.reviewer_user_ids),
+        due_at=payload.due_at,
+    )
+    return SuccessEnvelope(
+        data=_assistance_request_data(result),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/api/v1/admin/review-assistance-requests/{assistance_request_id}/decline",
+    response_model=SuccessEnvelope[ReviewAssistanceRequestData],
+    responses=PRIVATE_RESPONSES,
+)
+async def decline_assistance_request(
+    assistance_request_id: UUID,
+    payload: DeclineAssistanceRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: ReviewServiceDependency,
+) -> SuccessEnvelope[ReviewAssistanceRequestData]:
+    result = await service.decline_assistance_request(
+        principal,
+        assistance_request_id,
+        reason=payload.reason,
+    )
+    return SuccessEnvelope(
+        data=_assistance_request_data(result),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
 @router.get(
     "/api/v1/reviewer/assignments",
     response_model=PaginatedSuccessEnvelope[list[ReviewAssignmentSummaryData]],
@@ -291,6 +352,31 @@ async def get_reviewer_assignment(
     result = await service.get_assignment(principal, assignment_id)
     return SuccessEnvelope(
         data=_assignment_detail_data(result),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/api/v1/reviewer/assignments/{assignment_id}/assistance-requests",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SuccessEnvelope[ReviewAssistanceRequestData],
+    responses=PRIVATE_RESPONSES,
+)
+async def request_assistance(
+    assignment_id: UUID,
+    payload: RequestAssistanceRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: ReviewServiceDependency,
+) -> SuccessEnvelope[ReviewAssistanceRequestData]:
+    result = await service.request_assistance(
+        principal,
+        assignment_id,
+        reason=payload.reason,
+        requested_reviewer_count=payload.requested_reviewer_count,
+    )
+    return SuccessEnvelope(
+        data=_assistance_request_data(result),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 

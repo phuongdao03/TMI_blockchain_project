@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.modules.dossiers.models import DossierStatus
 from app.modules.reviews.models import (
     ReviewAssignmentStatus,
+    ReviewAssistanceRequestStatus,
     ReviewFindingAction,
     ReviewFindingSeverity,
     ReviewRecommendation,
@@ -72,6 +73,40 @@ class ReviewAssignmentData(ReviewSchema):
     status: ReviewAssignmentStatus
     conflict_declared_at: datetime | None
     conflict_reason: str | None
+
+
+class ReviewAssistanceRequestData(ReviewSchema):
+    id: UUID
+    assignment_id: UUID
+    requested_by_user_id: UUID
+    requested_reviewer_count: int
+    reason: str
+    status: ReviewAssistanceRequestStatus
+    created_at: datetime
+    reviewed_by_user_id: UUID | None
+    decision_reason: str | None
+    reviewed_at: datetime | None
+
+
+class RequestAssistanceRequest(ReviewSchema):
+    reason: Annotated[str, Field(min_length=20, max_length=2_000)]
+    requested_reviewer_count: Annotated[int, Field(ge=1, le=10)]
+
+
+class ApproveAssistanceRequest(ReviewSchema):
+    reviewer_user_ids: Annotated[list[UUID], Field(min_length=1, max_length=10)]
+    due_at: datetime | None = None
+
+    @field_validator("reviewer_user_ids")
+    @classmethod
+    def unique_reviewers(cls, value: list[UUID]) -> list[UUID]:
+        if len(set(value)) != len(value):
+            raise ValueError("Reviewer IDs must be unique.")
+        return value
+
+
+class DeclineAssistanceRequest(ReviewSchema):
+    reason: Annotated[str, Field(min_length=20, max_length=2_000)]
 
 
 class ConflictDeclarationRequest(ReviewSchema):
@@ -206,10 +241,16 @@ class AdminReviewAssignmentData(ReviewSchema):
     review: ReviewData | None
 
 
+class AdminReviewAssistanceRequestData(ReviewSchema):
+    request: ReviewAssistanceRequestData
+    requester_email: str
+
+
 class AdminReviewDossierDetailData(AdminReviewDossierSummaryData):
     canonical_hash: str
     snapshot_json: dict[str, object]
     assignments: tuple[AdminReviewAssignmentData, ...]
+    assistance_requests: tuple[AdminReviewAssistanceRequestData, ...] = ()
 
 
 class ReviewAssignmentSummaryData(ReviewSchema):
@@ -223,6 +264,7 @@ class ReviewAssignmentDetailData(ReviewAssignmentSummaryData):
     canonical_hash: str | None
     snapshot_json: dict[str, Any] | None
     review: ReviewData | None
+    assistance_requests: tuple[ReviewAssistanceRequestData, ...] = ()
 
 
 class AssignSimilarityCaseRequest(ReviewSchema):

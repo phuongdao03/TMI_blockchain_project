@@ -10,7 +10,13 @@ import { Button } from "@/components/ui/button";
 import { ApiError, authApi } from "@/lib/api/client";
 import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
 
-export function StaffInvitationForm({ token }: { token?: string }) {
+export function StaffInvitationForm({
+  token,
+  employee = false,
+}: {
+  token?: string;
+  employee?: boolean;
+}) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>();
@@ -27,7 +33,11 @@ export function StaffInvitationForm({ token }: { token?: string }) {
         new GoogleAuthProvider(),
       );
       const idToken = await credential.user.getIdToken(true);
-      await authApi.acceptStaffInvitation(token, idToken);
+      if (employee) {
+        await authApi.acceptEmployeeInvitation(token, idToken);
+      } else {
+        await authApi.acceptStaffInvitation(token, idToken);
+      }
       router.replace("/login?invitation=accepted");
     } catch (cause) {
       setError(
@@ -43,7 +53,9 @@ export function StaffInvitationForm({ token }: { token?: string }) {
     <AuthCard
       description="Xác nhận danh tính bằng đúng email đã nhận lời mời để bắt đầu công việc."
       footer={<AuthLink href="/login">Quay lại đăng nhập</AuthLink>}
-      title="Tham gia đội ngũ CNS"
+      title={
+        employee ? "Kích hoạt tài khoản nhân viên" : "Tham gia đội ngũ CNS"
+      }
     >
       <div className="space-y-5">
         <div className="rounded-xl border border-white/10 bg-white/[0.035] p-4">

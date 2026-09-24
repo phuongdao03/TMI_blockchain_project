@@ -215,7 +215,10 @@ export function PublicLibrary({
             {works.isPending ? (
               <CatalogSkeleton />
             ) : works.error ? (
-              <div className="rounded-3xl border border-red-400/20 bg-red-400/10 px-6 py-14 text-center">
+              <div
+                className="rounded-3xl border border-red-400/20 bg-red-400/10 px-6 py-14 text-center"
+                role="alert"
+              >
                 <p className="font-bold text-red-100">
                   Chưa thể tải danh sách đề cử
                 </p>

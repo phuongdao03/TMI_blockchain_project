@@ -15,6 +15,7 @@ import Link from "next/link";
 
 import { EvidenceViewer } from "@/components/reviews/evidence-viewer";
 import { FiveTScorecard } from "@/components/reviews/five-t-scorecard";
+import { ReviewAssistancePanel } from "@/components/reviews/review-assistance-panel";
 import { Card } from "@/components/ui/card";
 import { reviewApi } from "@/lib/api/client";
 import type { ReviewAssignmentDetail, ReviewDraft } from "@/lib/api/types";
@@ -226,6 +227,11 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           </span>
         </p>
       ) : null}
+      <ReviewAssistancePanel
+        assignmentId={assignmentId}
+        canRequest={detail.assignment.status === "IN_PROGRESS"}
+        requests={detail.assistanceRequests ?? []}
+      />
       {terminal ? (
         <Card className="p-8 text-center">
           <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-amber-50 text-amber-700">

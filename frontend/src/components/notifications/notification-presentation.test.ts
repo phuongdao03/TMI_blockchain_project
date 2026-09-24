@@ -44,6 +44,23 @@ describe("notification presentation", () => {
     ).toBe("/admin/reviews/dossier-1");
   });
 
+  it("routes assistance requests to the admin review workspace", () => {
+    expect(
+      presentNotification(
+        {
+          ...base,
+          type: "review.assistance_requested",
+          data: { dossier_id: "dossier-1" },
+        },
+        { adminDossierLinks: true },
+      ),
+    ).toMatchObject({
+      actionLabel: "Xử lý yêu cầu",
+      actionPath: "/admin/reviews/dossier-1",
+      tone: "warning",
+    });
+  });
+
   it("repairs historical certificate notifications without an action path", () => {
     expect(
       presentNotification({

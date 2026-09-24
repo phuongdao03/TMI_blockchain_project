@@ -110,7 +110,7 @@ export function PaymentRequestWorkspace() {
             <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-primary-700">
               Sau phê duyệt · trước blockchain
             </p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-5xl">
+            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
               Quyết định phí hồ sơ
             </h1>
             <p className="mt-4 max-w-2xl leading-7 text-[var(--theme-muted)]">

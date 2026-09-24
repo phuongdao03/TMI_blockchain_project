@@ -11,6 +11,8 @@ from app.modules.reviews.models import (
     Review,
     ReviewAssignment,
     ReviewAssignmentStatus,
+    ReviewAssistanceRequest,
+    ReviewAssistanceRequestStatus,
     SimilarityCaseStatus,
     SimilarityReviewCase,
     SimilaritySignalType,
@@ -31,6 +33,9 @@ class ReviewRepository:
 
     def add_review(self, review: Review) -> None:
         self._session.add(review)
+
+    def add_assistance_request(self, request: ReviewAssistanceRequest) -> None:
+        self._session.add(request)
 
     def add_similarity_case(self, case: SimilarityReviewCase) -> None:
         self._session.add(case)
@@ -111,6 +116,26 @@ class ReviewRepository:
             .outerjoin(Review, Review.assignment_id == ReviewAssignment.id)
             .where(ReviewAssignment.dossier_version_id == dossier_version_id)
             .order_by(ReviewAssignment.id)
+        )
+        return tuple(rows.tuples().all())
+
+    async def list_admin_assistance_requests(
+        self,
+        dossier_version_id: UUID,
+    ) -> tuple[tuple[ReviewAssistanceRequest, User], ...]:
+        rows = await self._session.execute(
+            select(ReviewAssistanceRequest, User)
+            .join(
+                ReviewAssignment,
+                ReviewAssignment.id == ReviewAssistanceRequest.assignment_id,
+            )
+            .join(User, User.id == ReviewAssistanceRequest.requested_by_user_id)
+            .where(ReviewAssignment.dossier_version_id == dossier_version_id)
+            .order_by(
+                ReviewAssistanceRequest.created_at.desc(),
+                ReviewAssistanceRequest.id.desc(),
+            )
+            .limit(50)
         )
         return tuple(rows.tuples().all())
 
@@ -217,6 +242,70 @@ class ReviewRepository:
                 )
             ),
         )
+
+    async def get_assignment(
+        self,
+        assignment_id: UUID,
+        *,
+        for_update: bool = False,
+    ) -> ReviewAssignment | None:
+        statement = select(ReviewAssignment).where(ReviewAssignment.id == assignment_id)
+        if for_update:
+            statement = statement.with_for_update().execution_options(
+                populate_existing=True
+            )
+        return cast(
+            ReviewAssignment | None,
+            await self._session.scalar(statement),
+        )
+
+    async def get_pending_assistance_request(
+        self,
+        assignment_id: UUID,
+    ) -> ReviewAssistanceRequest | None:
+        return cast(
+            ReviewAssistanceRequest | None,
+            await self._session.scalar(
+                select(ReviewAssistanceRequest).where(
+                    ReviewAssistanceRequest.assignment_id == assignment_id,
+                    ReviewAssistanceRequest.status
+                    == ReviewAssistanceRequestStatus.PENDING,
+                )
+            ),
+        )
+
+    async def get_assistance_request(
+        self,
+        request_id: UUID,
+        *,
+        for_update: bool = False,
+    ) -> ReviewAssistanceRequest | None:
+        statement = select(ReviewAssistanceRequest).where(
+            ReviewAssistanceRequest.id == request_id
+        )
+        if for_update:
+            statement = statement.with_for_update().execution_options(
+                populate_existing=True
+            )
+        return cast(
+            ReviewAssistanceRequest | None,
+            await self._session.scalar(statement),
+        )
+
+    async def list_assistance_requests_for_assignment(
+        self,
+        assignment_id: UUID,
+    ) -> tuple[ReviewAssistanceRequest, ...]:
+        requests = await self._session.scalars(
+            select(ReviewAssistanceRequest)
+            .where(ReviewAssistanceRequest.assignment_id == assignment_id)
+            .order_by(
+                ReviewAssistanceRequest.created_at.desc(),
+                ReviewAssistanceRequest.id.desc(),
+            )
+            .limit(20)
+        )
+        return tuple(requests.all())
 
     async def get_owned_assignment(
         self,

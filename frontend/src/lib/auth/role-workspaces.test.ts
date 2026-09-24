@@ -11,13 +11,16 @@ describe("role workspaces", () => {
   it("routes the four product roles to their focused workspaces", () => {
     expect(resolveDefaultWorkspace(["VIEWER"])).toBe("/dashboard");
     expect(resolveDefaultWorkspace(["USER"])).toBe("/dashboard");
-    expect(resolveDefaultWorkspace(["MODERATOR"])).toBe("/reviews");
+    expect(resolveDefaultWorkspace(["MODERATOR"])).toBe("/work-allocations");
     expect(resolveDefaultWorkspace(["SUPER_ADMIN"])).toBe("/admin");
     expect(resolveDefaultWorkspace(["USER"], ["payments.read"])).toBe(
       "/admin/payments",
     );
     expect(resolveDefaultWorkspace(["USER"], ["users.read"])).toBe(
       "/admin/users",
+    );
+    expect(resolveDefaultWorkspace(["MODERATOR"], ["review.assign"])).toBe(
+      "/work-allocations",
     );
   });
 
@@ -27,6 +30,13 @@ describe("role workspaces", () => {
     expect(action.href).toBe("/admin/payments");
     expect(action.label).toBe("Khu vực làm việc");
     expect(action.label).not.toMatch(/^Quay lại/i);
+  });
+
+  it("returns Moderators to their allocated work from public pages", () => {
+    expect(resolvePublicHeaderAction(["MODERATOR"])).toEqual({
+      href: "/work-allocations",
+      label: "Công việc được giao",
+    });
   });
 
   it("keeps submission actions restricted to users", () => {

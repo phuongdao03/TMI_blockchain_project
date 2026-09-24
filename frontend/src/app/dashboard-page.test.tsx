@@ -3,22 +3,76 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import DashboardPage from "@/app/(dashboard)/dashboard/page";
+import MyWorkAllocationsPage from "@/app/(dashboard)/work-allocations/page";
 import { AuthUserProvider } from "@/lib/auth/user-context";
 
 const listMock = vi.hoisted(() => vi.fn());
+const summaryMock = vi.hoisted(() => vi.fn());
+const allocationsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/api/client", () => ({
   dossierApi: { list: listMock },
+  hrModeratorDashboardApi: { summary: summaryMock },
+  workAllocationSelfApi: { list: allocationsMock },
 }));
 
 describe("dashboard overview", () => {
   beforeEach(() => {
     listMock.mockReset();
+    summaryMock.mockReset();
+    allocationsMock.mockReset();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
   });
+
+  it.each([
+    ["dashboard", DashboardPage],
+    ["default work allocation page", MyWorkAllocationsPage],
+  ] as const)(
+    "exposes personal HR on the moderator %s",
+    async (_name, Page) => {
+      summaryMock.mockResolvedValue({
+        profileLinked: true,
+        workDate: "2026-09-23",
+        timezone: "Asia/Ho_Chi_Minh",
+        attendanceStatus: null,
+        checkInAt: null,
+        checkOutAt: null,
+        leavePendingCount: 0,
+        overtimePendingCount: 0,
+        updatedAt: "2026-09-23T08:00:00Z",
+      });
+      allocationsMock.mockResolvedValue({ data: [] });
+      render(
+        <QueryClientProvider
+          client={
+            new QueryClient({ defaultOptions: { queries: { retry: false } } })
+          }
+        >
+          <AuthUserProvider
+            user={{
+              id: "moderator-1",
+              email: "moderator@example.com",
+              roles: ["MODERATOR"],
+              accountType: null,
+            }}
+          >
+            <Page />
+          </AuthUserProvider>
+        </QueryClientProvider>,
+      );
+
+      expect(
+        await screen.findByText("Chấm công và yêu cầu cá nhân"),
+      ).toBeDefined();
+      expect(
+        screen.getByRole("link", { name: /Mở chấm công/ }).getAttribute("href"),
+      ).toBe("/attendance");
+      expect(listMock).not.toHaveBeenCalled();
+    },
+  );
 
   it("uses live dossier data even when the preview flag is explicitly set", async () => {
     vi.stubEnv("NEXT_PUBLIC_RELEASE_MODE", "preview");

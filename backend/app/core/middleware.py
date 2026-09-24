@@ -109,7 +109,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if "Referrer-Policy" not in response.headers:
             response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Permissions-Policy"] = (
-            "camera=(), geolocation=(), microphone=()"
+            "camera=(), geolocation=(self), microphone=()"
         )
         if request.url.path.startswith("/api/v1/public/"):
             response.headers["Cache-Control"] = "no-store"

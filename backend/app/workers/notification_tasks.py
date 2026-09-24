@@ -19,6 +19,7 @@ from app.modules.notifications.email import (
     SmtpEmailGateway,
     render_email,
 )
+from app.modules.notifications.redaction import redact_notification_data
 from app.modules.notifications.service import NotificationService
 from app.modules.public.cache_events import CatalogCacheEventHandler
 from app.modules.public.catalog_cache import RedisPublicCatalogCache
@@ -30,6 +31,8 @@ EMAIL_EVENTS = frozenset(
         "dossier.submitted",
         "dossier.supplement_requested",
         "review.assignment_created",
+        "review.assistance_requested",
+        "review.assistance_resolved",
         "council.decided",
         "payment.paid",
         "certificate.issued",
@@ -56,6 +59,14 @@ EVENT_COPY: dict[str, tuple[str, str]] = {
         "Đã hoàn tất thẩm định",
         "Kết quả thẩm định đã được ghi nhận.",
     ),
+    "review.assistance_requested": (
+        "Yêu cầu hỗ trợ thẩm định",
+        "Một moderator cần thêm người cùng thẩm định hồ sơ phức tạp.",
+    ),
+    "review.assistance_resolved": (
+        "Yêu cầu hỗ trợ đã được xử lý",
+        "Yêu cầu bổ sung người thẩm định của bạn đã có phản hồi.",
+    ),
     "council.decided": (
         "Hội đồng đã quyết định",
         "Quyết định hội đồng đã được cập nhật.",
@@ -76,6 +87,7 @@ EVENT_COPY: dict[str, tuple[str, str]] = {
 EVENT_ROLE_RECIPIENTS: dict[str, frozenset[str]] = {
     "dossier.submitted": frozenset({"SUPER_ADMIN"}),
     "review.completed": frozenset({"SUPER_ADMIN"}),
+    "review.assistance_requested": frozenset({"SUPER_ADMIN"}),
 }
 
 
@@ -83,6 +95,8 @@ def _action_path(event_type: str, payload: Mapping[str, object]) -> str | None:
     dossier_id = payload.get("dossier_id") or payload.get("dossierId")
     assignment_id = payload.get("assignment_id") or payload.get("assignmentId")
     certificate_id = payload.get("certificate_id") or payload.get("certificateId")
+    if event_type == "review.assistance_resolved" and isinstance(assignment_id, str):
+        return f"/reviews/{assignment_id}"
     if event_type == "review.assignment_created" and isinstance(assignment_id, str):
         return f"/reviews/{assignment_id}"
     if event_type in {
@@ -114,6 +128,12 @@ def _recipient_action_path(
     direct_recipient_id: UUID | None,
 ) -> str | None:
     dossier_id = payload.get("dossier_id") or payload.get("dossierId")
+    if (
+        event_type == "review.assistance_requested"
+        and recipient_id != direct_recipient_id
+        and isinstance(dossier_id, str)
+    ):
+        return f"/admin/reviews/{dossier_id}"
     if (
         event_type in {"dossier.submitted", "review.completed"}
         and recipient_id != direct_recipient_id
@@ -157,6 +177,21 @@ def staff_invitation_message(
         text=text,
         html=html,
     )
+
+
+def employee_invitation_message(
+    *, email: str, invitation_token: str, app_base_url: str
+) -> EmailMessage:
+    token = quote(invitation_token, safe="")
+    action_url = f"{app_base_url.rstrip('/')}/employee-invitation?token={token}"
+    title = "Lời mời kích hoạt tài khoản nhân viên"
+    body = (
+        "Bạn được mời kích hoạt tài khoản người dùng để làm việc trên hệ thống. "
+        "Đăng nhập bằng đúng địa chỉ Gmail nhận thư này để xác nhận. "
+        "Quản trị viên sẽ cấu hình hồ sơ nhân sự sau khi tài khoản được kích hoạt."
+    )
+    text, html = render_email(title=title, body=body, action_url=action_url)
+    return EmailMessage(to=email, subject=title, text=text, html=html)
 
 
 async def _consume(event_id: UUID) -> None:
@@ -213,6 +248,30 @@ async def _consume(event_id: UUID) -> None:
                 use_ssl=settings.smtp_use_ssl,
                 timeout_seconds=settings.smtp_timeout_seconds,
             ).send(message)
+        if event_type == "employee.invited":
+            email = payload.get("email")
+            invitation_token = payload.get("invitation_token")
+            if not isinstance(email, str) or not isinstance(invitation_token, str):
+                raise RuntimeError("Invalid employee invitation payload")
+            message = employee_invitation_message(
+                email=email,
+                invitation_token=invitation_token,
+                app_base_url=settings.app_base_url,
+            )
+            await SmtpEmailGateway(
+                host=settings.smtp_host,
+                port=settings.smtp_port,
+                sender=settings.smtp_sender,
+                username=settings.smtp_username,
+                password=(
+                    settings.smtp_password.get_secret_value()
+                    if settings.smtp_password is not None
+                    else None
+                ),
+                use_tls=settings.smtp_use_tls,
+                use_ssl=settings.smtp_use_ssl,
+                timeout_seconds=settings.smtp_timeout_seconds,
+            ).send(message)
         if event_type == "blockchain.anchored":
             dossier_id = payload.get("dossier_id")
             certificate_version_id = payload.get("certificate_version_id")
@@ -236,11 +295,7 @@ async def _consume(event_id: UUID) -> None:
             )
         )
         if recipient_ids and copy is not None:
-            safe_data = {
-                key: value
-                for key, value in payload.items()
-                if key not in {"email", "verification_token", "token"}
-            }
+            safe_data = redact_notification_data(payload)
             notifications = []
             for recipient_id in sorted(recipient_ids, key=str):
                 recipient_data = dict(safe_data)
@@ -276,6 +331,9 @@ async def _consume(event_id: UUID) -> None:
                     if notification.user_id == direct_recipient_id
                 )
                 deliver_notification_email.delay(str(direct_notification.id))
+            elif event_type == "review.assistance_requested":
+                for notification in notifications:
+                    deliver_notification_email.delay(str(notification.id))
         if aggregate_type in {"public_work", "public_category", "public_tag"}:
             redis_client: Redis = Redis.from_url(settings.redis_url)
             try:

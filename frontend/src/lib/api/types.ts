@@ -2,6 +2,389 @@ export interface ResponseMeta {
   request_id: string;
 }
 
+export type DepartmentStatus = "ACTIVE" | "INACTIVE";
+
+export interface Department {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  status: DepartmentStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type EmploymentStatus =
+  | "ACTIVE"
+  | "INACTIVE"
+  | "ON_LEAVE"
+  | "TERMINATED";
+
+export interface Employee {
+  id: string;
+  employeeCode: string;
+  userId: string | null;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  departmentId: string;
+  departmentName: string;
+  position: string;
+  employmentStatus: EmploymentStatus;
+  joinDate: string;
+  contractType: string | null;
+  baseSalary: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AttendanceStatus =
+  | "PRESENT"
+  | "LATE"
+  | "ABSENT"
+  | "LEAVE"
+  | "HALF_DAY"
+  | "OT"
+  | "PENDING"
+  | "REJECTED";
+
+export interface Attendance {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  workDate: string;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  status: AttendanceStatus;
+  lateMinutes: number;
+  earlyLeaveMinutes: number;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AttendanceWorkdayContext {
+  workDate: string | null;
+  timezone: string | null;
+}
+
+export interface AdminAttendance extends Attendance {
+  employeeCode: string;
+  departmentName: string;
+}
+
+export type AttendanceLocationExceptionStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED";
+export type AttendanceLocationEventType = "CHECK_IN" | "CHECK_OUT";
+export type AttendanceLocationOutcome =
+  | "ACCEPTED"
+  | "OUTSIDE_WORKSITE"
+  | "LOW_ACCURACY"
+  | "LOCATION_UNAVAILABLE"
+  | "EXCEPTION_APPROVED";
+
+export interface AttendanceLocationEvidenceReview {
+  id: string;
+  eventType: AttendanceLocationEventType;
+  worksitePolicyId: string;
+  worksiteCode: string;
+  worksiteName: string;
+  clientCapturedAt: string;
+  receivedAt: string;
+  latitude: string | null;
+  longitude: string | null;
+  accuracyMeters: string;
+  distanceMeters: string;
+  effectiveTimezone: string;
+  permittedRadiusMeters: number;
+  maxAccuracyMeters: number;
+  outcome: AttendanceLocationOutcome;
+}
+
+export interface AttendanceLocationException {
+  id: string;
+  attendanceId: string;
+  locationEvidenceId: string;
+  status: AttendanceLocationExceptionStatus;
+  requestedByUserId: string;
+  decisionNote: string | null;
+  reviewedByUserId: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminAttendanceLocationException
+  extends AttendanceLocationException {
+  employeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  workDate: string;
+  attendanceStatus: AttendanceStatus;
+  evidence: AttendanceLocationEvidenceReview;
+}
+
+export type AttendanceWorksiteStatus = "ACTIVE" | "INACTIVE";
+
+export interface AttendanceWorksite {
+  id: string;
+  code: string;
+  name: string;
+  status: AttendanceWorksiteStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AttendanceWorksitePolicy {
+  id: string;
+  worksiteId: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  timezone: string;
+  latitude: string;
+  longitude: string;
+  radiusMeters: number;
+  maxAccuracyMeters: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AttendanceAssignment {
+  id: string;
+  employeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  worksiteId: string;
+  worksiteCode: string;
+  worksiteName: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  scheduleCode: string;
+  holidayCalendarCode: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type LeaveRequestStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELLED";
+
+export interface LeaveRequest {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: LeaveRequestStatus;
+  decisionNote: string | null;
+  reviewedByUserId: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminLeaveRequest extends LeaveRequest {
+  employeeCode: string;
+  departmentName: string;
+}
+
+export type OvertimeRequestStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELLED";
+
+export interface OvertimeRequest {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  startAt: string;
+  endAt: string;
+  reason: string;
+  status: OvertimeRequestStatus;
+  decisionNote: string | null;
+  reviewedByUserId: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminOvertimeRequest extends OvertimeRequest {
+  employeeCode: string;
+  departmentName: string;
+}
+
+export type PayrollPeriodStatus = "DRAFT" | "CONFIRMED" | "PAID";
+
+export interface PayrollPeriod {
+  id: string;
+  worksiteId: string;
+  periodMonth: string;
+  currency: "VND";
+  standardWorkdays: number;
+  status: PayrollPeriodStatus;
+  calculatedAt: string | null;
+  confirmedAt: string | null;
+  confirmedByUserId: string | null;
+  paidAt: string | null;
+  paidByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PayrollEntry {
+  id: string;
+  payrollPeriodId: string;
+  employeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  baseSalary: string;
+  attendanceWorkdays: string;
+  approvedOvertimeHours: string;
+  allowance: string;
+  socialInsurance: string;
+  incomeTax: string;
+  dailySalary: string;
+  overtimeSalary: string;
+  grossPay: string;
+  totalDeductions: string;
+  netPay: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PayrollPeriodDetail extends PayrollPeriod {
+  entries: PayrollEntry[];
+}
+
+export interface HrDashboardSummary {
+  activeEmployeeCount: number;
+  attendancePendingCount: number;
+  locationExceptionPendingCount: number;
+  leavePendingCount: number;
+  overtimePendingCount: number;
+  payrollDraftCount: number;
+  updatedAt: string;
+}
+
+export interface ModeratorHrDashboardSummary {
+  profileLinked: boolean;
+  workDate: string | null;
+  timezone: string | null;
+  attendanceStatus: AttendanceStatus | null;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  leavePendingCount: number;
+  overtimePendingCount: number;
+  updatedAt: string;
+}
+
+export type WorkTaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "CANCELLED";
+export type WorkTaskPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export interface WorkTask {
+  id: string;
+  title: string;
+  description: string | null;
+  status: WorkTaskStatus;
+  priority: WorkTaskPriority;
+  assigneeEmployeeId: string | null;
+  createdByUserId: string;
+  dueAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WorkAllocationKind = "GENERIC" | "DOSSIER_REVIEW";
+export type WorkAllocationStatus =
+  | "DRAFT"
+  | "ACTIVE"
+  | "COMPLETED"
+  | "CANCELLED";
+export type WorkAllocationPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type AllocationResponsibility = "LEAD" | "CONTRIBUTOR" | "REVIEWER";
+export type WorkScopeType = "EVIDENCE" | "GROUP";
+
+export interface WorkAllocation {
+  id: string;
+  kind: WorkAllocationKind;
+  objective: string;
+  description: string | null;
+  dossierId: string | null;
+  dossierVersionId: string | null;
+  dueAt: string | null;
+  priority: WorkAllocationPriority;
+  status: WorkAllocationStatus;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkScope {
+  id: string;
+  allocationId: string;
+  scopeType: WorkScopeType;
+  dossierEvidenceId: string | null;
+  dossierEvidenceTitle: string | null;
+  groupLabel: string | null;
+  requiresDualReview: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AllocationMember {
+  id: string;
+  allocationId: string;
+  userId: string;
+  responsibility: AllocationResponsibility;
+  assignedByUserId: string;
+  isActive: boolean;
+  deactivatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkScopeCoverage {
+  scopeId: string;
+  reviewAssignmentIds: string[];
+  reviewerUserIds: string[];
+}
+
+export interface WorkAllocationDetail extends WorkAllocation {
+  scopes: WorkScope[];
+  members: AllocationMember[];
+  scopeCoverage: WorkScopeCoverage[];
+}
+
+export interface WorkScopeInput {
+  scopeType: WorkScopeType;
+  dossierEvidenceId?: string | null;
+  groupLabel?: string | null;
+  requiresDualReview?: boolean;
+}
+
+export interface WorkAllocationCreateInput {
+  kind: WorkAllocationKind;
+  objective: string;
+  description?: string | null;
+  dossierId?: string | null;
+  dossierVersionId?: string | null;
+  dueAt?: string | null;
+  priority?: WorkAllocationPriority;
+  scopes?: WorkScopeInput[];
+  members?: Array<{
+    userId: string;
+    responsibility: AllocationResponsibility;
+  }>;
+}
+
 export interface ListResponseMeta {
   request_id?: string;
   requestId?: string;
@@ -50,6 +433,7 @@ export interface AuthUser {
   roles: string[];
   permissions?: string[];
   accountType: AccountType | null;
+  isEmployee?: boolean;
 }
 
 export type AdminUserStatus = "PENDING" | "ACTIVE" | "SUSPENDED" | "DELETED";
@@ -672,6 +1056,8 @@ export type ReviewAssignmentStatus =
   | "SUBMITTED"
   | "CANCELLED";
 
+export type ReviewAssistanceRequestStatus = "PENDING" | "APPROVED" | "DECLINED";
+
 export type ReviewRecommendation = "APPROVE" | "SUPPLEMENT" | "REJECT";
 export type ReviewFindingSeverity =
   | "INFO"
@@ -706,6 +1092,19 @@ export interface ReviewAssignment {
   status: ReviewAssignmentStatus;
   conflictDeclaredAt: string | null;
   conflictReason: string | null;
+}
+
+export interface ReviewAssistanceRequest {
+  id: string;
+  assignmentId: string;
+  requestedByUserId: string;
+  requestedReviewerCount: number;
+  reason: string;
+  status: ReviewAssistanceRequestStatus;
+  createdAt: string;
+  reviewedByUserId: string | null;
+  decisionReason: string | null;
+  reviewedAt: string | null;
 }
 
 export interface ReviewAssignmentSummary {
@@ -836,6 +1235,7 @@ export interface ReviewAssignmentDetail extends ReviewAssignmentSummary {
   canonicalHash: string | null;
   snapshotJson: ReviewSnapshot | null;
   review: ReviewData | null;
+  assistanceRequests?: ReviewAssistanceRequest[];
 }
 
 export type AdminReviewDossierStatus =
@@ -857,12 +1257,18 @@ export interface AdminReviewDossierDetail extends AdminReviewDossierSummary {
   canonicalHash: string;
   snapshotJson: ReviewSnapshot;
   assignments: AdminReviewAssignment[];
+  assistanceRequests?: AdminReviewAssistanceRequest[];
 }
 
 export interface AdminReviewAssignment {
   assignment: ReviewAssignment;
   reviewerEmail: string;
   review: ReviewData | null;
+}
+
+export interface AdminReviewAssistanceRequest {
+  request: ReviewAssistanceRequest;
+  requesterEmail: string;
 }
 
 export type AdminDossierDecision = "APPROVE" | "REJECT" | "REQUEST_MORE_INFO";

@@ -21,7 +21,7 @@ export function ActivityHistory() {
           <History aria-hidden="true" className="size-4" /> Dấu vết hoạt động cá
           nhân
         </p>
-        <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
+        <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
           Lịch sử hoạt động
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
@@ -52,7 +52,7 @@ export function ActivityHistory() {
             aria-hidden="true"
             className="mx-auto size-9 text-neutral-300"
           />
-          <h2 className="mt-4 text-xl font-black">Chưa có hoạt động</h2>
+          <h2 className="mt-4 text-xl font-semibold">Chưa có hoạt động</h2>
           <p className="mt-2 text-sm text-neutral-500">
             Các lượt yêu thích và chia sẻ sau khi đăng nhập sẽ xuất hiện tại
             đây.
@@ -75,12 +75,12 @@ export function ActivityHistory() {
                 )}
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-primary-700">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
                   {item.kind === "FAVORITE"
                     ? "Đã yêu thích"
                     : `Đã chia sẻ · ${item.channel ?? ""}`}
                 </p>
-                <h2 className="mt-2 truncate text-xl font-black text-ink-950">
+                <h2 className="mt-2 truncate text-xl font-semibold text-ink-950">
                   {item.title}
                 </h2>
                 <p className="mt-1 line-clamp-2 text-sm leading-6 text-neutral-500">

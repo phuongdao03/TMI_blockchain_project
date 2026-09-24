@@ -252,7 +252,7 @@ describe("GoogleOAuthButton", () => {
       ),
     );
     expect(screen.queryByText(/mã 6 số/i)).toBeNull();
-    expect(mocks.replace).toHaveBeenCalledWith("/reviews");
+    expect(mocks.replace).toHaveBeenCalledWith("/work-allocations");
   });
 
   it("explains a blocked popup when the redirect fallback also fails", async () => {

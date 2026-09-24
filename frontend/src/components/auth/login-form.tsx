@@ -18,6 +18,7 @@ import { FormField } from "@/components/auth/form-field";
 import { GoogleOAuthButton } from "@/components/auth/google-oauth-button";
 import { Button } from "@/components/ui/button";
 import { ApiError, authApi } from "@/lib/api/client";
+import type { AccountType } from "@/lib/api/types";
 import { loginSchema, type LoginValues } from "@/lib/auth/schemas";
 import { resolveDefaultWorkspace } from "@/lib/auth/role-workspaces";
 import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
@@ -26,7 +27,13 @@ function safeDestination(value: string | undefined, fallback: string): string {
   return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
 }
 
-export function LoginForm({ next }: { next?: string }) {
+export function LoginForm({
+  next,
+  accountType = "PUBLIC_USER",
+}: {
+  next?: string;
+  accountType?: AccountType;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState<string>();
@@ -43,7 +50,7 @@ export function LoginForm({ next }: { next?: string }) {
     const idToken = await user.getIdToken(true);
     const result = await authApi.exchangeFirebaseToken(
       idToken,
-      "PUBLIC_USER",
+      accountType,
       next,
     );
     queryClient.setQueryData(["auth", "me"], result.user);

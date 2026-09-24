@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 from redis.asyncio import Redis
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -29,9 +30,25 @@ from app.modules.auth.services import RegistrationService
 from app.modules.auth.session_service import AuthPrincipal, SessionService
 from app.modules.auth.staff_invitation_service import StaffInvitationService
 from app.modules.auth.tokens import AccessTokenManager, CsrfTokenManager
+from app.modules.hr.models import Employee
 
 SessionDependency = Annotated[AsyncSession, Depends(get_session)]
 SettingsDependency = Annotated[Settings, Depends(get_settings)]
+
+
+async def get_employee_profile_link_status(
+    session: SessionDependency,
+    principal: "CurrentPrincipalDependency",
+) -> bool:
+    employee_id = await session.scalar(
+        select(Employee.id).where(Employee.user_id == principal.user_id).limit(1)
+    )
+    return employee_id is not None
+
+
+EmployeeProfileLinkDependency = Annotated[
+    bool, Depends(get_employee_profile_link_status)
+]
 
 
 @dataclass(frozen=True, slots=True)

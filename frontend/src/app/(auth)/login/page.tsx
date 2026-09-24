@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { LoginForm } from "@/components/auth/login-form";
+import type { AccountType } from "@/lib/api/types";
 
 export const metadata: Metadata = {
   title: "Đăng nhập",
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; accountType?: string }>;
 }) {
-  const { next } = await searchParams;
-  return <LoginForm next={next} />;
+  const { next, accountType: requestedAccountType } = await searchParams;
+  const accountType: AccountType =
+    requestedAccountType === "INDIVIDUAL_APPLICANT" ||
+    requestedAccountType === "ORGANIZATION_APPLICANT"
+      ? requestedAccountType
+      : "PUBLIC_USER";
+  return <LoginForm accountType={accountType} next={next} />;
 }

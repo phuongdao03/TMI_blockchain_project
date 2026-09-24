@@ -33,6 +33,16 @@ const EVENT_PRESENTATION: Record<
     groupLabel: "Thẩm định",
     tone: "success",
   },
+  "review.assistance_requested": {
+    actionLabel: "Xử lý yêu cầu",
+    groupLabel: "Cần phối hợp",
+    tone: "warning",
+  },
+  "review.assistance_resolved": {
+    actionLabel: "Xem phản hồi",
+    groupLabel: "Thẩm định",
+    tone: "info",
+  },
   "certificate.issued": {
     actionLabel: "Xem chứng thư",
     groupLabel: "Chứng thư",
@@ -78,6 +88,11 @@ const EVENT_PRESENTATION: Record<
     groupLabel: "Blockchain",
     tone: "action",
   },
+  HR_ATTENDANCE_LOCATION_REVIEW_REQUIRED: {
+    actionLabel: "Mở hàng chờ xác minh",
+    groupLabel: "Chấm công",
+    tone: "warning",
+  },
 };
 
 function safeInternalPath(value: unknown): string | null {
@@ -97,7 +112,11 @@ export function presentNotification(
   };
   const submittedDossierId =
     options.adminDossierLinks &&
-    ["dossier.submitted", "review.completed"].includes(item.type)
+    [
+      "dossier.submitted",
+      "review.completed",
+      "review.assistance_requested",
+    ].includes(item.type)
       ? (item.data.dossierId ?? item.data.dossier_id)
       : null;
   const certificateId = ["certificate.issued", "certificate.revoked"].includes(

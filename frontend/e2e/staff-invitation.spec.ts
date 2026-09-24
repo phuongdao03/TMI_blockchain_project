@@ -36,5 +36,5 @@ test("reviewer signs in directly after Firebase authentication", async ({
     .fill("correct horse battery staple");
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
-  await expect(page).toHaveURL(/\/reviews$/);
+  await expect(page).toHaveURL(/\/work-allocations$/);
 });

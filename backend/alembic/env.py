@@ -14,6 +14,7 @@ from app.modules.blockchain import models as blockchain_models  # noqa: F401
 from app.modules.council import models as council_models  # noqa: F401
 from app.modules.dossiers import models as dossier_models  # noqa: F401
 from app.modules.engagement import models as engagement_models  # noqa: F401
+from app.modules.hr import models as hr_models  # noqa: F401
 from app.modules.media import models as media_models  # noqa: F401
 from app.modules.operations import job_models as operations_job_models  # noqa: F401
 from app.modules.organizations import models as organization_models  # noqa: F401
@@ -24,6 +25,7 @@ from app.modules.ranking import trending_models as trending_models  # noqa: F401
 from app.modules.reviews import models as review_models  # noqa: F401
 from app.modules.search import discovery_models as search_discovery_models  # noqa: F401
 from app.modules.search import history_models as search_history_models  # noqa: F401
+from app.modules.tasks import models as task_models  # noqa: F401
 from app.modules.users import models as user_models  # noqa: F401
 from app.modules.voting import models as voting_models  # noqa: F401
 

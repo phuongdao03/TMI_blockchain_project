@@ -22,6 +22,7 @@ celery_app = Celery(
         "app.workers.search_discovery_tasks",
         "app.workers.engagement_tasks",
         "app.workers.engagement_velocity_tasks",
+        "app.workers.attendance_location_tasks",
     ],
 )
 celery_app.conf.update(
@@ -66,6 +67,13 @@ celery_app.conf.update(
         },
         "purge-expired-search-history": {
             "task": "app.workers.search_history_tasks.purge_expired_search_history",
+            "schedule": 86400.0,
+        },
+        "purge-expired-attendance-locations": {
+            "task": (
+                "app.workers.attendance_location_tasks."
+                "purge_expired_attendance_locations"
+            ),
             "schedule": 86400.0,
         },
         "materialize-hourly-search-discovery": {

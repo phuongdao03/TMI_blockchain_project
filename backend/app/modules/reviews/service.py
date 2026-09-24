@@ -23,6 +23,8 @@ from app.modules.reviews.models import (
     Review,
     ReviewAssignment,
     ReviewAssignmentStatus,
+    ReviewAssistanceRequest,
+    ReviewAssistanceRequestStatus,
     ReviewFindingAction,
     ReviewFindingSeverity,
     ReviewRecommendation,
@@ -30,6 +32,7 @@ from app.modules.reviews.models import (
 from app.modules.reviews.repository import ReviewRepository
 from app.modules.reviews.types import (
     AdminReviewAssignmentView,
+    AdminReviewAssistanceRequestView,
     AdminReviewDossierDetailView,
     AdminReviewDossierPage,
     AdminReviewDossierSummaryView,
@@ -37,6 +40,7 @@ from app.modules.reviews.types import (
     ReviewAssignmentPage,
     ReviewAssignmentSummaryView,
     ReviewAssignmentView,
+    ReviewAssistanceRequestView,
     ReviewDraft,
     ReviewFinding,
     ReviewView,
@@ -44,6 +48,8 @@ from app.modules.reviews.types import (
 
 ASSIGNMENT_CREATED_EVENT = "review.assignment_created"
 REVIEW_COMPLETED_EVENT = "review.completed"
+ASSISTANCE_REQUESTED_EVENT = "review.assistance_requested"
+ASSISTANCE_RESOLVED_EVENT = "review.assistance_resolved"
 ADMIN_ROLES = frozenset({"SUPER_ADMIN"})
 REVIEWER_ROLES = frozenset({"MODERATOR"})
 ADMIN_REVIEW_DOSSIER_STATUSES = (
@@ -130,6 +136,9 @@ class ReviewService:
                 raise ReviewNotFoundError("Review dossier was not found.")
             dossier, version, assignment_count = row
             assignment_rows = await self._reviews.list_admin_assignments(version.id)
+            assistance_rows = await self._reviews.list_admin_assistance_requests(
+                version.id
+            )
             summary = self._admin_dossier_summary(dossier, version, assignment_count)
             return AdminReviewDossierDetailView(
                 dossier_id=summary.dossier_id,
@@ -150,6 +159,13 @@ class ReviewService:
                         else None,
                     )
                     for assignment, reviewer, review in assignment_rows
+                ),
+                assistance_requests=tuple(
+                    AdminReviewAssistanceRequestView(
+                        request=self._assistance_request_view(request),
+                        requester_email=requester.email,
+                    )
+                    for request, requester in assistance_rows
                 ),
             )
 
@@ -252,6 +268,190 @@ class ReviewService:
             ) from exc
         return result
 
+    async def request_assistance(
+        self,
+        principal: AuthPrincipal,
+        assignment_id: UUID,
+        *,
+        reason: str,
+        requested_reviewer_count: int,
+    ) -> ReviewAssistanceRequestView:
+        self._require_reviewer(principal)
+        normalized_reason = self._assistance_reason(reason)
+        normalized_count = self._requested_reviewer_count(requested_reviewer_count)
+        try:
+            async with self._session.begin():
+                assignment = await self._owned_assignment(
+                    principal,
+                    assignment_id,
+                    for_update=True,
+                )
+                if assignment.status is not ReviewAssignmentStatus.IN_PROGRESS:
+                    raise ReviewConflictError(
+                        "Only an in-progress assignment can request assistance."
+                    )
+                if await self._reviews.get_pending_assistance_request(assignment.id):
+                    raise ReviewConflictError(
+                        "An assistance request is already pending for this assignment."
+                    )
+                request = ReviewAssistanceRequest(
+                    id=self._uuid_factory(),
+                    assignment_id=assignment.id,
+                    requested_by_user_id=principal.user_id,
+                    requested_reviewer_count=normalized_count,
+                    reason=normalized_reason,
+                    status=ReviewAssistanceRequestStatus.PENDING,
+                    created_at=self._clock(),
+                )
+                self._reviews.add_assistance_request(request)
+                self._add_assistance_requested_event(request, assignment)
+                await self._session.flush()
+                result = self._assistance_request_view(request)
+                self._audit_assistance(
+                    "review.assistance_requested",
+                    principal.user_id,
+                    request.id,
+                    after={"requested_reviewer_count": normalized_count},
+                )
+        except IntegrityError as exc:
+            raise ReviewConflictError(
+                "An assistance request is already pending for this assignment."
+            ) from exc
+        return result
+
+    async def approve_assistance_request(
+        self,
+        principal: AuthPrincipal,
+        request_id: UUID,
+        *,
+        reviewer_user_ids: tuple[UUID, ...],
+        due_at: datetime | None,
+    ) -> ReviewAssistanceRequestView:
+        self._require_admin(principal)
+        reviewer_ids = self._reviewer_ids(reviewer_user_ids)
+        normalized_due_at = self._due_at(due_at)
+        async with self._session.begin():
+            request = await self._reviews.get_assistance_request(
+                request_id,
+                for_update=True,
+            )
+            if request is None:
+                raise ReviewNotFoundError("Assistance request was not found.")
+            if request.status is not ReviewAssistanceRequestStatus.PENDING:
+                raise ReviewConflictError(
+                    "Assistance request has already been resolved."
+                )
+            if len(reviewer_ids) != request.requested_reviewer_count:
+                raise ReviewValidationError(
+                    "Reviewer count must match the assistance request."
+                )
+            assignment = await self._reviews.get_assignment(
+                request.assignment_id,
+                for_update=True,
+            )
+            if assignment is None:
+                raise ReviewNotFoundError("Review assignment was not found.")
+            if assignment.status is not ReviewAssignmentStatus.IN_PROGRESS:
+                raise ReviewConflictError(
+                    "The requesting assignment is no longer in progress."
+                )
+            dossier = await self._dossiers.get_by_id(
+                assignment.dossier_id,
+                for_update=True,
+            )
+            if (
+                dossier is None
+                or dossier.status is not DossierStatus.UNDER_REVIEW
+                or dossier.current_version_no <= 0
+            ):
+                raise ReviewConflictError(
+                    "Reviewers can be added only to the current UNDER_REVIEW "
+                    "dossier version."
+                )
+            version = await self._dossiers.get_version(
+                dossier.id,
+                dossier.current_version_no,
+            )
+            if version is None or version.id != assignment.dossier_version_id:
+                raise ReviewConflictError(
+                    "The assistance request does not match the current dossier version."
+                )
+            for reviewer_id in reviewer_ids:
+                reviewer = await self._reviews.get_active_reviewer(reviewer_id)
+                if reviewer is None:
+                    raise ReviewValidationError(
+                        "Every assignee must be an active reviewer."
+                    )
+                if reviewer.id == dossier.owner_user_id:
+                    raise ReviewValidationError(
+                        "A dossier owner cannot review their own dossier."
+                    )
+                if await self._reviews.get_active_assignment(reviewer.id, version.id):
+                    raise ReviewConflictError(
+                        "Reviewer already has an active assignment for this version."
+                    )
+                new_assignment = ReviewAssignment(
+                    id=self._uuid_factory(),
+                    dossier_id=dossier.id,
+                    dossier_version_id=version.id,
+                    reviewer_user_id=reviewer.id,
+                    assigned_by=principal.user_id,
+                    due_at=normalized_due_at,
+                    status=ReviewAssignmentStatus.IN_PROGRESS,
+                )
+                self._reviews.add_assignment(new_assignment)
+                self._add_assignment_event(new_assignment)
+            request.status = ReviewAssistanceRequestStatus.APPROVED
+            request.reviewed_by_user_id = principal.user_id
+            request.reviewed_at = self._clock()
+            self._add_assistance_resolved_event(request, assignment)
+            await self._session.flush()
+            result = self._assistance_request_view(request)
+            self._audit_assistance(
+                "review.assistance_approved",
+                principal.user_id,
+                request.id,
+                after={"assignment_count": len(reviewer_ids)},
+            )
+        return result
+
+    async def decline_assistance_request(
+        self,
+        principal: AuthPrincipal,
+        request_id: UUID,
+        *,
+        reason: str,
+    ) -> ReviewAssistanceRequestView:
+        self._require_admin(principal)
+        normalized_reason = self._assistance_reason(reason)
+        async with self._session.begin():
+            request = await self._reviews.get_assistance_request(
+                request_id,
+                for_update=True,
+            )
+            if request is None:
+                raise ReviewNotFoundError("Assistance request was not found.")
+            if request.status is not ReviewAssistanceRequestStatus.PENDING:
+                raise ReviewConflictError(
+                    "Assistance request has already been resolved."
+                )
+            assignment = await self._reviews.get_assignment(request.assignment_id)
+            if assignment is None:
+                raise ReviewNotFoundError("Review assignment was not found.")
+            request.status = ReviewAssistanceRequestStatus.DECLINED
+            request.reviewed_by_user_id = principal.user_id
+            request.reviewed_at = self._clock()
+            request.decision_reason = normalized_reason
+            self._add_assistance_resolved_event(request, assignment)
+            await self._session.flush()
+            result = self._assistance_request_view(request)
+            self._audit_assistance(
+                "review.assistance_declined",
+                principal.user_id,
+                request.id,
+            )
+        return result
+
     async def list_assignments(
         self,
         principal: AuthPrincipal,
@@ -300,6 +500,11 @@ class ReviewService:
             if dossier is None or version is None:
                 raise ReviewNotFoundError()
             review = await self._reviews.get_review(assignment.id)
+            assistance_requests = (
+                await self._reviews.list_assistance_requests_for_assignment(
+                    assignment.id
+                )
+            )
             can_view_sensitive = assignment.status in (
                 ReviewAssignmentStatus.IN_PROGRESS,
                 ReviewAssignmentStatus.SUBMITTED,
@@ -315,6 +520,10 @@ class ReviewService:
                 canonical_hash=(version.canonical_hash if can_view_sensitive else None),
                 snapshot_json=(version.snapshot_json if can_view_sensitive else None),
                 review=self._review_view(review) if review is not None else None,
+                assistance_requests=tuple(
+                    self._assistance_request_view(request)
+                    for request in assistance_requests
+                ),
             )
 
     async def declare_conflict(
@@ -491,6 +700,59 @@ class ReviewService:
                 event_type=REVIEW_COMPLETED_EVENT,
                 aggregate_type="review_assignment",
                 aggregate_id=assignment.id,
+                payload_ciphertext=encrypted.ciphertext,
+                payload_nonce=encrypted.nonce,
+                key_id=encrypted.key_id,
+                occurred_at=self._clock(),
+            )
+        )
+
+    def _add_assistance_requested_event(
+        self,
+        request: ReviewAssistanceRequest,
+        assignment: ReviewAssignment,
+    ) -> None:
+        encrypted = self._payload_cipher.encrypt(
+            {
+                "request_id": str(request.id),
+                "dossier_id": str(assignment.dossier_id),
+            },
+            event_type=ASSISTANCE_REQUESTED_EVENT,
+            aggregate_id=request.id,
+        )
+        self._outbox.add(
+            OutboxEvent(
+                event_type=ASSISTANCE_REQUESTED_EVENT,
+                aggregate_type="review_assistance_request",
+                aggregate_id=request.id,
+                payload_ciphertext=encrypted.ciphertext,
+                payload_nonce=encrypted.nonce,
+                key_id=encrypted.key_id,
+                occurred_at=self._clock(),
+            )
+        )
+
+    def _add_assistance_resolved_event(
+        self,
+        request: ReviewAssistanceRequest,
+        assignment: ReviewAssignment,
+    ) -> None:
+        encrypted = self._payload_cipher.encrypt(
+            {
+                "request_id": str(request.id),
+                "dossier_id": str(assignment.dossier_id),
+                "assignment_id": str(assignment.id),
+                "recipient_user_id": str(request.requested_by_user_id),
+                "status": request.status.value,
+            },
+            event_type=ASSISTANCE_RESOLVED_EVENT,
+            aggregate_id=request.id,
+        )
+        self._outbox.add(
+            OutboxEvent(
+                event_type=ASSISTANCE_RESOLVED_EVENT,
+                aggregate_type="review_assistance_request",
+                aggregate_id=request.id,
                 payload_ciphertext=encrypted.ciphertext,
                 payload_nonce=encrypted.nonce,
                 key_id=encrypted.key_id,
@@ -1389,6 +1651,40 @@ class ReviewService:
             conflict_reason=assignment.conflict_reason,
         )
 
+    @staticmethod
+    def _assistance_request_view(
+        request: ReviewAssistanceRequest,
+    ) -> ReviewAssistanceRequestView:
+        return ReviewAssistanceRequestView(
+            id=request.id,
+            assignment_id=request.assignment_id,
+            requested_by_user_id=request.requested_by_user_id,
+            requested_reviewer_count=request.requested_reviewer_count,
+            reason=request.reason,
+            status=request.status,
+            created_at=request.created_at,
+            reviewed_by_user_id=request.reviewed_by_user_id,
+            decision_reason=request.decision_reason,
+            reviewed_at=request.reviewed_at,
+        )
+
+    @staticmethod
+    def _assistance_reason(value: str) -> str:
+        normalized = value.strip()
+        if not 20 <= len(normalized) <= 2_000:
+            raise ReviewValidationError(
+                "Assistance request reason must contain 20 to 2000 characters."
+            )
+        return normalized
+
+    @staticmethod
+    def _requested_reviewer_count(value: int) -> int:
+        if isinstance(value, bool) or not 1 <= value <= 10:
+            raise ReviewValidationError(
+                "Requested reviewer count must be between 1 and 10."
+            )
+        return value
+
     def _audit_assignment(
         self,
         user_id: UUID,
@@ -1402,6 +1698,22 @@ class ReviewService:
             resource_type="dossier",
             resource_id=str(dossier_id),
             after={"assignment_count": assignment_count},
+        )
+
+    def _audit_assistance(
+        self,
+        action: str,
+        user_id: UUID,
+        request_id: UUID,
+        *,
+        after: dict[str, object] | None = None,
+    ) -> None:
+        self._audit_service.record(
+            actor_user_id=user_id,
+            action=action,
+            resource_type="review_assistance_request",
+            resource_id=str(request_id),
+            after=after,
         )
 
     def _audit_review(

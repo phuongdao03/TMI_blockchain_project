@@ -23,6 +23,7 @@ from app.modules.auth.models import (
 from app.modules.auth.repositories import AuthRepository, OutboxRepository
 from app.modules.auth.schemas import (
     INTERNAL_MANAGED_ROLES,
+    EmployeeInvitationRequest,
     StaffAccountData,
     StaffInvitationData,
     StaffInvitationRequest,
@@ -39,6 +40,7 @@ from app.modules.organizations.models import (
 )
 
 STAFF_INVITATION_EVENT = "staff.invited"
+EMPLOYEE_INVITATION_EVENT = "employee.invited"
 
 
 class StaffInvitationService:
@@ -75,15 +77,55 @@ class StaffInvitationService:
         request_id: str | None,
         user_agent: str | None,
     ) -> StaffInvitationData:
+        return await self._create(
+            email=str(payload.email),
+            role_code=payload.role,
+            organization_id=payload.organization_id,
+            principal=principal,
+            audit=audit,
+            request_id=request_id,
+            user_agent=user_agent,
+        )
+
+    async def create_employee(
+        self,
+        *,
+        payload: EmployeeInvitationRequest,
+        principal: AuthPrincipal,
+        audit: AuditService,
+        request_id: str | None,
+        user_agent: str | None,
+    ) -> StaffInvitationData:
+        return await self._create(
+            email=str(payload.email),
+            role_code="USER",
+            organization_id=None,
+            principal=principal,
+            audit=audit,
+            request_id=request_id,
+            user_agent=user_agent,
+        )
+
+    async def _create(
+        self,
+        *,
+        email: str,
+        role_code: str,
+        organization_id: UUID | None,
+        principal: AuthPrincipal,
+        audit: AuditService,
+        request_id: str | None,
+        user_agent: str | None,
+    ) -> StaffInvitationData:
         self._require_admin(principal)
-        email = str(payload.email).strip().lower()
+        email = email.strip().lower()
         now = self._clock()
         try:
             async with self._session.begin():
                 target_user = await self._validate_target(
                     email=email,
-                    role_code=payload.role,
-                    organization_id=payload.organization_id,
+                    role_code=role_code,
+                    organization_id=organization_id,
                 )
                 active = tuple(
                     (
@@ -110,15 +152,15 @@ class StaffInvitationService:
                         )
                 invitation, raw_token = self._new_invitation(
                     email=email,
-                    role_code=payload.role,
-                    organization_id=payload.organization_id,
+                    role_code=role_code,
+                    organization_id=organization_id,
                     created_by_user_id=principal.user_id,
                     now=now,
                 )
                 self._session.add(invitation)
                 await self._session.flush()
                 self._enqueue(invitation, raw_token=raw_token, now=now)
-                if target_user is not None:
+                if target_user is not None and role_code != "USER":
                     self._session.add(
                         Notification(
                             user_id=target_user.id,
@@ -139,10 +181,18 @@ class StaffInvitationService:
                     )
                 audit.record(
                     actor_user_id=principal.user_id,
-                    action="admin.staff_invitation.created",
-                    resource_type="staff_invitation",
+                    action=(
+                        "admin.employee_invitation.created"
+                        if role_code == "USER"
+                        else "admin.staff_invitation.created"
+                    ),
+                    resource_type=(
+                        "employee_invitation"
+                        if role_code == "USER"
+                        else "staff_invitation"
+                    ),
                     resource_id=str(invitation.id),
-                    after={"email": email, "role": payload.role},
+                    after={"email": email, "role": role_code},
                     request_id=request_id,
                     user_agent=user_agent,
                 )
@@ -168,6 +218,7 @@ class StaffInvitationService:
         now = self._clock()
         async with self._session.begin():
             invitation = await self._locked(invitation_id)
+            self._require_staff_invitation(invitation)
             self._require_pending(invitation, now=now)
             await self._cancel_pending_delivery(invitation.id, now=now)
             raw_token = secrets.token_urlsafe(32)
@@ -197,6 +248,7 @@ class StaffInvitationService:
         now = self._clock()
         async with self._session.begin():
             invitation = await self._locked(invitation_id)
+            self._require_staff_invitation(invitation)
             self._require_pending(invitation, now=now)
             await self._cancel_pending_delivery(invitation.id, now=now)
             invitation.revoked_at = now
@@ -223,6 +275,43 @@ class StaffInvitationService:
         *,
         raw_token: str,
         claims: FirebaseClaims,
+        audit: AuditService,
+        request_id: str | None,
+        user_agent: str | None,
+    ) -> StaffAccountData:
+        return await self._accept(
+            raw_token=raw_token,
+            claims=claims,
+            allowed_roles=INTERNAL_MANAGED_ROLES,
+            audit=audit,
+            request_id=request_id,
+            user_agent=user_agent,
+        )
+
+    async def accept_employee(
+        self,
+        *,
+        raw_token: str,
+        claims: FirebaseClaims,
+        audit: AuditService,
+        request_id: str | None,
+        user_agent: str | None,
+    ) -> StaffAccountData:
+        return await self._accept(
+            raw_token=raw_token,
+            claims=claims,
+            allowed_roles=frozenset({"USER"}),
+            audit=audit,
+            request_id=request_id,
+            user_agent=user_agent,
+        )
+
+    async def _accept(
+        self,
+        *,
+        raw_token: str,
+        claims: FirebaseClaims,
+        allowed_roles: frozenset[str],
         audit: AuditService,
         request_id: str | None,
         user_agent: str | None,
@@ -256,7 +345,7 @@ class StaffInvitationService:
                 if existing_user is None and identity is not None:
                     raise self._invalid()
                 role = await self._auth.get_role_by_code(invitation.role_code)
-                if role is None or role.code not in INTERNAL_MANAGED_ROLES:
+                if role is None or role.code not in allowed_roles:
                     raise self._invalid()
 
                 if existing_user is None:
@@ -299,8 +388,16 @@ class StaffInvitationService:
                 invitation.accepted_user_id = user.id
                 audit.record(
                     actor_user_id=user.id,
-                    action="auth.staff_invitation.accepted",
-                    resource_type="staff_invitation",
+                    action=(
+                        "auth.employee_invitation.accepted"
+                        if role.code == "USER"
+                        else "auth.staff_invitation.accepted"
+                    ),
+                    resource_type=(
+                        "employee_invitation"
+                        if role.code == "USER"
+                        else "staff_invitation"
+                    ),
                     resource_id=str(invitation.id),
                     after={"role": invitation.role_code},
                     request_id=request_id,
@@ -330,6 +427,7 @@ class StaffInvitationService:
         now = self._clock()
         async with self._session.begin():
             invitation = await self._locked(invitation_id)
+            self._require_staff_invitation(invitation)
             self._require_pending(invitation, now=now)
             if invitation.email != principal.email.strip().lower():
                 raise DomainError(
@@ -380,6 +478,7 @@ class StaffInvitationService:
         now = self._clock()
         async with self._session.begin():
             invitation = await self._locked(invitation_id)
+            self._require_staff_invitation(invitation)
             self._require_pending(invitation, now=now)
             if invitation.email != principal.email.strip().lower():
                 raise DomainError(
@@ -408,13 +507,21 @@ class StaffInvitationService:
     ) -> tuple[list[StaffInvitationData], int]:
         statement = (
             select(StaffInvitation)
+            .where(StaffInvitation.role_code.in_(INTERNAL_MANAGED_ROLES))
             .order_by(StaffInvitation.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
         rows = tuple((await self._session.scalars(statement)).all())
         total = int(
-            (await self._session.scalar(select(func.count(StaffInvitation.id)))) or 0
+            (
+                await self._session.scalar(
+                    select(func.count(StaffInvitation.id)).where(
+                        StaffInvitation.role_code.in_(INTERNAL_MANAGED_ROLES)
+                    )
+                )
+            )
+            or 0
         )
         now = self._clock()
         return [self._to_data(row, now=now) for row in rows], total
@@ -424,7 +531,7 @@ class StaffInvitationService:
     ) -> User | None:
         user = await self._auth.get_user_by_email(email)
         role = await self._auth.get_role_by_code(role_code)
-        if role is None or role_code not in INTERNAL_MANAGED_ROLES:
+        if role is None or role_code not in INTERNAL_MANAGED_ROLES | {"USER"}:
             raise DomainError(
                 code="STAFF_ROLE_NOT_FOUND",
                 message="The requested internal function is not configured.",
@@ -479,6 +586,11 @@ class StaffInvitationService:
     def _enqueue(
         self, invitation: StaffInvitation, *, raw_token: str, now: datetime
     ) -> None:
+        event_type = (
+            EMPLOYEE_INVITATION_EVENT
+            if invitation.role_code == "USER"
+            else STAFF_INVITATION_EVENT
+        )
         encrypted = self._payload_cipher.encrypt(
             {
                 "email": invitation.email,
@@ -486,12 +598,12 @@ class StaffInvitationService:
                 "invitation_token": raw_token,
                 "role": invitation.role_code,
             },
-            event_type=STAFF_INVITATION_EVENT,
+            event_type=event_type,
             aggregate_id=invitation.id,
         )
         self._outbox.add(
             OutboxEvent(
-                event_type=STAFF_INVITATION_EVENT,
+                event_type=event_type,
                 aggregate_type="staff_invitation",
                 aggregate_id=invitation.id,
                 payload_ciphertext=encrypted.ciphertext,
@@ -561,6 +673,11 @@ class StaffInvitationService:
             or self._as_utc(invitation.expires_at) <= now
         ):
             raise self._invalid()
+
+    @staticmethod
+    def _require_staff_invitation(invitation: StaffInvitation) -> None:
+        if invitation.role_code not in INTERNAL_MANAGED_ROLES:
+            raise StaffInvitationService._invalid()
 
     @staticmethod
     def _require_admin(principal: AuthPrincipal) -> None:

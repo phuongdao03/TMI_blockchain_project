@@ -88,7 +88,7 @@ export function RoleDashboardOverview({
         <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-primary-700">
           {isViewer ? "Không gian tra cứu" : "Công việc hôm nay"}
         </p>
-        <h1 className="mt-3 text-4xl font-bold tracking-[-0.04em] sm:text-5xl">
+        <h1 className="mt-3 text-3xl font-bold tracking-[-0.04em] sm:text-4xl">
           {title}
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-7 text-neutral-600">

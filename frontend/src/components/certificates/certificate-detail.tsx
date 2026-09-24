@@ -211,7 +211,7 @@ export function CertificateDetail({ id }: { id: string }) {
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-amber-300">
               <BadgeCheck className="size-4" /> Chứng thư tài sản số
             </p>
-            <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight sm:text-5xl">
+            <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight sm:text-4xl">
               {certificate.assetTitle}
             </h1>
             <p className="mt-4 font-mono text-sm text-slate-300">

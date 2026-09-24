@@ -11,6 +11,7 @@ from app.modules.auth.dependencies import (
     get_applicant_upgrade_service,
     get_csrf_protected_principal,
     get_current_principal,
+    get_employee_profile_link_status,
     get_session_service,
 )
 from app.modules.auth.models import AccountType
@@ -130,6 +131,7 @@ async def _request(
     cookies: dict[str, str] | None = None,
     headers: dict[str, str] | None = None,
     upgrade_service: StubApplicantUpgradeService | None = None,
+    is_employee: bool = False,
 ) -> httpx.Response:
     settings = Settings.model_validate(
         {
@@ -146,6 +148,7 @@ async def _request(
     app.dependency_overrides[get_session_service] = lambda: service
     app.dependency_overrides[get_current_principal] = lambda: service.principal
     app.dependency_overrides[get_csrf_protected_principal] = lambda: service.principal
+    app.dependency_overrides[get_employee_profile_link_status] = lambda: is_employee
     if upgrade_service is not None:
         app.dependency_overrides[get_applicant_upgrade_service] = lambda: (
             upgrade_service
@@ -188,6 +191,7 @@ def test_login_api_sets_secure_cookie_contract_without_returning_tokens() -> Non
             "roles": ["APPLICANT"],
             "accountType": None,
             "permissions": [],
+            "isEmployee": False,
         }
     }
     assert "token" not in response.text.lower()
@@ -207,11 +211,14 @@ def test_login_api_sets_secure_cookie_contract_without_returning_tokens() -> Non
 
 def test_me_and_sessions_api_return_current_user_scope() -> None:
     service = StubSessionService()
-    me_response = asyncio.run(_request("GET", "/api/v1/auth/me", service))
+    me_response = asyncio.run(
+        _request("GET", "/api/v1/auth/me", service, is_employee=True)
+    )
     sessions_response = asyncio.run(_request("GET", "/api/v1/auth/sessions", service))
 
     assert me_response.status_code == 200
     assert me_response.json()["data"]["email"] == "owner@cnsgroup.vn"
+    assert me_response.json()["data"]["isEmployee"] is True
     assert sessions_response.status_code == 200
     assert sessions_response.json()["data"][0]["isCurrent"] is True
 
@@ -281,4 +288,5 @@ def test_applicant_upgrade_api_returns_updated_account_scope() -> None:
         "roles": ["APPLICANT"],
         "accountType": "INDIVIDUAL_APPLICANT",
         "permissions": [],
+        "isEmployee": False,
     }

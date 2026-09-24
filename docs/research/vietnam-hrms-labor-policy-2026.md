@@ -1,0 +1,26 @@
+# Cơ sở pháp lý cho chính sách HRMS Việt Nam (kiểm tra 24/09/2026)
+
+Chỉ dùng nguồn chính thức. Đây là tóm tắt kỹ thuật, không thay thế rà soát pháp lý của doanh nghiệp trước khi trả lương thật. Các con số bên dưới là **mức sàn/trần pháp luật**, không phải chính sách thưởng/phạt do phần mềm tự đặt.
+
+## Những ràng buộc pháp luật cần mã hóa
+
+- **Làm thêm giờ:** Người lao động phải đồng ý (trừ trường hợp đặc biệt theo Điều 108). Tổng giờ làm thêm thông thường không quá 50% giờ làm việc bình thường trong ngày; nếu tính theo tuần, tổng giờ làm việc và làm thêm không quá 12 giờ/ngày; không quá 40 giờ/tháng và 200 giờ/năm. Mốc 300 giờ/năm chỉ áp dụng trường hợp được liệt kê và có nghĩa vụ thông báo cơ quan lao động. Tiền làm thêm tối thiểu 150% ngày thường, 200% ngày nghỉ hằng tuần, 300% ngày lễ/tết/ngày nghỉ hưởng lương; làm đêm thêm ít nhất 30%, làm thêm ban đêm còn có khoản cộng thêm 20% theo Điều 98. [Bộ luật Lao động 45/2019/QH14, Điều 98, 107–108](https://congbao.chinhphu.vn/tai-ve-van-ban-so-45-2019-qh14-30232-29070?format=pdf); [Nghị định 145/2020/NĐ-CP, hướng dẫn tính giờ](https://congbao.chinhphu.vn/tai-ve-van-ban-so-145-2020-nd-cp-32732-33806?format=pdf).
+- **Nghỉ hằng năm:** Làm đủ 12 tháng được ít nhất 12 ngày làm việc/năm trong điều kiện bình thường; 14 hoặc 16 ngày cho các nhóm nghề/người lao động được luật nêu. Chưa đủ 12 tháng tính theo tỷ lệ; mỗi đủ 5 năm với cùng người sử dụng lao động cộng 1 ngày. Khi thôi/mất việc, ngày phép chưa nghỉ phải được thanh toán. Không cấu hình 12 ngày thành một hằng số áp dụng cho mọi trường hợp. [Bộ luật Lao động 45/2019/QH14, Điều 113–114](https://congbao.chinhphu.vn/tai-ve-van-ban-so-45-2019-qh14-30232-29070?format=pdf).
+- **Thưởng:** Doanh nghiệp có thể quyết định quy chế thưởng dựa trên kết quả kinh doanh và mức hoàn thành công việc, nhưng phải công bố công khai sau khi tham khảo tổ chức đại diện người lao động tại cơ sở, nếu có. Không có mức “tháng 13” bắt buộc phổ quát trong Điều 104. [Bộ luật Lao động 45/2019/QH14, Điều 104](https://congbao.chinhphu.vn/tai-ve-van-ban-so-45-2019-qh14-30232-29070?format=pdf).
+- **Không phạt tiền/cắt lương để kỷ luật:** Điều 127 cấm phạt tiền, cắt lương thay xử lý kỷ luật. Vì vậy UI/API không nên tạo loại “phạt đi muộn 50.000đ/lần” rồi tự trừ lương. Khoản khấu trừ tiền lương theo Điều 102 chỉ trong phạm vi bồi thường thiệt hại tài sản theo Điều 129, phải cho nhân viên biết lý do và mức khấu trừ hằng tháng không quá 30% lương thực trả sau các khoản bảo hiểm/thuế bắt buộc. [Bộ luật Lao động 45/2019/QH14, Điều 102, 127, 129](https://congbao.chinhphu.vn/tai-ve-van-ban-so-45-2019-qh14-30232-29070?format=pdf).
+- **Lương tối thiểu:** Nghị định 293/2025/NĐ-CP có hiệu lực từ 01/01/2026, xác định mức theo vùng và theo tháng/giờ. Hệ thống phải xác định vùng theo địa điểm làm việc và phiên bản hiệu lực, không gắn một mức chung cho cả Việt Nam. [Nghị định 293/2025/NĐ-CP](https://vbpl.vn/laocai/Pages/vbpq-toanvan.aspx?ItemID=183939&Keyword=&dvid=282).
+- **Bảo hiểm:** Luật BHXH 2024 có hiệu lực từ 01/07/2025, mở rộng diện tham gia bắt buộc, bao gồm hợp đồng lao động từ đủ 01 tháng với điều kiện luật định. Cần tách căn cứ đóng bảo hiểm khỏi lương thực trả và xử lý theo loại hợp đồng/kỳ hiệu lực; không suy từ `BHXH = 10,5% × lương cơ bản` cho mọi trường hợp. [Luật BHXH 41/2024/QH15, Điều 2, 31–34, 140](https://vbpl.vn/bongoaigiao/Pages/vbpq-toanvan.aspx?ItemID=175027); [Nghị định 158/2025/NĐ-CP](https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=178757).
+
+## Khuyến nghị **chính sách doanh nghiệp** (chưa phải yêu cầu pháp luật)
+
+1. Đặt `thuong` thành khoản **cộng**, có danh mục minh bạch như chất lượng thẩm định, hoàn thành mốc công việc, sáng kiến, thưởng lễ/tết; mỗi khoản có căn cứ, người đề xuất, người duyệt, kỳ lương và chứng từ. Công khai tiêu chí, không tự động hứa thưởng cố định nếu quy chế chưa duyệt.
+2. Thay “phạt tiền” bằng **ghi nhận vi phạm/chênh lệch chấm công để xem xét**, có phản hồi của nhân viên và quy trình kỷ luật riêng. Chỉ có các khoản **khấu trừ hợp pháp** được mã hóa: thuế, bảo hiểm theo quy định và bồi thường thiệt hại đủ hồ sơ theo Điều 102/129. Không tự động trừ khi GPS ngoài bán kính hoặc đi muộn.
+3. OT dùng luồng đề nghị → đồng ý của người lao động → duyệt của quản lý → chấm giờ thực tế → duyệt bảng công → tính lương theo loại ngày và ca đêm. Không dùng một hệ số 1,5 cho mọi OT.
+4. Phép năm cấu hình theo nhóm điều kiện làm việc, thâm niên, thời gian thực tế, tồn phép và ngày nghỉ lễ; yêu cầu/duyệt có dấu thời gian. Chính sách cao hơn mức luật là lựa chọn doanh nghiệp.
+5. Khóa bảng lương theo kỳ sau đối soát, cho phép điều chỉnh bằng bút toán kỳ sau có audit; hiển thị tách `lương hợp đồng`, `lương theo công`, `OT`, `thưởng`, `phụ cấp`, `bảo hiểm`, `thuế`, `khấu trừ hợp pháp`, `thực lĩnh`. Không coi `max(0, …)` là cách giải quyết thiếu lương.
+
+## Cần pháp chế/tài chính xác nhận trước khi bật trả lương thật
+
+- Mẫu hợp đồng, quy chế thưởng, nội quy lao động, danh mục nghề/điều kiện làm việc, quy chế OT và quy trình bồi thường tài sản của chính doanh nghiệp.
+- Tiền lương đóng từng quỹ bảo hiểm, thuế TNCN và các mức/giảm trừ có thể thay đổi theo kỳ; phải kiểm tra văn bản hiệu lực tại ngày tính lương thay vì cố định vào code.
+- Mức lương tối thiểu chính xác cho từng địa điểm; bảng vùng trong phụ lục nghị định và các thay đổi địa giới/hiệu lực sau 24/09/2026.

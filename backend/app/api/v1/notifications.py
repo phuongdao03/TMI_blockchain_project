@@ -14,6 +14,7 @@ from app.modules.auth.dependencies import (
     CurrentPrincipalDependency,
 )
 from app.modules.notifications.dependencies import NotificationServiceDependency
+from app.modules.notifications.redaction import redact_notification_data
 from app.modules.notifications.schemas import (
     MarkAllReadData,
     MarkReadRequest,
@@ -22,6 +23,13 @@ from app.modules.notifications.schemas import (
 )
 
 router = APIRouter(prefix="/api/v1/notifications", tags=["notifications"])
+
+
+def _notification_data(row: object) -> NotificationData:
+    data = NotificationData.model_validate(row)
+    return data.model_copy(
+        update={"data_json": redact_notification_data(data.data_json)}
+    )
 
 
 @router.get("", response_model=PaginatedSuccessEnvelope[list[NotificationData]])
@@ -40,7 +48,7 @@ async def list_notifications(
         unread_only=unread_only,
     )
     return PaginatedSuccessEnvelope(
-        data=[NotificationData.model_validate(row) for row in rows],
+        data=[_notification_data(row) for row in rows],
         meta=ListResponseMeta(
             request_id=request.state.request_id,
             page=page,
@@ -95,6 +103,6 @@ async def mark_read(
             status_code=404,
         )
     return SuccessEnvelope(
-        data=NotificationData.model_validate(row),
+        data=_notification_data(row),
         meta=ResponseMeta(request_id=request.state.request_id),
     )

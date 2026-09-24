@@ -23,6 +23,8 @@ from app.api.v1.council import router as council_router
 from app.api.v1.dossiers import router as dossiers_router
 from app.api.v1.engagement import router as engagement_router
 from app.api.v1.health import router as health_router
+from app.api.v1.hr import router as hr_router
+from app.api.v1.hr import self_router as my_hr_router
 from app.api.v1.media import router as media_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.operations import router as operations_router
@@ -37,8 +39,12 @@ from app.api.v1.search_discovery import router as search_discovery_router
 from app.api.v1.search_history import router as search_history_router
 from app.api.v1.share_redirect import router as share_redirect_router
 from app.api.v1.staff_accounts import router as staff_accounts_router
+from app.api.v1.staff_invitations import employee_router as employee_invitations_router
 from app.api.v1.staff_invitations import router as staff_invitations_router
+from app.api.v1.tasks import router as tasks_router
 from app.api.v1.users import router as users_router
+from app.api.v1.work_allocations import router as work_allocations_router
+from app.api.v1.work_allocations import self_router as my_work_allocations_router
 from app.core.config import Settings, get_settings
 from app.core.errors import install_exception_handlers
 from app.core.health import DependencyProbe, HealthService
@@ -242,6 +248,11 @@ def create_application(
     )
     install_exception_handlers(app)
     app.include_router(health_router)
+    app.include_router(hr_router)
+    app.include_router(my_hr_router)
+    app.include_router(tasks_router)
+    app.include_router(work_allocations_router)
+    app.include_router(my_work_allocations_router)
     app.include_router(admin_users_router)
     app.include_router(auth_router)
     app.include_router(audit_router)
@@ -269,6 +280,7 @@ def create_application(
     app.include_router(share_redirect_router)
     app.include_router(staff_accounts_router)
     app.include_router(staff_invitations_router)
+    app.include_router(employee_invitations_router)
     app.include_router(search_discovery_router)
     app.include_router(users_router)
     return app

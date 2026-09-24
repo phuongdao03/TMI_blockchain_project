@@ -92,7 +92,7 @@ export default function AdminGuidePage() {
           <p className="text-sm font-bold uppercase tracking-[0.16em] text-primary-700">
             Dành cho quản trị viên
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--theme-text)] sm:text-5xl">
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--theme-text)] sm:text-4xl">
             Hướng dẫn quản trị
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--theme-muted)] sm:text-base">

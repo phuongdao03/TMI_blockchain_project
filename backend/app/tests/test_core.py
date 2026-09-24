@@ -216,6 +216,9 @@ def test_security_headers_are_present_and_hsts_is_production_only() -> None:
     assert local_response.headers["X-Content-Type-Options"] == "nosniff"
     assert local_response.headers["X-Frame-Options"] == "DENY"
     assert local_response.headers["Referrer-Policy"] == "no-referrer"
+    assert local_response.headers["Permissions-Policy"] == (
+        "camera=(), geolocation=(self), microphone=()"
+    )
     assert "default-src 'none'" in local_response.headers["Content-Security-Policy"]
     assert "Strict-Transport-Security" not in local_response.headers
     assert production_response.headers["Strict-Transport-Security"].startswith(
