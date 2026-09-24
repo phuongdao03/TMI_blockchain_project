@@ -19,6 +19,8 @@ vi.mock("@/lib/api/client", () => ({
 
 describe("OvertimeWorkspace", () => {
   it("submits a timezone-aware overtime interval", async () => {
+    const localStart = "2026-09-24T17:00";
+    const localEnd = "2026-09-24T20:00";
     listMock.mockResolvedValue({
       success: true,
       data: [],
@@ -35,10 +37,10 @@ describe("OvertimeWorkspace", () => {
     );
 
     fireEvent.change(await screen.findByLabelText("Bắt đầu"), {
-      target: { value: "2026-09-24T17:00" },
+      target: { value: localStart },
     });
     fireEvent.change(screen.getByLabelText("Kết thúc"), {
-      target: { value: "2026-09-24T20:00" },
+      target: { value: localEnd },
     });
     fireEvent.change(screen.getByLabelText("Lý do tăng ca"), {
       target: { value: "Hỗ trợ sự cố" },
@@ -49,8 +51,8 @@ describe("OvertimeWorkspace", () => {
 
     await waitFor(() =>
       expect(createMock).toHaveBeenCalledWith({
-        startAt: "2026-09-24T10:00:00.000Z",
-        endAt: "2026-09-24T13:00:00.000Z",
+        startAt: new Date(localStart).toISOString(),
+        endAt: new Date(localEnd).toISOString(),
         reason: "Hỗ trợ sự cố",
       }),
     );

@@ -221,7 +221,7 @@ test("mobile workspace navigation stays compact, centered and touch friendly", a
 
   const controls = navigation.locator(".dashboard-mobile-navigation__link");
   await expect(
-    navigation.getByRole("link", { name: "Chứng thư", exact: true }),
+    navigation.getByRole("link", { name: "Tìm đề cử", exact: true }),
   ).toBeVisible();
   for (const control of await controls.all()) {
     const box = await control.boundingBox();
