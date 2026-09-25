@@ -139,16 +139,26 @@ export function AttendanceLocationPicker({
           disabled={disabled}
           onClick={() => {
             if (!navigator.geolocation) {
-              setLocationMessage("Trình duyệt không hỗ trợ lấy vị trí. Nhập tọa độ trực tiếp ở bên dưới.");
+              setLocationMessage(
+                "Trình duyệt không hỗ trợ lấy vị trí. Nhập tọa độ trực tiếp ở bên dưới.",
+              );
               return;
             }
             setLocationMessage("Đang lấy vị trí thiết bị…");
             navigator.geolocation.getCurrentPosition(
               ({ coords }) => {
-                onCoordinatesChange(coords.latitude.toFixed(6), coords.longitude.toFixed(6));
-                setLocationMessage(`Đã lấy vị trí thiết bị (sai số khoảng ${Math.round(coords.accuracy)} m). Chỉ dùng khi bạn đang ở văn phòng.`);
+                onCoordinatesChange(
+                  coords.latitude.toFixed(6),
+                  coords.longitude.toFixed(6),
+                );
+                setLocationMessage(
+                  `Đã lấy vị trí thiết bị (sai số khoảng ${Math.round(coords.accuracy)} m). Chỉ dùng khi bạn đang ở văn phòng.`,
+                );
               },
-              () => setLocationMessage("Không thể lấy vị trí. Hãy cho phép định vị qua HTTPS hoặc nhập tọa độ trực tiếp."),
+              () =>
+                setLocationMessage(
+                  "Không thể lấy vị trí. Hãy cho phép định vị qua HTTPS hoặc nhập tọa độ trực tiếp.",
+                ),
               { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
             );
           }}
@@ -164,7 +174,11 @@ export function AttendanceLocationPicker({
           Bản đồ không hiển thị
         </button>
       </div>
-      {locationMessage ? <p aria-live="polite" className="mt-2 text-sm text-neutral-700">{locationMessage}</p> : null}
+      {locationMessage ? (
+        <p aria-live="polite" className="mt-2 text-sm text-neutral-700">
+          {locationMessage}
+        </p>
+      ) : null}
 
       <div className="mt-4 grid min-w-0 gap-2">
         <label className="text-sm font-semibold text-neutral-800">
@@ -256,8 +270,13 @@ export function AttendanceLocationPicker({
         </MapContainer>
       </div>
       {tilesFailed || !mapTileConfig ? (
-        <p className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950" role="status">
-          Bản đồ nền tạm thời không tải được. Nhập tọa độ trực tiếp ở bên dưới hoặc lấy vị trí thiết bị khi đang ở văn phòng; vùng chấm công vẫn được lưu chính xác.
+        <p
+          className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+          role="status"
+        >
+          Bản đồ nền tạm thời không tải được. Nhập tọa độ trực tiếp ở bên dưới
+          hoặc lấy vị trí thiết bị khi đang ở văn phòng; vùng chấm công vẫn được
+          lưu chính xác.
         </p>
       ) : null}
       <p className="mt-3 text-xs leading-5 text-neutral-500">

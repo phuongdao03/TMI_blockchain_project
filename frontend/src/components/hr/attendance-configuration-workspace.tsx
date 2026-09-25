@@ -96,8 +96,13 @@ export function AttendanceConfigurationWorkspace() {
     },
   });
   const updateWorksite = useMutation({
-    mutationFn: ({ id, changes }: { id: string; changes: { name?: string; status?: "ACTIVE" | "INACTIVE" } }) =>
-      hrAttendanceConfigurationApi.updateWorksite(id, changes),
+    mutationFn: ({
+      id,
+      changes,
+    }: {
+      id: string;
+      changes: { name?: string; status?: "ACTIVE" | "INACTIVE" };
+    }) => hrAttendanceConfigurationApi.updateWorksite(id, changes),
     onSuccess: async () => {
       setNotice("Đã cập nhật trạng thái địa điểm làm việc.");
       await refreshWorksites();
@@ -179,10 +184,14 @@ export function AttendanceConfigurationWorkspace() {
         onToggleActive={(worksite) =>
           updateWorksite.mutateAsync({
             id: worksite.id,
-            changes: { status: worksite.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" },
+            changes: {
+              status: worksite.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
+            },
           })
         }
-        onRename={(worksite, name) => updateWorksite.mutateAsync({ id: worksite.id, changes: { name } })}
+        onRename={(worksite, name) =>
+          updateWorksite.mutateAsync({ id: worksite.id, changes: { name } })
+        }
         onRetry={() => void worksites.refetch()}
         selectedWorksiteId={resolvedSelectedWorksiteId}
         worksites={worksites}

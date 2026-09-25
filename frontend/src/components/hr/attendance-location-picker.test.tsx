@@ -112,7 +112,9 @@ describe("AttendanceLocationPicker", () => {
     });
     expect(onCoordinatesChange).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Về điểm chấm công đã lưu" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Về điểm chấm công đã lưu" }),
+    );
     expect(mapSetView).toHaveBeenLastCalledWith([10.8231, 106.6297], 16, {
       animate: false,
     });
@@ -128,7 +130,9 @@ describe("AttendanceLocationPicker", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Bản đồ không hiển thị" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Bản đồ không hiển thị" }),
+    );
     expect(screen.getByText(/Nhập tọa độ trực tiếp/)).toBeTruthy();
   });
 });

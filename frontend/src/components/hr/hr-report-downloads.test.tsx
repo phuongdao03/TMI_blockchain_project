@@ -50,7 +50,18 @@ describe("HR report downloads", () => {
       meta: { total: 1 },
     });
     listEmployees.mockResolvedValue({ data: [], meta: { total: 0 } });
-    listAccounts.mockResolvedValue({ data: [{ id: "user-1", fullName: "Lan", email: "lan@example.com", isEmailVerified: true, roles: ["MODERATOR"] }], meta: { total: 1 } });
+    listAccounts.mockResolvedValue({
+      data: [
+        {
+          id: "user-1",
+          fullName: "Lan",
+          email: "lan@example.com",
+          isEmailVerified: true,
+          roles: ["MODERATOR"],
+        },
+      ],
+      meta: { total: 1 },
+    });
     exportDepartments.mockResolvedValue(new Blob(["xlsx"]));
     exportEmployees.mockResolvedValue(new Blob(["xlsx"]));
     updateDepartment.mockResolvedValue({
@@ -124,8 +135,16 @@ describe("HR report downloads", () => {
 
   it("shows existing verified accounts as employee candidates without a search", async () => {
     renderWorkspace(<EmployeeWorkspace />);
-    fireEvent.click(await screen.findByRole("button", { name: "Chọn tài khoản để thêm nhân viên" }));
-    expect(await screen.findByRole("option", { name: "Lan · lan@example.com" })).toBeDefined();
-    expect(listAccounts).toHaveBeenCalledWith(expect.objectContaining({ status: "ACTIVE", verified: true }));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Chọn tài khoản để thêm nhân viên",
+      }),
+    );
+    expect(
+      await screen.findByRole("option", { name: "Lan · lan@example.com" }),
+    ).toBeDefined();
+    expect(listAccounts).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "ACTIVE", verified: true }),
+    );
   });
 });

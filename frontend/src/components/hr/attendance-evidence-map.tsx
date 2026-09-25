@@ -87,11 +87,13 @@ export function AttendanceEvidenceMap({
           scrollWheelZoom={false}
           zoom={16}
         >
-          {!tilesFailed && mapTileConfig ? <TileLayer
-            attribution={mapTileConfig.attribution}
-            eventHandlers={{ tileerror: () => setTilesFailed(true) }}
-            url={mapTileConfig.url}
-          /> : null}
+          {!tilesFailed && mapTileConfig ? (
+            <TileLayer
+              attribution={mapTileConfig.attribution}
+              eventHandlers={{ tileerror: () => setTilesFailed(true) }}
+              url={mapTileConfig.url}
+            />
+          ) : null}
           <MapViewport points={points} />
           {points.map((point) => {
             const color =
@@ -120,7 +122,12 @@ export function AttendanceEvidenceMap({
           })}
         </MapContainer>
       </div>
-      {tilesFailed || !mapTileConfig ? <p className="px-3 py-2 text-sm text-amber-900" role="status">Bản đồ nền không khả dụng; dữ liệu vị trí đã ghi nhận vẫn được giữ nguyên.</p> : null}
+      {tilesFailed || !mapTileConfig ? (
+        <p className="px-3 py-2 text-sm text-amber-900" role="status">
+          Bản đồ nền không khả dụng; dữ liệu vị trí đã ghi nhận vẫn được giữ
+          nguyên.
+        </p>
+      ) : null}
       <p className="px-3 py-2 text-xs leading-5 text-neutral-600">
         Chấm xanh: giờ vào · Chấm đỏ: giờ ra · Vòng tròn: sai số GPS do thiết bị
         báo.

@@ -399,9 +399,16 @@ export function EmployeeWorkspace() {
                 </select>
               </label>
               <p className="mt-2 text-xs text-neutral-600">
-                Danh sách gồm tài khoản đang hoạt động, đã xác minh, kể cả người kiểm duyệt. Nếu không thấy tài khoản, tìm theo email. Tạo hồ sơ bằng email không tự gửi lời mời.
+                Danh sách gồm tài khoản đang hoạt động, đã xác minh, kể cả người
+                kiểm duyệt. Nếu không thấy tài khoản, tìm theo email. Tạo hồ sơ
+                bằng email không tự gửi lời mời.
               </p>
-              {accounts.data && accounts.data.data.length === 0 ? <p className="mt-2 text-sm text-neutral-700" role="status">Chưa tìm thấy tài khoản phù hợp. Kiểm tra trạng thái xác minh hoặc mời nhân viên qua Gmail.</p> : null}
+              {accounts.data && accounts.data.data.length === 0 ? (
+                <p className="mt-2 text-sm text-neutral-700" role="status">
+                  Chưa tìm thấy tài khoản phù hợp. Kiểm tra trạng thái xác minh
+                  hoặc mời nhân viên qua Gmail.
+                </p>
+              ) : null}
             </div>
             <div className="flex items-start justify-between md:col-span-2 xl:col-span-3">
               <div>
@@ -792,9 +799,14 @@ export function EmployeeWorkspace() {
                     Chưa có nhân viên phù hợp
                   </p>
                   <p className="mt-1 text-sm text-neutral-600">
-                    Tài khoản đã đăng ký chỉ xuất hiện ở đây sau khi được liên kết với hồ sơ nhân sự.
+                    Tài khoản đã đăng ký chỉ xuất hiện ở đây sau khi được liên
+                    kết với hồ sơ nhân sự.
                   </p>
-                  <button className="mt-4 min-h-11 rounded-xl border border-primary-600 px-4 text-sm font-semibold text-primary-700 hover:bg-primary-50" onClick={() => setCreating(true)} type="button">
+                  <button
+                    className="mt-4 min-h-11 rounded-xl border border-primary-600 px-4 text-sm font-semibold text-primary-700 hover:bg-primary-50"
+                    onClick={() => setCreating(true)}
+                    type="button"
+                  >
                     Chọn tài khoản để thêm nhân viên
                   </button>
                 </td>

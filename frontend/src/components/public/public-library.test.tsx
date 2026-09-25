@@ -193,7 +193,9 @@ describe("PublicWorkCard", () => {
 
   it("does not hide the cover until the full image response resolves", () => {
     render(<PublicWorkCard position={1} source="list" work={work} />);
-    expect(screen.getByAltText("Tác phẩm nghệ thuật số").className).not.toContain("opacity-0");
+    expect(
+      screen.getByAltText("Tác phẩm nghệ thuật số").className,
+    ).not.toContain("opacity-0");
     expect(screen.queryByTestId("image-loading")).toBeNull();
   });
 });

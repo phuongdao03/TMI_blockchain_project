@@ -237,28 +237,68 @@ export function AttendanceWorksitePanel({
                         {isActive ? "Đang hoạt động" : "Tạm ngưng"}
                       </span>
                       <div className="flex flex-wrap gap-2">
-                      <button
-                        aria-label={`Đổi tên ${worksite.name}`}
-                        className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-neutral-200 px-2 text-xs font-semibold text-neutral-700 hover:text-neutral-950"
-                        onClick={() => { setEditingId(worksite.id); setEditingName(worksite.name); }}
-                        type="button"
-                      ><Pencil aria-hidden="true" className="size-4" /> Sửa</button>
-                      <button
-                        aria-label={`${isActive ? "Tạm ngưng" : "Kích hoạt"} ${worksite.name}`}
-                        className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-neutral-200 px-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-400 hover:text-neutral-950 disabled:opacity-50"
-                        disabled={isUpdating}
-                        onClick={() => void toggle(worksite)}
-                        type="button"
-                      >
-                        <Power aria-hidden="true" className="size-4" /> {isActive ? "Tạm ngưng" : "Kích hoạt"}
-                      </button>
+                        <button
+                          aria-label={`Đổi tên ${worksite.name}`}
+                          className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-neutral-200 px-2 text-xs font-semibold text-neutral-700 hover:text-neutral-950"
+                          onClick={() => {
+                            setEditingId(worksite.id);
+                            setEditingName(worksite.name);
+                          }}
+                          type="button"
+                        >
+                          <Pencil aria-hidden="true" className="size-4" /> Sửa
+                        </button>
+                        <button
+                          aria-label={`${isActive ? "Tạm ngưng" : "Kích hoạt"} ${worksite.name}`}
+                          className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-neutral-200 px-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-400 hover:text-neutral-950 disabled:opacity-50"
+                          disabled={isUpdating}
+                          onClick={() => void toggle(worksite)}
+                          type="button"
+                        >
+                          <Power aria-hidden="true" className="size-4" />{" "}
+                          {isActive ? "Tạm ngưng" : "Kích hoạt"}
+                        </button>
                       </div>
                     </div>
                     {editingId === worksite.id ? (
-                      <form className="mt-3 flex flex-col gap-2" onSubmit={(event) => { event.preventDefault(); void rename(worksite); }}>
-                        <label className="text-xs font-semibold text-neutral-800" htmlFor={`worksite-name-${worksite.id}`}>Tên địa điểm</label>
-                        <input className={fieldClass} id={`worksite-name-${worksite.id}`} maxLength={160} onChange={(event) => setEditingName(event.target.value)} value={editingName} />
-                        <div className="flex gap-2"><button className="min-h-10 rounded-lg bg-primary-700 px-3 text-xs font-semibold text-white disabled:opacity-50" disabled={isUpdating} type="submit">Lưu tên</button><button className="min-h-10 rounded-lg px-3 text-xs text-neutral-700" onClick={() => setEditingId(null)} type="button">Hủy</button></div>
+                      <form
+                        className="mt-3 flex flex-col gap-2"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void rename(worksite);
+                        }}
+                      >
+                        <label
+                          className="text-xs font-semibold text-neutral-800"
+                          htmlFor={`worksite-name-${worksite.id}`}
+                        >
+                          Tên địa điểm
+                        </label>
+                        <input
+                          className={fieldClass}
+                          id={`worksite-name-${worksite.id}`}
+                          maxLength={160}
+                          onChange={(event) =>
+                            setEditingName(event.target.value)
+                          }
+                          value={editingName}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            className="min-h-10 rounded-lg bg-primary-700 px-3 text-xs font-semibold text-white disabled:opacity-50"
+                            disabled={isUpdating}
+                            type="submit"
+                          >
+                            Lưu tên
+                          </button>
+                          <button
+                            className="min-h-10 rounded-lg px-3 text-xs text-neutral-700"
+                            onClick={() => setEditingId(null)}
+                            type="button"
+                          >
+                            Hủy
+                          </button>
+                        </div>
                       </form>
                     ) : null}
                   </div>
