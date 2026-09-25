@@ -13,6 +13,8 @@ import {
 } from "react-leaflet";
 import { useEffect, useMemo, useState } from "react";
 
+import { mapTileConfig } from "@/lib/maps/tile-config";
+
 const DEFAULT_CENTER: [number, number] = [20, 0];
 const CITY_LOCATIONS = [
   { name: "Hà Nội, Việt Nam", center: [21.0285, 105.8542] },
@@ -24,10 +26,6 @@ const CITY_LOCATIONS = [
   { name: "London, Anh", center: [51.5072, -0.1276] },
   { name: "New York, Hoa Kỳ", center: [40.7128, -74.006] },
 ] satisfies { name: string; center: CoordinatePair }[];
-const OSM_TILE_URL =
-  process.env.NEXT_PUBLIC_OSM_TILE_URL ??
-  "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-
 type CoordinatePair = [number, number];
 
 function coordinate(value: string, minimum: number, maximum: number) {
@@ -103,10 +101,12 @@ export function AttendanceLocationPicker({
   const [mapDestination, setMapDestination] = useState<CoordinatePair | null>(
     null,
   );
+  const [tilesFailed, setTilesFailed] = useState(false);
+  const [locationMessage, setLocationMessage] = useState("");
   const radius = Number(radiusMeters);
   const hasRadius = Number.isFinite(radius) && radius > 0;
   const mapCenter: LatLngExpression =
-    center ?? mapDestination ?? DEFAULT_CENTER;
+    mapDestination ?? center ?? DEFAULT_CENTER;
 
   return (
     <section aria-labelledby="attendance-geofence-map-title" className="mt-5">
@@ -133,7 +133,40 @@ export function AttendanceLocationPicker({
         </p>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          className="min-h-11 rounded-xl border border-primary-600 px-4 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50"
+          disabled={disabled}
+          onClick={() => {
+            if (!navigator.geolocation) {
+              setLocationMessage("Trình duyệt không hỗ trợ lấy vị trí. Nhập tọa độ trực tiếp ở bên dưới.");
+              return;
+            }
+            setLocationMessage("Đang lấy vị trí thiết bị…");
+            navigator.geolocation.getCurrentPosition(
+              ({ coords }) => {
+                onCoordinatesChange(coords.latitude.toFixed(6), coords.longitude.toFixed(6));
+                setLocationMessage(`Đã lấy vị trí thiết bị (sai số khoảng ${Math.round(coords.accuracy)} m). Chỉ dùng khi bạn đang ở văn phòng.`);
+              },
+              () => setLocationMessage("Không thể lấy vị trí. Hãy cho phép định vị qua HTTPS hoặc nhập tọa độ trực tiếp."),
+              { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+            );
+          }}
+          type="button"
+        >
+          Lấy vị trí thiết bị tại văn phòng
+        </button>
+        <button
+          className="min-h-11 rounded-xl px-3 text-sm font-medium text-neutral-700 underline underline-offset-4 hover:text-neutral-950"
+          onClick={() => setTilesFailed(true)}
+          type="button"
+        >
+          Bản đồ không hiển thị
+        </button>
+      </div>
+      {locationMessage ? <p aria-live="polite" className="mt-2 text-sm text-neutral-700">{locationMessage}</p> : null}
+
+      <div className="mt-4 grid min-w-0 gap-2">
         <label className="text-sm font-semibold text-neutral-800">
           Đến thành phố
           <select
@@ -155,7 +188,19 @@ export function AttendanceLocationPicker({
             ))}
           </select>
         </label>
-        <p className="self-end text-xs leading-5 text-neutral-600">
+        {center && mapDestination ? (
+          <button
+            className="min-h-11 justify-self-start rounded-xl border border-neutral-300 bg-white px-3 text-sm font-semibold text-neutral-800 transition-colors hover:border-primary-600 hover:text-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+            onClick={() => {
+              setCityName("");
+              setMapDestination(null);
+            }}
+            type="button"
+          >
+            Về điểm chấm công đã lưu
+          </button>
+        ) : null}
+        <p className="text-xs leading-5 text-neutral-600">
           Chọn thành phố chỉ điều hướng bản đồ. Chạm đúng địa điểm làm việc để
           đặt tâm vùng.
         </p>
@@ -171,15 +216,18 @@ export function AttendanceLocationPicker({
           className="h-72 w-full sm:h-96"
           minZoom={2}
           scrollWheelZoom
-          zoom={center ? 16 : mapDestination ? 12 : 2}
+          zoom={mapDestination ? 12 : center ? 16 : 2}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url={OSM_TILE_URL}
-          />
+          {!tilesFailed && mapTileConfig ? (
+            <TileLayer
+              attribution={mapTileConfig.attribution}
+              eventHandlers={{ tileerror: () => setTilesFailed(true) }}
+              url={mapTileConfig.url}
+            />
+          ) : null}
           <MapViewport
-            center={center ?? mapDestination ?? DEFAULT_CENTER}
-            zoom={center ? 16 : mapDestination ? 12 : 2}
+            center={mapDestination ?? center ?? DEFAULT_CENTER}
+            zoom={mapDestination ? 12 : center ? 16 : 2}
           />
           <MapSelection
             disabled={disabled}
@@ -207,6 +255,11 @@ export function AttendanceLocationPicker({
           ) : null}
         </MapContainer>
       </div>
+      {tilesFailed || !mapTileConfig ? (
+        <p className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950" role="status">
+          Bản đồ nền tạm thời không tải được. Nhập tọa độ trực tiếp ở bên dưới hoặc lấy vị trí thiết bị khi đang ở văn phòng; vùng chấm công vẫn được lưu chính xác.
+        </p>
+      ) : null}
       <p className="mt-3 text-xs leading-5 text-neutral-500">
         Bản đồ dùng dữ liệu OpenStreetMap. Chỉ Super Admin được cấu hình điểm
         làm việc; vị trí chấm công của nhân viên không được hiển thị tại đây.

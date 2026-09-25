@@ -52,9 +52,25 @@ NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_URL=http://localhost:9099
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=<Firebase Web app config>
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=<Firebase Web app config>
 NEXT_PUBLIC_FIREBASE_APP_ID=<Firebase Web app config>
+NEXT_PUBLIC_OSM_TILE_URL=https://<approved-tile-provider>/{z}/{x}/{y}.png
+NEXT_PUBLIC_OSM_TILE_ATTRIBUTION=<provider attribution required by its terms>
 ```
 
 The local mock is not a payment processor and must never receive real money.
+
+For production worksite maps, set `NEXT_PUBLIC_OSM_TILE_URL` and
+`NEXT_PUBLIC_OSM_TILE_ATTRIBUTION` as GitHub repository variables before the
+frontend image build. The URL must use HTTPS and include `{z}`, `{x}` and
+`{y}`. Choose a provider that permits the expected traffic, supplies the
+required attribution and can restrict any public browser token to the
+production domain. These public variables are frozen into the Next.js image
+at build time; changing only the VPS environment does not update the map.
+Map tile requests reveal the viewed map area to the provider, including when
+an admin inspects attendance evidence; review that data flow before choosing
+an external provider, or use approved self-hosted tiles.
+Without both values, the production UI shows a coordinate-entry fallback
+instead of relying on volunteer OSM tiles. Verify tile requests and labels on
+the deployed domain before approving the release.
 
 Bootstrap does not create application accounts or credentials. To create the
 first local Super Admin, choose an email and enter a new password interactively:
@@ -134,3 +150,40 @@ worker consumes encrypted outbox events and sends account, dossier, review,
 council, payment, certificate and blockchain notifications. Validate the relay
 from the container without printing credentials, then confirm delivery and
 bounce handling in the provider dashboard.
+
+## Public video stuck on the original MP4
+
+The public work API may expose a video with `streamingUrl: null`. In that state
+the viewer falls back to the retained MP4; it does not mean visitors must log
+in. For the published work `52504e0f-09d9-45f4-a167-d3ca710a8dbc`, this was
+observed on 2026-09-25: the fallback is a 4K, 52.6 MB source. Do not enable
+bulk eager HLS generation or replace the source before the cause is known.
+
+Read-only checks from the deployment directory (do not paste `.env.production`,
+Cloudinary credentials, cookies or full log files into a ticket):
+
+1. In the Super Admin publication editor, inspect the affected video's media
+   status and failure code. `READY` should expose a derivative URL; `PENDING`
+   should be picked up by the worker/scheduler, while `PROCESSING` needs a
+   recent completion or an investigated worker interruption.
+2. Confirm whether deployment is `RELEASE_MODE=full` without printing the
+   environment file. A preview deployment intentionally does not start the
+   `worker` and `scheduler` Compose services.
+3. From `/var/www/tmi_blockchain`, with the same Compose environment used by
+   deployment, inspect service health using `docker compose --env-file
+   infrastructure/.env.production -f
+   infrastructure/compose.production.yaml --profile full ps worker scheduler`.
+   Do not start/restart them merely to make the check pass.
+4. Inspect only recent relevant task logs using `docker compose --env-file
+   infrastructure/.env.production -f infrastructure/compose.production.yaml --profile full
+   logs --since=30m --tail=200 worker scheduler`; redact sensitive details
+   before sharing. Look for `generate_public_media_derivative`,
+   `reconcile_pending_public_media`, provider timeouts, memory kills and
+   `PROVIDER_UNAVAILABLE`/`SOURCE_INTEGRITY_FAILED`.
+
+If services are unhealthy, treat it as an operational incident and use the
+approved deployment/rollback procedure. If they are healthy but the media is
+still pending, inspect the queue and the specific media row with an authorized
+read-only administrator; avoid manually changing database status. A code fix
+or selective regeneration should follow the confirmed failure mode. Verify a
+new `streamingUrl`, playback and seek on mobile before closing the incident.

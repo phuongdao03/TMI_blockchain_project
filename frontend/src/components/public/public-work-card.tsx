@@ -18,7 +18,6 @@ export function PublicWorkCard({
   source: "featured" | "list";
   work: PublicCatalogWork;
 }) {
-  const [imageReady, setImageReady] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const href = `/works/${encodeURIComponent(work.slug)}`;
   const isLead = source === "featured" && position === 1;
@@ -40,19 +39,11 @@ export function PublicWorkCard({
           <div className="relative aspect-video overflow-hidden bg-ink-800">
             {work.thumbnailUrl && !imageFailed ? (
               <>
-                {!imageReady ? (
-                  <span
-                    aria-hidden="true"
-                    className="absolute inset-0 animate-pulse bg-[linear-gradient(110deg,#3A1514_25%,#6E251E_45%,#3A1514_65%)] bg-[length:200%_100%]"
-                    data-testid="image-loading"
-                  />
-                ) : null}
                 <Image
                   alt={work.thumbnailAltText || work.title}
-                  className={`object-cover transition duration-700 group-hover:scale-[1.04] ${imageReady ? "opacity-85" : "opacity-0"}`}
+                  className="object-cover opacity-85 transition-transform duration-300 motion-reduce:transition-none group-hover:scale-[1.02]"
                   fill
                   onError={() => setImageFailed(true)}
-                  onLoad={() => setImageReady(true)}
                   priority={position === 1 ? true : undefined}
                   sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                   src={work.thumbnailUrl}
@@ -135,19 +126,11 @@ export function PublicWorkCard({
       >
         {work.thumbnailUrl && !imageFailed ? (
           <>
-            {!imageReady ? (
-              <span
-                aria-hidden="true"
-                className="absolute inset-0 animate-pulse bg-[linear-gradient(110deg,#3A1514_25%,#6E251E_45%,#3A1514_65%)] bg-[length:200%_100%]"
-                data-testid="image-loading"
-              />
-            ) : null}
             <Image
               alt={work.thumbnailAltText || work.title}
-              className={`object-cover transition duration-700 group-hover:scale-[1.03] ${imageReady ? "opacity-80" : "opacity-0"}`}
+              className="object-cover opacity-80 transition-transform duration-300 motion-reduce:transition-none group-hover:scale-[1.02]"
               fill
               onError={() => setImageFailed(true)}
-              onLoad={() => setImageReady(true)}
               priority={position === 1 ? true : undefined}
               sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
               src={work.thumbnailUrl}

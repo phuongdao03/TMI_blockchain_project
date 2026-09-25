@@ -91,4 +91,44 @@ describe("AttendanceLocationPicker", () => {
     expect(onCoordinatesChange).not.toHaveBeenCalled();
     expect(screen.queryByTestId("attendance-geofence")).toBeNull();
   });
+
+  it("lets an admin inspect another city even when the worksite already has coordinates", () => {
+    const onCoordinatesChange = vi.fn();
+    render(
+      <AttendanceLocationPicker
+        latitude="10.8231"
+        longitude="106.6297"
+        onCoordinatesChange={onCoordinatesChange}
+        radiusMeters="250"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Đến thành phố"), {
+      target: { value: "Singapore" },
+    });
+
+    expect(mapSetView).toHaveBeenLastCalledWith([1.3521, 103.8198], 12, {
+      animate: false,
+    });
+    expect(onCoordinatesChange).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Về điểm chấm công đã lưu" }));
+    expect(mapSetView).toHaveBeenLastCalledWith([10.8231, 106.6297], 16, {
+      animate: false,
+    });
+  });
+
+  it("keeps coordinate selection usable when map tiles are blocked", () => {
+    render(
+      <AttendanceLocationPicker
+        latitude=""
+        longitude=""
+        onCoordinatesChange={vi.fn()}
+        radiusMeters="250"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Bản đồ không hiển thị" }));
+    expect(screen.getByText(/Nhập tọa độ trực tiếp/)).toBeTruthy();
+  });
 });

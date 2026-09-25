@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { createElement } from "react";
@@ -191,10 +191,9 @@ describe("PublicWorkCard", () => {
     ).toBe("/works/di-san-so");
   });
 
-  it("keeps a loading surface until the responsive image resolves", () => {
+  it("does not hide the cover until the full image response resolves", () => {
     render(<PublicWorkCard position={1} source="list" work={work} />);
-    expect(screen.getByTestId("image-loading")).toBeTruthy();
-    fireEvent.load(screen.getByAltText("Tác phẩm nghệ thuật số"));
+    expect(screen.getByAltText("Tác phẩm nghệ thuật số").className).not.toContain("opacity-0");
     expect(screen.queryByTestId("image-loading")).toBeNull();
   });
 });

@@ -71,6 +71,17 @@ function mockQueries() {
 }
 
 describe("AttendanceConfigurationWorkspace", () => {
+  it("renames an existing worksite without replacing its historical policies", async () => {
+    mockQueries();
+    updateWorksiteMock.mockResolvedValue({ ...worksite, name: "Văn phòng Singapore" });
+    renderWorkspace();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Đổi tên Singapore Hub" }));
+    fireEvent.change(screen.getByLabelText("Tên địa điểm"), { target: { value: "Văn phòng Singapore" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu tên" }));
+
+    await waitFor(() => expect(updateWorksiteMock).toHaveBeenCalledWith("worksite-1", { name: "Văn phòng Singapore" }));
+  });
   it("creates a worksite from the administration workspace", async () => {
     mockQueries();
     createWorksiteMock.mockResolvedValue(worksite);

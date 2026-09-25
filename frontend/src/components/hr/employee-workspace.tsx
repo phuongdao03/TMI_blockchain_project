@@ -98,9 +98,7 @@ export function EmployeeWorkspace() {
         verified: true,
         pageSize: 100,
       }),
-    enabled:
-      Boolean(accountQuery) &&
-      (creating || Boolean(editing && !editing.userId)),
+    enabled: creating || Boolean(editing && !editing.userId),
   });
   const createEmployee = useMutation({
     mutationFn: () =>
@@ -356,7 +354,7 @@ export function EmployeeWorkspace() {
               >
                 Tìm tài khoản
               </button>
-              {accounts.isPending && accountQuery ? (
+              {accounts.isPending ? (
                 <p className="mt-2 text-xs text-neutral-600" role="status">
                   Đang tìm tài khoản…
                 </p>
@@ -385,13 +383,12 @@ export function EmployeeWorkspace() {
                   value={selectedUserId}
                 >
                   <option value="">
-                    Chưa liên kết — nhập email để lập hồ sơ
+                    Chọn tài khoản đã đăng ký hoặc nhập email bên dưới
                   </option>
                   {accounts.data?.data
                     .filter(
                       (user) =>
                         user.isEmailVerified &&
-                        user.roles.includes("USER") &&
                         !rows.some((employee) => employee.userId === user.id),
                     )
                     .map((user) => (
@@ -402,10 +399,9 @@ export function EmployeeWorkspace() {
                 </select>
               </label>
               <p className="mt-2 text-xs text-neutral-600">
-                Chọn tài khoản USER đã xác minh, hoặc gửi lời mời Gmail ở phía
-                trên rồi liên kết khi nhân viên xác nhận. Lập hồ sơ bằng email
-                không tự gửi lời mời.
+                Danh sách gồm tài khoản đang hoạt động, đã xác minh, kể cả người kiểm duyệt. Nếu không thấy tài khoản, tìm theo email. Tạo hồ sơ bằng email không tự gửi lời mời.
               </p>
+              {accounts.data && accounts.data.data.length === 0 ? <p className="mt-2 text-sm text-neutral-700" role="status">Chưa tìm thấy tài khoản phù hợp. Kiểm tra trạng thái xác minh hoặc mời nhân viên qua Gmail.</p> : null}
             </div>
             <div className="flex items-start justify-between md:col-span-2 xl:col-span-3">
               <div>
@@ -796,8 +792,11 @@ export function EmployeeWorkspace() {
                     Chưa có nhân viên phù hợp
                   </p>
                   <p className="mt-1 text-sm text-neutral-600">
-                    Thêm hồ sơ mới hoặc thay đổi bộ lọc.
+                    Tài khoản đã đăng ký chỉ xuất hiện ở đây sau khi được liên kết với hồ sơ nhân sự.
                   </p>
+                  <button className="mt-4 min-h-11 rounded-xl border border-primary-600 px-4 text-sm font-semibold text-primary-700 hover:bg-primary-50" onClick={() => setCreating(true)} type="button">
+                    Chọn tài khoản để thêm nhân viên
+                  </button>
                 </td>
               </tr>
             ) : null}

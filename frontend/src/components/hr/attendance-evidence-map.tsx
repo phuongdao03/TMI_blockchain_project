@@ -2,7 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 
-import { Fragment, useEffect } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   Circle,
   CircleMarker,
@@ -12,6 +12,7 @@ import {
 } from "react-leaflet";
 
 import type { AttendanceLocationEvidenceReview } from "@/lib/api/types";
+import { mapTileConfig } from "@/lib/maps/tile-config";
 
 type EvidencePoint = {
   id: string;
@@ -20,10 +21,6 @@ type EvidencePoint = {
   longitude: number;
   accuracyMeters: number;
 };
-
-const OSM_TILE_URL =
-  process.env.NEXT_PUBLIC_OSM_TILE_URL ??
-  "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
 function MapViewport({ points }: { points: EvidencePoint[] }) {
   const map = useMap();
@@ -53,6 +50,7 @@ export function AttendanceEvidenceMap({
 }: {
   evidence: AttendanceLocationEvidenceReview[];
 }) {
+  const [tilesFailed, setTilesFailed] = useState(false);
   const points = evidence.flatMap((item): EvidencePoint[] => {
     const latitude = Number(item.latitude);
     const longitude = Number(item.longitude);
@@ -89,10 +87,11 @@ export function AttendanceEvidenceMap({
           scrollWheelZoom={false}
           zoom={16}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url={OSM_TILE_URL}
-          />
+          {!tilesFailed && mapTileConfig ? <TileLayer
+            attribution={mapTileConfig.attribution}
+            eventHandlers={{ tileerror: () => setTilesFailed(true) }}
+            url={mapTileConfig.url}
+          /> : null}
           <MapViewport points={points} />
           {points.map((point) => {
             const color =
@@ -121,6 +120,7 @@ export function AttendanceEvidenceMap({
           })}
         </MapContainer>
       </div>
+      {tilesFailed || !mapTileConfig ? <p className="px-3 py-2 text-sm text-amber-900" role="status">Bản đồ nền không khả dụng; dữ liệu vị trí đã ghi nhận vẫn được giữ nguyên.</p> : null}
       <p className="px-3 py-2 text-xs leading-5 text-neutral-600">
         Chấm xanh: giờ vào · Chấm đỏ: giờ ra · Vòng tròn: sai số GPS do thiết bị
         báo.

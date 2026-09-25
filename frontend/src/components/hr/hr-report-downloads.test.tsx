@@ -12,9 +12,12 @@ const exportDepartments = vi.hoisted(() => vi.fn());
 const updateDepartment = vi.hoisted(() => vi.fn());
 const exportEmployees = vi.hoisted(() => vi.fn());
 const saveWorkbook = vi.hoisted(() => vi.fn());
+const listAccounts = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/api/client", () => ({
   ApiError: class ApiError extends Error {},
+  adminUsersApi: { list: listAccounts },
+  employeeInvitationsApi: { create: vi.fn() },
   hrDepartmentApi: {
     list: listDepartments,
     create: vi.fn(),
@@ -47,6 +50,7 @@ describe("HR report downloads", () => {
       meta: { total: 1 },
     });
     listEmployees.mockResolvedValue({ data: [], meta: { total: 0 } });
+    listAccounts.mockResolvedValue({ data: [{ id: "user-1", fullName: "Lan", email: "lan@example.com", isEmailVerified: true, roles: ["MODERATOR"] }], meta: { total: 1 } });
     exportDepartments.mockResolvedValue(new Blob(["xlsx"]));
     exportEmployees.mockResolvedValue(new Blob(["xlsx"]));
     updateDepartment.mockResolvedValue({
@@ -116,5 +120,12 @@ describe("HR report downloads", () => {
       expect.any(Blob),
       "hr-employees.xlsx",
     );
+  });
+
+  it("shows existing verified accounts as employee candidates without a search", async () => {
+    renderWorkspace(<EmployeeWorkspace />);
+    fireEvent.click(await screen.findByRole("button", { name: "Chọn tài khoản để thêm nhân viên" }));
+    expect(await screen.findByRole("option", { name: "Lan · lan@example.com" })).toBeDefined();
+    expect(listAccounts).toHaveBeenCalledWith(expect.objectContaining({ status: "ACTIVE", verified: true }));
   });
 });

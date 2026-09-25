@@ -4,6 +4,7 @@ import {
   Building2,
   CircleAlert,
   LoaderCircle,
+  Pencil,
   Plus,
   Power,
 } from "lucide-react";
@@ -28,6 +29,7 @@ export function AttendanceWorksitePanel({
   onCreate,
   onRetry,
   onSelect,
+  onRename,
   onToggleActive,
   selectedWorksiteId,
   worksites,
@@ -37,6 +39,7 @@ export function AttendanceWorksitePanel({
   onCreate: (input: WorksiteInput) => Promise<unknown>;
   onRetry: () => void;
   onSelect: (worksiteId: string) => void;
+  onRename: (worksite: AttendanceWorksite, name: string) => Promise<unknown>;
   onToggleActive: (worksite: AttendanceWorksite) => Promise<unknown>;
   selectedWorksiteId: string | null;
   worksites: WorksiteQuery;
@@ -44,6 +47,8 @@ export function AttendanceWorksitePanel({
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
   const items = worksites.data?.data ?? [];
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -70,6 +75,21 @@ export function AttendanceWorksitePanel({
       await onToggleActive(worksite);
     } catch {
       setFormError("Không thể cập nhật trạng thái điểm chấm công.");
+    }
+  }
+
+  async function rename(worksite: AttendanceWorksite) {
+    const nextName = editingName.trim();
+    if (nextName.length < 2) {
+      setFormError("Tên địa điểm cần ít nhất 2 ký tự.");
+      return;
+    }
+    try {
+      await onRename(worksite, nextName);
+      setEditingId(null);
+      setFormError(null);
+    } catch {
+      setFormError("Không thể đổi tên địa điểm. Vui lòng thử lại.");
     }
   }
 
@@ -210,22 +230,37 @@ export function AttendanceWorksitePanel({
                         {worksite.name}
                       </span>
                     </button>
-                    <div className="mt-3 flex items-center justify-between gap-2">
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-bold ${isActive ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-600"}`}
                       >
                         {isActive ? "Đang hoạt động" : "Tạm ngưng"}
                       </span>
+                      <div className="flex flex-wrap gap-2">
+                      <button
+                        aria-label={`Đổi tên ${worksite.name}`}
+                        className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-neutral-200 px-2 text-xs font-semibold text-neutral-700 hover:text-neutral-950"
+                        onClick={() => { setEditingId(worksite.id); setEditingName(worksite.name); }}
+                        type="button"
+                      ><Pencil aria-hidden="true" className="size-4" /> Sửa</button>
                       <button
                         aria-label={`${isActive ? "Tạm ngưng" : "Kích hoạt"} ${worksite.name}`}
-                        className="inline-flex size-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 transition hover:border-neutral-400 hover:text-neutral-950 disabled:opacity-50"
+                        className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-neutral-200 px-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-400 hover:text-neutral-950 disabled:opacity-50"
                         disabled={isUpdating}
                         onClick={() => void toggle(worksite)}
                         type="button"
                       >
-                        <Power aria-hidden="true" className="size-4" />
+                        <Power aria-hidden="true" className="size-4" /> {isActive ? "Tạm ngưng" : "Kích hoạt"}
                       </button>
+                      </div>
                     </div>
+                    {editingId === worksite.id ? (
+                      <form className="mt-3 flex flex-col gap-2" onSubmit={(event) => { event.preventDefault(); void rename(worksite); }}>
+                        <label className="text-xs font-semibold text-neutral-800" htmlFor={`worksite-name-${worksite.id}`}>Tên địa điểm</label>
+                        <input className={fieldClass} id={`worksite-name-${worksite.id}`} maxLength={160} onChange={(event) => setEditingName(event.target.value)} value={editingName} />
+                        <div className="flex gap-2"><button className="min-h-10 rounded-lg bg-primary-700 px-3 text-xs font-semibold text-white disabled:opacity-50" disabled={isUpdating} type="submit">Lưu tên</button><button className="min-h-10 rounded-lg px-3 text-xs text-neutral-700" onClick={() => setEditingId(null)} type="button">Hủy</button></div>
+                      </form>
+                    ) : null}
                   </div>
                 </li>
               );

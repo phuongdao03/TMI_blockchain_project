@@ -5413,6 +5413,13 @@ html[data-theme="dark"] .public-theme-surface .text-emerald-300 {
   color: #ffffff !important;
 }
 
+/* Cover labels sit over photography, not over the themed card surface. */
+.public-theme-surface .bg-ink-950\/80.text-white,
+.public-search-surface .bg-ink-950\/80.text-white {
+  background-color: rgb(15 7 7 / 82%) !important;
+  color: #ffffff !important;
+}
+
 html[data-theme="dark"] .dashboard-main .bg-surface,
 html[data-theme="dark"] .dashboard-main .bg-background {
   background-color: var(--theme-surface) !important;
@@ -8048,4 +8055,13 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
   background: var(--theme-elevated) !important;
   border-color: var(--theme-border) !important;
   color: var(--theme-text) !important;
+}
+
+/* Avoid animating every operational panel on low-power mobile devices. Keep
+   small control feedback, but make content available immediately. */
+@media (max-width: 767px) {
+  .dashboard-page-stage,
+  .dashboard-page-stage > * > :where(header, section, form, ol) {
+    animation: none !important;
+  }
 }

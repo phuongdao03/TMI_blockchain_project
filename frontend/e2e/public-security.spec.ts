@@ -12,6 +12,29 @@ const banned = [
   "restricted/source",
 ];
 
+test("published nominations remain readable without signing in", async ({ page, context }) => {
+  await context.clearCookies();
+  const authenticationRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/\/api\/v1\/(auth|me)(\/|\?|$)/.test(new URL(request.url()).pathname)) {
+      authenticationRequests.push(request.url());
+    }
+  });
+
+  const catalog = await page.request.get("/api/v1/public/works");
+  const detail = await page.request.get("/api/v1/public/works/bo-nhan-dien-cns");
+  expect(catalog.status()).toBe(200);
+  expect(detail.status()).toBe(200);
+
+  await page.goto("/works");
+  await expect(page).toHaveURL(/\/works$/);
+  await expect(page.getByRole("link", { name: /Xem đề cử/ }).first()).toBeVisible();
+  await page.goto("/works/bo-nhan-dien-cns");
+  await expect(page).toHaveURL(/\/works\/bo-nhan-dien-cns$/);
+  await expect(page.getByRole("heading", { name: "Bộ nhận diện CNS" })).toBeVisible();
+  expect(authenticationRequests).toEqual([]);
+});
+
 test("public visibility and leakage release gate", async ({ page }) => {
   const visible = await page.request.get(
     "/api/v1/public/works/bo-nhan-dien-cns",
