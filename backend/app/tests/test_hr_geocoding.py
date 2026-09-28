@@ -41,9 +41,7 @@ def test_geocoding_returns_only_bounded_labels_and_coordinates(monkeypatch):
     results = asyncio.run(
         geocoding.search_worksite_addresses("Văn phòng", "server-secret")
     )
-    assert results == [
-        {"label": "Văn phòng", "latitude": 10.72, "longitude": 106.7}
-    ]
+    assert results == [{"label": "Văn phòng", "latitude": 10.72, "longitude": 106.7}]
 
 
 def test_geocoding_hides_upstream_error_and_key(monkeypatch):
