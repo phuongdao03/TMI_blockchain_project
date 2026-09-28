@@ -147,14 +147,34 @@ export default function AdminGuidePage() {
               </WorkspaceLink>
             </GuideSection>
 
-            <GuideSection id="attendance" icon={FileClock} title="Điểm làm việc và chấm công GPS">
+            <GuideSection
+              id="attendance"
+              icon={FileClock}
+              title="Điểm làm việc và chấm công GPS"
+            >
               <Steps>
-                <li>Tạo và kích hoạt điểm chấm công; đặt múi giờ theo địa điểm làm việc của nhân viên.</li>
-                <li>Nhập địa chỉ đầy đủ, chọn kết quả, kiểm tra bản đồ và bấm chọn làm tâm vùng. Có thể nhập tọa độ đã xác minh hoặc lấy GPS ngay tại văn phòng.</li>
-                <li>Kiểm tra sai số thiết bị, bán kính, ngày hiệu lực rồi lưu chính sách; sau đó mới phân công nhân viên.</li>
-                <li>Đối chiếu giờ vào/ra và xét duyệt ngoại lệ vị trí theo bằng chứng. Không coi kết quả geocoding là bằng chứng nhân viên đã ở đó.</li>
+                <li>
+                  Tạo và kích hoạt điểm chấm công; đặt múi giờ theo địa điểm làm
+                  việc của nhân viên.
+                </li>
+                <li>
+                  Nhập địa chỉ đầy đủ, chọn kết quả, kiểm tra bản đồ và bấm chọn
+                  làm tâm vùng. Có thể nhập tọa độ đã xác minh hoặc lấy GPS ngay
+                  tại văn phòng.
+                </li>
+                <li>
+                  Kiểm tra sai số thiết bị, bán kính, ngày hiệu lực rồi lưu
+                  chính sách; sau đó mới phân công nhân viên.
+                </li>
+                <li>
+                  Đối chiếu giờ vào/ra và xét duyệt ngoại lệ vị trí theo bằng
+                  chứng. Không coi kết quả geocoding là bằng chứng nhân viên đã
+                  ở đó.
+                </li>
               </Steps>
-              <WorkspaceLink href="/admin/attendance/worksites">Mở điểm chấm công</WorkspaceLink>
+              <WorkspaceLink href="/admin/attendance/worksites">
+                Mở điểm chấm công
+              </WorkspaceLink>
             </GuideSection>
 
             <GuideSection

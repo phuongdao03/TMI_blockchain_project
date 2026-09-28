@@ -185,12 +185,27 @@ export function AttendanceWorkspace() {
       </header>
 
       <details className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 text-sm text-[var(--theme-text)] sm:px-5">
-        <summary className="cursor-pointer font-semibold">Hướng dẫn chấm công bằng GPS</summary>
+        <summary className="cursor-pointer font-semibold">
+          Hướng dẫn chấm công bằng GPS
+        </summary>
         <ol className="mt-3 list-decimal space-y-2 pl-5 leading-6 text-[var(--theme-muted)]">
-          <li>Bật vị trí trên điện thoại và cho phép Chrome hoặc Safari dùng vị trí khi mở website HTTPS.</li>
-          <li>Đến điểm làm việc được phân công, bấm Chấm công vào hoặc Chấm công ra và chờ thông báo kết quả.</li>
-          <li>Nếu bị từ chối quyền hoặc sai số lớn, kiểm tra quyền vị trí, bật định vị chính xác và thử lại ở nơi thoáng. Không dùng địa chỉ tìm kiếm thay GPS.</li>
-          <li>Kiểm tra giờ và trạng thái sau thao tác. Trạng thái chờ duyệt vị trí chưa phải ngày công đã duyệt; hãy liên hệ quản lý nếu cần hỗ trợ.</li>
+          <li>
+            Bật vị trí trên điện thoại và cho phép Chrome hoặc Safari dùng vị
+            trí khi mở website HTTPS.
+          </li>
+          <li>
+            Đến điểm làm việc được phân công, bấm Chấm công vào hoặc Chấm công
+            ra và chờ thông báo kết quả.
+          </li>
+          <li>
+            Nếu bị từ chối quyền hoặc sai số lớn, kiểm tra quyền vị trí, bật
+            định vị chính xác và thử lại ở nơi thoáng. Không dùng địa chỉ tìm
+            kiếm thay GPS.
+          </li>
+          <li>
+            Kiểm tra giờ và trạng thái sau thao tác. Trạng thái chờ duyệt vị trí
+            chưa phải ngày công đã duyệt; hãy liên hệ quản lý nếu cần hỗ trợ.
+          </li>
         </ol>
       </details>
 

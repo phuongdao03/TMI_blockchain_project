@@ -14,7 +14,10 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { hrAttendanceConfigurationApi } from "@/lib/api/client";
-import { captureForegroundLocation, LocationCaptureError } from "@/lib/geolocation";
+import {
+  captureForegroundLocation,
+  LocationCaptureError,
+} from "@/lib/geolocation";
 import { mapTileConfig } from "@/lib/maps/tile-config";
 
 const DEFAULT_CENTER: [number, number] = [20, 0];
@@ -116,7 +119,8 @@ export function AttendanceLocationPicker({
   const [capturingLocation, setCapturingLocation] = useState(false);
   const radius = Number(radiusMeters);
   const hasRadius = Number.isFinite(radius) && radius > 0;
-  const mapCenter: LatLngExpression = mapDestination ?? center ?? DEFAULT_CENTER;
+  const mapCenter: LatLngExpression =
+    mapDestination ?? center ?? DEFAULT_CENTER;
 
   async function searchAddress() {
     const query = addressQuery.trim();
@@ -131,10 +135,14 @@ export function AttendanceLocationPicker({
       const results = await hrAttendanceConfigurationApi.searchAddress(query);
       setAddressResults(results);
       if (results.length === 0) {
-        setAddressMessage("Không tìm thấy địa chỉ phù hợp. Hãy thêm số nhà, đường và thành phố.");
+        setAddressMessage(
+          "Không tìm thấy địa chỉ phù hợp. Hãy thêm số nhà, đường và thành phố.",
+        );
       }
     } catch {
-      setAddressMessage("Không thể tìm địa chỉ. Kiểm tra cấu hình Stadia hoặc thử lại sau.");
+      setAddressMessage(
+        "Không thể tìm địa chỉ. Kiểm tra cấu hình Stadia hoặc thử lại sau.",
+      );
     } finally {
       setSearchingAddress(false);
     }
@@ -195,7 +203,9 @@ export function AttendanceLocationPicker({
           }}
           type="button"
         >
-          {capturingLocation ? "Đang lấy vị trí…" : "Lấy vị trí thiết bị tại văn phòng"}
+          {capturingLocation
+            ? "Đang lấy vị trí…"
+            : "Lấy vị trí thiết bị tại văn phòng"}
         </button>
         <button
           className="min-h-11 rounded-xl px-3 text-sm font-medium text-neutral-700 underline underline-offset-4 hover:text-neutral-950"
@@ -254,11 +264,15 @@ export function AttendanceLocationPicker({
       </div>
 
       <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-3 sm:p-4">
-        <label className="block text-sm font-semibold text-neutral-800" htmlFor="worksite-address-search">
+        <label
+          className="block text-sm font-semibold text-neutral-800"
+          htmlFor="worksite-address-search"
+        >
           Tìm địa chỉ điểm làm việc
         </label>
         <p className="mt-1 text-xs leading-5 text-neutral-600">
-          Nhập số nhà, đường, thành phố và quốc gia. Kết quả tìm kiếm chỉ giúp di chuyển bản đồ; hãy kiểm tra và xác nhận tâm vùng trước khi lưu.
+          Nhập số nhà, đường, thành phố và quốc gia. Kết quả tìm kiếm chỉ giúp
+          di chuyển bản đồ; hãy kiểm tra và xác nhận tâm vùng trước khi lưu.
         </p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input
@@ -284,7 +298,11 @@ export function AttendanceLocationPicker({
             {searchingAddress ? "Đang tìm…" : "Tìm địa chỉ"}
           </button>
         </div>
-        {addressMessage ? <p aria-live="polite" className="mt-2 text-sm text-neutral-700">{addressMessage}</p> : null}
+        {addressMessage ? (
+          <p aria-live="polite" className="mt-2 text-sm text-neutral-700">
+            {addressMessage}
+          </p>
+        ) : null}
         {addressResults.length > 0 ? (
           <ul aria-label="Kết quả tìm địa chỉ" className="mt-3 space-y-2">
             {addressResults.map((result, index) => (
@@ -295,7 +313,9 @@ export function AttendanceLocationPicker({
                     setMapDestination([result.latitude, result.longitude]);
                     setDestinationZoom(17);
                     setSelectedAddress(result.label);
-                    setAddressMessage("Đã di chuyển bản đồ. Kiểm tra vị trí trước khi chọn làm tâm vùng.");
+                    setAddressMessage(
+                      "Đã di chuyển bản đồ. Kiểm tra vị trí trước khi chọn làm tâm vùng.",
+                    );
                   }}
                   type="button"
                 >
@@ -310,10 +330,15 @@ export function AttendanceLocationPicker({
             className="mt-3 min-h-11 rounded-xl border border-primary-600 px-4 text-sm font-semibold text-primary-700 hover:bg-primary-50"
             disabled={disabled}
             onClick={() => {
-              onCoordinatesChange(mapDestination[0].toFixed(6), mapDestination[1].toFixed(6));
+              onCoordinatesChange(
+                mapDestination[0].toFixed(6),
+                mapDestination[1].toFixed(6),
+              );
               setMapDestination(null);
               setSelectedAddress(null);
-              setAddressMessage("Đã chọn tâm vùng. Kiểm tra lại vị trí và bán kính trước khi lưu chính sách.");
+              setAddressMessage(
+                "Đã chọn tâm vùng. Kiểm tra lại vị trí và bán kính trước khi lưu chính sách.",
+              );
             }}
             type="button"
           >
