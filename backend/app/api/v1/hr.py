@@ -3,7 +3,9 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, Response, status
+from pydantic import BaseModel, Field
 
+from app.core.errors import DomainError
 from app.core.schemas import (
     ListResponseMeta,
     PaginatedSuccessEnvelope,
@@ -15,8 +17,10 @@ from app.modules.auth.dependencies import (
     CsrfProtectedPrincipalDependency,
     CurrentPrincipalDependency,
     SessionDependency,
+    SettingsDependency,
 )
 from app.modules.hr.dashboard_service import HrDashboardService
+from app.modules.hr.geocoding import search_worksite_addresses
 from app.modules.hr.models import (
     AttendanceLocationExceptionStatus,
     AttendanceStatus,
@@ -73,6 +77,45 @@ from app.modules.tasks.models import TaskPriority, TaskStatus
 router = APIRouter(prefix="/api/v1/admin/hr", tags=["human resources"])
 self_router = APIRouter(prefix="/api/v1/me/hr", tags=["human resources"])
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+class AddressSearchRequest(BaseModel):
+    q: str = Field(min_length=3, max_length=160)
+
+
+@router.post("/attendance-worksites/address-search")
+async def search_attendance_worksite_address(
+    request: Request,
+    response: Response,
+    input_data: AddressSearchRequest,
+    principal: CsrfProtectedPrincipalDependency,
+    settings: SettingsDependency,
+) -> SuccessEnvelope[list[dict[str, object]]]:
+    if "SUPER_ADMIN" not in principal.roles:
+        raise DomainError(
+            code="HR_FORBIDDEN",
+            message="Only a super administrator can search worksite addresses.",
+            status_code=403,
+        )
+    if not input_data.q.strip():
+        raise DomainError(
+            code="HR_GEOCODING_INVALID_QUERY",
+            message="Enter an address to search.",
+            status_code=422,
+        )
+    if settings.stadia_maps_api_key is None:
+        raise DomainError(
+            code="HR_GEOCODING_NOT_CONFIGURED",
+            message="Address search has not been configured.",
+            status_code=503,
+        )
+    response.headers["Cache-Control"] = "no-store"
+    return SuccessEnvelope(
+        data=await search_worksite_addresses(
+            input_data.q.strip(), settings.stadia_maps_api_key.get_secret_value()
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
 
 
 def _private_location_response(response: Response) -> None:

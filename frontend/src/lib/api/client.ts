@@ -1673,6 +1673,14 @@ export const hrAdminAttendanceApi = {
 };
 
 export const hrAttendanceConfigurationApi = {
+  searchAddress(query: string) {
+    return request<
+      { label: string; latitude: number; longitude: number }[]
+    >("/admin/hr/attendance-worksites/address-search", {
+      method: "POST",
+      body: JSON.stringify({ q: query }),
+    });
+  },
   listWorksites(
     filters: {
       page?: number;

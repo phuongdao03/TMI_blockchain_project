@@ -114,6 +114,7 @@ class Settings(BaseSettings):
         le=86_400,
     )
     firebase_project_id: str = Field(default="", max_length=255)
+    stadia_maps_api_key: SecretStr | None = None
     firebase_auth_emulator_host: str = Field(default="", max_length=255)
     firebase_jwks_uri: str = Field(
         default="https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com",

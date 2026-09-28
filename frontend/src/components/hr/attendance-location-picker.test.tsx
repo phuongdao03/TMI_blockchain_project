@@ -4,6 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AttendanceLocationPicker } from "@/components/hr/attendance-location-picker";
 
+const { searchAddress } = vi.hoisted(() => ({ searchAddress: vi.fn() }));
+vi.mock("@/lib/api/client", () => ({
+  hrAttendanceConfigurationApi: { searchAddress: (...args: unknown[]) => searchAddress(...args) },
+}));
+
 const mapSetView = vi.fn();
 let mapEvents: {
   click?: (event: { latlng: { lat: number; lng: number } }) => void;
@@ -28,6 +33,32 @@ vi.mock("react-leaflet", () => ({
 }));
 
 describe("AttendanceLocationPicker", () => {
+  it("moves to an address result without saving until admin confirms", async () => {
+    searchAddress.mockResolvedValueOnce([
+      { label: "156A Nguyễn Hữu Thọ, Việt Nam", latitude: 10.72, longitude: 106.7 },
+    ]);
+    const onCoordinatesChange = vi.fn();
+    render(
+      <AttendanceLocationPicker
+        latitude=""
+        longitude=""
+        onCoordinatesChange={onCoordinatesChange}
+        radiusMeters="250"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Tìm địa chỉ điểm làm việc"), {
+      target: { value: "156A Nguyễn Hữu Thọ" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Tìm địa chỉ" }));
+    expect(await screen.findByRole("button", { name: "156A Nguyễn Hữu Thọ, Việt Nam" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "156A Nguyễn Hữu Thọ, Việt Nam" }));
+    expect(mapSetView).toHaveBeenLastCalledWith([10.72, 106.7], 17, { animate: false });
+    expect(onCoordinatesChange).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Chọn vị trí này làm tâm vùng" }));
+    expect(onCoordinatesChange).toHaveBeenCalledWith("10.720000", "106.700000");
+  });
   it("uses a map click to select the policy centre and updates the visible coordinates", () => {
     const onCoordinatesChange = vi.fn();
     const view = render(
