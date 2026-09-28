@@ -55,6 +55,20 @@ async function setTheme(page: Page, workspace: boolean, theme: "sáng" | "tối"
     "data-theme",
     theme === "sáng" ? "light" : "dark",
   );
+  if (workspace) {
+    await expect
+      .poll(() =>
+        page.locator(".dashboard-main").evaluate((element) => ({
+          background: getComputedStyle(element).backgroundColor,
+          color: getComputedStyle(element).color,
+        })),
+      )
+      .toEqual(
+        theme === "sáng"
+          ? { background: "rgb(255, 249, 243)", color: "rgb(36, 21, 21)" }
+          : { background: "rgb(26, 11, 11)", color: "rgb(255, 249, 243)" },
+      );
+  }
 }
 
 for (const persona of personas) {

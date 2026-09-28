@@ -6581,6 +6581,7 @@ html[data-theme="dark"] .dashboard-navigation__link--active:hover {
 
 .dashboard-main {
   background: var(--theme-bg);
+  color: var(--theme-text);
 }
 
 .dashboard-main input,
