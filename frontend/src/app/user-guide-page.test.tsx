@@ -13,7 +13,7 @@ describe("UserGuidePage", () => {
       }),
     ).toBeDefined();
     for (const heading of [
-      "Về Trung tâm An ninh Công nghệ số – CNS",
+      "Về dự án Đề cử Tinh Hoa Việt",
       "Khám phá đề cử",
       "Tạo tài khoản và đăng nhập",
       "Tạo và gửi hồ sơ đề cử",
@@ -31,6 +31,9 @@ describe("UserGuidePage", () => {
       screen.getByText(
         /tìm kiếm, ghi nhận và lan tỏa những giá trị tiêu biểu/i,
       ),
+    ).toBeDefined();
+    expect(
+      screen.getByText(/CNS là đơn vị phát triển nền tảng công nghệ phục vụ/i),
     ).toBeDefined();
     expect(
       screen.getByRole("heading", { name: "Chứng thư mang lại điều gì?" }),

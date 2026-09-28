@@ -14,7 +14,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 const nav = [
-  ["about", "Về tổ chức"],
+  ["about", "Về dự án"],
   ["explore", "Đề cử"],
   ["account", "Tài khoản"],
   ["dossier", "Hồ sơ"],
@@ -60,22 +60,21 @@ export default function UserGuidePage() {
             icon={Building2}
             id="about"
             number="01"
-            title="Về Trung tâm An ninh Công nghệ số – CNS"
+            title="Về dự án Đề cử Tinh Hoa Việt"
             wide
           >
             <p className="max-w-4xl text-base leading-8">
-              Trung tâm An ninh Công nghệ số – CNS được hình thành với mong muốn
-              tìm kiếm, ghi nhận và lan tỏa những giá trị tiêu biểu do người
-              Việt kiến tạo. Đó có thể là một tác phẩm, sản phẩm, sáng kiến, di
-              sản hoặc câu chuyện mang giá trị văn hóa và đóng góp tích cực cho
-              cộng đồng.
+              Đề cử Tinh Hoa Việt là dự án tìm kiếm, ghi nhận và lan tỏa những
+              giá trị tiêu biểu do người Việt kiến tạo. Đó có thể là một tác
+              phẩm, sản phẩm, sáng kiến, di sản hoặc câu chuyện mang giá trị văn
+              hóa và đóng góp tích cực cho cộng đồng.
             </p>
             <p className="max-w-4xl text-base leading-8">
-              Tổ chức đồng hành trong toàn bộ hành trình: tiếp nhận thông tin đề
-              cử, điều phối quá trình xem xét, yêu cầu bổ sung khi cần, công bố
-              nội dung đủ điều kiện và phát hành chứng thư xác lập. Mỗi bước đều
-              hướng tới một mục tiêu chung—giúp thông tin được trình bày rõ
-              ràng, có nguồn đối chiếu và có thể kiểm tra lại theo thời gian.
+              Dự án hỗ trợ hành trình từ tiếp nhận thông tin đề cử, điều phối
+              quá trình xem xét và yêu cầu bổ sung khi cần, đến công bố nội dung
+              đủ điều kiện và phát hành chứng thư xác lập. Trung tâm An ninh
+              Công nghệ số – CNS là đơn vị phát triển nền tảng công nghệ phục vụ
+              dự án.
             </p>
             <div className="about-columns grid gap-8 border-y border-[var(--theme-border)] py-6 md:grid-cols-2 md:divide-x md:divide-[var(--theme-border)]">
               <AboutCard title="Chứng thư mang lại điều gì?">
