@@ -131,7 +131,7 @@ const adminItems: NavigationItem[] = [
   },
   {
     href: "/admin/employees",
-    label: "Nhân viên",
+    label: "Nhân sự",
     icon: UsersRound,
     permission: "hr.employees.read",
   },
@@ -158,12 +158,6 @@ const adminItems: NavigationItem[] = [
     label: "Người dùng",
     icon: UsersRound,
     permission: "users.read",
-  },
-  {
-    href: "/admin/staff",
-    label: "Tài khoản nhân sự",
-    icon: UsersRound,
-    permission: "staff.read",
   },
   {
     href: "/admin/content",

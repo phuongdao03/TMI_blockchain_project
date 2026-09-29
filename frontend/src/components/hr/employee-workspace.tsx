@@ -39,18 +39,31 @@ function salary(value: string | null) {
   }).format(Number(value));
 }
 
-export function EmployeeWorkspace() {
+export function EmployeeWorkspace({
+  embedded = false,
+  initialSearch = "",
+  linkedAccount,
+  onClearLinkedAccount,
+}: {
+  embedded?: boolean;
+  initialSearch?: string;
+  linkedAccount?: { id: string; email: string } | null;
+  onClearLinkedAccount?: () => void;
+} = {}) {
   const queryClient = useQueryClient();
-  const [searchDraft, setSearchDraft] = useState("");
-  const [search, setSearch] = useState("");
+  const [searchDraft, setSearchDraft] = useState(initialSearch);
+  const [search, setSearch] = useState(initialSearch);
   const [departmentId, setDepartmentId] = useState("");
   const [employmentStatus, setEmploymentStatus] = useState<
     EmploymentStatus | ""
   >("");
-  const [creating, setCreating] = useState(false);
-  const [accountSearch, setAccountSearch] = useState("");
-  const [accountQuery, setAccountQuery] = useState("");
-  const [selectedUserId, setSelectedUserId] = useState("");
+  const [creating, setCreating] = useState(Boolean(linkedAccount));
+  const [accountSearch, setAccountSearch] = useState(
+    linkedAccount?.email ?? "",
+  );
+  const [accountQuery, setAccountQuery] = useState(linkedAccount?.email ?? "");
+  const [selectedUserId, setSelectedUserId] = useState(linkedAccount?.id ?? "");
+  const [accountNameModified, setAccountNameModified] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [invitedEmail, setInvitedEmail] = useState("");
   const [editing, setEditing] = useState<Employee | null>(null);
@@ -66,7 +79,7 @@ export function EmployeeWorkspace() {
   const [form, setForm] = useState({
     employeeCode: "",
     fullName: "",
-    email: "",
+    email: linkedAccount?.email ?? "",
     phone: "",
     departmentId: "",
     position: "",
@@ -74,6 +87,26 @@ export function EmployeeWorkspace() {
     contractType: "FULL_TIME",
     baseSalary: "",
   });
+
+  function closeCreateForm() {
+    setCreating(false);
+    setSelectedUserId("");
+    setAccountNameModified(false);
+    setAccountSearch("");
+    setAccountQuery("");
+    setForm({
+      employeeCode: "",
+      fullName: "",
+      email: "",
+      phone: "",
+      departmentId: "",
+      position: "",
+      joinDate: "",
+      contractType: "FULL_TIME",
+      baseSalary: "",
+    });
+    onClearLinkedAccount?.();
+  }
 
   const departments = useQuery({
     queryKey: ["hr", "departments", "options"],
@@ -104,25 +137,19 @@ export function EmployeeWorkspace() {
     mutationFn: () =>
       hrEmployeeApi.create({
         ...form,
+        fullName: accountNameModified
+          ? form.fullName
+          : form.fullName ||
+            accounts.data?.data.find((item) => item.id === linkedAccount?.id)
+              ?.fullName ||
+            "",
         userId: selectedUserId || null,
         phone: form.phone || null,
         contractType: form.contractType || null,
         baseSalary: form.baseSalary || null,
       }),
     onSuccess: () => {
-      setCreating(false);
-      setSelectedUserId("");
-      setForm({
-        employeeCode: "",
-        fullName: "",
-        email: "",
-        phone: "",
-        departmentId: "",
-        position: "",
-        joinDate: "",
-        contractType: "FULL_TIME",
-        baseSalary: "",
-      });
+      closeCreateForm();
       void queryClient.invalidateQueries({ queryKey: ["hr", "employees"] });
     },
   });
@@ -153,6 +180,9 @@ export function EmployeeWorkspace() {
     },
   });
   const rows = employees.data?.data ?? [];
+  const linkedAccountName =
+    accounts.data?.data.find((item) => item.id === linkedAccount?.id)
+      ?.fullName ?? "";
 
   function updateField(field: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -181,21 +211,48 @@ export function EmployeeWorkspace() {
       className="mx-auto max-w-7xl space-y-6 pb-12"
       aria-labelledby="employees-title"
     >
-      <header className="relative overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-950 px-6 py-7 text-white sm:px-8">
-        <div className="absolute inset-y-0 right-0 w-2/5 bg-[radial-gradient(circle_at_center,rgba(34,197,94,0.2),transparent_68%)]" />
-        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+      <header
+        className={
+          embedded
+            ? "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            : "relative overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-950 px-6 py-7 text-white sm:px-8"
+        }
+      >
+        {!embedded ? (
+          <div className="absolute inset-y-0 right-0 w-2/5 bg-[radial-gradient(circle_at_center,rgba(34,197,94,0.2),transparent_68%)]" />
+        ) : null}
+        <div
+          className={
+            embedded
+              ? "flex flex-1 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+              : "relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between"
+          }
+        >
           <div>
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">
+            <p
+              className={`flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] ${embedded ? "text-emerald-800" : "text-emerald-300"}`}
+            >
               <BriefcaseBusiness className="size-4" aria-hidden="true" /> Hồ sơ
               nội bộ
             </p>
-            <h1
-              id="employees-title"
-              className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl"
+            {embedded ? (
+              <h2
+                id="employees-title"
+                className="mt-2 text-xl font-bold tracking-tight text-neutral-950"
+              >
+                Hồ sơ nhân viên
+              </h2>
+            ) : (
+              <h1
+                id="employees-title"
+                className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl"
+              >
+                Đội ngũ nhân sự
+              </h1>
+            )}
+            <p
+              className={`mt-2 max-w-2xl text-sm leading-6 ${embedded ? "text-neutral-600" : "text-neutral-300"}`}
             >
-              Đội ngũ nhân sự
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
               Một nguồn dữ liệu rõ ràng cho cơ cấu, vị trí, trạng thái làm việc
               và thông tin hợp đồng.
             </p>
@@ -333,11 +390,20 @@ export function EmployeeWorkspace() {
               createEmployee.mutate();
             }}
           >
+            {linkedAccount ? (
+              <p className="rounded-xl border border-emerald-200 bg-white p-3 text-sm text-emerald-900 md:col-span-2 xl:col-span-3">
+                Đang tạo hồ sơ nhân viên cho{" "}
+                <strong>{linkedAccount.email}</strong>. Nhập mã nhân viên, phòng
+                ban và ngày vào làm để người này có thể được phân công chấm
+                công.
+              </p>
+            ) : null}
             <div className="rounded-xl border border-current/15 p-4 md:col-span-2 xl:col-span-3">
               <label className="text-sm font-bold text-neutral-800">
                 Tìm tài khoản đã đăng ký
                 <input
                   className={`${fieldClass} mt-2`}
+                  disabled={Boolean(linkedAccount)}
                   onChange={(event) => setAccountSearch(event.target.value)}
                   placeholder="Tên hoặc email người dùng"
                   value={accountSearch}
@@ -345,7 +411,9 @@ export function EmployeeWorkspace() {
               </label>
               <button
                 className="mt-2 min-h-10 rounded-lg border border-neutral-300 px-4 text-sm font-semibold"
-                disabled={accountSearch.trim().length < 2}
+                disabled={
+                  Boolean(linkedAccount) || accountSearch.trim().length < 2
+                }
                 onClick={() => {
                   setSelectedUserId("");
                   setAccountQuery(accountSearch.trim());
@@ -368,6 +436,7 @@ export function EmployeeWorkspace() {
                 Liên kết tài khoản
                 <select
                   className={`${fieldClass} mt-2`}
+                  disabled={Boolean(linkedAccount)}
                   onChange={(event) => {
                     const user = accounts.data?.data.find(
                       (item) => item.id === event.target.value,
@@ -385,6 +454,14 @@ export function EmployeeWorkspace() {
                   <option value="">
                     Chọn tài khoản đã đăng ký hoặc nhập email bên dưới
                   </option>
+                  {linkedAccount &&
+                  !(accounts.data?.data ?? []).some(
+                    (user) => user.id === linkedAccount.id,
+                  ) ? (
+                    <option value={linkedAccount.id}>
+                      {linkedAccount.email}
+                    </option>
+                  ) : null}
                   {accounts.data?.data
                     .filter(
                       (user) =>
@@ -403,7 +480,9 @@ export function EmployeeWorkspace() {
                 kiểm duyệt. Nếu không thấy tài khoản, tìm theo email. Tạo hồ sơ
                 bằng email không tự gửi lời mời.
               </p>
-              {accounts.data && accounts.data.data.length === 0 ? (
+              {accounts.data &&
+              accounts.data.data.length === 0 &&
+              !linkedAccount ? (
                 <p className="mt-2 text-sm text-neutral-700" role="status">
                   Chưa tìm thấy tài khoản phù hợp. Kiểm tra trạng thái xác minh
                   hoặc mời nhân viên qua Gmail.
@@ -423,7 +502,7 @@ export function EmployeeWorkspace() {
               <button
                 aria-label="Đóng biểu mẫu"
                 className="rounded-lg p-2 text-neutral-600 hover:bg-white"
-                onClick={() => setCreating(false)}
+                onClick={closeCreateForm}
                 type="button"
               >
                 <X className="size-5" />
@@ -442,9 +521,16 @@ export function EmployeeWorkspace() {
               Họ và tên
               <input
                 className={`${fieldClass} mt-2`}
-                onChange={(e) => updateField("fullName", e.target.value)}
+                onChange={(e) => {
+                  setAccountNameModified(true);
+                  updateField("fullName", e.target.value);
+                }}
                 required
-                value={form.fullName}
+                value={
+                  accountNameModified
+                    ? form.fullName
+                    : form.fullName || linkedAccountName
+                }
               />
             </label>
             <label className="text-sm font-bold text-neutral-800">
@@ -613,7 +699,6 @@ export function EmployeeWorkspace() {
                     .filter(
                       (user) =>
                         user.isEmailVerified &&
-                        user.roles.includes("USER") &&
                         !rows.some((employee) => employee.userId === user.id),
                     )
                     .map((user) => (

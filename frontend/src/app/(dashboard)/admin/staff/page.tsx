@@ -1,10 +1,5 @@
-import { RoleGate } from "@/components/auth/role-gate";
-import { StaffAccountWorkspace } from "@/components/admin/staff-account-workspace";
+import { redirect } from "next/navigation";
 
 export default function StaffAccountsPage() {
-  return (
-    <RoleGate allowed={["SUPER_ADMIN"]}>
-      <StaffAccountWorkspace />
-    </RoleGate>
-  );
+  redirect("/admin/employees");
 }

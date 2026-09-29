@@ -131,6 +131,29 @@ beforeEach(() => {
 });
 
 describe("StaffAccountWorkspace", () => {
+  it("opens an employee profile from an active reviewer account", async () => {
+    const onCreateEmployee = vi.fn();
+    render(<StaffAccountWorkspace onCreateEmployee={onCreateEmployee} />, {
+      wrapper,
+    });
+    await screen.findByText("reviewer@cnsgroup.vn");
+
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "Mở hồ sơ nhân viên cho reviewer@cnsgroup.vn",
+      }),
+    );
+    expect(onCreateEmployee).toHaveBeenCalledWith({
+      id: "staff-1",
+      email: "reviewer@cnsgroup.vn",
+    });
+    expect(
+      screen.queryByRole("button", {
+        name: "Mở hồ sơ nhân viên cho finance@cnsgroup.vn",
+      }),
+    ).toBeNull();
+  });
+
   it("shows a clear summary, account table and filters", async () => {
     render(<StaffAccountWorkspace />, { wrapper });
 
@@ -169,7 +192,10 @@ describe("StaffAccountWorkspace", () => {
 
   it("lets the administrator select an existing account and confirm the invitation", async () => {
     const user = userEvent.setup();
-    render(<StaffAccountWorkspace />, { wrapper });
+    const onCreateEmployee = vi.fn();
+    render(<StaffAccountWorkspace onCreateEmployee={onCreateEmployee} />, {
+      wrapper,
+    });
     await screen.findByText("reviewer@cnsgroup.vn");
 
     await user.click(
@@ -190,5 +216,9 @@ describe("StaffAccountWorkspace", () => {
         role: "MODERATOR",
       }),
     );
+    expect(onCreateEmployee).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText(/Người đó sẽ nhận thông báo và bấm Chấp nhận/),
+    ).toBeDefined();
   });
 });

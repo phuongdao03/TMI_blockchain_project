@@ -402,8 +402,8 @@ export default function AdminGuidePage() {
                   chức và kiểm tra quyền đã được thu hồi.
                 </li>
               </Steps>
-              <WorkspaceLink href="/admin/staff">
-                Mở tài khoản nhân sự
+              <WorkspaceLink href="/admin/employees">
+                Mở mục Nhân sự
               </WorkspaceLink>
             </GuideSection>
 

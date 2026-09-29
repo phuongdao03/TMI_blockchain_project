@@ -25,7 +25,8 @@ const pageTitles: Record<string, string> = {
   "/admin/payroll": "Bảng lương",
   "/admin/reviews": "Phân công thẩm định",
   "/admin/content": "Quản trị nội dung",
-  "/admin/staff": "Tài khoản nhân sự",
+  "/admin/staff": "Nhân sự",
+  "/admin/employees": "Nhân sự",
   "/admin/audit": "Lịch sử hoạt động",
   "/admin/reports": "Báo cáo",
 };

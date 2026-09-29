@@ -202,9 +202,10 @@ const screens: Record<string, PreviewScreen> = {
     ],
   },
   "/admin/employees": {
-    title: "Nhân viên",
+    title: "Nhân sự",
     eyebrow: "Nhân sự",
-    description: "Danh sách nhân viên, phòng ban và trạng thái làm việc.",
+    description:
+      "Quản lý tài khoản, quyền kiểm duyệt và hồ sơ nhân viên tại một nơi.",
     columns: ["Nhân viên", "Phòng ban", "Trạng thái"],
     rows: [
       ["Nguyễn Minh Anh", "Thẩm định", "Đang làm việc"],

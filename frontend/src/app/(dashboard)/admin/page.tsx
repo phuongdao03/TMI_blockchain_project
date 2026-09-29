@@ -13,9 +13,10 @@ import { OperationsDashboard } from "@/components/admin/operations-dashboard";
 
 const modules = [
   {
-    href: "/admin/staff",
-    title: "Đội ngũ làm việc",
-    description: "Mời nhân sự, cập nhật nhiệm vụ và khóa tài khoản khi cần.",
+    href: "/admin/employees",
+    title: "Nhân sự",
+    description:
+      "Quản lý tài khoản, hồ sơ nhân viên và quyền chấm công tại một nơi.",
     icon: UsersRound,
     tone: "bg-primary-50 text-primary-700",
   },
@@ -94,7 +95,7 @@ export default function AdminPortalPage() {
             </div>
             <Link
               className="text-sm font-bold text-primary-700 underline-offset-4 hover:underline"
-              href="/admin/staff"
+              href="/admin/employees"
             >
               Quản lý đội ngũ →
             </Link>

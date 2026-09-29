@@ -38,7 +38,15 @@ function invitationErrorMessage(cause: unknown): string {
   return "Không thể gửi lời mời lúc này. Vui lòng thử lại hoặc kiểm tra cấu hình gửi email.";
 }
 
-export function StaffAccountWorkspace() {
+export function StaffAccountWorkspace({
+  embedded = false,
+  isOpeningEmployee = false,
+  onCreateEmployee,
+}: {
+  embedded?: boolean;
+  isOpeningEmployee?: boolean;
+  onCreateEmployee?: (account: { id: string; email: string }) => void;
+} = {}) {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [candidateSearch, setCandidateSearch] = useState("");
@@ -89,7 +97,7 @@ export function StaffAccountWorkspace() {
       setEmail("");
       setConfirmInvite(false);
       setFeedback(
-        "Đã gửi lời mời bảo mật. Nhân sự cần xác minh đúng email nhận lời mời để kích hoạt tài khoản.",
+        "Đã gửi lời mời cho tài khoản đã chọn. Người đó sẽ nhận thông báo và bấm Chấp nhận để có quyền kiểm duyệt.",
       );
       setError(null);
       void queryClient.invalidateQueries({
@@ -176,34 +184,36 @@ export function StaffAccountWorkspace() {
 
   return (
     <div className="staff-account-workspace mx-auto max-w-7xl space-y-7 pb-8">
-      <header className="border-b border-neutral-200 pb-6">
-        <Link
-          className="inline-flex items-center gap-2 text-sm font-bold text-neutral-500 transition hover:text-neutral-950"
-          href="/admin"
-        >
-          <ArrowLeft aria-hidden="true" className="size-4" />
-          Trung tâm quản trị
-        </Link>
-        <div className="mt-6 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-          <div>
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
-              <UsersRound aria-hidden="true" className="size-4" />
-              Đội ngũ làm việc
-            </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-950 sm:text-4xl">
-              Mời và quản lý người phụ trách
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
-              Mời nhân sự bằng email công việc, theo dõi quá trình kích hoạt và
-              khóa quyền truy cập ngay khi không còn sử dụng.
-            </p>
+      {!embedded ? (
+        <header className="border-b border-neutral-200 pb-6">
+          <Link
+            className="inline-flex items-center gap-2 text-sm font-bold text-neutral-500 transition hover:text-neutral-950"
+            href="/admin"
+          >
+            <ArrowLeft aria-hidden="true" className="size-4" />
+            Trung tâm quản trị
+          </Link>
+          <div className="mt-6 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+            <div>
+              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
+                <UsersRound aria-hidden="true" className="size-4" />
+                Đội ngũ làm việc
+              </p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-950 sm:text-4xl">
+                Mời và quản lý người phụ trách
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
+                Mời nhân sự bằng email công việc, theo dõi quá trình kích hoạt
+                và khóa quyền truy cập ngay khi không còn sử dụng.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm font-semibold text-primary-700">
+              <ShieldCheck aria-hidden="true" className="size-5" />
+              Khu vực quản trị
+            </div>
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm font-semibold text-primary-700">
-            <ShieldCheck aria-hidden="true" className="size-5" />
-            Khu vực quản trị
-          </div>
-        </div>
-      </header>
+        </header>
+      ) : null}
       {feedback ? (
         <p
           className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-800"
@@ -233,7 +243,7 @@ export function StaffAccountWorkspace() {
         <SummaryCard label="Đang hoạt động" value={activeCount} tone="green" />
         <SummaryCard label="Đã khóa" value={suspendedCount} tone="red" />
       </section>
-      <div className="grid gap-6 xl:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.6fr)]">
+      <div className="grid gap-6">
         <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
           <div className="flex items-start gap-3">
             <span className="rounded-xl bg-neutral-950 p-3 text-white">
@@ -244,8 +254,8 @@ export function StaffAccountWorkspace() {
                 Chọn người kiểm duyệt
               </h2>
               <p className="mt-1 text-sm leading-6 text-neutral-600">
-                Chọn một tài khoản đã hoạt động trên hệ thống. Người đó chỉ nhận
-                quyền kiểm duyệt sau khi tự chấp nhận lời mời.
+                Chọn tài khoản đang hoạt động trên hệ thống. Người đó sẽ nhận
+                thông báo và tự chấp nhận lời mời để có quyền kiểm duyệt.
               </p>
             </div>
           </div>
@@ -264,7 +274,7 @@ export function StaffAccountWorkspace() {
             />
           </label>
           <div
-            className="mt-4 max-h-80 space-y-2 overflow-y-auto"
+            className="mt-4 grid max-h-80 gap-2 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3"
             data-testid="reviewer-candidates"
           >
             {candidates.isPending ? <TableSkeleton /> : null}
@@ -511,29 +521,13 @@ export function StaffAccountWorkspace() {
                           </p>
                         </td>
                         <td className="px-5 py-4 sm:px-6">
-                          <label
-                            className="sr-only"
-                            htmlFor={`role-${account.id}`}
-                          >
-                            Nhiệm vụ của {account.email}
-                          </label>
-                          <SelectControl
-                            className="rounded-lg border border-neutral-300 bg-white px-2 py-2 text-xs font-semibold outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 disabled:bg-neutral-100"
-                            disabled
-                            id={`role-${account.id}`}
-                            value={account.role}
-                          >
-                            {isProtected ? (
-                              <option value="SUPER_ADMIN">
-                                Quản trị hệ thống
-                              </option>
-                            ) : null}
-                            {STAFF_ACCOUNT_ROLES.map((item) => (
-                              <option key={item.value} value={item.value}>
-                                {item.label}
-                              </option>
-                            ))}
-                          </SelectControl>
+                          <span className="inline-flex rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-2 text-xs font-semibold text-neutral-800">
+                            {isProtected
+                              ? "Quản trị hệ thống"
+                              : (STAFF_ACCOUNT_ROLES.find(
+                                  (item) => item.value === account.role,
+                                )?.label ?? account.role)}
+                          </span>
                         </td>
                         <td className="px-5 py-4 sm:px-6">
                           <span className="inline-flex rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-xs font-bold text-neutral-700">
@@ -542,6 +536,24 @@ export function StaffAccountWorkspace() {
                         </td>
                         <td className="px-5 py-4 sm:px-6">
                           <div className="flex flex-wrap gap-2">
+                            {account.status === "ACTIVE" &&
+                            !isProtected &&
+                            onCreateEmployee ? (
+                              <button
+                                aria-label={`Mở hồ sơ nhân viên cho ${account.email}`}
+                                className="inline-flex min-h-9 items-center rounded-lg border border-emerald-300 px-3 text-xs font-bold text-emerald-800 hover:bg-emerald-50 disabled:cursor-wait disabled:opacity-60"
+                                disabled={isOpeningEmployee}
+                                onClick={() =>
+                                  onCreateEmployee({
+                                    id: account.id,
+                                    email: account.email,
+                                  })
+                                }
+                                type="button"
+                              >
+                                Hồ sơ nhân viên
+                              </button>
+                            ) : null}
                             {nextStatus ? (
                               <button
                                 aria-label={`${nextStatus === "ACTIVE" ? "Mở khóa" : "Khóa"} ${account.email}`}
@@ -592,7 +604,7 @@ export function StaffAccountWorkspace() {
         </section>
         <ConfirmationDialog
           confirmLabel="Gửi lời mời"
-          description={`Lời mời sẽ được gửi tới ${email || "email đã nhập"} cho nhiệm vụ ${selectedRole?.label ?? "đã chọn"}. Người nhận phải xác minh đúng email trước khi làm việc.`}
+          description={`Lời mời sẽ được gửi tới ${email || "email đã nhập"} cho nhiệm vụ ${selectedRole?.label ?? "đã chọn"}. Người nhận cần bấm Chấp nhận trong thông báo để có quyền kiểm duyệt.`}
           isPending={create.isPending}
           onCancel={() => setConfirmInvite(false)}
           onConfirm={() => create.mutate()}
