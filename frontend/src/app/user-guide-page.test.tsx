@@ -13,12 +13,12 @@ describe("UserGuidePage", () => {
       }),
     ).toBeDefined();
     for (const heading of [
-      "Về dự án Đề cử Tinh Hoa Việt",
+      "Chọn việc bạn cần làm",
       "Khám phá đề cử",
       "Tạo tài khoản và đăng nhập",
       "Tạo và gửi hồ sơ đề cử",
       "Theo dõi hồ sơ, bổ sung và lệ phí",
-      "Tra cứu chứng thư, QR và lưu trữ blockchain",
+      "Tra cứu và kiểm tra chứng thư",
       "Cài ứng dụng trên thiết bị",
       "Bảo vệ tài khoản và nhận hỗ trợ",
     ])
@@ -28,18 +28,14 @@ describe("UserGuidePage", () => {
       screen.getByText(/không lưu.*tệp gốc.*tài liệu cá nhân/i),
     ).toBeDefined();
     expect(
-      screen.getByText(
-        /tìm kiếm, ghi nhận và lan tỏa những giá trị tiêu biểu/i,
-      ),
+      screen.getByText(/Tinh Hoa Việt là tổ chức tiếp nhận/i),
     ).toBeDefined();
+    expect(screen.getByText(/Tinh Hoa Việt là tổ chức/i)).toBeDefined();
+    expect(screen.queryByText(/CNS/i)).toBeNull();
+    expect(screen.queryByText(/là dự án/i)).toBeNull();
+    expect(screen.getByText(/Kết quả: hồ sơ xuất hiện/i)).toBeDefined();
     expect(
-      screen.getByText(/CNS là đơn vị phát triển nền tảng công nghệ phục vụ/i),
-    ).toBeDefined();
-    expect(
-      screen.getByRole("heading", { name: "Chứng thư mang lại điều gì?" }),
-    ).toBeDefined();
-    expect(
-      screen.getByRole("heading", { name: "Thông tin nào được công khai?" }),
+      screen.getByText(/Tài liệu thẩm định, thông tin liên hệ/i),
     ).toBeDefined();
     expect(screen.getByText(/không thanh toán lần hai/i)).toBeDefined();
     expect(
@@ -53,6 +49,11 @@ describe("UserGuidePage", () => {
         .getByRole("link", { name: "Mở thư viện đề cử" })
         .getAttribute("href"),
     ).toBe("/works");
+    expect(
+      screen
+        .getByRole("link", { name: "Mở Hồ sơ của tôi" })
+        .getAttribute("href"),
+    ).toBe("/dossiers");
     expect(
       screen
         .getByRole("link", { name: "Tra cứu chứng thư" })

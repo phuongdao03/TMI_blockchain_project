@@ -18,6 +18,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import type { AuthUser } from "@/lib/api/types";
 import type { WorkspacePersona } from "@/lib/auth/role-workspaces";
 import { AuthUserProvider } from "@/lib/auth/user-context";
+import AdminGuidePage from "@/app/(dashboard)/admin/guide/page";
 import { previewScreenFor, type PreviewScreen } from "./preview-screens";
 
 const roleOptions: ReadonlyArray<{
@@ -493,7 +494,9 @@ export function RoleUiPreview({
                 Xem thử · {role}
               </span>
             </div>
-            {screen ? (
+            {role === "SUPER_ADMIN" && path === "/admin/guide" ? (
+              <AdminGuidePage />
+            ) : screen ? (
               <ScreenPreview screen={screen} />
             ) : (
               <RoleHome role={role} />

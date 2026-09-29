@@ -23,6 +23,7 @@ describe("AdminGuidePage", () => {
       "Ghi nhận hồ sơ trên blockchain",
       "Công bố nội dung",
       "Quản lý tài khoản nhân sự",
+      "Quản lý nhân viên và tính lương",
       "Kiểm tra lịch sử và báo cáo",
       "Xử lý tình huống thường gặp",
     ]) {
@@ -34,6 +35,13 @@ describe("AdminGuidePage", () => {
       screen.getByText(/không đưa tài liệu gốc lên blockchain/i),
     ).toBeDefined();
     expect(screen.getByText(/chỉ tạo khoản phí sau khi hồ sơ/i)).toBeDefined();
+    expect(screen.getByText(/quản trị viên Tinh Hoa Việt/i)).toBeDefined();
+    expect(screen.queryByText(/CNS/i)).toBeNull();
+    expect(
+      screen
+        .getByRole("link", { name: "Mở hàng đợi thẩm định" })
+        .getAttribute("href"),
+    ).toBe("/admin/reviews");
     expect(
       screen.queryByText(/window\.ethereum|calldata|checksum/i),
     ).toBeNull();

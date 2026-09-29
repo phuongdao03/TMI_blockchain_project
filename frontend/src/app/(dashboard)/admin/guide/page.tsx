@@ -17,6 +17,7 @@ import { RoleGate } from "@/components/auth/role-gate";
 const sections = [
   { href: "#start", label: "Bắt đầu ca làm việc" },
   { href: "#attendance", label: "Điểm làm việc và chấm công" },
+  { href: "#employees", label: "Nhân viên và tính lương" },
   { href: "#records", label: "Hồ sơ và người dùng" },
   { href: "#review", label: "Thẩm định hồ sơ" },
   { href: "#payment", label: "Thanh toán" },
@@ -97,9 +98,9 @@ export default function AdminGuidePage() {
             Hướng dẫn quản trị
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--theme-muted)] sm:text-base">
-            Hướng dẫn các công việc vận hành thường ngày, từ tiếp nhận hồ sơ đến
-            công bố kết quả. Mỗi phần cho biết nơi thao tác, thứ tự thực hiện và
-            điểm cần kiểm tra trước khi xác nhận.
+            Dành cho quản trị viên Tinh Hoa Việt. Chọn công việc trong mục lục,
+            làm theo thứ tự và kiểm tra kết quả trên hồ sơ trước khi chuyển sang
+            bước tiếp theo.
           </p>
         </header>
 
@@ -131,15 +132,17 @@ export default function AdminGuidePage() {
               title="Bắt đầu ca làm việc"
             >
               <p>
-                Mở <strong>Tổng quan vận hành</strong> để nắm hồ sơ đang chờ,
-                khoản thanh toán, nội dung sắp công bố và các cảnh báo cần xử
-                lý. Ưu tiên công việc quá hạn hoặc có trạng thái lỗi trước.
+                Mở <strong>Tổng quan vận hành</strong> đầu mỗi ca để nhận biết
+                việc đang chờ và việc cần xử lý gấp.
               </p>
               <Steps>
-                <li>Kiểm tra thông báo mới và các việc đang quá hạn.</li>
-                <li>Mở từng nhóm công việc để xác nhận dữ liệu thực tế.</li>
+                <li>Xem thông báo, hồ sơ quá hạn và các cảnh báo lỗi.</li>
                 <li>
-                  Chỉ thực hiện hành động khi tài khoản của bạn có đúng quyền.
+                  Mở từng nhóm công việc để kiểm tra trạng thái trên hồ sơ gốc.
+                </li>
+                <li>
+                  Xử lý theo mức độ ưu tiên; chuyển cho người phụ trách nếu
+                  nghiệp vụ nằm ngoài quyền của bạn.
                 </li>
               </Steps>
               <WorkspaceLink href="/admin/dashboard">
@@ -152,29 +155,83 @@ export default function AdminGuidePage() {
               icon={FileClock}
               title="Điểm làm việc và chấm công GPS"
             >
+              <p>
+                Hoàn tất điểm làm việc và chính sách vị trí trước khi phân công
+                nhân viên chấm công.
+              </p>
               <Steps>
                 <li>
-                  Tạo và kích hoạt điểm chấm công; đặt múi giờ theo địa điểm làm
-                  việc của nhân viên.
+                  Tạo điểm chấm công, nhập mã và tên dễ nhận biết, rồi kích
+                  hoạt.
                 </li>
                 <li>
-                  Nhập địa chỉ đầy đủ, chọn kết quả, kiểm tra bản đồ và bấm chọn
-                  làm tâm vùng. Có thể nhập tọa độ đã xác minh hoặc lấy GPS ngay
-                  tại văn phòng.
+                  Đặt múi giờ của điểm làm việc. Tìm địa chỉ và chọn kết quả phù
+                  hợp; kiểm tra bản đồ trước khi bấm Chọn vị trí này làm tâm
+                  vùng. Có thể dùng tọa độ đã xác minh hoặc GPS tại văn phòng.
                 </li>
                 <li>
-                  Kiểm tra sai số thiết bị, bán kính, ngày hiệu lực rồi lưu
-                  chính sách; sau đó mới phân công nhân viên.
+                  Kiểm tra bán kính, sai số GPS cho phép và ngày hiệu lực; lưu
+                  chính sách rồi phân công nhân viên.
                 </li>
                 <li>
-                  Đối chiếu giờ vào/ra và xét duyệt ngoại lệ vị trí theo bằng
-                  chứng. Không coi kết quả geocoding là bằng chứng nhân viên đã
-                  ở đó.
+                  Theo dõi giờ vào, giờ ra và xem bằng chứng trước khi xử lý
+                  ngoại lệ vị trí.
                 </li>
               </Steps>
+              <p>
+                Kết quả cần thấy: điểm làm việc có chính sách đang hiệu lực và
+                nhân viên được phân công đúng điểm. Nếu bản đồ hoặc GPS báo lỗi,
+                kiểm tra lại vị trí trước khi dùng dữ liệu chấm công.
+              </p>
               <WorkspaceLink href="/admin/attendance/worksites">
                 Mở điểm chấm công
               </WorkspaceLink>
+            </GuideSection>
+
+            <GuideSection
+              id="employees"
+              icon={UsersRound}
+              title="Quản lý nhân viên và tính lương"
+            >
+              <p>
+                Hồ sơ nhân viên và tài khoản đăng nhập là hai phần riêng. Liên
+                kết tài khoản đã đăng ký hoặc mời nhân viên bằng email, sau đó
+                mới tạo hồ sơ nhân sự.
+              </p>
+              <Steps>
+                <li>
+                  Tìm tài khoản theo email. Nếu chưa có, gửi lời mời và chờ nhân
+                  viên xác minh email.
+                </li>
+                <li>
+                  Liên kết tài khoản với hồ sơ nhân viên; nhập phòng ban, vị
+                  trí, hợp đồng, thời gian thử việc và mức lương áp dụng.
+                </li>
+                <li>
+                  Tạo kỳ lương theo điểm làm việc và tháng. Tính số liệu, rồi
+                  đối chiếu ngày công, nghỉ phép, tăng ca và các khoản điều
+                  chỉnh trước khi xác nhận.
+                </li>
+                <li>
+                  Chỉ chọn <strong>Đánh dấu đã chi</strong> sau khi xác nhận
+                  tiền đã được chuyển. Tải báo cáo để đối chiếu với chứng từ
+                  thanh toán.
+                </li>
+              </Steps>
+              <p>
+                Kết quả cần thấy: nhân viên đã liên kết đúng tài khoản; kỳ lương
+                chuyển sang trạng thái xác nhận sau khi kiểm tra số liệu. Thao
+                tác đánh dấu đã chi chỉ ghi nhận nội bộ, không tự chuyển tiền
+                qua ngân hàng.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <WorkspaceLink href="/admin/employees">
+                  Mở nhân viên
+                </WorkspaceLink>
+                <WorkspaceLink href="/admin/payroll">
+                  Mở bảng lương
+                </WorkspaceLink>
+              </div>
             </GuideSection>
 
             <GuideSection
@@ -183,21 +240,21 @@ export default function AdminGuidePage() {
               title="Quản lý hồ sơ và người dùng"
             >
               <p>
-                Trang <strong>Người dùng</strong> dùng để tra cứu chủ hồ sơ và
-                tình trạng tài khoản. Khi cần hỗ trợ, hãy đối chiếu đúng email,
-                mã hồ sơ và phiên bản trước khi cập nhật trạng thái.
+                Dùng trang <strong>Người dùng</strong> để tra cứu tài khoản và
+                chủ hồ sơ. Khi hỗ trợ một trường hợp cụ thể, đối chiếu email và
+                mã hồ sơ trước khi thao tác.
               </p>
               <Steps>
-                <li>Tìm người dùng bằng thông tin nhận diện có sẵn.</li>
+                <li>Tìm tài khoản bằng email hoặc thông tin được cung cấp.</li>
                 <li>
-                  Mở hồ sơ liên quan và kiểm tra tài liệu theo từng loại đã khai
-                  báo.
+                  Mở hồ sơ liên quan; kiểm tra trạng thái, phiên bản và tài liệu
+                  cần xử lý.
                 </li>
                 <li>
-                  Không sửa nội dung thay cho người nộp; yêu cầu họ bổ sung khi
-                  thiếu.
+                  Nếu thiếu thông tin, gửi yêu cầu bổ sung để người nộp tự cập
+                  nhật hồ sơ.
                 </li>
-                <li>Khóa tài khoản chỉ khi có căn cứ và ghi rõ lý do.</li>
+                <li>Nếu cần khóa tài khoản, ghi rõ căn cứ và lý do.</li>
               </Steps>
               <WorkspaceLink href="/admin/users">
                 Mở danh sách người dùng
@@ -210,21 +267,23 @@ export default function AdminGuidePage() {
               title="Tổ chức thẩm định hồ sơ"
             >
               <p>
-                Mỗi hồ sơ có thể chứa nhiều tài liệu khác loại. Nhân viên thẩm
-                định kiểm tra từng tài liệu theo loại mà người nộp đã chọn, ghi
-                nhận đạt, cần bổ sung hoặc không phù hợp và nêu căn cứ rõ ràng.
+                Quản trị viên phân công hồ sơ; người thẩm định đánh giá từng tài
+                liệu theo loại đã khai báo và ghi rõ căn cứ cho kết luận.
               </p>
               <Steps>
-                <li>Phân công hồ sơ cho người có chuyên môn phù hợp.</li>
+                <li>Mở hàng đợi và phân công hồ sơ cho người phù hợp.</li>
                 <li>
-                  Đảm bảo người thẩm định đang xem đúng phiên bản tài liệu.
+                  Kiểm tra tiến độ; bảo đảm kết luận áp dụng cho đúng phiên bản
+                  tài liệu.
                 </li>
                 <li>
-                  Kiểm tra kết luận, căn cứ và ghi chú trước khi hoàn tất phiếu
-                  thẩm định.
+                  Đối chiếu kết luận, lý do cần bổ sung hoặc từ chối và ghi chú
+                  trước khi hoàn tất quyết định.
                 </li>
               </Steps>
-              <WorkspaceLink href="/reviews">Mở hồ sơ đánh giá</WorkspaceLink>
+              <WorkspaceLink href="/admin/reviews">
+                Mở hàng đợi thẩm định
+              </WorkspaceLink>
             </GuideSection>
 
             <GuideSection
@@ -233,25 +292,29 @@ export default function AdminGuidePage() {
               title="Tạo yêu cầu thanh toán"
             >
               <p>
-                Chỉ tạo khoản phí sau khi hồ sơ đã đến đúng giai đoạn thu phí.
-                Kiểm tra mã hồ sơ, số tiền, nội dung khoản phí và hạn thanh toán
-                trước khi gửi cho người nộp.
+                Chỉ tạo khoản phí sau khi hồ sơ đến giai đoạn được phép thu.
+                Việc này ảnh hưởng trực tiếp đến số tiền người nộp nhìn thấy.
               </p>
               <Steps>
+                <li>Chọn hồ sơ đủ điều kiện và kiểm tra mã hồ sơ.</li>
                 <li>
-                  Chọn đúng hồ sơ đã được phê duyệt hoặc đủ điều kiện thu phí.
+                  Nhập số tiền theo biểu phí hiện hành, nội dung khoản phí và
+                  hạn thanh toán.
                 </li>
                 <li>
-                  Nhập số tiền theo biểu phí đang áp dụng và mô tả dễ hiểu.
+                  Xem lại thông tin, gửi yêu cầu và theo dõi trạng thái thanh
+                  toán trong hệ thống.
                 </li>
                 <li>
-                  Gửi yêu cầu rồi theo dõi trạng thái thanh toán trong hệ thống.
-                </li>
-                <li>
-                  Nếu tiền đã chuyển nhưng chưa cập nhật, chưa tạo yêu cầu
+                  Nếu người nộp báo đã chuyển tiền mà trạng thái chưa cập nhật,
+                  đối chiếu giao dịch trước khi xử lý; không tạo khoản thu
                   trùng.
                 </li>
               </Steps>
+              <p>
+                Kết quả cần thấy: yêu cầu thanh toán xuất hiện trên đúng hồ sơ
+                với số tiền và hạn thanh toán đã kiểm tra.
+              </p>
               <WorkspaceLink href="/admin/payments">
                 Mở quản lý tài chính
               </WorkspaceLink>
@@ -263,25 +326,24 @@ export default function AdminGuidePage() {
               title="Ghi nhận hồ sơ trên blockchain"
             >
               <p>
-                Bước này dành cho hồ sơ đã hoàn tất xét duyệt. Hệ thống chỉ công
-                bố dấu vân tay số để kiểm tra tính toàn vẹn; không đưa tài liệu
-                gốc lên blockchain.
+                Thực hiện sau khi hồ sơ hoàn tất xét duyệt và các điều kiện
+                thanh toán. Hệ thống chỉ công bố dấu vân tay số; không đưa tài
+                liệu gốc lên blockchain.
               </p>
               <Steps>
-                <li>Kết nối đúng ví của tổ chức và chọn mạng Polygon.</li>
-                <li>Đối chiếu tên hồ sơ, phiên bản và dấu vân tay số.</li>
+                <li>Kiểm tra hồ sơ đã đủ điều kiện ghi nhận.</li>
+                <li>Kết nối ví được cấp quyền và chọn mạng Polygon.</li>
+                <li>Đối chiếu mã hồ sơ, phiên bản và dấu vân tay số.</li>
                 <li>
-                  Xác nhận giao dịch trong ví và chờ hệ thống báo đã ghi nhận.
-                </li>
-                <li>
-                  Không đóng trang khi giao dịch đang chờ; không gửi lại cùng hồ
-                  sơ.
+                  Xác nhận trong ví và theo dõi trạng thái đến khi hiển thị
+                  <strong> Đã ghi nhận</strong>. Nếu đang chờ, kiểm tra giao
+                  dịch trước khi thử lại.
                 </li>
               </Steps>
               <p>
-                Chỉ xem là hoàn tất khi trạng thái hiển thị{" "}
-                <strong>Đã ghi nhận</strong>. Nếu ví hoặc mạng không đúng, dừng
-                thao tác và chọn lại trước khi ký.
+                Kết quả cần thấy: trạng thái <strong>Đã ghi nhận</strong> và mã
+                giao dịch tương ứng. Nếu ví hoặc mạng không đúng, dừng thao tác
+                và chọn lại trước khi ký.
               </p>
               <WorkspaceLink href="/blockchain">
                 Mở khu vực ghi nhận
@@ -294,21 +356,26 @@ export default function AdminGuidePage() {
               title="Công bố nội dung"
             >
               <p>
-                Khu vực này quyết định nội dung nào xuất hiện trên trang công
-                khai. Việc hồ sơ được duyệt hoặc đã ghi nhận blockchain không tự
-                động đồng nghĩa với việc toàn bộ tài liệu được công khai.
+                Nội dung công bố có thể được xem bởi mọi người. Kiểm tra riêng
+                các trường công khai dù hồ sơ đã được duyệt và ghi nhận.
               </p>
               <Steps>
-                <li>Chọn tác phẩm hoặc hồ sơ đã đủ điều kiện công bố.</li>
+                <li>Chọn hồ sơ đã đủ điều kiện công bố.</li>
                 <li>
-                  Kiểm tra tiêu đề, mô tả, hình đại diện, danh mục và địa điểm.
+                  Đọc lại tiêu đề, mô tả; kiểm tra hình đại diện, danh mục và
+                  địa điểm hiển thị.
                 </li>
-                <li>Xem trước nội dung ở cả màn hình lớn và điện thoại.</li>
+                <li>Xem trước nội dung trên máy tính và điện thoại.</li>
                 <li>
-                  Chọn công khai khi thông tin đã đúng và không lộ dữ liệu riêng
-                  tư.
+                  Chỉ công bố khi thông tin chính xác và không chứa dữ liệu
+                  riêng tư; kiểm tra lại trang công khai sau khi lưu.
                 </li>
               </Steps>
+              <p>
+                Kết quả cần thấy: trang chi tiết công khai hiển thị đúng nội
+                dung đã duyệt. Nếu chưa xuất hiện, kiểm tra trạng thái công bố
+                trước khi thao tác lại.
+              </p>
               <WorkspaceLink href="/admin/content">
                 Mở quản trị nội dung
               </WorkspaceLink>
@@ -320,20 +387,19 @@ export default function AdminGuidePage() {
               title="Quản lý tài khoản nhân sự"
             >
               <p>
-                Mời nhân sự bằng email công việc và cấp đúng vai trò cần dùng.
-                Tài khoản chỉ được kích hoạt khi người được mời xác minh đúng
-                email.
+                Quyền sử dụng hệ thống khác với hồ sơ nhân viên. Chỉ cấp vai trò
+                kiểm duyệt hoặc quản trị cho người có nhiệm vụ tương ứng.
               </p>
               <Steps>
-                <li>Kiểm tra email và nhiệm vụ trước khi gửi lời mời.</li>
-                <li>Chỉ cấp các quyền cần thiết cho công việc được giao.</li>
+                <li>Xác nhận email công việc và nhiệm vụ trước khi mời.</li>
+                <li>Chọn đúng vai trò, chỉ cấp quyền cần cho nhiệm vụ.</li>
                 <li>
-                  Khi đổi vai trò quan trọng, thực hiện đủ bước phê duyệt nội
-                  bộ.
+                  Kiểm tra trạng thái kích hoạt; xem lại quyền khi nhiệm vụ thay
+                  đổi.
                 </li>
                 <li>
-                  Khóa tài khoản ngay khi nhân sự không còn nhiệm vụ trong hệ
-                  thống.
+                  Khi nhân sự rời nhiệm vụ, khóa tài khoản theo quy trình của tổ
+                  chức và kiểm tra quyền đã được thu hồi.
                 </li>
               </Steps>
               <WorkspaceLink href="/admin/staff">
@@ -347,18 +413,16 @@ export default function AdminGuidePage() {
               title="Kiểm tra lịch sử và báo cáo"
             >
               <p>
-                Lịch sử hoạt động giúp đối chiếu ai đã thực hiện thao tác, vào
-                thời điểm nào và trên đối tượng nào. Báo cáo dùng để theo dõi
-                khối lượng công việc và phát hiện điểm bất thường.
+                Dùng lịch sử hoạt động để xác định ai thao tác, vào lúc nào và
+                trên đối tượng nào. Báo cáo giúp theo dõi khối lượng công việc.
               </p>
               <Steps>
                 <li>
                   Lọc theo thời gian, người thực hiện hoặc loại hoạt động.
                 </li>
-                <li>Đối chiếu lịch sử trước khi kết luận có thao tác sai.</li>
+                <li>Mở bản ghi liên quan để đối chiếu trước khi kết luận.</li>
                 <li>
-                  Không chỉnh sửa dữ liệu để che giấu sai sót; ghi nhận hướng xử
-                  lý.
+                  Ghi lại kết quả kiểm tra và cách xử lý theo quy trình nội bộ.
                 </li>
               </Steps>
               <div className="flex flex-wrap gap-3">
@@ -380,9 +444,9 @@ export default function AdminGuidePage() {
                     Không thấy hồ sơ cần xử lý
                   </summary>
                   <p className="mt-2">
-                    Kiểm tra bộ lọc, trạng thái và người được phân công. Nếu vẫn
-                    không thấy, xác nhận hồ sơ đã được gửi chứ không còn là bản
-                    nháp.
+                    Bỏ bộ lọc, kiểm tra trạng thái và người được phân công. Nếu
+                    vẫn không thấy, tra mã hồ sơ và xác nhận người nộp đã gửi hồ
+                    sơ thành công.
                   </p>
                 </details>
                 <details className="p-4">
@@ -390,8 +454,9 @@ export default function AdminGuidePage() {
                     Thanh toán chưa cập nhật
                   </summary>
                   <p className="mt-2">
-                    Đối chiếu mã hồ sơ và mã thanh toán. Chờ hệ thống nhận kết
-                    quả trước khi tạo khoản thu mới hoặc xác nhận thủ công.
+                    Tra mã hồ sơ và mã giao dịch, kiểm tra trạng thái tại khu
+                    vực thanh toán. Chỉ xử lý tiếp sau khi đã đối chiếu kết quả;
+                    tránh tạo khoản thu thứ hai.
                   </p>
                 </details>
                 <details className="p-4">
@@ -399,8 +464,9 @@ export default function AdminGuidePage() {
                     Ví không kết nối hoặc ký không thành công
                   </summary>
                   <p className="mt-2">
-                    Mở khóa ví, chọn đúng tài khoản của tổ chức và mạng Polygon.
-                    Nếu giao dịch đã gửi, kiểm tra trạng thái trước khi thử lại.
+                    Mở khóa ví, chọn tài khoản được cấp quyền và mạng Polygon.
+                    Nếu đã xác nhận giao dịch trong ví, kiểm tra trạng thái trên
+                    hệ thống trước khi thao tác lại.
                   </p>
                 </details>
                 <details className="p-4">
@@ -408,8 +474,9 @@ export default function AdminGuidePage() {
                     Nội dung chưa xuất hiện trên trang công khai
                   </summary>
                   <p className="mt-2">
-                    Kiểm tra trạng thái công bố, thời điểm hiển thị và bản xem
-                    trước. Hồ sơ được duyệt không tự động xuất hiện công khai.
+                    Kiểm tra trạng thái công bố và bản xem trước, sau đó mở
+                    trang công khai để xác nhận. Hồ sơ được duyệt chưa tự động
+                    xuất hiện trong thư viện.
                   </p>
                 </details>
               </div>

@@ -1,31 +1,45 @@
-# Hướng dẫn chấm công và cấu hình địa điểm
+# Hướng dẫn thiết lập điểm làm việc và chấm công
 
-## Dành cho Super Admin
+Tài liệu này dành cho quản trị viên thiết lập vùng chấm công và nhân viên ghi nhận giờ vào, giờ ra. Chấm công dùng vị trí tại thời điểm nhân viên chủ động thao tác; kết quả ngoài vùng hoặc có sai số lớn cần được xem xét theo quy trình của tổ chức.
 
-1. Vào **Điểm chấm công**, tạo địa điểm với mã và tên dễ nhận biết. Kích hoạt địa điểm trước khi tạo chính sách hoặc phân công nhân viên.
-2. Ở **Thiết lập vùng chấm công**, nhập ngày hiệu lực và múi giờ IANA của chính địa điểm, ví dụ `Asia/Ho_Chi_Minh`. Không dùng múi giờ của máy admin cho nhân viên ở nước khác.
-3. Để đặt tâm vùng, có ba cách: tìm địa chỉ đầy đủ rồi chọn một kết quả và bấm **Chọn vị trí này làm tâm vùng**; đứng tại điểm làm việc và bấm **Lấy vị trí thiết bị tại văn phòng**; hoặc nhập cặp vĩ độ/kinh độ đã xác minh. Chọn thành phố chỉ di chuyển bản đồ, không tự đổi tâm vùng.
-4. Geocoding có thể trả vị trí gần đúng, nhất là tại tòa nhà lớn hoặc địa chỉ mới. Kiểm tra bằng bản đồ, tọa độ và bằng chứng ngoài hệ thống trước khi lưu. Vị trí thiết bị cũng kèm sai số do trình duyệt báo; không coi kết quả GPS là chính xác tuyệt đối.
-5. Nhập bán kính cho phép và sai số GPS tối đa theo điều kiện thực tế. Xem lại vùng tròn, ngày hiệu lực và múi giờ, rồi lưu chính sách. Phân công nhân viên cho đúng địa điểm và giai đoạn.
-6. Theo dõi chấm công tại tài khoản Super Admin. Bằng chứng vị trí chính xác chỉ dành cho người có quyền, không xuất ra báo cáo chung. Trường hợp ngoài vùng/sai số lớn phải xử lý theo quy trình xét duyệt hiện hành; không sửa bằng chứng cũ.
+## Quản trị viên: thiết lập điểm làm việc
 
-### Nếu bản đồ không tải
+**Trước khi bắt đầu:** Chuẩn bị địa chỉ, múi giờ, tọa độ đã kiểm tra (nếu có), bán kính chấm công và ngày bắt đầu áp dụng. Đăng nhập bằng tài khoản Super Admin.
 
-- Kiểm tra website chạy HTTPS và `Referrer-Policy` trên trang là `strict-origin-when-cross-origin`, không có `no-referrer` trên trang cấu hình.
-- Trong Stadia Maps, khai báo đúng domain `decu.tinhhoaviet.org.vn`. Kiểm tra tile request trong DevTools → Network: trạng thái thành công, `Referer` là domain production. Không gửi API key trong ảnh chụp.
-- URL tile là biến build-time `NEXT_PUBLIC_OSM_TILE_URL`. Không thêm `api_key` vào URL công khai. Nếu tile vẫn lỗi, dùng tọa độ đã xác minh để làm việc tạm thời và báo quản trị kỹ thuật; không đoán vị trí bằng bản đồ trắng.
-- Tìm địa chỉ dùng `STADIA_MAPS_API_KEY` ở backend; nếu thiếu key hoặc nhà cung cấp không trả kết quả, ô tìm kiếm sẽ báo lỗi nhưng vẫn có thể nhập tọa độ thủ công.
+1. Mở **Điểm chấm công** tại `/admin/attendance/worksites`. Tạo điểm mới với mã và tên dễ nhận biết, rồi kích hoạt.
+2. Trong **Thiết lập vùng chấm công**, chọn múi giờ của chính điểm làm việc, chẳng hạn `Asia/Ho_Chi_Minh`. Đối với địa điểm ở múi giờ khác, dùng múi giờ của địa điểm đó.
+3. Xác định tâm vùng bằng một trong ba cách: tìm địa chỉ đầy đủ rồi chọn **Chọn vị trí này làm tâm vùng**; dùng **Lấy vị trí thiết bị tại văn phòng** khi đang đứng tại đó; hoặc nhập vĩ độ và kinh độ đã xác minh. Chỉ chọn thành phố trên bản đồ sẽ không đặt tâm vùng.
+4. Kiểm tra vị trí trên bản đồ với địa chỉ thực tế. Kết quả tìm địa chỉ và GPS thiết bị đều có thể sai lệch; xem tọa độ và sai số trước khi lưu.
+5. Nhập bán kính, sai số GPS tối đa và ngày hiệu lực. Kiểm tra lại vùng trên bản đồ và múi giờ, lưu chính sách, rồi phân công nhân viên cho đúng điểm làm việc và giai đoạn.
+6. Mở khu vực theo dõi chấm công để đối chiếu giờ vào, giờ ra. Xem bằng chứng vị trí trước khi xử lý trường hợp ngoài vùng hoặc sai số lớn. Không sửa bằng chứng đã ghi nhận.
 
-## Dành cho nhân viên
+**Kiểm tra kết quả:** Điểm làm việc đang hoạt động, chính sách có ngày hiệu lực đúng và nhân viên xuất hiện trong danh sách được phân công. Tọa độ chi tiết chỉ dành cho người có quyền; báo cáo chung không xuất bằng chứng GPS chi tiết.
 
-1. Dùng Chrome/Safari trên điện thoại, mở website qua HTTPS và đăng nhập tài khoản nhân viên đã được liên kết hồ sơ nhân sự.
-2. Bật dịch vụ vị trí của điện thoại; cho phép trình duyệt dùng vị trí **khi sử dụng website**. Không cần bật theo dõi vị trí liên tục.
-3. Vào **Chấm công** và bấm **Chấm công vào** hoặc **Chấm công ra**. Hệ thống lấy một mẫu GPS khi bạn chủ động bấm nút; chờ thông báo kết quả rồi kiểm tra giờ vào/ra và trạng thái. Không bấm liên tục khi đang chờ.
-4. Nếu trình duyệt từ chối quyền, vào cài đặt quyền của website và điện thoại để cho phép vị trí rồi thử lại. Nếu quá thời gian hoặc sai số lớn, di chuyển tới chỗ thoáng, bật định vị chính xác, kiểm tra kết nối mạng và thử lại. Không dùng địa chỉ tìm kiếm của admin thay cho GPS chấm công.
-5. Nếu kết quả đang chờ xét duyệt vị trí, liên hệ người quản lý; không xem đó là ngày công đã được duyệt. Chỉ nhân viên và Super Admin có quyền mới xem bằng chứng GPS chi tiết; tọa độ không xuất trong báo cáo chung.
+### Khi bản đồ hoặc ô tìm địa chỉ không hoạt động
 
-## Kiểm tra trước khi mở production
+- **Bản đồ trống:** Kiểm tra website đang chạy qua HTTPS. Người vận hành kỹ thuật kiểm tra cấu hình Stadia Maps cho domain `decu.tinhhoaviet.org.vn`, chính sách `Referrer-Policy` và yêu cầu tải tile trong Network của trình duyệt. Biến `NEXT_PUBLIC_OSM_TILE_URL` là cấu hình lúc build; không đặt API key vào URL công khai.
+- **Không tìm được địa chỉ:** Người vận hành kỹ thuật kiểm tra `STADIA_MAPS_API_KEY` ở backend và phản hồi của nhà cung cấp. Trong lúc chờ xử lý, có thể nhập tọa độ đã xác minh. Không ước lượng tâm vùng từ một bản đồ trống.
+- **GPS thiết bị thiếu chính xác:** Kiểm tra vị trí thực tế và sai số trình duyệt trả về. Không dùng kết quả tìm địa chỉ để thay thế bằng chứng chấm công của nhân viên.
 
-- Kiểm tra tile thật trên Chrome và Safari, desktop và điện thoại, ở domain production.
-- Kiểm tra tìm địa chỉ bằng tài khoản Super Admin thật; tài khoản khác phải bị từ chối. Đảm bảo key chỉ nằm trong biến môi trường backend.
-- Tại ít nhất một điểm làm việc thực tế, đối chiếu địa chỉ tìm kiếm, tọa độ, bán kính, sai số GPS và chấm công vào/ra của thiết bị thử nghiệm. Không dùng dữ liệu lương thật để kiểm thử.
+## Nhân viên: chấm công vào và ra
+
+**Trước khi bắt đầu:** Đăng nhập tài khoản đã liên kết hồ sơ nhân sự, mở website qua HTTPS trên điện thoại và cho phép trình duyệt dùng vị trí khi bạn chấm công.
+
+1. Đến điểm làm việc được phân công và mở **Chấm công** tại `/attendance`.
+2. Bật vị trí trên điện thoại. Khi trình duyệt hỏi quyền, chọn cho phép dùng vị trí trong lúc sử dụng website.
+3. Bấm **Chấm công vào** hoặc **Chấm công ra**. Chờ thông báo kết quả; không bấm lặp lại khi yêu cầu đang xử lý.
+4. Kiểm tra giờ và trạng thái mới hiển thị trên trang. Nếu bản ghi đang chờ xét duyệt vị trí, liên hệ người quản lý và chờ kết quả; chưa xem đó là ngày công được duyệt.
+
+Hệ thống lấy vị trí khi bạn chủ động bấm nút; bạn không cần bật theo dõi vị trí liên tục. Bằng chứng GPS chi tiết chỉ hiển thị cho bạn và người quản trị có quyền.
+
+### Nếu chấm công không thành công
+
+- **Trình duyệt từ chối vị trí:** Mở quyền vị trí của website và điện thoại, cấp lại quyền rồi thử một lần nữa.
+- **Hết thời gian hoặc sai số quá lớn:** Kiểm tra kết nối mạng, bật định vị chính xác và di chuyển tới nơi thoáng hơn trước khi thử lại.
+- **Ngoài vùng làm việc:** Kiểm tra bạn đang ở đúng điểm được phân công. Nếu vẫn có sai lệch, báo người quản lý để xét duyệt theo bằng chứng; không dùng địa chỉ tìm kiếm thay cho vị trí thực tế.
+
+## Kiểm tra trước khi áp dụng tại địa điểm mới
+
+- Kiểm tra bản đồ và tìm địa chỉ trên thiết bị thực tế, với tài khoản Super Admin và domain sử dụng thật.
+- Đối chiếu tọa độ, bán kính, sai số GPS, ngày hiệu lực và múi giờ với địa điểm làm việc.
+- Thử chấm công vào và ra bằng tài khoản thử nghiệm đã được phân công. Xác nhận trạng thái và quyền xem bằng chứng vị trí trước khi áp dụng cho nhân viên.

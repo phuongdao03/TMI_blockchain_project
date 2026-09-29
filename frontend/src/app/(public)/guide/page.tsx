@@ -2,9 +2,9 @@ import {
   ArrowRight,
   Bell,
   BookOpen,
-  Building2,
   Download,
   FileCheck2,
+  ListChecks,
   LockKeyhole,
   Send,
   ShieldCheck,
@@ -14,7 +14,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 const nav = [
-  ["about", "Về dự án"],
+  ["about", "Bắt đầu"],
   ["explore", "Đề cử"],
   ["account", "Tài khoản"],
   ["dossier", "Hồ sơ"],
@@ -36,8 +36,9 @@ export default function UserGuidePage() {
             Hướng dẫn sử dụng Đề cử Tinh Hoa Việt
           </h1>
           <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300 sm:text-lg">
-            Chọn đúng việc bạn cần làm. Hướng dẫn này chỉ mô tả các chức năng
-            đang có trên hệ thống.
+            Tìm đúng việc cần làm: xem đề cử đã công bố, gửi hồ sơ, theo dõi
+            tiến độ hoặc kiểm tra chứng thư. Các bước dưới đây đi theo trình tự
+            sử dụng trên hệ thống.
           </p>
         </header>
         <nav
@@ -57,42 +58,29 @@ export default function UserGuidePage() {
 
         <div className="mt-12 grid gap-10 lg:grid-cols-2">
           <Section
-            icon={Building2}
+            icon={ListChecks}
             id="about"
             number="01"
-            title="Về dự án Đề cử Tinh Hoa Việt"
+            title="Chọn việc bạn cần làm"
             wide
           >
-            <p className="max-w-4xl text-base leading-8">
-              Đề cử Tinh Hoa Việt là dự án tìm kiếm, ghi nhận và lan tỏa những
-              giá trị tiêu biểu do người Việt kiến tạo. Đó có thể là một tác
-              phẩm, sản phẩm, sáng kiến, di sản hoặc câu chuyện mang giá trị văn
-              hóa và đóng góp tích cực cho cộng đồng.
+            <p>
+              Tinh Hoa Việt là tổ chức tiếp nhận và xem xét hồ sơ đề cử. Chọn lộ
+              trình phù hợp với việc bạn muốn hoàn thành:
             </p>
-            <p className="max-w-4xl text-base leading-8">
-              Dự án hỗ trợ hành trình từ tiếp nhận thông tin đề cử, điều phối
-              quá trình xem xét và yêu cầu bổ sung khi cần, đến công bố nội dung
-              đủ điều kiện và phát hành chứng thư xác lập. Trung tâm An ninh
-              Công nghệ số – CNS là đơn vị phát triển nền tảng công nghệ phục vụ
-              dự án.
-            </p>
-            <div className="about-columns grid gap-8 border-y border-[var(--theme-border)] py-6 md:grid-cols-2 md:divide-x md:divide-[var(--theme-border)]">
-              <AboutCard title="Chứng thư mang lại điều gì?">
-                Chứng thư là dấu mốc ghi nhận một hồ sơ cụ thể tại một thời điểm
-                cụ thể. Trên đó có số chứng thư, phiên bản và dấu vân tay số để
-                người xem kiểm tra thông tin đã công bố có còn nguyên vẹn hay
-                không. Chứng thư hỗ trợ minh bạch nguồn gốc ghi nhận; không tự
-                thay thế giấy chứng nhận sở hữu, quyền tác giả hoặc kết luận của
-                cơ quan chuyên ngành.
-              </AboutCard>
-              <AboutCard title="Thông tin nào được công khai?">
-                Thư viện chỉ giới thiệu những nội dung đã được lựa chọn và cho
-                phép công bố, chẳng hạn tên đề cử, câu chuyện, hình ảnh đại diện
-                và trạng thái chứng thư. Tài liệu nội bộ, thông tin liên hệ,
-                giấy tờ cá nhân và các tệp dùng trong quá trình xem xét vẫn được
-                bảo vệ theo quyền truy cập, không xuất hiện trên trang công
-                khai.
-              </AboutCard>
+            <Steps
+              items={[
+                "Muốn xem nội dung đã công bố: mở thư viện đề cử. Bạn không cần tài khoản.",
+                "Muốn gửi đề cử: tạo tài khoản, chuẩn bị thông tin và tài liệu, rồi gửi hồ sơ.",
+                "Đã gửi hồ sơ: đăng nhập để xem trạng thái, bổ sung thông tin hoặc thanh toán khi được yêu cầu.",
+                "Đã có chứng thư: dùng số chứng thư, mã giao dịch hoặc mã QR để tra cứu.",
+              ]}
+            />
+            <div className="flex flex-wrap gap-3">
+              <GuideLink href="/works">Xem đề cử</GuideLink>
+              <GuideLink href="/dossiers" secondary>
+                Theo dõi hồ sơ
+              </GuideLink>
             </div>
           </Section>
 
@@ -102,17 +90,19 @@ export default function UserGuidePage() {
             number="02"
             title="Khám phá đề cử"
           >
-            <p>
-              Mở danh sách đề cử để xem nội dung đã được duyệt và công bố. Bạn
-              không cần đăng nhập để tìm kiếm, mở chi tiết hoặc chia sẻ.
-            </p>
+            <p>Bạn không cần đăng nhập để tìm và xem những đề cử đã công bố.</p>
             <Steps
               items={[
-                "Tìm theo tên hoặc dùng bộ lọc.",
-                "Mở đề cử để xem câu chuyện, hình ảnh và thông tin chủ thể.",
-                "Nếu đã có chứng thư, chọn Xem và kiểm tra chứng thư.",
+                "Mở thư viện đề cử; nhập tên cần tìm hoặc chọn bộ lọc.",
+                "Chọn một đề cử để đọc nội dung và xem hình ảnh đã công bố.",
+                "Nếu có chứng thư, mở mục chứng thư từ trang chi tiết để kiểm tra.",
               ]}
             />
+            <p>
+              Kết quả: trang chi tiết hiển thị nội dung được phép công bố. Tài
+              liệu thẩm định, thông tin liên hệ và giấy tờ cá nhân không xuất
+              hiện trong thư viện.
+            </p>
             <GuideLink href="/works">Mở thư viện đề cử</GuideLink>
           </Section>
 
@@ -123,16 +113,21 @@ export default function UserGuidePage() {
             title="Tạo tài khoản và đăng nhập"
           >
             <p>
-              Tạo tài khoản khi bạn cần gửi và theo dõi hồ sơ. Sau khi đăng ký,
-              xác minh email rồi đăng nhập để mở không gian cá nhân.
+              Cần có tài khoản để tạo và theo dõi hồ sơ. Hãy dùng địa chỉ email
+              bạn có thể truy cập trong suốt quá trình xử lý.
             </p>
             <Steps
               items={[
-                "Chọn Đăng ký và nhập email đang sử dụng.",
-                "Mở email xác minh do hệ thống gửi.",
-                "Đăng nhập; dùng Đặt lại mật khẩu nếu quên mật khẩu.",
+                "Chọn Đăng ký, điền thông tin và gửi biểu mẫu.",
+                "Mở email xác minh và làm theo liên kết trong thư.",
+                "Quay lại trang Đăng nhập. Nếu quên mật khẩu, chọn Quên mật khẩu? để nhận liên kết đặt lại.",
               ]}
             />
+            <p>
+              Kết quả: đăng nhập thành công và mở được khu vực Hồ sơ của tôi.
+              Nếu chưa thấy email xác minh, kiểm tra cả mục Thư rác trước khi
+              yêu cầu gửi lại.
+            </p>
             <div className="grid gap-3 sm:flex">
               <GuideLink href="/register">Đăng ký</GuideLink>
               <GuideLink href="/login" secondary>
@@ -148,21 +143,26 @@ export default function UserGuidePage() {
             title="Tạo và gửi hồ sơ đề cử"
           >
             <p>
-              Trong Hồ sơ của tôi, tạo bản nháp, chọn loại hồ sơ và khai thông
-              tin theo biểu mẫu.
+              Đăng nhập và mở Hồ sơ của tôi. Bạn có thể lưu bản nháp để hoàn
+              thiện trước khi gửi.
             </p>
             <Steps
               items={[
-                "Lưu bản nháp trong khi chuẩn bị.",
-                "Kiểm tra tên, chủ thể, mô tả và từng tệp trước khi gửi.",
-                "Sau khi gửi, hồ sơ chuyển sang chỉ đọc trong thời gian xử lý.",
+                "Chọn Tạo hồ sơ, chọn loại phù hợp và điền các trường trong biểu mẫu.",
+                "Tải tài liệu liên quan lên, kiểm tra tên, chủ thể, mô tả và từng tệp.",
+                "Gửi hồ sơ khi thông tin đã đầy đủ; kiểm tra trạng thái trong danh sách Hồ sơ của tôi.",
               ]}
             />
             <Note>
-              Không tải lên mật khẩu, mã xác thực, khóa ví hoặc dữ liệu không
-              liên quan. Nếu cổng tiếp nhận chưa mở, hệ thống sẽ thông báo tại
-              khu vực hồ sơ.
+              Sau khi gửi, hồ sơ tạm thời chỉ đọc. Khi cần chỉnh sửa, hãy chờ
+              yêu cầu bổ sung. Không tải lên mật khẩu, mã xác thực hoặc dữ liệu
+              không liên quan.
             </Note>
+            <p>
+              Kết quả: hồ sơ xuất hiện trong danh sách với trạng thái đã tiếp
+              nhận. Nếu vẫn là bản nháp, mở lại hồ sơ và hoàn tất bước gửi.
+            </p>
+            <GuideLink href="/dossiers">Mở Hồ sơ của tôi</GuideLink>
           </Section>
 
           <Section
@@ -172,48 +172,56 @@ export default function UserGuidePage() {
             title="Theo dõi hồ sơ, bổ sung và lệ phí"
           >
             <p>
-              Trạng thái và thông báo nghiệp vụ xuất hiện trong tài khoản trên
-              website. Mở thông báo để đi đúng tới hồ sơ hoặc bước liên quan.
+              Mở Hồ sơ của tôi để xem trạng thái mới nhất. Thông báo trong tài
+              khoản sẽ dẫn đến hồ sơ hoặc việc bạn cần xử lý.
             </p>
             <Steps
               items={[
-                "Cần bổ sung: cập nhật đúng phần được yêu cầu rồi gửi lại.",
-                "Được phê duyệt: theo dõi nghĩa vụ lệ phí nếu có.",
-                "Thanh toán: kiểm tra mã hồ sơ, nội dung và số tiền trước khi mở cổng thanh toán; không thanh toán lần hai nếu trạng thái cập nhật chậm.",
+                "Khi hồ sơ cần bổ sung, đọc yêu cầu, cập nhật đúng phần được nêu và gửi lại.",
+                "Khi hồ sơ được duyệt, kiểm tra khoản lệ phí được hiển thị trong tài khoản, nếu có.",
+                "Trước khi thanh toán, đối chiếu mã hồ sơ, nội dung và số tiền. Nếu đã trả tiền mà trạng thái chưa đổi, không thanh toán lần hai; kiểm tra lại sau hoặc liên hệ hỗ trợ.",
               ]}
             />
+            <p>
+              Sau mỗi thao tác, quay lại hồ sơ để kiểm tra trạng thái mới. Giữ
+              mã hồ sơ và thông tin giao dịch để đối chiếu khi cần hỗ trợ.
+            </p>
+            <GuideLink href="/dossiers">Xem trạng thái hồ sơ</GuideLink>
           </Section>
 
           <Section
             icon={FileCheck2}
             id="certificate"
             number="06"
-            title="Tra cứu chứng thư, QR và lưu trữ blockchain"
+            title="Tra cứu và kiểm tra chứng thư"
           >
             <p>
-              Trang tra cứu là công khai. Nhập số chứng thư hoặc mã giao dịch để
-              xem trạng thái, phiên bản và bằng chứng ghi nhận.
+              Trang tra cứu mở cho mọi người, không cần đăng nhập. Bạn có thể
+              nhập số chứng thư, mã giao dịch hoặc quét mã QR trên chứng thư.
             </p>
             <Steps
               items={[
-                "Mở từ nút trên đề cử hoặc vào trang Tra cứu chứng thư.",
-                "QR trên chứng thư mở trực tiếp đúng trang xác minh.",
-                "Tài liệu đối chiếu là tệp bạn đang giữ; trình duyệt tính dấu vân tay để so khớp dữ liệu đã công bố.",
+                "Mở trang Tra cứu chứng thư, chọn cách tra cứu và nhập số chứng thư hoặc mã giao dịch.",
+                "Đọc kết quả xác minh, rồi đối chiếu số, trạng thái và phiên bản với chứng thư bạn nhận được.",
+                "Nếu không tìm thấy hoặc chứng thư đang chờ xác nhận, kiểm tra lại mã và tra cứu sau; liên hệ đơn vị phát hành khi thông tin không khớp.",
               ]}
             />
             <div className="grid gap-5">
               <Note>
-                Blockchain lưu dấu vân tay số của dữ liệu xác lập, số phiên bản,
-                địa chỉ hợp đồng và dấu vết giao dịch. Các bản ghi này hỗ trợ
-                phát hiện dữ liệu đã bị thay đổi.
+                Mã QR trên chứng thư dẫn đến trang xác minh tương ứng. Bản ghi
+                blockchain hỗ trợ đối chiếu dấu vân tay số và lịch sử ghi nhận.
               </Note>
               <Note>
-                Blockchain không lưu ảnh, video, tệp gốc, mật khẩu hay tài liệu
-                cá nhân. Tệp được quản lý trong hệ thống lưu trữ riêng theo
-                quyền truy cập; chỉ dấu vân tay một chiều được dùng để đối
-                chiếu.
+                Blockchain không lưu ảnh, video, tệp gốc hoặc tài liệu cá nhân.
+                Dấu vân tay số dùng để đối chiếu dữ liệu đã ghi nhận; hãy giữ
+                tài liệu gốc nếu bạn cần kiểm tra về sau.
               </Note>
             </div>
+            <p>
+              Chứng thư ghi nhận thông tin tại thời điểm phát hành; nó không
+              thay thế giấy tờ chứng minh quyền sở hữu, quyền tác giả hoặc kết
+              luận chuyên ngành.
+            </p>
             <GuideLink href="/verify">Tra cứu chứng thư</GuideLink>
           </Section>
 
@@ -224,14 +232,14 @@ export default function UserGuidePage() {
             title="Cài ứng dụng trên thiết bị"
           >
             <p>
-              Nút Cài ứng dụng trên thanh đầu trang đưa bạn tới hướng dẫn. Việc
-              cài chỉ bắt đầu sau khi bạn chọn Tiến hành cài đặt.
+              Bạn có thể thêm website vào màn hình chính để mở nhanh. Cách thực
+              hiện tùy thiết bị và trình duyệt.
             </p>
             <Steps
               items={[
-                "iPhone/iPad: mở Chia sẻ → Thêm vào Màn hình chính.",
-                "Android: mở menu trình duyệt → Cài đặt ứng dụng hoặc Thêm vào màn hình chính.",
-                "Máy tính: mở menu trình duyệt → Cài đặt ứng dụng.",
+                "Mở trang Cài ứng dụng bằng chính thiết bị muốn cài.",
+                "Chọn Tiến hành cài đặt nếu trình duyệt hỗ trợ; nếu không, làm theo hướng dẫn thủ công cho thiết bị của bạn.",
+                "Kiểm tra biểu tượng Tinh Hoa Việt trên màn hình chính hoặc trong danh sách ứng dụng.",
               ]}
             />
             <GuideLink href="/install">Xem hướng dẫn cài đặt</GuideLink>
@@ -259,9 +267,9 @@ export default function UserGuidePage() {
                 <h3 className="font-bold text-white">Khi gặp sự cố</h3>
                 <Steps
                   items={[
-                    "Ghi lại mã hồ sơ hoặc số chứng thư.",
-                    "Chụp lỗi và ghi thời điểm, thiết bị, trình duyệt.",
-                    "Không gửi mật khẩu, mã xác thực hoặc khóa ví cho bộ phận hỗ trợ.",
+                    "Ghi lại mã hồ sơ hoặc số chứng thư liên quan.",
+                    "Chụp thông báo lỗi và ghi thời điểm, thiết bị, trình duyệt đã dùng.",
+                    "Gửi thông tin sự cố qua kênh hỗ trợ chính thức; không gửi mật khẩu, mã xác thực hoặc khóa ví.",
                   ]}
                 />
               </div>
@@ -324,21 +332,6 @@ function Note({ children }: { children: ReactNode }) {
       <ShieldCheck className="mt-1 size-4 shrink-0 text-gold-300" />
       <p>{children}</p>
     </div>
-  );
-}
-function AboutCard({
-  children,
-  title,
-}: {
-  children: ReactNode;
-  title: string;
-}) {
-  return (
-    <article className="md:px-7 md:first:pl-0 md:last:pr-0">
-      <ShieldCheck className="size-5 text-primary-700" />
-      <h3 className="mt-4 text-lg font-bold text-white">{title}</h3>
-      <p className="mt-3 leading-7">{children}</p>
-    </article>
   );
 }
 function GuideLink({
