@@ -140,17 +140,18 @@ export function AttendanceConfigurationWorkspace() {
         <div className="relative max-w-3xl">
           <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-primary-200">
             <Globe2 aria-hidden="true" className="size-4" />
-            Điều hành nhân sự toàn cầu
+            Thiết lập chấm công
           </span>
           <h1
             className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl"
             id="attendance-configuration-title"
           >
-            Địa điểm làm việc toàn cầu
+            Chấm công theo địa điểm
           </h1>
           <p className="mt-3 text-sm leading-6 text-neutral-300 sm:text-base">
-            Thiết lập từng địa điểm, vùng chấm công và lịch làm việc theo múi
-            giờ thực tế — không dùng một quy tắc chung cho mọi quốc gia.
+            Thực hiện lần lượt ba bước: chọn địa điểm, lưu vùng GPS và phân công
+            nhân viên. Sau khi lưu một bước, thông tin ở bước tiếp theo sẽ được
+            mở để bạn tiếp tục.
           </p>
         </div>
       </header>
@@ -197,7 +198,7 @@ export function AttendanceConfigurationWorkspace() {
         worksites={worksites}
       />
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="mx-auto max-w-5xl space-y-6">
         <AttendancePolicyPanel
           isSaving={createPolicy.isPending}
           key={resolvedSelectedWorksiteId ?? "no-worksite"}
@@ -215,9 +216,11 @@ export function AttendanceConfigurationWorkspace() {
           assignments={assignments}
           employeeSearch={employeeSearch}
           employees={employees}
+          policies={policies.data?.data ?? []}
           isSaving={createAssignment.isPending}
           onEmployeeSearch={setEmployeeSearch}
           onRetry={() => void assignments.refetch()}
+          onRetryEmployees={() => void employees.refetch()}
           onSave={(input) => createAssignment.mutateAsync(input)}
           selectedWorksite={selectedWorksite}
         />

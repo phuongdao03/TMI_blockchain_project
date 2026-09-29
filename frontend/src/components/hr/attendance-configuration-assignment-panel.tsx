@@ -1,11 +1,14 @@
 "use client";
 
 import { CircleAlert, UserRoundCheck, UsersRound } from "lucide-react";
+import Link from "next/link";
 import { type FormEvent, useState } from "react";
 
+import { ApiError } from "@/lib/api/client";
 import type {
   AttendanceAssignment,
   AttendanceWorksite,
+  AttendanceWorksitePolicy,
   Employee,
 } from "@/lib/api/types";
 
@@ -22,24 +25,29 @@ type AssignmentQuery = {
 type EmployeeQuery = {
   data?: { data: Employee[] };
   isPending: boolean;
+  isError: boolean;
 };
 
 export function AttendanceAssignmentPanel({
   assignments,
   employeeSearch,
   employees,
+  policies,
   isSaving,
   onEmployeeSearch,
   onRetry,
+  onRetryEmployees,
   onSave,
   selectedWorksite,
 }: {
   assignments: AssignmentQuery;
   employeeSearch: string;
   employees: EmployeeQuery;
+  policies: AttendanceWorksitePolicy[];
   isSaving: boolean;
   onEmployeeSearch: (value: string) => void;
   onRetry: () => void;
+  onRetryEmployees: () => void;
   onSave: (input: AssignmentInput) => Promise<unknown>;
   selectedWorksite: AttendanceWorksite | null;
 }) {
@@ -50,7 +58,8 @@ export function AttendanceAssignmentPanel({
   const [holidayCalendarCode, setHolidayCalendarCode] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const rows = assignments.data?.data ?? [];
-  const canAssign = selectedWorksite?.status === "ACTIVE";
+  const hasPolicy = policies.length > 0;
+  const canAssign = selectedWorksite?.status === "ACTIVE" && hasPolicy;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,6 +78,18 @@ export function AttendanceAssignmentPanel({
       setFormError("Ngày kết thúc không được trước ngày hiệu lực.");
       return;
     }
+    if (
+      !policies.some(
+        (policy) =>
+          policy.effectiveFrom <= effectiveFrom &&
+          (!policy.effectiveTo || policy.effectiveTo >= effectiveFrom),
+      )
+    ) {
+      setFormError(
+        "Ngày phân công phải nằm trong thời gian hiệu lực của vùng chấm công.",
+      );
+      return;
+    }
     try {
       await onSave({
         employeeId,
@@ -83,9 +104,15 @@ export function AttendanceAssignmentPanel({
       setEffectiveTo("");
       setScheduleCode("");
       setHolidayCalendarCode("");
-    } catch {
+    } catch (error) {
       setFormError(
-        "Không thể lưu phân công. Có thể nhân viên đã có lịch hiệu lực chồng lấn.",
+        error instanceof ApiError &&
+          error.code === "HR_ATTENDANCE_ASSIGNMENT_OVERLAP"
+          ? "Nhân viên đã có phân công trong khoảng thời gian này. Chọn giai đoạn khác."
+          : error instanceof ApiError &&
+              error.code === "HR_ATTENDANCE_ASSIGNMENT_POLICY_REQUIRED"
+            ? "Ngày phân công chưa có vùng chấm công hiệu lực. Kiểm tra lại chính sách."
+            : "Không thể lưu phân công. Kiểm tra dữ liệu và thử lại.",
       );
     }
   }
@@ -110,7 +137,8 @@ export function AttendanceAssignmentPanel({
             Lịch làm việc của nhân viên
           </h2>
           <p className="mt-1 text-sm leading-6 text-neutral-600">
-            Gán đúng địa điểm, lịch làm và lịch nghỉ cho từng giai đoạn.
+            Chọn hồ sơ nhân viên, ngày bắt đầu và mã lịch áp dụng tại địa điểm
+            này.
           </p>
         </div>
       </div>
@@ -133,6 +161,30 @@ export function AttendanceAssignmentPanel({
             value={employeeSearch}
           />
         </label>
+        {employees.isError ? (
+          <p className="mt-3 text-sm text-rose-700" role="alert">
+            Không tải được danh sách nhân viên.
+            <button
+              className="ml-2 font-semibold underline"
+              onClick={onRetryEmployees}
+              type="button"
+            >
+              Thử lại
+            </button>
+          </p>
+        ) : null}
+        {!employees.isPending &&
+        !employees.isError &&
+        (employees.data?.data.length ?? 0) === 0 ? (
+          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950">
+            {employeeSearch.trim()
+              ? "Không tìm thấy hồ sơ nhân viên đang làm việc. Thử tên hoặc email khác."
+              : "Chưa có hồ sơ nhân viên đang làm việc. Tài khoản người kiểm duyệt cần được tạo hồ sơ nhân viên trước khi phân công chấm công."}{" "}
+            <Link className="font-bold underline" href="/admin/employees">
+              Mở mục Nhân sự
+            </Link>
+          </p>
+        ) : null}
         <label
           className="mt-3 block text-sm font-semibold text-neutral-800"
           htmlFor="attendance-assignment-employee"
@@ -186,40 +238,61 @@ export function AttendanceAssignmentPanel({
               value={effectiveTo}
             />
           </label>
-          <label
-            className="block text-sm font-semibold text-neutral-800"
-            htmlFor="attendance-assignment-schedule"
-          >
-            Mã lịch làm việc
-            <input
-              className={fieldClass}
-              disabled={!canAssign}
-              id="attendance-assignment-schedule"
-              maxLength={64}
-              onChange={(event) => setScheduleCode(event.target.value)}
-              placeholder="VD: MON_FRI_8H"
-              value={scheduleCode}
-            />
-          </label>
-          <label
-            className="block text-sm font-semibold text-neutral-800"
-            htmlFor="attendance-assignment-holiday-calendar"
-          >
-            Mã lịch nghỉ lễ
-            <input
-              className={fieldClass}
-              disabled={!canAssign}
-              id="attendance-assignment-holiday-calendar"
-              maxLength={64}
-              onChange={(event) => setHolidayCalendarCode(event.target.value)}
-              placeholder="VD: VN-HCM"
-              value={holidayCalendarCode}
-            />
-          </label>
+          <div>
+            <label
+              className="block text-sm font-semibold text-neutral-800"
+              htmlFor="attendance-assignment-schedule"
+            >
+              Mã lịch làm việc
+              <input
+                aria-describedby="attendance-assignment-schedule-help"
+                className={fieldClass}
+                disabled={!canAssign}
+                id="attendance-assignment-schedule"
+                maxLength={64}
+                onChange={(event) => setScheduleCode(event.target.value)}
+                placeholder="VD: MON_FRI_8H"
+                value={scheduleCode}
+              />
+            </label>
+            <p
+              className="mt-1 text-xs leading-5 text-neutral-600"
+              id="attendance-assignment-schedule-help"
+            >
+              Dùng mã lịch làm việc của đơn vị, ví dụ MON_FRI_8H cho thứ Hai đến
+              thứ Sáu, 8 giờ mỗi ngày.
+            </p>
+          </div>
+          <div>
+            <label
+              className="block text-sm font-semibold text-neutral-800"
+              htmlFor="attendance-assignment-holiday-calendar"
+            >
+              Mã lịch nghỉ lễ
+              <input
+                aria-describedby="attendance-assignment-holiday-help"
+                className={fieldClass}
+                disabled={!canAssign}
+                id="attendance-assignment-holiday-calendar"
+                maxLength={64}
+                onChange={(event) => setHolidayCalendarCode(event.target.value)}
+                placeholder="VD: VN-HCM"
+                value={holidayCalendarCode}
+              />
+            </label>
+            <p
+              className="mt-1 text-xs leading-5 text-neutral-600"
+              id="attendance-assignment-holiday-help"
+            >
+              Dùng mã lịch nghỉ theo khu vực, ví dụ VN-HCM.
+            </p>
+          </div>
         </div>
         {selectedWorksite && !canAssign ? (
           <p className="mt-3 text-sm text-amber-800">
-            Địa điểm đang tạm ngưng nên chưa thể phân công mới.
+            {selectedWorksite.status !== "ACTIVE"
+              ? "Địa điểm đang tạm ngưng nên chưa thể phân công mới."
+              : "Lưu vùng chấm công trước khi phân công nhân viên."}
           </p>
         ) : null}
         {formError ? (

@@ -165,8 +165,8 @@ export function AttendancePolicyPanel({
           </h2>
           <p className="mt-1 text-sm leading-6 text-neutral-600">
             {selectedWorksite
-              ? `Thiết lập tâm vùng, bán kính và độ chính xác cho ${selectedWorksite.name}.`
-              : "Chọn một địa điểm trước khi thiết lập vùng chấm công."}
+              ? `Chọn ngày hiệu lực, xác nhận tâm vùng trên bản đồ và nhập bán kính cho ${selectedWorksite.name}.`
+              : "Chọn một địa điểm ở bước 1 trước khi thiết lập vùng chấm công."}
           </p>
         </div>
       </div>
@@ -219,12 +219,33 @@ export function AttendancePolicyPanel({
               className={fieldClass}
               disabled={!canConfigure}
               id="attendance-policy-timezone"
+              list="attendance-timezone-options"
               maxLength={64}
               onChange={(event) => updateInput("timezone", event.target.value)}
               placeholder="VD: Asia/Ho_Chi_Minh"
               value={timezone}
             />
           </label>
+          <datalist id="attendance-timezone-options">
+            <option value="Asia/Ho_Chi_Minh" />
+            <option value="Asia/Singapore" />
+            <option value="Asia/Bangkok" />
+          </datalist>
+        </div>
+        <AttendanceLocationPicker
+          disabled={!canConfigure}
+          latitude={latitude}
+          longitude={longitude}
+          onCoordinatesChange={(nextLatitude, nextLongitude) => {
+            setDraft((current) => ({
+              ...(current ?? inheritedInputs),
+              latitude: nextLatitude,
+              longitude: nextLongitude,
+            }));
+          }}
+          radiusMeters={radiusMeters}
+        />
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <label
             className="block text-sm font-semibold text-neutral-800"
             htmlFor="attendance-policy-latitude"
@@ -292,19 +313,6 @@ export function AttendancePolicyPanel({
             />
           </label>
         </div>
-        <AttendanceLocationPicker
-          disabled={!canConfigure}
-          latitude={latitude}
-          longitude={longitude}
-          onCoordinatesChange={(nextLatitude, nextLongitude) => {
-            setDraft((current) => ({
-              ...(current ?? inheritedInputs),
-              latitude: nextLatitude,
-              longitude: nextLongitude,
-            }));
-          }}
-          radiusMeters={radiusMeters}
-        />
         {latestPolicy ? (
           <p className="mt-3 text-sm leading-6 text-primary-900">
             Đã sao chép thông số từ chính sách gần nhất. Hãy chọn ngày hiệu lực

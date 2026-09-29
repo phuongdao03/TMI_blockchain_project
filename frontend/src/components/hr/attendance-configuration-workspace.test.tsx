@@ -71,6 +71,79 @@ function mockQueries() {
 }
 
 describe("AttendanceConfigurationWorkspace", () => {
+  it("explains the missing employee profile and blocks assignment until a policy exists", async () => {
+    mockQueries();
+    renderWorkspace();
+
+    expect(await screen.findByText("Singapore Hub")).toBeDefined();
+    expect(
+      (
+        await screen.findByRole("link", { name: "Mở mục Nhân sự" })
+      ).getAttribute("href"),
+    ).toBe("/admin/employees");
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Lưu phân công",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(
+      screen.getByText(/Lưu vùng chấm công trước khi phân công/),
+    ).toBeDefined();
+  });
+
+  it("rejects an assignment date outside the saved policy period", async () => {
+    mockQueries();
+    listPoliciesMock.mockResolvedValue({
+      data: [
+        {
+          id: "policy-1",
+          worksiteId: "worksite-1",
+          effectiveFrom: "2026-10-01",
+          effectiveTo: null,
+          timezone: "Asia/Singapore",
+          latitude: "1.3521",
+          longitude: "103.8198",
+          radiusMeters: 180,
+          maxAccuracyMeters: 35,
+          createdAt: "2026-09-29T00:00:00Z",
+          updatedAt: "2026-09-29T00:00:00Z",
+        },
+      ],
+      meta: { total: 1 },
+    });
+    listEmployeesMock.mockResolvedValue({
+      data: [
+        { id: "employee-1", employeeCode: "NV001", fullName: "Nguyễn An" },
+      ],
+      meta: { total: 1 },
+    });
+    renderWorkspace();
+
+    expect(
+      await screen.findByRole("option", { name: "NV001 · Nguyễn An" }),
+    ).toBeDefined();
+    fireEvent.change(screen.getByLabelText("Nhân viên"), {
+      target: { value: "employee-1" },
+    });
+    fireEvent.change(screen.getByLabelText("Ngày hiệu lực phân công"), {
+      target: { value: "2026-09-30" },
+    });
+    fireEvent.change(screen.getByLabelText("Mã lịch làm việc"), {
+      target: { value: "MON_FRI_8H" },
+    });
+    fireEvent.change(screen.getByLabelText("Mã lịch nghỉ lễ"), {
+      target: { value: "VN-HCM" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu phân công" }));
+
+    expect(
+      screen.getByText(/Ngày phân công phải nằm trong thời gian hiệu lực/),
+    ).toBeDefined();
+    expect(createAssignmentMock).not.toHaveBeenCalled();
+  });
+
   it("renames an existing worksite without replacing its historical policies", async () => {
     mockQueries();
     updateWorksiteMock.mockResolvedValue({
@@ -98,7 +171,7 @@ describe("AttendanceConfigurationWorkspace", () => {
     createWorksiteMock.mockResolvedValue(worksite);
     renderWorkspace();
 
-    expect(await screen.findByText("Địa điểm làm việc toàn cầu")).toBeDefined();
+    expect(await screen.findByText("Chấm công theo địa điểm")).toBeDefined();
     fireEvent.change(screen.getByLabelText("Mã điểm chấm công"), {
       target: { value: "syd-hub" },
     });

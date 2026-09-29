@@ -115,6 +115,7 @@ export function AttendanceLocationPicker({
   const [addressMessage, setAddressMessage] = useState("");
   const [searchingAddress, setSearchingAddress] = useState(false);
   const [tilesFailed, setTilesFailed] = useState(false);
+  const [tileAttempt, setTileAttempt] = useState(0);
   const [locationMessage, setLocationMessage] = useState("");
   const [capturingLocation, setCapturingLocation] = useState(false);
   const radius = Number(radiusMeters);
@@ -194,7 +195,7 @@ export function AttendanceLocationPicker({
             } catch (error) {
               setLocationMessage(
                 error instanceof LocationCaptureError
-                  ? error.message
+                  ? `${error.message} Bạn cũng có thể tìm địa chỉ điểm làm việc hoặc nhập tọa độ đã xác minh.`
                   : "Không thể lấy vị trí thiết bị. Hãy thử lại hoặc nhập tọa độ đã xác minh.",
               );
             } finally {
@@ -206,13 +207,6 @@ export function AttendanceLocationPicker({
           {capturingLocation
             ? "Đang lấy vị trí…"
             : "Lấy vị trí thiết bị tại văn phòng"}
-        </button>
-        <button
-          className="min-h-11 rounded-xl px-3 text-sm font-medium text-neutral-700 underline underline-offset-4 hover:text-neutral-950"
-          onClick={() => setTilesFailed(true)}
-          type="button"
-        >
-          Bản đồ không hiển thị
         </button>
       </div>
       {locationMessage ? (
@@ -263,21 +257,21 @@ export function AttendanceLocationPicker({
         </p>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-3 sm:p-4">
+      <div className="mt-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-[var(--theme-text)] sm:p-4">
         <label
-          className="block text-sm font-semibold text-neutral-800"
+          className="block text-sm font-semibold text-[var(--theme-text)]"
           htmlFor="worksite-address-search"
         >
           Tìm địa chỉ điểm làm việc
         </label>
-        <p className="mt-1 text-xs leading-5 text-neutral-600">
+        <p className="mt-1 text-xs leading-5 text-[var(--theme-muted)]">
           Nhập số nhà, đường, thành phố và quốc gia. Kết quả tìm kiếm chỉ giúp
           di chuyển bản đồ; hãy kiểm tra và xác nhận tâm vùng trước khi lưu.
         </p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input
             autoComplete="street-address"
-            className="min-h-11 min-w-0 flex-1 rounded-xl border border-neutral-300 bg-white px-3 text-sm text-neutral-950 focus:border-primary-600 focus:outline-2 focus:outline-offset-2 focus:outline-primary-600"
+            className="min-h-11 min-w-0 flex-1 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm text-[var(--theme-text)] focus:border-primary-600 focus:outline-2 focus:outline-offset-2 focus:outline-primary-600"
             id="worksite-address-search"
             onChange={(event) => setAddressQuery(event.target.value)}
             onKeyDown={(event) => {
@@ -299,7 +293,10 @@ export function AttendanceLocationPicker({
           </button>
         </div>
         {addressMessage ? (
-          <p aria-live="polite" className="mt-2 text-sm text-neutral-700">
+          <p
+            aria-live="polite"
+            className="mt-2 text-sm text-[var(--theme-muted)]"
+          >
             {addressMessage}
           </p>
         ) : null}
@@ -308,7 +305,8 @@ export function AttendanceLocationPicker({
             {addressResults.map((result, index) => (
               <li key={`${result.latitude}-${result.longitude}-${index}`}>
                 <button
-                  className="min-h-11 w-full rounded-xl border border-neutral-200 px-3 py-2 text-left text-sm text-neutral-800 hover:border-primary-600 hover:bg-primary-50"
+                  aria-pressed={selectedAddress === result.label}
+                  className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-left text-sm text-[var(--theme-text)] transition-colors hover:border-primary-600 hover:bg-[var(--theme-elevated)] aria-pressed:border-primary-600 aria-pressed:bg-[var(--theme-elevated)]"
                   onClick={() => {
                     setMapDestination([result.latitude, result.longitude]);
                     setDestinationZoom(17);
@@ -327,7 +325,7 @@ export function AttendanceLocationPicker({
         ) : null}
         {selectedAddress && mapDestination ? (
           <button
-            className="mt-3 min-h-11 rounded-xl border border-primary-600 px-4 text-sm font-semibold text-primary-700 hover:bg-primary-50"
+            className="mt-3 min-h-11 rounded-xl border border-primary-600 px-4 text-sm font-semibold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)]"
             disabled={disabled}
             onClick={() => {
               onCoordinatesChange(
@@ -359,10 +357,11 @@ export function AttendanceLocationPicker({
           scrollWheelZoom
           zoom={mapDestination ? destinationZoom : center ? 16 : 2}
         >
-          {!tilesFailed && mapTileConfig ? (
+          {mapTileConfig ? (
             <TileLayer
               attribution={mapTileConfig.attribution}
               eventHandlers={{ tileerror: () => setTilesFailed(true) }}
+              key={tileAttempt}
               url={mapTileConfig.url}
             />
           ) : null}
@@ -397,14 +396,28 @@ export function AttendanceLocationPicker({
         </MapContainer>
       </div>
       {tilesFailed || !mapTileConfig ? (
-        <p
+        <div
           className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"
           role="status"
         >
-          Bản đồ nền tạm thời không tải được. Nhập tọa độ trực tiếp ở bên dưới
-          hoặc lấy vị trí thiết bị khi đang ở văn phòng; vùng chấm công vẫn được
-          lưu chính xác.
-        </p>
+          <p>
+            {mapTileConfig
+              ? "Bản đồ nền tạm thời không tải được. Nhập tọa độ trực tiếp ở bên dưới hoặc lấy vị trí thiết bị khi đang ở văn phòng; vùng chấm công vẫn được lưu chính xác."
+              : "Chưa cấu hình nguồn bản đồ nền. Hãy nhờ quản trị hệ thống cấu hình bản đồ; trong lúc này có thể nhập tọa độ đã xác minh ở bên dưới."}
+          </p>
+          {mapTileConfig ? (
+            <button
+              className="mt-2 min-h-10 font-bold underline underline-offset-4"
+              onClick={() => {
+                setTilesFailed(false);
+                setTileAttempt((attempt) => attempt + 1);
+              }}
+              type="button"
+            >
+              Thử tải lại bản đồ
+            </button>
+          ) : null}
+        </div>
       ) : null}
       <p className="mt-3 text-xs leading-5 text-neutral-500">
         Bản đồ dùng dữ liệu OpenStreetMap. Chỉ Super Admin được cấu hình điểm

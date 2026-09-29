@@ -110,8 +110,8 @@ export function AttendanceWorksitePanel({
             Điểm chấm công
           </h2>
           <p className="mt-1 text-sm leading-6 text-neutral-600">
-            Mỗi mã đại diện cho một nơi làm việc có thể có nhiều chính sách theo
-            thời gian.
+            Chọn địa điểm cần thiết lập. Nếu chưa có, nhập mã và tên địa điểm
+            làm việc để tạo mới.
           </p>
         </div>
         <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-700">

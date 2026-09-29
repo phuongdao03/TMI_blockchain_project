@@ -26,7 +26,19 @@ vi.mock("react-leaflet", () => ({
       {children}
     </div>
   ),
-  TileLayer: () => null,
+  TileLayer: ({
+    eventHandlers,
+  }: {
+    eventHandlers: { tileerror: () => void };
+  }) => (
+    <button
+      data-testid="map-tiles"
+      onClick={eventHandlers.tileerror}
+      type="button"
+    >
+      Simulate tile error
+    </button>
+  ),
   useMap: () => ({ setView: mapSetView }),
   useMapEvents: (events: typeof mapEvents) => {
     mapEvents = events;
@@ -62,9 +74,18 @@ describe("AttendanceLocationPicker", () => {
         name: "156A Nguyễn Hữu Thọ, Việt Nam",
       }),
     ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "156A Nguyễn Hữu Thọ, Việt Nam" })
+        .className,
+    ).toContain("text-[var(--theme-text)]");
     fireEvent.click(
       screen.getByRole("button", { name: "156A Nguyễn Hữu Thọ, Việt Nam" }),
     );
+    expect(
+      screen
+        .getByRole("button", { name: "156A Nguyễn Hữu Thọ, Việt Nam" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
     expect(mapSetView).toHaveBeenLastCalledWith([10.72, 106.7], 17, {
       animate: false,
     });
@@ -167,7 +188,7 @@ describe("AttendanceLocationPicker", () => {
     });
   });
 
-  it("keeps coordinate selection usable when map tiles are blocked", () => {
+  it("keeps map tiles and coordinate selection usable after a tile error", () => {
     render(
       <AttendanceLocationPicker
         latitude=""
@@ -177,9 +198,10 @@ describe("AttendanceLocationPicker", () => {
       />,
     );
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Bản đồ không hiển thị" }),
-    );
+    fireEvent.click(screen.getByTestId("map-tiles"));
     expect(screen.getByText(/Nhập tọa độ trực tiếp/)).toBeTruthy();
+    expect(screen.getByTestId("map-tiles")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Thử tải lại bản đồ" }));
+    expect(screen.queryByText(/Nhập tọa độ trực tiếp/)).toBeNull();
   });
 });
