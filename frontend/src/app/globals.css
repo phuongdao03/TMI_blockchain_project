@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
   --thv-red: #9d0000;
@@ -18,8 +19,14 @@
   --color-primary-700: #650000;
   --color-primary-600: #9d0000;
   --color-primary-500: #b51212;
+  --color-primary-400: #e58a7f;
+  --color-primary-300: #f2b5aa;
+  --color-primary-200: #f9d3c9;
   --color-primary-100: #fce8df;
   --color-primary-50: #fff4ed;
+  --color-primary-800: #470000;
+  --color-primary-900: #350000;
+  --color-primary-950: #240707;
   --color-accent-gold: #f6c515;
   --color-neutral-950: #241515;
   --color-neutral-700: #6b5656;
@@ -112,8 +119,14 @@
   --color-primary-700: var(--color-primary-700);
   --color-primary-600: var(--color-primary-600);
   --color-primary-500: var(--color-primary-500);
+  --color-primary-400: var(--color-primary-400);
+  --color-primary-300: var(--color-primary-300);
+  --color-primary-200: var(--color-primary-200);
   --color-primary-100: var(--color-primary-100);
   --color-primary-50: var(--color-primary-50);
+  --color-primary-800: var(--color-primary-800);
+  --color-primary-900: var(--color-primary-900);
+  --color-primary-950: var(--color-primary-950);
   --color-accent-gold: var(--color-accent-gold);
   --color-neutral-950: var(--color-neutral-950);
   --color-neutral-700: var(--color-neutral-700);
@@ -4431,8 +4444,28 @@ html[data-theme="dark"] .dashboard-main .text-red-950,
 html[data-theme="dark"] .dashboard-main .text-red-900,
 html[data-theme="dark"] .dashboard-main .text-red-800,
 html[data-theme="dark"] .dashboard-main .text-red-700,
+html[data-theme="dark"] .dashboard-main .text-rose-700,
+html[data-theme="dark"] .dashboard-main .text-rose-800,
 html[data-theme="dark"] .dashboard-main .text-error {
   color: #ffb8b8 !important;
+}
+
+/* Bright action backgrounds keep dark ink in both themes. The generic
+   neutral-text mapping above otherwise turns their labels nearly white. */
+html[data-theme="dark"]
+  .dashboard-main
+  :is(
+    [class~="bg-emerald-300"],
+    [class~="bg-emerald-400"],
+    [class~="bg-emerald-500"],
+    [class~="bg-lime-400"],
+    [class~="bg-yellow-400"],
+    [class~="bg-amber-400"],
+    [class~="bg-primary-300"],
+    [class~="bg-primary-400"],
+    [class~="dark:bg-primary-400"]
+  )[class~="text-neutral-950"] {
+  color: #172019 !important;
 }
 
 /* Dynamic dossier creation uses component tokens rather than utility-only
@@ -5068,8 +5101,44 @@ html[data-theme="dark"] .cms-list-item--selected {
 
 html[data-theme="dark"] .dashboard-main .hover\:bg-neutral-50:hover,
 html[data-theme="dark"] .dashboard-main .hover\:bg-neutral-50\/80:hover,
-html[data-theme="dark"] .dashboard-main .hover\:bg-neutral-100:hover {
+html[data-theme="dark"] .dashboard-main .hover\:bg-neutral-100:hover,
+html[data-theme="dark"] .dashboard-main [class~="hover:bg-white"]:hover,
+html[data-theme="dark"] .dashboard-main [class~="hover:bg-white/70"]:hover {
   background-color: var(--theme-elevated) !important;
+}
+
+html[data-theme="dark"]
+  .dashboard-main
+  :is(
+    [class~="hover:bg-primary-50"],
+    [class~="hover:bg-emerald-50"],
+    [class~="hover:bg-emerald-100"]
+  ):hover {
+  background-color: color-mix(
+    in srgb,
+    #4aa66b 16%,
+    var(--theme-elevated)
+  ) !important;
+}
+
+html[data-theme="dark"]
+  .dashboard-main
+  :is([class~="hover:bg-red-50"], [class~="hover:bg-red-100"]):hover {
+  background-color: color-mix(
+    in srgb,
+    #ce5a5a 16%,
+    var(--theme-elevated)
+  ) !important;
+}
+
+html[data-theme="dark"]
+  .dashboard-main
+  [class~="hover:text-neutral-950"]:hover {
+  color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .dashboard-main [class~="hover:text-red-900"]:hover {
+  color: #ffb8b8 !important;
 }
 
 /* Search is shared by the public site and signed-in workspaces.  Its visual
