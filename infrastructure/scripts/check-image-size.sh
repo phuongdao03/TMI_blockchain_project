@@ -19,6 +19,10 @@ size_megabytes=$(((size_bytes + 1024 * 1024 - 1) / 1024 / 1024))
 
 printf '%s: %s MiB (budget %s MiB)\n' "$image" "$size_megabytes" "$maximum_megabytes"
 if ((size_bytes > maximum_bytes)); then
-  echo "image exceeds the approved size budget" >&2
+  message="image exceeds the approved size budget: ${size_megabytes} MiB > ${maximum_megabytes} MiB"
+  echo "$message" >&2
+  if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+    echo "::error title=Image size budget exceeded::$message" >&2
+  fi
   exit 1
 fi
