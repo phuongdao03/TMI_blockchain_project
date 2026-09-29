@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  BadgeCheck,
   BookOpenText,
   Eye,
   ImageIcon,
@@ -9,6 +10,7 @@ import {
   Send,
   Tags,
 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -18,7 +20,7 @@ import { cmsApi } from "@/lib/api/client";
 type CmsSection = "publicWorks" | "posts" | "pages" | "banners" | "categories";
 
 const sections = [
-  { id: "publicWorks", label: "Tác phẩm công khai", icon: Eye },
+  { id: "publicWorks", label: "Tác phẩm", icon: Eye },
   { id: "posts", label: "Bài viết", icon: BookOpenText },
   { id: "pages", label: "Trang", icon: LayoutTemplate },
   { id: "banners", label: "Banner", icon: ImageIcon },
@@ -32,18 +34,26 @@ export function CmsWorkspace() {
   const [section, setSection] = useState<CmsSection>("publicWorks");
 
   return (
-    <div className="cms-workspace mx-auto max-w-7xl space-y-7">
-      <header className="rounded-3xl bg-neutral-950 px-6 py-7 text-white sm:px-8">
-        <p className="flex items-center gap-2 text-sm font-bold text-primary-300">
-          <BookOpenText className="size-4" /> Nội dung công khai
-        </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">
-          Trung tâm nội dung
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-300">
-          Quản lý nội dung công khai, xem trước bản đã làm sạch và kiểm soát
-          thời điểm xuất bản.
-        </p>
+    <div className="cms-workspace mx-auto max-w-7xl space-y-6 pb-8">
+      <header className="flex flex-col gap-5 border-b border-neutral-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary-700">
+            <BookOpenText className="size-4" /> Quản trị công bố
+          </p>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-neutral-950 sm:text-3xl">
+            Nội dung công bố
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
+            Kiểm tra bản nháp, quản lý nội dung đang hiển thị và lưu trữ bản thử
+            nghiệm kèm lý do để giữ lịch sử minh bạch.
+          </p>
+        </div>
+        <Link
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-bold text-neutral-800 hover:bg-neutral-50"
+          href="/admin/certificates"
+        >
+          <BadgeCheck className="size-4" aria-hidden="true" /> Quản lý chứng thư
+        </Link>
       </header>
 
       <nav

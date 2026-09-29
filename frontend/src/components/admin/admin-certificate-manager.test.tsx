@@ -62,6 +62,7 @@ describe("AdminCertificateManager", () => {
       meta: { page: 1, pageSize: 20, total: 1 },
     });
     renderManager();
+    fireEvent.click(await screen.findByText("Quản lý hiển thị và phiên bản"));
     fireEvent.click(
       await screen.findByRole("button", { name: "Cho hiển thị cùng tác phẩm" }),
     );
@@ -91,5 +92,41 @@ describe("AdminCertificateManager", () => {
     expect(
       screen.queryByRole("button", { name: "Cho hiển thị cùng tác phẩm" }),
     ).toBeNull();
+  });
+
+  it("filters and pages certificates while keeping direct verification", async () => {
+    vi.mocked(adminCertificateApi.list).mockImplementation(async (filters) => ({
+      data: [
+        {
+          ...row,
+          certificate: {
+            ...row.certificate,
+            certificateNumber:
+              filters?.page === 2 ? "CNS-2026-0002" : "CNS-2026-0001",
+          },
+        },
+      ],
+      success: true,
+      meta: { page: filters?.page ?? 1, pageSize: 10, total: 11 },
+    }));
+    renderManager();
+
+    fireEvent.change(screen.getByLabelText("Lọc trạng thái công bố"), {
+      target: { value: "DRAFT" },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Trang sau" }));
+    await waitFor(() =>
+      expect(adminCertificateApi.list).toHaveBeenCalledWith({
+        page: 2,
+        pageSize: 10,
+        search: undefined,
+        status: undefined,
+        publicationStatus: "DRAFT",
+      }),
+    );
+    expect(
+      await screen.findByRole("link", { name: /Xác minh CNS-2026-0002/ }),
+    ).toBeTruthy();
+    expect(screen.getByText("Chỉ tra cứu trực tiếp")).toBeTruthy();
   });
 });

@@ -80,6 +80,15 @@ const statusLabels: Record<PublicationStatus, string> = {
   ARCHIVED: "Đã lưu trữ",
 };
 
+const availableActions: Record<PublicationStatus, readonly StateAction[]> = {
+  DRAFT: ["publish", "suspend", "archive"],
+  PENDING_PUBLICATION: ["publish", "hide", "suspend", "archive"],
+  PUBLISHED: ["hide", "suspend", "archive"],
+  HIDDEN: ["publish", "suspend", "archive"],
+  SUSPENDED: ["hide", "archive"],
+  ARCHIVED: [],
+};
+
 const checklistLabels: Record<string, string> = {
   TITLE_REQUIRED: "Có tiêu đề công khai",
   SHORT_DESCRIPTION_REQUIRED: "Có mô tả ngắn",
@@ -133,8 +142,9 @@ export function PublicWorkEditor({
 }: PublicWorkEditorProps = {}) {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<PublicationStatus | "">("DRAFT");
-  const [selectedId, setSelectedId] = useState<string | undefined>(
+  const [status, setStatus] = useState<PublicationStatus | "">("");
+  const [page, setPage] = useState(1);
+  const [chosenId, setSelectedId] = useState<string | undefined>(
     initialSelectedId,
   );
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">(
@@ -146,14 +156,23 @@ export function PublicWorkEditor({
   const [newTagName, setNewTagName] = useState("");
 
   const works = useQuery({
-    queryKey: ["admin", "public-works", query, status],
+    queryKey: ["admin", "public-works", query, status, page],
     queryFn: () =>
       publicWorkAdminApi.list({
         query: query || undefined,
         status: status || undefined,
-        pageSize: 50,
+        page,
+        pageSize: 20,
       }),
   });
+  const firstWorkId = works.data?.data[0]?.id;
+  useEffect(() => {
+    if (chosenId || !firstWorkId) return;
+    // Keep the first selection stable when filters change during an edit.
+    const timer = window.setTimeout(() => setSelectedId(firstWorkId), 0);
+    return () => window.clearTimeout(timer);
+  }, [chosenId, firstWorkId]);
+  const selectedId = chosenId;
   const detail = useQuery({
     queryKey: ["admin", "public-work", selectedId],
     queryFn: () => publicWorkAdminApi.get(selectedId!),
@@ -338,10 +357,16 @@ export function PublicWorkEditor({
   const saveError = save.error as ApiError | null;
 
   return (
-    <section className="cms-workspace overflow-visible rounded-3xl border border-neutral-200 bg-white shadow-sm">
-      <div className="grid min-h-[46rem] xl:grid-cols-[24rem_minmax(0,1fr)]">
+    <section className="cms-workspace overflow-visible rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <div className="grid min-h-[32rem] xl:grid-cols-[21rem_minmax(0,1fr)]">
         <aside className="cms-list-pane border-b border-neutral-200 bg-neutral-50/80 xl:border-r xl:border-b-0">
           <div className="border-b border-neutral-200 p-4">
+            <div className="mb-4">
+              <h2 className="font-bold text-neutral-950">Tác phẩm</h2>
+              <p className="mt-1 text-xs leading-5 text-neutral-600">
+                Tìm và chọn bản ghi để kiểm tra nội dung trước khi công bố.
+              </p>
+            </div>
             <div className="relative">
               <Search
                 aria-hidden="true"
@@ -350,17 +375,22 @@ export function PublicWorkEditor({
               <input
                 aria-label="Tìm tác phẩm"
                 className={`${fieldClass} pl-9`}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setPage(1);
+                }}
                 placeholder="Tìm theo tiêu đề hoặc đường dẫn"
+                type="search"
                 value={query}
               />
             </div>
             <SelectControl
               aria-label="Lọc theo trạng thái"
               className={`${fieldClass} mt-3`}
-              onChange={(event) =>
-                setStatus(event.target.value as PublicationStatus | "")
-              }
+              onChange={(event) => {
+                setStatus(event.target.value as PublicationStatus | "");
+                setPage(1);
+              }}
               value={status}
             >
               <option value="">Tất cả trạng thái</option>
@@ -370,6 +400,9 @@ export function PublicWorkEditor({
                 </option>
               ))}
             </SelectControl>
+            <p className="mt-3 text-xs text-neutral-600" role="status">
+              {works.data?.meta.total ?? 0} tác phẩm phù hợp
+            </p>
           </div>
           <div className="max-h-80 overflow-y-auto p-2 xl:max-h-[38rem]">
             {works.isPending ? (
@@ -411,16 +444,26 @@ export function PublicWorkEditor({
                 }}
                 type="button"
               >
-                <span className="block truncate font-mono text-sm font-black text-primary-800">
+                <span className="block text-pretty text-sm leading-5 font-bold text-neutral-950">
+                  {work.title}
+                </span>
+                <span className="mt-1 block truncate font-mono text-xs text-neutral-500">
                   {displayCnsDossierCode(work.dossierCode) ||
                     `TP-${work.id.slice(0, 8).toUpperCase()}`}
                 </span>
-                <span className="mt-1 block min-h-10 text-pretty text-sm leading-5 font-semibold text-neutral-700">
-                  {work.title}
-                </span>
-                <span className="mt-2 flex items-center justify-between gap-2 text-xs text-neutral-500">
-                  <span className="truncate">Mã tác phẩm</span>
-                  <span>{statusLabels[work.publicationStatus]}</span>
+                <span className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+                  <span className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-neutral-700">
+                    {statusLabels[work.publicationStatus]}
+                  </span>
+                  {work.publicationStatus === "PUBLISHED" ? (
+                    <span className="rounded-full border border-primary-200 bg-primary-50 px-2.5 py-1 text-primary-800">
+                      {work.visibility === "PUBLIC"
+                        ? "Trong danh mục"
+                        : work.visibility === "UNLISTED"
+                          ? "Chỉ qua liên kết"
+                          : "Riêng tư"}
+                    </span>
+                  ) : null}
                 </span>
               </button>
             ))}
@@ -430,6 +473,32 @@ export function PublicWorkEditor({
               </p>
             ) : null}
           </div>
+          {works.data && works.data.meta.total > 20 ? (
+            <nav
+              aria-label="Trang tác phẩm"
+              className="flex items-center justify-between gap-2 border-t border-neutral-200 p-3 text-xs font-semibold text-neutral-700"
+            >
+              <button
+                className="min-h-9 rounded-lg border border-neutral-300 px-3 disabled:opacity-50"
+                disabled={page <= 1}
+                onClick={() => setPage((current) => current - 1)}
+                type="button"
+              >
+                Trang trước
+              </button>
+              <span>
+                Trang {page}/{Math.ceil(works.data.meta.total / 20)}
+              </span>
+              <button
+                className="min-h-9 rounded-lg border border-neutral-300 px-3 disabled:opacity-50"
+                disabled={page * 20 >= works.data.meta.total}
+                onClick={() => setPage((current) => current + 1)}
+                type="button"
+              >
+                Trang sau
+              </button>
+            </nav>
+          ) : null}
         </aside>
 
         {!selectedId ? (
@@ -454,7 +523,7 @@ export function PublicWorkEditor({
             <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 bg-white/95 px-5 py-4 backdrop-blur">
               <div>
                 <p className="text-xs font-bold tracking-[0.16em] text-primary-700 uppercase">
-                  Public catalog
+                  Biên tập nội dung công bố
                 </p>
                 <h2 className="mt-1 text-xl font-bold tracking-tight">
                   {detail.data.title}
@@ -794,38 +863,62 @@ export function PublicWorkEditor({
                       Phiên bản {detail.data.version}
                     </p>
                     <div className="mt-4 grid gap-2">
-                      {detail.data.publicationStatus !== "PUBLISHED" ? (
+                      {availableActions[detail.data.publicationStatus].includes(
+                        "publish",
+                      ) ? (
                         <Button
                           disabled={
                             !detail.data.checklist.every(
                               (item) => item.passed,
-                            ) || isDirty
+                            ) ||
+                            isDirty ||
+                            transition.isPending
                           }
                           onClick={() => setPendingAction("publish")}
                         >
                           <Send className="size-4" /> Xuất bản
                         </Button>
-                      ) : (
+                      ) : null}
+                      {availableActions[detail.data.publicationStatus].includes(
+                        "hide",
+                      ) ? (
                         <Button
+                          disabled={isDirty || transition.isPending}
                           onClick={() => setPendingAction("hide")}
                           variant="outline"
                         >
                           <Eye className="size-4" /> Ẩn tác phẩm
                         </Button>
-                      )}
-                      <Button
-                        onClick={() => setPendingAction("suspend")}
-                        variant="outline"
-                      >
-                        <ShieldAlert className="size-4" /> Tạm ngưng
-                      </Button>
-                      <Button
-                        onClick={() => setPendingAction("archive")}
-                        variant="ghost"
-                      >
-                        <Archive className="size-4" /> Lưu trữ
-                      </Button>
+                      ) : null}
+                      {availableActions[detail.data.publicationStatus].includes(
+                        "suspend",
+                      ) ? (
+                        <Button
+                          disabled={isDirty || transition.isPending}
+                          onClick={() => setPendingAction("suspend")}
+                          variant="outline"
+                        >
+                          <ShieldAlert className="size-4" /> Tạm ngưng
+                        </Button>
+                      ) : null}
+                      {availableActions[detail.data.publicationStatus].includes(
+                        "archive",
+                      ) ? (
+                        <Button
+                          disabled={isDirty || transition.isPending}
+                          onClick={() => setPendingAction("archive")}
+                          variant="ghost"
+                        >
+                          <Archive className="size-4" /> Lưu trữ
+                        </Button>
+                      ) : null}
                     </div>
+                    {detail.data.publicationStatus === "ARCHIVED" ? (
+                      <p className="mt-3 text-xs leading-5 text-neutral-600">
+                        Bản này đã ngừng công bố. Lý do lưu trữ được giữ trong
+                        nhật ký hoạt động.
+                      </p>
+                    ) : null}
                     {isDirty ? (
                       <p className="mt-3 text-xs leading-5 text-amber-700">
                         Hãy lưu thay đổi trước khi chuyển trạng thái.
@@ -1657,7 +1750,9 @@ function ReasonDialog({
           {action === "suspend" ? "Tạm ngưng tác phẩm" : "Lưu trữ tác phẩm"}
         </h2>
         <p className="mt-2 text-sm leading-6 text-neutral-600">
-          Lý do được lưu trong nhật ký kiểm toán và không hiển thị công khai.
+          {action === "archive"
+            ? "Tác phẩm sẽ rời danh mục công khai. Lý do lưu trữ được giữ trong nhật ký để có thể đối chiếu về sau. Chứng thư đã cấp vẫn tra cứu được."
+            : "Lý do được lưu trong nhật ký kiểm toán và không hiển thị công khai."}
         </p>
         <label className="mt-4 block text-sm font-bold">
           Lý do

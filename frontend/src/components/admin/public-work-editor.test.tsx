@@ -158,6 +158,99 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("PublicWorkEditor", () => {
+  it("opens the first work and lets administrators browse all pages", async () => {
+    const user = userEvent.setup();
+    const nextWork = {
+      ...work,
+      id: "second-work",
+      title: "Tác phẩm trang hai",
+    };
+    vi.mocked(publicWorkAdminApi.list).mockImplementation(async (filters) => ({
+      success: true,
+      data: filters?.page === 2 ? [nextWork] : [work],
+      meta: { page: filters?.page ?? 1, pageSize: 20, total: 21 },
+    }));
+
+    render(<PublicWorkEditor />, { wrapper });
+
+    await waitFor(() =>
+      expect(publicWorkAdminApi.get).toHaveBeenCalledWith(work.id),
+    );
+    expect(await screen.findByLabelText("Tiêu đề công khai")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Trang sau" }));
+    expect(
+      await screen.findByRole("button", { name: /Tác phẩm trang hai/ }),
+    ).toBeTruthy();
+    expect(publicWorkAdminApi.list).toHaveBeenCalledWith({
+      query: undefined,
+      status: undefined,
+      page: 2,
+      pageSize: 20,
+    });
+  });
+
+  it("does not offer publication transitions for an archived work", async () => {
+    vi.mocked(publicWorkAdminApi.get).mockResolvedValue({
+      ...work,
+      publicationStatus: "ARCHIVED",
+    });
+    render(<PublicWorkEditor initialSelectedId={work.id} />, { wrapper });
+
+    await screen.findByLabelText("Tiêu đề công khai");
+    expect(screen.queryByRole("button", { name: "Xuất bản" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Lưu trữ" })).toBeNull();
+  });
+
+  it("archives a test work with an audit reason", async () => {
+    vi.mocked(publicWorkAdminApi.transition).mockResolvedValue({
+      ...work,
+      publicationStatus: "ARCHIVED",
+      version: 3,
+    });
+    const user = userEvent.setup();
+    render(<PublicWorkEditor initialSelectedId={work.id} />, { wrapper });
+
+    await screen.findByLabelText("Tiêu đề công khai");
+    await user.click(screen.getByRole("button", { name: "Lưu trữ" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Lý do" }),
+      "Bản thử nghiệm hệ thống",
+    );
+    await user.click(screen.getByRole("button", { name: "Xác nhận" }));
+    await waitFor(() =>
+      expect(publicWorkAdminApi.transition).toHaveBeenCalledWith(
+        work.id,
+        "archive",
+        2,
+        "Bản thử nghiệm hệ thống",
+      ),
+    );
+  });
+
+  it("keeps unsaved edits open while filtering the list", async () => {
+    const user = userEvent.setup();
+    vi.mocked(publicWorkAdminApi.list).mockImplementation(async (filters) => ({
+      success: true,
+      data: filters?.query
+        ? [{ ...work, id: "another-work", title: "Tác phẩm khác" }]
+        : [work],
+      meta: { page: 1, pageSize: 20, total: 1 },
+    }));
+    render(<PublicWorkEditor />, { wrapper });
+
+    const title = await screen.findByLabelText("Tiêu đề công khai");
+    await waitFor(() =>
+      expect((title as HTMLInputElement).value).toBe(work.title),
+    );
+    await user.type(title, " đang sửa");
+    await user.type(screen.getByLabelText("Tìm tác phẩm"), "khác");
+    await screen.findByRole("button", { name: /Tác phẩm khác/ });
+    expect((title as HTMLInputElement).value).toBe(
+      "Bản mẫu công khai đang sửa",
+    );
+    expect(publicWorkAdminApi.get).not.toHaveBeenCalledWith("another-work");
+  });
+
   it("preserves an unsaved public title when work details are refetched", async () => {
     const client = new QueryClient({
       defaultOptions: {
