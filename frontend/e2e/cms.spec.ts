@@ -29,7 +29,7 @@ test("content admin creates, previews and publishes a sanitized post", async ({
   await page.goto("/admin/content");
   await page.getByRole("button", { name: "Bài viết" }).click();
   await expect(
-    page.getByRole("heading", { name: "Trung tâm nội dung" }),
+    page.getByRole("heading", { level: 1, name: "Nội dung công bố" }),
   ).toBeVisible();
 
   await page.getByLabel("Tiêu đề").fill("Thông báo xác lập");

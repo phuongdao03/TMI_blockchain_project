@@ -126,7 +126,7 @@ test("super admin previews the populated attendance feed and circle worksite map
   await page.goto("/admin/attendance/worksites");
 
   await expect(
-    page.getByRole("heading", { level: 1, name: "Địa điểm làm việc toàn cầu" }),
+    page.getByRole("heading", { level: 1, name: "Chấm công theo địa điểm" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /DEMO-SG.*Singapore/ }),
