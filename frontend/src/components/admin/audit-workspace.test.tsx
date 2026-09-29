@@ -117,24 +117,25 @@ describe("AuditWorkspace", () => {
     expect(screen.queryByText("Không phát hiện bất thường")).toBeNull();
   });
 
-  it("prioritizes a human-readable event, resource, and actor before technical identifiers", async () => {
+  it("shows a human-readable event without exposing technical identifiers", async () => {
     render(<AuditWorkspace />, { wrapper: Wrapper });
 
     const summary = await screen.findByTestId("audit-row-summary");
     expect(summary.textContent).toContain("Đã phê duyệt chứng thư");
-    expect(summary.textContent).toContain("Hệ thống cấp chứng thư");
+    expect(
+      screen.getAllByText("Hệ thống cấp chứng thư").length,
+    ).toBeGreaterThan(0);
     expect(summary.textContent).not.toContain(
       "71a340d3-f813-3e7e-53aa-7495ba56a269",
     );
 
-    const technicalDetails = screen.getByTestId("audit-row-technical-details");
-    expect(technicalDetails.textContent).toContain(
-      "71a340d3-f813-3e7e-53aa-7495ba56a269",
-    );
-    expect(technicalDetails.textContent).toContain("request-1");
+    expect(screen.queryByText("Chi tiết kỹ thuật")).toBeNull();
+    expect(screen.queryByText("Thông tin kỹ thuật")).toBeNull();
+    expect(screen.queryByTestId("audit-row-technical-details")).toBeNull();
+    expect(screen.queryByText("request-1")).toBeNull();
   });
 
-  it("uses single-column audit cards on mobile instead of compressing five table columns", async () => {
+  it("uses single-column audit cards on mobile instead of compressing the table", async () => {
     render(<AuditWorkspace />, { wrapper: Wrapper });
 
     const desktopTable = await screen.findByTestId("audit-desktop-table");
@@ -236,9 +237,7 @@ describe("AuditWorkspace", () => {
     expect(
       (await screen.findByTestId("audit-row-summary")).textContent,
     ).not.toContain("public.verification.completed");
-    expect(
-      screen.getByTestId("audit-row-technical-details").textContent,
-    ).toContain("public.verification.completed");
+    expect(screen.queryByTestId("audit-row-technical-details")).toBeNull();
   });
 
   it("shows publication as the business outcome", async () => {

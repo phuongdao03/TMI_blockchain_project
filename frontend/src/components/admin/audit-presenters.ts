@@ -39,6 +39,34 @@ const exactActionLabels: Record<string, string> = {
   "public_work.published": "Đã công bố tác phẩm",
   "public_work.media_attached": "Đã thêm nội dung công khai",
   "certificate.issued": "Đã cấp chứng thư",
+  "hr.department.created": "Đã tạo phòng ban",
+  "hr.department.updated": "Đã cập nhật phòng ban",
+  "hr.employee.created": "Đã tạo hồ sơ nhân viên",
+  "hr.employee.updated": "Đã cập nhật hồ sơ nhân viên",
+  "hr.attendance_worksite.created": "Đã tạo điểm làm việc",
+  "hr.attendance_worksite.updated": "Đã cập nhật điểm làm việc",
+  "hr.attendance_worksite_policy.created": "Đã lưu chính sách chấm công",
+  "hr.attendance_assignment.created": "Đã phân công điểm chấm công",
+  "hr.attendance.checked_in": "Nhân viên đã chấm công vào",
+  "hr.attendance.checked_out": "Nhân viên đã chấm công ra",
+  "hr.attendance.adjusted": "Đã điều chỉnh chấm công",
+  "hr.attendance_location_exception.decided": "Đã xử lý ngoại lệ vị trí",
+  "hr.leave.created": "Đã gửi yêu cầu nghỉ phép",
+  "hr.leave.cancelled": "Đã hủy yêu cầu nghỉ phép",
+  "hr.overtime.created": "Đã gửi yêu cầu tăng ca",
+  "hr.overtime.cancelled": "Đã hủy yêu cầu tăng ca",
+  "hr.payroll.created": "Đã tạo kỳ lương",
+  "hr.payroll.calculated": "Đã tính bảng lương",
+  "hr.payroll.entry_adjusted": "Đã điều chỉnh khoản lương",
+  "hr.payroll.confirmed": "Đã xác nhận bảng lương",
+  "hr.payroll.paid": "Đã ghi nhận trả lương",
+  "work.task.created": "Đã tạo công việc",
+  "work.task.updated": "Đã cập nhật công việc",
+  "work.task.checklist.created": "Đã thêm mục kiểm tra công việc",
+  "work.task.comment.created": "Đã bình luận công việc",
+  "work.task.attachment.added": "Đã đính kèm tệp công việc",
+  "work.allocation.created": "Đã tạo phân công công việc",
+  "work.allocation.activated": "Đã kích hoạt phân công công việc",
 };
 
 const actionLabels: Record<string, string> = {
@@ -81,6 +109,19 @@ const resourceLabels: Record<string, string> = {
   public_work: "Tác phẩm công khai",
   public_category: "Danh mục công khai",
   public_tag: "Nhãn công khai",
+  department: "Phòng ban",
+  employee: "Nhân viên",
+  attendance_worksite: "Điểm làm việc",
+  attendance_worksite_policy: "Chính sách chấm công",
+  attendance_assignment: "Phân công chấm công",
+  attendance: "Chấm công",
+  attendance_location_exception: "Ngoại lệ vị trí",
+  leave_request: "Nghỉ phép",
+  overtime_request: "Tăng ca",
+  payroll_period: "Kỳ lương",
+  payroll_entry: "Khoản lương",
+  task: "Công việc",
+  work_allocation: "Phân công công việc",
 };
 
 const roleLabels: Record<string, string> = {
@@ -191,7 +232,7 @@ export function actorLabel(
       ? (serviceLabels[actorService.toLowerCase()] ?? "Tác vụ hệ thống")
       : "Tác vụ hệ thống";
   }
-  return "Phiên không định danh";
+  return "Người dùng chưa xác định";
 }
 
 export function auditEventSummary(row: AuditLogItem): string {
@@ -236,9 +277,15 @@ export function auditTargetLabel(row: AuditLogItem): string {
     stringValue(row.after, "certificate_number") ??
     stringValue(row.after, "dossier_code") ??
     stringValue(row.after, "title") ??
+    stringValue(row.after, "name") ??
+    stringValue(row.after, "employee_code") ??
+    stringValue(row.after, "code") ??
     stringValue(row.before, "certificate_number") ??
     stringValue(row.before, "dossier_code") ??
-    stringValue(row.before, "title");
+    stringValue(row.before, "title") ??
+    stringValue(row.before, "name") ??
+    stringValue(row.before, "employee_code") ??
+    stringValue(row.before, "code");
   return value
     ? `${resourceLabel(row.resourceType)} · ${value}`
     : resourceLabel(row.resourceType);

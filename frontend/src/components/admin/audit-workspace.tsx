@@ -18,7 +18,7 @@ import { auditApi } from "@/lib/api/client";
 import type { AuditListFilters } from "@/lib/api/types";
 
 const inputClass =
-  "mt-2 min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm text-ink-950 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100";
+  "mt-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm text-[var(--theme-text)] outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100";
 
 export function AuditWorkspace() {
   const [page, setPage] = useState(1);
@@ -72,9 +72,8 @@ export function AuditWorkspace() {
             Lịch sử vận hành
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:leading-7">
-            Theo dõi các quyết định và thay đổi quan trọng. Thông tin kỹ thuật
-            được thu gọn để danh sách tập trung vào việc đã xảy ra và trạng thái
-            kiểm chứng.
+            Xem ai đã thực hiện thay đổi, nội dung liên quan và kết quả ghi
+            nhận. Dùng bộ lọc để tìm đúng hoạt động cần đối chiếu.
           </p>
           <a
             className={`${buttonVariants({ variant: "outline" })} mt-5 inline-flex w-full sm:mt-6 sm:w-auto`}
@@ -124,7 +123,7 @@ export function AuditWorkspace() {
 
       <section
         aria-label="Bộ lọc lịch sử"
-        className="grid gap-4 border border-neutral-200 bg-white p-4 sm:p-5 md:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-[var(--theme-text)] sm:p-5 md:grid-cols-2 xl:grid-cols-4"
       >
         <label className="text-sm font-semibold" htmlFor="audit-action">
           Loại hoạt động
@@ -150,6 +149,16 @@ export function AuditWorkspace() {
             <option value="audit.integrity_checked">
               Tính toàn vẹn được kiểm tra
             </option>
+            <option value="hr.employee.updated">
+              Hồ sơ nhân viên được cập nhật
+            </option>
+            <option value="hr.attendance.adjusted">
+              Chấm công được điều chỉnh
+            </option>
+            <option value="hr.payroll.confirmed">
+              Bảng lương được xác nhận
+            </option>
+            <option value="cms.post.published">Bài viết được xuất bản</option>
           </SelectControl>
         </label>
         <label className="text-sm font-semibold" htmlFor="audit-resource-type">
@@ -169,6 +178,10 @@ export function AuditWorkspace() {
             <option value="certificate">Chứng thư</option>
             <option value="document">Tài liệu</option>
             <option value="payment">Thanh toán</option>
+            <option value="employee">Nhân viên</option>
+            <option value="attendance">Chấm công</option>
+            <option value="payroll_period">Kỳ lương</option>
+            <option value="cms_post">Bài viết</option>
           </SelectControl>
         </label>
         <label className="text-sm font-semibold" htmlFor="audit-created-from">
@@ -199,7 +212,7 @@ export function AuditWorkspace() {
             value={createdTo}
           />
         </label>
-        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 text-sm xl:col-span-4">
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-4 text-sm xl:col-span-4">
           <input
             checked={showAccessEvents}
             className="size-4 accent-primary-700"
@@ -210,10 +223,10 @@ export function AuditWorkspace() {
             type="checkbox"
           />
           <span>
-            <strong className="block text-ink-950">
+            <strong className="block text-[var(--theme-text)]">
               Hiển thị lượt truy cập
             </strong>
-            <span className="text-xs text-neutral-500">
+            <span className="text-xs text-[var(--theme-muted)]">
               Bao gồm các lần quản trị viên mở trang lịch sử; mặc định được ẩn
               để ưu tiên thay đổi nghiệp vụ.
             </span>
@@ -221,11 +234,13 @@ export function AuditWorkspace() {
         </label>
       </section>
 
-      <section className="overflow-hidden border border-neutral-200 bg-white">
-        <div className="flex items-center justify-between gap-3 border-b border-neutral-200 px-4 py-4 sm:px-5">
+      <section className="overflow-hidden border border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text)]">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--theme-border)] px-4 py-4 sm:px-5">
           <div>
-            <h2 className="font-bold text-ink-950">Hoạt động gần đây</h2>
-            <p className="mt-1 text-xs text-neutral-500">
+            <h2 className="font-bold text-[var(--theme-text)]">
+              Hoạt động gần đây
+            </h2>
+            <p className="mt-1 text-xs text-[var(--theme-muted)]">
               {audit.data?.meta.total ?? 0} thay đổi phù hợp
             </p>
           </div>
@@ -267,13 +282,12 @@ export function AuditWorkspace() {
             data-testid="audit-desktop-table"
           >
             <table className="min-w-full text-left text-sm">
-              <thead className="bg-neutral-50 text-xs tracking-wide text-neutral-500 uppercase">
+              <thead className="bg-[var(--theme-elevated)] text-xs tracking-wide text-[var(--theme-muted)] uppercase">
                 <tr>
                   <th className="px-5 py-3">Thời gian</th>
                   <th className="px-5 py-3">Việc đã xảy ra</th>
                   <th className="px-5 py-3">Người thực hiện</th>
                   <th className="px-5 py-3">Kết quả</th>
-                  <th className="px-5 py-3">Chi tiết kỹ thuật</th>
                 </tr>
               </thead>
               <tbody>

@@ -23,30 +23,6 @@ function IntegrityBadge({ row }: { row: AuditLogItem }) {
   );
 }
 
-function TechnicalDetails({ row }: { row: AuditLogItem }) {
-  return (
-    <details className="group text-xs text-neutral-600">
-      <summary className="cursor-pointer font-semibold text-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2">
-        Thông tin kỹ thuật
-      </summary>
-      <dl className="mt-3 grid max-w-sm gap-2 rounded-lg bg-neutral-50 p-3">
-        <div>
-          <dt className="text-neutral-500">Loại sự kiện</dt>
-          <dd className="break-all font-mono">{row.action}</dd>
-        </div>
-        <div>
-          <dt className="text-neutral-500">Mã đối tượng</dt>
-          <dd className="break-all font-mono">{row.resourceId}</dd>
-        </div>
-        <div>
-          <dt className="text-neutral-500">Mã yêu cầu</dt>
-          <dd className="break-all font-mono">{row.requestId ?? "—"}</dd>
-        </div>
-      </dl>
-    </details>
-  );
-}
-
 export function AuditRow({ row }: { row: AuditLogItem }) {
   const timestamp = formatAuditTimestamp(row.createdAt);
   return (
@@ -64,18 +40,12 @@ export function AuditRow({ row }: { row: AuditLogItem }) {
         <span className="mt-1 block text-xs text-neutral-500">
           {auditTargetLabel(row)}
         </span>
-        <span className="mt-1 block text-xs text-neutral-500">
-          {actorLabel(row.actorType, row.actorService)}
-        </span>
       </td>
       <td className="px-5 py-4 text-neutral-700">
         {actorLabel(row.actorType, row.actorService)}
       </td>
       <td className="px-5 py-4">
         <IntegrityBadge row={row} />
-      </td>
-      <td className="px-5 py-4" data-testid="audit-row-technical-details">
-        <TechnicalDetails row={row} />
       </td>
     </tr>
   );
