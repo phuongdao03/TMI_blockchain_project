@@ -242,7 +242,10 @@ describe("dashboard overview", () => {
     );
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Khám phá đề cử" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Tra cứu đề cử và chứng thư",
+      }),
     ).toBeDefined();
     expect(screen.queryByRole("link", { name: "Tạo hồ sơ mới" })).toBeNull();
     expect(listMock).not.toHaveBeenCalled();
