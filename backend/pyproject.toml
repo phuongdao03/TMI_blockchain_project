@@ -20,7 +20,7 @@ dependencies = [
   "Pillow==12.3.0",
   "pydantic==2.13.4",
   "pydantic-settings==2.14.2",
-  "PyJWT==2.13.0",
+  "PyJWT==2.14.0",
   "qrcode[pil]==8.2",
   "redis==8.0.1",
   "reportlab==5.0.0",
