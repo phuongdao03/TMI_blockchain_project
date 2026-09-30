@@ -101,9 +101,22 @@ export function RoleDashboardOverview({
       ) : null}
 
       {isViewer ? (
-        <nav aria-label="Việc có thể làm với tài khoản tra cứu" className="flex flex-wrap gap-3">
-          <Link className="inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]" href="/verify">Tra cứu chứng thư</Link>
-          <Link className="inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]" href="/help">Xem hướng dẫn tài khoản</Link>
+        <nav
+          aria-label="Việc có thể làm với tài khoản tra cứu"
+          className="flex flex-wrap gap-3"
+        >
+          <Link
+            className="inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
+            href="/verify"
+          >
+            Tra cứu chứng thư
+          </Link>
+          <Link
+            className="inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
+            href="/help"
+          >
+            Xem hướng dẫn tài khoản
+          </Link>
         </nav>
       ) : null}
 

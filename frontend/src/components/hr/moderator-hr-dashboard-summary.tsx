@@ -88,7 +88,10 @@ export function ModeratorHrDashboardSummary() {
           Super Admin cần liên kết hồ sơ nhân sự với tài khoản này trước khi bạn
           có thể sử dụng chấm công, nghỉ phép và tăng ca.
         </p>
-        <Link className="mt-4 inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)]" href="/help#employee">
+        <Link
+          className="mt-4 inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)]"
+          href="/help#employee"
+        >
           Xem cách hoàn tất thiết lập nhân sự
         </Link>
       </section>

@@ -128,7 +128,8 @@ export function AttendanceLocationPicker({
   const hasRadius = Number.isFinite(radius) && radius > 0;
   const mapCenter: LatLngExpression =
     mapDestination ?? center ?? DEFAULT_CENTER;
-  const activeTiles = mapStyle === "satellite" ? satelliteTileConfig : mapTileConfig;
+  const activeTiles =
+    mapStyle === "satellite" ? satelliteTileConfig : mapTileConfig;
 
   function goToCity(city: { name: string; center: CoordinatePair }) {
     setCityName(city.name);
@@ -156,13 +157,21 @@ export function AttendanceLocationPicker({
     setSearchingCity(true);
     try {
       const results = await hrAttendanceConfigurationApi.searchAddress(query);
-      setCityResults(results.map((result) => ({
-        name: result.label,
-        center: [result.latitude, result.longitude],
-      })));
-      setCityMessage(results.length ? "Chọn một kết quả để chuyển bản đồ." : "Không tìm thấy địa điểm. Thử tên thành phố kèm quốc gia.");
+      setCityResults(
+        results.map((result) => ({
+          name: result.label,
+          center: [result.latitude, result.longitude],
+        })),
+      );
+      setCityMessage(
+        results.length
+          ? "Chọn một kết quả để chuyển bản đồ."
+          : "Không tìm thấy địa điểm. Thử tên thành phố kèm quốc gia.",
+      );
     } catch {
-      setCityMessage("Không tìm được thành phố lúc này. Thử lại hoặc tìm địa chỉ bên dưới.");
+      setCityMessage(
+        "Không tìm được thành phố lúc này. Thử lại hoặc tìm địa chỉ bên dưới.",
+      );
     } finally {
       setSearchingCity(false);
     }
@@ -265,23 +274,47 @@ export function AttendanceLocationPicker({
           Đến thành phố
           <input
             className="mt-1 min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm text-[var(--theme-text)]"
-            onChange={(event) => { setCityName(event.target.value); setCityResults([]); }}
+            onChange={(event) => {
+              setCityName(event.target.value);
+              setCityResults([]);
+            }}
             onKeyDown={(event) => {
-              if (event.key === "Enter") { event.preventDefault(); void searchCity(); }
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void searchCity();
+              }
             }}
             placeholder="Gõ tên thành phố, ví dụ: Đà Nẵng"
             value={cityName}
           />
         </label>
-        <button className="min-h-11 justify-self-start rounded-xl border border-[var(--theme-border)] px-4 text-sm font-semibold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)]" disabled={searchingCity} onClick={() => void searchCity()} type="button">
+        <button
+          className="min-h-11 justify-self-start rounded-xl border border-[var(--theme-border)] px-4 text-sm font-semibold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)]"
+          disabled={searchingCity}
+          onClick={() => void searchCity()}
+          type="button"
+        >
           {searchingCity ? "Đang tìm…" : "Tìm thành phố"}
         </button>
-        {cityMessage ? <p aria-live="polite" className="text-sm text-[var(--theme-muted)]">{cityMessage}</p> : null}
+        {cityMessage ? (
+          <p aria-live="polite" className="text-sm text-[var(--theme-muted)]">
+            {cityMessage}
+          </p>
+        ) : null}
         {cityResults.length > 0 ? (
-          <ul aria-label="Kết quả thành phố" className="grid gap-2 sm:grid-cols-2">
+          <ul
+            aria-label="Kết quả thành phố"
+            className="grid gap-2 sm:grid-cols-2"
+          >
             {cityResults.map((city) => (
               <li key={`${city.name}-${city.center.join("-")}`}>
-                <button className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-left text-sm font-semibold text-[var(--theme-text)] hover:border-primary-600" onClick={() => goToCity(city)} type="button">{city.name}</button>
+                <button
+                  className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-left text-sm font-semibold text-[var(--theme-text)] hover:border-primary-600"
+                  onClick={() => goToCity(city)}
+                  type="button"
+                >
+                  {city.name}
+                </button>
               </li>
             ))}
           </ul>
@@ -398,9 +431,33 @@ export function AttendanceLocationPicker({
         role="application"
       >
         {satelliteTileConfig ? (
-          <div className="flex gap-2 border-b border-[var(--theme-border)] bg-[var(--theme-surface)] p-2" role="group" aria-label="Kiểu bản đồ">
-            <button aria-pressed={mapStyle === "street"} className="min-h-10 rounded-lg px-4 text-sm font-semibold text-[var(--theme-text)] aria-pressed:bg-[var(--theme-elevated)]" onClick={() => { setMapStyle("street"); setTilesFailed(false); }} type="button">Đường phố</button>
-            <button aria-pressed={mapStyle === "satellite"} className="min-h-10 rounded-lg px-4 text-sm font-semibold text-[var(--theme-text)] aria-pressed:bg-[var(--theme-elevated)]" onClick={() => { setMapStyle("satellite"); setTilesFailed(false); }} type="button">Ảnh vệ tinh</button>
+          <div
+            className="flex gap-2 border-b border-[var(--theme-border)] bg-[var(--theme-surface)] p-2"
+            role="group"
+            aria-label="Kiểu bản đồ"
+          >
+            <button
+              aria-pressed={mapStyle === "street"}
+              className="min-h-10 rounded-lg px-4 text-sm font-semibold text-[var(--theme-text)] aria-pressed:bg-[var(--theme-elevated)]"
+              onClick={() => {
+                setMapStyle("street");
+                setTilesFailed(false);
+              }}
+              type="button"
+            >
+              Đường phố
+            </button>
+            <button
+              aria-pressed={mapStyle === "satellite"}
+              className="min-h-10 rounded-lg px-4 text-sm font-semibold text-[var(--theme-text)] aria-pressed:bg-[var(--theme-elevated)]"
+              onClick={() => {
+                setMapStyle("satellite");
+                setTilesFailed(false);
+              }}
+              type="button"
+            >
+              Ảnh vệ tinh
+            </button>
           </div>
         ) : null}
         <MapContainer
@@ -473,8 +530,9 @@ export function AttendanceLocationPicker({
         </div>
       ) : null}
       <p className="mt-3 text-xs leading-5 text-neutral-500">
-        Bản đồ nền có ghi nguồn dữ liệu ngay trên bản đồ. Chỉ Super Admin được cấu hình điểm
-        làm việc; vị trí chấm công của nhân viên không được hiển thị tại đây.
+        Bản đồ nền có ghi nguồn dữ liệu ngay trên bản đồ. Chỉ Super Admin được
+        cấu hình điểm làm việc; vị trí chấm công của nhân viên không được hiển
+        thị tại đây.
       </p>
     </section>
   );

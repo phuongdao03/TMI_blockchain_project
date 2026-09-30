@@ -9,7 +9,10 @@ import type {
   AttendanceWorksitePolicy,
 } from "@/lib/api/types";
 
-import type { PolicyCorrectionInput, PolicyInput } from "./attendance-configuration-types";
+import type {
+  PolicyCorrectionInput,
+  PolicyInput,
+} from "./attendance-configuration-types";
 
 const AttendanceLocationPicker = dynamic(
   () =>
@@ -64,7 +67,8 @@ function localDateIn(timezone: string): string {
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(new Date());
-  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  const value = (type: string) =>
+    parts.find((part) => part.type === type)?.value ?? "";
   return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
@@ -77,7 +81,10 @@ export function AttendancePolicyPanel({
   selectedWorksite,
 }: {
   isSaving: boolean;
-  onCorrect: (policyId: string, input: PolicyCorrectionInput) => Promise<unknown>;
+  onCorrect: (
+    policyId: string,
+    input: PolicyCorrectionInput,
+  ) => Promise<unknown>;
   onRetry: () => void;
   onSave: (input: PolicyInput) => Promise<unknown>;
   policies: PolicyQuery;
@@ -91,12 +98,18 @@ export function AttendancePolicyPanel({
   const canConfigure = selectedWorksite?.status === "ACTIVE";
   const rows = policies.data?.data ?? [];
   const latestPolicy = rows[0] ?? null;
-  const correctablePolicy = rows.find(
-    (policy) => {
+  const correctablePolicy =
+    rows.find((policy) => {
       const today = localDateIn(policy.timezone);
-      return policy.effectiveFrom <= today && (!policy.effectiveTo || policy.effectiveTo >= today);
-    },
-  ) ?? rows.find((policy) => policy.effectiveFrom > localDateIn(policy.timezone)) ?? null;
+      return (
+        policy.effectiveFrom <= today &&
+        (!policy.effectiveTo || policy.effectiveTo >= today)
+      );
+    }) ??
+    rows.find(
+      (policy) => policy.effectiveFrom > localDateIn(policy.timezone),
+    ) ??
+    null;
   const inheritedInputs: PolicyForm = latestPolicy
     ? {
         ...emptyPolicyForm,
@@ -107,7 +120,9 @@ export function AttendancePolicyPanel({
         maxAccuracyMeters: String(latestPolicy.maxAccuracyMeters),
       }
     : emptyPolicyForm;
-  const showForm = Boolean(selectedWorksite) && (!latestPolicy || correcting || creatingVersion);
+  const showForm =
+    Boolean(selectedWorksite) &&
+    (!latestPolicy || correcting || creatingVersion);
   const form = draft ?? inheritedInputs;
   const {
     effectiveFrom,
@@ -139,8 +154,12 @@ export function AttendancePolicyPanel({
       !timezone.trim() ||
       !latitude.trim() ||
       !longitude.trim() ||
-      !Number.isFinite(parsedLatitude) || parsedLatitude < -90 || parsedLatitude > 90 ||
-      !Number.isFinite(parsedLongitude) || parsedLongitude < -180 || parsedLongitude > 180 ||
+      !Number.isFinite(parsedLatitude) ||
+      parsedLatitude < -90 ||
+      parsedLatitude > 90 ||
+      !Number.isFinite(parsedLongitude) ||
+      parsedLongitude < -180 ||
+      parsedLongitude > 180 ||
       !Number.isFinite(radius) ||
       radius <= 0 ||
       !Number.isFinite(accuracy) ||
@@ -150,7 +169,9 @@ export function AttendancePolicyPanel({
       return;
     }
     if (correcting && correctionReason.trim().length < 10) {
-      setFormError("Nhập lý do điều chỉnh ít nhất 10 ký tự để lưu vào nhật ký.");
+      setFormError(
+        "Nhập lý do điều chỉnh ít nhất 10 ký tự để lưu vào nhật ký.",
+      );
       return;
     }
     if (effectiveTo && effectiveTo < effectiveFrom) {
@@ -160,8 +181,10 @@ export function AttendancePolicyPanel({
     try {
       if (correcting && correctablePolicy) {
         await onCorrect(correctablePolicy.id, {
-          latitude: latitude.trim(), longitude: longitude.trim(),
-          radiusMeters: radius, maxAccuracyMeters: accuracy,
+          latitude: latitude.trim(),
+          longitude: longitude.trim(),
+          radiusMeters: radius,
+          maxAccuracyMeters: accuracy,
           reason: correctionReason.trim(),
         });
         setCorrecting(false);
@@ -233,15 +256,21 @@ export function AttendancePolicyPanel({
             onClick={() => {
               setCorrecting((current) => !current);
               setCreatingVersion(false);
-              setDraft(correcting ? null : {
-                effectiveFrom: correctablePolicy.effectiveFrom,
-                effectiveTo: correctablePolicy.effectiveTo ?? "",
-                timezone: correctablePolicy.timezone,
-                latitude: correctablePolicy.latitude,
-                longitude: correctablePolicy.longitude,
-                radiusMeters: String(correctablePolicy.radiusMeters),
-                maxAccuracyMeters: String(correctablePolicy.maxAccuracyMeters),
-              });
+              setDraft(
+                correcting
+                  ? null
+                  : {
+                      effectiveFrom: correctablePolicy.effectiveFrom,
+                      effectiveTo: correctablePolicy.effectiveTo ?? "",
+                      timezone: correctablePolicy.timezone,
+                      latitude: correctablePolicy.latitude,
+                      longitude: correctablePolicy.longitude,
+                      radiusMeters: String(correctablePolicy.radiusMeters),
+                      maxAccuracyMeters: String(
+                        correctablePolicy.maxAccuracyMeters,
+                      ),
+                    },
+              );
               setFormError(null);
             }}
             type="button"
@@ -253,193 +282,223 @@ export function AttendancePolicyPanel({
 
       {latestPolicy && !showForm ? (
         <p className="mt-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 text-sm leading-6 text-[var(--theme-text)]">
-          Vùng đã lưu: {latestPolicy.latitude}, {latestPolicy.longitude} · bán kính {latestPolicy.radiusMeters} m · sai số tối đa {latestPolicy.maxAccuracyMeters} m. Chọn sửa vị trí nếu đặt nhầm tâm vùng; chọn phiên bản mới khi cần thay đổi thời gian áp dụng.
+          Vùng đã lưu: {latestPolicy.latitude}, {latestPolicy.longitude} · bán
+          kính {latestPolicy.radiusMeters} m · sai số tối đa{" "}
+          {latestPolicy.maxAccuracyMeters} m. Chọn sửa vị trí nếu đặt nhầm tâm
+          vùng; chọn phiên bản mới khi cần thay đổi thời gian áp dụng.
         </p>
       ) : null}
 
       {correcting ? (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950">
-          Sửa tâm vùng, bán kính hoặc sai số của chính sách hiện tại. Ngày hiệu lực và múi giờ được giữ nguyên; lý do và giá trị trước/sau được ghi vào nhật ký quản trị.
+          Sửa tâm vùng, bán kính hoặc sai số của chính sách hiện tại. Ngày hiệu
+          lực và múi giờ được giữ nguyên; lý do và giá trị trước/sau được ghi
+          vào nhật ký quản trị.
         </p>
       ) : null}
 
-      {showForm ? <form
-        className="mt-5 rounded-2xl bg-neutral-50 p-4 sm:p-5"
-        onSubmit={submit}
-      >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label
-            className="block text-sm font-semibold text-neutral-800"
-            htmlFor="attendance-policy-effective-from"
-          >
-            Ngày hiệu lực
-            <input
-              className={fieldClass}
-              disabled={!canConfigure || correcting}
-              id="attendance-policy-effective-from"
-              onChange={(event) =>
-                updateInput("effectiveFrom", event.target.value)
-              }
-              type="date"
-              value={effectiveFrom}
-            />
-          </label>
-          <label
-            className="block text-sm font-semibold text-neutral-800"
-            htmlFor="attendance-policy-effective-to"
-          >
-            Kết thúc{" "}
-            <span className="font-normal text-neutral-500">(nếu có)</span>
-            <input
-              className={fieldClass}
-              disabled={!canConfigure || correcting}
-              id="attendance-policy-effective-to"
-              min={effectiveFrom || undefined}
-              onChange={(event) =>
-                updateInput("effectiveTo", event.target.value)
-              }
-              type="date"
-              value={effectiveTo}
-            />
-          </label>
-          <label
-            className="block text-sm font-semibold text-neutral-800 sm:col-span-2"
-            htmlFor="attendance-policy-timezone"
-          >
-            Múi giờ IANA
-            <input
-              className={fieldClass}
-              disabled={!canConfigure || correcting}
-              id="attendance-policy-timezone"
-              list="attendance-timezone-options"
-              maxLength={64}
-              onChange={(event) => updateInput("timezone", event.target.value)}
-              placeholder="VD: Asia/Ho_Chi_Minh"
-              value={timezone}
-            />
-          </label>
-          <datalist id="attendance-timezone-options">
-            <option value="Asia/Ho_Chi_Minh" />
-            <option value="Asia/Singapore" />
-            <option value="Asia/Bangkok" />
-          </datalist>
-        </div>
-        {correcting ? (
-          <label className="mt-4 block text-sm font-semibold text-neutral-800" htmlFor="attendance-policy-correction-reason">
-            Lý do điều chỉnh
-            <textarea className={fieldClass} id="attendance-policy-correction-reason" maxLength={500} minLength={10} onChange={(event) => setCorrectionReason(event.target.value)} placeholder="Ví dụ: Đã chọn nhầm vị trí khi thiết lập ban đầu" required rows={2} value={correctionReason} />
-          </label>
-        ) : null}
-        <AttendanceLocationPicker
-          disabled={!canConfigure}
-          latitude={latitude}
-          longitude={longitude}
-          onCoordinatesChange={(nextLatitude, nextLongitude) => {
-            setDraft((current) => ({
-              ...(current ?? inheritedInputs),
-              latitude: nextLatitude,
-              longitude: nextLongitude,
-            }));
-          }}
-          radiusMeters={radiusMeters}
-        />
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <label
-            className="block text-sm font-semibold text-neutral-800"
-            htmlFor="attendance-policy-latitude"
-          >
-            Vĩ độ
-            <input
-              className={fieldClass}
-              disabled={!canConfigure}
-              id="attendance-policy-latitude"
-              inputMode="decimal"
-              onChange={(event) => updateInput("latitude", event.target.value)}
-              placeholder="10.7769"
-              value={latitude}
-            />
-          </label>
-          <label
-            className="block text-sm font-semibold text-neutral-800"
-            htmlFor="attendance-policy-longitude"
-          >
-            Kinh độ
-            <input
-              className={fieldClass}
-              disabled={!canConfigure}
-              id="attendance-policy-longitude"
-              inputMode="decimal"
-              onChange={(event) => updateInput("longitude", event.target.value)}
-              placeholder="106.7009"
-              value={longitude}
-            />
-          </label>
-          <label
-            className="block text-sm font-semibold text-neutral-800"
-            htmlFor="attendance-policy-radius"
-          >
-            Bán kính cho phép (m)
-            <input
-              className={fieldClass}
-              disabled={!canConfigure}
-              id="attendance-policy-radius"
-              inputMode="numeric"
-              min="1"
-              onChange={(event) =>
-                updateInput("radiusMeters", event.target.value)
-              }
-              type="number"
-              value={radiusMeters}
-            />
-          </label>
-          <label
-            className="block text-sm font-semibold text-neutral-800"
-            htmlFor="attendance-policy-accuracy"
-          >
-            Sai số GPS tối đa (m)
-            <input
-              className={fieldClass}
-              disabled={!canConfigure}
-              id="attendance-policy-accuracy"
-              inputMode="numeric"
-              min="1"
-              onChange={(event) =>
-                updateInput("maxAccuracyMeters", event.target.value)
-              }
-              type="number"
-              value={maxAccuracyMeters}
-            />
-          </label>
-        </div>
-        {latestPolicy && !correcting ? (
-          <p className="mt-3 text-sm leading-6 text-primary-900">
-            Đã sao chép thông số từ chính sách gần nhất. Hãy chọn ngày hiệu lực
-            cho phiên bản mới.
-          </p>
-        ) : null}
-        {selectedWorksite && !canConfigure ? (
-          <p className="mt-3 text-sm text-amber-800">
-            Địa điểm đang tạm ngưng; hãy kích hoạt lại trước khi tạo chính sách
-            mới.
-          </p>
-        ) : null}
-        {formError ? (
-          <p className="mt-3 flex gap-2 text-sm text-rose-700" role="alert">
-            <CircleAlert
-              aria-hidden="true"
-              className="mt-0.5 size-4 shrink-0"
-            />
-            {formError}
-          </p>
-        ) : null}
-        <button
-          className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-primary-700 px-4 text-sm font-bold text-white transition hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={isSaving || !canConfigure}
-          type="submit"
+      {showForm ? (
+        <form
+          className="mt-5 rounded-2xl bg-neutral-50 p-4 sm:p-5"
+          onSubmit={submit}
         >
-          {isSaving ? "Đang lưu..." : correcting ? "Lưu tọa độ sửa" : "Lưu chính sách"}
-        </button>
-      </form> : null}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label
+              className="block text-sm font-semibold text-neutral-800"
+              htmlFor="attendance-policy-effective-from"
+            >
+              Ngày hiệu lực
+              <input
+                className={fieldClass}
+                disabled={!canConfigure || correcting}
+                id="attendance-policy-effective-from"
+                onChange={(event) =>
+                  updateInput("effectiveFrom", event.target.value)
+                }
+                type="date"
+                value={effectiveFrom}
+              />
+            </label>
+            <label
+              className="block text-sm font-semibold text-neutral-800"
+              htmlFor="attendance-policy-effective-to"
+            >
+              Kết thúc{" "}
+              <span className="font-normal text-neutral-500">(nếu có)</span>
+              <input
+                className={fieldClass}
+                disabled={!canConfigure || correcting}
+                id="attendance-policy-effective-to"
+                min={effectiveFrom || undefined}
+                onChange={(event) =>
+                  updateInput("effectiveTo", event.target.value)
+                }
+                type="date"
+                value={effectiveTo}
+              />
+            </label>
+            <label
+              className="block text-sm font-semibold text-neutral-800 sm:col-span-2"
+              htmlFor="attendance-policy-timezone"
+            >
+              Múi giờ IANA
+              <input
+                className={fieldClass}
+                disabled={!canConfigure || correcting}
+                id="attendance-policy-timezone"
+                list="attendance-timezone-options"
+                maxLength={64}
+                onChange={(event) =>
+                  updateInput("timezone", event.target.value)
+                }
+                placeholder="VD: Asia/Ho_Chi_Minh"
+                value={timezone}
+              />
+            </label>
+            <datalist id="attendance-timezone-options">
+              <option value="Asia/Ho_Chi_Minh" />
+              <option value="Asia/Singapore" />
+              <option value="Asia/Bangkok" />
+            </datalist>
+          </div>
+          {correcting ? (
+            <label
+              className="mt-4 block text-sm font-semibold text-neutral-800"
+              htmlFor="attendance-policy-correction-reason"
+            >
+              Lý do điều chỉnh
+              <textarea
+                className={fieldClass}
+                id="attendance-policy-correction-reason"
+                maxLength={500}
+                minLength={10}
+                onChange={(event) => setCorrectionReason(event.target.value)}
+                placeholder="Ví dụ: Đã chọn nhầm vị trí khi thiết lập ban đầu"
+                required
+                rows={2}
+                value={correctionReason}
+              />
+            </label>
+          ) : null}
+          <AttendanceLocationPicker
+            disabled={!canConfigure}
+            latitude={latitude}
+            longitude={longitude}
+            onCoordinatesChange={(nextLatitude, nextLongitude) => {
+              setDraft((current) => ({
+                ...(current ?? inheritedInputs),
+                latitude: nextLatitude,
+                longitude: nextLongitude,
+              }));
+            }}
+            radiusMeters={radiusMeters}
+          />
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <label
+              className="block text-sm font-semibold text-neutral-800"
+              htmlFor="attendance-policy-latitude"
+            >
+              Vĩ độ
+              <input
+                className={fieldClass}
+                disabled={!canConfigure}
+                id="attendance-policy-latitude"
+                inputMode="decimal"
+                onChange={(event) =>
+                  updateInput("latitude", event.target.value)
+                }
+                placeholder="10.7769"
+                value={latitude}
+              />
+            </label>
+            <label
+              className="block text-sm font-semibold text-neutral-800"
+              htmlFor="attendance-policy-longitude"
+            >
+              Kinh độ
+              <input
+                className={fieldClass}
+                disabled={!canConfigure}
+                id="attendance-policy-longitude"
+                inputMode="decimal"
+                onChange={(event) =>
+                  updateInput("longitude", event.target.value)
+                }
+                placeholder="106.7009"
+                value={longitude}
+              />
+            </label>
+            <label
+              className="block text-sm font-semibold text-neutral-800"
+              htmlFor="attendance-policy-radius"
+            >
+              Bán kính cho phép (m)
+              <input
+                className={fieldClass}
+                disabled={!canConfigure}
+                id="attendance-policy-radius"
+                inputMode="numeric"
+                min="1"
+                onChange={(event) =>
+                  updateInput("radiusMeters", event.target.value)
+                }
+                type="number"
+                value={radiusMeters}
+              />
+            </label>
+            <label
+              className="block text-sm font-semibold text-neutral-800"
+              htmlFor="attendance-policy-accuracy"
+            >
+              Sai số GPS tối đa (m)
+              <input
+                className={fieldClass}
+                disabled={!canConfigure}
+                id="attendance-policy-accuracy"
+                inputMode="numeric"
+                min="1"
+                onChange={(event) =>
+                  updateInput("maxAccuracyMeters", event.target.value)
+                }
+                type="number"
+                value={maxAccuracyMeters}
+              />
+            </label>
+          </div>
+          {latestPolicy && !correcting ? (
+            <p className="mt-3 text-sm leading-6 text-primary-900">
+              Đã sao chép thông số từ chính sách gần nhất. Hãy chọn ngày hiệu
+              lực cho phiên bản mới.
+            </p>
+          ) : null}
+          {selectedWorksite && !canConfigure ? (
+            <p className="mt-3 text-sm text-amber-800">
+              Địa điểm đang tạm ngưng; hãy kích hoạt lại trước khi tạo chính
+              sách mới.
+            </p>
+          ) : null}
+          {formError ? (
+            <p className="mt-3 flex gap-2 text-sm text-rose-700" role="alert">
+              <CircleAlert
+                aria-hidden="true"
+                className="mt-0.5 size-4 shrink-0"
+              />
+              {formError}
+            </p>
+          ) : null}
+          <button
+            className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-primary-700 px-4 text-sm font-bold text-white transition hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isSaving || !canConfigure}
+            type="submit"
+          >
+            {isSaving
+              ? "Đang lưu..."
+              : correcting
+                ? "Lưu tọa độ sửa"
+                : "Lưu chính sách"}
+          </button>
+        </form>
+      ) : null}
 
       <div className="mt-5" aria-live="polite">
         <div className="flex items-center justify-between gap-3">
@@ -522,7 +581,8 @@ function PolicyHistoryItem({ policy }: { policy: AttendanceWorksitePolicy }) {
           aria-hidden="true"
           className="size-4 shrink-0 text-primary-700"
         />
-        Chính sách cũ được lưu để đối chiếu. Chỉ chính sách hiện tại được sửa tọa độ và mọi lần sửa đều có nhật ký.
+        Chính sách cũ được lưu để đối chiếu. Chỉ chính sách hiện tại được sửa
+        tọa độ và mọi lần sửa đều có nhật ký.
       </p>
     </li>
   );

@@ -311,13 +311,18 @@ async def correct_attendance_worksite_policy(
     session: SessionDependency,
 ) -> SuccessEnvelope[AttendanceWorksitePolicyData]:
     data = await HrService(session).correct_attendance_worksite_policy(
-        principal, worksite_id, policy_id, payload,
+        principal,
+        worksite_id,
+        policy_id,
+        payload,
         audit=AuditService(session),
         request_id=request.state.request_id,
         user_agent=request.headers.get("user-agent"),
     )
     _private_location_response(response)
-    return SuccessEnvelope(data=data, meta=ResponseMeta(request_id=request.state.request_id))
+    return SuccessEnvelope(
+        data=data, meta=ResponseMeta(request_id=request.state.request_id)
+    )
 
 
 @router.get(

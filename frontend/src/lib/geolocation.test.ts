@@ -81,13 +81,27 @@ describe("captureForegroundLocation", () => {
 
   it("retries with standard accuracy when precise GPS times out", async () => {
     const getCurrentPosition = vi.fn(
-      (success: PositionCallback, error: PositionErrorCallback, options: PositionOptions) => {
+      (
+        success: PositionCallback,
+        error: PositionErrorCallback,
+        options: PositionOptions,
+      ) => {
         if (options.enableHighAccuracy) {
-          error({ code: 3, message: "timeout", PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 });
+          error({
+            code: 3,
+            message: "timeout",
+            PERMISSION_DENIED: 1,
+            POSITION_UNAVAILABLE: 2,
+            TIMEOUT: 3,
+          });
           return;
         }
         success({
-          coords: { latitude: 10.72, longitude: 106.7, accuracy: 85 } as GeolocationCoordinates,
+          coords: {
+            latitude: 10.72,
+            longitude: 106.7,
+            accuracy: 85,
+          } as GeolocationCoordinates,
           timestamp: Date.parse("2026-09-30T02:00:00Z"),
         } as GeolocationPosition);
       },
@@ -100,7 +114,8 @@ describe("captureForegroundLocation", () => {
     });
     expect(getCurrentPosition).toHaveBeenCalledTimes(2);
     expect(getCurrentPosition).toHaveBeenLastCalledWith(
-      expect.any(Function), expect.any(Function),
+      expect.any(Function),
+      expect.any(Function),
       { enableHighAccuracy: false, maximumAge: 0, timeout: 15_000 },
     );
   });

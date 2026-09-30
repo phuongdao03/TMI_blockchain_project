@@ -123,8 +123,18 @@ export function AttendanceConfigurationWorkspace() {
     },
   });
   const correctPolicy = useMutation({
-    mutationFn: ({ policyId, input }: { policyId: string; input: PolicyCorrectionInput }) =>
-      hrAttendanceConfigurationApi.correctPolicy(resolvedSelectedWorksiteId!, policyId, input),
+    mutationFn: ({
+      policyId,
+      input,
+    }: {
+      policyId: string;
+      input: PolicyCorrectionInput;
+    }) =>
+      hrAttendanceConfigurationApi.correctPolicy(
+        resolvedSelectedWorksiteId!,
+        policyId,
+        input,
+      ),
     onSuccess: async () => {
       setNotice("Đã sửa tọa độ vùng chấm công và ghi lại lý do điều chỉnh.");
       await refreshPolicies();
@@ -212,7 +222,9 @@ export function AttendanceConfigurationWorkspace() {
           isSaving={createPolicy.isPending || correctPolicy.isPending}
           key={resolvedSelectedWorksiteId ?? "no-worksite"}
           onRetry={() => void policies.refetch()}
-          onCorrect={(policyId, input) => correctPolicy.mutateAsync({ policyId, input })}
+          onCorrect={(policyId, input) =>
+            correctPolicy.mutateAsync({ policyId, input })
+          }
           onSave={(input) =>
             createPolicy.mutateAsync({
               worksiteId: resolvedSelectedWorksiteId!,

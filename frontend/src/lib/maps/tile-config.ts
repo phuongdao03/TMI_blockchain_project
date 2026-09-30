@@ -36,7 +36,8 @@ export const mapTileConfig = resolveMapTileConfig(
 );
 
 const STADIA_SATELLITE_ATTRIBUTION =
-  '&copy; CNES, Distribution Airbus DS, &copy; Airbus DS, &copy; PlanetObserver (Contains Copernicus Data) | &copy; <a href="https://stadiamaps.com/attribution/">Stadia Maps</a> | &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> | ' + OSM_ATTRIBUTION;
+  '&copy; CNES, Distribution Airbus DS, &copy; Airbus DS, &copy; PlanetObserver (Contains Copernicus Data) | &copy; <a href="https://stadiamaps.com/attribution/">Stadia Maps</a> | &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> | ' +
+  OSM_ATTRIBUTION;
 
 export function resolveSatelliteTileConfig(
   url: string | undefined,
@@ -49,9 +50,12 @@ export function resolveSatelliteTileConfig(
     const parsed = new URL(base.url);
     if (
       parsed.protocol !== "https:" ||
-      !["tiles.stadiamaps.com", "tiles-eu.stadiamaps.com"].includes(parsed.hostname) ||
+      !["tiles.stadiamaps.com", "tiles-eu.stadiamaps.com"].includes(
+        parsed.hostname,
+      ) ||
       !parsed.pathname.startsWith("/tiles/")
-    ) return null;
+    )
+      return null;
     return {
       url: `https://${parsed.hostname}/tiles/alidade_satellite/{z}/{x}/{y}.jpg${parsed.search}`,
       attribution: STADIA_SATELLITE_ATTRIBUTION,

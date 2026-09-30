@@ -245,7 +245,9 @@ class CreateAttendanceWorksitePolicyRequest(EffectiveDatedAttendanceRequest):
 
 class CorrectAttendanceWorksitePolicyRequest(HrSchema):
     latitude: Annotated[Decimal, Field(ge=-90, le=90, max_digits=8, decimal_places=6)]
-    longitude: Annotated[Decimal, Field(ge=-180, le=180, max_digits=9, decimal_places=6)]
+    longitude: Annotated[
+        Decimal, Field(ge=-180, le=180, max_digits=9, decimal_places=6)
+    ]
     radius_meters: Annotated[int, Field(gt=0, le=20_037_509)]
     max_accuracy_meters: Annotated[int, Field(gt=0, le=20_037_509)]
     reason: Annotated[str, Field(min_length=10, max_length=500)]

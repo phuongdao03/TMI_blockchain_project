@@ -117,73 +117,84 @@ export function AttendanceWorksitePanel({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-700">{worksites.data?.meta.total ?? 0} địa điểm</span>
+          <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-700">
+            {worksites.data?.meta.total ?? 0} địa điểm
+          </span>
           {items.length > 0 ? (
-            <button aria-expanded={showCreate} className="min-h-11 rounded-xl border border-neutral-300 px-4 text-sm font-bold text-neutral-900 hover:bg-neutral-50" onClick={() => setShowCreate((current) => !current)} type="button">
+            <button
+              aria-expanded={showCreate}
+              className="min-h-11 rounded-xl border border-neutral-300 px-4 text-sm font-bold text-neutral-900 hover:bg-neutral-50"
+              onClick={() => setShowCreate((current) => !current)}
+              type="button"
+            >
               {showCreate ? "Đóng biểu mẫu" : "Thêm địa điểm"}
             </button>
           ) : null}
         </div>
       </div>
 
-      <div className={`mt-5 grid gap-5 ${showCreate || items.length === 0 ? "lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" : ""}`}>
-        {showCreate || items.length === 0 ? <form className="rounded-2xl bg-neutral-50 p-4" onSubmit={submit}>
-          <h3 className="text-sm font-bold text-neutral-950">
-            Tạo địa điểm mới
-          </h3>
-          <label
-            className="mt-4 block text-sm font-semibold text-neutral-800"
-            htmlFor="attendance-worksite-code"
-          >
-            Mã điểm chấm công
-            <input
-              className={fieldClass}
-              id="attendance-worksite-code"
-              maxLength={32}
-              onChange={(event) => setCode(event.target.value)}
-              placeholder="VD: SGN-HQ"
-              value={code}
-            />
-          </label>
-          <label
-            className="mt-3 block text-sm font-semibold text-neutral-800"
-            htmlFor="attendance-worksite-name"
-          >
-            Tên điểm chấm công
-            <input
-              className={fieldClass}
-              id="attendance-worksite-name"
-              maxLength={160}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="VD: Văn phòng TP. Hồ Chí Minh"
-              value={name}
-            />
-          </label>
-          {formError ? (
-            <p className="mt-3 flex gap-2 text-sm text-rose-700" role="alert">
-              <CircleAlert
-                aria-hidden="true"
-                className="mt-0.5 size-4 shrink-0"
+      <div
+        className={`mt-5 grid gap-5 ${showCreate || items.length === 0 ? "lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" : ""}`}
+      >
+        {showCreate || items.length === 0 ? (
+          <form className="rounded-2xl bg-neutral-50 p-4" onSubmit={submit}>
+            <h3 className="text-sm font-bold text-neutral-950">
+              Tạo địa điểm mới
+            </h3>
+            <label
+              className="mt-4 block text-sm font-semibold text-neutral-800"
+              htmlFor="attendance-worksite-code"
+            >
+              Mã điểm chấm công
+              <input
+                className={fieldClass}
+                id="attendance-worksite-code"
+                maxLength={32}
+                onChange={(event) => setCode(event.target.value)}
+                placeholder="VD: SGN-HQ"
+                value={code}
               />
-              {formError}
-            </p>
-          ) : null}
-          <button
-            className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 text-sm font-bold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isCreating}
-            type="submit"
-          >
-            {isCreating ? (
-              <LoaderCircle
-                aria-hidden="true"
-                className="size-4 animate-spin"
+            </label>
+            <label
+              className="mt-3 block text-sm font-semibold text-neutral-800"
+              htmlFor="attendance-worksite-name"
+            >
+              Tên điểm chấm công
+              <input
+                className={fieldClass}
+                id="attendance-worksite-name"
+                maxLength={160}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="VD: Văn phòng TP. Hồ Chí Minh"
+                value={name}
               />
-            ) : (
-              <Plus aria-hidden="true" className="size-4" />
-            )}
-            Tạo điểm chấm công
-          </button>
-        </form> : null}
+            </label>
+            {formError ? (
+              <p className="mt-3 flex gap-2 text-sm text-rose-700" role="alert">
+                <CircleAlert
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0"
+                />
+                {formError}
+              </p>
+            ) : null}
+            <button
+              className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 text-sm font-bold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isCreating}
+              type="submit"
+            >
+              {isCreating ? (
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-4 animate-spin"
+                />
+              ) : (
+                <Plus aria-hidden="true" className="size-4" />
+              )}
+              Tạo điểm chấm công
+            </button>
+          </form>
+        ) : null}
 
         <div aria-live="polite" className="min-w-0">
           {worksites.isPending ? <WorksiteSkeleton /> : null}

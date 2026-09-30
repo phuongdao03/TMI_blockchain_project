@@ -116,7 +116,10 @@ test("viewer dashboard keeps public discovery as its primary action", async ({
   await page.goto("/dashboard");
 
   await expect(
-    page.getByRole("heading", { level: 1, name: "Khám phá đề cử" }),
+    page.getByRole("heading", {
+      level: 1,
+      name: "Tra cứu đề cử và chứng thư",
+    }),
   ).toBeVisible();
   await expect(page.getByText("Không gian tra cứu")).toBeVisible();
   await expect(

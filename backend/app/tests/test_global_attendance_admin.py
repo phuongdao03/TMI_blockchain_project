@@ -307,45 +307,72 @@ def test_admin_can_correct_current_policy_coordinates_with_audit_history() -> No
         async with sessions() as session:
             service = HrService(session)
             worksite = await service.create_attendance_worksite(
-                admin, CreateAttendanceWorksiteRequest(code="hcm", name="HCM Office"),
-                audit=AuditService(session), request_id="correct-policy", user_agent="pytest",
+                admin,
+                CreateAttendanceWorksiteRequest(code="hcm", name="HCM Office"),
+                audit=AuditService(session),
+                request_id="correct-policy",
+                user_agent="pytest",
             )
             policy = await service.create_attendance_worksite_policy(
-                admin, worksite.id,
+                admin,
+                worksite.id,
                 CreateAttendanceWorksitePolicyRequest(
-                    effective_from=date(2026, 9, 30), timezone="Asia/Ho_Chi_Minh",
-                    latitude=Decimal("65.152274"), longitude=Decimal("-44.236726"),
-                    radius_meters=350, max_accuracy_meters=350,
+                    effective_from=date(2026, 9, 30),
+                    timezone="Asia/Ho_Chi_Minh",
+                    latitude=Decimal("65.152274"),
+                    longitude=Decimal("-44.236726"),
+                    radius_meters=350,
+                    max_accuracy_meters=350,
                 ),
-                audit=AuditService(session), request_id="correct-policy", user_agent="pytest",
+                audit=AuditService(session),
+                request_id="correct-policy",
+                user_agent="pytest",
             )
             corrected = await service.correct_attendance_worksite_policy(
-                admin, worksite.id, policy.id,
+                admin,
+                worksite.id,
+                policy.id,
                 CorrectAttendanceWorksitePolicyRequest(
-                    latitude=Decimal("10.717157"), longitude=Decimal("106.702454"),
-                    radius_meters=150, max_accuracy_meters=150,
-                    reason="Correct the office coordinates selected during initial setup",
+                    latitude=Decimal("10.717157"),
+                    longitude=Decimal("106.702454"),
+                    radius_meters=150,
+                    max_accuracy_meters=150,
+                    reason="Correct initial office coordinates",
                 ),
-                audit=AuditService(session), request_id="correct-policy", user_agent="pytest",
+                audit=AuditService(session),
+                request_id="correct-policy",
+                user_agent="pytest",
             )
             assert corrected.id == policy.id
             assert corrected.latitude == Decimal("10.717157")
             assert corrected.longitude == Decimal("106.702454")
             assert corrected.effective_from == policy.effective_from
-            audit_row = await session.scalar(select(AuditLog).where(AuditLog.action == "hr.attendance_worksite_policy.corrected"))
+            audit_row = await session.scalar(
+                select(AuditLog).where(
+                    AuditLog.action == "hr.attendance_worksite_policy.corrected"
+                )
+            )
             assert audit_row is not None
             assert audit_row.before_json["latitude"] == "65.152274"
             assert audit_row.after_json["longitude"] == "106.702454"
-            assert audit_row.after_json["reason"] == "Correct the office coordinates selected during initial setup"
+            assert (
+                audit_row.after_json["reason"] == "Correct initial office coordinates"
+            )
             with pytest.raises(DomainError) as denied:
                 await service.correct_attendance_worksite_policy(
-                    _principal(roles=("MODERATOR",)), worksite.id, policy.id,
+                    _principal(roles=("MODERATOR",)),
+                    worksite.id,
+                    policy.id,
                     CorrectAttendanceWorksitePolicyRequest(
-                        latitude=Decimal("10.700000"), longitude=Decimal("106.700000"),
-                        radius_meters=100, max_accuracy_meters=50,
+                        latitude=Decimal("10.700000"),
+                        longitude=Decimal("106.700000"),
+                        radius_meters=100,
+                        max_accuracy_meters=50,
                         reason="Attempt to change the worksite without admin access",
                     ),
-                    audit=AuditService(session), request_id="correct-policy", user_agent="pytest",
+                    audit=AuditService(session),
+                    request_id="correct-policy",
+                    user_agent="pytest",
                 )
             assert denied.value.status_code == 403
         await engine.dispose()

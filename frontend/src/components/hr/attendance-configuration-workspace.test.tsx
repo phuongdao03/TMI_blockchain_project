@@ -174,7 +174,9 @@ describe("AttendanceConfigurationWorkspace", () => {
     renderWorkspace();
 
     expect(await screen.findByText("Chấm công theo địa điểm")).toBeDefined();
-    fireEvent.click(await screen.findByRole("button", { name: "Thêm địa điểm" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Thêm địa điểm" }),
+    );
     fireEvent.change(screen.getByLabelText("Mã điểm chấm công"), {
       target: { value: "syd-hub" },
     });
@@ -253,7 +255,9 @@ describe("AttendanceConfigurationWorkspace", () => {
     });
     renderWorkspace();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Tạo phiên bản mới" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Tạo phiên bản mới" }),
+    );
     expect(await screen.findByDisplayValue("Asia/Singapore")).toBeDefined();
     expect(screen.getByDisplayValue("1.352100")).toBeDefined();
     expect(screen.getByDisplayValue("103.819800")).toBeDefined();
@@ -275,26 +279,51 @@ describe("AttendanceConfigurationWorkspace", () => {
 
   it("lets an admin correct mistaken coordinates on the current policy with a reason", async () => {
     mockQueries();
-    listPoliciesMock.mockResolvedValue({ data: [{
-      id: "policy-current", worksiteId: worksite.id,
-      effectiveFrom: "2026-09-30", effectiveTo: null,
-      timezone: "Asia/Singapore", latitude: "65.152274", longitude: "-44.236726",
-      radiusMeters: 350, maxAccuracyMeters: 350,
-      createdAt: "2026-09-30T00:00:00Z", updatedAt: "2026-09-30T00:00:00Z",
-    }], meta: { total: 1 } });
+    listPoliciesMock.mockResolvedValue({
+      data: [
+        {
+          id: "policy-current",
+          worksiteId: worksite.id,
+          effectiveFrom: "2026-09-30",
+          effectiveTo: null,
+          timezone: "Asia/Singapore",
+          latitude: "65.152274",
+          longitude: "-44.236726",
+          radiusMeters: 350,
+          maxAccuracyMeters: 350,
+          createdAt: "2026-09-30T00:00:00Z",
+          updatedAt: "2026-09-30T00:00:00Z",
+        },
+      ],
+      meta: { total: 1 },
+    });
     correctPolicyMock.mockResolvedValue({ id: "policy-current" });
     renderWorkspace();
-    fireEvent.click(await screen.findByRole("button", { name: "Sửa vị trí đã lưu" }));
-    fireEvent.change(screen.getByLabelText("Vĩ độ"), { target: { value: "10.717157" } });
-    fireEvent.change(screen.getByLabelText("Kinh độ"), { target: { value: "106.702454" } });
-    fireEvent.change(screen.getByLabelText("Lý do điều chỉnh"), { target: { value: "Chọn nhầm vị trí khi thiết lập ban đầu" } });
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Sửa vị trí đã lưu" }),
+    );
+    fireEvent.change(screen.getByLabelText("Vĩ độ"), {
+      target: { value: "10.717157" },
+    });
+    fireEvent.change(screen.getByLabelText("Kinh độ"), {
+      target: { value: "106.702454" },
+    });
+    fireEvent.change(screen.getByLabelText("Lý do điều chỉnh"), {
+      target: { value: "Chọn nhầm vị trí khi thiết lập ban đầu" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Lưu tọa độ sửa" }));
-    await waitFor(() => expect(correctPolicyMock).toHaveBeenCalledWith(
-      "worksite-1", "policy-current", {
-        latitude: "10.717157", longitude: "106.702454",
-        radiusMeters: 350, maxAccuracyMeters: 350,
-        reason: "Chọn nhầm vị trí khi thiết lập ban đầu",
-      },
-    ));
+    await waitFor(() =>
+      expect(correctPolicyMock).toHaveBeenCalledWith(
+        "worksite-1",
+        "policy-current",
+        {
+          latitude: "10.717157",
+          longitude: "106.702454",
+          radiusMeters: 350,
+          maxAccuracyMeters: 350,
+          reason: "Chọn nhầm vị trí khi thiết lập ban đầu",
+        },
+      ),
+    );
   });
 });

@@ -131,12 +131,14 @@ class StubGlobalAttendanceAdminService:
         assert worksite_id == self.worksite.id
         assert policy_id == self.policy.id
         assert payload.reason == "Correct misplaced office marker"
-        return self.policy.model_copy(update={
-            "latitude": payload.latitude,
-            "longitude": payload.longitude,
-            "radius_meters": payload.radius_meters,
-            "max_accuracy_meters": payload.max_accuracy_meters,
-        })
+        return self.policy.model_copy(
+            update={
+                "latitude": payload.latitude,
+                "longitude": payload.longitude,
+                "radius_meters": payload.radius_meters,
+                "max_accuracy_meters": payload.max_accuracy_meters,
+            }
+        )
 
     async def create_attendance_assignment(self, principal, payload, **kwargs):
         assert principal.roles == ("SUPER_ADMIN",)
@@ -279,7 +281,10 @@ def test_global_attendance_policy_correction_is_private_and_validated(
             f"/policies/{service.policy.id}"
         )
         response = await _request(
-            monkeypatch, service, "PATCH", path,
+            monkeypatch,
+            service,
+            "PATCH",
+            path,
             json={
                 "latitude": "10.716853",
                 "longitude": "106.702038",
@@ -289,7 +294,10 @@ def test_global_attendance_policy_correction_is_private_and_validated(
             },
         )
         invalid = await _request(
-            monkeypatch, service, "PATCH", path,
+            monkeypatch,
+            service,
+            "PATCH",
+            path,
             json={
                 "latitude": "10.716853",
                 "longitude": "106.702038",
