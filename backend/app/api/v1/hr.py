@@ -46,6 +46,7 @@ from app.modules.hr.schemas import (
     AttendanceWorksitePolicyData,
     CheckInRequest,
     CheckOutRequest,
+    CorrectAttendanceWorksitePolicyRequest,
     CreateAttendanceAssignmentRequest,
     CreateAttendanceWorksitePolicyRequest,
     CreateAttendanceWorksiteRequest,
@@ -294,6 +295,29 @@ async def create_attendance_worksite_policy(
     return SuccessEnvelope(
         data=data, meta=ResponseMeta(request_id=request.state.request_id)
     )
+
+
+@router.patch(
+    "/attendance-worksites/{worksite_id}/policies/{policy_id}",
+    response_model=SuccessEnvelope[AttendanceWorksitePolicyData],
+)
+async def correct_attendance_worksite_policy(
+    worksite_id: UUID,
+    policy_id: UUID,
+    payload: CorrectAttendanceWorksitePolicyRequest,
+    request: Request,
+    response: Response,
+    principal: CsrfProtectedPrincipalDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[AttendanceWorksitePolicyData]:
+    data = await HrService(session).correct_attendance_worksite_policy(
+        principal, worksite_id, policy_id, payload,
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    _private_location_response(response)
+    return SuccessEnvelope(data=data, meta=ResponseMeta(request_id=request.state.request_id))
 
 
 @router.get(

@@ -9,7 +9,7 @@ import type {
   AttendanceWorksitePolicy,
 } from "@/lib/api/types";
 
-import type { PolicyInput } from "./attendance-configuration-types";
+import type { PolicyCorrectionInput, PolicyInput } from "./attendance-configuration-types";
 
 const AttendanceLocationPicker = dynamic(
   () =>
@@ -57,24 +57,46 @@ const emptyPolicyForm: PolicyForm = {
   maxAccuracyMeters: "",
 };
 
+function localDateIn(timezone: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
 export function AttendancePolicyPanel({
   isSaving,
+  onCorrect,
   onRetry,
   onSave,
   policies,
   selectedWorksite,
 }: {
   isSaving: boolean;
+  onCorrect: (policyId: string, input: PolicyCorrectionInput) => Promise<unknown>;
   onRetry: () => void;
   onSave: (input: PolicyInput) => Promise<unknown>;
   policies: PolicyQuery;
   selectedWorksite: AttendanceWorksite | null;
 }) {
   const [draft, setDraft] = useState<PolicyForm | null>(null);
+  const [correcting, setCorrecting] = useState(false);
+  const [creatingVersion, setCreatingVersion] = useState(false);
+  const [correctionReason, setCorrectionReason] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const canConfigure = selectedWorksite?.status === "ACTIVE";
   const rows = policies.data?.data ?? [];
   const latestPolicy = rows[0] ?? null;
+  const correctablePolicy = rows.find(
+    (policy) => {
+      const today = localDateIn(policy.timezone);
+      return policy.effectiveFrom <= today && (!policy.effectiveTo || policy.effectiveTo >= today);
+    },
+  ) ?? rows.find((policy) => policy.effectiveFrom > localDateIn(policy.timezone)) ?? null;
   const inheritedInputs: PolicyForm = latestPolicy
     ? {
         ...emptyPolicyForm,
@@ -85,6 +107,7 @@ export function AttendancePolicyPanel({
         maxAccuracyMeters: String(latestPolicy.maxAccuracyMeters),
       }
     : emptyPolicyForm;
+  const showForm = Boolean(selectedWorksite) && (!latestPolicy || correcting || creatingVersion);
   const form = draft ?? inheritedInputs;
   const {
     effectiveFrom,
@@ -108,18 +131,26 @@ export function AttendancePolicyPanel({
     setFormError(null);
     const radius = Number(radiusMeters);
     const accuracy = Number(maxAccuracyMeters);
+    const parsedLatitude = Number(latitude);
+    const parsedLongitude = Number(longitude);
     if (
       !canConfigure ||
-      !effectiveFrom ||
+      (!correcting && !effectiveFrom) ||
       !timezone.trim() ||
       !latitude.trim() ||
       !longitude.trim() ||
+      !Number.isFinite(parsedLatitude) || parsedLatitude < -90 || parsedLatitude > 90 ||
+      !Number.isFinite(parsedLongitude) || parsedLongitude < -180 || parsedLongitude > 180 ||
       !Number.isFinite(radius) ||
       radius <= 0 ||
       !Number.isFinite(accuracy) ||
       accuracy <= 0
     ) {
-      setFormError("Nhập đầy đủ giá trị GPS dương cho chính sách này.");
+      setFormError("Kiểm tra tọa độ hợp lệ, bán kính và sai số GPS lớn hơn 0.");
+      return;
+    }
+    if (correcting && correctionReason.trim().length < 10) {
+      setFormError("Nhập lý do điều chỉnh ít nhất 10 ký tự để lưu vào nhật ký.");
       return;
     }
     if (effectiveTo && effectiveTo < effectiveFrom) {
@@ -127,6 +158,18 @@ export function AttendancePolicyPanel({
       return;
     }
     try {
+      if (correcting && correctablePolicy) {
+        await onCorrect(correctablePolicy.id, {
+          latitude: latitude.trim(), longitude: longitude.trim(),
+          radiusMeters: radius, maxAccuracyMeters: accuracy,
+          reason: correctionReason.trim(),
+        });
+        setCorrecting(false);
+        setCreatingVersion(false);
+        setCorrectionReason("");
+        setDraft(null);
+        return;
+      }
       await onSave({
         effectiveFrom,
         effectiveTo: effectiveTo || null,
@@ -136,7 +179,8 @@ export function AttendancePolicyPanel({
         radiusMeters: radius,
         maxAccuracyMeters: accuracy,
       });
-      setDraft(emptyPolicyForm);
+      setDraft(null);
+      setCreatingVersion(false);
     } catch {
       setFormError(
         "Không thể lưu chính sách. Kiểm tra múi giờ, tọa độ và khoảng hiệu lực.",
@@ -149,11 +193,11 @@ export function AttendancePolicyPanel({
       aria-labelledby="attendance-policy-title"
       className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-6"
     >
-      <div className="flex items-start gap-3">
+      <div className="flex flex-wrap items-start gap-3">
         <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700">
           <MapPinned aria-hidden="true" className="size-5" />
         </span>
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
             02 · Vùng chấm công
           </p>
@@ -169,9 +213,57 @@ export function AttendancePolicyPanel({
               : "Chọn một địa điểm ở bước 1 trước khi thiết lập vùng chấm công."}
           </p>
         </div>
+        {latestPolicy && canConfigure ? (
+          <button
+            className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)]"
+            onClick={() => {
+              setCreatingVersion((current) => !current);
+              setCorrecting(false);
+              setDraft(null);
+              setFormError(null);
+            }}
+            type="button"
+          >
+            {creatingVersion ? "Hủy phiên bản mới" : "Tạo phiên bản mới"}
+          </button>
+        ) : null}
+        {correctablePolicy && canConfigure ? (
+          <button
+            className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)]"
+            onClick={() => {
+              setCorrecting((current) => !current);
+              setCreatingVersion(false);
+              setDraft(correcting ? null : {
+                effectiveFrom: correctablePolicy.effectiveFrom,
+                effectiveTo: correctablePolicy.effectiveTo ?? "",
+                timezone: correctablePolicy.timezone,
+                latitude: correctablePolicy.latitude,
+                longitude: correctablePolicy.longitude,
+                radiusMeters: String(correctablePolicy.radiusMeters),
+                maxAccuracyMeters: String(correctablePolicy.maxAccuracyMeters),
+              });
+              setFormError(null);
+            }}
+            type="button"
+          >
+            {correcting ? "Hủy sửa vị trí" : "Sửa vị trí đã lưu"}
+          </button>
+        ) : null}
       </div>
 
-      <form
+      {latestPolicy && !showForm ? (
+        <p className="mt-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 text-sm leading-6 text-[var(--theme-text)]">
+          Vùng đã lưu: {latestPolicy.latitude}, {latestPolicy.longitude} · bán kính {latestPolicy.radiusMeters} m · sai số tối đa {latestPolicy.maxAccuracyMeters} m. Chọn sửa vị trí nếu đặt nhầm tâm vùng; chọn phiên bản mới khi cần thay đổi thời gian áp dụng.
+        </p>
+      ) : null}
+
+      {correcting ? (
+        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950">
+          Sửa tâm vùng, bán kính hoặc sai số của chính sách hiện tại. Ngày hiệu lực và múi giờ được giữ nguyên; lý do và giá trị trước/sau được ghi vào nhật ký quản trị.
+        </p>
+      ) : null}
+
+      {showForm ? <form
         className="mt-5 rounded-2xl bg-neutral-50 p-4 sm:p-5"
         onSubmit={submit}
       >
@@ -183,7 +275,7 @@ export function AttendancePolicyPanel({
             Ngày hiệu lực
             <input
               className={fieldClass}
-              disabled={!canConfigure}
+              disabled={!canConfigure || correcting}
               id="attendance-policy-effective-from"
               onChange={(event) =>
                 updateInput("effectiveFrom", event.target.value)
@@ -200,7 +292,7 @@ export function AttendancePolicyPanel({
             <span className="font-normal text-neutral-500">(nếu có)</span>
             <input
               className={fieldClass}
-              disabled={!canConfigure}
+              disabled={!canConfigure || correcting}
               id="attendance-policy-effective-to"
               min={effectiveFrom || undefined}
               onChange={(event) =>
@@ -217,7 +309,7 @@ export function AttendancePolicyPanel({
             Múi giờ IANA
             <input
               className={fieldClass}
-              disabled={!canConfigure}
+              disabled={!canConfigure || correcting}
               id="attendance-policy-timezone"
               list="attendance-timezone-options"
               maxLength={64}
@@ -232,6 +324,12 @@ export function AttendancePolicyPanel({
             <option value="Asia/Bangkok" />
           </datalist>
         </div>
+        {correcting ? (
+          <label className="mt-4 block text-sm font-semibold text-neutral-800" htmlFor="attendance-policy-correction-reason">
+            Lý do điều chỉnh
+            <textarea className={fieldClass} id="attendance-policy-correction-reason" maxLength={500} minLength={10} onChange={(event) => setCorrectionReason(event.target.value)} placeholder="Ví dụ: Đã chọn nhầm vị trí khi thiết lập ban đầu" required rows={2} value={correctionReason} />
+          </label>
+        ) : null}
         <AttendanceLocationPicker
           disabled={!canConfigure}
           latitude={latitude}
@@ -313,7 +411,7 @@ export function AttendancePolicyPanel({
             />
           </label>
         </div>
-        {latestPolicy ? (
+        {latestPolicy && !correcting ? (
           <p className="mt-3 text-sm leading-6 text-primary-900">
             Đã sao chép thông số từ chính sách gần nhất. Hãy chọn ngày hiệu lực
             cho phiên bản mới.
@@ -339,9 +437,9 @@ export function AttendancePolicyPanel({
           disabled={isSaving || !canConfigure}
           type="submit"
         >
-          {isSaving ? "Đang lưu..." : "Lưu chính sách"}
+          {isSaving ? "Đang lưu..." : correcting ? "Lưu tọa độ sửa" : "Lưu chính sách"}
         </button>
-      </form>
+      </form> : null}
 
       <div className="mt-5" aria-live="polite">
         <div className="flex items-center justify-between gap-3">
@@ -424,7 +522,7 @@ function PolicyHistoryItem({ policy }: { policy: AttendanceWorksitePolicy }) {
           aria-hidden="true"
           className="size-4 shrink-0 text-primary-700"
         />
-        Bản ghi lịch sử không thể chỉnh sửa hoặc xóa tại đây.
+        Chính sách cũ được lưu để đối chiếu. Chỉ chính sách hiện tại được sửa tọa độ và mọi lần sửa đều có nhật ký.
       </p>
     </li>
   );

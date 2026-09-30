@@ -2,6 +2,7 @@ from calendar import monthrange
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from uuid import NAMESPACE_URL, UUID, uuid5
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,6 +54,7 @@ from app.modules.hr.schemas import (
     AttendanceWorksitePolicyData,
     CheckInRequest,
     CheckOutRequest,
+    CorrectAttendanceWorksitePolicyRequest,
     CreateAttendanceAssignmentRequest,
     CreateAttendanceWorksitePolicyRequest,
     CreateAttendanceWorksiteRequest,
@@ -1324,6 +1326,68 @@ class HrService:
             user_agent=user_agent,
         )
         await self._session.commit()
+        return self._attendance_policy_data(policy)
+
+    async def correct_attendance_worksite_policy(
+        self,
+        principal: AuthPrincipal,
+        worksite_id: UUID,
+        policy_id: UUID,
+        payload: CorrectAttendanceWorksitePolicyRequest,
+        *,
+        audit: AuditService,
+        request_id: str,
+        user_agent: str | None,
+    ) -> AttendanceWorksitePolicyData:
+        self._require_attendance_configuration_admin(principal)
+        policy = await self._session.scalar(
+            select(AttendanceWorksitePolicy)
+            .where(
+                AttendanceWorksitePolicy.id == policy_id,
+                AttendanceWorksitePolicy.worksite_id == worksite_id,
+            )
+            .with_for_update()
+        )
+        if policy is None:
+            raise DomainError(
+                code="HR_ATTENDANCE_POLICY_NOT_FOUND",
+                message="Attendance policy not found at this worksite.",
+                status_code=404,
+            )
+        local_today = datetime.now(ZoneInfo(policy.timezone)).date()
+        if policy.effective_to is not None and policy.effective_to < local_today:
+            raise DomainError(
+                code="HR_ATTENDANCE_POLICY_HISTORICAL",
+                message="An expired attendance policy cannot be corrected.",
+                status_code=409,
+            )
+        before = {
+            **self._attendance_policy_audit_snapshot(policy),
+            "latitude": str(policy.latitude),
+            "longitude": str(policy.longitude),
+        }
+        policy.latitude = payload.latitude
+        policy.longitude = payload.longitude
+        policy.radius_meters = payload.radius_meters
+        policy.max_accuracy_meters = payload.max_accuracy_meters
+        await self._session.flush()
+        audit.record(
+            actor_user_id=principal.user_id,
+            action="hr.attendance_worksite_policy.corrected",
+            resource_type="attendance_worksite_policy",
+            resource_id=str(policy.id),
+            before=before,
+            after={
+                **self._attendance_policy_audit_snapshot(policy),
+                "latitude": str(policy.latitude),
+                "longitude": str(policy.longitude),
+                "reason": payload.reason.strip(),
+            },
+            request_id=request_id,
+            user_agent=user_agent,
+        )
+        await self._session.commit()
+        await self._session.refresh(policy)
         return self._attendance_policy_data(policy)
 
     async def list_attendance_assignments(

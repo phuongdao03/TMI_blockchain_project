@@ -10,6 +10,11 @@ export type PolicyInput = {
   maxAccuracyMeters: number;
 };
 
+export type PolicyCorrectionInput = Pick<
+  PolicyInput,
+  "latitude" | "longitude" | "radiusMeters" | "maxAccuracyMeters"
+> & { reason: string };
+
 export type AssignmentInput = {
   employeeId: string;
   worksiteId: string;

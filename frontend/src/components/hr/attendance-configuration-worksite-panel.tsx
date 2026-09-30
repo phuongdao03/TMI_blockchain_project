@@ -46,6 +46,7 @@ export function AttendanceWorksitePanel({
 }) {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -62,6 +63,7 @@ export function AttendanceWorksitePanel({
       await onCreate({ code: code.trim(), name: name.trim() });
       setCode("");
       setName("");
+      setShowCreate(false);
     } catch {
       setFormError("Không thể tạo điểm chấm công. Kiểm tra mã và thử lại.");
     }
@@ -114,13 +116,18 @@ export function AttendanceWorksitePanel({
             làm việc để tạo mới.
           </p>
         </div>
-        <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-700">
-          {worksites.data?.meta.total ?? 0} địa điểm
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-700">{worksites.data?.meta.total ?? 0} địa điểm</span>
+          {items.length > 0 ? (
+            <button aria-expanded={showCreate} className="min-h-11 rounded-xl border border-neutral-300 px-4 text-sm font-bold text-neutral-900 hover:bg-neutral-50" onClick={() => setShowCreate((current) => !current)} type="button">
+              {showCreate ? "Đóng biểu mẫu" : "Thêm địa điểm"}
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-        <form className="rounded-2xl bg-neutral-50 p-4" onSubmit={submit}>
+      <div className={`mt-5 grid gap-5 ${showCreate || items.length === 0 ? "lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" : ""}`}>
+        {showCreate || items.length === 0 ? <form className="rounded-2xl bg-neutral-50 p-4" onSubmit={submit}>
           <h3 className="text-sm font-bold text-neutral-950">
             Tạo địa điểm mới
           </h3>
@@ -176,7 +183,7 @@ export function AttendanceWorksitePanel({
             )}
             Tạo điểm chấm công
           </button>
-        </form>
+        </form> : null}
 
         <div aria-live="polite" className="min-w-0">
           {worksites.isPending ? <WorksiteSkeleton /> : null}

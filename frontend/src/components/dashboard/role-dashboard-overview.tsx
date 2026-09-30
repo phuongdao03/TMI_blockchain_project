@@ -76,9 +76,9 @@ export function RoleDashboardOverview({
     persona === "VIEWER" || persona === "USER"
       ? undefined
       : staffWorkspaces[persona];
-  const title = workspace?.title ?? "Khám phá đề cử";
+  const title = workspace?.title ?? "Tra cứu đề cử và chứng thư";
   const description = isViewer
-    ? "Khám phá nội dung đã công bố và theo dõi những hoạt động mới của chương trình."
+    ? "Tài khoản tra cứu đã sẵn sàng. Tìm nội dung công khai hoặc kiểm tra trạng thái chứng thư bằng mã được cung cấp."
     : (workspace?.description ?? "");
   const primaryAction = workspace?.primaryAction ?? publicAction;
 
@@ -98,6 +98,13 @@ export function RoleDashboardOverview({
 
       {isViewer && accountType === "PUBLIC_USER" ? (
         <ApplicantUpgradeCard onUpgraded={onUpgraded} />
+      ) : null}
+
+      {isViewer ? (
+        <nav aria-label="Việc có thể làm với tài khoản tra cứu" className="flex flex-wrap gap-3">
+          <Link className="inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]" href="/verify">Tra cứu chứng thư</Link>
+          <Link className="inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]" href="/help">Xem hướng dẫn tài khoản</Link>
+        </nav>
       ) : null}
 
       {primaryAction ? (

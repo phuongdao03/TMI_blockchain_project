@@ -161,17 +161,19 @@ export default function AdminGuidePage() {
               </p>
               <Steps>
                 <li>
-                  Tạo điểm chấm công, nhập mã và tên dễ nhận biết, rồi kích
-                  hoạt.
+                  Mở Điểm chấm công, chọn địa điểm đã có. Nếu tạo mới, bấm Thêm địa điểm và nhập mã, tên dễ nhận biết.
                 </li>
                 <li>
-                  Đặt múi giờ của điểm làm việc. Tìm địa chỉ và chọn kết quả phù
-                  hợp; kiểm tra bản đồ trước khi bấm Chọn vị trí này làm tâm
-                  vùng. Có thể dùng tọa độ đã xác minh hoặc GPS tại văn phòng.
+                  Đặt múi giờ. Gõ tên thành phố để chuyển bản đồ, tìm địa chỉ cụ thể, rồi chọn kết quả. Có thể đổi giữa Đường phố và Ảnh vệ tinh khi nguồn ảnh được cấu hình.
                 </li>
                 <li>
-                  Kiểm tra bán kính, sai số GPS cho phép và ngày hiệu lực; lưu
-                  chính sách rồi phân công nhân viên.
+                  Chạm đúng tòa nhà để đặt tâm vùng hoặc bấm Lấy vị trí thiết bị khi đang ở văn phòng. Nếu GPS không hoạt động, kiểm tra quyền vị trí của trình duyệt và thiết bị; vẫn có thể nhập tọa độ đã xác minh.
+                </li>
+                <li>
+                  Kiểm tra vĩ độ, kinh độ, bán kính, sai số GPS và ngày hiệu lực; lưu chính sách. Nếu đặt sai tâm vùng, bấm Sửa vị trí đã lưu, nhập tọa độ đúng và lý do điều chỉnh. Kiểm tra nhật ký trước/sau khi lưu.
+                </li>
+                <li>
+                  Tạo hồ sơ nhân viên và liên kết tài khoản trước khi phân công lịch chấm công. Xác nhận nhân viên thấy lịch tại tài khoản của họ.
                 </li>
                 <li>
                   Theo dõi giờ vào, giờ ra và xem bằng chứng trước khi xử lý
@@ -179,9 +181,7 @@ export default function AdminGuidePage() {
                 </li>
               </Steps>
               <p>
-                Kết quả cần thấy: điểm làm việc có chính sách đang hiệu lực và
-                nhân viên được phân công đúng điểm. Nếu bản đồ hoặc GPS báo lỗi,
-                kiểm tra lại vị trí trước khi dùng dữ liệu chấm công.
+                Kết quả cần thấy: bản đồ hiển thị tâm vùng đúng địa chỉ, chính sách đang hiệu lực và nhân viên được phân công đúng điểm. Sau khi sửa tọa độ, kiểm tra lại bản đồ và lịch sử điều chỉnh.
               </p>
               <WorkspaceLink href="/admin/attendance/worksites">
                 Mở điểm chấm công
@@ -391,17 +391,20 @@ export default function AdminGuidePage() {
                 kiểm duyệt hoặc quản trị cho người có nhiệm vụ tương ứng.
               </p>
               <Steps>
-                <li>Xác nhận email công việc và nhiệm vụ trước khi mời.</li>
-                <li>Chọn đúng vai trò, chỉ cấp quyền cần cho nhiệm vụ.</li>
+                <li>Mở Nhân sự → Tài khoản và quyền, tìm tài khoản đã đăng ký bằng email và chọn Chọn làm người kiểm duyệt.</li>
+                <li>Người được chọn mở Thông báo và bấm Chấp nhận. Sau đó kiểm tra tài khoản xuất hiện trong danh sách người kiểm duyệt đang hoạt động.</li>
                 <li>
-                  Kiểm tra trạng thái kích hoạt; xem lại quyền khi nhiệm vụ thay
-                  đổi.
+                  Phân công hồ sơ tại hàng chờ kiểm duyệt hoặc giao đầu việc. Chỉ cấp vai trò không tự sinh công việc trong tài khoản của người kiểm duyệt.
+                </li>
+                <li>
+                  Nếu người đó cần chấm công, chuyển sang Hồ sơ nhân viên, tạo hoặc mở hồ sơ theo email và liên kết đúng tài khoản; sau đó phân công điểm làm việc.
                 </li>
                 <li>
                   Khi nhân sự rời nhiệm vụ, khóa tài khoản theo quy trình của tổ
                   chức và kiểm tra quyền đã được thu hồi.
                 </li>
               </Steps>
+              <p>Kết quả cần thấy: người kiểm duyệt mở được Công việc được giao; hồ sơ nhân viên liên kết đúng tài khoản nếu cần dùng chấm công, nghỉ phép hoặc tăng ca.</p>
               <WorkspaceLink href="/admin/employees">
                 Mở mục Nhân sự
               </WorkspaceLink>
@@ -448,6 +451,14 @@ export default function AdminGuidePage() {
                     vẫn không thấy, tra mã hồ sơ và xác nhận người nộp đã gửi hồ
                     sơ thành công.
                   </p>
+                </details>
+                <details className="p-4">
+                  <summary className="cursor-pointer font-semibold text-[var(--theme-text)]">GPS không lấy được hoặc tọa độ đã lưu bị sai</summary>
+                  <p className="mt-2">Kiểm tra HTTPS, quyền vị trí của website và dịch vụ định vị của thiết bị; thử lại tại văn phòng. Nếu vẫn lỗi, tìm địa chỉ hoặc nhập tọa độ đã xác minh. Với chính sách đang dùng, bấm Sửa vị trí đã lưu, nhập lý do và kiểm tra lại tâm vùng sau khi lưu.</p>
+                </details>
+                <details className="p-4">
+                  <summary className="cursor-pointer font-semibold text-[var(--theme-text)]">Người kiểm duyệt đã đăng nhập nhưng không thấy việc</summary>
+                  <p className="mt-2">Kiểm tra lời mời đã được chấp nhận và vai trò đã hoạt động. Tiếp theo kiểm tra cả phân công hồ sơ lẫn đầu việc cho đúng tài khoản email. Nếu chỉ thiếu chấm công, mở Nhân sự → Hồ sơ nhân viên để liên kết tài khoản rồi phân công điểm làm việc.</p>
                 </details>
                 <details className="p-4">
                   <summary className="cursor-pointer font-semibold text-[var(--theme-text)]">

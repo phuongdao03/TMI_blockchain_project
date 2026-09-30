@@ -28,7 +28,7 @@ function locationError(error: GeolocationPositionError): LocationCaptureError {
     case 1:
       return new LocationCaptureError(
         "LOCATION_PERMISSION_DENIED",
-        "Bạn đã từ chối quyền vị trí. Hãy cho phép vị trí rồi thử lại.",
+        "Chưa được cấp quyền vị trí cho lần lấy này. Kiểm tra quyền vị trí của website và thiết bị rồi thử lại.",
       );
     case 3:
       return new LocationCaptureError(
@@ -58,15 +58,26 @@ export async function captureForegroundLocation(): Promise<ForegroundLocationCap
     );
   }
 
-  const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      maximumAge: 0,
-      timeout: 15_000,
+  const readPosition = (enableHighAccuracy: boolean) =>
+    new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy,
+        maximumAge: 0,
+        timeout: 15_000,
+      });
     });
-  }).catch((error: GeolocationPositionError) => {
-    throw locationError(error);
-  });
+  let position: GeolocationPosition;
+  try {
+    position = await readPosition(true);
+  } catch (error) {
+    const failure = error as GeolocationPositionError;
+    if (failure.code === 1) throw locationError(failure);
+    try {
+      position = await readPosition(false);
+    } catch (retryError) {
+      throw locationError(retryError as GeolocationPositionError);
+    }
+  }
   const { accuracy, latitude, longitude } = position.coords;
   const capturedAt = new Date(position.timestamp);
   if (

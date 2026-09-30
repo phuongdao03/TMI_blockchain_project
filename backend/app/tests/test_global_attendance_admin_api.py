@@ -124,6 +124,20 @@ class StubGlobalAttendanceAdminService:
         assert payload.timezone == "America/New_York"
         return self.policy
 
+    async def correct_attendance_worksite_policy(
+        self, principal, worksite_id, policy_id, payload, **kwargs
+    ):
+        assert principal.roles == ("SUPER_ADMIN",)
+        assert worksite_id == self.worksite.id
+        assert policy_id == self.policy.id
+        assert payload.reason == "Correct misplaced office marker"
+        return self.policy.model_copy(update={
+            "latitude": payload.latitude,
+            "longitude": payload.longitude,
+            "radius_meters": payload.radius_meters,
+            "max_accuracy_meters": payload.max_accuracy_meters,
+        })
+
     async def create_attendance_assignment(self, principal, payload, **kwargs):
         assert principal.roles == ("SUPER_ADMIN",)
         assert payload.employee_id == self.assignment.employee_id
@@ -251,6 +265,45 @@ def test_global_attendance_admin_rejects_invalid_iana_timezone_at_api_boundary(
         )
         assert response.status_code == 422
         assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+    asyncio.run(exercise())
+
+
+def test_global_attendance_policy_correction_is_private_and_validated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def exercise() -> None:
+        service = StubGlobalAttendanceAdminService()
+        path = (
+            f"/api/v1/admin/hr/attendance-worksites/{service.worksite.id}"
+            f"/policies/{service.policy.id}"
+        )
+        response = await _request(
+            monkeypatch, service, "PATCH", path,
+            json={
+                "latitude": "10.716853",
+                "longitude": "106.702038",
+                "radiusMeters": 150,
+                "maxAccuracyMeters": 40,
+                "reason": "Correct misplaced office marker",
+            },
+        )
+        invalid = await _request(
+            monkeypatch, service, "PATCH", path,
+            json={
+                "latitude": "10.716853",
+                "longitude": "106.702038",
+                "radiusMeters": 150,
+                "maxAccuracyMeters": 40,
+                "reason": "short",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.headers["cache-control"] == "no-store"
+        assert response.json()["data"]["latitude"] == "10.716853"
+        assert response.json()["data"]["radiusMeters"] == 150
+        assert invalid.status_code == 422
 
     asyncio.run(exercise())
 

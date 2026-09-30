@@ -326,12 +326,13 @@ const screens: Record<string, PreviewScreen> = {
 
 const common = ["/search", "/works", "/verify", "/notifications", "/account"];
 const permittedPaths: Record<WorkspacePersona, readonly string[]> = {
-  VIEWER: ["/dashboard", ...common, "/activity", "/guide"],
+  VIEWER: ["/dashboard", ...common, "/activity", "/help", "/guide"],
   USER: [
     "/dashboard",
     ...common,
     "/activity",
     "/guide",
+    "/help",
     "/dossiers",
     "/certificates",
   ],
@@ -339,6 +340,7 @@ const permittedPaths: Record<WorkspacePersona, readonly string[]> = {
     "/work-allocations",
     ...common,
     "/guide",
+    "/help",
     "/attendance",
     "/leave",
     "/overtime",

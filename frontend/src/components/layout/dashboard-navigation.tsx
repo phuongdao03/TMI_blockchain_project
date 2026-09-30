@@ -62,7 +62,7 @@ const personalItems: NavigationItem[] = [
 ];
 
 const publicSupportItem: NavigationItem = {
-  href: "/guide",
+  href: "/help",
   label: "Hướng dẫn",
   icon: CircleHelp,
 };

@@ -54,6 +54,9 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=<Firebase Web app config>
 NEXT_PUBLIC_FIREBASE_APP_ID=<Firebase Web app config>
 NEXT_PUBLIC_OSM_TILE_URL=https://<approved-tile-provider>/{z}/{x}/{y}.png
 NEXT_PUBLIC_OSM_TILE_ATTRIBUTION=<provider attribution required by its terms>
+# Optional when the approved street map is not Stadia Maps:
+NEXT_PUBLIC_SATELLITE_TILE_URL=https://<approved-imagery-provider>/{z}/{x}/{y}.jpg
+NEXT_PUBLIC_SATELLITE_TILE_ATTRIBUTION=<imagery attribution required by its terms>
 ```
 
 The local mock is not a payment processor and must never receive real money.
@@ -71,6 +74,10 @@ an external provider, or use approved self-hosted tiles.
 Without both values, the production UI shows a coordinate-entry fallback
 instead of relying on volunteer OSM tiles. Verify tile requests and labels on
 the deployed domain before approving the release.
+When the approved street map uses Stadia Maps tiles, the attendance map also
+offers Stadia Alidade Satellite automatically with its required imagery
+attribution. For another provider, configure both optional satellite build
+variables and approve its domain access and attribution before rebuilding.
 
 Bootstrap does not create application accounts or credentials. To create the
 first local Super Admin, choose an email and enter a new password interactively:

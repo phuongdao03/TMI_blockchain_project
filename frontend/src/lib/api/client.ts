@@ -1744,6 +1744,22 @@ export const hrAttendanceConfigurationApi = {
       { method: "POST", body: JSON.stringify(input) },
     );
   },
+  correctPolicy(
+    worksiteId: string,
+    policyId: string,
+    input: {
+      latitude: string;
+      longitude: string;
+      radiusMeters: number;
+      maxAccuracyMeters: number;
+      reason: string;
+    },
+  ) {
+    return request<AttendanceWorksitePolicy>(
+      `/admin/hr/attendance-worksites/${encodeURIComponent(worksiteId)}/policies/${encodeURIComponent(policyId)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
   listAssignments(
     filters: {
       page?: number;

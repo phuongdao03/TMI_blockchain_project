@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, ClipboardList, Inbox, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 
-import { workAllocationSelfApi } from "@/lib/api/client";
+import { reviewApi, workAllocationSelfApi } from "@/lib/api/client";
 
 const statusLabels = {
   DRAFT: "Chờ kích hoạt",
@@ -25,6 +25,11 @@ export function MyWorkAllocationList() {
     queryKey: ["my-work-allocations"],
     queryFn: () => workAllocationSelfApi.list({ pageSize: 50 }),
   });
+  const reviews = useQuery({
+    queryKey: ["my-review-assignments", "work-allocations"],
+    queryFn: () => reviewApi.list({ pageSize: 50 }),
+  });
+  const separateReviews = reviews.data?.data ?? [];
 
   return (
     <section
@@ -46,10 +51,27 @@ export function MyWorkAllocationList() {
           Theo dõi đầu việc chung và các hồ sơ thẩm định mà bạn đang tham gia.
         </p>
       </header>
-      {allocations.isPending ? <LoadingState /> : null}
+      {allocations.isPending || reviews.isPending ? <LoadingState /> : null}
       {allocations.isError ? <ErrorState /> : null}
-      {allocations.data && allocations.data.data.length === 0 ? (
+      {reviews.isError ? <p role="alert" className="rounded-xl border border-red-200 p-4 text-sm text-red-800">Chưa tải được hồ sơ thẩm định. Mở hàng đợi để kiểm tra trực tiếp.</p> : null}
+      {allocations.data && reviews.data && allocations.data.data.length === 0 && reviews.data.data.length === 0 ? (
         <EmptyState />
+      ) : null}
+      {separateReviews.length > 0 ? (
+        <section aria-label="Hồ sơ thẩm định được giao" className="space-y-3">
+          <h2 className="text-lg font-bold text-[var(--theme-text)]">Hồ sơ thẩm định</h2>
+          {separateReviews.map((item) => (
+            <article className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4" key={item.assignment.id}>
+              <div>
+                <p className="text-xs font-semibold text-[var(--theme-muted)]">{item.dossierCode} · Phiên bản {item.versionNo}</p>
+                <h3 className="mt-1 font-bold text-[var(--theme-text)]">{item.dossierTitle}</h3>
+              </div>
+              <Link className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary-700 px-4 text-sm font-bold text-white" href={`/reviews/${item.assignment.id}`}>
+                Mở hồ sơ thẩm định <ArrowRight aria-hidden="true" className="size-4" />
+              </Link>
+            </article>
+          ))}
+        </section>
       ) : null}
       {allocations.data?.data.length ? (
         <div className="grid gap-3" role="list">
@@ -135,6 +157,7 @@ function EmptyState() {
         Khi được phân công, đầu việc hoặc hồ sơ cần thẩm định sẽ xuất hiện tại
         đây.
       </p>
+      <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">Tài khoản kiểm duyệt đã sẵn sàng. Quản trị viên cần giao việc hoặc phân công hồ sơ để bạn bắt đầu.</p>
     </div>
   );
 }

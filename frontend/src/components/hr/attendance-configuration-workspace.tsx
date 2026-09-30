@@ -9,6 +9,7 @@ import { AttendanceAssignmentPanel } from "./attendance-configuration-assignment
 import { AttendancePolicyPanel } from "./attendance-configuration-policy-panel";
 import type {
   AssignmentInput,
+  PolicyCorrectionInput,
   PolicyInput,
   WorksiteInput,
 } from "./attendance-configuration-types";
@@ -121,6 +122,14 @@ export function AttendanceConfigurationWorkspace() {
       await refreshPolicies();
     },
   });
+  const correctPolicy = useMutation({
+    mutationFn: ({ policyId, input }: { policyId: string; input: PolicyCorrectionInput }) =>
+      hrAttendanceConfigurationApi.correctPolicy(resolvedSelectedWorksiteId!, policyId, input),
+    onSuccess: async () => {
+      setNotice("Đã sửa tọa độ vùng chấm công và ghi lại lý do điều chỉnh.");
+      await refreshPolicies();
+    },
+  });
   const createAssignment = useMutation({
     mutationFn: (input: AssignmentInput) =>
       hrAttendanceConfigurationApi.createAssignment(input),
@@ -200,9 +209,10 @@ export function AttendanceConfigurationWorkspace() {
 
       <div className="mx-auto max-w-5xl space-y-6">
         <AttendancePolicyPanel
-          isSaving={createPolicy.isPending}
+          isSaving={createPolicy.isPending || correctPolicy.isPending}
           key={resolvedSelectedWorksiteId ?? "no-worksite"}
           onRetry={() => void policies.refetch()}
+          onCorrect={(policyId, input) => correctPolicy.mutateAsync({ policyId, input })}
           onSave={(input) =>
             createPolicy.mutateAsync({
               worksiteId: resolvedSelectedWorksiteId!,

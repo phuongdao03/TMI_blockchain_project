@@ -152,12 +152,24 @@ describe("AttendanceLocationPicker", () => {
     fireEvent.change(screen.getByLabelText("Đến thành phố"), {
       target: { value: "Singapore" },
     });
+    fireEvent.click(screen.getByRole("button", { name: "Tìm thành phố" }));
+    fireEvent.click(screen.getByRole("button", { name: "Singapore" }));
 
     expect(mapSetView).toHaveBeenCalledWith([1.3521, 103.8198], 12, {
       animate: false,
     });
     expect(onCoordinatesChange).not.toHaveBeenCalled();
     expect(screen.queryByTestId("attendance-geofence")).toBeNull();
+  });
+
+  it("finds a city by typing its name and moves the map without changing policy coordinates", () => {
+    const onCoordinatesChange = vi.fn();
+    render(<AttendanceLocationPicker latitude="" longitude="" onCoordinatesChange={onCoordinatesChange} radiusMeters="250" />);
+    fireEvent.change(screen.getByLabelText("Đến thành phố"), { target: { value: "sing" } });
+    fireEvent.click(screen.getByRole("button", { name: "Tìm thành phố" }));
+    fireEvent.click(screen.getByRole("button", { name: "Singapore" }));
+    expect(mapSetView).toHaveBeenLastCalledWith([1.3521, 103.8198], 12, { animate: false });
+    expect(onCoordinatesChange).not.toHaveBeenCalled();
   });
 
   it("lets an admin inspect another city even when the worksite already has coordinates", () => {
@@ -174,6 +186,8 @@ describe("AttendanceLocationPicker", () => {
     fireEvent.change(screen.getByLabelText("Đến thành phố"), {
       target: { value: "Singapore" },
     });
+    fireEvent.click(screen.getByRole("button", { name: "Tìm thành phố" }));
+    fireEvent.click(screen.getByRole("button", { name: "Singapore" }));
 
     expect(mapSetView).toHaveBeenLastCalledWith([1.3521, 103.8198], 12, {
       animate: false,

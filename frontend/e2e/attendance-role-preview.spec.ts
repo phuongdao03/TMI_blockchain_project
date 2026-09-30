@@ -131,9 +131,16 @@ test("super admin previews the populated attendance feed and circle worksite map
   await expect(
     page.getByRole("button", { name: /DEMO-SG.*Singapore/ }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Sửa vị trí đã lưu" }).click();
   await expect(
     page.locator('[aria-label="Bản đồ cấu hình vùng chấm công"]'),
   ).toBeVisible();
+  await expect(page.getByLabel("Lý do điều chỉnh")).toBeVisible();
+  const latitudeBeforeCitySearch = await page.getByLabel("Vĩ độ").inputValue();
+  await page.getByLabel("Đến thành phố").fill("Bangkok");
+  await page.getByRole("button", { name: "Tìm thành phố" }).click();
+  await page.getByRole("button", { name: "Bangkok, Thái Lan" }).click();
+  await expect(page.getByLabel("Vĩ độ")).toHaveValue(latitudeBeforeCitySearch);
   await expectNoHorizontalOverflow(page);
 
   await page.goto("/admin/attendance");
