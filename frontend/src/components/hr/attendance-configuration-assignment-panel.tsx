@@ -16,6 +16,15 @@ import type { AssignmentInput } from "./attendance-configuration-types";
 
 const fieldClass =
   "mt-2 min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm text-neutral-950 outline-none transition focus:border-primary-600 focus:ring-2 focus:ring-primary-100 disabled:cursor-not-allowed disabled:bg-neutral-100";
+const weekdays = [
+  "Thứ 2",
+  "Thứ 3",
+  "Thứ 4",
+  "Thứ 5",
+  "Thứ 6",
+  "Thứ 7",
+  "Chủ nhật",
+];
 
 type AssignmentQuery = {
   data?: { data: AttendanceAssignment[]; meta: { total: number } };
@@ -54,8 +63,11 @@ export function AttendanceAssignmentPanel({
   const [employeeId, setEmployeeId] = useState("");
   const [effectiveFrom, setEffectiveFrom] = useState("");
   const [effectiveTo, setEffectiveTo] = useState("");
-  const [scheduleCode, setScheduleCode] = useState("");
-  const [holidayCalendarCode, setHolidayCalendarCode] = useState("");
+  const [workDays, setWorkDays] = useState([0, 1, 2, 3, 4]);
+  const [startTime, setStartTime] = useState("08:00");
+  const [endTime, setEndTime] = useState("17:00");
+  const [holidayDate, setHolidayDate] = useState("");
+  const [holidayDates, setHolidayDates] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const rows = assignments.data?.data ?? [];
   const hasPolicy = policies.length > 0;
@@ -68,10 +80,17 @@ export function AttendanceAssignmentPanel({
       !canAssign ||
       !employeeId ||
       !effectiveFrom ||
-      !scheduleCode.trim() ||
-      !holidayCalendarCode.trim()
+      workDays.length === 0 ||
+      !startTime ||
+      !endTime
     ) {
-      setFormError("Chọn nhân viên và nhập đầy đủ lịch làm việc, lịch nghỉ.");
+      setFormError(
+        "Chọn nhân viên, ít nhất một ngày làm việc và giờ bắt đầu/kết thúc.",
+      );
+      return;
+    }
+    if (endTime <= startTime) {
+      setFormError("Giờ kết thúc phải sau giờ bắt đầu.");
       return;
     }
     if (effectiveTo && effectiveTo < effectiveFrom) {
@@ -96,14 +115,21 @@ export function AttendanceAssignmentPanel({
         worksiteId: selectedWorksite.id,
         effectiveFrom,
         effectiveTo: effectiveTo || null,
-        scheduleCode: scheduleCode.trim(),
-        holidayCalendarCode: holidayCalendarCode.trim(),
+        scheduleCode: "CUSTOM",
+        holidayCalendarCode: "CUSTOM",
+        workDays,
+        startTime,
+        endTime,
+        holidayDates,
       });
       setEmployeeId("");
       setEffectiveFrom("");
       setEffectiveTo("");
-      setScheduleCode("");
-      setHolidayCalendarCode("");
+      setWorkDays([0, 1, 2, 3, 4]);
+      setStartTime("08:00");
+      setEndTime("17:00");
+      setHolidayDate("");
+      setHolidayDates([]);
     } catch (error) {
       setFormError(
         error instanceof ApiError &&
@@ -137,8 +163,8 @@ export function AttendanceAssignmentPanel({
             Lịch làm việc của nhân viên
           </h2>
           <p className="mt-1 text-sm leading-6 text-neutral-600">
-            Gán hồ sơ nhân viên cho địa điểm chấm công. Tài khoản được mời chỉ
-            xuất hiện ở đây sau khi đã tạo và liên kết hồ sơ nhân viên.
+            Chọn nhân viên, ngày làm việc và giờ làm tại địa điểm này. Tài khoản
+            cần có hồ sơ nhân viên liên kết trước khi chấm công.
           </p>
         </div>
       </div>
@@ -211,8 +237,8 @@ export function AttendanceAssignmentPanel({
           </select>
         </label>
         <p className="mt-2 text-xs leading-5 text-neutral-600">
-          Trong form hồ sơ nhân viên, tìm và chọn đúng tài khoản đã nhận lời mời
-          trước khi lưu. Sau đó quay lại đây và tìm bằng email.
+          Chỉ hồ sơ nhân viên đang làm việc mới xuất hiện. Nếu tài khoản chưa có
+          trong danh sách, mở Nhân sự để hoàn tất hồ sơ công việc.
         </p>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <label
@@ -245,56 +271,115 @@ export function AttendanceAssignmentPanel({
               value={effectiveTo}
             />
           </label>
-          <div>
+          <fieldset className="sm:col-span-2">
+            <legend className="text-sm font-semibold text-neutral-800">
+              Ngày làm việc hằng tuần
+            </legend>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {weekdays.map((label, day) => (
+                <label
+                  className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-semibold transition ${workDays.includes(day) ? "border-emerald-700 bg-emerald-700 text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
+                  key={day}
+                >
+                  <input
+                    checked={workDays.includes(day)}
+                    className="sr-only"
+                    disabled={!canAssign}
+                    onChange={() =>
+                      setWorkDays((current) =>
+                        current.includes(day)
+                          ? current.filter((value) => value !== day)
+                          : [...current, day].sort(),
+                      )
+                    }
+                    type="checkbox"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <label className="text-sm font-semibold text-neutral-800">
+            Giờ bắt đầu
+            <input
+              className={fieldClass}
+              disabled={!canAssign}
+              onChange={(event) => setStartTime(event.target.value)}
+              required
+              type="time"
+              value={startTime}
+            />
+          </label>
+          <label className="text-sm font-semibold text-neutral-800">
+            Giờ kết thúc
+            <input
+              className={fieldClass}
+              disabled={!canAssign}
+              min={startTime}
+              onChange={(event) => setEndTime(event.target.value)}
+              required
+              type="time"
+              value={endTime}
+            />
+          </label>
+          <div className="sm:col-span-2">
             <label
               className="block text-sm font-semibold text-neutral-800"
-              htmlFor="attendance-assignment-schedule"
+              htmlFor="attendance-holiday-date"
             >
-              Mã nhận diện lịch làm việc
-              <input
-                aria-describedby="attendance-assignment-schedule-help"
-                className={fieldClass}
-                disabled={!canAssign}
-                id="attendance-assignment-schedule"
-                maxLength={64}
-                onChange={(event) => setScheduleCode(event.target.value)}
-                placeholder="VD: MON_FRI_8H"
-                value={scheduleCode}
-              />
+              Ngày nghỉ lễ riêng (nếu có)
             </label>
-            <p
-              className="mt-1 text-xs leading-5 text-neutral-600"
-              id="attendance-assignment-schedule-help"
-            >
-              Nhãn nội bộ để nhận diện lịch của nhân viên, ví dụ MON_FRI_8H.
-              Hiện mã này chỉ được lưu cùng phân công; chưa tự tạo ca làm hay số
-              giờ công.
-            </p>
-          </div>
-          <div>
-            <label
-              className="block text-sm font-semibold text-neutral-800"
-              htmlFor="attendance-assignment-holiday-calendar"
-            >
-              Mã nhận diện lịch nghỉ lễ
+            <div className="flex flex-wrap items-end gap-2">
               <input
-                aria-describedby="attendance-assignment-holiday-help"
-                className={fieldClass}
+                className={`${fieldClass} max-w-64`}
                 disabled={!canAssign}
-                id="attendance-assignment-holiday-calendar"
-                maxLength={64}
-                onChange={(event) => setHolidayCalendarCode(event.target.value)}
-                placeholder="VD: VN-HCM"
-                value={holidayCalendarCode}
+                id="attendance-holiday-date"
+                onChange={(event) => setHolidayDate(event.target.value)}
+                type="date"
+                value={holidayDate}
               />
-            </label>
-            <p
-              className="mt-1 text-xs leading-5 text-neutral-600"
-              id="attendance-assignment-holiday-help"
-            >
-              Nhãn nội bộ để nhận diện lịch nghỉ theo khu vực, ví dụ VN-HCM.
-              Hiện mã này chưa tự tạo ngày nghỉ lễ.
-            </p>
+              <button
+                className="min-h-11 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800"
+                disabled={!holidayDate || holidayDates.includes(holidayDate)}
+                onClick={() => {
+                  setHolidayDates((current) =>
+                    [...current, holidayDate].sort(),
+                  );
+                  setHolidayDate("");
+                }}
+                type="button"
+              >
+                Thêm ngày nghỉ
+              </button>
+            </div>
+            {holidayDates.length > 0 ? (
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {holidayDates.map((day) => (
+                  <li
+                    className="rounded-lg bg-neutral-200 px-3 py-1 text-sm text-neutral-900"
+                    key={day}
+                  >
+                    {day}{" "}
+                    <button
+                      aria-label={`Bỏ ngày nghỉ ${day}`}
+                      className="ml-1 font-bold"
+                      onClick={() =>
+                        setHolidayDates((current) =>
+                          current.filter((value) => value !== day),
+                        )
+                      }
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 text-xs text-neutral-600">
+                Không chọn nếu chưa có ngày nghỉ riêng.
+              </p>
+            )}
           </div>
         </div>
         {selectedWorksite && !canAssign ? (
@@ -392,9 +477,19 @@ function AssignmentHistoryItem({
         <div className="flex justify-between gap-3">
           <dt>Lịch làm</dt>
           <dd className="font-semibold text-neutral-900">
-            {assignment.scheduleCode}
+            {assignment.workDays?.length &&
+            assignment.startTime &&
+            assignment.endTime
+              ? `${assignment.workDays.map((day) => weekdays[day]).join(", ")} · ${assignment.startTime.slice(0, 5)}–${assignment.endTime.slice(0, 5)}`
+              : `Lịch cũ: ${assignment.scheduleCode}`}
           </dd>
         </div>
+        {assignment.holidayDates?.length ? (
+          <div className="flex justify-between gap-3">
+            <dt>Nghỉ lễ</dt>
+            <dd className="text-right">{assignment.holidayDates.join(", ")}</dd>
+          </div>
+        ) : null}
         <div className="flex justify-between gap-3">
           <dt>Hiệu lực</dt>
           <dd className="text-right">

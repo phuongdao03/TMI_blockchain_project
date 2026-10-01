@@ -19,6 +19,7 @@ import {
 } from "@/lib/api/client";
 import type { Employee, EmploymentStatus } from "@/lib/api/types";
 import { HrReportDownload } from "@/components/hr/hr-report-download";
+import { formatVndInput, parseVndInput } from "@/lib/format-vnd-input";
 
 const fieldClass =
   "min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm text-neutral-950 outline-none transition focus:border-primary-600 focus:ring-2 focus:ring-primary-100";
@@ -69,7 +70,6 @@ export function EmployeeWorkspace({
     linkedAccount?.email ?? initialAccountSearch,
   );
   const [selectedUserId, setSelectedUserId] = useState(linkedAccount?.id ?? "");
-  const [accountNameModified, setAccountNameModified] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [invitedEmail, setInvitedEmail] = useState("");
   const [editing, setEditing] = useState<Employee | null>(null);
@@ -83,10 +83,7 @@ export function EmployeeWorkspace({
     baseSalary: "",
   });
   const [form, setForm] = useState({
-    employeeCode: "",
-    fullName: "",
     email: linkedAccount?.email ?? initialAccountSearch,
-    phone: "",
     departmentId: "",
     position: "",
     joinDate: "",
@@ -97,14 +94,10 @@ export function EmployeeWorkspace({
   function closeCreateForm() {
     setCreating(false);
     setSelectedUserId("");
-    setAccountNameModified(false);
     setAccountSearch("");
     setAccountQuery("");
     setForm({
-      employeeCode: "",
-      fullName: "",
       email: "",
-      phone: "",
       departmentId: "",
       position: "",
       joinDate: "",
@@ -143,16 +136,9 @@ export function EmployeeWorkspace({
     mutationFn: () =>
       hrEmployeeApi.create({
         ...form,
-        fullName: accountNameModified
-          ? form.fullName
-          : form.fullName ||
-            accounts.data?.data.find((item) => item.id === linkedAccount?.id)
-              ?.fullName ||
-            "",
         userId: selectedUserId || null,
-        phone: form.phone || null,
         contractType: form.contractType || null,
-        baseSalary: form.baseSalary || null,
+        baseSalary: parseVndInput(form.baseSalary) || null,
       }),
     onSuccess: () => {
       closeCreateForm();
@@ -177,7 +163,7 @@ export function EmployeeWorkspace({
         position: editForm.position.trim(),
         employmentStatus: editForm.employmentStatus,
         contractType: editForm.contractType || null,
-        baseSalary: editForm.baseSalary || null,
+        baseSalary: parseVndInput(editForm.baseSalary) || null,
       });
     },
     onSuccess: () => {
@@ -186,9 +172,6 @@ export function EmployeeWorkspace({
     },
   });
   const rows = employees.data?.data ?? [];
-  const linkedAccountName =
-    accounts.data?.data.find((item) => item.id === linkedAccount?.id)
-      ?.fullName ?? "";
 
   function updateField(field: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -208,7 +191,7 @@ export function EmployeeWorkspace({
       position: employee.position,
       employmentStatus: employee.employmentStatus,
       contractType: employee.contractType ?? "",
-      baseSalary: employee.baseSalary ?? "",
+      baseSalary: formatVndInput(employee.baseSalary?.split(".")[0] ?? ""),
     });
   }
 
@@ -369,8 +352,9 @@ export function EmployeeWorkspace({
               {inviteEmployee.isPending ? "Đang gửi…" : "Gửi lời mời"}
             </button>
             <p className="text-xs leading-5 text-neutral-600 sm:col-span-2">
-              Người nhận xác minh Gmail để kích hoạt tài khoản USER. Sau đó,
-              chọn tài khoản trong danh sách bên dưới và cấu hình hồ sơ nhân sự.
+              Người nhận xác minh Gmail rồi tự điền họ tên, số điện thoại trong
+              mục Tài khoản. Quản trị viên chọn tài khoản bên dưới để thiết lập
+              công việc.
             </p>
             {invitedEmail ? (
               <p
@@ -398,9 +382,9 @@ export function EmployeeWorkspace({
           >
             {linkedAccount ? (
               <p className="rounded-xl border border-emerald-200 bg-white p-3 text-sm text-emerald-900 md:col-span-2 xl:col-span-3">
-                Đang tạo hồ sơ nhân viên cho{" "}
-                <strong>{linkedAccount.email}</strong>. Nhập mã nhân viên, phòng
-                ban và ngày vào làm để người này có thể được phân công chấm
+                Đang thiết lập công việc cho{" "}
+                <strong>{linkedAccount.email}</strong>. Chọn phòng ban, vị trí
+                và ngày vào làm để tài khoản này xuất hiện trong phân công chấm
                 công.
               </p>
             ) : null}
@@ -458,7 +442,6 @@ export function EmployeeWorkspace({
                     if (user)
                       setForm((current) => ({
                         ...current,
-                        fullName: user.fullName || current.fullName,
                         email: user.email,
                       }));
                   }}
@@ -505,11 +488,12 @@ export function EmployeeWorkspace({
             <div className="flex items-start justify-between md:col-span-2 xl:col-span-3">
               <div>
                 <h2 className="text-lg font-bold text-neutral-950">
-                  Hồ sơ nhân viên mới
+                  Thiết lập công việc
                 </h2>
                 <p className="mt-1 text-sm text-neutral-600">
-                  Thông tin lương chỉ hiển thị trong khu vực quản trị được bảo
-                  vệ.
+                  Mã nhân viên được tạo tự động. Người được mời tự cập nhật họ
+                  tên và số điện thoại trong mục Tài khoản; quản trị viên chỉ
+                  nhập thông tin công việc.
                 </p>
               </div>
               <button
@@ -522,47 +506,13 @@ export function EmployeeWorkspace({
               </button>
             </div>
             <label className="text-sm font-bold text-neutral-800">
-              Mã nhân viên
+              Email tài khoản
               <input
                 className={`${fieldClass} mt-2`}
-                onChange={(e) => updateField("employeeCode", e.target.value)}
-                required
-                value={form.employeeCode}
-              />
-            </label>
-            <label className="text-sm font-bold text-neutral-800">
-              Họ và tên
-              <input
-                className={`${fieldClass} mt-2`}
-                onChange={(e) => {
-                  setAccountNameModified(true);
-                  updateField("fullName", e.target.value);
-                }}
-                required
-                value={
-                  accountNameModified
-                    ? form.fullName
-                    : form.fullName || linkedAccountName
-                }
-              />
-            </label>
-            <label className="text-sm font-bold text-neutral-800">
-              Email
-              <input
-                className={`${fieldClass} mt-2`}
-                onChange={(e) => updateField("email", e.target.value)}
-                readOnly={Boolean(selectedUserId)}
+                readOnly
                 required
                 type="email"
                 value={form.email}
-              />
-            </label>
-            <label className="text-sm font-bold text-neutral-800">
-              Điện thoại
-              <input
-                className={`${fieldClass} mt-2`}
-                onChange={(e) => updateField("phone", e.target.value)}
-                value={form.phone}
               />
             </label>
             <label className="text-sm font-bold text-neutral-800">
@@ -617,10 +567,12 @@ export function EmployeeWorkspace({
               Lương cơ bản
               <input
                 className={`${fieldClass} mt-2`}
-                min="0"
-                onChange={(e) => updateField("baseSalary", e.target.value)}
-                step="1000"
-                type="number"
+                inputMode="numeric"
+                onChange={(e) =>
+                  updateField("baseSalary", formatVndInput(e.target.value))
+                }
+                placeholder="7.000.000"
+                type="text"
                 value={form.baseSalary}
               />
             </label>
@@ -634,10 +586,7 @@ export function EmployeeWorkspace({
             <div className="flex justify-end md:col-span-2 xl:col-span-3">
               <button
                 className="min-h-11 rounded-xl bg-neutral-950 px-6 text-sm font-bold text-white disabled:opacity-50"
-                disabled={
-                  createEmployee.isPending ||
-                  (Boolean(initialAccountSearch) && !selectedUserId)
-                }
+                disabled={createEmployee.isPending || !selectedUserId}
                 type="submit"
               >
                 {createEmployee.isPending ? "Đang lưu..." : "Tạo hồ sơ"}
@@ -825,15 +774,15 @@ export function EmployeeWorkspace({
             Lương cơ bản
             <input
               className={`${fieldClass} mt-2`}
-              min="0"
+              inputMode="numeric"
               onChange={(e) =>
                 setEditForm((current) => ({
                   ...current,
-                  baseSalary: e.target.value,
+                  baseSalary: formatVndInput(e.target.value),
                 }))
               }
-              step="1000"
-              type="number"
+              placeholder="7.000.000"
+              type="text"
               value={editForm.baseSalary}
             />
           </label>

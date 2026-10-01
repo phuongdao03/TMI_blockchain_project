@@ -1,4 +1,5 @@
 import asyncio
+from datetime import date
 from uuid import uuid4
 
 import pytest
@@ -11,6 +12,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.db.base import Base
 from app.modules.auth.models import User, UserStatus
+from app.modules.hr.models import Department, Employee
 from app.modules.media.errors import MediaValidationError
 from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.users.models import UserProfile
@@ -81,6 +83,45 @@ def test_profile_defaults_then_persists_encrypted_phone() -> None:
 
         reread = await service.get_profile(user_id=user.id, email=user.email)
         assert reread.phone == "+84901234567"
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_invited_employee_updates_personal_fields_themselves() -> None:
+    async def exercise() -> None:
+        service, sessions, user, engine = await _build_service()
+        async with sessions.begin() as session:
+            department = Department(code="REV", name="Kiểm duyệt")
+            session.add(department)
+            await session.flush()
+            employee = Employee(
+                employee_code="NV-001",
+                user_id=user.id,
+                full_name="owner",
+                email=user.email,
+                department_id=department.id,
+                position="Kiểm duyệt viên",
+                join_date=date(2026, 10, 1),
+            )
+            session.add(employee)
+            await session.flush()
+            employee_id = employee.id
+        await service.update_profile(
+            user_id=user.id,
+            email=user.email,
+            changes=ProfileChanges(
+                full_name="Đào Phương",
+                phone="+84901234567",
+                provided_fields=frozenset({"full_name", "phone"}),
+            ),
+        )
+        async with sessions() as session:
+            stored = await session.get(Employee, employee_id)
+            assert stored is not None
+            assert stored.full_name == "Đào Phương"
+            assert stored.phone == "+84901234567"
         await service.close()
         await engine.dispose()
 

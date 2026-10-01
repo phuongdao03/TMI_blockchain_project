@@ -1,9 +1,10 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    JSON,
     CheckConstraint,
     Date,
     DateTime,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    Time,
     UniqueConstraint,
     Uuid,
     func,
@@ -230,6 +232,10 @@ class AttendanceAssignment(UtcTimestampMixin, Base):
     effective_to: Mapped[date | None] = mapped_column(Date)
     schedule_code: Mapped[str] = mapped_column(String(64), nullable=False)
     holiday_calendar_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    work_days: Mapped[list[int] | None] = mapped_column(JSON)
+    start_time: Mapped[time | None] = mapped_column(Time)
+    end_time: Mapped[time | None] = mapped_column(Time)
+    holiday_dates: Mapped[list[str] | None] = mapped_column(JSON)
 
 
 class Attendance(UtcTimestampMixin, Base):

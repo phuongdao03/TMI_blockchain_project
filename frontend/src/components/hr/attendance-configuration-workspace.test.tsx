@@ -161,18 +161,65 @@ describe("AttendanceConfigurationWorkspace", () => {
     fireEvent.change(screen.getByLabelText("Ngày hiệu lực phân công"), {
       target: { value: "2026-09-30" },
     });
-    fireEvent.change(screen.getByLabelText("Mã nhận diện lịch làm việc"), {
-      target: { value: "MON_FRI_8H" },
-    });
-    fireEvent.change(screen.getByLabelText("Mã nhận diện lịch nghỉ lễ"), {
-      target: { value: "VN-HCM" },
-    });
     fireEvent.click(screen.getByRole("button", { name: "Lưu phân công" }));
 
     expect(
       screen.getByText(/Ngày phân công phải nằm trong thời gian hiệu lực/),
     ).toBeDefined();
     expect(createAssignmentMock).not.toHaveBeenCalled();
+  });
+
+  it("saves working days, hours and selected holidays", async () => {
+    mockQueries();
+    listPoliciesMock.mockResolvedValue({
+      data: [
+        {
+          id: "policy-1",
+          worksiteId: "worksite-1",
+          effectiveFrom: "2026-10-01",
+          effectiveTo: null,
+        },
+      ],
+      meta: { total: 1 },
+    });
+    listEmployeesMock.mockResolvedValue({
+      data: [
+        { id: "employee-1", employeeCode: "NV001", fullName: "Nguyễn An" },
+      ],
+      meta: { total: 1 },
+    });
+    createAssignmentMock.mockResolvedValue({ id: "assignment-1" });
+    renderWorkspace();
+    await screen.findByRole("option", { name: "NV001 · Nguyễn An" });
+    fireEvent.change(screen.getByLabelText("Nhân viên"), {
+      target: { value: "employee-1" },
+    });
+    fireEvent.change(screen.getByLabelText("Ngày hiệu lực phân công"), {
+      target: { value: "2026-10-02" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Thứ 7" }));
+    fireEvent.change(screen.getByLabelText("Giờ bắt đầu"), {
+      target: { value: "09:00" },
+    });
+    fireEvent.change(screen.getByLabelText("Giờ kết thúc"), {
+      target: { value: "18:00" },
+    });
+    fireEvent.change(screen.getByLabelText("Ngày nghỉ lễ riêng (nếu có)"), {
+      target: { value: "2026-10-10" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Thêm ngày nghỉ" }));
+    fireEvent.click(screen.getByRole("button", { name: "Lưu phân công" }));
+    await waitFor(() =>
+      expect(createAssignmentMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          employeeId: "employee-1",
+          workDays: [0, 1, 2, 3, 4, 5],
+          startTime: "09:00",
+          endTime: "18:00",
+          holidayDates: ["2026-10-10"],
+        }),
+      ),
+    );
   });
 
   it("renames an existing worksite without replacing its historical policies", async () => {

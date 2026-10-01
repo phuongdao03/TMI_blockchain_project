@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
@@ -74,9 +74,11 @@ class DepartmentData(HrSchema):
 
 
 class CreateEmployeeRequest(HrSchema):
-    employee_code: Annotated[str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{1,31}$")]
+    employee_code: Annotated[
+        str | None, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{1,31}$")
+    ] = None
     user_id: UUID | None = None
-    full_name: Annotated[str, Field(min_length=2, max_length=255)]
+    full_name: Annotated[str | None, Field(min_length=2, max_length=255)] = None
     email: EmailStr
     phone: Annotated[str | None, Field(max_length=32)] = None
     department_id: UUID
@@ -88,8 +90,8 @@ class CreateEmployeeRequest(HrSchema):
 
     @field_validator("employee_code", "full_name", "position")
     @classmethod
-    def strip_employee_fields(cls, value: str) -> str:
-        return value.strip()
+    def strip_employee_fields(cls, value: str | None) -> str | None:
+        return value.strip() if value is not None else None
 
 
 class UpdateEmployeeRequest(HrSchema):
@@ -274,6 +276,34 @@ class CreateAttendanceAssignmentRequest(EffectiveDatedAttendanceRequest):
     holiday_calendar_code: Annotated[
         str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
     ]
+    work_days: Annotated[list[int] | None, Field(min_length=1, max_length=7)] = None
+    start_time: time | None = None
+    end_time: time | None = None
+    holiday_dates: Annotated[list[date] | None, Field(max_length=366)] = None
+
+    @model_validator(mode="after")
+    def validate_work_schedule(self) -> "CreateAttendanceAssignmentRequest":
+        schedule_fields = (self.work_days, self.start_time, self.end_time)
+        if any(value is not None for value in schedule_fields):
+            if any(value is None for value in schedule_fields):
+                raise ValueError(
+                    "Work days, start time and end time are required together."
+                )
+            assert self.work_days is not None
+            assert self.start_time is not None and self.end_time is not None
+            if len(set(self.work_days)) != len(self.work_days) or any(
+                day < 0 or day > 6 for day in self.work_days
+            ):
+                raise ValueError(
+                    "Work days must be unique values from Monday (0) to Sunday (6)."
+                )
+            if self.end_time <= self.start_time:
+                raise ValueError("End time must be later than start time.")
+        if self.holiday_dates and len(set(self.holiday_dates)) != len(
+            self.holiday_dates
+        ):
+            raise ValueError("Holiday dates must be unique.")
+        return self
 
 
 class AttendanceAssignmentData(HrSchema):
@@ -288,6 +318,10 @@ class AttendanceAssignmentData(HrSchema):
     effective_to: date | None
     schedule_code: str
     holiday_calendar_code: str
+    work_days: list[int] | None
+    start_time: time | None
+    end_time: time | None
+    holiday_dates: list[date] | None
     created_at: datetime
     updated_at: datetime
 

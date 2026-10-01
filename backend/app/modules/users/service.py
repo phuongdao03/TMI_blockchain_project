@@ -2,8 +2,10 @@ import logging
 from dataclasses import dataclass
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.hr.models import Employee
 from app.modules.media.errors import MediaValidationError
 from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.users.models import UserProfile
@@ -90,6 +92,15 @@ class UserProfileService:
                 profile.locale = changes.locale
             if "timezone" in changes.provided_fields and changes.timezone is not None:
                 profile.timezone = changes.timezone
+
+            employee = await self._session.scalar(
+                select(Employee).where(Employee.user_id == user_id)
+            )
+            if employee is not None:
+                if "full_name" in changes.provided_fields and changes.full_name:
+                    employee.full_name = changes.full_name
+                if "phone" in changes.provided_fields:
+                    employee.phone = changes.phone
 
             await self._session.flush()
             view = self._view(user_id=user_id, email=email, profile=profile)

@@ -38,7 +38,7 @@ export function StaffInvitationForm({
       } else {
         await authApi.acceptStaffInvitation(token, idToken);
       }
-      router.replace("/login?invitation=accepted");
+      router.replace("/login?invitation=accepted&next=%2Faccount");
     } catch (cause) {
       setError(
         cause instanceof ApiError
@@ -70,7 +70,8 @@ export function StaffInvitationForm({
               </p>
               <p className="mt-1 text-xs leading-5 text-[#aaa6a4]">
                 Liên kết chỉ dùng một lần. Tài khoản chỉ được kích hoạt khi
-                email đăng nhập trùng với địa chỉ người quản trị đã mời.
+                email đăng nhập trùng với địa chỉ người quản trị đã mời. Sau khi
+                đăng nhập, hãy điền họ tên và số điện thoại trong hồ sơ cá nhân.
               </p>
             </div>
           </div>

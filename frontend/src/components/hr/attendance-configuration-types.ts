@@ -22,4 +22,8 @@ export type AssignmentInput = {
   effectiveTo?: string | null;
   scheduleCode: string;
   holidayCalendarCode: string;
+  workDays: number[];
+  startTime: string;
+  endTime: string;
+  holidayDates: string[];
 };

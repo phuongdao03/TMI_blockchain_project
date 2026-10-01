@@ -38,7 +38,9 @@ describe("StaffInvitationForm", () => {
     );
 
     await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith("/login?invitation=accepted"),
+      expect(replace).toHaveBeenCalledWith(
+        "/login?invitation=accepted&next=%2Faccount",
+      ),
     );
     expect(screen.queryByText(/mã xác minh/i)).toBeNull();
   });

@@ -1433,9 +1433,9 @@ export const hrEmployeeApi = {
     return requestBlob(`/admin/hr/reports/employees.xlsx${query}`);
   },
   create(input: {
-    employeeCode: string;
+    employeeCode?: string;
     userId?: string | null;
-    fullName: string;
+    fullName?: string;
     email: string;
     phone?: string | null;
     departmentId: string;
@@ -1785,6 +1785,10 @@ export const hrAttendanceConfigurationApi = {
     effectiveTo?: string | null;
     scheduleCode: string;
     holidayCalendarCode: string;
+    workDays: number[];
+    startTime: string;
+    endTime: string;
+    holidayDates: string[];
   }) {
     return request<AttendanceAssignment>("/admin/hr/attendance-assignments", {
       method: "POST",

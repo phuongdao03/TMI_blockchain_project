@@ -78,20 +78,17 @@ describe("EmployeeWorkspace", () => {
     );
 
     expect(
-      await screen.findByText(/Đang tạo hồ sơ nhân viên cho/),
+      await screen.findByText(/Đang thiết lập công việc cho/),
     ).toBeDefined();
-    expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe(
-      "reviewer@example.com",
-    );
-    await waitFor(() =>
-      expect(
-        (screen.getByLabelText("Họ và tên") as HTMLInputElement).value,
-      ).toBe("Nguyễn Kiểm Duyệt"),
-    );
-    fireEvent.change(screen.getByLabelText("Mã nhân viên"), {
-      target: { value: "NV001" },
-    });
-    fireEvent.change(screen.getAllByLabelText("Phòng ban")[1]!, {
+    expect(
+      (screen.getByLabelText("Email tài khoản") as HTMLInputElement).value,
+    ).toBe("reviewer@example.com");
+    expect(screen.getByText(/Mã nhân viên được tạo tự động/)).toBeDefined();
+    await screen.findAllByRole("option", { name: "Kiểm duyệt" });
+    const form = screen
+      .getByRole("button", { name: "Tạo hồ sơ" })
+      .closest("form") as HTMLFormElement;
+    fireEvent.change(form.querySelector("select[required]")!, {
       target: { value: "department-1" },
     });
     fireEvent.change(screen.getByLabelText("Vị trí"), {
@@ -100,6 +97,16 @@ describe("EmployeeWorkspace", () => {
     fireEvent.change(screen.getByLabelText("Ngày vào làm"), {
       target: { value: "2026-09-29" },
     });
+    fireEvent.change(screen.getByLabelText("Lương cơ bản"), {
+      target: { value: "7000000" },
+    });
+    expect(
+      (screen.getByLabelText("Lương cơ bản") as HTMLInputElement).value,
+    ).toBe("7.000.000");
+    expect(
+      (screen.getByRole("button", { name: "Tạo hồ sơ" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Tạo hồ sơ" }));
 
     await waitFor(() =>
@@ -107,10 +114,9 @@ describe("EmployeeWorkspace", () => {
         expect.objectContaining({
           userId: "moderator-1",
           email: "reviewer@example.com",
-          fullName: "Nguyễn Kiểm Duyệt",
-          employeeCode: "NV001",
           departmentId: "department-1",
           joinDate: "2026-09-29",
+          baseSalary: "7000000",
         }),
       ),
     );

@@ -1,9 +1,10 @@
 import asyncio
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -32,6 +33,7 @@ from app.modules.hr.models import (
 from app.modules.hr.schemas import (
     CheckInRequest,
     CheckOutRequest,
+    CreateAttendanceAssignmentRequest,
     CreateDepartmentRequest,
     CreateEmployeeRequest,
     CreateLeaveRequest,
@@ -44,6 +46,86 @@ from app.modules.hr.schemas import (
 )
 from app.modules.hr.service import HrService
 from app.modules.notifications.models import Notification
+from app.modules.users.models import UserProfile
+
+
+def test_work_schedule_requires_valid_days_and_hours() -> None:
+    base = dict(
+        employee_id=uuid4(),
+        worksite_id=uuid4(),
+        effective_from=date(2026, 10, 1),
+        schedule_code="CUSTOM",
+        holiday_calendar_code="CUSTOM",
+    )
+    schedule = CreateAttendanceAssignmentRequest(
+        **base,
+        work_days=[0, 1, 2, 3, 4],
+        start_time=time(8),
+        end_time=time(17),
+        holiday_dates=[date(2026, 10, 2)],
+    )
+    assert schedule.work_days == [0, 1, 2, 3, 4]
+    with pytest.raises(ValidationError):
+        CreateAttendanceAssignmentRequest(
+            **base, work_days=[0, 0], start_time=time(8), end_time=time(17)
+        )
+    with pytest.raises(ValidationError):
+        CreateAttendanceAssignmentRequest(
+            **base, work_days=[0], start_time=time(17), end_time=time(8)
+        )
+
+
+def test_work_schedule_calculates_late_and_early_minutes_in_worksite_timezone() -> None:
+    assignment = AttendanceAssignment(
+        employee_id=uuid4(),
+        worksite_id=uuid4(),
+        effective_from=date(2026, 10, 1),
+        schedule_code="CUSTOM",
+        holiday_calendar_code="CUSTOM",
+        work_days=[0, 1, 2, 3, 4],
+        start_time=time(8),
+        end_time=time(17),
+        holiday_dates=["2026-10-05"],
+    )
+    policy = AttendanceWorksitePolicy(
+        worksite_id=assignment.worksite_id,
+        effective_from=date(2026, 10, 1),
+        timezone="Asia/Ho_Chi_Minh",
+        latitude=Decimal("10.776900"),
+        longitude=Decimal("106.700900"),
+        radius_meters=100,
+        max_accuracy_meters=25,
+    )
+    assert (
+        HrService._scheduled_difference_minutes(
+            assignment=assignment,
+            policy=policy,
+            work_date=date(2026, 10, 2),
+            occurred_at=datetime(2026, 10, 2, 1, 10, tzinfo=UTC),
+            boundary="start",
+        )
+        == 10
+    )
+    assert (
+        HrService._scheduled_difference_minutes(
+            assignment=assignment,
+            policy=policy,
+            work_date=date(2026, 10, 2),
+            occurred_at=datetime(2026, 10, 2, 9, 40, tzinfo=UTC),
+            boundary="end",
+        )
+        == 20
+    )
+    assert (
+        HrService._scheduled_difference_minutes(
+            assignment=assignment,
+            policy=policy,
+            work_date=date(2026, 10, 5),
+            occurred_at=datetime(2026, 10, 5, 2, tzinfo=UTC),
+            boundary="start",
+        )
+        == 0
+    )
 
 
 async def _create_hr_tables(engine: object) -> None:
@@ -53,6 +135,7 @@ async def _create_hr_tables(engine: object) -> None:
                 sync_connection,
                 tables=[
                     User.__table__,
+                    UserProfile.__table__,
                     Role.__table__,
                     UserRole.__table__,
                     Department.__table__,
@@ -244,6 +327,83 @@ def test_employee_creation_lists_salary_for_authorized_admin_only() -> None:
             )
             assert total == 1
             assert rows[0].department_name == "Khối Công nghệ"
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_existing_reviewer_account_can_become_employee_without_manual_code() -> None:
+    async def exercise() -> None:
+        engine = create_async_engine("sqlite+aiosqlite://")
+        await _create_hr_tables(engine)
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        admin = _principal(roles=("SUPER_ADMIN",))
+        reviewer = User(
+            email="reviewer@example.com",
+            password_hash=None,
+            status=UserStatus.ACTIVE,
+            email_verified_at=datetime.now(UTC),
+        )
+        async with sessions.begin() as session:
+            session.add_all([User(id=admin.user_id, email=admin.email), reviewer])
+            department = Department(code="REV", name="Kiểm duyệt")
+            session.add(department)
+            await session.flush()
+            session.add(UserProfile(user_id=reviewer.id, full_name="Đào Phương"))
+            department_id = department.id
+            reviewer_id = reviewer.id
+        async with sessions() as session:
+            created = await HrService(session).create_employee(
+                admin,
+                CreateEmployeeRequest(
+                    user_id=reviewer_id,
+                    email="reviewer@example.com",
+                    department_id=department_id,
+                    position="Người kiểm duyệt",
+                    join_date=date(2026, 10, 1),
+                ),
+                audit=AuditService(session),
+                request_id="reviewer-onboarding",
+                user_agent="pytest",
+            )
+            assert created.employee_code == f"NV-{reviewer_id.hex[:12]}".upper()
+            assert created.full_name == "Đào Phương"
+            assert created.user_id == reviewer_id
+            worksite = AttendanceWorksite(code="REV-HQ", name="Văn phòng")
+            session.add(worksite)
+            await session.flush()
+            session.add(
+                AttendanceWorksitePolicy(
+                    worksite_id=worksite.id,
+                    effective_from=date(2026, 10, 1),
+                    timezone="Asia/Ho_Chi_Minh",
+                    latitude=Decimal("10.776900"),
+                    longitude=Decimal("106.700900"),
+                    radius_meters=100,
+                    max_accuracy_meters=25,
+                )
+            )
+            await session.commit()
+            assignment = await HrService(session).create_attendance_assignment(
+                admin,
+                CreateAttendanceAssignmentRequest(
+                    employee_id=created.id,
+                    worksite_id=worksite.id,
+                    effective_from=date(2026, 10, 1),
+                    schedule_code="CUSTOM",
+                    holiday_calendar_code="CUSTOM",
+                    work_days=[0, 1, 2, 3, 4],
+                    start_time=time(8),
+                    end_time=time(17),
+                    holiday_dates=[date(2026, 10, 2)],
+                ),
+                audit=AuditService(session),
+                request_id="reviewer-assignment",
+                user_agent="pytest",
+            )
+            assert assignment.work_days == [0, 1, 2, 3, 4]
+            assert assignment.start_time == time(8)
+            assert assignment.holiday_dates == [date(2026, 10, 2)]
         await engine.dispose()
 
     asyncio.run(exercise())

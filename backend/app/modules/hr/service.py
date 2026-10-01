@@ -74,6 +74,7 @@ from app.modules.hr.schemas import (
     UpdateEmployeeRequest,
 )
 from app.modules.notifications.models import Notification
+from app.modules.users.models import UserProfile
 
 ATTENDANCE_LOCATION_RETENTION_MONTHS = 24
 
@@ -348,7 +349,14 @@ class HrService:
                 message="Department not found.",
                 status_code=404,
             )
-        code = payload.employee_code.upper()
+        if payload.employee_code is None and payload.user_id is None:
+            raise DomainError(
+                code="HR_EMPLOYEE_IDENTITY_REQUIRED",
+                message="Employee code or linked account is required.",
+                status_code=422,
+            )
+        code = (payload.employee_code or f"NV-{payload.user_id.hex[:12]}").upper()
+        full_name = payload.full_name
         if payload.user_id is not None:
             linked_user = await self._session.get(User, payload.user_id)
             if (
@@ -367,6 +375,11 @@ class HrService:
                     message="Employee email must match linked user.",
                     status_code=422,
                 )
+            profile = await self._session.get(UserProfile, payload.user_id)
+            if profile and profile.full_name:
+                full_name = profile.full_name
+        if not full_name:
+            full_name = "Chưa cập nhật tên"
         duplicate_criteria = [Employee.employee_code == code]
         if payload.user_id:
             duplicate_criteria.append(Employee.user_id == payload.user_id)
@@ -380,8 +393,11 @@ class HrService:
                 status_code=409,
             )
         employee = Employee(
-            **payload.model_dump(exclude={"employee_code"}, by_alias=False),
+            **payload.model_dump(
+                exclude={"employee_code", "full_name"}, by_alias=False
+            ),
             employee_code=code,
+            full_name=full_name,
         )
         self._session.add(employee)
         await self._session.flush()
@@ -860,6 +876,14 @@ class HrService:
             ),
             "schedule_code": assignment.schedule_code,
             "holiday_calendar_code": assignment.holiday_calendar_code,
+            "work_days": assignment.work_days,
+            "start_time": (
+                assignment.start_time.isoformat() if assignment.start_time else None
+            ),
+            "end_time": (
+                assignment.end_time.isoformat() if assignment.end_time else None
+            ),
+            "holiday_dates": assignment.holiday_dates,
         }
 
     @staticmethod
@@ -884,9 +908,37 @@ class HrService:
             effective_to is None or work_date <= effective_to
         )
 
+    @staticmethod
+    def _scheduled_difference_minutes(
+        *,
+        assignment: AttendanceAssignment,
+        policy: AttendanceWorksitePolicy,
+        work_date: date,
+        occurred_at: datetime,
+        boundary: str,
+    ) -> int:
+        if (
+            assignment.work_days is None
+            or work_date.weekday() not in assignment.work_days
+            or work_date.isoformat() in (assignment.holiday_dates or [])
+        ):
+            return 0
+        scheduled_time = (
+            assignment.start_time if boundary == "start" else assignment.end_time
+        )
+        if scheduled_time is None:
+            return 0
+        timezone = ZoneInfo(policy.timezone)
+        scheduled_at = datetime.combine(work_date, scheduled_time, tzinfo=timezone)
+        local_at = occurred_at.astimezone(timezone)
+        difference = (
+            local_at - scheduled_at if boundary == "start" else scheduled_at - local_at
+        )
+        return max(0, int(difference.total_seconds() // 60))
+
     async def _resolve_attendance_location_policy(
         self, *, employee_id: UUID, occurred_at: datetime
-    ) -> tuple[AttendanceWorksitePolicy, date]:
+    ) -> tuple[AttendanceAssignment, AttendanceWorksitePolicy, date]:
         """Resolve one active policy using the worksite's IANA-local workday.
 
         The broad UTC window keeps the SQL prefilter safe for all supported
@@ -927,7 +979,7 @@ class HrService:
                 )
             )
         ).tuples()
-        matches: list[tuple[AttendanceWorksitePolicy, date]] = []
+        matches: list[tuple[AttendanceAssignment, AttendanceWorksitePolicy, date]] = []
         for assignment, policy in rows:
             work_date = local_work_date_for(
                 occurred_at=occurred_at, timezone=policy.timezone
@@ -941,7 +993,7 @@ class HrService:
                 effective_to=policy.effective_to,
                 work_date=work_date,
             ):
-                matches.append((policy, work_date))
+                matches.append((assignment, policy, work_date))
         if not matches:
             raise DomainError(
                 code="HR_ATTENDANCE_LOCATION_POLICY_REQUIRED",
@@ -1521,7 +1573,11 @@ class HrService:
                 ),
                 status_code=409,
             )
-        assignment = AttendanceAssignment(**payload.model_dump(by_alias=False))
+        assignment_values = payload.model_dump(by_alias=False)
+        assignment_values["holiday_dates"] = [
+            value.isoformat() for value in payload.holiday_dates or []
+        ]
+        assignment = AttendanceAssignment(**assignment_values)
         self._session.add(assignment)
         await self._session.flush()
         audit.record(
@@ -1608,7 +1664,7 @@ class HrService:
         """
         employee = await self._self_employee(principal)
         try:
-            policy, work_date = await self._resolve_attendance_location_policy(
+            _, policy, work_date = await self._resolve_attendance_location_policy(
                 employee_id=employee.id, occurred_at=self._now()
             )
         except DomainError as error:
@@ -1726,7 +1782,7 @@ class HrService:
     ) -> AttendanceData:
         employee = await self._self_employee(principal)
         now = self._now()
-        policy, work_date = await self._resolve_attendance_location_policy(
+        assignment, policy, work_date = await self._resolve_attendance_location_policy(
             employee_id=employee.id, occurred_at=now
         )
         existing = await self._session.scalar(
@@ -1744,16 +1800,24 @@ class HrService:
         outcome, distance_meters = self._location_outcome(
             payload=payload, policy=policy
         )
+        late_minutes = self._scheduled_difference_minutes(
+            assignment=assignment,
+            policy=policy,
+            work_date=work_date,
+            occurred_at=now,
+            boundary="start",
+        )
         attendance = Attendance(
             employee_id=employee.id,
             work_date=work_date,
             check_in_at=now,
             note=payload.note,
             status=(
-                AttendanceStatus.PRESENT
+                (AttendanceStatus.LATE if late_minutes else AttendanceStatus.PRESENT)
                 if outcome == AttendanceLocationOutcome.ACCEPTED
                 else AttendanceStatus.PENDING
             ),
+            late_minutes=late_minutes,
         )
         self._session.add(attendance)
         await self._session.flush()
@@ -1803,7 +1867,7 @@ class HrService:
     ) -> AttendanceData:
         employee = await self._self_employee(principal)
         now = self._now()
-        policy, work_date = await self._resolve_attendance_location_policy(
+        assignment, policy, work_date = await self._resolve_attendance_location_policy(
             employee_id=employee.id, occurred_at=now
         )
         attendance = await self._session.scalar(
@@ -1834,6 +1898,13 @@ class HrService:
             payload=payload, policy=policy
         )
         attendance.check_out_at = now
+        attendance.early_leave_minutes = self._scheduled_difference_minutes(
+            assignment=assignment,
+            policy=policy,
+            work_date=work_date,
+            occurred_at=now,
+            boundary="end",
+        )
         if outcome != AttendanceLocationOutcome.ACCEPTED:
             attendance.status = AttendanceStatus.PENDING
         await self._session.flush()
@@ -1950,7 +2021,11 @@ class HrService:
             ):
                 attendance.status = AttendanceStatus.PENDING
             else:
-                attendance.status = AttendanceStatus.PRESENT
+                attendance.status = (
+                    AttendanceStatus.LATE
+                    if attendance.late_minutes
+                    else AttendanceStatus.PRESENT
+                )
 
         await self._session.flush()
         await self._session.refresh(exception)

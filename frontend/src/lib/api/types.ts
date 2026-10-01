@@ -163,6 +163,10 @@ export interface AttendanceAssignment {
   effectiveTo: string | null;
   scheduleCode: string;
   holidayCalendarCode: string;
+  workDays: number[] | null;
+  startTime: string | null;
+  endTime: string | null;
+  holidayDates: string[] | null;
   createdAt: string;
   updatedAt: string;
 }

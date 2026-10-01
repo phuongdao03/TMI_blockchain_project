@@ -68,21 +68,22 @@ export function PeopleWorkspace({
       <header className="border-b border-neutral-200 pb-5">
         <h1 className="text-2xl font-bold text-neutral-950">Nhân sự</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
-          Tài khoản dùng để đăng nhập và nhận quyền. Hồ sơ nhân viên dùng cho
-          chấm công, nghỉ phép và thông tin lao động.
+          Tài khoản để đăng nhập; hồ sơ nhân viên để chấm công và quản lý lao
+          động. Người được mời tự điền thông tin cá nhân, quản trị viên thiết
+          lập công việc.
         </p>
         <ol className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
           <li className="rounded-lg border border-neutral-200 bg-white px-3 py-2">
-            <strong className="text-primary-700">01</strong> Mời tài khoản và
-            chờ người dùng chấp nhận
+            <strong className="text-primary-700">01</strong> Mời hoặc chọn tài
+            khoản đã có
           </li>
           <li className="rounded-lg border border-neutral-200 bg-white px-3 py-2">
-            <strong className="text-primary-700">02</strong> Tạo hồ sơ nhân
-            viên, liên kết tài khoản
+            <strong className="text-primary-700">02</strong> Thiết lập phòng
+            ban, vị trí và ngày vào làm
           </li>
           <li className="rounded-lg border border-neutral-200 bg-white px-3 py-2">
-            <strong className="text-primary-700">03</strong> Phân công địa điểm
-            chấm công
+            <strong className="text-primary-700">03</strong> Gán địa điểm và giờ
+            làm việc
           </li>
         </ol>
         {checkingAccount ? (
