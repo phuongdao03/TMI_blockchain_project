@@ -355,7 +355,11 @@ class HrService:
                 message="Employee code or linked account is required.",
                 status_code=422,
             )
-        code = (payload.employee_code or f"NV-{payload.user_id.hex[:12]}").upper()
+        if payload.employee_code is not None:
+            code = payload.employee_code.upper()
+        else:
+            assert payload.user_id is not None
+            code = f"NV-{payload.user_id.hex[:12]}".upper()
         full_name = payload.full_name
         if payload.user_id is not None:
             linked_user = await self._session.get(User, payload.user_id)

@@ -21,7 +21,7 @@ test("invited staff verifies email and activates the account once", async ({
     .getByRole("button", { name: "Xác minh email và kích hoạt tài khoản" })
     .click();
 
-  await expect(page).toHaveURL(/\/login\?invitation=accepted$/);
+  await expect(page).toHaveURL(/\/login\?invitation=accepted&next=%2Faccount$/);
 });
 
 test("reviewer signs in directly after Firebase authentication", async ({

@@ -103,7 +103,7 @@ export function OperationsDashboard({
     ...Object.values(metrics.data.dossierFunnel),
   );
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="mx-auto max-w-7xl space-y-8 text-[var(--theme-text)]">
       {showHeader ? (
         <header>
           <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-primary-700">
