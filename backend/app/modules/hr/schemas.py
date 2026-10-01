@@ -318,10 +318,10 @@ class AttendanceAssignmentData(HrSchema):
     effective_to: date | None
     schedule_code: str
     holiday_calendar_code: str
-    work_days: list[int] | None
-    start_time: time | None
-    end_time: time | None
-    holiday_dates: list[date] | None
+    work_days: list[int] | None = None
+    start_time: time | None = None
+    end_time: time | None = None
+    holiday_dates: list[date] | None = None
     created_at: datetime
     updated_at: datetime
 
