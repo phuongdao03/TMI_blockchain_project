@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { StaffAccountWorkspace } from "@/components/admin/staff-account-workspace";
 import { hrEmployeeApi } from "@/lib/api/client";
@@ -9,23 +9,21 @@ import { EmployeeWorkspace } from "./employee-workspace";
 type PeopleView = "accounts" | "employees";
 type LinkedAccount = { id: string; email: string };
 
-export function PeopleWorkspace() {
-  const [view, setView] = useState<PeopleView>("accounts");
+export function PeopleWorkspace({
+  initialAccountSearch = "",
+  initialView = "accounts",
+}: {
+  initialAccountSearch?: string;
+  initialView?: PeopleView;
+} = {}) {
+  const [view, setView] = useState<PeopleView>(initialView);
   const [linkedAccount, setLinkedAccount] = useState<LinkedAccount | null>(
     null,
   );
-  const [employeeSearch, setEmployeeSearch] = useState("");
+  const [employeeSearch, setEmployeeSearch] = useState(initialAccountSearch);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [profileNotice, setProfileNotice] = useState<string | null>(null);
   const [checkingAccount, setCheckingAccount] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("view") !== "employees") return;
-    const account = params.get("account")?.trim() ?? "";
-    setEmployeeSearch(account);
-    setView("employees");
-  }, []);
 
   async function openEmployeeProfile(account: LinkedAccount) {
     setCheckingAccount(true);

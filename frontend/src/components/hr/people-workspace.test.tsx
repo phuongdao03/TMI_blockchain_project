@@ -46,29 +46,23 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("PeopleWorkspace", () => {
   it("opens the employee form with the email passed from attendance setup", async () => {
-    window.history.replaceState(
-      {},
-      "",
-      "/admin/employees?view=employees&account=reviewer%40example.com",
+    render(
+      <PeopleWorkspace
+        initialAccountSearch="reviewer@example.com"
+        initialView="employees"
+      />,
     );
-    try {
-      render(<PeopleWorkspace />);
-      await waitFor(() =>
-        expect(screen.getByTestId("search").textContent).toBe(
-          "reviewer@example.com",
-        ),
-      );
-      expect(screen.getByTestId("account-search").textContent).toBe(
-        "reviewer@example.com",
-      );
-      expect(
-        screen
-          .getByRole("tab", { name: "Hồ sơ nhân viên" })
-          .getAttribute("aria-selected"),
-      ).toBe("true");
-    } finally {
-      window.history.replaceState({}, "", "/");
-    }
+    expect(screen.getByTestId("search").textContent).toBe(
+      "reviewer@example.com",
+    );
+    expect(screen.getByTestId("account-search").textContent).toBe(
+      "reviewer@example.com",
+    );
+    expect(
+      screen
+        .getByRole("tab", { name: "Hồ sơ nhân viên" })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
   });
   it("opens a prelinked form when the moderator has no employee profile", async () => {
     listEmployees.mockResolvedValue({ data: [] });
