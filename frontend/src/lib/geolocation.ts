@@ -9,6 +9,8 @@ type LocationCaptureFailureCode =
   | "LOCATION_INSECURE_CONTEXT"
   | "LOCATION_UNSUPPORTED"
   | "LOCATION_PERMISSION_DENIED"
+  | "LOCATION_POLICY_BLOCKED"
+  | "LOCATION_ACCESS_BLOCKED"
   | "LOCATION_TIMEOUT"
   | "LOCATION_UNAVAILABLE"
   | "LOCATION_INVALID";
@@ -28,7 +30,7 @@ function locationError(error: GeolocationPositionError): LocationCaptureError {
     case 1:
       return new LocationCaptureError(
         "LOCATION_PERMISSION_DENIED",
-        "Chưa được cấp quyền vị trí cho lần lấy này. Kiểm tra quyền vị trí của website và thiết bị rồi thử lại.",
+        "Trình duyệt hoặc thiết bị từ chối cung cấp vị trí. Kiểm tra quyền vị trí của website, quyền vị trí của trình duyệt trong hệ điều hành rồi thử lại.",
       );
     case 3:
       return new LocationCaptureError(
@@ -41,6 +43,45 @@ function locationError(error: GeolocationPositionError): LocationCaptureError {
         "Thiết bị chưa thể cung cấp vị trí. Hãy bật dịch vụ định vị rồi thử lại.",
       );
   }
+}
+
+function locationPolicyBlocked(): boolean {
+  const policyDocument = document as Document & {
+    permissionsPolicy?: { allowsFeature(feature: string): boolean };
+    featurePolicy?: { allowsFeature(feature: string): boolean };
+  };
+  const policy =
+    policyDocument.permissionsPolicy ?? policyDocument.featurePolicy;
+  try {
+    return policy?.allowsFeature("geolocation") === false;
+  } catch {
+    return false;
+  }
+}
+
+async function locationPermissionState(): Promise<PermissionState | null> {
+  try {
+    return (
+      (await navigator.permissions?.query({ name: "geolocation" }))?.state ??
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
+function blockedLocationError(): LocationCaptureError {
+  return new LocationCaptureError(
+    "LOCATION_ACCESS_BLOCKED",
+    "Quyền vị trí của website đã bật, nhưng trình duyệt hoặc thiết bị vẫn chặn lấy vị trí. Kiểm tra dịch vụ định vị của hệ điều hành và quyền vị trí của trình duyệt, rồi mở lại trang để thử.",
+  );
+}
+
+function policyLocationError(): LocationCaptureError {
+  return new LocationCaptureError(
+    "LOCATION_POLICY_BLOCKED",
+    "Trang hiện tại bị chính sách bảo mật chặn lấy vị trí. Hãy mở trực tiếp website chấm công hoặc liên hệ quản trị viên để kiểm tra cấu hình.",
+  );
 }
 
 /** Captures one location only after an explicit attendance action. */
@@ -71,11 +112,28 @@ export async function captureForegroundLocation(): Promise<ForegroundLocationCap
     position = await readPosition(true);
   } catch (error) {
     const failure = error as GeolocationPositionError;
-    if (failure.code === 1) throw locationError(failure);
+    if (failure.code === 1) {
+      if (locationPolicyBlocked()) {
+        throw policyLocationError();
+      }
+      const permissionState = await locationPermissionState();
+      if (permissionState === "denied" || permissionState === "prompt") {
+        throw locationError(failure);
+      }
+    }
     try {
       position = await readPosition(false);
     } catch (retryError) {
-      throw locationError(retryError as GeolocationPositionError);
+      const retryFailure = retryError as GeolocationPositionError;
+      if (retryFailure.code === 1) {
+        if (locationPolicyBlocked()) {
+          throw policyLocationError();
+        }
+        if ((await locationPermissionState()) === "granted") {
+          throw blockedLocationError();
+        }
+      }
+      throw locationError(retryFailure);
     }
   }
   const { accuracy, latitude, longitude } = position.coords;
