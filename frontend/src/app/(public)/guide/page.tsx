@@ -345,7 +345,7 @@ function GuideLink({
 }) {
   return (
     <Link
-      className={`guide-cta group inline-flex min-h-12 w-full items-center justify-between gap-4 rounded-xl border px-5 py-3 text-sm font-extrabold no-underline sm:w-auto ${secondary ? "border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text)] hover:border-primary-700 hover:text-primary-700" : "border-primary-800 bg-primary-800 text-white shadow-sm hover:bg-primary-900"}`}
+      className={`guide-cta group inline-flex min-h-12 w-full items-center justify-between gap-4 rounded-xl border px-5 py-3 text-sm font-extrabold no-underline sm:w-auto ${secondary ? "border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text)] hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)]" : "guide-cta--primary shadow-sm"}`}
       href={href}
     >
       <span>{children}</span>

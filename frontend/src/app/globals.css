@@ -7088,6 +7088,28 @@ html[data-theme="dark"] .public-home .home-journey .font-mono {
     box-shadow var(--duration-fast) var(--ease-smooth-out);
 }
 
+.project-guide .guide-cta--primary {
+  border-color: var(--thv-red-dark);
+  background-color: var(--thv-red-dark);
+  color: #ffffff;
+}
+
+.project-guide .guide-cta--primary:hover {
+  border-color: var(--thv-red-deep);
+  background-color: var(--thv-red-deep);
+}
+
+html[data-theme="dark"] .project-guide .guide-cta--primary {
+  border-color: var(--thv-gold);
+  background-color: var(--thv-gold);
+  color: var(--thv-text);
+}
+
+html[data-theme="dark"] .project-guide .guide-cta--primary:hover {
+  border-color: var(--thv-gold-light);
+  background-color: var(--thv-gold-light);
+}
+
 .guide-cta:hover {
   transform: translateY(-1px);
 }
