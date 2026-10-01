@@ -19,21 +19,46 @@
 2. The script validates the environment file, runs the approved Alembic
    migration, waits for Compose health and checks `https://APP_DOMAIN/health`.
    With `RELEASE_MODE=full`, it automatically enables the Compose `full` profile
-   and waits for ClamAV, worker and scheduler; preview releases keep that profile
-   disabled.
+   and waits for ClamAV, worker and scheduler; preview releases keep that
+   profile disabled.
 3. Smoke login, dossier read, public verification and notification worker.
 4. Monitor errors, P95 latency, queue backlog and pending blockchain age for 30
    minutes.
 
+### Attendance geolocation on the shared VPS
+
+The deployment workflow copies `infrastructure/` to the VPS, but it does not
+replace `/etc/nginx/sites-available/decu.tinhhoaviet.org.vn`. When the host
+Nginx site is stale, it can add `geolocation=()` beside the frontend's
+`geolocation=(self)` policy. Browsers apply the restrictive policy and block
+attendance even when the user has allowed location.
+
+After a change to the host Nginx template, update its active site separately:
+
+```bash
+sudo cp -a /etc/nginx/sites-available/decu.tinhhoaviet.org.vn \
+  /etc/nginx/sites-available/decu.tinhhoaviet.org.vn.bak
+sudo install -m 644 \
+  /var/www/tmi_blockchain/infrastructure/nginx/decu.tinhhoaviet.org.vn.conf.example \
+  /etc/nginx/sites-available/decu.tinhhoaviet.org.vn
+sudo nginx -t && sudo systemctl reload nginx
+curl -sSI https://decu.tinhhoaviet.org.vn/login | grep -i '^permissions-policy:'
+```
+
+The last command must show `geolocation=(self)` once and must not show
+`geolocation=()`. If `nginx -t` fails, restore the `.bak` file, test again and
+reload. Check for a second policy in other active Nginx config or an outer proxy
+if the response still contains `geolocation=()`.
+
 ## Rollback
 
 Use the protected GitHub Actions **Rollback** workflow with the previous
-immutable image tag, or run `infrastructure/scripts/rollback.sh
-<previous-commit-sha>` directly on the VPS. This changes only application
-images, waits for health and records the release state. Do not automatically
-downgrade the database. If the release migration is incompatible, follow its
-reviewed Alembic downgrade plan after taking a fresh backup and confirming no
-newer data would be lost.
+immutable image tag, or run
+`infrastructure/scripts/rollback.sh <previous-commit-sha>` directly on the VPS.
+This changes only application images, waits for health and records the release
+state. Do not automatically downgrade the database. If the release migration is
+incompatible, follow its reviewed Alembic downgrade plan after taking a fresh
+backup and confirming no newer data would be lost.
 
 Rollback immediately for data-integrity risk, security exposure, error rate
 above twice baseline or P95 latency above 150% of baseline.

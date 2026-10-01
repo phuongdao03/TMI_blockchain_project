@@ -182,6 +182,13 @@ test("nginx production config enforces TLS, headers and webhook isolation", asyn
   assert.match(nginx, /Strict-Transport-Security/);
   assert.match(nginx, /Permissions-Policy[^\n]*geolocation=\(self\)/);
   assert.match(hostNginx, /Permissions-Policy[^\n]*geolocation=\(self\)/);
+  for (const config of [nginx, hostNginx]) {
+    assert.match(
+      config,
+      /location \/ \{[\s\S]*?proxy_hide_header Permissions-Policy;/,
+      "the edge proxy must send one authoritative geolocation policy",
+    );
+  }
   assert.match(nginx, /Content-Security-Policy/);
   assert.match(
     nginx,
