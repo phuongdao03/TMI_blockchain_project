@@ -44,10 +44,13 @@ export function ReviewEvidenceAssessments({
           className="flex items-center gap-2 font-bold"
           id="evidence-assessment-title"
         >
-          <FileCheck2 aria-hidden="true" className="size-5 text-primary-700" />
+          <FileCheck2
+            aria-hidden="true"
+            className="size-5 text-[var(--theme-accent)]"
+          />
           Kết quả kiểm tra từng tệp
         </h3>
-        <p className="mt-1 text-sm text-neutral-600">
+        <p className="mt-1 text-sm text-[var(--theme-muted)]">
           Ghi nhận tệp phù hợp, cần làm rõ hoặc không liên quan.
         </p>
       </div>
@@ -62,7 +65,7 @@ export function ReviewEvidenceAssessments({
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_13rem] sm:items-center">
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{evidence.title}</p>
-                  <p className="mt-1 text-xs text-neutral-500">
+                  <p className="mt-1 text-xs text-[var(--theme-muted)]">
                     Định dạng {formatEvidenceMimeType(evidence.media.mimeType)}
                   </p>
                 </div>

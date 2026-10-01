@@ -37,10 +37,10 @@ export function ReviewEvidenceSelect({
       role="group"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <p className="text-xs font-bold uppercase tracking-wider text-neutral-600">
+        <p className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
           Tài liệu làm căn cứ
         </p>
-        <p className="text-xs leading-5 text-neutral-500">
+        <p className="text-xs leading-5 text-[var(--theme-muted)]">
           Chọn ít nhất một tệp đã khóa.
         </p>
       </div>

@@ -137,8 +137,8 @@ export function AttendanceAssignmentPanel({
             Lịch làm việc của nhân viên
           </h2>
           <p className="mt-1 text-sm leading-6 text-neutral-600">
-            Chọn hồ sơ nhân viên, ngày bắt đầu và mã lịch áp dụng tại địa điểm
-            này.
+            Gán hồ sơ nhân viên cho địa điểm chấm công. Tài khoản được mời chỉ
+            xuất hiện ở đây sau khi đã tạo và liên kết hồ sơ nhân viên.
           </p>
         </div>
       </div>
@@ -178,10 +178,13 @@ export function AttendanceAssignmentPanel({
         (employees.data?.data.length ?? 0) === 0 ? (
           <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950">
             {employeeSearch.trim()
-              ? "Không tìm thấy hồ sơ nhân viên đang làm việc. Thử tên hoặc email khác."
-              : "Chưa có hồ sơ nhân viên đang làm việc. Tài khoản người kiểm duyệt cần được tạo hồ sơ nhân viên trước khi phân công chấm công."}{" "}
-            <Link className="font-bold underline" href="/admin/employees">
-              Mở mục Nhân sự
+              ? "Không thấy hồ sơ nhân viên đang làm việc với từ khóa này. Nếu đây là tài khoản vừa được mời, hãy tạo hồ sơ và liên kết tài khoản trong Nhân sự."
+              : "Chưa có hồ sơ nhân viên đang làm việc. Mời tài khoản chỉ cấp quyền đăng nhập; để chấm công, cần tạo hồ sơ nhân viên và liên kết tài khoản."}{" "}
+            <Link
+              className="font-bold underline"
+              href={`/admin/employees?view=employees${employeeSearch.trim().includes("@") ? `&account=${encodeURIComponent(employeeSearch.trim())}` : ""}`}
+            >
+              Tạo hoặc liên kết hồ sơ nhân viên
             </Link>
           </p>
         ) : null}
@@ -207,6 +210,10 @@ export function AttendanceAssignmentPanel({
             ))}
           </select>
         </label>
+        <p className="mt-2 text-xs leading-5 text-neutral-600">
+          Trong form hồ sơ nhân viên, tìm và chọn đúng tài khoản đã nhận lời mời
+          trước khi lưu. Sau đó quay lại đây và tìm bằng email.
+        </p>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <label
             className="block text-sm font-semibold text-neutral-800"
@@ -243,7 +250,7 @@ export function AttendanceAssignmentPanel({
               className="block text-sm font-semibold text-neutral-800"
               htmlFor="attendance-assignment-schedule"
             >
-              Mã lịch làm việc
+              Mã nhận diện lịch làm việc
               <input
                 aria-describedby="attendance-assignment-schedule-help"
                 className={fieldClass}
@@ -259,8 +266,9 @@ export function AttendanceAssignmentPanel({
               className="mt-1 text-xs leading-5 text-neutral-600"
               id="attendance-assignment-schedule-help"
             >
-              Dùng mã lịch làm việc của đơn vị, ví dụ MON_FRI_8H cho thứ Hai đến
-              thứ Sáu, 8 giờ mỗi ngày.
+              Nhãn nội bộ để nhận diện lịch của nhân viên, ví dụ MON_FRI_8H.
+              Hiện mã này chỉ được lưu cùng phân công; chưa tự tạo ca làm hay số
+              giờ công.
             </p>
           </div>
           <div>
@@ -268,7 +276,7 @@ export function AttendanceAssignmentPanel({
               className="block text-sm font-semibold text-neutral-800"
               htmlFor="attendance-assignment-holiday-calendar"
             >
-              Mã lịch nghỉ lễ
+              Mã nhận diện lịch nghỉ lễ
               <input
                 aria-describedby="attendance-assignment-holiday-help"
                 className={fieldClass}
@@ -284,7 +292,8 @@ export function AttendanceAssignmentPanel({
               className="mt-1 text-xs leading-5 text-neutral-600"
               id="attendance-assignment-holiday-help"
             >
-              Dùng mã lịch nghỉ theo khu vực, ví dụ VN-HCM.
+              Nhãn nội bộ để nhận diện lịch nghỉ theo khu vực, ví dụ VN-HCM.
+              Hiện mã này chưa tự tạo ngày nghỉ lễ.
             </p>
           </div>
         </div>

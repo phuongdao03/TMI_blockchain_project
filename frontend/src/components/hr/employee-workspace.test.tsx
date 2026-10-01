@@ -41,6 +41,30 @@ beforeEach(() => {
 });
 
 describe("EmployeeWorkspace", () => {
+  it("requires a linked account when opened from attendance setup", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <EmployeeWorkspace initialAccountSearch="reviewer@example.com" />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(/Đang tìm tài khoản/)).toBeDefined();
+    expect(
+      (screen.getByRole("button", { name: "Tạo hồ sơ" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    await screen.findByRole("option", { name: /reviewer@example.com/ });
+    fireEvent.change(screen.getByLabelText("Liên kết tài khoản"), {
+      target: { value: "moderator-1" },
+    });
+    expect(
+      (screen.getByRole("button", { name: "Tạo hồ sơ" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+  });
+
   it("creates a linked employee profile from an existing moderator account", async () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },

@@ -103,7 +103,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       },
     ]);
     await page.goto("/reviews");
-    await page.getByRole("link", { name: "Mở phiếu kiểm duyệt" }).click();
+    await page.getByRole("link", { name: "Tiếp tục thẩm định" }).click();
     await page
       .getByLabel("Kết quả kiểm tra Giấy xác nhận quyền sở hữu")
       .selectOption("VALID");

@@ -6,6 +6,8 @@ import { ReviewAssignmentList } from "@/components/reviews/review-assignment-lis
 
 const listMock = vi.hoisted(() => vi.fn());
 
+vi.mock("next/link", () => ({ default: "a" }));
+
 vi.mock("@/lib/api/client", () => ({
   reviewApi: { list: listMock },
 }));
@@ -52,7 +54,7 @@ describe("ReviewAssignmentList", () => {
     expect(screen.queryByText(/xung đột lợi ích/i)).toBeNull();
     expect(
       screen
-        .getByRole("link", { name: "Mở phiếu kiểm duyệt" })
+        .getByRole("link", { name: "Tiếp tục thẩm định" })
         .getAttribute("href"),
     ).toBe("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
   });

@@ -22,7 +22,7 @@ import type { ReviewAssignmentDetail, ReviewDraft } from "@/lib/api/types";
 import { reviewKeys } from "@/lib/reviews/query-keys";
 
 const statusLabels = {
-  ASSIGNED: "Đang thẩm định",
+  ASSIGNED: "Mới được giao",
   IN_PROGRESS: "Đang thẩm định",
   CONFLICTED: "Đã kết thúc",
   SUBMITTED: "Đã gửi kết quả",
@@ -122,7 +122,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
   return (
     <div className="review-workspace mx-auto max-w-[92rem] space-y-6">
       <Link
-        className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-neutral-600 hover:text-primary-700"
+        className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[var(--theme-muted)] hover:text-[var(--theme-accent)]"
         href="/reviews"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
@@ -131,7 +131,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
       <header className="border-l-4 border-l-primary-700 border-y border-r border-[var(--theme-border)] bg-[var(--theme-surface)] px-6 py-6 text-[var(--theme-text)] sm:px-8">
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
           <div>
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent)]">
               <ClipboardCheck className="size-4" />
               {detail.dossierCode} · Phiên bản {detail.versionNo}
             </p>
@@ -139,7 +139,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
               {detail.dossierTitle}
             </h1>
           </div>
-          <span className="w-fit rounded-full border border-primary-200 bg-[var(--theme-elevated)] px-3 py-1.5 text-xs font-bold text-primary-800">
+          <span className="w-fit rounded-full border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-3 py-1.5 text-xs font-bold text-[var(--theme-accent)]">
             {statusLabels[detail.assignment.status]}
           </span>
         </div>
@@ -162,12 +162,12 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
             ]
         ).map(([number, title, description]) => (
           <li className="grid grid-cols-[2rem_1fr] gap-3 py-2" key={number}>
-            <span className="grid size-8 place-items-center rounded-full bg-[var(--theme-elevated)] font-mono text-xs font-bold text-primary-700">
+            <span className="grid size-8 place-items-center rounded-full bg-[var(--theme-elevated)] font-mono text-xs font-bold text-[var(--theme-accent)]">
               {number}
             </span>
             <div>
               <p className="text-sm font-bold">{title}</p>
-              <p className="mt-1 text-xs leading-5 text-neutral-500">
+              <p className="mt-1 text-xs leading-5 text-[var(--theme-muted)]">
                 {description}
               </p>
             </div>
@@ -180,7 +180,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
         className="grid overflow-hidden border-y border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text)] sm:grid-cols-3"
       >
         <article className="border-b border-[var(--theme-border)] p-4 sm:border-b-0 sm:border-r sm:p-5">
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-500">
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
             <Clock3 aria-hidden="true" className="size-4" /> Thời hạn xử lý
           </p>
           <p
@@ -188,26 +188,26 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           >
             {deadline.label}
           </p>
-          <p className="mt-1 text-xs leading-5 text-neutral-500">
+          <p className="mt-1 text-xs leading-5 text-[var(--theme-muted)]">
             {deadline.detail}
           </p>
         </article>
         <article className="border-b border-[var(--theme-border)] p-4 sm:border-b-0 sm:border-r sm:p-5">
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-500">
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
             <Files aria-hidden="true" className="size-4" /> Bộ bằng chứng
           </p>
           <p className="mt-2 font-bold">{evidenceCount} tài liệu đã khóa</p>
-          <p className="mt-1 text-xs leading-5 text-neutral-500">
+          <p className="mt-1 text-xs leading-5 text-[var(--theme-muted)]">
             Chỉ dẫn chiếu nội dung thuộc phiên bản {detail.versionNo}
           </p>
         </article>
         <article className="p-4 sm:p-5">
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-500">
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
             <LockKeyhole aria-hidden="true" className="size-4" /> Phạm vi thao
             tác
           </p>
           <p className="mt-2 font-bold">Thẩm định nội bộ</p>
-          <p className="mt-1 text-xs leading-5 text-neutral-500">
+          <p className="mt-1 text-xs leading-5 text-[var(--theme-muted)]">
             Không thể sửa hồ sơ hoặc đưa ra quyết định cuối cùng
           </p>
         </article>
@@ -238,21 +238,24 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
             <AlertTriangle className="size-6" />
           </span>
           <h2 className="mt-4 text-xl font-bold">Phân công đã kết thúc</h2>
-          <p className="mt-2 text-sm text-neutral-500">
+          <p className="mt-2 text-sm text-[var(--theme-muted)]">
             Hồ sơ không còn khả dụng để tiếp tục thẩm định.
           </p>
         </Card>
       ) : null}
       {["IN_PROGRESS", "SUBMITTED"].includes(detail.assignment.status) &&
       detail.snapshotJson ? (
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(20rem,0.76fr)_minmax(34rem,1.24fr)]">
-          <div className="space-y-6 xl:sticky xl:top-28">
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(21rem,0.85fr)_minmax(34rem,1.15fr)]">
+          <aside
+            aria-label="Hồ sơ và tài liệu kiểm chứng"
+            className="min-w-0 space-y-4"
+          >
             {detail.snapshotJson.dossier.summary ? (
               <Card className="p-5">
-                <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
                   Tóm tắt của người nộp
                 </p>
-                <p className="mt-2 text-sm leading-6 text-neutral-700">
+                <p className="mt-2 text-sm leading-6 text-[var(--theme-text)]">
                   {detail.snapshotJson.dossier.summary}
                 </p>
               </Card>
@@ -263,16 +266,19 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
               }
               evidences={detail.snapshotJson.evidences ?? []}
             />
-            <Card className="p-5">
-              <p className="flex items-center gap-2 text-xs font-bold text-emerald-700">
-                <CheckCircle2 className="size-4" />
+            <details className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 text-sm">
+              <summary className="flex cursor-pointer items-center gap-2 font-semibold text-[var(--theme-text)]">
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="size-4 text-emerald-700"
+                />
                 Dấu vân tay phiên bản
-              </p>
-              <code className="mt-3 block break-all text-xs leading-5 text-neutral-500">
+              </summary>
+              <code className="mt-3 block break-all text-xs leading-5 text-[var(--theme-muted)]">
                 {detail.canonicalHash}
               </code>
-            </Card>
-          </div>
+            </details>
+          </aside>
           <FiveTScorecard
             evidences={detail.snapshotJson.evidences ?? []}
             initialReview={detail.review}

@@ -26,14 +26,17 @@ vi.mock("@/components/admin/staff-account-workspace", () => ({
 }));
 vi.mock("./employee-workspace", () => ({
   EmployeeWorkspace: ({
+    initialAccountSearch,
     initialSearch,
     linkedAccount,
   }: {
+    initialAccountSearch: string;
     initialSearch: string;
     linkedAccount: { id: string; email: string } | null;
   }) => (
     <div>
       <span data-testid="search">{initialSearch}</span>
+      <span data-testid="account-search">{initialAccountSearch}</span>
       <span data-testid="linked-account">{linkedAccount?.email ?? "none"}</span>
     </div>
   ),
@@ -42,6 +45,31 @@ vi.mock("./employee-workspace", () => ({
 beforeEach(() => vi.clearAllMocks());
 
 describe("PeopleWorkspace", () => {
+  it("opens the employee form with the email passed from attendance setup", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/admin/employees?view=employees&account=reviewer%40example.com",
+    );
+    try {
+      render(<PeopleWorkspace />);
+      await waitFor(() =>
+        expect(screen.getByTestId("search").textContent).toBe(
+          "reviewer@example.com",
+        ),
+      );
+      expect(screen.getByTestId("account-search").textContent).toBe(
+        "reviewer@example.com",
+      );
+      expect(
+        screen
+          .getByRole("tab", { name: "Hồ sơ nhân viên" })
+          .getAttribute("aria-selected"),
+      ).toBe("true");
+    } finally {
+      window.history.replaceState({}, "", "/");
+    }
+  });
   it("opens a prelinked form when the moderator has no employee profile", async () => {
     listEmployees.mockResolvedValue({ data: [] });
     render(<PeopleWorkspace />);

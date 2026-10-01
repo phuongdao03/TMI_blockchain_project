@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { MyWorkAllocationList } from "@/components/work-allocations/my-work-allocation-list";
 
 const listMock = vi.hoisted(() => vi.fn());
 const reviewListMock = vi.hoisted(() => vi.fn());
+
+vi.mock("next/link", () => ({ default: "a" }));
 
 vi.mock("@/lib/api/client", () => ({
   workAllocationSelfApi: {
@@ -39,10 +41,91 @@ describe("MyWorkAllocationList", () => {
     expect(await screen.findByText("Hồ sơ chờ thẩm định")).toBeDefined();
     expect(
       screen
-        .getByRole("link", { name: "Mở hồ sơ thẩm định" })
+        .getByRole("link", { name: "Bắt đầu thẩm định: Hồ sơ chờ thẩm định" })
         .getAttribute("href"),
     ).toBe("/reviews/review-1");
     expect(screen.queryByText("Chưa có công việc được giao")).toBeNull();
+    expect(screen.getByText("Mới được giao")).toBeDefined();
+  });
+
+  it("separates submitted reviews from work that still needs attention", async () => {
+    listMock.mockResolvedValue({ data: [], meta: { total: 0 } });
+    reviewListMock.mockResolvedValue({
+      data: [
+        {
+          assignment: { id: "open", status: "IN_PROGRESS", dueAt: null },
+          dossierCode: "HS-1",
+          dossierTitle: "Hồ sơ đang làm",
+          versionNo: 1,
+        },
+        {
+          assignment: { id: "done", status: "SUBMITTED", dueAt: null },
+          dossierCode: "HS-2",
+          dossierTitle: "Hồ sơ đã gửi",
+          versionNo: 2,
+        },
+      ],
+      meta: { total: 2 },
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MyWorkAllocationList />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("Hồ sơ đang làm")).toBeDefined();
+    expect(screen.queryByText("Hồ sơ đã gửi")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Đã kết thúc" }));
+    expect(screen.getByText("Hồ sơ đã gửi")).toBeDefined();
+    expect(screen.getByText("Đã gửi kết quả")).toBeDefined();
+    expect(screen.queryByText("Hồ sơ đang làm")).toBeNull();
+  });
+
+  it("does not show the same dossier twice when an allocation and a review exist", async () => {
+    listMock.mockResolvedValue({
+      data: [
+        {
+          id: "allocation-1",
+          kind: "DOSSIER_REVIEW",
+          objective: "Thẩm định hồ sơ",
+          dossierId: "dossier-1",
+          dossierVersionId: "version-1",
+          status: "ACTIVE",
+          priority: "MEDIUM",
+          dueAt: null,
+        },
+      ],
+      meta: { total: 1 },
+    });
+    reviewListMock.mockResolvedValue({
+      data: [
+        {
+          assignment: {
+            id: "review-1",
+            dossierId: "dossier-1",
+            dossierVersionId: "version-1",
+            status: "ASSIGNED",
+            dueAt: null,
+          },
+          dossierCode: "HS-1",
+          dossierTitle: "Hồ sơ A",
+          versionNo: 1,
+        },
+      ],
+      meta: { total: 1 },
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MyWorkAllocationList />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("Hồ sơ A")).toBeDefined();
+    expect(screen.queryByText("Thẩm định hồ sơ")).toBeNull();
   });
 
   it("shows a moderator's assigned work and connects dossier work to review", async () => {

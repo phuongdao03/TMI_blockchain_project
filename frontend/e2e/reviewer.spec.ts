@@ -64,7 +64,7 @@ test("reviewer reviews each document and submits a criteria verdict", async ({
       .locator("main")
       .getByRole("heading", { level: 1, name: "Công việc kiểm duyệt" }),
   ).toBeVisible();
-  const reviewLink = page.getByRole("link", { name: "Mở phiếu kiểm duyệt" });
+  const reviewLink = page.getByRole("link", { name: "Tiếp tục thẩm định" });
   await expect(reviewLink).toHaveAttribute(
     "href",
     /\/reviews\/4155dbf5-bb3e-449d-8bf0-9572cc642cac$/,

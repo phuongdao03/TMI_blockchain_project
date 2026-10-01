@@ -41,11 +41,13 @@ function salary(value: string | null) {
 
 export function EmployeeWorkspace({
   embedded = false,
+  initialAccountSearch = "",
   initialSearch = "",
   linkedAccount,
   onClearLinkedAccount,
 }: {
   embedded?: boolean;
+  initialAccountSearch?: string;
   initialSearch?: string;
   linkedAccount?: { id: string; email: string } | null;
   onClearLinkedAccount?: () => void;
@@ -57,11 +59,15 @@ export function EmployeeWorkspace({
   const [employmentStatus, setEmploymentStatus] = useState<
     EmploymentStatus | ""
   >("");
-  const [creating, setCreating] = useState(Boolean(linkedAccount));
-  const [accountSearch, setAccountSearch] = useState(
-    linkedAccount?.email ?? "",
+  const [creating, setCreating] = useState(
+    Boolean(linkedAccount || initialAccountSearch),
   );
-  const [accountQuery, setAccountQuery] = useState(linkedAccount?.email ?? "");
+  const [accountSearch, setAccountSearch] = useState(
+    linkedAccount?.email ?? initialAccountSearch,
+  );
+  const [accountQuery, setAccountQuery] = useState(
+    linkedAccount?.email ?? initialAccountSearch,
+  );
   const [selectedUserId, setSelectedUserId] = useState(linkedAccount?.id ?? "");
   const [accountNameModified, setAccountNameModified] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -79,7 +85,7 @@ export function EmployeeWorkspace({
   const [form, setForm] = useState({
     employeeCode: "",
     fullName: "",
-    email: linkedAccount?.email ?? "",
+    email: linkedAccount?.email ?? initialAccountSearch,
     phone: "",
     departmentId: "",
     position: "",
@@ -398,6 +404,13 @@ export function EmployeeWorkspace({
                 công.
               </p>
             ) : null}
+            {initialAccountSearch && !linkedAccount ? (
+              <p className="rounded-xl border border-amber-200 bg-white p-3 text-sm text-amber-950 md:col-span-2 xl:col-span-3">
+                Đang tìm tài khoản <strong>{initialAccountSearch}</strong> để
+                dùng chấm công. Chọn tài khoản trong ô “Liên kết tài khoản”
+                trước khi tạo hồ sơ.
+              </p>
+            ) : null}
             <div className="rounded-xl border border-current/15 p-4 md:col-span-2 xl:col-span-3">
               <label className="text-sm font-bold text-neutral-800">
                 Tìm tài khoản đã đăng ký
@@ -621,7 +634,10 @@ export function EmployeeWorkspace({
             <div className="flex justify-end md:col-span-2 xl:col-span-3">
               <button
                 className="min-h-11 rounded-xl bg-neutral-950 px-6 text-sm font-bold text-white disabled:opacity-50"
-                disabled={createEmployee.isPending}
+                disabled={
+                  createEmployee.isPending ||
+                  (Boolean(initialAccountSearch) && !selectedUserId)
+                }
                 type="submit"
               >
                 {createEmployee.isPending ? "Đang lưu..." : "Tạo hồ sơ"}

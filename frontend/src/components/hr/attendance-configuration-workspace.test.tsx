@@ -14,6 +14,8 @@ const listAssignmentsMock = vi.hoisted(() => vi.fn());
 const createAssignmentMock = vi.hoisted(() => vi.fn());
 const listEmployeesMock = vi.hoisted(() => vi.fn());
 
+vi.mock("next/link", () => ({ default: "a" }));
+
 vi.mock("@/lib/api/client", () => ({
   ApiError: class ApiError extends Error {},
   hrAttendanceConfigurationApi: {
@@ -73,6 +75,31 @@ function mockQueries() {
 }
 
 describe("AttendanceConfigurationWorkspace", () => {
+  it("carries a searched account email to the employee profile form", async () => {
+    mockQueries();
+    listPoliciesMock.mockResolvedValue({
+      data: [
+        {
+          id: "policy-1",
+          worksiteId: "worksite-1",
+          effectiveFrom: "2026-10-01",
+          effectiveTo: null,
+        },
+      ],
+      meta: { total: 1 },
+    });
+    renderWorkspace();
+    const search = await screen.findByLabelText("Tìm nhân viên đang hoạt động");
+    fireEvent.change(search, { target: { value: "reviewer@example.com" } });
+    expect(
+      (
+        await screen.findByRole("link", {
+          name: "Tạo hoặc liên kết hồ sơ nhân viên",
+        })
+      ).getAttribute("href"),
+    ).toBe("/admin/employees?view=employees&account=reviewer%40example.com");
+  });
+
   it("explains the missing employee profile and blocks assignment until a policy exists", async () => {
     mockQueries();
     renderWorkspace();
@@ -80,9 +107,11 @@ describe("AttendanceConfigurationWorkspace", () => {
     expect(await screen.findByText("Singapore Hub")).toBeDefined();
     expect(
       (
-        await screen.findByRole("link", { name: "Mở mục Nhân sự" })
+        await screen.findByRole("link", {
+          name: "Tạo hoặc liên kết hồ sơ nhân viên",
+        })
       ).getAttribute("href"),
-    ).toBe("/admin/employees");
+    ).toBe("/admin/employees?view=employees");
     expect(
       (
         screen.getByRole("button", {
@@ -132,10 +161,10 @@ describe("AttendanceConfigurationWorkspace", () => {
     fireEvent.change(screen.getByLabelText("Ngày hiệu lực phân công"), {
       target: { value: "2026-09-30" },
     });
-    fireEvent.change(screen.getByLabelText("Mã lịch làm việc"), {
+    fireEvent.change(screen.getByLabelText("Mã nhận diện lịch làm việc"), {
       target: { value: "MON_FRI_8H" },
     });
-    fireEvent.change(screen.getByLabelText("Mã lịch nghỉ lễ"), {
+    fireEvent.change(screen.getByLabelText("Mã nhận diện lịch nghỉ lễ"), {
       target: { value: "VN-HCM" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Lưu phân công" }));

@@ -215,6 +215,20 @@ export function VerdictReviewForm({
   useReviewAutosave({ draft: autosaveDraft, onSave, readOnly });
 
   const complete = validationIssues.length === 0;
+  const reviewedFiles = evidences.filter(
+    (evidence) =>
+      assessments[evidence.mediaAssetId]?.status &&
+      assessments[evidence.mediaAssetId]?.status !== "UNREVIEWED",
+  ).length;
+  const completedCriteria = rubric.criteria.filter(({ key }) => {
+    const answer = verdicts[key];
+    return (
+      answer?.outcome &&
+      answer.rationale.trim().length >= 20 &&
+      (answer.outcome === "NOT_APPLICABLE" ||
+        answer.evidenceMediaIds.length > 0)
+    );
+  }).length;
 
   const firstInvalidFieldId = useMemo(() => {
     for (const criterion of rubric.criteria) {
@@ -254,7 +268,7 @@ export function VerdictReviewForm({
 
   async function prepareSubmit() {
     if (!complete) {
-      setError(validationIssues.join(" "));
+      setError(validationIssues[0] ?? "Phiếu còn nội dung cần hoàn tất.");
       if (firstInvalidFieldId) {
         document.getElementById(firstInvalidFieldId)?.focus();
       }
@@ -273,15 +287,64 @@ export function VerdictReviewForm({
     <>
       <Card className="overflow-hidden">
         <header className="border-b border-[var(--theme-border)] bg-[var(--theme-elevated)] px-5 py-6 text-[var(--theme-text)] sm:px-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent)]">
             Kết luận theo tiêu chí
           </p>
           <h2 className="mt-2 text-2xl font-bold">Phiếu thẩm định hồ sơ</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
-            Chọn kết luận rõ ràng cho từng tiêu chí và dẫn tài liệu đã kiểm tra.
-            Phiếu này không sử dụng điểm số.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
+            Kiểm tra tệp, chọn kết luận cho từng tiêu chí rồi gửi kết quả. Bản
+            nháp được lưu trong khi bạn làm việc.
           </p>
+          <div
+            aria-label="Tiến độ thẩm định"
+            className="mt-5 flex flex-wrap gap-2 text-xs font-semibold"
+          >
+            <span className="rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2">
+              Tệp đã kiểm tra {reviewedFiles}/{evidences.length}
+            </span>
+            <span className="rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2">
+              Tiêu chí hoàn thành {completedCriteria}/{rubric.criteria.length}
+            </span>
+            <span
+              className={`rounded-md border px-3 py-2 ${complete ? "border-emerald-500 text-emerald-700" : "border-[var(--theme-border)] text-[var(--theme-muted)]"}`}
+            >
+              {complete
+                ? "Sẵn sàng gửi"
+                : `${validationIssues.length} mục cần hoàn tất`}
+            </span>
+          </div>
         </header>
+        <nav
+          aria-label="Các phần của phiếu thẩm định"
+          className="flex flex-wrap gap-2 border-b border-[var(--theme-border)] px-5 py-3 text-sm font-semibold sm:px-8"
+        >
+          <a
+            className="rounded-lg px-3 py-2 text-[var(--theme-accent)] hover:bg-[var(--theme-elevated)]"
+            href="#evidence-assessment-title"
+          >
+            1. Kiểm tra tệp
+          </a>
+          {rubric.gates.length ? (
+            <a
+              className="rounded-lg px-3 py-2 text-[var(--theme-accent)] hover:bg-[var(--theme-elevated)]"
+              href="#review-conditions"
+            >
+              2. Điều kiện tiếp nhận
+            </a>
+          ) : null}
+          <a
+            className="rounded-lg px-3 py-2 text-[var(--theme-accent)] hover:bg-[var(--theme-elevated)]"
+            href="#review-verdicts"
+          >
+            {rubric.gates.length ? "3" : "2"}. Kết luận tiêu chí
+          </a>
+          <a
+            className="rounded-lg px-3 py-2 text-[var(--theme-accent)] hover:bg-[var(--theme-elevated)]"
+            href="#review-final-result"
+          >
+            {rubric.gates.length ? "4" : "3"}. Gửi kết quả
+          </a>
+        </nav>
         <form className="space-y-8 p-5 sm:p-8">
           <ReviewEvidenceAssessments
             assessments={assessments}
@@ -304,15 +367,15 @@ export function VerdictReviewForm({
                   };
                   return (
                     <fieldset
-                      className="border-0 bg-[var(--theme-elevated)] py-5"
+                      className="border-0 bg-[var(--theme-surface)] px-1 py-6"
                       disabled={readOnly}
                       key={gate.key}
                     >
                       <legend className="px-1 font-bold">{gate.label}</legend>
-                      <p className="text-sm text-neutral-600">
+                      <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
                         {gate.description}
                       </p>
-                      <div className="mt-3 grid gap-3 sm:grid-cols-[13rem_1fr]">
+                      <div className="mt-4 grid gap-4">
                         <select
                           aria-label={`Kết quả ${gate.label}`}
                           className="min-h-11 rounded-lg border bg-[var(--theme-surface)] px-3"
@@ -335,7 +398,7 @@ export function VerdictReviewForm({
                         <div>
                           <textarea
                             aria-label={`Căn cứ ${gate.label}`}
-                            className="min-h-20 w-full rounded-lg border bg-[var(--theme-surface)] p-3"
+                            className="min-h-28 w-full resize-y rounded-lg border bg-[var(--theme-surface)] p-3 leading-6"
                             id={`verdict-gate-rationale-${gate.key}`}
                             maxLength={2_000}
                             onChange={(event) =>
@@ -351,7 +414,9 @@ export function VerdictReviewForm({
                             value={answer.rationale}
                           />
                           <p className="mt-1 text-right text-xs text-[var(--theme-muted)]">
-                            {answer.rationale.trim().length}/20 ký tự tối thiểu
+                            {answer.rationale.trim().length >= 20
+                              ? "Đủ độ dài căn cứ"
+                              : `Cần thêm ${20 - answer.rationale.trim().length} ký tự`}
                           </p>
                         </div>
                       </div>
@@ -379,7 +444,7 @@ export function VerdictReviewForm({
               <h3 className="text-lg font-bold" id="review-verdicts">
                 Kết luận từng tiêu chí
               </h3>
-              <p className="mt-1 text-sm text-neutral-600">
+              <p className="mt-1 text-sm text-[var(--theme-muted)]">
                 Đánh giá dựa trên tài liệu thực tế của hồ sơ.
               </p>
             </div>
@@ -392,20 +457,20 @@ export function VerdictReviewForm({
                 };
                 return (
                   <fieldset
-                    className="border-0 bg-[var(--theme-elevated)] py-5"
+                    className="border-0 bg-[var(--theme-surface)] px-1 py-6"
                     disabled={readOnly}
                     key={criterion.key}
                   >
                     <legend className="px-1 font-bold">
-                      <span className="mr-2 text-primary-700">
+                      <span className="mr-2 text-[var(--theme-accent)]">
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       {criterion.label}
                     </legend>
-                    <p className="text-sm text-neutral-600">
+                    <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
                       {criterion.description}
                     </p>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-[15rem_1fr]">
+                    <div className="mt-4 grid gap-4">
                       <select
                         aria-label={`Kết luận ${criterion.label}`}
                         className="min-h-11 rounded-lg border bg-[var(--theme-surface)] px-3"
@@ -448,7 +513,9 @@ export function VerdictReviewForm({
                           value={answer.rationale}
                         />
                         <p className="mt-1 text-right text-xs text-[var(--theme-muted)]">
-                          {answer.rationale.trim().length}/20 ký tự tối thiểu
+                          {answer.rationale.trim().length >= 20
+                            ? "Đủ độ dài căn cứ"
+                            : `Cần thêm ${20 - answer.rationale.trim().length} ký tự`}
                         </p>
                       </div>
                     </div>
@@ -470,12 +537,15 @@ export function VerdictReviewForm({
             </div>
           </section>
 
-          <section className="grid gap-4 rounded-2xl border p-5 md:grid-cols-2">
+          <section
+            className="grid scroll-mt-24 gap-4 rounded-xl border border-[var(--theme-border)] p-5 md:grid-cols-2"
+            id="review-final-result"
+          >
             <div
               className="rounded-xl bg-[var(--theme-elevated)] p-4"
               role="status"
             >
-              <p className="text-xs font-bold uppercase tracking-wider text-neutral-600">
+              <p className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
                 Kết quả từ các tiêu chí
               </p>
               <p className="mt-2 text-lg font-bold">
@@ -520,7 +590,7 @@ export function VerdictReviewForm({
           <div className="flex flex-col justify-between gap-4 border-t pt-5 sm:flex-row sm:items-center">
             <p
               aria-live="polite"
-              className="flex items-center gap-2 text-xs font-semibold text-neutral-500"
+              className="flex items-center gap-2 text-xs font-semibold text-[var(--theme-muted)]"
               data-testid="review-save-status"
               role={saveError ? "alert" : "status"}
             >

@@ -15,6 +15,12 @@ Tài liệu này dành cho quản trị viên thiết lập vùng chấm công v
 
 **Kiểm tra kết quả:** Điểm làm việc đang hoạt động, chính sách có ngày hiệu lực đúng và nhân viên xuất hiện trong danh sách được phân công. Tọa độ chi tiết chỉ dành cho người có quyền; báo cáo chung không xuất bằng chứng GPS chi tiết.
 
+### Vì sao tài khoản đã mời chưa xuất hiện khi phân công?
+
+Lời mời tạo quyền truy cập cho **tài khoản**. Danh sách phân công chấm công lấy từ **hồ sơ nhân viên đang làm việc**. Từ màn phân công, tìm email rồi chọn **Tạo hoặc liên kết hồ sơ nhân viên**; hệ thống mở form nhân sự với email đó. Chọn đúng tài khoản trong ô **Liên kết tài khoản**, điền mã nhân viên, phòng ban và thông tin bắt buộc, rồi lưu. Quay lại Điểm chấm công, tìm bằng email để phân công. Nếu đã có hồ sơ, kiểm tra hồ sơ đó đã liên kết đúng tài khoản và có trạng thái đang làm việc.
+
+**Mã lịch làm việc** và **mã lịch nghỉ lễ** hiện là nhãn nội bộ lưu trên bản phân công, chẳng hạn `MON_FRI_8H` và `VN-HCM`. Backend chưa có danh mục lịch tương ứng và không tự suy ra ca, giờ công hay ngày lễ từ hai mã này. Dùng mã thống nhất trong tổ chức để tra cứu; ngày hiệu lực và vùng chấm công mới là các điều kiện được kiểm tra khi phân công.
+
 ### Khi bản đồ hoặc ô tìm địa chỉ không hoạt động
 
 - **Bản đồ trống:** Kiểm tra website đang chạy qua HTTPS. Người vận hành kỹ thuật kiểm tra cấu hình Stadia Maps cho domain `decu.tinhhoaviet.org.vn`, chính sách `Referrer-Policy` và yêu cầu tải tile trong Network của trình duyệt. Biến `NEXT_PUBLIC_OSM_TILE_URL` là cấu hình lúc build; không đặt API key vào URL công khai.
@@ -43,3 +49,7 @@ Hệ thống lấy vị trí khi bạn chủ động bấm nút; bạn không c�
 - Kiểm tra bản đồ và tìm địa chỉ trên thiết bị thực tế, với tài khoản Super Admin và domain sử dụng thật.
 - Đối chiếu tọa độ, bán kính, sai số GPS, ngày hiệu lực và múi giờ với địa điểm làm việc.
 - Thử chấm công vào và ra bằng tài khoản thử nghiệm đã được phân công. Xác nhận trạng thái và quyền xem bằng chứng vị trí trước khi áp dụng cho nhân viên.
+
+### Kiểm thử tự động không cần nhiều tài khoản thật
+
+Từ thư mục gốc repo, chạy `python -m pytest -q backend/app/tests/test_staff_invitations.py backend/app/tests/test_global_attendance_admin_api.py backend/app/tests/test_review_assignment_api.py` để kiểm tra hợp đồng lời mời, phân công chấm công và thẩm định qua API với dữ liệu test. Khi đã cài dependency frontend, chạy `npm --prefix frontend run test:e2e`: Playwright dùng mock API và cookie persona (`reviewer`, `super-admin`) để kiểm tra giao diện theo vai trò. Các bài test này không thay thế lần thử GPS thực tế trên thiết bị tại điểm làm việc.

@@ -12,7 +12,7 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -47,6 +47,12 @@ export function EvidenceViewer({
     evidence: ReviewEvidenceSnapshot;
     url: string;
   } | null>(null);
+  const previewRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!preview) return;
+    previewRef.current?.focus();
+    previewRef.current?.scrollIntoView?.({ block: "nearest" });
+  }, [preview]);
   const [deliveries, setDeliveries] = useState<
     Record<string, { expiresAt: number; url: string }>
   >({});
@@ -93,9 +99,9 @@ export function EvidenceViewer({
   ];
 
   return (
-    <Card className="overflow-hidden">
-      <div className="border-b px-6 py-5 sm:px-8">
-        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
+    <Card className="flex flex-col overflow-hidden">
+      <div className="border-b border-[var(--theme-border)] px-5 py-5 sm:px-6">
+        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-accent)]">
           <ShieldCheck aria-hidden="true" className="size-4" />
           Bằng chứng phiên bản đã khóa
         </p>
@@ -104,15 +110,15 @@ export function EvidenceViewer({
         </h2>
       </div>
       {evidences.length ? (
-        <div className="divide-y divide-[var(--theme-border)]">
+        <div className="order-2 divide-y divide-[var(--theme-border)]">
           {evidenceGroups.map((group) => (
             <section
               aria-labelledby={`evidence-group-${group.key}`}
               key={group.key}
             >
-              <div className="bg-[var(--theme-elevated)] px-5 py-3 sm:px-8">
+              <div className="bg-[var(--theme-elevated)] px-5 py-2.5 sm:px-6">
                 <h3
-                  className="text-xs font-bold uppercase tracking-[0.14em] text-neutral-600"
+                  className="text-xs font-bold uppercase tracking-[0.1em] text-[var(--theme-muted)]"
                   id={`evidence-group-${group.key}`}
                 >
                   {group.label} · {group.items.length} tệp
@@ -132,37 +138,35 @@ export function EvidenceViewer({
                     activeMediaId === evidence.mediaAssetId;
                   return (
                     <article
-                      className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 p-5 sm:items-center sm:px-8"
+                      className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-3 px-5 py-4 sm:px-6"
                       key={evidence.id}
                     >
-                      <span className="grid size-11 place-items-center rounded-xl bg-primary-50 text-primary-700">
+                      <span className="grid size-10 place-items-center rounded-lg bg-[var(--theme-elevated)] text-[var(--theme-accent)]">
                         <Icon aria-hidden="true" className="size-5" />
                       </span>
                       <div className="min-w-0">
-                        <h3 className="font-bold text-neutral-950">
+                        <h3 className="font-bold text-[var(--theme-text)]">
                           {evidence.title}
                         </h3>
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-neutral-600">
-                          <span className="rounded-full border bg-[var(--theme-surface)] px-2.5 py-1">
-                            Loại tài liệu: {group.label}
-                          </span>
-                          <span className="rounded-full border bg-[var(--theme-surface)] px-2.5 py-1">
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--theme-muted)]">
+                          <span>Loại tài liệu: {group.label}</span>
+                          <span>
                             Định dạng:{" "}
                             {formatEvidenceMimeType(evidence.media.mimeType)}
                           </span>
-                          <span className="rounded-full border bg-[var(--theme-surface)] px-2.5 py-1">
+                          <span>
                             Dung lượng: {formatBytes(evidence.media.bytes)}
                           </span>
                         </div>
                         {evidence.description ? (
-                          <p className="mt-2 text-sm leading-6 text-neutral-600">
+                          <p className="mt-2 text-sm leading-6 text-[var(--theme-muted)]">
                             {evidence.description}
                           </p>
                         ) : null}
                       </div>
                       <Button
                         aria-label={`Xem ${evidence.title}`}
-                        className="col-span-2 w-full"
+                        className="col-span-2 w-full sm:col-start-2 sm:w-fit"
                         disabled={mutation.isPending}
                         onClick={() => openEvidence(evidence)}
                         variant="outline"
@@ -185,7 +189,7 @@ export function EvidenceViewer({
           ))}
         </div>
       ) : (
-        <p className="p-8 text-sm text-neutral-500">
+        <p className="p-8 text-sm text-[var(--theme-muted)]">
           Phiên bản này không có tài liệu bằng chứng.
         </p>
       )}
@@ -200,18 +204,20 @@ export function EvidenceViewer({
       {preview ? (
         <section
           aria-label={`Xem trước ${preview.evidence.title}`}
-          className="border-t border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:p-6"
+          className="order-1 border-b border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 outline-none sm:p-6"
+          ref={previewRef}
           role="region"
+          tabIndex={-1}
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary-700">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--theme-accent)]">
                 Bản xem trước an toàn
               </p>
               <h3 className="mt-1 truncate font-bold">
                 {preview.evidence.title}
               </h3>
-              <p className="mt-1 text-xs text-neutral-500">
+              <p className="mt-1 text-xs text-[var(--theme-muted)]">
                 Liên kết có thời hạn · chỉ dùng trong phiên làm việc này
               </p>
             </div>

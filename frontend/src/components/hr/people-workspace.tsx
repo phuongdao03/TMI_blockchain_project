@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { StaffAccountWorkspace } from "@/components/admin/staff-account-workspace";
 import { hrEmployeeApi } from "@/lib/api/client";
@@ -18,6 +18,14 @@ export function PeopleWorkspace() {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [profileNotice, setProfileNotice] = useState<string | null>(null);
   const [checkingAccount, setCheckingAccount] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("view") !== "employees") return;
+    const account = params.get("account")?.trim() ?? "";
+    setEmployeeSearch(account);
+    setView("employees");
+  }, []);
 
   async function openEmployeeProfile(account: LinkedAccount) {
     setCheckingAccount(true);
@@ -62,11 +70,23 @@ export function PeopleWorkspace() {
       <header className="border-b border-neutral-200 pb-5">
         <h1 className="text-2xl font-bold text-neutral-950">Nhân sự</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
-          Để chọn người kiểm duyệt, tìm tài khoản ở tab Tài khoản và quyền rồi
-          gửi lời mời. Người được chọn nhận thông báo và bấm Chấp nhận để có
-          quyền kiểm duyệt. Chỉ tạo hồ sơ nhân viên nếu người đó cũng cần chấm
-          công hoặc quản lý thông tin lao động tại đây.
+          Tài khoản dùng để đăng nhập và nhận quyền. Hồ sơ nhân viên dùng cho
+          chấm công, nghỉ phép và thông tin lao động.
         </p>
+        <ol className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
+          <li className="rounded-lg border border-neutral-200 bg-white px-3 py-2">
+            <strong className="text-primary-700">01</strong> Mời tài khoản và
+            chờ người dùng chấp nhận
+          </li>
+          <li className="rounded-lg border border-neutral-200 bg-white px-3 py-2">
+            <strong className="text-primary-700">02</strong> Tạo hồ sơ nhân
+            viên, liên kết tài khoản
+          </li>
+          <li className="rounded-lg border border-neutral-200 bg-white px-3 py-2">
+            <strong className="text-primary-700">03</strong> Phân công địa điểm
+            chấm công
+          </li>
+        </ol>
         {checkingAccount ? (
           <p className="mt-3 text-sm text-neutral-600" role="status">
             Đang kiểm tra hồ sơ nhân viên…
@@ -151,6 +171,7 @@ export function PeopleWorkspace() {
         {view === "employees" ? (
           <EmployeeWorkspace
             embedded
+            initialAccountSearch={employeeSearch}
             initialSearch={employeeSearch}
             linkedAccount={linkedAccount}
             onClearLinkedAccount={() => setLinkedAccount(null)}
