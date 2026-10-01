@@ -102,6 +102,7 @@ function apiMessage(error: unknown) {
 
 export function AdminAttendanceWorkspace() {
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
   const [departmentId, setDepartmentId] = useState("");
@@ -124,6 +125,7 @@ export function AdminAttendanceWorkspace() {
     queryKey: [
       "hr",
       "admin-attendance",
+      page,
       search,
       departmentId,
       attendanceStatus,
@@ -132,6 +134,7 @@ export function AdminAttendanceWorkspace() {
     ],
     queryFn: () =>
       hrAdminAttendanceApi.list({
+        page,
         search: search || undefined,
         departmentId: departmentId || undefined,
         status: attendanceStatus || undefined,
@@ -166,9 +169,14 @@ export function AdminAttendanceWorkspace() {
     },
   });
   const rows = attendance.data?.data ?? [];
+  const pageCount = Math.max(
+    1,
+    Math.ceil((attendance.data?.meta.total ?? 0) / 100),
+  );
 
   function submitFilters(event: FormEvent) {
     event.preventDefault();
+    setPage(1);
     setSearch(searchDraft.trim());
   }
 
@@ -269,7 +277,10 @@ export function AdminAttendanceWorkspace() {
           Phòng ban
           <select
             className={`${fieldClass} mt-2`}
-            onChange={(event) => setDepartmentId(event.target.value)}
+            onChange={(event) => {
+              setPage(1);
+              setDepartmentId(event.target.value);
+            }}
             value={departmentId}
           >
             <option value="">Tất cả phòng ban</option>
@@ -284,9 +295,10 @@ export function AdminAttendanceWorkspace() {
           Trạng thái
           <select
             className={`${fieldClass} mt-2`}
-            onChange={(event) =>
-              setAttendanceStatus(event.target.value as AttendanceStatus | "")
-            }
+            onChange={(event) => {
+              setPage(1);
+              setAttendanceStatus(event.target.value as AttendanceStatus | "");
+            }}
             value={attendanceStatus}
           >
             <option value="">Tất cả</option>
@@ -301,7 +313,10 @@ export function AdminAttendanceWorkspace() {
           Từ ngày
           <input
             className={`${fieldClass} mt-2`}
-            onChange={(event) => setWorkDateFrom(event.target.value)}
+            onChange={(event) => {
+              setPage(1);
+              setWorkDateFrom(event.target.value);
+            }}
             type="date"
             value={workDateFrom}
           />
@@ -310,7 +325,10 @@ export function AdminAttendanceWorkspace() {
           Đến ngày
           <input
             className={`${fieldClass} mt-2`}
-            onChange={(event) => setWorkDateTo(event.target.value)}
+            onChange={(event) => {
+              setPage(1);
+              setWorkDateTo(event.target.value);
+            }}
             type="date"
             value={workDateTo}
           />
@@ -364,7 +382,7 @@ export function AdminAttendanceWorkspace() {
             className="text-sm font-bold text-neutral-950"
             id="attendance-list-title"
           >
-            Danh sách bản ghi
+            Lịch sử chấm công nhân viên
           </h2>
           <span className="text-xs font-semibold text-neutral-500">
             {attendance.data?.meta.total ?? 0} bản ghi
@@ -507,6 +525,32 @@ export function AdminAttendanceWorkspace() {
             ))}
           </tbody>
         </table>
+        {attendance.isSuccess && pageCount > 1 ? (
+          <nav
+            aria-label="Chuyển trang lịch sử chấm công"
+            className="flex items-center justify-end gap-3 border-t border-neutral-200 px-5 py-4"
+          >
+            <button
+              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={page === 1}
+              onClick={() => setPage((current) => current - 1)}
+              type="button"
+            >
+              Trang trước
+            </button>
+            <span className="text-sm text-neutral-600">
+              Trang {page} / {pageCount}
+            </span>
+            <button
+              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={page >= pageCount}
+              onClick={() => setPage((current) => current + 1)}
+              type="button"
+            >
+              Trang sau
+            </button>
+          </nav>
+        ) : null}
       </section>
     </section>
   );

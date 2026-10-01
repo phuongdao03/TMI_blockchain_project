@@ -75,9 +75,7 @@ function errorMessage(error: unknown) {
 
 export function AttendanceWorkspace() {
   const queryClient = useQueryClient();
-  const [note, setNote] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
-  const [locationSummary, setLocationSummary] = useState<string | null>(null);
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
   const [showLocationEvidence, setShowLocationEvidence] = useState(false);
   const attendance = useQuery({
@@ -97,25 +95,18 @@ export function AttendanceWorkspace() {
     ]);
   async function captureLocation() {
     setNotice(null);
-    setLocationSummary(null);
     setIsCapturingLocation(true);
     try {
-      const location = await captureForegroundLocation();
-      setLocationSummary(
-        `Vị trí đã được ghi nhận từ thiết bị; sai số báo cáo là ${Math.round(location.accuracyMeters)} m.`,
-      );
-      return location;
+      return await captureForegroundLocation();
     } finally {
       setIsCapturingLocation(false);
     }
   }
   const checkIn = useMutation({
     mutationFn: async () => {
-      const location = await captureLocation();
-      return hrSelfApi.checkIn({ ...location, note: note.trim() || null });
+      return hrSelfApi.checkIn(await captureLocation());
     },
     onSuccess: (record) => {
-      setNote("");
       setNotice(
         record.status === "PENDING"
           ? "Yêu cầu chấm công vào đã được ghi nhận và đang chờ Super Admin xét duyệt vị trí."
@@ -356,21 +347,6 @@ export function AttendanceWorkspace() {
                 </p>
               </aside>
             ) : null}
-            {!today && hasActiveWorkday ? (
-              <label className="mt-5 block text-sm font-bold text-neutral-800">
-                Ghi chú ngày công{" "}
-                <span className="font-normal text-neutral-500">
-                  (không bắt buộc)
-                </span>
-                <textarea
-                  className="mt-2 min-h-24 w-full rounded-xl border border-neutral-300 bg-white px-3 py-3 text-sm text-neutral-950 outline-none transition focus:border-primary-600 focus:ring-2 focus:ring-primary-100"
-                  maxLength={2000}
-                  onChange={(event) => setNote(event.target.value)}
-                  placeholder="Ví dụ: Làm việc tại văn phòng Hà Nội"
-                  value={note}
-                />
-              </label>
-            ) : null}
             <aside className="mt-5 flex gap-3 rounded-xl border border-primary-100 bg-primary-50 p-4 text-sm leading-6 text-primary-950">
               <Clock3
                 aria-hidden="true"
@@ -437,14 +413,6 @@ export function AttendanceWorkspace() {
                 role="status"
               >
                 Đang lấy vị trí GPS từ thiết bị…
-              </p>
-            ) : null}
-            {locationSummary ? (
-              <p
-                className="mt-3 text-sm font-semibold text-primary-800"
-                role="status"
-              >
-                {locationSummary}
               </p>
             ) : null}
             {notice ? (
@@ -565,7 +533,7 @@ function AttendanceHistory({
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-neutral-500">
-            20 ngày gần nhất
+            20 bản ghi gần nhất
           </p>
           <h2
             className="mt-2 text-xl font-bold text-neutral-950"

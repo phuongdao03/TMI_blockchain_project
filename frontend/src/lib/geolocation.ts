@@ -151,9 +151,9 @@ export async function captureForegroundLocation(): Promise<ForegroundLocationCap
     );
   }
   return {
-    latitude,
-    longitude,
-    accuracyMeters: accuracy,
+    latitude: Number(latitude.toFixed(6)),
+    longitude: Number(longitude.toFixed(6)),
+    accuracyMeters: Math.max(0.01, Number(accuracy.toFixed(2))),
     clientCapturedAt: capturedAt.toISOString(),
   };
 }

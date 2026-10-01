@@ -59,6 +59,26 @@ describe("captureForegroundLocation", () => {
     );
   });
 
+  it("limits browser GPS precision to the attendance API contract", async () => {
+    const getCurrentPosition = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          latitude: 10.776912345,
+          longitude: 106.700987654,
+          accuracy: 138.123456,
+        } as GeolocationCoordinates,
+        timestamp: Date.parse("2026-09-21T02:30:00.000Z"),
+      } as GeolocationPosition);
+    });
+    enableSecureLocation(getCurrentPosition);
+
+    await expect(captureForegroundLocation()).resolves.toMatchObject({
+      latitude: 10.776912,
+      longitude: 106.700988,
+      accuracyMeters: 138.12,
+    });
+  });
+
   it("explains a denied permission without exposing position details", async () => {
     const deniedError: GeolocationPositionError = {
       code: 1,

@@ -45,7 +45,7 @@ describe("AttendanceWorkspace", () => {
     });
   });
 
-  it("records an optional note when a moderator starts their workday", async () => {
+  it("checks in without a note and shows success only after the API accepts it", async () => {
     listAttendanceMock.mockResolvedValue({
       success: true,
       data: [],
@@ -61,10 +61,10 @@ describe("AttendanceWorkspace", () => {
       </QueryClientProvider>,
     );
 
-    const note = await screen.findByRole("textbox", {
-      name: /Ghi chú ngày công/i,
-    });
-    fireEvent.change(note, { target: { value: "Làm việc tại văn phòng" } });
+    await screen.findByRole("button", { name: "Chấm công vào" });
+    expect(
+      screen.queryByRole("textbox", { name: /Ghi chú ngày công/i }),
+    ).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Chấm công vào" }));
 
     await waitFor(() => {
@@ -73,7 +73,6 @@ describe("AttendanceWorkspace", () => {
         longitude: 106.7009,
         accuracyMeters: 18.5,
         clientCapturedAt: "2026-09-21T02:30:00.000Z",
-        note: "Làm việc tại văn phòng",
       });
     });
     expect(
@@ -81,11 +80,7 @@ describe("AttendanceWorkspace", () => {
         "Chấm công vào thành công. Thời gian máy chủ và vị trí đã được lưu an toàn.",
       ),
     ).toBeDefined();
-    expect(
-      screen.getByText(
-        "Vị trí đã được ghi nhận từ thiết bị; sai số báo cáo là 19 m.",
-      ),
-    ).toBeDefined();
+    expect(screen.queryByText(/sai số báo cáo/i)).toBeNull();
   });
 
   it("explains a denied foreground location permission without submitting attendance", async () => {

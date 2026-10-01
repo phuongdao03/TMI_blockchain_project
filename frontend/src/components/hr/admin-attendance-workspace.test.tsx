@@ -20,6 +20,49 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 describe("AdminAttendanceWorkspace", () => {
+  it("lets admin browse attendance history beyond the first 100 records", async () => {
+    listDepartmentsMock.mockResolvedValue({
+      success: true,
+      data: [],
+      meta: { requestId: "test", page: 1, pageSize: 100, total: 0 },
+    });
+    listAttendanceMock.mockImplementation(async ({ page = 1 }) => ({
+      success: true,
+      data: [],
+      meta: { requestId: "test", page, pageSize: 100, total: 120 },
+    }));
+    listLocationExceptionsMock.mockResolvedValue({
+      success: true,
+      data: [],
+      meta: { requestId: "test", page: 1, pageSize: 20, total: 0 },
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <AdminAttendanceWorkspace />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Trang sau" }));
+    await waitFor(() => {
+      expect(listAttendanceMock).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 2, pageSize: 100 }),
+      );
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("Mã, tên hoặc email"), {
+      target: { value: "OPS-001" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
+    await waitFor(() => {
+      expect(listAttendanceMock).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 1, search: "OPS-001" }),
+      );
+    });
+  });
+
   it("submits a confirmed attendance adjustment through the protected client", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     listDepartmentsMock.mockResolvedValue({
