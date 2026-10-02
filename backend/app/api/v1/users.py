@@ -8,7 +8,11 @@ from app.modules.auth.dependencies import (
     CurrentPrincipalDependency,
 )
 from app.modules.users.dependencies import UserProfileServiceDependency
-from app.modules.users.schemas import PatchUserProfileRequest, UserProfileData
+from app.modules.users.schemas import (
+    EmploymentData,
+    PatchUserProfileRequest,
+    UserProfileData,
+)
 from app.modules.users.service import ProfileChanges, ProfileView
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
@@ -28,7 +32,11 @@ def _profile_data(view: ProfileView) -> UserProfileData:
         avatar_media_id=view.avatar_media_id,
         locale=view.locale,
         timezone=view.timezone,
-        employment=view.employment,
+        employment=(
+            EmploymentData.model_validate(view.employment)
+            if view.employment is not None
+            else None
+        ),
     )
 
 

@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import exists, func, select
+from sqlalchemy import Select, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import DomainError
@@ -24,7 +24,9 @@ class AdminAnnouncementService:
         self._session = session
 
     @staticmethod
-    def _recipients(audience: AnnouncementAudience, recipient_user_id: UUID | None):
+    def _recipients(
+        audience: AnnouncementAudience, recipient_user_id: UUID | None
+    ) -> Select[tuple[UUID]]:
         employee_exists = exists(
             select(Employee.id).where(
                 Employee.user_id == User.id,
