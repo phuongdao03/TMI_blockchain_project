@@ -54,6 +54,11 @@ describe("public route compatibility", () => {
     );
   });
 
+  it("does not block Firebase's same-origin iframe with app security headers", async () => {
+    const headers = await nextConfig.headers?.();
+    expect(headers?.[0]?.source).toBe("/((?!__/auth/).*)");
+  });
+
   it("prevents an opaque QR token from being cached or forwarded as a referrer", async () => {
     const headers = await nextConfig.headers?.();
 

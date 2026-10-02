@@ -15,8 +15,10 @@ let emulatorConnected = false;
 export function resolveFirebaseAuthDomain(
   configuredDomain: string | undefined,
 ): string | undefined {
-  // Google OAuth validates this exact Firebase handler domain. Replacing it
-  // with the application hostname causes redirect_uri_mismatch in production.
+  if (process.env.NEXT_PUBLIC_FIREBASE_SAME_ORIGIN_AUTH === "true") {
+    const appUrl = process.env.NEXT_PUBLIC_APP_BASE_URL;
+    if (appUrl) return new URL(appUrl).hostname;
+  }
   return configuredDomain;
 }
 

@@ -99,7 +99,7 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
-      { source: "/:path*", headers: securityHeaders },
+      { source: "/((?!__/auth/).*)", headers: securityHeaders },
       { source: "/r/:token", headers: qrRedirectHeaders },
       { source: "/verify/:token", headers: qrRedirectHeaders },
     ];

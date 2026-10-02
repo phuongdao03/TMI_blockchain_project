@@ -5,6 +5,7 @@ import {
   getRedirectResult,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
   type User,
 } from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
@@ -21,6 +22,14 @@ import {
 import type { AccountType } from "@/lib/api/types";
 
 const GOOGLE_REDIRECT_PENDING_KEY = "cns.google-oauth.redirect-pending";
+
+function shouldUseAndroidRedirect(): boolean {
+  return (
+    process.env.NEXT_PUBLIC_FIREBASE_SAME_ORIGIN_AUTH === "true" &&
+    typeof navigator !== "undefined" &&
+    /Android/i.test(navigator.userAgent)
+  );
+}
 
 function hasPendingRedirect(): boolean {
   try {
@@ -86,7 +95,9 @@ export function GoogleOAuthButton({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
-  const [popupReady, setPopupReady] = useState(() => !firebaseConfigured());
+  const [popupReady, setPopupReady] = useState(
+    () => !firebaseConfigured() || shouldUseAndroidRedirect(),
+  );
   const [error, setError] = useState<string>();
 
   const finishSignIn = useCallback(
@@ -110,7 +121,7 @@ export function GoogleOAuthButton({
   );
 
   useEffect(() => {
-    if (!firebaseConfigured()) return;
+    if (!firebaseConfigured() || shouldUseAndroidRedirect()) return;
     let active = true;
     void prepareGooglePopup()
       .catch(() => {
@@ -166,6 +177,11 @@ export function GoogleOAuthButton({
       const auth = getFirebaseAuth();
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
+      if (shouldUseAndroidRedirect()) {
+        setPendingRedirect(true);
+        await signInWithRedirect(auth, provider);
+        return;
+      }
       const credential = await signInWithPopup(auth, provider);
       await finishSignIn(credential.user);
     } catch (cause) {

@@ -25,6 +25,16 @@ server {
         proxy_set_header X-Request-ID $request_id;
     }
 
+    location ^~ /__/auth/ {
+        proxy_pass https://tmi-blockchain.firebaseapp.com;
+        proxy_ssl_server_name on;
+        proxy_set_header Host tmi-blockchain.firebaseapp.com;
+        proxy_set_header X-Forwarded-Proto https;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Cache-Control "no-store" always;
+    }
+
     location / {
         return 301 https://$host$request_uri;
     }
