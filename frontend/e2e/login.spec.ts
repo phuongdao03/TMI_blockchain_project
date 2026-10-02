@@ -48,6 +48,15 @@ test("applicant signs in with Google through Firebase exchange", async ({
   await expect(page).toHaveURL(/\/dashboard$/);
 });
 
+test("a new applicant registers with Google on mobile", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile-chrome");
+  await page.goto("/register");
+  await page.getByRole("button", { name: "Tiếp tục với Google" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+});
+
 test("a public account can choose an applicant profile without a false expired-session error", async ({
   page,
 }) => {

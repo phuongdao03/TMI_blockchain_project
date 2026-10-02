@@ -5,7 +5,6 @@ import {
   getRedirectResult,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
   type User,
 } from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
@@ -40,14 +39,6 @@ function safeDestination(value: string | undefined, fallback: string): string {
   return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
 }
 
-function isMobileBrowser(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return (
-    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
-}
-
 function oauthErrorMessage(error: unknown): string {
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     return "Bạn đang ngoại tuyến. Hãy kiểm tra kết nối mạng rồi thử lại.";
@@ -73,9 +64,7 @@ function oauthErrorMessage(error: unknown): string {
   if (code === "auth/popup-closed-by-user")
     return "Bạn đã đóng cửa sổ đăng nhập Google.";
   if (code === "auth/popup-blocked")
-    return "Trình duyệt đã chặn cửa sổ đăng nhập. Hãy cho phép popup rồi thử lại.";
-  if (code === "auth/mobile-popup-blocked")
-    return "Trình duyệt đã chặn đăng nhập Google. Hãy cho phép cửa sổ bật lên cho trang này rồi thử lại, hoặc đăng nhập bằng email.";
+    return "Trình duyệt đã chặn cửa sổ đăng nhập Google. Hãy cho phép cửa sổ bật lên rồi thử lại.";
   if (code === "auth/unauthorized-domain")
     return "Tên miền hiện tại chưa được cho phép đăng nhập Google.";
   return "Không thể kết nối Google lúc này. Vui lòng thử lại.";
@@ -118,13 +107,12 @@ export function GoogleOAuthButton({
   useEffect(() => {
     if (!firebaseConfigured()) return;
     const redirectWasStarted = hasPendingRedirect();
+    if (!redirectWasStarted) return;
     let active = true;
 
-    if (redirectWasStarted) {
-      queueMicrotask(() => {
-        if (active) setIsPending(true);
-      });
-    }
+    queueMicrotask(() => {
+      if (active) setIsPending(true);
+    });
 
     void getRedirectResult(getFirebaseAuth())
       .then(async (credential) => {
@@ -133,15 +121,13 @@ export function GoogleOAuthButton({
           await finishSignIn(credential.user);
           return;
         }
-        if (!active || !redirectWasStarted) return;
-        setPendingRedirect(false);
-        setError("Phiên đăng nhập Google chưa hoàn tất. Vui lòng thử lại.");
-        setIsPending(false);
-      })
-      .catch((cause: unknown) => {
         if (!active) return;
         setPendingRedirect(false);
-        setError(oauthErrorMessage(cause));
+        setIsPending(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setPendingRedirect(false);
         setIsPending(false);
       });
 
@@ -153,30 +139,15 @@ export function GoogleOAuthButton({
   async function startGoogleOAuth() {
     setError(undefined);
     setIsPending(true);
+    setPendingRedirect(false);
     try {
       if (!firebaseConfigured())
         throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
       const auth = getFirebaseAuth();
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
-      if (isMobileBrowser()) {
-        setPendingRedirect(true);
-        await signInWithRedirect(auth, provider);
-        return;
-      }
-      try {
-        const credential = await signInWithPopup(auth, provider);
-        await finishSignIn(credential.user);
-      } catch (popupError) {
-        if (
-          (popupError as { code?: string } | null)?.code !==
-          "auth/popup-blocked"
-        ) {
-          throw popupError;
-        }
-        setPendingRedirect(true);
-        await signInWithRedirect(auth, provider);
-      }
+      const credential = await signInWithPopup(auth, provider);
+      await finishSignIn(credential.user);
     } catch (cause) {
       setPendingRedirect(false);
       setError(oauthErrorMessage(cause));
