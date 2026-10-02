@@ -272,11 +272,11 @@ export function DashboardOverview() {
               <div className="divide-y divide-neutral-100">
                 {dossiers.data.data.slice(0, 3).map((dossier) => (
                   <Link
-                    className="flex min-h-20 items-center justify-between gap-4 px-6 py-4 hover:bg-neutral-50"
+                    className="flex min-h-20 flex-col items-start justify-center gap-2.5 px-4 py-4 hover:bg-neutral-50 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6"
                     href={`/dossiers/${dossier.id}`}
                     key={dossier.id}
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 max-w-full">
                       <p className="truncate text-sm font-bold">
                         {dossier.title}
                       </p>
@@ -284,7 +284,10 @@ export function DashboardOverview() {
                         {dossier.code}
                       </p>
                     </div>
-                    <DossierStatusBadge status={dossier.status} />
+                    <DossierStatusBadge
+                      className="shrink-0 whitespace-nowrap"
+                      status={dossier.status}
+                    />
                   </Link>
                 ))}
               </div>

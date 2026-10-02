@@ -174,6 +174,7 @@ test("mobile workspace drawer exposes complete navigation and restores focus", a
   test.skip(testInfo.project.name !== "mobile-chrome");
   await authenticate(context, "e2e-access");
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 560 });
   await page.goto("/dashboard");
 
   const trigger = page.getByRole("button", {
@@ -196,11 +197,71 @@ test("mobile workspace drawer exposes complete navigation and restores focus", a
     drawer.getByRole("group", { name: "Chọn giao diện" }),
   ).toBeVisible();
   await expect(drawer.getByRole("button", { name: "Đăng xuất" })).toBeVisible();
+  const logoutBox = await drawer
+    .getByRole("button", { name: "Đăng xuất" })
+    .boundingBox();
+  expect(logoutBox).not.toBeNull();
+  expect(logoutBox!.y + logoutBox!.height).toBeLessThanOrEqual(
+    page.viewportSize()!.height,
+  );
+  await page.screenshot({
+    path: testInfo.outputPath("mobile-workspace-drawer.png"),
+  });
+  const menuText = await drawer
+    .getByRole("link", { name: "Tìm đề cử" })
+    .evaluate((link) => getComputedStyle(link).color);
+  expect(menuText).toBe(
+    await drawer.evaluate((panel) => getComputedStyle(panel).color),
+  );
   await expectResponsivePage(page);
 
   await page.keyboard.press("Escape");
   await expect(drawer).toBeHidden();
   await expect(trigger).toBeFocused();
+});
+
+test("recent dossier status stays on one line on mobile", async ({
+  context,
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile-chrome");
+  await authenticate(context, "e2e-access");
+  await page.route("**/api/v1/dossiers?**", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        success: true,
+        data: [
+          {
+            id: "9155dbf5-bb3e-449d-8bf0-9572cc642cac",
+            code: "TMI-2026-001",
+            title: "Video chào mừng Tinh Hoa Việt",
+            status: "CERTIFICATE_ISSUED",
+          },
+        ],
+        meta: { page: 1, pageSize: 5, total: 1 },
+      }),
+    });
+  });
+  await page.goto("/dashboard");
+
+  const recent = page.getByRole("heading", { name: "Hồ sơ gần đây" });
+  const row = recent.locator("xpath=ancestor::section[1]").getByRole("link", {
+    name: /Video chào mừng Tinh Hoa Việt/,
+  });
+  const badge = row.getByText("Đã phát hành chứng thư");
+  await expect(badge).toBeVisible();
+  const titleBox = await row
+    .getByText("Video chào mừng Tinh Hoa Việt")
+    .boundingBox();
+  const badgeBox = await badge.boundingBox();
+  expect(titleBox).not.toBeNull();
+  expect(badgeBox).not.toBeNull();
+  expect(badgeBox!.y).toBeGreaterThan(titleBox!.y);
+  expect(badgeBox!.height).toBeLessThan(36);
+  expect(badgeBox!.x + badgeBox!.width).toBeLessThanOrEqual(
+    page.viewportSize()!.width,
+  );
 });
 
 test("mobile workspace navigation stays compact, centered and touch friendly", async ({

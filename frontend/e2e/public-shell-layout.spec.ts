@@ -1,5 +1,46 @@
 import { expect, test } from "@playwright/test";
 
+test("mobile home shows account actions without opening the menu", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile-chrome");
+  await page.goto("/");
+
+  const actions = page.getByRole("navigation", { name: "Truy cập tài khoản" });
+  const login = actions.getByRole("link", { name: "Đăng nhập" });
+  const register = actions.getByRole("link", { name: "Tạo tài khoản" });
+  await expect(login).toBeVisible();
+  await expect(register).toBeVisible();
+  for (const action of [login, register]) {
+    const box = await action.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    expect(box!.y + box!.height).toBeLessThan(page.viewportSize()!.height);
+  }
+  await page.screenshot({
+    path: testInfo.outputPath("mobile-home-actions.png"),
+  });
+});
+
+test("mobile home loads featured works when they approach the viewport", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile-chrome");
+  const featuredRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/v1/public/works?")) {
+      featuredRequests.push(request.url());
+    }
+  });
+
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  expect(featuredRequests).toHaveLength(0);
+
+  await page.locator(".home-featured").scrollIntoViewIfNeeded();
+  await expect.poll(() => featuredRequests.length).toBe(1);
+});
+
 test("compact public shell keeps the account entry in its drawer and uses a full-height page frame", async ({
   context,
   page,

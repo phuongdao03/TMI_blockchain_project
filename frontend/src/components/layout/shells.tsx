@@ -174,6 +174,18 @@ export function PublicShell({
           </button>
         </div>
       </header>
+      {!publicHeaderAction ? (
+        <nav aria-label="Truy cập tài khoản" className="public-mobile-auth">
+          <Link className="public-mobile-auth__login" href="/login">
+            <LogIn aria-hidden="true" />
+            Đăng nhập
+          </Link>
+          <Link className="public-mobile-auth__register" href="/register">
+            <UserPlus aria-hidden="true" />
+            Tạo tài khoản
+          </Link>
+        </nav>
+      ) : null}
       {publicHeaderAction ? (
         <div
           aria-label="Quay lại khu vực làm việc"

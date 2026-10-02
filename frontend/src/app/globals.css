@@ -8157,3 +8157,91 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
     animation: none !important;
   }
 }
+
+.public-mobile-auth {
+  display: none;
+}
+
+@media (max-width: 38rem) {
+  .public-mobile-auth {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    background: var(--thv-red-deep);
+  }
+
+  .public-mobile-auth a {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 750;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .public-mobile-auth svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .public-mobile-auth__login {
+    border: 1px solid rgb(255 255 255 / 45%);
+    color: #fff;
+  }
+
+  .public-mobile-auth__register {
+    border: 1px solid var(--thv-gold);
+    background: var(--thv-gold);
+    color: var(--thv-red-deep);
+  }
+}
+
+@media (max-width: 54rem) {
+  .dashboard-workspace-drawer__panel {
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-workspace-drawer__header {
+    flex: 0 0 auto;
+  }
+
+  .dashboard-workspace-drawer .dashboard-navigation {
+    min-height: 0;
+    flex: 1 1 auto;
+    align-content: start;
+    gap: 1rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-block: 1rem;
+  }
+
+  .dashboard-workspace-drawer .dashboard-navigation__label {
+    color: var(--theme-muted);
+  }
+
+  .dashboard-workspace-drawer .dashboard-navigation__link {
+    color: var(--theme-text);
+  }
+
+  .dashboard-workspace-drawer .dashboard-navigation__link:hover {
+    background: var(--theme-elevated);
+  }
+
+  .dashboard-workspace-drawer .dashboard-navigation__link--active,
+  .dashboard-workspace-drawer .dashboard-navigation__link--active:hover {
+    background: var(--thv-gold);
+    color: var(--thv-red-deep);
+  }
+
+  .dashboard-workspace-drawer__account {
+    flex: 0 0 auto;
+    margin-top: 0;
+    padding-top: 0.75rem;
+  }
+}

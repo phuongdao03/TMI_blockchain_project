@@ -79,8 +79,9 @@ describe("layout shells", () => {
         name: "Điều hướng công khai",
       }),
     ).toBeNull();
-    const loginLink = screen.getByRole("link", { name: "Đăng nhập" });
-    const registerLink = screen.getByRole("link", { name: "Đăng ký" });
+    const header = screen.getByRole("banner");
+    const loginLink = within(header).getByRole("link", { name: "Đăng nhập" });
+    const registerLink = within(header).getByRole("link", { name: "Đăng ký" });
     expect(loginLink.classList.contains("public-header__auth-link")).toBe(true);
     expect(registerLink.classList.contains("public-header__auth-link")).toBe(
       true,
@@ -92,6 +93,9 @@ describe("layout shells", () => {
     expect(loginLink.querySelector("svg")).not.toBeNull();
     expect(registerLink.querySelector("svg")).not.toBeNull();
     expect(registerLink.classList.contains("button")).toBe(false);
+    expect(
+      screen.getByRole("navigation", { name: "Truy cập tài khoản" }),
+    ).toBeDefined();
     expect(
       screen
         .getByRole("link", { name: "Danh sách đề cử" })
