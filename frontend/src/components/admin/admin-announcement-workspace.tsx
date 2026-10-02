@@ -196,6 +196,7 @@ export function AdminAnnouncementWorkspace() {
               <button
                 key={item.value}
                 type="button"
+                disabled={busy}
                 aria-pressed={audience === item.value}
                 className={
                   "rounded-2xl border p-4 text-left transition focus-visible:outline-2 focus-visible:outline-primary-500 " +
@@ -228,9 +229,15 @@ export function AdminAnnouncementWorkspace() {
                 <input
                   id="announcement-user-search"
                   className={fieldClass}
+                  disabled={busy}
                   placeholder="Tên hoặc email"
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setSelectedUser(null);
+                    setMatches([]);
+                    resetDraftConfirmation();
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
@@ -263,6 +270,7 @@ export function AdminAnnouncementWorkspace() {
                     <li key={user.id}>
                       <button
                         type="button"
+                        disabled={busy}
                         className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-left text-sm hover:border-primary-500"
                         onClick={() => {
                           setSelectedUser(user);
@@ -306,6 +314,7 @@ export function AdminAnnouncementWorkspace() {
             id="announcement-title"
             className={"mt-2 " + fieldClass}
             maxLength={255}
+            disabled={busy}
             required
             minLength={3}
             value={title}
@@ -325,6 +334,7 @@ export function AdminAnnouncementWorkspace() {
             id="announcement-body"
             className={"mt-2 min-h-36 resize-y " + fieldClass}
             maxLength={5000}
+            disabled={busy}
             required
             minLength={3}
             value={body}
@@ -383,6 +393,7 @@ export function AdminAnnouncementWorkspace() {
               <input
                 className="mt-1 size-4 accent-primary-600"
                 type="checkbox"
+                disabled={busy}
                 checked={confirmed}
                 onChange={(event) => setConfirmed(event.target.checked)}
               />

@@ -94,6 +94,32 @@ def test_announcement_audiences_and_retry() -> None:
             )
             assert result == repeated == 2
             assert await session.scalar(select(func.count(Notification.id))) == 2
+            await session.rollback()
+            for audience, expected_user_id in (
+                (AnnouncementAudience.EMPLOYEES, employee_user.id),
+                (AnnouncementAudience.USERS, regular_user.id),
+            ):
+                targeted_campaign_id = uuid4()
+                count = await service.send(
+                    audience=audience,
+                    recipient_user_id=None,
+                    campaign_id=targeted_campaign_id,
+                    title="Audience check",
+                    body="Check the matching accounts.",
+                    actor_user_id=regular_user.id,
+                    request_id="test-announcement-audience",
+                    user_agent=None,
+                )
+                actual_recipient_ids = set(
+                    await session.scalars(
+                        select(Notification.user_id).where(
+                            Notification.source_event_id == targeted_campaign_id
+                        )
+                    )
+                )
+                assert count == 1
+                assert actual_recipient_ids == {expected_user_id}
+                await session.rollback()
         await engine.dispose()
 
     asyncio.run(exercise())
