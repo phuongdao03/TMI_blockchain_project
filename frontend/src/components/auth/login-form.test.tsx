@@ -18,6 +18,7 @@ const { sendEmailVerification, signInWithEmailAndPassword, signOut } =
 vi.mock("@/lib/firebase/client", () => ({
   firebaseConfigured: () => true,
   getFirebaseAuth: () => ({ name: "firebase-auth" }),
+  prepareGooglePopup: async () => undefined,
 }));
 vi.mock("firebase/auth", () => ({
   getRedirectResult: vi.fn(async () => null),
@@ -64,7 +65,7 @@ describe("LoginForm", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("keeps account routing and staff provisioning details out of the form", () => {
+  it("keeps account routing and staff provisioning details out of the form", async () => {
     render(<LoginForm />, { wrapper: Wrapper });
 
     expect(
@@ -75,7 +76,7 @@ describe("LoginForm", () => {
     expect(screen.queryByText(/một tài khoản cho mọi hành trình/i)).toBeNull();
     expect(screen.queryByText(/nhân sự chỉ được tạo qua lời mời/i)).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Tiếp tục với Google" }),
+      await screen.findByRole("button", { name: "Tiếp tục với Google" }),
     ).toBeDefined();
   });
 

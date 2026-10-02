@@ -24,6 +24,7 @@ vi.mock("@tanstack/react-query", () => ({
 vi.mock("@/lib/firebase/client", () => ({
   firebaseConfigured: () => true,
   getFirebaseAuth: () => ({}),
+  prepareGooglePopup: async () => undefined,
 }));
 
 vi.mock("firebase/auth", () => ({
@@ -155,7 +156,7 @@ describe("RegisterForm", () => {
     render(<RegisterForm />);
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Tiếp tục với Google" }),
+      await screen.findByRole("button", { name: "Tiếp tục với Google" }),
     );
 
     expect((await screen.findByRole("alert")).textContent).toContain(

@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   getRedirectResult: vi.fn(),
   signInWithPopup: vi.fn(),
   signInWithRedirect: vi.fn(),
+  prepareGooglePopup: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -22,6 +23,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/firebase/client", () => ({
   firebaseConfigured: () => true,
   getFirebaseAuth: () => ({ name: "firebase-auth" }),
+  prepareGooglePopup: mocks.prepareGooglePopup,
 }));
 vi.mock("firebase/auth", () => ({
   GoogleAuthProvider: class {
@@ -51,6 +53,41 @@ describe("GoogleOAuthButton", () => {
     Object.values(mocks).forEach((mock) => mock.mockReset());
     sessionStorage.clear();
     mocks.getRedirectResult.mockResolvedValue(null);
+    mocks.prepareGooglePopup.mockResolvedValue(undefined);
+  });
+
+  it("waits for the Google popup helper before the first mobile tap", async () => {
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+    );
+    let finishPreparation!: () => void;
+    mocks.prepareGooglePopup.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishPreparation = resolve;
+      }),
+    );
+    mocks.signInWithPopup.mockResolvedValue({
+      user: { getIdToken: vi.fn(async () => "first-tap-token") },
+    });
+    mockExchange("first-tap@cns.vn");
+
+    render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
+    const button = screen.getByRole("button", { name: /Google/ });
+    expect(button.hasAttribute("disabled")).toBe(true);
+    expect(mocks.signInWithPopup).not.toHaveBeenCalled();
+
+    finishPreparation();
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+    await userEvent.click(button);
+
+    await waitFor(() =>
+      expect(mocks.setQueryData).toHaveBeenCalledWith(
+        ["auth", "me"],
+        expect.objectContaining({ email: "first-tap@cns.vn" }),
+      ),
+    );
+    expect(mocks.signInWithPopup).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it.each([
@@ -73,7 +110,7 @@ describe("GoogleOAuthButton", () => {
 
       render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
       await userEvent.click(
-        screen.getByRole("button", { name: "Tiếp tục với Google" }),
+        await screen.findByRole("button", { name: "Tiếp tục với Google" }),
       );
 
       await waitFor(() =>
@@ -127,7 +164,7 @@ describe("GoogleOAuthButton", () => {
     mocks.signInWithPopup.mockRejectedValue({ code: "auth/popup-blocked" });
     render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
     await userEvent.click(
-      screen.getByRole("button", { name: "Tiếp tục với Google" }),
+      await screen.findByRole("button", { name: "Tiếp tục với Google" }),
     );
 
     expect((await screen.findByRole("alert")).textContent).toContain(
@@ -144,7 +181,7 @@ describe("GoogleOAuthButton", () => {
 
     render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
     await userEvent.click(
-      screen.getByRole("button", { name: "Tiếp tục với Google" }),
+      await screen.findByRole("button", { name: "Tiếp tục với Google" }),
     );
 
     await waitFor(() =>

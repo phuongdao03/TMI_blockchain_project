@@ -6,9 +6,15 @@ type E2EUser = {
 
 type E2EAuth = {
   currentUser: E2EUser | null;
+  authStateReady(): Promise<void>;
+  _popupRedirectResolver: { _initialize(): Promise<void> };
 };
 
-const auth: E2EAuth = { currentUser: null };
+const auth: E2EAuth = {
+  currentUser: null,
+  authStateReady: async () => undefined,
+  _popupRedirectResolver: { _initialize: async () => undefined },
+};
 
 function user(email: string, token: string, emailVerified = true): E2EUser {
   return { email, emailVerified, getIdToken: async () => token };

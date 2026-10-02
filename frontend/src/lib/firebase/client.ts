@@ -1,5 +1,5 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { connectAuthEmulator, getAuth } from "firebase/auth";
+import { connectAuthEmulator, getAuth, type Auth } from "firebase/auth";
 
 const configuredFirebase = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -52,4 +52,17 @@ export function getFirebaseAuth() {
     emulatorConnected = true;
   }
   return auth;
+}
+
+export async function prepareGooglePopup(): Promise<void> {
+  const auth = getFirebaseAuth();
+  await auth.authStateReady();
+  // Firebase otherwise initializes this iframe after the user's first tap.
+  // Safari can expire the tap's popup permission before window.open runs.
+  const resolver = (
+    auth as Auth & {
+      _popupRedirectResolver?: { _initialize(auth: Auth): Promise<unknown> };
+    }
+  )._popupRedirectResolver;
+  if (resolver) await resolver._initialize(auth);
 }

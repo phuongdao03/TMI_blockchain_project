@@ -13,7 +13,11 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ApiError, authApi } from "@/lib/api/client";
 import { resolveDefaultWorkspace } from "@/lib/auth/role-workspaces";
-import { getFirebaseAuth, firebaseConfigured } from "@/lib/firebase/client";
+import {
+  getFirebaseAuth,
+  firebaseConfigured,
+  prepareGooglePopup,
+} from "@/lib/firebase/client";
 import type { AccountType } from "@/lib/api/types";
 
 const GOOGLE_REDIRECT_PENDING_KEY = "cns.google-oauth.redirect-pending";
@@ -82,6 +86,7 @@ export function GoogleOAuthButton({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
+  const [popupReady, setPopupReady] = useState(() => !firebaseConfigured());
   const [error, setError] = useState<string>();
 
   const finishSignIn = useCallback(
@@ -103,6 +108,21 @@ export function GoogleOAuthButton({
     },
     [accountType, next, queryClient, router],
   );
+
+  useEffect(() => {
+    if (!firebaseConfigured()) return;
+    let active = true;
+    void prepareGooglePopup()
+      .catch(() => {
+        // A failed warm-up must not permanently hide the sign-in action.
+      })
+      .finally(() => {
+        if (active) setPopupReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!firebaseConfigured()) return;
@@ -167,7 +187,7 @@ export function GoogleOAuthButton({
       ) : null}
       <button
         className="auth-google-button flex min-h-12 w-full items-center justify-center gap-3 rounded-md border border-[#ad8883]/45 bg-[#171717] px-4 text-sm font-bold text-[#e5e2e1] transition-colors hover:border-[#ffb4aa] hover:bg-[#242222] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffb4aa] disabled:pointer-events-none disabled:opacity-60"
-        disabled={isPending}
+        disabled={isPending || !popupReady}
         onClick={startGoogleOAuth}
         type="button"
       >
@@ -181,7 +201,11 @@ export function GoogleOAuthButton({
             G
           </span>
         )}
-        {isPending ? "Đang kết nối Google…" : label}
+        {!popupReady
+          ? "Đang chuẩn bị Google…"
+          : isPending
+            ? "Đang kết nối Google…"
+            : label}
       </button>
     </div>
   );
