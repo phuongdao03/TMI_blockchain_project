@@ -13,6 +13,11 @@ const EVENT_PRESENTATION: Record<
   string,
   Omit<NotificationPresentation, "actionPath">
 > = {
+  "admin.announcement": {
+    actionLabel: "Xem thông báo",
+    groupLabel: "Từ quản trị hệ thống",
+    tone: "info",
+  },
   "dossier.submitted": {
     actionLabel: "Xem hồ sơ",
     groupLabel: "Hồ sơ",

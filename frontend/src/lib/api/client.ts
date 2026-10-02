@@ -7,6 +7,9 @@ import type {
   AdminDossierDecision,
   AdminUser,
   AdminUserListFilters,
+  AnnouncementTarget,
+  AnnouncementSendInput,
+  AnnouncementReceipt,
   ActivityPage,
   AdminAttendance,
   AdminAttendanceLocationException,
@@ -593,6 +596,21 @@ export const adminUsersApi = {
       `/admin/users/${encodeURIComponent(userId)}/status`,
       { method: "PATCH", body: JSON.stringify(input) },
     );
+  },
+};
+
+export const adminAnnouncementsApi = {
+  preview(target: AnnouncementTarget) {
+    return request<{ recipientCount: number }>("/admin/notifications/preview", {
+      method: "POST",
+      body: JSON.stringify(target),
+    });
+  },
+  send(input: AnnouncementSendInput) {
+    return request<AnnouncementReceipt>("/admin/notifications", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
   },
 };
 

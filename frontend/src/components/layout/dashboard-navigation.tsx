@@ -160,6 +160,12 @@ const adminItems: NavigationItem[] = [
     permission: "users.read",
   },
   {
+    href: "/admin/notifications",
+    label: "Gửi thông báo",
+    icon: Bell,
+    allowedRoles: ["SUPER_ADMIN"],
+  },
+  {
     href: "/admin/content",
     label: "Nội dung công bố",
     icon: FileText,

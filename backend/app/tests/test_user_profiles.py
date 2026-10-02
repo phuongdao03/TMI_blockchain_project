@@ -16,6 +16,7 @@ from app.modules.hr.models import Department, Employee
 from app.modules.media.errors import MediaValidationError
 from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.users.models import UserProfile
+from app.modules.users.schemas import UserProfileData
 from app.modules.users.security import SensitiveFieldCipher
 from app.modules.users.service import ProfileChanges, UserProfileService
 
@@ -122,6 +123,41 @@ def test_invited_employee_updates_personal_fields_themselves() -> None:
             assert stored is not None
             assert stored.full_name == "Đào Phương"
             assert stored.phone == "+84901234567"
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_linked_employee_details_appear_before_personal_profile_is_saved() -> None:
+    async def exercise() -> None:
+        service, sessions, user, engine = await _build_service()
+        async with sessions.begin() as session:
+            department = Department(code="OPS", name="Operations")
+            session.add(department)
+            await session.flush()
+            session.add(
+                Employee(
+                    employee_code="NV-002",
+                    user_id=user.id,
+                    full_name="Đào Nguyên Phương",
+                    email=user.email,
+                    phone="+84901234567",
+                    department_id=department.id,
+                    position="Reviewer",
+                    join_date=date(2026, 10, 1),
+                )
+            )
+        profile = await service.get_profile(user_id=user.id, email=user.email)
+        assert profile.full_name == "Đào Nguyên Phương"
+        assert profile.phone == "+84901234567"
+        assert profile.employment is not None
+        assert profile.employment.employee_code == "NV-002"
+        assert profile.employment.department_name == "Operations"
+        serialized = UserProfileData.model_validate(
+            profile, from_attributes=True
+        ).model_dump(by_alias=True)
+        assert serialized["employment"]["departmentName"] == "Operations"
         await service.close()
         await engine.dispose()
 

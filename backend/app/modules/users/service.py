@@ -1,11 +1,12 @@
 import logging
 from dataclasses import dataclass
+from datetime import date
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.hr.models import Employee
+from app.modules.hr.models import Department, Employee
 from app.modules.media.errors import MediaValidationError
 from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.users.models import UserProfile
@@ -26,6 +27,15 @@ class ProfileChanges:
 
 
 @dataclass(frozen=True, slots=True)
+class EmploymentView:
+    employee_code: str
+    department_name: str
+    position: str
+    employment_status: str
+    join_date: date
+
+
+@dataclass(frozen=True, slots=True)
 class ProfileView:
     user_id: UUID
     email: str
@@ -34,6 +44,7 @@ class ProfileView:
     avatar_media_id: UUID | None
     locale: str
     timezone: str
+    employment: EmploymentView | None = None
 
 
 class UserProfileService:
@@ -50,7 +61,16 @@ class UserProfileService:
     async def get_profile(self, *, user_id: UUID, email: str) -> ProfileView:
         async with self._session.begin():
             profile = await self._repository.get_profile(user_id)
-            return self._view(user_id=user_id, email=email, profile=profile)
+            employee = await self._session.scalar(
+                select(Employee).where(Employee.user_id == user_id)
+            )
+            return self._view(
+                user_id=user_id,
+                email=email,
+                profile=profile,
+                employee=employee,
+                employment=await self._employment_view(employee),
+            )
 
     async def update_profile(
         self,
@@ -103,7 +123,13 @@ class UserProfileService:
                     employee.phone = changes.phone
 
             await self._session.flush()
-            view = self._view(user_id=user_id, email=email, profile=profile)
+            view = self._view(
+                user_id=user_id,
+                email=email,
+                profile=profile,
+                employee=employee,
+                employment=await self._employment_view(employee),
+            )
 
         logger.info(
             "security_audit",
@@ -121,19 +147,44 @@ class UserProfileService:
         user_id: UUID,
         email: str,
         profile: UserProfile | None,
+        employee: Employee | None = None,
+        employment: EmploymentView | None = None,
     ) -> ProfileView:
+        full_name = profile.full_name if profile and profile.full_name else None
+        if full_name is None and employee is not None:
+            full_name = employee.full_name
+        phone = (
+            self._cipher.decrypt(profile.phone_encrypted)
+            if profile is not None and profile.phone_encrypted is not None
+            else employee.phone
+            if employee
+            else None
+        )
         return ProfileView(
             user_id=user_id,
             email=email,
-            full_name=profile.full_name if profile is not None else None,
-            phone=(
-                self._cipher.decrypt(profile.phone_encrypted)
-                if profile is not None and profile.phone_encrypted is not None
-                else None
-            ),
+            full_name=full_name,
+            phone=phone,
             avatar_media_id=(profile.avatar_media_id if profile is not None else None),
             locale=profile.locale if profile is not None else "vi",
             timezone=(profile.timezone if profile is not None else "Asia/Ho_Chi_Minh"),
+            employment=employment,
+        )
+
+    async def _employment_view(
+        self, employee: Employee | None
+    ) -> EmploymentView | None:
+        if employee is None:
+            return None
+        department_name = await self._session.scalar(
+            select(Department.name).where(Department.id == employee.department_id)
+        )
+        return EmploymentView(
+            employee_code=employee.employee_code,
+            department_name=str(department_name or ""),
+            position=employee.position,
+            employment_status=employee.employment_status.value,
+            join_date=employee.join_date,
         )
 
     async def close(self) -> None:

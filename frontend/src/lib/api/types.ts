@@ -622,6 +622,24 @@ export interface NotificationItem {
   createdAt: string;
 }
 
+export type AnnouncementAudience = "ALL" | "USERS" | "EMPLOYEES" | "INDIVIDUAL";
+
+export interface AnnouncementTarget {
+  audience: AnnouncementAudience;
+  recipientUserId?: string;
+}
+
+export interface AnnouncementSendInput extends AnnouncementTarget {
+  campaignId: string;
+  title: string;
+  body: string;
+}
+
+export interface AnnouncementReceipt {
+  campaignId: string;
+  recipientCount: number;
+}
+
 export interface AuditLogItem {
   id: string;
   actorUserId: string | null;
@@ -676,6 +694,13 @@ export interface UserProfile {
   avatarMediaId: string | null;
   locale: string;
   timezone: string;
+  employment?: {
+    employeeCode: string;
+    departmentName: string;
+    position: string;
+    employmentStatus: string;
+    joinDate: string;
+  } | null;
 }
 
 export interface ProfileUpdate {

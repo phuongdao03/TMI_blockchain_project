@@ -1,7 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { BadgeCheck, LoaderCircle, Save, UserRound } from "lucide-react";
+import {
+  BadgeCheck,
+  BriefcaseBusiness,
+  Camera,
+  LoaderCircle,
+  Save,
+  UserRound,
+} from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -17,6 +24,13 @@ interface ProfileFormProps {
   profile: UserProfile;
   onSave: (profile: ProfileUpdate) => Promise<void>;
 }
+
+const employmentStatusLabel: Record<string, string> = {
+  ACTIVE: "Đang làm việc",
+  ON_LEAVE: "Đang nghỉ phép",
+  INACTIVE: "Tạm ngừng",
+  TERMINATED: "Đã nghỉ việc",
+};
 
 export function ProfileForm({
   avatarLinkPending = false,
@@ -52,15 +66,16 @@ export function ProfileForm({
 
   return (
     <form className="space-y-6" noValidate onSubmit={submit}>
-      <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 sm:flex-row sm:items-center">
-        <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-ink-950 text-white shadow-lg shadow-slate-950/15">
-          <UserRound aria-hidden="true" className="size-7" />
+      <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-5 sm:flex-row sm:items-center">
+        <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-primary-100 text-primary-700">
+          <UserRound aria-hidden="true" className="size-6" />
         </span>
-        <div>
-          <p className="font-semibold text-neutral-950">
+        <div className="min-w-0">
+          <p className="text-lg font-bold text-neutral-950">
             {profile.fullName || "Hồ sơ cá nhân"}
           </p>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="break-all text-sm text-neutral-700">{profile.email}</p>
+          <p className="mt-1 text-xs text-neutral-500">
             {profile.avatarMediaId
               ? "Ảnh đại diện đã được liên kết"
               : "Chưa có ảnh đại diện"}
@@ -68,12 +83,67 @@ export function ProfileForm({
         </div>
       </div>
 
-      <FileUploader
-        disabled={avatarLinkPending}
-        label="Ảnh đại diện"
-        onComplete={(asset) => onAvatarUploaded(asset.id)}
-        purpose="AVATAR"
-      />
+      {profile.employment ? (
+        <section
+          className="rounded-2xl border border-neutral-200 p-5"
+          aria-label="Thông tin công việc"
+        >
+          <div className="flex flex-wrap items-center gap-2 text-primary-700">
+            <BriefcaseBusiness aria-hidden="true" className="size-5" />
+            <h3 className="font-bold">Thông tin công việc</h3>
+            <span className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold">
+              {employmentStatusLabel[profile.employment.employmentStatus] ??
+                profile.employment.employmentStatus}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-neutral-500">
+            Thông tin do quản trị viên cập nhật. Họ tên và số điện thoại của bạn
+            có thể sửa bên dưới.
+          </p>
+          <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <dt className="text-neutral-500">Mã nhân viên</dt>
+              <dd className="mt-1 font-semibold text-neutral-950">
+                {profile.employment.employeeCode}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-neutral-500">Phòng ban</dt>
+              <dd className="mt-1 font-semibold text-neutral-950">
+                {profile.employment.departmentName}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-neutral-500">Vị trí</dt>
+              <dd className="mt-1 font-semibold text-neutral-950">
+                {profile.employment.position}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-neutral-500">Ngày vào làm</dt>
+              <dd className="mt-1 font-semibold text-neutral-950">
+                {new Intl.DateTimeFormat("vi-VN", { timeZone: "UTC" }).format(
+                  new Date(profile.employment.joinDate),
+                )}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
+
+      <details className="rounded-2xl border border-neutral-200 p-4">
+        <summary className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-neutral-950">
+          <Camera aria-hidden="true" className="size-4" /> Thay ảnh đại diện
+        </summary>
+        <div className="mt-4">
+          <FileUploader
+            disabled={avatarLinkPending}
+            label="Ảnh đại diện"
+            onComplete={(asset) => onAvatarUploaded(asset.id)}
+            purpose="AVATAR"
+          />
+        </div>
+      </details>
 
       {saved ? (
         <p
@@ -102,17 +172,25 @@ export function ProfileForm({
           placeholder="0901234567"
           {...register("phone")}
         />
-        <FormField
-          error={errors.locale?.message}
-          label="Ngôn ngữ"
-          {...register("locale")}
-        />
-        <FormField
-          error={errors.timezone?.message}
-          label="Múi giờ"
-          {...register("timezone")}
-        />
       </div>
+
+      <details className="rounded-2xl border border-neutral-200 p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-neutral-950">
+          Ngôn ngữ và múi giờ
+        </summary>
+        <div className="mt-4 grid gap-5 md:grid-cols-2">
+          <FormField
+            error={errors.locale?.message}
+            label="Ngôn ngữ"
+            {...register("locale")}
+          />
+          <FormField
+            error={errors.timezone?.message}
+            label="Múi giờ"
+            {...register("timezone")}
+          />
+        </div>
+      </details>
 
       <div className="flex justify-end border-t border-neutral-100 pt-5">
         <Button disabled={isSubmitting} type="submit">

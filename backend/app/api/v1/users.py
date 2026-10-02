@@ -28,6 +28,7 @@ def _profile_data(view: ProfileView) -> UserProfileData:
         avatar_media_id=view.avatar_media_id,
         locale=view.locale,
         timezone=view.timezone,
+        employment=view.employment,
     )
 
 

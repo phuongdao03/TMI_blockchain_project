@@ -52,16 +52,16 @@ export function AccountSettings() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-7">
-      <header className="rounded-3xl bg-ink-950 px-6 py-7 text-white shadow-xl shadow-slate-950/10 sm:px-8">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gold-300">
-          Không gian tin cậy
+      <header className="rounded-3xl border border-neutral-200 bg-white px-6 py-7 sm:px-8">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-600">
+          Thông tin tài khoản
         </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-          Tài khoản &amp; tổ chức
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-950 sm:text-4xl">
+          Tài khoản của bạn
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-          Quản lý danh tính, thông tin pháp lý và quyền truy cập của đội ngũ
-          trong một khu vực bảo mật.
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-700">
+          Xem thông tin cá nhân, cập nhật cách liên hệ và quản lý tổ chức của
+          bạn.
         </p>
       </header>
 
@@ -115,7 +115,7 @@ export function AccountSettings() {
           </CardTitle>
           <CardDescription>
             {tab === "profile"
-              ? "Thông tin này được dùng xuyên suốt hồ sơ xác minh."
+              ? "Thông tin cá nhân của bạn. Nếu có hồ sơ nhân viên, thông tin công việc được đồng bộ từ quản trị nhân sự."
               : "Quản lý thông tin tổ chức và thành viên theo đúng vai trò."}
           </CardDescription>
         </CardHeader>

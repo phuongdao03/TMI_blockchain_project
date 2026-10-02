@@ -1035,6 +1035,34 @@ const server = createServer(async (request, response) => {
     return;
   }
   if (
+    request.method === "POST" &&
+    path === "/api/v1/admin/notifications/preview" &&
+    superAdminAuthenticated &&
+    csrfProtected
+  ) {
+    const payload = await readJson(request);
+    send(
+      response,
+      200,
+      envelope({ recipientCount: payload.audience === "INDIVIDUAL" ? 1 : 2 }),
+    );
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path === "/api/v1/admin/notifications" &&
+    superAdminAuthenticated &&
+    csrfProtected
+  ) {
+    const payload = await readJson(request);
+    send(
+      response,
+      200,
+      envelope({ campaignId: payload.campaignId, recipientCount: 1 }),
+    );
+    return;
+  }
+  if (
     request.method === "PATCH" &&
     path === `/api/v1/admin/users/${adminUser.id}/status` &&
     superAdminAuthenticated &&

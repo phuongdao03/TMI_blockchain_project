@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
+from app.api.v1.admin_notifications import router as admin_notifications_router
 from app.api.v1.admin_users import router as admin_users_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.auth import router as auth_router
@@ -270,6 +271,7 @@ def create_application(
     app.include_router(media_router)
     app.include_router(organizations_router)
     app.include_router(notifications_router)
+    app.include_router(admin_notifications_router)
     app.include_router(operations_router)
     app.include_router(payments_router)
     app.include_router(public_router)

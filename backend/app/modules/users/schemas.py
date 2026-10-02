@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -77,6 +78,20 @@ class PatchUserProfileRequest(BaseModel):
         return self
 
 
+class EmploymentData(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=_camel,
+        populate_by_name=True,
+        serialize_by_alias=True,
+        from_attributes=True,
+    )
+    employee_code: str
+    department_name: str
+    position: str
+    employment_status: str
+    join_date: date
+
+
 class UserProfileData(BaseModel):
     model_config = ConfigDict(
         alias_generator=_camel,
@@ -92,3 +107,4 @@ class UserProfileData(BaseModel):
     avatar_media_id: UUID | None
     locale: str
     timezone: str
+    employment: EmploymentData | None = None

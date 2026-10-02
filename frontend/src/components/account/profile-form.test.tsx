@@ -5,6 +5,35 @@ import { describe, expect, it, vi } from "vitest";
 import { ProfileForm } from "@/components/account/profile-form";
 
 describe("ProfileForm", () => {
+  it("shows linked HR details without requiring the employee to re-enter them", () => {
+    render(
+      <ProfileForm
+        onAvatarUploaded={vi.fn()}
+        onSave={vi.fn()}
+        profile={{
+          userId: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
+          email: "reviewer@example.com",
+          fullName: "Đào Nguyên Phương",
+          phone: "+84901234567",
+          avatarMediaId: null,
+          locale: "vi",
+          timezone: "Asia/Ho_Chi_Minh",
+          employment: {
+            employeeCode: "CNS-03",
+            departmentName: "CNS Nhà Bè",
+            position: "Kiểm duyệt viên",
+            employmentStatus: "ACTIVE",
+            joinDate: "2026-10-01",
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("CNS-03")).toBeDefined();
+    expect(screen.getByText("CNS Nhà Bè")).toBeDefined();
+    expect(screen.getByDisplayValue("Đào Nguyên Phương")).toBeDefined();
+    expect(screen.getByDisplayValue("0901234567")).toBeDefined();
+  });
+
   it("validates and saves editable profile fields", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn().mockResolvedValue(undefined);
