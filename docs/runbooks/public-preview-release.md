@@ -56,11 +56,11 @@ These identify the Firebase web application and are not server private keys.
 Restrict the API key in Google Cloud and add the production domain to Firebase
 Authentication authorized domains. Enable only the intended Firebase sign-in
 providers. Keep `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` set to the project's
-`<project>.firebaseapp.com` domain. The browser must use that exact value as
-Firebase's OAuth handler; replacing it with the application hostname causes
-Google `redirect_uri_mismatch`. Register the application hostname in Firebase
-Authentication and ensure the Google OAuth client authorizes
-`https://<project>.firebaseapp.com/__/auth/handler`.
+`<project>.firebaseapp.com` domain in the build input. Register the application
+hostname in Firebase Authentication and ensure the Google OAuth client
+authorizes `https://<project>.firebaseapp.com/__/auth/handler`. For Android
+installed-app sign-in, follow `docs/runbooks/android-google-oauth.md` to add
+the app-domain redirect URI and proxy before enabling the same-origin flag.
 
 ## VPS prerequisites
 

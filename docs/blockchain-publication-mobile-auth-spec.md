@@ -42,6 +42,9 @@ Firebase's registered OAuth callback domain.
 - Firebase Authentication Authorized domains includes `decu.tinhhoaviet.org.vn`.
 - The Google OAuth client used by Firebase includes
   `https://<firebase-project>.firebaseapp.com/__/auth/handler`.
+- Android installed-app sign-in can use the same-origin helper and redirect
+  after the OAuth client, VPS proxy, and build flag are configured as described
+  in `docs/runbooks/android-google-oauth.md`.
 
 ## Verification
 
