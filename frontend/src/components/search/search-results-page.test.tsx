@@ -119,6 +119,7 @@ describe("SearchResultsPage", () => {
   });
 
   it("prioritizes works in an album grid and keeps refinements on demand", async () => {
+    const user = userEvent.setup();
     render(
       <SearchResultsPage
         parameters={{ tags: [], tagsMode: "any", sort: "newest" }}
@@ -135,6 +136,13 @@ describe("SearchResultsPage", () => {
         .getByRole("button", { name: /Tinh chỉnh kết quả/ })
         .getAttribute("aria-expanded"),
     ).toBe("false");
+    expect(publicApi.searchFacets).not.toHaveBeenCalled();
+    await user.click(
+      screen.getByRole("button", { name: /Tinh chỉnh kết quả/ }),
+    );
+    await waitFor(() =>
+      expect(publicApi.searchFacets).toHaveBeenCalledTimes(1),
+    );
   });
 
   it("moves focus into the mobile drawer and closes it with Escape", async () => {

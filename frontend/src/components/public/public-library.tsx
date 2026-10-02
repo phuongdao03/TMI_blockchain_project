@@ -44,12 +44,14 @@ export function PublicLibrary({
     queryKey: ["public-catalog-works", filters],
     queryFn: () => publicApi.works(filters),
     initialData: initialData?.works,
+    staleTime: 60_000,
   });
   const featured = useQuery({
     queryKey: ["public-catalog-featured"],
     queryFn: () => publicApi.featuredWorks(3),
     enabled: parameters.page === 1 && !hasFilters(parameters),
     initialData: initialData?.featured,
+    staleTime: 30_000,
   });
   const categories = useQuery({
     queryKey: ["public-categories"],

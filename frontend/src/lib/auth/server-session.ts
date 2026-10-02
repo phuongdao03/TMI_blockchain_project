@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 import type { AuthUser, SuccessEnvelope } from "@/lib/api/types";
 import { resolveServerApiBaseUrl } from "@/lib/api/server-base-url";
@@ -8,7 +9,7 @@ export interface ServerAuthState {
   hasRefreshCookie: boolean;
 }
 
-export async function getServerAuthState(): Promise<ServerAuthState> {
+export const getServerAuthState = cache(async (): Promise<ServerAuthState> => {
   const cookieStore = await cookies();
   const hasRefreshCookie = Boolean(cookieStore.get("cns_refresh"));
   if (!cookieStore.get("cns_access")) {
@@ -33,4 +34,4 @@ export async function getServerAuthState(): Promise<ServerAuthState> {
   } catch {
     return { user: null, hasRefreshCookie };
   }
-}
+});

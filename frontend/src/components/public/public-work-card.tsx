@@ -57,7 +57,7 @@ export function PublicWorkCard({
               />
             )}
             <span className="absolute inset-0 bg-gradient-to-t from-ink-950/85 via-ink-950/5 to-transparent" />
-            <span className="absolute top-3 left-3 border border-white/20 bg-ink-950/80 px-2.5 py-1 text-[0.6rem] font-bold tracking-[0.12em] text-white uppercase backdrop-blur">
+            <span className="absolute top-3 left-3 border border-white/20 bg-ink-950 px-2.5 py-1 text-[0.6rem] font-bold tracking-[0.12em] text-white uppercase">
               {work.categoryName}
             </span>
             <span className="absolute right-3 bottom-3 font-mono text-xs font-bold text-white/75">
@@ -151,7 +151,7 @@ export function PublicWorkCard({
           </span>
         )}
         <span className="absolute inset-0 bg-gradient-to-t from-ink-950/80 via-transparent to-transparent" />
-        <span className="absolute top-3 left-3 border border-white/20 bg-black/50 px-2.5 py-1 text-[0.6rem] font-bold tracking-[0.12em] text-white uppercase backdrop-blur">
+        <span className="absolute top-3 left-3 border border-white/20 bg-ink-950 px-2.5 py-1 text-[0.6rem] font-bold tracking-[0.12em] text-white uppercase">
           {work.categoryName}
         </span>
       </Link>

@@ -499,7 +499,7 @@ describe("layout shells", () => {
     );
 
     expect(
-      screen
+      within(screen.getByRole("banner"))
         .getByRole("link", { name: "Công việc được giao" })
         .getAttribute("href"),
     ).toBe("/work-allocations");
@@ -622,7 +622,7 @@ describe("layout shells", () => {
       </PublicShell>,
     );
 
-    const workspaceLink = screen.getByRole("link", {
+    const workspaceLink = within(screen.getByRole("banner")).getByRole("link", {
       name: "Không gian của tôi",
     });
     expect(workspaceLink.getAttribute("href")).toBe("/dashboard");
@@ -673,9 +673,58 @@ describe("layout shells", () => {
       screen.getByRole("navigation", { name: "Điều hướng chính" }),
     ).toBeDefined();
     expect(
-      screen
+      within(screen.getByRole("banner"))
         .getByRole("link", { name: "Không gian của tôi" })
         .getAttribute("href"),
     ).toBe("/dashboard");
+    const quickNavigation = screen.getByRole("navigation", {
+      name: "Điều hướng nhanh",
+    });
+    expect(
+      within(quickNavigation)
+        .getByRole("link", { name: "Tìm đề cử" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
+    expect(
+      within(quickNavigation)
+        .getByRole("link", { name: "Thư viện đề cử" })
+        .getAttribute("href"),
+    ).toBe("/works");
+  });
+
+  it("marks the library in signed-in quick navigation and restores menu focus", async () => {
+    const user = userEvent.setup();
+    navigationState.pathname = "/works";
+    render(
+      <PublicShell
+        user={{
+          id: "reader-library",
+          email: "reader@cnsgroup.vn",
+          roles: ["USER"],
+          accountType: null,
+        }}
+      >
+        <h1>Thư viện đề cử</h1>
+      </PublicShell>,
+    );
+    const quickNavigation = screen.getByRole("navigation", {
+      name: "Điều hướng nhanh",
+    });
+    expect(
+      within(quickNavigation)
+        .getByRole("link", { name: "Thư viện đề cử" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
+    expect(
+      within(quickNavigation)
+        .getByRole("link", { name: "Hồ sơ của tôi" })
+        .getAttribute("href"),
+    ).toBe("/dossiers");
+    const moreButton = within(quickNavigation).getByRole("button", {
+      name: "Mở thêm mục điều hướng",
+    });
+    await user.click(moreButton);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(moreButton));
   });
 });

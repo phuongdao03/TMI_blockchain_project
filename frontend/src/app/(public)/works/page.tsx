@@ -68,12 +68,12 @@ export default async function LibraryPage({
         className={
           embedded
             ? "mx-auto max-w-[90rem]"
-            : "mx-auto min-h-[calc(100dvh-5rem)] max-w-[90rem] px-4 py-14 sm:px-6 lg:px-8 lg:py-20"
+            : "mx-auto min-h-[calc(100dvh-5rem)] max-w-[90rem] px-4 py-7 sm:px-6 sm:py-14 lg:px-8 lg:py-20"
         }
       >
         <header
-          className={`grid gap-6 border-b border-white/10 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-end ${
-            embedded ? "pb-7" : "pb-12"
+          className={`grid gap-3 border-b border-white/10 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-end ${
+            embedded ? "pb-5 sm:pb-7" : "pb-6 sm:pb-12"
           }`}
         >
           <div>
@@ -85,7 +85,7 @@ export default async function LibraryPage({
               Không gian đề cử
             </p>
             <h1
-              className={`mt-4 max-w-5xl font-bold tracking-[-0.035em] text-[var(--theme-text,#fff)] ${
+              className={`mt-2 max-w-5xl font-bold tracking-[-0.035em] text-[var(--theme-text,#fff)] sm:mt-4 ${
                 embedded
                   ? "text-3xl sm:text-4xl"
                   : "text-4xl sm:text-5xl lg:text-6xl"
@@ -108,7 +108,9 @@ export default async function LibraryPage({
         </header>
         <div
           className={
-            embedded ? "mt-8" : "mt-10 px-5 py-8 sm:px-7 lg:px-9 lg:py-10"
+            embedded
+              ? "mt-5 sm:mt-8"
+              : "mt-6 px-5 py-6 sm:mt-10 sm:px-7 sm:py-8 lg:px-9 lg:py-10"
           }
         >
           <PublicLibrary {...parameters} initialData={initialData} />

@@ -76,11 +76,16 @@ test("compact public shell keeps the account entry in its drawer and uses a full
   await page.goto("/verify");
 
   const header = page.locator(".public-header");
-  const workspaceAction = page.locator(".public-header__workspace");
+  const quickNavigation = page.getByRole("navigation", {
+    name: "Điều hướng nhanh",
+  });
   const menuButton = page.getByRole("button", { name: "Mở menu" });
 
   await expect(header).toBeVisible();
-  await expect(workspaceAction).toBeVisible();
+  await expect(quickNavigation).toBeVisible();
+  await expect(
+    quickNavigation.getByRole("link", { name: "Không gian của tôi" }),
+  ).toBeVisible();
   await expect(menuButton).toBeVisible();
   await expect
     .poll(() =>
@@ -98,6 +103,58 @@ test("compact public shell keeps the account entry in its drawer and uses a full
   ).toBeVisible();
 
   await expect(page.locator(".public-shell")).toHaveCSS("display", "flex");
+});
+
+test("signed-in mobile visitor keeps quick navigation across discovery pages", async ({
+  context,
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile-chrome");
+  await context.addCookies([
+    {
+      name: "cns_access",
+      value: "e2e-access",
+      domain: "127.0.0.1",
+      path: "/",
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+    {
+      name: "cns_csrf",
+      value: "e2e-csrf",
+      domain: "127.0.0.1",
+      path: "/",
+      sameSite: "Lax",
+    },
+    {
+      name: "cns_e2e_persona",
+      value: "public",
+      domain: "127.0.0.1",
+      path: "/",
+      sameSite: "Lax",
+    },
+  ]);
+
+  await page.goto("/dashboard");
+  await page
+    .getByRole("navigation", { name: "Điều hướng nhanh" })
+    .getByRole("link", { name: "Tìm đề cử" })
+    .click();
+
+  const quickNavigation = page.getByRole("navigation", {
+    name: "Điều hướng nhanh",
+  });
+  await expect(
+    quickNavigation.getByRole("link", { name: "Tìm đề cử" }),
+  ).toHaveAttribute("aria-current", "page");
+  await quickNavigation.getByRole("link", { name: "Thư viện đề cử" }).click();
+  await expect(
+    quickNavigation.getByRole("link", { name: "Thư viện đề cử" }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(page.locator(".public-workspace-return")).toBeHidden();
+  await expect(
+    quickNavigation.getByRole("link", { name: "Không gian của tôi" }),
+  ).toBeVisible();
 });
 
 test("medium public shell keeps a one-tap return to the workspace", async ({

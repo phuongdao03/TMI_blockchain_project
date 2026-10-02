@@ -8245,3 +8245,49 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
     padding-top: 0.75rem;
   }
 }
+
+/* Keep discovery destinations within reach while browsing the public pages. */
+@media (max-width: 54rem) {
+  .public-shell--workspace {
+    padding-bottom: calc(5.25rem + env(safe-area-inset-bottom));
+  }
+
+  .public-shell .public-workspace-navigation {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    color: var(--theme-text);
+  }
+
+  .public-shell .public-workspace-navigation--compact {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .public-shell
+    .public-workspace-navigation
+    .dashboard-mobile-navigation__link {
+    color: var(--theme-muted);
+    font-size: 0.6875rem;
+    line-height: 1.15;
+  }
+
+  .public-shell
+    .public-workspace-navigation
+    .dashboard-mobile-navigation__link--active {
+    color: var(--theme-text);
+  }
+
+  .public-shell .public-workspace-return,
+  .public-shell .public-header__workspace {
+    display: none !important;
+  }
+
+  .public-library-page,
+  html[data-theme="dark"] .public-library-page,
+  .public-search-surface {
+    background: var(--theme-bg);
+    box-shadow: none;
+  }
+
+  .public-search-surface {
+    background: var(--theme-surface);
+  }
+}

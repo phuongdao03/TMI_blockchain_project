@@ -84,6 +84,25 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("PublicLibrary", () => {
+  it("uses server catalog data without immediately requesting the same list again", async () => {
+    render(
+      <PublicLibrary
+        initialData={{
+          works: {
+            success: true,
+            data: [work],
+            meta: { page: 1, pageSize: 12, total: 1 },
+          },
+        }}
+        page={1}
+      />,
+      { wrapper },
+    );
+
+    expect(screen.getByText("Di sản số")).toBeTruthy();
+    expect(publicApi.works).not.toHaveBeenCalled();
+  });
+
   it("hydrates deep-link filters and requests the exact API contract", async () => {
     render(
       <PublicLibrary

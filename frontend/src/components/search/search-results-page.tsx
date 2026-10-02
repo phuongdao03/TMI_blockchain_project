@@ -32,6 +32,7 @@ export function SearchResultsPage({
   embedded?: boolean;
 }) {
   const [filterOpen, setFilterOpen] = useState(false);
+  const activeFilters = activeFilterCount(parameters);
   const closeButton = useRef<HTMLButtonElement>(null);
   const filterButton = useRef<HTMLButtonElement>(null);
   const mobileFilter = useRef<HTMLDivElement>(null);
@@ -43,6 +44,7 @@ export function SearchResultsPage({
   const facets = useQuery({
     queryKey: ["public-search-facets", facetParameters],
     queryFn: ({ signal }) => publicApi.searchFacets(facetParameters, signal),
+    enabled: filterOpen || activeFilters > 0,
   });
 
   useEffect(() => {
@@ -81,7 +83,6 @@ export function SearchResultsPage({
     };
   }, [filterOpen]);
 
-  const activeFilters = activeFilterCount(parameters);
   return (
     <div>
       {!embedded ? (
@@ -92,14 +93,14 @@ export function SearchResultsPage({
           <ArrowLeft aria-hidden="true" className="size-4" /> Quay lại thư viện
         </Link>
       ) : null}
-      <header className={embedded ? "max-w-3xl" : "mt-7 max-w-4xl"}>
+      <header className={embedded ? "max-w-3xl" : "mt-3 max-w-4xl sm:mt-7"}>
         <p className="text-xs font-bold tracking-[0.22em] text-gold-300 uppercase">
           Tìm kiếm đề cử
         </p>
-        <h1 className="mt-4 text-3xl font-bold tracking-[-0.04em] text-white sm:text-4xl">
+        <h1 className="mt-2 text-3xl font-bold tracking-[-0.04em] text-white sm:mt-4 sm:text-4xl">
           Tìm nội dung bạn quan tâm
         </h1>
-        <p className="mt-5 max-w-2xl text-base leading-7 text-slate-400">
+        <p className="mt-3 max-w-2xl text-base leading-6 text-slate-400 sm:mt-5 sm:leading-7">
           Tìm theo tên, chủ đề hoặc danh mục trong những nội dung đã được công
           bố.
         </p>
@@ -107,7 +108,7 @@ export function SearchResultsPage({
 
       <form
         action="/search"
-        className="mt-9 grid gap-3 border-y border-white/10 py-5 lg:grid-cols-[minmax(0,1fr)_13rem_auto_auto]"
+        className="mt-5 grid gap-3 border-y border-white/10 py-4 sm:mt-9 sm:py-5 lg:grid-cols-[minmax(0,1fr)_13rem_auto_auto]"
         method="get"
       >
         <SearchAutocomplete defaultValue={parameters.q} name="q" />

@@ -2,9 +2,12 @@
 
 import {
   ArrowLeft,
+  BookOpen,
+  FileText,
   LayoutDashboard,
   LogIn,
   Menu,
+  Search,
   UserPlus,
   X,
 } from "lucide-react";
@@ -15,6 +18,7 @@ import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { IconFrame } from "@/components/ui/icon-frame";
 import { resolvePublicHeaderAction } from "@/lib/auth/role-workspaces";
 import { useAuthUser } from "@/lib/auth/user-context";
 import type { AuthUser } from "@/lib/api/types";
@@ -25,6 +29,7 @@ import { DashboardNavigation } from "./dashboard-navigation";
 
 const publicLinks = [
   { href: "/", label: "Trang chủ" },
+  { href: "/search", label: "Tìm đề cử" },
   { href: "/works", label: "Danh sách đề cử" },
   { href: "/process", label: "Quy trình" },
   { href: "/verify", label: "Tra cứu chứng thư" },
@@ -41,15 +46,38 @@ export function PublicShell({
   const publicHeaderAction = activeUser
     ? resolvePublicHeaderAction(activeUser.roles, activeUser.permissions ?? [])
     : null;
+  const quickLinks = publicHeaderAction
+    ? [
+        ...(publicHeaderAction.href === "/dossiers"
+          ? [{ href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard }]
+          : []),
+        {
+          href: publicHeaderAction.href,
+          label:
+            publicHeaderAction.href === "/dossiers"
+              ? "Hồ sơ của tôi"
+              : publicHeaderAction.label,
+          icon:
+            publicHeaderAction.href === "/dossiers"
+              ? FileText
+              : LayoutDashboard,
+        },
+        { href: "/search", label: "Tìm đề cử", icon: Search },
+        { href: "/works", label: "Thư viện đề cử", icon: BookOpen },
+      ]
+    : [];
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const mobileNavigationRef = useRef<HTMLElement>(null);
   const firstMobileLinkRef = useRef<HTMLAnchorElement>(null);
 
   const closeMenu = (restoreFocus = true) => {
     setMenuOpen(false);
     if (restoreFocus) {
-      requestAnimationFrame(() => menuButtonRef.current?.focus());
+      requestAnimationFrame(() =>
+        (menuReturnFocusRef.current ?? menuButtonRef.current)?.focus(),
+      );
     }
   };
 
@@ -93,7 +121,13 @@ export function PublicShell({
   }, [menuOpen]);
 
   return (
-    <div className="public-shell">
+    <div
+      className={
+        publicHeaderAction
+          ? "public-shell public-shell--workspace"
+          : "public-shell"
+      }
+    >
       <a className="skip-link" href="#main-content">
         Chuyển đến nội dung chính
       </a>
@@ -164,7 +198,13 @@ export function PublicShell({
             aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
             aria-expanded={menuOpen}
             aria-controls="public-mobile-navigation"
-            onClick={() => (menuOpen ? closeMenu() : setMenuOpen(true))}
+            onClick={(event) => {
+              if (menuOpen) closeMenu();
+              else {
+                menuReturnFocusRef.current = event.currentTarget;
+                setMenuOpen(true);
+              }
+            }}
           >
             {menuOpen ? (
               <X aria-hidden="true" focusable="false" strokeWidth={1.75} />
@@ -279,6 +319,55 @@ export function PublicShell({
         </div>
       ) : null}
       <main id="main-content">{children}</main>
+      {publicHeaderAction ? (
+        <nav
+          aria-label="Điều hướng nhanh"
+          className={`dashboard-mobile-navigation public-workspace-navigation${quickLinks.length === 3 ? " public-workspace-navigation--compact" : ""}`}
+        >
+          {quickLinks.map((item) => {
+            const active =
+              pathname === item.href || pathname.startsWith(`${item.href}/`);
+            return (
+              <Link
+                aria-current={active ? "page" : undefined}
+                className={`dashboard-mobile-navigation__link${
+                  active ? " dashboard-mobile-navigation__link--active" : ""
+                }`}
+                href={item.href}
+                key={item.href}
+              >
+                <IconFrame
+                  className="dashboard-mobile-navigation__icon"
+                  icon={item.icon}
+                  size="sm"
+                  tone={active ? "brand" : "neutral"}
+                />
+                <span className="dashboard-mobile-navigation__label">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+          <button
+            aria-expanded={menuOpen}
+            aria-label="Mở thêm mục điều hướng"
+            className="dashboard-mobile-navigation__link dashboard-mobile-navigation__more"
+            onClick={(event) => {
+              menuReturnFocusRef.current = event.currentTarget;
+              setMenuOpen(true);
+            }}
+            type="button"
+          >
+            <IconFrame
+              className="dashboard-mobile-navigation__icon"
+              icon={Menu}
+              size="sm"
+              tone="neutral"
+            />
+            <span className="dashboard-mobile-navigation__label">Thêm</span>
+          </button>
+        </nav>
+      ) : null}
       <footer className="public-footer public-footer--legal">
         <div className="public-footer__inner">
           <div className="public-footer__identity">
