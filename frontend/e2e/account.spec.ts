@@ -35,9 +35,13 @@ test("account page presents profile and permission-aware organization UI", async
   await page.goto("/account");
 
   await expect(
-    page.getByRole("heading", { level: 1, name: "Tài khoản & tổ chức" }),
+    page.getByRole("heading", { level: 1, name: "Tài khoản của bạn" }),
   ).toBeVisible();
   await expect(page.getByLabel("Họ và tên")).toHaveValue("Nguyễn Minh Anh");
+  await page
+    .locator("summary")
+    .filter({ hasText: "Thay ảnh đại diện" })
+    .click();
   await page.getByLabel("Chọn ảnh đại diện").setInputFiles({
     name: "avatar.png",
     mimeType: "image/png",
