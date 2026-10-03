@@ -63,11 +63,16 @@
 
 /* Public institutional evidence and media */
 .institution-section {
+  --institution-accent: #785018;
   padding: clamp(4rem, 7vw, 7rem) 1.25rem;
   border-top: 1px solid var(--theme-border);
   background: var(--theme-surface);
   color: var(--theme-text);
   scroll-margin-top: 3rem;
+}
+
+html[data-theme="dark"] .institution-section {
+  --institution-accent: #e2bb69;
 }
 
 .institution-section--gallery {
@@ -92,7 +97,7 @@
 
 .institution-eyebrow {
   margin: 0 0 1.25rem;
-  color: var(--theme-warning);
+  color: var(--institution-accent);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -306,7 +311,7 @@
   border: 1px solid
     color-mix(in srgb, var(--theme-warning) 60%, var(--theme-border));
   border-radius: 99rem;
-  color: var(--theme-warning);
+  color: var(--institution-accent);
   font-size: 0.83rem;
   font-weight: 700;
   white-space: nowrap;
@@ -338,7 +343,7 @@
 
 .heritage-gallery__filters span {
   margin-left: 0.3rem;
-  opacity: 0.7;
+  opacity: 1;
 }
 
 .heritage-gallery {
@@ -395,7 +400,7 @@
 }
 
 .heritage-gallery__bottom small {
-  color: var(--theme-warning);
+  color: var(--institution-accent);
   font-weight: 700;
 }
 
@@ -8039,7 +8044,7 @@ html[data-theme="dark"] .public-home .home-journey .font-mono {
 
 .mission-section__eyebrow {
   margin: 0;
-  color: #906d20;
+  color: #795917;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -8122,7 +8127,7 @@ html[data-theme="dark"] .public-home .home-journey .font-mono {
 }
 
 .mission-section__number {
-  color: #967327;
+  color: #745113;
   font-size: 1.1rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
