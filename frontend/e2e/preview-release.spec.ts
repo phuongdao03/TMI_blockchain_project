@@ -10,7 +10,7 @@ test("preview public home keeps submission closed and hides internal language", 
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Nơi những giá trị Việt được giới thiệu, ghi nhận và lan tỏa.",
+      name: "Suy tôn trí tuệ. Lưu truyền di sản.",
     }),
   ).toBeVisible();
   await expect(

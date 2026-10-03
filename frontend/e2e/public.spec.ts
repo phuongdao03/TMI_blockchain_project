@@ -23,10 +23,12 @@ test("public portal is professional, responsive and verifiable", async ({
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: /Nơi những giá trị Việt được giới thiệu/,
+      name: /Suy tôn trí tuệ\. Lưu truyền di sản\./,
     }),
   ).toBeVisible();
-  await expect(page.getByText(/Khám phá các đề cử tiêu biểu/)).toBeVisible();
+  await expect(
+    page.getByText(/Tinh Hoa Việt giới thiệu những giá trị tiêu biểu/),
+  ).toBeVisible();
   await page.screenshot({
     caret: "initial",
     fullPage: true,
