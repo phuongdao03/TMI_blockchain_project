@@ -12,7 +12,9 @@ import {
 import Link from "next/link";
 
 import { FeaturedAssets } from "@/components/public/featured-assets";
-import { CertificateOrbit } from "@/components/visual/certificate-orbit";
+import { InstitutionContent } from "@/components/public/institution-content";
+import { HeritageSymbols } from "@/components/public/heritage-symbols";
+import { MissionContent } from "@/components/public/mission-content";
 import { isPreviewRelease } from "@/lib/release-mode";
 
 const audiences = [
@@ -75,22 +77,33 @@ export default function HomePage() {
         id="gioi-thieu"
       >
         <div className="registry-hero-glow" aria-hidden="true" />
-        <div className="mx-auto grid max-w-[100rem] items-center gap-8 px-4 py-10 sm:px-6 sm:py-14 lg:min-h-[calc(100dvh-4.5rem)] lg:grid-cols-[0.88fr_1.12fr] lg:gap-5 lg:px-8 lg:py-16 xl:px-14">
-          <div className="relative z-10 max-w-[44rem] lg:py-8">
+        <div className="registry-hero__layout mx-auto max-w-[100rem] px-4 py-10 sm:px-6 sm:py-14 lg:min-h-[calc(100dvh-4.5rem)] lg:px-8 lg:py-16 xl:px-14">
+          <div className="registry-hero__intro relative z-10 max-w-[44rem] lg:pt-8">
             <p className="registry-kicker">
               <span aria-hidden="true" className="registry-kicker-dot" />
-              Đề cử Tinh Hoa Việt
+              Tổ chức Tinh Hoa Việt
             </p>
             <h1 className="mt-7 text-3xl font-semibold leading-tight tracking-[-0.04em] text-balance sm:mt-10 sm:text-4xl">
-              Nơi những giá trị Việt được giới thiệu,{" "}
-              <span className="text-gold-300">ghi nhận và lan tỏa.</span>
+              Suy tôn trí tuệ.{" "}
+              <span className="text-gold-300">Lưu truyền di sản.</span>
             </h1>
             <p className="mt-8 max-w-[41rem] text-base leading-8 text-slate-300 sm:text-lg">
-              Khám phá các đề cử tiêu biểu, đọc câu chuyện phía sau mỗi giá trị
-              và tra cứu thông tin, trạng thái cùng bằng chứng xác thực của các
-              hồ sơ được công bố.
+              Tinh Hoa Việt giới thiệu những giá trị tiêu biểu của con người, tổ
+              chức, tri thức, văn hóa và sáng tạo Việt Nam qua hồ sơ có căn cứ.
+              Tại đây, công chúng có thể khám phá đề cử, theo dõi trạng thái xác
+              lập và đối chiếu thông tin được công bố.
             </p>
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <p className="registry-hero__organization">
+              Trung tâm Xác lập Tinh Hoa Việt trực thuộc Viện Những Vấn đề Phát
+              triển (VIDS), được thành lập theo Quyết định số 55 ngày
+              02/01/2026.
+            </p>
+          </div>
+          <div className="registry-visual registry-visual--heritage relative min-w-0 self-stretch lg:-mr-14">
+            <HeritageSymbols />
+          </div>
+          <div className="registry-hero__actions relative z-10 max-w-[44rem] lg:pb-8">
+            <div className="registry-hero__buttons mt-9 flex flex-col gap-3 sm:flex-row">
               <Link
                 className="registry-button registry-button-primary"
                 href="/works"
@@ -100,9 +113,9 @@ export default function HomePage() {
               </Link>
               <Link
                 className="registry-button registry-button-secondary"
-                href="/process"
+                href="#van-ban-thanh-lap"
               >
-                Tìm hiểu chương trình
+                Xem văn bản thành lập
               </Link>
             </div>
             <form
@@ -127,9 +140,9 @@ export default function HomePage() {
             </form>
             <dl className="registry-hero__summary mt-8 grid grid-cols-3 border-t border-white/15 pt-6 text-sm">
               {[
-                ["Nội dung", "Chọn lọc"],
-                ["Thông tin", "Rõ ràng"],
-                ["Dữ liệu", "Kiểm chứng"],
+                ["Đề cử", "Theo tiêu chí"],
+                ["Xác lập", "Theo quyết định"],
+                ["Tra cứu", "Có thể đối chiếu"],
               ].map(([term, detail]) => (
                 <div
                   className="border-l border-white/20 px-4 first:border-l-0 first:pl-0"
@@ -143,11 +156,12 @@ export default function HomePage() {
               ))}
             </dl>
           </div>
-          <div className="registry-visual relative hidden min-w-0 self-stretch sm:flex lg:-mr-14">
-            <CertificateOrbit />
-          </div>
         </div>
       </section>
+
+      <MissionContent />
+
+      <InstitutionContent />
 
       <section className="home-journey journey-workflow border-b">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">

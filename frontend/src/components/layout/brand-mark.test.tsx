@@ -38,6 +38,20 @@ describe("BrandMark", () => {
     expect(screen.queryByText(/Phát triển bởi/)).toBeNull();
   });
 
+  it("shows the supplied seal as the single public logo", () => {
+    render(<BrandMark variant="public-seal" />);
+
+    const homeLink = screen.getByRole("link", {
+      name: "Trung tâm Đề cử Tinh Hoa Việt",
+    });
+    const logos = homeLink.querySelectorAll("img");
+
+    expect(logos).toHaveLength(1);
+    expect(decodeURIComponent(logos[0]?.getAttribute("src") ?? "")).toContain(
+      "/assets/brand/thv-public-header-seal.png",
+    );
+  });
+
   it("adds the CNS attribution only where it is explicitly requested", () => {
     render(<BrandMark showCredit />);
 

@@ -47,6 +47,22 @@ const securityHeaders = [
     : []),
 ];
 
+const sameOriginPdfHeaders = securityHeaders.map((header) => {
+  if (header.key === "Content-Security-Policy") {
+    return {
+      ...header,
+      value: header.value.replace(
+        "frame-ancestors 'none'",
+        "frame-ancestors 'self'",
+      ),
+    };
+  }
+  if (header.key === "X-Frame-Options") {
+    return { ...header, value: "SAMEORIGIN" };
+  }
+  return header;
+});
+
 const qrRedirectHeaders = [
   { key: "Cache-Control", value: "no-store" },
   { key: "Referrer-Policy", value: "no-referrer" },
@@ -60,6 +76,10 @@ const nextConfig: NextConfig = {
     localPatterns: [
       {
         pathname: "/assets/brand/**",
+        search: "",
+      },
+      {
+        pathname: "/assets/institution/**",
         search: "",
       },
     ],
@@ -100,6 +120,10 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/((?!__/auth/).*)", headers: securityHeaders },
+      {
+        source: "/assets/institution/proposal-2026.pdf",
+        headers: sameOriginPdfHeaders,
+      },
       { source: "/r/:token", headers: qrRedirectHeaders },
       { source: "/verify/:token", headers: qrRedirectHeaders },
     ];

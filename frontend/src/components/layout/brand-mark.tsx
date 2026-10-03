@@ -42,27 +42,15 @@ export function BrandMark({
           </span>
         </span>
       ) : usesPublicSeal ? (
-        <span className="brand-mark__public-lockup" aria-hidden="true">
-          <span className="brand-mark__seal-frame">
-            <Image
-              className="brand-mark__seal"
-              src="/assets/brand/thv-public-header-seal.png"
-              alt=""
-              width={1253}
-              height={1254}
-              priority
-            />
-          </span>
-          <span className="brand-mark__public-wordmark-frame">
-            <Image
-              className="brand-mark__public-wordmark"
-              src="/assets/brand/thv-public-header-wordmark.png"
-              alt=""
-              width={1448}
-              height={1086}
-              priority
-            />
-          </span>
+        <span className="brand-mark__seal-frame" aria-hidden="true">
+          <Image
+            className="brand-mark__seal"
+            src="/assets/brand/thv-public-header-seal.png"
+            alt=""
+            width={1254}
+            height={1254}
+            priority
+          />
         </span>
       ) : (
         <span className="brand-mark__wordmark-frame" aria-hidden="true">

@@ -14,13 +14,23 @@ describe("HomePage", () => {
     vi.stubEnv("NEXT_PUBLIC_RELEASE_MODE", "preview");
     render(<HomePage />);
 
-    expect(screen.getByText("Đề cử Tinh Hoa Việt")).toBeDefined();
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Suy tôn trí tuệ. Lưu truyền di sản.",
+      }),
+    ).toBeDefined();
     expect(
       screen.getByRole("link", { name: "Khám phá đề cử" }).getAttribute("href"),
     ).toBe("/works");
     expect(
       screen.getByRole("img", {
-        name: "Sơ đồ phạm vi thông tin công bố trên nền tảng Tinh Hoa Việt",
+        name: "Họa tiết chim Lạc màu trắng trên nền đỏ",
+      }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("img", {
+        name: "Biểu trưng Trung tâm Xác lập Tinh Hoa Việt",
       }),
     ).toBeDefined();
     expect(screen.queryByText(/Phiên bản V1|sau V1/)).toBeNull();
@@ -34,7 +44,7 @@ describe("HomePage", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Nơi những giá trị Việt được giới thiệu, ghi nhận và lan tỏa.",
+        name: "Suy tôn trí tuệ. Lưu truyền di sản.",
       }),
     ).toBeDefined();
     expect(
@@ -44,12 +54,12 @@ describe("HomePage", () => {
     ).toBe("/works");
     expect(
       screen
-        .getByRole("link", { name: "Tìm hiểu chương trình" })
+        .getByRole("link", { name: "Xem văn bản thành lập" })
         .getAttribute("href"),
-    ).toBe("/process");
+    ).toBe("#van-ban-thanh-lap");
     expect(
       screen.getByRole("img", {
-        name: "Sơ đồ phạm vi thông tin công bố trên nền tảng Tinh Hoa Việt",
+        name: "Họa tiết mặt trống đồng với các vòng hoa văn đồng tâm",
       }),
     ).toBeDefined();
     expect(
@@ -97,5 +107,27 @@ describe("HomePage", () => {
     expect(
       document.querySelectorAll(".journey-workflow__icon-frame"),
     ).toHaveLength(3);
+  });
+
+  it("publishes establishment evidence and the 2026 event dossier", () => {
+    render(<HomePage />);
+
+    expect(
+      screen.getByRole("heading", { name: /Trung tâm Xác lập Tinh Hoa Việt/ }),
+    ).toBeDefined();
+    expect(screen.getByText("Quyết định số 55")).toBeDefined();
+    expect(screen.getByText("02/01/2026")).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Xem quyết định" }).getAttribute("href"),
+    ).toBe("/assets/institution/decision.pdf");
+    expect(
+      screen
+        .getByRole("link", { name: "Tải proposal PDF" })
+        .getAttribute("href"),
+    ).toBe("/assets/institution/proposal-2026.pdf");
+    expect(
+      screen.getByRole("region", { name: "Trình xem proposal" }),
+    ).toBeDefined();
+    expect(screen.getByRole("status").textContent).toContain("Trang 1 / 53");
   });
 });

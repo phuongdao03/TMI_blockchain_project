@@ -7,11 +7,16 @@ import {
   LayoutDashboard,
   LogIn,
   Menu,
+  Mail,
+  MapPin,
+  Music2,
+  Phone,
   Search,
   UserPlus,
   X,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 
@@ -371,12 +376,121 @@ export function PublicShell({
       <footer className="public-footer public-footer--legal">
         <div className="public-footer__inner">
           <div className="public-footer__identity">
-            <BrandMark showCredit variant="public-seal" />
+            <BrandMark variant="public-seal" />
+            <div>
+              <p className="public-footer__name">
+                Trung tâm Đề cử và Xác lập Tinh Hoa Việt
+              </p>
+              <p className="public-footer__credit">
+                Phát triển bởi Trung tâm An ninh Công nghệ số – CNS
+              </p>
+            </div>
           </div>
           <nav aria-label="Liên kết cuối trang">
             <Link href="/policies">Điều khoản sử dụng</Link>
             <Link href="/policies#privacy">Chính sách quyền riêng tư</Link>
           </nav>
+        </div>
+        <div className="public-footer__details">
+          <div className="public-footer__organizations">
+            <h2>Đơn vị đồng hành</h2>
+            <div className="public-footer__partners">
+              <div className="public-footer__partner">
+                <Image
+                  alt="Viện Những Vấn đề Phát triển (VIDS)"
+                  height={72}
+                  sizes="72px"
+                  src="/assets/institution/logo-vids.webp"
+                  width={72}
+                />
+                <p>
+                  Viện Những Vấn đề Phát triển <span>VIDS · A-228</span>
+                </p>
+              </div>
+              <div className="public-footer__partner">
+                <Image
+                  alt="Báo chí Online"
+                  height={72}
+                  sizes="72px"
+                  src="/assets/institution/logo-baochi.webp"
+                  width={72}
+                />
+                <p>
+                  BAOCHI.ONLINE · MXH ·{" "}
+                  <a
+                    href="http://ankt.vn/"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    ANKT.VN
+                  </a>
+                  <span>392/GP-BTTTT</span>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="public-footer__contact">
+            <h2>Thông tin liên hệ</h2>
+            <p>
+              <MapPin aria-hidden="true" size={18} />
+              <span>
+                <strong>Địa chỉ</strong>181 Đề Thám, P. Bến Thành, TP. Hồ Chí
+                Minh.
+              </span>
+            </p>
+            <p>
+              <MapPin aria-hidden="true" size={18} />
+              <span>
+                <strong>Văn phòng đại diện</strong>Lô 51, đường N1, KDC Mai
+                Linh, phường Long Bình, TP. Đồng Nai.
+              </span>
+            </p>
+            <p>
+              <Phone aria-hidden="true" size={18} />
+              <span>
+                <strong>Ban Đề cử và Xác lập</strong>
+                <a href="tel:0989553535">0989.55.3535</a>
+              </span>
+            </p>
+            <p>
+              <Mail aria-hidden="true" size={18} />
+              <a href="mailto:tinhhoanoidung@gmail.com">
+                tinhhoanoidung@gmail.com
+              </a>
+            </p>
+          </div>
+        </div>
+        <div className="public-footer__bottom">
+          <p>TINH HOA VIỆT · SUY TÔN TRÍ TUỆ – LƯU TRUYỀN DI SẢN</p>
+          <div
+            aria-label="Mạng xã hội Tinh Hoa Việt"
+            className="public-footer__social"
+          >
+            <a
+              aria-label="Facebook Tổ chức Tinh Hoa Việt"
+              href="https://www.facebook.com/profile.php?id=61582707560694"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <span aria-hidden="true">f</span>
+            </a>
+            <a
+              aria-label="YouTube Tổ chức Tinh Hoa Việt"
+              href="https://www.youtube.com/@tochuctinhhoaviet"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <span aria-hidden="true">▶</span>
+            </a>
+            <a
+              aria-label="TikTok Tổ chức Tinh Hoa Việt"
+              href="https://www.tiktok.com/@tochuctinhhoaviet"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <Music2 aria-hidden="true" size={19} />
+            </a>
+          </div>
         </div>
       </footer>
     </div>

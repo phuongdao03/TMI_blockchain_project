@@ -50,4 +50,27 @@ describe("frontend security headers", () => {
     );
     expect(contentSecurityPolicy).not.toContain("frame-src *");
   });
+
+  it("allows the proposal PDF to render in a same-origin frame only", async () => {
+    const routes = await nextConfig.headers!();
+    const documentHeaders = routes[0]?.headers;
+    const proposalHeaders = routes.find(
+      (route) => route.source === "/assets/institution/proposal-2026.pdf",
+    )?.headers;
+
+    expect(
+      documentHeaders?.find(
+        (header) => header.key === "Content-Security-Policy",
+      )?.value,
+    ).toContain("frame-ancestors 'none'");
+    expect(
+      proposalHeaders?.find(
+        (header) => header.key === "Content-Security-Policy",
+      )?.value,
+    ).toContain("frame-ancestors 'self'");
+    expect(
+      proposalHeaders?.find((header) => header.key === "X-Frame-Options")
+        ?.value,
+    ).toBe("SAMEORIGIN");
+  });
 });

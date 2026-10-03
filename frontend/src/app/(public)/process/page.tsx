@@ -39,7 +39,10 @@ export default function ProcessPage() {
             <h1>Hành trình từ một đề cử đến giá trị được lan tỏa.</h1>
             <p>
               Hiện tại, chương trình tập trung giúp cộng đồng khám phá nội dung
-              đã được công bố. Hoạt động gửi hồ sơ được mở theo từng giai đoạn.
+              đã được công bố. Đề cử là bước giới thiệu giá trị; xác lập chỉ
+              được công bố sau khi hồ sơ được xem xét theo tiêu chí và quy trình
+              chuyên môn đã phê duyệt. Hoạt động gửi hồ sơ được mở theo từng
+              giai đoạn.
             </p>
           </div>
         </header>
@@ -79,7 +82,9 @@ export default function ProcessPage() {
             <h1>Hành trình hồ sơ, rõ ràng từ đầu đến cuối.</h1>
             <p>
               Chuẩn bị thông tin, gửi hồ sơ, theo dõi phản hồi và tra cứu kết
-              quả trong một quy trình dễ theo dõi.
+              quả. Đề cử không đồng nghĩa với xác lập; kết quả xác lập dựa trên
+              hồ sơ, tiêu chí và quy trình chuyên môn đã được phê duyệt, không
+              phụ thuộc vào việc đồng hành hay tài trợ.
             </p>
           </div>
           <div className="public-page-header__action">

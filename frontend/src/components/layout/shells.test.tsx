@@ -103,7 +103,7 @@ describe("layout shells", () => {
     ).toBe("page");
   });
 
-  it("uses the official seal and wordmark together in the public header", () => {
+  it("uses only the supplied seal in the public header", () => {
     render(
       <PublicShell>
         <h1>Trang chủ</h1>
@@ -118,11 +118,8 @@ describe("layout shells", () => {
       decodeURIComponent(logo.getAttribute("src") ?? ""),
     );
 
-    expect(headerLogos).toHaveLength(2);
+    expect(headerLogos).toHaveLength(1);
     expect(sources[0]).toContain("/assets/brand/thv-public-header-seal.png");
-    expect(sources[1]).toContain(
-      "/assets/brand/thv-public-header-wordmark.png",
-    );
   });
 
   it("keeps public and auth footers limited to terms and privacy links", () => {
@@ -155,19 +152,46 @@ describe("layout shells", () => {
 
     const publicFooter = screen.getByRole("contentinfo");
     expect(publicFooter.querySelector(".public-footer__inner")).not.toBeNull();
+    const footerBrand = within(publicFooter).getByRole("link", {
+      name: "Trung tâm Đề cử Tinh Hoa Việt",
+    });
+    const footerLogos = footerBrand.querySelectorAll("img");
+    expect(footerLogos).toHaveLength(1);
     expect(
-      publicFooter.querySelector(".brand-mark--public-seal"),
-    ).not.toBeNull();
-    expect(
-      within(publicFooter).getByRole("link", {
-        name: "Trung tâm Đề cử Tinh Hoa Việt",
-      }),
-    ).toBeDefined();
+      decodeURIComponent(footerLogos[0]?.getAttribute("src") ?? ""),
+    ).toContain("/assets/brand/thv-public-header-seal.png");
     expect(
       within(publicFooter).getByText(
         "Phát triển bởi Trung tâm An ninh Công nghệ số – CNS",
       ),
     ).toBeDefined();
+    expect(
+      within(publicFooter).getByText(/Viện Những Vấn đề Phát triển/),
+    ).toBeDefined();
+    expect(
+      within(publicFooter).getByRole("img", {
+        name: "Viện Những Vấn đề Phát triển (VIDS)",
+      }),
+    ).toBeDefined();
+    expect(
+      within(publicFooter).getByRole("img", { name: "Báo chí Online" }),
+    ).toBeDefined();
+    expect(
+      within(publicFooter).queryAllByRole("img", {
+        name: "Trung tâm Xác lập Tinh Hoa Việt",
+      }),
+    ).toHaveLength(0);
+    expect(within(publicFooter).getByText("Đơn vị đồng hành")).toBeDefined();
+    expect(
+      within(publicFooter)
+        .getByRole("link", { name: "0989.55.3535" })
+        .getAttribute("href"),
+    ).toBe("tel:0989553535");
+    expect(
+      within(publicFooter)
+        .getByRole("link", { name: "tinhhoanoidung@gmail.com" })
+        .getAttribute("href"),
+    ).toBe("mailto:tinhhoanoidung@gmail.com");
   });
 
   it("opens mobile navigation as a viewport drawer and restores trigger focus", async () => {
