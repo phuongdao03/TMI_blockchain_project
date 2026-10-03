@@ -91,7 +91,10 @@ class HrDashboardService:
                 Employee, Employee.employment_status == EmploymentStatus.ACTIVE
             ),
             attendance_pending_count=await self._count(
-                Attendance, Attendance.status == AttendanceStatus.PENDING
+                Attendance,
+                Attendance.status.in_(
+                    (AttendanceStatus.PENDING, AttendanceStatus.INCOMPLETE)
+                ),
             ),
             location_exception_pending_count=await self._count(
                 AttendanceLocationException,

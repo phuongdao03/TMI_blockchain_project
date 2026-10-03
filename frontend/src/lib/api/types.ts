@@ -39,6 +39,8 @@ export interface Employee {
 }
 
 export type AttendanceStatus =
+  | "IN_PROGRESS"
+  | "INCOMPLETE"
   | "PRESENT"
   | "LATE"
   | "ABSENT"

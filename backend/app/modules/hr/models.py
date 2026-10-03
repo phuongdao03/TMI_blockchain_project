@@ -37,6 +37,8 @@ class EmploymentStatus(StrEnum):
 
 
 class AttendanceStatus(StrEnum):
+    IN_PROGRESS = "IN_PROGRESS"
+    INCOMPLETE = "INCOMPLETE"
     PRESENT = "PRESENT"
     LATE = "LATE"
     ABSENT = "ABSENT"

@@ -43,7 +43,7 @@ describe("HrDashboardSummary", () => {
     render(<HrDashboardSummary />, { wrapper: Wrapper });
 
     const attendance = await screen.findByRole("link", {
-      name: /chấm công chờ duyệt/i,
+      name: /chấm công cần xem xét/i,
     });
     expect(attendance.getAttribute("href")).toBe("/admin/attendance");
     expect(

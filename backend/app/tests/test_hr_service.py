@@ -1,5 +1,5 @@
 import asyncio
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
@@ -125,6 +125,54 @@ def test_work_schedule_calculates_late_and_early_minutes_in_worksite_timezone() 
             boundary="start",
         )
         == 0
+    )
+
+
+@pytest.mark.parametrize(
+    ("worked_minutes", "expected_status"),
+    [
+        (2, AttendanceStatus.INCOMPLETE),
+        (239, AttendanceStatus.INCOMPLETE),
+        (240, AttendanceStatus.HALF_DAY),
+        (479, AttendanceStatus.HALF_DAY),
+        (480, AttendanceStatus.PRESENT),
+    ],
+)
+def test_attendance_credit_requires_worked_time(
+    worked_minutes: int, expected_status: AttendanceStatus
+) -> None:
+    check_in_at = datetime(2026, 10, 3, 10, 6, tzinfo=UTC)
+    assert (
+        HrService._worked_attendance_status(
+            assignment=None,
+            check_in_at=check_in_at,
+            check_out_at=check_in_at + timedelta(minutes=worked_minutes),
+            late_minutes=0,
+        )
+        == expected_status
+    )
+
+
+def test_shorter_configured_shift_uses_its_own_duration() -> None:
+    assignment = AttendanceAssignment(
+        employee_id=uuid4(),
+        worksite_id=uuid4(),
+        effective_from=date(2026, 10, 1),
+        schedule_code="CUSTOM",
+        holiday_calendar_code="CUSTOM",
+        work_days=[5],
+        start_time=time(9),
+        end_time=time(13),
+    )
+    check_in_at = datetime(2026, 10, 3, 2, tzinfo=UTC)
+    assert (
+        HrService._worked_attendance_status(
+            assignment=assignment,
+            check_in_at=check_in_at,
+            check_out_at=check_in_at + timedelta(hours=4),
+            late_minutes=5,
+        )
+        == AttendanceStatus.LATE
     )
 
 
@@ -556,7 +604,9 @@ def test_misassigned_hr_permissions_cannot_read_employee_or_department(
     asyncio.run(exercise())
 
 
-def test_moderator_can_check_in_once_and_check_out_only_their_employee() -> None:
+def test_moderator_can_check_in_once_and_check_out_only_their_employee(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     async def exercise() -> None:
         engine = create_async_engine("sqlite+aiosqlite://")
         await _create_hr_tables(engine)
@@ -611,6 +661,11 @@ def test_moderator_can_check_in_once_and_check_out_only_their_employee() -> None
             )
 
         async with sessions() as session:
+            monkeypatch.setattr(
+                HrService,
+                "_now",
+                staticmethod(lambda: datetime(2026, 10, 3, 10, 6, tzinfo=UTC)),
+            )
             service = HrService(session)
             checked_in = await service.check_in(
                 moderator,
@@ -620,6 +675,7 @@ def test_moderator_can_check_in_once_and_check_out_only_their_employee() -> None
                 user_agent="pytest",
             )
             assert checked_in.check_out_at is None
+            assert checked_in.status == AttendanceStatus.IN_PROGRESS
             with pytest.raises(DomainError) as duplicate:
                 await service.check_in(
                     moderator,
@@ -631,6 +687,11 @@ def test_moderator_can_check_in_once_and_check_out_only_their_employee() -> None
             assert duplicate.value.status_code == 409
 
         async with sessions() as session:
+            monkeypatch.setattr(
+                HrService,
+                "_now",
+                staticmethod(lambda: datetime(2026, 10, 3, 10, 8, tzinfo=UTC)),
+            )
             checked_out = await HrService(session).check_out(
                 moderator,
                 CheckOutRequest(**_location_capture()),
@@ -639,6 +700,7 @@ def test_moderator_can_check_in_once_and_check_out_only_their_employee() -> None
                 user_agent="pytest",
             )
             assert checked_out.check_out_at is not None
+            assert checked_out.status == AttendanceStatus.INCOMPLETE
 
             attendance = await session.get(Attendance, checked_out.id)
             assert attendance is not None

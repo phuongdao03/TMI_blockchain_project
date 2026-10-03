@@ -1,5 +1,5 @@
 import asyncio
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -31,6 +31,7 @@ from app.modules.hr.models import (
 from app.modules.hr.schemas import (
     AttendanceLocationExceptionDecisionRequest,
     CheckInRequest,
+    CheckOutRequest,
     CreateAttendanceWorksitePolicyRequest,
 )
 from app.modules.hr.service import HrService
@@ -143,7 +144,7 @@ async def _seed_global_attendance(
     return employee.id, worksite.id
 
 
-def test_accepted_location_evidence_creates_present_attendance() -> None:
+def test_accepted_location_evidence_creates_in_progress_attendance() -> None:
     async def exercise() -> None:
         engine = create_async_engine("sqlite+aiosqlite://")
         await _create_tables(engine)
@@ -175,7 +176,7 @@ def test_accepted_location_evidence_creates_present_attendance() -> None:
                     )
                 )
 
-                assert attendance.status == AttendanceStatus.PRESENT
+                assert attendance.status == AttendanceStatus.IN_PROGRESS
                 assert attendance.work_date == date(2026, 9, 21)
                 assert evidence is not None
                 assert evidence.event_type == AttendanceLocationEventType.CHECK_IN
@@ -341,6 +342,18 @@ def test_outside_worksite_stays_pending_until_super_admin_approves() -> None:
                 assert exceptions[0].employee_name == "Avery Patel"
                 assert exceptions[0].evidence.latitude == Decimal("10.786900")
 
+                HrService._now = staticmethod(lambda: NOW + timedelta(minutes=2))
+                checked_out = await HrService(session).check_out(
+                    moderator,
+                    CheckOutRequest(
+                        **_capture(latitude="10.776900").model_dump(exclude={"note"})
+                    ),
+                    audit=AuditService(session),
+                    request_id="location-decision",
+                    user_agent="pytest",
+                )
+                assert checked_out.status == AttendanceStatus.PENDING
+
                 resolved = await HrService(
                     session
                 ).decide_attendance_location_exception(
@@ -361,7 +374,7 @@ def test_outside_worksite_stays_pending_until_super_admin_approves() -> None:
 
                 assert resolved.status == AttendanceLocationExceptionStatus.APPROVED
                 assert refreshed_attendance is not None
-                assert refreshed_attendance.status == AttendanceStatus.PRESENT
+                assert refreshed_attendance.status == AttendanceStatus.INCOMPLETE
                 assert refreshed_evidence is not None
                 assert (
                     refreshed_evidence.outcome
@@ -374,6 +387,7 @@ def test_outside_worksite_stays_pending_until_super_admin_approves() -> None:
                                 AuditLog.action.in_(
                                     [
                                         "hr.attendance.checked_in",
+                                        "hr.attendance.checked_out",
                                         "hr.attendance_location_exception.decided",
                                     ]
                                 )
@@ -381,7 +395,7 @@ def test_outside_worksite_stays_pending_until_super_admin_approves() -> None:
                         )
                     ).all()
                 )
-                assert len(audit_rows) == 2
+                assert len(audit_rows) == 3
                 assert all("10.786900" not in row.after_json for row in audit_rows)
         finally:
             HrService._now = original_now

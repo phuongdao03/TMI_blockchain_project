@@ -20,6 +20,53 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 describe("AdminAttendanceWorkspace", () => {
+  it("shows a short attendance as missing hours instead of on time", async () => {
+    listDepartmentsMock.mockResolvedValue({
+      success: true,
+      data: [],
+      meta: { requestId: "test", page: 1, pageSize: 100, total: 0 },
+    });
+    listLocationExceptionsMock.mockResolvedValue({
+      success: true,
+      data: [],
+      meta: { requestId: "test", page: 1, pageSize: 20, total: 0 },
+    });
+    listAttendanceMock.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: "short-attendance",
+          employeeId: "employee-1",
+          employeeName: "Avery Patel",
+          employeeCode: "OPS-001",
+          departmentName: "Operations",
+          workDate: "2026-10-03",
+          checkInAt: "2026-10-03T10:06:00Z",
+          checkOutAt: "2026-10-03T10:08:00Z",
+          status: "INCOMPLETE",
+          lateMinutes: 0,
+          earlyLeaveMinutes: 0,
+          note: null,
+          createdAt: "2026-10-03T10:06:00Z",
+          updatedAt: "2026-10-03T10:08:00Z",
+        },
+      ],
+      meta: { requestId: "test", page: 1, pageSize: 100, total: 1 },
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <AdminAttendanceWorkspace />
+      </QueryClientProvider>,
+    );
+
+    const row = (await screen.findByText("Avery Patel")).closest("tr");
+    expect(row?.textContent).toContain("Thiếu giờ");
+    expect(row?.textContent).not.toContain("Đúng giờ");
+  });
+
   it("lets admin browse attendance history beyond the first 100 records", async () => {
     listDepartmentsMock.mockResolvedValue({
       success: true,

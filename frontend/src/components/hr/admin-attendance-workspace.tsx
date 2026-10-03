@@ -25,6 +25,8 @@ const fieldClass =
   "min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm text-neutral-950 outline-none transition focus:border-primary-600 focus:ring-2 focus:ring-primary-100";
 
 const statusLabels: Record<AttendanceStatus, string> = {
+  IN_PROGRESS: "Chưa chấm ra",
+  INCOMPLETE: "Thiếu giờ",
   PRESENT: "Đúng giờ",
   LATE: "Đi muộn",
   ABSENT: "Vắng mặt",
@@ -36,6 +38,8 @@ const statusLabels: Record<AttendanceStatus, string> = {
 };
 
 const statusStyles: Record<AttendanceStatus, string> = {
+  IN_PROGRESS: "bg-sky-50 text-sky-800",
+  INCOMPLETE: "bg-amber-50 text-amber-900",
   PRESENT: "bg-emerald-50 text-emerald-800",
   LATE: "bg-amber-50 text-amber-900",
   ABSENT: "bg-red-50 text-red-800",

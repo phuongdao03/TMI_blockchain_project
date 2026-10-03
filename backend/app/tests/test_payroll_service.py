@@ -124,6 +124,16 @@ def test_recalculates_draft_payroll_from_payable_attendance_and_approved_ot() ->
                         work_date=date(2026, 9, 3),
                         status=AttendanceStatus.PENDING,
                     ),
+                    Attendance(
+                        employee_id=employee.id,
+                        work_date=date(2026, 9, 4),
+                        status=AttendanceStatus.IN_PROGRESS,
+                    ),
+                    Attendance(
+                        employee_id=employee.id,
+                        work_date=date(2026, 9, 5),
+                        status=AttendanceStatus.INCOMPLETE,
+                    ),
                     OvertimeRequest(
                         employee_id=employee.id,
                         start_at=datetime(2026, 9, 10, 10, tzinfo=UTC),

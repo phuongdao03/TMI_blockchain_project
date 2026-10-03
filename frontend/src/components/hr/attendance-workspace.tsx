@@ -26,6 +26,8 @@ const statusPresentation: Record<
   AttendanceStatus,
   { label: string; className: string }
 > = {
+  IN_PROGRESS: { label: "Chưa chấm ra", className: "bg-sky-50 text-sky-800" },
+  INCOMPLETE: { label: "Thiếu giờ", className: "bg-amber-50 text-amber-900" },
   PRESENT: { label: "Đúng giờ", className: "bg-emerald-50 text-emerald-800" },
   LATE: { label: "Đi muộn", className: "bg-amber-50 text-amber-900" },
   ABSENT: { label: "Vắng mặt", className: "bg-red-50 text-red-800" },
@@ -121,7 +123,11 @@ export function AttendanceWorkspace() {
       setNotice(
         record.status === "PENDING"
           ? "Yêu cầu chấm công ra đã được ghi nhận và đang chờ Super Admin xét duyệt vị trí."
-          : "Chấm công ra thành công. Ngày làm việc của bạn đã được cập nhật.",
+          : record.status === "INCOMPLETE"
+            ? "Đã ghi nhận giờ ra. Thời gian làm việc chưa đủ để tự tính công; hãy liên hệ quản trị viên nếu cần điều chỉnh."
+            : record.status === "HALF_DAY"
+              ? "Đã ghi nhận giờ ra và nửa ngày công."
+              : "Chấm công ra thành công. Ngày làm việc của bạn đã được cập nhật.",
       );
       void refresh();
     },
@@ -223,18 +229,26 @@ export function AttendanceWorkspace() {
                   className="mt-2 text-2xl font-bold tracking-tight text-neutral-950"
                   id="today-title"
                 >
-                  {today?.checkOutAt
-                    ? "Ca làm đã hoàn tất"
-                    : today
-                      ? "Bạn đang trong ca"
-                      : "Sẵn sàng bắt đầu"}
+                  {today?.status === "INCOMPLETE"
+                    ? "Ngày công chưa đủ giờ"
+                    : today?.status === "HALF_DAY"
+                      ? "Đã ghi nhận nửa ngày công"
+                      : today?.checkOutAt
+                        ? "Đã ghi nhận giờ ra"
+                        : today
+                          ? "Bạn đang trong ca"
+                          : "Sẵn sàng bắt đầu"}
                 </h2>
               </div>
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${todayPresentation?.className ?? "bg-neutral-100 text-neutral-700"}`}
               >
-                {today?.status === "PENDING" || today?.status === "REJECTED" ? (
+                {today?.status === "PENDING" ||
+                today?.status === "REJECTED" ||
+                today?.status === "INCOMPLETE" ? (
                   <CircleAlert aria-hidden="true" className="size-3.5" />
+                ) : today?.status === "IN_PROGRESS" ? (
+                  <Clock3 aria-hidden="true" className="size-3.5" />
                 ) : (
                   <Check aria-hidden="true" className="size-3.5" />
                 )}
@@ -309,9 +323,21 @@ export function AttendanceWorkspace() {
                   />
                 ) : null}
                 {today?.checkOutAt ? (
-                  <p className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-emerald-50 px-4 text-sm font-bold text-emerald-800">
-                    <Check aria-hidden="true" className="size-4" />
-                    Đã hoàn tất ngày công
+                  <p
+                    className={`inline-flex min-h-12 items-center gap-2 rounded-xl px-4 text-sm font-bold ${todayPresentation?.className ?? "bg-neutral-100 text-neutral-700"}`}
+                  >
+                    {["INCOMPLETE", "PENDING", "REJECTED"].includes(
+                      today.status,
+                    ) ? (
+                      <CircleAlert aria-hidden="true" className="size-4" />
+                    ) : (
+                      <Check aria-hidden="true" className="size-4" />
+                    )}
+                    {today.status === "INCOMPLETE"
+                      ? "Đã ghi giờ ra · thiếu giờ"
+                      : today.status === "HALF_DAY"
+                        ? "Đã ghi nhận nửa ngày công"
+                        : "Đã ghi nhận giờ ra"}
                   </p>
                 ) : null}
               </div>
@@ -370,6 +396,22 @@ export function AttendanceWorkspace() {
                 <p>
                   Vị trí đang chờ Super Admin duyệt. Lượt chấm công này chưa
                   được tính công hoặc lương.
+                </p>
+              </aside>
+            ) : null}
+            {today?.status === "INCOMPLETE" ? (
+              <aside
+                className="mt-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950"
+                role="status"
+              >
+                <CircleAlert
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-amber-800"
+                />
+                <p>
+                  Thời gian làm việc chưa đạt ngưỡng nửa ngày. Lượt này không tự
+                  tính công hoặc lương; hãy liên hệ quản trị viên nếu cần điều
+                  chỉnh.
                 </p>
               </aside>
             ) : null}

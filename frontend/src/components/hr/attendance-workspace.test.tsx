@@ -45,6 +45,50 @@ describe("AttendanceWorkspace", () => {
     });
   });
 
+  it("does not describe a two-minute attendance as a completed workday", async () => {
+    getWorkdayContextMock.mockResolvedValue({
+      workDate: "2026-10-03",
+      timezone: "Asia/Ho_Chi_Minh",
+    });
+    listAttendanceMock.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: "short-attendance",
+          employeeId: "employee-1",
+          employeeName: "Avery Patel",
+          workDate: "2026-10-03",
+          checkInAt: "2026-10-03T10:06:00Z",
+          checkOutAt: "2026-10-03T10:08:00Z",
+          status: "INCOMPLETE",
+          lateMinutes: 0,
+          earlyLeaveMinutes: 0,
+          note: null,
+          createdAt: "2026-10-03T10:06:00Z",
+          updatedAt: "2026-10-03T10:08:00Z",
+        },
+      ],
+      meta: { requestId: "test", page: 1, pageSize: 20, total: 1 },
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <AttendanceWorkspace />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "Ngày công chưa đủ giờ" }),
+    ).toBeDefined();
+    expect(screen.getByText("Đã ghi giờ ra · thiếu giờ")).toBeDefined();
+    expect(screen.queryByText("Đã hoàn tất ngày công")).toBeNull();
+    expect(
+      screen.getByText(/Lượt này không tự tính công hoặc lương/),
+    ).toBeDefined();
+  });
+
   it("checks in without a note and shows success only after the API accepts it", async () => {
     listAttendanceMock.mockResolvedValue({
       success: true,
@@ -121,7 +165,7 @@ describe("AttendanceWorkspace", () => {
           workDate: new Date().toISOString().slice(0, 10),
           checkInAt: "2026-09-21T01:00:00.000Z",
           checkOutAt: null,
-          status: "PRESENT",
+          status: "IN_PROGRESS",
           lateMinutes: 0,
           earlyLeaveMinutes: 0,
           note: null,
@@ -131,7 +175,10 @@ describe("AttendanceWorkspace", () => {
       ],
       meta: { requestId: "test", page: 1, pageSize: 20, total: 1 },
     });
-    checkOutMock.mockResolvedValue({ id: "attendance-1" });
+    checkOutMock.mockResolvedValue({
+      id: "attendance-1",
+      status: "INCOMPLETE",
+    });
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -153,6 +200,9 @@ describe("AttendanceWorkspace", () => {
         clientCapturedAt: "2026-09-21T02:30:00.000Z",
       });
     });
+    expect(
+      await screen.findByText(/Thời gian làm việc chưa đủ để tự tính công/),
+    ).toBeDefined();
   });
 
   it("makes a pending location review explicit and non-payable", async () => {

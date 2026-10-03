@@ -77,6 +77,7 @@ from app.modules.notifications.models import Notification
 from app.modules.users.models import UserProfile
 
 ATTENDANCE_LOCATION_RETENTION_MONTHS = 24
+STANDARD_WORKDAY_MINUTES = 8 * 60
 
 
 class HrService:
@@ -939,6 +940,41 @@ class HrService:
             local_at - scheduled_at if boundary == "start" else scheduled_at - local_at
         )
         return max(0, int(difference.total_seconds() // 60))
+
+    @classmethod
+    def _worked_attendance_status(
+        cls,
+        *,
+        assignment: AttendanceAssignment | None,
+        check_in_at: datetime | None,
+        check_out_at: datetime | None,
+        late_minutes: int,
+    ) -> AttendanceStatus:
+        if check_out_at is None:
+            return AttendanceStatus.IN_PROGRESS
+        if check_in_at is None:
+            return AttendanceStatus.INCOMPLETE
+
+        required_minutes = STANDARD_WORKDAY_MINUTES
+        if assignment is not None and assignment.start_time and assignment.end_time:
+            scheduled_span = datetime.combine(
+                date.min, assignment.end_time
+            ) - datetime.combine(date.min, assignment.start_time)
+            required_minutes = min(
+                required_minutes, int(scheduled_span.total_seconds() // 60)
+            )
+        worked_minutes = max(
+            0,
+            int(
+                (cls._as_utc(check_out_at) - cls._as_utc(check_in_at)).total_seconds()
+                // 60
+            ),
+        )
+        if worked_minutes < (required_minutes + 1) // 2:
+            return AttendanceStatus.INCOMPLETE
+        if worked_minutes < required_minutes:
+            return AttendanceStatus.HALF_DAY
+        return AttendanceStatus.LATE if late_minutes else AttendanceStatus.PRESENT
 
     async def _resolve_attendance_location_policy(
         self, *, employee_id: UUID, occurred_at: datetime
@@ -1817,7 +1853,7 @@ class HrService:
             check_in_at=now,
             note=payload.note,
             status=(
-                (AttendanceStatus.LATE if late_minutes else AttendanceStatus.PRESENT)
+                AttendanceStatus.IN_PROGRESS
                 if outcome == AttendanceLocationOutcome.ACCEPTED
                 else AttendanceStatus.PENDING
             ),
@@ -1909,8 +1945,18 @@ class HrService:
             occurred_at=now,
             boundary="end",
         )
-        if outcome != AttendanceLocationOutcome.ACCEPTED:
+        if (
+            outcome != AttendanceLocationOutcome.ACCEPTED
+            or attendance.status == AttendanceStatus.PENDING
+        ):
             attendance.status = AttendanceStatus.PENDING
+        else:
+            attendance.status = self._worked_attendance_status(
+                assignment=assignment,
+                check_in_at=attendance.check_in_at,
+                check_out_at=now,
+                late_minutes=attendance.late_minutes,
+            )
         await self._session.flush()
         evidence = await self._record_attendance_location_evidence(
             attendance=attendance,
@@ -2025,10 +2071,21 @@ class HrService:
             ):
                 attendance.status = AttendanceStatus.PENDING
             else:
-                attendance.status = (
-                    AttendanceStatus.LATE
-                    if attendance.late_minutes
-                    else AttendanceStatus.PRESENT
+                assignment = await self._session.scalar(
+                    select(AttendanceAssignment).where(
+                        AttendanceAssignment.employee_id == attendance.employee_id,
+                        AttendanceAssignment.effective_from <= attendance.work_date,
+                        or_(
+                            AttendanceAssignment.effective_to.is_(None),
+                            AttendanceAssignment.effective_to >= attendance.work_date,
+                        ),
+                    )
+                )
+                attendance.status = self._worked_attendance_status(
+                    assignment=assignment,
+                    check_in_at=attendance.check_in_at,
+                    check_out_at=attendance.check_out_at,
+                    late_minutes=attendance.late_minutes,
                 )
 
         await self._session.flush()

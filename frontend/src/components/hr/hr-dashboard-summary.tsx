@@ -21,7 +21,7 @@ const queueCards: readonly QueueCard[] = [
   },
   {
     href: "/admin/attendance",
-    label: "Chấm công chờ duyệt",
+    label: "Chấm công cần xem xét",
     value: (summary) => summary.attendancePendingCount,
   },
   {

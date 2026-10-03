@@ -19,6 +19,14 @@ export function attendancePresentation(summary: ModeratorHrDashboardSummary) {
     };
   }
   const recordedStates = {
+    IN_PROGRESS: [
+      "Chưa chấm công ra",
+      "Giờ vào đã được ghi nhận; ngày công sẽ được tính sau khi có giờ ra.",
+    ],
+    INCOMPLETE: [
+      "Ngày công chưa đủ giờ",
+      "Thời gian làm việc chưa đủ để tự tính công. Hãy xem chi tiết hoặc liên hệ quản trị viên.",
+    ],
     PENDING: [
       "Chấm công đang chờ xác minh",
       "Lượt chấm công sẽ được cập nhật sau khi được xem xét.",

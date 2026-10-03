@@ -128,6 +128,11 @@ def test_dashboard_summary_returns_only_super_admin_aggregate_queues() -> None:
                         work_date=date(2026, 9, 21),
                         status=AttendanceStatus.PRESENT,
                     ),
+                    Attendance(
+                        employee_id=active_employee.id,
+                        work_date=date(2026, 9, 20),
+                        status=AttendanceStatus.INCOMPLETE,
+                    ),
                     LeaveRequest(
                         employee_id=active_employee.id,
                         leave_type="ANNUAL",
@@ -204,7 +209,7 @@ def test_dashboard_summary_returns_only_super_admin_aggregate_queues() -> None:
             summary = await HrDashboardService(session).summary(admin)
             assert asdict(summary) == {
                 "active_employee_count": 1,
-                "attendance_pending_count": 1,
+                "attendance_pending_count": 2,
                 "location_exception_pending_count": 1,
                 "leave_pending_count": 1,
                 "overtime_pending_count": 1,
