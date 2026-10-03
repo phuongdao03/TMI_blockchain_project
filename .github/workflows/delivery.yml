@@ -66,7 +66,11 @@ jobs:
       - name: Dependency security audit
         run: |
           npm audit --audit-level=high
-          npm --prefix frontend audit --audit-level=high
+          report=$(mktemp)
+          trap 'rm -f "$report"' EXIT
+          audit_status=0
+          npm --prefix frontend audit --audit-level=high --json > "$report" || audit_status=$?
+          node infrastructure/scripts/check-frontend-audit.mjs "$report" "$audit_status"
           npm --prefix contracts audit --audit-level=high
       - name: Pinned contract tests
         run: |
