@@ -252,8 +252,8 @@ test("CI has quality, migration, image, staging and manual production gates", as
   assert.match(workflow, /--build-arg NEXT_PUBLIC_APP_BASE_URL/);
   assert.match(
     workflow,
-    /check-image-size\.sh "\$REGISTRY\/cns-certificate-frontend:\$TAG" 225/,
-    "frontend image budget must accommodate the measured Next.js 16.3 runtime without removing the size gate",
+    /check-image-size\.sh "\$REGISTRY\/cns-certificate-frontend:\$TAG" 285/,
+    "frontend image budget must accommodate the measured proposal assets without removing the size gate",
   );
   assert.match(
     workflow,

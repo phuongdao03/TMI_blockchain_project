@@ -333,10 +333,11 @@ jobs:
           # narrow 9 MiB margin while retaining the image size gate.
           stage="check backend image size"
           bash infrastructure/scripts/check-image-size.sh "$REGISTRY/cns-certificate-backend:$TAG" 310
-          # Next.js 16.3 standalone output measures 215 MiB with the Firebase
-          # and WalletConnect runtimes. Retain a narrow 10 MiB regression margin.
+          # The public proposal PDF, audio and gallery add 53 MiB to the
+          # frontend. Delivery run 37135890833 measured 275 MiB; retain a
+          # narrow 10 MiB regression margin while keeping the size gate.
           stage="check frontend image size"
-          bash infrastructure/scripts/check-image-size.sh "$REGISTRY/cns-certificate-frontend:$TAG" 225
+          bash infrastructure/scripts/check-image-size.sh "$REGISTRY/cns-certificate-frontend:$TAG" 285
           stage="start image smoke tests"
           docker run -d --rm --name cns-backend-smoke -p 18000:8000 "$REGISTRY/cns-certificate-backend:$TAG"
           docker run -d --rm --name cns-frontend-smoke -p 13000:3000 "$REGISTRY/cns-certificate-frontend:$TAG"
