@@ -7,9 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.blockchain.models import (
     BlockchainTransaction,
     Certificate,
+    CertificateStatus,
     CertificateVersion,
     CertificateVersionStatus,
 )
+from app.modules.certificates.rebrand import REVOCATION_REASON
 from app.modules.dossiers.models import Category, Dossier
 from app.modules.organizations.models import (
     MembershipStatus,
@@ -105,7 +107,7 @@ class CertificateRepository:
                 CertificateVersionStatus.ANCHOR_PENDING,
                 CertificateVersionStatus.FAILED,
             )
-        )
+        ) & CertificateVersion.change_reason.is_distinct_from(REVOCATION_REASON)
         rows = await self._session.scalars(
             select(CertificateVersion)
             .where(criteria)
@@ -124,7 +126,20 @@ class CertificateRepository:
         *,
         for_update: bool = False,
     ) -> Certificate | None:
-        statement = select(Certificate).where(Certificate.dossier_id == dossier_id)
+        statement = (
+            select(Certificate)
+            .join(
+                CertificateVersion,
+                (CertificateVersion.certificate_id == Certificate.id)
+                & (CertificateVersion.version_no == Certificate.current_version_no),
+            )
+            .where(Certificate.dossier_id == dossier_id)
+            .order_by(
+                (Certificate.status == CertificateStatus.ACTIVE).desc(),
+                (CertificateVersion.status == CertificateVersionStatus.ACTIVE).desc(),
+                Certificate.issued_at.desc(),
+            )
+        )
         if for_update:
             statement = statement.with_for_update().execution_options(
                 populate_existing=True
@@ -158,7 +173,10 @@ class CertificateRepository:
             Dossier.owner_user_id == user_id,
             Dossier.organization_id.in_(membership),
         )
-        statement = self._detail_statement().where(condition)
+        statement = self._detail_statement().where(
+            condition,
+            CertificateVersion.status == CertificateVersionStatus.ACTIVE,
+        )
         rows = (
             await self._session.execute(
                 statement.order_by(Certificate.issued_at.desc())
@@ -170,7 +188,14 @@ class CertificateRepository:
             select(func.count())
             .select_from(Certificate)
             .join(Dossier, Dossier.id == Certificate.dossier_id)
-            .where(condition)
+            .join(
+                CertificateVersion,
+                (CertificateVersion.certificate_id == Certificate.id)
+                & (CertificateVersion.version_no == Certificate.current_version_no),
+            )
+            .where(
+                condition, CertificateVersion.status == CertificateVersionStatus.ACTIVE
+            )
         )
         return tuple(cast(CertificateRow, row) for row in rows), int(total or 0)
 
@@ -200,7 +225,13 @@ class CertificateRepository:
             filters.append(Certificate.status == status)
         if publication_status:
             filters.append(PublicWork.publication_status == publication_status)
-        statement = self._admin_statement().where(*filters)
+        # A staged THV replacement has no PDF yet and must not appear as an
+        # issued certificate beside the still-active legacy number.
+        visible_version = or_(
+            CertificateVersion.status != CertificateVersionStatus.ANCHOR_PENDING,
+            ~Certificate.certificate_number.startswith("THV-"),
+        )
+        statement = self._admin_statement().where(*filters, visible_version)
         rows = (
             await self._session.execute(
                 statement.order_by(Certificate.issued_at.desc(), Certificate.id)
@@ -212,8 +243,13 @@ class CertificateRepository:
             select(func.count())
             .select_from(Certificate)
             .join(Dossier, Dossier.id == Certificate.dossier_id)
+            .join(
+                CertificateVersion,
+                (CertificateVersion.certificate_id == Certificate.id)
+                & (CertificateVersion.version_no == Certificate.current_version_no),
+            )
             .outerjoin(PublicWork, PublicWork.certificate_id == Certificate.id)
-            .where(*filters)
+            .where(*filters, visible_version)
         )
         return tuple(cast(AdminCertificateRow, row) for row in rows), int(total or 0)
 

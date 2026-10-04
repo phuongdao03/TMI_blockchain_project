@@ -110,7 +110,7 @@ class PublicCatalogService:
                     transaction.confirmed_at if transaction is not None else None
                 ),
                 created_at=version.created_at,
-                issuer_label="Trung tâm An ninh Công nghệ số – CNS",
+                issuer_label="Đề cử Tinh Hoa Việt",
                 documents=public_evidence_proofs(version.metadata_json),
             )
             for version, transaction in rows

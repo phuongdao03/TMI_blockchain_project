@@ -63,7 +63,16 @@ class PublicRepository:
             .select_from(Certificate)
             .join(Dossier, Dossier.id == Certificate.dossier_id)
             .join(Category, Category.id == Dossier.category_id)
-            .where(*filters)
+            .join(
+                CertificateVersion,
+                (CertificateVersion.certificate_id == Certificate.id)
+                & (CertificateVersion.version_no == Certificate.current_version_no),
+            )
+            .where(
+                *filters,
+                Certificate.status == CertificateStatus.ACTIVE,
+                CertificateVersion.status == CertificateVersionStatus.ACTIVE,
+            )
         )
         return tuple(cast(PublicRow, row) for row in rows), int(total or 0)
 
@@ -87,7 +96,18 @@ class PublicRepository:
                     Dossier,
                     (Dossier.category_id == Category.id) & self._published_condition(),
                 )
-                .outerjoin(Certificate, Certificate.dossier_id == Dossier.id)
+                .outerjoin(
+                    Certificate,
+                    (Certificate.dossier_id == Dossier.id)
+                    & (Certificate.status == CertificateStatus.ACTIVE)
+                    & select(CertificateVersion.id)
+                    .where(
+                        CertificateVersion.certificate_id == Certificate.id,
+                        CertificateVersion.version_no == Certificate.current_version_no,
+                        CertificateVersion.status == CertificateVersionStatus.ACTIVE,
+                    )
+                    .exists(),
+                )
                 .where(Category.is_active.is_(True))
                 .group_by(Category.id)
                 .order_by(Category.display_order, Category.name)
@@ -125,6 +145,7 @@ class PublicRepository:
         return await self._verification_context(
             func.lower(BlockchainTransaction.tx_hash) == transaction_hash,
             historical=True,
+            prefer_active=True,
         )
 
     async def list_certificate_versions(
@@ -161,6 +182,7 @@ class PublicRepository:
         condition: ColumnElement[bool],
         *,
         historical: bool = False,
+        prefer_active: bool = False,
     ) -> VerificationContext | None:
         status_filter: tuple[CertificateVersionStatus, ...] = (
             (
@@ -177,33 +199,58 @@ class PublicRepository:
         ]
         if status_filter:
             filters.append(CertificateVersion.status.in_(status_filter))
-        row = (
-            await self._session.execute(
-                self._verification_statement(historical=historical)
-                .add_columns(
-                    DossierVersion.canonical_hash,
-                    DossierVersion.snapshot_json,
-                    DossierVersion.version_no,
-                    select(PublicWork.slug)
-                    .where(
-                        PublicWork.dossier_id == Dossier.id,
-                        PublicWork.publication_status == PublicationStatus.PUBLISHED,
-                        PublicWork.visibility == PublicWorkVisibility.PUBLIC,
-                        PublicWork.deleted_at.is_(None),
-                        PublicWork.published_at.is_not(None),
-                        Category.is_active.is_(True),
-                        Certificate.status != CertificateStatus.REVOKED,
+        else:
+            filters.append(
+                CertificateVersion.status.in_(
+                    (
+                        CertificateVersionStatus.ACTIVE,
+                        CertificateVersionStatus.REVOKED,
                     )
-                    .limit(1)
-                    .scalar_subquery(),
                 )
-                .join(
-                    DossierVersion,
-                    DossierVersion.id == CertificateVersion.dossier_version_id,
-                )
-                .where(*filters)
             )
-        ).one_or_none()
+        statement = (
+            self._verification_statement(historical=historical)
+            .add_columns(
+                DossierVersion.canonical_hash,
+                DossierVersion.snapshot_json,
+                DossierVersion.version_no,
+                select(PublicWork.slug)
+                .where(
+                    PublicWork.dossier_id == Dossier.id,
+                    PublicWork.publication_status == PublicationStatus.PUBLISHED,
+                    PublicWork.visibility == PublicWorkVisibility.PUBLIC,
+                    PublicWork.deleted_at.is_(None),
+                    PublicWork.published_at.is_not(None),
+                    Category.is_active.is_(True),
+                    Certificate.status != CertificateStatus.REVOKED,
+                )
+                .limit(1)
+                .scalar_subquery(),
+                select(PublicWork.author_display_name)
+                .where(
+                    PublicWork.dossier_id == Dossier.id,
+                    PublicWork.publication_status == PublicationStatus.PUBLISHED,
+                    PublicWork.visibility == PublicWorkVisibility.PUBLIC,
+                    PublicWork.deleted_at.is_(None),
+                    PublicWork.published_at.is_not(None),
+                )
+                .limit(1)
+                .scalar_subquery(),
+            )
+            .join(
+                DossierVersion,
+                DossierVersion.id == CertificateVersion.dossier_version_id,
+            )
+            .where(*filters)
+        )
+        if prefer_active:
+            statement = statement.order_by(
+                (Certificate.status == CertificateStatus.ACTIVE).desc(),
+                (CertificateVersion.status == CertificateVersionStatus.ACTIVE).desc(),
+                Certificate.issued_at.desc(),
+            ).limit(1)
+        result = await self._session.execute(statement)
+        row = result.first() if prefer_active else result.one_or_none()
         if row is None:
             return None
         (
@@ -216,6 +263,7 @@ class PublicRepository:
             dossier_snapshot,
             dossier_version_no,
             public_work_slug,
+            public_author_display_name,
         ) = row
         asset_title, category_name, dossier_code = self._frozen_identity(
             version.metadata_json
@@ -258,6 +306,7 @@ class PublicRepository:
             recognized_subject=self._recognized_subject(metadata),
             is_current_version=(version.version_no == certificate.current_version_no),
             public_work_slug=public_work_slug,
+            public_author_display_name=public_author_display_name,
         )
 
     @staticmethod
@@ -381,6 +430,10 @@ class PublicRepository:
                 BlockchainTransaction,
                 BlockchainTransaction.id
                 == CertificateVersion.blockchain_transaction_id,
+            )
+            .where(
+                Certificate.status == CertificateStatus.ACTIVE,
+                CertificateVersion.status == CertificateVersionStatus.ACTIVE,
             )
         )
 

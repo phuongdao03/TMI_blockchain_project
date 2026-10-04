@@ -16,7 +16,7 @@ def test_numbering_is_deterministic_and_concurrency_safe() -> None:
 
     values = {service.generate(certificate_id, issued_at) for _ in range(100)}
 
-    assert values == {"CNS-2026-7EAEC2D2C99A"}
+    assert values == {"THV-2026-7EAEC2D2C99A"}
 
 
 def test_metadata_is_versioned_deterministic_and_excludes_private_fields() -> None:

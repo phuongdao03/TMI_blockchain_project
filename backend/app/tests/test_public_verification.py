@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import cast
 from unittest.mock import AsyncMock, Mock
@@ -219,6 +220,23 @@ def test_verification_reports_not_found_and_temporary_chain_unavailability() -> 
         assert pending_result.network_available is False
         assert pending_result.event_name == "ProofRecorded"
 
+        async def found_revoked(value: str) -> VerificationContext:
+            del value
+            return replace(context, certificate_status=CertificateStatus.REVOKED)
+
+        revoked_audit, revoked_audit_session = _audit_dependencies()
+        revoked_service = PublicVerificationService(
+            gateway=UnavailableGateway(),
+            find_by_token=found_revoked,
+            find_by_number=found_revoked,
+            find_by_transaction=found_revoked,
+            audit=revoked_audit,
+            audit_session=revoked_audit_session,
+        )
+        revoked_result = await revoked_service.verify_number(context.certificate_number)
+        assert revoked_result.status is VerificationStatus.REVOKED
+        assert revoked_result.network_available is False
+
     asyncio.run(scenario())
 
 
@@ -356,7 +374,7 @@ def test_verification_recomputes_metadata_instead_of_trusting_stored_hash() -> N
         )
 
         result = await service.verify_number(context.certificate_number)
-        assert result.issuer_label == "Trung tâm An ninh Công nghệ số – CNS"
+        assert result.issuer_label == "Đề cử Tinh Hoa Việt"
 
         assert result.status is VerificationStatus.MISMATCH
         assert result.public_work_slug == "bo-nhan-dien-cns"

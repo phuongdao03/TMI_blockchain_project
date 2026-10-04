@@ -1,7 +1,9 @@
 from typing import Any
+from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, Response, status
+from fastapi.responses import StreamingResponse
 
 from app.core.schemas import (
     ErrorEnvelope,
@@ -98,6 +100,28 @@ async def certificate_qr(
         headers={
             "Cache-Control": "private, no-store",
             "Content-Disposition": 'inline; filename="certificate-qr.png"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get(
+    "/{certificate_id}/pdf", response_class=StreamingResponse, responses=RESPONSES
+)
+async def download_certificate_pdf(
+    certificate_id: UUID,
+    principal: CurrentPrincipalDependency,
+    service: CertificateServiceDependency,
+) -> StreamingResponse:
+    content, filename = await service.download_pdf(principal, certificate_id)
+    disposition = f"attachment; filename*=UTF-8''{quote(filename, safe='')}"
+    return StreamingResponse(
+        iter((content,)),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": disposition,
+            "Content-Length": str(len(content)),
+            "Cache-Control": "private, no-store",
             "X-Content-Type-Options": "nosniff",
         },
     )

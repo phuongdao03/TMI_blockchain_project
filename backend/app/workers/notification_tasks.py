@@ -72,8 +72,8 @@ EVENT_COPY: dict[str, tuple[str, str]] = {
         "Quyết định hội đồng đã được cập nhật.",
     ),
     "payment.paid": ("Thanh toán thành công", "Khoản thanh toán đã được xác nhận."),
-    "certificate.issued": ("Chứng thư đã phát hành", "Chứng thư số đã sẵn sàng."),
-    "certificate.revoked": ("Chứng thư đã thu hồi", "Chứng thư số đã được thu hồi."),
+    "certificate.issued": ("Bằng xác lập đã phát hành", "Bằng xác lập đã sẵn sàng."),
+    "certificate.revoked": ("Bằng xác lập đã thu hồi", "Bằng xác lập đã được thu hồi."),
     "blockchain.anchored": (
         "Blockchain đã xác nhận",
         "Bản ghi blockchain đã được xác nhận.",

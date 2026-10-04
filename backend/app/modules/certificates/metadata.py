@@ -85,7 +85,7 @@ class CertificateNumberingService:
     """Generates a collision-resistant number without a shared counter."""
 
     def generate(self, certificate_id: UUID, issued_at: datetime) -> str:
-        return f"CNS-{issued_at.astimezone(UTC).year}-{certificate_id.hex[:12].upper()}"
+        return f"THV-{issued_at.astimezone(UTC).year}-{certificate_id.hex[:12].upper()}"
 
 
 class CertificateMetadataBuilder:

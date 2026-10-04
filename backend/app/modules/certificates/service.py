@@ -1,10 +1,11 @@
+import hashlib
 import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.outbox import OutboxEvent
@@ -32,6 +33,7 @@ from app.modules.certificates.metadata import (
     CertificateNumberingService,
 )
 from app.modules.certificates.pdf import CertificatePdfRenderer
+from app.modules.certificates.rebrand import REVOCATION_REASON
 from app.modules.certificates.repository import (
     AdminCertificateRow,
     CertificateRepository,
@@ -49,7 +51,11 @@ from app.modules.dossiers.workflow import DossierWorkflowService
 from app.modules.media.gateway import MediaGateway
 from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.public.backfill import PublicWorkDraftBackfill
-from app.modules.public.models import PublicationStatus, PublicWorkVisibility
+from app.modules.public.models import (
+    PublicationStatus,
+    PublicWork,
+    PublicWorkVisibility,
+)
 from app.modules.public.share_service import canonical_public_origin
 
 CERTIFICATE_ISSUED_EVENT = "certificate.issued"
@@ -138,6 +144,46 @@ class CertificateService:
                 metadata_hash=version.metadata_hash,
                 qr_payload=version.qr_payload or certificate.qr_payload,
             )
+
+    async def download_pdf(
+        self, principal: AuthPrincipal, certificate_id: UUID
+    ) -> tuple[bytes, str]:
+        """Return a checked PDF only to a user who can access its certificate."""
+        self._require_role(principal)
+        async with self._session.begin():
+            row = await self._certificates.get(certificate_id)
+            if row is None:
+                raise CertificateNotFoundError()
+            if not await self._certificates.can_access(
+                certificate_id, principal.user_id
+            ):
+                raise CertificateForbiddenError()
+            certificate, _, *_ = row
+            if certificate.pdf_media_id is None:
+                raise CertificateConflictError("Bằng xác lập chưa sẵn sàng để tải.")
+            media = await self._session.get(MediaAsset, certificate.pdf_media_id)
+            if (
+                media is None
+                or media.status is not MediaStatus.ACTIVE
+                or media.mime_type != "application/pdf"
+                or media.sha256 is None
+                or media.bytes <= 0
+            ):
+                raise CertificateConflictError("Bằng xác lập chưa sẵn sàng để tải.")
+            public_id = media.cloudinary_public_id
+            resource_type = media.resource_type
+            byte_count = media.bytes
+            digest = media.sha256
+            filename = f"{certificate.certificate_number}.pdf"
+        content = await self._media_gateway.download_asset(
+            public_id=public_id,
+            resource_type=resource_type,
+            file_format="pdf",
+            max_bytes=byte_count,
+        )
+        if len(content) != byte_count or hashlib.sha256(content).hexdigest() != digest:
+            raise CertificateGenerationError("Certificate PDF integrity check failed.")
+        return content, filename
 
     async def list_admin(
         self,
@@ -269,12 +315,21 @@ class CertificateService:
             )
             if dossier is None:
                 raise CertificateNotFoundError()
+            is_reissue = (
+                certificate.certificate_number.startswith("THV-")
+                and version.status is CertificateVersionStatus.ANCHOR_PENDING
+                and version.change_reason == REVOCATION_REASON
+            )
             if (
-                version.status is not CertificateVersionStatus.ACTIVE
+                (
+                    version.status is not CertificateVersionStatus.ACTIVE
+                    and not is_reissue
+                )
                 or certificate.current_version_no != version.version_no
                 or transaction is None
                 or transaction.status is not BlockchainTransactionStatus.CONFIRMED
                 or transaction.tx_hash is None
+                or (is_reissue and transaction.method != "recordProof")
             ):
                 raise CertificateConflictError(
                     "Certificate version is not ready for rendition."
@@ -326,10 +381,18 @@ class CertificateService:
                 return
             if (
                 locked_version.status is not CertificateVersionStatus.ACTIVE
-                or locked_certificate.current_version_no != locked_version.version_no
-            ):
+                and not is_reissue
+            ) or locked_certificate.current_version_no != locked_version.version_no:
                 raise CertificateConflictError(
                     "Certificate version changed before rendition completed."
+                )
+            if is_reissue and (
+                locked_version.status is not CertificateVersionStatus.ANCHOR_PENDING
+                or locked_version.change_reason != REVOCATION_REASON
+                or locked_certificate.status is not CertificateStatus.ACTIVE
+            ):
+                raise CertificateConflictError(
+                    "THV replacement changed before rendition completed."
                 )
             media = MediaAsset(
                 id=self._uuid_factory(),
@@ -351,6 +414,55 @@ class CertificateService:
             await self._session.flush()
             locked_version.pdf_media_id = media.id
             locked_certificate.pdf_media_id = media.id
+            if is_reissue:
+                legacy_rows = tuple(
+                    await self._session.scalars(
+                        select(Certificate)
+                        .where(
+                            Certificate.dossier_id == locked_certificate.dossier_id,
+                            Certificate.status == CertificateStatus.ACTIVE,
+                            or_(
+                                Certificate.certificate_number.startswith("CNS-"),
+                                Certificate.certificate_number.startswith("TMI-"),
+                            ),
+                        )
+                        .with_for_update()
+                    )
+                )
+                if not legacy_rows:
+                    raise CertificateConflictError(
+                        "Legacy certificate is unavailable for THV cutover."
+                    )
+                revoked_at = self._clock()
+                for legacy in legacy_rows:
+                    legacy_version = await self._session.scalar(
+                        select(CertificateVersion)
+                        .where(
+                            CertificateVersion.certificate_id == legacy.id,
+                            CertificateVersion.version_no == legacy.current_version_no,
+                        )
+                        .with_for_update()
+                    )
+                    if (
+                        legacy_version is None
+                        or legacy_version.status is not CertificateVersionStatus.ACTIVE
+                    ):
+                        raise CertificateConflictError(
+                            "Legacy certificate version changed before THV cutover."
+                        )
+                    legacy.status = CertificateStatus.REVOKED
+                    legacy.revoked_at = revoked_at
+                    legacy.revocation_reason_hash = hashlib.sha256(
+                        REVOCATION_REASON.encode("utf-8")
+                    ).hexdigest()
+                    legacy_version.status = CertificateVersionStatus.REVOKED
+                    legacy_version.revoked_at = revoked_at
+                locked_version.status = CertificateVersionStatus.ACTIVE
+                await self._session.execute(
+                    update(PublicWork)
+                    .where(PublicWork.dossier_id == locked_certificate.dossier_id)
+                    .values(certificate_id=locked_certificate.id)
+                )
             self._audit(
                 "certificate.version.rendered",
                 certificate_version_id,

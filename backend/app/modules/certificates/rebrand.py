@@ -6,11 +6,13 @@ from datetime import UTC, datetime, timedelta
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
-from sqlalchemy import select, update
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.security import hash_verification_token
 from app.modules.blockchain.models import (
+    BlockchainTransaction,
+    BlockchainTransactionStatus,
     Certificate,
     CertificateStatus,
     CertificateVersion,
@@ -20,17 +22,21 @@ from app.modules.certificates.metadata import (
     CertificateMetadataBuilder,
     CertificateNumberingService,
 )
-from app.modules.public.models import PublicWork
+from app.modules.public.models import (
+    PublicationStatus,
+    PublicWork,
+    PublicWorkVisibility,
+)
 from app.modules.public.share_service import canonical_public_origin
 
-LEGACY_PREFIX = "TMI-"
-REVOCATION_REASON = "CNS identity hard cutover and certificate reissuance"
+LEGACY_PREFIXES = ("TMI-", "CNS-")
+REVOCATION_REASON = "Tinh Hoa Viet certificate reissued with a THV number"
 
 
 @dataclass(frozen=True, slots=True)
 class CertificateRebrandReport:
     candidates: int
-    reissued: int
+    prepared: int
     replacement_version_ids: tuple[UUID, ...]
 
 
@@ -40,6 +46,7 @@ def replacement_metadata(
     certificate_number: str,
     issued_at: datetime,
     expires_at: datetime,
+    author_display_name: str | None = None,
 ) -> tuple[dict[str, object], str]:
     metadata = deepcopy(source)
     metadata["certificateNumber"] = certificate_number
@@ -48,15 +55,15 @@ def replacement_metadata(
     metadata["expiresAt"] = (
         expires_at.astimezone(UTC).isoformat().replace("+00:00", "Z")
     )
-    dossier_code = metadata.get("dossierCode")
-    if isinstance(dossier_code, str) and dossier_code.startswith(LEGACY_PREFIX):
-        metadata["dossierCode"] = f"CNS-{dossier_code[len(LEGACY_PREFIX) :]}"
     asset = metadata.get("asset")
-    if isinstance(asset, dict) and asset.get("subject") in {
-        "Chủ thể hồ sơ TMI",
-        "Chủ thể hồ sơ CNS",
-    }:
-        asset["subject"] = "Chưa công bố"
+    if isinstance(asset, dict):
+        if author_display_name and author_display_name.strip():
+            asset["subject"] = author_display_name.strip()
+        elif asset.get("subject") in {
+            "Chủ thể hồ sơ TMI",
+            "Chủ thể hồ sơ CNS",
+        }:
+            asset["subject"] = "Chưa công bố"
     digest = hashlib.sha256(
         CertificateMetadataBuilder.canonical_bytes(metadata)
     ).hexdigest()
@@ -64,7 +71,7 @@ def replacement_metadata(
 
 
 class CertificateRebrandService:
-    """Revoke legacy certificates and issue replacements without rewriting history."""
+    """Prepare THV replacements; legacy numbers stay live until PDF cutover."""
 
     def __init__(
         self,
@@ -84,11 +91,15 @@ class CertificateRebrandService:
 
     async def run(self, *, dry_run: bool) -> CertificateRebrandReport:
         criteria = (
-            Certificate.certificate_number.startswith(LEGACY_PREFIX),
-            Certificate.status != CertificateStatus.REVOKED,
+            or_(
+                *(
+                    Certificate.certificate_number.startswith(prefix)
+                    for prefix in LEGACY_PREFIXES
+                )
+            ),
+            Certificate.status == CertificateStatus.ACTIVE,
         )
         replacement_version_ids: list[UUID] = []
-        reason_hash = hashlib.sha256(REVOCATION_REASON.encode("utf-8")).hexdigest()
         async with self._session.begin():
             candidate_ids = tuple(
                 await self._session.scalars(
@@ -98,7 +109,7 @@ class CertificateRebrandService:
             if dry_run or not candidate_ids:
                 return CertificateRebrandReport(
                     candidates=len(candidate_ids),
-                    reissued=0,
+                    prepared=0,
                     replacement_version_ids=(),
                 )
             certificates = tuple(
@@ -112,7 +123,15 @@ class CertificateRebrandService:
             for legacy in certificates:
                 # A concurrent cutover may have completed while this runner was
                 # waiting for the row lock. Never create a second replacement.
-                if legacy.status is CertificateStatus.REVOKED:
+                if legacy.status is not CertificateStatus.ACTIVE:
+                    continue
+                existing = await self._session.scalar(
+                    select(Certificate.id).where(
+                        Certificate.dossier_id == legacy.dossier_id,
+                        Certificate.certificate_number.startswith("THV-"),
+                    )
+                )
+                if existing is not None:
                     continue
                 version = await self._session.scalar(
                     select(CertificateVersion).where(
@@ -125,13 +144,29 @@ class CertificateRebrandService:
                         f"Legacy certificate {legacy.id} has no current version."
                     )
 
+                if version.status is not CertificateVersionStatus.ACTIVE:
+                    raise RuntimeError(f"Legacy certificate {legacy.id} is not active.")
+                proof_transaction = await self._session.scalar(
+                    select(BlockchainTransaction)
+                    .where(
+                        BlockchainTransaction.dossier_version_id
+                        == version.dossier_version_id,
+                        BlockchainTransaction.method == "recordProof",
+                        BlockchainTransaction.status
+                        == BlockchainTransactionStatus.CONFIRMED,
+                        BlockchainTransaction.tx_hash.is_not(None),
+                    )
+                    .order_by(BlockchainTransaction.confirmed_at.desc())
+                )
+                if proof_transaction is None:
+                    raise RuntimeError(
+                        f"Legacy certificate {legacy.id} has no confirmed THV "
+                        "dossier proof. Reissue requires a verified recordProof."
+                    )
+                public_work = await self._session.scalar(
+                    select(PublicWork).where(PublicWork.dossier_id == legacy.dossier_id)
+                )
                 now = datetime.now(UTC)
-                legacy.status = CertificateStatus.REVOKED
-                legacy.revoked_at = now
-                legacy.revocation_reason_hash = reason_hash
-                version.status = CertificateVersionStatus.REVOKED
-                version.revoked_at = now
-
                 replacement_id = uuid4()
                 replacement_version_id = uuid4()
                 token = secrets.token_urlsafe(32)
@@ -146,6 +181,15 @@ class CertificateRebrandService:
                     certificate_number=number,
                     issued_at=now,
                     expires_at=expires_at,
+                    author_display_name=(
+                        public_work.author_display_name
+                        if public_work is not None
+                        and public_work.publication_status
+                        is PublicationStatus.PUBLISHED
+                        and public_work.visibility is PublicWorkVisibility.PUBLIC
+                        and public_work.published_at is not None
+                        else None
+                    ),
                 )
                 self._session.add(
                     Certificate(
@@ -168,24 +212,46 @@ class CertificateRebrandService:
                         dossier_version_id=version.dossier_version_id,
                         metadata_json=metadata,
                         metadata_hash=metadata_hash,
+                        blockchain_transaction_id=proof_transaction.id,
                         public_token_hash=token_hash,
                         qr_payload=qr_payload,
-                        status=CertificateVersionStatus.ACTIVE,
+                        status=CertificateVersionStatus.ANCHOR_PENDING,
                         change_reason=REVOCATION_REASON,
-                        blockchain_transaction_id=version.blockchain_transaction_id,
                     )
                 )
-                await self._session.execute(
-                    update(PublicWork)
-                    .where(PublicWork.certificate_id == legacy.id)
-                    .values(certificate_id=replacement_id)
-                )
                 replacement_version_ids.append(replacement_version_id)
+                await self._session.flush()
 
             await self._session.flush()
 
         return CertificateRebrandReport(
             candidates=len(candidate_ids),
-            reissued=len(replacement_version_ids),
+            prepared=len(replacement_version_ids),
             replacement_version_ids=tuple(replacement_version_ids),
         )
+
+    async def ready_to_render(self) -> tuple[UUID, ...]:
+        """Return staged THV versions for the existing PDF worker."""
+        async with self._session.begin():
+            return tuple(
+                await self._session.scalars(
+                    select(CertificateVersion.id)
+                    .join(
+                        Certificate, Certificate.id == CertificateVersion.certificate_id
+                    )
+                    .join(
+                        BlockchainTransaction,
+                        BlockchainTransaction.id
+                        == CertificateVersion.blockchain_transaction_id,
+                    )
+                    .where(
+                        Certificate.certificate_number.startswith("THV-"),
+                        CertificateVersion.status
+                        == CertificateVersionStatus.ANCHOR_PENDING,
+                        CertificateVersion.change_reason == REVOCATION_REASON,
+                        BlockchainTransaction.method == "recordProof",
+                        BlockchainTransaction.status
+                        == BlockchainTransactionStatus.CONFIRMED,
+                    )
+                )
+            )

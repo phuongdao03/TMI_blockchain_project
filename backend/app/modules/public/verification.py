@@ -128,6 +128,7 @@ class VerificationContext:
     recognized_subject: str | None = None
     is_current_version: bool = True
     public_work_slug: str | None = None
+    public_author_display_name: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,6 +157,7 @@ class VerificationView:
     recognized_subject: str | None = None
     documents: tuple[PublicEvidenceProof, ...] = ()
     public_work_slug: str | None = None
+    public_author_display_name: str | None = None
 
 
 class VerificationEvaluator:
@@ -297,7 +299,13 @@ class PublicVerificationService:
             if record is None:
                 record = await self._gateway.get_proof(asset_id, context.proof_version)
         except BlockchainGatewayError:
-            status = VerificationStatus.PENDING
+            # Local revocation remains authoritative when the proof network is
+            # temporarily unavailable. The chain only records dossier proofs.
+            status = (
+                VerificationStatus.REVOKED
+                if context.certificate_status is CertificateStatus.REVOKED
+                else VerificationStatus.PENDING
+            )
             network_available = False
         else:
             signer_wallet_address = record.signer or signer_wallet_address
@@ -335,11 +343,12 @@ class PublicVerificationService:
             dossier_code=context.dossier_code,
             metadata_hash=context.metadata_hash,
             block_number=context.block_number,
-            issuer_label="Trung tâm An ninh Công nghệ số – CNS",
+            issuer_label="Đề cử Tinh Hoa Việt",
             signer_wallet_address=signer_wallet_address,
             event_name="ProofRecorded",
             network_available=network_available,
             recognized_subject=context.recognized_subject,
             documents=public_evidence_proofs(context.metadata),
             public_work_slug=context.public_work_slug,
+            public_author_display_name=context.public_author_display_name,
         )

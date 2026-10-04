@@ -99,6 +99,7 @@ class VerificationData(PublicSchema):
     recognized_subject: str | None
     documents: list["PublicEvidenceProofData"]
     public_work_slug: str | None
+    public_author_display_name: str | None
 
 
 class PublicEvidenceProofData(PublicSchema):

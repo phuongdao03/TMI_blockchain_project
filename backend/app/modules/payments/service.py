@@ -1107,7 +1107,7 @@ class PaymentService:
                 title="Thanh toán đã được xác nhận",
                 body=(
                     "Hồ sơ đang được đưa vào quy trình ký blockchain "
-                    "và phát hành chứng thư."
+                    "và phát hành bằng xác lập."
                 ),
                 data_json={
                     "dossierId": str(dossier.id),
