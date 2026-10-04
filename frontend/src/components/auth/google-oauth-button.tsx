@@ -96,9 +96,7 @@ export function GoogleOAuthButton({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
-  const [popupReady, setPopupReady] = useState(
-    () => !firebaseConfigured() || shouldUseMobileRedirect(),
-  );
+  const [popupReady, setPopupReady] = useState(() => !firebaseConfigured());
   const [error, setError] = useState<string>();
 
   const finishSignIn = useCallback(
@@ -122,8 +120,16 @@ export function GoogleOAuthButton({
   );
 
   useEffect(() => {
-    if (!firebaseConfigured() || shouldUseMobileRedirect()) return;
+    if (!firebaseConfigured()) return;
     let active = true;
+    if (shouldUseMobileRedirect()) {
+      queueMicrotask(() => {
+        if (active) setPopupReady(true);
+      });
+      return () => {
+        active = false;
+      };
+    }
     void prepareGooglePopup()
       .catch(() => {
         // A failed warm-up must not permanently hide the sign-in action.

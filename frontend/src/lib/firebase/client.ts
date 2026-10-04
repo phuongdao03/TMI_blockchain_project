@@ -15,6 +15,14 @@ let emulatorConnected = false;
 export function usesSameOriginFirebaseAuth(
   configuredDomain = configuredFirebase.authDomain,
 ): boolean {
+  // Desktop uses the established Firebase popup handler. The proxied helper
+  // is needed for mobile redirect, where storage is partitioned by origin.
+  if (
+    typeof navigator === "undefined" ||
+    !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+  ) {
+    return false;
+  }
   const appUrl = process.env.NEXT_PUBLIC_APP_BASE_URL;
   if (!appUrl) return false;
   try {

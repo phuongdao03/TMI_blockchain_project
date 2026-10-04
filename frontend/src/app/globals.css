@@ -3491,9 +3491,25 @@ html[data-theme="dark"] .public-home {
   color: inherit;
 }
 
+@font-face {
+  font-family: "THV Noto Serif";
+  src: url("/assets/fonts/NotoSerif-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "THV Noto Serif";
+  src: url("/assets/fonts/NotoSerif-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 .digital-certificate__heading,
 .digital-certificate__work-title {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "THV Noto Serif", serif;
 }
 
 .digital-certificate__heading {
@@ -3510,7 +3526,7 @@ html[data-theme="dark"] .public-home {
 .digital-certificate__work-title {
   overflow-wrap: anywhere;
   font-size: clamp(1.55rem, 3.3vw, 2.55rem);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.28;
 }
 
