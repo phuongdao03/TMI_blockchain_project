@@ -3491,6 +3491,29 @@ html[data-theme="dark"] .public-home {
   color: inherit;
 }
 
+.digital-certificate__heading,
+.digital-certificate__work-title {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.digital-certificate__heading {
+  line-height: 1.12;
+}
+
+.digital-certificate__work-panel {
+  min-height: 9rem;
+  border-left: 0.3rem solid #ad8231;
+  background: #f5efd9;
+  padding: 1rem 1.25rem 1.5rem;
+}
+
+.digital-certificate__work-title {
+  overflow-wrap: anywhere;
+  font-size: clamp(1.55rem, 3.3vw, 2.55rem);
+  font-weight: 600;
+  line-height: 1.28;
+}
+
 .verification-panel .border-white\/10,
 .verification-panel .border-white\/15 {
   border-color: var(--theme-border);
@@ -8353,6 +8376,11 @@ html[data-theme="dark"] .mission-section__objectives li {
 .registry-heritage__drum img {
   filter: brightness(0) saturate(100%) invert(78%) sepia(63%) saturate(940%)
     hue-rotate(349deg) brightness(102%);
+}
+
+html[data-theme="light"] .registry-heritage__drum img {
+  filter: brightness(0) saturate(100%) invert(36%) sepia(54%) saturate(1290%)
+    hue-rotate(15deg) brightness(87%);
 }
 
 .registry-heritage__logo {

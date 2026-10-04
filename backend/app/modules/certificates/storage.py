@@ -57,6 +57,8 @@ class CloudinaryCertificateStorage:
     ) -> StoredCertificate:
         import time
 
+        # Cloudinary raw public IDs include the original file extension.
+        public_id = public_id if public_id.endswith(".pdf") else f"{public_id}.pdf"
         timestamp = str(int(time.time()))
         parameters = {
             "access_mode": "authenticated",
@@ -81,10 +83,15 @@ class CloudinaryCertificateStorage:
         )
         response.raise_for_status()
         payload = response.json()
-        if not isinstance(payload, dict) or not isinstance(payload.get("version"), int):
+        if (
+            not isinstance(payload, dict)
+            or not isinstance(payload.get("version"), int)
+            or not isinstance(payload.get("public_id"), str)
+            or not payload["public_id"]
+        ):
             raise RuntimeError("Cloudinary certificate response is invalid.")
         return StoredCertificate(
-            public_id=public_id,
+            public_id=payload["public_id"],
             version=int(payload["version"]),
             bytes=len(content),
             sha256=hashlib.sha256(content).hexdigest(),

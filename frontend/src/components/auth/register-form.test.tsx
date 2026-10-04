@@ -25,6 +25,7 @@ vi.mock("@/lib/firebase/client", () => ({
   firebaseConfigured: () => true,
   getFirebaseAuth: () => ({}),
   prepareGooglePopup: async () => undefined,
+  usesSameOriginFirebaseAuth: () => false,
 }));
 
 vi.mock("firebase/auth", () => ({

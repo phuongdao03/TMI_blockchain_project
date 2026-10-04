@@ -19,6 +19,7 @@ vi.mock("@/lib/firebase/client", () => ({
   firebaseConfigured: () => true,
   getFirebaseAuth: () => ({ name: "firebase-auth" }),
   prepareGooglePopup: async () => undefined,
+  usesSameOriginFirebaseAuth: () => false,
 }));
 vi.mock("firebase/auth", () => ({
   getRedirectResult: vi.fn(async () => null),

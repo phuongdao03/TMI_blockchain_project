@@ -47,7 +47,7 @@ export function DigitalCertificate({ data }: { data: Verification }) {
   }
 
   return (
-    <article className="digital-certificate relative isolate overflow-hidden border border-[#d6b968] bg-[#fffdf5] text-[#261713] shadow-[0_28px_80px_rgba(16,8,5,.24)]">
+    <article className="digital-certificate relative isolate overflow-hidden border-[3px] border-[#71121c] bg-[#fffdf5] p-1.5 text-[#261713] shadow-[0_28px_80px_rgba(16,8,5,.24)]">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10 opacity-55 [background-image:radial-gradient(circle_at_15%_8%,rgba(198,160,65,.18),transparent_28%),linear-gradient(rgba(126,19,27,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(126,19,27,.035)_1px,transparent_1px)] [background-size:auto,24px_24px,24px_24px]"
@@ -56,39 +56,37 @@ export function DigitalCertificate({ data }: { data: Verification }) {
       <Image
         alt=""
         aria-hidden="true"
-        className="pointer-events-none absolute -right-20 top-28 -z-10 size-80 object-contain opacity-[0.07] sm:size-[32rem]"
+        className="pointer-events-none absolute -right-20 top-24 -z-10 size-80 object-contain opacity-[0.13] sm:size-[32rem]"
         height={512}
         src="/assets/brand/trong-dong.png"
         width={512}
       />
 
-      <div className="p-4 sm:p-8 lg:p-12">
-        <header className="flex flex-col items-center gap-3 border-b border-[#d8c798] pb-5 text-center sm:flex-row sm:gap-5 sm:pb-7 sm:text-left">
+      <div className="border border-[#b89543] p-4 sm:p-8 lg:p-12">
+        <header className="flex flex-col items-center border-b-2 border-[#ad8231] pb-6 text-center sm:pb-8">
+          <p className="text-xs font-semibold tracking-[0.16em] text-[#9b7427] uppercase sm:text-sm">
+            Đề cử Tinh Hoa Việt
+          </p>
+          <h2 className="digital-certificate__heading mt-2 text-balance text-3xl font-bold uppercase text-[#2b1714] sm:text-5xl">
+            Bằng xác lập
+          </h2>
           <Image
             alt="Biểu trưng Tinh Hoa Việt"
-            className="size-20 shrink-0 scale-[1.2] [clip-path:circle(40%_at_center)] sm:size-32"
+            className="mt-3 size-24 shrink-0 scale-[1.2] [clip-path:circle(40%_at_center)] sm:size-32"
             height={256}
             src="/assets/brand/logo-tinh-hoa-viet.png"
             width={256}
           />
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold tracking-[0.08em] text-[#765c27] uppercase sm:tracking-[0.14em]">
-              Đề cử Tinh Hoa Việt
-            </p>
-            <h2 className="mt-2 text-balance font-sans text-3xl leading-tight font-bold text-[#2b1714] sm:text-4xl lg:text-5xl">
-              Bằng xác lập
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-[#503d32]">
-              Ghi nhận tác phẩm · Tôn vinh giá trị Việt
-            </p>
-          </div>
+          <p className="mt-3 text-sm leading-6 text-[#503d32]">
+            Ghi nhận tác phẩm · Tôn vinh giá trị Việt
+          </p>
         </header>
 
-        <div className="mt-5 border-l-4 border-[#ad8231] bg-[#f6efdc] px-4 py-3">
-          <p className="text-xs font-bold tracking-[0.08em] text-[#765c27] uppercase">
+        <div className="mt-5 px-1 sm:px-2">
+          <p className="text-xs font-semibold tracking-[0.08em] text-[#9b7427] uppercase">
             Số bằng xác lập
           </p>
-          <p className="mt-1 break-all font-mono text-base font-black text-[#82141d]">
+          <p className="mt-1 break-all font-mono text-base font-semibold text-[#82141d] sm:text-lg">
             {data.certificateNumber}
           </p>
           <p
@@ -99,13 +97,15 @@ export function DigitalCertificate({ data }: { data: Verification }) {
         </div>
 
         <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,1fr)_11rem] lg:items-center lg:gap-12">
-          <section>
-            <p className="text-xs font-bold tracking-[0.08em] text-[#765c27] uppercase sm:tracking-[0.14em]">
-              Tác phẩm được ghi nhận
-            </p>
-            <h3 className="mt-3 text-pretty font-sans text-[1.65rem] leading-tight font-bold text-[#2b1714] sm:text-4xl">
-              {data.assetTitle ?? "Tài sản số đã xác lập"}
-            </h3>
+          <section className="min-w-0">
+            <div className="digital-certificate__work-panel">
+              <p className="text-xs font-semibold tracking-[0.08em] text-[#9b7427] uppercase sm:text-sm">
+                Tác phẩm được ghi nhận
+              </p>
+              <h3 className="digital-certificate__work-title mt-5 text-pretty text-[#2b1714]">
+                {data.assetTitle ?? "Tài sản số đã xác lập"}
+              </h3>
+            </div>
             <dl className="mt-5 grid gap-x-10 gap-y-4 text-sm sm:grid-cols-2">
               {subject || data.publicAuthorDisplayName ? (
                 <CertificateFact

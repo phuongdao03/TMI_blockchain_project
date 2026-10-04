@@ -48,6 +48,7 @@ from app.modules.certificates.types import (
 from app.modules.dossiers.models import DossierStatus, DossierVersion
 from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.workflow import DossierWorkflowService
+from app.modules.media.errors import MediaProviderUnavailableError
 from app.modules.media.gateway import MediaGateway
 from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.public.backfill import PublicWorkDraftBackfill
@@ -175,12 +176,24 @@ class CertificateService:
             byte_count = media.bytes
             digest = media.sha256
             filename = f"{certificate.certificate_number}.pdf"
-        content = await self._media_gateway.download_asset(
-            public_id=public_id,
-            resource_type=resource_type,
-            file_format="pdf",
-            max_bytes=byte_count,
-        )
+        try:
+            content = await self._media_gateway.download_asset(
+                public_id=public_id,
+                resource_type=resource_type,
+                file_format="pdf",
+                max_bytes=byte_count,
+            )
+        except MediaProviderUnavailableError:
+            if resource_type != "raw" or public_id.endswith(".pdf"):
+                raise
+            # Older PDF rows stored the requested ID instead of Cloudinary's
+            # actual raw asset ID, which may have gained the .pdf extension.
+            content = await self._media_gateway.download_asset(
+                public_id=f"{public_id}.pdf",
+                resource_type=resource_type,
+                file_format="pdf",
+                max_bytes=byte_count,
+            )
         if len(content) != byte_count or hashlib.sha256(content).hexdigest() != digest:
             raise CertificateGenerationError("Certificate PDF integrity check failed.")
         return content, filename

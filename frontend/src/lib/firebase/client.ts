@@ -12,10 +12,27 @@ const configuredFirebase = {
 
 let emulatorConnected = false;
 
+export function usesSameOriginFirebaseAuth(
+  configuredDomain = configuredFirebase.authDomain,
+): boolean {
+  const appUrl = process.env.NEXT_PUBLIC_APP_BASE_URL;
+  if (!appUrl) return false;
+  try {
+    const appHostname = new URL(appUrl).hostname;
+    return (
+      process.env.NEXT_PUBLIC_FIREBASE_SAME_ORIGIN_AUTH === "true" ||
+      (appHostname === "decu.tinhhoaviet.org.vn" &&
+        Boolean(configuredDomain?.endsWith(".firebaseapp.com")))
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function resolveFirebaseAuthDomain(
   configuredDomain: string | undefined,
 ): string | undefined {
-  if (process.env.NEXT_PUBLIC_FIREBASE_SAME_ORIGIN_AUTH === "true") {
+  if (usesSameOriginFirebaseAuth(configuredDomain)) {
     const appUrl = process.env.NEXT_PUBLIC_APP_BASE_URL;
     if (appUrl) return new URL(appUrl).hostname;
   }

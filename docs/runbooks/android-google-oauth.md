@@ -1,13 +1,12 @@
-# Android Google OAuth in the installed web app
+# Mobile Google OAuth on the public site
 
 ## Cause
 
-Android opens the Firebase popup helper in a separate browser context. With the
-helper on `tmi-blockchain.firebaseapp.com`, its initial `sessionStorage` state
-can be missing, leaving the user on a blank Firebase page or showing “missing
-initial state”. When the proxy flag is enabled, Android uses Firebase redirect
-in the current window and the helper shares the application origin. iOS keeps
-the popup path that already works.
+Mobile browsers can open the Firebase popup helper in a separate storage
+context. Its initial `sessionStorage` state can then be missing, leaving the
+user on a blank Firebase page or showing “missing initial state”. On the
+canonical production hostname, the app uses the proxied Firebase helper on
+the same origin and redirects in the current window on Android and iOS.
 
 ## Production activation order
 
@@ -23,15 +22,16 @@ the popup path that already works.
    `/__/auth/iframe` returns through the app hostname without a 302 to
    `firebaseapp.com`, and is not served with `X-Frame-Options: DENY` or
    `frame-ancestors 'none'`.
-4. Set GitHub repository variable `NEXT_PUBLIC_FIREBASE_SAME_ORIGIN_AUTH=true`.
-   Keep `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=tmi-blockchain.firebaseapp.com`.
-   Build a new frontend image through Delivery and deploy it. These values are
-   compiled into the frontend; changing only the VPS `.env` is insufficient.
-5. Test Google sign-in and registration from the installed Android app and from
-   Safari on iOS. Confirm the URL returns to `decu.tinhhoaviet.org.vn` and the
-   backend Firebase token exchange completes. Do not use the Firebase helper
-   in a separate Chrome tab as the success criterion.
+4. Keep `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=tmi-blockchain.firebaseapp.com` in the
+   GitHub image build inputs. The canonical hostname
+   `decu.tinhhoaviet.org.vn` uses its same-origin helper automatically.
+   `NEXT_PUBLIC_FIREBASE_SAME_ORIGIN_AUTH=true` enables the same behavior on
+   another hostname after its proxy and OAuth URI are configured. Build a new
+   frontend image through Delivery and deploy it; changing only the VPS `.env`
+   is insufficient.
+5. Test Google sign-in and registration on Android and iOS. Confirm the helper
+   iframe loads from `decu.tinhhoaviet.org.vn`, the URL returns to that host,
+   and the backend Firebase token exchange completes.
 
-The flag defaults to `false` until the OAuth redirect URI and VPS proxy are
-ready. This keeps the existing iOS flow working during the configuration
-change. To roll back, set the GitHub variable to `false`, rebuild, and deploy.
+If the OAuth URI or proxy must be rolled back, restore the previous frontend
+image before removing either production dependency.

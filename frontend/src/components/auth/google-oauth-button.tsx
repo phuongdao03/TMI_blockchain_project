@@ -18,16 +18,17 @@ import {
   getFirebaseAuth,
   firebaseConfigured,
   prepareGooglePopup,
+  usesSameOriginFirebaseAuth,
 } from "@/lib/firebase/client";
 import type { AccountType } from "@/lib/api/types";
 
 const GOOGLE_REDIRECT_PENDING_KEY = "cns.google-oauth.redirect-pending";
 
-function shouldUseAndroidRedirect(): boolean {
+function shouldUseMobileRedirect(): boolean {
   return (
-    process.env.NEXT_PUBLIC_FIREBASE_SAME_ORIGIN_AUTH === "true" &&
+    usesSameOriginFirebaseAuth() &&
     typeof navigator !== "undefined" &&
-    /Android/i.test(navigator.userAgent)
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
   );
 }
 
@@ -96,7 +97,7 @@ export function GoogleOAuthButton({
   const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
   const [popupReady, setPopupReady] = useState(
-    () => !firebaseConfigured() || shouldUseAndroidRedirect(),
+    () => !firebaseConfigured() || shouldUseMobileRedirect(),
   );
   const [error, setError] = useState<string>();
 
@@ -121,7 +122,7 @@ export function GoogleOAuthButton({
   );
 
   useEffect(() => {
-    if (!firebaseConfigured() || shouldUseAndroidRedirect()) return;
+    if (!firebaseConfigured() || shouldUseMobileRedirect()) return;
     let active = true;
     void prepareGooglePopup()
       .catch(() => {
@@ -138,12 +139,14 @@ export function GoogleOAuthButton({
   useEffect(() => {
     if (!firebaseConfigured()) return;
     const redirectWasStarted = hasPendingRedirect();
-    if (!redirectWasStarted) return;
+    if (!redirectWasStarted && !shouldUseMobileRedirect()) return;
     let active = true;
 
-    queueMicrotask(() => {
-      if (active) setIsPending(true);
-    });
+    if (redirectWasStarted) {
+      queueMicrotask(() => {
+        if (active) setIsPending(true);
+      });
+    }
 
     void getRedirectResult(getFirebaseAuth())
       .then(async (credential) => {
@@ -156,10 +159,11 @@ export function GoogleOAuthButton({
         setPendingRedirect(false);
         setIsPending(false);
       })
-      .catch(() => {
+      .catch((cause: unknown) => {
         if (!active) return;
         setPendingRedirect(false);
         setIsPending(false);
+        if (redirectWasStarted) setError(oauthErrorMessage(cause));
       });
 
     return () => {
@@ -177,7 +181,7 @@ export function GoogleOAuthButton({
       const auth = getFirebaseAuth();
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
-      if (shouldUseAndroidRedirect()) {
+      if (shouldUseMobileRedirect()) {
         setPendingRedirect(true);
         await signInWithRedirect(auth, provider);
         return;

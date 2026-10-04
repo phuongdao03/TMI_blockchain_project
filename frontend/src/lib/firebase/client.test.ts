@@ -13,7 +13,14 @@ describe("resolveFirebaseAuthDomain", () => {
     );
   });
 
-  it("keeps the configured Firebase handler domain in production", () => {
+  it("uses the proxied handler on the public production domain", () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_BASE_URL", "https://decu.tinhhoaviet.org.vn");
+    expect(resolveFirebaseAuthDomain("tmi-blockchain.firebaseapp.com")).toBe(
+      "decu.tinhhoaviet.org.vn",
+    );
+  });
+
+  it("keeps the configured handler on other production domains", () => {
     expect(resolveFirebaseAuthDomain("project.firebaseapp.com")).toBe(
       "project.firebaseapp.com",
     );

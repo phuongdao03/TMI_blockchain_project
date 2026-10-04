@@ -26,6 +26,8 @@ vi.mock("@/lib/firebase/client", () => ({
   firebaseConfigured: () => true,
   getFirebaseAuth: () => ({ name: "firebase-auth" }),
   prepareGooglePopup: mocks.prepareGooglePopup,
+  usesSameOriginFirebaseAuth: () =>
+    process.env.NEXT_PUBLIC_FIREBASE_SAME_ORIGIN_AUTH === "true",
 }));
 vi.mock("firebase/auth", () => ({
   GoogleAuthProvider: class {
@@ -59,34 +61,46 @@ describe("GoogleOAuthButton", () => {
     mocks.prepareGooglePopup.mockResolvedValue(undefined);
   });
 
-  it("uses same-origin redirect on Android and completes after returning", async () => {
-    vi.stubEnv("NEXT_PUBLIC_FIREBASE_SAME_ORIGIN_AUTH", "true");
-    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+  it.each([
+    [
+      "Android",
       "Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 Chrome/125 Mobile Safari/537.36",
-    );
-    mocks.signInWithRedirect.mockResolvedValue(undefined);
-    const { unmount } = render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
-    await userEvent.click(screen.getByRole("button", { name: /Google/ }));
-    expect(mocks.signInWithRedirect).toHaveBeenCalledOnce();
-    expect(mocks.signInWithPopup).not.toHaveBeenCalled();
-    expect(sessionStorage.getItem("cns.google-oauth.redirect-pending")).toBe(
-      "1",
-    );
-    unmount();
+    ],
+    [
+      "iPhone",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+    ],
+  ])(
+    "uses same-origin redirect on %s and completes after returning",
+    async (_, agent) => {
+      vi.stubEnv("NEXT_PUBLIC_FIREBASE_SAME_ORIGIN_AUTH", "true");
+      vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(agent);
+      mocks.signInWithRedirect.mockResolvedValue(undefined);
+      const { unmount } = render(
+        <GoogleOAuthButton accountType="PUBLIC_USER" />,
+      );
+      await userEvent.click(screen.getByRole("button", { name: /Google/ }));
+      expect(mocks.signInWithRedirect).toHaveBeenCalledOnce();
+      expect(mocks.signInWithPopup).not.toHaveBeenCalled();
+      expect(sessionStorage.getItem("cns.google-oauth.redirect-pending")).toBe(
+        "1",
+      );
+      unmount();
 
-    mocks.getRedirectResult.mockResolvedValue({
-      user: { getIdToken: vi.fn(async () => "android-token") },
-    });
-    mockExchange("android@cns.vn");
-    // A redirect reloads the page, so mount a fresh button for the return trip.
-    render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
-    await waitFor(() =>
-      expect(mocks.replace).toHaveBeenCalledWith("/dashboard"),
-    );
-    expect(
-      sessionStorage.getItem("cns.google-oauth.redirect-pending"),
-    ).toBeNull();
-  });
+      mocks.getRedirectResult.mockResolvedValue({
+        user: { getIdToken: vi.fn(async () => "mobile-token") },
+      });
+      mockExchange("mobile@cns.vn");
+      // A redirect reloads the page, so mount a fresh button for the return trip.
+      render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
+      await waitFor(() =>
+        expect(mocks.replace).toHaveBeenCalledWith("/dashboard"),
+      );
+      expect(
+        sessionStorage.getItem("cns.google-oauth.redirect-pending"),
+      ).toBeNull();
+    },
+  );
 
   it("waits for the Google popup helper before the first mobile tap", async () => {
     vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
@@ -134,8 +148,6 @@ describe("GoogleOAuthButton", () => {
   ])(
     "finishes Google login or registration on %s without a redirect",
     async (_, agent) => {
-      if (_ === "iPhone")
-        vi.stubEnv("NEXT_PUBLIC_FIREBASE_SAME_ORIGIN_AUTH", "true");
       vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(agent);
       mocks.signInWithPopup.mockResolvedValue({
         user: { getIdToken: vi.fn(async () => "mobile-token") },
@@ -168,6 +180,27 @@ describe("GoogleOAuthButton", () => {
     expect(
       sessionStorage.getItem("cns.google-oauth.redirect-pending"),
     ).toBeNull();
+  });
+
+  it("completes a mobile redirect when the app marker was lost", async () => {
+    vi.stubEnv("NEXT_PUBLIC_FIREBASE_SAME_ORIGIN_AUTH", "true");
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+    );
+    mocks.getRedirectResult.mockResolvedValue({
+      user: { getIdToken: vi.fn(async () => "recovered-token") },
+    });
+    mockExchange("recovered@cns.vn");
+
+    render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
+
+    await waitFor(() =>
+      expect(mocks.setQueryData).toHaveBeenCalledWith(
+        ["auth", "me"],
+        expect.objectContaining({ email: "recovered@cns.vn" }),
+      ),
+    );
+    expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
   });
 
   it("finishes an earlier redirect if the user returns during deployment", async () => {
