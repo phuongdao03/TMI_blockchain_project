@@ -8324,33 +8324,11 @@ html[data-theme="dark"] .mission-section__objectives li {
   scroll-margin-top: 7rem;
 }
 
-.registry-heritage__outline {
-  position: absolute;
-  inset: 7% 8% 15% 2%;
-  border: 1px solid rgb(246 197 21 / 45%);
-}
-
-.registry-heritage__bird,
-.registry-heritage__drum,
 .registry-heritage__logo {
   position: absolute;
   margin: 0;
 }
 
-.registry-heritage__bird {
-  z-index: 2;
-  bottom: 1%;
-  left: 0;
-  width: 34%;
-  aspect-ratio: 1;
-  border: 1px solid rgb(246 197 21 / 60%);
-  padding: 0.5rem;
-  background: #fff8e9;
-  box-shadow: 0 2rem 4rem rgb(24 0 0 / 26%);
-}
-
-.registry-heritage__bird img,
-.registry-heritage__drum img,
 .registry-heritage__logo img {
   display: block;
   width: 100%;
@@ -8362,38 +8340,15 @@ html[data-theme="dark"] .mission-section__objectives li {
   transform: scale(1.23);
 }
 
-.registry-heritage__drum {
-  z-index: 2;
-  right: 0;
-  bottom: 0;
-  width: 35%;
-  aspect-ratio: 1;
-  border: 0;
-  background: transparent;
-  filter: drop-shadow(0 1rem 1.5rem rgb(24 0 0 / 24%));
-}
-
-.registry-heritage__drum img {
-  filter: brightness(0) saturate(100%) invert(78%) sepia(63%) saturate(940%)
-    hue-rotate(349deg) brightness(102%);
-}
-
-html[data-theme="light"] .registry-heritage__drum img {
-  filter: brightness(0) saturate(100%) invert(36%) sepia(54%) saturate(1290%)
-    hue-rotate(15deg) brightness(87%);
-}
-
 .registry-heritage__logo {
   z-index: 1;
-  top: 0;
-  left: 14%;
-  width: 72%;
+  top: 50%;
+  left: 50%;
+  width: 78%;
   aspect-ratio: 1;
+  transform: translate(-50%, -50%);
   overflow: hidden;
-  border: 0.2rem solid var(--thv-gold);
   border-radius: 50%;
-  background: #731500;
-  box-shadow: 0 1rem 2rem rgb(24 0 0 / 35%);
 }
 
 html[data-theme="light"] .public-home .registry-hero {
@@ -8535,17 +8490,8 @@ html[data-theme="light"] .public-home .registry-search input::placeholder {
     margin-top: 0;
   }
 
-  .registry-heritage__bird {
-    width: 28%;
-  }
-
-  .registry-heritage__drum {
-    width: 29%;
-  }
-
   .registry-heritage__logo {
-    left: 16.5%;
-    width: 67%;
+    width: 76%;
   }
 }
 
