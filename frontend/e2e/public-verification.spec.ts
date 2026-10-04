@@ -6,7 +6,7 @@ test("certificate issuer stays readable without mobile overflow", async ({
   await page.goto("/verify/demo-token");
   const issuer = page
     .locator(".digital-certificate dd")
-    .filter({ hasText: "Đề cử Tinh Hoa Việt" });
+    .filter({ hasText: /^Đề cử Tinh Hoa Việt$/ });
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await expect(issuer).toBeVisible();
