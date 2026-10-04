@@ -16,15 +16,15 @@ export async function generateMetadata({
       ? `Bằng xác lập ${identifier}`
       : "Xác minh bằng xác lập",
     description:
-      "Kiểm tra bằng xác lập xác lập tài sản số và bằng chứng ghi nhận trên Polygon.",
+      "Xem thông tin tác phẩm và tình trạng của bằng xác lập Tinh Hoa Việt.",
     alternates: certificateNumber
       ? { canonical: `/verify/${encodeURIComponent(identifier)}` }
       : undefined,
     openGraph: certificateNumber
       ? {
-          title: `Bằng xác lập xác lập tài sản số ${identifier}`,
+          title: `Bằng xác lập ${identifier}`,
           description:
-            "Đối chiếu dấu vân tay số và bằng chứng blockchain của Tinh Hoa Việt.",
+            "Xem thông tin tác phẩm và tình trạng của bằng xác lập Tinh Hoa Việt.",
           type: "website",
           url: `/verify/${encodeURIComponent(identifier)}`,
         }

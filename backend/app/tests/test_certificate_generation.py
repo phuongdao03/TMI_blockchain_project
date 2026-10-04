@@ -2,6 +2,8 @@ import hashlib
 from datetime import UTC, datetime
 from uuid import UUID
 
+from reportlab.pdfgen.canvas import Canvas
+
 from app.modules.certificates.metadata import (
     CertificateMetadataBuilder,
     CertificateNumberingService,
@@ -98,3 +100,50 @@ def test_pdf_contains_certificate_fields_qr_and_stable_hash() -> None:
     assert rendered.qr_png.startswith(b"\x89PNG")
     assert rendered.sha256 == hashlib.sha256(rendered.content).hexdigest()
     assert rendered.template_version == "certificate-red-gold-v1"
+
+
+def test_pdf_uses_public_vietnamese_details_without_dates_or_provider(
+    monkeypatch,
+) -> None:
+    import app.modules.certificates.pdf as certificate_pdf
+
+    drawn: list[str] = []
+
+    class RecordingCanvas(Canvas):
+        def drawString(self, x, y, text, *args, **kwargs):
+            drawn.append(text)
+            return super().drawString(x, y, text, *args, **kwargs)
+
+        def drawCentredString(self, x, y, text, *args, **kwargs):
+            drawn.append(text)
+            return super().drawCentredString(x, y, text, *args, **kwargs)
+
+    monkeypatch.setattr(certificate_pdf, "Canvas", RecordingCanvas)
+    renderer = CertificatePdfRenderer(template_version="v3", generator_version="test")
+    renderer.render(
+        metadata={
+            "certificateNumber": "THV-2026-7EAEC2D2C99A",
+            "asset": {
+                "title": "Video chào mừng thương hiệu Đề cử Tinh Hoa Việt",
+                "summary": (
+                    "Tác phẩm giới thiệu vẻ đẹp văn hóa Việt và hành trình đề cử."
+                ),
+                "subject": "Trung tâm Đề cử Tinh Hoa Việt",
+                "category": "Tài sản trí tuệ số",
+            },
+            "issuedAt": "2026-10-04T00:00:00Z",
+            "expiresAt": "2027-10-04T00:00:00Z",
+            "blockchain": {"network": "polygon", "transactionHash": "0x1234"},
+        },
+        verification_url="https://example.test/verify/THV-2026-7EAEC2D2C99A",
+    )
+
+    text = " ".join(drawn)
+    assert "Video chào mừng thương hiệu Đề cử Tinh Hoa Việt" in text
+    assert "Tác phẩm giới thiệu vẻ đẹp văn hóa Việt" in text
+    assert "MÔ TẢ TÁC PHẨM" in text
+    assert "Mạng blockchain Polygon" in text
+    assert "Ghi nhận tác phẩm · Tôn vinh giá trị Việt" in text
+    assert "NGÀY PHÁT HÀNH" not in text
+    assert "NGÀY HẾT HẠN" not in text
+    assert "polygon" not in text

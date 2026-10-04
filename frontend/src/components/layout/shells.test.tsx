@@ -161,9 +161,7 @@ describe("layout shells", () => {
       decodeURIComponent(footerLogos[0]?.getAttribute("src") ?? ""),
     ).toContain("/assets/brand/logo-tinh-hoa-viet.png");
     expect(
-      within(publicFooter).getByText(
-        "Phát triển bởi Trung tâm An ninh Công nghệ số – CNS",
-      ),
+      within(publicFooter).getByText("Nền tảng Đề cử Tinh Hoa Việt"),
     ).toBeDefined();
     expect(
       within(publicFooter).getByText(/Viện Những Vấn đề Phát triển/),

@@ -35,9 +35,7 @@ export function BrandMark({
         </span>
       ) : null}
       {showCredit ? (
-        <span className="brand-mark__credit">
-          Phát triển bởi Trung tâm An ninh Công nghệ số – CNS
-        </span>
+        <span className="brand-mark__credit">Nền tảng Đề cử Tinh Hoa Việt</span>
       ) : null}
     </Link>
   );

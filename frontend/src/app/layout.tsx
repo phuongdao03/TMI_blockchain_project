@@ -15,8 +15,8 @@ export const metadata: Metadata = {
   description:
     "Khám phá những đề cử tiêu biểu, câu chuyện giá trị Việt và thông tin minh bạch của chương trình.",
   icons: {
-    icon: "/assets/brand/logo-tinh-hoa-viet.png",
-    apple: "/assets/brand/logo-tinh-hoa-viet.png",
+    icon: "/assets/brand/thv-certificate-seal.png",
+    apple: "/assets/brand/thv-certificate-seal.png",
   },
   appleWebApp: {
     capable: true,

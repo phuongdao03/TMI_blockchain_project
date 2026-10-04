@@ -50,11 +50,9 @@ describe("BrandMark", () => {
     );
   });
 
-  it("adds the CNS attribution only where it is explicitly requested", () => {
+  it("shows the platform credit when requested", () => {
     render(<BrandMark showCredit />);
 
-    expect(
-      screen.getByText("Phát triển bởi Trung tâm An ninh Công nghệ số – CNS"),
-    ).toBeDefined();
+    expect(screen.getByText("Nền tảng Đề cử Tinh Hoa Việt")).toBeDefined();
   });
 });

@@ -366,7 +366,7 @@ function CertificatePanel({
   return (
     <section className="py-6">
       <FileCheck2 className="size-7 text-gold-300" />
-      <h2 className="mt-4 font-bold text-white">Chứng nhận công khai</h2>
+      <h2 className="mt-4 font-bold text-white">Bằng xác lập</h2>
       {certificate ? (
         <>
           <dl className="mt-4 space-y-3 text-sm">
@@ -378,12 +378,6 @@ function CertificatePanel({
             <DataRow
               label="Trạng thái bằng xác lập"
               value={certificate.status}
-            />
-            <DataRow
-              label="Ngày phát hành"
-              value={new Intl.DateTimeFormat("vi-VN").format(
-                new Date(certificate.issuedAt),
-              )}
             />
           </dl>
           <Link

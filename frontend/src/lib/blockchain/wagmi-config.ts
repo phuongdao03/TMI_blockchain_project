@@ -19,7 +19,7 @@ const connectors = [
               process.env.NEXT_PUBLIC_APP_BASE_URL ??
               "https://decu.tinhhoaviet.org.vn",
             icons: [
-              "https://decu.tinhhoaviet.org.vn/assets/brand/logo-tinh-hoa-viet.png",
+              "https://decu.tinhhoaviet.org.vn/assets/brand/thv-certificate-seal.png",
             ],
           },
         }),

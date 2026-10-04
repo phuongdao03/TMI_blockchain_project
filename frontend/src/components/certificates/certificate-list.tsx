@@ -18,12 +18,6 @@ const certificateStatusLabel: Record<CertificateStatus, string> = {
   REVOKED: "Đã thu hồi",
 };
 
-function date(value: string) {
-  return new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(
-    new Date(value),
-  );
-}
-
 export function CertificateList({ page }: { page: number }) {
   const query = useQuery({
     queryKey: ["certificates", page],
@@ -106,8 +100,10 @@ export function CertificateList({ page }: { page: number }) {
               <p className="mt-1 font-semibold">{certificate.categoryName}</p>
             </div>
             <div>
-              <p className="text-xs text-neutral-400">Ngày cấp</p>
-              <p className="mt-1 font-semibold">{date(certificate.issuedAt)}</p>
+              <p className="text-xs text-neutral-400">Phiên bản</p>
+              <p className="mt-1 font-semibold">
+                {certificate.currentVersionNo}
+              </p>
             </div>
           </div>
           <Link

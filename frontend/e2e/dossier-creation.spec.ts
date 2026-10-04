@@ -39,11 +39,11 @@ test("an applicant selects a dossier type and creates a draft", async ({
   await dossierTypes.filter({ hasText: "Tác phẩm văn hóa" }).click();
   await page
     .getByLabel("Chủ sở hữu hoặc tác giả")
-    .fill("Trung tâm an ninh công nghệ số - CNS");
+    .fill("Trung tâm an ninh công nghệ số - THV");
   await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
   await page
     .getByLabel("Tên tài sản hoặc tác phẩm")
-    .fill("Bộ nhận diện thương hiệu CNS");
+    .fill("Bộ nhận diện thương hiệu THV");
   await page
     .getByLabel("Mô tả ngắn")
     .fill("Hồ sơ xác lập nguồn gốc và quyền sở hữu.");

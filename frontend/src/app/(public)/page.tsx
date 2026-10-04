@@ -77,7 +77,7 @@ export default function HomePage() {
         id="gioi-thieu"
       >
         <div className="registry-hero-glow" aria-hidden="true" />
-        <div className="registry-hero__layout mx-auto max-w-[100rem] px-4 py-10 sm:px-6 sm:py-14 lg:min-h-[calc(100dvh-4.5rem)] lg:px-8 lg:py-16 xl:px-14">
+        <div className="registry-hero__layout mx-auto max-w-[100rem] px-4 py-8 sm:px-6 sm:py-14 lg:min-h-[calc(100dvh-4.5rem)] lg:px-8 lg:py-16 xl:px-14">
           <div className="registry-hero__intro relative z-10 max-w-[44rem] lg:pt-8">
             <p className="registry-kicker">
               <span aria-hidden="true" className="registry-kicker-dot" />
@@ -87,7 +87,7 @@ export default function HomePage() {
               Suy tôn trí tuệ.{" "}
               <span className="text-gold-300">Lưu truyền di sản.</span>
             </h1>
-            <p className="mt-8 max-w-[41rem] text-base leading-8 text-slate-300 sm:text-lg">
+            <p className="mt-5 max-w-[41rem] text-[0.95rem] leading-7 text-slate-300 sm:mt-8 sm:text-lg sm:leading-8">
               Tinh Hoa Việt giới thiệu những giá trị tiêu biểu của con người, tổ
               chức, tri thức, văn hóa và sáng tạo Việt Nam qua hồ sơ có căn cứ.
               Tại đây, công chúng có thể khám phá đề cử, theo dõi trạng thái xác

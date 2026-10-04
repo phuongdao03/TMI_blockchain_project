@@ -1,7 +1,6 @@
 import hashlib
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 
@@ -28,7 +27,7 @@ class CertificatePdfRenderer:
         "Bằng xác lập ghi nhận thông tin tại thời điểm phát hành. "
         "Bằng không thay thế văn bản xác lập quyền của cơ quan nhà nước."
     )
-    FONT_NAME = "CNS-NotoSans"
+    FONT_NAME = "THV-NotoSans"
 
     @classmethod
     def _fit_text(cls, value: str, *, max_width: float, font_size: float) -> str:
@@ -43,16 +42,35 @@ class CertificatePdfRenderer:
             trimmed = trimmed[:-1]
         return trimmed.rstrip() + "…"
 
-    @staticmethod
-    def _display_date(value: object) -> str:
-        if not isinstance(value, str) or not value:
-            return "Chưa cập nhật"
-        try:
-            return datetime.fromisoformat(value.replace("Z", "+00:00")).strftime(
-                "%d/%m/%Y"
+    @classmethod
+    def _wrap_text(
+        cls, value: str, *, max_width: float, font_size: float, max_lines: int
+    ) -> list[str]:
+        words = value.split()
+        lines: list[str] = []
+        line = ""
+        for word in words:
+            candidate = f"{line} {word}".strip()
+            if pdfmetrics.stringWidth(candidate, cls.FONT_NAME, font_size) <= max_width:
+                line = candidate
+                continue
+            if line:
+                lines.append(line)
+                line = word
+            else:
+                lines.append(
+                    cls._fit_text(word, max_width=max_width, font_size=font_size)
+                )
+                line = ""
+            if len(lines) == max_lines:
+                break
+        if len(lines) < max_lines and line:
+            lines.append(line)
+        if len(lines) == max_lines and " ".join(lines) != " ".join(words):
+            lines[-1] = cls._fit_text(
+                lines[-1] + "…", max_width=max_width, font_size=font_size
             )
-        except ValueError:
-            return value[:24]
+        return lines
 
     def __init__(self, *, template_version: str, generator_version: str) -> None:
         self._template_version = template_version
@@ -98,20 +116,22 @@ class CertificatePdfRenderer:
             pageCompression=1,
             invariant=1,
         )
-        pdf.setFillColor(colors.HexColor("#fffaf0"))
+        pdf.setTitle("Bằng xác lập Tinh Hoa Việt")
+        pdf.setAuthor("Đề cử Tinh Hoa Việt")
+        pdf.setFillColor(colors.HexColor("#fffcf5"))
         pdf.rect(0, 0, width, height, stroke=0, fill=1)
         red = colors.HexColor("#720b17")
         gold = colors.HexColor("#b7882f")
         ink = colors.HexColor("#2b1714")
         muted = colors.HexColor("#725f4f")
         pdf.setFillColor(red)
-        pdf.rect(0, height - 16, width, 16, stroke=0, fill=1)
+        pdf.rect(0, height - 12, width, 12, stroke=0, fill=1)
         pdf.setStrokeColor(red)
-        pdf.setLineWidth(2)
-        pdf.rect(26, 26, width - 52, height - 52, stroke=1, fill=0)
+        pdf.setLineWidth(1.5)
+        pdf.rect(25, 22, width - 50, height - 52, stroke=1, fill=0)
         pdf.setStrokeColor(gold)
-        pdf.setLineWidth(0.8)
-        pdf.rect(33, 33, width - 66, height - 66, stroke=1, fill=0)
+        pdf.setLineWidth(0.7)
+        pdf.rect(31, 28, width - 62, height - 64, stroke=1, fill=0)
 
         logo = (
             Path(__file__).resolve().parents[2]
@@ -119,108 +139,118 @@ class CertificatePdfRenderer:
             / "images"
             / "logo-tinh-hoa-viet.png"
         )
-        pdf.drawImage(
-            str(logo),
-            61,
-            height - 143,
-            width=91,
-            height=91,
-            preserveAspectRatio=True,
-            mask="auto",
-        )
         pdf.setFillColor(gold)
         pdf.setFont(self.FONT_NAME, 10)
-        pdf.drawString(169, height - 75, "ĐỀ CỬ TINH HOA VIỆT")
+        pdf.drawCentredString(width / 2, height - 56, "ĐỀ CỬ TINH HOA VIỆT")
         pdf.setFillColor(ink)
-        pdf.setFont(self.FONT_NAME, 31)
-        pdf.drawString(166, height - 113, "BẰNG XÁC LẬP")
+        pdf.setFont(self.FONT_NAME, 32)
+        pdf.drawCentredString(width / 2, height - 100, "BẰNG XÁC LẬP")
+
+        # The supplied artwork has a square burgundy background. Clip it to the
+        # actual round seal so the square never appears on the certificate.
+        seal_size = 142
+        seal_x = (width - seal_size) / 2
+        seal_y = height - 250
+        pdf.saveState()
+        seal_clip = pdf.beginPath()
+        seal_clip.circle(width / 2, seal_y + seal_size / 2, seal_size * 0.405)
+        pdf.clipPath(seal_clip, stroke=0, fill=0)
+        pdf.drawImage(str(logo), seal_x, seal_y, seal_size, seal_size, mask="auto")
+        pdf.restoreState()
+        pdf.setStrokeColor(gold)
+        pdf.setLineWidth(1.5)
+        pdf.circle(
+            width / 2, seal_y + seal_size / 2, seal_size * 0.405, stroke=1, fill=0
+        )
         pdf.setFillColor(muted)
-        pdf.setFont(self.FONT_NAME, 10)
-        pdf.drawString(
-            169, height - 135, "Ghi nhận giá trị Việt · Kiểm tra độc lập bằng mã QR"
+        pdf.setFont(self.FONT_NAME, 9)
+        pdf.drawCentredString(
+            width / 2,
+            height - 267,
+            "Ghi nhận tác phẩm · Tôn vinh giá trị Việt",
         )
         pdf.setStrokeColor(gold)
-        pdf.line(62, height - 161, width - 62, height - 161)
+        pdf.line(63, height - 283, width - 63, height - 283)
 
         pdf.setFillColor(gold)
-        pdf.setFont(self.FONT_NAME, 9)
-        pdf.drawString(67, height - 188, "SỐ BẰNG XÁC LẬP")
+        pdf.setFont(self.FONT_NAME, 8)
+        pdf.drawString(65, height - 305, "SỐ BẰNG XÁC LẬP")
         pdf.setFillColor(red)
-        pdf.setFont(self.FONT_NAME, 16)
+        pdf.setFont(self.FONT_NAME, 15)
         pdf.drawString(
-            67,
-            height - 210,
+            65,
+            height - 326,
             self._fit_text(
                 str(metadata.get("certificateNumber", "")),
-                max_width=width - 322,
-                font_size=16,
+                max_width=width - 330,
+                font_size=15,
             ),
         )
 
-        fields = (
-            ("TÁC PHẨM ĐƯỢC GHI NHẬN", str(asset.get("title") or "Chưa công bố")),
-            (
-                "TÁC GIẢ / NGƯỜI ĐƯỢC GHI NHẬN",
-                str(asset.get("subject") or "Chưa công bố"),
-            ),
-            ("DANH MỤC", str(asset.get("category") or "Chưa công bố")),
-            ("ĐƠN VỊ ĐỀ CỬ", "Đề cử Tinh Hoa Việt"),
-            ("NGÀY PHÁT HÀNH", self._display_date(metadata.get("issuedAt"))),
-            (
-                "NGÀY HẾT HẠN",
-                self._display_date(metadata["expiresAt"])
-                if metadata.get("expiresAt")
-                else "Không thời hạn",
-            ),
-        )
-        y = height - 258
-        for label, value in fields:
+        def field(label: str, value: str, y: float, *, size: float = 10) -> None:
             pdf.setFillColor(muted)
-            pdf.setFont(self.FONT_NAME, 8)
-            pdf.drawString(67, y, label)
+            pdf.setFont(self.FONT_NAME, 7)
+            pdf.drawString(65, y, label)
             pdf.setFillColor(ink)
-            pdf.setFont(self.FONT_NAME, 12)
+            pdf.setFont(self.FONT_NAME, size)
             pdf.drawString(
-                67,
-                y - 19,
-                self._fit_text(value, max_width=width - 322, font_size=12),
+                65,
+                y - 17,
+                self._fit_text(value, max_width=width - 339, font_size=size),
             )
-            y -= 43
+
+        field(
+            "TÁC PHẨM ĐƯỢC GHI NHẬN",
+            str(asset.get("title") or "Chưa công bố"),
+            241,
+            size=11,
+        )
+        pdf.setFillColor(muted)
+        pdf.setFont(self.FONT_NAME, 7)
+        pdf.drawString(65, 203, "MÔ TẢ TÁC PHẨM")
+        pdf.setFillColor(ink)
+        pdf.setFont(self.FONT_NAME, 8)
+        summary = str(asset.get("summary") or "Chưa có mô tả công khai")
+        for index, line in enumerate(
+            self._wrap_text(summary, max_width=width - 339, font_size=8, max_lines=5)
+        ):
+            pdf.drawString(65, 187 - index * 12, line)
+        field(
+            "TÁC GIẢ / NGƯỜI ĐƯỢC GHI NHẬN",
+            str(asset.get("subject") or "Chưa công bố"),
+            112,
+        )
+        field("DANH MỤC", str(asset.get("category") or "Chưa công bố"), 76)
 
         pdf.setStrokeColor(gold)
-        pdf.line(width - 232, height - 239, width - 232, 98)
+        pdf.line(width - 232, 57, width - 232, 260)
         pdf.setFillColor(muted)
         pdf.setFont(self.FONT_NAME, 8)
-        pdf.drawString(width - 211, height - 257, "QUÉT ĐỂ KIỂM TRA")
+        pdf.drawString(width - 211, 241, "QUÉT ĐỂ KIỂM TRA")
 
         pdf.drawImage(
             ImageReader(BytesIO(qr_png)),
             width - 211,
-            height - 413,
-            width=149,
-            height=149,
+            89,
+            width=132,
+            height=132,
             preserveAspectRatio=True,
             mask="auto",
         )
         pdf.setFillColor(muted)
-        pdf.setFont(self.FONT_NAME, 7)
+        pdf.setFont(self.FONT_NAME, 8)
+        network_label = (
+            "Mạng blockchain Polygon"
+            if str(blockchain.get("network") or "").lower() == "polygon"
+            else "Mạng blockchain"
+        )
+        pdf.drawString(width - 211, 72, network_label)
+        pdf.setFont(self.FONT_NAME, 6)
+        pdf.drawString(65, 37, self.LEGAL_DISCLAIMER)
         pdf.drawString(
             width - 211,
-            height - 437,
-            "Mạng: " + str(blockchain.get("network") or "Đang cập nhật")[:18],
-        )
-        pdf.drawString(67, 75, self.LEGAL_DISCLAIMER)
-        pdf.drawString(
-            67,
-            61,
-            "Mã giao dịch: "
-            + str(blockchain.get("transactionHash") or "Đang cập nhật")[:74],
-        )
-        pdf.setFont(self.FONT_NAME, 6)
-        pdf.drawRightString(
-            width - 67,
-            52,
-            f"{self._template_version} | {self._generator_version}",
+            57,
+            "Mã GD: " + str(blockchain.get("transactionHash") or "Đang cập nhật")[:22],
         )
         pdf.showPage()
         pdf.save()

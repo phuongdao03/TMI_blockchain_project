@@ -48,9 +48,9 @@ test("content admin creates, previews and publishes a sanitized post", async ({
 
 test("content admin previews and publishes a public work", async ({ page }) => {
   await page.goto("/admin/content");
-  await page.getByRole("button", { name: /Di sản số CNS/ }).click();
+  await page.getByRole("button", { name: /Di sản số THV/ }).click();
   await expect(page.getByLabel("Tiêu đề công khai")).toHaveValue(
-    "Di sản số CNS",
+    "Di sản số THV",
   );
   await page.getByRole("button", { name: "Xem trước" }).click();
   await expect(page.getByText(/Tác phẩm số đã hoàn tất/)).toBeVisible();
@@ -70,7 +70,7 @@ test("mobile work preview uses its own width instead of desktop breakpoints", as
 }) => {
   await page.setViewportSize({ width: isMobile ? 390 : 1440, height: 1000 });
   await page.goto("/admin/content");
-  await page.getByRole("button", { name: /Di sản số CNS/ }).click();
+  await page.getByRole("button", { name: /Di sản số THV/ }).click();
   await page
     .getByLabel("Tiêu đề công khai")
     .fill("Video chào mừng thương hiệu ĐỀ CỬ TINH HOA VIỆT");
@@ -123,10 +123,10 @@ test("public work stays readable without horizontal scrolling on phones", async 
 }) => {
   for (const width of [320, 390, 430, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 844 });
-    await page.goto("/works/bo-nhan-dien-cns");
+    await page.goto("/works/video-chao-mung-tinh-hoa-viet");
     const title = page.getByRole("heading", {
       level: 1,
-      name: "Bộ nhận diện CNS",
+      name: "Video chào mừng thương hiệu Đề cử Tinh Hoa Việt",
       exact: true,
     });
     await expect(title).toBeVisible();

@@ -1,13 +1,12 @@
-const LEGACY_DOSSIER_PREFIX = "TMI-";
+const LEGACY_DOSSIER_PREFIXES = ["TMI-", "CNS-"];
 
 /**
- * Shows legacy dossier identifiers under the CNS identity without mutating the
- * signed source record. Certificate numbers themselves are never rewritten
- * here: revoked certificates must remain traceable by their original number.
+ * Avoids displaying old brand codes in the current interface while preserving
+ * the original identifier in the signed source record.
  */
 export function displayCnsDossierCode(code: string | null | undefined): string {
   if (!code) return "";
-  return code.startsWith(LEGACY_DOSSIER_PREFIX)
-    ? `CNS-${code.slice(LEGACY_DOSSIER_PREFIX.length)}`
+  return LEGACY_DOSSIER_PREFIXES.some((prefix) => code.startsWith(prefix))
+    ? "Hồ sơ lưu trữ"
     : code;
 }

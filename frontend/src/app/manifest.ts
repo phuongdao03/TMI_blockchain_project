@@ -17,8 +17,8 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["business", "education", "productivity"],
     icons: [
       {
-        src: "/assets/brand/logo-tinh-hoa-viet.png",
-        sizes: "2048x2048",
+        src: "/assets/brand/thv-certificate-seal.png",
+        sizes: "1254x1254",
         type: "image/png",
         purpose: "any",
       },

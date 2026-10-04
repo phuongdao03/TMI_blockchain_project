@@ -15,6 +15,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 
+import { CertificatePdfViewer } from "@/components/certificates/certificate-pdf-viewer";
 import { Feedback } from "@/components/ui/feedback";
 import { certificateApi, dossierApi } from "@/lib/api/client";
 import type {
@@ -196,6 +197,10 @@ export function CertificateDetail({ id }: { id: string }) {
     );
   }
   const certificate = detail.data.certificate;
+  const networkLabel =
+    certificate.network?.toLowerCase() === "polygon"
+      ? "Mạng blockchain Polygon"
+      : "Mạng blockchain";
 
   async function downloadPdf() {
     try {
@@ -214,7 +219,7 @@ export function CertificateDetail({ id }: { id: string }) {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="mx-auto max-w-7xl space-y-4 sm:space-y-6">
       <Link
         className="inline-flex items-center gap-2 text-sm font-bold text-neutral-600 hover:text-primary-700"
         href="/certificates"
@@ -222,21 +227,21 @@ export function CertificateDetail({ id }: { id: string }) {
         <ArrowLeft className="size-4" /> Quay lại danh sách
       </Link>
 
-      <section className="relative overflow-hidden rounded-[2rem] bg-neutral-950 p-7 text-white shadow-2xl sm:p-10">
+      <section className="relative overflow-hidden rounded-[1.25rem] bg-neutral-950 p-5 text-white shadow-xl sm:rounded-[2rem] sm:p-10 sm:shadow-2xl">
         <div className="absolute -right-20 -top-20 size-72 rounded-full bg-primary-600/20 blur-3xl" />
-        <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div className="relative grid gap-4 sm:gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-amber-300">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.1em] text-amber-300 sm:tracking-[0.2em]">
               <BadgeCheck className="size-4" /> Bằng xác lập tài sản số
             </p>
-            <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight sm:text-4xl">
+            <h1 className="mt-3 max-w-3xl text-2xl font-bold leading-tight tracking-tight sm:mt-4 sm:text-4xl">
               {certificate.assetTitle}
             </h1>
-            <p className="mt-4 font-mono text-sm text-slate-300">
+            <p className="mt-2 break-all font-mono text-sm text-slate-300 sm:mt-4">
               {certificate.certificateNumber}
             </p>
             <button
-              className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#f6c515] px-5 text-sm font-black text-[#3b1114] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#f6c515] px-5 text-sm font-bold text-[#3b1114] disabled:cursor-not-allowed disabled:opacity-50 sm:mt-6 sm:min-h-12 sm:w-auto"
               disabled={!certificate.pdfReady}
               onClick={() => void downloadPdf()}
               type="button"
@@ -253,7 +258,7 @@ export function CertificateDetail({ id }: { id: string }) {
             ) : null}
           </div>
           <div
-            className={`rounded-2xl border px-5 py-4 ${certificate.status === "ACTIVE" ? "border-emerald-400/20 bg-emerald-400/10" : "border-amber-300/25 bg-amber-300/10"}`}
+            className={`rounded-xl border px-4 py-3 sm:rounded-2xl sm:px-5 sm:py-4 ${certificate.status === "ACTIVE" ? "border-emerald-400/20 bg-emerald-400/10" : "border-amber-300/25 bg-amber-300/10"}`}
           >
             <p
               className={`flex items-center gap-2 font-bold ${certificate.status === "ACTIVE" ? "text-emerald-300" : "text-amber-200"}`}
@@ -271,6 +276,18 @@ export function CertificateDetail({ id }: { id: string }) {
           </div>
         </div>
       </section>
+
+      {certificate.pdfReady ? (
+        <CertificatePdfViewer
+          certificateId={id}
+          certificateNumber={certificate.certificateNumber}
+          onDownload={() => void downloadPdf()}
+        />
+      ) : (
+        <div className="grid min-h-48 place-items-center rounded-xl border border-dashed border-neutral-300 bg-white text-sm text-neutral-600">
+          Bản PDF đang được chuẩn bị.
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <section className="rounded-3xl border border-neutral-200 bg-white p-6 sm:p-8">
@@ -379,10 +396,10 @@ export function CertificateDetail({ id }: { id: string }) {
                 />
               </div>
               <div>
-                <h2 className="font-bold">Kiểm tra bằng xác lập độc lập</h2>
+                <h2 className="font-bold">Tra cứu bằng xác lập</h2>
                 <p className="mt-2 text-sm leading-6 text-neutral-600">
-                  Quét QR hoặc mở liên kết để đối chiếu mã toàn vẹn và giao dịch
-                  blockchain. Tài liệu gốc không được đưa lên blockchain.
+                  Xem thông tin ghi nhận và tình trạng hiện tại của bằng xác
+                  lập.
                 </p>
                 <p className="mt-2 break-all font-mono text-xs text-neutral-500">
                   {detail.data.qrPayload}
@@ -393,7 +410,7 @@ export function CertificateDetail({ id }: { id: string }) {
               className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 text-sm font-bold text-white"
               href={`/verify/${encodeURIComponent(certificate.certificateNumber)}`}
             >
-              Kiểm tra công khai <ExternalLink className="size-4" />
+              Mở trang tra cứu <ExternalLink className="size-4" />
             </a>
           </section>
         </div>
@@ -405,7 +422,10 @@ export function CertificateDetail({ id }: { id: string }) {
         </summary>
         <dl className="mt-5 grid gap-4 text-sm md:grid-cols-2">
           {[
-            ["Mạng xác nhận", certificate.network ?? "Đang cập nhật"],
+            [
+              "Mạng xác nhận",
+              certificate.network ? networkLabel : "Đang cập nhật",
+            ],
             ["Mã giao dịch", certificate.transactionHash ?? "Chưa có"],
             ["Mã toàn vẹn", detail.data.metadataHash],
             ["Số lượt xác nhận", String(certificate.confirmations)],

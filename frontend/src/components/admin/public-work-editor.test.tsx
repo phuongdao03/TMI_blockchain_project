@@ -457,7 +457,7 @@ describe("PublicWorkEditor", () => {
     ).toBe("Tiêu đề đã nộp");
   });
 
-  it("identifies works by dossier code and creates the first tag inline", async () => {
+  it("masks legacy dossier codes and creates the first tag inline", async () => {
     vi.mocked(publicWorkAdminApi.tags)
       .mockResolvedValueOnce([])
       .mockResolvedValue([
@@ -471,7 +471,8 @@ describe("PublicWorkEditor", () => {
     const user = userEvent.setup();
     render(<PublicWorkEditor />, { wrapper });
 
-    expect(await screen.findByText("CNS-2026-0042")).toBeTruthy();
+    expect(await screen.findByText("Hồ sơ lưu trữ")).toBeTruthy();
+    expect(screen.queryByText("CNS-2026-0042")).toBeNull();
     expect(screen.queryByText("TMI-2026-0042")).toBeNull();
     await user.click(
       await screen.findByRole("button", { name: /Bản mẫu công khai/ }),

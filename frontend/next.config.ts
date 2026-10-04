@@ -70,6 +70,7 @@ const qrRedirectHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["127.0.0.1"],
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   output: "standalone",
   images: {
@@ -122,6 +123,10 @@ const nextConfig: NextConfig = {
       { source: "/((?!__/auth/).*)", headers: securityHeaders },
       {
         source: "/assets/institution/proposal-2026.pdf",
+        headers: sameOriginPdfHeaders,
+      },
+      {
+        source: "/api/v1/certificates/:id/pdf",
         headers: sameOriginPdfHeaders,
       },
       { source: "/r/:token", headers: qrRedirectHeaders },

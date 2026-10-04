@@ -9,7 +9,7 @@ test("applicant signs in with Firebase email and securely signs out", async ({
   await page.goto("/login?accountType=INDIVIDUAL_APPLICANT");
   await page
     .getByRole("textbox", { name: "Email" })
-    .fill("applicant@cnsgroup.vn");
+    .fill("applicant@tinhhoaviet.org.vn");
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
@@ -63,7 +63,7 @@ test("a public account can choose an applicant profile without a false expired-s
   await page.goto("/login");
   await page
     .getByRole("textbox", { name: "Email" })
-    .fill("applicant@cnsgroup.vn");
+    .fill("applicant@tinhhoaviet.org.vn");
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
@@ -84,7 +84,7 @@ test("email signup sends Firebase verification without exposing internal access"
   await page.goto("/register");
   await page
     .getByRole("textbox", { name: "Email" })
-    .fill("new-applicant@cnsgroup.vn");
+    .fill("new-applicant@tinhhoaviet.org.vn");
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await page.getByLabel("Xác nhận mật khẩu").fill(password);
   await page.getByRole("button", { name: "Đăng ký" }).click();
@@ -104,7 +104,7 @@ test("password recovery uses Firebase one-time action code", async ({
   await page.goto("/forgot-password");
   await page
     .getByRole("textbox", { name: "Email" })
-    .fill("applicant@cnsgroup.vn");
+    .fill("applicant@tinhhoaviet.org.vn");
   await page.getByRole("button", { name: "Gửi hướng dẫn" }).click();
   await expect(page.getByRole("status")).toContainText(
     "Yêu cầu đặt lại mật khẩu đã được tiếp nhận",

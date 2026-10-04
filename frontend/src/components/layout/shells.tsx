@@ -382,7 +382,7 @@ export function PublicShell({
                 Trung tâm Đề cử và Xác lập Tinh Hoa Việt
               </p>
               <p className="public-footer__credit">
-                Phát triển bởi Trung tâm An ninh Công nghệ số – CNS
+                Nền tảng Đề cử Tinh Hoa Việt
               </p>
             </div>
           </div>

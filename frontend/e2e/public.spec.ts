@@ -80,7 +80,7 @@ test("public portal is professional, responsive and verifiable", async ({
   ).toBeVisible();
   await autocomplete.press("ArrowDown");
   await autocomplete.press("Enter");
-  await expect(page).toHaveURL(/\/works\/bo-nhan-dien-cns$/);
+  await expect(page).toHaveURL(/\/works\/video-chao-mung-tinh-hoa-viet$/);
   await page.goto("/works");
   await page.goto("/search?q=bo&category=brand&sort=relevance");
   await expect(
@@ -93,7 +93,7 @@ test("public portal is professional, responsive and verifiable", async ({
     "href",
     /cursor=e2e-next-cursor/,
   );
-  await expect(page.getByText("CNS-2026-7EAEC2D2C99A")).toBeVisible();
+  await expect(page.getByText("THV-2026-7EAEC2D2C99A")).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     "content",
     /noindex/,
@@ -129,19 +129,25 @@ test("public portal is professional, responsive and verifiable", async ({
     await expect(page.getByRole("dialog")).toBeHidden();
   }
 
-  await page.goto("/works/bo-nhan-dien-cns");
+  await page.goto("/works/video-chao-mung-tinh-hoa-viet");
   await expect(
-    page.getByRole("heading", { name: "Bộ nhận diện CNS" }),
+    page.getByRole("heading", {
+      name: "Video chào mừng thương hiệu Đề cử Tinh Hoa Việt",
+    }),
   ).toBeVisible();
-  await expect(page.getByLabel("Bìa mặc định: Bộ nhận diện CNS")).toBeVisible();
+  await expect(
+    page.getByLabel(
+      "Bìa mặc định: Video chào mừng thương hiệu Đề cử Tinh Hoa Việt",
+    ),
+  ).toBeVisible();
   await expect(page.getByText("Thông tin đã được đối chiếu")).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
-    new URL("/works/bo-nhan-dien-cns", page.url()).toString(),
+    new URL("/works/video-chao-mung-tinh-hoa-viet", page.url()).toString(),
   );
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
     "content",
-    /Bộ nhận diện CNS/,
+    /Video chào mừng thương hiệu Đề cử Tinh Hoa Việt/,
   );
   await page.getByRole("button", { name: "QR" }).click();
   await expect(
@@ -150,11 +156,11 @@ test("public portal is professional, responsive and verifiable", async ({
   await expect(page.getByRole("button", { name: "Đóng mã QR" })).toBeFocused();
   await expect(page.getByRole("link", { name: "Mở tác phẩm" })).toHaveAttribute(
     "href",
-    new URL("/works/bo-nhan-dien-cns", page.url()).toString(),
+    new URL("/works/video-chao-mung-tinh-hoa-viet", page.url()).toString(),
   );
   await expect(page.getByRole("link", { name: "Tải ảnh QR" })).toHaveAttribute(
     "href",
-    "/api/v1/public/works/bo-nhan-dien-cns/qr",
+    "/api/v1/public/works/video-chao-mung-tinh-hoa-viet/qr",
   );
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
@@ -175,7 +181,7 @@ test("public portal is professional, responsive and verifiable", async ({
   });
 
   await page.goto("/works/bo-nhan-dien-cu");
-  await expect(page).toHaveURL(/\/works\/bo-nhan-dien-cns$/);
+  await expect(page).toHaveURL(/\/works\/video-chao-mung-tinh-hoa-viet$/);
 
   await page.goto("/works/chia-se-rieng");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
@@ -184,13 +190,25 @@ test("public portal is professional, responsive and verifiable", async ({
   );
 
   await page.goto("/verify");
-  await page.getByLabel("Thông tin cần tra cứu").fill("CNS-2026-7EAEC2D2C99A");
+  await page.getByLabel("Thông tin cần tra cứu").fill("THV-2026-7EAEC2D2C99A");
   await page.getByRole("button", { name: "Kiểm tra" }).click();
   await expect(
     page.getByText(
       "Bằng xác lập có hiệu lực; hồ sơ đã được xác nhận trên blockchain.",
     ),
   ).toBeVisible();
+  const certificateHeading = page.locator(".digital-certificate h2");
+  await expect(certificateHeading).toBeVisible();
+  expect(
+    await certificateHeading.evaluate(
+      (element) => getComputedStyle(element).fontFamily,
+    ),
+  ).not.toMatch(/Georgia|ui-serif/i);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+    ),
+  ).toBe(true);
 
   const robots = await page.request.get("/robots.txt");
   expect(await robots.text()).toContain(
@@ -200,7 +218,7 @@ test("public portal is professional, responsive and verifiable", async ({
   expect(await sitemapIndex.text()).toContain("/sitemaps/works/1.xml");
   const worksSitemap = await page.request.get("/sitemaps/works/1.xml");
   const worksXml = await worksSitemap.text();
-  expect(worksXml).toContain("/works/bo-nhan-dien-cns");
+  expect(worksXml).toContain("/works/video-chao-mung-tinh-hoa-viet");
   expect(worksXml).not.toContain("chia-se-rieng");
 
   expect(consoleProblems).toEqual([]);

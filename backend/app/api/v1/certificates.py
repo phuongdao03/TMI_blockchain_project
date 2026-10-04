@@ -112,9 +112,11 @@ async def download_certificate_pdf(
     certificate_id: UUID,
     principal: CurrentPrincipalDependency,
     service: CertificateServiceDependency,
+    inline: bool = False,
 ) -> StreamingResponse:
     content, filename = await service.download_pdf(principal, certificate_id)
-    disposition = f"attachment; filename*=UTF-8''{quote(filename, safe='')}"
+    disposition_type = "inline" if inline else "attachment"
+    disposition = f"{disposition_type}; filename*=UTF-8''{quote(filename, safe='')}"
     return StreamingResponse(
         iter((content,)),
         media_type="application/pdf",

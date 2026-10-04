@@ -7,14 +7,6 @@ import { useState } from "react";
 import type { Verification } from "@/lib/api/types";
 import { displayCnsDossierCode } from "@/lib/brand/identifiers";
 
-function date(value: string | null): string {
-  if (!value) return "Đang cập nhật";
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "long",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
 function recognizedSubject(value: string | null | undefined): string | null {
   return value === "Chủ thể hồ sơ CNS" ||
     value === "Chủ thể hồ sơ TMI" ||
@@ -30,6 +22,7 @@ export function DigitalCertificate({ data }: { data: Verification }) {
   const workPath = data.publicWorkSlug
     ? `/works/${encodeURIComponent(data.publicWorkSlug)}`
     : null;
+  const subject = recognizedSubject(data.recognizedSubject);
   const valid = data.status === "VALID";
   const statusLabel = {
     VALID: "Đang có hiệu lực",
@@ -69,70 +62,70 @@ export function DigitalCertificate({ data }: { data: Verification }) {
         width={512}
       />
 
-      <div className="p-5 sm:p-8 lg:p-12">
-        <header className="flex flex-col items-center gap-5 border-b border-[#d8c798] pb-7 text-center sm:flex-row sm:text-left">
+      <div className="p-4 sm:p-8 lg:p-12">
+        <header className="flex flex-col items-center gap-3 border-b border-[#d8c798] pb-5 text-center sm:flex-row sm:gap-5 sm:pb-7 sm:text-left">
           <Image
             alt="Biểu trưng Tinh Hoa Việt"
-            className="size-28 shrink-0 object-contain drop-shadow-[0_8px_14px_rgba(100,18,18,.2)] sm:size-32"
+            className="size-20 shrink-0 scale-[1.2] [clip-path:circle(40%_at_center)] sm:size-32"
             height={256}
-            priority
             src="/assets/brand/logo-tinh-hoa-viet.png"
             width={256}
           />
           <div className="min-w-0 flex-1">
-            <p className="text-[0.65rem] font-black tracking-[0.22em] text-[#765c27] uppercase">
-              Đề cử Tinh Hoa Việt · Ghi nhận giá trị Việt
+            <p className="text-xs font-bold tracking-[0.08em] text-[#765c27] uppercase sm:tracking-[0.14em]">
+              Đề cử Tinh Hoa Việt
             </p>
-            <h2 className="mt-2 text-balance font-serif text-3xl leading-tight font-black tracking-[-0.035em] text-[#2b1714] sm:text-4xl lg:text-5xl">
+            <h2 className="mt-2 text-balance font-sans text-3xl leading-tight font-bold text-[#2b1714] sm:text-4xl lg:text-5xl">
               Bằng xác lập
             </h2>
             <p className="mt-2 text-sm leading-6 text-[#503d32]">
-              Thông tin ghi nhận và đường dẫn kiểm tra công khai
+              Ghi nhận tác phẩm · Tôn vinh giá trị Việt
             </p>
           </div>
         </header>
 
-        <div className="mt-6 border-l-4 border-[#ad8231] bg-[#f6efdc] px-4 py-3">
-          <p className="text-[0.65rem] font-black tracking-[0.16em] text-[#765c27] uppercase">
+        <div className="mt-5 border-l-4 border-[#ad8231] bg-[#f6efdc] px-4 py-3">
+          <p className="text-xs font-bold tracking-[0.08em] text-[#765c27] uppercase">
             Số bằng xác lập
           </p>
           <p className="mt-1 break-all font-mono text-base font-black text-[#82141d]">
             {data.certificateNumber}
           </p>
+          <p
+            className={`mt-3 inline-flex items-center gap-2 text-sm font-bold ${valid ? "text-[#245b38]" : "text-[#76530c]"}`}
+          >
+            <ShieldCheck className="size-4" /> {statusLabel}
+          </p>
         </div>
 
-        <div className="grid gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_11rem] lg:items-center lg:gap-12">
+        <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,1fr)_11rem] lg:items-center lg:gap-12">
           <section>
-            <p className="text-[0.68rem] font-black tracking-[0.18em] text-[#765c27] uppercase">
+            <p className="text-xs font-bold tracking-[0.08em] text-[#765c27] uppercase sm:tracking-[0.14em]">
               Tác phẩm được ghi nhận
             </p>
-            <h3 className="mt-3 text-pretty font-serif text-3xl leading-tight font-black text-[#2b1714] sm:text-4xl">
+            <h3 className="mt-3 text-pretty font-sans text-[1.65rem] leading-tight font-bold text-[#2b1714] sm:text-4xl">
               {data.assetTitle ?? "Tài sản số đã xác lập"}
             </h3>
-            <dl className="mt-7 grid gap-x-10 gap-y-5 text-sm sm:grid-cols-2">
-              <CertificateFact
-                label={
-                  recognizedSubject(data.recognizedSubject)
-                    ? "Người được ghi nhận trên bằng"
-                    : "Tác giả công khai của tác phẩm"
-                }
-                value={
-                  recognizedSubject(data.recognizedSubject) ??
-                  data.publicAuthorDisplayName
-                }
-              />
+            <dl className="mt-5 grid gap-x-10 gap-y-4 text-sm sm:grid-cols-2">
+              {subject || data.publicAuthorDisplayName ? (
+                <CertificateFact
+                  label={
+                    subject
+                      ? "Người được ghi nhận trên bằng"
+                      : "Tác giả công khai của tác phẩm"
+                  }
+                  value={subject ?? data.publicAuthorDisplayName}
+                />
+              ) : null}
               <CertificateFact
                 label="Mã tác phẩm"
                 mono
                 value={displayCnsDossierCode(data.dossierCode)}
               />
+              <CertificateFact label="Danh mục" value={data.categoryName} />
               <CertificateFact
                 label="Đơn vị đề cử"
                 value="Đề cử Tinh Hoa Việt"
-              />
-              <CertificateFact
-                label="Ngày ghi nhận"
-                value={date(data.confirmedAt ?? data.issuedAt)}
               />
               <CertificateFact
                 label="Phiên bản"
@@ -141,12 +134,13 @@ export function DigitalCertificate({ data }: { data: Verification }) {
               <CertificateFact
                 label="Mạng ghi nhận"
                 value={
-                  data.network === "polygon" ? "Polygon Mainnet" : data.network
+                  data.network?.toLowerCase() === "polygon"
+                    ? "Mạng blockchain Polygon"
+                    : "Mạng blockchain"
                 }
               />
             </dl>
-            {!recognizedSubject(data.recognizedSubject) &&
-            data.publicAuthorDisplayName ? (
+            {!subject && data.publicAuthorDisplayName ? (
               <p className="mt-5 border-l-2 border-[#ad8231] pl-3 text-xs leading-5 text-[#6d5949]">
                 Tên tác giả lấy từ trang tác phẩm công khai. Bản ghi bằng đã
                 phát hành không được thay đổi.
@@ -161,6 +155,7 @@ export function DigitalCertificate({ data }: { data: Verification }) {
                   alt={`Mã QR kiểm tra bằng xác lập ${data.certificateNumber}`}
                   className="aspect-square size-full object-contain"
                   height={320}
+                  loading="eager"
                   src={`/api/v1/verify/certificate/${encodeURIComponent(data.certificateNumber)}/qr`}
                   onError={() => setFailedQr(data.certificateNumber)}
                   unoptimized
@@ -191,12 +186,6 @@ export function DigitalCertificate({ data }: { data: Verification }) {
             </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-end">
-            <span
-              className={`inline-flex min-h-11 items-center justify-center gap-2 border px-4 text-center text-sm font-black ${valid ? "border-[#9bc8aa] bg-[#edf8f0] text-[#245b38]" : "border-[#d8b66a] bg-[#fff7df] text-[#76530c]"}`}
-            >
-              <ShieldCheck className="size-4" />
-              {statusLabel}
-            </span>
             <button
               className="inline-flex min-h-11 items-center justify-center gap-2 border border-[#b78e4b] bg-transparent px-4 text-sm font-bold text-[#82141d] transition hover:bg-[#f7ecd0] active:translate-y-px"
               onClick={() => void share()}
@@ -236,7 +225,7 @@ function CertificateFact({
 }) {
   return (
     <div className="border-l-2 border-[#e1d5b5] pl-3">
-      <dt className="text-xs font-bold text-[#765c27]">{label}</dt>
+      <dt className="text-sm font-semibold text-[#765c27]">{label}</dt>
       <dd
         className={`mt-1 text-pretty leading-6 font-semibold text-[#2b1714] ${mono ? "break-all font-mono text-xs" : ""}`}
       >

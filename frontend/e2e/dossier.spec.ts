@@ -50,17 +50,20 @@ test("applicant creates, uploads evidence and submits an immutable dossier", asy
     .click();
   await page
     .getByLabel("Chủ sở hữu hoặc tác giả")
-    .fill("Trung tâm an ninh công nghệ số - CNS");
+    .fill("Trung tâm an ninh công nghệ số - THV");
   await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
 
   await page
     .getByLabel("Tên tài sản hoặc tác phẩm")
-    .fill("Bộ nhận diện CNS E2E");
+    .fill("Video chào mừng thương hiệu Đề cử Tinh Hoa Việt E2E");
   await page.getByLabel("Mô tả ngắn").fill("Hồ sơ kiểm thử luồng xác lập.");
   await page.getByRole("button", { name: "Tạo hồ sơ nháp" }).click();
   await expect(page).toHaveURL(/\/dossiers\/9155dbf5-/);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Bộ nhận diện CNS E2E" }),
+    page.getByRole("heading", {
+      level: 1,
+      name: "Video chào mừng thương hiệu Đề cử Tinh Hoa Việt E2E",
+    }),
   ).toBeVisible();
 
   await page.getByRole("button", { name: /Bằng chứng/ }).click();

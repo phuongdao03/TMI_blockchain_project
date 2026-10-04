@@ -71,7 +71,7 @@ test("reviewer reviews each document and submits a criteria verdict", async ({
   );
   await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Hồ sơ thương hiệu CNS" }),
+    page.getByRole("heading", { level: 1, name: "Hồ sơ thương hiệu THV" }),
   ).toBeVisible();
   await expect(page.getByText("Bằng chứng phiên bản đã khóa")).toBeVisible();
   await expect(

@@ -72,8 +72,8 @@ function formatDate(value: string | null) {
 function networkLabel(value: string | null | undefined): string | null {
   if (!value) return null;
   return value.toLowerCase() === "polygon"
-    ? "Polygon (sổ ghi nhận công khai)"
-    : value;
+    ? "Mạng blockchain Polygon"
+    : "Mạng blockchain";
 }
 
 export function VerificationPanel({
@@ -110,16 +110,18 @@ export function VerificationPanel({
   return (
     <div className="verification-panel space-y-8">
       <header className="max-w-3xl">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-gold-300">
-          Tra cứu độc lập
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-gold-300">
+          {token ? "Thông tin công khai" : "Tra cứu độc lập"}
         </p>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-          Kiểm tra bằng xác lập
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-white sm:mt-4 sm:text-4xl">
+          {token ? "Bằng xác lập" : "Kiểm tra bằng xác lập"}
         </h1>
-        <p className="mt-5 text-base leading-7 text-slate-300">
-          Nhập mã được cung cấp để xem tình trạng và thông tin xác nhận đã công
-          bố.
-        </p>
+        {!token ? (
+          <p className="mt-3 text-base leading-7 text-slate-300 sm:mt-5">
+            Nhập mã được cung cấp để xem tình trạng và thông tin xác nhận đã
+            công bố.
+          </p>
+        ) : null}
       </header>
 
       {!token ? (
@@ -178,11 +180,19 @@ export function VerificationPanel({
           </div>
         ) : result.data ? (
           <div className="space-y-8">
-            <VerificationResult data={result.data} />
-
-            {result.data.status !== "NOT_FOUND" ? (
-              <DigitalCertificate data={result.data} />
-            ) : null}
+            {result.data.status === "VALID" ? (
+              <>
+                <DigitalCertificate data={result.data} />
+                <VerificationResult data={result.data} />
+              </>
+            ) : (
+              <>
+                <VerificationResult data={result.data} />
+                {result.data.status !== "NOT_FOUND" ? (
+                  <DigitalCertificate data={result.data} />
+                ) : null}
+              </>
+            )}
 
             {result.data.status !== "NOT_FOUND" ? (
               <div>

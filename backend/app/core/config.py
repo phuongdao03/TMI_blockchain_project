@@ -563,7 +563,7 @@ class Settings(BaseSettings):
     )
     certificate_validity_days: int = Field(default=365, ge=1, le=3_650)
     certificate_template_version: str = Field(
-        default="thv-bang-xac-lap-v2",
+        default="thv-bang-xac-lap-v3",
         min_length=1,
         max_length=64,
     )

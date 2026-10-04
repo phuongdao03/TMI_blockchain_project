@@ -17,8 +17,8 @@ describe("PWA manifest", () => {
     });
     expect(value.icons).toEqual([
       {
-        src: "/assets/brand/logo-tinh-hoa-viet.png",
-        sizes: "2048x2048",
+        src: "/assets/brand/thv-certificate-seal.png",
+        sizes: "1254x1254",
         type: "image/png",
         purpose: "any",
       },

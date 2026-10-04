@@ -56,9 +56,9 @@ test("account page presents profile and permission-aware organization UI", async
     page.getByText("Tệp đã được tải lên và xác minh."),
   ).toBeVisible();
   await page.getByRole("tab", { name: "Tổ chức" }).click();
-  await expect(page.getByLabel("Tên hiển thị")).toHaveValue("CNS Lab");
+  await expect(page.getByLabel("Tên hiển thị")).toHaveValue("THV Lab");
   await expect(
     page.getByRole("button", { name: "Mời thành viên" }),
   ).toBeVisible();
-  await expect(page.getByText("member@cnsgroup.vn")).toBeVisible();
+  await expect(page.getByText("member@tinhhoaviet.org.vn")).toBeVisible();
 });

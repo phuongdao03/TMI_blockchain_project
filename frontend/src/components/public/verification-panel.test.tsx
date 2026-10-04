@@ -32,7 +32,7 @@ describe("VerificationPanel", () => {
     verifyToken.mockResolvedValue({
       status: "VALID",
       checkedAt: "2026-08-12T08:00:00Z",
-      certificateNumber: "CNS-2026-0001",
+      certificateNumber: "THV-2026-0001",
       documents: [],
     });
     certificateVersions.mockResolvedValue([]);
@@ -41,9 +41,9 @@ describe("VerificationPanel", () => {
     await screen.findByText(/Bằng xác lập có hiệu lực/);
     expect(
       screen
-        .getByAltText("Mã QR kiểm tra bằng xác lập CNS-2026-0001")
+        .getByAltText("Mã QR kiểm tra bằng xác lập THV-2026-0001")
         .getAttribute("src"),
-    ).toMatch(/\/api\/v1\/verify\/certificate\/CNS-2026-0001\/qr$/);
+    ).toMatch(/\/api\/v1\/verify\/certificate\/THV-2026-0001\/qr$/);
     expect(screen.queryByText("Đối chiếu tài liệu")).toBeNull();
     expect(screen.queryByLabelText("Chọn tài liệu để đối chiếu")).toBeNull();
     expect(screen.queryByRole("link", { name: /Xem tác phẩm/ })).toBeNull();
@@ -73,9 +73,9 @@ describe("VerificationPanel", () => {
     verifyToken.mockResolvedValue({
       status: "VALID",
       checkedAt: "2026-08-11T08:00:00Z",
-      certificateNumber: "CNS-2026-0001",
+      certificateNumber: "THV-2026-0001",
       dossierCode: "ASSET-001",
-      assetTitle: "Bộ nhận diện CNS",
+      assetTitle: "Video chào mừng thương hiệu Đề cử Tinh Hoa Việt",
       categoryName: "Thiết kế",
       issuedAt: "2026-08-01T08:00:00Z",
       expiresAt: null,
@@ -86,7 +86,7 @@ describe("VerificationPanel", () => {
       confirmations: 32,
       confirmedAt: "2026-08-11T08:00:00Z",
       explorerUrl: "https://polygonscan.com/tx/0xabcd",
-      publicWorkSlug: "bo-nhan-dien-cns",
+      publicWorkSlug: "video-chao-mung-tinh-hoa-viet",
       metadataHash: "ab".repeat(32),
       blockNumber: 123,
       issuerLabel: "Đề cử Tinh Hoa Việt",
@@ -121,8 +121,10 @@ describe("VerificationPanel", () => {
       ),
     ).toBeDefined();
     expect(await screen.findByText("Lịch sử xác nhận")).toBeDefined();
-    expect(screen.getAllByText("Bộ nhận diện CNS")).toHaveLength(2);
-    expect(screen.getByText("Polygon (sổ ghi nhận công khai)")).toBeDefined();
+    expect(
+      screen.getAllByText("Video chào mừng thương hiệu Đề cử Tinh Hoa Việt"),
+    ).toHaveLength(2);
+    expect(screen.getAllByText("Mạng blockchain Polygon")).toHaveLength(2);
     expect(screen.getByText("32 lượt xác nhận từ mạng")).toBeDefined();
     expect(screen.queryByText(/database|role|schema|endpoint/i)).toBeNull();
     expect(screen.getByText("Blockchain là gì?")).toBeDefined();
@@ -133,13 +135,15 @@ describe("VerificationPanel", () => {
       }),
     ).toBeDefined();
     expect(
-      screen.getByText("Đề cử Tinh Hoa Việt · Ghi nhận giá trị Việt"),
+      screen.getByText("Ghi nhận tác phẩm · Tôn vinh giá trị Việt"),
     ).toBeDefined();
     expect(screen.queryByText("Chủ thể hồ sơ CNS")).toBeNull();
     const publicRecord = screen.getByRole("link", {
       name: /Xem tác phẩm/,
     });
-    expect(publicRecord.getAttribute("href")).toBe("/works/bo-nhan-dien-cns");
+    expect(publicRecord.getAttribute("href")).toBe(
+      "/works/video-chao-mung-tinh-hoa-viet",
+    );
     expect(publicRecord.getAttribute("target")).toBeNull();
     expect(screen.getByText("Dấu vân tay số của hồ sơ")).toBeDefined();
     expect(screen.getByText("Mã giao dịch trên blockchain")).toBeDefined();

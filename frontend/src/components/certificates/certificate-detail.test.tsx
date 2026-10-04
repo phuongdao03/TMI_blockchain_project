@@ -18,14 +18,22 @@ vi.mock("@/lib/api/client", () => ({
   dossierApi: { versions: dossierVersionsMock },
 }));
 
+vi.mock("@/components/certificates/certificate-pdf-viewer", () => ({
+  CertificatePdfViewer: ({
+    certificateNumber,
+  }: {
+    certificateNumber: string;
+  }) => <div aria-label="Bằng xác lập PDF">{certificateNumber}.pdf</div>,
+}));
+
 describe("CertificateDetail", () => {
   it("explains version history with user language", async () => {
     getMock.mockResolvedValue({
       certificate: {
         id: "certificate-1",
         dossierId: "dossier-1",
-        certificateNumber: "CNS-2026-0001",
-        assetTitle: "Bộ nhận diện CNS",
+        certificateNumber: "THV-2026-0001",
+        assetTitle: "Video chào mừng Tinh Hoa Việt",
         currentVersionNo: 2,
         status: "ACTIVE",
         pdfReady: true,
@@ -34,7 +42,15 @@ describe("CertificateDetail", () => {
         confirmations: 64,
       },
       metadataHash: "a".repeat(64),
-      qrPayload: "/verify/CNS-2026-0001",
+      metadata: {
+        asset: {
+          title: "Video chào mừng Tinh Hoa Việt",
+          summary: "Tác phẩm lan tỏa vẻ đẹp văn hóa Việt.",
+          subject: "Trung tâm Đề cử Tinh Hoa Việt",
+          category: "Tài sản trí tuệ số",
+        },
+      },
+      qrPayload: "/verify/THV-2026-0001",
     });
     versionsMock.mockResolvedValue([
       {
@@ -74,7 +90,9 @@ describe("CertificateDetail", () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText("Bộ nhận diện CNS")).toBeDefined();
+    expect(
+      await screen.findByText("Video chào mừng Tinh Hoa Việt"),
+    ).toBeDefined();
     expect(screen.getAllByText("Đang có hiệu lực").length).toBeGreaterThan(0);
     expect(screen.getByText("Đã được cập nhật")).toBeDefined();
     expect(screen.getByText("Chưa có thay đổi cần cập nhật")).toBeDefined();
@@ -82,7 +100,13 @@ describe("CertificateDetail", () => {
     expect(
       screen.getByRole("button", { name: /Tải bằng xác lập PDF/i }),
     ).toBeDefined();
+    expect(screen.getByLabelText("Bằng xác lập PDF")).toBeDefined();
+    expect(screen.getByText("THV-2026-0001.pdf")).toBeDefined();
     expect(screen.getByAltText("Mã QR kiểm tra bằng xác lập")).toBeDefined();
+    expect(screen.getByText("Mạng blockchain Polygon")).toBeDefined();
+    expect(screen.queryByTitle("Bằng xác lập THV-2026-0001")).toBeNull();
+    expect(screen.queryByText(/Có thể cuộn và phóng to/)).toBeNull();
+    expect(screen.queryByText("polygon")).toBeNull();
     expect(
       screen.queryByText(/SUPER_ADMIN|database|schema|endpoint/i),
     ).toBeNull();

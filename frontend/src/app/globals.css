@@ -1192,6 +1192,7 @@ html[data-theme="dark"] .proposal-reader-wrap {
   --color-ink-800: var(--color-ink-800);
   --color-gold-300: var(--color-gold-300);
   --font-sans: "Segoe UI", system-ui, ui-sans-serif, sans-serif;
+  --font-serif: "Segoe UI", system-ui, ui-sans-serif, sans-serif;
   --font-mono:
     "JetBrains Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
   --font-weight-bold: 650;
@@ -1698,6 +1699,8 @@ body {
   flex: none;
   aspect-ratio: 1;
   object-fit: contain;
+  clip-path: circle(40% at center);
+  scale: 1.2;
 }
 
 .brand-mark__official-name {
@@ -1716,7 +1719,7 @@ body {
 }
 
 .brand-mark__official-name strong {
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: clamp(0.85rem, 1.1vw, 1.12rem);
   white-space: nowrap;
 }
@@ -8332,6 +8335,10 @@ html[data-theme="dark"] .mission-section__objectives li {
   object-fit: contain;
 }
 
+.registry-heritage__logo img {
+  transform: scale(1.23);
+}
+
 .registry-heritage__drum {
   z-index: 2;
   right: 0;
@@ -8469,12 +8476,26 @@ html[data-theme="light"] .public-home .registry-search input::placeholder {
 }
 
 @media (max-width: 48rem) {
+  .registry-hero__layout {
+    grid-template-areas: "intro" "actions" "visual";
+    align-items: start;
+    gap: 1.25rem;
+  }
+
   .public-home .registry-hero h1 {
     max-width: 16ch;
+    font-size: clamp(2rem, 8.2vw, 2.7rem);
+    line-height: 1.12;
+  }
+
+  .public-home .registry-hero__organization {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    line-height: 1.55;
   }
 
   .registry-visual--heritage {
-    min-height: 21rem;
+    min-height: 18rem;
   }
 
   .registry-heritage {

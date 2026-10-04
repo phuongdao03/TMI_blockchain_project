@@ -17,10 +17,10 @@ describe("CertificateList", () => {
       data: [
         {
           id: "7eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
-          certificateNumber: "CNS-2026-7EAEC2D2C99A",
+          certificateNumber: "THV-2026-7EAEC2D2C99A",
           dossierId: "dossier-id",
           dossierCode: "DOS-1",
-          assetTitle: "Bộ nhận diện CNS",
+          assetTitle: "Video chào mừng Tinh Hoa Việt",
           categoryName: "Thương hiệu",
           currentVersionNo: 1,
           status: "ACTIVE",
@@ -45,7 +45,10 @@ describe("CertificateList", () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText("Bộ nhận diện CNS")).toBeDefined();
+    expect(
+      await screen.findByText("Video chào mừng Tinh Hoa Việt"),
+    ).toBeDefined();
+    expect(screen.queryByText("Ngày cấp")).toBeNull();
     expect(screen.getByText("Có hiệu lực")).toBeDefined();
     expect(screen.queryByText("ACTIVE")).toBeNull();
     expect(

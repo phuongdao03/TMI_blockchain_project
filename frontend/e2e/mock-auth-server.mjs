@@ -1,28 +1,29 @@
 import { createServer } from "node:http";
+import { readFileSync } from "node:fs";
 
 const mockPort = Number(process.env.E2E_MOCK_PORT ?? 4010);
 
 const user = {
   id: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-  email: "owner@cnsgroup.vn",
+  email: "owner@tinhhoaviet.org.vn",
   roles: ["USER"],
   accountType: "INDIVIDUAL_APPLICANT",
 };
 const applicantUser = {
   id: "e57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-  email: "applicant@cnsgroup.vn",
+  email: "applicant@tinhhoaviet.org.vn",
   roles: ["USER"],
   accountType: "INDIVIDUAL_APPLICANT",
 };
 const reviewerUser = {
   id: "f57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-  email: "reviewer@cnsgroup.vn",
+  email: "reviewer@tinhhoaviet.org.vn",
   roles: ["MODERATOR"],
   accountType: null,
 };
 const superAdminUser = {
   id: "a57912cc-714c-4ab5-9fd9-1c5b38cd902b",
-  email: "superadmin@cnsgroup.vn",
+  email: "superadmin@tinhhoaviet.org.vn",
   roles: ["SUPER_ADMIN"],
   permissions: ["users.read", "users.suspend"],
   accountType: null,
@@ -370,9 +371,9 @@ const profile = {
 };
 const organization = {
   id: organizationId,
-  code: "CNS-LAB",
-  legalName: "Công ty TNHH CNS Lab",
-  displayName: "CNS Lab",
+  code: "THV-LAB",
+  legalName: "Công ty TNHH THV Lab",
+  displayName: "THV Lab",
   taxCode: "0312345678",
   status: "ACTIVE",
   ownerUserId: user.id,
@@ -389,7 +390,7 @@ const members = [
   },
   {
     userId: "5f81fa20-ec0a-4393-a90c-bf9c6285766d",
-    email: "member@cnsgroup.vn",
+    email: "member@tinhhoaviet.org.vn",
     roleCode: "MEMBER",
     status: "INVITED",
     joinedAt: null,
@@ -434,11 +435,11 @@ const initialPublicWork = {
   id: publicWorkId,
   dossierId,
   certificateId: "7eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
-  slug: "di-san-so-cns",
-  title: "Di sản số CNS",
+  slug: "di-san-so-tinh-hoa-viet",
+  title: "Di sản số THV",
   shortDescription: "Tác phẩm số đã hoàn tất quy trình xác lập minh bạch.",
   fullDescription: "Một bản giới thiệu công khai chỉ chứa dữ liệu được duyệt.",
-  authorDisplayName: "CNS Studio",
+  authorDisplayName: "Trung tâm Đề cử Tinh Hoa Việt",
   categoryId,
   categoryName: "Thương hiệu",
   tagIds: [],
@@ -453,7 +454,7 @@ const initialPublicWork = {
   checklist: [{ code: "TITLE_REQUIRED", passed: true }],
   sourceVersionNo: 1,
   sourceFields: [
-    { key: "title", label: "Tiêu đề hồ sơ", value: "Di sản số CNS" },
+    { key: "title", label: "Tiêu đề hồ sơ", value: "Di sản số THV" },
     {
       key: "summary",
       label: "Mô tả hồ sơ",
@@ -659,7 +660,7 @@ const server = createServer(async (request, response) => {
         {
           id: "e2e-review-allocation",
           kind: "DOSSIER_REVIEW",
-          objective: "Thẩm định hồ sơ thương hiệu CNS",
+          objective: "Thẩm định hồ sơ thương hiệu THV",
           description: "Đánh giá tài liệu trong hồ sơ được phân công.",
           dossierId: "e2e-dossier",
           dossierVersionId: "e2e-version",
@@ -675,23 +676,24 @@ const server = createServer(async (request, response) => {
     return;
   }
   const publicAsset = {
-    slug: "bo-nhan-dien-cns",
-    title: "Bộ nhận diện CNS",
-    summary: "Hệ thống nhận diện thương hiệu đã được xác lập.",
+    slug: "video-chao-mung-tinh-hoa-viet",
+    title: "Video chào mừng thương hiệu Đề cử Tinh Hoa Việt",
+    summary:
+      "Tác phẩm giới thiệu chương trình Đề cử Tinh Hoa Việt, lan tỏa giá trị văn hóa và tinh thần sáng tạo Việt Nam.",
     categoryCode: "BRAND",
     categoryName: "Thương hiệu",
-    certificateNumber: "CNS-2026-7EAEC2D2C99A",
+    certificateNumber: "THV-2026-7EAEC2D2C99A",
     certificateStatus: "ACTIVE",
     issuedAt: "2026-07-31T00:00:00Z",
     transactionHash: `0x${"34".repeat(32)}`,
   };
   const catalogWork = {
     id: "32324c61-89fd-44c2-b803-67d8cf5f203e",
-    slug: "bo-nhan-dien-cns",
-    title: "Bộ nhận diện CNS",
+    slug: "video-chao-mung-tinh-hoa-viet",
+    title: "Video chào mừng thương hiệu Đề cử Tinh Hoa Việt",
     shortDescription:
       "Hệ thống nhận diện thương hiệu đã được công bố minh bạch.",
-    authorDisplayName: "CNS Studio",
+    authorDisplayName: "Trung tâm Đề cử Tinh Hoa Việt",
     categoryName: "Thương hiệu",
     categorySlug: "brand",
     tags: [{ name: "Tiêu biểu", slug: "featured" }],
@@ -704,16 +706,16 @@ const server = createServer(async (request, response) => {
     ...catalogWork,
     fullDescription:
       "Một câu chuyện công khai dài hơn về giá trị đã được xác lập.",
-    organizationDisplayName: "CNS Group",
+    organizationDisplayName: "Đề cử Tinh Hoa Việt",
     visibility: "PUBLIC",
     certificate: {
-      certificateNumber: "CNS-2026-7EAEC2D2C99A",
+      certificateNumber: "THV-2026-7EAEC2D2C99A",
       status: "ACTIVE",
       issuedAt: "2026-07-31T00:00:00Z",
       expiresAt: null,
     },
     proof: {
-      network: "local",
+      network: "polygon",
       transactionHash: publicAsset.transactionHash,
       status: "CONFIRMED",
       confirmations: 3,
@@ -1143,7 +1145,7 @@ const server = createServer(async (request, response) => {
             authorDisplayName: catalogWork.authorDisplayName,
             categoryName: catalogWork.categoryName,
             categorySlug: catalogWork.categorySlug,
-            certificateNumber: "CNS-2026-7EAEC2D2C99A",
+            certificateNumber: "THV-2026-7EAEC2D2C99A",
             certificateStatus: "ACTIVE",
             publishedAt: catalogWork.publishedAt,
           },
@@ -1164,15 +1166,15 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/public/works/bo-nhan-dien-cns/qr"
+    path === "/api/v1/public/works/video-chao-mung-tinh-hoa-viet/qr"
   ) {
-    const png = Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
-      "base64",
+    const png = readFileSync(
+      new URL("./fixtures/certificate-preview-qr.png", import.meta.url),
     );
     response.writeHead(200, {
       "Cache-Control": "no-store",
-      "Content-Location": "http://127.0.0.1:3100/works/bo-nhan-dien-cns",
+      "Content-Location":
+        "http://127.0.0.1:3100/works/video-chao-mung-tinh-hoa-viet",
       "Content-Type": "image/png",
     });
     response.end(png);
@@ -1195,7 +1197,7 @@ const server = createServer(async (request, response) => {
   if (
     request.method === "POST" &&
     [
-      "/api/v1/public/works/bo-nhan-dien-cns/engagement/views",
+      "/api/v1/public/works/video-chao-mung-tinh-hoa-viet/engagement/views",
       "/api/v1/public/works/chia-se-rieng/engagement/views",
     ].includes(path)
   ) {
@@ -1205,7 +1207,8 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "POST" &&
-    path === "/api/v1/public/works/bo-nhan-dien-cns/engagement/shares"
+    path ===
+      "/api/v1/public/works/video-chao-mung-tinh-hoa-viet/engagement/shares"
   ) {
     send(response, 202, envelope({ accepted: true }));
     return;
@@ -1215,14 +1218,14 @@ const server = createServer(async (request, response) => {
     path === "/api/v1/public/works/bo-nhan-dien-cu"
   ) {
     response.writeHead(308, {
-      Location: "/api/v1/public/works/bo-nhan-dien-cns",
+      Location: "/api/v1/public/works/video-chao-mung-tinh-hoa-viet",
     });
     response.end();
     return;
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/public/works/bo-nhan-dien-cns"
+    path === "/api/v1/public/works/video-chao-mung-tinh-hoa-viet"
   ) {
     send(response, 200, envelope(catalogDetail), {
       "Cache-Control": "no-store",
@@ -1303,7 +1306,7 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/public/assets/bo-nhan-dien-cns"
+    path === "/api/v1/public/assets/video-chao-mung-tinh-hoa-viet"
   ) {
     send(
       response,
@@ -1314,7 +1317,7 @@ const server = createServer(async (request, response) => {
           schemaVersion: 1,
           asset: { title: publicAsset.title },
         },
-        network: "local",
+        network: "polygon",
         contractAddress: `0x${"12".repeat(20)}`,
         confirmations: 3,
       }),
@@ -1323,7 +1326,7 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/verify/certificate/CNS-2026-7EAEC2D2C99A"
+    path === "/api/v1/verify/certificate/THV-2026-7EAEC2D2C99A"
   ) {
     send(
       response,
@@ -1337,17 +1340,18 @@ const server = createServer(async (request, response) => {
         issuedAt: publicAsset.issuedAt,
         expiresAt: null,
         version: 1,
-        network: "local",
+        network: "polygon",
         contractAddress: `0x${"12".repeat(20)}`,
         transactionHash: publicAsset.transactionHash,
         confirmations: 3,
         confirmedAt: "2026-07-31T10:00:00Z",
         explorerUrl: null,
         publicWorkSlug: publicAsset.slug,
-        dossierCode: "CNS-2026-DEMO0001",
+        dossierCode: "THV-2026-DEMO0001",
         metadataHash: "ab".repeat(32),
         blockNumber: 123456,
-        issuerLabel: "CNS Certificate",
+        issuerLabel: "Đề cử Tinh Hoa Việt",
+        recognizedSubject: "Trung tâm Đề cử Tinh Hoa Việt",
         documents: [
           {
             title: "Hồ sơ công khai",
@@ -1362,7 +1366,7 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/verify/certificate/CNS-2026-7EAEC2D2C99A/versions"
+    path === "/api/v1/verify/certificate/THV-2026-7EAEC2D2C99A/versions"
   ) {
     send(
       response,
@@ -1376,7 +1380,7 @@ const server = createServer(async (request, response) => {
           blockNumber: 123456,
           confirmedAt: "2026-07-31T10:00:00Z",
           createdAt: "2026-07-31T09:00:00Z",
-          issuerLabel: "CNS Certificate",
+          issuerLabel: "Đề cử Tinh Hoa Việt",
           documents: [],
         },
       ]),
@@ -1385,11 +1389,10 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
-    path === "/api/v1/verify/certificate/CNS-2026-7EAEC2D2C99A/qr"
+    path === "/api/v1/verify/certificate/THV-2026-7EAEC2D2C99A/qr"
   ) {
-    const png = Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
-      "base64",
+    const png = readFileSync(
+      new URL("./fixtures/certificate-preview-qr.png", import.meta.url),
     );
     response.writeHead(200, {
       "Cache-Control": "public, max-age=86400, immutable",
@@ -1403,7 +1406,7 @@ const server = createServer(async (request, response) => {
     id: "7eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
     certificateNumber: publicAsset.certificateNumber,
     dossierId,
-    dossierCode: "CNS-2026-DEMO0001",
+    dossierCode: "THV-2026-DEMO0001",
     assetTitle: publicAsset.title,
     categoryName: publicAsset.categoryName,
     currentVersionNo: 1,
@@ -1411,12 +1414,46 @@ const server = createServer(async (request, response) => {
     issuedAt: publicAsset.issuedAt,
     expiresAt: "2027-07-31T00:00:00Z",
     pdfReady: true,
-    network: "local",
+    network: "polygon",
     contractAddress: `0x${"12".repeat(20)}`,
     transactionHash: publicAsset.transactionHash,
     blockchainStatus: "CONFIRMED",
     confirmations: 3,
   };
+  if (
+    request.method === "GET" &&
+    path === `/api/v1/certificates/${demoCertificate.id}/pdf` &&
+    authenticated
+  ) {
+    const pdf = readFileSync(
+      new URL("./fixtures/certificate-preview.pdf", import.meta.url),
+    );
+    response.writeHead(200, {
+      "Cache-Control": "private, no-store",
+      "Content-Disposition": "inline; filename=certificate-preview.pdf",
+      "Content-Type": "application/pdf",
+      "Content-Length": pdf.length,
+      "X-Content-Type-Options": "nosniff",
+    });
+    response.end(pdf);
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === `/api/v1/certificates/${demoCertificate.id}/qr` &&
+    authenticated
+  ) {
+    const png = readFileSync(
+      new URL("./fixtures/certificate-preview-qr.png", import.meta.url),
+    );
+    response.writeHead(200, {
+      "Cache-Control": "private, no-store",
+      "Content-Type": "image/png",
+      "X-Content-Type-Options": "nosniff",
+    });
+    response.end(png);
+    return;
+  }
   if (
     request.method === "GET" &&
     path === "/api/v1/certificates" &&
@@ -1439,11 +1476,13 @@ const server = createServer(async (request, response) => {
           schemaVersion: 1,
           asset: {
             title: publicAsset.title,
-            category: publicAsset.categoryName,
+            summary: publicAsset.summary,
+            category: "Tài sản trí tuệ số",
+            subject: "Trung tâm Đề cử Tinh Hoa Việt",
           },
         },
         metadataHash: "ab".repeat(32),
-        qrPayload: "http://127.0.0.1:3100/verify/demo-token",
+        qrPayload: "/verify/demo-token",
       }),
     );
     return;
@@ -1507,17 +1546,18 @@ const server = createServer(async (request, response) => {
         issuedAt: publicAsset.issuedAt,
         expiresAt: "2027-07-31T00:00:00Z",
         version: 1,
-        network: "local",
+        network: "polygon",
         contractAddress: `0x${"12".repeat(20)}`,
         transactionHash: publicAsset.transactionHash,
         confirmations: 3,
         confirmedAt: "2026-07-31T10:00:00Z",
         explorerUrl: null,
         publicWorkSlug: publicAsset.slug,
-        dossierCode: "CNS-2026-DEMO0001",
+        dossierCode: "THV-2026-DEMO0001",
         metadataHash: "ab".repeat(32),
         blockNumber: 123456,
-        issuerLabel: "CNS Certificate",
+        issuerLabel: "Đề cử Tinh Hoa Việt",
+        recognizedSubject: "Trung tâm Đề cử Tinh Hoa Việt",
         documents: [
           {
             title: "Hồ sơ công khai",
@@ -1533,7 +1573,7 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && path === "/api/e2e/reset-payment") {
     dossier = {
       id: dossierId,
-      code: "CNS-2026-PAYMENT001",
+      code: "THV-2026-PAYMENT001",
       ownerUserId: user.id,
       organizationId: null,
       categoryId,
@@ -1621,7 +1661,7 @@ const server = createServer(async (request, response) => {
       expiresAt: "2026-08-01T08:15:00Z",
       paidAt: null,
       checkoutUrl: "http://127.0.0.1:4010/mock-checkout",
-      qrPayload: "CNS|PAY-2026-E2E00003",
+      qrPayload: "THV|PAY-2026-E2E00003",
       createdAt: "2026-08-01T08:00:00Z",
       updatedAt: "2026-08-01T08:00:00Z",
     };
@@ -1656,8 +1696,8 @@ const server = createServer(async (request, response) => {
         ? "https://pay.payos.vn/web/payos-provider-confirmed"
         : "https://pay.payos.vn/web/payos-provider-pending",
       qrPayload: confirmedScenario
-        ? "CNS|PAY-2026-E2E00005"
-        : "CNS|PAY-2026-E2E00004",
+        ? "THV|PAY-2026-E2E00005"
+        : "THV|PAY-2026-E2E00004",
       createdAt: "2026-08-30T08:00:00Z",
       updatedAt: "2026-08-30T08:00:00Z",
     };
@@ -1667,7 +1707,7 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && path === "/api/e2e/reset-needs-supplement") {
     dossier = {
       id: dossierId,
-      code: "CNS-2026-SUPPLEMENT001",
+      code: "THV-2026-SUPPLEMENT001",
       ownerUserId: user.id,
       organizationId: null,
       categoryId,
@@ -2001,7 +2041,7 @@ const server = createServer(async (request, response) => {
       expiresAt: "2026-08-01T08:15:00Z",
       paidAt: null,
       checkoutUrl: "http://127.0.0.1:4010/mock-checkout",
-      qrPayload: "CNS|PAY-2026-E2E00001",
+      qrPayload: "THV|PAY-2026-E2E00001",
       createdAt: "2026-08-01T08:00:00Z",
       updatedAt: "2026-08-01T08:00:00Z",
       description: payload.description,
@@ -2111,7 +2151,7 @@ const server = createServer(async (request, response) => {
       ...paymentOrder,
       checkoutUrl:
         paymentOrder.checkoutUrl ?? "http://127.0.0.1:4010/mock-checkout",
-      qrPayload: paymentOrder.qrPayload ?? `CNS|${paymentOrder.orderCode}`,
+      qrPayload: paymentOrder.qrPayload ?? `THV|${paymentOrder.orderCode}`,
       updatedAt: "2026-08-01T08:00:00Z",
     };
     send(response, 201, envelope(paymentOrder));
@@ -2139,7 +2179,7 @@ const server = createServer(async (request, response) => {
     dossier: {
       id: dossierId,
       code: "HS-2026-REVIEW01",
-      title: "Hồ sơ thương hiệu CNS",
+      title: "Hồ sơ thương hiệu THV",
       summary: "Hồ sơ kiểm thử thẩm định theo kết luận.",
       dossierType: {
         code: "TRADEMARK_PROFILE",
@@ -2224,7 +2264,7 @@ const server = createServer(async (request, response) => {
     dossierId,
     dossierVersionId: reviewVersionId,
     dossierCode: "HS-2026-COUNCIL",
-    dossierTitle: "Hồ sơ thương hiệu số CNS",
+    dossierTitle: "Hồ sơ thương hiệu số THV",
     versionNo: 1,
     decision: councilSessionStatus === "CLOSED" ? "APPROVE" : null,
   };
@@ -2480,7 +2520,7 @@ const server = createServer(async (request, response) => {
         {
           assignment: reviewAssignment,
           dossierCode: "HS-2026-REVIEW01",
-          dossierTitle: "Hồ sơ thương hiệu CNS",
+          dossierTitle: "Hồ sơ thương hiệu THV",
           versionNo: 1,
         },
       ]),
@@ -2501,7 +2541,7 @@ const server = createServer(async (request, response) => {
       envelope({
         assignment: reviewAssignment,
         dossierCode: "HS-2026-REVIEW01",
-        dossierTitle: "Hồ sơ thương hiệu CNS",
+        dossierTitle: "Hồ sơ thương hiệu THV",
         versionNo: 1,
         canonicalHash: visible ? "b".repeat(64) : null,
         snapshotJson: visible ? reviewSnapshot : null,
@@ -2635,7 +2675,7 @@ const server = createServer(async (request, response) => {
     }
     dossier = {
       id: dossierId,
-      code: "CNS-2026-E2E000000001",
+      code: "THV-2026-E2E000000001",
       ownerUserId: user.id,
       organizationId: input.organizationId ?? null,
       categoryId: input.categoryId,
@@ -3244,7 +3284,7 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && path === "/api/v1/auth/login") {
     const credentials = await readJson(request);
     if (
-      credentials.email !== "owner@cnsgroup.vn" ||
+      credentials.email !== "owner@tinhhoaviet.org.vn" ||
       credentials.password !== "correct horse battery staple"
     ) {
       const failure = error(401, "INVALID_CREDENTIALS", "Sai thông tin.");

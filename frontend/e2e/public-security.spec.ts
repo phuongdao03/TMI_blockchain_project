@@ -26,7 +26,7 @@ test("published nominations remain readable without signing in", async ({
 
   const catalog = await page.request.get("/api/v1/public/works");
   const detail = await page.request.get(
-    "/api/v1/public/works/bo-nhan-dien-cns",
+    "/api/v1/public/works/video-chao-mung-tinh-hoa-viet",
   );
   expect(catalog.status()).toBe(200);
   expect(detail.status()).toBe(200);
@@ -36,17 +36,19 @@ test("published nominations remain readable without signing in", async ({
   await expect(
     page.getByRole("link", { name: /Xem đề cử/ }).first(),
   ).toBeVisible();
-  await page.goto("/works/bo-nhan-dien-cns");
-  await expect(page).toHaveURL(/\/works\/bo-nhan-dien-cns$/);
+  await page.goto("/works/video-chao-mung-tinh-hoa-viet");
+  await expect(page).toHaveURL(/\/works\/video-chao-mung-tinh-hoa-viet$/);
   await expect(
-    page.getByRole("heading", { name: "Bộ nhận diện CNS" }),
+    page.getByRole("heading", {
+      name: "Video chào mừng thương hiệu Đề cử Tinh Hoa Việt",
+    }),
   ).toBeVisible();
   expect(authenticationRequests).toEqual([]);
 });
 
 test("public visibility and leakage release gate", async ({ page }) => {
   const visible = await page.request.get(
-    "/api/v1/public/works/bo-nhan-dien-cns",
+    "/api/v1/public/works/video-chao-mung-tinh-hoa-viet",
   );
   expect(visible.status()).toBe(200);
   expect(visible.headers()["cache-control"]).toBe("no-store");
@@ -78,7 +80,7 @@ test("public visibility and leakage release gate", async ({ page }) => {
   const sitemap = await page.request.get("/sitemaps/works/1.xml");
   expect(await sitemap.text()).not.toContain("chia-se-rieng");
 
-  await page.goto("/works/bo-nhan-dien-cns");
+  await page.goto("/works/video-chao-mung-tinh-hoa-viet");
   const html = await page.locator("html").innerHTML();
   for (const field of banned) expect(html).not.toContain(field);
 });

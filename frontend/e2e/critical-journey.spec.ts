@@ -56,11 +56,11 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       .click();
     await page
       .getByLabel("Chủ sở hữu hoặc tác giả")
-      .fill("Trung tâm an ninh công nghệ số - CNS");
+      .fill("Trung tâm an ninh công nghệ số - THV");
     await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
     await page
       .getByLabel("Tên tài sản hoặc tác phẩm")
-      .fill("Bộ nhận diện CNS Critical Journey");
+      .fill("Video chào mừng thương hiệu Đề cử Tinh Hoa Việt Critical Journey");
     await page.getByLabel("Mô tả ngắn").fill("Hồ sơ E2E toàn luồng MVP.");
     const createDossier = page.waitForResponse(
       (response) =>
@@ -157,11 +157,11 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
 
   await test.step("anchored certificate is visible and verifiable", async () => {
     await page.goto("/certificates");
-    await expect(page.getByText("CNS-2026-7EAEC2D2C99A")).toBeVisible();
+    await expect(page.getByText("THV-2026-7EAEC2D2C99A")).toBeVisible();
     await page.goto("/verify");
     await page
       .getByLabel("Thông tin cần tra cứu")
-      .fill("CNS-2026-7EAEC2D2C99A");
+      .fill("THV-2026-7EAEC2D2C99A");
     await page.getByRole("button", { name: "Kiểm tra" }).click();
     await expect(
       page.getByText(
