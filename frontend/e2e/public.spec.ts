@@ -202,9 +202,7 @@ test("public portal is professional, responsive and verifiable", async ({
   const workTitle = page.locator(".digital-certificate__work-title");
   await expect(workTitle).toBeVisible();
   expect(
-    await workTitle.evaluate(
-      (element) => getComputedStyle(element).fontFamily,
-    ),
+    await workTitle.evaluate((element) => getComputedStyle(element).fontFamily),
   ).toMatch(/THV Noto Serif/i);
   await expect
     .poll(() =>
