@@ -27,6 +27,9 @@ export function CertificatePdfViewer({
 }: Props) {
   const [page, setPage] = useState<PDFPageProxy | null>(null);
   const [error, setError] = useState(false);
+  const [pdfAvailable, setPdfAvailable] = useState(false);
+  const [nativeFallback, setNativeFallback] = useState(false);
+  const [reload, setReload] = useState(0);
   const [width, setWidth] = useState(0);
   const [zoom, setZoom] = useState(100);
   const [expanded, setExpanded] = useState(false);
@@ -34,6 +37,7 @@ export function CertificatePdfViewer({
   const readerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pdfUrl = `/api/v1/certificates/${encodeURIComponent(certificateId)}/pdf?inline=1`;
 
   useEffect(() => {
     let disposed = false;
@@ -45,20 +49,27 @@ export function CertificatePdfViewer({
       try {
         setPage(null);
         setError(false);
+        setNativeFallback(false);
+        setPdfAvailable(false);
         const blob = await certificateApi.downloadPdf(certificateId);
         if (disposed) return;
+        setPdfAvailable(true);
 
-        const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-          "pdfjs-dist/build/pdf.worker.min.mjs",
-          import.meta.url,
-        ).toString();
-        loadingTask = pdfjs.getDocument({
-          data: new Uint8Array(await blob.arrayBuffer()),
-        });
-        const document = await loadingTask.promise;
-        const firstPage = await document.getPage(1);
-        if (!disposed) setPage(firstPage);
+        try {
+          const pdfjs = await import("pdfjs-dist");
+          pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+            "pdfjs-dist/build/pdf.worker.min.mjs",
+            import.meta.url,
+          ).toString();
+          loadingTask = pdfjs.getDocument({
+            data: new Uint8Array(await blob.arrayBuffer()),
+          });
+          const pdfDocument = await loadingTask.promise;
+          const firstPage = await pdfDocument.getPage(1);
+          if (!disposed) setPage(firstPage);
+        } catch {
+          if (!disposed) setNativeFallback(true);
+        }
       } catch {
         if (!disposed) setError(true);
       }
@@ -69,7 +80,7 @@ export function CertificatePdfViewer({
       disposed = true;
       if (loadingTask) void loadingTask.destroy();
     };
-  }, [certificateId]);
+  }, [certificateId, reload]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -101,7 +112,14 @@ export function CertificatePdfViewer({
       canvas,
       viewport: page.getViewport({ scale: displayScale * resolution }),
     });
-    void renderTask.promise.catch(() => {});
+    void renderTask.promise.catch((reason: unknown) => {
+      if (
+        reason instanceof Error &&
+        reason.name === "RenderingCancelledException"
+      )
+        return;
+      setNativeFallback(true);
+    });
     return () => renderTask.cancel();
   }, [page, width, zoom]);
 
@@ -213,13 +231,9 @@ export function CertificatePdfViewer({
             <button
               aria-label="Mở PDF trong thẻ mới"
               className={buttonClass}
-              disabled={!page}
+              disabled={!pdfAvailable}
               onClick={() =>
-                window.open(
-                  `/api/v1/certificates/${encodeURIComponent(certificateId)}/pdf?inline=1`,
-                  "_blank",
-                  "noopener,noreferrer",
-                )
+                window.open(pdfUrl, "_blank", "noopener,noreferrer")
               }
               type="button"
             >
@@ -244,10 +258,30 @@ export function CertificatePdfViewer({
         >
           {error ? (
             <div
-              className="grid min-h-48 place-items-center text-center text-sm text-white"
+              className="grid min-h-48 place-items-center gap-3 text-center text-sm text-white"
               role="alert"
             >
-              Không thể mở PDF. Vui lòng tải xuống để xem.
+              <p>Chưa tải được bằng xác lập. Vui lòng thử lại.</p>
+              <button
+                className={buttonClass}
+                onClick={() => setReload((value) => value + 1)}
+                type="button"
+              >
+                Tải lại PDF
+              </button>
+            </div>
+          ) : nativeFallback && pdfAvailable ? (
+            <div className="grid min-h-48 place-content-center gap-3 px-4 text-center text-sm text-white">
+              <p>Bản PDF này cần trình xem của trình duyệt.</p>
+              <a
+                className={buttonClass}
+                href={pdfUrl}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Mở bằng xác lập PDF
+                <ExternalLink aria-hidden="true" className="size-4" />
+              </a>
             </div>
           ) : !page ? (
             <div

@@ -55,7 +55,7 @@ export function AdaptiveVideo({
       if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
         void tryStreaming();
       }
-    }, 12000);
+    }, 6000);
   }
 
   async function tryStreaming() {
@@ -105,19 +105,25 @@ export function AdaptiveVideo({
     <div className="relative grid size-full place-items-center bg-[#1d0e0b]">
       <video
         className={className}
-        controls={active && controls}
+        controls={active && !failed && controls}
         controlsList={controlsList}
         loop={loop}
         muted={muted}
         onError={() => void tryStreaming()}
         onCanPlay={() => {
           if (startupTimeout.current) clearTimeout(startupTimeout.current);
-          if (active)
-            void videoRef.current?.play().catch(() => setFailed(true));
+          if (active) void videoRef.current?.play().catch(() => undefined);
+        }}
+        onPlaying={() => {
+          if (startupTimeout.current) clearTimeout(startupTimeout.current);
+          setFailed(false);
+        }}
+        onStalled={() => {
+          if (!usingStreaming.current) void tryStreaming();
         }}
         playsInline
         poster={poster}
-        preload="none"
+        preload={active ? "metadata" : "none"}
         ref={videoRef}
       >
         <track kind="captions" />

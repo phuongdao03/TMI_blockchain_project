@@ -117,11 +117,13 @@ export function DigitalCertificate({ data }: { data: Verification }) {
                   value={subject ?? data.publicAuthorDisplayName}
                 />
               ) : null}
-              <CertificateFact
-                label="Mã tác phẩm"
-                mono
-                value={displayCnsDossierCode(data.dossierCode)}
-              />
+              {data.dossierCode ? (
+                <CertificateFact
+                  label="Mã hồ sơ đề cử"
+                  mono
+                  value={displayCnsDossierCode(data.dossierCode)}
+                />
+              ) : null}
               <CertificateFact label="Danh mục" value={data.categoryName} />
               <CertificateFact
                 label="Đơn vị đề cử"

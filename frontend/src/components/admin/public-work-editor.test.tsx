@@ -471,7 +471,7 @@ describe("PublicWorkEditor", () => {
     const user = userEvent.setup();
     render(<PublicWorkEditor />, { wrapper });
 
-    expect(await screen.findByText("Hồ sơ lưu trữ")).toBeTruthy();
+    expect(await screen.findByText("THV-2026-0042")).toBeTruthy();
     expect(screen.queryByText("CNS-2026-0042")).toBeNull();
     expect(screen.queryByText("TMI-2026-0042")).toBeNull();
     await user.click(

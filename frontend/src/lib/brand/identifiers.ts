@@ -6,7 +6,8 @@ const LEGACY_DOSSIER_PREFIXES = ["TMI-", "CNS-"];
  */
 export function displayCnsDossierCode(code: string | null | undefined): string {
   if (!code) return "";
-  return LEGACY_DOSSIER_PREFIXES.some((prefix) => code.startsWith(prefix))
-    ? "Hồ sơ lưu trữ"
-    : code;
+  const legacyPrefix = LEGACY_DOSSIER_PREFIXES.find((prefix) =>
+    code.startsWith(prefix),
+  );
+  return legacyPrefix ? `THV-${code.slice(legacyPrefix.length)}` : code;
 }

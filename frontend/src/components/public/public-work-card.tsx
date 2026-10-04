@@ -56,10 +56,14 @@ export function PublicWorkCard({
                 label={work.categoryName}
               />
             )}
-            <span className="absolute inset-0 bg-gradient-to-t from-ink-950/85 via-ink-950/5 to-transparent" />
-            <span className="absolute top-3 left-3 border border-white/20 bg-ink-950 px-2.5 py-1 text-[0.6rem] font-bold tracking-[0.12em] text-white uppercase">
-              {work.categoryName}
-            </span>
+            {work.thumbnailUrl && !imageFailed ? (
+              <>
+                <span className="absolute inset-0 bg-gradient-to-t from-ink-950/85 via-ink-950/5 to-transparent" />
+                <span className="catalog-album-tile__category absolute top-3 left-3 border border-white/20 bg-ink-950 px-2.5 py-1 text-[0.6rem] font-bold tracking-[0.12em] text-white uppercase">
+                  {work.categoryName}
+                </span>
+              </>
+            ) : null}
             <span className="absolute right-3 bottom-3 font-mono text-xs font-bold text-white/75">
               {String(position).padStart(2, "0")}
             </span>

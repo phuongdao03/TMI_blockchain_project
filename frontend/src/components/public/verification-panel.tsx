@@ -283,7 +283,7 @@ function VerificationResult({
         <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
           <Fact label="Bằng xác lập" value={data.certificateNumber} />
           <Fact
-            label="Mã tài sản"
+            label="Mã hồ sơ đề cử"
             value={displayCnsDossierCode(data.dossierCode)}
           />
           <Fact label="Tài sản" value={data.assetTitle} />

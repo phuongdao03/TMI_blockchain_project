@@ -276,7 +276,7 @@ export default function HomePage() {
           <div className="max-w-2xl">
             <ShieldCheck
               aria-hidden="true"
-              className="size-6 text-primary-700"
+              className="home-cta__icon size-6 text-primary-700"
             />
             <h2 className="mt-5 text-3xl font-semibold tracking-tight">
               {preview
