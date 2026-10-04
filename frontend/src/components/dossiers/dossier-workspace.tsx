@@ -819,7 +819,8 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   Kiểm tra & nộp
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-neutral-500">
-                  Kiểm tra lại thông tin và tài liệu trước khi gửi Tinh Hoa Việt xem xét.
+                  Kiểm tra lại thông tin và tài liệu trước khi gửi Tinh Hoa Việt
+                  xem xét.
                 </p>
               </div>
               {missingRequiredRules.length ? (

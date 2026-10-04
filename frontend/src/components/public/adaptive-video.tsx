@@ -112,7 +112,8 @@ export function AdaptiveVideo({
         onError={() => void tryStreaming()}
         onCanPlay={() => {
           if (startupTimeout.current) clearTimeout(startupTimeout.current);
-          if (active) void videoRef.current?.play().catch(() => setFailed(true));
+          if (active)
+            void videoRef.current?.play().catch(() => setFailed(true));
         }}
         playsInline
         poster={poster}
@@ -131,7 +132,11 @@ export function AdaptiveVideo({
           <span className="grid size-16 place-items-center rounded-full border border-white/70 bg-[#680b17]/90 shadow-xl">
             <Play aria-hidden="true" className="ml-1 size-7 fill-current" />
           </span>
-          {failed ? <span className="mt-20 rounded bg-black/70 px-3 py-2 text-sm font-semibold">Video chưa phát được. Chạm để thử lại.</span> : null}
+          {failed ? (
+            <span className="mt-20 rounded bg-black/70 px-3 py-2 text-sm font-semibold">
+              Video chưa phát được. Chạm để thử lại.
+            </span>
+          ) : null}
         </button>
       ) : null}
     </div>

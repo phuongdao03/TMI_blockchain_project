@@ -377,7 +377,11 @@ export function DossierCreateForm() {
                 {[
                   ["PRIVATE", "Riêng tư", "Chỉ chủ hồ sơ và người xử lý"],
                   ["UNLISTED", "Không niêm yết", "Chỉ người có liên kết"],
-                  ["PUBLIC", "Công khai", "Có thể công bố sau cấp bằng xác lập"],
+                  [
+                    "PUBLIC",
+                    "Công khai",
+                    "Có thể công bố sau cấp bằng xác lập",
+                  ],
                 ].map(([value, label, description]) => (
                   <label className="dossier-visibility-option" key={value}>
                     <input

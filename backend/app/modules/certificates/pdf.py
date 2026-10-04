@@ -35,9 +35,11 @@ class CertificatePdfRenderer:
         if pdfmetrics.stringWidth(value, cls.FONT_NAME, font_size) <= max_width:
             return value
         trimmed = value
-        while trimmed and pdfmetrics.stringWidth(
-            trimmed + "…", cls.FONT_NAME, font_size
-        ) > max_width:
+        while (
+            trimmed
+            and pdfmetrics.stringWidth(trimmed + "…", cls.FONT_NAME, font_size)
+            > max_width
+        ):
             trimmed = trimmed[:-1]
         return trimmed.rstrip() + "…"
 

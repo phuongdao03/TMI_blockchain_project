@@ -375,7 +375,10 @@ function CertificatePanel({
               value={certificate.certificateNumber}
               mono
             />
-            <DataRow label="Trạng thái bằng xác lập" value={certificate.status} />
+            <DataRow
+              label="Trạng thái bằng xác lập"
+              value={certificate.status}
+            />
             <DataRow
               label="Ngày phát hành"
               value={new Intl.DateTimeFormat("vi-VN").format(

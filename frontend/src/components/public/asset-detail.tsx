@@ -53,8 +53,8 @@ export function AssetDetail({ slug }: { slug: string }) {
         <section className="rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
           <h2 className="text-xl font-bold">Thông tin công khai</h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-            Đây là thông tin được công bố cùng bằng xác lập. File gốc vẫn nằm trong
-            kho lưu trữ của hệ thống, không được đưa lên blockchain.
+            Đây là thông tin được công bố cùng bằng xác lập. File gốc vẫn nằm
+            trong kho lưu trữ của hệ thống, không được đưa lên blockchain.
           </p>
           <dl className="mt-6 grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-white/10 p-4">

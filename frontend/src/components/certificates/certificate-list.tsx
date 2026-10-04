@@ -33,7 +33,8 @@ export function CertificateList({ page }: { page: number }) {
     return (
       <div className="grid min-h-64 place-items-center rounded-3xl border bg-white">
         <span className="flex items-center gap-2 text-sm font-semibold text-neutral-600">
-          <LoaderCircle className="size-5 animate-spin" /> Đang tải bằng xác lập…
+          <LoaderCircle className="size-5 animate-spin" /> Đang tải bằng xác
+          lập…
         </span>
       </div>
     );
@@ -56,14 +57,18 @@ export function CertificateList({ page }: { page: number }) {
           Bằng xác lập sẽ xuất hiện sau khi hồ sơ hoàn tất lệ phí và được phát
           hành.
         </p>
-        <Link className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-primary-700 px-5 text-sm font-bold text-white" href="/dossiers">
+        <Link
+          className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-primary-700 px-5 text-sm font-bold text-white"
+          href="/dossiers"
+        >
           Theo dõi hồ sơ của tôi
         </Link>
       </div>
     );
   }
   const ordered = [...query.data.data].sort(
-    (left, right) => Number(right.status === "ACTIVE") - Number(left.status === "ACTIVE"),
+    (left, right) =>
+      Number(right.status === "ACTIVE") - Number(left.status === "ACTIVE"),
   );
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -77,7 +82,9 @@ export function CertificateList({ page }: { page: number }) {
             <span className="grid size-11 place-items-center rounded-2xl bg-primary-50 text-primary-700">
               <BadgeCheck className="size-6" />
             </span>
-            <span className={`rounded-full px-3 py-1 text-xs font-bold ${certificate.status === "ACTIVE" ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-bold ${certificate.status === "ACTIVE" ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}
+            >
               {certificateStatusLabel[certificate.status]}
             </span>
           </div>
@@ -89,7 +96,8 @@ export function CertificateList({ page }: { page: number }) {
           </h2>
           {certificate.status === "REVOKED" ? (
             <p className="mt-2 text-sm leading-6 text-[var(--theme-muted)]">
-              Mã cũ được giữ để đối chiếu lịch sử. Hãy dùng bằng THV mới nếu đã được tái cấp.
+              Mã cũ được giữ để đối chiếu lịch sử. Hãy dùng bằng THV mới nếu đã
+              được tái cấp.
             </p>
           ) : null}
           <div className="mt-5 grid grid-cols-2 gap-4 border-t pt-4 text-sm">
@@ -106,7 +114,10 @@ export function CertificateList({ page }: { page: number }) {
             className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary-700 px-4 text-sm font-bold text-white sm:w-auto"
             href={`/certificates/${certificate.id}`}
           >
-            {certificate.status === "ACTIVE" ? "Xem và tải bằng" : "Xem lịch sử"} <ArrowUpRight className="size-4" />
+            {certificate.status === "ACTIVE"
+              ? "Xem và tải bằng"
+              : "Xem lịch sử"}{" "}
+            <ArrowUpRight className="size-4" />
           </Link>
         </article>
       ))}

@@ -54,7 +54,9 @@ export function StaffInvitationForm({
       description="Xác nhận danh tính bằng đúng email đã nhận lời mời để bắt đầu công việc."
       footer={<AuthLink href="/login">Quay lại đăng nhập</AuthLink>}
       title={
-        employee ? "Kích hoạt tài khoản nhân viên" : "Tham gia đội ngũ Tinh Hoa Việt"
+        employee
+          ? "Kích hoạt tài khoản nhân viên"
+          : "Tham gia đội ngũ Tinh Hoa Việt"
       }
     >
       <div className="space-y-5">

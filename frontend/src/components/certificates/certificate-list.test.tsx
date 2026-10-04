@@ -49,7 +49,9 @@ describe("CertificateList", () => {
     expect(screen.getByText("Có hiệu lực")).toBeDefined();
     expect(screen.queryByText("ACTIVE")).toBeNull();
     expect(
-      screen.getByRole("link", { name: /Xem và tải bằng/ }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: /Xem và tải bằng/ })
+        .getAttribute("href"),
     ).toBe("/certificates/7eaec2d2-c99a-42c9-8f1e-71462ba01ea0");
   });
 

@@ -122,8 +122,8 @@ export function DashboardOverview() {
             Việc cần làm
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-neutral-600">
-            Tiếp tục hồ sơ đang dở, theo dõi cập nhật mới nhất và nhận bằng xác lập
-            khi hoàn tất.
+            Tiếp tục hồ sơ đang dở, theo dõi cập nhật mới nhất và nhận bằng xác
+            lập khi hoàn tất.
           </p>
         </div>
       </header>
@@ -175,10 +175,7 @@ export function DashboardOverview() {
         </Link>
       </section>
 
-      <nav
-        aria-label="Lối tắt hồ sơ"
-        className="grid gap-2 sm:grid-cols-3"
-      >
+      <nav aria-label="Lối tắt hồ sơ" className="grid gap-2 sm:grid-cols-3">
         <Link
           className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
           href="/dossiers"

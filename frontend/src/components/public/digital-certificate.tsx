@@ -16,7 +16,9 @@ function date(value: string | null): string {
 }
 
 function recognizedSubject(value: string | null | undefined): string | null {
-  return value === "Chủ thể hồ sơ CNS" || value === "Chủ thể hồ sơ TMI" || value === "Chưa công bố"
+  return value === "Chủ thể hồ sơ CNS" ||
+    value === "Chủ thể hồ sơ TMI" ||
+    value === "Chưa công bố"
     ? null
     : (value ?? null);
 }
@@ -91,8 +93,12 @@ export function DigitalCertificate({ data }: { data: Verification }) {
         </header>
 
         <div className="mt-6 border-l-4 border-[#ad8231] bg-[#f6efdc] px-4 py-3">
-          <p className="text-[0.65rem] font-black tracking-[0.16em] text-[#765c27] uppercase">Số bằng xác lập</p>
-          <p className="mt-1 break-all font-mono text-base font-black text-[#82141d]">{data.certificateNumber}</p>
+          <p className="text-[0.65rem] font-black tracking-[0.16em] text-[#765c27] uppercase">
+            Số bằng xác lập
+          </p>
+          <p className="mt-1 break-all font-mono text-base font-black text-[#82141d]">
+            {data.certificateNumber}
+          </p>
         </div>
 
         <div className="grid gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_11rem] lg:items-center lg:gap-12">
@@ -105,8 +111,15 @@ export function DigitalCertificate({ data }: { data: Verification }) {
             </h3>
             <dl className="mt-7 grid gap-x-10 gap-y-5 text-sm sm:grid-cols-2">
               <CertificateFact
-                label={recognizedSubject(data.recognizedSubject) ? "Người được ghi nhận trên bằng" : "Tác giả công khai của tác phẩm"}
-                value={recognizedSubject(data.recognizedSubject) ?? data.publicAuthorDisplayName}
+                label={
+                  recognizedSubject(data.recognizedSubject)
+                    ? "Người được ghi nhận trên bằng"
+                    : "Tác giả công khai của tác phẩm"
+                }
+                value={
+                  recognizedSubject(data.recognizedSubject) ??
+                  data.publicAuthorDisplayName
+                }
               />
               <CertificateFact
                 label="Mã tác phẩm"
@@ -132,9 +145,11 @@ export function DigitalCertificate({ data }: { data: Verification }) {
                 }
               />
             </dl>
-            {!recognizedSubject(data.recognizedSubject) && data.publicAuthorDisplayName ? (
+            {!recognizedSubject(data.recognizedSubject) &&
+            data.publicAuthorDisplayName ? (
               <p className="mt-5 border-l-2 border-[#ad8231] pl-3 text-xs leading-5 text-[#6d5949]">
-                Tên tác giả lấy từ trang tác phẩm công khai. Bản ghi bằng đã phát hành không được thay đổi.
+                Tên tác giả lấy từ trang tác phẩm công khai. Bản ghi bằng đã
+                phát hành không được thay đổi.
               </p>
             ) : null}
           </section>

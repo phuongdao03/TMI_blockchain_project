@@ -12,7 +12,9 @@ export async function generateMetadata({
   const identifier = decodeURIComponent((await params).token);
   const certificateNumber = isCertificateNumber(identifier);
   return {
-    title: certificateNumber ? `Bằng xác lập ${identifier}` : "Xác minh bằng xác lập",
+    title: certificateNumber
+      ? `Bằng xác lập ${identifier}`
+      : "Xác minh bằng xác lập",
     description:
       "Kiểm tra bằng xác lập xác lập tài sản số và bằng chứng ghi nhận trên Polygon.",
     alternates: certificateNumber

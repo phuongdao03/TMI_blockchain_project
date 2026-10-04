@@ -12,7 +12,9 @@ it("keeps the video unloaded until the visitor chooses to play", () => {
 });
 
 it("starts the optimized video after a tap and falls back to HLS on error", () => {
-  const load = vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => {});
+  const load = vi
+    .spyOn(HTMLMediaElement.prototype, "load")
+    .mockImplementation(() => {});
   const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
   const canPlayType = vi
     .spyOn(HTMLMediaElement.prototype, "canPlayType")
@@ -25,7 +27,9 @@ it("starts the optimized video after a tap and falls back to HLS on error", () =
       />,
     );
     const video = container.querySelector("video")!;
-    fireEvent.click(screen.getByRole("button", { name: "Phát video tác phẩm" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Phát video tác phẩm" }),
+    );
     expect(video.getAttribute("src")).toBe("/optimized.mp4");
     expect(play).toHaveBeenCalled();
     fireEvent.error(video);

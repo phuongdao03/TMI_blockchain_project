@@ -11,8 +11,8 @@ export default function OfflinePage() {
         </p>
         <h1 className="mt-2 text-3xl font-bold">Bạn đang ngoại tuyến</h1>
         <p className="mt-4 leading-7 text-[#685858]">
-          Hãy kiểm tra kết nối mạng rồi thử lại. Vì an toàn, hồ sơ, bằng xác lập và
-          dữ liệu tài khoản không được lưu ngoại tuyến trên thiết bị này.
+          Hãy kiểm tra kết nối mạng rồi thử lại. Vì an toàn, hồ sơ, bằng xác lập
+          và dữ liệu tài khoản không được lưu ngoại tuyến trên thiết bị này.
         </p>
         <Link
           className="mt-7 inline-flex min-h-11 items-center rounded-lg bg-[#8b0000] px-5 font-semibold text-white"

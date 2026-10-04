@@ -101,9 +101,9 @@ export function AdminCertificateManager() {
             Quản lý bằng xác lập
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
-            Tra cứu bằng xác lập đã cấp, kiểm soát nơi hiển thị và theo dõi phiên
-            bản. Bằng xác lập thu hồi vẫn giữ trang xác minh và lịch sử để đối
-            chiếu.
+            Tra cứu bằng xác lập đã cấp, kiểm soát nơi hiển thị và theo dõi
+            phiên bản. Bằng xác lập thu hồi vẫn giữ trang xác minh và lịch sử để
+            đối chiếu.
           </p>
         </div>
         <Link
@@ -325,8 +325,8 @@ export function AdminCertificateManager() {
                     </Link>
                   </div>
                   <p className="mt-2 text-xs leading-5 text-neutral-600">
-                    Thay đổi hiển thị không tự công bố tác phẩm; bằng xác lập vẫn
-                    tra cứu bằng số hoặc liên kết trực tiếp.
+                    Thay đổi hiển thị không tự công bố tác phẩm; bằng xác lập
+                    vẫn tra cứu bằng số hoặc liên kết trực tiếp.
                   </p>
                   {listing.variables?.id === certificate.id &&
                   listing.isError ? (

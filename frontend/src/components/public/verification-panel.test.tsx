@@ -132,7 +132,9 @@ describe("VerificationPanel", () => {
         name: "Biểu trưng Tinh Hoa Việt",
       }),
     ).toBeDefined();
-    expect(screen.getByText("Đề cử Tinh Hoa Việt · Ghi nhận giá trị Việt")).toBeDefined();
+    expect(
+      screen.getByText("Đề cử Tinh Hoa Việt · Ghi nhận giá trị Việt"),
+    ).toBeDefined();
     expect(screen.queryByText("Chủ thể hồ sơ CNS")).toBeNull();
     const publicRecord = screen.getByRole("link", {
       name: /Xem tác phẩm/,

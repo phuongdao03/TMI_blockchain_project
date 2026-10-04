@@ -37,8 +37,8 @@ export default function UserGuidePage() {
           </h1>
           <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300 sm:text-lg">
             Tìm đúng việc cần làm: xem đề cử đã công bố, gửi hồ sơ, theo dõi
-            tiến độ hoặc kiểm tra bằng xác lập. Các bước dưới đây đi theo trình tự
-            sử dụng trên hệ thống.
+            tiến độ hoặc kiểm tra bằng xác lập. Các bước dưới đây đi theo trình
+            tự sử dụng trên hệ thống.
           </p>
         </header>
         <nav
@@ -197,7 +197,8 @@ export default function UserGuidePage() {
           >
             <p>
               Trang tra cứu mở cho mọi người, không cần đăng nhập. Bạn có thể
-              nhập số bằng xác lập, mã giao dịch hoặc quét mã QR trên bằng xác lập.
+              nhập số bằng xác lập, mã giao dịch hoặc quét mã QR trên bằng xác
+              lập.
             </p>
             <Steps
               items={[
@@ -208,8 +209,9 @@ export default function UserGuidePage() {
             />
             <div className="grid gap-5">
               <Note>
-                Mã QR trên bằng xác lập dẫn đến trang xác minh tương ứng. Bản ghi
-                blockchain hỗ trợ đối chiếu dấu vân tay số và lịch sử ghi nhận.
+                Mã QR trên bằng xác lập dẫn đến trang xác minh tương ứng. Bản
+                ghi blockchain hỗ trợ đối chiếu dấu vân tay số và lịch sử ghi
+                nhận.
               </Note>
               <Note>
                 Blockchain không lưu ảnh, video, tệp gốc hoặc tài liệu cá nhân.

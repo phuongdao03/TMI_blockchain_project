@@ -242,7 +242,9 @@ export function CertificateDetail({ id }: { id: string }) {
               type="button"
             >
               <Download aria-hidden="true" className="size-5" />
-              {certificate.pdfReady ? "Tải bằng xác lập PDF" : "PDF đang chuẩn bị"}
+              {certificate.pdfReady
+                ? "Tải bằng xác lập PDF"
+                : "PDF đang chuẩn bị"}
             </button>
             {downloadError ? (
               <p className="mt-3 text-sm text-red-200" role="alert">
@@ -250,10 +252,18 @@ export function CertificateDetail({ id }: { id: string }) {
               </p>
             ) : null}
           </div>
-          <div className={`rounded-2xl border px-5 py-4 ${certificate.status === "ACTIVE" ? "border-emerald-400/20 bg-emerald-400/10" : "border-amber-300/25 bg-amber-300/10"}`}>
-            <p className={`flex items-center gap-2 font-bold ${certificate.status === "ACTIVE" ? "text-emerald-300" : "text-amber-200"}`}>
+          <div
+            className={`rounded-2xl border px-5 py-4 ${certificate.status === "ACTIVE" ? "border-emerald-400/20 bg-emerald-400/10" : "border-amber-300/25 bg-amber-300/10"}`}
+          >
+            <p
+              className={`flex items-center gap-2 font-bold ${certificate.status === "ACTIVE" ? "text-emerald-300" : "text-amber-200"}`}
+            >
               <ShieldCheck className="size-5" />
-              {certificate.status === "ACTIVE" ? "Đang có hiệu lực" : certificate.status === "REVOKED" ? "Đã thu hồi" : "Đã hết hiệu lực"}
+              {certificate.status === "ACTIVE"
+                ? "Đang có hiệu lực"
+                : certificate.status === "REVOKED"
+                  ? "Đã thu hồi"
+                  : "Đã hết hiệu lực"}
             </p>
             <p className="mt-1 text-xs text-emerald-100/70">
               Phiên bản {certificate.currentVersionNo}
@@ -281,7 +291,8 @@ export function CertificateDetail({ id }: { id: string }) {
             className="scroll-mt-24 rounded-3xl border border-neutral-200 bg-white p-6"
           >
             <h2 className="flex items-center gap-2 text-lg font-bold">
-              <RefreshCw className="size-5 text-primary-700" /> Cập nhật bằng xác lập
+              <RefreshCw className="size-5 text-primary-700" /> Cập nhật bằng
+              xác lập
             </h2>
             {openRequest ? (
               <Feedback

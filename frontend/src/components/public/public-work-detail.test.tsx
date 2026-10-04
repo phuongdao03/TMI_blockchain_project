@@ -170,7 +170,9 @@ describe("PublicWorkDetailPage", () => {
     expect(video?.playsInline).toBe(true);
     expect(video?.getAttribute("src")).toBeNull();
     expect(video?.querySelectorAll("source")).toHaveLength(0);
-    expect(screen.getByRole("button", { name: "Phát video tác phẩm" })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Phát video tác phẩm" }),
+    ).toBeDefined();
     expect(screen.getByText("Video chào mừng Tinh hoa Việt")).toBeDefined();
   });
 
