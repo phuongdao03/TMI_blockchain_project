@@ -23,11 +23,8 @@ describe("HomePage", () => {
     expect(
       screen.getByRole("link", { name: "Khám phá đề cử" }).getAttribute("href"),
     ).toBe("/works");
-    expect(
-      screen.getByRole("img", {
-        name: "Họa tiết chim Lạc màu trắng trên nền đỏ",
-      }),
-    ).toBeDefined();
+    expect(document.querySelectorAll(".registry-heritage img")).toHaveLength(1);
+    expect(document.querySelector(".registry-heritage__outline")).toBeNull();
     expect(
       screen.getByRole("img", {
         name: "Biểu trưng Trung tâm Xác lập Tinh Hoa Việt",
@@ -57,11 +54,6 @@ describe("HomePage", () => {
         .getByRole("link", { name: "Xem văn bản thành lập" })
         .getAttribute("href"),
     ).toBe("#van-ban-thanh-lap");
-    expect(
-      screen.getByRole("img", {
-        name: "Họa tiết mặt trống đồng với các vòng hoa văn đồng tâm",
-      }),
-    ).toBeDefined();
     expect(
       screen.getByRole("search", { name: "Tìm kiếm đề cử" }),
     ).toBeDefined();
