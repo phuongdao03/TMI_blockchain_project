@@ -39,7 +39,7 @@ test("applicant sees a task-focused certificate history", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 1, name: "Bộ nhận diện CNS" }),
   ).toBeVisible();
-  await expect(page.getByText("Lịch sử chứng thư")).toBeVisible();
+  await expect(page.getByText("Lịch sử bằng xác lập")).toBeVisible();
   await expect(page.getByText("Đang có hiệu lực").first()).toBeVisible();
   await expect(page.getByText("Chưa có thay đổi cần cập nhật")).toBeVisible();
   await expect(
@@ -48,7 +48,7 @@ test("applicant sees a task-focused certificate history", async ({ page }) => {
   await expect(
     page.getByText("Mã toàn vẹn", { exact: true }),
   ).not.toBeVisible();
-  await expect(page.getByAltText("Mã QR kiểm tra chứng thư")).toBeVisible();
+  await expect(page.getByAltText("Mã QR kiểm tra bằng xác lập")).toBeVisible();
 
   await page.getByText("Xem thông tin đối chiếu nâng cao").click();
   await expect(page.getByText("Mã toàn vẹn", { exact: true })).toBeVisible();

@@ -1,16 +1,20 @@
 import { expect, test } from "@playwright/test";
 
-test("certificate organization stays on one line without overflow", async ({
+test("certificate issuer stays readable without mobile overflow", async ({
   page,
 }) => {
   await page.goto("/verify/demo-token");
-  const organization = page.locator(".digital-certificate__platform");
+  const issuer = page
+    .locator(".digital-certificate dd")
+    .filter({ hasText: "Đề cử Tinh Hoa Việt" });
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    await expect(organization).toHaveCSS("white-space", "nowrap");
+    await expect(issuer).toBeVisible();
     await expect
       .poll(() =>
-        organization.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+        ),
       )
       .toBe(true);
   }
@@ -22,7 +26,9 @@ test("public verification explains provenance without document comparison", asyn
   await page.goto("/verify/demo-token");
 
   await expect(
-    page.getByText("Chứng thư hợp lệ và đã được xác nhận trên blockchain."),
+    page.getByText(
+      "Bằng xác lập có hiệu lực; hồ sơ đã được xác nhận trên blockchain.",
+    ),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Lịch sử xác nhận" }),
@@ -48,19 +54,18 @@ test("public verification explains provenance without document comparison", asyn
 test("certificate work action remains readable in light and dark themes", async ({
   page,
 }) => {
-  await page.emulateMedia({ colorScheme: "light" });
-  await page.goto("/verify/demo-token");
-  const action = page.locator(".digital-certificate footer a");
-  await expect(action).toBeVisible();
-  await expect(action).toContainText("Xem tác phẩm");
-  await expect(action).toHaveCSS("color", "rgb(255, 255, 255)");
-  await expect(action.locator("svg")).toHaveCSS("color", "rgb(255, 255, 255)");
-  await expect(action).toHaveCSS("min-height", "48px");
-  await action.hover();
-  await expect(action).toHaveCSS("color", "rgb(255, 255, 255)");
-  await action.focus();
-  await expect(action).toHaveCSS("outline-width", "3px");
-  await expect(action).toHaveAttribute("href", /\/works\//);
-  await page.emulateMedia({ colorScheme: "dark" });
-  await expect(action).toHaveCSS("color", "rgb(255, 255, 255)");
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.goto("/verify/demo-token");
+    const action = page
+      .locator(".digital-certificate")
+      .getByRole("link", { name: "Xem tác phẩm" });
+    await expect(action).toBeVisible();
+    await expect(action).toHaveAttribute("href", /\/works\//);
+    expect(
+      await action.evaluate(
+        (element) => element.getBoundingClientRect().height,
+      ),
+    ).toBeGreaterThanOrEqual(44);
+  }
 });

@@ -65,7 +65,7 @@ Nếu bước `prepare --apply` từ chối một bằng vì thiếu `recordProo
 - Bộ test backend: 980 đạt, 2 bỏ qua. Các test trọng tâm về tái cấp, tra cứu mã cũ/mới, PDF và trạng thái thu hồi khi blockchain tạm ngừng cũng đạt sau chỉnh sửa cuối.
 - Bộ test frontend: 543 đạt; các test video, bằng xác lập và tải PDF chạy lại đều đạt.
 - Ruff, mypy (401 tệp), TypeScript, ESLint và Next.js production build (65 route) đạt.
-- Đã xem giao diện trang chủ trên viewport điện thoại ở hai chế độ sáng/tối. Chưa kiểm thử nội dung động với dữ liệu production hoặc chạy lệnh tái cấp trên VPS.
+- Đã xem giao diện trang chủ trên viewport điện thoại ở hai chế độ sáng/tối. Các hành trình E2E liên quan đến trang công khai, tra cứu, hồ sơ và dashboard đạt trên Chrome desktop/mobile (21 đạt, 5 bỏ qua theo viewport); chế độ preview đạt 1 test. Chưa kiểm thử nội dung động với dữ liệu production hoặc chạy lệnh tái cấp trên VPS.
 
 ## Giới hạn vận hành
 

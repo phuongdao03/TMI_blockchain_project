@@ -118,7 +118,7 @@ test("viewer dashboard keeps public discovery as its primary action", async ({
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Tra cứu đề cử và chứng thư",
+      name: "Tra cứu đề cử và bằng xác lập",
     }),
   ).toBeVisible();
   await expect(page.getByText("Không gian tra cứu")).toBeVisible();
@@ -191,7 +191,7 @@ test("mobile workspace drawer exposes complete navigation and restores focus", a
     drawer.getByRole("link", { name: "Hoạt động gần đây" }),
   ).toBeVisible();
   await expect(
-    drawer.getByRole("link", { name: "Chứng thư", exact: true }),
+    drawer.getByRole("link", { name: "Bằng xác lập", exact: true }),
   ).toBeVisible();
   await expect(
     drawer.getByRole("group", { name: "Chọn giao diện" }),
@@ -249,7 +249,7 @@ test("recent dossier status stays on one line on mobile", async ({
   const row = recent.locator("xpath=ancestor::section[1]").getByRole("link", {
     name: /Video chào mừng Tinh Hoa Việt/,
   });
-  const badge = row.getByText("Đã phát hành chứng thư");
+  const badge = row.getByText("Đã phát hành bằng xác lập");
   await expect(badge).toBeVisible();
   const titleBox = await row
     .getByText("Video chào mừng Tinh Hoa Việt")

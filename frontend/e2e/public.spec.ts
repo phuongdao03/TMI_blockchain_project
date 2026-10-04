@@ -63,7 +63,7 @@ test("public portal is professional, responsive and verifiable", async ({
     ).toBeVisible();
     await page.goto("/verify");
     await expect(
-      page.getByRole("heading", { name: "Kiểm tra chứng thư" }),
+      page.getByRole("heading", { name: "Kiểm tra bằng xác lập" }),
     ).toBeVisible();
     expect(consoleProblems).toEqual([]);
     expect(searchHistoryRequests).toEqual([]);
@@ -187,7 +187,9 @@ test("public portal is professional, responsive and verifiable", async ({
   await page.getByLabel("Thông tin cần tra cứu").fill("CNS-2026-7EAEC2D2C99A");
   await page.getByRole("button", { name: "Kiểm tra" }).click();
   await expect(
-    page.getByText("Chứng thư hợp lệ và đã được xác nhận trên blockchain."),
+    page.getByText(
+      "Bằng xác lập có hiệu lực; hồ sơ đã được xác nhận trên blockchain.",
+    ),
   ).toBeVisible();
 
   const robots = await page.request.get("/robots.txt");

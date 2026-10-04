@@ -106,7 +106,7 @@ test("discovery keeps an authenticated return path across public screens", async
   await page.goto("/verify");
   await expect(page.getByRole("button", { name: "Mở menu" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Kiểm tra chứng thư" }),
+    page.getByRole("heading", { name: "Kiểm tra bằng xác lập" }),
   ).toBeVisible();
   expect(
     await page.evaluate(

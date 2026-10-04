@@ -40,7 +40,7 @@ test("super admin reviews and safely replays failed background work", async ({
       ),
     ).toBe(true);
   }
-  await expect(page.getByText("Phát hành chứng thư")).toBeVisible();
+  await expect(page.getByText("Phát hành bằng xác lập")).toBeVisible();
   await expect(page.getByText("blockchain.broadcast")).toBeHidden();
 
   await page.getByText("Xem chi tiết").click();
