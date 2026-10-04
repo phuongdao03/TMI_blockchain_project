@@ -87,7 +87,7 @@ const dossierGuidance: Record<
     next: "Hoàn thiện thông tin và thêm ít nhất một tài liệu.",
   },
   SUBMITTED: {
-    outcome: "CNS đã nhận hồ sơ.",
+    outcome: "Tinh Hoa Việt đã nhận hồ sơ.",
     next: "Theo dõi thông báo trong khi hồ sơ được kiểm tra.",
   },
   PRECHECK: {
@@ -120,26 +120,26 @@ const dossierGuidance: Record<
   },
   PAID: {
     outcome: "Khoản phí đã được xác nhận.",
-    next: "Chờ CNS chuẩn bị chứng thư.",
+    next: "Chờ Tinh Hoa Việt chuẩn bị bằng xác lập.",
   },
   ANCHOR_PENDING: {
-    outcome: "Chứng thư đang được chuẩn bị.",
+    outcome: "Bằng xác lập đang được chuẩn bị.",
     next: "Theo dõi thông báo phát hành.",
   },
   ANCHORED: {
-    outcome: "Chứng thư đã sẵn sàng để phát hành.",
-    next: "Chờ thông báo tải chứng thư.",
+    outcome: "Bằng xác lập đã sẵn sàng để phát hành.",
+    next: "Chờ thông báo tải bằng xác lập.",
   },
   CERTIFICATE_ISSUED: {
-    outcome: "Chứng thư đã được phát hành.",
-    next: "Mở danh sách chứng thư để tải xuống.",
+    outcome: "Bằng xác lập đã được phát hành.",
+    next: "Mở danh sách bằng xác lập để tải xuống.",
   },
   PUBLISHED: {
-    outcome: "Chứng thư đã được công bố.",
-    next: "Tải chứng thư hoặc chia sẻ đường dẫn kiểm tra.",
+    outcome: "Bằng xác lập đã được công bố.",
+    next: "Tải bằng xác lập hoặc chia sẻ đường dẫn kiểm tra.",
   },
   REVOKED: {
-    outcome: "Chứng thư không còn hiệu lực.",
+    outcome: "Bằng xác lập không còn hiệu lực.",
     next: "Liên hệ hỗ trợ nếu bạn cần biết thêm lý do.",
   },
   CANCELLED: {
@@ -324,7 +324,7 @@ function InformationStep({ dossier }: { dossier: DossierDetail }) {
         >
           <option value="PRIVATE">Riêng tư</option>
           <option value="UNLISTED">Không niêm yết</option>
-          <option value="PUBLIC">Công khai sau cấp chứng thư</option>
+          <option value="PUBLIC">Công khai sau cấp bằng xác lập</option>
         </select>
       </div>
       {update.error ? (
@@ -819,7 +819,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   Kiểm tra & nộp
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-neutral-500">
-                  Kiểm tra lại thông tin và tài liệu trước khi gửi CNS xem xét.
+                  Kiểm tra lại thông tin và tài liệu trước khi gửi Tinh Hoa Việt xem xét.
                 </p>
               </div>
               {missingRequiredRules.length ? (

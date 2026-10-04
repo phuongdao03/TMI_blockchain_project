@@ -733,7 +733,7 @@ describe("PublicWorkEditor", () => {
     expect(await screen.findByText(work.shortDescription)).toBeTruthy();
     expect(
       screen
-        .getByRole("link", { name: /Xem và kiểm tra chứng thư/ })
+        .getByRole("link", { name: /Xem và kiểm tra bằng xác lập/ })
         .getAttribute("href"),
     ).toBe("/verify/CNS-2026-0001");
     expect(screen.queryByText(work.dossierId)).toBeNull();

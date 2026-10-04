@@ -1121,6 +1121,9 @@ export const similarityApi = {
 };
 
 export const certificateApi = {
+  downloadPdf(certificateId: string) {
+    return requestBlob(`/certificates/${encodeURIComponent(certificateId)}/pdf`);
+  },
   list(page = 1, pageSize = 20) {
     return requestPaginated<Certificate[]>(
       `/certificates?page=${page}&pageSize=${pageSize}`,

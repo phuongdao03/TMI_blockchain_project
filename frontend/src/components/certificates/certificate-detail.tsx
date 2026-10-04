@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   BadgeCheck,
+  Download,
   ExternalLink,
   FileClock,
   LoaderCircle,
@@ -48,7 +49,7 @@ const statusCopy: Record<
   },
   ACTIVE: {
     label: "Đang có hiệu lực",
-    description: "Đây là phiên bản chứng thư đang được sử dụng.",
+    description: "Đây là phiên bản bằng xác lập đang được sử dụng.",
     tone: "bg-emerald-50 text-emerald-800",
   },
   SUPERSEDED: {
@@ -135,6 +136,7 @@ function VersionTimeline({ versions }: { versions: CertificateVersion[] }) {
 export function CertificateDetail({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
+  const [downloadError, setDownloadError] = useState(false);
   const detail = useQuery({
     queryKey: ["certificate", id],
     queryFn: () => certificateApi.get(id),
@@ -182,18 +184,34 @@ export function CertificateDetail({ id }: { id: string }) {
     return (
       <div className="grid min-h-80 place-items-center" role="status">
         <LoaderCircle className="size-7 animate-spin text-primary-700" />
-        <span className="sr-only">Đang tải chứng thư</span>
+        <span className="sr-only">Đang tải bằng xác lập</span>
       </div>
     );
   }
   if (detail.error || versions.error || !detail.data || !versions.data) {
     return (
-      <Feedback title="Không thể tải chứng thư" tone="error">
+      <Feedback title="Không thể tải bằng xác lập" tone="error">
         Vui lòng thử lại sau.
       </Feedback>
     );
   }
   const certificate = detail.data.certificate;
+
+  async function downloadPdf() {
+    try {
+      const blob = await certificateApi.downloadPdf(id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${certificate.certificateNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setDownloadError(true);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -209,7 +227,7 @@ export function CertificateDetail({ id }: { id: string }) {
         <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-amber-300">
-              <BadgeCheck className="size-4" /> Chứng thư tài sản số
+              <BadgeCheck className="size-4" /> Bằng xác lập tài sản số
             </p>
             <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight sm:text-4xl">
               {certificate.assetTitle}
@@ -217,10 +235,25 @@ export function CertificateDetail({ id }: { id: string }) {
             <p className="mt-4 font-mono text-sm text-slate-300">
               {certificate.certificateNumber}
             </p>
+            <button
+              className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#f6c515] px-5 text-sm font-black text-[#3b1114] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              disabled={!certificate.pdfReady}
+              onClick={() => void downloadPdf()}
+              type="button"
+            >
+              <Download aria-hidden="true" className="size-5" />
+              {certificate.pdfReady ? "Tải bằng xác lập PDF" : "PDF đang chuẩn bị"}
+            </button>
+            {downloadError ? (
+              <p className="mt-3 text-sm text-red-200" role="alert">
+                Không thể tải PDF. Vui lòng thử lại.
+              </p>
+            ) : null}
           </div>
-          <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-5 py-4">
-            <p className="flex items-center gap-2 font-bold text-emerald-300">
-              <ShieldCheck className="size-5" /> Đang có hiệu lực
+          <div className={`rounded-2xl border px-5 py-4 ${certificate.status === "ACTIVE" ? "border-emerald-400/20 bg-emerald-400/10" : "border-amber-300/25 bg-amber-300/10"}`}>
+            <p className={`flex items-center gap-2 font-bold ${certificate.status === "ACTIVE" ? "text-emerald-300" : "text-amber-200"}`}>
+              <ShieldCheck className="size-5" />
+              {certificate.status === "ACTIVE" ? "Đang có hiệu lực" : certificate.status === "REVOKED" ? "Đã thu hồi" : "Đã hết hiệu lực"}
             </p>
             <p className="mt-1 text-xs text-emerald-100/70">
               Phiên bản {certificate.currentVersionNo}
@@ -234,7 +267,7 @@ export function CertificateDetail({ id }: { id: string }) {
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
             Tiến trình cập nhật
           </p>
-          <h2 className="mt-2 text-2xl font-bold">Lịch sử chứng thư</h2>
+          <h2 className="mt-2 text-2xl font-bold">Lịch sử bằng xác lập</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
             Mỗi lần điều chỉnh được lưu thành một phiên bản mới. Bản cũ không bị
             xóa và vẫn có thể đối chiếu khi cần.
@@ -248,8 +281,7 @@ export function CertificateDetail({ id }: { id: string }) {
             className="scroll-mt-24 rounded-3xl border border-neutral-200 bg-white p-6"
           >
             <h2 className="flex items-center gap-2 text-lg font-bold">
-              <RefreshCw className="size-5 text-primary-700" /> Cập nhật chứng
-              thư
+              <RefreshCw className="size-5 text-primary-700" /> Cập nhật bằng xác lập
             </h2>
             {openRequest ? (
               <Feedback
@@ -269,7 +301,7 @@ export function CertificateDetail({ id }: { id: string }) {
               >
                 <p className="text-sm leading-6 text-neutral-600">
                   Hồ sơ có thông tin mới đã được xét duyệt. Hãy nêu rõ lý do để
-                  gửi yêu cầu cập nhật chứng thư.
+                  gửi yêu cầu cập nhật bằng xác lập.
                 </p>
                 <label
                   className="block text-sm font-bold"
@@ -327,7 +359,7 @@ export function CertificateDetail({ id }: { id: string }) {
             <div className="grid gap-5 sm:grid-cols-[8rem_1fr] sm:items-center">
               <div className="rounded-2xl border border-neutral-200 bg-white p-2 shadow-sm">
                 <Image
-                  alt="Mã QR kiểm tra chứng thư"
+                  alt="Mã QR kiểm tra bằng xác lập"
                   className="aspect-square size-full"
                   height={240}
                   src={`/api/v1/certificates/${encodeURIComponent(id)}/qr`}
@@ -336,7 +368,7 @@ export function CertificateDetail({ id }: { id: string }) {
                 />
               </div>
               <div>
-                <h2 className="font-bold">Kiểm tra chứng thư độc lập</h2>
+                <h2 className="font-bold">Kiểm tra bằng xác lập độc lập</h2>
                 <p className="mt-2 text-sm leading-6 text-neutral-600">
                   Quét QR hoặc mở liên kết để đối chiếu mã toàn vẹn và giao dịch
                   blockchain. Tài liệu gốc không được đưa lên blockchain.

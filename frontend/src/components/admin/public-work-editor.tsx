@@ -1751,7 +1751,7 @@ function ReasonDialog({
         </h2>
         <p className="mt-2 text-sm leading-6 text-neutral-600">
           {action === "archive"
-            ? "Tác phẩm sẽ rời danh mục công khai. Lý do lưu trữ được giữ trong nhật ký để có thể đối chiếu về sau. Chứng thư đã cấp vẫn tra cứu được."
+            ? "Tác phẩm sẽ rời danh mục công khai. Lý do lưu trữ được giữ trong nhật ký để có thể đối chiếu về sau. Bằng xác lập đã cấp vẫn tra cứu được."
             : "Lý do được lưu trong nhật ký kiểm toán và không hiển thị công khai."}
         </p>
         <label className="mt-4 block text-sm font-bold">

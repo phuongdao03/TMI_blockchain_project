@@ -63,7 +63,7 @@ describe("account guides", () => {
     ).toBeDefined();
     expect(
       screen
-        .getAllByRole("link", { name: "Tra cứu chứng thư" })
+        .getAllByRole("link", { name: "Tra cứu bằng xác lập" })
         .some((link) => link.getAttribute("href") === "/verify"),
     ).toBe(true);
   });

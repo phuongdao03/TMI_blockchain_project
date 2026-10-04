@@ -1548,6 +1548,7 @@ export interface Verification {
   recognizedSubject?: string | null;
   documents?: PublicEvidenceProof[];
   publicWorkSlug?: string | null;
+    publicAuthorDisplayName?: string | null;
 }
 
 export interface PublicEvidenceProof {

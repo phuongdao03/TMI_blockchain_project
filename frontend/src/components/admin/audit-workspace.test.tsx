@@ -121,9 +121,9 @@ describe("AuditWorkspace", () => {
     render(<AuditWorkspace />, { wrapper: Wrapper });
 
     const summary = await screen.findByTestId("audit-row-summary");
-    expect(summary.textContent).toContain("Đã phê duyệt chứng thư");
+    expect(summary.textContent).toContain("Đã phê duyệt bằng xác lập");
     expect(
-      screen.getAllByText("Hệ thống cấp chứng thư").length,
+      screen.getAllByText("Hệ thống cấp bằng xác lập").length,
     ).toBeGreaterThan(0);
     expect(summary.textContent).not.toContain(
       "71a340d3-f813-3e7e-53aa-7495ba56a269",
@@ -148,8 +148,8 @@ describe("AuditWorkspace", () => {
 
     const mobileRow = screen.getByTestId("audit-mobile-row");
     expect(mobileRow.tagName).toBe("ARTICLE");
-    expect(mobileRow.textContent).toContain("Đã phê duyệt chứng thư");
-    expect(mobileRow.textContent).toContain("Hệ thống cấp chứng thư");
+    expect(mobileRow.textContent).toContain("Đã phê duyệt bằng xác lập");
+    expect(mobileRow.textContent).toContain("Hệ thống cấp bằng xác lập");
     expect(mobileRow.textContent).not.toContain(
       "71a340d3-f813-3e7e-53aa-7495ba56a269",
     );
@@ -229,10 +229,10 @@ describe("AuditWorkspace", () => {
     render(<AuditWorkspace />, { wrapper: Wrapper });
 
     expect(
-      await screen.findAllByText("Đã kiểm tra chứng thư công khai"),
+      await screen.findAllByText("Đã kiểm tra bằng xác lập công khai"),
     ).toHaveLength(2);
     expect(screen.getAllByText(/CNS-2026-0001/)).toHaveLength(2);
-    expect(screen.getAllByText(/Tra cứu chứng thư/)).toHaveLength(2);
+    expect(screen.getAllByText(/Tra cứu bằng xác lập/)).toHaveLength(2);
     expect(screen.getAllByText("Hợp lệ")).toHaveLength(2);
     expect(
       (await screen.findByTestId("audit-row-summary")).textContent,

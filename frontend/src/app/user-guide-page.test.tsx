@@ -18,7 +18,7 @@ describe("UserGuidePage", () => {
       "Tạo tài khoản và đăng nhập",
       "Tạo và gửi hồ sơ đề cử",
       "Theo dõi hồ sơ, bổ sung và lệ phí",
-      "Tra cứu và kiểm tra chứng thư",
+      "Tra cứu và kiểm tra bằng xác lập",
       "Cài ứng dụng trên thiết bị",
       "Bảo vệ tài khoản và nhận hỗ trợ",
     ])
@@ -56,7 +56,7 @@ describe("UserGuidePage", () => {
     ).toBe("/dossiers");
     expect(
       screen
-        .getByRole("link", { name: "Tra cứu chứng thư" })
+        .getByRole("link", { name: "Tra cứu bằng xác lập" })
         .getAttribute("href"),
     ).toBe("/verify");
     expect(

@@ -22,7 +22,7 @@ const modules = [
   },
   {
     href: "/admin/certificate-updates",
-    title: "Cập nhật chứng thư",
+    title: "Cập nhật bằng xác lập",
     description:
       "Xem xét yêu cầu điều chỉnh và theo dõi việc phát hành phiên bản thay thế.",
     icon: FilePenLine,

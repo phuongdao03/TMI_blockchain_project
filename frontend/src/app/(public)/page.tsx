@@ -61,9 +61,9 @@ const journey = [
     number: "03",
     title: "Kiểm chứng thông tin",
     detail:
-      "Tra cứu chứng thư khi hồ sơ đã được xác lập để đối chiếu mã, trạng thái và dữ liệu xác thực.",
+      "Tra cứu bằng xác lập khi hồ sơ đã được xác lập để đối chiếu mã, trạng thái và dữ liệu xác thực.",
     href: "/verify",
-    action: "Tra cứu chứng thư",
+    action: "Tra cứu bằng xác lập",
     icon: BadgeCheck,
   },
 ] as const;

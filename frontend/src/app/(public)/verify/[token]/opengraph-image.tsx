@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 import { isCertificateNumber } from "@/lib/verification/certificate-route";
 
-export const alt = "Chứng thư xác lập tài sản số Tinh Hoa Việt";
+export const alt = "Bằng xác lập xác lập tài sản số Tinh Hoa Việt";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -14,7 +14,7 @@ export default async function CertificateOpenGraphImage({
   const identifier = decodeURIComponent((await params).token);
   const number = isCertificateNumber(identifier)
     ? identifier.toUpperCase()
-    : "CHỨNG THƯ SỐ";
+    : "BẰNG XÁC LẬP SỐ";
   return new ImageResponse(
     (
       <div
@@ -50,7 +50,7 @@ export default async function CertificateOpenGraphImage({
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", fontSize: 68, fontWeight: 800 }}>
-              Chứng thư xác lập tài sản số
+              Bằng xác lập xác lập tài sản số
             </div>
             <div
               style={{

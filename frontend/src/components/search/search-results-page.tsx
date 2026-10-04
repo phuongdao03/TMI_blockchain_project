@@ -483,7 +483,7 @@ function ActiveFilters({
   if (parameters.certificateStatus)
     chips.push({
       key: "certificate",
-      label: `Chứng thư: ${parameters.certificateStatus}`,
+      label: `Bằng xác lập: ${parameters.certificateStatus}`,
       href: searchHref({
         ...parameters,
         certificateStatus: undefined,

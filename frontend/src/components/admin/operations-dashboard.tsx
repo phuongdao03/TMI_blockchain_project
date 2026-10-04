@@ -29,7 +29,7 @@ const dossierStatusLabels: Record<string, string> = {
   PAYMENT_PENDING: "Chờ thanh toán",
   APPROVED: "Đã phê duyệt",
   REJECTED: "Không được phê duyệt",
-  CERTIFICATE_ISSUED: "Đã phát hành chứng thư",
+  CERTIFICATE_ISSUED: "Đã phát hành bằng xác lập",
 };
 
 export function OperationsDashboard({

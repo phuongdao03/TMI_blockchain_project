@@ -47,7 +47,7 @@ export function DossierPaymentAction({
         <div>
           <h2 className="font-bold">Thanh toán đã được xác nhận</h2>
           <p className="mt-1 text-sm leading-6">
-            Hồ sơ đang ở hàng đợi ký blockchain và phát hành chứng thư.
+            Hồ sơ đang ở hàng đợi ký blockchain và phát hành bằng xác lập.
           </p>
         </div>
       </section>

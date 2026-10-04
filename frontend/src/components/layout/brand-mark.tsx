@@ -12,58 +12,28 @@ export function BrandMark({
   showCredit = false,
   variant = "default",
 }: BrandMarkProps) {
-  const usesPublicSeal = !compact && variant === "public-seal";
-
+  const sealOnly = variant === "public-seal";
   return (
     <Link
-      aria-label="Trung tâm Đề cử Tinh Hoa Việt"
-      className={`brand-mark${compact ? " brand-mark--compact" : ""}${usesPublicSeal ? " brand-mark--public-seal" : ""}`}
+      aria-label="Đề cử Tinh Hoa Việt"
+      className={`brand-mark brand-mark--official${compact ? " brand-mark--compact" : ""}${sealOnly ? " brand-mark--public-seal" : ""}`}
       href="/"
     >
-      {compact ? (
-        <span className="brand-mark__compact-lockup" aria-hidden="true">
-          <Image
-            className="brand-mark__emblem"
-            src="/assets/brand/thv-brand-emblem.png"
-            alt=""
-            width={1254}
-            height={1254}
-            priority
-          />
-          <span className="brand-mark__compact-wordmark-frame">
-            <Image
-              className="brand-mark__compact-wordmark"
-              src="/assets/brand/thv-public-header-wordmark.png"
-              alt=""
-              width={1536}
-              height={1024}
-              priority
-            />
-          </span>
+      <Image
+        alt=""
+        aria-hidden="true"
+        className="brand-mark__official-logo"
+        height={256}
+        priority
+        src="/assets/brand/logo-tinh-hoa-viet.png"
+        width={256}
+      />
+      {!sealOnly ? (
+        <span className="brand-mark__official-name" aria-hidden="true">
+          <span>Đề cử và xác lập</span>
+          <strong>Tinh Hoa Việt</strong>
         </span>
-      ) : usesPublicSeal ? (
-        <span className="brand-mark__seal-frame" aria-hidden="true">
-          <Image
-            className="brand-mark__seal"
-            src="/assets/brand/thv-public-header-seal.png"
-            alt=""
-            width={1254}
-            height={1254}
-            priority
-          />
-        </span>
-      ) : (
-        <span className="brand-mark__wordmark-frame" aria-hidden="true">
-          <Image
-            className="brand-mark__wordmark"
-            src="/assets/brand/thv-brand-wordmark.png"
-            alt=""
-            width={1448}
-            height={1086}
-            priority
-          />
-        </span>
-      )}
+      ) : null}
       {showCredit ? (
         <span className="brand-mark__credit">
           Phát triển bởi Trung tâm An ninh Công nghệ số – CNS

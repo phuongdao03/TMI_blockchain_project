@@ -35,10 +35,10 @@ const nextActions: Record<DossierStatus, string> = {
   PAYMENT_PENDING: "Cần thanh toán để tiếp tục",
   PAID: "Đã thanh toán · Chờ ký số",
   ANCHOR_PENDING: "Đang ký lên blockchain",
-  ANCHORED: "Đang chuẩn bị chứng thư",
-  CERTIFICATE_ISSUED: "Chứng thư đã sẵn sàng",
+  ANCHORED: "Đang chuẩn bị bằng xác lập",
+  CERTIFICATE_ISSUED: "Bằng xác lập đã sẵn sàng",
   PUBLISHED: "Đã công bố",
-  REVOKED: "Chứng thư đã thu hồi",
+  REVOKED: "Bằng xác lập đã thu hồi",
   CANCELLED: "Hồ sơ đã hủy",
 };
 

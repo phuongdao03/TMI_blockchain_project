@@ -8,7 +8,7 @@ import { operationsApi } from "@/lib/api/client";
 import type { DurableJobSummary } from "@/lib/api/types";
 
 const taskLabels: Record<string, string> = {
-  "blockchain.broadcast": "Phát hành chứng thư",
+  "blockchain.broadcast": "Phát hành bằng xác lập",
   "blockchain.confirm": "Xác nhận phát hành",
   "blockchain.reconcile": "Đối soát phát hành",
   "payment.reconcile_pending": "Đối soát thanh toán",

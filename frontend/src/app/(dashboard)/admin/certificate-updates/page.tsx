@@ -12,7 +12,7 @@ export default function CertificateUpdatesPage() {
             <FileClock className="size-4" /> Việc cần xem xét
           </p>
           <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-            Cập nhật chứng thư
+            Cập nhật bằng xác lập
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-600">
             Xem lý do thay đổi, đối chiếu phiên bản hồ sơ đã được phê duyệt và

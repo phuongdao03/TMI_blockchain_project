@@ -13,10 +13,10 @@ export default async function CertificatesPage({
     <div className="mx-auto max-w-7xl space-y-7">
       <header>
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
-          <BadgeCheck className="size-4" /> Kho chứng thư
+          <BadgeCheck className="size-4" /> Kho bằng xác lập
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-          Chứng thư đã phát hành
+          Bằng xác lập đã phát hành
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
           Quản lý bản PDF riêng tư và mở thông tin kiểm tra của từng tài sản.

@@ -49,13 +49,13 @@ const EVENT_PRESENTATION: Record<
     tone: "info",
   },
   "certificate.issued": {
-    actionLabel: "Xem chứng thư",
-    groupLabel: "Chứng thư",
+    actionLabel: "Xem bằng xác lập",
+    groupLabel: "Bằng xác lập",
     tone: "success",
   },
   "certificate.revoked": {
     actionLabel: "Xem chi tiết",
-    groupLabel: "Chứng thư",
+    groupLabel: "Bằng xác lập",
     tone: "warning",
   },
   "blockchain.anchored": {

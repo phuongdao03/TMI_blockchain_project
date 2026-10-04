@@ -79,7 +79,7 @@ describe("PaymentRequestWorkspace", () => {
     expect(issueMock.mock.calls[0]?.[1]).toMatchObject({
       amountMinor: 1_500_000,
       currency: "VND",
-      description: "Phí xác lập và phát hành chứng thư",
+      description: "Phí xác lập và phát hành bằng xác lập",
     });
     expect(
       await screen.findByText("Đã gửi yêu cầu cho người nộp"),

@@ -41,7 +41,7 @@ describe("DossierPaymentAction", () => {
     getActiveMock.mockResolvedValue({
       id: "payment-active",
       amountMinor: 1_500_000,
-      description: "Phí xác lập và phát hành chứng thư",
+      description: "Phí xác lập và phát hành bằng xác lập",
     });
     renderAction("PAYMENT_PENDING");
 
@@ -60,7 +60,7 @@ describe("DossierPaymentAction", () => {
       id: "obligation-1",
       amountMinor: 1_750_000,
       currency: "VND",
-      description: "Phí xác lập và phát hành chứng thư",
+      description: "Phí xác lập và phát hành bằng xác lập",
       dueAt: "2026-09-06T10:00:00Z",
     });
     createCheckoutMock.mockResolvedValueOnce({ id: "checkout-1" });

@@ -19,7 +19,7 @@ const nav = [
   ["account", "Tài khoản"],
   ["dossier", "Hồ sơ"],
   ["tracking", "Theo dõi"],
-  ["certificate", "Chứng thư"],
+  ["certificate", "Bằng xác lập"],
   ["install", "Cài ứng dụng"],
   ["security", "An toàn"],
 ] as const;
@@ -37,7 +37,7 @@ export default function UserGuidePage() {
           </h1>
           <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300 sm:text-lg">
             Tìm đúng việc cần làm: xem đề cử đã công bố, gửi hồ sơ, theo dõi
-            tiến độ hoặc kiểm tra chứng thư. Các bước dưới đây đi theo trình tự
+            tiến độ hoặc kiểm tra bằng xác lập. Các bước dưới đây đi theo trình tự
             sử dụng trên hệ thống.
           </p>
         </header>
@@ -73,7 +73,7 @@ export default function UserGuidePage() {
                 "Muốn xem nội dung đã công bố: mở thư viện đề cử. Bạn không cần tài khoản.",
                 "Muốn gửi đề cử: tạo tài khoản, chuẩn bị thông tin và tài liệu, rồi gửi hồ sơ.",
                 "Đã gửi hồ sơ: đăng nhập để xem trạng thái, bổ sung thông tin hoặc thanh toán khi được yêu cầu.",
-                "Đã có chứng thư: dùng số chứng thư, mã giao dịch hoặc mã QR để tra cứu.",
+                "Đã có bằng xác lập: dùng số bằng xác lập, mã giao dịch hoặc mã QR để tra cứu.",
               ]}
             />
             <div className="flex flex-wrap gap-3">
@@ -95,7 +95,7 @@ export default function UserGuidePage() {
               items={[
                 "Mở thư viện đề cử; nhập tên cần tìm hoặc chọn bộ lọc.",
                 "Chọn một đề cử để đọc nội dung và xem hình ảnh đã công bố.",
-                "Nếu có chứng thư, mở mục chứng thư từ trang chi tiết để kiểm tra.",
+                "Nếu có bằng xác lập, mở mục bằng xác lập từ trang chi tiết để kiểm tra.",
               ]}
             />
             <p>
@@ -193,22 +193,22 @@ export default function UserGuidePage() {
             icon={FileCheck2}
             id="certificate"
             number="06"
-            title="Tra cứu và kiểm tra chứng thư"
+            title="Tra cứu và kiểm tra bằng xác lập"
           >
             <p>
               Trang tra cứu mở cho mọi người, không cần đăng nhập. Bạn có thể
-              nhập số chứng thư, mã giao dịch hoặc quét mã QR trên chứng thư.
+              nhập số bằng xác lập, mã giao dịch hoặc quét mã QR trên bằng xác lập.
             </p>
             <Steps
               items={[
-                "Mở trang Tra cứu chứng thư, chọn cách tra cứu và nhập số chứng thư hoặc mã giao dịch.",
-                "Đọc kết quả xác minh, rồi đối chiếu số, trạng thái và phiên bản với chứng thư bạn nhận được.",
-                "Nếu không tìm thấy hoặc chứng thư đang chờ xác nhận, kiểm tra lại mã và tra cứu sau; liên hệ đơn vị phát hành khi thông tin không khớp.",
+                "Mở trang Tra cứu bằng xác lập, chọn cách tra cứu và nhập số bằng xác lập hoặc mã giao dịch.",
+                "Đọc kết quả xác minh, rồi đối chiếu số, trạng thái và phiên bản với bằng xác lập bạn nhận được.",
+                "Nếu không tìm thấy hoặc bằng xác lập đang chờ xác nhận, kiểm tra lại mã và tra cứu sau; liên hệ đơn vị phát hành khi thông tin không khớp.",
               ]}
             />
             <div className="grid gap-5">
               <Note>
-                Mã QR trên chứng thư dẫn đến trang xác minh tương ứng. Bản ghi
+                Mã QR trên bằng xác lập dẫn đến trang xác minh tương ứng. Bản ghi
                 blockchain hỗ trợ đối chiếu dấu vân tay số và lịch sử ghi nhận.
               </Note>
               <Note>
@@ -218,11 +218,11 @@ export default function UserGuidePage() {
               </Note>
             </div>
             <p>
-              Chứng thư ghi nhận thông tin tại thời điểm phát hành; nó không
+              Bằng xác lập ghi nhận thông tin tại thời điểm phát hành; nó không
               thay thế giấy tờ chứng minh quyền sở hữu, quyền tác giả hoặc kết
               luận chuyên ngành.
             </p>
-            <GuideLink href="/verify">Tra cứu chứng thư</GuideLink>
+            <GuideLink href="/verify">Tra cứu bằng xác lập</GuideLink>
           </Section>
 
           <Section
@@ -267,7 +267,7 @@ export default function UserGuidePage() {
                 <h3 className="font-bold text-white">Khi gặp sự cố</h3>
                 <Steps
                   items={[
-                    "Ghi lại mã hồ sơ hoặc số chứng thư liên quan.",
+                    "Ghi lại mã hồ sơ hoặc số bằng xác lập liên quan.",
                     "Chụp thông báo lỗi và ghi thời điểm, thiết bị, trình duyệt đã dùng.",
                     "Gửi thông tin sự cố qua kênh hỗ trợ chính thức; không gửi mật khẩu, mã xác thực hoặc khóa ví.",
                   ]}

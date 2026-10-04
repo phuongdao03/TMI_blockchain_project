@@ -12,15 +12,15 @@ export async function generateMetadata({
   const identifier = decodeURIComponent((await params).token);
   const certificateNumber = isCertificateNumber(identifier);
   return {
-    title: certificateNumber ? `Chứng thư ${identifier}` : "Xác minh chứng thư",
+    title: certificateNumber ? `Bằng xác lập ${identifier}` : "Xác minh bằng xác lập",
     description:
-      "Kiểm tra chứng thư xác lập tài sản số và bằng chứng ghi nhận trên Polygon.",
+      "Kiểm tra bằng xác lập xác lập tài sản số và bằng chứng ghi nhận trên Polygon.",
     alternates: certificateNumber
       ? { canonical: `/verify/${encodeURIComponent(identifier)}` }
       : undefined,
     openGraph: certificateNumber
       ? {
-          title: `Chứng thư xác lập tài sản số ${identifier}`,
+          title: `Bằng xác lập xác lập tài sản số ${identifier}`,
           description:
             "Đối chiếu dấu vân tay số và bằng chứng blockchain của Tinh Hoa Việt.",
           type: "website",

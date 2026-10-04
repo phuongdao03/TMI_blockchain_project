@@ -97,16 +97,16 @@ const applicantTasks: GuideTask[] = [
   },
   {
     id: "certificate",
-    title: "Nhận và kiểm tra chứng thư",
+    title: "Nhận và kiểm tra bằng xác lập",
     steps: [
-      "Khi hồ sơ hoàn tất, mở Chứng thư và tìm theo mã hồ sơ.",
+      "Khi hồ sơ hoàn tất, mở Bằng xác lập và tìm theo mã hồ sơ.",
       "Đối chiếu tên tác phẩm, chủ sở hữu, phiên bản và trạng thái hiệu lực.",
-      "Tải chứng thư nếu có; dùng mục Tra cứu chứng thư để kiểm tra mã với thông tin công khai.",
+      "Tải bằng xác lập nếu có; dùng mục Tra cứu bằng xác lập để kiểm tra mã với thông tin công khai.",
     ],
     result:
-      "Chứng thư đúng hồ sơ và trạng thái tra cứu công khai khớp với hồ sơ cá nhân.",
+      "Bằng xác lập đúng hồ sơ và trạng thái tra cứu công khai khớp với hồ sơ cá nhân.",
     href: "/certificates",
-    action: "Mở chứng thư",
+    action: "Mở bằng xác lập",
   },
 ];
 
@@ -125,16 +125,16 @@ const viewerTasks: GuideTask[] = [
   },
   {
     id: "verify",
-    title: "Tra cứu chứng thư",
+    title: "Tra cứu bằng xác lập",
     steps: [
-      "Mở Tra cứu chứng thư và nhập mã chứng thư được cung cấp.",
+      "Mở Tra cứu bằng xác lập và nhập mã bằng xác lập được cung cấp.",
       "Đối chiếu tên tác phẩm, chủ thể, thời điểm cấp và trạng thái hiện tại.",
-      "Nếu chứng thư đã thu hồi hoặc không tìm thấy, kiểm tra lại mã và lịch sử phiên bản trước khi sử dụng thông tin.",
+      "Nếu bằng xác lập đã thu hồi hoặc không tìm thấy, kiểm tra lại mã và lịch sử phiên bản trước khi sử dụng thông tin.",
     ],
     result:
-      "Bạn nhìn thấy tình trạng xác minh hiện tại và thông tin công khai của chứng thư.",
+      "Bạn nhìn thấy tình trạng xác minh hiện tại và thông tin công khai của bằng xác lập.",
     href: "/verify",
-    action: "Tra cứu chứng thư",
+    action: "Tra cứu bằng xác lập",
   },
 ];
 
@@ -191,8 +191,8 @@ export default function AccountGuidePage() {
   const intro = isReviewer
     ? "Nhận quyền, xử lý hồ sơ được giao và sử dụng chấm công theo đúng thứ tự. Mỗi phần có kết quả để tự kiểm tra."
     : isApplicant
-      ? "Tạo hồ sơ, theo dõi yêu cầu và kiểm tra chứng thư ngay trong tài khoản của bạn."
-      : "Tìm nội dung và xác minh chứng thư công khai từ tài khoản tra cứu.";
+      ? "Tạo hồ sơ, theo dõi yêu cầu và kiểm tra bằng xác lập ngay trong tài khoản của bạn."
+      : "Tìm nội dung và xác minh bằng xác lập công khai từ tài khoản tra cứu.";
   return (
     <main className="mx-auto max-w-5xl space-y-6 pb-12">
       <header className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">

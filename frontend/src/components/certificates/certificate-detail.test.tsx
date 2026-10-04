@@ -13,6 +13,7 @@ vi.mock("@/lib/api/client", () => ({
     get: getMock,
     versions: versionsMock,
     requestVersion: vi.fn(),
+    downloadPdf: vi.fn(),
   },
   dossierApi: { versions: dossierVersionsMock },
 }));
@@ -78,8 +79,8 @@ describe("CertificateDetail", () => {
     expect(screen.getByText("Đã được cập nhật")).toBeDefined();
     expect(screen.getByText("Chưa có thay đổi cần cập nhật")).toBeDefined();
     expect(screen.queryByText("ACTIVE")).toBeNull();
-    expect(screen.queryByText(/Tải chứng thư PDF/i)).toBeNull();
-    expect(screen.getByAltText("Mã QR kiểm tra chứng thư")).toBeDefined();
+    expect(screen.getByRole("button", { name: /Tải bằng xác lập PDF/i })).toBeDefined();
+    expect(screen.getByAltText("Mã QR kiểm tra bằng xác lập")).toBeDefined();
     expect(
       screen.queryByText(/SUPER_ADMIN|database|schema|endpoint/i),
     ).toBeNull();

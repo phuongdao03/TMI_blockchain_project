@@ -28,7 +28,7 @@ const workflowSteps = [
     title: "Xác lập và công bố",
     action: "Kiểm tra lại thông tin được phép công bố sau khi hồ sơ hoàn tất.",
     outcome:
-      "Nhận chứng thư và mã tra cứu khi hồ sơ đủ điều kiện theo quy trình.",
+      "Nhận bằng xác lập và mã tra cứu khi hồ sơ đủ điều kiện theo quy trình.",
   },
 ] as const;
 
@@ -37,8 +37,8 @@ const accountPaths = [
     title: "Tra cứu công khai",
     access: "Không cần tài khoản",
     detail:
-      "Tìm tác phẩm, kiểm tra chứng thư và xem những thông tin đã được chủ thể cho phép công bố.",
-    next: "Mở Thư viện hoặc nhập mã tại trang Tra cứu chứng thư.",
+      "Tìm tác phẩm, kiểm tra bằng xác lập và xem những thông tin đã được chủ thể cho phép công bố.",
+    next: "Mở Thư viện hoặc nhập mã tại trang Tra cứu bằng xác lập.",
   },
   {
     title: "Gửi và theo dõi hồ sơ",
@@ -67,7 +67,7 @@ export const policySections = [
       "Mỗi tài khoản phải được sử dụng bởi đúng chủ thể đăng ký; mọi thông tin và tài liệu gửi lên cần chính xác, hợp pháp và thuộc phạm vi quyền sử dụng của bạn.",
     details: [
       "Bạn có trách nhiệm bảo mật thông tin đăng nhập, cập nhật hồ sơ khi có thay đổi và phản hồi yêu cầu bổ sung trong thời hạn được thông báo.",
-      "Việc gửi hồ sơ không đồng nghĩa với việc hồ sơ được chấp thuận, công bố hoặc cấp chứng thư.",
+      "Việc gửi hồ sơ không đồng nghĩa với việc hồ sơ được chấp thuận, công bố hoặc cấp bằng xác lập.",
     ],
   },
   {
@@ -82,11 +82,11 @@ export const policySections = [
   },
   {
     id: "publication-and-verification",
-    title: "Công bố, kiểm chứng và chứng thư",
+    title: "Công bố, kiểm chứng và bằng xác lập",
     summary:
       "Thông tin công khai chỉ được hiển thị sau khi hoàn tất các bước xử lý phù hợp; phạm vi hiển thị có thể thay đổi theo trạng thái, quyết định xử lý hoặc yêu cầu bảo vệ thông tin.",
     details: [
-      "Mã tra cứu, QR và chứng thư phản ánh dữ liệu của bản ghi tại thời điểm xác minh trên hệ thống.",
+      "Mã tra cứu, QR và bằng xác lập phản ánh dữ liệu của bản ghi tại thời điểm xác minh trên hệ thống.",
       "Thông tin xác minh không thay thế việc tự đánh giá về quyền sở hữu, quyền tác giả, tính hợp pháp hoặc nghĩa vụ của các bên liên quan.",
     ],
   },
@@ -120,7 +120,7 @@ export function ProcessGuide({ compact = false }: { compact?: boolean }) {
       <div className="public-information-shell">
         <header className="public-information-intro">
           <p className="public-information-kicker">QUY TRÌNH HỒ SƠ</p>
-          <h2>Từ hồ sơ đến chứng thư, rõ ở từng mốc.</h2>
+          <h2>Từ hồ sơ đến bằng xác lập, rõ ở từng mốc.</h2>
           <p>
             Bốn bước ngắn gọn để bạn chuẩn bị, gửi, theo dõi và tra cứu kết quả
             mà không phải đoán bước tiếp theo.

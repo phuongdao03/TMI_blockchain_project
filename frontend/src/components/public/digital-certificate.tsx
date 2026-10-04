@@ -16,7 +16,7 @@ function date(value: string | null): string {
 }
 
 function recognizedSubject(value: string | null | undefined): string | null {
-  return value === "Chủ thể hồ sơ CNS" || value === "Chủ thể hồ sơ TMI"
+  return value === "Chủ thể hồ sơ CNS" || value === "Chủ thể hồ sơ TMI" || value === "Chưa công bố"
     ? null
     : (value ?? null);
 }
@@ -29,13 +29,21 @@ export function DigitalCertificate({ data }: { data: Verification }) {
     ? `/works/${encodeURIComponent(data.publicWorkSlug)}`
     : null;
   const valid = data.status === "VALID";
+  const statusLabel = {
+    VALID: "Đang có hiệu lực",
+    REVOKED: "Đã thu hồi",
+    EXPIRED: "Đã hết hạn",
+    MISMATCH: "Thông tin chưa khớp",
+    PENDING: "Đang đối chiếu",
+    NOT_FOUND: "Không tìm thấy",
+  }[data.status];
 
   async function share() {
     const url = new URL(verifyPath, window.location.origin).toString();
     if (navigator.share) {
       await navigator.share({
-        title: `Chứng thư ${data.certificateNumber}`,
-        text: data.assetTitle ?? "Chứng thư xác lập tài sản số",
+        title: `Bằng xác lập ${data.certificateNumber}`,
+        text: data.assetTitle ?? "Bằng xác lập Tinh Hoa Việt",
         url,
       });
       return;
@@ -50,39 +58,42 @@ export function DigitalCertificate({ data }: { data: Verification }) {
         className="pointer-events-none absolute inset-0 -z-10 opacity-55 [background-image:radial-gradient(circle_at_15%_8%,rgba(198,160,65,.18),transparent_28%),linear-gradient(rgba(126,19,27,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(126,19,27,.035)_1px,transparent_1px)] [background-size:auto,24px_24px,24px_24px]"
       />
       <div className="h-2 bg-[#82141d] sm:h-3" />
+      <Image
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-20 top-28 -z-10 size-80 object-contain opacity-[0.07] sm:size-[32rem]"
+        height={512}
+        src="/assets/brand/trong-dong.png"
+        width={512}
+      />
 
       <div className="p-5 sm:p-8 lg:p-12">
-        <header className="digital-certificate__header grid gap-5 border-b border-[#d8c798] pb-6 sm:grid-cols-[auto_1fr] sm:items-center lg:grid-cols-[8rem_1fr_auto]">
-          <p className="digital-certificate__organization">
-            <span className="digital-certificate__platform">
-              Đề cử và Xác lập Tinh Hoa Việt
-            </span>
-            <span className="digital-certificate__operator">
-              Phát triển và vận hành công nghệ bởi CNS
-            </span>
-          </p>
+        <header className="flex flex-col items-center gap-5 border-b border-[#d8c798] pb-7 text-center sm:flex-row sm:text-left">
           <Image
-            alt="Biểu trưng Đề cử và Xác lập Tinh Hoa Việt"
-            className="mx-auto size-24 object-contain drop-shadow-[0_8px_14px_rgba(100,18,18,.2)] sm:mx-0 lg:size-28"
-            height={224}
+            alt="Biểu trưng Tinh Hoa Việt"
+            className="size-28 shrink-0 object-contain drop-shadow-[0_8px_14px_rgba(100,18,18,.2)] sm:size-32"
+            height={256}
             priority
-            src="/assets/brand/thv-certificate-seal.png"
-            width={224}
+            src="/assets/brand/logo-tinh-hoa-viet.png"
+            width={256}
           />
-          <div className="text-center sm:text-left">
-            <h2 className="mt-2 text-balance font-serif text-3xl leading-none font-black tracking-[-0.035em] text-[#2b1714] sm:text-4xl lg:text-5xl">
-              Chứng thư xác lập tài sản số
-            </h2>
-          </div>
-          <div className="border-t border-[#d8c798] pt-4 text-center sm:col-span-2 sm:text-left lg:col-span-1 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6 lg:text-right">
-            <p className="text-[0.65rem] font-bold tracking-[0.18em] text-[#6d5949] uppercase">
-              Số chứng thư
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.65rem] font-black tracking-[0.22em] text-[#765c27] uppercase">
+              Đề cử Tinh Hoa Việt · Ghi nhận giá trị Việt
             </p>
-            <p className="mt-1 break-all font-mono text-sm font-black text-[#82141d] sm:text-base">
-              {data.certificateNumber}
+            <h2 className="mt-2 text-balance font-serif text-3xl leading-tight font-black tracking-[-0.035em] text-[#2b1714] sm:text-4xl lg:text-5xl">
+              Bằng xác lập
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[#503d32]">
+              Thông tin ghi nhận và đường dẫn kiểm tra công khai
             </p>
           </div>
         </header>
+
+        <div className="mt-6 border-l-4 border-[#ad8231] bg-[#f6efdc] px-4 py-3">
+          <p className="text-[0.65rem] font-black tracking-[0.16em] text-[#765c27] uppercase">Số bằng xác lập</p>
+          <p className="mt-1 break-all font-mono text-base font-black text-[#82141d]">{data.certificateNumber}</p>
+        </div>
 
         <div className="grid gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_11rem] lg:items-center lg:gap-12">
           <section>
@@ -94,8 +105,8 @@ export function DigitalCertificate({ data }: { data: Verification }) {
             </h3>
             <dl className="mt-7 grid gap-x-10 gap-y-5 text-sm sm:grid-cols-2">
               <CertificateFact
-                label="Tác giả/người được ghi nhận"
-                value={recognizedSubject(data.recognizedSubject)}
+                label={recognizedSubject(data.recognizedSubject) ? "Người được ghi nhận trên bằng" : "Tác giả công khai của tác phẩm"}
+                value={recognizedSubject(data.recognizedSubject) ?? data.publicAuthorDisplayName}
               />
               <CertificateFact
                 label="Mã tác phẩm"
@@ -103,8 +114,8 @@ export function DigitalCertificate({ data }: { data: Verification }) {
                 value={displayCnsDossierCode(data.dossierCode)}
               />
               <CertificateFact
-                label="Đơn vị xác lập"
-                value={data.issuerLabel}
+                label="Đơn vị đề cử"
+                value="Đề cử Tinh Hoa Việt"
               />
               <CertificateFact
                 label="Ngày ghi nhận"
@@ -121,13 +132,18 @@ export function DigitalCertificate({ data }: { data: Verification }) {
                 }
               />
             </dl>
+            {!recognizedSubject(data.recognizedSubject) && data.publicAuthorDisplayName ? (
+              <p className="mt-5 border-l-2 border-[#ad8231] pl-3 text-xs leading-5 text-[#6d5949]">
+                Tên tác giả lấy từ trang tác phẩm công khai. Bản ghi bằng đã phát hành không được thay đổi.
+              </p>
+            ) : null}
           </section>
 
           <section className="mx-auto w-full max-w-44 text-center">
             <div className="border border-[#c9ad60] bg-white p-2 shadow-[0_8px_24px_rgba(65,42,20,.12)]">
               {failedQr !== data.certificateNumber ? (
                 <Image
-                  alt={`Mã QR kiểm tra chứng thư ${data.certificateNumber}`}
+                  alt={`Mã QR kiểm tra bằng xác lập ${data.certificateNumber}`}
                   className="aspect-square size-full object-contain"
                   height={320}
                   src={`/api/v1/verify/certificate/${encodeURIComponent(data.certificateNumber)}/qr`}
@@ -140,7 +156,7 @@ export function DigitalCertificate({ data }: { data: Verification }) {
                   className="flex aspect-square items-center justify-center p-3 text-sm font-bold text-[#82141d]"
                   href={verifyPath}
                 >
-                  Mở trang kiểm tra chứng thư
+                  Mở trang kiểm tra bằng xác lập
                 </a>
               )}
             </div>
@@ -164,7 +180,7 @@ export function DigitalCertificate({ data }: { data: Verification }) {
               className={`inline-flex min-h-11 items-center justify-center gap-2 border px-4 text-center text-sm font-black ${valid ? "border-[#9bc8aa] bg-[#edf8f0] text-[#245b38]" : "border-[#d8b66a] bg-[#fff7df] text-[#76530c]"}`}
             >
               <ShieldCheck className="size-4" />
-              {valid ? "Đang có hiệu lực" : "Đang đối chiếu"}
+              {statusLabel}
             </span>
             <button
               className="inline-flex min-h-11 items-center justify-center gap-2 border border-[#b78e4b] bg-transparent px-4 text-sm font-bold text-[#82141d] transition hover:bg-[#f7ecd0] active:translate-y-px"

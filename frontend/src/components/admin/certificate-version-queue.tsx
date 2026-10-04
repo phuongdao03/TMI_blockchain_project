@@ -111,7 +111,7 @@ export function CertificateVersionQueue() {
           <Check className="mx-auto size-10 text-emerald-600" />
           <h2 className="mt-4 text-xl font-bold">Hàng chờ đã được xử lý</h2>
           <p className="mt-2 text-sm text-neutral-500">
-            Chưa có yêu cầu cập nhật chứng thư cần xem xét.
+            Chưa có yêu cầu cập nhật bằng xác lập cần xem xét.
           </p>
         </section>
       ) : (
@@ -130,7 +130,7 @@ export function CertificateVersionQueue() {
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <strong>Chứng thư · phiên bản {item.versionNo}</strong>
+                    <strong>Bằng xác lập · phiên bản {item.versionNo}</strong>
                     <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800">
                       {statusLabels[item.status] ?? "Đang xử lý"}
                     </span>

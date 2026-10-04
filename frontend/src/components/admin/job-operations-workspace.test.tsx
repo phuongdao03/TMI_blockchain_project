@@ -50,7 +50,7 @@ describe("JobOperationsWorkspace", () => {
 
     render(<JobOperationsWorkspace />, { wrapper: Wrapper });
 
-    expect(await screen.findByText("Phát hành chứng thư")).toBeDefined();
+    expect(await screen.findByText("Phát hành bằng xác lập")).toBeDefined();
     expect(screen.getByText("Cần xử lý")).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
     expect(screen.getByRole("dialog")).toBeDefined();

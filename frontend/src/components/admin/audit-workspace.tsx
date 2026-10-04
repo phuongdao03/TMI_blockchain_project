@@ -140,10 +140,10 @@ export function AuditWorkspace() {
             <option value="">Tất cả hoạt động</option>
             <option value="dossier.approved">Hồ sơ được phê duyệt</option>
             <option value="certificate.version.approved">
-              Cập nhật chứng thư được duyệt
+              Cập nhật bằng xác lập được duyệt
             </option>
             <option value="certificate.version.rejected">
-              Cập nhật chứng thư bị từ chối
+              Cập nhật bằng xác lập bị từ chối
             </option>
             <option value="audit.exported">Báo cáo được tải</option>
             <option value="audit.integrity_checked">
@@ -175,7 +175,7 @@ export function AuditWorkspace() {
           >
             <option value="">Tất cả</option>
             <option value="dossier">Hồ sơ</option>
-            <option value="certificate">Chứng thư</option>
+            <option value="certificate">Bằng xác lập</option>
             <option value="document">Tài liệu</option>
             <option value="payment">Thanh toán</option>
             <option value="employee">Nhân viên</option>

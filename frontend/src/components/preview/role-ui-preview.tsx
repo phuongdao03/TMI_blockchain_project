@@ -65,7 +65,7 @@ function RoleHome({ role }: { role: WorkspacePersona }) {
           />
           <PreviewCard
             icon={BadgeCheck}
-            title="Xác minh chứng thư"
+            title="Xác minh bằng xác lập"
             value="Tra cứu công khai"
             detail="Kiểm tra thông tin phát hành và trạng thái."
             href={previewHref(role, "/verify")}
@@ -91,7 +91,7 @@ function RoleHome({ role }: { role: WorkspacePersona }) {
         <PageHeading
           eyebrow="Trung tâm hồ sơ"
           title="Việc cần làm"
-          description="Theo dõi tiến độ hồ sơ, cập nhật cần xử lý và chứng thư đã phát hành."
+          description="Theo dõi tiến độ hồ sơ, cập nhật cần xử lý và bằng xác lập đã phát hành."
         />
         <section
           className="grid gap-4 sm:grid-cols-3"
@@ -114,8 +114,8 @@ function RoleHome({ role }: { role: WorkspacePersona }) {
           <PreviewCard
             icon={BadgeCheck}
             title="Đã hoàn tất"
-            value="03 chứng thư"
-            detail="Chứng thư đã được phát hành."
+            value="03 bằng xác lập"
+            detail="Bằng xác lập đã được phát hành."
             href={previewHref(role, "/certificates")}
           />
         </section>

@@ -340,7 +340,7 @@ export function DossierCreateForm() {
                 aria-describedby="dossier-title-error"
                 className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
                 id="dossier-title"
-                placeholder="Ví dụ: Bộ nhận diện thương hiệu CNS"
+                placeholder="Ví dụ: Bộ sưu tập văn hóa Việt"
                 {...form.register("title")}
               />
               {form.formState.errors.title ? (
@@ -377,7 +377,7 @@ export function DossierCreateForm() {
                 {[
                   ["PRIVATE", "Riêng tư", "Chỉ chủ hồ sơ và người xử lý"],
                   ["UNLISTED", "Không niêm yết", "Chỉ người có liên kết"],
-                  ["PUBLIC", "Công khai", "Có thể công bố sau cấp chứng thư"],
+                  ["PUBLIC", "Công khai", "Có thể công bố sau cấp bằng xác lập"],
                 ].map(([value, label, description]) => (
                   <label className="dossier-visibility-option" key={value}>
                     <input

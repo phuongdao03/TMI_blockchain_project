@@ -57,7 +57,7 @@ function nextAction(dossier: Dossier) {
     };
   }
   if (completedStatuses.has(dossier.status)) {
-    return { label: "Tải chứng thư", href: "/certificates" };
+    return { label: "Tải bằng xác lập", href: "/certificates" };
   }
   return { label: "Xem tiến độ hồ sơ", href: `/dossiers/${dossier.id}` };
 }
@@ -122,7 +122,7 @@ export function DashboardOverview() {
             Việc cần làm
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-neutral-600">
-            Tiếp tục hồ sơ đang dở, theo dõi cập nhật mới nhất và nhận chứng thư
+            Tiếp tục hồ sơ đang dở, theo dõi cập nhật mới nhất và nhận bằng xác lập
             khi hoàn tất.
           </p>
         </div>
@@ -175,6 +175,40 @@ export function DashboardOverview() {
         </Link>
       </section>
 
+      <nav
+        aria-label="Lối tắt hồ sơ"
+        className="grid gap-2 sm:grid-cols-3"
+      >
+        <Link
+          className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
+          href="/dossiers"
+        >
+          Theo dõi hồ sơ
+        </Link>
+        <Link
+          className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
+          href={
+            primaryDossier &&
+            (primaryDossier.status === "DRAFT" ||
+              primaryDossier.status === "NEEDS_SUPPLEMENT")
+              ? `/dossiers/${primaryDossier.id}`
+              : "/dossiers/new"
+          }
+        >
+          {primaryDossier &&
+          (primaryDossier.status === "DRAFT" ||
+            primaryDossier.status === "NEEDS_SUPPLEMENT")
+            ? "Tải thêm tài liệu"
+            : "Gửi đề cử mới"}
+        </Link>
+        <Link
+          className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
+          href="/certificates"
+        >
+          Bằng xác lập của tôi
+        </Link>
+      </nav>
+
       <section
         aria-label="Chỉ số tổng quan"
         className="dashboard-overview__metrics dashboard-surface grid overflow-hidden rounded-xl border md:grid-cols-3"
@@ -189,13 +223,13 @@ export function DashboardOverview() {
           {
             label: "Đang xử lý",
             value: dossiers.isPending ? "—" : String(processingCount),
-            detail: "Hồ sơ đã gửi và đang được CNS xử lý",
+            detail: "Hồ sơ đã gửi và đang được Tinh Hoa Việt xem xét",
             icon: Clock3,
           },
           {
-            label: "Chứng thư sẵn sàng",
+            label: "Bằng xác lập sẵn sàng",
             value: dossiers.isPending ? "—" : String(certificateCount),
-            detail: "Chứng thư đã phát hành và có thể tải xuống",
+            detail: "Bằng xác lập đã phát hành và có thể tải xuống",
             icon: BadgeCheck,
           },
         ].map((item) => {
@@ -318,7 +352,7 @@ export function DashboardOverview() {
             {[
               "Trạng thái dễ hiểu",
               "Thông báo khi cần bổ sung",
-              "Chứng thư sẵn sàng để tải",
+              "Bằng xác lập sẵn sàng để tải",
             ].map((label) => (
               <p
                 className="flex items-center gap-2 text-sm font-semibold text-slate-300"

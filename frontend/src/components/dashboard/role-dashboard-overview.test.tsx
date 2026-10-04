@@ -40,6 +40,12 @@ describe("RoleDashboardOverview", () => {
     expect(screen.queryByRole("link", { name: /Ký blockchain/i })).toBeNull();
   });
 
+  it("does not offer administrative shortcuts to a dossier submitter", () => {
+    render(<RoleDashboardOverview persona="USER" />);
+
+    expect(screen.queryByRole("navigation", { name: "Lối tắt công việc" })).toBeNull();
+  });
+
   it("keeps the landing page focused on a single primary action", () => {
     render(<RoleDashboardOverview persona="SUPER_ADMIN" />);
 

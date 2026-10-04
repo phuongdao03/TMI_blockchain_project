@@ -70,7 +70,7 @@ describe("LoginForm", () => {
 
     expect(
       screen.getByText(
-        "Truy cập không gian hồ sơ để theo dõi tiến trình, phản hồi và chứng thư của bạn.",
+        "Truy cập không gian hồ sơ để theo dõi tiến trình, phản hồi và bằng xác lập của bạn.",
       ),
     ).toBeDefined();
     expect(screen.queryByText(/một tài khoản cho mọi hành trình/i)).toBeNull();

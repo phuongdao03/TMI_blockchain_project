@@ -98,11 +98,11 @@ export function AdminCertificateManager() {
             <BadgeCheck className="size-4" aria-hidden="true" /> Hồ sơ xác minh
           </p>
           <h1 className="mt-2 text-2xl font-bold tracking-tight text-neutral-950 sm:text-3xl">
-            Quản lý chứng thư
+            Quản lý bằng xác lập
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
-            Tra cứu chứng thư đã cấp, kiểm soát nơi hiển thị và theo dõi phiên
-            bản. Chứng thư thu hồi vẫn giữ trang xác minh và lịch sử để đối
+            Tra cứu bằng xác lập đã cấp, kiểm soát nơi hiển thị và theo dõi phiên
+            bản. Bằng xác lập thu hồi vẫn giữ trang xác minh và lịch sử để đối
             chiếu.
           </p>
         </div>
@@ -116,7 +116,7 @@ export function AdminCertificateManager() {
       </header>
 
       <section
-        aria-label="Tìm và lọc chứng thư"
+        aria-label="Tìm và lọc bằng xác lập"
         className="rounded-2xl border border-neutral-200 bg-white p-4 sm:p-5"
       >
         <form
@@ -124,7 +124,7 @@ export function AdminCertificateManager() {
           onSubmit={submitSearch}
         >
           <label className="relative min-w-0 flex-1">
-            <span className="sr-only">Tìm chứng thư</span>
+            <span className="sr-only">Tìm bằng xác lập</span>
             <Search
               aria-hidden="true"
               className="absolute left-3 top-3.5 size-4 text-neutral-500"
@@ -132,7 +132,7 @@ export function AdminCertificateManager() {
             <input
               className="min-h-11 w-full rounded-xl border border-neutral-300 bg-white pl-10 pr-3 text-sm"
               onChange={(event) => setSearchDraft(event.target.value)}
-              placeholder="Số chứng thư, mã hồ sơ hoặc tên tác phẩm"
+              placeholder="Số bằng xác lập, mã hồ sơ hoặc tên tác phẩm"
               type="search"
               value={searchDraft}
             />
@@ -141,14 +141,14 @@ export function AdminCertificateManager() {
             className="min-h-11 rounded-xl bg-primary-700 px-5 text-sm font-bold text-white"
             type="submit"
           >
-            Tìm chứng thư
+            Tìm bằng xác lập
           </button>
         </form>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="text-xs font-bold text-neutral-700">
-            Trạng thái chứng thư
+            Trạng thái bằng xác lập
             <select
-              aria-label="Lọc trạng thái chứng thư"
+              aria-label="Lọc trạng thái bằng xác lập"
               className="mt-2 min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm font-semibold"
               onChange={(event) => {
                 setStatus(event.target.value as CertificateStatus | "");
@@ -188,8 +188,8 @@ export function AdminCertificateManager() {
         </div>
         <p className="mt-4 text-sm text-neutral-600" role="status">
           {query.isPending
-            ? "Đang tải chứng thư…"
-            : `${total} chứng thư phù hợp`}
+            ? "Đang tải bằng xác lập…"
+            : `${total} bằng xác lập phù hợp`}
         </p>
       </section>
 
@@ -198,7 +198,7 @@ export function AdminCertificateManager() {
           className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
           role="alert"
         >
-          Không thể tải chứng thư.{" "}
+          Không thể tải bằng xác lập.{" "}
           <button
             className="font-bold underline"
             onClick={() => void query.refetch()}
@@ -210,13 +210,13 @@ export function AdminCertificateManager() {
       ) : null}
       {query.data && query.data.data.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-600">
-          Không có chứng thư phù hợp. Thử đổi từ khóa hoặc bộ lọc.
+          Không có bằng xác lập phù hợp. Thử đổi từ khóa hoặc bộ lọc.
         </div>
       ) : null}
 
       {query.data && query.data.data.length > 0 ? (
         <section
-          aria-label="Danh sách chứng thư"
+          aria-label="Danh sách bằng xác lập"
           className="divide-y divide-neutral-200 overflow-hidden rounded-2xl border border-neutral-200 bg-white"
         >
           {query.data.data.map((item) => {
@@ -259,7 +259,7 @@ export function AdminCertificateManager() {
                     {item.publicationStatus !== "PUBLISHED" ? (
                       <p className="mt-1 text-xs text-neutral-600">
                         Tác phẩm chưa công bố; thay đổi hiển thị không tự đưa
-                        chứng thư vào danh mục công khai.
+                        bằng xác lập vào danh mục công khai.
                       </p>
                     ) : null}
                   </div>
@@ -325,7 +325,7 @@ export function AdminCertificateManager() {
                     </Link>
                   </div>
                   <p className="mt-2 text-xs leading-5 text-neutral-600">
-                    Thay đổi hiển thị không tự công bố tác phẩm; chứng thư vẫn
+                    Thay đổi hiển thị không tự công bố tác phẩm; bằng xác lập vẫn
                     tra cứu bằng số hoặc liên kết trực tiếp.
                   </p>
                   {listing.variables?.id === certificate.id &&
@@ -338,7 +338,7 @@ export function AdminCertificateManager() {
                   {listing.variables?.id === certificate.id &&
                   listing.isSuccess ? (
                     <p className="mt-2 text-sm text-emerald-800" role="status">
-                      Đã lưu lựa chọn hiển thị chứng thư.
+                      Đã lưu lựa chọn hiển thị bằng xác lập.
                     </p>
                   ) : null}
                 </details>
@@ -350,7 +350,7 @@ export function AdminCertificateManager() {
 
       {query.data && total > pageSize ? (
         <nav
-          aria-label="Trang chứng thư"
+          aria-label="Trang bằng xác lập"
           className="flex items-center justify-between gap-3 text-sm font-semibold text-neutral-700"
         >
           <button

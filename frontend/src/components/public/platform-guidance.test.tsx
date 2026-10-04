@@ -35,7 +35,7 @@ describe("platform guidance", () => {
       "Điều khoản sử dụng",
       "Tài khoản và hồ sơ",
       "Chính sách quyền riêng tư",
-      "Công bố, kiểm chứng và chứng thư",
+      "Công bố, kiểm chứng và bằng xác lập",
       "Quyền, nghĩa vụ và giới hạn trách nhiệm",
       "Cập nhật chính sách",
     ]);

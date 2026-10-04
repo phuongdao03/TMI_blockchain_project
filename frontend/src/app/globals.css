@@ -1687,6 +1687,54 @@ body {
   padding: 0.25rem;
 }
 
+.brand-mark--official {
+  gap: 0.55rem;
+}
+
+.brand-mark__official-logo {
+  display: block;
+  width: clamp(3.25rem, 4vw, 4.75rem);
+  height: auto;
+  flex: none;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.brand-mark__official-name {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  color: #f6c515;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.brand-mark__official-name span {
+  font-size: 0.55rem;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+}
+
+.brand-mark__official-name strong {
+  font-family: Georgia, serif;
+  font-size: clamp(0.85rem, 1.1vw, 1.12rem);
+  white-space: nowrap;
+}
+
+.brand-mark--compact .brand-mark__official-logo {
+  width: 3.5rem;
+}
+
+@media (max-width: 38rem) {
+  .brand-mark__official-logo {
+    width: 3.5rem;
+  }
+
+  .brand-mark__official-name strong {
+    font-size: 0.87rem;
+  }
+}
+
 .public-header {
   position: sticky;
   z-index: 40;
@@ -8246,7 +8294,7 @@ html[data-theme="dark"] .mission-section__objectives li {
 .registry-heritage {
   position: relative;
   width: min(100%, 40rem);
-  height: clamp(30rem, 39vw, 39rem);
+  aspect-ratio: 1;
   scroll-margin-top: 7rem;
 }
 
@@ -8287,13 +8335,17 @@ html[data-theme="dark"] .mission-section__objectives li {
 .registry-heritage__drum {
   z-index: 2;
   right: 0;
-  bottom: 1%;
+  bottom: 0;
   width: 35%;
   aspect-ratio: 1;
-  border: 0.4rem solid #570510;
-  border-radius: 50%;
-  background: #eee1c7;
-  box-shadow: 0 1.4rem 3rem rgb(24 0 0 / 34%);
+  border: 0;
+  background: transparent;
+  filter: drop-shadow(0 1rem 1.5rem rgb(24 0 0 / 24%));
+}
+
+.registry-heritage__drum img {
+  filter: brightness(0) saturate(100%) invert(78%) sepia(63%) saturate(940%)
+    hue-rotate(349deg) brightness(102%);
 }
 
 .registry-heritage__logo {
@@ -8426,8 +8478,7 @@ html[data-theme="light"] .public-home .registry-search input::placeholder {
   }
 
   .registry-heritage {
-    width: min(100%, 26rem);
-    height: 21rem;
+    width: min(100%, 23rem);
     margin: 0 auto;
   }
 
@@ -8440,7 +8491,7 @@ html[data-theme="light"] .public-home .registry-search input::placeholder {
   }
 
   .registry-heritage__drum {
-    width: 30%;
+    width: 29%;
   }
 
   .registry-heritage__logo {

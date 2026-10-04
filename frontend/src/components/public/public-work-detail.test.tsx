@@ -127,7 +127,7 @@ describe("PublicWorkDetailPage", () => {
     expect(screen.getByLabelText(`Bìa mặc định: ${detail.title}`)).toBeTruthy();
   });
 
-  it("renders an approved public video with native playback controls", () => {
+  it("renders an approved public video without loading it before a tap", () => {
     const videoDetail: PublicWorkDetail = {
       ...detail,
       media: [
@@ -161,15 +161,16 @@ describe("PublicWorkDetailPage", () => {
     );
 
     const video = container.querySelector("video");
-    expect(video?.controls).toBe(true);
+    expect(video?.controls).toBe(false);
     expect(video?.loop).toBe(true);
     expect(video?.muted).toBe(true);
     expect(video?.poster).toContain("poster.webp");
     expect(video?.getAttribute("controlslist")).toContain("nodownload");
-    expect(video?.preload).toBe("metadata");
+    expect(video?.preload).toBe("none");
     expect(video?.playsInline).toBe(true);
     expect(video?.getAttribute("src")).toBeNull();
     expect(video?.querySelectorAll("source")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Phát video tác phẩm" })).toBeDefined();
     expect(screen.getByText("Video chào mừng Tinh hoa Việt")).toBeDefined();
   });
 
@@ -179,7 +180,7 @@ describe("PublicWorkDetailPage", () => {
     });
     expect(await screen.findByText("Chưa thể đối chiếu lúc này")).toBeTruthy();
     expect(screen.getByText(detail.proof!.transactionHash!)).toBeTruthy();
-    expect(screen.getByText("Trạng thái chứng thư")).toBeTruthy();
+    expect(screen.getByText("Trạng thái bằng xác lập")).toBeTruthy();
   });
 
   it("links a published nomination to its public certificate", () => {
@@ -189,7 +190,7 @@ describe("PublicWorkDetailPage", () => {
 
     expect(
       screen
-        .getByRole("link", { name: "Xem và kiểm tra chứng thư" })
+        .getByRole("link", { name: "Xem và kiểm tra bằng xác lập" })
         .getAttribute("href"),
     ).toBe(
       `/verify/${encodeURIComponent(detail.certificate!.certificateNumber)}`,

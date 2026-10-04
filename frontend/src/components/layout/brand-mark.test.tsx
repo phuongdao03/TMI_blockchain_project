@@ -4,28 +4,26 @@ import { describe, expect, it } from "vitest";
 import { BrandMark } from "@/components/layout/brand-mark";
 
 describe("BrandMark", () => {
-  it("shows the emblem and supplied wordmark together in compact workspaces", () => {
+  it("shows the official symbol and clear name in compact workspaces", () => {
     render(<BrandMark compact />);
 
     const homeLink = screen.getByRole("link", {
-      name: "Trung tâm Đề cử Tinh Hoa Việt",
+      name: "Đề cử Tinh Hoa Việt",
     });
     const sources = Array.from(homeLink.querySelectorAll("img"), (logo) =>
       decodeURIComponent(logo.getAttribute("src") ?? ""),
     );
 
-    expect(sources).toHaveLength(2);
-    expect(sources[0]).toContain("/assets/brand/thv-brand-emblem.png");
-    expect(sources[1]).toContain(
-      "/assets/brand/thv-public-header-wordmark.png",
-    );
+    expect(sources).toHaveLength(1);
+    expect(sources[0]).toContain("/assets/brand/logo-tinh-hoa-viet.png");
+    expect(homeLink.textContent).toContain("Tinh Hoa Việt");
   });
 
   it("renders the approved Tinh Hoa Việt wordmark", () => {
     render(<BrandMark />);
 
     const homeLink = screen.getByRole("link", {
-      name: "Trung tâm Đề cử Tinh Hoa Việt",
+      name: "Đề cử Tinh Hoa Việt",
     });
     const logo = homeLink.querySelector("img");
     const source = logo?.getAttribute("src");
@@ -33,7 +31,7 @@ describe("BrandMark", () => {
     expect(logo).not.toBeNull();
     expect(logo?.getAttribute("alt")).toBe("");
     expect(decodeURIComponent(source ?? "")).toContain(
-      "/assets/brand/thv-brand-wordmark.png",
+      "/assets/brand/logo-tinh-hoa-viet.png",
     );
     expect(screen.queryByText(/Phát triển bởi/)).toBeNull();
   });
@@ -42,13 +40,13 @@ describe("BrandMark", () => {
     render(<BrandMark variant="public-seal" />);
 
     const homeLink = screen.getByRole("link", {
-      name: "Trung tâm Đề cử Tinh Hoa Việt",
+      name: "Đề cử Tinh Hoa Việt",
     });
     const logos = homeLink.querySelectorAll("img");
 
     expect(logos).toHaveLength(1);
     expect(decodeURIComponent(logos[0]?.getAttribute("src") ?? "")).toContain(
-      "/assets/brand/thv-public-header-seal.png",
+      "/assets/brand/logo-tinh-hoa-viet.png",
     );
   });
 

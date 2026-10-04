@@ -52,7 +52,7 @@ export function CmsWorkspace() {
           className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-bold text-neutral-800 hover:bg-neutral-50"
           href="/admin/certificates"
         >
-          <BadgeCheck className="size-4" aria-hidden="true" /> Quản lý chứng thư
+          <BadgeCheck className="size-4" aria-hidden="true" /> Quản lý bằng xác lập
         </Link>
       </header>
 

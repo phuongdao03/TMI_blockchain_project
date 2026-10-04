@@ -290,7 +290,7 @@ function PublicGallery({
         ) : null}
         {selected.kind === "VIDEO" && selected.url ? (
           <AdaptiveVideo
-            autoPlay={selected.autoplay}
+            key={selected.id}
             className={`max-h-[42rem] w-full ${selected.fitMode === "COVER" ? "object-cover" : "object-contain"}`}
             controls={selected.controlsPreset !== "NONE"}
             controlsList={
@@ -371,11 +371,11 @@ function CertificatePanel({
         <>
           <dl className="mt-4 space-y-3 text-sm">
             <DataRow
-              label="Số chứng thư"
+              label="Số bằng xác lập"
               value={certificate.certificateNumber}
               mono
             />
-            <DataRow label="Trạng thái chứng thư" value={certificate.status} />
+            <DataRow label="Trạng thái bằng xác lập" value={certificate.status} />
             <DataRow
               label="Ngày phát hành"
               value={new Intl.DateTimeFormat("vi-VN").format(
@@ -387,7 +387,7 @@ function CertificatePanel({
             className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 text-sm font-bold text-white"
             href={`/verify/${encodeURIComponent(certificate.certificateNumber)}`}
           >
-            Xem và kiểm tra chứng thư <ExternalLink className="size-4" />
+            Xem và kiểm tra bằng xác lập <ExternalLink className="size-4" />
           </Link>
         </>
       ) : (

@@ -137,7 +137,7 @@ export function SearchFilters({
           </SelectControl>
         </label>
         <label className="block text-sm font-semibold text-slate-300">
-          Trạng thái chứng thư
+          Trạng thái bằng xác lập
           <SelectControl
             className={controlClass}
             defaultValue={parameters.certificateStatus ?? ""}

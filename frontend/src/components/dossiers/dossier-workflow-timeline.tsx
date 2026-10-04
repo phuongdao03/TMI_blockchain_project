@@ -16,9 +16,9 @@ const workflowStages: Array<{
   { statuses: ["APPROVED", "PAYMENT_PENDING"], label: "Hoàn tất lệ phí" },
   {
     statuses: ["PAID", "ANCHOR_PENDING", "ANCHORED"],
-    label: "Chuẩn bị chứng thư",
+    label: "Chuẩn bị bằng xác lập",
   },
-  { statuses: ["CERTIFICATE_ISSUED", "PUBLISHED"], label: "Nhận chứng thư" },
+  { statuses: ["CERTIFICATE_ISSUED", "PUBLISHED"], label: "Nhận bằng xác lập" },
 ];
 
 const exceptionStatuses = new Set<DossierStatus>([
@@ -55,7 +55,7 @@ export function DossierWorkflowTimeline({
             className="mt-1 text-xl font-bold tracking-tight text-neutral-950"
             id="dossier-workflow-heading"
           >
-            Từ chuẩn bị đến nhận chứng thư
+            Từ chuẩn bị đến nhận bằng xác lập
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-500">
             Theo dõi chặng đang xử lý và phần việc sắp tới của hồ sơ.
@@ -69,7 +69,7 @@ export function DossierWorkflowTimeline({
               : status === "REJECTED"
                 ? "Chưa đủ điều kiện"
                 : status === "REVOKED"
-                  ? "Chứng thư đã thu hồi"
+                  ? "Bằng xác lập đã thu hồi"
                   : "Hồ sơ đã hủy"}
           </span>
         ) : null}

@@ -30,10 +30,10 @@ const screens: Record<string, PreviewScreen> = {
     ],
   },
   "/verify": {
-    title: "Tra cứu chứng thư",
+    title: "Tra cứu bằng xác lập",
     eyebrow: "Xác minh",
-    description: "Kiểm tra thông tin chứng thư và trạng thái phát hành.",
-    columns: ["Mã chứng thư", "Tác phẩm", "Trạng thái"],
+    description: "Kiểm tra thông tin bằng xác lập và trạng thái phát hành.",
+    columns: ["Mã bằng xác lập", "Tác phẩm", "Trạng thái"],
     rows: [
       ["THV-2026-018", "Sắc màu di sản", "Có hiệu lực"],
       ["THV-2026-012", "Hành trình nghề Việt", "Có hiệu lực"],
@@ -66,7 +66,7 @@ const screens: Record<string, PreviewScreen> = {
     columns: ["Hoạt động", "Đối tượng", "Thời gian"],
     rows: [
       ["Xem hồ sơ", "Sắc màu di sản", "Hôm nay"],
-      ["Tra cứu chứng thư", "THV-2026-018", "Hôm qua"],
+      ["Tra cứu bằng xác lập", "THV-2026-018", "Hôm qua"],
     ],
   },
   "/guide": {
@@ -90,10 +90,10 @@ const screens: Record<string, PreviewScreen> = {
     ],
   },
   "/certificates": {
-    title: "Chứng thư",
+    title: "Bằng xác lập",
     eyebrow: "Hồ sơ",
-    description: "Chứng thư đã phát hành cho các hồ sơ của bạn.",
-    columns: ["Mã chứng thư", "Tác phẩm", "Phát hành"],
+    description: "Bằng xác lập đã phát hành cho các hồ sơ của bạn.",
+    columns: ["Mã bằng xác lập", "Tác phẩm", "Phát hành"],
     rows: [
       ["THV-2026-018", "Sắc màu di sản", "18/09/2026"],
       ["THV-2026-012", "Hành trình nghề Việt", "11/09/2026"],
@@ -273,10 +273,10 @@ const screens: Record<string, PreviewScreen> = {
     ],
   },
   "/admin/certificates": {
-    title: "Quản lý chứng thư",
-    eyebrow: "Chứng thư",
-    description: "Theo dõi chứng thư và trạng thái phát hành.",
-    columns: ["Mã chứng thư", "Tác phẩm", "Trạng thái"],
+    title: "Quản lý bằng xác lập",
+    eyebrow: "Bằng xác lập",
+    description: "Theo dõi bằng xác lập và trạng thái phát hành.",
+    columns: ["Mã bằng xác lập", "Tác phẩm", "Trạng thái"],
     rows: [
       ["THV-2026-018", "Sắc màu di sản", "Đã phát hành"],
       ["THV-2026-019", "Hành trình nghề Việt", "Chờ ký"],
@@ -314,9 +314,9 @@ const screens: Record<string, PreviewScreen> = {
   },
   "/blockchain": {
     title: "Ký blockchain",
-    eyebrow: "Chứng thư",
-    description: "Xem chứng thư chờ ký và lịch sử giao dịch.",
-    columns: ["Chứng thư", "Tác phẩm", "Trạng thái"],
+    eyebrow: "Bằng xác lập",
+    description: "Xem bằng xác lập chờ ký và lịch sử giao dịch.",
+    columns: ["Bằng xác lập", "Tác phẩm", "Trạng thái"],
     rows: [
       ["THV-2026-019", "Hành trình nghề Việt", "Chờ ký"],
       ["THV-2026-018", "Sắc màu di sản", "Đã ghi nhận"],

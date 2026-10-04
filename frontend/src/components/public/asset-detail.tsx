@@ -35,10 +35,10 @@ export function AssetDetail({ slug }: { slug: string }) {
             <span className="flex items-center gap-1.5 text-xs font-bold text-success">
               <BadgeCheck className="size-4" />
               {asset.certificateStatus === "ACTIVE"
-                ? "Chứng thư đang có hiệu lực"
+                ? "Bằng xác lập đang có hiệu lực"
                 : asset.certificateStatus === "REVOKED"
-                  ? "Chứng thư đã thu hồi"
-                  : "Chứng thư đã hết hạn"}
+                  ? "Bằng xác lập đã thu hồi"
+                  : "Bằng xác lập đã hết hạn"}
             </span>
           </div>
           <h1 className="mt-7 max-w-5xl text-4xl font-bold tracking-[-0.04em] sm:text-6xl lg:text-7xl">
@@ -53,12 +53,12 @@ export function AssetDetail({ slug }: { slug: string }) {
         <section className="rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
           <h2 className="text-xl font-bold">Thông tin công khai</h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-            Đây là thông tin được công bố cùng chứng thư. File gốc vẫn nằm trong
+            Đây là thông tin được công bố cùng bằng xác lập. File gốc vẫn nằm trong
             kho lưu trữ của hệ thống, không được đưa lên blockchain.
           </p>
           <dl className="mt-6 grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-white/10 p-4">
-              <dt className="text-xs text-slate-400">Số chứng thư</dt>
+              <dt className="text-xs text-slate-400">Số bằng xác lập</dt>
               <dd className="mt-1 font-bold text-white">
                 {asset.certificateNumber}
               </dd>
@@ -84,12 +84,12 @@ export function AssetDetail({ slug }: { slug: string }) {
           <h2 className="mt-5 font-bold">Xác minh blockchain</h2>
           <p className="mt-3 text-sm leading-6 text-slate-300">
             {asset.transactionHash
-              ? "Bản ghi blockchain đã được công bố. Hãy tra cứu chứng thư để kiểm tra trạng thái mới nhất."
+              ? "Bản ghi blockchain đã được công bố. Hãy tra cứu bằng xác lập để kiểm tra trạng thái mới nhất."
               : "Chưa có mã giao dịch blockchain để đối chiếu."}
           </p>
           <dl className="mt-5 space-y-4 text-xs">
             <div>
-              <dt className="text-slate-500">Số chứng thư</dt>
+              <dt className="text-slate-500">Số bằng xác lập</dt>
               <dd className="mt-1 break-all font-mono text-white">
                 {asset.certificateNumber}
               </dd>

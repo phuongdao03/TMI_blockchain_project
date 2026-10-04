@@ -40,7 +40,7 @@ describe("AssetDetail", () => {
     expect(await screen.findByText("Xác minh blockchain")).toBeDefined();
     expect(
       screen.getByText(
-        "Bản ghi blockchain đã được công bố. Hãy tra cứu chứng thư để kiểm tra trạng thái mới nhất.",
+        "Bản ghi blockchain đã được công bố. Hãy tra cứu bằng xác lập để kiểm tra trạng thái mới nhất.",
       ),
     ).toBeDefined();
     expect(screen.getByText("Mã giao dịch trên blockchain")).toBeDefined();

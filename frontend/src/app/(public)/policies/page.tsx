@@ -9,7 +9,7 @@ export default function PoliciesPage() {
           <h1>Điều khoản sử dụng &amp; Chính sách quyền riêng tư.</h1>
           <p>
             Quy định về việc sử dụng nền tảng, quản lý hồ sơ, xử lý dữ liệu cá
-            nhân, công bố thông tin và tra cứu chứng thư.
+            nhân, công bố thông tin và tra cứu bằng xác lập.
           </p>
           <span>Cập nhật lần cuối: 24/08/2026</span>
         </div>

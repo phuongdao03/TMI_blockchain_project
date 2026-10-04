@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Đề cử Tinh Hoa Việt",
     short_name: "Tinh Hoa Việt",
     description:
-      "Nền tảng đề cử, xác lập và tra cứu chứng thư tài sản số Tinh Hoa Việt.",
+      "Nền tảng đề cử, xác lập và tra cứu bằng xác lập tài sản số Tinh Hoa Việt.",
     lang: "vi",
     start_url: "/",
     scope: "/",
@@ -17,14 +17,8 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["business", "education", "productivity"],
     icons: [
       {
-        src: "/pwa-icon-192.png",
-        sizes: "192x192",
-        type: "image/png",
-        purpose: "any",
-      },
-      {
-        src: "/pwa-icon-512.png",
-        sizes: "512x512",
+        src: "/assets/brand/logo-tinh-hoa-viet.png",
+        sizes: "2048x2048",
         type: "image/png",
         purpose: "any",
       },
@@ -36,7 +30,7 @@ export default function manifest(): MetadataRoute.Manifest {
         url: "/search",
       },
       {
-        name: "Tra cứu chứng thư",
+        name: "Tra cứu bằng xác lập",
         short_name: "Tra cứu",
         url: "/verify",
       },

@@ -101,7 +101,7 @@ export function ImageCoverPicker({
       </div>
       <p className="text-xs leading-5 text-neutral-600">
         Ảnh bìa chỉ dùng để trình bày tác phẩm. Không thay đổi tài liệu gốc hoặc
-        chứng thư; không sử dụng giấy tờ riêng tư làm bìa.
+        bằng xác lập; không sử dụng giấy tờ riêng tư làm bìa.
       </p>
       {source === "upload" ? (
         <FileUploader

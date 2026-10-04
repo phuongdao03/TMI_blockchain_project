@@ -23,9 +23,9 @@ const resultCopy: Record<
   { title: string; detail: string; tone: string; icon: typeof CheckCircle2 }
 > = {
   VALID: {
-    title: "Chứng thư hợp lệ và đã được xác nhận trên blockchain.",
+    title: "Bằng xác lập có hiệu lực; hồ sơ đã được xác nhận trên blockchain.",
     detail:
-      "Thông tin chứng thư trùng khớp với bản ghi công khai. Bạn có thể xem tài sản, thời điểm xác nhận và mã giao dịch ở bên cạnh.",
+      "Mã bằng đang có hiệu lực trong hệ thống. Bằng chứng hồ sơ đã được ghi nhận trên Polygon; bạn có thể đối chiếu nội dung, thời điểm và mã giao dịch bên cạnh.",
     tone: "text-success",
     icon: CheckCircle2,
   },
@@ -36,14 +36,14 @@ const resultCopy: Record<
     icon: AlertTriangle,
   },
   REVOKED: {
-    title: "Chứng thư đã được thu hồi",
-    detail: "Chứng thư không còn hiệu lực sử dụng.",
+    title: "Bằng xác lập đã được thu hồi",
+    detail: "Bằng xác lập không còn hiệu lực sử dụng.",
     tone: "text-error",
     icon: AlertTriangle,
   },
   EXPIRED: {
-    title: "Chứng thư đã hết hạn",
-    detail: "Hãy yêu cầu chủ thể cung cấp chứng thư còn hiệu lực.",
+    title: "Bằng xác lập đã hết hạn",
+    detail: "Hãy yêu cầu chủ thể cung cấp bằng xác lập còn hiệu lực.",
     tone: "text-warning",
     icon: AlertTriangle,
   },
@@ -54,7 +54,7 @@ const resultCopy: Record<
     icon: LoaderCircle,
   },
   NOT_FOUND: {
-    title: "Không tìm thấy chứng thư",
+    title: "Không tìm thấy bằng xác lập",
     detail: "Kiểm tra lại mã hoặc yêu cầu người gửi cung cấp liên kết hợp lệ.",
     tone: "text-slate-300",
     icon: ShieldQuestion,
@@ -114,7 +114,7 @@ export function VerificationPanel({
           Tra cứu độc lập
         </p>
         <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-          Kiểm tra chứng thư
+          Kiểm tra bằng xác lập
         </h1>
         <p className="mt-5 text-base leading-7 text-slate-300">
           Nhập mã được cung cấp để xem tình trạng và thông tin xác nhận đã công
@@ -141,7 +141,7 @@ export function VerificationPanel({
             onChange={(event) => setMode(event.target.value as typeof mode)}
             value={mode}
           >
-            <option value="number">Số chứng thư</option>
+            <option value="number">Số bằng xác lập</option>
             <option value="transaction">Mã giao dịch</option>
           </SelectControl>
           <label className="sr-only" htmlFor="verification-value">
@@ -152,7 +152,7 @@ export function VerificationPanel({
             id="verification-value"
             name="lookup"
             onChange={(event) => setValue(event.target.value)}
-            placeholder={mode === "number" ? "Ví dụ: CNS-2026-…" : "Ví dụ: 0x…"}
+            placeholder={mode === "number" ? "Ví dụ: THV-2026-…" : "Ví dụ: 0x…"}
             required
             value={value}
           />
@@ -234,7 +234,7 @@ export function VerificationPanel({
               embedded ? "min-h-32 py-8" : "min-h-64"
             }`}
           >
-            Nhập mã chứng thư hoặc mã giao dịch để bắt đầu.
+            Nhập mã bằng xác lập hoặc mã giao dịch để bắt đầu.
           </div>
         )}
       </section>
@@ -250,7 +250,7 @@ function VerificationResult({
   const copy = resultCopy[data.status];
   const detail =
     data.status === "PENDING" && data.networkAvailable === false
-      ? "Bản ghi chứng thư vẫn còn trong hệ thống. Polygon đang tạm thời không phản hồi nên chưa thể đối chiếu trực tiếp; vui lòng thử lại sau."
+      ? "Bản ghi bằng xác lập vẫn còn trong hệ thống. Polygon đang tạm thời không phản hồi nên chưa thể đối chiếu trực tiếp; vui lòng thử lại sau."
       : copy.detail;
   const Icon = copy.icon;
   return (
@@ -271,7 +271,7 @@ function VerificationResult({
       </div>
       <div>
         <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
-          <Fact label="Chứng thư" value={data.certificateNumber} />
+          <Fact label="Bằng xác lập" value={data.certificateNumber} />
           <Fact
             label="Mã tài sản"
             value={displayCnsDossierCode(data.dossierCode)}
@@ -281,7 +281,7 @@ function VerificationResult({
             label="Phiên bản"
             value={data.version ? String(data.version) : null}
           />
-          <Fact label="Đơn vị xác lập" value={data.issuerLabel} />
+          <Fact label="Đơn vị đề cử" value={data.issuerLabel} />
           <Fact
             label="Thời điểm xác nhận"
             value={formatDate(data.confirmedAt)}

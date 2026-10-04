@@ -37,7 +37,7 @@ const publicLinks = [
   { href: "/search", label: "Tìm đề cử" },
   { href: "/works", label: "Danh sách đề cử" },
   { href: "/process", label: "Quy trình" },
-  { href: "/verify", label: "Tra cứu chứng thư" },
+  { href: "/verify", label: "Tra cứu bằng xác lập" },
   { href: "/guide", label: "Hướng dẫn" },
 ];
 

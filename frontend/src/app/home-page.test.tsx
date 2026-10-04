@@ -101,7 +101,7 @@ describe("HomePage", () => {
     ).toBeDefined();
     expect(
       screen
-        .getByRole("link", { name: /Tra cứu chứng thư/i })
+        .getByRole("link", { name: /Tra cứu bằng xác lập/i })
         .getAttribute("href"),
     ).toBe("/verify");
     expect(

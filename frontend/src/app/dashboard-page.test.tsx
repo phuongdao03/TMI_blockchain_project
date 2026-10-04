@@ -141,7 +141,7 @@ describe("dashboard overview", () => {
     ["DRAFT", "Tiếp tục hoàn thiện hồ sơ", "/dossiers/dossier-1"],
     ["UNDER_REVIEW", "Xem tiến độ hồ sơ", "/dossiers/dossier-1"],
     ["PAYMENT_PENDING", "Thanh toán phí phát hành", "/dossiers/dossier-1"],
-    ["CERTIFICATE_ISSUED", "Tải chứng thư", "/certificates"],
+    ["CERTIFICATE_ISSUED", "Tải bằng xác lập", "/certificates"],
   ] as const)(
     "uses the correct primary action for %s",
     async (status, label, href) => {
@@ -244,7 +244,7 @@ describe("dashboard overview", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Tra cứu đề cử và chứng thư",
+        name: "Tra cứu đề cử và bằng xác lập",
       }),
     ).toBeDefined();
     expect(screen.queryByRole("link", { name: "Tạo hồ sơ mới" })).toBeNull();

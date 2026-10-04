@@ -52,7 +52,7 @@ const discoveryItems: NavigationItem[] = [
   { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
   { href: "/search", label: "Tìm đề cử", icon: Search },
   { href: "/works", label: "Thư viện đề cử", icon: BookOpen },
-  { href: "/verify", label: "Tra cứu chứng thư", icon: ShieldCheck },
+  { href: "/verify", label: "Tra cứu bằng xác lập", icon: ShieldCheck },
 ];
 
 const personalItems: NavigationItem[] = [
@@ -75,7 +75,7 @@ const adminSupportItem: NavigationItem = {
 
 const userItems: NavigationItem[] = [
   { href: "/dossiers", label: "Hồ sơ của tôi", icon: FileText },
-  { href: "/certificates", label: "Chứng thư", icon: FileCheck2 },
+  { href: "/certificates", label: "Bằng xác lập", icon: FileCheck2 },
 ];
 
 const reviewerItems: NavigationItem[] = [
@@ -173,7 +173,7 @@ const adminItems: NavigationItem[] = [
   },
   {
     href: "/admin/certificates",
-    label: "Quản lý chứng thư",
+    label: "Quản lý bằng xác lập",
     icon: BadgeCheck,
     permission: "public_content.manage",
   },

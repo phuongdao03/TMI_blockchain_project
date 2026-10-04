@@ -7,7 +7,7 @@ describe("DossierWorkflowTimeline", () => {
   it("shows the active stage and upcoming user-facing stages", () => {
     render(<DossierWorkflowTimeline history={[]} status="PRECHECK" />);
 
-    expect(screen.getByText("Từ chuẩn bị đến nhận chứng thư")).toBeDefined();
+    expect(screen.getByText("Từ chuẩn bị đến nhận bằng xác lập")).toBeDefined();
     expect(screen.getByText("Đang thực hiện")).toBeDefined();
     expect(screen.getAllByText("Sắp tới").length).toBeGreaterThan(0);
   });

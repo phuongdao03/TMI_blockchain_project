@@ -166,7 +166,7 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                   <p className="mt-1 text-sm leading-6 text-emerald-800">
                     Thanh toán được ghi nhận
                     {payment.paidAt ? ` lúc ${formatTime(payment.paidAt)}` : ""}
-                    . CNS đang chuẩn bị và phát hành chứng thư cho hồ sơ của
+                    . Tinh Hoa Việt đang chuẩn bị và phát hành bằng xác lập cho hồ sơ của
                     bạn.
                   </p>
                 </div>
@@ -261,7 +261,7 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                 aria-hidden="true"
                 className="size-5 shrink-0 text-primary-700"
               />
-              CNS không yêu cầu mật khẩu hay mã xác nhận ngân hàng của bạn.
+              Tinh Hoa Việt không yêu cầu mật khẩu hay mã xác nhận ngân hàng của bạn.
             </div>
           </aside>
         </div>

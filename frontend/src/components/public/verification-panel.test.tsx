@@ -38,10 +38,10 @@ describe("VerificationPanel", () => {
     certificateVersions.mockResolvedValue([]);
     renderPanel();
 
-    await screen.findByText(/Chứng thư hợp lệ/);
+    await screen.findByText(/Bằng xác lập có hiệu lực/);
     expect(
       screen
-        .getByAltText("Mã QR kiểm tra chứng thư CNS-2026-0001")
+        .getByAltText("Mã QR kiểm tra bằng xác lập CNS-2026-0001")
         .getAttribute("src"),
     ).toMatch(/\/api\/v1\/verify\/certificate\/CNS-2026-0001\/qr$/);
     expect(screen.queryByText("Đối chiếu tài liệu")).toBeNull();
@@ -89,7 +89,7 @@ describe("VerificationPanel", () => {
       publicWorkSlug: "bo-nhan-dien-cns",
       metadataHash: "ab".repeat(32),
       blockNumber: 123,
-      issuerLabel: "Trung tâm An ninh Công nghệ số – CNS",
+      issuerLabel: "Đề cử Tinh Hoa Việt",
       recognizedSubject: "Chủ thể hồ sơ CNS",
       documents: [
         {
@@ -108,7 +108,7 @@ describe("VerificationPanel", () => {
         blockNumber: 123,
         confirmedAt: "2026-08-11T08:00:00Z",
         createdAt: "2026-08-10T08:00:00Z",
-        issuerLabel: "Trung tâm An ninh Công nghệ số – CNS",
+        issuerLabel: "Đề cử Tinh Hoa Việt",
         documents: [],
       },
     ]);
@@ -117,7 +117,7 @@ describe("VerificationPanel", () => {
 
     expect(
       await screen.findByText(
-        "Chứng thư hợp lệ và đã được xác nhận trên blockchain.",
+        "Bằng xác lập có hiệu lực; hồ sơ đã được xác nhận trên blockchain.",
       ),
     ).toBeDefined();
     expect(await screen.findByText("Lịch sử xác nhận")).toBeDefined();
@@ -129,13 +129,10 @@ describe("VerificationPanel", () => {
     expect(screen.getByText("Chi tiết nâng cao")).toBeDefined();
     expect(
       screen.getByRole("img", {
-        name: "Biểu trưng Đề cử và Xác lập Tinh Hoa Việt",
+        name: "Biểu trưng Tinh Hoa Việt",
       }),
     ).toBeDefined();
-    expect(screen.getByText("Đề cử và Xác lập Tinh Hoa Việt")).toBeDefined();
-    expect(
-      screen.getByText("Phát triển và vận hành công nghệ bởi CNS"),
-    ).toBeDefined();
+    expect(screen.getByText("Đề cử Tinh Hoa Việt · Ghi nhận giá trị Việt")).toBeDefined();
     expect(screen.queryByText("Chủ thể hồ sơ CNS")).toBeNull();
     const publicRecord = screen.getByRole("link", {
       name: /Xem tác phẩm/,

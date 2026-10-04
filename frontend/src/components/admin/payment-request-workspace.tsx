@@ -36,7 +36,7 @@ export function PaymentRequestWorkspace() {
   const [mode, setMode] = useState<FeeMode>("PAID");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState(
-    "Phí xác lập và phát hành chứng thư",
+    "Phí xác lập và phát hành bằng xác lập",
   );
   const [dueAt, setDueAt] = useState("");
   const [waiverReason, setWaiverReason] = useState("");

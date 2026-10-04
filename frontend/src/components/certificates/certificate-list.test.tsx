@@ -49,7 +49,7 @@ describe("CertificateList", () => {
     expect(screen.getByText("Có hiệu lực")).toBeDefined();
     expect(screen.queryByText("ACTIVE")).toBeNull();
     expect(
-      screen.getByRole("link", { name: /Xem chứng thư/ }).getAttribute("href"),
+      screen.getByRole("link", { name: /Xem và tải bằng/ }).getAttribute("href"),
     ).toBe("/certificates/7eaec2d2-c99a-42c9-8f1e-71462ba01ea0");
   });
 
@@ -69,7 +69,7 @@ describe("CertificateList", () => {
     );
 
     expect(
-      await screen.findByText("Chưa có chứng thư được phát hành"),
+      await screen.findByText("Chưa có bằng xác lập được phát hành"),
     ).toBeDefined();
     expect(screen.queryByText(/blockchain|database|backend|API/i)).toBeNull();
   });

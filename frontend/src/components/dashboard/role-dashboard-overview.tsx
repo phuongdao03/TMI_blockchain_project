@@ -72,15 +72,28 @@ export function RoleDashboardOverview({
   onUpgraded?: (user: AuthUser) => void;
 }) {
   const isViewer = persona === "VIEWER";
+  const isStaff = persona === "MODERATOR" || persona === "SUPER_ADMIN";
   const workspace =
     persona === "VIEWER" || persona === "USER"
       ? undefined
       : staffWorkspaces[persona];
-  const title = workspace?.title ?? "Tra cứu đề cử và chứng thư";
+  const title = workspace?.title ?? "Tra cứu đề cử và bằng xác lập";
   const description = isViewer
-    ? "Tài khoản tra cứu đã sẵn sàng. Tìm nội dung công khai hoặc kiểm tra trạng thái chứng thư bằng mã được cung cấp."
+    ? "Tài khoản tra cứu đã sẵn sàng. Tìm nội dung công khai hoặc kiểm tra trạng thái bằng xác lập bằng mã được cung cấp."
     : (workspace?.description ?? "");
   const primaryAction = workspace?.primaryAction ?? publicAction;
+  const staffShortcuts =
+    persona === "MODERATOR"
+      ? ([
+          ["Hồ sơ cần thẩm định", "/reviews"],
+          ["Công việc được giao", "/work-allocations"],
+          ["Tra cứu hồ sơ", "/search"],
+        ] as const)
+      : ([
+          ["Tổng quan vận hành", "/admin/dashboard"],
+          ["Phân công hồ sơ", "/admin/work-allocations"],
+          ["Quản lý bằng xác lập", "/admin/certificates"],
+        ] as const);
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -109,7 +122,7 @@ export function RoleDashboardOverview({
             className="inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
             href="/verify"
           >
-            Tra cứu chứng thư
+            Tra cứu bằng xác lập
           </Link>
           <Link
             className="inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
@@ -148,6 +161,23 @@ export function RoleDashboardOverview({
             <ArrowRight aria-hidden="true" className="size-4" />
           </Link>
         </section>
+      ) : null}
+
+      {isStaff ? (
+        <nav
+          aria-label="Lối tắt công việc"
+          className="grid gap-2 sm:grid-cols-3"
+        >
+          {staffShortcuts.map(([label, href]) => (
+            <Link
+              className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-center text-sm font-bold text-[var(--theme-text)]"
+              href={href}
+              key={href}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
       ) : null}
     </div>
   );

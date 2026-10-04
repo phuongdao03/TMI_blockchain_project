@@ -4,8 +4,8 @@ const exactActionLabels: Record<string, string> = {
   "audit.read": "Đã mở lịch sử vận hành",
   "audit.exported": "Đã tải báo cáo lịch sử",
   "audit.integrity_checked": "Đã kiểm tra tính toàn vẹn bản ghi",
-  "certificate.version.approved": "Đã phê duyệt chứng thư",
-  "certificate.version.rejected": "Đã từ chối chứng thư",
+  "certificate.version.approved": "Đã phê duyệt bằng xác lập",
+  "certificate.version.rejected": "Đã từ chối bằng xác lập",
   "dossier.approved": "Đã phê duyệt hồ sơ",
   "payment.confirmed": "Đã xác nhận thanh toán",
   "blockchain.transaction.confirmed": "Đã xác nhận giao dịch blockchain",
@@ -35,10 +35,10 @@ const exactActionLabels: Record<string, string> = {
   "blockchain.wallet.revoked": "Đã thu hồi ví ký blockchain",
   "blockchain.signature.requested": "Đã tạo yêu cầu ký blockchain",
   "blockchain.transaction.submitted": "Đã gửi giao dịch blockchain",
-  "public.verification.completed": "Đã kiểm tra chứng thư công khai",
+  "public.verification.completed": "Đã kiểm tra bằng xác lập công khai",
   "public_work.published": "Đã công bố tác phẩm",
   "public_work.media_attached": "Đã thêm nội dung công khai",
-  "certificate.issued": "Đã cấp chứng thư",
+  "certificate.issued": "Đã cấp bằng xác lập",
   "hr.department.created": "Đã tạo phòng ban",
   "hr.department.updated": "Đã cập nhật phòng ban",
   "hr.employee.created": "Đã tạo hồ sơ nhân viên",
@@ -86,9 +86,9 @@ const actionLabels: Record<string, string> = {
 const resourceLabels: Record<string, string> = {
   audit_log: "Lịch sử vận hành",
   blockchain_transaction: "Giao dịch blockchain",
-  certificate: "Chứng thư",
-  certificate_verification: "Tra cứu chứng thư",
-  certificate_version: "Phiên bản chứng thư",
+  certificate: "Bằng xác lập",
+  certificate_verification: "Tra cứu bằng xác lập",
+  certificate_version: "Phiên bản bằng xác lập",
   dossier: "Hồ sơ",
   document: "Tài liệu",
   payment: "Thanh toán",
@@ -141,10 +141,10 @@ function stringValue(
 
 const serviceLabels: Record<string, string> = {
   "blockchain-worker": "Hệ thống blockchain",
-  "certificate-worker": "Hệ thống cấp chứng thư",
+  "certificate-worker": "Hệ thống cấp bằng xác lập",
   "payment-worker": "Hệ thống thanh toán",
   "notification-worker": "Hệ thống thông báo",
-  "certificate-issuance-worker": "Hệ thống cấp chứng thư",
+  "certificate-issuance-worker": "Hệ thống cấp bằng xác lập",
 };
 
 export const integrityLabels: Record<

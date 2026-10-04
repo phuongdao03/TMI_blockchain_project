@@ -62,7 +62,7 @@ describe("layout shells", () => {
     navigationState.pathname = "/works/published-work";
     render(
       <PublicShell>
-        <h1>Nền tảng chứng thư tài sản số</h1>
+        <h1>Nền tảng bằng xác lập tài sản số</h1>
       </PublicShell>,
     );
     expect(screen.getByRole("banner")).toBeDefined();
@@ -71,7 +71,7 @@ describe("layout shells", () => {
     ).toBeDefined();
     expect(screen.getAllByRole("link", { name: "Trang chủ" })).toHaveLength(1);
     expect(
-      screen.getAllByRole("link", { name: "Tra cứu chứng thư" }),
+      screen.getAllByRole("link", { name: "Tra cứu bằng xác lập" }),
     ).toHaveLength(1);
     expect(screen.getAllByRole("link", { name: "Hướng dẫn" })).toHaveLength(1);
     expect(
@@ -111,7 +111,7 @@ describe("layout shells", () => {
     );
 
     const brandLink = within(screen.getByRole("banner")).getByRole("link", {
-      name: "Trung tâm Đề cử Tinh Hoa Việt",
+      name: "Đề cử Tinh Hoa Việt",
     });
     const headerLogos = Array.from(brandLink.querySelectorAll("img"));
     const sources = headerLogos.map((logo) =>
@@ -119,13 +119,13 @@ describe("layout shells", () => {
     );
 
     expect(headerLogos).toHaveLength(1);
-    expect(sources[0]).toContain("/assets/brand/thv-public-header-seal.png");
+    expect(sources[0]).toContain("/assets/brand/logo-tinh-hoa-viet.png");
   });
 
   it("keeps public and auth footers limited to terms and privacy links", () => {
     render(
       <PublicShell>
-        <h1>Nền tảng chứng thư tài sản số</h1>
+        <h1>Nền tảng bằng xác lập tài sản số</h1>
       </PublicShell>,
     );
 
@@ -153,13 +153,13 @@ describe("layout shells", () => {
     const publicFooter = screen.getByRole("contentinfo");
     expect(publicFooter.querySelector(".public-footer__inner")).not.toBeNull();
     const footerBrand = within(publicFooter).getByRole("link", {
-      name: "Trung tâm Đề cử Tinh Hoa Việt",
+      name: "Đề cử Tinh Hoa Việt",
     });
     const footerLogos = footerBrand.querySelectorAll("img");
     expect(footerLogos).toHaveLength(1);
     expect(
       decodeURIComponent(footerLogos[0]?.getAttribute("src") ?? ""),
-    ).toContain("/assets/brand/thv-public-header-seal.png");
+    ).toContain("/assets/brand/logo-tinh-hoa-viet.png");
     expect(
       within(publicFooter).getByText(
         "Phát triển bởi Trung tâm An ninh Công nghệ số – CNS",

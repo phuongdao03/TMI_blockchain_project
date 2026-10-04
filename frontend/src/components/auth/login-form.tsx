@@ -154,7 +154,7 @@ export function LoginForm({
 
   return (
     <AuthCard
-      description="Truy cập không gian hồ sơ để theo dõi tiến trình, phản hồi và chứng thư của bạn."
+      description="Truy cập không gian hồ sơ để theo dõi tiến trình, phản hồi và bằng xác lập của bạn."
       footer={
         <>
           Chưa có tài khoản? <AuthLink href="/register">Tạo tài khoản</AuthLink>
