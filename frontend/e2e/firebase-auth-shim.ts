@@ -49,7 +49,7 @@ export async function sendPasswordResetEmail(
   _target: E2EAuth,
   email: string,
 ): Promise<void> {
-  if (email === "failure@cnsgroup.vn")
+  if (email === "failure@tinhhoaviet.org.vn")
     throw authError("auth/too-many-requests");
 }
 
@@ -72,11 +72,11 @@ export async function signInWithEmailAndPassword(
   }
   const signedIn = user(
     email,
-    email === "superadmin@cnsgroup.vn"
+    email === "superadmin@tinhhoaviet.org.vn"
       ? "e2e-super-admin-token"
-      : email === "reviewer@cnsgroup.vn"
+      : email === "reviewer@tinhhoaviet.org.vn"
         ? "e2e-reviewer-token"
-        : email === "owner@cnsgroup.vn"
+        : email === "owner@tinhhoaviet.org.vn"
           ? "e2e-admin-token"
           : "e2e-applicant-token",
   );
@@ -89,8 +89,8 @@ export async function signInWithPopup(
 ): Promise<{ user: E2EUser }> {
   const isInvitation = window.location.pathname.includes("staff-invitation");
   const signedIn = isInvitation
-    ? user("reviewer@cnsgroup.vn", "e2e-staff-invitation-token")
-    : user("applicant@cnsgroup.vn", "e2e-applicant-token");
+    ? user("reviewer@tinhhoaviet.org.vn", "e2e-staff-invitation-token")
+    : user("applicant@tinhhoaviet.org.vn", "e2e-applicant-token");
   target.currentUser = signedIn;
   return { user: signedIn };
 }
@@ -111,7 +111,7 @@ export async function getRedirectResult(
   }
   callback.searchParams.delete("__cns_e2e_firebase_redirect");
   window.history.replaceState(null, "", callback);
-  const signedIn = user("applicant@cnsgroup.vn", "e2e-applicant-token");
+  const signedIn = user("applicant@tinhhoaviet.org.vn", "e2e-applicant-token");
   target.currentUser = signedIn;
   return { user: signedIn };
 }
