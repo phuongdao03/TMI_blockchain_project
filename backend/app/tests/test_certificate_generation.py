@@ -1,4 +1,5 @@
 import hashlib
+import unicodedata
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -147,3 +148,106 @@ def test_pdf_uses_public_vietnamese_details_without_dates_or_provider(
     assert "NGÀY PHÁT HÀNH" not in text
     assert "NGÀY HẾT HẠN" not in text
     assert "polygon" not in text
+
+
+def test_pdf_highlights_full_work_title_over_drum_watermark(monkeypatch) -> None:
+    import app.modules.certificates.pdf as certificate_pdf
+
+    title = "Video chào mừng thương hiệu Đề cử Tinh Hoa Việt và di sản văn hóa dân tộc"
+    title_lines: list[tuple[str, float]] = []
+    images: list[str] = []
+
+    class RecordingCanvas(Canvas):
+        def drawString(self, x, y, text, *args, **kwargs):
+            if 169 <= y <= 220 and self._fontsize >= 19:
+                title_lines.append((text, self._fontsize))
+            return super().drawString(x, y, text, *args, **kwargs)
+
+        def drawImage(self, image, x, y, *args, **kwargs):
+            if isinstance(image, str):
+                images.append(image)
+            return super().drawImage(image, x, y, *args, **kwargs)
+
+    monkeypatch.setattr(certificate_pdf, "Canvas", RecordingCanvas)
+    renderer = CertificatePdfRenderer(template_version="v4", generator_version="test")
+    renderer.render(
+        metadata={
+            "certificateNumber": "THV-2026-7EAEC2D2C99A",
+            "asset": {"title": title, "category": "Thương hiệu"},
+            "blockchain": {},
+        },
+        verification_url="https://example.test/verify/test",
+    )
+
+    assert " ".join(line for line, _ in title_lines) == title
+    assert len(title_lines) >= 2
+    assert all(size >= 19 for _, size in title_lines)
+    assert any(image.endswith("trong-dong.png") for image in images)
+
+
+def test_pdf_normalizes_vietnamese_display_text(monkeypatch) -> None:
+    import app.modules.certificates.pdf as certificate_pdf
+
+    drawn: list[str] = []
+
+    class RecordingCanvas(Canvas):
+        def drawString(self, x, y, text, *args, **kwargs):
+            drawn.append(text)
+            return super().drawString(x, y, text, *args, **kwargs)
+
+    monkeypatch.setattr(certificate_pdf, "Canvas", RecordingCanvas)
+    expected = ("Đề cử Tinh Hoa Việt", "Văn hóa Việt", "Trung tâm Đề cử", "Thương hiệu")
+    renderer = CertificatePdfRenderer(template_version="v4", generator_version="test")
+    renderer.render(
+        metadata={
+            "certificateNumber": "THV-2026-TEST",
+            "asset": {
+                "title": unicodedata.normalize("NFD", expected[0]),
+                "summary": unicodedata.normalize("NFD", expected[1]),
+                "subject": unicodedata.normalize("NFD", expected[2]),
+                "category": unicodedata.normalize("NFD", expected[3]),
+            },
+            "blockchain": {},
+        },
+        verification_url="https://example.test/verify/test",
+    )
+
+    assert all(value in drawn for value in expected)
+    assert all(unicodedata.is_normalized("NFC", value) for value in drawn)
+
+
+def test_pdf_uses_serif_type_for_headline_and_work_title(monkeypatch) -> None:
+    import app.modules.certificates.pdf as certificate_pdf
+
+    title = "Video chào mừng thương hiệu Đề cử Tinh Hoa Việt"
+    display_fonts: dict[str, str] = {}
+    rendered_title_lines: list[str] = []
+
+    class RecordingCanvas(Canvas):
+        def drawCentredString(self, x, y, text, *args, **kwargs):
+            if text == "BẰNG XÁC LẬP":
+                display_fonts["headline"] = self._fontname
+            return super().drawCentredString(x, y, text, *args, **kwargs)
+
+        def drawString(self, x, y, text, *args, **kwargs):
+            if 169 <= y <= 220 and self._fontsize >= 19:
+                display_fonts["work_title"] = self._fontname
+                rendered_title_lines.append(text)
+            return super().drawString(x, y, text, *args, **kwargs)
+
+    monkeypatch.setattr(certificate_pdf, "Canvas", RecordingCanvas)
+    renderer = CertificatePdfRenderer(template_version="v4", generator_version="test")
+    renderer.render(
+        metadata={
+            "certificateNumber": "THV-2026-TEST",
+            "asset": {"title": title},
+            "blockchain": {},
+        },
+        verification_url="https://example.test/verify/test",
+    )
+
+    assert display_fonts == {
+        "headline": "THV-NotoSerif-Bold",
+        "work_title": "THV-NotoSerif-Regular",
+    }
+    assert rendered_title_lines == [title]
