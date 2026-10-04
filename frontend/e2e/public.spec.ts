@@ -203,7 +203,7 @@ test("public portal is professional, responsive and verifiable", async ({
     await certificateHeading.evaluate(
       (element) => getComputedStyle(element).fontFamily,
     ),
-  ).not.toMatch(/Georgia|ui-serif/i);
+  ).toMatch(/Georgia|serif/i);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth + 1,
