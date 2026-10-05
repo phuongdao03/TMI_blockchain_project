@@ -146,7 +146,8 @@ class PublicMediaQueryService:
                 if row.derivative_status is DerivativeStatus.READY
                 or (
                     row.media_kind is PublicMediaKind.VIDEO
-                    and row.derivative_status is DerivativeStatus.PENDING
+                    and row.derivative_status
+                    in {DerivativeStatus.PENDING, DerivativeStatus.PROCESSING}
                 )
             )
         fallback = next(
@@ -195,7 +196,8 @@ class PublicMediaQueryService:
                     )
                     if (
                         row.media_kind is PublicMediaKind.VIDEO
-                        and row.derivative_status is DerivativeStatus.READY
+                        and row.derivative_status
+                        in {DerivativeStatus.READY, DerivativeStatus.PROCESSING}
                     )
                     else None
                 ),
@@ -621,7 +623,15 @@ class PublicMediaWorker:
             if joined is None:
                 return
             relation, asset = joined
-            if relation.derivative_status is DerivativeStatus.READY:
+            legacy_video_proxy = (
+                relation.media_kind is PublicMediaKind.VIDEO
+                and relation.derivative_url is not None
+                and relation.derivative_url.startswith("/api/v1/public/works/")
+            )
+            if (
+                relation.derivative_status is DerivativeStatus.READY
+                and not legacy_video_proxy
+            ):
                 return
             if is_editorial_cover(asset) or (
                 self._single_copy_storage_enabled
@@ -698,7 +708,9 @@ class PublicMediaWorker:
                     self._event(current.public_work_id)
             return
         if source_format is None:
-            await self._mark_failed(relation_id, "UNSUPPORTED_MIME")
+            await self._mark_failed(
+                relation_id, "UNSUPPORTED_MIME", preserve_fallback=legacy_video_proxy
+            )
             raise PublicMediaValidationError("Public media MIME type is unsupported.")
         derivative_public_id = (
             f"cns/{self._environment}/dossiers/"
@@ -732,7 +744,11 @@ class PublicMediaWorker:
                 else (),
             )
         except MediaProviderUnavailableError:
-            await self._mark_failed(relation_id, "PROVIDER_UNAVAILABLE")
+            await self._mark_failed(
+                relation_id,
+                "PROVIDER_UNAVAILABLE",
+                preserve_fallback=legacy_video_proxy,
+            )
             raise
         except (
             InvalidTag,
@@ -741,7 +757,11 @@ class PublicMediaWorker:
             MediaContentTooLargeError,
             ValueError,
         ):
-            await self._mark_failed(relation_id, "SOURCE_INTEGRITY_FAILED")
+            await self._mark_failed(
+                relation_id,
+                "SOURCE_INTEGRITY_FAILED",
+                preserve_fallback=legacy_video_proxy,
+            )
             raise PublicMediaValidationError(
                 "Retained media integrity verification failed."
             ) from None
@@ -798,11 +818,17 @@ class PublicMediaWorker:
             )
         return content
 
-    async def _mark_failed(self, relation_id: UUID, code: str) -> None:
+    async def _mark_failed(
+        self, relation_id: UUID, code: str, *, preserve_fallback: bool = False
+    ) -> None:
         async with self._session.begin():
             relation = await self._repository.get_relation(relation_id, for_update=True)
             if relation is not None:
-                relation.derivative_status = DerivativeStatus.FAILED
+                relation.derivative_status = (
+                    DerivativeStatus.READY
+                    if preserve_fallback
+                    else DerivativeStatus.FAILED
+                )
                 relation.failure_code = code
 
     def _event(self, work_id: UUID) -> None:

@@ -15,9 +15,10 @@ export function BrandMark({
   const sealOnly = variant === "public-seal";
   return (
     <Link
-      aria-label="Đề cử Tinh Hoa Việt"
+      aria-label="Đề cử và xác lập Tinh Hoa Việt"
       className={`brand-mark brand-mark--official${compact ? " brand-mark--compact" : ""}${sealOnly ? " brand-mark--public-seal" : ""}`}
       href="/"
+      prefetch={false}
     >
       <Image
         alt=""

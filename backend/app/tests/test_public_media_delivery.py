@@ -39,6 +39,21 @@ def test_legacy_video_seeking(requested: str, expected: bytes, header: str) -> N
     assert response.headers["cache-control"] == "private, no-store"
 
 
+def test_large_video_open_range_returns_a_bounded_chunk() -> None:
+    content = b"a" * (3 * 1024 * 1024)
+    response = content_response(content, "video/mp4", "bytes=0-")
+    assert response.status_code == 206
+    assert len(response.body) == 2 * 1024 * 1024
+    assert (
+        response.headers["content-range"]
+        == f"bytes 0-{2 * 1024 * 1024 - 1}/{len(content)}"
+    )
+
+    tail = content_response(content, "video/mp4", f"bytes={len(content) - 8}-")
+    assert tail.status_code == 206
+    assert tail.body == b"a" * 8
+
+
 @pytest.mark.parametrize(
     "requested", ["bytes=9-", "bytes=-0", "bytes=2-1", "bytes=0-1,3-4", "invalid"]
 )
@@ -49,7 +64,8 @@ def test_invalid_range(requested: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "derivative_status", [DerivativeStatus.READY, DerivativeStatus.PENDING]
+    "derivative_status",
+    [DerivativeStatus.READY, DerivativeStatus.PENDING, DerivativeStatus.PROCESSING],
 )
 def test_encrypted_video_poster_delivers_real_frame_without_upload(
     derivative_status: DerivativeStatus,

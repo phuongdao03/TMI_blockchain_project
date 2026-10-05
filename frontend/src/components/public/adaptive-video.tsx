@@ -30,6 +30,7 @@ export function AdaptiveVideo({
   const startupTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [active, setActive] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
     return () => {
       if (startupTimeout.current) clearTimeout(startupTimeout.current);
@@ -47,31 +48,31 @@ export function AdaptiveVideo({
     usingStreaming.current = false;
     if (startupTimeout.current) clearTimeout(startupTimeout.current);
     setFailed(false);
+    setLoading(true);
     setActive(true);
     video.src = fallbackUrl;
     video.load();
     void video.play().catch(() => undefined);
-    startupTimeout.current = setTimeout(() => {
-      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-        void tryStreaming();
-      }
-    }, 6000);
+    if (streamingUrl) {
+      startupTimeout.current = setTimeout(() => {
+        if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+          void tryStreaming();
+        }
+      }, 6000);
+    }
   }
 
   async function tryStreaming() {
     const video = videoRef.current;
     if (!video || !streamingUrl || usingStreaming.current) {
       setFailed(true);
+      setLoading(false);
       return;
     }
     if (startupTimeout.current) clearTimeout(startupTimeout.current);
     usingStreaming.current = true;
     setFailed(false);
-    startupTimeout.current = setTimeout(() => {
-      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-        setFailed(true);
-      }
-    }, 15000);
+    setLoading(true);
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = streamingUrl;
       video.load();
@@ -81,6 +82,7 @@ export function AdaptiveVideo({
       const { default: Hls } = await import("hls.js");
       if (!videoRef.current || !Hls.isSupported()) {
         setFailed(true);
+        setLoading(false);
         return;
       }
       const hls = new Hls({
@@ -93,16 +95,20 @@ export function AdaptiveVideo({
       hls.loadSource(streamingUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) setFailed(true);
+        if (data.fatal) {
+          setFailed(true);
+          setLoading(false);
+        }
       });
       destroyStreaming.current = () => hls.destroy();
     } catch {
       setFailed(true);
+      setLoading(false);
     }
   }
 
   return (
-    <div className="relative grid size-full place-items-center bg-[#1d0e0b]">
+    <div className="adaptive-video relative grid size-full place-items-center bg-[#1d0e0b]">
       <video
         className={className}
         controls={active && !failed && controls}
@@ -112,14 +118,18 @@ export function AdaptiveVideo({
         onError={() => void tryStreaming()}
         onCanPlay={() => {
           if (startupTimeout.current) clearTimeout(startupTimeout.current);
+          setLoading(false);
           if (active) void videoRef.current?.play().catch(() => undefined);
         }}
         onPlaying={() => {
           if (startupTimeout.current) clearTimeout(startupTimeout.current);
           setFailed(false);
+          setLoading(false);
         }}
+        onWaiting={() => setLoading(true)}
         onStalled={() => {
-          if (!usingStreaming.current) void tryStreaming();
+          setLoading(true);
+          if (streamingUrl && !usingStreaming.current) void tryStreaming();
         }}
         playsInline
         poster={poster}
@@ -128,10 +138,18 @@ export function AdaptiveVideo({
       >
         <track kind="captions" />
       </video>
+      {active && !failed && loading ? (
+        <span
+          className="adaptive-video__loading absolute bottom-4 left-1/2 -translate-x-1/2 rounded bg-black/75 px-3 py-2 text-sm font-semibold text-white"
+          role="status"
+        >
+          Đang tải video…
+        </span>
+      ) : null}
       {!active || failed ? (
         <button
           aria-label={failed ? "Thử phát lại video" : "Phát video tác phẩm"}
-          className="absolute inset-0 grid place-items-center bg-black/15 text-white transition hover:bg-black/25"
+          className="adaptive-video__play absolute inset-0 grid place-items-center bg-black/15 text-white transition hover:bg-black/25"
           onClick={startPlayback}
           type="button"
         >
@@ -139,7 +157,7 @@ export function AdaptiveVideo({
             <Play aria-hidden="true" className="ml-1 size-7 fill-current" />
           </span>
           {failed ? (
-            <span className="mt-20 rounded bg-black/70 px-3 py-2 text-sm font-semibold">
+            <span className="adaptive-video__error mt-20 rounded bg-black/70 px-3 py-2 text-sm font-semibold">
               Video chưa phát được. Chạm để thử lại.
             </span>
           ) : null}

@@ -279,10 +279,7 @@ export function SearchResultsPage({
             aria-live="polite"
             className="mt-6 flex items-center justify-between gap-4 text-sm text-slate-500"
           >
-            <span>
-              {results.data.data.length} kết quả trên trang ·{" "}
-              {results.data.meta.durationMs} ms
-            </span>
+            <span>{results.data.data.length} kết quả</span>
             {results.data.meta.nextCursor ? (
               <Link
                 className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-gold-300/30 px-4 font-semibold text-gold-200 transition hover:bg-gold-300/10"

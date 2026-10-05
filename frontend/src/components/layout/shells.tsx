@@ -137,7 +137,7 @@ export function PublicShell({
         Chuyển đến nội dung chính
       </a>
       <header className="public-header">
-        <BrandMark variant="public-seal" />
+        <BrandMark />
         <nav className="public-nav" aria-label="Điều hướng chính">
           {publicLinks.map((item) => {
             const active =
@@ -289,6 +289,9 @@ export function PublicShell({
                 </Link>
               );
             })}
+            <Link href="/install" onClick={() => closeMenu(false)}>
+              Cài ứng dụng
+            </Link>
             {publicHeaderAction ? (
               <Link
                 href={publicHeaderAction.href}

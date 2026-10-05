@@ -1,7 +1,7 @@
 import asyncio
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import OperationalError
 
 from app.core.config import get_settings
@@ -11,7 +11,7 @@ from app.modules.media.encryption import DocumentEncryptionKeyring
 from app.modules.media.errors import MediaProviderUnavailableError
 from app.modules.media.gateway import CloudinaryMediaGateway
 from app.modules.public.media_service import PublicMediaWorker
-from app.modules.public.models import DerivativeStatus, PublicWorkMedia
+from app.modules.public.models import DerivativeStatus, PublicMediaKind, PublicWorkMedia
 from app.workers.celery_app import celery_app
 
 
@@ -64,7 +64,19 @@ async def _reconcile_pending(*, limit: int = 100) -> None:
         relation_ids = tuple(
             await session.scalars(
                 select(PublicWorkMedia.id)
-                .where(PublicWorkMedia.derivative_status == DerivativeStatus.PENDING)
+                .where(
+                    or_(
+                        PublicWorkMedia.derivative_status == DerivativeStatus.PENDING,
+                        and_(
+                            PublicWorkMedia.media_kind == PublicMediaKind.VIDEO,
+                            PublicWorkMedia.derivative_status == DerivativeStatus.READY,
+                            PublicWorkMedia.failure_code.is_(None),
+                            PublicWorkMedia.derivative_url.like(
+                                "/api/v1/public/works/%/media/%"
+                            ),
+                        ),
+                    )
+                )
                 .order_by(PublicWorkMedia.created_at, PublicWorkMedia.id)
                 .limit(limit)
             )

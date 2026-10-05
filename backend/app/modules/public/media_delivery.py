@@ -32,6 +32,8 @@ from app.modules.public.video_poster import (
     retain_poster,
 )
 
+VIDEO_RANGE_CHUNK_BYTES = 2 * 1024 * 1024
+
 
 def content_response(
     content: bytes, mime_type: str, byte_range: str | None
@@ -62,6 +64,8 @@ def content_response(
         raise HTTPException(
             status_code=416, headers={**headers, "Content-Range": f"bytes */{size}"}
         ) from None
+    if mime_type.startswith("video/"):
+        end = min(end, start + VIDEO_RANGE_CHUNK_BYTES - 1)
     headers["Content-Range"] = f"bytes {start}-{end}/{size}"
     return Response(
         content[start : end + 1], status_code=206, media_type=mime_type, headers=headers
@@ -115,7 +119,8 @@ class PublicMediaDeliveryService:
                 or (
                     relation.derivative_status is not DerivativeStatus.READY
                     and not (
-                        relation.derivative_status is DerivativeStatus.PENDING
+                        relation.derivative_status
+                        in {DerivativeStatus.PENDING, DerivativeStatus.PROCESSING}
                         and asset.mime_type.startswith("video/")
                     )
                 )

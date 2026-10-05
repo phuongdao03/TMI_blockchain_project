@@ -4,7 +4,7 @@ import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -61,6 +61,7 @@ from app.modules.public.models import (
     VideoFitMode,
     VideoQualityProfile,
 )
+from app.workers import public_media_tasks
 from app.workers.celery_app import celery_app
 from app.workers.public_media_tasks import reconcile_pending_public_media
 
@@ -370,6 +371,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
 
     class VideoGateway:
         corrupt = True
+        reject = False
         upload_count = 0
 
         async def download_asset(self, **kwargs: object) -> bytes:
@@ -386,6 +388,8 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             self, **kwargs: object
         ) -> PublicDerivativeMetadata:
             self.upload_count += 1
+            if self.reject:
+                raise MediaProviderUnavailableError()
             assert kwargs["source_resource_type"] == "video"
             assert kwargs["source_format"] == "mp4"
             assert kwargs["source_content"] == content
@@ -575,6 +579,57 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert "/sp_auto:maxres_720p/" in public_video.streaming_url
             assert public_video.poster_url is not None
             assert public_video.poster_url.endswith(".webp")
+
+            # Earlier releases marked a source-backed 4K video READY even
+            # though its public URL still pointed to the slow media proxy.
+            relation.derivative_url = (
+                f"/api/v1/public/works/{work_id}/media/{relation_id}"
+            )
+            relation.derivative_public_id = None
+            await session.commit()
+            relation.derivative_status = DerivativeStatus.PROCESSING
+            await session.commit()
+            during_repair = await service.list_public(work_id)
+            assert len(during_repair) == 1
+            assert during_repair[0].url.startswith("/api/v1/public/works/")
+            assert during_repair[0].poster_url is not None
+            relation.derivative_status = DerivativeStatus.READY
+            await session.commit()
+            with (
+                patch.object(
+                    public_media_tasks, "get_session_factory", return_value=factory
+                ),
+                patch.object(
+                    public_media_tasks.generate_public_media_derivative, "delay"
+                ) as enqueue,
+            ):
+                await public_media_tasks._reconcile_pending()
+                enqueue.assert_called_once_with(str(relation_id))
+            await worker.process(relation_id)
+            assert video_gateway.upload_count == 2
+            assert relation.derivative_url.startswith("https://res.cloudinary.com/")
+
+            relation.derivative_url = (
+                f"/api/v1/public/works/{work_id}/media/{relation_id}"
+            )
+            relation.derivative_public_id = None
+            await session.commit()
+            video_gateway.reject = True
+            with pytest.raises(MediaProviderUnavailableError):
+                await worker.process(relation_id)
+            assert relation.derivative_status is DerivativeStatus.READY
+            assert relation.derivative_url.startswith("/api/v1/public/works/")
+            assert relation.failure_code == "PROVIDER_UNAVAILABLE"
+            with (
+                patch.object(
+                    public_media_tasks, "get_session_factory", return_value=factory
+                ),
+                patch.object(
+                    public_media_tasks.generate_public_media_derivative, "delay"
+                ) as enqueue,
+            ):
+                await public_media_tasks._reconcile_pending()
+                enqueue.assert_not_called()
         await engine.dispose()
 
     asyncio.run(exercise())

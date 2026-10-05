@@ -128,6 +128,8 @@ describe("SearchResultsPage", () => {
     );
 
     expect(await screen.findByTestId("search-album-grid")).toBeTruthy();
+    expect(screen.getByText("1 kết quả")).toBeDefined();
+    expect(screen.queryByText(/12 ms/)).toBeNull();
     expect(screen.getByRole("article").getAttribute("data-layout")).toBe(
       "search-album-tile",
     );

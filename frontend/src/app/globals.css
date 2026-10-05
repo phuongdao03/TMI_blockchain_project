@@ -8569,6 +8569,57 @@ html[data-theme="light"] .public-home .registry-search input::placeholder {
   }
 }
 
+/* Keep the public identity readable on phones without squeezing the controls. */
+.public-shell .public-header {
+  backdrop-filter: none;
+}
+
+@media (max-width: 38rem) {
+  .public-shell .public-header {
+    gap: 0.375rem;
+  }
+
+  .public-shell .public-header .brand-mark {
+    min-width: 0;
+    gap: 0.25rem;
+  }
+
+  .public-shell .public-header .brand-mark__official-logo {
+    width: 3rem;
+  }
+
+  .public-shell .public-header .brand-mark__official-name {
+    min-width: 0;
+  }
+
+  .public-shell .public-header .brand-mark__official-name span {
+    font-size: 0.49rem;
+    letter-spacing: 0.055em;
+  }
+
+  .public-shell .public-header .brand-mark__official-name strong {
+    font-size: 0.72rem;
+    white-space: normal;
+  }
+
+  .public-shell .public-header__actions > a[href="/install"] {
+    display: none;
+  }
+
+  .public-shell .public-workspace-navigation {
+    background: var(--theme-surface);
+    backdrop-filter: none;
+    animation: none;
+  }
+}
+
+/* Video controls stay legible over the dark player in both color modes. */
+.public-theme-surface .adaptive-video__play,
+.public-theme-surface .adaptive-video__loading,
+.public-theme-surface .adaptive-video__error {
+  color: #fff !important;
+}
+
 /* Workspace motion system -------------------------------------------------
    Motion stays short, semantic and transform-only so it remains smooth on
    modest mobile devices. Every effect has a reduced-motion fallback. */
