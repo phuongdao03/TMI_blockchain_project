@@ -566,6 +566,49 @@ describe("BlockchainSigningWorkspace", () => {
     ).toBeNull();
   });
 
+  it("rechecks a failed transaction with a hash and shows its recovered confirmation", async () => {
+    const user = userEvent.setup();
+    const transactionHash = `0x${"ef".repeat(32)}`;
+    currentWallet.mockResolvedValue({
+      id: "wallet-link",
+      walletAddress: "0x3434343434343434343434343434343434343434",
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-26T00:00:00Z",
+    });
+    proofQueue.mockResolvedValue([
+      {
+        transactionId: "transaction-recoverable",
+        dossierId: "dossier-1",
+        dossierCode: "THV-2026-001",
+        dossierTitle: "Tác phẩm cần đối chiếu",
+        version: 2,
+        proofHash: `0x${"ab".repeat(32)}`,
+        status: "FAILED",
+        txHash: transactionHash,
+        confirmations: 0,
+        errorCode: "CHAIN_REORG",
+        createdAt: "2026-08-26T00:00:00Z",
+      },
+    ]);
+    transactionStatus.mockResolvedValue({
+      transactionId: "transaction-recoverable",
+      status: "CONFIRMED",
+      txHash: transactionHash,
+      confirmations: 12,
+      errorCode: null,
+      confirmedAt: "2026-08-26T00:01:00Z",
+    });
+
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: /Tác phẩm cần đối chiếu/ }),
+    );
+
+    expect(await screen.findByText("Bằng chứng có thể tự kiểm tra")).toBeDefined();
+    expect(transactionStatus).toHaveBeenCalledWith("transaction-recoverable");
+  });
+
   it("keeps the transaction visible and offers a retry when Polygon status is unavailable", async () => {
     const user = userEvent.setup();
     const transactionHash = `0x${"ef".repeat(32)}`;

@@ -693,6 +693,35 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version() -> None:
         assert without_confirmations.status is BlockchainTransactionStatus.BROADCAST
         assert without_confirmations.confirmations == 1
 
+        # An earlier inconsistent RPC response can mark a mined transaction as
+        # failed. A later canonical receipt must restore it without another signature.
+        async with sessions() as session:
+            stored_transaction = await session.get(
+                BlockchainTransaction, intent.transaction_id
+            )
+            assert stored_transaction is not None
+            stored_transaction.status = BlockchainTransactionStatus.FAILED
+            stored_transaction.error_code = "CHAIN_REORG"
+            await session.commit()
+
+        gateway.receipt_available = False
+        await service.reconcile_pending()
+        still_failed = await service.transaction_status(
+            principal, transaction_id=intent.transaction_id, reconcile=False
+        )
+        assert still_failed.status is BlockchainTransactionStatus.FAILED
+
+        gateway.receipt_available = True
+        await service.reconcile_pending()
+        recovered_after_failure = await service.transaction_status(
+            principal,
+            transaction_id=intent.transaction_id,
+            reconcile=False,
+        )
+        assert recovered_after_failure.status is BlockchainTransactionStatus.BROADCAST
+        assert recovered_after_failure.error_code is None
+        assert recovered_after_failure.confirmations == 1
+
         gateway.latest_block = 11
 
         confirmed = await service.transaction_status(

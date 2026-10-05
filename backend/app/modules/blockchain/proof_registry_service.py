@@ -14,7 +14,7 @@ from datetime import UTC, datetime, timedelta
 from typing import cast
 from uuid import UUID, uuid4
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, case, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.outbox import OutboxEvent
@@ -277,10 +277,7 @@ class THVProofRegistryService:
                     ),
                 )
             if existing_transaction_id is not None:
-                await self._recover_missing_transaction_hash(
-                    existing_transaction_id,
-                    proof=existing,
-                )
+                await self._reconcile(existing_transaction_id)
             raise BlockchainConflictError(
                 "This dossier version is already confirmed on-chain. Refresh its "
                 "status instead of signing it again."
@@ -544,10 +541,26 @@ class THVProofRegistryService:
                                     BlockchainTransactionStatus.BROADCAST,
                                     BlockchainTransactionStatus.CONFIRMED,
                                     BlockchainTransactionStatus.SIGNING,
+                                    BlockchainTransactionStatus.FAILED,
                                 )
                             ),
+                            or_(
+                                BlockchainTransaction.status
+                                != BlockchainTransactionStatus.FAILED,
+                                BlockchainTransaction.tx_hash.is_not(None),
+                            ),
                         )
-                        .order_by(BlockchainTransaction.broadcast_at)
+                        .order_by(
+                            case(
+                                (
+                                    BlockchainTransaction.status
+                                    == BlockchainTransactionStatus.FAILED,
+                                    1,
+                                ),
+                                else_=0,
+                            ),
+                            BlockchainTransaction.broadcast_at,
+                        )
                         .limit(limit)
                     )
                 ).all()
@@ -567,6 +580,7 @@ class THVProofRegistryService:
                 not in {
                     BlockchainTransactionStatus.BROADCAST,
                     BlockchainTransactionStatus.CONFIRMED,
+                    BlockchainTransactionStatus.FAILED,
                 }
                 or transaction.tx_hash is None
             ):
@@ -658,6 +672,8 @@ class THVProofRegistryService:
             transaction.receipt_event_name = "ProofRecorded"
             transaction.error_code = None
             transaction.error_message = None
+            if transaction.status is BlockchainTransactionStatus.FAILED:
+                transaction.status = BlockchainTransactionStatus.BROADCAST
             if (
                 confirmations >= self._required_confirmations
                 and transaction.status is not BlockchainTransactionStatus.CONFIRMED

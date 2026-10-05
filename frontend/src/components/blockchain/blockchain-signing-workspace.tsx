@@ -50,6 +50,11 @@ const statusLabel: Record<string, string> = {
   REPLACED: "Đã được thay thế",
 };
 const terminalStatuses = new Set(["CONFIRMED", "FAILED", "REPLACED"]);
+function signingStatusLabel(status: string, transactionHash?: string | null) {
+  return status === "FAILED" && transactionHash
+    ? "Đang đối chiếu giao dịch"
+    : (statusLabel[status] ?? status);
+}
 const signingSteps = [
   "Chuẩn bị",
   "Chờ MetaMask",
@@ -103,7 +108,7 @@ function signingStep(
   if (status === "CONFIRMED") return 3;
   if (
     status === "BROADCAST" ||
-    status === "FAILED" ||
+    (status === "FAILED" && Boolean(transactionHash)) ||
     (status === "SIGNING" && transactionHash)
   ) {
     return 2;
@@ -126,6 +131,9 @@ function verificationMessage(status: string, transactionHash?: string | null) {
     return "MetaMask chưa trả về mã giao dịch. Bạn có thể mở lại ví để tiếp tục ký.";
   }
   if (status === "FAILED") {
+    if (transactionHash) {
+      return "Giao dịch đã có mã trên Polygon. Hệ thống đang đối chiếu lại; bạn không cần ký lần nữa.";
+    }
     return "Giao dịch chưa được ghi nhận. Vui lòng kiểm tra lỗi và thử lại.";
   }
   return "Hồ sơ đã sẵn sàng. Hãy kiểm tra thông tin trước khi ký.";
@@ -172,14 +180,22 @@ export function BlockchainSigningWorkspace() {
     ],
     queryFn: () => proofRegistrySigningApi.status(selected!.transactionId!),
     enabled: Boolean(
-      selected?.transactionId && !terminalStatuses.has(selected.status),
+      selected?.transactionId &&
+        (!terminalStatuses.has(selected.status) ||
+          (selected.status === "FAILED" && selected.txHash)),
     ),
     retry: false,
     refetchInterval: (query) => {
-      if (query.state.data && terminalStatuses.has(query.state.data.status)) {
+      if (
+        query.state.data &&
+        terminalStatuses.has(query.state.data.status) &&
+        !(query.state.data.status === "FAILED" && query.state.data.txHash)
+      ) {
         return false;
       }
-      return query.state.error ? 15_000 : 4_000;
+      return query.state.error || query.state.data?.status === "FAILED"
+        ? 15_000
+        : 4_000;
     },
     refetchIntervalInBackground: false,
   });
@@ -201,7 +217,10 @@ export function BlockchainSigningWorkspace() {
   useEffect(() => {
     const next = transactionStatus.data;
     if (!next) return;
-    if (terminalStatuses.has(next.status)) {
+    if (
+      terminalStatuses.has(next.status) &&
+      !(next.status === "FAILED" && next.txHash)
+    ) {
       void queryClient.invalidateQueries({
         queryKey: ["blockchain", "proof-registry", "signing-queue"],
       });
@@ -787,7 +806,7 @@ export function BlockchainSigningWorkspace() {
                 </p>
               </div>
               <span className="blockchain-status-pill rounded-full px-3 py-1.5 text-xs font-bold">
-                {statusLabel[item.status] ?? item.status}
+                {signingStatusLabel(item.status, item.txHash)}
               </span>
             </button>
           ))}
@@ -810,8 +829,10 @@ export function BlockchainSigningWorkspace() {
               </p>
             </div>
             <span className="blockchain-status-pill rounded-full px-3 py-1.5 text-xs font-bold">
-              {statusLabel[displayedSelected.status] ??
-                displayedSelected.status}
+              {signingStatusLabel(
+                displayedSelected.status,
+                displayedSelected.txHash,
+              )}
             </span>
           </div>
           <ol
@@ -869,6 +890,8 @@ export function BlockchainSigningWorkspace() {
               )}
             </p>
             {(displayedSelected.status === "BROADCAST" ||
+              (displayedSelected.status === "FAILED" &&
+                displayedSelected.txHash) ||
               (displayedSelected.status === "SIGNING" &&
                 displayedSelected.txHash)) &&
             !transactionStatus.error ? (
@@ -1078,6 +1101,8 @@ export function BlockchainSigningWorkspace() {
           </details>
           <div className="blockchain-signing-action mt-7">
             {displayedSelected.status === "BROADCAST" ||
+            (displayedSelected.status === "FAILED" &&
+              displayedSelected.txHash) ||
             (displayedSelected.status === "SIGNING" &&
               displayedSelected.txHash) ? (
               <button
