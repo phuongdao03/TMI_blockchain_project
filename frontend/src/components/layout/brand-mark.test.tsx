@@ -8,7 +8,7 @@ describe("BrandMark", () => {
     render(<BrandMark compact />);
 
     const homeLink = screen.getByRole("link", {
-      name: "Đề cử Tinh Hoa Việt",
+      name: "Đề cử và xác lập Tinh Hoa Việt",
     });
     const sources = Array.from(homeLink.querySelectorAll("img"), (logo) =>
       decodeURIComponent(logo.getAttribute("src") ?? ""),
@@ -23,7 +23,7 @@ describe("BrandMark", () => {
     render(<BrandMark />);
 
     const homeLink = screen.getByRole("link", {
-      name: "Đề cử Tinh Hoa Việt",
+      name: "Đề cử và xác lập Tinh Hoa Việt",
     });
     const logo = homeLink.querySelector("img");
     const source = logo?.getAttribute("src");
@@ -40,7 +40,7 @@ describe("BrandMark", () => {
     render(<BrandMark variant="public-seal" />);
 
     const homeLink = screen.getByRole("link", {
-      name: "Đề cử Tinh Hoa Việt",
+      name: "Đề cử và xác lập Tinh Hoa Việt",
     });
     const logos = homeLink.querySelectorAll("img");
 

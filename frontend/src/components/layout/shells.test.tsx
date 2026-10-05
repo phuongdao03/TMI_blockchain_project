@@ -103,7 +103,7 @@ describe("layout shells", () => {
     ).toBe("page");
   });
 
-  it("uses only the supplied seal in the public header", () => {
+  it("shows the complete brand beside the supplied seal in the public header", () => {
     render(
       <PublicShell>
         <h1>Trang chủ</h1>
@@ -111,7 +111,7 @@ describe("layout shells", () => {
     );
 
     const brandLink = within(screen.getByRole("banner")).getByRole("link", {
-      name: "Đề cử Tinh Hoa Việt",
+      name: "Đề cử và xác lập Tinh Hoa Việt",
     });
     const headerLogos = Array.from(brandLink.querySelectorAll("img"));
     const sources = headerLogos.map((logo) =>
@@ -120,6 +120,8 @@ describe("layout shells", () => {
 
     expect(headerLogos).toHaveLength(1);
     expect(sources[0]).toContain("/assets/brand/logo-tinh-hoa-viet.png");
+    expect(brandLink.textContent).toContain("Đề cử và xác lập");
+    expect(brandLink.textContent).toContain("Tinh Hoa Việt");
   });
 
   it("keeps public and auth footers limited to terms and privacy links", () => {
@@ -153,7 +155,7 @@ describe("layout shells", () => {
     const publicFooter = screen.getByRole("contentinfo");
     expect(publicFooter.querySelector(".public-footer__inner")).not.toBeNull();
     const footerBrand = within(publicFooter).getByRole("link", {
-      name: "Đề cử Tinh Hoa Việt",
+      name: "Đề cử và xác lập Tinh Hoa Việt",
     });
     const footerLogos = footerBrand.querySelectorAll("img");
     expect(footerLogos).toHaveLength(1);
