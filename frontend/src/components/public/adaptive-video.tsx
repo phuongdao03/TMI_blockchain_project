@@ -1,6 +1,6 @@
 "use client";
 
-import { Play } from "lucide-react";
+import { LoaderCircle, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 type AdaptiveVideoProps = {
@@ -26,17 +26,55 @@ export function AdaptiveVideo({
 }: AdaptiveVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const usingStreaming = useRef(false);
+  const playRequested = useRef(false);
+  const preloadFailed = useRef(false);
   const destroyStreaming = useRef<(() => void) | null>(null);
   const startupTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [active, setActive] = useState(false);
+  const [warmed, setWarmed] = useState(false);
   const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || typeof IntersectionObserver === "undefined") return;
+    preloadFailed.current = false;
+    setWarmed(false);
+
+    const connection = (
+      navigator as Navigator & {
+        connection?: { saveData?: boolean; effectiveType?: string };
+      }
+    ).connection;
+    if (
+      connection?.saveData ||
+      connection?.effectiveType === "slow-2g" ||
+      connection?.effectiveType === "2g"
+    )
+      return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        if (playRequested.current) return;
+        video.preload = "auto";
+        video.src = fallbackUrl;
+        video.load();
+        setWarmed(true);
+      },
+      { rootMargin: "350px" },
+    );
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, [fallbackUrl]);
+
   useEffect(() => {
     return () => {
       if (startupTimeout.current) clearTimeout(startupTimeout.current);
       destroyStreaming.current?.();
       destroyStreaming.current = null;
       usingStreaming.current = false;
+      playRequested.current = false;
     };
   }, [fallbackUrl, streamingUrl]);
 
@@ -50,15 +88,22 @@ export function AdaptiveVideo({
     setFailed(false);
     setLoading(true);
     setActive(true);
-    video.src = fallbackUrl;
-    video.load();
+    playRequested.current = true;
+    if (preloadFailed.current && streamingUrl) {
+      void tryStreaming();
+      return;
+    }
+    if (video.getAttribute("src") !== fallbackUrl || video.error) {
+      video.src = fallbackUrl;
+      video.load();
+    }
     void video.play().catch(() => undefined);
     if (streamingUrl) {
       startupTimeout.current = setTimeout(() => {
         if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
           void tryStreaming();
         }
-      }, 6000);
+      }, 3000);
     }
   }
 
@@ -115,7 +160,10 @@ export function AdaptiveVideo({
         controlsList={controlsList}
         loop={loop}
         muted={muted}
-        onError={() => void tryStreaming()}
+        onError={() => {
+          if (playRequested.current) void tryStreaming();
+          else preloadFailed.current = true;
+        }}
         onCanPlay={() => {
           if (startupTimeout.current) clearTimeout(startupTimeout.current);
           setLoading(false);
@@ -128,21 +176,24 @@ export function AdaptiveVideo({
         }}
         onWaiting={() => setLoading(true)}
         onStalled={() => {
-          setLoading(true);
-          if (streamingUrl && !usingStreaming.current) void tryStreaming();
+          if (playRequested.current) {
+            setLoading(true);
+            if (streamingUrl && !usingStreaming.current) void tryStreaming();
+          }
         }}
         playsInline
         poster={poster}
-        preload={active ? "metadata" : "none"}
+        preload={warmed ? "auto" : active ? "metadata" : "none"}
         ref={videoRef}
       >
         <track kind="captions" />
       </video>
       {active && !failed && loading ? (
         <span
-          className="adaptive-video__loading absolute bottom-4 left-1/2 -translate-x-1/2 rounded bg-black/75 px-3 py-2 text-sm font-semibold text-white"
+          className="adaptive-video__loading absolute bottom-4 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded bg-black/75 px-3 py-2 text-sm font-semibold text-white"
           role="status"
         >
+          <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
           Đang tải video…
         </span>
       ) : null}

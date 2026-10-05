@@ -524,12 +524,17 @@ function ResultsSkeleton() {
     <div
       aria-label="Đang tải kết quả"
       className="space-y-px border-y border-white/10"
+      role="status"
     >
       {[0, 1, 2, 3].map((item) => (
-        <div className="grid animate-pulse gap-3 py-7" key={item}>
-          <div className="h-3 w-28 rounded bg-white/[0.05]" />
-          <div className="h-6 w-2/3 rounded bg-white/[0.07]" />
-          <div className="h-4 w-full rounded bg-white/[0.04]" />
+        <div
+          aria-hidden="true"
+          className="grid animate-pulse gap-3 py-7"
+          key={item}
+        >
+          <div className="thv-skeleton h-3 w-28 rounded" />
+          <div className="thv-skeleton h-6 w-2/3 rounded" />
+          <div className="thv-skeleton h-4 w-full rounded" />
         </div>
       ))}
     </div>

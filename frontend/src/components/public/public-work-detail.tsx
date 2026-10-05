@@ -544,10 +544,17 @@ function DetailSkeleton() {
     <div
       aria-label="Đang tải tác phẩm"
       className="mx-auto min-h-[70dvh] max-w-[90rem] animate-pulse px-4 py-16"
+      role="status"
     >
-      <div className="h-5 w-32 rounded bg-ink-800" />
-      <div className="mt-6 h-16 max-w-3xl rounded bg-ink-800" />
-      <div className="mt-12 aspect-[16/7] rounded-3xl bg-ink-900" />
+      <div aria-hidden="true" className="thv-skeleton h-5 w-32 rounded" />
+      <div
+        aria-hidden="true"
+        className="thv-skeleton mt-6 h-16 max-w-3xl rounded"
+      />
+      <div
+        aria-hidden="true"
+        className="thv-skeleton mt-12 aspect-[16/7] rounded-3xl"
+      />
     </div>
   );
 }

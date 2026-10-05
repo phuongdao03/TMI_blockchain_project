@@ -409,16 +409,17 @@ function CatalogSkeleton() {
     <div
       aria-label="Đang tải danh sách đề cử"
       className="divide-y divide-white/10 border-y border-white/10"
+      role="status"
     >
       {Array.from({ length: 5 }, (_, index) => (
         <div
           className="grid animate-pulse grid-cols-[7rem_1fr] gap-4 py-5 sm:grid-cols-[9rem_1fr]"
           key={index}
         >
-          <div className="aspect-square bg-ink-800 sm:aspect-[4/3]" />
+          <div className="thv-skeleton aspect-square sm:aspect-[4/3]" />
           <div className="py-2">
-            <div className="h-5 w-2/3 bg-ink-800" />
-            <div className="mt-3 h-4 max-w-lg bg-ink-800" />
+            <div className="thv-skeleton h-5 w-2/3" />
+            <div className="thv-skeleton mt-3 h-4 max-w-lg" />
           </div>
         </div>
       ))}

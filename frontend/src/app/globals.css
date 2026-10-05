@@ -3205,6 +3205,99 @@ summary {
   background: color-mix(in srgb, var(--theme-text) 9%, var(--theme-surface));
 }
 
+.thv-skeleton,
+.page-loading__shape {
+  background: color-mix(
+    in srgb,
+    var(--theme-text, #241515) 14%,
+    var(--theme-surface, #fff9f3)
+  );
+}
+
+.page-loading {
+  min-height: 55dvh;
+  padding: clamp(1.5rem, 5vw, 4rem);
+  color: var(--theme-text, #241515);
+  background: var(--theme-bg, #fff9f3);
+}
+
+.page-loading__message {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--theme-muted, #6b5656);
+  font-weight: 600;
+}
+
+.page-loading__placeholder {
+  max-width: 72rem;
+  margin-top: 2rem;
+  animation: thv-loading-pulse 1.5s ease-in-out infinite;
+}
+
+.page-loading__shape {
+  border-radius: 0.5rem;
+}
+
+.page-loading__eyebrow {
+  width: 8rem;
+  height: 0.9rem;
+}
+.page-loading__title {
+  width: min(25rem, 78%);
+  height: 2.8rem;
+  margin-top: 1.25rem;
+}
+.page-loading__summary {
+  width: min(36rem, 95%);
+  height: 1.1rem;
+  margin-top: 1rem;
+}
+.page-loading__cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+.page-loading__card {
+  min-height: 12rem;
+}
+
+html[data-theme="dark"] .page-loading {
+  color: var(--theme-text, #fff9f3);
+  background: var(--theme-bg, #1a0b0b);
+}
+
+html[data-theme="dark"] .page-loading__message {
+  color: var(--theme-muted, #d3b8b4);
+}
+
+html[data-theme="dark"] .page-loading__shape {
+  background: color-mix(
+    in srgb,
+    var(--theme-text, #fff9f3) 14%,
+    var(--theme-surface, #261111)
+  );
+}
+
+@keyframes thv-loading-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-loading__cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .page-loading__card:last-child {
+    display: none;
+  }
+  .page-loading__card {
+    min-height: 10rem;
+  }
+}
+
 .dashboard-success-state {
   border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
   background: color-mix(

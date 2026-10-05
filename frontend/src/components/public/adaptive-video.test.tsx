@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
 import { AdaptiveVideo } from "@/components/public/adaptive-video";
@@ -9,6 +9,125 @@ it("keeps the video unloaded until the visitor chooses to play", () => {
 
   expect(video.preload).toBe("none");
   expect(video.getAttribute("src")).toBeNull();
+});
+
+it("warms a nearby video and reuses its buffer when playback starts", () => {
+  const load = vi
+    .spyOn(HTMLMediaElement.prototype, "load")
+    .mockImplementation(() => {});
+  const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+  const observe = vi.fn();
+  const disconnect = vi.fn();
+  let notify: IntersectionObserverCallback = () => {};
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      constructor(callback: IntersectionObserverCallback) {
+        notify = callback;
+      }
+      observe = observe;
+      disconnect = disconnect;
+    },
+  );
+  try {
+    const { container } = render(<AdaptiveVideo fallbackUrl="/video.mp4" />);
+    const video = container.querySelector("video")!;
+    expect(observe).toHaveBeenCalledWith(video);
+    expect(video.getAttribute("src")).toBeNull();
+
+    act(() =>
+      notify(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      ),
+    );
+    expect(video.getAttribute("src")).toBe("/video.mp4");
+    expect(video.preload).toBe("auto");
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(disconnect).toHaveBeenCalled();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Phát video tác phẩm" }),
+    );
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(play).toHaveBeenCalledTimes(1);
+  } finally {
+    load.mockRestore();
+    play.mockRestore();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("does not restart playback if the video enters view after a tap", () => {
+  const load = vi
+    .spyOn(HTMLMediaElement.prototype, "load")
+    .mockImplementation(() => {});
+  const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+  let notify: IntersectionObserverCallback = () => {};
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      constructor(callback: IntersectionObserverCallback) {
+        notify = callback;
+      }
+      observe = vi.fn();
+      disconnect = vi.fn();
+    },
+  );
+  try {
+    const { container } = render(<AdaptiveVideo fallbackUrl="/video.mp4" />);
+    const video = container.querySelector("video")!;
+    fireEvent.click(
+      screen.getByRole("button", { name: "Phát video tác phẩm" }),
+    );
+    act(() =>
+      notify(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      ),
+    );
+    expect(video.getAttribute("src")).toBe("/video.mp4");
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(play).toHaveBeenCalledTimes(1);
+  } finally {
+    load.mockRestore();
+    play.mockRestore();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("does not warm video when data saving is enabled", () => {
+  const load = vi
+    .spyOn(HTMLMediaElement.prototype, "load")
+    .mockImplementation(() => {});
+  const originalConnection = Object.getOwnPropertyDescriptor(
+    navigator,
+    "connection",
+  );
+  const observe = vi.fn();
+  Object.defineProperty(navigator, "connection", {
+    configurable: true,
+    value: { saveData: true },
+  });
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      observe = observe;
+      disconnect = vi.fn();
+    },
+  );
+  try {
+    const { container } = render(<AdaptiveVideo fallbackUrl="/video.mp4" />);
+    expect(container.querySelector("video")?.getAttribute("src")).toBeNull();
+    expect(observe).not.toHaveBeenCalled();
+    expect(load).not.toHaveBeenCalled();
+  } finally {
+    if (originalConnection)
+      Object.defineProperty(navigator, "connection", originalConnection);
+    else Reflect.deleteProperty(navigator, "connection");
+    load.mockRestore();
+    vi.unstubAllGlobals();
+  }
 });
 
 it("starts the optimized video after a tap and falls back to HLS on error", () => {
@@ -106,6 +225,11 @@ it("shows buffering feedback while playback waits for more data", () => {
     expect(screen.queryByText(/Đang tải video/)).toBeNull();
     fireEvent.waiting(video);
     expect(screen.getByText(/Đang tải video/)).toBeDefined();
+    expect(
+      container.querySelector(".adaptive-video__loading svg"),
+    ).not.toBeNull();
+    fireEvent.playing(video);
+    expect(container.querySelector(".adaptive-video__loading")).toBeNull();
   } finally {
     load.mockRestore();
     play.mockRestore();
