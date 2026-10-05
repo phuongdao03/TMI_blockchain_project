@@ -81,52 +81,54 @@ export function RegisterForm() {
           kiểm tra hộp thư.
         </div>
       ) : (
-        <form className="space-y-5" noValidate onSubmit={onSubmit}>
-          {submitError ? (
-            <p className="text-sm font-medium text-error" role="alert">
-              {submitError}
-            </p>
-          ) : null}
-          <GoogleOAuthButton accountType="PUBLIC_USER" />
+        <div className="space-y-5">
+          <form className="space-y-5" noValidate onSubmit={onSubmit}>
+            {submitError ? (
+              <p className="text-sm font-medium text-error" role="alert">
+                {submitError}
+              </p>
+            ) : null}
+            <FormField
+              autoComplete="email"
+              error={errors.email?.message}
+              label="Email"
+              type="email"
+              {...register("email")}
+            />
+            <FormField
+              autoComplete="new-password"
+              error={errors.password?.message}
+              hint="Dùng ít nhất 12 ký tự."
+              label="Mật khẩu"
+              type="password"
+              {...register("password")}
+            />
+            <FormField
+              autoComplete="new-password"
+              error={errors.confirmPassword?.message}
+              label="Xác nhận mật khẩu"
+              type="password"
+              {...register("confirmPassword")}
+            />
+            <Button className="w-full" disabled={isSubmitting} type="submit">
+              {isSubmitting ? (
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-5 animate-spin"
+                />
+              ) : null}
+              {isSubmitting ? "Đang tạo tài khoản…" : "Đăng ký"}
+            </Button>
+          </form>
           <div aria-hidden="true" className="flex items-center gap-3">
             <span className="h-px flex-1 bg-white/10" />
             <span className="font-mono text-[0.6rem] tracking-[0.12em] text-[#6f6d6c] uppercase">
-              Hoặc đăng ký bằng email
+              Hoặc tiếp tục với Google
             </span>
             <span className="h-px flex-1 bg-white/10" />
           </div>
-          <FormField
-            autoComplete="email"
-            error={errors.email?.message}
-            label="Email"
-            type="email"
-            {...register("email")}
-          />
-          <FormField
-            autoComplete="new-password"
-            error={errors.password?.message}
-            hint="Dùng ít nhất 12 ký tự."
-            label="Mật khẩu"
-            type="password"
-            {...register("password")}
-          />
-          <FormField
-            autoComplete="new-password"
-            error={errors.confirmPassword?.message}
-            label="Xác nhận mật khẩu"
-            type="password"
-            {...register("confirmPassword")}
-          />
-          <Button className="w-full" disabled={isSubmitting} type="submit">
-            {isSubmitting ? (
-              <LoaderCircle
-                aria-hidden="true"
-                className="size-5 animate-spin"
-              />
-            ) : null}
-            {isSubmitting ? "Đang tạo tài khoản…" : "Đăng ký"}
-          </Button>
-        </form>
+          <GoogleOAuthButton accountType="PUBLIC_USER" />
+        </div>
       )}
     </AuthCard>
   );

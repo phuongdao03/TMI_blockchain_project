@@ -22,22 +22,22 @@ export default function InstallPage() {
             Cài đặt trong vài bước
           </h1>
           <p className="mt-5 text-base leading-7 text-slate-300 sm:text-lg">
-            Mở trang này trên thiết bị bạn muốn sử dụng, sau đó chọn cách cài
-            phù hợp bên dưới. Biểu tượng Tinh Hoa Việt sẽ xuất hiện trên màn
-            hình chính hoặc trong danh sách ứng dụng sau khi cài thành công.
+            Mở trang trên thiết bị bạn muốn dùng. Nếu trình duyệt hỗ trợ, nút
+            bên dưới sẽ mở hộp thoại cài đặt; trên iPhone và iPad, hãy thêm ứng
+            dụng qua menu Chia sẻ của Safari.
           </p>
         </header>
 
         <section className="mt-10 grid overflow-hidden border-y border-[var(--theme-border)] lg:grid-cols-2">
           <div className="p-5 sm:p-8 lg:p-10">
             <h2 className="text-xl font-bold text-white">
-              Cài từ nút trên trang
+              Cài theo trình duyệt của bạn
             </h2>
             <ul className="mt-5 space-y-4 text-sm leading-6 text-slate-300">
               {[
                 "Dùng trình duyệt trên chính điện thoại hoặc máy tính muốn cài.",
-                "Chọn Tiến hành cài đặt và xác nhận nếu trình duyệt hiện hộp thoại.",
-                "Nếu không có hộp thoại, làm theo hướng dẫn thủ công bên cạnh.",
+                "Trên Chrome hoặc Edge, chọn Cài ứng dụng ngay khi nút cài xuất hiện.",
+                "Trên iPhone hoặc iPad, làm theo các bước trong Safari bên cạnh.",
               ].map((item) => (
                 <li className="flex gap-3" key={item}>
                   <Check className="mt-1 size-4 shrink-0 text-gold-300" />
@@ -50,12 +50,17 @@ export default function InstallPage() {
             </div>
           </div>
 
-          <div className="border-t border-[var(--theme-border)] bg-[var(--theme-surface-soft)] p-5 sm:p-8 lg:border-l lg:border-t-0 lg:p-10">
-            <h2 className="text-xl font-bold text-white">Cài theo thiết bị</h2>
+          <div
+            id="install-device-steps"
+            className="scroll-mt-28 border-t border-[var(--theme-border)] bg-[var(--theme-surface-soft)] p-5 sm:p-8 lg:border-l lg:border-t-0 lg:p-10"
+          >
+            <h2 className="text-xl font-bold text-white">
+              Hướng dẫn theo thiết bị
+            </h2>
             <ol className="mt-6 space-y-6">
               <InstallStep icon={Share} title="iPhone hoặc iPad">
                 Mở website trong Safari, chạm Chia sẻ, chọn Thêm vào Màn hình
-                chính rồi xác nhận Thêm.
+                chính, bật Mở dưới dạng ứng dụng nếu có, rồi chạm Thêm.
               </InstallStep>
               <InstallStep icon={SquarePlus} title="Điện thoại Android">
                 Mở menu trình duyệt, chọn Cài đặt ứng dụng hoặc Thêm vào màn

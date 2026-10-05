@@ -43,6 +43,18 @@ vi.mock("firebase/auth", () => ({
 }));
 
 describe("RegisterForm", () => {
+  it("places Google registration below the email registration button", async () => {
+    render(<RegisterForm />);
+
+    const emailButton = screen.getByRole("button", { name: "Đăng ký" });
+    const googleButton = await screen.findByRole("button", {
+      name: "Tiếp tục với Google",
+    });
+    expect(
+      emailButton.compareDocumentPosition(googleButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
   afterEach(() => {
     vi.restoreAllMocks();
     replace.mockReset();

@@ -384,9 +384,6 @@ export function PublicShell({
               <p className="public-footer__name">
                 Trung tâm Đề cử và Xác lập Tinh Hoa Việt
               </p>
-              <p className="public-footer__credit">
-                Phát triển bởi Trung tâm An ninh Công nghệ số
-              </p>
             </div>
           </div>
           <nav aria-label="Liên kết cuối trang">
@@ -463,6 +460,10 @@ export function PublicShell({
             </p>
           </div>
         </div>
+        <div className="public-footer__developer">
+          <h2>Đơn vị phát triển</h2>
+          <DeveloperCredit showPrefix={false} />
+        </div>
         <div className="public-footer__bottom">
           <p>TINH HOA VIỆT · SUY TÔN TRÍ TUỆ – LƯU TRUYỀN DI SẢN</p>
           <div
@@ -513,9 +514,31 @@ export function AuthShell({ children }: PropsWithChildren) {
         {children}
       </main>
       <footer className="auth-footer">
-        <Link href="/policies">Điều khoản sử dụng</Link>
-        <Link href="/policies#privacy">Chính sách quyền riêng tư</Link>
+        <DeveloperCredit />
+        <nav aria-label="Liên kết cuối trang">
+          <Link href="/policies">Điều khoản sử dụng</Link>
+          <Link href="/policies#privacy">Chính sách quyền riêng tư</Link>
+        </nav>
       </footer>
+    </div>
+  );
+}
+
+function DeveloperCredit({ showPrefix = true }: { showPrefix?: boolean }) {
+  return (
+    <div className="developer-credit">
+      <Image
+        alt=""
+        className="developer-credit__logo"
+        height={48}
+        sizes="48px"
+        src="/assets/institution/logo-cns.png"
+        width={48}
+      />
+      <span>
+        {showPrefix ? "Phát triển bởi " : null}
+        Trung tâm An ninh Công nghệ số
+      </span>
     </div>
   );
 }

@@ -946,6 +946,7 @@ html[data-theme="dark"] .proposal-reader-wrap {
 }
 
 .public-footer__details,
+.public-footer__developer,
 .public-footer__bottom {
   width: min(100%, 80rem);
   margin-inline: auto;
@@ -959,7 +960,8 @@ html[data-theme="dark"] .proposal-reader-wrap {
 }
 
 .public-footer__organizations h2,
-.public-footer__contact h2 {
+.public-footer__contact h2,
+.public-footer__developer h2 {
   margin: 0 0 1.25rem;
   color: var(--thv-gold-light);
   font-size: 0.8rem;
@@ -7675,6 +7677,88 @@ html[data-theme="dark"] .public-library-page {
 
 .auth-shell .auth-footer a:hover {
   color: var(--thv-red-light);
+}
+
+.developer-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  color: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.developer-credit__logo {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  object-fit: contain;
+}
+
+.public-footer__developer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  padding-block: 1rem;
+  border-top: 1px solid rgb(255 255 255 / 20%);
+}
+
+.public-footer__developer h2 {
+  flex: none;
+  margin: 0;
+}
+
+.public-footer__developer .developer-credit {
+  color: rgb(255 255 255 / 86%);
+  font-weight: 600;
+}
+
+@media (max-width: 38rem) {
+  .public-footer__developer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.auth-shell .auth-footer {
+  justify-content: space-between;
+  gap: 1rem 2rem;
+}
+
+.auth-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem 1.5rem;
+}
+
+.install-guide__manual-link {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--theme-border);
+  border-radius: 999px;
+  background: var(--theme-surface-soft);
+  padding: 0.625rem 1.25rem;
+  color: var(--theme-text);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.install-guide__manual-link:hover,
+.install-guide__manual-link:focus-visible {
+  border-color: var(--theme-accent);
+}
+
+@media (max-width: 38rem) {
+  .auth-shell .auth-footer {
+    justify-content: center;
+    text-align: center;
+  }
 }
 
 .dashboard-shell {

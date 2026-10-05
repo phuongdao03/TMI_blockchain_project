@@ -163,14 +163,6 @@ export function LoginForm({
       title="Đăng nhập"
     >
       <div className="space-y-5">
-        <GoogleOAuthButton accountType="PUBLIC_USER" next={next} />
-        <div aria-hidden="true" className="flex items-center gap-3">
-          <span className="h-px flex-1 bg-white/10" />
-          <span className="font-mono text-[0.6rem] tracking-[0.12em] text-[#6f6d6c] uppercase">
-            Hoặc dùng email
-          </span>
-          <span className="h-px flex-1 bg-white/10" />
-        </div>
         <form className="space-y-5" noValidate onSubmit={onSubmit}>
           {submitError ? (
             <p
@@ -209,6 +201,14 @@ export function LoginForm({
             {isSubmitting ? "Đang đăng nhập…" : "Đăng nhập"}
           </Button>
         </form>
+        <div aria-hidden="true" className="flex items-center gap-3">
+          <span className="h-px flex-1 bg-white/10" />
+          <span className="font-mono text-[0.6rem] tracking-[0.12em] text-[#6f6d6c] uppercase">
+            Hoặc tiếp tục với Google
+          </span>
+          <span className="h-px flex-1 bg-white/10" />
+        </div>
+        <GoogleOAuthButton accountType="PUBLIC_USER" next={next} />
       </div>
     </AuthCard>
   );

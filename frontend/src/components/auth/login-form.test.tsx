@@ -46,6 +46,18 @@ function Wrapper({ children }: { children: ReactNode }) {
 }
 
 describe("LoginForm", () => {
+  it("places Google sign-in below the email sign-in button", async () => {
+    render(<LoginForm />, { wrapper: Wrapper });
+
+    const emailButton = screen.getByRole("button", { name: "Đăng nhập" });
+    const googleButton = await screen.findByRole("button", {
+      name: "Tiếp tục với Google",
+    });
+    expect(
+      emailButton.compareDocumentPosition(googleButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
   beforeEach(() => {
     vi.restoreAllMocks();
     replace.mockReset();

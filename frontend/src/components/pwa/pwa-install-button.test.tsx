@@ -45,22 +45,50 @@ describe("PWA installation", () => {
     );
     fireEvent(window, event);
     expect(prompt).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "Tiến hành cài đặt" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Tiến hành cài đặt" }),
+    );
     expect(prompt).toHaveBeenCalledOnce();
     await waitFor(() =>
       expect(screen.getByRole("status").textContent).toContain(
-        "đã được cài đặt",
+        "Đã xác nhận cài đặt",
       ),
     );
   });
 
   it("shows manual guidance when a native prompt is unavailable", async () => {
-    const user = userEvent.setup();
     render(<PwaInstallAction />);
-    await user.click(screen.getByRole("button", { name: "Tiến hành cài đặt" }));
-    expect(screen.getByRole("status").textContent).toMatch(
-      /Thêm vào màn hình chính/,
+    expect(
+      await screen.findByText(/Trình duyệt chưa cung cấp hộp thoại/),
+    ).toBeDefined();
+    expect(
+      screen
+        .getByRole("link", { name: "Xem cách cài trên thiết bị" })
+        .getAttribute("href"),
+    ).toBe("#install-device-steps");
+    expect(
+      screen.queryByRole("button", { name: "Tiến hành cài đặt" }),
+    ).toBeNull();
+  });
+
+  it("shows iPhone steps immediately without promising an automatic prompt", async () => {
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1",
     );
+    try {
+      render(<PwaInstallAction />);
+      expect(await screen.findByText(/Safari.*Chia sẻ/)).toBeDefined();
+      expect(
+        screen.queryByRole("button", { name: "Tiến hành cài đặt" }),
+      ).toBeNull();
+      expect(
+        screen
+          .getByRole("link", { name: /Xem các bước trên iPhone/ })
+          .getAttribute("href"),
+      ).toBe("#install-device-steps");
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it("hides the CTA inside the installed application", async () => {

@@ -163,10 +163,21 @@ describe("layout shells", () => {
       decodeURIComponent(footerLogos[0]?.getAttribute("src") ?? ""),
     ).toContain("/assets/brand/logo-tinh-hoa-viet.png");
     expect(
-      within(publicFooter).getByText(
-        "Phát triển bởi Trung tâm An ninh Công nghệ số",
-      ),
+      within(publicFooter).getByText("Trung tâm An ninh Công nghệ số"),
     ).toBeDefined();
+    expect(
+      decodeURIComponent(
+        publicFooter
+          .querySelector(".developer-credit img")
+          ?.getAttribute("src") ?? "",
+      ),
+    ).toContain("/assets/institution/logo-cns.png");
+    expect(
+      publicFooter.querySelector(".public-footer__identity .developer-credit"),
+    ).toBeNull();
+    expect(
+      publicFooter.querySelector(".public-footer__developer .developer-credit"),
+    ).not.toBeNull();
     expect(
       within(publicFooter).getByText(/Viện Những Vấn đề Phát triển/),
     ).toBeDefined();
@@ -274,6 +285,16 @@ describe("layout shells", () => {
       within(header).queryByRole("link", { name: "Đăng nhập" }),
     ).toBeNull();
     expect(within(header).queryByRole("link", { name: "Đăng ký" })).toBeNull();
+    const footer = screen.getByRole("contentinfo");
+    expect(
+      decodeURIComponent(
+        footer.querySelector(".developer-credit img")?.getAttribute("src") ??
+          "",
+      ),
+    ).toContain("/assets/institution/logo-cns.png");
+    expect(
+      within(footer).getByText(/Trung tâm An ninh Công nghệ số/),
+    ).toBeDefined();
   });
 
   it("renders applicant navigation on desktop and mobile", () => {

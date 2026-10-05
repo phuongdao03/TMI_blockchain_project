@@ -12,6 +12,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<InstallChoice>;
 }
 type NavigatorWithStandalone = Navigator & { standalone?: boolean };
+const INSTALL_PROMPT_READY = "pwa-install-prompt-ready";
 
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
@@ -21,6 +22,13 @@ function isStandalone() {
     (typeof window.matchMedia === "function" &&
       window.matchMedia("(display-mode: standalone)").matches) ||
     (navigator as NavigatorWithStandalone).standalone === true
+  );
+}
+
+function isAppleMobile() {
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1)
   );
 }
 
@@ -34,6 +42,7 @@ export function PwaInstallButton({ className }: { className?: string }) {
     const capture = (event: Event) => {
       event.preventDefault();
       deferredPrompt = event as BeforeInstallPromptEvent;
+      window.dispatchEvent(new Event(INSTALL_PROMPT_READY));
     };
     const markInstalled = () => setInstalled(true);
     window.addEventListener("beforeinstallprompt", capture);
@@ -66,20 +75,46 @@ export function PwaInstallButton({ className }: { className?: string }) {
 
 export function PwaInstallAction() {
   const [state, setState] = useState<
-    "idle" | "working" | "installed" | "manual"
+    "idle" | "working" | "accepted" | "installed"
   >("idle");
+  const [platform, setPlatform] = useState<"unknown" | "ios" | "other">(
+    "unknown",
+  );
+  const [promptReady, setPromptReady] = useState(false);
+
+  useEffect(() => {
+    const refresh = () => setPromptReady(Boolean(deferredPrompt));
+    const detect = window.setTimeout(() => {
+      setPlatform(isAppleMobile() ? "ios" : "other");
+      refresh();
+      if (isStandalone()) setState("installed");
+    }, 0);
+    const installed = () => setState("installed");
+    window.addEventListener(INSTALL_PROMPT_READY, refresh);
+    window.addEventListener("appinstalled", installed);
+    return () => {
+      window.clearTimeout(detect);
+      window.removeEventListener(INSTALL_PROMPT_READY, refresh);
+      window.removeEventListener("appinstalled", installed);
+    };
+  }, []);
 
   async function install() {
-    if (!deferredPrompt) return setState("manual");
+    if (!deferredPrompt) {
+      setPromptReady(false);
+      return;
+    }
     setState("working");
     try {
       await deferredPrompt.prompt();
       const choice = await deferredPrompt.userChoice;
       deferredPrompt = null;
-      setState(choice.outcome === "accepted" ? "installed" : "idle");
+      setPromptReady(false);
+      setState(choice.outcome === "accepted" ? "accepted" : "idle");
     } catch {
       deferredPrompt = null;
-      setState("manual");
+      setPromptReady(false);
+      setState("idle");
     }
   }
 
@@ -88,6 +123,46 @@ export function PwaInstallAction() {
       <p className="text-sm font-bold text-emerald-400" role="status">
         Ứng dụng đã được cài đặt.
       </p>
+    );
+  }
+  if (state === "accepted") {
+    return (
+      <p className="text-sm font-semibold text-emerald-400" role="status">
+        Đã xác nhận cài đặt. Kiểm tra biểu tượng ứng dụng trên thiết bị.
+      </p>
+    );
+  }
+  if (platform === "unknown") {
+    return (
+      <p className="text-sm text-[var(--theme-muted)]">
+        Đang kiểm tra trình duyệt…
+      </p>
+    );
+  }
+  if (platform === "ios") {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm leading-6 text-[var(--theme-muted)]">
+          Trên iPhone hoặc iPad, mở trang bằng Safari rồi chạm Chia sẻ → Thêm
+          vào Màn hình chính → Thêm. Safari cần bạn xác nhận bước này.
+        </p>
+        <a className="install-guide__manual-link" href="#install-device-steps">
+          Xem các bước trên iPhone
+        </a>
+      </div>
+    );
+  }
+  if (!promptReady) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm leading-6 text-[var(--theme-muted)]">
+          Trình duyệt chưa cung cấp hộp thoại cài đặt. Bạn có thể cài từ menu
+          trình duyệt theo hướng dẫn bên cạnh.
+        </p>
+        <a className="install-guide__manual-link" href="#install-device-steps">
+          Xem cách cài trên thiết bị
+        </a>
+      </div>
     );
   }
   return (
@@ -101,16 +176,6 @@ export function PwaInstallAction() {
         <Download aria-hidden="true" className="size-5" />
         {state === "working" ? "Đang mở cài đặt…" : "Tiến hành cài đặt"}
       </button>
-      {state === "manual" ? (
-        <p
-          className="mt-3 max-w-xl text-sm leading-6 text-slate-400"
-          role="status"
-        >
-          Trình duyệt chưa mở hộp thoại tự động. Hãy dùng menu trình duyệt và
-          chọn <strong>Cài đặt ứng dụng</strong> hoặc{" "}
-          <strong>Thêm vào màn hình chính</strong>.
-        </p>
-      ) : null}
     </div>
   );
 }
