@@ -14,10 +14,13 @@ test("onboarding stays minimal and keeps OAuth keyboard accessible", async ({
     name: "Tiếp tục với Google",
   });
   await expect(googleButton).toBeVisible();
-  await googleButton.focus();
-  await expect(googleButton).toBeFocused();
+  const registerButton = page.getByRole("button", { name: "Đăng ký" });
+  await registerButton.focus();
+  await expect(registerButton).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("textbox", { name: "Email" })).toBeFocused();
+  await expect(googleButton).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(registerButton).toBeFocused();
 
   expect(
     await page.evaluate(() => document.body.scrollWidth <= window.innerWidth),
