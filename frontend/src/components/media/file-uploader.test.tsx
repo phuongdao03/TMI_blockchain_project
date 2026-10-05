@@ -131,6 +131,81 @@ describe("FileUploader", () => {
     );
   });
 
+  it("keeps the uploaded checkpoint and explains a temporary provider failure", async () => {
+    const user = userEvent.setup();
+    const checkpoint = {
+      mediaId: activeAsset.id,
+      publicId: "uploads/evidence",
+      version: 17,
+      signature: "b".repeat(40),
+    };
+    uploadMediaMock
+      .mockImplementationOnce(async (_file, _purpose, callbacks) => {
+        callbacks.onTransferred(checkpoint);
+        throw new Error("Media provider is unavailable.");
+      })
+      .mockResolvedValueOnce(activeAsset);
+    render(
+      <FileUploader
+        label="Bằng chứng hồ sơ"
+        onComplete={vi.fn()}
+        purpose="DOSSIER_EVIDENCE"
+      />,
+    );
+    await user.upload(
+      screen.getByLabelText("Chọn bằng chứng hồ sơ"),
+      new File(["video"], "evidence.mp4", { type: "video/mp4" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Tải lên 1 tệp" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "không cần tải lại",
+    );
+    await user.click(screen.getByRole("button", { name: "Thử lại 1 tệp" }));
+    await vi.waitFor(() => expect(uploadMediaMock).toHaveBeenCalledTimes(2));
+    expect(uploadMediaMock.mock.calls[1]?.[2]?.resumeCompletion).toEqual(
+      checkpoint,
+    );
+  });
+
+  it("allows stopping a long inspection and resuming without a second transfer", async () => {
+    const user = userEvent.setup();
+    const checkpoint = {
+      mediaId: activeAsset.id,
+      publicId: "uploads/evidence",
+      version: 17,
+      signature: "b".repeat(40),
+    };
+    uploadMediaMock.mockImplementationOnce(
+      async (_file, _purpose, callbacks) => {
+        callbacks.onTransferred(checkpoint);
+        callbacks.onStage("inspecting");
+        await new Promise<void>((_resolve, reject) => {
+          callbacks.signal.addEventListener("abort", () => {
+            reject(new Error("Đã dừng chờ kiểm tra tệp."));
+          });
+        });
+      },
+    );
+    render(
+      <FileUploader
+        label="Bằng chứng hồ sơ"
+        onComplete={vi.fn()}
+        purpose="DOSSIER_EVIDENCE"
+      />,
+    );
+    await user.upload(
+      screen.getByLabelText("Chọn bằng chứng hồ sơ"),
+      new File(["video"], "evidence.mp4", { type: "video/mp4" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Tải lên 1 tệp" }));
+    expect(await screen.findByText(/giữ trang này mở/i)).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Dừng chờ" }));
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Đã dừng chờ",
+    );
+  });
+
   it("rejects an invalid selected file before starting an upload", () => {
     render(
       <FileUploader

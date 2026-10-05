@@ -2,7 +2,12 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 
-import type { MediaAsset, MediaPurpose } from "@/lib/api/types";
+import { ApiError } from "@/lib/api/client";
+import type {
+  MediaAsset,
+  MediaPurpose,
+  MediaUploadCompletion,
+} from "@/lib/api/types";
 import {
   type MediaFileConstraints,
   uploadMedia,
@@ -20,9 +25,11 @@ export type UploadStatus =
   | "failed";
 
 export interface UploadQueueItem {
+  completion: MediaUploadCompletion | null;
   error: string | null;
   file: File;
   id: string;
+  inspectionStartedAt: number | null;
   progress: number;
   status: Exclude<UploadStatus, "idle" | "complete">;
 }
@@ -42,7 +49,17 @@ const BUSY_STATUSES: readonly UploadQueueItem["status"][] = [
   "inspecting",
 ];
 
-function uploadErrorMessage(error: unknown): string {
+function uploadErrorMessage(error: unknown, canResume: boolean): string {
+  if (
+    (error instanceof ApiError &&
+      error.code === "MEDIA_PROVIDER_UNAVAILABLE") ||
+    (error instanceof Error &&
+      error.message === "Media provider is unavailable.")
+  ) {
+    return canResume
+      ? "Dịch vụ lưu trữ tạm gián đoạn. Tệp đã được gửi; bấm Thử lại để tiếp tục xác nhận, không cần tải lại."
+      : "Dịch vụ lưu trữ tạm gián đoạn. Vui lòng thử lại sau ít phút.";
+  }
   return error instanceof Error
     ? error.message
     : "Không thể tải tệp. Vui lòng kiểm tra kết nối và thử lại.";
@@ -56,6 +73,7 @@ export function useMediaUploader({
   purpose,
 }: UseMediaUploaderOptions) {
   const nextId = useRef(0);
+  const activeAbortController = useRef<AbortController | null>(null);
   const [items, setItems] = useState<UploadQueueItem[]>([]);
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const [completedCount, setCompletedCount] = useState(0);
@@ -99,9 +117,11 @@ export function useMediaUploader({
       }
 
       const additions = nextFiles.map<UploadQueueItem>((file) => ({
+        completion: null,
         error: null,
         file,
         id: `upload-${nextId.current++}`,
+        inspectionStartedAt: null,
         progress: 0,
         status: "selected",
       }));
@@ -138,10 +158,14 @@ export function useMediaUploader({
     let newlyCompleted = 0;
 
     for (const queued of pending) {
+      let completion = queued.completion;
+      const controller = new AbortController();
+      activeAbortController.current = controller;
       updateItem(queued.id, {
         error: null,
-        progress: 0,
-        status: "signing",
+        inspectionStartedAt: null,
+        progress: completion ? 100 : 0,
+        status: completion ? "verifying" : "signing",
       });
       try {
         const asset = await uploadMedia(
@@ -149,7 +173,18 @@ export function useMediaUploader({
           purpose,
           {
             onProgress: (progress) => updateItem(queued.id, { progress }),
-            onStage: (status) => updateItem(queued.id, { status }),
+            onStage: (status) =>
+              updateItem(queued.id, {
+                status,
+                inspectionStartedAt:
+                  status === "inspecting" ? Date.now() : null,
+              }),
+            onTransferred: (transferred) => {
+              completion = transferred;
+              updateItem(queued.id, { completion: transferred, progress: 100 });
+            },
+            resumeCompletion: completion ?? undefined,
+            signal: controller.signal,
           },
           constraints,
         );
@@ -158,10 +193,12 @@ export function useMediaUploader({
         setItems((current) => current.filter((item) => item.id !== queued.id));
       } catch (error) {
         updateItem(queued.id, {
-          error: uploadErrorMessage(error),
+          completion,
+          error: uploadErrorMessage(error, completion !== null),
           status: "failed",
         });
       }
+      activeAbortController.current = null;
     }
 
     if (newlyCompleted > 0) {
@@ -183,6 +220,10 @@ export function useMediaUploader({
     (item) => item.status === "selected" || item.status === "failed",
   ).length;
   const activeItem = items.find((item) => BUSY_STATUSES.includes(item.status));
+  const stopWaiting = useCallback(
+    () => activeAbortController.current?.abort(),
+    [],
+  );
   const status = useMemo<UploadStatus>(() => {
     if (activeItem) return activeItem.status;
     if (failedCount > 0) return "failed";
@@ -205,6 +246,7 @@ export function useMediaUploader({
     selectFile,
     selectFiles,
     startUpload,
+    stopWaiting,
     status,
   };
 }

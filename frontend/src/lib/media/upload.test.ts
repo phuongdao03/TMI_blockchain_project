@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mediaApi } from "@/lib/api/client";
-import type { MediaAsset, MediaUploadAuthorization } from "@/lib/api/types";
+import type {
+  MediaAsset,
+  MediaUploadAuthorization,
+  MediaUploadCompletion,
+} from "@/lib/api/types";
 import {
   mediaPolicies,
   MediaUploadValidationError,
@@ -241,6 +245,95 @@ describe("uploadMedia", () => {
     ).not.toHaveBeenCalled();
     const body = FakeXMLHttpRequest.instances[0]?.sent.mock.calls[0]?.[0];
     expect((body as FormData).get("file")).toBe(file);
+  });
+
+  it("resumes confirmation after a provider failure without uploading the file again", async () => {
+    const signatureSpy = vi
+      .spyOn(mediaApi, "createUploadSignature")
+      .mockResolvedValue(authorization);
+    const completeSpy = vi
+      .spyOn(mediaApi, "completeUpload")
+      .mockRejectedValueOnce(new Error("Media provider is unavailable."))
+      .mockResolvedValueOnce(activeAsset);
+    const getAssetSpy = vi
+      .spyOn(mediaApi, "getAsset")
+      .mockResolvedValue({ ...activeAsset, status: "PENDING" });
+    let checkpoint: MediaUploadCompletion | undefined;
+    const file = sizedFile("evidence.mp4", "video/mp4", 52_574_976);
+
+    await expect(
+      uploadMedia(file, "DOSSIER_EVIDENCE", {
+        onTransferred: (completion) => {
+          checkpoint = completion;
+        },
+      }),
+    ).rejects.toThrow("Media provider is unavailable.");
+    expect(checkpoint).toEqual({
+      mediaId: authorization.mediaId,
+      publicId: authorization.publicId,
+      version: 17,
+      signature: "b".repeat(40),
+    });
+
+    await expect(
+      uploadMedia(file, "DOSSIER_EVIDENCE", {
+        resumeCompletion: checkpoint,
+      }),
+    ).resolves.toEqual(activeAsset);
+    expect(signatureSpy).toHaveBeenCalledTimes(1);
+    expect(FakeXMLHttpRequest.instances).toHaveLength(1);
+    expect(getAssetSpy).toHaveBeenCalledWith(authorization.mediaId);
+    expect(completeSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("resumes inspection without scheduling another server scan", async () => {
+    const completeSpy = vi.spyOn(mediaApi, "completeUpload");
+    vi.spyOn(mediaApi, "getAsset")
+      .mockResolvedValueOnce(quarantinedAsset)
+      .mockResolvedValueOnce(activeAsset);
+    const onStage = vi.fn();
+
+    await expect(
+      uploadMedia(
+        sizedFile("evidence.mp4", "video/mp4", 52_574_976),
+        "DOSSIER_EVIDENCE",
+        {
+          resumeCompletion: {
+            mediaId: authorization.mediaId,
+            publicId: authorization.publicId,
+            version: 17,
+            signature: "b".repeat(40),
+          },
+          inspectionPollIntervalMs: 0,
+          onStage,
+        },
+      ),
+    ).resolves.toEqual(activeAsset);
+    expect(completeSpy).not.toHaveBeenCalled();
+    expect(onStage).toHaveBeenCalledWith("inspecting");
+  });
+
+  it("lets the visitor stop waiting after transfer while inspection continues on the server", async () => {
+    vi.spyOn(mediaApi, "createUploadSignature").mockResolvedValue(
+      authorization,
+    );
+    vi.spyOn(mediaApi, "completeUpload").mockResolvedValue(quarantinedAsset);
+    const statusSpy = vi.spyOn(mediaApi, "getAsset");
+    const controller = new AbortController();
+
+    await expect(
+      uploadMedia(
+        sizedFile("evidence.mp4", "video/mp4", 52_574_976),
+        "DOSSIER_EVIDENCE",
+        {
+          signal: controller.signal,
+          onStage: (stage) => {
+            if (stage === "inspecting") controller.abort();
+          },
+        },
+      ),
+    ).rejects.toThrow(/dừng chờ/i);
+    expect(statusSpy).not.toHaveBeenCalled();
   });
 
   it("uploads videos larger than 100 MB in sequential 20 MB chunks", async () => {

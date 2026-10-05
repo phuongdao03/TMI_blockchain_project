@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -213,12 +213,53 @@ describe("DossierWorkspace", () => {
       screen.getByText("Chưa đáp ứng các tài liệu bắt buộc"),
     ).toBeDefined();
     await user.click(screen.getByRole("button", { name: "Bổ sung tài liệu" }));
-    expect(screen.getByText("Tải tệp chưa phải là gửi hồ sơ")).toBeDefined();
+    expect(
+      screen.getByText(/Chọn loại tài liệu, thêm tệp rồi bấm Tải lên/),
+    ).toBeDefined();
     await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
     expect(screen.getByText("Tài liệu quyền sở hữu")).toBeDefined();
     expect(screen.getByRole("button", { name: "Nộp hồ sơ" })).toHaveProperty(
       "disabled",
       true,
     );
+  });
+
+  it("uses one document chooser and keeps the category fixed while a file is queued", async () => {
+    const user = userEvent.setup();
+    api.get.mockResolvedValue({
+      ...dossier,
+      evidences: [],
+      documentRules: [
+        dossier.documentRules[0],
+        {
+          ...dossier.documentRules[0],
+          key: "OTHER",
+          label: "Tài liệu khác",
+          required: false,
+          maxCount: 20,
+        },
+      ],
+    });
+    api.versions.mockResolvedValue([]);
+    api.timeline.mockResolvedValue([]);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <DossierWorkspace dossierId={dossier.id} />
+      </QueryClientProvider>,
+    );
+
+    const steps = await screen.findByRole("navigation", {
+      name: "Các bước hoàn thiện hồ sơ",
+    });
+    await user.click(within(steps).getByRole("button", { name: /Bằng chứng/ }));
+    expect(screen.queryByLabelText("1. Chọn loại tài liệu")).toBeNull();
+    const other = screen.getByRole("button", { name: /Tài liệu khác/ });
+    await user.upload(
+      screen.getByLabelText("Chọn tài liệu quyền sở hữu"),
+      new File(["proof"], "proof.pdf", { type: "application/pdf" }),
+    );
+    expect(other.hasAttribute("disabled")).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Xóa proof.pdf" }));
+    expect(other.hasAttribute("disabled")).toBe(false);
   });
 });

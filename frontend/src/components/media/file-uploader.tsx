@@ -12,6 +12,7 @@ import {
 import {
   type ChangeEvent,
   type DragEvent,
+  useEffect,
   useId,
   useRef,
   useState,
@@ -34,6 +35,7 @@ interface FileUploaderProps {
   maxFiles?: number;
   multiple?: boolean;
   onComplete: (asset: MediaAsset, index: number) => void | Promise<void>;
+  onQueueChange?: (hasQueuedFiles: boolean) => void;
   purpose: MediaPurpose;
 }
 
@@ -101,6 +103,7 @@ export function FileUploader({
   maxFiles,
   multiple = false,
   onComplete,
+  onQueueChange,
   purpose,
 }: FileUploaderProps) {
   const inputId = useId();
@@ -123,6 +126,7 @@ export function FileUploader({
     selectFile,
     selectFiles,
     startUpload,
+    stopWaiting,
     status,
   } = useMediaUploader({
     constraints,
@@ -131,6 +135,11 @@ export function FileUploader({
     onComplete,
     purpose,
   });
+  const [clock, setClock] = useState(0);
+
+  useEffect(() => {
+    onQueueChange?.(items.length > 0);
+  }, [items.length, onQueueChange]);
 
   const handleInput = (event: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files ?? []);
@@ -153,6 +162,14 @@ export function FileUploader({
   const activeItem = items.find((item) =>
     ["signing", "uploading", "verifying", "inspecting"].includes(item.status),
   );
+  useEffect(() => {
+    if (activeItem?.status !== "inspecting") return;
+    const timer = window.setInterval(() => setClock(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [activeItem?.id, activeItem?.status]);
+  const inspectionSeconds = activeItem?.inspectionStartedAt
+    ? Math.max(0, Math.floor((clock - activeItem.inspectionStartedAt) / 1_000))
+    : 0;
   const openPicker = () => inputRef.current?.click();
   const descriptionId = `${inputId}-description`;
 
@@ -235,11 +252,17 @@ export function FileUploader({
                     : "Chọn tệp từ thiết bị"}
               </p>
               <p className="mt-1 text-xs leading-5 text-neutral-500">
-                Bấm Thêm tệp để chọn từ thiết bị. Hỗ trợ: {supportedFormats}.
+                Bấm Thêm tệp để chọn từ thiết bị.
                 <span className="hidden sm:block">
                   Bạn cũng có thể kéo thả tệp vào đây.
                 </span>
               </p>
+              <details className="mt-1 text-xs text-neutral-500">
+                <summary className="w-fit cursor-pointer underline underline-offset-2">
+                  Xem định dạng được hỗ trợ
+                </summary>
+                <p className="mt-1 leading-5">{supportedFormats}</p>
+              </details>
             </div>
             <FileUploaderActions
               canChoose={canChoose}
@@ -303,7 +326,7 @@ export function FileUploader({
                         </span>
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="break-words text-sm font-bold text-neutral-950">
+                        <p className="[overflow-wrap:anywhere] text-sm font-bold text-neutral-950">
                           {item.file.name}
                         </p>
                         <p className="mt-0.5 text-xs text-neutral-500">
@@ -359,6 +382,31 @@ export function FileUploader({
             ? itemStatus(activeItem)
             : overallStatus(status, items.length, completedCount)}
         </p>
+
+        {activeItem?.status === "inspecting" ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary-200 bg-primary-50 p-4 text-sm text-primary-950">
+            <div>
+              <p className="font-bold">
+                Tệp đã gửi xong, đang kiểm tra an toàn
+              </p>
+              <p className="mt-1 leading-6">
+                Video lớn có thể mất vài phút. Giữ trang này mở đến khi tệp xuất
+                hiện trong danh sách đã thêm.
+              </p>
+              <p className="mt-1 text-xs font-medium">
+                Đã chờ {Math.floor(inspectionSeconds / 60)} phút{" "}
+                {inspectionSeconds % 60} giây
+              </p>
+            </div>
+            <button
+              className="min-h-10 rounded-lg border border-primary-300 px-3 font-semibold hover:bg-primary-100"
+              onClick={stopWaiting}
+              type="button"
+            >
+              Dừng chờ
+            </button>
+          </div>
+        ) : null}
 
         {error ? (
           <p

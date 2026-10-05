@@ -5,6 +5,7 @@ import type {
   MediaAsset,
   MediaPurpose,
   MediaUploadAuthorization,
+  MediaUploadCompletion,
 } from "@/lib/api/types";
 
 type UploadStage = "uploading" | "verifying" | "inspecting";
@@ -13,6 +14,9 @@ interface UploadCallbacks {
   inspectionPollIntervalMs?: number;
   onProgress?: (progress: number) => void;
   onStage?: (stage: UploadStage) => void;
+  onTransferred?: (completion: MediaUploadCompletion) => void;
+  resumeCompletion?: MediaUploadCompletion;
+  signal?: AbortSignal;
 }
 
 /**
@@ -38,8 +42,14 @@ const wait = (milliseconds: number) =>
 async function waitForInspection(
   mediaId: string,
   intervalMs: number,
+  signal?: AbortSignal,
 ): Promise<MediaAsset> {
   for (let attempt = 0; attempt < MAX_INSPECTION_POLLS; attempt += 1) {
+    if (signal?.aborted) {
+      throw new Error(
+        "Đã dừng chờ kiểm tra tệp. Bạn có thể thử lại để tiếp tục từ bước xác nhận.",
+      );
+    }
     const asset = await mediaApi.getAsset(mediaId);
     if (asset.status === "ACTIVE") {
       return asset;
@@ -312,29 +322,52 @@ export async function uploadMedia(
   constraints?: MediaFileConstraints,
 ): Promise<MediaAsset> {
   validateMediaFile(file, purpose, constraints);
-  const authorization = await mediaApi.createUploadSignature({
-    confidentiality: "PRIVATE",
-    purpose,
-    filename: file.name,
-    mimeType: file.type,
-    size: file.size,
-  });
-  callbacks.onStage?.("uploading");
-  const result = await uploadToCloudinary(
-    file,
-    authorization,
-    callbacks.onProgress,
-  );
-  if (result.public_id !== authorization.publicId) {
-    throw new Error("Tệp tải lên không khớp với phiên bảo mật hiện tại.");
+  let completion = callbacks.resumeCompletion;
+  if (!completion) {
+    const authorization = await mediaApi.createUploadSignature({
+      confidentiality: "PRIVATE",
+      purpose,
+      filename: file.name,
+      mimeType: file.type,
+      size: file.size,
+    });
+    callbacks.onStage?.("uploading");
+    const result = await uploadToCloudinary(
+      file,
+      authorization,
+      callbacks.onProgress,
+    );
+    if (result.public_id !== authorization.publicId) {
+      throw new Error("Tệp tải lên không khớp với phiên bảo mật hiện tại.");
+    }
+    completion = {
+      mediaId: authorization.mediaId,
+      publicId: result.public_id,
+      version: result.version,
+      signature: result.signature,
+    };
+    callbacks.onTransferred?.(completion);
   }
   callbacks.onStage?.("verifying");
-  const asset = await mediaApi.completeUpload({
-    mediaId: authorization.mediaId,
-    publicId: result.public_id,
-    version: result.version,
-    signature: result.signature,
-  });
+  if (callbacks.resumeCompletion) {
+    const existing = await mediaApi.getAsset(completion.mediaId);
+    if (existing.status === "ACTIVE") return existing;
+    if (existing.status === "REJECTED") {
+      throw new Error(
+        "Tệp không vượt qua bước xác minh an toàn. Vui lòng chọn tệp khác.",
+      );
+    }
+    if (existing.status === "QUARANTINED") {
+      callbacks.onStage?.("inspecting");
+      return waitForInspection(
+        existing.id,
+        callbacks.inspectionPollIntervalMs ??
+          DEFAULT_INSPECTION_POLL_INTERVAL_MS,
+        callbacks.signal,
+      );
+    }
+  }
+  const asset = await mediaApi.completeUpload(completion);
   if (asset.status === "ACTIVE") {
     return asset;
   }
@@ -345,5 +378,6 @@ export async function uploadMedia(
   return waitForInspection(
     asset.id,
     callbacks.inspectionPollIntervalMs ?? DEFAULT_INSPECTION_POLL_INTERVAL_MS,
+    callbacks.signal,
   );
 }

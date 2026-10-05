@@ -343,6 +343,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
   const [step, setStep] = useState<Step>("information");
   const [evidenceTitle, setEvidenceTitle] = useState("");
   const [evidenceType, setEvidenceType] = useState("OWNERSHIP_DOCUMENT");
+  const [queueLocked, setQueueLocked] = useState(false);
   const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: dossierKeys.detail(dossierId),
@@ -494,6 +495,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
             {dossier.canEdit ? (
               <Button
                 className="mt-4"
+                disabled={queueLocked && nextPreparationStep !== "evidence"}
                 onClick={() => setStep(nextPreparationStep)}
                 type="button"
               >
@@ -547,8 +549,9 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
             return (
               <button
                 aria-current={active ? "step" : undefined}
+                disabled={queueLocked && item.id !== "evidence"}
                 className={cn(
-                  "flex min-h-16 min-w-0 w-full flex-col justify-center gap-1 border-b-2 px-1 py-3 text-center transition-colors duration-150 sm:flex-row sm:gap-3 sm:px-3 sm:text-left",
+                  "flex min-h-16 min-w-0 w-full flex-col justify-center gap-1 border-b-2 px-1 py-3 text-center transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-row sm:gap-3 sm:px-3 sm:text-left",
                   active
                     ? "border-primary-600 text-primary-800"
                     : "border-transparent text-[var(--theme-muted)] hover:bg-[var(--theme-elevated)]",
@@ -592,57 +595,54 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   Tài liệu cho hồ sơ của bạn
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-neutral-500">
-                  Chọn đúng loại, tải tệp lên và chờ hệ thống xác nhận an toàn.
-                  Bạn có thể tải nhiều tệp cùng lúc.
+                  Chọn loại tài liệu, thêm tệp rồi bấm Tải lên. Bạn có thể chọn
+                  nhiều tệp cùng loại.
                 </p>
               </div>
               {dossier.canEdit ? (
                 <div className="space-y-5 border-t border-[var(--theme-border)] pt-5">
-                  <div className="text-sm leading-6">
-                    <p className="font-bold">Tải tệp chưa phải là gửi hồ sơ</p>
-                    <p className="mt-1 text-[var(--theme-muted)]">
-                      Chọn loại tài liệu, thêm tệp từ thiết bị rồi bấm Tải lên.
-                      Khi tệp đã được xác nhận, chuyển sang Kiểm tra & nộp để
-                      gửi hồ sơ.
-                    </p>
-                  </div>
                   {documentRules.length > 0 ? (
-                    <div
-                      aria-label="Tài liệu cần chuẩn bị"
-                      className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]"
-                    >
-                      {documentRules.map((rule) => {
-                        const count = ruleProgress(rule, dossier.evidences);
-                        return (
-                          <button
-                            key={rule.key}
-                            type="button"
-                            aria-pressed={selectedRule?.key === rule.key}
-                            onClick={() => setEvidenceType(rule.key)}
-                            className={cn(
-                              "flex min-h-14 w-full items-center justify-between gap-3 px-3 py-3 text-left",
-                              selectedRule?.key === rule.key &&
-                                "bg-[var(--theme-elevated)]",
-                            )}
-                          >
-                            <span className="min-w-0">
+                    <fieldset className="space-y-3">
+                      <legend className="text-sm font-bold">
+                        1. Chọn loại tài liệu
+                      </legend>
+                      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                        {documentRules.map((rule) => {
+                          const count = ruleProgress(rule, dossier.evidences);
+                          const selected = selectedRule?.key === rule.key;
+                          return (
+                            <button
+                              key={rule.key}
+                              type="button"
+                              aria-pressed={selected}
+                              disabled={
+                                (queueLocked && !selected) || attach.isPending
+                              }
+                              onClick={() => {
+                                setEvidenceType(rule.key);
+                                setEvidenceTitle("");
+                              }}
+                              className={cn(
+                                "min-h-20 rounded-xl border px-4 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:cursor-not-allowed disabled:opacity-50",
+                                selected
+                                  ? "border-primary-600 bg-primary-50 text-primary-950"
+                                  : "border-[var(--theme-border)] bg-[var(--theme-surface)] hover:bg-[var(--theme-elevated)]",
+                              )}
+                            >
                               <strong className="block text-sm">
                                 {rule.label}
                               </strong>
-                              <span className="text-xs text-[var(--theme-muted)]">
-                                {rule.required ? "Bắt buộc" : "Tùy chọn"} · Đã
-                                thêm {count}/{rule.maxCount} tệp
+                              <span className="mt-1 block text-xs text-[var(--theme-muted)]">
+                                {rule.required ? "Bắt buộc" : "Tùy chọn"} ·{" "}
+                                {count}/{rule.maxCount} tệp
                               </span>
-                            </span>
-                            <span className="shrink-0 text-xs font-bold">
-                              {count > 0 ? "Đã có" : "Thêm tệp →"}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
                   ) : null}
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  {documentRules.length === 0 ? (
                     <div>
                       <label
                         className="text-sm font-bold"
@@ -656,38 +656,49 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                         onChange={(event) =>
                           setEvidenceType(event.target.value)
                         }
-                        value={selectedRule?.key ?? evidenceType}
-                        disabled={attach.isPending}
+                        value={evidenceType}
+                        disabled={queueLocked || attach.isPending}
                       >
-                        {documentRules.length ? (
-                          documentRules.map((rule) => (
-                            <option key={rule.key} value={rule.key}>
-                              {rule.label}
-                              {rule.required ? " · bắt buộc" : ""}
-                            </option>
-                          ))
-                        ) : (
-                          <>
-                            <option value="OWNERSHIP_DOCUMENT">
-                              Tài liệu quyền sở hữu
-                            </option>
-                            <option value="CREATIVE_WORK">Tác phẩm gốc</option>
-                            <option value="OTHER">Tài liệu khác</option>
-                          </>
-                        )}
+                        <option value="OWNERSHIP_DOCUMENT">
+                          Tài liệu quyền sở hữu
+                        </option>
+                        <option value="CREATIVE_WORK">Tác phẩm gốc</option>
+                        <option value="OTHER">Tài liệu khác</option>
                       </select>
                     </div>
-                    <div>
+                  ) : null}
+                  {queueLocked ? (
+                    <p
+                      className="text-xs font-medium text-primary-800"
+                      role="status"
+                    >
+                      Hoàn tất hoặc xóa tệp đang chọn trước khi đổi loại tài
+                      liệu.
+                    </p>
+                  ) : null}
+                  {selectedRule ? (
+                    <p className="border-l-2 border-primary-500 py-1 pl-4 text-xs leading-5 text-[var(--theme-muted)]">
+                      {selectedRule.required
+                        ? "Cần có để nộp hồ sơ"
+                        : "Không bắt buộc"}{" "}
+                      · {evidenceScopeLabel(selectedRule.defaultVisibility)}.
+                    </p>
+                  ) : null}
+                  <details className="rounded-xl border border-[var(--theme-border)] px-4 py-3">
+                    <summary className="cursor-pointer text-sm font-semibold">
+                      Đặt tên hiển thị cho tài liệu (tùy chọn)
+                    </summary>
+                    <div className="mt-3">
                       <label
                         className="text-sm font-bold"
                         htmlFor="evidence-title"
                       >
-                        2. Tên tài liệu
+                        Tên tài liệu
                       </label>
                       <input
                         className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm text-[var(--theme-text)]"
                         id="evidence-title"
-                        disabled={attach.isPending}
+                        disabled={queueLocked || attach.isPending}
                         onChange={(event) =>
                           setEvidenceTitle(event.target.value)
                         }
@@ -700,28 +711,11 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                         Có thể để trống; hệ thống sẽ dùng tên loại tài liệu.
                       </p>
                     </div>
-                  </div>
-                  {selectedRule ? (
-                    <div className="flex flex-col gap-2 border-l-2 border-primary-500 py-1 pl-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="font-bold text-neutral-900">
-                          {selectedRule.required
-                            ? "Cần có tài liệu này để nộp hồ sơ"
-                            : "Tài liệu bổ sung, không bắt buộc"}
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-neutral-600">
-                          {evidenceScopeLabel(selectedRule.defaultVisibility)}.
-                          Phạm vi hiển thị được áp dụng tự động.
-                        </p>
-                      </div>
-                      <span className="shrink-0 rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-700">
-                        {selectedRuleCount}/{selectedRule.maxCount} tệp
-                      </span>
-                    </div>
-                  ) : null}
+                  </details>
                   <div>
-                    <p className="mb-3 text-sm font-bold">3. Chọn và tải tệp</p>
+                    <p className="mb-3 text-sm font-bold">2. Chọn và tải tệp</p>
                     <FileUploader
+                      key={selectedRule?.key ?? evidenceType}
                       constraints={
                         selectedRule
                           ? {
@@ -738,6 +732,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                           : undefined
                       }
                       multiple
+                      onQueueChange={setQueueLocked}
                       onComplete={async (asset, index) => {
                         await attach.mutateAsync({
                           asset,
@@ -801,11 +796,15 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
               <div className="flex flex-wrap justify-between gap-3 border-t border-[var(--theme-border)] pt-5">
                 <Button
                   variant="outline"
+                  disabled={queueLocked}
                   onClick={() => setStep("information")}
                 >
                   Quay lại thông tin
                 </Button>
-                <Button onClick={() => setStep("review")}>
+                <Button
+                  disabled={queueLocked}
+                  onClick={() => setStep("review")}
+                >
                   Tiếp tục kiểm tra →
                 </Button>
               </div>
