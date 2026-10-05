@@ -20,11 +20,17 @@ function errorMessage(error: unknown): string {
 export function DossierAllocationForm({
   staff,
   onSaved,
+  initialDossier,
 }: {
   staff: StaffAccount[];
   onSaved: () => Promise<void>;
+  initialDossier?: { dossierId: string; dossierTitle: string };
 }) {
-  const composer = useDossierAllocationComposer({ staff, onSaved });
+  const composer = useDossierAllocationComposer({
+    staff,
+    onSaved,
+    initialDossier,
+  });
 
   return (
     <form
@@ -41,8 +47,8 @@ export function DossierAllocationForm({
             Phân công hồ sơ thẩm định
           </h2>
           <p className="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-            Gắn từng tài liệu của version hiện tại với người chịu trách nhiệm và
-            xác nhận phạm vi trước khi kích hoạt.
+            Chọn tác phẩm đã nộp và người thẩm định. Toàn bộ tài liệu sẽ được
+            giao mặc định; bạn có thể điều chỉnh phạm vi khi cần.
           </p>
         </div>
       </div>
@@ -58,27 +64,44 @@ export function DossierAllocationForm({
           <option value="">
             {composer.dossiers.isPending
               ? "Đang tải hồ sơ..."
-              : "Chọn hồ sơ đang thẩm định"}
+              : "Chọn tác phẩm đã nộp cần giao"}
           </option>
           {(composer.dossiers.data?.data ?? []).map((dossier) => (
             <option key={dossier.dossierId} value={dossier.dossierId}>
-              {dossier.dossierCode} · {dossier.dossierTitle} · Version{" "}
-              {dossier.versionNo}
+              {dossier.dossierCode} · {dossier.dossierTitle} ·{" "}
+              {dossier.status === "SUBMITTED"
+                ? "Chờ kiểm tra"
+                : dossier.status === "PRECHECK"
+                  ? "Đang kiểm tra"
+                  : "Đang thẩm định"}
             </option>
           ))}
         </select>
       </label>
       {composer.dossiers.isError ? (
         <p className="mt-2 text-sm text-red-700 dark:text-red-300" role="alert">
-          Chưa thể tải hồ sơ đang thẩm định.
+          Chưa thể tải danh sách hồ sơ đã nộp. Hãy thử tải lại trang.
         </p>
       ) : null}
-      {composer.dossierDetail.isPending ? (
+      {!composer.dossiers.isPending &&
+      !composer.dossiers.isError &&
+      !composer.dossiers.data?.data.length ? (
+        <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">
+          Chưa có hồ sơ đã nộp cần phân công.
+        </p>
+      ) : null}
+      {composer.selectedDossierId && composer.dossierDetail.isPending ? (
         <p
           className="mt-4 text-sm text-neutral-600 dark:text-neutral-300"
           role="status"
         >
           Đang tải version hồ sơ và tài liệu...
+        </p>
+      ) : null}
+      {composer.selectedDossierId && composer.dossierDetail.isError ? (
+        <p className="mt-3 text-sm text-red-700 dark:text-red-300" role="alert">
+          Chưa thể tải tài liệu của hồ sơ này. Hãy chọn lại hồ sơ hoặc thử tải
+          lại trang.
         </p>
       ) : null}
       {composer.dossierDetail.data ? (
@@ -93,7 +116,7 @@ export function DossierAllocationForm({
           onDueAtChange={composer.setDueAt}
           onObjectiveChange={composer.setObjective}
           onPriorityChange={composer.setPriority}
-          onScopeReviewersChange={composer.setScopeReviewerIds}
+          onToggleScopeReviewer={composer.toggleScopeReviewer}
           onToggleEvidence={composer.toggleEvidence}
           onToggleReviewer={composer.toggleReviewer}
           priority={composer.priority}
@@ -121,8 +144,8 @@ export function DossierAllocationForm({
       >
         <ClipboardCheck aria-hidden="true" className="size-4" />
         {composer.createAndActivate.isPending
-          ? "Đang ghi nhận..."
-          : "Tạo và kích hoạt phân công"}
+          ? "Đang giao hồ sơ..."
+          : "Giao hồ sơ để thẩm định"}
       </button>
     </form>
   );

@@ -5,8 +5,10 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OperationsDashboard } from "@/components/admin/operations-dashboard";
+import { ApiError } from "@/lib/api/client";
 
 const metrics = vi.hoisted(() => vi.fn());
+const listReviewDossiers = vi.hoisted(() => vi.fn());
 
 const metricsPayload = {
   dossierFunnel: { UNDER_REVIEW: 4, CERTIFICATE_ISSUED: 2 },
@@ -25,7 +27,18 @@ const metricsPayload = {
 };
 
 vi.mock("@/lib/api/client", () => ({
+  ApiError: class ApiError extends Error {
+    constructor(
+      message: string,
+      readonly code: string,
+      readonly status: number,
+      readonly requestId?: string,
+    ) {
+      super(message);
+    }
+  },
   operationsApi: { metrics },
+  adminReviewApi: { list: listReviewDossiers },
 }));
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -43,6 +56,10 @@ function Wrapper({ children }: { children: ReactNode }) {
 describe("OperationsDashboard", () => {
   beforeEach(() => {
     metrics.mockReset().mockResolvedValue(metricsPayload);
+    listReviewDossiers.mockReset().mockResolvedValue({
+      data: [],
+      meta: { total: 3 },
+    });
   });
 
   it("presents work queues without raw status, IDs or infrastructure metrics", async () => {
@@ -86,5 +103,21 @@ describe("OperationsDashboard", () => {
     );
     expect(await screen.findByText("Đang thẩm định")).toBeDefined();
     expect(metrics).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows the request ID when production metrics fail", async () => {
+    metrics.mockRejectedValueOnce(
+      new ApiError("unavailable", "OPERATIONS_UNAVAILABLE", 503, "req-42"),
+    );
+    render(<OperationsDashboard />, { wrapper: Wrapper });
+    expect(
+      await screen.findByText(/OPERATIONS_UNAVAILABLE · Mã yêu cầu: req-42/),
+    ).toBeDefined();
+    expect(
+      await screen.findByText("3 hồ sơ đang chờ kiểm tra hoặc thẩm định."),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Xem hồ sơ chờ xử lý" }),
+    ).toBeDefined();
   });
 });

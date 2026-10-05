@@ -2,12 +2,6 @@ import { FileText, ShieldCheck, UsersRound } from "lucide-react";
 
 import type { ReviewEvidenceSnapshot, StaffAccount } from "@/lib/api/types";
 
-type ScopeReviewerIds = Record<string, string[]>;
-
-function toggleId(ids: string[], id: string): string[] {
-  return ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id];
-}
-
 export function DossierDocumentScopeSelector({
   evidences,
   reviewers,
@@ -21,7 +15,7 @@ export function DossierDocumentScopeSelector({
   evidences: ReviewEvidenceSnapshot[];
   reviewers: StaffAccount[];
   selectedEvidenceIds: string[];
-  scopeReviewerIds: ScopeReviewerIds;
+  scopeReviewerIds: Record<string, string[]>;
   dualReviewEvidenceIds: string[];
   onToggleEvidence: (evidenceId: string) => void;
   onToggleReviewer: (evidenceId: string, reviewerId: string) => void;
@@ -123,15 +117,4 @@ export function DossierDocumentScopeSelector({
       </div>
     </fieldset>
   );
-}
-
-export function toggleScopeReviewer(
-  values: ScopeReviewerIds,
-  evidenceId: string,
-  reviewerId: string,
-): ScopeReviewerIds {
-  return {
-    ...values,
-    [evidenceId]: toggleId(values[evidenceId] ?? [], reviewerId),
-  };
 }

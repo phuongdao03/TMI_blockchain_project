@@ -45,6 +45,36 @@ const allocationDetail: WorkAllocationDetail = {
 };
 
 describe("WorkAllocationList", () => {
+  it("lets an admin activate an existing general draft", () => {
+    const activateDraft = vi.fn();
+    render(
+      <WorkAllocationList
+        isDetailError={false}
+        isDetailPending={false}
+        isError={false}
+        isPending={false}
+        onActivateDraft={activateDraft}
+        onSelect={vi.fn()}
+        rows={[
+          {
+            ...dossierAllocation,
+            id: "draft-1",
+            kind: "GENERIC",
+            dossierId: null,
+            dossierVersionId: null,
+            status: "DRAFT",
+          },
+        ]}
+        selectedAllocationId={null}
+        selectedDetail={null}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Kích hoạt và giao việc" }),
+    );
+    expect(activateDraft).toHaveBeenCalledWith("draft-1");
+  });
+
   it("reveals named document coverage for a selected dossier allocation", () => {
     const selectAllocation = vi.fn();
 

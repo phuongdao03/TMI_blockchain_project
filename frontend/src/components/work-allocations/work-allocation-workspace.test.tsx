@@ -6,25 +6,33 @@ import { WorkAllocationWorkspace } from "@/components/work-allocations/work-allo
 
 const listMock = vi.hoisted(() => vi.fn());
 const createMock = vi.hoisted(() => vi.fn());
+const activateMock = vi.hoisted(() => vi.fn());
 const staffListMock = vi.hoisted(() => vi.fn());
 const dossierListMock = vi.hoisted(() => vi.fn());
+const dossierGetMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/api/client", () => ({
   ApiError: class ApiError extends Error {},
   workAllocationAdminApi: {
     list: listMock,
     create: createMock,
+    activate: activateMock,
   },
   staffAccountsApi: {
     list: staffListMock,
   },
   adminReviewApi: {
     list: dossierListMock,
+    get: dossierGetMock,
   },
 }));
 
 describe("WorkAllocationWorkspace", () => {
   it("creates a general allocation with an explicit responsible person", async () => {
+    dossierListMock.mockResolvedValue({
+      data: [],
+      meta: { total: 0 },
+    });
     listMock.mockResolvedValue({
       success: true,
       data: [],
@@ -45,6 +53,7 @@ describe("WorkAllocationWorkspace", () => {
       meta: { page: 1, pageSize: 100, total: 1 },
     });
     createMock.mockResolvedValue({ id: "allocation-1" });
+    activateMock.mockResolvedValue({ id: "allocation-1", status: "ACTIVE" });
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -58,12 +67,15 @@ describe("WorkAllocationWorkspace", () => {
     expect(
       await screen.findByRole("heading", { name: "Phân công công việc" }),
     ).toBeDefined();
-    fireEvent.click(screen.getByRole("button", { name: "Tạo phân công" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Giao hồ sơ thẩm định" }),
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Công việc chung" }));
     fireEvent.change(screen.getByLabelText("Mục tiêu công việc"), {
       target: { value: "Rà soát kế hoạch truyền thông" },
     });
     fireEvent.click(await screen.findByLabelText("linh.tran@example.com"));
-    fireEvent.click(screen.getByRole("button", { name: "Lưu phân công" }));
+    fireEvent.click(screen.getByRole("button", { name: "Giao công việc" }));
 
     await waitFor(() => {
       expect(createMock).toHaveBeenCalledWith({
@@ -74,6 +86,7 @@ describe("WorkAllocationWorkspace", () => {
         priority: "MEDIUM",
         members: [{ userId: "moderator-1", responsibility: "CONTRIBUTOR" }],
       });
+      expect(activateMock).toHaveBeenCalledWith("allocation-1", []);
     });
   });
 
@@ -90,8 +103,27 @@ describe("WorkAllocationWorkspace", () => {
     });
     dossierListMock.mockResolvedValue({
       success: true,
-      data: [],
-      meta: { page: 1, pageSize: 50, total: 0 },
+      data: [
+        {
+          dossierId: "dossier-1",
+          dossierCode: "HS-2026-01",
+          dossierTitle: "Đồng Diễn Múa Saravan",
+          status: "SUBMITTED",
+          versionNo: 1,
+          submittedAt: "2026-10-05T08:00:00Z",
+          assignmentCount: 0,
+        },
+      ],
+      meta: { page: 1, pageSize: 100, total: 1 },
+    });
+    dossierGetMock.mockResolvedValue({
+      dossierId: "dossier-1",
+      dossierCode: "HS-2026-01",
+      dossierTitle: "Đồng Diễn Múa Saravan",
+      status: "SUBMITTED",
+      versionNo: 1,
+      snapshotJson: { evidences: [] },
+      assignments: [],
     });
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -103,13 +135,14 @@ describe("WorkAllocationWorkspace", () => {
       </QueryClientProvider>,
     );
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Tạo phân công" }),
-    );
-    fireEvent.click(screen.getByRole("tab", { name: "Hồ sơ thẩm định" }));
+    expect(await screen.findByText("Đồng Diễn Múa Saravan")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Giao hồ sơ" }));
 
     expect(
       await screen.findByRole("heading", { name: "Phân công hồ sơ thẩm định" }),
     ).toBeDefined();
+    expect(
+      (screen.getByLabelText("Hồ sơ cần thẩm định") as HTMLSelectElement).value,
+    ).toBe("dossier-1");
   });
 });

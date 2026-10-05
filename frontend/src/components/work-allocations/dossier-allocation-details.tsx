@@ -1,9 +1,6 @@
 import { UsersRound } from "lucide-react";
 
-import {
-  DossierDocumentScopeSelector,
-  toggleScopeReviewer,
-} from "@/components/work-allocations/dossier-document-scope-selector";
+import { DossierDocumentScopeSelector } from "@/components/work-allocations/dossier-document-scope-selector";
 import type {
   AdminReviewDossierDetail,
   StaffAccount,
@@ -38,7 +35,7 @@ export function DossierAllocationDetails({
   onPriorityChange,
   onToggleReviewer,
   onToggleEvidence,
-  onScopeReviewersChange,
+  onToggleScopeReviewer,
   onDualReviewChange,
 }: {
   detail: AdminReviewDossierDetail;
@@ -58,7 +55,7 @@ export function DossierAllocationDetails({
   onPriorityChange: (value: WorkAllocationPriority) => void;
   onToggleReviewer: (reviewerId: string) => void;
   onToggleEvidence: (evidenceId: string) => void;
-  onScopeReviewersChange: (value: Record<string, string[]>) => void;
+  onToggleScopeReviewer: (evidenceId: string, reviewerId: string) => void;
   onDualReviewChange: (value: string[]) => void;
 }) {
   return (
@@ -119,6 +116,12 @@ export function DossierAllocationDetails({
         <p className="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
           Chỉ người trong nhóm này mới có thể được gán cho tài liệu bên dưới.
         </p>
+        {staff.length === 0 ? (
+          <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+            Chưa có nhân viên thẩm định đang hoạt động. Hãy kích hoạt tài khoản
+            nhân viên trước khi giao hồ sơ.
+          </p>
+        ) : null}
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {staff.map((person) => (
             <label
@@ -137,26 +140,31 @@ export function DossierAllocationDetails({
           ))}
         </div>
       </fieldset>
-      <DossierDocumentScopeSelector
-        dualReviewEvidenceIds={dualReviewEvidenceIds}
-        evidences={detail.snapshotJson.evidences}
-        onToggleDualReview={(evidenceId) =>
-          onDualReviewChange(
-            dualReviewEvidenceIds.includes(evidenceId)
-              ? dualReviewEvidenceIds.filter((id) => id !== evidenceId)
-              : [...dualReviewEvidenceIds, evidenceId],
-          )
-        }
-        onToggleEvidence={onToggleEvidence}
-        onToggleReviewer={(evidenceId, reviewerId) =>
-          onScopeReviewersChange(
-            toggleScopeReviewer(scopeReviewerIds, evidenceId, reviewerId),
-          )
-        }
-        reviewers={selectedReviewers}
-        scopeReviewerIds={scopeReviewerIds}
-        selectedEvidenceIds={selectedEvidenceIds}
-      />
+      <details className="mt-6 rounded-xl border border-neutral-200 p-4 dark:border-neutral-700">
+        <summary className="cursor-pointer text-sm font-bold text-neutral-900 dark:text-white">
+          Tùy chỉnh phạm vi tài liệu ({selectedEvidenceIds.length}/
+          {detail.snapshotJson.evidences.length} tệp)
+        </summary>
+        <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
+          Mặc định mọi tài liệu được giao cho tất cả người thẩm định đã chọn.
+        </p>
+        <DossierDocumentScopeSelector
+          dualReviewEvidenceIds={dualReviewEvidenceIds}
+          evidences={detail.snapshotJson.evidences}
+          onToggleDualReview={(evidenceId) =>
+            onDualReviewChange(
+              dualReviewEvidenceIds.includes(evidenceId)
+                ? dualReviewEvidenceIds.filter((id) => id !== evidenceId)
+                : [...dualReviewEvidenceIds, evidenceId],
+            )
+          }
+          onToggleEvidence={onToggleEvidence}
+          onToggleReviewer={onToggleScopeReviewer}
+          reviewers={selectedReviewers}
+          scopeReviewerIds={scopeReviewerIds}
+          selectedEvidenceIds={selectedEvidenceIds}
+        />
+      </details>
     </>
   );
 }

@@ -9,6 +9,7 @@ import {
   ReceiptText,
   RefreshCw,
 } from "lucide-react";
+import Link from "next/link";
 
 import {
   OperationsJobHealthChart,
@@ -16,7 +17,7 @@ import {
   ReviewerWorkloadChart,
 } from "@/components/admin/operations-charts";
 import { JobOperationsWorkspace } from "@/components/admin/job-operations-workspace";
-import { operationsApi } from "@/lib/api/client";
+import { adminReviewApi, ApiError, operationsApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
 
 const dossierStatusLabels: Record<string, string> = {
@@ -42,6 +43,11 @@ export function OperationsDashboard({
     queryKey: ["admin", "operations"],
     queryFn: operationsApi.metrics,
   });
+  const reviewQueue = useQuery({
+    queryKey: ["admin", "operations", "review-queue-fallback"],
+    queryFn: () => adminReviewApi.list({ pageSize: 1 }),
+    enabled: metrics.isError,
+  });
   if (metrics.isPending)
     return (
       <section
@@ -59,7 +65,8 @@ export function OperationsDashboard({
         ))}
       </section>
     );
-  if (!metrics.data)
+  if (!metrics.data) {
+    const error = metrics.error instanceof ApiError ? metrics.error : null;
     return (
       <section
         className="rounded-xl border border-error/30 bg-[var(--theme-surface)] p-5"
@@ -69,22 +76,47 @@ export function OperationsDashboard({
           Chưa tải được tổng quan vận hành
         </h2>
         <p className="mt-2 text-sm text-[var(--theme-muted)]">
-          Dữ liệu chưa bị mất. Hãy thử kết nối lại với dịch vụ vận hành.
+          {error?.status === 403
+            ? "Tài khoản này chưa có quyền xem chỉ số vận hành."
+            : error?.status === 401
+              ? "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại."
+              : "Không thể kết nối với dịch vụ vận hành. Bạn vẫn có thể xử lý hồ sơ."}
         </p>
-        <button
-          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary-700 px-4 text-sm font-bold text-white disabled:opacity-60"
-          disabled={metrics.isFetching}
-          onClick={() => void metrics.refetch()}
-          type="button"
-        >
-          <RefreshCw
-            aria-hidden="true"
-            className={`size-4 ${metrics.isFetching ? "animate-spin" : ""}`}
-          />
-          {metrics.isFetching ? "Đang tải lại" : "Thử tải lại tổng quan"}
-        </button>
+        {error ? (
+          <p className="mt-2 text-xs text-[var(--theme-muted)]">
+            Mã lỗi: {error.code}
+            {error.requestId ? ` · Mã yêu cầu: ${error.requestId}` : ""}
+          </p>
+        ) : null}
+        {reviewQueue.data ? (
+          <p className="mt-3 text-sm font-semibold text-[var(--theme-text)]">
+            {reviewQueue.data.meta.total} hồ sơ đang chờ kiểm tra hoặc thẩm
+            định.
+          </p>
+        ) : null}
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary-700 px-4 text-sm font-bold text-white disabled:opacity-60"
+            disabled={metrics.isFetching}
+            onClick={() => void metrics.refetch()}
+            type="button"
+          >
+            <RefreshCw
+              aria-hidden="true"
+              className={`size-4 ${metrics.isFetching ? "animate-spin" : ""}`}
+            />
+            {metrics.isFetching ? "Đang tải lại" : "Thử tải lại tổng quan"}
+          </button>
+          <Link
+            className="inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)]"
+            href="/admin/reviews"
+          >
+            Xem hồ sơ chờ xử lý
+          </Link>
+        </div>
       </section>
     );
+  }
   const activeDossiers = Object.entries(metrics.data.dossierFunnel)
     .filter(([status]) => !["REJECTED", "CERTIFICATE_ISSUED"].includes(status))
     .reduce((total, [, count]) => total + count, 0);

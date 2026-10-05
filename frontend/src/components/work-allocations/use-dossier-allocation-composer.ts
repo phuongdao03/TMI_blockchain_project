@@ -13,21 +13,31 @@ const coverableAssignmentStatuses = new Set([
   "IN_PROGRESS",
   "SUBMITTED",
 ]);
+const routingReason =
+  "Quản trị viên chuyển hồ sơ sang thẩm định khi giao việc.";
 
 export function useDossierAllocationComposer({
   staff,
   onSaved,
+  initialDossier,
 }: {
   staff: StaffAccount[];
   onSaved: () => Promise<void>;
+  initialDossier?: { dossierId: string; dossierTitle: string };
 }) {
-  const [selectedDossierId, setSelectedDossierId] = useState("");
-  const [objective, setObjective] = useState("");
+  const [selectedDossierId, setSelectedDossierId] = useState(
+    initialDossier?.dossierId ?? "",
+  );
+  const [objective, setObjective] = useState(
+    initialDossier ? `Thẩm định: ${initialDossier.dossierTitle}` : "",
+  );
   const [description, setDescription] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [priority, setPriority] = useState<WorkAllocationPriority>("MEDIUM");
   const [selectedReviewerIds, setSelectedReviewerIds] = useState<string[]>([]);
-  const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[]>([]);
+  const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<
+    string[] | null
+  >(null);
   const [scopeReviewerIds, setScopeReviewerIds] = useState<
     Record<string, string[]>
   >({});
@@ -37,8 +47,7 @@ export function useDossierAllocationComposer({
   const [formError, setFormError] = useState<string | null>(null);
   const dossiers = useQuery({
     queryKey: ["review-dossiers", "allocation-composer"],
-    queryFn: () =>
-      adminReviewApi.list({ status: "UNDER_REVIEW", pageSize: 50 }),
+    queryFn: () => adminReviewApi.list({ pageSize: 100 }),
   });
   const dossierDetail = useQuery({
     queryKey: ["review-dossier", selectedDossierId, "allocation-composer"],
@@ -49,18 +58,36 @@ export function useDossierAllocationComposer({
     () => staff.filter((person) => selectedReviewerIds.includes(person.id)),
     [selectedReviewerIds, staff],
   );
+  const effectiveSelectedEvidenceIds =
+    selectedEvidenceIds ??
+    (dossierDetail.data?.snapshotJson.evidences ?? []).map(
+      (evidence) => evidence.id,
+    );
+  const effectiveScopeReviewerIds = Object.fromEntries(
+    effectiveSelectedEvidenceIds.map((evidenceId) => [
+      evidenceId,
+      scopeReviewerIds[evidenceId] ?? selectedReviewerIds,
+    ]),
+  );
   const selectedEvidences = useMemo(
     () =>
       (dossierDetail.data?.snapshotJson.evidences ?? []).filter((evidence) =>
-        selectedEvidenceIds.includes(evidence.id),
+        effectiveSelectedEvidenceIds.includes(evidence.id),
       ),
-    [dossierDetail.data?.snapshotJson.evidences, selectedEvidenceIds],
+    [dossierDetail.data?.snapshotJson.evidences, effectiveSelectedEvidenceIds],
   );
 
   const createAndActivate = useMutation({
     mutationFn: async () => {
-      const detail = dossierDetail.data;
-      if (!detail) throw new Error("Hồ sơ chưa sẵn sàng để phân công.");
+      if (!dossierDetail.data)
+        throw new Error("Hồ sơ chưa sẵn sàng để phân công.");
+      const detail = await adminReviewApi.get(selectedDossierId);
+      if (detail.status === "SUBMITTED") {
+        await adminReviewApi.startPrecheck(detail.dossierId, routingReason);
+      }
+      if (detail.status === "SUBMITTED" || detail.status === "PRECHECK") {
+        await adminReviewApi.passPrecheck(detail.dossierId, routingReason);
+      }
       const assignmentsByReviewer = new Map<string, ReviewAssignment>();
       detail.assignments.forEach(({ assignment }) => {
         if (coverableAssignmentStatuses.has(assignment.status)) {
@@ -112,9 +139,9 @@ export function useDossierAllocationComposer({
       );
       const scopeCoverage = selectedEvidences.map((evidence) => {
         const scopeId = scopeIdByEvidence.get(evidence.id);
-        const reviewAssignmentIds = (scopeReviewerIds[evidence.id] ?? []).map(
-          (reviewerId) => assignmentsByReviewer.get(reviewerId)?.id,
-        );
+        const reviewAssignmentIds = (
+          effectiveScopeReviewerIds[evidence.id] ?? []
+        ).map((reviewerId) => assignmentsByReviewer.get(reviewerId)?.id);
         if (
           !scopeId ||
           reviewAssignmentIds.some((assignmentId) => !assignmentId)
@@ -141,8 +168,8 @@ export function useDossierAllocationComposer({
       (item) => item.dossierId === dossierId,
     );
     setSelectedDossierId(dossierId);
-    setObjective(dossier ? `Thẩm định hồ sơ ${dossier.dossierCode}` : "");
-    setSelectedEvidenceIds([]);
+    setObjective(dossier ? `Thẩm định: ${dossier.dossierTitle}` : "");
+    setSelectedEvidenceIds(null);
     setScopeReviewerIds({});
     setDualReviewEvidenceIds([]);
     setFormError(null);
@@ -165,11 +192,16 @@ export function useDossierAllocationComposer({
   }
 
   function toggleEvidence(evidenceId: string) {
-    setSelectedEvidenceIds((selected) =>
-      selected.includes(evidenceId)
-        ? selected.filter((id) => id !== evidenceId)
-        : [...selected, evidenceId],
-    );
+    setSelectedEvidenceIds((selected) => {
+      const current =
+        selected ??
+        (dossierDetail.data?.snapshotJson.evidences ?? []).map(
+          (evidence) => evidence.id,
+        );
+      return current.includes(evidenceId)
+        ? current.filter((id) => id !== evidenceId)
+        : [...current, evidenceId];
+    });
     setScopeReviewerIds((current) => {
       const next = { ...current };
       delete next[evidenceId];
@@ -178,6 +210,16 @@ export function useDossierAllocationComposer({
     setDualReviewEvidenceIds((selected) =>
       selected.filter((id) => id !== evidenceId),
     );
+  }
+
+  function toggleScopeReviewer(evidenceId: string, reviewerId: string) {
+    const current = effectiveScopeReviewerIds[evidenceId] ?? [];
+    setScopeReviewerIds((values) => ({
+      ...values,
+      [evidenceId]: current.includes(reviewerId)
+        ? current.filter((id) => id !== reviewerId)
+        : [...current, reviewerId],
+    }));
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -191,7 +233,7 @@ export function useDossierAllocationComposer({
       return;
     }
     const invalidScope = selectedEvidences.find((evidence) => {
-      const reviewerIds = scopeReviewerIds[evidence.id] ?? [];
+      const reviewerIds = effectiveScopeReviewerIds[evidence.id] ?? [];
       return (
         reviewerIds.length <
         (dualReviewEvidenceIds.includes(evidence.id) ? 2 : 1)
@@ -217,9 +259,9 @@ export function useDossierAllocationComposer({
     formError,
     objective,
     priority,
-    scopeReviewerIds,
+    scopeReviewerIds: effectiveScopeReviewerIds,
     selectedDossierId,
-    selectedEvidenceIds,
+    selectedEvidenceIds: effectiveSelectedEvidenceIds,
     selectedReviewerIds,
     selectedReviewers,
     selectDossier,
@@ -228,9 +270,9 @@ export function useDossierAllocationComposer({
     setDualReviewEvidenceIds,
     setObjective,
     setPriority,
-    setScopeReviewerIds,
     submit,
     toggleEvidence,
     toggleReviewer,
+    toggleScopeReviewer,
   };
 }

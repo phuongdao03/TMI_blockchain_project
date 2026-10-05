@@ -99,8 +99,8 @@ def test_work_allocation_roles_and_personal_list_enforce_boundaries() -> None:
             mine, total = await service.list_my_allocations(
                 moderator, page=1, page_size=20
             )
-            assert total == 1
-            assert mine[0].id == created.id
+            assert total == 0
+            assert mine == ()
 
             audit = await session.scalar(
                 select(AuditLog).where(AuditLog.action == "work.allocation.created")

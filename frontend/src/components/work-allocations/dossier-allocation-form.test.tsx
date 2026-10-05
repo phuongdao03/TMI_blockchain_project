@@ -11,6 +11,8 @@ const allocationActivateMock = vi.hoisted(() => vi.fn());
 const dossierListMock = vi.hoisted(() => vi.fn());
 const dossierGetMock = vi.hoisted(() => vi.fn());
 const assignMock = vi.hoisted(() => vi.fn());
+const startPrecheckMock = vi.hoisted(() => vi.fn());
+const passPrecheckMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/api/client", () => ({
   ApiError: class ApiError extends Error {},
@@ -18,6 +20,8 @@ vi.mock("@/lib/api/client", () => ({
     list: dossierListMock,
     get: dossierGetMock,
     assign: assignMock,
+    startPrecheck: startPrecheckMock,
+    passPrecheck: passPrecheckMock,
   },
   workAllocationAdminApi: {
     create: allocationCreateMock,
@@ -131,25 +135,17 @@ describe("DossierAllocationForm", () => {
     await waitFor(() => {
       expect(dossierGetMock).toHaveBeenCalledWith("dossier-1");
     });
+    fireEvent.click(await screen.findByText(/Tùy chỉnh phạm vi tài liệu/));
     await screen.findByText("Tài liệu và phạm vi thẩm định");
-    const evidence = await screen.findByRole("checkbox", {
-      name: /Bản thảo chính/,
-    });
     fireEvent.click(await screen.findByLabelText("linh.tran@example.com"));
-    fireEvent.click(evidence);
     fireEvent.click(
-      await screen.findByLabelText(
-        "Phân công linh.tran@example.com · Bản thảo chính",
-      ),
-    );
-    fireEvent.click(
-      screen.getByRole("button", { name: "Tạo và kích hoạt phân công" }),
+      screen.getByRole("button", { name: "Giao hồ sơ để thẩm định" }),
     );
 
     await waitFor(() => {
       expect(allocationCreateMock).toHaveBeenCalledWith({
         kind: "DOSSIER_REVIEW",
-        objective: "Thẩm định hồ sơ HS-2026-01",
+        objective: "Thẩm định: Tác phẩm Mùa nước nổi",
         description: null,
         dossierId: "dossier-1",
         dossierVersionId: "version-1",
@@ -183,7 +179,7 @@ describe("DossierAllocationForm", () => {
           dossierId: "dossier-2",
           dossierCode: "HS-2026-02",
           dossierTitle: "Tác phẩm Mưa đầu mùa",
-          status: "UNDER_REVIEW",
+          status: "SUBMITTED",
           versionNo: 1,
           submittedAt: "2026-09-20T08:00:00Z",
           assignmentCount: 0,
@@ -195,7 +191,7 @@ describe("DossierAllocationForm", () => {
       dossierId: "dossier-2",
       dossierCode: "HS-2026-02",
       dossierTitle: "Tác phẩm Mưa đầu mùa",
-      status: "UNDER_REVIEW",
+      status: "SUBMITTED",
       versionNo: 1,
       submittedAt: "2026-09-20T08:00:00Z",
       assignmentCount: 0,
@@ -270,16 +266,11 @@ describe("DossierAllocationForm", () => {
     await userEvent
       .setup()
       .selectOptions(screen.getByLabelText("Hồ sơ cần thẩm định"), "dossier-2");
+    fireEvent.click(await screen.findByText(/Tùy chỉnh phạm vi tài liệu/));
     await screen.findByText("Tài liệu và phạm vi thẩm định");
     fireEvent.click(screen.getByLabelText("minh.pham@example.com"));
-    fireEvent.click(screen.getByRole("checkbox", { name: /Hồ sơ minh chứng/ }));
     fireEvent.click(
-      screen.getByLabelText(
-        "Phân công minh.pham@example.com · Hồ sơ minh chứng",
-      ),
-    );
-    fireEvent.click(
-      screen.getByRole("button", { name: "Tạo và kích hoạt phân công" }),
+      screen.getByRole("button", { name: "Giao hồ sơ để thẩm định" }),
     );
 
     await waitFor(() => {
@@ -287,6 +278,14 @@ describe("DossierAllocationForm", () => {
         "dossier-2",
         ["moderator-2"],
         undefined,
+      );
+      expect(startPrecheckMock).toHaveBeenCalledWith(
+        "dossier-2",
+        expect.any(String),
+      );
+      expect(passPrecheckMock).toHaveBeenCalledWith(
+        "dossier-2",
+        expect.any(String),
       );
       expect(allocationActivateMock).toHaveBeenCalledWith("allocation-2", [
         {

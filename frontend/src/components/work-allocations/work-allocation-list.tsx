@@ -25,6 +25,10 @@ export function WorkAllocationList({
   isDetailPending,
   isDetailError,
   onSelect,
+  onActivateDraft,
+  activatingDraftId,
+  activationError,
+  failedDraftId,
 }: {
   rows: WorkAllocation[];
   isPending: boolean;
@@ -34,6 +38,10 @@ export function WorkAllocationList({
   isDetailPending: boolean;
   isDetailError: boolean;
   onSelect: (allocationId: string | null) => void;
+  onActivateDraft?: (allocationId: string) => void;
+  activatingDraftId?: string | null;
+  activationError?: unknown;
+  failedDraftId?: string | null;
 }) {
   if (isPending) {
     return (
@@ -108,6 +116,23 @@ export function WorkAllocationList({
               ? ` · Hạn ${new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(new Date(allocation.dueAt))}`
               : " · Chưa đặt hạn"}
           </p>
+          {allocation.kind === "GENERIC" && allocation.status === "DRAFT" ? (
+            <button
+              className="mt-4 min-h-10 rounded-lg bg-primary-700 px-4 text-sm font-bold text-white disabled:opacity-60"
+              disabled={Boolean(activatingDraftId)}
+              onClick={() => onActivateDraft?.(allocation.id)}
+              type="button"
+            >
+              {activatingDraftId === allocation.id
+                ? "Đang kích hoạt..."
+                : "Kích hoạt và giao việc"}
+            </button>
+          ) : null}
+          {activationError && failedDraftId === allocation.id ? (
+            <p className="mt-2 text-sm text-red-700" role="alert">
+              Chưa thể kích hoạt công việc. Vui lòng thử lại.
+            </p>
+          ) : null}
           <button
             aria-expanded={selectedAllocationId === allocation.id}
             className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-sm font-bold text-neutral-800 transition hover:border-primary-400 hover:text-primary-700 dark:border-neutral-700 dark:text-neutral-100 dark:hover:border-primary-400 dark:hover:text-primary-200"

@@ -37,8 +37,8 @@ export function GenericAllocationForm({
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const create = useMutation({
-    mutationFn: () =>
-      workAllocationAdminApi.create({
+    mutationFn: async () => {
+      const created = await workAllocationAdminApi.create({
         kind: "GENERIC",
         objective: objective.trim(),
         description: description.trim() || null,
@@ -48,7 +48,9 @@ export function GenericAllocationForm({
           userId,
           responsibility: "CONTRIBUTOR",
         })),
-      }),
+      });
+      await workAllocationAdminApi.activate(created.id, []);
+    },
     onSuccess: async () => {
       setObjective("");
       setDescription("");
@@ -72,6 +74,10 @@ export function GenericAllocationForm({
     event.preventDefault();
     if (!objective.trim()) {
       setFormError("Mục tiêu công việc là bắt buộc.");
+      return;
+    }
+    if (selectedMemberIds.length === 0) {
+      setFormError("Chọn ít nhất một người thực hiện công việc.");
       return;
     }
     setFormError(null);
@@ -189,7 +195,7 @@ export function GenericAllocationForm({
         type="submit"
       >
         <Plus aria-hidden="true" className="size-4" />
-        {create.isPending ? "Đang lưu..." : "Lưu phân công"}
+        {create.isPending ? "Đang giao việc..." : "Giao công việc"}
       </button>
     </form>
   );

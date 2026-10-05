@@ -465,6 +465,7 @@ class WorkAllocationService:
         criteria = (
             AllocationMember.user_id == principal.user_id,
             AllocationMember.is_active.is_(True),
+            WorkAllocation.status != WorkAllocationStatus.DRAFT,
         )
         total = int(
             await self._session.scalar(
