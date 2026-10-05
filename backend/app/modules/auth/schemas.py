@@ -213,6 +213,15 @@ class FirebaseExchangeRequest(BaseModel):
     ] = None
 
 
+class FirebaseVerificationEmailRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    id_token: Annotated[
+        str,
+        Field(alias="idToken", min_length=100, max_length=16_384),
+    ]
+
+
 class AuthStatusData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

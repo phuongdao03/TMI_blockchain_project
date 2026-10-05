@@ -5,15 +5,14 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginForm } from "@/components/auth/login-form";
+import { authApi } from "@/lib/api/client";
 
 const replace = vi.fn();
 const refresh = vi.fn();
-const { sendEmailVerification, signInWithEmailAndPassword, signOut } =
-  vi.hoisted(() => ({
-    sendEmailVerification: vi.fn(),
-    signInWithEmailAndPassword: vi.fn(),
-    signOut: vi.fn(),
-  }));
+const { signInWithEmailAndPassword, signOut } = vi.hoisted(() => ({
+  signInWithEmailAndPassword: vi.fn(),
+  signOut: vi.fn(),
+}));
 
 vi.mock("@/lib/firebase/client", () => ({
   firebaseConfigured: () => true,
@@ -26,7 +25,6 @@ vi.mock("firebase/auth", () => ({
   GoogleAuthProvider: class {
     setCustomParameters = vi.fn();
   },
-  sendEmailVerification,
   signInWithEmailAndPassword,
   signInWithPopup: vi.fn(),
   signInWithRedirect: vi.fn(),
@@ -62,7 +60,6 @@ describe("LoginForm", () => {
     vi.restoreAllMocks();
     replace.mockReset();
     refresh.mockReset();
-    sendEmailVerification.mockReset();
     signInWithEmailAndPassword.mockReset();
     signOut.mockReset();
   });
@@ -143,7 +140,7 @@ describe("LoginForm", () => {
       next: "/dashboard",
     });
     expect(signInWithEmailAndPassword).toHaveBeenCalledWith(
-      { name: "firebase-auth" },
+      expect.objectContaining({ name: "firebase-auth", languageCode: "vi" }),
       "owner@cnsgroup.vn",
       "correct horse battery staple",
     );
@@ -155,7 +152,9 @@ describe("LoginForm", () => {
       getIdToken: vi.fn(async () => "unverified-firebase-token"),
     };
     signInWithEmailAndPassword.mockResolvedValue({ user: firebaseUser });
-    sendEmailVerification.mockResolvedValue(undefined);
+    const sendEmail = vi
+      .spyOn(authApi, "sendFirebaseVerificationEmail")
+      .mockResolvedValue({ message: "sent" });
     signOut.mockResolvedValue(undefined);
     const fetchMock = vi.spyOn(globalThis, "fetch");
     render(<LoginForm />, { wrapper: Wrapper });
@@ -170,10 +169,10 @@ describe("LoginForm", () => {
     expect((await screen.findByRole("alert")).textContent).toContain(
       "Email chưa được xác minh",
     );
-    expect(sendEmailVerification).toHaveBeenCalledWith(firebaseUser, {
-      url: `${window.location.origin}/login`,
-    });
-    expect(signOut).toHaveBeenCalledWith({ name: "firebase-auth" });
+    expect(sendEmail).toHaveBeenCalledWith("unverified-firebase-token");
+    expect(signOut).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "firebase-auth", languageCode: "vi" }),
+    );
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

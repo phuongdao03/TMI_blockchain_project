@@ -605,7 +605,9 @@ describe("BlockchainSigningWorkspace", () => {
       await screen.findByRole("button", { name: /Tác phẩm cần đối chiếu/ }),
     );
 
-    expect(await screen.findByText("Bằng chứng có thể tự kiểm tra")).toBeDefined();
+    expect(
+      await screen.findByText("Bằng chứng có thể tự kiểm tra"),
+    ).toBeDefined();
     expect(transactionStatus).toHaveBeenCalledWith("transaction-recoverable");
   });
 

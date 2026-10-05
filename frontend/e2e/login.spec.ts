@@ -78,7 +78,7 @@ test("a public account can choose an applicant profile without a false expired-s
   );
 });
 
-test("email signup sends Firebase verification without exposing internal access", async ({
+test("email signup sends branded verification without exposing internal access", async ({
   page,
 }) => {
   await page.goto("/register");
@@ -90,7 +90,7 @@ test("email signup sends Firebase verification without exposing internal access"
   await page.getByRole("button", { name: "Đăng ký" }).click();
 
   await expect(page.getByRole("status")).toContainText(
-    "hướng dẫn xác minh đã được gửi",
+    "Kiểm tra email để hoàn tất đăng ký",
   );
   const visibleText = await page.locator("body").innerText();
   expect(visibleText).not.toMatch(

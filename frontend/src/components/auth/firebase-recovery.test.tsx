@@ -43,7 +43,7 @@ describe("Firebase password recovery", () => {
     expect(status.textContent).toContain("Spam/Thư rác");
     expect(status.textContent).not.toContain("Nếu địa chỉ tồn tại");
     expect(firebaseMocks.sendPasswordResetEmail).toHaveBeenCalledWith(
-      { name: "firebase-auth" },
+      expect.objectContaining({ name: "firebase-auth", languageCode: "vi" }),
       "owner@cnsgroup.vn",
       {
         handleCodeInApp: false,

@@ -3,13 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RegisterForm } from "@/components/auth/register-form";
+import { authApi } from "@/lib/api/client";
 
 const replace = vi.fn();
 const refresh = vi.fn();
 const setQueryData = vi.fn();
 const firebaseMocks = vi.hoisted(() => ({
   createUserWithEmailAndPassword: vi.fn(),
-  sendEmailVerification: vi.fn(),
   signOut: vi.fn(),
 }));
 
@@ -34,7 +34,6 @@ vi.mock("firebase/auth", () => ({
   GoogleAuthProvider: class {
     setCustomParameters = vi.fn();
   },
-  sendEmailVerification: firebaseMocks.sendEmailVerification,
   signOut: firebaseMocks.signOut,
   signInWithPopup: vi.fn(async () => ({
     user: { getIdToken: vi.fn(async () => "firebase-test-token") },
@@ -61,7 +60,6 @@ describe("RegisterForm", () => {
     refresh.mockReset();
     setQueryData.mockReset();
     firebaseMocks.createUserWithEmailAndPassword.mockReset();
-    firebaseMocks.sendEmailVerification.mockReset();
     firebaseMocks.signOut.mockReset();
     firebaseMocks.signOut.mockResolvedValue(undefined);
   });
@@ -101,10 +99,15 @@ describe("RegisterForm", () => {
   });
 
   it("creates the email identity in Firebase and sends a verification link", async () => {
-    const user = { uid: "firebase-user-1" };
+    const user = {
+      uid: "firebase-user-1",
+      getIdToken: vi.fn(async () => "firebase-test-token"),
+    };
     const fetchMock = vi.spyOn(globalThis, "fetch");
     firebaseMocks.createUserWithEmailAndPassword.mockResolvedValue({ user });
-    firebaseMocks.sendEmailVerification.mockResolvedValue(undefined);
+    const sendEmail = vi
+      .spyOn(authApi, "sendFirebaseVerificationEmail")
+      .mockResolvedValue({ message: "sent" });
     render(<RegisterForm />);
 
     await userEvent.type(
@@ -122,19 +125,52 @@ describe("RegisterForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Đăng ký" }));
 
     expect(await screen.findByRole("status")).toBeDefined();
-    expect(screen.getByText(/hướng dẫn xác minh đã được gửi/i)).toBeDefined();
+    expect(
+      screen.getByText("Kiểm tra email để hoàn tất đăng ký"),
+    ).toBeDefined();
+    expect(
+      screen.getByText(/Chúng tôi đã gửi liên kết xác minh tới/),
+    ).toBeDefined();
+    expect(screen.getByText("owner@cnsgroup.vn")).toBeDefined();
     expect(firebaseMocks.createUserWithEmailAndPassword).toHaveBeenCalledWith(
-      {},
+      expect.objectContaining({ languageCode: "vi" }),
       "owner@cnsgroup.vn",
       "correct horse battery staple",
     );
-    expect(firebaseMocks.sendEmailVerification).toHaveBeenCalledWith(
-      user,
-      expect.objectContaining({
-        url: "http://localhost:3000/login",
-      }),
-    );
+    expect(sendEmail).toHaveBeenCalledWith("firebase-test-token");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("explains how to resend when the account was created but email delivery fails", async () => {
+    firebaseMocks.createUserWithEmailAndPassword.mockResolvedValue({
+      user: {
+        uid: "firebase-user-2",
+        getIdToken: vi.fn(async () => "firebase-test-token"),
+      },
+    });
+    vi.spyOn(authApi, "sendFirebaseVerificationEmail").mockRejectedValue(
+      new Error("mail unavailable"),
+    );
+    render(<RegisterForm />);
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Email" }),
+      "owner@cnsgroup.vn",
+    );
+    await userEvent.type(
+      screen.getByLabelText("Mật khẩu"),
+      "correct horse battery staple",
+    );
+    await userEvent.type(
+      screen.getByLabelText("Xác nhận mật khẩu"),
+      "correct horse battery staple",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Đăng ký" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Tài khoản đã được tạo nhưng chưa gửi được email xác minh",
+    );
+    expect(firebaseMocks.signOut).toHaveBeenCalledOnce();
   });
 
   it("does not ask new users to choose an account type", () => {

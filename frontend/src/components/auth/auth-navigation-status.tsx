@@ -9,7 +9,7 @@ export function AuthNavigationStatus() {
       <div className="w-full max-w-sm rounded-xl border border-[#ad8883]/35 bg-[#211313] px-8 py-9 text-center text-[#f6e9df] shadow-2xl">
         <LoaderCircle
           aria-hidden="true"
-          className="mx-auto size-9 animate-spin text-[#e8bb74] motion-reduce:animate-none"
+          className="auth-activity-spinner mx-auto size-9 text-[#e8bb74]"
         />
         <p className="mt-5 text-lg font-semibold">
           Đang mở không gian làm việc…

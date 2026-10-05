@@ -2,12 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  sendEmailVerification,
-  signInWithEmailAndPassword,
-  signOut,
-  type User,
-} from "firebase/auth";
+import { signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -126,17 +121,17 @@ export function LoginForm({
       if (!firebaseConfigured())
         throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
       const auth = getFirebaseAuth();
+      auth.languageCode = "vi";
       const credential = await signInWithEmailAndPassword(
         auth,
         values.email,
         values.password,
       );
       if (!credential.user.emailVerified) {
-        const continueUrl = new URL("/login", window.location.origin);
         try {
-          await sendEmailVerification(credential.user, {
-            url: continueUrl.toString(),
-          });
+          await authApi.sendFirebaseVerificationEmail(
+            await credential.user.getIdToken(),
+          );
           setSubmitError(
             "Email chưa được xác minh. Chúng tôi đã gửi lại liên kết xác minh; hãy mở email rồi đăng nhập lại.",
           );
@@ -196,11 +191,15 @@ export function LoginForm({
               <AuthLink href="/forgot-password">Quên mật khẩu?</AuthLink>
             </div>
           </div>
-          <Button className="w-full" disabled={isSubmitting} type="submit">
+          <Button
+            className="auth-submit-button w-full"
+            disabled={isSubmitting}
+            type="submit"
+          >
             {isSubmitting ? (
               <LoaderCircle
                 aria-hidden="true"
-                className="size-5 animate-spin"
+                className="auth-activity-spinner size-5"
               />
             ) : null}
             {isSubmitting ? "Đang đăng nhập…" : "Đăng nhập"}

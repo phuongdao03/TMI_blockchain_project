@@ -16,7 +16,11 @@ from app.modules.auth.errors import (
     OAuthProviderUnavailableError,
     UnauthenticatedError,
 )
+from app.modules.auth.firebase_admin_gateway import FirebaseAdminGateway
 from app.modules.auth.firebase_provider import FirebaseTokenVerifier
+from app.modules.auth.firebase_verification_email import (
+    FirebaseVerificationEmailService,
+)
 from app.modules.auth.oauth import RedisOAuthRateLimiter
 from app.modules.auth.oauth_service import OAuthService
 from app.modules.auth.onboarding import ApplicantUpgradeService
@@ -31,6 +35,7 @@ from app.modules.auth.session_service import AuthPrincipal, SessionService
 from app.modules.auth.staff_invitation_service import StaffInvitationService
 from app.modules.auth.tokens import AccessTokenManager, CsrfTokenManager
 from app.modules.hr.models import Employee
+from app.modules.notifications.email import SmtpEmailGateway
 
 SessionDependency = Annotated[AsyncSession, Depends(get_session)]
 SettingsDependency = Annotated[Settings, Depends(get_settings)]
@@ -211,6 +216,50 @@ async def get_firebase_auth_runtime(
 FirebaseAuthRuntimeDependency = Annotated[
     FirebaseAuthRuntime,
     Depends(get_firebase_auth_runtime),
+]
+
+
+async def get_firebase_verification_email_service(
+    settings: SettingsDependency,
+) -> AsyncIterator[FirebaseVerificationEmailService]:
+    redis_client: Redis = Redis.from_url(
+        settings.redis_url,
+        socket_connect_timeout=settings.readiness_timeout_seconds,
+        socket_timeout=settings.readiness_timeout_seconds,
+    )
+    try:
+        yield FirebaseVerificationEmailService(
+            identity=FirebaseAdminGateway.create(settings),
+            email_gateway=SmtpEmailGateway(
+                host=settings.smtp_host,
+                port=settings.smtp_port,
+                sender=settings.smtp_sender,
+                username=settings.smtp_username,
+                password=(
+                    settings.smtp_password.get_secret_value()
+                    if settings.smtp_password is not None
+                    else None
+                ),
+                use_tls=settings.smtp_use_tls,
+                use_ssl=settings.smtp_use_ssl,
+                timeout_seconds=settings.smtp_timeout_seconds,
+            ),
+            rate_limiter=RedisAuthRateLimiter(
+                redis_client,
+                scope="firebase-verification-email",
+                ip_attempts=5,
+                email_attempts=3,
+                window_seconds=3600,
+            ),
+            app_base_url=settings.app_base_url,
+        )
+    finally:
+        await redis_client.aclose()
+
+
+FirebaseVerificationEmailServiceDependency = Annotated[
+    FirebaseVerificationEmailService,
+    Depends(get_firebase_verification_email_service),
 ]
 
 

@@ -29,6 +29,61 @@ class _AuthModule:
         return self.user
 
 
+def test_unverified_password_identity_generates_branded_verification_link() -> None:
+    async def scenario() -> None:
+        app = object()
+        auth = _AuthModule(
+            SimpleNamespace(
+                uid="firebase-user-1",
+                email="member@example.com",
+                email_verified=False,
+                disabled=False,
+            )
+        )
+        auth.verify_id_token = lambda token, *, app: {
+            "uid": "firebase-user-1",
+            "email": "member@example.com",
+            "firebase": {"sign_in_provider": "password"},
+        }
+        auth.ActionCodeSettings = lambda **kwargs: kwargs
+        auth.generate_email_verification_link = lambda email, settings, *, app: (
+            "https://tmi-blockchain.firebaseapp.com/__/auth/action"
+            "?mode=verifyEmail&oobCode=secret-code&apiKey=private-key"
+        )
+        gateway = FirebaseAdminGateway(auth_module=auth, app=app)
+
+        email = await gateway.unverified_password_email("valid-token")
+        link = await gateway.branded_email_verification_link(
+            email, app_base_url="https://decu.tinhhoaviet.org.vn"
+        )
+
+        assert email == "member@example.com"
+        assert link == (
+            "https://decu.tinhhoaviet.org.vn/auth/action"
+            "?mode=verifyEmail&oobCode=secret-code"
+        )
+        assert "tmi-blockchain" not in link
+
+    asyncio.run(scenario())
+
+
+def test_verification_email_rejects_a_non_password_identity() -> None:
+    async def scenario() -> None:
+        auth = _AuthModule(object())
+        auth.verify_id_token = lambda token, *, app: {
+            "uid": "firebase-user-1",
+            "email": "member@example.com",
+            "firebase": {"sign_in_provider": "google.com"},
+        }
+        gateway = FirebaseAdminGateway(auth_module=auth, app=object())
+
+        with pytest.raises(FirebaseAdminError, match="identity is invalid"):
+            await gateway.unverified_password_email("valid-token")
+        assert auth.get_user_calls == []
+
+    asyncio.run(scenario())
+
+
 def test_verify_email_for_identity_updates_only_an_exact_enabled_match() -> None:
     async def scenario() -> None:
         app = object()

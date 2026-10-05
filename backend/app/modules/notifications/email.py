@@ -39,7 +39,12 @@ def mask_email(value: str) -> str:
 
 
 def render_email(
-    *, title: str, body: str, action_url: str | None = None, version: str = "v1"
+    *,
+    title: str,
+    body: str,
+    action_url: str | None = None,
+    action_label: str = "Tiếp tục xác minh",
+    version: str = "v1",
 ) -> tuple[str, str]:
     if version != "v1":
         raise ValueError("Unsupported email template version.")
@@ -49,7 +54,7 @@ def render_email(
         f'<a href="{escape(action_url, quote=True)}" '
         'style="display:inline-block;padding:12px 18px;border-radius:8px;'
         'background:#5f0010;color:#ffffff;font-weight:700;text-decoration:none">'
-        "Tiếp tục xác minh</a></p>"
+        f"{escape(action_label)}</a></p>"
         if action_url
         else ""
     )

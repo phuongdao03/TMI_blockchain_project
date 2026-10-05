@@ -1,11 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  createUserWithEmailAndPassword,
-  sendEmailVerification,
-  signOut,
-} from "firebase/auth";
+import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -14,12 +10,14 @@ import { AuthCard, AuthLink } from "@/components/auth/auth-card";
 import { FormField } from "@/components/auth/form-field";
 import { GoogleOAuthButton } from "@/components/auth/google-oauth-button";
 import { Button } from "@/components/ui/button";
+import { authApi } from "@/lib/api/client";
 import { registerSchema, type RegisterValues } from "@/lib/auth/schemas";
 import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
 
 export function RegisterForm() {
   const [submitError, setSubmitError] = useState<string>();
-  const [accepted, setAccepted] = useState(false);
+  const [acceptedEmail, setAcceptedEmail] = useState<string>();
+  const [submitPhase, setSubmitPhase] = useState<"creating" | "sending">();
   const {
     register,
     handleSubmit,
@@ -35,30 +33,40 @@ export function RegisterForm() {
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(undefined);
+    setSubmitPhase("creating");
+    let accountCreated = false;
     try {
+      // Give the browser a frame to show progress before Firebase initializes.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
       if (!firebaseConfigured())
         throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
       const auth = getFirebaseAuth();
+      auth.languageCode = "vi";
       const credential = await createUserWithEmailAndPassword(
         auth,
         values.email,
         values.password,
       );
-      const continueUrl = new URL("/login", window.location.origin);
+      accountCreated = true;
+      setSubmitPhase("sending");
       try {
-        await sendEmailVerification(credential.user, {
-          url: continueUrl.toString(),
-        });
+        await authApi.sendFirebaseVerificationEmail(
+          await credential.user.getIdToken(),
+        );
       } finally {
-        await signOut(auth);
+        await signOut(auth).catch(() => undefined);
       }
-      setAccepted(true);
+      setAcceptedEmail(values.email.trim());
     } catch {
       setSubmitError(
-        typeof navigator !== "undefined" && !navigator.onLine
-          ? "Bạn đang ngoại tuyến. Hãy kiểm tra kết nối mạng rồi thử lại."
-          : "Không thể đăng ký lúc này. Vui lòng thử lại.",
+        accountCreated
+          ? "Tài khoản đã được tạo nhưng chưa gửi được email xác minh. Hãy đăng nhập bằng email và mật khẩu vừa tạo để gửi lại liên kết."
+          : typeof navigator !== "undefined" && !navigator.onLine
+            ? "Bạn đang ngoại tuyến. Hãy kiểm tra kết nối mạng rồi thử lại."
+            : "Không thể đăng ký lúc này. Vui lòng thử lại.",
       );
+    } finally {
+      setSubmitPhase(undefined);
     }
   });
 
@@ -72,13 +80,17 @@ export function RegisterForm() {
       }
       title="Tạo tài khoản"
     >
-      {accepted ? (
+      {acceptedEmail ? (
         <div
           className="rounded-lg border border-success bg-green-50 p-4 text-sm text-green-800"
           role="status"
         >
-          Nếu địa chỉ có thể đăng ký, hướng dẫn xác minh đã được gửi. Vui lòng
-          kiểm tra hộp thư.
+          <p className="font-semibold">Kiểm tra email để hoàn tất đăng ký</p>
+          <p className="mt-2">
+            Chúng tôi đã gửi liên kết xác minh tới{" "}
+            <strong>{acceptedEmail}</strong>. Hãy mở Hộp thư đến hoặc thư rác,
+            chọn “Xác minh email”, rồi quay lại đăng nhập.
+          </p>
         </div>
       ) : (
         <div className="space-y-5">
@@ -110,15 +122,38 @@ export function RegisterForm() {
               type="password"
               {...register("confirmPassword")}
             />
-            <Button className="w-full" disabled={isSubmitting} type="submit">
+            <Button
+              className="auth-submit-button w-full"
+              disabled={isSubmitting}
+              type="submit"
+            >
               {isSubmitting ? (
                 <LoaderCircle
                   aria-hidden="true"
-                  className="size-5 animate-spin"
+                  className="auth-activity-spinner size-5"
                 />
               ) : null}
-              {isSubmitting ? "Đang tạo tài khoản…" : "Đăng ký"}
+              {submitPhase === "sending"
+                ? "Đang gửi email xác minh…"
+                : isSubmitting
+                  ? "Đang tạo tài khoản…"
+                  : "Đăng ký"}
             </Button>
+            {isSubmitting ? (
+              <div className="auth-submit-progress" role="status">
+                <span>
+                  {submitPhase === "sending"
+                    ? "Tài khoản đã tạo. Đang gửi thư xác minh…"
+                    : "Đang tạo tài khoản của bạn…"}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="auth-submit-progress__track"
+                >
+                  <span className="auth-submit-progress__bar" />
+                </span>
+              </div>
+            ) : null}
           </form>
           <div aria-hidden="true" className="flex items-center gap-3">
             <span className="h-px flex-1 bg-white/10" />

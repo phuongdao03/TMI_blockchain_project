@@ -951,6 +951,23 @@ const server = createServer(async (request, response) => {
     );
     return;
   }
+  if (
+    request.method === "POST" &&
+    path === "/api/v1/auth/firebase/verification-email"
+  ) {
+    const payload = await readJson(request);
+    if (payload.idToken !== "e2e-unverified-token") {
+      const failure = error(
+        400,
+        "EMAIL_VERIFICATION_IDENTITY_INVALID",
+        "Invalid identity.",
+      );
+      send(response, failure.status, failure.body);
+      return;
+    }
+    send(response, 202, envelope({ message: "Verification email sent." }));
+    return;
+  }
   if (request.method === "POST" && path === "/api/v1/auth/firebase/exchange") {
     const payload = await readJson(request);
     let authenticatedUser;

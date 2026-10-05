@@ -32,7 +32,9 @@ export function ForgotPasswordForm() {
     try {
       if (!firebaseConfigured())
         throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
-      await sendPasswordResetEmail(getFirebaseAuth(), email, {
+      const auth = getFirebaseAuth();
+      auth.languageCode = "vi";
+      await sendPasswordResetEmail(auth, email, {
         handleCodeInApp: false,
         url: `${window.location.origin}/login`,
       });
@@ -79,7 +81,7 @@ export function ForgotPasswordForm() {
 
   return (
     <AuthCard
-      description="Nhập email đã dùng để đăng ký. Firebase sẽ gửi liên kết bảo mật để bạn đặt mật khẩu mới."
+      description="Nhập email đã dùng để đăng ký. Chúng tôi sẽ gửi liên kết bảo mật để bạn đặt mật khẩu mới."
       footer={<AuthLink href="/login">Quay lại đăng nhập</AuthLink>}
       title="Quên mật khẩu"
     >

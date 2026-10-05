@@ -12,6 +12,7 @@ from app.modules.auth.dependencies import (
     CurrentPrincipalDependency,
     EmployeeProfileLinkDependency,
     FirebaseAuthRuntimeDependency,
+    FirebaseVerificationEmailServiceDependency,
     PasswordResetServiceDependency,
     RegistrationServiceDependency,
     SessionDependency,
@@ -27,6 +28,7 @@ from app.modules.auth.schemas import (
     AuthUserData,
     EmailVerifiedData,
     FirebaseExchangeRequest,
+    FirebaseVerificationEmailRequest,
     ForgotPasswordRequest,
     LoginData,
     LoginRequest,
@@ -209,6 +211,35 @@ async def upgrade_to_applicant(
             permissions=principal.permissions,
             accountType=result.account_type,
         ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/firebase/verification-email",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=SuccessEnvelope[RegistrationAcceptedData],
+    responses={
+        400: {
+            "description": "Verification identity is invalid.",
+            "model": ErrorEnvelope,
+        },
+        422: ERROR_RESPONSES[422],
+        429: AUTH_ERROR_RESPONSES[429],
+        503: ERROR_RESPONSES[503],
+    },
+)
+async def send_firebase_verification_email(
+    payload: FirebaseVerificationEmailRequest,
+    request: Request,
+    service: FirebaseVerificationEmailServiceDependency,
+) -> SuccessEnvelope[RegistrationAcceptedData]:
+    await service.send(
+        id_token=payload.id_token,
+        client_ip=request.client.host if request.client is not None else "unknown",
+    )
+    return SuccessEnvelope(
+        data=RegistrationAcceptedData(message="Verification email sent."),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 

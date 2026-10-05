@@ -303,6 +303,12 @@ async function requestBlob(path: string, allowRefresh = true): Promise<Blob> {
 }
 
 export const authApi = {
+  sendFirebaseVerificationEmail(idToken: string) {
+    return request<{ message: string }>("/auth/firebase/verification-email", {
+      method: "POST",
+      body: JSON.stringify({ idToken }),
+    });
+  },
   exchangeFirebaseToken(
     idToken: string,
     accountType: AccountType,

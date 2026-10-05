@@ -2,6 +2,7 @@ import asyncio
 import importlib
 import re
 from typing import Any, Protocol
+from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 from app.core.config import Settings
 
@@ -110,6 +111,71 @@ class FirebaseAdminGateway:
         except Exception as exc:
             raise FirebaseAdminError(
                 "Firebase refresh-token revocation failed."
+            ) from exc
+
+    async def unverified_password_email(self, id_token: str) -> str:
+        """Resolve the email from a valid password identity, never client input."""
+        try:
+            claims = await asyncio.to_thread(
+                self._auth.verify_id_token, id_token, app=self._app
+            )
+            if claims.get("firebase", {}).get("sign_in_provider") != "password":
+                raise ValueError("Password sign-in is required.")
+            uid = claims.get("uid")
+            email = claims.get("email")
+            if not isinstance(uid, str) or not isinstance(email, str):
+                raise ValueError("Firebase identity is incomplete.")
+            user = await asyncio.to_thread(self._auth.get_user, uid, app=self._app)
+            if (
+                user.uid != uid
+                or not isinstance(user.email, str)
+                or user.email.casefold() != email.casefold()
+                or user.disabled
+                or user.email_verified
+            ):
+                raise ValueError("Firebase identity cannot receive verification.")
+            return email
+        except Exception as exc:
+            raise FirebaseAdminError(
+                "Firebase verification identity is invalid."
+            ) from exc
+
+    async def branded_email_verification_link(
+        self, email: str, *, app_base_url: str
+    ) -> str:
+        """Keep the Firebase one-time code but use the THV origin in the email."""
+        try:
+            continue_url = f"{app_base_url.rstrip('/')}/login"
+            settings = self._auth.ActionCodeSettings(
+                url=continue_url, handle_code_in_app=False
+            )
+            firebase_link = await asyncio.to_thread(
+                self._auth.generate_email_verification_link,
+                email,
+                settings,
+                app=self._app,
+            )
+            query = parse_qs(urlsplit(firebase_link).query)
+            if (
+                query.get("mode") != ["verifyEmail"]
+                or len(query.get("oobCode", [])) != 1
+            ):
+                raise ValueError("Firebase verification link is invalid.")
+            app_url = urlsplit(app_base_url)
+            if app_url.scheme not in {"http", "https"} or not app_url.netloc:
+                raise ValueError("Application URL is invalid.")
+            return urlunsplit(
+                (
+                    app_url.scheme,
+                    app_url.netloc,
+                    "/auth/action",
+                    urlencode({"mode": "verifyEmail", "oobCode": query["oobCode"][0]}),
+                    "",
+                )
+            )
+        except Exception as exc:
+            raise FirebaseAdminError(
+                "Firebase verification link is unavailable."
             ) from exc
 
 

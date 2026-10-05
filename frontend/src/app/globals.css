@@ -9925,6 +9925,65 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
   color: var(--theme-text) !important;
 }
 
+.auth-submit-button:disabled {
+  opacity: 1;
+}
+
+.auth-activity-spinner {
+  flex: none;
+  animation: auth-spinner-rotate 800ms linear infinite;
+  will-change: transform;
+}
+
+.auth-submit-progress {
+  display: grid;
+  gap: 0.5rem;
+  color: var(--theme-text-muted, #cbbab3);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.auth-submit-progress__track {
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(246 197 21 / 18%);
+}
+
+.auth-submit-progress__bar {
+  display: block;
+  width: 30%;
+  height: 100%;
+  border-radius: inherit;
+  background: #f6c515;
+  animation: auth-progress-sweep 1.35s ease-in-out infinite;
+}
+
+@keyframes auth-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes auth-progress-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(335%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-activity-spinner,
+  .auth-submit-progress__bar {
+    animation: none;
+  }
+  .auth-submit-progress__bar {
+    transform: translateX(120%);
+  }
+}
+
 /* Avoid animating every operational panel on low-power mobile devices. Keep
    small control feedback, but make content available immediately. */
 @media (max-width: 767px) {

@@ -218,13 +218,16 @@ export function GoogleOAuthButton({
         </p>
       ) : null}
       <button
-        className="auth-google-button flex min-h-12 w-full items-center justify-center gap-3 rounded-md border border-[#ad8883]/45 bg-[#171717] px-4 text-sm font-bold text-[#e5e2e1] transition-colors hover:border-[#ffb4aa] hover:bg-[#242222] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffb4aa] disabled:pointer-events-none disabled:opacity-60"
+        className="auth-google-button auth-submit-button flex min-h-12 w-full items-center justify-center gap-3 rounded-md border border-[#ad8883]/45 bg-[#171717] px-4 text-sm font-bold text-[#e5e2e1] transition-colors hover:border-[#ffb4aa] hover:bg-[#242222] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffb4aa] disabled:pointer-events-none disabled:opacity-60"
         disabled={isPending || !popupReady}
         onClick={startGoogleOAuth}
         type="button"
       >
         {isPending ? (
-          <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
+          <LoaderCircle
+            aria-hidden="true"
+            className="auth-activity-spinner size-5"
+          />
         ) : (
           <span
             aria-hidden="true"
