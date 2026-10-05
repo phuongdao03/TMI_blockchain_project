@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import HomePage from "@/app/(public)/page";
@@ -120,6 +120,10 @@ describe("HomePage", () => {
     expect(
       screen.getByRole("region", { name: "Trình xem proposal" }),
     ).toBeDefined();
-    expect(screen.getByRole("status").textContent).toContain("Trang 1 / 53");
+    expect(
+      within(
+        screen.getByRole("region", { name: "Trình xem proposal" }),
+      ).getByRole("status").textContent,
+    ).toContain("Trang 1 / 53");
   });
 });

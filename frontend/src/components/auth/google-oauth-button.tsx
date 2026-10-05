@@ -21,6 +21,7 @@ import {
   usesSameOriginFirebaseAuth,
 } from "@/lib/firebase/client";
 import type { AccountType } from "@/lib/api/types";
+import { AuthNavigationStatus } from "@/components/auth/auth-navigation-status";
 
 const GOOGLE_REDIRECT_PENDING_KEY = "cns.google-oauth.redirect-pending";
 
@@ -96,6 +97,7 @@ export function GoogleOAuthButton({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   const [popupReady, setPopupReady] = useState(() => !firebaseConfigured());
   const [error, setError] = useState<string>();
 
@@ -108,6 +110,7 @@ export function GoogleOAuthButton({
         next,
       );
       queryClient.setQueryData(["auth", "me"], result.user);
+      setNavigating(true);
       router.replace(
         safeDestination(
           next,
@@ -167,6 +170,7 @@ export function GoogleOAuthButton({
       })
       .catch((cause: unknown) => {
         if (!active) return;
+        setNavigating(false);
         setPendingRedirect(false);
         setIsPending(false);
         if (redirectWasStarted) setError(oauthErrorMessage(cause));
@@ -195,6 +199,7 @@ export function GoogleOAuthButton({
       const credential = await signInWithPopup(auth, provider);
       await finishSignIn(credential.user);
     } catch (cause) {
+      setNavigating(false);
       setPendingRedirect(false);
       setError(oauthErrorMessage(cause));
       setIsPending(false);
@@ -203,6 +208,7 @@ export function GoogleOAuthButton({
 
   return (
     <div className="space-y-3">
+      {navigating ? <AuthNavigationStatus /> : null}
       {error ? (
         <p
           className="rounded-md border border-[#ff8d82]/35 bg-[#3a1b19] px-3.5 py-3 text-sm font-medium text-[#ffb4aa]"

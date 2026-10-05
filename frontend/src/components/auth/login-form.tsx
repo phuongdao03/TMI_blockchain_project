@@ -14,6 +14,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { AuthCard, AuthLink } from "@/components/auth/auth-card";
+import { AuthNavigationStatus } from "@/components/auth/auth-navigation-status";
 import { FormField } from "@/components/auth/form-field";
 import { GoogleOAuthButton } from "@/components/auth/google-oauth-button";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ export function LoginForm({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState<string>();
+  const [navigating, setNavigating] = useState(false);
   const {
     register,
     handleSubmit,
@@ -54,6 +56,7 @@ export function LoginForm({
       next,
     );
     queryClient.setQueryData(["auth", "me"], result.user);
+    setNavigating(true);
     router.replace(
       safeDestination(
         next,
@@ -148,6 +151,7 @@ export function LoginForm({
       }
       await finishSignIn(credential.user);
     } catch (error) {
+      setNavigating(false);
       setSubmitError(loginErrorMessage(error));
     }
   });
@@ -162,6 +166,7 @@ export function LoginForm({
       }
       title="Đăng nhập"
     >
+      {navigating ? <AuthNavigationStatus /> : null}
       <div className="space-y-5">
         <form className="space-y-5" noValidate onSubmit={onSubmit}>
           {submitError ? (

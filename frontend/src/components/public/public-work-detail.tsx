@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AdaptiveVideo } from "@/components/public/adaptive-video";
+import { ImageLoadingStatus } from "@/components/media/image-loading-status";
 import { WorkCoverPlaceholder } from "@/components/public/work-cover-placeholder";
 import { PublicWorkCard } from "@/components/public/public-work-card";
 import { PublicWorkShareControls } from "@/components/public/public-work-share-controls";
@@ -269,6 +270,8 @@ function PublicGallery({
   const [selectedId, setSelectedId] = useState(
     media.find((item) => item.isThumbnail)?.id ?? media[0]?.id,
   );
+  const [loadedImageId, setLoadedImageId] = useState<string>();
+  const [failedImageId, setFailedImageId] = useState<string>();
   const selected = media.find((item) => item.id === selectedId) ?? media[0];
   if (!selected)
     return (
@@ -277,16 +280,36 @@ function PublicGallery({
   return (
     <section aria-label="Thư viện nội dung đề cử">
       <div className="relative grid aspect-video min-h-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-ink-900 @min-[40rem]/work:aspect-auto @min-[40rem]/work:min-h-[28rem] @min-[40rem]/work:rounded-3xl">
-        {selected.kind === "IMAGE" && selected.url ? (
+        {selected.kind === "IMAGE" &&
+        selected.url &&
+        failedImageId === selected.id ? (
+          <WorkCoverPlaceholder
+            title={title}
+            label="Ảnh chưa tải được"
+            kind="IMAGE"
+          />
+        ) : null}
+        {selected.kind === "IMAGE" &&
+        selected.url &&
+        failedImageId !== selected.id ? (
           <Image
             alt={selected.altText || title}
-            className="object-contain"
+            className={`object-contain ${loadedImageId === selected.id ? "" : "opacity-0"}`}
             fill
+            key={selected.id}
+            onError={() => setFailedImageId(selected.id)}
+            onLoad={() => setLoadedImageId(selected.id)}
             priority
             sizes="100vw"
             src={selected.url}
             unoptimized
           />
+        ) : null}
+        {selected.kind === "IMAGE" &&
+        selected.url &&
+        loadedImageId !== selected.id &&
+        failedImageId !== selected.id ? (
+          <ImageLoadingStatus />
         ) : null}
         {selected.kind === "VIDEO" && selected.url ? (
           <AdaptiveVideo

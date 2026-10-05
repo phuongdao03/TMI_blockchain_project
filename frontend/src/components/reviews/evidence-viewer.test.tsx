@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -67,6 +67,9 @@ describe("EvidenceViewer", () => {
     expect(
       screen.getByRole("img", { name: "Ảnh bản gốc" }).getAttribute("src"),
     ).toBe("https://media.example.test/evidence.png");
+    expect(screen.getByText("Đang tải hình ảnh…")).toBeDefined();
+    fireEvent.load(screen.getByRole("img", { name: "Ảnh bản gốc" }));
+    expect(screen.queryByText("Đang tải hình ảnh…")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Đóng xem trước" }));
     expect(screen.queryByRole("img", { name: "Ảnh bản gốc" })).toBeNull();
   });
@@ -151,6 +154,10 @@ describe("EvidenceViewer", () => {
     const video = container.querySelector("video");
     expect(video?.preload).toBe("none");
     expect(video?.playsInline).toBe(true);
+    fireEvent.waiting(video!);
+    expect(screen.getByText("Đang tải video…")).toBeDefined();
+    fireEvent.playing(video!);
+    expect(screen.queryByText("Đang tải video…")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Đóng xem trước" }));
     await user.click(
       screen.getByRole("button", { name: "Xem Video giới thiệu" }),

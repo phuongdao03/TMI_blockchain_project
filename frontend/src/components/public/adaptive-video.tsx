@@ -57,7 +57,7 @@ export function AdaptiveVideo({
         if (!entries.some((entry) => entry.isIntersecting)) return;
         observer.disconnect();
         if (playRequested.current) return;
-        video.preload = "auto";
+        video.preload = "metadata";
         video.src = fallbackUrl;
         video.load();
         setWarmed(true);
@@ -183,18 +183,23 @@ export function AdaptiveVideo({
         }}
         playsInline
         poster={poster}
-        preload={warmed ? "auto" : active ? "metadata" : "none"}
+        preload={warmed || active ? "metadata" : "none"}
         ref={videoRef}
       >
         <track kind="captions" />
       </video>
       {active && !failed && loading ? (
         <span
-          className="adaptive-video__loading absolute bottom-4 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded bg-black/75 px-3 py-2 text-sm font-semibold text-white"
+          className="adaptive-video__loading pointer-events-none absolute inset-0 grid place-items-center bg-black/45 text-white"
           role="status"
         >
-          <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-          Đang tải video…
+          <span className="flex flex-col items-center gap-3 rounded-lg bg-black/75 px-5 py-4 text-sm font-semibold">
+            <LoaderCircle
+              aria-hidden="true"
+              className="size-7 animate-spin motion-reduce:animate-none"
+            />
+            Đang tải video…
+          </span>
         </span>
       ) : null}
       {!active || failed ? (

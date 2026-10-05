@@ -3,7 +3,7 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -174,6 +174,46 @@ describe("PublicWorkDetailPage", () => {
       screen.getByRole("button", { name: "Phát video tác phẩm" }),
     ).toBeDefined();
     expect(screen.getByText("Video chào mừng Tinh hoa Việt")).toBeDefined();
+  });
+
+  it("keeps image loading feedback visible until the selected image loads", () => {
+    const imageDetail: PublicWorkDetail = {
+      ...detail,
+      media: [
+        {
+          id: "image-1",
+          kind: "IMAGE",
+          sortOrder: 0,
+          caption: null,
+          altText: "Ảnh tác phẩm",
+          url: "/api/v1/public/works/work-1/media/image-1",
+          streamingUrl: null,
+          mimeType: "image/webp",
+          width: 1200,
+          height: 800,
+          durationMs: null,
+          isThumbnail: true,
+          posterUrl: null,
+          controlsPreset: "FULL",
+          fitMode: "CONTAIN",
+          autoplay: false,
+          loop: false,
+          muted: false,
+        },
+      ],
+    };
+    render(
+      <PublicWorkDetailPage initialDetail={imageDetail} slug={detail.slug} />,
+      {
+        wrapper,
+      },
+    );
+
+    expect(screen.getByText("Đang tải hình ảnh…")).toBeDefined();
+    fireEvent.load(screen.getByAltText("Ảnh tác phẩm"));
+    return waitFor(() =>
+      expect(screen.queryByText("Đang tải hình ảnh…")).toBeNull(),
+    );
   });
 
   it("distinguishes published proof from temporarily unavailable verification", async () => {

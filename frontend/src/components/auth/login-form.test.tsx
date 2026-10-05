@@ -129,6 +129,9 @@ describe("LoginForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/dashboard"));
+    expect(screen.getByRole("status").textContent).toContain(
+      "Đang mở không gian làm việc",
+    );
     expect(refresh).toHaveBeenCalledOnce();
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0] ?? [];

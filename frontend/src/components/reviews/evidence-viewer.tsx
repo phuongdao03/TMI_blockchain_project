@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PrivateDocumentVerification } from "@/components/documents/private-document-verification";
+import { ImageLoadingStatus } from "@/components/media/image-loading-status";
 import { formatEvidenceMimeType } from "@/components/reviews/review-evidence-format";
 import { mediaApi } from "@/lib/api/client";
 import type {
@@ -47,6 +48,9 @@ export function EvidenceViewer({
     evidence: ReviewEvidenceSnapshot;
     url: string;
   } | null>(null);
+  const [loadedImageUrl, setLoadedImageUrl] = useState<string>();
+  const [failedMediaUrl, setFailedMediaUrl] = useState<string>();
+  const [bufferingVideoUrl, setBufferingVideoUrl] = useState<string>();
   const previewRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!preview) return;
@@ -65,6 +69,8 @@ export function EvidenceViewer({
     },
   });
   const openEvidence = (evidence: ReviewEvidenceSnapshot) => {
+    setFailedMediaUrl(undefined);
+    setBufferingVideoUrl(undefined);
     const cached = deliveries[evidence.mediaAssetId];
     if (cached && isDeliveryFresh(cached.expiresAt)) {
       setPreview({ evidence, url: cached.url });
@@ -230,15 +236,28 @@ export function EvidenceViewer({
             </Button>
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-xl border border-[var(--theme-border)] bg-black/5">
+          <div className="relative mt-4 min-h-44 overflow-hidden rounded-xl border border-[var(--theme-border)] bg-black/5">
             {preview.evidence.media.mimeType.startsWith("image/") ? (
-              // Signed review media can use storage hosts not known at build time.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                alt={preview.evidence.title}
-                className="max-h-[65vh] w-full object-contain"
-                src={preview.url}
-              />
+              failedMediaUrl === preview.url ? (
+                <p className="grid min-h-44 place-items-center p-6 text-center text-sm">
+                  Chưa thể tải hình ảnh. Hãy thử mở lại liên kết.
+                </p>
+              ) : (
+                <>
+                  {/* Signed review media can use storage hosts not known at build time. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt={preview.evidence.title}
+                    className={`max-h-[65vh] w-full object-contain ${loadedImageUrl === preview.url ? "" : "opacity-0"}`}
+                    onError={() => setFailedMediaUrl(preview.url)}
+                    onLoad={() => setLoadedImageUrl(preview.url)}
+                    src={preview.url}
+                  />
+                  {loadedImageUrl !== preview.url ? (
+                    <ImageLoadingStatus />
+                  ) : null}
+                </>
+              )
             ) : preview.evidence.media.mimeType === "application/pdf" ? (
               <div className="grid min-h-44 place-items-center gap-3 p-6 text-center">
                 <FileText
@@ -265,15 +284,46 @@ export function EvidenceViewer({
                 </audio>
               </div>
             ) : preview.evidence.media.mimeType.startsWith("video/") ? (
-              <video
-                className="max-h-[65vh] w-full bg-black"
-                controls
-                playsInline
-                preload="none"
-                src={preview.url}
-              >
-                Trình duyệt không hỗ trợ phát tệp video này.
-              </video>
+              <>
+                <video
+                  className="max-h-[65vh] w-full bg-black"
+                  controls
+                  onError={() => {
+                    setBufferingVideoUrl(undefined);
+                    setFailedMediaUrl(preview.url);
+                  }}
+                  onPlay={() => setBufferingVideoUrl(preview.url)}
+                  onPlaying={() => setBufferingVideoUrl(undefined)}
+                  onWaiting={() => setBufferingVideoUrl(preview.url)}
+                  playsInline
+                  preload="none"
+                  src={preview.url}
+                >
+                  Trình duyệt không hỗ trợ phát tệp video này.
+                </video>
+                {bufferingVideoUrl === preview.url ? (
+                  <div
+                    className="pointer-events-none absolute inset-0 grid place-items-center bg-black/45 text-white"
+                    role="status"
+                  >
+                    <span className="flex items-center gap-2 rounded-lg bg-black/75 px-4 py-3 text-sm font-semibold">
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="size-5 animate-spin motion-reduce:animate-none"
+                      />
+                      Đang tải video…
+                    </span>
+                  </div>
+                ) : null}
+                {failedMediaUrl === preview.url ? (
+                  <p
+                    className="p-3 text-center text-sm text-[var(--theme-text)]"
+                    role="alert"
+                  >
+                    Chưa thể phát video. Hãy thử mở lại liên kết.
+                  </p>
+                ) : null}
+              </>
             ) : (
               <div className="grid min-h-44 place-items-center gap-3 p-6 text-center">
                 <FileText

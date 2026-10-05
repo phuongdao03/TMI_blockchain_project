@@ -4,6 +4,8 @@ import { ArrowLeft, ArrowRight, Maximize2, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
+import { ImageLoadingStatus } from "@/components/media/image-loading-status";
+
 const categories = [
   "Tất cả",
   "Nghi thức & sự kiện",
@@ -68,6 +70,8 @@ export function HeritageGallery() {
     useState<(typeof categories)[number]>("Tất cả");
   const [index, setIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [loadedFile, setLoadedFile] = useState<string>();
+  const [failedFile, setFailedFile] = useState<string>();
   const expandButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const visible =
@@ -146,9 +150,20 @@ export function HeritageGallery() {
               alt={photo.title}
               fill
               key={photo.file}
+              onError={() => setFailedFile(photo.file)}
+              onLoad={() => setLoadedFile(photo.file)}
               sizes="(max-width: 48rem) 100vw, (max-width: 80rem) 90vw, 1280px"
               src={largePhoto}
+              style={{ opacity: loadedFile === photo.file ? 1 : 0 }}
             />
+            {loadedFile !== photo.file && failedFile !== photo.file ? (
+              <ImageLoadingStatus />
+            ) : null}
+            {failedFile === photo.file ? (
+              <p className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-white">
+                Chưa thể tải ảnh này. Hãy chọn ảnh khác.
+              </p>
+            ) : null}
             <span className="heritage-gallery__counter">
               {String(index + 1).padStart(2, "0")} /{" "}
               {String(visible.length).padStart(2, "0")}

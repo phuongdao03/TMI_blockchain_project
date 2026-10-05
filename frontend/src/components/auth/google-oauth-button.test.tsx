@@ -166,6 +166,9 @@ describe("GoogleOAuthButton", () => {
         ),
       );
       expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
+      expect(screen.getByRole("status").textContent).toContain(
+        "Đang mở không gian làm việc",
+      );
       expect(mocks.signInWithRedirect).not.toHaveBeenCalled();
       expect(screen.queryByRole("alert")).toBeNull();
     },

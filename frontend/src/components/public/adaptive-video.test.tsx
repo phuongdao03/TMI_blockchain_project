@@ -42,7 +42,7 @@ it("warms a nearby video and reuses its buffer when playback starts", () => {
       ),
     );
     expect(video.getAttribute("src")).toBe("/video.mp4");
-    expect(video.preload).toBe("auto");
+    expect(video.preload).toBe("metadata");
     expect(load).toHaveBeenCalledTimes(1);
     expect(disconnect).toHaveBeenCalled();
 

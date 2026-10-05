@@ -19,6 +19,7 @@ export function PublicWorkCard({
   work: PublicCatalogWork;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
+  const [loadedImageSrc, setLoadedImageSrc] = useState<string>();
   const href = `/works/${encodeURIComponent(work.slug)}`;
   const isLead = source === "featured" && position === 1;
 
@@ -44,11 +45,20 @@ export function PublicWorkCard({
                   className="object-cover opacity-85 transition-transform duration-300 motion-reduce:transition-none group-hover:scale-[1.02]"
                   fill
                   onError={() => setImageFailed(true)}
+                  onLoad={() =>
+                    setLoadedImageSrc(work.thumbnailUrl ?? undefined)
+                  }
                   priority={position === 1 ? true : undefined}
                   sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                   src={work.thumbnailUrl}
                   unoptimized
                 />
+                {loadedImageSrc !== work.thumbnailUrl ? (
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 animate-pulse bg-ink-800 motion-reduce:animate-none"
+                  />
+                ) : null}
               </>
             ) : (
               <WorkCoverPlaceholder
@@ -135,11 +145,18 @@ export function PublicWorkCard({
               className="object-cover opacity-80 transition-transform duration-300 motion-reduce:transition-none group-hover:scale-[1.02]"
               fill
               onError={() => setImageFailed(true)}
+              onLoad={() => setLoadedImageSrc(work.thumbnailUrl ?? undefined)}
               priority={position === 1 ? true : undefined}
               sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
               src={work.thumbnailUrl}
               unoptimized
             />
+            {loadedImageSrc !== work.thumbnailUrl ? (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 animate-pulse bg-ink-800 motion-reduce:animate-none"
+              />
+            ) : null}
           </>
         ) : (
           <span className="absolute inset-0 flex items-end overflow-hidden bg-[radial-gradient(circle_at_70%_20%,rgba(246,197,21,.2),transparent_32%),linear-gradient(145deg,#751C19,#240908)] p-5">
