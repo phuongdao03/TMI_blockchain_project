@@ -3780,6 +3780,10 @@ html[data-theme="light"] .public-home .text-slate-300 {
   color: #24201d;
 }
 
+html[data-theme="light"] .public-home .image-loading-status {
+  color: #fff;
+}
+
 html[data-theme="light"] .public-home .text-slate-400,
 html[data-theme="light"] .public-home .text-slate-500 {
   color: #655f5b;
