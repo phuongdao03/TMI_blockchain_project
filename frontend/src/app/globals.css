@@ -2172,12 +2172,6 @@ body {
     font-weight: 650;
     text-decoration: none;
   }
-
-  .public-mobile-nav__account {
-    display: flex;
-    gap: 1rem;
-    border-top: 1px solid var(--theme-border);
-  }
 }
 
 @media (max-width: 38rem) {
