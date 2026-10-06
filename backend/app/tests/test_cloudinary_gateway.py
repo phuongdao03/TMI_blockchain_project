@@ -205,7 +205,16 @@ def test_cloudinary_creates_isolated_public_derivative(
     asyncio.run(exercise())
 
 
-@pytest.mark.parametrize("failure", ["timeout", "http_400"])
+@pytest.mark.parametrize(
+    "failure",
+    [
+        "timeout",
+        "http_400",
+        "http_400_header",
+        "http_400_source_id",
+        "http_400_encoded_source_id",
+    ],
+)
 def test_derivative_failure_logs_only_safe_diagnostics(
     failure: str,
     caplog: pytest.LogCaptureFixture,
@@ -224,8 +233,48 @@ def test_derivative_failure_logs_only_safe_diagnostics(
             assert request.extensions["timeout"]["write"] == 240.0
             if failure == "timeout":
                 raise httpx.ReadTimeout("sensitive-url-and-token", request=request)
+            if failure == "http_400_header":
+                return httpx.Response(
+                    400,
+                    headers={
+                        "X-Cld-Error": (
+                            "Invalid transformation: q_auto:good; "
+                            "public_id=sensitive-private-source"
+                        )
+                    },
+                    content=b"not JSON",
+                )
+            if failure == "http_400_source_id":
+                return httpx.Response(
+                    400,
+                    json={
+                        "error": {
+                            "message": "Resource not found - private/sensitive-id"
+                        }
+                    },
+                )
+            if failure == "http_400_encoded_source_id":
+                return httpx.Response(
+                    400,
+                    json={
+                        "error": {
+                            "message": "Resource not found - private%2Fsensitive-id"
+                        }
+                    },
+                )
             return httpx.Response(
-                400, json={"error": {"message": "sensitive-provider-body"}}
+                400,
+                json={
+                    "error": {
+                        "message": (
+                            "Invalid transformation: q_auto:good; "
+                            "source=https://example.test/private/"
+                            "sensitive-private-source "
+                            "public_id=sensitive-private-source "
+                            "api_key=sensitive-api-key token=sensitive-secret"
+                        )
+                    }
+                },
             )
 
         client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -243,12 +292,12 @@ def test_derivative_failure_logs_only_safe_diagnostics(
 
         expected_error = (
             MediaProviderRejectedError
-            if failure == "http_400"
+            if failure.startswith("http_400")
             else MediaProviderUnavailableError
         )
         with pytest.raises(expected_error):
             await gateway.create_public_derivative(
-                source_public_id="sensitive-private-source",
+                source_public_id="private/sensitive-id",
                 source_resource_type="video",
                 source_format="mp4",
                 derivative_public_id="public/video",
@@ -262,6 +311,10 @@ def test_derivative_failure_logs_only_safe_diagnostics(
         )
         assert "operation=upload" in diagnostics
         assert ("ReadTimeout" if failure == "timeout" else "status=400") in diagnostics
+        if failure in {"http_400_source_id", "http_400_encoded_source_id"}:
+            assert "reason=Resource not found - [redacted]" in diagnostics
+        elif failure.startswith("http_400"):
+            assert "reason=Invalid transformation: q_auto:good" in diagnostics
         assert "sensitive" not in diagnostics
         await client.aclose()
 
