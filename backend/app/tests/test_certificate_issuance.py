@@ -17,19 +17,26 @@ from app.db.base import Base
 from app.modules.audit.models import AuditLog
 from app.modules.auth.models import User, UserStatus
 from app.modules.auth.security import OutboxPayloadCipher
+from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.models import (
     BlockchainTransaction,
     BlockchainTransactionStatus,
     Certificate,
+    CertificateContentDraft,
     CertificateStatus,
     CertificateVersion,
 )
-from app.modules.certificates.errors import CertificateGenerationError
+from app.modules.certificates.content_service import CertificateContentService
+from app.modules.certificates.errors import (
+    CertificateConflictError,
+    CertificateGenerationError,
+)
 from app.modules.certificates.metadata import (
     CertificateMetadataBuilder,
     CertificateNumberingService,
 )
 from app.modules.certificates.pdf import CertificatePdfRenderer, RenderedCertificate
+from app.modules.certificates.schemas import CertificateContentRequest
 from app.modules.certificates.service import CertificateService
 from app.modules.certificates.storage import CertificateStorage, StoredCertificate
 from app.modules.dossiers.models import (
@@ -222,6 +229,127 @@ def test_prepare_certificate_uses_the_canonical_public_verify_route() -> None:
         assert len(versions) == 1
         assert versions[0].qr_payload == certificate.qr_payload
         assert versions[0].public_token_hash == certificate.public_token_hash
+        await service._session.close()  # noqa: SLF001
+        await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_content_draft_blocks_issuance_until_admin_confirms() -> None:
+    async def scenario() -> None:
+        service, engine, dossier_id = await _issuance_service(
+            DossierStatus.PAID, existing_certificate=False
+        )
+        async with service._session.begin():  # noqa: SLF001
+            dossier = await service._session.get(Dossier, dossier_id)  # noqa: SLF001
+            assert dossier is not None
+            service._session.add(  # noqa: SLF001
+                CertificateContentDraft(
+                    dossier_id=dossier_id,
+                    content_json={
+                        "title": "Original title",
+                        "summary": "Original summary",
+                        "subject": "",
+                        "category": "Original category",
+                    },
+                )
+            )
+            admin_id = dossier.owner_user_id
+        assert await service.process_issuance(dossier_id) is None
+        async with service._session.begin():  # noqa: SLF001
+            assert (
+                await service._session.scalar(  # noqa: SLF001
+                    select(Certificate.id).where(Certificate.dossier_id == dossier_id)
+                )
+                is None
+            )
+        principal = AuthPrincipal(
+            user_id=admin_id,
+            session_id=uuid4(),
+            email="admin@example.test",
+            roles=("SUPER_ADMIN",),
+            permissions=("public_content.manage",),
+        )
+        enqueued: list[UUID] = []
+        editor = CertificateContentService(
+            service._session,
+            enqueue_issue=enqueued.append,  # noqa: SLF001
+        )
+        await editor.update(
+            principal,
+            dossier_id,
+            CertificateContentRequest(
+                title="Đồng diễn múa Saravan",
+                summary="Mô tả được duyệt",
+                subject="Trường Đại học Trà Vinh (TVU)",
+                category="Tài sản trí tuệ số",
+            ),
+        )
+        await editor.confirm(principal, dossier_id)
+        assert enqueued == [dossier_id]
+        certificate = await service._prepare_certificate(dossier_id)  # noqa: SLF001
+        versions = await service._certificates.list_versions(certificate.id)  # noqa: SLF001
+        asset = versions[0].metadata_json["asset"]
+        assert asset == {
+            "title": "Đồng diễn múa Saravan",
+            "summary": "Mô tả được duyệt",
+            "category": "Tài sản trí tuệ số",
+            "categoryCode": "",
+            "subject": "Trường Đại học Trà Vinh (TVU)",
+        }
+        await service._session.rollback()  # noqa: SLF001
+        with pytest.raises(CertificateConflictError, match="already frozen"):
+            await editor.update(
+                principal,
+                dossier_id,
+                CertificateContentRequest(title="Changed", category="Changed"),
+            )
+        await service._session.close()  # noqa: SLF001
+        await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_admin_can_confirm_content_while_payment_is_pending() -> None:
+    async def scenario() -> None:
+        service, engine, dossier_id = await _issuance_service(
+            DossierStatus.PAYMENT_PENDING, existing_certificate=False
+        )
+        async with service._session.begin():  # noqa: SLF001
+            dossier = await service._session.get(Dossier, dossier_id)  # noqa: SLF001
+            assert dossier is not None
+            service._session.add(  # noqa: SLF001
+                CertificateContentDraft(
+                    dossier_id=dossier_id,
+                    content_json={
+                        "title": "Tác phẩm",
+                        "summary": "",
+                        "subject": "",
+                        "category": "Di sản văn hóa",
+                    },
+                )
+            )
+            admin_id = dossier.owner_user_id
+        principal = AuthPrincipal(
+            user_id=admin_id,
+            session_id=uuid4(),
+            email="admin@example.test",
+            roles=("SUPER_ADMIN",),
+            permissions=("public_content.manage",),
+        )
+        enqueued: list[UUID] = []
+        editor = CertificateContentService(
+            service._session,
+            enqueue_issue=enqueued.append,  # noqa: SLF001
+        )
+        await editor.update(
+            principal,
+            dossier_id,
+            CertificateContentRequest(title="Tên mới", category="Danh mục mới"),
+        )
+        draft = await editor.confirm(principal, dossier_id)
+        assert draft.confirmed_at is not None
+        assert enqueued == []
         await service._session.close()  # noqa: SLF001
         await engine.dispose()
 

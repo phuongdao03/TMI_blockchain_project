@@ -40,6 +40,9 @@ import type {
   CmsPost,
   CmsPostInput,
   Certificate,
+  CertificateContent,
+  CertificateContentDraft,
+  CertificateIssuedContent,
   CertificateDetail,
   CertificateStatus,
   CertificateVersion,
@@ -1132,6 +1135,11 @@ export const certificateApi = {
       `/certificates/${encodeURIComponent(certificateId)}/pdf`,
     );
   },
+  downloadVersionPdf(certificateId: string, versionNo: number) {
+    return requestBlob(
+      `/certificates/${encodeURIComponent(certificateId)}/versions/${versionNo}/pdf`,
+    );
+  },
   list(page = 1, pageSize = 20) {
     return requestPaginated<Certificate[]>(
       `/certificates?page=${page}&pageSize=${pageSize}`,
@@ -1160,6 +1168,41 @@ export const certificateApi = {
 };
 
 export const adminCertificateApi = {
+  issuedContent(certificateId: string) {
+    return request<CertificateIssuedContent>(
+      `/admin/certificates/${encodeURIComponent(certificateId)}/content`,
+    );
+  },
+  requestContentCorrection(
+    certificateId: string,
+    input: {
+      expectedVersionNo: number;
+      reason: string;
+      content: CertificateContent;
+    },
+  ) {
+    return request<CertificateVersion>(
+      `/admin/certificates/${encodeURIComponent(certificateId)}/content-corrections`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  contentDrafts() {
+    return request<CertificateContentDraft[]>(
+      "/admin/certificates/content-drafts",
+    );
+  },
+  updateContentDraft(dossierId: string, content: CertificateContent) {
+    return request<CertificateContentDraft>(
+      `/admin/certificates/content-drafts/${encodeURIComponent(dossierId)}`,
+      { method: "PUT", body: JSON.stringify(content) },
+    );
+  },
+  confirmContentDraft(dossierId: string) {
+    return request<CertificateContentDraft>(
+      `/admin/certificates/content-drafts/${encodeURIComponent(dossierId)}/confirm`,
+      { method: "POST" },
+    );
+  },
   configureListing(
     id: string,
     input: { expectedWorkVersion: number; showCertificate: boolean },

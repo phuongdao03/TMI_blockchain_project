@@ -269,6 +269,8 @@ class PublicRepository:
             version.metadata_json
         )
         metadata = dict(version.metadata_json)
+        asset_metadata = metadata.get("asset")
+        asset_map = asset_metadata if isinstance(asset_metadata, Mapping) else {}
         return VerificationContext(
             certificate_id=certificate.id,
             certificate_number=certificate.certificate_number,
@@ -307,6 +309,9 @@ class PublicRepository:
             is_current_version=(version.version_no == certificate.current_version_no),
             public_work_slug=public_work_slug,
             public_author_display_name=public_author_display_name,
+            asset_summary=self._safe_metadata_text(
+                asset_map.get("summary"), fallback=None, max_length=5000
+            ),
         )
 
     @staticmethod
@@ -354,10 +359,12 @@ class PublicRepository:
         return title, category, dossier_code
 
     @staticmethod
-    def _safe_metadata_text(value: object, *, fallback: str | None) -> str | None:
+    def _safe_metadata_text(
+        value: object, *, fallback: str | None, max_length: int = 500
+    ) -> str | None:
         if isinstance(value, str):
             normalized = " ".join(value.split())
-            if 1 <= len(normalized) <= 500:
+            if 1 <= len(normalized) <= max_length:
                 return normalized
         return fallback
 

@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -12,12 +13,15 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.db.base import Base
+from app.db.outbox import OutboxEvent
 from app.modules.audit.models import AuditLog
 from app.modules.audit.service import AuditService
 from app.modules.auth.models import User, UserStatus
-from app.modules.auth.security import hash_verification_token
+from app.modules.auth.security import OutboxPayloadCipher, hash_verification_token
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.models import (
+    BlockchainTransaction,
+    BlockchainTransactionStatus,
     Certificate,
     CertificateStatus,
     CertificateVersion,
@@ -28,6 +32,10 @@ from app.modules.certificates.errors import (
     CertificateForbiddenError,
 )
 from app.modules.certificates.metadata import CertificateMetadataBuilder
+from app.modules.certificates.schemas import (
+    CertificateContentCorrectionRequest,
+    CertificateContentRequest,
+)
 from app.modules.certificates.version_service import CertificateVersionService
 from app.modules.council.models import (
     CouncilCase,
@@ -45,6 +53,7 @@ from app.modules.dossiers.models import (
 )
 from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.media.provenance import CURRENT_INSPECTION_POLICY_VERSION
+from app.workers.certificate_tasks import _version_recovery_candidate_ids
 
 NOW = datetime(2026, 8, 11, 9, 0, tzinfo=UTC)
 REQUEST_REASON = "Correct the ownership evidence after the approved legal update."
@@ -223,6 +232,7 @@ async def _fixture() -> tuple[
         public_base_url="https://cns.example",
         environment="test",
         token_factory=lambda: "version-token-for-test",
+        payload_cipher=OutboxPayloadCipher(key=b"x" * 32, key_id="test"),
     )
     return (
         service,
@@ -411,6 +421,122 @@ def test_requester_cannot_decide_their_own_request() -> None:
         )
         with pytest.raises(CertificateForbiddenError):
             await service.approve(requester, requested.id)
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_existing_thv_content_correction_creates_new_version_and_pdf_job() -> None:
+    async def scenario() -> None:
+        (
+            service,
+            sessions,
+            engine,
+            certificate_id,
+            _,
+            _,
+            requester_id,
+            approver_id,
+        ) = await _fixture()
+        async with sessions() as session:
+            certificate = await session.get(Certificate, certificate_id)
+            assert certificate is not None
+            certificate.certificate_number = "THV-2026-CORRECTION"
+            active = await session.scalar(
+                select(CertificateVersion).where(
+                    CertificateVersion.certificate_id == certificate_id,
+                    CertificateVersion.version_no == 1,
+                )
+            )
+            assert active is not None
+            active.metadata_json = {
+                "certificateNumber": certificate.certificate_number,
+                "certificateVersion": 1,
+                "asset": {
+                    "title": "Tên cũ",
+                    "summary": "Mô tả cũ",
+                    "subject": "Chưa công bố",
+                    "category": "Danh mục cũ",
+                },
+            }
+            active.metadata_hash = hashlib.sha256(
+                CertificateMetadataBuilder.canonical_bytes(active.metadata_json)
+            ).hexdigest()
+            proof = BlockchainTransaction(
+                id=uuid4(),
+                dossier_id=certificate.dossier_id,
+                dossier_version_id=active.dossier_version_id,
+                certificate_id=certificate_id,
+                network="polygon",
+                chain_id=137,
+                contract_address="0x" + "1" * 40,
+                method="recordProof",
+                payload_hash="2" * 64,
+                tx_hash="0x" + "3" * 64,
+                status=BlockchainTransactionStatus.CONFIRMED,
+            )
+            session.add(proof)
+            await session.flush()
+            active.blockchain_transaction_id = proof.id
+            await session.commit()
+
+        requester = _principal(
+            requester_id, "SUPER_ADMIN", permissions=("public_content.manage",)
+        )
+        approver = _principal(
+            approver_id, "SUPER_ADMIN", permissions=("certificate.version.decide",)
+        )
+        outsider = _principal(uuid4(), "APPLICANT", permissions=())
+        with pytest.raises(CertificateForbiddenError):
+            await service.current_content(outsider, certificate_id)
+        current = await service.current_content(requester, certificate_id)
+        assert current.content.subject == "Chưa công bố"
+        requested = await service.request_content_correction(
+            requester,
+            certificate_id,
+            CertificateContentCorrectionRequest(
+                expected_version_no=1,
+                reason="Sửa tên tác giả và mô tả trên bằng xác lập cũ.",
+                content=CertificateContentRequest(
+                    title="Tên mới",
+                    summary="Mô tả mới",
+                    subject="Trường Đại học Trà Vinh (TVU)",
+                    category="Danh mục mới",
+                ),
+            ),
+        )
+        assert requested.status is CertificateVersionStatus.PENDING_APPROVAL
+        assert requested.content is not None
+        assert requested.content["subject"] == "Trường Đại học Trà Vinh (TVU)"
+        with pytest.raises(CertificateForbiddenError):
+            await service.approve(requester, requested.id)
+        approved = await service.approve(approver, requested.id)
+        assert approved.status is CertificateVersionStatus.ACTIVE
+        async with sessions() as check:
+            certificate = await check.get(Certificate, certificate_id)
+            predecessor = await check.get(
+                CertificateVersion, requested.predecessor_version_id
+            )
+            updated = await check.get(CertificateVersion, requested.id)
+            event = await check.scalar(
+                select(OutboxEvent).where(OutboxEvent.aggregate_id == requested.id)
+            )
+            recoverable = await _version_recovery_candidate_ids(check, batch_size=10)
+        assert certificate is not None and certificate.current_version_no == 2
+        assert certificate.pdf_media_id is None
+        assert (
+            predecessor is not None
+            and predecessor.status is CertificateVersionStatus.SUPERSEDED
+        )
+        assert (
+            updated is not None
+            and updated.metadata_json["asset"]["subject"]
+            == "Trường Đại học Trà Vinh (TVU)"
+        )
+        assert updated.blockchain_transaction_id == proof.id
+        assert event is not None and event.event_type == "certificate.version.ready"
+        assert recoverable == (requested.id,)
         await service.close()
         await engine.dispose()
 

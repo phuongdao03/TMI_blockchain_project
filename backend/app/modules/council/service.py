@@ -12,6 +12,7 @@ from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequiremen
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.certificates.content_service import reset_content_draft
 from app.modules.council.errors import (
     CouncilConflictError,
     CouncilForbiddenError,
@@ -368,6 +369,9 @@ class CouncilService:
             )
             if decision is CouncilCaseDecision.APPROVE:
                 dossier.approved_at = now
+                await reset_content_draft(
+                    self._session, dossier.id, version.snapshot_json
+                )
 
             case_result = calculate_case_result(
                 council_case,
@@ -635,6 +639,9 @@ class CouncilService:
                     )
                     if result.decision is CouncilCaseDecision.APPROVE:
                         dossier.approved_at = self._clock()
+                        await reset_content_draft(
+                            self._session, dossier.id, version.snapshot_json
+                        )
                     self._add_decision_event(council_case, result.decision)
             council_session.status = CouncilSessionStatus.CLOSED
             council_session.closed_at = self._clock()

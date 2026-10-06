@@ -2,6 +2,7 @@ import hashlib
 import json
 import math
 from collections.abc import Mapping
+from copy import deepcopy
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -9,6 +10,46 @@ PUBLIC_EVIDENCE_SCOPES = frozenset({"PUBLIC", "PUBLIC_PREVIEW"})
 MAX_PUBLIC_FIELD_VALUE_LENGTH = 5_000
 MAX_PUBLIC_FIELD_LIST_ITEMS = 100
 MAX_PUBLIC_FIELD_LIST_ITEM_LENGTH = 500
+
+
+def draft_content_from_snapshot(snapshot: Mapping[str, object]) -> dict[str, object]:
+    dossier_value = snapshot.get("dossier")
+    dossier = dossier_value if isinstance(dossier_value, dict) else {}
+    category_value = dossier.get("category")
+    category = category_value if isinstance(category_value, dict) else {}
+    return {
+        "title": str(dossier.get("title") or "Chưa đặt tên")[:255],
+        "summary": str(dossier.get("summary") or "")[:5000],
+        "subject": "",
+        "category": str(category.get("name") or "Chưa phân loại")[:255],
+    }
+
+
+def content_from_metadata(metadata: Mapping[str, object]) -> dict[str, str]:
+    asset_value = metadata.get("asset")
+    asset = asset_value if isinstance(asset_value, Mapping) else {}
+    return {
+        "title": str(asset.get("title") or "Chưa công bố")[:255],
+        "summary": str(asset.get("summary") or "")[:5000],
+        "subject": str(asset.get("subject") or "")[:255],
+        "category": str(asset.get("category") or "Chưa phân loại")[:255],
+    }
+
+
+def corrected_metadata(
+    source: Mapping[str, object], *, version_no: int, content: Mapping[str, str]
+) -> tuple[dict[str, object], str]:
+    metadata = deepcopy(dict(source))
+    metadata.pop("rendition", None)
+    asset_value = metadata.get("asset")
+    asset = dict(asset_value) if isinstance(asset_value, Mapping) else {}
+    asset.update(content)
+    metadata["asset"] = asset
+    metadata["certificateVersion"] = version_no
+    digest = hashlib.sha256(
+        CertificateMetadataBuilder.canonical_bytes(metadata)
+    ).hexdigest()
+    return metadata, digest
 
 
 def public_fields_from_snapshot(
@@ -111,12 +152,15 @@ class CertificateMetadataBuilder:
         issued_at: datetime,
         expires_at: datetime | None,
         subject: str = "Chưa công bố",
+        content: Mapping[str, object] | None = None,
         blockchain: Mapping[str, object] | None = None,
     ) -> tuple[dict[str, object], str]:
         dossier_value = snapshot.get("dossier")
         dossier = dossier_value if isinstance(dossier_value, dict) else {}
         category_value = dossier.get("category")
         category = category_value if isinstance(category_value, dict) else {}
+        approved_content = content or {}
+        summary = approved_content.get("summary", dossier.get("summary"))
         evidences_value = snapshot.get("evidences")
         evidences = evidences_value if isinstance(evidences_value, list) else []
         public_evidences: list[dict[str, object]] = []
@@ -146,15 +190,13 @@ class CertificateMetadataBuilder:
             "dossierVersion": dossier_version,
             "dossierCode": str(dossier.get("code", "")),
             "asset": {
-                "title": str(dossier.get("title", "")),
-                "summary": (
-                    str(dossier["summary"])
-                    if dossier.get("summary") is not None
-                    else None
+                "title": str(approved_content.get("title", dossier.get("title", ""))),
+                "summary": str(summary) if summary is not None else None,
+                "category": str(
+                    approved_content.get("category", category.get("name", ""))
                 ),
-                "category": str(category.get("name", "")),
                 "categoryCode": str(category.get("code", "")),
-                "subject": subject,
+                "subject": str(approved_content.get("subject", subject) or ""),
             },
             "issuedAt": _iso_utc(issued_at),
             "expiresAt": _iso_utc(expires_at),

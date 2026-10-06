@@ -137,7 +137,7 @@ describe("VerificationPanel", () => {
     expect(
       screen.getByText("Ghi nhận tác phẩm · Tôn vinh giá trị Việt"),
     ).toBeDefined();
-    expect(screen.queryByText("Chủ thể hồ sơ CNS")).toBeNull();
+    expect(screen.getByText("Chủ thể hồ sơ CNS")).toBeDefined();
     const publicRecord = screen.getByRole("link", {
       name: /Xem tác phẩm/,
     });

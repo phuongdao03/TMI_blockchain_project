@@ -12,6 +12,7 @@ import Link from "next/link";
 import { type FormEvent, useState } from "react";
 
 import { adminCertificateApi } from "@/lib/api/client";
+import { CertificateContentDrafts } from "@/components/admin/certificate-content-drafts";
 import type { CertificateStatus, PublicationStatus } from "@/lib/api/types";
 import { displayCnsDossierCode } from "@/lib/brand/identifiers";
 
@@ -92,6 +93,7 @@ export function AdminCertificateManager() {
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 pb-8">
+      <CertificateContentDrafts />
       <header className="flex flex-col gap-5 border-b border-neutral-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary-700">
@@ -106,13 +108,21 @@ export function AdminCertificateManager() {
             đối chiếu.
           </p>
         </div>
-        <Link
-          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-bold text-neutral-800 hover:bg-neutral-50"
-          href="/admin/content"
-        >
-          <BookOpenText className="size-4" aria-hidden="true" /> Nội dung công
-          bố
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-primary-700 bg-white px-4 text-sm font-bold text-primary-700 hover:bg-primary-50"
+            href="/admin/certificates/corrections"
+          >
+            <FilePenLine className="size-4" aria-hidden="true" /> Sửa bằng đã cấp
+          </Link>
+          <Link
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-bold text-neutral-800 hover:bg-neutral-50"
+            href="/admin/content"
+          >
+            <BookOpenText className="size-4" aria-hidden="true" /> Nội dung công
+            bố
+          </Link>
+        </div>
       </header>
 
       <section
@@ -315,6 +325,17 @@ export function AdminCertificateManager() {
                         href={`/certificates/${certificate.id}#certificate-update`}
                       >
                         Tạo phiên bản điều chỉnh
+                      </Link>
+                    ) : null}
+                    {certificate.status === "ACTIVE" &&
+                    certificate.certificateNumber.startsWith("THV-") &&
+                    certificate.blockchainStatus === "CONFIRMED" &&
+                    certificate.transactionHash ? (
+                      <Link
+                        className="min-h-10 rounded-lg border border-[#b7882f] px-3 text-sm font-bold text-[#720b17]"
+                        href={`/admin/certificates/corrections/${encodeURIComponent(certificate.id)}`}
+                      >
+                        Chỉnh nội dung bằng cũ
                       </Link>
                     ) : null}
                     <Link

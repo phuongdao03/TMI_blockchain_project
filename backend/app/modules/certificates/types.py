@@ -68,3 +68,4 @@ class CertificateVersionView:
     blockchain_transaction_id: UUID | None
     pdf_ready: bool
     created_at: datetime
+    content: dict[str, str] | None = None

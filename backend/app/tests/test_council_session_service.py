@@ -17,6 +17,7 @@ from app.modules.audit.models import AuditLog
 from app.modules.auth.models import Role, User, UserRole, UserStatus
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.blockchain.models import CertificateContentDraft
 from app.modules.council.errors import (
     CouncilConflictError,
     CouncilForbiddenError,
@@ -399,6 +400,10 @@ def test_admin_final_decision_records_minutes_and_approves_completed_review() ->
             assert stored_dossier.status is DossierStatus.APPROVED
             assert stored_dossier.approved_at is not None
             assert stored_dossier.approved_at.replace(tzinfo=UTC) == NOW
+            content_draft = await session.get(CertificateContentDraft, dossier.id)
+            assert content_draft is not None
+            assert content_draft.confirmed_at is None
+            assert content_draft.content_json["title"] == dossier.title
             assert stored_session is not None
             assert stored_session.status is CouncilSessionStatus.CLOSED
             assert stored_session.minutes_hash == result.minutes_hash

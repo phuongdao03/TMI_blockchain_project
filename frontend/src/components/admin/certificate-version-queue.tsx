@@ -138,6 +138,28 @@ export function CertificateVersionQueue() {
                   <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-700">
                     {item.changeReason}
                   </p>
+                  {item.content ? (
+                    <dl className="mt-3 grid gap-2 rounded-lg bg-neutral-50 p-3 text-sm sm:grid-cols-2">
+                      <div>
+                        <dt className="font-bold">Tác phẩm trên bằng</dt>
+                        <dd>{item.content.title}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-bold">Người được ghi nhận</dt>
+                        <dd>{item.content.subject || "Không ghi"}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-bold">Danh mục</dt>
+                        <dd>{item.content.category}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-bold">Mô tả</dt>
+                        <dd className="whitespace-pre-wrap">
+                          {item.content.summary || "Không ghi"}
+                        </dd>
+                      </div>
+                    </dl>
+                  ) : null}
                   <p className="mt-2 text-xs text-neutral-400">
                     Tiếp nhận {date(item.requestedAt)}
                   </p>

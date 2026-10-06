@@ -79,7 +79,37 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
-function VersionTimeline({ versions }: { versions: CertificateVersion[] }) {
+function VersionTimeline({
+  certificateId,
+  certificateNumber,
+  versions,
+}: {
+  certificateId: string;
+  certificateNumber: string;
+  versions: CertificateVersion[];
+}) {
+  const [downloadError, setDownloadError] = useState<number | null>(null);
+
+  async function downloadVersion(versionNo: number) {
+    try {
+      const blob = await certificateApi.downloadVersionPdf(
+        certificateId,
+        versionNo,
+      );
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${certificateNumber}-v${versionNo}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setDownloadError(null);
+    } catch {
+      setDownloadError(versionNo);
+    }
+  }
+
   return (
     <ol className="mt-6 space-y-0">
       {versions.map((version, index) => {
@@ -122,6 +152,20 @@ function VersionTimeline({ versions }: { versions: CertificateVersion[] }) {
                 >
                   {version.rejectionReason}
                 </Feedback>
+              ) : null}
+              {version.pdfReady ? (
+                <button
+                  className="mt-2 text-sm font-bold text-primary-700 underline"
+                  onClick={() => void downloadVersion(version.versionNo)}
+                  type="button"
+                >
+                  Tải PDF phiên bản {version.versionNo}
+                </button>
+              ) : null}
+              {downloadError === version.versionNo ? (
+                <p className="mt-2 text-sm text-red-700" role="alert">
+                  Không thể tải PDF phiên bản này.
+                </p>
               ) : null}
               <p className="mt-2 text-xs text-neutral-400">
                 {formatDate(version.requestedAt ?? version.createdAt)}
@@ -299,7 +343,11 @@ export function CertificateDetail({ id }: { id: string }) {
             Mỗi lần điều chỉnh được lưu thành một phiên bản mới. Bản cũ không bị
             xóa và vẫn có thể đối chiếu khi cần.
           </p>
-          <VersionTimeline versions={versions.data} />
+          <VersionTimeline
+            certificateId={id}
+            certificateNumber={certificate.certificateNumber}
+            versions={versions.data}
+          />
         </section>
 
         <div className="space-y-6">

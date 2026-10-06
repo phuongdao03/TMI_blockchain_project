@@ -103,6 +103,73 @@ def test_pdf_contains_certificate_fields_qr_and_stable_hash() -> None:
     assert rendered.template_version == "certificate-red-gold-v1"
 
 
+def test_pdf_preserves_long_approved_content_on_continuation_page(monkeypatch) -> None:
+    import app.modules.certificates.pdf as certificate_pdf
+
+    drawn: list[str] = []
+    page_count = 0
+
+    class RecordingCanvas(Canvas):
+        def drawString(self, x, y, value, *args, **kwargs):
+            drawn.append(value)
+            return super().drawString(x, y, value, *args, **kwargs)
+
+        def showPage(self):
+            nonlocal page_count
+            page_count += 1
+            return super().showPage()
+
+    monkeypatch.setattr(certificate_pdf, "Canvas", RecordingCanvas)
+    renderer = CertificatePdfRenderer(template_version="v3", generator_version="test")
+    renderer.render(
+        metadata={
+            "certificateNumber": "THV-2026-TEST",
+            "asset": {
+                "title": "Đồng diễn múa Saravan",
+                "summary": "Mô tả đầy đủ " * 60 + "KẾT THÚC",
+                "subject": "Trường Đại học Trà Vinh",
+                "category": "Tài sản trí tuệ số",
+            },
+        },
+        verification_url="https://example.test/verify/token",
+    )
+    assert page_count == 2
+    assert any("KẾT THÚC" in line for line in drawn)
+
+
+def test_pdf_keeps_maximum_length_summary_across_multiple_pages(monkeypatch) -> None:
+    import app.modules.certificates.pdf as certificate_pdf
+
+    drawn: list[str] = []
+    page_count = 0
+
+    class RecordingCanvas(Canvas):
+        def drawString(self, x, y, value, *args, **kwargs):
+            drawn.append(value)
+            return super().drawString(x, y, value, *args, **kwargs)
+
+        def showPage(self):
+            nonlocal page_count
+            page_count += 1
+            return super().showPage()
+
+    monkeypatch.setattr(certificate_pdf, "Canvas", RecordingCanvas)
+    renderer = CertificatePdfRenderer(template_version="v3", generator_version="test")
+    renderer.render(
+        metadata={
+            "certificateNumber": "THV-2026-TEST",
+            "asset": {
+                "title": "Tác phẩm",
+                "summary": "Mô tả đầy đủ " * 300 + "KẾT THÚC",
+                "category": "Tài sản trí tuệ số",
+            },
+        },
+        verification_url="https://example.test/verify/token",
+    )
+    assert page_count >= 3
+    assert any("KẾT THÚC" in line for line in drawn)
+
+
 def test_pdf_uses_public_vietnamese_details_without_dates_or_provider(
     monkeypatch,
 ) -> None:

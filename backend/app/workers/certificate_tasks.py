@@ -13,7 +13,9 @@ from app.modules.blockchain.models import (
     BlockchainTransaction,
     BlockchainTransactionStatus,
     Certificate,
+    CertificateStatus,
     CertificateVersion,
+    CertificateVersionStatus,
 )
 from app.modules.certificates.errors import CertificateGenerationError
 from app.modules.certificates.metadata import (
@@ -146,6 +148,27 @@ async def _repair_publication(*, batch_size: int = 100) -> PublicationRecoveryRe
                 )
         cursor = candidate_ids[-1]
 
+    version_cursor: UUID | None = None
+    while True:
+        async with session_factory() as session:
+            version_ids = await _version_recovery_candidate_ids(
+                session, batch_size=batch_size, after=version_cursor
+            )
+        if not version_ids:
+            break
+        candidates += len(version_ids)
+        for version_id in version_ids:
+            try:
+                await _process(certificate_version_id=version_id)
+                recovered += 1
+            except Exception:
+                failed += 1
+                logger.exception(
+                    "Certificate version rendition recovery failed for %s",
+                    version_id,
+                )
+        version_cursor = version_ids[-1]
+
     async with session_factory() as session:
         await PublicWorkDraftBackfill(session, batch_size=batch_size).run(dry_run=False)
     return PublicationRecoveryReport(
@@ -204,6 +227,37 @@ async def _publication_recovery_candidate_ids(
             )
             .distinct()
             .order_by(Dossier.id)
+            .limit(batch_size)
+        )
+    )
+
+
+async def _version_recovery_candidate_ids(
+    session: AsyncSession,
+    *,
+    batch_size: int,
+    after: UUID | None = None,
+) -> tuple[UUID, ...]:
+    return tuple(
+        await session.scalars(
+            select(CertificateVersion.id)
+            .join(Certificate, Certificate.id == CertificateVersion.certificate_id)
+            .join(
+                BlockchainTransaction,
+                BlockchainTransaction.id
+                == CertificateVersion.blockchain_transaction_id,
+            )
+            .where(
+                CertificateVersion.status == CertificateVersionStatus.ACTIVE,
+                CertificateVersion.version_no > 1,
+                CertificateVersion.pdf_media_id.is_(None),
+                Certificate.current_version_no == CertificateVersion.version_no,
+                Certificate.status == CertificateStatus.ACTIVE,
+                BlockchainTransaction.status == BlockchainTransactionStatus.CONFIRMED,
+                BlockchainTransaction.tx_hash.is_not(None),
+                *((CertificateVersion.id > after,) if after is not None else ()),
+            )
+            .order_by(CertificateVersion.id)
             .limit(batch_size)
         )
     )

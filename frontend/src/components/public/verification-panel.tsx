@@ -257,7 +257,16 @@ function VerificationResult({
 }: {
   data: Awaited<ReturnType<typeof publicApi.verifyNumber>>;
 }) {
-  const copy = resultCopy[data.status];
+  const copy =
+    data.status === "VALID" && data.isCurrentVersion === false
+      ? {
+          title: "Phiên bản cũ của bằng xác lập",
+          detail:
+            "Dữ liệu của phiên bản này còn đối chiếu được, nhưng đã có phiên bản mới. Tra cứu bằng số bằng xác lập để xem nội dung hiện hành.",
+          tone: "text-warning",
+          icon: History,
+        }
+      : resultCopy[data.status];
   const detail =
     data.status === "PENDING" && data.networkAvailable === false
       ? "Bản ghi bằng xác lập vẫn còn trong hệ thống. Polygon đang tạm thời không phản hồi nên chưa thể đối chiếu trực tiếp; vui lòng thử lại sau."

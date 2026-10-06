@@ -440,5 +440,6 @@ def test_historical_qr_reads_its_immutable_chain_version() -> None:
         result = await service.verify_token("historical-qr-token")
         assert result.status is VerificationStatus.VALID
         assert result.version == 1
+        assert result.is_current_version is False
 
     asyncio.run(scenario())

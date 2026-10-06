@@ -7,14 +7,6 @@ import { useState } from "react";
 import type { Verification } from "@/lib/api/types";
 import { displayCnsDossierCode } from "@/lib/brand/identifiers";
 
-function recognizedSubject(value: string | null | undefined): string | null {
-  return value === "Chủ thể hồ sơ CNS" ||
-    value === "Chủ thể hồ sơ TMI" ||
-    value === "Chưa công bố"
-    ? null
-    : (value ?? null);
-}
-
 export function DigitalCertificate({ data }: { data: Verification }) {
   const [failedQr, setFailedQr] = useState<string | null>(null);
   if (!data.certificateNumber) return null;
@@ -22,8 +14,8 @@ export function DigitalCertificate({ data }: { data: Verification }) {
   const workPath = data.publicWorkSlug
     ? `/works/${encodeURIComponent(data.publicWorkSlug)}`
     : null;
-  const subject = recognizedSubject(data.recognizedSubject);
-  const valid = data.status === "VALID";
+  const subject = data.recognizedSubject?.trim() || null;
+  const valid = data.status === "VALID" && data.isCurrentVersion !== false;
   const statusLabel = {
     VALID: "Đang có hiệu lực",
     REVOKED: "Đã thu hồi",
@@ -92,7 +84,10 @@ export function DigitalCertificate({ data }: { data: Verification }) {
           <p
             className={`mt-3 inline-flex items-center gap-2 text-sm font-bold ${valid ? "text-[#245b38]" : "text-[#76530c]"}`}
           >
-            <ShieldCheck className="size-4" /> {statusLabel}
+          <ShieldCheck className="size-4" />
+          {data.isCurrentVersion === false
+            ? "Phiên bản cũ · đã có bản cập nhật"
+            : statusLabel}
           </p>
         </div>
 
@@ -105,16 +100,17 @@ export function DigitalCertificate({ data }: { data: Verification }) {
               <h3 className="digital-certificate__work-title mt-5 text-pretty text-[#2b1714]">
                 {data.assetTitle ?? "Tài sản số đã xác lập"}
               </h3>
+              {data.assetSummary ? (
+                <p className="mt-4 text-sm leading-6 text-[#503d32]">
+                  {data.assetSummary}
+                </p>
+              ) : null}
             </div>
             <dl className="mt-5 grid gap-x-10 gap-y-4 text-sm sm:grid-cols-2">
-              {subject || data.publicAuthorDisplayName ? (
+              {subject ? (
                 <CertificateFact
-                  label={
-                    subject
-                      ? "Người được ghi nhận trên bằng"
-                      : "Tác giả công khai của tác phẩm"
-                  }
-                  value={subject ?? data.publicAuthorDisplayName}
+                  label="Người được ghi nhận trên bằng"
+                  value={subject}
                 />
               ) : null}
               {data.dossierCode ? (
@@ -142,12 +138,6 @@ export function DigitalCertificate({ data }: { data: Verification }) {
                 }
               />
             </dl>
-            {!subject && data.publicAuthorDisplayName ? (
-              <p className="mt-5 border-l-2 border-[#ad8231] pl-3 text-xs leading-5 text-[#6d5949]">
-                Tên tác giả lấy từ trang tác phẩm công khai. Bản ghi bằng đã
-                phát hành không được thay đổi.
-              </p>
-            ) : null}
           </section>
 
           <section className="mx-auto w-full max-w-44 text-center">

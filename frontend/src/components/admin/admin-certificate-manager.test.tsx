@@ -9,6 +9,7 @@ import type { AdminCertificate } from "@/lib/api/types";
 vi.mock("@/lib/api/client", () => ({
   adminCertificateApi: {
     list: vi.fn(),
+    contentDrafts: vi.fn().mockResolvedValue([]),
     configureListing: vi
       .fn()
       .mockResolvedValue({ showCertificate: true, publicWorkVersion: 3 }),
@@ -55,6 +56,32 @@ function renderManager() {
 }
 
 describe("AdminCertificateManager", () => {
+  it("links issued THV certificates to the dedicated correction page", async () => {
+    vi.mocked(adminCertificateApi.list).mockResolvedValue({
+      data: [
+        {
+          ...row,
+          certificate: {
+            ...row.certificate,
+            certificateNumber: "THV-2026-0001",
+            transactionHash: "0xconfirmed",
+            blockchainStatus: "CONFIRMED",
+          },
+        },
+      ],
+      success: true,
+      meta: { page: 1, pageSize: 10, total: 1 },
+    });
+    renderManager();
+    expect(
+      screen.getByRole("link", { name: "Sửa bằng đã cấp" }).getAttribute("href"),
+    ).toBe("/admin/certificates/corrections");
+    fireEvent.click(await screen.findByText("Quản lý hiển thị và phiên bản"));
+    expect(
+      screen.getByRole("link", { name: "Chỉnh nội dung bằng cũ" }).getAttribute("href"),
+    ).toBe("/admin/certificates/corrections/certificate");
+  });
+
   it("lets admin set listing preference without publishing the work", async () => {
     vi.mocked(adminCertificateApi.list).mockResolvedValue({
       data: [row],

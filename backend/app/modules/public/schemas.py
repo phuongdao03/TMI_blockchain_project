@@ -79,6 +79,8 @@ class VerificationData(PublicSchema):
     checked_at: datetime
     certificate_number: str | None
     asset_title: str | None
+    asset_summary: str | None = None
+    is_current_version: bool = True
     category_name: str | None
     issued_at: datetime | None
     expires_at: datetime | None

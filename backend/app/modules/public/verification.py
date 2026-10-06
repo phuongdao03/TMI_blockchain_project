@@ -129,6 +129,7 @@ class VerificationContext:
     is_current_version: bool = True
     public_work_slug: str | None = None
     public_author_display_name: str | None = None
+    asset_summary: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,6 +159,8 @@ class VerificationView:
     documents: tuple[PublicEvidenceProof, ...] = ()
     public_work_slug: str | None = None
     public_author_display_name: str | None = None
+    asset_summary: str | None = None
+    is_current_version: bool = True
 
 
 class VerificationEvaluator:
@@ -326,6 +329,8 @@ class PublicVerificationService:
             checked_at=now,
             certificate_number=context.certificate_number,
             asset_title=context.asset_title,
+            asset_summary=context.asset_summary,
+            is_current_version=context.is_current_version,
             category_name=context.category_name,
             issued_at=context.issued_at,
             expires_at=context.expires_at,

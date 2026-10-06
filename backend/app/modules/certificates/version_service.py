@@ -9,11 +9,16 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.outbox import OutboxEvent
 from app.modules.audit.service import AuditService
 from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
-from app.modules.auth.security import hash_verification_token
+from app.modules.auth.repositories import OutboxRepository
+from app.modules.auth.security import OutboxPayloadCipher, hash_verification_token
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.models import (
+    BlockchainTransaction,
+    BlockchainTransactionStatus,
+    Certificate,
     CertificateStatus,
     CertificateVersion,
     CertificateVersionStatus,
@@ -23,8 +28,17 @@ from app.modules.certificates.errors import (
     CertificateForbiddenError,
     CertificateNotFoundError,
 )
-from app.modules.certificates.metadata import CertificateMetadataBuilder
+from app.modules.certificates.metadata import (
+    CertificateMetadataBuilder,
+    content_from_metadata,
+    corrected_metadata,
+)
 from app.modules.certificates.repository import CertificateRepository
+from app.modules.certificates.schemas import (
+    CertificateContentCorrectionRequest,
+    CertificateContentRequest,
+    CertificateIssuedContentData,
+)
 from app.modules.certificates.types import CertificateVersionView
 from app.modules.council.models import CouncilCase, CouncilCaseDecision
 from app.modules.dossiers.models import DossierVersion
@@ -36,6 +50,7 @@ REQUEST_ROLES = frozenset({"USER"})
 DECIDE_ROLES = frozenset({"SUPER_ADMIN"})
 MIN_REASON_LENGTH = 20
 MAX_REASON_LENGTH = 2_000
+CONTENT_READY_EVENT = "certificate.version.ready"
 
 
 class CertificateVersionService:
@@ -50,6 +65,7 @@ class CertificateVersionService:
         public_base_url: str = "http://localhost:3100",
         environment: str = "local",
         token_factory: Callable[[], str] | None = None,
+        payload_cipher: OutboxPayloadCipher | None = None,
     ) -> None:
         self._session = session
         self._metadata_builder = metadata_builder
@@ -63,6 +79,164 @@ class CertificateVersionService:
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(32))
         self._certificates = CertificateRepository(session)
         self._dossiers = DossierRepository(session)
+        self._payload_cipher = payload_cipher
+        self._outbox = OutboxRepository(session)
+
+    async def current_content(
+        self, principal: AuthPrincipal, certificate_id: UUID
+    ) -> CertificateIssuedContentData:
+        self._require_content_manage(principal)
+        async with self._session.begin():
+            row = await self._certificates.get(certificate_id)
+            if row is None:
+                raise CertificateNotFoundError()
+            certificate, version, *_ = row
+            if (
+                certificate.status is not CertificateStatus.ACTIVE
+                or not certificate.certificate_number.startswith("THV-")
+            ):
+                raise CertificateConflictError(
+                    "Content correction requires an active THV certificate."
+                )
+            await self._verified_thv_proof(version)
+            return CertificateIssuedContentData(
+                certificate_id=certificate.id,
+                certificate_number=certificate.certificate_number,
+                current_version_no=certificate.current_version_no,
+                content=CertificateContentRequest.model_validate(
+                    content_from_metadata(version.metadata_json)
+                ),
+            )
+
+    async def request_content_correction(
+        self,
+        principal: AuthPrincipal,
+        certificate_id: UUID,
+        payload: CertificateContentCorrectionRequest,
+    ) -> CertificateVersionView:
+        self._require_content_manage(principal)
+        reason = self._reason(payload.reason, field="Change reason")
+        content = CertificateContentRequest(
+            title=payload.content.title.strip(),
+            summary=payload.content.summary.strip(),
+            subject=payload.content.subject.strip(),
+            category=payload.content.category.strip(),
+        ).model_dump()
+        try:
+            async with self._session.begin():
+                certificate = await self._session.get(
+                    Certificate, certificate_id, with_for_update=True
+                )
+                if certificate is None:
+                    raise CertificateNotFoundError()
+                if (
+                    certificate.status is not CertificateStatus.ACTIVE
+                    or not certificate.certificate_number.startswith("THV-")
+                ):
+                    raise CertificateConflictError(
+                        "Content correction requires an active THV certificate."
+                    )
+                if certificate.current_version_no != payload.expected_version_no:
+                    raise CertificateConflictError("Certificate version has changed.")
+                if await self._certificates.get_open_version_request(certificate_id):
+                    raise CertificateConflictError(
+                        "A certificate correction is already being processed."
+                    )
+                predecessor = await self._session.scalar(
+                    select(CertificateVersion).where(
+                        CertificateVersion.certificate_id == certificate_id,
+                        CertificateVersion.version_no == certificate.current_version_no,
+                    )
+                )
+                if (
+                    predecessor is None
+                    or predecessor.status is not CertificateVersionStatus.ACTIVE
+                ):
+                    raise CertificateConflictError(
+                        "Active certificate version is unavailable."
+                    )
+                await self._verified_thv_proof(predecessor)
+                current_hash = hashlib.sha256(
+                    self._metadata_builder.canonical_bytes(
+                        {
+                            key: value
+                            for key, value in predecessor.metadata_json.items()
+                            if key != "rendition"
+                        }
+                    )
+                ).hexdigest()
+                if current_hash != predecessor.metadata_hash:
+                    raise CertificateConflictError(
+                        "Active certificate metadata integrity check failed."
+                    )
+                if content == content_from_metadata(predecessor.metadata_json):
+                    raise CertificateConflictError(
+                        "Certificate content has not changed."
+                    )
+                next_version_no = certificate.current_version_no + 1
+                metadata, metadata_hash = corrected_metadata(
+                    predecessor.metadata_json,
+                    version_no=next_version_no,
+                    content=content,
+                )
+                token = self._token_factory()
+                qr_payload = (
+                    f"{self._public_base_url}/verify/{quote(token, safe='-._~')}"
+                )
+                requested = CertificateVersion(
+                    id=self._uuid_factory(),
+                    certificate_id=certificate_id,
+                    version_no=next_version_no,
+                    predecessor_version_id=predecessor.id,
+                    dossier_version_id=predecessor.dossier_version_id,
+                    metadata_json=metadata,
+                    metadata_hash=metadata_hash,
+                    public_token_hash=hash_verification_token(token),
+                    qr_payload=qr_payload,
+                    status=CertificateVersionStatus.PENDING_APPROVAL,
+                    change_reason=reason,
+                    requested_by=principal.user_id,
+                    requested_at=self._clock(),
+                )
+                self._certificates.add_version(requested)
+                self._audit.record(
+                    actor_user_id=principal.user_id,
+                    action="certificate.content_correction_requested",
+                    resource_type="certificate_version",
+                    resource_id=str(requested.id),
+                    after={
+                        "certificate_id": str(certificate_id),
+                        "version_no": next_version_no,
+                    },
+                )
+                await self._session.flush()
+                return self._view(requested)
+        except IntegrityError as exc:
+            raise CertificateConflictError(
+                "A certificate correction is already being processed."
+            ) from exc
+
+    async def _verified_thv_proof(
+        self, version: CertificateVersion
+    ) -> BlockchainTransaction:
+        transaction = (
+            await self._session.get(
+                BlockchainTransaction, version.blockchain_transaction_id
+            )
+            if version.blockchain_transaction_id is not None
+            else None
+        )
+        if (
+            transaction is None
+            or transaction.method != "recordProof"
+            or transaction.status is not BlockchainTransactionStatus.CONFIRMED
+            or transaction.tx_hash is None
+            or transaction.dossier_version_id != version.dossier_version_id
+        ):
+            raise CertificateConflictError(
+                "Confirmed THV dossier proof is required before content correction."
+            )
+        return transaction
 
     async def request(
         self,
@@ -247,6 +421,79 @@ class CertificateVersionService:
             anchored = await self._certificates.get_version(version_id, for_update=True)
             if anchored is None:
                 raise CertificateNotFoundError()
+            predecessor = (
+                await self._certificates.get_version(anchored.predecessor_version_id)
+                if anchored.predecessor_version_id is not None
+                else None
+            )
+            if (
+                predecessor is not None
+                and predecessor.dossier_version_id == anchored.dossier_version_id
+            ):
+                if anchored.status is not CertificateVersionStatus.PENDING_APPROVAL:
+                    raise CertificateConflictError(
+                        "Content correction is no longer awaiting approval."
+                    )
+                if self._payload_cipher is None:
+                    raise CertificateConflictError(
+                        "Certificate rendition dispatch is unavailable."
+                    )
+                certificate = await self._session.get(
+                    Certificate, anchored.certificate_id, with_for_update=True
+                )
+                if (
+                    certificate is None
+                    or certificate.status is not CertificateStatus.ACTIVE
+                    or not certificate.certificate_number.startswith("THV-")
+                    or certificate.current_version_no != predecessor.version_no
+                    or predecessor.status is not CertificateVersionStatus.ACTIVE
+                ):
+                    raise CertificateConflictError(
+                        "Active certificate changed before correction approval."
+                    )
+                approved_hash = hashlib.sha256(
+                    self._metadata_builder.canonical_bytes(anchored.metadata_json)
+                ).hexdigest()
+                if approved_hash != anchored.metadata_hash:
+                    raise CertificateConflictError(
+                        "Certificate correction metadata integrity check failed."
+                    )
+                proof = await self._verified_thv_proof(predecessor)
+                predecessor.status = CertificateVersionStatus.SUPERSEDED
+                await self._session.flush()
+                anchored.status = CertificateVersionStatus.ACTIVE
+                anchored.decided_by = principal.user_id
+                anchored.decided_at = self._clock()
+                anchored.blockchain_transaction_id = proof.id
+                certificate.current_version_no = anchored.version_no
+                certificate.public_token_hash = anchored.public_token_hash
+                certificate.qr_payload = anchored.qr_payload or certificate.qr_payload
+                certificate.pdf_media_id = None
+                encrypted = self._payload_cipher.encrypt(
+                    {"certificate_version_id": str(anchored.id)},
+                    event_type=CONTENT_READY_EVENT,
+                    aggregate_id=anchored.id,
+                )
+                self._outbox.add(
+                    OutboxEvent(
+                        event_type=CONTENT_READY_EVENT,
+                        aggregate_type="certificate_version",
+                        aggregate_id=anchored.id,
+                        payload_ciphertext=encrypted.ciphertext,
+                        payload_nonce=encrypted.nonce,
+                        key_id=encrypted.key_id,
+                        occurred_at=self._clock(),
+                    )
+                )
+                self._audit.record(
+                    actor_user_id=principal.user_id,
+                    action="certificate.content_correction_approved",
+                    resource_type="certificate_version",
+                    resource_id=str(anchored.id),
+                    after={"status": anchored.status.value},
+                )
+                await self._session.flush()
+                return self._view(anchored)
             if anchored.status is CertificateVersionStatus.PENDING_APPROVAL:
                 anchored.status = CertificateVersionStatus.ANCHOR_PENDING
                 anchored.decided_by = principal.user_id
@@ -376,6 +623,17 @@ class CertificateVersionService:
         )
 
     @staticmethod
+    def _require_content_manage(principal: AuthPrincipal) -> None:
+        AuthorizationPolicy.require_capability(
+            principal,
+            PolicyRequirement(
+                permission="public_content.manage",
+                compatible_roles=frozenset({"SUPER_ADMIN"}),
+            ),
+            CertificateForbiddenError,
+        )
+
+    @staticmethod
     def _require_read(principal: AuthPrincipal) -> None:
         AuthorizationPolicy.require_capability(
             principal,
@@ -405,4 +663,5 @@ class CertificateVersionService:
             blockchain_transaction_id=version.blockchain_transaction_id,
             pdf_ready=version.pdf_media_id is not None,
             created_at=version.created_at,
+            content=content_from_metadata(version.metadata_json),
         )

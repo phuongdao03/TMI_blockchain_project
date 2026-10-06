@@ -95,6 +95,35 @@ class CertificatePdfRenderer:
             )
         return lines
 
+    @classmethod
+    def _wrap_full_text(
+        cls, value: str, *, max_width: float, font_size: float
+    ) -> list[str]:
+        words = normalize("NFC", value).split()
+        lines: list[str] = []
+        line = ""
+        for word in words:
+            candidate = f"{line} {word}".strip()
+            if pdfmetrics.stringWidth(candidate, cls.FONT_NAME, font_size) <= max_width:
+                line = candidate
+                continue
+            if line:
+                lines.append(line)
+                line = ""
+            while pdfmetrics.stringWidth(word, cls.FONT_NAME, font_size) > max_width:
+                split_at = len(word) - 1
+                while (
+                    pdfmetrics.stringWidth(word[:split_at], cls.FONT_NAME, font_size)
+                    > max_width
+                ):
+                    split_at -= 1
+                lines.append(word[:split_at])
+                word = word[split_at:]
+            line = word
+        if line:
+            lines.append(line)
+        return lines
+
     def __init__(self, *, template_version: str, generator_version: str) -> None:
         self._template_version = template_version
         self._generator_version = generator_version
@@ -248,21 +277,22 @@ class CertificatePdfRenderer:
         title_y = 220 - (3 - len(title_lines)) * 11.5
         for index, line in enumerate(title_lines):
             pdf.drawString(77, title_y - index * 23, line)
-        pdf.setFillColor(muted)
-        pdf.setFont(self.FONT_NAME, 7)
-        pdf.drawString(65, 155, "MÔ TẢ TÁC PHẨM")
-        pdf.setFillColor(ink)
-        pdf.setFont(self.FONT_NAME, 8)
-        summary = str(asset.get("summary") or "Chưa có mô tả công khai")
-        for index, line in enumerate(
-            self._wrap_text(summary, max_width=width - 339, font_size=8, max_lines=3)
-        ):
-            pdf.drawString(65, 141 - index * 12, line)
-        field(
-            "TÁC GIẢ / NGƯỜI ĐƯỢC GHI NHẬN",
-            str(asset.get("subject") or "Chưa công bố"),
-            105,
-        )
+        summary = str(asset.get("summary") or "")
+        if summary:
+            pdf.setFillColor(muted)
+            pdf.setFont(self.FONT_NAME, 7)
+            pdf.drawString(65, 155, "MÔ TẢ TÁC PHẨM")
+            pdf.setFillColor(ink)
+            pdf.setFont(self.FONT_NAME, 8)
+            for index, line in enumerate(
+                self._wrap_text(
+                    summary, max_width=width - 339, font_size=8, max_lines=3
+                )
+            ):
+                pdf.drawString(65, 141 - index * 12, line)
+        subject = str(asset.get("subject") or "")
+        if subject:
+            field("TÁC GIẢ / NGƯỜI ĐƯỢC GHI NHẬN", subject, 105)
         field("DANH MỤC", str(asset.get("category") or "Chưa công bố"), 76)
 
         pdf.setStrokeColor(gold)
@@ -295,7 +325,63 @@ class CertificatePdfRenderer:
             57,
             "Mã GD: " + str(blockchain.get("transactionHash") or "Đang cập nhật")[:22],
         )
+        needs_appendix = (
+            len(self._wrap_full_text(title, max_width=width - 368, font_size=19)) > 3
+            or len(self._wrap_full_text(summary, max_width=width - 339, font_size=8))
+            > 3
+            or pdfmetrics.stringWidth(subject, self.FONT_NAME, 10) > width - 339
+            or pdfmetrics.stringWidth(
+                str(asset.get("category") or ""), self.FONT_NAME, 10
+            )
+            > width - 339
+        )
         pdf.showPage()
+        if needs_appendix:
+
+            def appendix_page() -> float:
+                pdf.setFillColor(colors.HexColor("#fffcf5"))
+                pdf.rect(0, 0, width, height, stroke=0, fill=1)
+                pdf.setStrokeColor(gold)
+                pdf.rect(31, 28, width - 62, height - 56, stroke=1, fill=0)
+                pdf.setFillColor(red)
+                pdf.setFont(self.SERIF_BOLD_FONT_NAME, 20)
+                pdf.drawString(60, height - 70, "NỘI DUNG BẰNG XÁC LẬP")
+                pdf.setFont(self.FONT_NAME, 9)
+                pdf.drawString(
+                    60, height - 92, str(metadata.get("certificateNumber") or "")
+                )
+                return height - 130
+
+            y = appendix_page()
+            for label, value in (
+                ("TÁC PHẨM ĐƯỢC GHI NHẬN", title),
+                ("MÔ TẢ TÁC PHẨM", summary),
+                ("TÁC GIẢ / NGƯỜI ĐƯỢC GHI NHẬN", subject),
+                ("DANH MỤC", str(asset.get("category") or "")),
+            ):
+                if not value:
+                    continue
+                if y < 80:
+                    pdf.showPage()
+                    y = appendix_page()
+                pdf.setFillColor(gold)
+                pdf.setFont(self.FONT_NAME, 8)
+                pdf.drawString(60, y, label)
+                y -= 19
+                pdf.setFillColor(ink)
+                pdf.setFont(self.FONT_NAME, 10)
+                for line in self._wrap_full_text(
+                    value, max_width=width - 120, font_size=10
+                ):
+                    if y < 70:
+                        pdf.showPage()
+                        y = appendix_page()
+                        pdf.setFillColor(ink)
+                        pdf.setFont(self.FONT_NAME, 10)
+                    pdf.drawString(60, y, line)
+                    y -= 15
+                y -= 17
+            pdf.showPage()
         pdf.save()
         content = buffer.getvalue()
         return RenderedCertificate(

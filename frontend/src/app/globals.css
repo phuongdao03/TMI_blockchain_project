@@ -3221,6 +3221,54 @@ summary {
   background: var(--theme-bg, #fff9f3);
 }
 
+.navigation-loading {
+  position: fixed;
+  z-index: 1000;
+  top: env(safe-area-inset-top, 0px);
+  inset-inline: 0;
+  height: 3px;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--theme-accent, #b7882f) 20%, transparent);
+}
+
+.navigation-loading__bar {
+  display: block;
+  width: 45%;
+  height: 100%;
+  background: var(--theme-accent, #b7882f);
+  animation: navigation-loading-progress 1.2s ease-in-out infinite alternate;
+}
+
+.navigation-loading__message {
+  position: fixed;
+  left: 50%;
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  border: 1px solid #b7882f;
+  border-radius: 999px;
+  background: #4a0c13;
+  padding: 0.55rem 1rem;
+  color: #fff9e6;
+  font-size: 0.875rem;
+  font-weight: 700;
+  box-shadow: 0 8px 24px #1a0b0b55;
+}
+
+@media (min-width: 48rem) {
+  .navigation-loading__message { display: none; }
+}
+
+@keyframes navigation-loading-progress {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+
 .page-loading__message {
   display: inline-flex;
   align-items: center;

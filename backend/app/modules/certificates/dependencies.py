@@ -6,6 +6,7 @@ from fastapi import Depends
 from app.modules.audit.service import AuditService
 from app.modules.auth.dependencies import SessionDependency, SettingsDependency
 from app.modules.auth.security import OutboxPayloadCipher
+from app.modules.certificates.content_service import CertificateContentService
 from app.modules.certificates.metadata import (
     CertificateMetadataBuilder,
     CertificateNumberingService,
@@ -74,6 +75,20 @@ CertificateServiceDependency = Annotated[
 ]
 
 
+def get_certificate_content_service(
+    session: SessionDependency,
+) -> CertificateContentService:
+    return CertificateContentService(
+        session,
+        enqueue_issue=lambda dossier_id: issue_certificate.delay(str(dossier_id)),
+    )
+
+
+CertificateContentServiceDependency = Annotated[
+    CertificateContentService, Depends(get_certificate_content_service)
+]
+
+
 async def get_certificate_version_service(
     session: SessionDependency,
     settings: SettingsDependency,
@@ -82,6 +97,14 @@ async def get_certificate_version_service(
         session=session,
         metadata_builder=CertificateMetadataBuilder(),
         audit=AuditService(session),
+        payload_cipher=OutboxPayloadCipher.from_base64(
+            encoded_key=(
+                settings.auth_outbox_encryption_key.get_secret_value()
+                if settings.auth_outbox_encryption_key is not None
+                else ""
+            ),
+            key_id=settings.auth_outbox_key_id,
+        ),
         public_base_url=settings.app_base_url,
         environment=settings.app_env,
     )

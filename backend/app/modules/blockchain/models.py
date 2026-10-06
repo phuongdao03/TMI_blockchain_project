@@ -141,6 +141,21 @@ class Certificate(UtcTimestampMixin, Base):
     qr_payload: Mapped[str] = mapped_column(Text, nullable=False)
 
 
+class CertificateContentDraft(UtcTimestampMixin, Base):
+    __tablename__ = "certificate_content_drafts"
+
+    dossier_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("dossiers.id", ondelete="RESTRICT"), primary_key=True
+    )
+    content_json: Mapped[dict[str, object]] = mapped_column(
+        BLOCKCHAIN_JSON, nullable=False
+    )
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    confirmed_by_user_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT")
+    )
+
+
 class DocumentBlockchainEvidence(UtcTimestampMixin, Base):
     __tablename__ = "document_blockchain_evidences"
     __table_args__ = (

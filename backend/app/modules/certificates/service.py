@@ -18,6 +18,7 @@ from app.modules.blockchain.models import (
     BlockchainTransaction,
     BlockchainTransactionStatus,
     Certificate,
+    CertificateContentDraft,
     CertificateStatus,
     CertificateVersion,
     CertificateVersionStatus,
@@ -163,19 +164,63 @@ class CertificateService:
             if certificate.pdf_media_id is None:
                 raise CertificateConflictError("Bằng xác lập chưa sẵn sàng để tải.")
             media = await self._session.get(MediaAsset, certificate.pdf_media_id)
-            if (
-                media is None
-                or media.status is not MediaStatus.ACTIVE
-                or media.mime_type != "application/pdf"
-                or media.sha256 is None
-                or media.bytes <= 0
-            ):
-                raise CertificateConflictError("Bằng xác lập chưa sẵn sàng để tải.")
-            public_id = media.cloudinary_public_id
-            resource_type = media.resource_type
-            byte_count = media.bytes
-            digest = media.sha256
+            public_id, resource_type, byte_count, digest = self._pdf_asset(media)
             filename = f"{certificate.certificate_number}.pdf"
+        content = await self._fetch_pdf(public_id, resource_type, byte_count, digest)
+        return content, filename
+
+    async def download_version_pdf(
+        self,
+        principal: AuthPrincipal,
+        certificate_id: UUID,
+        version_no: int,
+    ) -> tuple[bytes, str]:
+        self._require_role(principal)
+        async with self._session.begin():
+            row = await self._certificates.get(certificate_id)
+            if row is None:
+                raise CertificateNotFoundError()
+            if not await self._certificates.can_access(
+                certificate_id, principal.user_id
+            ):
+                raise CertificateForbiddenError()
+            certificate = row[0]
+            version = await self._session.scalar(
+                select(CertificateVersion).where(
+                    CertificateVersion.certificate_id == certificate_id,
+                    CertificateVersion.version_no == version_no,
+                )
+            )
+            if version is None:
+                raise CertificateNotFoundError()
+            if version.pdf_media_id is None:
+                raise CertificateConflictError("Phiên bản PDF chưa sẵn sàng để tải.")
+            media = await self._session.get(MediaAsset, version.pdf_media_id)
+            public_id, resource_type, byte_count, digest = self._pdf_asset(media)
+            filename = f"{certificate.certificate_number}-v{version_no}.pdf"
+        content = await self._fetch_pdf(public_id, resource_type, byte_count, digest)
+        return content, filename
+
+    @staticmethod
+    def _pdf_asset(media: MediaAsset | None) -> tuple[str, str, int, str]:
+        if (
+            media is None
+            or media.status is not MediaStatus.ACTIVE
+            or media.mime_type != "application/pdf"
+            or media.sha256 is None
+            or media.bytes <= 0
+        ):
+            raise CertificateConflictError("Bằng xác lập chưa sẵn sàng để tải.")
+        return (
+            media.cloudinary_public_id,
+            media.resource_type,
+            media.bytes,
+            media.sha256,
+        )
+
+    async def _fetch_pdf(
+        self, public_id: str, resource_type: str, byte_count: int, digest: str
+    ) -> bytes:
         try:
             content = await self._media_gateway.download_asset(
                 public_id=public_id,
@@ -196,7 +241,7 @@ class CertificateService:
             )
         if len(content) != byte_count or hashlib.sha256(content).hexdigest() != digest:
             raise CertificateGenerationError("Certificate PDF integrity check failed.")
-        return content, filename
+        return content
 
     async def list_admin(
         self,
@@ -238,6 +283,10 @@ class CertificateService:
             status = dossier.status
             actor_user_id = dossier.owner_user_id
         if certificate is None and status is DossierStatus.PAID:
+            async with self._session.begin():
+                draft = await self._session.get(CertificateContentDraft, dossier_id)
+                if draft is not None and draft.confirmed_at is None:
+                    return None
             certificate = await self._prepare_certificate(dossier_id)
         if status is DossierStatus.PAID:
             if certificate is None:
@@ -519,6 +568,11 @@ class CertificateService:
                 raise CertificateConflictError(
                     "Approved dossier version is unavailable."
                 )
+            content_draft = await self._session.get(CertificateContentDraft, dossier_id)
+            if content_draft is not None and content_draft.confirmed_at is None:
+                raise CertificateConflictError(
+                    "Certificate content has not been confirmed."
+                )
             number = self._numbering.generate(certificate_id, issued_at)
             expires_at = issued_at + timedelta(days=self._validity_days)
             qr_payload = f"{self._public_base_url}/verify/{quote(token, safe='-._~')}"
@@ -529,6 +583,9 @@ class CertificateService:
                 snapshot=version.snapshot_json,
                 issued_at=issued_at,
                 expires_at=expires_at,
+                content=content_draft.content_json
+                if content_draft is not None
+                else None,
             )
             certificate = Certificate(
                 id=certificate_id,

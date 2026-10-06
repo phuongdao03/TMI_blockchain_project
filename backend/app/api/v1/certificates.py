@@ -147,6 +147,33 @@ async def list_certificate_versions(
     )
 
 
+@router.get(
+    "/{certificate_id}/versions/{version_no}/pdf",
+    response_class=StreamingResponse,
+    responses=RESPONSES,
+)
+async def download_certificate_version_pdf(
+    certificate_id: UUID,
+    version_no: int,
+    principal: CurrentPrincipalDependency,
+    service: CertificateServiceDependency,
+) -> StreamingResponse:
+    content, filename = await service.download_version_pdf(
+        principal, certificate_id, version_no
+    )
+    disposition = f"attachment; filename*=UTF-8''{quote(filename, safe='')}"
+    return StreamingResponse(
+        iter((content,)),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": disposition,
+            "Content-Length": str(len(content)),
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @router.post(
     "/{certificate_id}/version-requests",
     response_model=SuccessEnvelope[CertificateVersionData],

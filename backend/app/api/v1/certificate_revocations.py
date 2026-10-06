@@ -16,11 +16,16 @@ from app.modules.auth.dependencies import (
 )
 from app.modules.blockchain.models import CertificateStatus
 from app.modules.certificates.dependencies import (
+    CertificateContentServiceDependency,
     CertificateServiceDependency,
     CertificateVersionServiceDependency,
 )
 from app.modules.certificates.schemas import (
     AdminCertificateData,
+    CertificateContentCorrectionRequest,
+    CertificateContentDraftData,
+    CertificateContentRequest,
+    CertificateIssuedContentData,
     CertificateListingData,
     CertificateListingRequest,
     CertificateRevocationRequest,
@@ -42,6 +47,96 @@ RESPONSES: dict[int | str, dict[str, Any]] = {
     404: {"description": "Certificate not found.", "model": ErrorEnvelope},
     409: {"description": "Certificate state conflicts.", "model": ErrorEnvelope},
 }
+
+
+@router.get(
+    "/content-drafts",
+    response_model=SuccessEnvelope[list[CertificateContentDraftData]],
+    responses=RESPONSES,
+)
+async def list_certificate_content_drafts(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: CertificateContentServiceDependency,
+) -> SuccessEnvelope[list[CertificateContentDraftData]]:
+    rows = await service.list_drafts(principal)
+    return SuccessEnvelope(
+        data=list(rows), meta=ResponseMeta(request_id=request.state.request_id)
+    )
+
+
+@router.put(
+    "/content-drafts/{dossier_id}",
+    response_model=SuccessEnvelope[CertificateContentDraftData],
+    responses=RESPONSES,
+)
+async def update_certificate_content_draft(
+    dossier_id: UUID,
+    payload: CertificateContentRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: CertificateContentServiceDependency,
+) -> SuccessEnvelope[CertificateContentDraftData]:
+    draft = await service.update(principal, dossier_id, payload)
+    return SuccessEnvelope(
+        data=draft, meta=ResponseMeta(request_id=request.state.request_id)
+    )
+
+
+@router.post(
+    "/content-drafts/{dossier_id}/confirm",
+    response_model=SuccessEnvelope[CertificateContentDraftData],
+    responses=RESPONSES,
+)
+async def confirm_certificate_content_draft(
+    dossier_id: UUID,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: CertificateContentServiceDependency,
+) -> SuccessEnvelope[CertificateContentDraftData]:
+    draft = await service.confirm(principal, dossier_id)
+    return SuccessEnvelope(
+        data=draft, meta=ResponseMeta(request_id=request.state.request_id)
+    )
+
+
+@router.get(
+    "/{certificate_id}/content",
+    response_model=SuccessEnvelope[CertificateIssuedContentData],
+    responses=RESPONSES,
+)
+async def get_issued_certificate_content(
+    certificate_id: UUID,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: CertificateVersionServiceDependency,
+) -> SuccessEnvelope[CertificateIssuedContentData]:
+    content = await service.current_content(principal, certificate_id)
+    return SuccessEnvelope(
+        data=content, meta=ResponseMeta(request_id=request.state.request_id)
+    )
+
+
+@router.post(
+    "/{certificate_id}/content-corrections",
+    response_model=SuccessEnvelope[CertificateVersionData],
+    status_code=status.HTTP_201_CREATED,
+    responses=RESPONSES,
+)
+async def request_issued_certificate_content_correction(
+    certificate_id: UUID,
+    payload: CertificateContentCorrectionRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: CertificateVersionServiceDependency,
+) -> SuccessEnvelope[CertificateVersionData]:
+    version = await service.request_content_correction(
+        principal, certificate_id, payload
+    )
+    return SuccessEnvelope(
+        data=CertificateVersionData.model_validate(version),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
 
 
 @router.get(

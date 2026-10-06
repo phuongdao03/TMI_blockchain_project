@@ -69,6 +69,35 @@ class CertificateListingRequest(CertificateSchema):
     show_certificate: bool
 
 
+class CertificateContentRequest(CertificateSchema):
+    title: str = Field(min_length=1, max_length=255)
+    summary: str = Field(default="", max_length=5000)
+    subject: str = Field(default="", max_length=255)
+    category: str = Field(min_length=1, max_length=255)
+
+
+class CertificateContentDraftData(CertificateSchema):
+    dossier_id: UUID
+    dossier_code: str
+    dossier_title: str
+    dossier_status: str
+    content: CertificateContentRequest
+    confirmed_at: datetime | None
+
+
+class CertificateIssuedContentData(CertificateSchema):
+    certificate_id: UUID
+    certificate_number: str
+    current_version_no: int
+    content: CertificateContentRequest
+
+
+class CertificateContentCorrectionRequest(CertificateSchema):
+    expected_version_no: int = Field(ge=1)
+    reason: str = Field(min_length=20, max_length=2_000)
+    content: CertificateContentRequest
+
+
 class CertificateListingData(CertificateSchema):
     show_certificate: bool
     public_work_version: int
@@ -91,6 +120,7 @@ class CertificateVersionData(CertificateSchema):
     blockchain_transaction_id: UUID | None
     pdf_ready: bool
     created_at: datetime
+    content: CertificateContentRequest | None = None
 
 
 class CertificateVersionRequest(CertificateSchema):

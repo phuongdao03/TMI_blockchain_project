@@ -1451,6 +1451,29 @@ export interface AdminCertificate {
   publicWorkVersion?: number | null;
 }
 
+export interface CertificateContent {
+  title: string;
+  summary: string;
+  subject: string;
+  category: string;
+}
+
+export interface CertificateContentDraft {
+  dossierId: string;
+  dossierCode: string;
+  dossierTitle: string;
+  dossierStatus: string;
+  content: CertificateContent;
+  confirmedAt: string | null;
+}
+
+export interface CertificateIssuedContent {
+  certificateId: string;
+  certificateNumber: string;
+  currentVersionNo: number;
+  content: CertificateContent;
+}
+
 export interface CertificateDetail {
   certificate: Certificate;
   metadata: Record<string, unknown>;
@@ -1484,6 +1507,7 @@ export interface CertificateVersion {
   blockchainTransactionId: string | null;
   pdfReady: boolean;
   createdAt: string;
+  content?: CertificateContent | null;
 }
 
 export interface PublicCategory {
@@ -1528,6 +1552,8 @@ export interface Verification {
   checkedAt: string;
   certificateNumber: string | null;
   assetTitle: string | null;
+  assetSummary?: string | null;
+  isCurrentVersion?: boolean;
   categoryName: string | null;
   issuedAt: string | null;
   expiresAt: string | null;
