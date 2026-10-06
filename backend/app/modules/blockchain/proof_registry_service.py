@@ -599,15 +599,16 @@ class THVProofRegistryService:
                     transaction_id, "TRANSACTION_REVERTED", "Transaction reverted."
                 )
                 return
+            # Delegated wallet transactions target their manager, while the
+            # gateway decodes ProofRecorded only from this registry's logs.
             if (
                 receipt.transaction_hash.lower() != tx_hash.lower()
-                or receipt.contract_address.lower() != self._contract_address
                 or "ProofRecorded" not in receipt.event_names
             ):
                 await self._fail_transaction(
                     transaction_id,
                     "RECEIPT_MISMATCH",
-                    "Receipt contract, hash or ProofRecorded event does not match.",
+                    "Receipt hash or registry ProofRecorded event does not match.",
                 )
                 return
             canonical_hash = await self._gateway.block_hash(receipt.block_number)
@@ -935,14 +936,22 @@ class THVProofRegistryService:
         expected_chain: int,
         expected_call_hash: str,
     ) -> bool:
-        return (
+        wallet_context_matches = (
             chain_transaction.sender == expected_wallet
             and chain_transaction.sender == connected_wallet
-            and chain_transaction.recipient.lower() == expected_contract.lower()
             and chain_transaction.chain_id == expected_chain
             and chain_transaction.value == 0
-            and hashlib.sha256(chain_transaction.data).hexdigest() == expected_call_hash
         )
+        if not wallet_context_matches:
+            return False
+        if chain_transaction.recipient.lower() == expected_contract.lower():
+            return (
+                hashlib.sha256(chain_transaction.data).hexdigest() == expected_call_hash
+            )
+        # Smart wallets may route the requested call through a delegation
+        # manager. The receipt's event emitted by our exact registry contract
+        # and the stored on-chain proof are still required before confirmation.
+        return bool(chain_transaction.data)
 
     def _add_confirmed_event(
         self,

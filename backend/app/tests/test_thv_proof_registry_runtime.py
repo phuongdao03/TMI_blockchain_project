@@ -73,6 +73,9 @@ class ProofRegistryGateway:
         self.receipt_available = True
         self.latest_block = 11
         self.transaction_hash = "0x" + "90" * 32
+        self.transaction_recipient = CONTRACT
+        self.transaction_data = PAYLOAD
+        self.receipt_contract_address = CONTRACT
         self.asset_id = bytes(32)
         self.proof_hash = bytes(32)
         self.version = 0
@@ -124,8 +127,8 @@ class ProofRegistryGateway:
         return ChainTransaction(
             transaction_hash=tx_hash,
             sender=WALLET,
-            recipient=CONTRACT,
-            data=PAYLOAD,
+            recipient=self.transaction_recipient,
+            data=self.transaction_data,
             chain_id=31_337,
             value=0,
         )
@@ -137,7 +140,7 @@ class ProofRegistryGateway:
             transaction_hash=tx_hash,
             block_number=10,
             block_hash="0x" + "77" * 32,
-            contract_address=CONTRACT,
+            contract_address=self.receipt_contract_address,
             event_names=("ProofRecorded",),
             succeeded=True,
             proof_recorded_events=(
@@ -199,22 +202,19 @@ def test_gateway_decodes_full_proof_recorded_event_payload() -> None:
     proof_hash = bytes.fromhex("cd" * 32)
     version = 7
     timestamp = int(NOW.timestamp())
-    event = gateway._proof_recorded_event(
-        {
-            "address": CONTRACT,
-            "topics": [
-                Web3.keccak(
-                    text="ProofRecorded(bytes32,bytes32,uint64,address,uint64)"
-                ),
-                asset_id,
-                proof_hash,
-                version.to_bytes(32, "big"),
-            ],
-            "data": bytes(12)
-            + bytes.fromhex(WALLET.removeprefix("0x"))
-            + timestamp.to_bytes(32, "big"),
-        }
-    )
+    log = {
+        "address": CONTRACT,
+        "topics": [
+            Web3.keccak(text="ProofRecorded(bytes32,bytes32,uint64,address,uint64)"),
+            asset_id,
+            proof_hash,
+            version.to_bytes(32, "big"),
+        ],
+        "data": bytes(12)
+        + bytes.fromhex(WALLET.removeprefix("0x"))
+        + timestamp.to_bytes(32, "big"),
+    }
+    event = gateway._proof_recorded_event(log)
 
     assert event == ProofRecordedEvent(
         asset_id=asset_id,
@@ -222,6 +222,27 @@ def test_gateway_decodes_full_proof_recorded_event_payload() -> None:
         version=version,
         signer=WALLET,
         timestamp=timestamp,
+    )
+    assert gateway._proof_recorded_event({**log, "address": "0x" + "56" * 20}) is None
+
+
+def test_delegated_transaction_still_requires_the_authorized_wallet() -> None:
+    transaction = ChainTransaction(
+        transaction_hash="0x" + "90" * 32,
+        sender="0x" + "56" * 20,
+        recipient="0x" + "78" * 20,
+        data=b"delegation-wrapper",
+        chain_id=31_337,
+        value=0,
+    )
+
+    assert not THVProofRegistryService._transaction_matches_intent(
+        transaction,
+        expected_wallet=WALLET,
+        connected_wallet=WALLET,
+        expected_contract=CONTRACT,
+        expected_chain=31_337,
+        expected_call_hash="00" * 32,
     )
 
 
@@ -526,7 +547,10 @@ def test_static_abi_encodes_the_contract_record_proof_signature() -> None:
     assert len(payload) == 4 + (32 * 3)
 
 
-def test_thv_proof_intent_requires_a_payment_ready_dossier_version() -> None:
+@pytest.mark.parametrize("delegated", [False, True])
+def test_thv_proof_intent_requires_a_payment_ready_dossier_version(
+    delegated: bool,
+) -> None:
     async def exercise() -> None:
         engine = create_async_engine("sqlite+aiosqlite://")
         sessions = async_sessionmaker(engine, expire_on_commit=False)
@@ -602,6 +626,10 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version() -> None:
             permissions=("blockchain.sign",),
         )
         gateway = ProofRegistryGateway()
+        if delegated:
+            gateway.transaction_recipient = "0x" + "56" * 20
+            gateway.transaction_data = b"metamask-delegation-wrapper"
+            gateway.receipt_contract_address = gateway.transaction_recipient
         issuance_requests: list[UUID] = []
         service = THVProofRegistryService(
             session=sessions(),

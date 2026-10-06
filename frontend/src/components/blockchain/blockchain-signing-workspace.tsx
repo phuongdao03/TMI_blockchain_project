@@ -52,7 +52,7 @@ const statusLabel: Record<string, string> = {
 const terminalStatuses = new Set(["CONFIRMED", "FAILED", "REPLACED"]);
 function signingStatusLabel(status: string, transactionHash?: string | null) {
   return status === "FAILED" && transactionHash
-    ? "Đang đối chiếu giao dịch"
+    ? "Cần kiểm tra giao dịch"
     : (statusLabel[status] ?? status);
 }
 const signingSteps = [
@@ -117,7 +117,11 @@ function signingStep(
   return 0;
 }
 
-function verificationMessage(status: string, transactionHash?: string | null) {
+function verificationMessage(
+  status: string,
+  transactionHash?: string | null,
+  errorCode?: string | null,
+) {
   if (status === "CONFIRMED") {
     return "Tài liệu đã được ghi nhận và chưa bị thay đổi.";
   }
@@ -132,7 +136,10 @@ function verificationMessage(status: string, transactionHash?: string | null) {
   }
   if (status === "FAILED") {
     if (transactionHash) {
-      return "Giao dịch đã có mã trên Polygon. Hệ thống đang đối chiếu lại; bạn không cần ký lần nữa.";
+      if (errorCode === "TRANSACTION_REVERTED") {
+        return "Giao dịch trên Polygon đã thất bại. Hãy kiểm tra chi tiết giao dịch và liên hệ bộ phận vận hành; không ký lại khi hồ sơ còn mã giao dịch này.";
+      }
+      return "Giao dịch đã có mã nhưng chưa xác thực được bằng chứng của hồ sơ. Hãy chọn ‘Kiểm tra xác nhận ngay’ để đối chiếu lại; không ký thêm giao dịch.";
     }
     return "Giao dịch chưa được ghi nhận. Vui lòng kiểm tra lỗi và thử lại.";
   }
@@ -507,7 +514,7 @@ export function BlockchainSigningWorkspace() {
         role="status"
       >
         <LoaderCircle
-          className="size-6 animate-spin text-primary-700"
+          className="auth-activity-spinner size-6 text-primary-700"
           aria-hidden="true"
         />
         <div>
@@ -569,7 +576,7 @@ export function BlockchainSigningWorkspace() {
           >
             {busy === "connect" ? (
               <LoaderCircle
-                className="size-4 animate-spin"
+                className="auth-activity-spinner size-4"
                 aria-hidden="true"
               />
             ) : (
@@ -588,7 +595,7 @@ export function BlockchainSigningWorkspace() {
         >
           {busy ? (
             <LoaderCircle
-              className="mt-0.5 size-4 shrink-0 animate-spin"
+              className="auth-activity-spinner mt-0.5 size-4 shrink-0"
               aria-hidden="true"
             />
           ) : (
@@ -739,7 +746,7 @@ export function BlockchainSigningWorkspace() {
               type="button"
             >
               {busy === "link" ? (
-                <LoaderCircle className="size-4 animate-spin" />
+                <LoaderCircle className="auth-activity-spinner size-4" />
               ) : (
                 <BadgeCheck className="size-4" />
               )}
@@ -865,15 +872,25 @@ export function BlockchainSigningWorkspace() {
                       className="size-4 shrink-0"
                       aria-hidden="true"
                     />
-                  ) : current ? (
-                    <LoaderCircle
+                  ) : current && displayedSelected.status === "FAILED" ? (
+                    <AlertTriangle
                       className="size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                  ) : current &&
+                    (displayedSelected.status === "SIGNING" ||
+                      displayedSelected.status === "BROADCAST" ||
+                      busy === "sign") ? (
+                    <LoaderCircle
+                      className="auth-activity-spinner size-4 shrink-0"
                       aria-hidden="true"
                     />
                   ) : (
                     <Circle className="size-4 shrink-0" aria-hidden="true" />
                   )}
-                  {step}
+                  {index === 2 && displayedSelected.status === "FAILED"
+                    ? "Cần kiểm tra"
+                    : step}
                 </li>
               );
             })}
@@ -887,11 +904,10 @@ export function BlockchainSigningWorkspace() {
               {verificationMessage(
                 displayedSelected.status,
                 displayedSelected.txHash,
+                displayedSelected.errorCode,
               )}
             </p>
             {(displayedSelected.status === "BROADCAST" ||
-              (displayedSelected.status === "FAILED" &&
-                displayedSelected.txHash) ||
               (displayedSelected.status === "SIGNING" &&
                 displayedSelected.txHash)) &&
             !transactionStatus.error ? (
@@ -975,7 +991,7 @@ export function BlockchainSigningWorkspace() {
                     type="button"
                   >
                     <RefreshCw
-                      className={`size-4 ${transactionStatus.isFetching ? "animate-spin" : ""}`}
+                      className={`size-4 ${transactionStatus.isFetching ? "auth-activity-spinner" : ""}`}
                       aria-hidden="true"
                     />
                     {transactionStatus.isFetching
@@ -1112,7 +1128,7 @@ export function BlockchainSigningWorkspace() {
                 type="button"
               >
                 <RefreshCw
-                  className={`size-4 ${transactionStatus.isFetching ? "animate-spin" : ""}`}
+                  className={`size-4 ${transactionStatus.isFetching ? "auth-activity-spinner" : ""}`}
                 />
                 {transactionStatus.isFetching
                   ? "Đang kiểm tra Polygon…"
@@ -1135,7 +1151,7 @@ export function BlockchainSigningWorkspace() {
                 type="button"
               >
                 {busy === "sign" ? (
-                  <LoaderCircle className="size-4 animate-spin" />
+                  <LoaderCircle className="auth-activity-spinner size-4" />
                 ) : (
                   <FileCheck2 className="size-4" />
                 )}
