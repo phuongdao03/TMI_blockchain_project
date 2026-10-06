@@ -394,6 +394,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert kwargs["source_format"] == "mp4"
             assert kwargs["source_content"] == content
             assert kwargs["transformation"] == "c_limit,w_640,q_auto:eco,vc_auto,f_mp4"
+            assert kwargs["eager_transformations"] == ()
             assert str(kwargs["derivative_public_id"]).startswith("cns/local/dossiers/")
             assert "/versions/1/public/" in str(kwargs["derivative_public_id"])
             return PublicDerivativeMetadata(

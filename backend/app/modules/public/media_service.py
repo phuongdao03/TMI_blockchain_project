@@ -687,7 +687,6 @@ class PublicMediaWorker:
             height = asset.height
             video_quality_profile = relation.video_quality_profile
             video_max_width = relation.video_max_width
-            poster_time_ms = relation.poster_time_ms
             work = await self._repository.get_work(relation.public_work_id)
             source_version_no = (
                 await self._repository.source_version_number(work)
@@ -733,15 +732,9 @@ class PublicMediaWorker:
                         f"{VIDEO_QUALITY_TRANSFORMATIONS[video_quality_profile]},vc_auto,f_mp4"
                     )
                 ),
-                eager_transformations=(
-                    (
-                        f"so_{poster_time_ms / 1000:g},q_auto,f_webp"
-                        if poster_time_ms is not None
-                        else "so_auto,q_auto,f_webp"
-                    ),
-                )
-                if media_kind is PublicMediaKind.VIDEO
-                else (),
+                # Posters are served through a signed derivative URL when requested.
+                # Generating one synchronously here holds up the entire video upload.
+                eager_transformations=(),
             )
         except MediaProviderUnavailableError:
             await self._mark_failed(

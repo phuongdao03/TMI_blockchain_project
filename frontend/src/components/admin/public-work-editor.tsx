@@ -1362,11 +1362,11 @@ function Gallery({
         <ul className="mt-2 divide-y divide-neutral-200">
           {items.map((item, index) => (
             <li className="py-3" key={item.id}>
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-3">
                 <span className="grid size-10 place-items-center rounded-lg bg-neutral-100 text-xs font-bold text-neutral-600">
                   {item.mediaKind.slice(0, 3)}
                 </span>
-                <span className="min-w-0 flex-1">
+                <span className="min-w-0">
                   <span className="block truncate text-sm font-bold">
                     {item.caption || item.altText || `Media ${index + 1}`}
                   </span>
@@ -1401,52 +1401,54 @@ function Gallery({
                     </span>
                   ) : null}
                 </span>
-                {item.mediaKind === "IMAGE" || item.mediaKind === "VIDEO" ? (
+                <div className="col-span-2 flex flex-wrap items-center gap-2 sm:justify-end">
+                  {item.mediaKind === "IMAGE" || item.mediaKind === "VIDEO" ? (
+                    <button
+                      aria-pressed={selectedThumbnail === item.mediaAssetId}
+                      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-500 ${selectedThumbnail === item.mediaAssetId ? "border-primary-200 bg-primary-50 text-primary-700" : "border-primary-700 bg-primary-700 text-white hover:bg-primary-800"}`}
+                      disabled={item.derivativeStatus !== "READY"}
+                      onClick={() => onThumbnail(item.mediaAssetId)}
+                      type="button"
+                    >
+                      <ImageIcon aria-hidden="true" className="size-4" />
+                      {item.derivativeStatus !== "READY"
+                        ? item.mediaKind === "VIDEO"
+                          ? "Chưa thể chọn video làm bìa"
+                          : "Chưa thể chọn ảnh làm bìa"
+                        : selectedThumbnail === item.mediaAssetId
+                          ? "Đã chọn làm bìa"
+                          : item.mediaKind === "VIDEO"
+                            ? "Dùng khung video làm bìa"
+                            : "Đặt ảnh bìa"}
+                    </button>
+                  ) : null}
                   <button
-                    aria-pressed={selectedThumbnail === item.mediaAssetId}
-                    className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-500 sm:w-auto ${selectedThumbnail === item.mediaAssetId ? "border-primary-200 bg-primary-50 text-primary-700" : "border-primary-700 bg-primary-700 text-white hover:bg-primary-800"}`}
-                    disabled={item.derivativeStatus !== "READY"}
-                    onClick={() => onThumbnail(item.mediaAssetId)}
+                    aria-label="Di chuyển lên"
+                    className="grid size-11 place-items-center"
+                    disabled={index === 0}
+                    onClick={() => void reorder(index, -1)}
                     type="button"
                   >
-                    <ImageIcon aria-hidden="true" className="size-4" />
-                    {item.derivativeStatus !== "READY"
-                      ? item.mediaKind === "VIDEO"
-                        ? "Chưa thể chọn video làm bìa"
-                        : "Chưa thể chọn ảnh làm bìa"
-                      : selectedThumbnail === item.mediaAssetId
-                        ? "Đã chọn làm bìa"
-                        : item.mediaKind === "VIDEO"
-                          ? "Dùng khung video làm bìa"
-                          : "Đặt ảnh bìa"}
+                    <ArrowUp className="size-4" />
                   </button>
-                ) : null}
-                <button
-                  aria-label="Di chuyển lên"
-                  className="grid size-11 place-items-center"
-                  disabled={index === 0}
-                  onClick={() => void reorder(index, -1)}
-                  type="button"
-                >
-                  <ArrowUp className="size-4" />
-                </button>
-                <button
-                  aria-label="Di chuyển xuống"
-                  className="grid size-11 place-items-center"
-                  disabled={index === items.length - 1}
-                  onClick={() => void reorder(index, 1)}
-                  type="button"
-                >
-                  <ArrowDown className="size-4" />
-                </button>
-                <button
-                  aria-label="Xóa hình ảnh hoặc video"
-                  className="grid size-11 place-items-center text-red-700"
-                  onClick={() => void remove(item.id)}
-                  type="button"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+                  <button
+                    aria-label="Di chuyển xuống"
+                    className="grid size-11 place-items-center"
+                    disabled={index === items.length - 1}
+                    onClick={() => void reorder(index, 1)}
+                    type="button"
+                  >
+                    <ArrowDown className="size-4" />
+                  </button>
+                  <button
+                    aria-label="Xóa hình ảnh hoặc video"
+                    className="grid size-11 place-items-center text-red-700"
+                    onClick={() => void remove(item.id)}
+                    type="button"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
               </div>
               {item.mediaKind === "VIDEO" ? (
                 <VideoPresentationSettings
