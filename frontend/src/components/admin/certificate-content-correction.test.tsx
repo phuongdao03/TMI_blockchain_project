@@ -44,7 +44,9 @@ it("submits edited content for a new version while previewing removals", async (
   });
   render(
     <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
     >
       <CertificateContentCorrection certificateId="certificate-1" />
     </QueryClientProvider>,
@@ -58,7 +60,9 @@ it("submits edited content for a new version while previewing removals", async (
   fireEvent.change(screen.getByLabelText("Lý do chỉnh sửa"), {
     target: { value: "Sửa nội dung tác giả trên bằng xác lập cũ." },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Gửi duyệt phiên bản mới" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Gửi duyệt phiên bản mới" }),
+  );
   await waitFor(() =>
     expect(adminCertificateApi.requestContentCorrection).toHaveBeenCalledWith(
       "certificate-1",

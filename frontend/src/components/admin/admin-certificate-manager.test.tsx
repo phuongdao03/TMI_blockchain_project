@@ -74,11 +74,15 @@ describe("AdminCertificateManager", () => {
     });
     renderManager();
     expect(
-      screen.getByRole("link", { name: "Sửa bằng đã cấp" }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: "Sửa bằng đã cấp" })
+        .getAttribute("href"),
     ).toBe("/admin/certificates/corrections");
     fireEvent.click(await screen.findByText("Quản lý hiển thị và phiên bản"));
     expect(
-      screen.getByRole("link", { name: "Chỉnh nội dung bằng cũ" }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: "Chỉnh nội dung bằng cũ" })
+        .getAttribute("href"),
     ).toBe("/admin/certificates/corrections/certificate");
   });
 

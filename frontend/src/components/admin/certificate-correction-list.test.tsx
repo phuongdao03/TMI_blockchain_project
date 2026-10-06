@@ -81,10 +81,14 @@ it("searches issued certificates and links active THV certificates to their edit
     }),
   );
   expect(
-    (await screen.findByRole("link", { name: "Sửa nội dung THV-2026-001" })).getAttribute("href"),
+    (
+      await screen.findByRole("link", { name: "Sửa nội dung THV-2026-001" })
+    ).getAttribute("href"),
   ).toBe("/admin/certificates/corrections/thv-id");
   expect(screen.queryByRole("link", { name: /Sửa nội dung CNS/ })).toBeNull();
-  expect(screen.queryByRole("link", { name: /Sửa nội dung THV-2026-002/ })).toBeNull();
+  expect(
+    screen.queryByRole("link", { name: /Sửa nội dung THV-2026-002/ }),
+  ).toBeNull();
   expect(screen.getByText(/cần chuyển sang định dạng THV/)).toBeTruthy();
   expect(screen.getByText(/bản ghi blockchain đã xác nhận/)).toBeTruthy();
 });

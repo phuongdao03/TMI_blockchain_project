@@ -113,7 +113,8 @@ export function AdminCertificateManager() {
             className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-primary-700 bg-white px-4 text-sm font-bold text-primary-700 hover:bg-primary-50"
             href="/admin/certificates/corrections"
           >
-            <FilePenLine className="size-4" aria-hidden="true" /> Sửa bằng đã cấp
+            <FilePenLine className="size-4" aria-hidden="true" /> Sửa bằng đã
+            cấp
           </Link>
           <Link
             className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-bold text-neutral-800 hover:bg-neutral-50"

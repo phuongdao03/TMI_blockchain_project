@@ -3257,7 +3257,9 @@ summary {
 }
 
 @media (min-width: 48rem) {
-  .navigation-loading__message { display: none; }
+  .navigation-loading__message {
+    display: none;
+  }
 }
 
 @keyframes navigation-loading-progress {

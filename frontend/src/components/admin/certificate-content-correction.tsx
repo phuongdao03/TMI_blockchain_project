@@ -82,7 +82,9 @@ export function CertificateContentCorrection({
             maxLength={255}
             required
             value={content.title}
-            onChange={(event) => setForm({ ...content, title: event.target.value })}
+            onChange={(event) =>
+              setForm({ ...content, title: event.target.value })
+            }
           />
         </label>
         <label className="block text-sm font-bold">
@@ -165,7 +167,8 @@ export function CertificateContentCorrection({
         ) : null}
         {submitted ? (
           <p className="text-sm text-emerald-800" role="status">
-            Đã gửi duyệt. Bằng hiện tại vẫn có hiệu lực trong lúc chờ quản trị viên khác phê duyệt. PDF mới sẽ được tạo sau khi duyệt.
+            Đã gửi duyệt. Bằng hiện tại vẫn có hiệu lực trong lúc chờ quản trị
+            viên khác phê duyệt. PDF mới sẽ được tạo sau khi duyệt.
           </p>
         ) : null}
       </form>

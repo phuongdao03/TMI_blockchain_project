@@ -84,10 +84,10 @@ export function DigitalCertificate({ data }: { data: Verification }) {
           <p
             className={`mt-3 inline-flex items-center gap-2 text-sm font-bold ${valid ? "text-[#245b38]" : "text-[#76530c]"}`}
           >
-          <ShieldCheck className="size-4" />
-          {data.isCurrentVersion === false
-            ? "Phiên bản cũ · đã có bản cập nhật"
-            : statusLabel}
+            <ShieldCheck className="size-4" />
+            {data.isCurrentVersion === false
+              ? "Phiên bản cũ · đã có bản cập nhật"
+              : statusLabel}
           </p>
         </div>
 
