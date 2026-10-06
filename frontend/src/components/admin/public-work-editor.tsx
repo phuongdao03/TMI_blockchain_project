@@ -115,6 +115,8 @@ function derivativeFailureMessage(
 ): string {
   const mediaName = kind === "VIDEO" ? "video" : "tệp";
   switch (code) {
+    case "PROVIDER_REJECTED":
+      return `Dịch vụ từ chối xử lý ${mediaName}. Quản trị viên cần kiểm tra lỗi Cloudinary trước khi thử lại.`;
     case "PROVIDER_UNAVAILABLE":
       return `Dịch vụ xử lý ${mediaName} tạm thời không khả dụng. Hãy thử xử lý lại sau ít phút.`;
     case "SOURCE_INTEGRITY_FAILED":

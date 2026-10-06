@@ -236,9 +236,17 @@ def test_derivative_failure_logs_only_safe_diagnostics(
             derivative_timeout_seconds=240,
             client=client,
         )
-        from app.modules.media.errors import MediaProviderUnavailableError
+        from app.modules.media.errors import (
+            MediaProviderRejectedError,
+            MediaProviderUnavailableError,
+        )
 
-        with pytest.raises(MediaProviderUnavailableError):
+        expected_error = (
+            MediaProviderRejectedError
+            if failure == "http_400"
+            else MediaProviderUnavailableError
+        )
+        with pytest.raises(expected_error):
             await gateway.create_public_derivative(
                 source_public_id="sensitive-private-source",
                 source_resource_type="video",

@@ -62,3 +62,12 @@ class MediaProviderUnavailableError(DomainError):
             message="Media provider is unavailable.",
             status_code=503,
         )
+
+
+class MediaProviderRejectedError(DomainError):
+    def __init__(self) -> None:
+        super().__init__(
+            code="MEDIA_PROVIDER_REJECTED",
+            message="Media provider rejected the processing request.",
+            status_code=422,
+        )

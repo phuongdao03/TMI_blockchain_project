@@ -31,7 +31,10 @@ from app.modules.dossiers.models import (
     EvidenceVisibility,
 )
 from app.modules.media.encryption import DocumentEncryptionKeyring
-from app.modules.media.errors import MediaProviderUnavailableError
+from app.modules.media.errors import (
+    MediaProviderRejectedError,
+    MediaProviderUnavailableError,
+)
 from app.modules.media.gateway import (
     CloudinaryMediaGateway,
     PublicDerivativeGateway,
@@ -372,6 +375,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
     class VideoGateway:
         corrupt = True
         reject = False
+        reject_as_bad_request = False
         upload_count = 0
 
         async def download_asset(self, **kwargs: object) -> bytes:
@@ -388,6 +392,8 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             self, **kwargs: object
         ) -> PublicDerivativeMetadata:
             self.upload_count += 1
+            if self.reject_as_bad_request:
+                raise MediaProviderRejectedError()
             if self.reject:
                 raise MediaProviderUnavailableError()
             assert kwargs["source_resource_type"] == "video"
@@ -621,6 +627,11 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert relation.derivative_status is DerivativeStatus.READY
             assert relation.derivative_url.startswith("/api/v1/public/works/")
             assert relation.failure_code == "PROVIDER_UNAVAILABLE"
+            video_gateway.reject = False
+            video_gateway.reject_as_bad_request = True
+            with pytest.raises(MediaProviderRejectedError):
+                await worker.process(relation_id)
+            assert relation.failure_code == "PROVIDER_REJECTED"
             with (
                 patch.object(
                     public_media_tasks, "get_session_factory", return_value=factory

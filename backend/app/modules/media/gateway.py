@@ -10,7 +10,10 @@ from urllib.parse import quote, urlencode
 
 import httpx
 
-from app.modules.media.errors import MediaProviderUnavailableError
+from app.modules.media.errors import (
+    MediaProviderRejectedError,
+    MediaProviderUnavailableError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -610,25 +613,34 @@ class CloudinaryMediaGateway:
             f"https://api.cloudinary.com/v1_1/"
             f"{quote(self._cloud_name, safe='')}/{target_resource_type}/upload"
         )
-        if source_content is None:
-            form["file"] = source_url
-            payload = await self._request_json(
-                "POST", url, data=form, timeout=self._derivative_timeout
-            )
-        else:
-            payload = await self._request_json(
-                "POST",
-                url,
-                data=form,
-                files={
-                    "file": (
-                        f"source.{source_format}",
-                        source_content,
-                        "application/octet-stream",
-                    )
-                },
-                timeout=self._derivative_timeout,
-            )
+        try:
+            if source_content is None:
+                form["file"] = source_url
+                payload = await self._request_json(
+                    "POST", url, data=form, timeout=self._derivative_timeout
+                )
+            else:
+                payload = await self._request_json(
+                    "POST",
+                    url,
+                    data=form,
+                    files={
+                        "file": (
+                            f"source.{source_format}",
+                            source_content,
+                            "application/octet-stream",
+                        )
+                    },
+                    timeout=self._derivative_timeout,
+                )
+        except MediaProviderUnavailableError as exc:
+            cause = exc.__cause__
+            if (
+                isinstance(cause, httpx.HTTPStatusError)
+                and cause.response.status_code == 400
+            ):
+                raise MediaProviderRejectedError() from exc
+            raise
         public_id = self._required_str(payload, "public_id")
         secure_url = self._required_str(payload, "secure_url")
         resource_type = self._required_str(payload, "resource_type")

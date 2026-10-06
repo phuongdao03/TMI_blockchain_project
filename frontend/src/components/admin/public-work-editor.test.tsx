@@ -637,6 +637,39 @@ describe("PublicWorkEditor", () => {
     );
   });
 
+  it("explains a provider-rejected video without calling it a temporary outage", async () => {
+    vi.mocked(publicWorkAdminApi.media).mockResolvedValueOnce([
+      {
+        id: "relation-video",
+        mediaAssetId: "asset-video",
+        mediaKind: "VIDEO",
+        sortOrder: 0,
+        caption: "Video source",
+        altText: null,
+        derivativeStatus: "FAILED",
+        derivativeMimeType: null,
+        derivativeWidth: null,
+        derivativeHeight: null,
+        durationMs: null,
+        attemptCount: 1,
+        failureCode: "PROVIDER_REJECTED",
+        posterMediaAssetId: null,
+        videoControlsPreset: "FULL",
+        videoFitMode: "CONTAIN",
+        videoQualityProfile: "BALANCED",
+        videoMaxWidth: 1280,
+        videoAutoplay: false,
+        videoLoop: false,
+        videoMuted: false,
+      },
+    ]);
+    render(<PublicWorkEditor />, { wrapper });
+    await screen.findByRole("button", { name: /Bản mẫu/ });
+    expect(
+      await screen.findByText(/Quản trị viên cần kiểm tra lỗi Cloudinary/),
+    ).toBeTruthy();
+  });
+
   it("offers signed dossier source media for explicit publication preparation", async () => {
     vi.mocked(publicWorkAdminApi.mediaCandidates).mockResolvedValueOnce([
       {

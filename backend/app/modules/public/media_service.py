@@ -19,7 +19,10 @@ from app.modules.media.encryption import (
     DocumentEncryptionKeyring,
     EncryptedDocument,
 )
-from app.modules.media.errors import MediaProviderUnavailableError
+from app.modules.media.errors import (
+    MediaProviderRejectedError,
+    MediaProviderUnavailableError,
+)
 from app.modules.media.gateway import MediaContentTooLargeError, PublicDerivativeGateway
 from app.modules.media.models import MediaAsset, MediaEncryptionStatus, MediaStatus
 from app.modules.public.cover import is_editorial_cover
@@ -736,6 +739,13 @@ class PublicMediaWorker:
                 # Generating one synchronously here holds up the entire video upload.
                 eager_transformations=(),
             )
+        except MediaProviderRejectedError:
+            await self._mark_failed(
+                relation_id,
+                "PROVIDER_REJECTED",
+                preserve_fallback=legacy_video_proxy,
+            )
+            raise
         except MediaProviderUnavailableError:
             await self._mark_failed(
                 relation_id,
