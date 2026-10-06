@@ -11,6 +11,7 @@ import {
   Eye,
   FilePenLine,
   ImageIcon,
+  LoaderCircle,
   Monitor,
   Plus,
   Search,
@@ -107,6 +108,38 @@ const derivativeStatusLabels: Record<
   READY: "Sẵn sàng công bố",
   FAILED: "Xử lý chưa thành công",
 };
+
+function derivativeFailureMessage(
+  code: string | null,
+  kind: PublicWorkMedia["mediaKind"],
+): string {
+  const mediaName = kind === "VIDEO" ? "video" : "tệp";
+  switch (code) {
+    case "PROVIDER_UNAVAILABLE":
+      return `Dịch vụ xử lý ${mediaName} tạm thời không khả dụng. Hãy thử xử lý lại sau ít phút.`;
+    case "SOURCE_INTEGRITY_FAILED":
+    case "source_not_available":
+      return "Không đọc được tệp gốc. Hãy kiểm tra tệp đã nộp và liên hệ bộ phận vận hành.";
+    case "source_not_certified":
+      return "Tệp không thuộc phiên bản hồ sơ được phép công bố. Hãy chọn lại tệp từ hồ sơ đã xác lập.";
+    case "UNSUPPORTED_MIME":
+      return "Định dạng tệp này chưa được hỗ trợ để công bố.";
+    default:
+      return "Chưa tạo được bản trình chiếu. Hãy thử xử lý lại; nếu lỗi tiếp diễn, liên hệ bộ phận vận hành.";
+  }
+}
+
+function publicationExcerpt(value: string): string {
+  let excerpt = "";
+  for (const character of value.trim()) {
+    if (excerpt.length + character.length > 500) break;
+    excerpt += character;
+  }
+  const wordBoundary = excerpt.lastIndexOf(" ");
+  return (
+    wordBoundary >= 350 ? excerpt.slice(0, wordBoundary) : excerpt
+  ).trimEnd();
+}
 
 function tagSlug(value: string): string {
   return value
@@ -600,9 +633,22 @@ export function PublicWorkEditor({
                   </EditorField>
                   <SourceFieldsPanel
                     fields={detail.data.sourceFields}
-                    onDescription={(value) =>
-                      setValue("shortDescription", value, { shouldDirty: true })
-                    }
+                    onDescription={(value) => {
+                      const description = value.trim();
+                      setValue(
+                        "shortDescription",
+                        description.length <= 500
+                          ? description
+                          : publicationExcerpt(description),
+                        { shouldDirty: true, shouldValidate: true },
+                      );
+                      if (description.length > 500) {
+                        setValue("fullDescription", description, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                      }
+                    }}
                     onFullDescription={(value) => {
                       const current = getValues("fullDescription");
                       setValue(
@@ -987,7 +1033,8 @@ function SourceFieldsPanel({
         Dữ liệu hồ sơ gốc · Phiên bản {version}
       </p>
       <p className="mt-1 text-xs leading-5 text-primary-800">
-        Chọn thông tin người dùng đã khai trong phiên bản được ký. Dữ liệu gốc
+        Đây là dữ liệu hồ sơ gốc không chỉnh sửa tại đây. Bấm dùng để chép sang
+        ô công bố bên dưới, chỉnh sửa bản công bố rồi lưu thay đổi. Dữ liệu gốc
         và dấu vân tay không bị thay đổi.
       </p>
       <ul className="mt-3 grid gap-2">
@@ -996,14 +1043,25 @@ function SourceFieldsPanel({
             className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary-100 bg-white p-3"
             key={`${field.key}-${index}`}
           >
-            <span className="min-w-0 flex-1">
-              <span className="block text-xs font-bold text-neutral-500">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-neutral-500">
                 {field.label}
-              </span>
-              <span className="mt-1 block line-clamp-2 text-sm text-neutral-950">
-                {field.value}
-              </span>
-            </span>
+              </p>
+              {field.key === "summary" && field.value.length > 500 ? (
+                <details className="mt-1 text-sm text-neutral-950">
+                  <summary className="cursor-pointer text-primary-800">
+                    Xem toàn bộ mô tả gốc
+                  </summary>
+                  <p className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap">
+                    {field.value}
+                  </p>
+                </details>
+              ) : (
+                <p className="mt-1 line-clamp-2 text-sm text-neutral-950">
+                  {field.value}
+                </p>
+              )}
+            </div>
             <Button
               onClick={() => {
                 if (field.key === "title") onTitle(field.value);
@@ -1312,7 +1370,17 @@ function Gallery({
                   <span className="block truncate text-sm font-bold">
                     {item.caption || item.altText || `Media ${index + 1}`}
                   </span>
-                  <span className="text-xs font-semibold text-neutral-600">
+                  <span
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-600"
+                    role="status"
+                  >
+                    {item.derivativeStatus === "PENDING" ||
+                    item.derivativeStatus === "PROCESSING" ? (
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="auth-activity-spinner size-3.5"
+                      />
+                    ) : null}
                     {derivativeStatusLabels[item.derivativeStatus]}
                   </span>
                   {item.derivativeStatus === "PENDING" ||
@@ -1321,21 +1389,36 @@ function Gallery({
                       Tự động cập nhật trạng thái, bạn có thể tiếp tục biên tập.
                     </span>
                   ) : null}
+                  {item.derivativeStatus === "FAILED" ? (
+                    <span
+                      className="mt-1 block text-xs text-red-700"
+                      role="alert"
+                    >
+                      {derivativeFailureMessage(
+                        item.failureCode,
+                        item.mediaKind,
+                      )}
+                    </span>
+                  ) : null}
                 </span>
                 {item.mediaKind === "IMAGE" || item.mediaKind === "VIDEO" ? (
                   <button
                     aria-pressed={selectedThumbnail === item.mediaAssetId}
-                    className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition sm:w-auto ${selectedThumbnail === item.mediaAssetId ? "border-primary-200 bg-primary-50 text-primary-700" : "border-primary-700 bg-primary-700 text-white hover:bg-primary-800"}`}
+                    className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-500 sm:w-auto ${selectedThumbnail === item.mediaAssetId ? "border-primary-200 bg-primary-50 text-primary-700" : "border-primary-700 bg-primary-700 text-white hover:bg-primary-800"}`}
                     disabled={item.derivativeStatus !== "READY"}
                     onClick={() => onThumbnail(item.mediaAssetId)}
                     type="button"
                   >
                     <ImageIcon aria-hidden="true" className="size-4" />
-                    {selectedThumbnail === item.mediaAssetId
-                      ? "Đã chọn làm bìa"
-                      : item.mediaKind === "VIDEO"
-                        ? "Dùng khung video làm bìa"
-                        : "Đặt ảnh bìa"}
+                    {item.derivativeStatus !== "READY"
+                      ? item.mediaKind === "VIDEO"
+                        ? "Chưa thể chọn video làm bìa"
+                        : "Chưa thể chọn ảnh làm bìa"
+                      : selectedThumbnail === item.mediaAssetId
+                        ? "Đã chọn làm bìa"
+                        : item.mediaKind === "VIDEO"
+                          ? "Dùng khung video làm bìa"
+                          : "Đặt ảnh bìa"}
                   </button>
                 ) : null}
                 <button
@@ -1564,7 +1647,12 @@ function VideoPresentationSettings({
       {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
       <Button
         className="mt-3"
-        disabled={saving || (settings.autoplay && !settings.muted)}
+        disabled={
+          saving ||
+          item.derivativeStatus === "PENDING" ||
+          item.derivativeStatus === "PROCESSING" ||
+          (settings.autoplay && !settings.muted)
+        }
         onClick={() => void save()}
         type="button"
       >
@@ -1572,9 +1660,12 @@ function VideoPresentationSettings({
           ? item.derivativeStatus === "FAILED"
             ? "Đang gửi xử lý lại…"
             : "Đang lưu…"
-          : item.derivativeStatus === "FAILED"
-            ? "Thử xử lý lại"
-            : "Lưu cấu hình video"}
+          : item.derivativeStatus === "PENDING" ||
+              item.derivativeStatus === "PROCESSING"
+            ? "Đang xử lý video…"
+            : item.derivativeStatus === "FAILED"
+              ? "Thử xử lý lại"
+              : "Lưu cấu hình video"}
       </Button>
     </details>
   );

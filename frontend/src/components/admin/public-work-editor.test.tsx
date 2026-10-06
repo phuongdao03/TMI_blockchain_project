@@ -158,6 +158,43 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("PublicWorkEditor", () => {
+  it("copies a long dossier description into editable publication fields", async () => {
+    const longSummary = "Di sản văn hóa và nghệ thuật Việt Nam. ".repeat(25);
+    vi.mocked(publicWorkAdminApi.get).mockResolvedValueOnce({
+      ...work,
+      sourceFields: [
+        { key: "title", label: "Tiêu đề hồ sơ", value: work.title },
+        { key: "summary", label: "Mô tả hồ sơ", value: longSummary },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PublicWorkEditor />, { wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: /Bản mẫu công khai/ }),
+    );
+    expect(screen.getByText("Xem toàn bộ mô tả gốc")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Dùng mô tả này" }));
+
+    const shortDescription = screen.getByLabelText(
+      "Mô tả ngắn",
+    ) as HTMLTextAreaElement;
+    const fullDescription = screen.getByLabelText(
+      "Nội dung giới thiệu",
+    ) as HTMLTextAreaElement;
+    expect(shortDescription.value.length).toBeLessThanOrEqual(500);
+    expect(fullDescription.value).toBe(longSummary.trim());
+    await user.clear(shortDescription);
+    await user.type(shortDescription, "Mô tả mới có thể chỉnh sửa.");
+    await user.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
+    await waitFor(() => expect(publicWorkAdminApi.update).toHaveBeenCalled());
+    expect(
+      vi.mocked(publicWorkAdminApi.update).mock.calls[0]?.[1],
+    ).toMatchObject({
+      shortDescription: "Mô tả mới có thể chỉnh sửa.",
+      fullDescription: longSummary.trim(),
+    });
+  });
+
   it("opens the first work and lets administrators browse all pages", async () => {
     const user = userEvent.setup();
     const nextWork = {
@@ -522,6 +559,21 @@ describe("PublicWorkEditor", () => {
 
     expect(await screen.findByText("Đang chờ xử lý")).toBeTruthy();
     expect(screen.getByText(/Tự động cập nhật trạng thái/)).toBeTruthy();
+    expect(
+      screen
+        .getByText("Đang chờ xử lý")
+        .querySelector(".auth-activity-spinner"),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "Chưa thể chọn video làm bìa" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole("button", { name: "Đang xử lý video…" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
   });
 
   it("allows a failed video derivative to be retried without changing settings", async () => {
@@ -553,6 +605,15 @@ describe("PublicWorkEditor", () => {
     const user = userEvent.setup();
     render(<PublicWorkEditor />, { wrapper });
     await user.click(await screen.findByRole("button", { name: /Bản mẫu/ }));
+
+    expect(
+      await screen.findByText(/Dịch vụ xử lý video tạm thời không khả dụng/),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "Chưa thể chọn video làm bìa" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
 
     await user.click(
       await screen.findByRole("button", { name: "Thử xử lý lại" }),
