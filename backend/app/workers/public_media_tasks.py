@@ -69,6 +69,15 @@ async def _reconcile_pending(*, limit: int = 100) -> None:
                         PublicWorkMedia.derivative_status == DerivativeStatus.PENDING,
                         and_(
                             PublicWorkMedia.media_kind == PublicMediaKind.VIDEO,
+                            PublicWorkMedia.derivative_status
+                            == DerivativeStatus.PROCESSING,
+                            PublicWorkMedia.derivative_public_id.is_not(None),
+                            PublicWorkMedia.derivative_url.like(
+                                "https://res.cloudinary.com/%"
+                            ),
+                        ),
+                        and_(
+                            PublicWorkMedia.media_kind == PublicMediaKind.VIDEO,
                             PublicWorkMedia.derivative_status == DerivativeStatus.READY,
                             PublicWorkMedia.failure_code.is_(None),
                             PublicWorkMedia.derivative_url.like(
