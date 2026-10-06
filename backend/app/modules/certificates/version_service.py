@@ -458,6 +458,10 @@ class CertificateVersionService:
                     raise CertificateConflictError(
                         "Certificate correction metadata integrity check failed."
                     )
+                if anchored.public_token_hash is None or anchored.qr_payload is None:
+                    raise CertificateConflictError(
+                        "Certificate correction verification token is unavailable."
+                    )
                 proof = await self._verified_thv_proof(predecessor)
                 predecessor.status = CertificateVersionStatus.SUPERSEDED
                 await self._session.flush()
@@ -467,7 +471,7 @@ class CertificateVersionService:
                 anchored.blockchain_transaction_id = proof.id
                 certificate.current_version_no = anchored.version_no
                 certificate.public_token_hash = anchored.public_token_hash
-                certificate.qr_payload = anchored.qr_payload or certificate.qr_payload
+                certificate.qr_payload = anchored.qr_payload
                 certificate.pdf_media_id = None
                 encrypted = self._payload_cipher.encrypt(
                     {"certificate_version_id": str(anchored.id)},

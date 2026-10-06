@@ -630,6 +630,9 @@ class CouncilService:
                             raise CouncilConflictError(
                                 "Evidence integrity must be reverified before approval."
                             )
+                        await reset_content_draft(
+                            self._session, dossier.id, version.snapshot_json
+                        )
                     self._workflow.transition(
                         dossier,
                         target=DECISION_TARGETS[result.decision],
@@ -639,9 +642,6 @@ class CouncilService:
                     )
                     if result.decision is CouncilCaseDecision.APPROVE:
                         dossier.approved_at = self._clock()
-                        await reset_content_draft(
-                            self._session, dossier.id, version.snapshot_json
-                        )
                     self._add_decision_event(council_case, result.decision)
             council_session.status = CouncilSessionStatus.CLOSED
             council_session.closed_at = self._clock()
