@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import re
 import secrets
 import time
 from collections.abc import Callable, Mapping
@@ -617,7 +618,11 @@ class CloudinaryMediaGateway:
             if source_content is None:
                 form["file"] = source_url
                 payload = await self._request_json(
-                    "POST", url, data=form, timeout=self._derivative_timeout
+                    "POST",
+                    url,
+                    data=form,
+                    timeout=self._derivative_timeout,
+                    sensitive_values=(source_public_id, derivative_public_id),
                 )
             else:
                 payload = await self._request_json(
@@ -632,6 +637,7 @@ class CloudinaryMediaGateway:
                         )
                     },
                     timeout=self._derivative_timeout,
+                    sensitive_values=(source_public_id, derivative_public_id),
                 )
         except MediaProviderUnavailableError as exc:
             cause = exc.__cause__
@@ -674,6 +680,7 @@ class CloudinaryMediaGateway:
         data: Mapping[str, str] | None = None,
         files: Mapping[str, tuple[str, bytes, str]] | None = None,
         timeout: httpx.Timeout | None = None,
+        sensitive_values: tuple[str, ...] = (),
     ) -> dict[str, object]:
         try:
             response = await self._client.request(
@@ -687,18 +694,71 @@ class CloudinaryMediaGateway:
             response.raise_for_status()
             payload = response.json()
         except (httpx.HTTPError, ValueError) as exc:
+            detail = (
+                self._safe_provider_error(
+                    exc.response, sensitive_values=sensitive_values
+                )
+                if isinstance(exc, httpx.HTTPStatusError)
+                and exc.response.status_code == 400
+                else None
+            )
             logger.warning(
-                "media_provider_request_failed operation=%s error_type=%s status=%s",
+                "media_provider_request_failed operation=%s "
+                "error_type=%s status=%s reason=%s",
                 "upload" if httpx.URL(url).path.endswith("/upload") else "media_api",
                 type(exc).__name__,
                 exc.response.status_code
                 if isinstance(exc, httpx.HTTPStatusError)
                 else None,
+                detail or "unknown",
             )
             raise MediaProviderUnavailableError() from exc
         if not isinstance(payload, dict):
             raise MediaProviderUnavailableError()
         return payload
+
+    def _safe_provider_error(
+        self, response: httpx.Response, *, sensitive_values: tuple[str, ...]
+    ) -> str | None:
+        message = response.headers.get("X-Cld-Error")
+        if not message:
+            try:
+                body = response.json()
+            except ValueError:
+                return None
+            error = body.get("error") if isinstance(body, dict) else None
+            message = error.get("message") if isinstance(error, dict) else None
+        if not isinstance(message, str) or not message.strip():
+            return None
+        for sensitive_value in sorted(
+            (
+                value
+                for value in (self._api_secret, self._api_key, *sensitive_values)
+                if value
+            ),
+            key=len,
+            reverse=True,
+        ):
+            message = message.replace(sensitive_value, "[redacted]")
+            encoded_value = quote(sensitive_value, safe="")
+            if encoded_value != sensitive_value:
+                message = message.replace(encoded_value, "[redacted]")
+        message = re.sub(r"(?:https?|cloudinary)://\S+", "[url]", message)
+        message = re.sub(
+            r"(?i)\b(api[_ -]?key|secret|token|signature|public[_ -]?id|"
+            r"asset[_ -]?id|source|file(?:name)?)\s*[:=]\s*"
+            r"(?:\"[^\"]*\"|'[^']*'|[^\s,;]+)",
+            r"\1=[redacted]",
+            message,
+        )
+        message = re.sub(
+            r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b",
+            "[id]",
+            message,
+            flags=re.IGNORECASE,
+        )
+        message = re.sub(r"\b[0-9a-f]{32,}\b", "[id]", message, flags=re.IGNORECASE)
+        return " ".join(message.split())[:240]
 
     @staticmethod
     def _required_str(payload: Mapping[str, object], field: str) -> str:
