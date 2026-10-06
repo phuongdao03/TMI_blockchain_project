@@ -205,6 +205,53 @@ def test_cloudinary_creates_isolated_public_derivative(
     asyncio.run(exercise())
 
 
+def test_large_video_derivative_uses_async_eager_processing() -> None:
+    async def exercise() -> None:
+        requests: list[httpx.Request] = []
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            if request.method == "HEAD":
+                return httpx.Response(404 if len(requests) == 2 else 200)
+            return httpx.Response(
+                200,
+                json={
+                    "public_id": "public/video",
+                    "secure_url": "https://res.cloudinary.com/demo/video/upload/v1/public/video.mp4",
+                    "resource_type": "video",
+                    "format": "mp4",
+                    "bytes": 50_000_000,
+                },
+            )
+
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        gateway = CloudinaryMediaGateway(
+            cloud_name="demo", api_key="api-key", api_secret="abcd", client=client
+        )
+        derivative = await gateway.create_public_derivative(
+            source_public_id="private/video",
+            source_resource_type="video",
+            source_format="mp4",
+            derivative_public_id="public/video",
+            transformation="c_limit,w_640,q_auto:eco,vc_auto,f_mp4",
+        )
+        form = parse_qs(requests[0].content.decode())
+        assert form["eager"] == ["c_limit,w_640,q_auto:eco,vc_auto,f_mp4"]
+        assert form["eager_async"] == ["true"]
+        assert "transformation" not in form
+        assert derivative.pending is True
+        assert derivative.url == (
+            "https://res.cloudinary.com/demo/video/upload/"
+            "c_limit,w_640,q_auto:eco,vc_auto,f_mp4/v1/public/video.mp4"
+        )
+        assert await gateway.public_derivative_ready(derivative.url) is False
+        assert await gateway.public_derivative_ready(derivative.url) is True
+        await gateway.close()
+        await client.aclose()
+
+    asyncio.run(exercise())
+
+
 @pytest.mark.parametrize(
     "failure",
     [

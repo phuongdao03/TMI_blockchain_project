@@ -201,6 +201,10 @@ class PublicMediaQueryService:
                         row.media_kind is PublicMediaKind.VIDEO
                         and row.derivative_status
                         in {DerivativeStatus.READY, DerivativeStatus.PROCESSING}
+                        and not (
+                            row.derivative_url
+                            and "/video/upload/c_limit," in row.derivative_url
+                        )
                     )
                     else None
                 ),
@@ -215,6 +219,10 @@ class PublicMediaQueryService:
                         extension="m3u8",
                     )
                     if row.media_kind is PublicMediaKind.VIDEO
+                    and not (
+                        row.derivative_url
+                        and "/video/upload/c_limit," in row.derivative_url
+                    )
                     else None
                 ),
                 controls_preset=row.video_controls_preset,
@@ -636,6 +644,43 @@ class PublicMediaWorker:
                 and not legacy_video_proxy
             ):
                 return
+            if (
+                relation.media_kind is PublicMediaKind.VIDEO
+                and relation.derivative_status is DerivativeStatus.PROCESSING
+                and relation.derivative_public_id is not None
+                and relation.derivative_url is not None
+            ):
+                pending_url = relation.derivative_url
+            else:
+                pending_url = None
+        if pending_url is not None:
+            if not await self._gateway.public_derivative_ready(pending_url):
+                return
+            async with self._session.begin():
+                current = await self._repository.get_relation(
+                    relation_id, for_update=True
+                )
+                if (
+                    current is not None
+                    and current.derivative_status is DerivativeStatus.PROCESSING
+                    and current.derivative_url == pending_url
+                ):
+                    current.derivative_status = DerivativeStatus.READY
+                    current.failure_code = None
+                    self._event(current.public_work_id)
+            return
+        async with self._session.begin():
+            joined = await self._repository.get_relation_with_asset(
+                relation_id, for_update=True
+            )
+            if joined is None:
+                return
+            relation, asset = joined
+            legacy_video_proxy = (
+                relation.media_kind is PublicMediaKind.VIDEO
+                and relation.derivative_url is not None
+                and relation.derivative_url.startswith("/api/v1/public/works/")
+            )
             if is_editorial_cover(asset) or (
                 self._single_copy_storage_enabled
                 and relation.media_kind is not PublicMediaKind.VIDEO
@@ -772,7 +817,11 @@ class PublicMediaWorker:
             current = await self._repository.get_relation(relation_id, for_update=True)
             if current is None or current.derivative_status is DerivativeStatus.READY:
                 return
-            current.derivative_status = DerivativeStatus.READY
+            current.derivative_status = (
+                DerivativeStatus.PROCESSING
+                if derivative.pending
+                else DerivativeStatus.READY
+            )
             current.derivative_public_id = derivative.public_id
             current.derivative_url = derivative.url
             current.derivative_mime_type = derivative.mime_type

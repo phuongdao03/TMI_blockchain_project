@@ -377,6 +377,12 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
         reject = False
         reject_as_bad_request = False
         upload_count = 0
+        pending = False
+        ready = False
+
+        async def public_derivative_ready(self, url: str) -> bool:
+            assert url.startswith("https://res.cloudinary.com/")
+            return self.ready
 
         async def download_asset(self, **kwargs: object) -> bytes:
             assert kwargs["public_id"] == "private/encrypted-video.bin"
@@ -407,13 +413,19 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
                 public_id="ip-certificate/public/derivatives/video-relation",
                 url=(
                     "https://res.cloudinary.com/demo/video/upload/"
-                    "ip-certificate/public/derivatives/video-relation.mp4"
+                    + (
+                        "c_limit,w_640,q_auto:eco,vc_auto,f_mp4/"
+                        if self.pending
+                        else ""
+                    )
+                    + "ip-certificate/public/derivatives/video-relation.mp4"
                 ),
                 mime_type="video/mp4",
                 bytes=4096,
                 width=1920,
                 height=1080,
                 duration_ms=12_000,
+                pending=self.pending,
             )
 
     async def exercise() -> None:
@@ -642,6 +654,34 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             ):
                 await public_media_tasks._reconcile_pending()
                 enqueue.assert_not_called()
+            video_gateway.reject_as_bad_request = False
+            video_gateway.pending = True
+            relation.derivative_status = DerivativeStatus.PENDING
+            relation.derivative_url = None
+            relation.derivative_public_id = None
+            await session.commit()
+            await worker.process(relation_id)
+            assert relation.derivative_status is DerivativeStatus.PROCESSING
+            assert video_gateway.upload_count == 5
+            with (
+                patch.object(
+                    public_media_tasks, "get_session_factory", return_value=factory
+                ),
+                patch.object(
+                    public_media_tasks.generate_public_media_derivative, "delay"
+                ) as enqueue,
+            ):
+                await public_media_tasks._reconcile_pending()
+                enqueue.assert_called_once_with(str(relation_id))
+            await worker.process(relation_id)
+            assert relation.derivative_status is DerivativeStatus.PROCESSING
+            video_gateway.ready = True
+            await worker.process(relation_id)
+            assert relation.derivative_status is DerivativeStatus.READY
+            assert video_gateway.upload_count == 5
+            ready_video = (await service.list_public(work_id))[0]
+            assert ready_video.url == relation.derivative_url
+            assert ready_video.streaming_url is None
         await engine.dispose()
 
     asyncio.run(exercise())

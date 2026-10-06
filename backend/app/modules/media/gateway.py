@@ -63,6 +63,7 @@ class PublicDerivativeMetadata:
     width: int | None = None
     height: int | None = None
     duration_ms: int | None = None
+    pending: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,6 +135,8 @@ class MediaGateway(Protocol):
 
 
 class PublicDerivativeGateway(Protocol):
+    async def public_derivative_ready(self, url: str) -> bool: ...
+
     async def download_asset(
         self,
         *,
@@ -592,16 +595,23 @@ class CloudinaryMediaGateway:
             file_format=source_format,
             expires_at=timestamp + 600,
         )
+        video = source_resource_type == "video"
         parameters = {
             "invalidate": "true",
             "overwrite": "true",
             "public_id": derivative_public_id,
             "timestamp": str(timestamp),
-            "transformation": transformation,
             "type": "upload",
         }
+        if video:
+            parameters["eager"] = transformation
+            parameters["eager_async"] = "true"
+        else:
+            parameters["transformation"] = transformation
         if eager_transformations:
-            parameters["eager"] = "|".join(eager_transformations)
+            parameters["eager"] = "|".join(
+                ((transformation,) if video else ()) + eager_transformations
+            )
         form = {
             **parameters,
             "api_key": self._api_key,
@@ -660,6 +670,15 @@ class CloudinaryMediaGateway:
             or quote(source_public_id, safe="") in secure_url
         ):
             raise MediaProviderUnavailableError()
+        if video:
+            marker = "/video/upload/"
+            if marker not in secure_url:
+                raise MediaProviderUnavailableError()
+            prefix, path = secure_url.split(marker, 1)
+            secure_url = (
+                f"{prefix}{marker}{transformation}/{path.rsplit('.', 1)[0]}.mp4"
+            )
+            file_format = "mp4"
         mime_prefix = "image" if resource_type == "image" else "video"
         duration = self._optional_number(payload, "duration")
         return PublicDerivativeMetadata(
@@ -670,7 +689,26 @@ class CloudinaryMediaGateway:
             width=self._optional_int(payload, "width"),
             height=self._optional_int(payload, "height"),
             duration_ms=round(duration * 1_000) if duration is not None else None,
+            pending=video,
         )
+
+    async def public_derivative_ready(self, url: str) -> bool:
+        parsed = httpx.URL(url)
+        if (
+            parsed.scheme != "https"
+            or parsed.host != "res.cloudinary.com"
+            or not parsed.path.startswith(f"/{self._cloud_name}/video/upload/")
+        ):
+            raise MediaProviderUnavailableError()
+        try:
+            response = await self._client.head(url, follow_redirects=False)
+        except httpx.HTTPError as exc:
+            raise MediaProviderUnavailableError() from exc
+        if response.status_code == 200:
+            return True
+        if response.status_code in {400, 404, 423}:
+            return False
+        raise MediaProviderUnavailableError()
 
     async def _request_json(
         self,
