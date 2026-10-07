@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,15 @@ function hasRequiredValue(value: unknown): boolean {
   return value !== null && value !== undefined;
 }
 
+function displayFieldValue(value: unknown): string {
+  if (Array.isArray(value)) return value.join(", ") || "Chưa điền";
+  if (typeof value === "boolean") return value ? "Có" : "Không";
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value).trim() || "Chưa điền";
+  }
+  return "Chưa điền";
+}
+
 const mimeLabels: Record<string, string> = {
   "application/pdf": "PDF",
   "application/msword": "DOC",
@@ -68,9 +77,12 @@ function formatFileLimit(bytes: number): string {
 
 export function DossierCreateForm() {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const queryClient = useQueryClient();
   const [dossierTypeVersionId, setDossierTypeVersionId] = useState("");
   const [formData, setFormData] = useState<Record<string, unknown>>({});
+  const [prepareStep, setPrepareStep] = useState<0 | 1 | 2 | 3>(0);
+  const [stepError, setStepError] = useState("");
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -97,6 +109,9 @@ export function DossierCreateForm() {
     dossierType?.currentVersion.schema.fields.filter(
       (field) => field.required,
     ) ?? [];
+  const hasTypeSpecificFields = Boolean(
+    dossierType?.currentVersion.schema.fields.length,
+  );
   const informationTotal = 1 + requiredFields.length;
   const informationComplete =
     (title.trim().length >= 3 ? 1 : 0) +
@@ -106,12 +121,17 @@ export function DossierCreateForm() {
     mutationFn: dossierApi.create,
     onSuccess: async (dossier) => {
       await queryClient.invalidateQueries({ queryKey: dossierKeys.lists() });
-      router.push(`/dossiers/${dossier.id}`);
+      router.push(`/dossiers/${dossier.id}?created=1`);
     },
   });
 
   const submit = form.handleSubmit((values) => {
-    if (!dossierType) return;
+    if (
+      !dossierType ||
+      prepareStep !== 3 ||
+      informationComplete !== informationTotal
+    )
+      return;
     create.mutate({
       categoryId: dossierType.categoryId,
       title: values.title,
@@ -122,19 +142,65 @@ export function DossierCreateForm() {
     });
   });
 
+  const reviewCoreInformation = async () => {
+    const valid = await form.trigger();
+    if (!valid) {
+      setStepError("Kiểm tra lại tên hồ sơ trước khi tiếp tục.");
+      return;
+    }
+    setStepError("");
+    setPrepareStep(hasTypeSpecificFields ? 2 : 3);
+  };
+
+  const reviewAdditionalInformation = () => {
+    const missing = requiredFields.find(
+      (field) => !hasRequiredValue(formData[field.key]),
+    );
+    if (missing) {
+      setStepError(
+        `Vui lòng điền ${missing.label || missing.key} trước khi tiếp tục.`,
+      );
+      return;
+    }
+    if (!formRef.current?.reportValidity()) {
+      setStepError(
+        "Kiểm tra định dạng các trường thông tin trước khi tiếp tục.",
+      );
+      return;
+    }
+    setStepError("");
+    setPrepareStep(3);
+  };
+
   return (
-    <form className="dossier-create-form space-y-6" onSubmit={submit}>
-      <nav aria-label="Các bước gửi hồ sơ">
-        <ol className="dossier-journey grid grid-cols-3 gap-2">
-          {[
-            ["01", "Thông tin", "Chọn loại và khai thông tin"],
-            ["02", "Tài liệu", "Sau khi lưu bản nháp"],
-            ["03", "Kiểm tra & nộp", "Xác nhận để gửi hồ sơ"],
-          ].map(([number, label, note], index) => (
+    <form
+      className="dossier-create-form space-y-6"
+      onSubmit={submit}
+      ref={formRef}
+    >
+      <nav aria-label="Các bước chuẩn bị hồ sơ nháp">
+        <ol
+          className={`dossier-journey grid grid-cols-2 gap-2 ${hasTypeSpecificFields ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
+        >
+          {(
+            [
+              [0, "01", "Chọn loại", "Chọn hồ sơ phù hợp"],
+              [1, "02", "Cơ bản", "Tên và mô tả"],
+              ...(hasTypeSpecificFields
+                ? [[2, "03", "Theo loại", "Thông tin riêng"]]
+                : []),
+              [
+                3,
+                hasTypeSpecificFields ? "04" : "03",
+                "Kiểm tra",
+                "Lưu bản nháp",
+              ],
+            ] as Array<[number, string, string, string]>
+          ).map(([step, number, label, note]) => (
             <li
-              aria-current={index === 0 ? "step" : undefined}
+              aria-current={step === prepareStep ? "step" : undefined}
               className={`dossier-journey__step rounded-xl border p-3 ${
-                index === 0
+                step === prepareStep
                   ? "dossier-journey__step--active"
                   : "border-[var(--theme-border)] bg-[var(--theme-surface)]"
               }`}
@@ -176,97 +242,102 @@ export function DossierCreateForm() {
       </section>
 
       <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6">
-        <fieldset aria-describedby="dossier-type-help">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <legend className="text-sm font-bold text-neutral-900">
-              Loại hồ sơ
-            </legend>
-            {dossierTypes.data ? (
-              <span className="text-xs font-medium text-neutral-500">
-                {dossierTypes.data.length} loại đang áp dụng
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-1 text-sm text-neutral-500" id="dossier-type-help">
-            Chọn một loại để nạp biểu mẫu đúng phiên bản.
-          </p>
-          <div className="mt-3 grid max-h-[23rem] gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
-            {dossierTypes.data?.map((item) => {
-              const selected = item.currentVersion.id === dossierTypeVersionId;
-              const description = item.currentVersion.schema.description;
-              return (
-                <label
-                  className="dossier-type-option"
-                  key={item.currentVersion.id}
-                >
-                  <input
-                    checked={selected}
-                    className="sr-only"
-                    name="dossier-type"
-                    onChange={() => {
-                      setDossierTypeVersionId(item.currentVersion.id);
-                      setFormData({});
-                    }}
-                    type="radio"
-                    value={item.currentVersion.id}
-                  />
-                  <span
-                    className="dossier-type-option__indicator"
-                    aria-hidden="true"
-                  >
-                    {selected ? <Check className="size-3.5" /> : null}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-bold text-neutral-950">
-                      {item.name}
-                    </span>
-                    <span className="mt-1 block text-xs leading-5 text-neutral-500">
-                      {description ??
-                        `Biểu mẫu phiên bản ${item.currentVersion.versionNo}`}
-                    </span>
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-          {dossierTypes.isError ? (
-            <div
-              className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4"
-              role="alert"
-            >
-              <p className="text-sm font-medium text-red-800">
-                Chưa thể tải danh mục hồ sơ. Vui lòng kiểm tra kết nối và thử
-                lại.
-              </p>
-              <Button
-                disabled={dossierTypes.isFetching}
-                onClick={() => void dossierTypes.refetch()}
-                type="button"
-                variant="outline"
-              >
-                <RefreshCw
-                  aria-hidden="true"
-                  className={`size-4 ${dossierTypes.isFetching ? "animate-spin" : ""}`}
-                />
-                {dossierTypes.isFetching ? "Đang tải lại…" : "Thử tải lại"}
-              </Button>
+        {prepareStep === 0 ? (
+          <fieldset aria-describedby="dossier-type-help">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <legend className="text-sm font-bold text-neutral-900">
+                Loại hồ sơ
+              </legend>
+              {dossierTypes.data ? (
+                <span className="text-xs font-medium text-neutral-500">
+                  {dossierTypes.data.length} loại đang áp dụng
+                </span>
+              ) : null}
             </div>
-          ) : null}
-          {dossierTypes.isLoading ? (
-            <p className="mt-3 text-sm text-neutral-500">
-              Đang tải danh mục hồ sơ…
+            <p className="mt-1 text-sm text-neutral-500" id="dossier-type-help">
+              Chọn một loại để nạp biểu mẫu đúng phiên bản.
             </p>
-          ) : null}
-          {dossierTypes.isSuccess && !hasDossierTypes ? (
-            <p className="mt-3 text-sm text-neutral-500" role="status">
-              Hiện chưa có loại hồ sơ đang mở. Vui lòng liên hệ bộ phận hỗ trợ.
-            </p>
-          ) : null}
-        </fieldset>
+            <div className="mt-3 grid max-h-[23rem] gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
+              {dossierTypes.data?.map((item) => {
+                const selected =
+                  item.currentVersion.id === dossierTypeVersionId;
+                const description = item.currentVersion.schema.description;
+                return (
+                  <label
+                    className="dossier-type-option"
+                    key={item.currentVersion.id}
+                  >
+                    <input
+                      checked={selected}
+                      className="sr-only"
+                      name="dossier-type"
+                      onChange={() => {
+                        setDossierTypeVersionId(item.currentVersion.id);
+                        setFormData({});
+                        setStepError("");
+                      }}
+                      type="radio"
+                      value={item.currentVersion.id}
+                    />
+                    <span
+                      className="dossier-type-option__indicator"
+                      aria-hidden="true"
+                    >
+                      {selected ? <Check className="size-3.5" /> : null}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-bold text-neutral-950">
+                        {item.name}
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-neutral-500">
+                        {description ??
+                          `Biểu mẫu phiên bản ${item.currentVersion.versionNo}`}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            {dossierTypes.isError ? (
+              <div
+                className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4"
+                role="alert"
+              >
+                <p className="text-sm font-medium text-red-800">
+                  Chưa thể tải danh mục hồ sơ. Vui lòng kiểm tra kết nối và thử
+                  lại.
+                </p>
+                <Button
+                  disabled={dossierTypes.isFetching}
+                  onClick={() => void dossierTypes.refetch()}
+                  type="button"
+                  variant="outline"
+                >
+                  <RefreshCw
+                    aria-hidden="true"
+                    className={`size-4 ${dossierTypes.isFetching ? "animate-spin" : ""}`}
+                  />
+                  {dossierTypes.isFetching ? "Đang tải lại…" : "Thử tải lại"}
+                </Button>
+              </div>
+            ) : null}
+            {dossierTypes.isLoading ? (
+              <p className="mt-3 text-sm text-neutral-500">
+                Đang tải danh mục hồ sơ…
+              </p>
+            ) : null}
+            {dossierTypes.isSuccess && !hasDossierTypes ? (
+              <p className="mt-3 text-sm text-neutral-500" role="status">
+                Hiện chưa có loại hồ sơ đang mở. Vui lòng liên hệ bộ phận hỗ
+                trợ.
+              </p>
+            ) : null}
+          </fieldset>
+        ) : null}
 
         {hasDossierTypes ? (
           <>
-            {dossierType ? (
+            {dossierType && prepareStep === 0 ? (
               <section
                 aria-labelledby="document-preflight-title"
                 className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:p-5"
@@ -329,250 +400,344 @@ export function DossierCreateForm() {
                 )}
               </section>
             ) : null}
-            <div>
-              <label
-                className="text-sm font-bold text-neutral-900"
-                htmlFor="dossier-title"
-              >
-                Tên tài sản hoặc tác phẩm
-              </label>
-              <input
-                aria-describedby="dossier-title-error"
-                className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
-                id="dossier-title"
-                placeholder="Ví dụ: Bộ sưu tập văn hóa Việt"
-                {...form.register("title")}
-              />
-              {form.formState.errors.title ? (
-                <p
-                  className="mt-2 text-sm font-medium text-error"
-                  id="dossier-title-error"
-                  role="alert"
-                >
-                  {form.formState.errors.title.message}
-                </p>
-              ) : null}
-            </div>
-
-            <div>
-              <label
-                className="text-sm font-bold text-neutral-900"
-                htmlFor="dossier-summary"
-              >
-                Mô tả ngắn
-              </label>
-              <textarea
-                className="mt-2 min-h-32 w-full resize-y rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
-                id="dossier-summary"
-                placeholder="Nêu mục đích, nguồn gốc và phạm vi tài sản cần xác lập."
-                {...form.register("summary")}
-              />
-            </div>
-
-            <fieldset>
-              <legend className="text-sm font-bold text-neutral-900">
-                Chế độ hiển thị
-              </legend>
-              <div className="mt-2 grid gap-3 sm:grid-cols-3">
-                {[
-                  ["PRIVATE", "Riêng tư", "Chỉ chủ hồ sơ và người xử lý"],
-                  ["UNLISTED", "Không niêm yết", "Chỉ người có liên kết"],
-                  [
-                    "PUBLIC",
-                    "Công khai",
-                    "Có thể công bố sau cấp bằng xác lập",
-                  ],
-                ].map(([value, label, description]) => (
-                  <label className="dossier-visibility-option" key={value}>
-                    <input
-                      className="accent-primary-600"
-                      type="radio"
-                      value={value}
-                      {...form.register("visibility")}
-                    />
-                    <span className="ml-2 text-sm font-bold">{label}</span>
-                    <span className="mt-1 block pl-6 text-xs leading-5 text-neutral-500">
-                      {description}
-                    </span>
+            {prepareStep === 1 ? (
+              <>
+                <div>
+                  <label
+                    className="text-sm font-bold text-neutral-900"
+                    htmlFor="dossier-title"
+                  >
+                    Tên tài sản hoặc tác phẩm
                   </label>
-                ))}
-              </div>
-            </fieldset>
+                  <input
+                    aria-describedby="dossier-title-error"
+                    className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
+                    id="dossier-title"
+                    placeholder="Ví dụ: Bộ sưu tập văn hóa Việt"
+                    {...form.register("title")}
+                  />
+                  {form.formState.errors.title ? (
+                    <p
+                      className="mt-2 text-sm font-medium text-error"
+                      id="dossier-title-error"
+                      role="alert"
+                    >
+                      {form.formState.errors.title.message}
+                    </p>
+                  ) : null}
+                </div>
 
-            {dossierType?.currentVersion.schema.fields.map((field) => (
-              <div key={field.key}>
-                <label
-                  className="text-sm font-bold text-neutral-900"
-                  htmlFor={`field-${field.key}`}
-                >
-                  {field.label || field.key}
-                  {field.required ? " *" : ""}
-                </label>
-                {field.helpText ? (
-                  <p className="mt-1 text-xs leading-5 text-neutral-500">
-                    {field.helpText}
-                  </p>
-                ) : null}
-                {field.type === "textarea" ? (
+                <div>
+                  <label
+                    className="text-sm font-bold text-neutral-900"
+                    htmlFor="dossier-summary"
+                  >
+                    Mô tả ngắn
+                  </label>
                   <textarea
-                    className="mt-2 min-h-28 w-full resize-y rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm leading-6"
-                    id={`field-${field.key}`}
-                    onChange={(event) =>
-                      setFormData((current) => ({
-                        ...current,
-                        [field.key]: event.target.value,
-                      }))
-                    }
-                    placeholder={field.placeholder}
-                    required={field.required}
-                    value={stringFieldValue(formData[field.key])}
+                    className="mt-2 min-h-32 w-full resize-y rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
+                    id="dossier-summary"
+                    placeholder="Nêu mục đích, nguồn gốc và phạm vi tài sản cần xác lập."
+                    {...form.register("summary")}
                   />
-                ) : field.type === "select" ? (
-                  <select
-                    className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm"
-                    id={`field-${field.key}`}
-                    onChange={(event) =>
-                      setFormData((current) => ({
-                        ...current,
-                        [field.key]: event.target.value,
-                      }))
-                    }
-                    required={field.required}
-                    value={stringFieldValue(formData[field.key])}
-                  >
-                    <option value="">Chọn phương án</option>
-                    {(field.options ?? []).map((option) => {
-                      const value =
-                        typeof option === "string" ? option : option.value;
-                      const label =
-                        typeof option === "string"
-                          ? option
-                          : (option.label ?? option.value);
-                      return (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      );
-                    })}
-                  </select>
-                ) : field.type === "multiselect" ? (
-                  <select
-                    className="mt-2 min-h-28 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm"
-                    id={`field-${field.key}`}
-                    multiple
-                    onChange={(event) =>
-                      setFormData((current) => ({
-                        ...current,
-                        [field.key]: Array.from(
-                          event.target.selectedOptions,
-                          (option) => option.value,
-                        ),
-                      }))
-                    }
-                    required={field.required}
-                    value={multiSelectFieldValue(formData[field.key])}
-                  >
-                    {(field.options ?? []).map((option) => {
-                      const value =
-                        typeof option === "string" ? option : option.value;
-                      const label =
-                        typeof option === "string"
-                          ? option
-                          : (option.label ?? option.value);
-                      return (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      );
-                    })}
-                  </select>
-                ) : field.type === "radio" ? (
-                  <fieldset className="mt-2 grid gap-2 sm:grid-cols-2">
-                    <legend className="sr-only">
+                </div>
+
+                <fieldset>
+                  <legend className="text-sm font-bold text-neutral-900">
+                    Chế độ hiển thị
+                  </legend>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                    {[
+                      ["PRIVATE", "Riêng tư", "Chỉ chủ hồ sơ và người xử lý"],
+                      ["UNLISTED", "Không niêm yết", "Chỉ người có liên kết"],
+                      [
+                        "PUBLIC",
+                        "Công khai",
+                        "Có thể công bố sau cấp bằng xác lập",
+                      ],
+                    ].map(([value, label, description]) => (
+                      <label className="dossier-visibility-option" key={value}>
+                        <input
+                          className="accent-primary-600"
+                          type="radio"
+                          value={value}
+                          {...form.register("visibility")}
+                        />
+                        <span className="ml-2 text-sm font-bold">{label}</span>
+                        <span className="mt-1 block pl-6 text-xs leading-5 text-neutral-500">
+                          {description}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              </>
+            ) : null}
+            {prepareStep === 2 ? (
+              <>
+                <div className="rounded-xl border border-primary-200 bg-primary-50 p-4 text-sm text-primary-950">
+                  <h2 className="font-bold">
+                    Thông tin riêng cho loại hồ sơ này
+                  </h2>
+                  <p className="mt-1 leading-6">
+                    Điền các mục được đánh dấu bắt buộc. Bạn có thể quay lại
+                    bước trước mà không mất nội dung đã nhập.
+                  </p>
+                </div>
+                {dossierType?.currentVersion.schema.fields.map((field) => (
+                  <div key={field.key}>
+                    <label
+                      className="text-sm font-bold text-neutral-900"
+                      htmlFor={`field-${field.key}`}
+                    >
                       {field.label || field.key}
-                    </legend>
-                    {(field.options ?? []).map((option) => {
-                      const value =
-                        typeof option === "string" ? option : option.value;
-                      const label =
-                        typeof option === "string"
-                          ? option
-                          : (option.label ?? option.value);
-                      return (
-                        <label className="dossier-choice-option" key={value}>
-                          <input
-                            checked={formData[field.key] === value}
-                            name={`field-${field.key}`}
-                            onChange={() =>
-                              setFormData((current) => ({
-                                ...current,
-                                [field.key]: value,
-                              }))
-                            }
-                            required={field.required}
-                            type="radio"
-                            value={value}
-                          />
-                          <span>{label}</span>
-                        </label>
-                      );
-                    })}
-                  </fieldset>
-                ) : field.type === "checkbox" ? (
-                  <input
-                    checked={formData[field.key] === true}
-                    className="ml-3 accent-primary-600"
-                    id={`field-${field.key}`}
-                    onChange={(event) =>
-                      setFormData((current) => ({
-                        ...current,
-                        [field.key]: event.target.checked,
-                      }))
-                    }
-                    type="checkbox"
-                  />
-                ) : (
-                  <input
-                    className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm"
-                    id={`field-${field.key}`}
-                    onChange={(event) =>
-                      setFormData((current) => ({
-                        ...current,
-                        [field.key]:
-                          field.type === "number" || field.type === "currency"
-                            ? Number(event.target.value)
-                            : event.target.value,
-                      }))
-                    }
-                    placeholder={field.placeholder}
-                    required={field.required}
-                    type={
-                      field.type === "phone"
-                        ? "tel"
-                        : field.type === "currency"
-                          ? "number"
-                          : field.type === "address" ||
-                              field.type === "person" ||
-                              field.type === "organization" ||
-                              field.type === "file"
-                            ? "text"
-                            : field.type
-                    }
-                    value={
-                      typeof formData[field.key] === "string" ||
-                      typeof formData[field.key] === "number"
-                        ? String(formData[field.key])
-                        : ""
-                    }
-                  />
-                )}
-              </div>
-            ))}
+                      {field.required ? " *" : ""}
+                    </label>
+                    {field.helpText ? (
+                      <p className="mt-1 text-xs leading-5 text-neutral-500">
+                        {field.helpText}
+                      </p>
+                    ) : null}
+                    {field.type === "textarea" ? (
+                      <textarea
+                        className="mt-2 min-h-28 w-full resize-y rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm leading-6"
+                        id={`field-${field.key}`}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            [field.key]: event.target.value,
+                          }))
+                        }
+                        placeholder={field.placeholder}
+                        required={field.required}
+                        value={stringFieldValue(formData[field.key])}
+                      />
+                    ) : field.type === "select" ? (
+                      <select
+                        className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm"
+                        id={`field-${field.key}`}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            [field.key]: event.target.value,
+                          }))
+                        }
+                        required={field.required}
+                        value={stringFieldValue(formData[field.key])}
+                      >
+                        <option value="">Chọn phương án</option>
+                        {(field.options ?? []).map((option) => {
+                          const value =
+                            typeof option === "string" ? option : option.value;
+                          const label =
+                            typeof option === "string"
+                              ? option
+                              : (option.label ?? option.value);
+                          return (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    ) : field.type === "multiselect" ? (
+                      <select
+                        className="mt-2 min-h-28 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm"
+                        id={`field-${field.key}`}
+                        multiple
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            [field.key]: Array.from(
+                              event.target.selectedOptions,
+                              (option) => option.value,
+                            ),
+                          }))
+                        }
+                        required={field.required}
+                        value={multiSelectFieldValue(formData[field.key])}
+                      >
+                        {(field.options ?? []).map((option) => {
+                          const value =
+                            typeof option === "string" ? option : option.value;
+                          const label =
+                            typeof option === "string"
+                              ? option
+                              : (option.label ?? option.value);
+                          return (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    ) : field.type === "radio" ? (
+                      <fieldset className="mt-2 grid gap-2 sm:grid-cols-2">
+                        <legend className="sr-only">
+                          {field.label || field.key}
+                        </legend>
+                        {(field.options ?? []).map((option) => {
+                          const value =
+                            typeof option === "string" ? option : option.value;
+                          const label =
+                            typeof option === "string"
+                              ? option
+                              : (option.label ?? option.value);
+                          return (
+                            <label
+                              className="dossier-choice-option"
+                              key={value}
+                            >
+                              <input
+                                checked={formData[field.key] === value}
+                                name={`field-${field.key}`}
+                                onChange={() =>
+                                  setFormData((current) => ({
+                                    ...current,
+                                    [field.key]: value,
+                                  }))
+                                }
+                                required={field.required}
+                                type="radio"
+                                value={value}
+                              />
+                              <span>{label}</span>
+                            </label>
+                          );
+                        })}
+                      </fieldset>
+                    ) : field.type === "checkbox" ? (
+                      <input
+                        checked={formData[field.key] === true}
+                        className="ml-3 accent-primary-600"
+                        id={`field-${field.key}`}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            [field.key]: event.target.checked,
+                          }))
+                        }
+                        type="checkbox"
+                      />
+                    ) : (
+                      <input
+                        className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm"
+                        id={`field-${field.key}`}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            [field.key]:
+                              field.type === "number" ||
+                              field.type === "currency"
+                                ? event.target.value === ""
+                                  ? ""
+                                  : Number(event.target.value)
+                                : event.target.value,
+                          }))
+                        }
+                        placeholder={field.placeholder}
+                        required={field.required}
+                        type={
+                          field.type === "phone"
+                            ? "tel"
+                            : field.type === "currency"
+                              ? "number"
+                              : field.type === "address" ||
+                                  field.type === "person" ||
+                                  field.type === "organization" ||
+                                  field.type === "file"
+                                ? "text"
+                                : field.type
+                        }
+                        value={
+                          typeof formData[field.key] === "string" ||
+                          typeof formData[field.key] === "number"
+                            ? String(formData[field.key])
+                            : ""
+                        }
+                      />
+                    )}
+                  </div>
+                ))}
+              </>
+            ) : null}
           </>
         ) : null}
       </section>
 
-      {create.error ? (
+      {prepareStep === 3 ? (
+        <section
+          className="space-y-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6"
+          aria-labelledby="draft-review-title"
+        >
+          <h2 className="text-xl font-bold" id="draft-review-title">
+            Kiểm tra thông tin
+          </h2>
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-[var(--theme-muted)]">Loại hồ sơ</dt>
+              <dd className="mt-1 font-bold">{dossierType?.name}</dd>
+            </div>
+            <div>
+              <dt className="text-[var(--theme-muted)]">Tên hồ sơ</dt>
+              <dd className="mt-1 font-bold">{title}</dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-[var(--theme-muted)]">Mô tả ngắn</dt>
+              <dd className="mt-1 whitespace-pre-wrap break-words font-medium">
+                {form.getValues("summary")?.trim() || "Chưa điền"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--theme-muted)]">Thông tin bắt buộc</dt>
+              <dd className="mt-1 font-bold">
+                {informationComplete}/{informationTotal} đã điền
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--theme-muted)]">Chế độ hiển thị</dt>
+              <dd className="mt-1 font-bold">
+                {form.getValues("visibility") === "PRIVATE"
+                  ? "Riêng tư"
+                  : form.getValues("visibility") === "UNLISTED"
+                    ? "Không niêm yết"
+                    : "Công khai"}
+              </dd>
+            </div>
+          </dl>
+          {hasTypeSpecificFields ? (
+            <div className="border-t border-[var(--theme-border)] pt-4">
+              <h3 className="text-sm font-bold">Thông tin theo loại hồ sơ</h3>
+              <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                {dossierType?.currentVersion.schema.fields.map((field) => (
+                  <div key={field.key}>
+                    <dt className="text-[var(--theme-muted)]">
+                      {field.label || field.key}
+                    </dt>
+                    <dd className="mt-1 whitespace-pre-wrap break-words font-medium">
+                      {displayFieldValue(formData[field.key])}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-3 text-xs leading-5 text-amber-800">
+                Sau khi tạo bản nháp, các mục này chưa thể chỉnh sửa. Hãy quay
+                lại kiểm tra trước khi lưu.
+              </p>
+            </div>
+          ) : null}
+          <div className="rounded-xl border border-primary-200 bg-primary-50 p-4 text-sm text-primary-950">
+            <p className="font-bold">Tạo bản nháp trước khi tải tài liệu</p>
+            <p className="mt-1 leading-6">
+              Bước này chỉ lưu thông tin. Sau đó bạn sẽ tải{" "}
+              {documentRules.length} nhóm tài liệu, kiểm tra và nộp hồ sơ. Bản
+              nháp chưa được gửi thẩm định.
+            </p>
+          </div>
+        </section>
+      ) : null}
+
+      {prepareStep === 3 && create.error ? (
         <div
           className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800"
           role="alert"
@@ -595,7 +760,7 @@ export function DossierCreateForm() {
         </div>
       ) : null}
 
-      {dossierType ? (
+      {dossierType && prepareStep === 2 ? (
         <section
           aria-label="Tiến độ khai thông tin"
           className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4"
@@ -626,17 +791,68 @@ export function DossierCreateForm() {
         </section>
       ) : null}
 
+      {stepError && (prepareStep === 1 || prepareStep === 2) ? (
+        <p
+          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800"
+          role="alert"
+        >
+          {stepError}
+        </p>
+      ) : null}
       {hasDossierTypes ? (
-        <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
-          <Button
-            className="min-w-44"
-            disabled={create.isPending || !dossierType}
-            type="submit"
-          >
-            <FilePlus2 aria-hidden="true" className="size-4" />
-            {create.isPending ? "Đang tạo…" : "Tạo hồ sơ nháp"}
-            <ArrowRight aria-hidden="true" className="size-4" />
-          </Button>
+        <div className="flex flex-wrap justify-end gap-3">
+          {prepareStep > 0 ? (
+            <Button
+              onClick={() => {
+                setStepError("");
+                setPrepareStep(
+                  prepareStep === 3
+                    ? hasTypeSpecificFields
+                      ? 2
+                      : 1
+                    : prepareStep === 2
+                      ? 1
+                      : 0,
+                );
+              }}
+              type="button"
+              variant="outline"
+            >
+              Quay lại
+            </Button>
+          ) : null}
+          {prepareStep === 0 ? (
+            <Button
+              disabled={!dossierType}
+              onClick={() => setPrepareStep(1)}
+              type="button"
+            >
+              Tiếp tục nhập thông tin{" "}
+              <ArrowRight aria-hidden="true" className="size-4" />
+            </Button>
+          ) : prepareStep === 1 ? (
+            <Button onClick={() => void reviewCoreInformation()} type="button">
+              {hasTypeSpecificFields
+                ? "Tiếp tục thông tin theo loại"
+                : "Kiểm tra thông tin"}{" "}
+              <ArrowRight aria-hidden="true" className="size-4" />
+            </Button>
+          ) : prepareStep === 2 ? (
+            <Button onClick={reviewAdditionalInformation} type="button">
+              Kiểm tra thông tin{" "}
+              <ArrowRight aria-hidden="true" className="size-4" />
+            </Button>
+          ) : (
+            <Button
+              className="min-w-44"
+              disabled={create.isPending}
+              type="submit"
+            >
+              <FilePlus2 aria-hidden="true" className="size-4" />
+              {create.isPending ? "Đang tạo…" : "Tạo hồ sơ nháp"}
+              <ArrowRight aria-hidden="true" className="size-4" />
+            </Button>
+          )}
         </div>
       ) : null}
     </form>

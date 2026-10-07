@@ -94,6 +94,7 @@ class PublicMediaDeliveryService:
         cover_x: int | None = None,
         cover_y: int | None = None,
         cover_zoom: int | None = None,
+        cover_width: int = 1280,
     ) -> Response:
         repository = PublicMediaRepository(self.session)
         async with self.session.begin():
@@ -155,7 +156,11 @@ class PublicMediaDeliveryService:
             x = cover_x if cover_x is not None else relation.cover_x
             y = cover_y if cover_y is not None else relation.cover_y
             zoom = cover_zoom if cover_zoom is not None else relation.cover_zoom
-            cache_key = f"cover:{asset.sha256}:{x}:{y}:{zoom}" if asset.sha256 else None
+            cache_key = (
+                f"cover:{asset.sha256}:{x}:{y}:{zoom}:{cover_width}"
+                if asset.sha256
+                else None
+            )
             cached = cached_poster(cache_key)
             if cached is not None:
                 return content_response(cached, "image/jpeg", None)
@@ -166,6 +171,7 @@ class PublicMediaDeliveryService:
                 x=cover_x if cover_x is not None else relation.cover_x,
                 y=cover_y if cover_y is not None else relation.cover_y,
                 zoom=cover_zoom if cover_zoom is not None else relation.cover_zoom,
+                width=cover_width,
             )
             retain_poster(cache_key, cropped)
             return content_response(cropped, "image/jpeg", None)

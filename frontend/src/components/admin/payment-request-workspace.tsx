@@ -30,9 +30,13 @@ function requestKey() {
 const controlClass =
   "min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-[var(--theme-text)] outline-none transition-[border-color,box-shadow] focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10";
 
-export function PaymentRequestWorkspace() {
+export function PaymentRequestWorkspace({
+  initialDossierId = "",
+}: {
+  initialDossierId?: string;
+}) {
   const queryClient = useQueryClient();
-  const [dossierId, setDossierId] = useState("");
+  const [dossierId, setDossierId] = useState(initialDossierId);
   const [mode, setMode] = useState<FeeMode>("PAID");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState(
@@ -83,7 +87,7 @@ export function PaymentRequestWorkspace() {
     Number(amount) <= 1_000_000_000 &&
     description.trim().length >= 5;
   const valid =
-    Boolean(dossierId) &&
+    Boolean(selected) &&
     (mode === "PAID" ? paidValid : waiverReason.trim().length >= 5);
   const success = mode === "PAID" ? issue.data : waive.data;
   const error = mode === "PAID" ? issue.error : waive.error;

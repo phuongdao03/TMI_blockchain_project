@@ -18,10 +18,23 @@ def test_crop_cover_returns_landscape_without_changing_source() -> None:
     assert original == output.getvalue()
 
 
+def test_crop_cover_supports_a_mobile_width() -> None:
+    output = BytesIO()
+    Image.new("RGB", (1600, 900), "red").save(output, format="PNG")
+    result = crop_cover(output.getvalue(), x=50, y=50, zoom=100, width=640)
+    assert Image.open(BytesIO(result)).size == (640, 360)
+
+
 @pytest.mark.parametrize("x,y,zoom", [(-1, 50, 100), (50, 101, 100), (50, 50, 301)])
 def test_crop_cover_rejects_invalid_configuration(x: int, y: int, zoom: int) -> None:
     with pytest.raises(ValueError):
         crop_cover(b"", x=x, y=y, zoom=zoom)
+
+
+@pytest.mark.parametrize("width", [0, 319, 1281, 999999])
+def test_crop_cover_rejects_unsafe_width(width: int) -> None:
+    with pytest.raises(ValueError):
+        crop_cover(b"", x=50, y=50, zoom=100, width=width)
 
 
 def test_editorial_marker_cannot_match_a_regular_evidence_filename() -> None:

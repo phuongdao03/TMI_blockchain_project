@@ -12,11 +12,14 @@ import {
   LockKeyhole,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 import { EvidenceViewer } from "@/components/reviews/evidence-viewer";
 import { FiveTScorecard } from "@/components/reviews/five-t-scorecard";
 import { ReviewAssistancePanel } from "@/components/reviews/review-assistance-panel";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
 import { reviewApi } from "@/lib/api/client";
 import type { ReviewAssignmentDetail, ReviewDraft } from "@/lib/api/types";
 import { reviewKeys } from "@/lib/reviews/query-keys";
@@ -61,6 +64,8 @@ export function reviewDeadlineState(dueAt: string | null, now = new Date()) {
 
 export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
   const queryClient = useQueryClient();
+  const [showConflictReason, setShowConflictReason] = useState(false);
+  const [conflictReason, setConflictReason] = useState("");
   const query = useQuery({
     queryKey: reviewKeys.detail(assignmentId),
     queryFn: () => reviewApi.get(assignmentId),
@@ -68,6 +73,19 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
   const save = useMutation({
     mutationFn: (draft: ReviewDraft) =>
       reviewApi.saveDraft(assignmentId, draft),
+  });
+  const declareConflict = useMutation({
+    mutationFn: (input: { hasConflict: boolean; reason?: string }) =>
+      reviewApi.declareConflict(assignmentId, input),
+    onSuccess: async (assignment) => {
+      queryClient.setQueryData<ReviewAssignmentDetail>(
+        reviewKeys.detail(assignmentId),
+        (current) => (current ? { ...current, assignment } : current),
+      );
+      await queryClient.invalidateQueries({
+        queryKey: reviewKeys.detail(assignmentId),
+      });
+    },
   });
   const submit = useMutation({
     mutationFn: () => reviewApi.submit(assignmentId),
@@ -144,6 +162,91 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           </span>
         </div>
       </header>
+
+      {detail.assignment.status === "SUBMITTED" ? (
+        <WorkflowNextStep
+          action={{ href: "/reviews", label: "Về hàng đợi" }}
+          description="Admin sẽ đọc báo cáo và ra quyết định cuối. Bạn có thể tiếp tục các hồ sơ khác trong hàng đợi."
+          title="Đã gửi báo cáo cho Admin"
+          tone="success"
+        />
+      ) : detail.assignment.status === "IN_PROGRESS" ? (
+        <WorkflowNextStep
+          action={{ href: "#review-form", label: "Tiếp tục báo cáo" }}
+          description="Kiểm tra từng bằng chứng, lưu nội dung đang làm và gửi báo cáo khi đã hoàn tất. Sau khi gửi, Admin sẽ ra quyết định cuối."
+          title="Việc cần làm · Hoàn tất báo cáo thẩm định"
+        />
+      ) : detail.assignment.status === "ASSIGNED" ? (
+        <div className="space-y-4">
+          <WorkflowNextStep
+            description="Xác nhận có hay không có xung đột lợi ích trước khi xem tài liệu và lập báo cáo. Nếu có xung đột, phân công sẽ kết thúc để Admin giao người khác."
+            title="Trước khi thẩm định · Xác nhận xung đột lợi ích"
+          />
+          <div className="space-y-4 border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button
+                disabled={declareConflict.isPending}
+                onClick={() => declareConflict.mutate({ hasConflict: false })}
+              >
+                {declareConflict.isPending ? (
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-4 animate-spin"
+                  />
+                ) : null}
+                Không có xung đột lợi ích
+              </Button>
+              <Button
+                disabled={declareConflict.isPending}
+                onClick={() => setShowConflictReason(true)}
+                variant="outline"
+              >
+                Có xung đột lợi ích
+              </Button>
+            </div>
+            {showConflictReason ? (
+              <div className="space-y-3">
+                <label
+                  className="block text-sm font-semibold"
+                  htmlFor="review-conflict-reason"
+                >
+                  Lý do xung đột
+                </label>
+                <textarea
+                  className="min-h-24 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-3 text-sm"
+                  id="review-conflict-reason"
+                  maxLength={2000}
+                  onChange={(event) => setConflictReason(event.target.value)}
+                  value={conflictReason}
+                />
+                <Button
+                  disabled={declareConflict.isPending || !conflictReason.trim()}
+                  onClick={() =>
+                    declareConflict.mutate({
+                      hasConflict: true,
+                      reason: conflictReason.trim(),
+                    })
+                  }
+                >
+                  Xác nhận xung đột
+                </Button>
+              </div>
+            ) : null}
+            {declareConflict.error ? (
+              <p className="text-sm font-semibold text-error" role="alert">
+                Không thể xác nhận phân công. {declareConflict.error.message}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : detail.assignment.status === "CONFLICTED" ? (
+        <WorkflowNextStep
+          action={{ href: "/reviews", label: "Về hàng đợi" }}
+          description="Đã ghi nhận xung đột lợi ích và kết thúc phân công này. Admin sẽ chọn người thẩm định khác; bạn có thể tiếp tục công việc còn lại."
+          title="Đã báo xung đột cho Admin"
+          tone="success"
+        />
+      ) : null}
 
       <ol
         aria-label="Quy trình thẩm định"
@@ -245,7 +348,10 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
       ) : null}
       {["IN_PROGRESS", "SUBMITTED"].includes(detail.assignment.status) &&
       detail.snapshotJson ? (
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(21rem,0.85fr)_minmax(34rem,1.15fr)]">
+        <div
+          className="grid items-start gap-6 xl:grid-cols-[minmax(21rem,0.85fr)_minmax(34rem,1.15fr)]"
+          id="review-form"
+        >
           <aside
             aria-label="Hồ sơ và tài liệu kiểm chứng"
             className="min-w-0 space-y-4"

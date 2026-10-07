@@ -47,6 +47,10 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
+function isActive(status: ReviewAssignmentStatus) {
+  return status === "ASSIGNED" || status === "IN_PROGRESS";
+}
+
 export function ReviewAssignmentList({
   page,
   pageSize,
@@ -57,10 +61,11 @@ export function ReviewAssignmentList({
   status?: ReviewAssignmentStatus;
 }) {
   const filters: ReviewListFilters = { page, pageSize, status };
-  const { data, error, isPending } = useQuery({
-    queryKey: reviewKeys.list(filters),
-    queryFn: () => reviewApi.list(filters),
-  });
+  const { data, dataUpdatedAt, error, isPending, isFetching, refetch } =
+    useQuery({
+      queryKey: reviewKeys.list(filters),
+      queryFn: () => reviewApi.list(filters),
+    });
 
   if (isPending) {
     return (
@@ -81,7 +86,15 @@ export function ReviewAssignmentList({
         className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-semibold text-red-800"
         role="alert"
       >
-        Không thể tải hàng đợi thẩm định. Vui lòng thử lại.
+        <p>Không thể tải hàng đợi thẩm định. Vui lòng thử lại.</p>
+        <button
+          className="mt-3 min-h-11 rounded-lg border border-red-300 px-4"
+          disabled={isFetching}
+          onClick={() => void refetch()}
+          type="button"
+        >
+          Thử tải lại
+        </button>
       </div>
     );
   }
@@ -100,6 +113,26 @@ export function ReviewAssignmentList({
   }
 
   const totalPages = Math.max(1, Math.ceil(data.meta.total / pageSize));
+  const isOverdue = (status: ReviewAssignmentStatus, dueAt: string | null) =>
+    isActive(status) &&
+    dueAt !== null &&
+    new Date(dueAt).getTime() < dataUpdatedAt;
+  const orderedAssignments = [...data.data].sort((left, right) => {
+    const priority = (status: ReviewAssignmentStatus, dueAt: string | null) =>
+      isOverdue(status, dueAt) ? 0 : isActive(status) ? 1 : 2;
+    const difference =
+      priority(left.assignment.status, left.assignment.dueAt) -
+      priority(right.assignment.status, right.assignment.dueAt);
+    if (difference) return difference;
+    return (
+      (left.assignment.dueAt
+        ? new Date(left.assignment.dueAt).getTime()
+        : Number.POSITIVE_INFINITY) -
+      (right.assignment.dueAt
+        ? new Date(right.assignment.dueAt).getTime()
+        : Number.POSITIVE_INFINITY)
+    );
+  });
   return (
     <section className="space-y-4" aria-labelledby="review-work-title">
       <header className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--theme-border)] pb-4">
@@ -115,9 +148,12 @@ export function ReviewAssignmentList({
           {data.meta.total} hồ sơ trong hàng đợi
         </p>
       </header>
+      <p className="text-xs text-[var(--theme-muted)]">
+        Việc trễ hạn và đang xử lý được đưa lên trước trong trang này.
+      </p>
       <div className="overflow-hidden rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text)]">
         <div className="divide-y divide-[var(--theme-border)]">
-          {data.data.map((item) => (
+          {orderedAssignments.map((item) => (
             <article
               className="relative grid gap-5 border-l-4 border-l-transparent p-5 transition hover:border-l-[var(--theme-accent)] hover:bg-[var(--theme-elevated)] md:grid-cols-[minmax(0,1fr)_auto] md:items-center lg:p-6"
               key={item.assignment.id}
@@ -132,6 +168,11 @@ export function ReviewAssignmentList({
                   >
                     {statusLabels[item.assignment.status]}
                   </span>
+                  {isOverdue(item.assignment.status, item.assignment.dueAt) ? (
+                    <span className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-800">
+                      Trễ hạn
+                    </span>
+                  ) : null}
                   <span className="font-mono text-xs font-semibold text-[var(--theme-muted)]">
                     {item.dossierCode} · V{item.versionNo}
                   </span>

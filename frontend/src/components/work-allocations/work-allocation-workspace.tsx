@@ -7,6 +7,7 @@ import { useState } from "react";
 import { DossierAllocationForm } from "@/components/work-allocations/dossier-allocation-form";
 import { GenericAllocationForm } from "@/components/work-allocations/generic-allocation-form";
 import { WorkAllocationList } from "@/components/work-allocations/work-allocation-list";
+import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
 import {
   adminReviewApi,
   staffAccountsApi,
@@ -24,6 +25,9 @@ export function WorkAllocationWorkspace() {
   >(null);
   const [selectedDossier, setSelectedDossier] =
     useState<AdminReviewDossierSummary | null>(null);
+  const [completedKind, setCompletedKind] = useState<
+    "GENERIC" | "DOSSIER_REVIEW" | "ACTIVATED" | null
+  >(null);
   const queryClient = useQueryClient();
   const allocations = useQuery({
     queryKey: ["work-allocations"],
@@ -53,8 +57,10 @@ export function WorkAllocationWorkspace() {
   const activateDraft = useMutation({
     mutationFn: (allocationId: string) =>
       workAllocationAdminApi.activate(allocationId, []),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["work-allocations"] }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["work-allocations"] });
+      setCompletedKind("ACTIVATED");
+    },
   });
   const refresh = async () => {
     await Promise.all([
@@ -65,6 +71,10 @@ export function WorkAllocationWorkspace() {
     ]);
     setIsCreating(false);
     setSelectedDossier(null);
+  };
+  const completeAssignment = async (kind: "GENERIC" | "DOSSIER_REVIEW") => {
+    await refresh();
+    setCompletedKind(kind);
   };
 
   return (
@@ -93,6 +103,7 @@ export function WorkAllocationWorkspace() {
           <button
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-400 px-5 text-sm font-bold text-neutral-950 transition hover:bg-primary-300 active:translate-y-px"
             onClick={() => {
+              setCompletedKind(null);
               setSelectedDossier(null);
               setIsCreating((current) => !current);
             }}
@@ -103,6 +114,28 @@ export function WorkAllocationWorkspace() {
           </button>
         </div>
       </header>
+      {completedKind ? (
+        <WorkflowNextStep
+          action={
+            completedKind === "DOSSIER_REVIEW"
+              ? { href: "/admin/reviews", label: "Theo dõi thẩm định" }
+              : { href: "#allocation-list", label: "Theo dõi công việc" }
+          }
+          description={
+            completedKind === "DOSSIER_REVIEW"
+              ? "Người kiểm duyệt sẽ nhận hồ sơ trong hàng đợi. Theo dõi báo cáo trước khi ra quyết định cuối."
+              : "Nhân viên sẽ thấy phân công trong không gian làm việc của họ. Theo dõi trạng thái và thời hạn trong danh sách bên dưới."
+          }
+          title={
+            completedKind === "DOSSIER_REVIEW"
+              ? "Đã giao hồ sơ thẩm định"
+              : completedKind === "ACTIVATED"
+                ? "Đã kích hoạt phân công"
+                : "Đã giao công việc cho nhân viên"
+          }
+          tone="success"
+        />
+      ) : null}
       {reviewDossiers.isError ? (
         <div
           className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200"
@@ -151,6 +184,7 @@ export function WorkAllocationWorkspace() {
                 <button
                   className="min-h-10 rounded-lg bg-primary-700 px-4 text-sm font-bold text-white"
                   onClick={() => {
+                    setCompletedKind(null);
                     setSelectedDossier(dossier);
                     setCreationKind("DOSSIER_REVIEW");
                     setIsCreating(true);
@@ -202,20 +236,20 @@ export function WorkAllocationWorkspace() {
           {creationKind === "GENERIC" ? (
             <GenericAllocationForm
               staff={staff.data?.data ?? []}
-              onSaved={refresh}
+              onSaved={() => completeAssignment("GENERIC")}
             />
           ) : (
             <DossierAllocationForm
               key={selectedDossier?.dossierId ?? "manual"}
               initialDossier={selectedDossier ?? undefined}
               staff={staff.data?.data ?? []}
-              onSaved={refresh}
+              onSaved={() => completeAssignment("DOSSIER_REVIEW")}
             />
           )}
         </section>
       ) : null}
 
-      <section aria-label="Danh sách phân công">
+      <section aria-label="Danh sách phân công" id="allocation-list">
         <WorkAllocationList
           isDetailError={allocationDetail.isError}
           isDetailPending={allocationDetail.isPending}

@@ -88,6 +88,14 @@ describe("WorkAllocationWorkspace", () => {
       });
       expect(activateMock).toHaveBeenCalledWith("allocation-1", []);
     });
+    expect(
+      await screen.findByText("Đã giao công việc cho nhân viên"),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "Theo dõi công việc" })
+        .getAttribute("href"),
+    ).toBe("#allocation-list");
   });
 
   it("opens the dossier composer from the unified allocation workspace", async () => {

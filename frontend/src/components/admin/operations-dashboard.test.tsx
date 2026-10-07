@@ -90,6 +90,24 @@ describe("OperationsDashboard", () => {
     expect(screen.queryByText(/blockchain/i)).toBeNull();
   });
 
+  it("links real dossier stage counts to the matching admin queue filter", async () => {
+    metrics.mockResolvedValue({
+      ...metricsPayload,
+      dossierFunnel: { SUBMITTED: 3, PRECHECK: 2, UNDER_REVIEW: 4 },
+    });
+    render(<OperationsDashboard showHeader={false} />, { wrapper: Wrapper });
+
+    const stageCounts = await screen.findByRole("region", {
+      name: "Số hồ sơ theo bước xử lý",
+    });
+    expect(stageCounts.textContent).toContain("Đã nộp3");
+    expect(
+      screen
+        .getByRole("link", { name: "Đã nộp: 3 hồ sơ" })
+        .getAttribute("href"),
+    ).toBe("/admin/reviews?status=SUBMITTED");
+  });
+
   it("offers an in-place retry when the overview request fails", async () => {
     const user = userEvent.setup();
     metrics

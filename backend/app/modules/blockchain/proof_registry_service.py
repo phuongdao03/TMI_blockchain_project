@@ -329,7 +329,7 @@ class THVProofRegistryService:
                 )
                 self._session.add(transaction)
                 await self._session.flush()
-            if transaction.status in {
+            if transaction.tx_hash is not None or transaction.status in {
                 BlockchainTransactionStatus.BROADCAST,
                 BlockchainTransactionStatus.CONFIRMED,
             }:
@@ -428,8 +428,8 @@ class THVProofRegistryService:
                 not in {
                     BlockchainTransactionIntentStatus.PREPARED,
                     BlockchainTransactionIntentStatus.SUBMITTED,
+                    BlockchainTransactionIntentStatus.EXPIRED,
                 }
-                or self._as_utc(intent.expires_at) <= now
                 or transaction.method != "recordProof"
                 or transaction.contract_address.lower() != self._contract_address
             ):
@@ -439,6 +439,13 @@ class THVProofRegistryService:
             if transaction.tx_hash and transaction.tx_hash.lower() != transaction_hash:
                 raise BlockchainConflictError(
                     "A different blockchain transaction is already attached."
+                )
+            if transaction.tx_hash and (
+                transaction.signer_user_id != principal.user_id
+                or transaction.signer_wallet_address != wallet.wallet_address
+            ):
+                raise BlockchainConflictError(
+                    "This proof transaction is attached to another signer."
                 )
             if transaction.status not in {
                 BlockchainTransactionStatus.CREATED,
@@ -458,6 +465,12 @@ class THVProofRegistryService:
             transaction.broadcast_at = transaction.broadcast_at or now
             transaction.error_code = None
             transaction.error_message = None
+            if intent.status in {
+                BlockchainTransactionIntentStatus.PREPARED,
+                BlockchainTransactionIntentStatus.EXPIRED,
+            }:
+                intent.status = BlockchainTransactionIntentStatus.SUBMITTED
+                intent.submitted_at = now
             expected_call_hash = intent.encoded_call_hash
             expected_wallet = intent.expected_wallet_address
             expected_contract = intent.contract_address
@@ -503,7 +516,10 @@ class THVProofRegistryService:
                 transaction.status = BlockchainTransactionStatus.BROADCAST
             transaction.error_code = None
             transaction.error_message = None
-            if intent.status is BlockchainTransactionIntentStatus.PREPARED:
+            if intent.status in {
+                BlockchainTransactionIntentStatus.PREPARED,
+                BlockchainTransactionIntentStatus.EXPIRED,
+            }:
                 intent.status = BlockchainTransactionIntentStatus.SUBMITTED
                 intent.submitted_at = now
             return self._status_view(transaction)
@@ -738,6 +754,7 @@ class THVProofRegistryService:
                             (
                                 BlockchainTransactionIntentStatus.PREPARED,
                                 BlockchainTransactionIntentStatus.SUBMITTED,
+                                BlockchainTransactionIntentStatus.EXPIRED,
                             )
                         ),
                     )
@@ -827,7 +844,10 @@ class THVProofRegistryService:
             transaction.broadcast_at = transaction.broadcast_at or recorded_at
             transaction.error_code = None
             transaction.error_message = None
-            if intent.status is BlockchainTransactionIntentStatus.PREPARED:
+            if intent.status in {
+                BlockchainTransactionIntentStatus.PREPARED,
+                BlockchainTransactionIntentStatus.EXPIRED,
+            }:
                 intent.status = BlockchainTransactionIntentStatus.SUBMITTED
                 intent.submitted_at = recorded_at
             if transaction.status is BlockchainTransactionStatus.CONFIRMED:
@@ -871,10 +891,21 @@ class THVProofRegistryService:
                             (
                                 BlockchainTransactionIntentStatus.PREPARED,
                                 BlockchainTransactionIntentStatus.SUBMITTED,
+                                BlockchainTransactionIntentStatus.EXPIRED,
                             )
                         ),
                     )
-                    .order_by(BlockchainTransactionIntent.created_at.desc())
+                    .order_by(
+                        case(
+                            (
+                                BlockchainTransactionIntent.status
+                                == BlockchainTransactionIntentStatus.SUBMITTED,
+                                0,
+                            ),
+                            else_=1,
+                        ),
+                        BlockchainTransactionIntent.created_at.desc(),
+                    )
                 ),
             )
             if intent is None or transaction.signer_wallet_address is None:
@@ -922,7 +953,10 @@ class THVProofRegistryService:
                 transaction.status = BlockchainTransactionStatus.BROADCAST
                 transaction.error_code = None
                 transaction.error_message = None
-            if intent.status is BlockchainTransactionIntentStatus.PREPARED:
+            if intent.status in {
+                BlockchainTransactionIntentStatus.PREPARED,
+                BlockchainTransactionIntentStatus.EXPIRED,
+            }:
                 intent.status = BlockchainTransactionIntentStatus.SUBMITTED
                 intent.submitted_at = self._clock()
 

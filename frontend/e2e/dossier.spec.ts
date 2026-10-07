@@ -48,15 +48,19 @@ test("applicant creates, uploads evidence and submits an immutable dossier", asy
     .locator(".dossier-type-option")
     .filter({ hasText: "Tác phẩm văn hóa" })
     .click();
-  await page
-    .getByLabel("Chủ sở hữu hoặc tác giả")
-    .fill("Trung tâm an ninh công nghệ số - THV");
-  await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
-
+  await page.getByRole("button", { name: "Tiếp tục nhập thông tin" }).click();
   await page
     .getByLabel("Tên tài sản hoặc tác phẩm")
     .fill("Video chào mừng thương hiệu Đề cử Tinh Hoa Việt E2E");
   await page.getByLabel("Mô tả ngắn").fill("Hồ sơ kiểm thử luồng xác lập.");
+  await page
+    .getByRole("button", { name: "Tiếp tục thông tin theo loại" })
+    .click();
+  await page
+    .getByLabel("Chủ sở hữu hoặc tác giả")
+    .fill("Trung tâm an ninh công nghệ số - THV");
+  await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
+  await page.getByRole("button", { name: "Kiểm tra thông tin" }).click();
   await page.getByRole("button", { name: "Tạo hồ sơ nháp" }).click();
   await expect(page).toHaveURL(/\/dossiers\/9155dbf5-/);
   await expect(

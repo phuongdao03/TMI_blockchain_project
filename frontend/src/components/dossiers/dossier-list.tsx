@@ -52,7 +52,7 @@ export function DossierList({
   status?: DossierStatus;
 }) {
   const filters: DossierListFilters = { page, pageSize, status };
-  const { data, error, isPending } = useQuery({
+  const { data, error, isPending, isFetching, refetch } = useQuery({
     queryKey: dossierKeys.list(filters),
     queryFn: () => dossierApi.list(filters),
   });
@@ -76,7 +76,15 @@ export function DossierList({
         className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-medium text-red-800"
         role="alert"
       >
-        Không thể tải danh sách hồ sơ. Vui lòng thử lại.
+        <p>Không thể tải danh sách hồ sơ. Vui lòng thử lại.</p>
+        <button
+          className="mt-4 min-h-11 rounded-xl border border-red-300 px-4 font-bold disabled:opacity-50"
+          disabled={isFetching}
+          onClick={() => void refetch()}
+          type="button"
+        >
+          {isFetching ? "Đang tải lại…" : "Thử tải lại"}
+        </button>
       </div>
     );
   }
@@ -86,16 +94,20 @@ export function DossierList({
         <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary-50 text-primary-700">
           <FolderSearch aria-hidden="true" className="size-7" />
         </span>
-        <h2 className="mt-5 text-xl font-bold">Chưa có hồ sơ phù hợp</h2>
+        <h2 className="mt-5 text-xl font-bold">
+          {status ? "Không có hồ sơ ở trạng thái này" : "Bạn chưa có hồ sơ nào"}
+        </h2>
         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-neutral-500">
-          Tạo hồ sơ đầu tiên để chuẩn bị dữ liệu và bằng chứng xác lập.
+          {status
+            ? "Thử xem tất cả trạng thái để tìm hồ sơ cần theo dõi."
+            : "Tạo hồ sơ đầu tiên để chuẩn bị dữ liệu và bằng chứng xác lập."}
         </p>
         <Link
           className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary-600 px-5 text-sm font-bold text-white hover:bg-primary-700"
-          href="/dossiers/new"
+          href={status ? "/dossiers" : "/dossiers/new"}
         >
-          <FilePlus2 aria-hidden="true" className="size-4" />
-          Tạo hồ sơ
+          {status ? null : <FilePlus2 aria-hidden="true" className="size-4" />}
+          {status ? "Xem tất cả hồ sơ" : "Tạo hồ sơ"}
         </Link>
       </div>
     );

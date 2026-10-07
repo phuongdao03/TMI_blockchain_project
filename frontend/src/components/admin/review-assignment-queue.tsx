@@ -73,14 +73,20 @@ function DossierDetail({ dossierId }: { dossierId: string }) {
 
 export function ReviewAssignmentQueue({
   initialDossierId,
+  initialStatus,
 }: {
   initialDossierId?: string;
+  initialStatus?: AdminReviewDossierStatus;
 }) {
-  const [status, setStatus] = useState<AdminReviewDossierStatus | "">("");
+  const [status, setStatus] = useState<AdminReviewDossierStatus | "">(
+    initialStatus ?? "",
+  );
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
   const dossiers = useQuery({
-    queryKey: ["admin-review-dossiers", status],
+    queryKey: ["admin-review-dossiers", status, page],
     queryFn: () =>
-      adminReviewApi.list({ status: status || undefined, pageSize: 50 }),
+      adminReviewApi.list({ status: status || undefined, page, pageSize }),
     enabled: !initialDossierId,
   });
   if (initialDossierId) return <DossierDetail dossierId={initialDossierId} />;
@@ -101,9 +107,10 @@ export function ReviewAssignmentQueue({
         Trạng thái
         <select
           className="mt-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3"
-          onChange={(event) =>
-            setStatus(event.target.value as AdminReviewDossierStatus | "")
-          }
+          onChange={(event) => {
+            setStatus(event.target.value as AdminReviewDossierStatus | "");
+            setPage(1);
+          }}
           value={status}
         >
           <option value="">Tất cả hồ sơ chờ xử lý</option>
@@ -120,16 +127,40 @@ export function ReviewAssignmentQueue({
           <span className="sr-only">Đang tải hàng chờ</span>
         </div>
       ) : dossiers.isError ? (
-        <p
+        <div
           className="rounded-2xl border border-red-200 bg-red-50 p-6 font-semibold text-red-800"
           role="alert"
         >
-          Chưa thể tải hàng chờ phân công.
-        </p>
+          <p>Chưa thể tải hàng chờ phân công.</p>
+          <button
+            className="mt-3 min-h-11 rounded-lg border border-red-300 px-4 text-sm"
+            disabled={dossiers.isFetching}
+            onClick={() => void dossiers.refetch()}
+            type="button"
+          >
+            Thử tải lại
+          </button>
+        </div>
       ) : dossiers.data.data.length === 0 ? (
         <div className="rounded-2xl border border-dashed p-12 text-center">
           <Inbox className="mx-auto size-9 text-neutral-400" />
-          <h2 className="mt-4 text-xl font-bold">Không có hồ sơ chờ xử lý</h2>
+          <h2 className="mt-4 text-xl font-bold">
+            {status
+              ? "Không có hồ sơ ở trạng thái này"
+              : "Không có hồ sơ chờ xử lý"}
+          </h2>
+          {status ? (
+            <button
+              className="mt-4 min-h-11 rounded-lg border border-[var(--theme-border)] px-4 text-sm font-semibold"
+              onClick={() => {
+                setStatus("");
+                setPage(1);
+              }}
+              type="button"
+            >
+              Xem tất cả trạng thái
+            </button>
+          ) : null}
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)]">
@@ -158,12 +189,44 @@ export function ReviewAssignmentQueue({
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--theme-border)] px-4 font-bold"
                 href={`/admin/reviews/${dossier.dossierId}`}
               >
-                Mở để phân công <ArrowRight className="size-4" />
+                {dossier.assignmentCount === 0
+                  ? "Mở để phân công"
+                  : "Xem tiến độ thẩm định"}{" "}
+                <ArrowRight className="size-4" />
               </Link>
             </article>
           ))}
         </div>
       )}
+      {dossiers.data && dossiers.data.meta.total > 0 ? (
+        <nav
+          aria-label="Trang hồ sơ chờ xử lý"
+          className="flex flex-wrap items-center justify-between gap-3 text-sm"
+        >
+          <p>
+            {dossiers.data.meta.total} hồ sơ · Trang {page}/
+            {Math.ceil(dossiers.data.meta.total / pageSize)}
+          </p>
+          <div className="flex gap-2">
+            <button
+              className="min-h-11 rounded-lg border border-[var(--theme-border)] px-4 font-semibold disabled:opacity-40"
+              disabled={page === 1}
+              onClick={() => setPage((current) => current - 1)}
+              type="button"
+            >
+              Trang trước
+            </button>
+            <button
+              className="min-h-11 rounded-lg border border-[var(--theme-border)] px-4 font-semibold disabled:opacity-40"
+              disabled={page * pageSize >= dossiers.data.meta.total}
+              onClick={() => setPage((current) => current + 1)}
+              type="button"
+            >
+              Trang sau
+            </button>
+          </div>
+        </nav>
+      ) : null}
     </div>
   );
 }

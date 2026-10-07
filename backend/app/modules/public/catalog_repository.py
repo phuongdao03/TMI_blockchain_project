@@ -17,6 +17,7 @@ from app.modules.blockchain.models import (
 from app.modules.dossiers.models import Category, Dossier, DossierStatus, DossierVersion
 from app.modules.media.models import MediaAsset
 from app.modules.organizations.models import Organization
+from app.modules.public.cloudinary_variants import cloudinary_video_variant
 from app.modules.public.models import (
     DerivativeStatus,
     PublicationStatus,
@@ -43,18 +44,16 @@ def _thumbnail_url(media: PublicWorkMedia | None) -> str | None:
         # Extracting a frame from a retained legacy video decrypts the whole
         # original file and can hold a catalog image request for tens of seconds.
         return None
-    marker = "/video/upload/"
-    if marker not in media.derivative_url or not media.derivative_url.startswith(
-        "https://res.cloudinary.com/"
-    ):
-        return None
-    prefix, path = media.derivative_url.split(marker, 1)
     offset = (
         f"so_{media.poster_time_ms / 1000:g}"
         if media.poster_time_ms is not None
         else "so_auto"
     )
-    return f"{prefix}{marker}{offset},q_auto,f_webp/{path.rsplit('.', 1)[0]}.webp"
+    return cloudinary_video_variant(
+        media.derivative_url,
+        transformation=f"{offset},q_auto,f_webp",
+        extension="webp",
+    )
 
 
 def _as_utc(value: datetime) -> datetime:

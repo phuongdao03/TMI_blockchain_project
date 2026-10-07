@@ -576,100 +576,124 @@ function ScoredReviewForm({
           {criteria.map(
             ({ indicators, key, label, purpose, scoreKey }, index) => {
               const band = scoreBand(values[scoreKey]);
+              const assessed =
+                values[scoreKey] !== null &&
+                values[scoreKey] !== undefined &&
+                (values.criterionComments?.[key]?.trim().length ?? 0) >= 20 &&
+                criterionEvidence[key].length > 0;
               return (
-                <fieldset
-                  className="grid gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:grid-cols-[minmax(0,1fr)_8.5rem] sm:p-5"
-                  disabled={readOnly}
+                <details
+                  className="overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)]"
                   key={key}
+                  open={readOnly || index === 0}
                 >
-                  <div>
-                    <legend className="font-bold text-neutral-950">
-                      <span className="mr-2 text-primary-700">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      {label}
-                    </legend>
-                    <p className="mt-1 text-xs leading-5 text-neutral-500">
-                      {purpose}
-                    </p>
-                    <ul
-                      className="mt-3 flex flex-wrap gap-2"
-                      aria-label={`Chỉ báo ${label}`}
-                    >
-                      {indicators.map((indicator) => (
-                        <li
-                          className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-2.5 py-1 text-xs text-neutral-600"
-                          key={indicator}
-                        >
-                          {indicator}
-                        </li>
-                      ))}
-                    </ul>
-                    <label
-                      className="mt-4 block text-xs font-bold uppercase tracking-wider text-neutral-600"
-                      htmlFor={"comment-" + key}
-                    >
-                      Nhận xét {label}
-                    </label>
-                    <textarea
-                      className="mt-2 min-h-28 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm disabled:opacity-60"
-                      id={"comment-" + key}
-                      maxLength={2_000}
-                      {...register(`criterionComments.${key}` as const)}
-                    />
-                    <p className="mt-2 text-xs text-neutral-500">
-                      Nêu nhận định, căn cứ đã kiểm tra và điểm còn giới hạn;
-                      tối thiểu 20 ký tự.
-                    </p>
-                    <ReviewEvidenceSelect
-                      disabled={readOnly}
-                      evidences={evidences}
-                      label={label}
-                      onChange={(next) =>
-                        setCriterionEvidence((currentEvidence) => ({
-                          ...currentEvidence,
-                          [key]: next,
-                        }))
+                  <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-bold sm:px-5">
+                    <span>
+                      {String(index + 1).padStart(2, "0")} · {label}
+                    </span>
+                    <span
+                      className={
+                        assessed
+                          ? "text-emerald-700"
+                          : "text-[var(--theme-muted)]"
                       }
-                      value={criterionEvidence[key]}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      className="text-xs font-bold uppercase tracking-wider text-neutral-600"
-                      htmlFor={"score-" + key}
                     >
-                      Điểm {label}
-                    </label>
-                    <input
-                      className="mt-2 h-14 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-center text-2xl font-bold tabular-nums disabled:opacity-60"
-                      id={"score-" + key}
-                      inputMode="numeric"
-                      max={20}
-                      min={0}
-                      type="number"
-                      {...register(scoreKey, {
-                        setValueAs: (value) =>
-                          value === "" ? null : Number(value),
-                      })}
-                    />
-                    {errors[scoreKey]?.message ? (
-                      <p className="mt-2 text-xs font-semibold text-red-700">
-                        {errors[scoreKey]?.message}
-                      </p>
-                    ) : null}
-                    {band ? (
-                      <div className="mt-3 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-2 text-center">
-                        <strong className="block text-xs text-primary-800">
-                          {band.label}
-                        </strong>
-                        <span className="mt-1 block text-[11px] leading-4 text-neutral-500">
-                          {band.description}
+                      {assessed ? "Đã hoàn thành" : "Cần chấm"}
+                    </span>
+                  </summary>
+                  <fieldset
+                    className="grid gap-4 border-t border-[var(--theme-border)] p-4 sm:grid-cols-[minmax(0,1fr)_8.5rem] sm:p-5"
+                    disabled={readOnly}
+                  >
+                    <div>
+                      <legend className="font-bold text-neutral-950">
+                        <span className="mr-2 text-primary-700">
+                          {String(index + 1).padStart(2, "0")}
                         </span>
-                      </div>
-                    ) : null}
-                  </div>
-                </fieldset>
+                        {label}
+                      </legend>
+                      <p className="mt-1 text-xs leading-5 text-neutral-500">
+                        {purpose}
+                      </p>
+                      <ul
+                        className="mt-3 flex flex-wrap gap-2"
+                        aria-label={`Chỉ báo ${label}`}
+                      >
+                        {indicators.map((indicator) => (
+                          <li
+                            className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-2.5 py-1 text-xs text-neutral-600"
+                            key={indicator}
+                          >
+                            {indicator}
+                          </li>
+                        ))}
+                      </ul>
+                      <label
+                        className="mt-4 block text-xs font-bold uppercase tracking-wider text-neutral-600"
+                        htmlFor={"comment-" + key}
+                      >
+                        Nhận xét {label}
+                      </label>
+                      <textarea
+                        className="mt-2 min-h-28 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm disabled:opacity-60"
+                        id={"comment-" + key}
+                        maxLength={2_000}
+                        {...register(`criterionComments.${key}` as const)}
+                      />
+                      <p className="mt-2 text-xs text-neutral-500">
+                        Nêu nhận định, căn cứ đã kiểm tra và điểm còn giới hạn;
+                        tối thiểu 20 ký tự.
+                      </p>
+                      <ReviewEvidenceSelect
+                        disabled={readOnly}
+                        evidences={evidences}
+                        label={label}
+                        onChange={(next) =>
+                          setCriterionEvidence((currentEvidence) => ({
+                            ...currentEvidence,
+                            [key]: next,
+                          }))
+                        }
+                        value={criterionEvidence[key]}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        className="text-xs font-bold uppercase tracking-wider text-neutral-600"
+                        htmlFor={"score-" + key}
+                      >
+                        Điểm {label}
+                      </label>
+                      <input
+                        className="mt-2 h-14 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-center text-2xl font-bold tabular-nums disabled:opacity-60"
+                        id={"score-" + key}
+                        inputMode="numeric"
+                        max={20}
+                        min={0}
+                        type="number"
+                        {...register(scoreKey, {
+                          setValueAs: (value) =>
+                            value === "" ? null : Number(value),
+                        })}
+                      />
+                      {errors[scoreKey]?.message ? (
+                        <p className="mt-2 text-xs font-semibold text-red-700">
+                          {errors[scoreKey]?.message}
+                        </p>
+                      ) : null}
+                      {band ? (
+                        <div className="mt-3 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-2 text-center">
+                          <strong className="block text-xs text-primary-800">
+                            {band.label}
+                          </strong>
+                          <span className="mt-1 block text-[11px] leading-4 text-neutral-500">
+                            {band.description}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  </fieldset>
+                </details>
               );
             },
           )}

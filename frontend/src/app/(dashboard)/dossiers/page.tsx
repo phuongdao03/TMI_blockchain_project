@@ -5,13 +5,46 @@ import { DossierList } from "@/components/dossiers/dossier-list";
 import { SelectControl } from "@/components/ui/form-controls";
 import type { DossierStatus } from "@/lib/api/types";
 
-const statusOptions: Array<[string, string]> = [
-  ["", "Tất cả trạng thái"],
-  ["DRAFT", "Bản nháp"],
-  ["SUBMITTED", "Đã nộp"],
-  ["NEEDS_SUPPLEMENT", "Cần bổ sung"],
-  ["UNDER_REVIEW", "Đang thẩm định"],
-  ["APPROVED", "Đã phê duyệt"],
+const statusGroups: Array<{
+  label: string;
+  options: Array<[DossierStatus, string]>;
+}> = [
+  {
+    label: "Cần bạn xử lý",
+    options: [
+      ["DRAFT", "Bản nháp"],
+      ["NEEDS_SUPPLEMENT", "Cần bổ sung"],
+      ["PAYMENT_PENDING", "Chờ thanh toán"],
+    ],
+  },
+  {
+    label: "Đang xử lý",
+    options: [
+      ["SUBMITTED", "Đã nộp"],
+      ["PRECHECK", "Đang kiểm tra"],
+      ["UNDER_REVIEW", "Đang thẩm định"],
+      ["COUNCIL_REVIEW", "Chờ quyết định"],
+      ["APPROVED", "Đã duyệt · Chờ quyết định phí"],
+      ["PAID", "Đã xác nhận phí"],
+      ["ANCHOR_PENDING", "Đang xác lập"],
+      ["ANCHORED", "Đang chuẩn bị bằng"],
+    ],
+  },
+  {
+    label: "Đã hoàn tất",
+    options: [
+      ["CERTIFICATE_ISSUED", "Đã cấp bằng"],
+      ["PUBLISHED", "Đã công bố"],
+    ],
+  },
+  {
+    label: "Đã kết thúc",
+    options: [
+      ["REJECTED", "Không được duyệt"],
+      ["REVOKED", "Đã thu hồi"],
+      ["CANCELLED", "Đã hủy"],
+    ],
+  },
 ];
 
 export default async function DossiersPage({
@@ -21,7 +54,9 @@ export default async function DossiersPage({
 }) {
   const parameters = await searchParams;
   const page = Math.max(1, Number(parameters.page) || 1);
-  const status = statusOptions.some(([value]) => value === parameters.status)
+  const status = statusGroups.some((group) =>
+    group.options.some(([value]) => value === parameters.status),
+  )
     ? (parameters.status as DossierStatus | undefined)
     : undefined;
 
@@ -64,10 +99,15 @@ export default async function DossiersPage({
             id="status-filter"
             name="status"
           >
-            {statusOptions.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
+            <option value="">Tất cả trạng thái</option>
+            {statusGroups.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.options.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </SelectControl>
         </div>

@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BlockchainSigningWorkspace } from "@/components/blockchain/blockchain-signing-workspace";
+import { readPendingProofBroadcast } from "@/lib/blockchain/pending-proof-broadcast";
 
 const {
   connectBrowserWallet,
@@ -91,6 +92,7 @@ function Wrapper({ children }: { children: ReactNode }) {
 describe("BlockchainSigningWorkspace", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     currentWallet.mockResolvedValue(null);
     currentBrowserWallet.mockResolvedValue({ address: null, chainId: 137 });
     proofQueue.mockResolvedValue([]);
@@ -375,6 +377,138 @@ describe("BlockchainSigningWorkspace", () => {
       transactionHash,
       connectedWallet: walletAddress,
     });
+  });
+
+  it("does not open two wallet signing flows after rapid activation", async () => {
+    const user = userEvent.setup();
+    const walletAddress = "0x3434343434343434343434343434343434";
+    currentWallet.mockResolvedValue({
+      id: "wallet-link",
+      walletAddress,
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-26T00:00:00Z",
+    });
+    currentBrowserWallet.mockResolvedValue({
+      address: walletAddress,
+      chainId: 137,
+    });
+    proofQueue.mockResolvedValue([
+      {
+        transactionId: null,
+        dossierId: "dossier-rapid",
+        dossierCode: "THV-2026-RAPID",
+        dossierTitle: "Hồ sơ ký nhanh",
+        version: 1,
+        proofHash: `0x${"ab".repeat(32)}`,
+        status: "CREATED",
+        txHash: null,
+        confirmations: 0,
+        errorCode: null,
+        createdAt: "2026-08-26T00:00:00Z",
+      },
+    ]);
+    prepareIntent.mockImplementation(() => new Promise(() => undefined));
+
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: /Hồ sơ ký nhanh/ }),
+    );
+    const button = screen.getByRole("button", {
+      name: "Ký và ghi nhận blockchain",
+    });
+    act(() => {
+      button.click();
+      button.click();
+    });
+    expect(prepareIntent).toHaveBeenCalledOnce();
+    expect(sendBrowserTransaction).not.toHaveBeenCalled();
+  });
+
+  it("resubmits a wallet hash saved before a page reload without asking MetaMask again", async () => {
+    const user = userEvent.setup();
+    const walletAddress = `0x${"34".repeat(20)}`;
+    const transactionHash = `0x${"77".repeat(32)}`;
+    currentWallet.mockResolvedValue({
+      id: "wallet-link",
+      walletAddress,
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-26T00:00:00Z",
+    });
+    currentBrowserWallet.mockResolvedValue({
+      address: walletAddress,
+      chainId: 137,
+    });
+    proofQueue.mockResolvedValue([
+      {
+        transactionId: "transaction-reload",
+        dossierId: "dossier-reload",
+        dossierCode: "THV-2026-RELOAD",
+        dossierTitle: "Hồ sơ cần đồng bộ",
+        version: 1,
+        proofHash: `0x${"ab".repeat(32)}`,
+        status: "SIGNING",
+        txHash: null,
+        confirmations: 0,
+        errorCode: null,
+        createdAt: "2026-08-26T00:00:00Z",
+      },
+    ]);
+    window.localStorage.setItem(
+      "thv-proof-broadcast:dossier-reload:1",
+      JSON.stringify({
+        dossierId: "dossier-reload",
+        version: 1,
+        transactionId: "transaction-reload",
+        intentId: "intent-reload",
+        transactionHash,
+        connectedWallet: walletAddress,
+      }),
+    );
+    expect(
+      readPendingProofBroadcast("dossier-reload", 1)?.transactionHash,
+    ).toBe(transactionHash);
+    submitTransaction
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue({
+        transactionId: "transaction-reload",
+        status: "BROADCAST",
+        txHash: transactionHash,
+        confirmations: 0,
+        errorCode: null,
+      });
+    transactionStatus.mockRejectedValue(new Error("offline"));
+
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: /Hồ sơ cần đồng bộ/ }),
+    );
+
+    expect(screen.getByText(transactionHash)).toBeDefined();
+    await waitFor(() => expect(submitTransaction).toHaveBeenCalledOnce());
+    expect(
+      await screen.findByText(
+        "Chưa thể đồng bộ mã giao dịch. Giao dịch đã được gửi từ ví; hãy thử lại khi có kết nối.",
+      ),
+    ).toBeDefined();
+    expect(window.localStorage.length).toBe(1);
+    await user.click(
+      screen.getByRole("button", { name: "Tiếp tục đồng bộ giao dịch" }),
+    );
+    expect(
+      await screen.findByText(
+        "Đã đồng bộ mã giao dịch từ ví. Hệ thống đang chờ mạng Polygon xác nhận.",
+      ),
+    ).toBeDefined();
+    expect(submitTransaction).toHaveBeenCalledWith({
+      transactionId: "transaction-reload",
+      intentId: "intent-reload",
+      transactionHash,
+      connectedWallet: walletAddress,
+    });
+    expect(sendBrowserTransaction).not.toHaveBeenCalled();
+    expect(window.localStorage.length).toBe(0);
   });
 
   it("guides an authorized Super Admin to verify a wallet instead of leaving the signing queue loading", async () => {

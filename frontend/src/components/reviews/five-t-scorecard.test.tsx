@@ -281,6 +281,16 @@ describe("FiveTScorecard", () => {
     );
 
     expect(screen.getByText("0/5 tiêu chí hoàn tất")).toBeDefined();
+    const firstCriterion = screen
+      .getByText("01 · Tính đúng đắn")
+      .closest("details");
+    const secondCriterion = screen
+      .getByText("02 · Tính minh bạch")
+      .closest("details");
+    expect(firstCriterion?.open).toBe(true);
+    expect(secondCriterion?.open).toBe(false);
+    await user.click(secondCriterion?.querySelector("summary") as HTMLElement);
+    expect(secondCriterion?.open).toBe(true);
     expect(
       screen.getByText(
         "Tiếp theo: Chấm điểm và nhận xét tiêu chí Tính đúng đắn",

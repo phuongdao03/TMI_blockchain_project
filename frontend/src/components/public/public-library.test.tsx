@@ -84,6 +84,21 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("PublicLibrary", () => {
+  it("shows visible animated loading feedback while the catalog request is pending", () => {
+    vi.mocked(publicApi.works).mockImplementationOnce(
+      () => new Promise(() => undefined),
+    );
+    const { container } = render(<PublicLibrary page={2} />, { wrapper });
+
+    expect(
+      screen.getByRole("status", { name: "Đang tải danh sách đề cử" }),
+    ).toBeTruthy();
+    expect(screen.getByText("Đang tải đề cử…")).toBeTruthy();
+    expect(
+      container.querySelector(".catalog-loading__progress"),
+    ).not.toBeNull();
+  });
+
   it("uses server catalog data without immediately requesting the same list again", async () => {
     render(
       <PublicLibrary
@@ -145,6 +160,42 @@ describe("PublicLibrary", () => {
     expect(previousHref).not.toContain("page=");
   });
 
+  it("promotes the first public nomination when no curated feature exists", () => {
+    const secondWork = {
+      ...work,
+      id: "work-2",
+      slug: "de-cu-thu-hai",
+      title: "Đề cử thứ hai",
+    };
+    render(
+      <PublicLibrary
+        initialData={{
+          featured: [],
+          works: {
+            success: true,
+            data: [work, secondWork],
+            meta: { page: 1, pageSize: 12, total: 2 },
+          },
+        }}
+        page={1}
+      />,
+      { wrapper },
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Đề cử nổi bật" }),
+    ).toBeDefined();
+    expect(screen.getByTestId("catalog-featured").textContent).toContain(
+      "Di sản số",
+    );
+    expect(screen.getByTestId("public-album-grid").textContent).toContain(
+      "Đề cử thứ hai",
+    );
+    expect(screen.getByTestId("public-album-grid").textContent).not.toContain(
+      "Di sản số",
+    );
+  });
+
   it("renders an actionable empty state", async () => {
     vi.mocked(publicApi.works).mockResolvedValueOnce({
       success: true,
@@ -188,6 +239,21 @@ describe("PublicLibrary", () => {
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
   });
+
+  it("keeps keyboard focus inside the mobile filter sheet", async () => {
+    const user = userEvent.setup();
+    render(<PublicLibrary page={1} />, { wrapper });
+    await user.click(screen.getByRole("button", { name: /Bộ lọc/ }));
+    const dialog = screen.getByRole("dialog");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Đóng bộ lọc" }),
+      ),
+    );
+
+    await user.tab({ shift: true });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+  });
 });
 
 describe("PublicWorkCard", () => {
@@ -198,6 +264,10 @@ describe("PublicWorkCard", () => {
     expect(screen.getByRole("article").getAttribute("data-layout")).toBe(
       "editorial-lead",
     );
+    expect(
+      screen.getByRole("link", { name: "Xem đề cử Di sản số" }),
+    ).toBeDefined();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
 
     rerender(<PublicWorkCard position={4} source="list" work={work} />);
     expect(screen.getByRole("article").getAttribute("data-layout")).toBe(

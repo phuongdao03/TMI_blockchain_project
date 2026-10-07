@@ -234,9 +234,16 @@ def test_large_video_derivative_uses_async_eager_processing() -> None:
             source_format="mp4",
             derivative_public_id="public/video",
             transformation="c_limit,w_640,q_auto:eco,vc_auto,f_mp4",
+            eager_transformations=(
+                "so_auto,q_auto,f_webp",
+                "sp_auto:maxres_720p/f_m3u8",
+            ),
         )
         form = parse_qs(requests[0].content.decode())
-        assert form["eager"] == ["c_limit,w_640,q_auto:eco,vc_auto,f_mp4"]
+        assert form["eager"] == [
+            "c_limit,w_640,q_auto:eco,vc_auto,f_mp4|"
+            "so_auto,q_auto,f_webp|sp_auto:maxres_720p/f_m3u8"
+        ]
         assert form["eager_async"] == ["true"]
         assert "transformation" not in form
         assert derivative.pending is True

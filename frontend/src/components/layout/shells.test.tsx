@@ -226,6 +226,9 @@ describe("layout shells", () => {
     expect(
       navigation.parentElement?.classList.contains("public-mobile-drawer"),
     ).toBe(true);
+    expect(
+      within(navigation).getByRole("group", { name: "Chọn giao diện" }),
+    ).toBeDefined();
     const homeLink = within(navigation).getByRole("link", { name: /trang/i });
     await waitFor(() => expect(document.activeElement).toBe(homeLink));
 

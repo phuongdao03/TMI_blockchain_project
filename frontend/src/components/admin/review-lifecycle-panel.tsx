@@ -10,8 +10,9 @@ import {
   UserCheck,
   UserRoundPlus,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+
+import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
 
 import { adminReviewApi, staffAccountsApi } from "@/lib/api/client";
 import type {
@@ -147,7 +148,6 @@ function AssistanceRequestResolution({
   const [selectedReviewerIds, setSelectedReviewerIds] = useState<string[]>([]);
   const [dueAt, setDueAt] = useState("");
   const [declineReason, setDeclineReason] = useState("");
-  const active = request.status === "PENDING";
   const availableReviewers = reviewers.filter(
     (reviewer) => !assignedIds.has(reviewer.id),
   );
@@ -165,6 +165,8 @@ function AssistanceRequestResolution({
       adminReviewApi.declineAssistanceRequest(request.id, declineReason.trim()),
     onSuccess: onResolved,
   });
+  const active =
+    request.status === "PENDING" && !approve.isSuccess && !decline.isSuccess;
   const error = approve.error ?? decline.error;
   const isBusy = approve.isPending || decline.isPending;
   const exactReviewerCount =
@@ -290,11 +292,28 @@ function AssistanceRequestResolution({
             </button>
           </div>
         </div>
+      ) : request.status === "PENDING" ? (
+        <div className="mt-4">
+          <WorkflowNextStep
+            action={{ href: "/admin/reviews", label: "Theo dõi thẩm định" }}
+            description={
+              approve.isSuccess
+                ? "Người được bổ sung sẽ nhận việc trong hàng đợi. Theo dõi báo cáo trước khi ra quyết định cuối."
+                : "Người kiểm duyệt hiện tại tiếp tục xử lý hồ sơ. Theo dõi báo cáo hoặc phân công lại khi cần."
+            }
+            title={
+              approve.isSuccess
+                ? "Đã bổ sung người kiểm duyệt"
+                : "Đã từ chối yêu cầu phối hợp"
+            }
+            tone="success"
+          />
+        </div>
       ) : (
         <p className="mt-4 text-sm leading-6 text-neutral-600">
           {request.status === "APPROVED"
-            ? "Yêu cầu đã được chấp thuận; các moderator mới đã nhận phân công."
-            : `Đã từ chối: ${request.decisionReason ?? "Không có ghi chú."}`}
+            ? "Yêu cầu đã được chấp thuận; người kiểm duyệt mới đã nhận phân công. Bước tiếp theo: theo dõi báo cáo của họ."
+            : `Đã từ chối: ${request.decisionReason ?? "Không có ghi chú."} Người kiểm duyệt hiện tại tiếp tục xử lý hồ sơ.`}
         </p>
       )}
       {error ? (
@@ -315,7 +334,6 @@ export function ReviewLifecyclePanel({
   dossier: AdminReviewDossierDetail;
 }) {
   const queryClient = useQueryClient();
-  const router = useRouter();
   const [reviewerId, setReviewerId] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [finalReason, setFinalReason] = useState("");
@@ -369,6 +387,11 @@ export function ReviewLifecyclePanel({
     dossier.assignments.every((item) =>
       ["SUBMITTED", "CONFLICTED", "CANCELLED"].includes(item.assignment.status),
     );
+  const needsReviewer = !dossier.assignments.some(
+    (item) =>
+      ["ASSIGNED", "IN_PROGRESS"].includes(item.assignment.status) ||
+      Boolean(item.review?.submittedAt),
+  );
   const decide = useMutation({
     mutationFn: (decision: AdminDossierDecision) =>
       adminReviewApi.decide(
@@ -378,29 +401,10 @@ export function ReviewLifecyclePanel({
         confirmNoConflict,
       ),
   });
-  useEffect(() => {
-    if (!decide.isSuccess || !decide.data) {
-      return;
-    }
-    const destination =
-      decide.data.status === "APPROVED" ? "/blockchain" : "/admin/reviews";
-    const timer = window.setTimeout(() => router.push(destination), 850);
-    return () => window.clearTimeout(timer);
-  }, [decide.data, decide.isSuccess, router]);
   const requestFinalSupplement = useMutation({
     mutationFn: () =>
       adminReviewApi.requestSupplement(dossier.dossierId, finalReason),
-    onSuccess: async () => {
-      await refresh();
-    },
   });
-  useEffect(() => {
-    if (!requestFinalSupplement.isSuccess) {
-      return;
-    }
-    const timer = window.setTimeout(() => router.push("/admin/reviews"), 850);
-    return () => window.clearTimeout(timer);
-  }, [requestFinalSupplement.isSuccess, router]);
   const submitDecision = (decision: AdminDossierDecision) => {
     setActiveDecision(decision);
     decide.reset();
@@ -420,7 +424,39 @@ export function ReviewLifecyclePanel({
 
   return (
     <div className="space-y-5">
-      <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5">
+      {!decisionSucceeded ? (
+        <WorkflowNextStep
+          action={
+            needsReviewer
+              ? { href: "#admin-assignment", label: "Chọn người kiểm duyệt" }
+              : isDecisionReady
+                ? { href: "#admin-decision", label: "Ra quyết định" }
+                : { href: "#admin-review-reports", label: "Xem tiến độ" }
+          }
+          description={
+            needsReviewer
+              ? dossier.assignments.length === 0
+                ? "Chọn người kiểm duyệt đang hoạt động và giao hồ sơ. Người được giao sẽ nhận việc trong hàng đợi của họ."
+                : "Chưa có báo cáo hợp lệ và các phân công trước đã kết thúc. Chọn người kiểm duyệt khác để tiếp tục."
+              : isDecisionReady
+                ? "Các báo cáo cần thiết đã hoàn tất. Đọc kết luận, ghi căn cứ và chọn quyết định cuối."
+                : "Hồ sơ đã được giao. Theo dõi báo cáo của từng người kiểm duyệt trước khi quyết định."
+          }
+          title={
+            needsReviewer
+              ? dossier.assignments.length === 0
+                ? "Bước 1 · Giao người kiểm duyệt"
+                : "Bước 1 · Phân công lại người kiểm duyệt"
+              : isDecisionReady
+                ? "Bước 3 · Ra quyết định cuối"
+                : "Bước 2 · Chờ báo cáo kiểm duyệt"
+          }
+        />
+      ) : null}
+      <section
+        className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5"
+        id="admin-assignment"
+      >
         <div className="flex items-start gap-3">
           <UserCheck className="mt-0.5 size-5 text-primary-700" />
           <div>
@@ -479,12 +515,14 @@ export function ReviewLifecyclePanel({
           </p>
         ) : null}
         {handoff.isSuccess ? (
-          <p
-            className="mt-4 text-sm font-semibold text-green-700"
-            role="status"
-          >
-            Đã phân công và gửi thông báo cho người kiểm duyệt.
-          </p>
+          <div className="mt-4">
+            <WorkflowNextStep
+              action={{ href: "/admin/reviews", label: "Theo dõi thẩm định" }}
+              description="Người kiểm duyệt sẽ nhận phân công trong hàng đợi. Theo dõi báo cáo của họ trước khi ra quyết định cuối."
+              title="Đã giao hồ sơ cho người kiểm duyệt"
+              tone="success"
+            />
+          </div>
         ) : null}
       </section>
 
@@ -517,7 +555,10 @@ export function ReviewLifecyclePanel({
       ) : null}
 
       {dossier.assignments.length > 0 ? (
-        <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5">
+        <section
+          className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5"
+          id="admin-review-reports"
+        >
           <div className="flex items-start gap-3">
             {dossier.assignments.every(
               (item) =>
@@ -550,7 +591,10 @@ export function ReviewLifecyclePanel({
       )}
 
       {dossier.assignments.length > 0 ? (
-        <section className="admin-decision-panel rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
+        <section
+          className="admin-decision-panel rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
+          id="admin-decision"
+        >
           <div className="flex items-start gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-700">
               <FileCheck2 aria-hidden="true" className="size-5" />
@@ -683,30 +727,32 @@ export function ReviewLifecyclePanel({
             </div>
           ) : null}
           {decisionSucceeded ? (
-            <div
-              aria-live="polite"
-              className="admin-decision-status admin-decision-status--success mt-4"
-              role="status"
-            >
-              <span
-                aria-hidden="true"
-                className="t-success-check admin-decision-status__check"
-                data-state="in"
-              >
-                <svg fill="none" viewBox="0 0 24 24">
-                  <path d="M4 12.5 9 17 20 6" />
-                </svg>
-              </span>
-              <div>
-                <p className="font-bold">
-                  {activeDecision === "REQUEST_MORE_INFO"
-                    ? "Đã gửi yêu cầu bổ sung"
-                    : "Đã ghi nhận quyết định"}
-                </p>
-                <p className="mt-1 text-sm">
-                  Đang chuyển sang bước tiếp theo của quy trình.
-                </p>
-              </div>
+            <div className="mt-4">
+              <WorkflowNextStep
+                action={
+                  activeDecision === "APPROVE"
+                    ? {
+                        href: `/admin/payments?dossierId=${encodeURIComponent(dossier.dossierId)}`,
+                        label: "Quyết định phí hồ sơ",
+                      }
+                    : { href: "/admin/reviews", label: "Về hàng chờ hồ sơ" }
+                }
+                description={
+                  activeDecision === "APPROVE"
+                    ? "Hồ sơ đã được phê duyệt. Chọn thu phí hoặc miễn phí cho hồ sơ trước khi chuyển sang bước ký xác lập."
+                    : activeDecision === "REQUEST_MORE_INFO"
+                      ? "Người gửi cần bổ sung hồ sơ. Theo dõi phiên bản nộp lại trong hàng chờ."
+                      : "Kết quả từ chối đã được ghi nhận. Tiếp tục xử lý các hồ sơ khác trong hàng chờ."
+                }
+                title={
+                  activeDecision === "APPROVE"
+                    ? "Đã phê duyệt hồ sơ"
+                    : activeDecision === "REQUEST_MORE_INFO"
+                      ? "Đã gửi yêu cầu bổ sung"
+                      : "Đã từ chối hồ sơ"
+                }
+                tone="success"
+              />
             </div>
           ) : null}
           {decide.isError || requestFinalSupplement.isError ? (

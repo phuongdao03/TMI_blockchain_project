@@ -79,6 +79,7 @@ const userItems: NavigationItem[] = [
 ];
 
 const reviewerItems: NavigationItem[] = [
+  { href: "/reviews", label: "Việc thẩm định", icon: ClipboardCheck },
   {
     href: "/work-allocations",
     label: "Công việc được giao",
@@ -89,9 +90,16 @@ const reviewerItems: NavigationItem[] = [
   { href: "/overtime", label: "Tăng ca", icon: Clock3 },
 ];
 
-const employeeItems: NavigationItem[] = reviewerItems.slice(1);
+const employeeItems: NavigationItem[] = reviewerItems.slice(2);
 
 const adminItems: NavigationItem[] = [
+  {
+    href: "/admin/reviews",
+    label: "Tiếp nhận hồ sơ",
+    icon: FileText,
+    permission: "review.assign",
+    allowedRoles: ["SUPER_ADMIN"],
+  },
   {
     href: "/admin/work-allocations",
     label: "Phân công công việc",
@@ -224,8 +232,23 @@ function sectionsFor(
     canAccess(item, roles, permissions),
   );
   if (persona === "SUPER_ADMIN") {
+    const dossierHrefs = new Set([
+      "/admin/reviews",
+      "/admin/work-allocations",
+      "/admin/dashboard",
+      "/admin/payments",
+      "/admin/certificates",
+      "/admin/content",
+    ]);
     return [
-      { label: "Điều hành", items: adminItems },
+      {
+        label: "Hồ sơ và phát hành",
+        items: adminItems.filter((item) => dossierHrefs.has(item.href)),
+      },
+      {
+        label: "Quản trị hệ thống",
+        items: adminItems.filter((item) => !dossierHrefs.has(item.href)),
+      },
       { label: "Tra cứu", items: discoveryItems.slice(1) },
       { label: "Cá nhân", items: personalItems.slice(0, 2) },
     ];
@@ -236,7 +259,8 @@ function sectionsFor(
       ...(operationalItems.length
         ? [{ label: "Vận hành", items: operationalItems }]
         : []),
-      { label: "Công việc", items: reviewerItems },
+      { label: "Thẩm định", items: reviewerItems.slice(0, 2) },
+      { label: "Nhân sự", items: employeeItems },
       { label: "Tra cứu", items: discoveryItems.slice(1) },
       { label: "Cá nhân", items: personalItems.slice(0, 2) },
     ];
@@ -270,12 +294,13 @@ function mobileItemsFor(
   const priorities: Record<WorkspacePersona, string[]> = {
     VIEWER: ["/dashboard", "/search", "/works"],
     USER: ["/dashboard", "/dossiers", "/attendance", "/leave"],
-    MODERATOR: ["/work-allocations", "/attendance", "/leave", "/overtime"],
+    MODERATOR: ["/reviews", "/work-allocations", "/attendance", "/leave"],
     SUPER_ADMIN: [
+      "/admin/reviews",
       "/admin/dashboard",
       "/admin/work-allocations",
-      "/admin/payroll",
       "/blockchain",
+      "/admin/payroll",
       "/admin/payments",
       "/admin/leave",
       "/admin/overtime",
@@ -324,7 +349,7 @@ export function DashboardNavigation({
   const authUser = useAuthUser();
   const effectiveRoles = roles ?? authUser?.roles ?? [];
   const effectivePermissions = authUser?.permissions ?? [];
-  const isEmployee = authUser?.isEmployee ?? previewRole === "USER";
+  const isEmployee = authUser?.isEmployee ?? false;
   const persona = resolveWorkspacePersona(effectiveRoles);
   const preview = isPreviewRelease();
   const supportItem =

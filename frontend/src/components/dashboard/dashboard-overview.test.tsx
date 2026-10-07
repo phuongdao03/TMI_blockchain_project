@@ -49,7 +49,7 @@ describe("DashboardOverview", () => {
   it("shows a task-focused empty state with one primary action", async () => {
     listDossiers.mockResolvedValue({
       data: [],
-      pagination: { page: 1, pageSize: 5, total: 0, totalPages: 1 },
+      meta: { page: 1, pageSize: 5, total: 0 },
     });
 
     renderDashboard();
@@ -60,6 +60,29 @@ describe("DashboardOverview", () => {
     expect(screen.getByRole("link", { name: /Tạo hồ sơ mới/i })).toBeDefined();
     expect(
       screen.getByRole("heading", { level: 1, name: "Việc cần làm" }),
+    ).toBeDefined();
+  });
+
+  it("states that status counts cover only recently loaded dossiers", async () => {
+    listDossiers.mockResolvedValue({
+      data: [
+        {
+          id: "recent-1",
+          code: "THV-1",
+          title: "Hồ sơ gần đây",
+          status: "DRAFT",
+          updatedAt: "2026-10-01T00:00:00Z",
+        },
+      ],
+      meta: { page: 1, pageSize: 5, total: 27 },
+    });
+
+    renderDashboard();
+
+    expect(await screen.findByText("Tổng cộng 27 hồ sơ")).toBeDefined();
+    expect(screen.getByText("Trạng thái của hồ sơ gần đây")).toBeDefined();
+    expect(
+      screen.getByText("Số liệu dưới đây chỉ tính trên 1 hồ sơ vừa tải."),
     ).toBeDefined();
   });
 });

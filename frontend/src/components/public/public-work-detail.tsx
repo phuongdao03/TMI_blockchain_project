@@ -30,6 +30,10 @@ import type {
   PublicWorkDetailMedia,
   Verification,
 } from "@/lib/api/types";
+import {
+  cloudinaryPublicImageLoader,
+  isCloudinaryPublicImage,
+} from "@/lib/media/cloudinary-image-loader";
 
 export function PublicWorkDetailPage({
   initialDetail,
@@ -297,12 +301,17 @@ function PublicGallery({
             className={`object-contain ${loadedImageId === selected.id ? "" : "opacity-0"}`}
             fill
             key={selected.id}
+            loader={
+              isCloudinaryPublicImage(selected.url)
+                ? cloudinaryPublicImageLoader
+                : undefined
+            }
             onError={() => setFailedImageId(selected.id)}
             onLoad={() => setLoadedImageId(selected.id)}
             priority
             sizes="100vw"
             src={selected.url}
-            unoptimized
+            unoptimized={!isCloudinaryPublicImage(selected.url)}
           />
         ) : null}
         {selected.kind === "IMAGE" &&

@@ -981,6 +981,15 @@ export const reviewApi = {
       `/reviewer/assignments/${assignmentId}`,
     );
   },
+  declareConflict(
+    assignmentId: string,
+    input: { hasConflict: boolean; reason?: string },
+  ) {
+    return request<ReviewAssignment>(
+      `/reviewer/assignments/${encodeURIComponent(assignmentId)}/conflict`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
   requestAssistance(
     assignmentId: string,
     input: { reason: string; requestedReviewerCount: number },

@@ -37,19 +37,24 @@ test("an applicant selects a dossier type and creates a draft", async ({
   const dossierTypes = page.locator(".dossier-type-option");
   await expect(dossierTypes).toHaveCount(12);
   await dossierTypes.filter({ hasText: "Tác phẩm văn hóa" }).click();
-  await page
-    .getByLabel("Chủ sở hữu hoặc tác giả")
-    .fill("Trung tâm an ninh công nghệ số - THV");
-  await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
+  await page.getByRole("button", { name: "Tiếp tục nhập thông tin" }).click();
   await page
     .getByLabel("Tên tài sản hoặc tác phẩm")
     .fill("Bộ nhận diện thương hiệu THV");
   await page
     .getByLabel("Mô tả ngắn")
     .fill("Hồ sơ xác lập nguồn gốc và quyền sở hữu.");
+  await page
+    .getByRole("button", { name: "Tiếp tục thông tin theo loại" })
+    .click();
+  await page
+    .getByLabel("Chủ sở hữu hoặc tác giả")
+    .fill("Trung tâm an ninh công nghệ số - THV");
+  await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
+  await page.getByRole("button", { name: "Kiểm tra thông tin" }).click();
   await page.getByRole("button", { name: "Tạo hồ sơ nháp" }).click();
 
   await expect(page).toHaveURL(
-    /\/dossiers\/9155dbf5-bb3e-449d-8bf0-9572cc642cac$/,
+    /\/dossiers\/9155dbf5-bb3e-449d-8bf0-9572cc642cac\?created=1$/,
   );
 });

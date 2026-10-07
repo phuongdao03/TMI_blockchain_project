@@ -29,6 +29,8 @@ from app.modules.blockchain.errors import (
 from app.modules.blockchain.human_signing import normalize_wallet_address
 from app.modules.blockchain.models import (
     BlockchainTransaction,
+    BlockchainTransactionIntent,
+    BlockchainTransactionIntentStatus,
     BlockchainTransactionStatus,
     BlockchainWalletLink,
 )
@@ -631,6 +633,7 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version(
             gateway.transaction_data = b"metamask-delegation-wrapper"
             gateway.receipt_contract_address = gateway.transaction_recipient
         issuance_requests: list[UUID] = []
+        clock_time = [NOW]
         service = THVProofRegistryService(
             session=sessions(),
             gateway=cast(THVProofRegistryGateway, gateway),
@@ -641,7 +644,7 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version(
             payload_cipher=OutboxPayloadCipher(key=OUTBOX_KEY, key_id="proof-key-v1"),
             required_confirmations=2,
             intent_ttl=timedelta(minutes=10),
-            clock=lambda: NOW,
+            clock=lambda: clock_time[0],
             enqueue_certificate_issue=issuance_requests.append,
         )
         assert await service.signing_queue(principal) == []
@@ -683,6 +686,14 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version(
         assert intent.transaction_id is not None
         assert intent.intent_id is not None
 
+        clock_time[0] = NOW + timedelta(minutes=11)
+        replacement_intent = await service.prepare_record_proof_intent(
+            principal,
+            dossier_id=dossier.id,
+            version_no=1,
+            connected_wallet=WALLET,
+        )
+        assert replacement_intent.intent_id != intent.intent_id
         gateway.transaction_available = False
         submitted = await service.submit_transaction(
             principal,
@@ -693,6 +704,30 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version(
         )
         assert submitted.status is BlockchainTransactionStatus.SIGNING
         assert submitted.tx_hash == gateway.transaction_hash
+        async with sessions() as session:
+            submitted_intent = await session.get(
+                BlockchainTransactionIntent, intent.intent_id
+            )
+            replacement = await session.get(
+                BlockchainTransactionIntent, replacement_intent.intent_id
+            )
+            assert submitted_intent is not None
+            assert (
+                submitted_intent.status is BlockchainTransactionIntentStatus.SUBMITTED
+            )
+            assert replacement is not None
+            assert replacement.status is BlockchainTransactionIntentStatus.PREPARED
+        clock_time[0] = NOW
+
+        with pytest.raises(
+            BlockchainConflictError, match="submitted proof transaction"
+        ):
+            await service.prepare_record_proof_intent(
+                principal,
+                dossier_id=dossier.id,
+                version_no=1,
+                connected_wallet=WALLET,
+            )
 
         gateway.transaction_available = True
         gateway.receipt_available = False

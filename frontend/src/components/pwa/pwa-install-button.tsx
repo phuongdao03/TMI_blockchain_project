@@ -16,6 +16,21 @@ const INSTALL_PROMPT_READY = "pwa-install-prompt-ready";
 
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
+function captureInstallPrompt(event: Event) {
+  event.preventDefault();
+  deferredPrompt = event as BeforeInstallPromptEvent;
+  window.dispatchEvent(new Event(INSTALL_PROMPT_READY));
+}
+
+async function requestInstall() {
+  const prompt = deferredPrompt;
+  if (!prompt) return null;
+  deferredPrompt = null;
+  window.dispatchEvent(new Event(INSTALL_PROMPT_READY));
+  await prompt.prompt();
+  return (await prompt.userChoice).outcome;
+}
+
 function isStandalone() {
   if (typeof window === "undefined") return false;
   return (
@@ -34,41 +49,81 @@ function isAppleMobile() {
 
 export function PwaInstallButton({ className }: { className?: string }) {
   const [installed, setInstalled] = useState(false);
+  const [promptReady, setPromptReady] = useState(false);
+  const [working, setWorking] = useState(false);
 
   useEffect(() => {
     const standaloneCheck = window.setTimeout(() => {
       if (isStandalone()) setInstalled(true);
     }, 0);
-    const capture = (event: Event) => {
-      event.preventDefault();
-      deferredPrompt = event as BeforeInstallPromptEvent;
-      window.dispatchEvent(new Event(INSTALL_PROMPT_READY));
+    const refresh = () => setPromptReady(Boolean(deferredPrompt));
+    const markInstalled = () => {
+      deferredPrompt = null;
+      setPromptReady(false);
+      setInstalled(true);
     };
-    const markInstalled = () => setInstalled(true);
-    window.addEventListener("beforeinstallprompt", capture);
+    refresh();
+    window.addEventListener("beforeinstallprompt", captureInstallPrompt);
+    window.addEventListener(INSTALL_PROMPT_READY, refresh);
     window.addEventListener("appinstalled", markInstalled);
     return () => {
       window.clearTimeout(standaloneCheck);
-      window.removeEventListener("beforeinstallprompt", capture);
+      window.removeEventListener("beforeinstallprompt", captureInstallPrompt);
+      window.removeEventListener(INSTALL_PROMPT_READY, refresh);
       window.removeEventListener("appinstalled", markInstalled);
     };
   }, []);
 
   if (installed) return null;
+  const actionClass = cn(
+    "group inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm font-bold text-[var(--theme-text)] transition hover:border-primary-500 hover:bg-[var(--theme-surface-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 sm:px-4",
+    className,
+  );
+  const content = (
+    <>
+      <Download
+        aria-hidden="true"
+        className="size-4 transition-transform group-hover:translate-y-0.5 motion-reduce:transition-none"
+      />
+      <span className="hidden whitespace-nowrap lg:inline">
+        {working
+          ? "Đang mở cài đặt…"
+          : promptReady
+            ? "Cài ứng dụng"
+            : "Cách cài ứng dụng"}
+      </span>
+    </>
+  );
+  if (promptReady) {
+    return (
+      <button
+        aria-label="Cài ứng dụng"
+        className={actionClass}
+        disabled={working}
+        onClick={async () => {
+          setWorking(true);
+          try {
+            const outcome = await requestInstall();
+            if (outcome === "accepted") setInstalled(true);
+          } catch {
+            setPromptReady(false);
+          } finally {
+            setWorking(false);
+          }
+        }}
+        type="button"
+      >
+        {content}
+      </button>
+    );
+  }
   return (
     <Link
       aria-label="Xem hướng dẫn cài ứng dụng"
-      className={cn(
-        "group inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm font-bold text-[var(--theme-text)] transition hover:border-primary-500 hover:bg-[var(--theme-surface-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 sm:px-4",
-        className,
-      )}
+      className={actionClass}
       href="/install"
     >
-      <Download
-        aria-hidden="true"
-        className="size-4 transition-transform group-hover:translate-y-0.5"
-      />
-      <span className="hidden whitespace-nowrap lg:inline">Cài ứng dụng</span>
+      {content}
     </Link>
   );
 }
@@ -89,11 +144,17 @@ export function PwaInstallAction() {
       refresh();
       if (isStandalone()) setState("installed");
     }, 0);
-    const installed = () => setState("installed");
+    const installed = () => {
+      deferredPrompt = null;
+      setPromptReady(false);
+      setState("installed");
+    };
+    window.addEventListener("beforeinstallprompt", captureInstallPrompt);
     window.addEventListener(INSTALL_PROMPT_READY, refresh);
     window.addEventListener("appinstalled", installed);
     return () => {
       window.clearTimeout(detect);
+      window.removeEventListener("beforeinstallprompt", captureInstallPrompt);
       window.removeEventListener(INSTALL_PROMPT_READY, refresh);
       window.removeEventListener("appinstalled", installed);
     };
@@ -106,11 +167,9 @@ export function PwaInstallAction() {
     }
     setState("working");
     try {
-      await deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      deferredPrompt = null;
+      const outcome = await requestInstall();
       setPromptReady(false);
-      setState(choice.outcome === "accepted" ? "accepted" : "idle");
+      setState(outcome === "accepted" ? "accepted" : "idle");
     } catch {
       deferredPrompt = null;
       setPromptReady(false);

@@ -1,7 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { Suspense, type ReactNode, useState } from "react";
 
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { NavigationLoading } from "@/components/ui/navigation-loading";
@@ -23,7 +23,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
       <ServiceWorkerRegistration
         forceEnable={process.env.NEXT_PUBLIC_ENABLE_PWA === "true"}
       />
-      <NavigationLoading />
+      <Suspense fallback={null}>
+        <NavigationLoading />
+      </Suspense>
       {children}
     </QueryClientProvider>
   );

@@ -292,6 +292,10 @@ export function PublicShell({
             <Link href="/install" onClick={() => closeMenu(false)}>
               Cài ứng dụng
             </Link>
+            <div className="public-mobile-nav__theme">
+              <span>Giao diện</span>
+              <ThemeToggle />
+            </div>
             {publicHeaderAction ? (
               <Link
                 href={publicHeaderAction.href}

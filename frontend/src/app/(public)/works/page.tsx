@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ArrowDown } from "lucide-react";
 
 import {
   type CatalogParameters,
@@ -56,63 +57,42 @@ export default async function LibraryPage({
     <div
       className={
         embedded
-          ? "public-theme-surface public-library-page public-theme-surface--embedded relative isolate overflow-hidden rounded-2xl px-5 py-7 shadow-[0_24px_70px_rgba(15,23,42,.12)] sm:px-7 lg:px-9"
-          : "public-theme-surface public-library-page relative isolate overflow-hidden"
+          ? "public-theme-surface public-library-page public-theme-surface--embedded overflow-hidden rounded-2xl px-4 py-6 sm:px-7 lg:px-9"
+          : "public-theme-surface public-library-page overflow-hidden"
       }
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[34rem] bg-[radial-gradient(circle_at_78%_8%,rgba(212,167,44,.12),transparent_24rem),radial-gradient(circle_at_10%_30%,rgba(220,38,38,.14),transparent_28rem)]"
-      />
       <div
         className={
           embedded
             ? "mx-auto max-w-[90rem]"
-            : "mx-auto min-h-[calc(100dvh-5rem)] max-w-[90rem] px-4 py-7 sm:px-6 sm:py-14 lg:px-8 lg:py-20"
+            : "mx-auto min-h-[calc(100dvh-5rem)] max-w-[90rem] px-4 py-7 sm:px-6 sm:py-12 lg:px-8"
         }
       >
         <header
-          className={`grid gap-3 border-b border-white/10 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-end ${
-            embedded ? "pb-5 sm:pb-7" : "pb-6 sm:pb-12"
+          className={`flex flex-col gap-4 border-b border-[var(--theme-border)] sm:flex-row sm:items-end sm:justify-between ${
+            embedded ? "pb-5" : "pb-6 sm:pb-8"
           }`}
         >
-          <div>
-            <p
-              className={`text-xs font-bold tracking-[0.24em] uppercase ${
-                embedded ? "text-gold-300" : "text-red-700"
-              }`}
-            >
-              Không gian đề cử
+          <div className="max-w-3xl">
+            <p className="text-xs font-bold tracking-[0.2em] text-[var(--theme-accent)] uppercase">
+              Khám phá Tinh Hoa Việt
             </p>
-            <h1
-              className={`mt-2 max-w-5xl font-bold tracking-[-0.035em] text-[var(--theme-text,#fff)] sm:mt-4 ${
-                embedded
-                  ? "text-3xl sm:text-4xl"
-                  : "text-4xl sm:text-5xl lg:text-6xl"
-              }`}
-            >
+            <h1 className="mt-2 text-3xl font-bold tracking-[-0.035em] text-[var(--theme-text)] sm:text-5xl">
               Thư viện đề cử
-              {!embedded ? (
-                <span className="block text-[var(--theme-muted,#94a3b8)]">
-                  Những giá trị đáng được biết đến.
-                </span>
-              ) : null}
             </h1>
-          </div>
-          <div className="border-l border-gold-300/40 pl-5">
-            <p className="text-sm leading-7 text-[var(--theme-muted,#94a3b8)]">
-              Khám phá những nội dung đã được giới thiệu tới cộng đồng, với
-              thông tin rõ ràng và dễ tra cứu.
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-muted)] sm:text-base">
+              Khám phá tác phẩm, ý tưởng và câu chuyện đã được giới thiệu tới
+              cộng đồng.
             </p>
           </div>
+          <a
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 self-start rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] transition-colors hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] sm:self-auto"
+            href="#catalog-search"
+          >
+            Tìm đề cử <ArrowDown aria-hidden="true" className="size-4" />
+          </a>
         </header>
-        <div
-          className={
-            embedded
-              ? "mt-5 sm:mt-8"
-              : "mt-6 px-5 py-6 sm:mt-10 sm:px-7 sm:py-8 lg:px-9 lg:py-10"
-          }
-        >
+        <div className={embedded ? "mt-5 sm:mt-8" : "mt-6 sm:mt-9"}>
           <PublicLibrary {...parameters} initialData={initialData} />
         </div>
       </div>

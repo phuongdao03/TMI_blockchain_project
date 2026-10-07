@@ -392,9 +392,12 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
         upload_count = 0
         pending = False
         ready = False
+        hls_ready = False
 
         async def public_derivative_ready(self, url: str) -> bool:
             assert url.startswith("https://res.cloudinary.com/")
+            if url.endswith(".m3u8"):
+                return self.hls_ready
             return self.ready
 
         async def download_asset(self, **kwargs: object) -> bytes:
@@ -419,7 +422,10 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert kwargs["source_format"] == "mp4"
             assert kwargs["source_content"] == content
             assert kwargs["transformation"] == "c_limit,w_640,q_auto:eco,vc_auto,f_mp4"
-            assert kwargs["eager_transformations"] == ()
+            assert kwargs["eager_transformations"] == (
+                "so_auto,q_auto,f_webp",
+                "sp_auto:maxres_720p/f_m3u8",
+            )
             assert str(kwargs["derivative_public_id"]).startswith("cns/local/dossiers/")
             assert "/versions/1/public/" in str(kwargs["derivative_public_id"])
             return PublicDerivativeMetadata(
@@ -609,7 +615,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert public_video.muted is True
             assert public_video.streaming_url is not None
             assert public_video.streaming_url.endswith(".m3u8")
-            assert "/sp_auto:maxres_720p/" in public_video.streaming_url
+            assert "/sp_auto:maxres_720p/f_m3u8/" in public_video.streaming_url
             assert public_video.poster_url is not None
             assert public_video.poster_url.endswith(".webp")
 
@@ -705,11 +711,18 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert relation.derivative_status is DerivativeStatus.PROCESSING
             video_gateway.ready = True
             await worker.process(relation_id)
+            assert relation.derivative_status is DerivativeStatus.PROCESSING
+            video_gateway.hls_ready = True
+            await worker.process(relation_id)
             assert relation.derivative_status is DerivativeStatus.READY
             assert video_gateway.upload_count == 5
             ready_video = (await service.list_public(work_id))[0]
             assert ready_video.url == relation.derivative_url
-            assert ready_video.streaming_url is None
+            assert ready_video.streaming_url is not None
+            assert "/sp_auto:maxres_720p/f_m3u8/" in ready_video.streaming_url
+            assert "/c_limit," not in ready_video.streaming_url
+            assert ready_video.poster_url is not None
+            assert "/c_limit," not in ready_video.poster_url
         await engine.dispose()
 
     asyncio.run(exercise())

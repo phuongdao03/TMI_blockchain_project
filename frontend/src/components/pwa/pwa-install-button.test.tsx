@@ -25,13 +25,42 @@ describe("PWA installation", () => {
     });
   });
 
-  it("takes the header CTA to the installation guide", () => {
+  it("takes the header CTA to the installation guide when native install is unavailable", () => {
     render(<PwaInstallButton />);
     expect(
       screen
         .getByRole("link", { name: "Xem hướng dẫn cài ứng dụng" })
         .getAttribute("href"),
     ).toBe("/install");
+  });
+
+  it("opens the native install dialog from the header in one tap when ready", async () => {
+    const user = userEvent.setup();
+    const { event, prompt } = installPrompt();
+    render(<PwaInstallButton />);
+
+    fireEvent(window, event);
+    await user.click(
+      await screen.findByRole("button", { name: "Cài ứng dụng" }),
+    );
+
+    expect(prompt).toHaveBeenCalledOnce();
+  });
+
+  it("returns to the install guide if the native prompt fails", async () => {
+    const user = userEvent.setup();
+    const { event, prompt } = installPrompt();
+    prompt.mockRejectedValueOnce(new Error("prompt unavailable"));
+    render(<PwaInstallButton />);
+
+    fireEvent(window, event);
+    await user.click(
+      await screen.findByRole("button", { name: "Cài ứng dụng" }),
+    );
+
+    expect(
+      await screen.findByRole("link", { name: "Xem hướng dẫn cài ứng dụng" }),
+    ).toBeDefined();
   });
 
   it("starts native installation only from the guide action", async () => {

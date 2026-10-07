@@ -6,6 +6,7 @@ import type { ReviewAssignmentStatus } from "@/lib/api/types";
 
 const statuses: Array<[string, string]> = [
   ["", "Tất cả phân công"],
+  ["ASSIGNED", "Mới được giao"],
   ["IN_PROGRESS", "Đang thẩm định"],
   ["SUBMITTED", "Đã gửi kết quả"],
 ];

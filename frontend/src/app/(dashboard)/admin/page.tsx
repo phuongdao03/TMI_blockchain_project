@@ -65,6 +65,75 @@ export default function AdminPortalPage() {
   return (
     <RoleGate allowed={["SUPER_ADMIN"]}>
       <div className="mx-auto max-w-7xl space-y-8">
+        <section
+          aria-labelledby="admin-start-title"
+          className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6"
+        >
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
+            Công việc hôm nay
+          </p>
+          <h1 className="mt-2 text-2xl font-bold" id="admin-start-title">
+            Bắt đầu xử lý hồ sơ
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
+            Đi theo thứ tự từ tiếp nhận, thẩm định đến phát hành. Mỗi mục mở
+            đúng khu vực xử lý hiện có.
+          </p>
+          <nav aria-label="Quy trình hồ sơ" className="mt-5">
+            <ol className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {(
+                [
+                  [
+                    "01",
+                    "Tiếp nhận và phân công",
+                    "Giao hồ sơ mới cho người thẩm định",
+                    "/admin/reviews",
+                  ],
+                  [
+                    "02",
+                    "Theo dõi thẩm định",
+                    "Xem tiến độ và các trường hợp cần chú ý",
+                    "/admin/dashboard",
+                  ],
+                  [
+                    "03",
+                    "Quyết định phí",
+                    "Chọn thu phí hoặc miễn phí sau khi duyệt",
+                    "/admin/payments",
+                  ],
+                  [
+                    "04",
+                    "Hoàn tất phát hành",
+                    "Kiểm tra bằng xác lập và công bố",
+                    "/admin/certificates",
+                  ],
+                ] as const
+              ).map(([number, title, description, href]) => (
+                <li key={href}>
+                  <Link
+                    className="flex h-full min-h-28 gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 transition-colors hover:border-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-600"
+                    href={href}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="font-mono text-sm font-bold text-primary-700"
+                    >
+                      {number}
+                    </span>
+                    <span>
+                      <strong className="block text-sm text-[var(--theme-text)]">
+                        {title}
+                      </strong>
+                      <span className="mt-1 block text-xs leading-5 text-[var(--theme-muted)]">
+                        {description}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </section>
         <section aria-labelledby="admin-priority-title">
           <div className="mb-5">
             <p className="text-sm font-bold uppercase tracking-[0.16em] text-primary-700">

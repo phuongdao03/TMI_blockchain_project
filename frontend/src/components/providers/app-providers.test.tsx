@@ -6,7 +6,10 @@ import { authApi } from "@/lib/api/client";
 
 let pathname = "/search";
 
-vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => pathname,
+  useSearchParams: () => new URLSearchParams(),
+}));
 vi.mock("@/lib/api/client", () => ({
   authApi: { currentUser: vi.fn() },
 }));

@@ -5,6 +5,7 @@ import { CircleHelp, LoaderCircle, Send, UsersRound } from "lucide-react";
 import { useId, useState } from "react";
 
 import { Card } from "@/components/ui/card";
+import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
 import { reviewApi } from "@/lib/api/client";
 import type { ReviewAssistanceRequest } from "@/lib/api/types";
 import { reviewKeys } from "@/lib/reviews/query-keys";
@@ -53,6 +54,7 @@ export function ReviewAssistancePanel({
   const canSubmit =
     canRequest &&
     !pending &&
+    !requestHelp.isSuccess &&
     reason.trim().length >= 20 &&
     !requestHelp.isPending;
 
@@ -76,6 +78,14 @@ export function ReviewAssistancePanel({
       </div>
 
       <div className="space-y-4 p-5 sm:p-6">
+        {requestHelp.isSuccess ? (
+          <WorkflowNextStep
+            action={{ href: "#review-form", label: "Tiếp tục báo cáo" }}
+            description="Tiếp tục kiểm tra hồ sơ trong lúc Admin xem yêu cầu và chỉ định thêm người kiểm duyệt. Trạng thái sẽ cập nhật tại đây."
+            title="Đã gửi yêu cầu hỗ trợ cho Admin"
+            tone="success"
+          />
+        ) : null}
         {requests.length > 0 ? (
           <div className="space-y-3" aria-label="Lịch sử yêu cầu hỗ trợ">
             {requests.map((item) => (
@@ -121,7 +131,7 @@ export function ReviewAssistancePanel({
           </div>
         ) : null}
 
-        {canRequest && !pending ? (
+        {canRequest && !pending && !requestHelp.isSuccess ? (
           <form
             className="space-y-4 rounded-xl border border-dashed border-primary-300 bg-white/60 p-4"
             onSubmit={(event) => {

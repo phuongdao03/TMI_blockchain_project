@@ -19,11 +19,6 @@ const publicLibrary = readFileSync(
   resolve(process.cwd(), "src/components/public/public-library.tsx"),
   "utf8",
 );
-const publicWorkCard = readFileSync(
-  resolve(process.cwd(), "src/components/public/public-work-card.tsx"),
-  "utf8",
-);
-
 describe("THV identity theme", () => {
   it.each([
     ["--thv-red", "#9d0000"],
@@ -196,12 +191,15 @@ describe("THV identity theme", () => {
     expect(stylesheet).toContain("--theme-bg: #24100f;");
   });
 
-  it("keeps the featured work card stacked until a wide desktop is available", () => {
+  it("stacks the featured card on phones and gives it room on larger screens", () => {
     expect(publicLibrary).toContain(
-      "xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,.65fr)]",
+      "xl:grid-cols-[minmax(0,1.55fr)_minmax(17rem,.45fr)]",
     );
-    expect(publicWorkCard).toContain(
-      "xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,.85fr)]",
+    expect(stylesheet).toMatch(
+      /\.catalog-work-card__link \{\s*display: block;/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(min-width: 48rem\) \{\s*\.catalog-work-card--lead \.catalog-work-card__link \{\s*display: grid;/,
     );
   });
 

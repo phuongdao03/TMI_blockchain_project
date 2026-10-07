@@ -8804,6 +8804,10 @@ html[data-theme="light"] .public-home .registry-search input::placeholder {
     gap: 0.375rem;
   }
 
+  .public-shell .public-header .theme-toggle {
+    display: none;
+  }
+
   .public-shell .public-header .brand-mark {
     min-width: 0;
     gap: 0.25rem;
@@ -8827,15 +8831,22 @@ html[data-theme="light"] .public-home .registry-search input::placeholder {
     white-space: normal;
   }
 
-  .public-shell .public-header__actions > a[href="/install"] {
-    display: none;
-  }
-
   .public-shell .public-workspace-navigation {
     background: var(--theme-surface);
     backdrop-filter: none;
     animation: none;
   }
+}
+
+.public-mobile-nav__theme {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.8rem;
+  color: var(--theme-text);
+  font-size: 0.9375rem;
+  font-weight: 700;
 }
 
 /* Video controls stay legible over the dark player in both color modes. */
@@ -9692,7 +9703,7 @@ html[data-theme="dark"] .review-workspace__error {
     display: none;
   }
 
-  .dashboard-context-header__install {
+  .dashboard-context-header__install:is(a) {
     display: none;
   }
 
@@ -10321,5 +10332,354 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
 
   .public-shell .public-footer--legal nav {
     gap: 0.25rem 1rem;
+  }
+}
+
+/* Nomination cards use semantic surfaces so the catalogue keeps clear
+   contrast in both themes. Motion is limited to hover-capable devices. */
+.catalog-work-card {
+  min-width: 0;
+}
+
+.public-library-page #catalog-search {
+  scroll-margin-top: 6rem;
+}
+
+@keyframes catalog-filter-enter {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.public-library-page .catalog-filter-sheet {
+  animation: catalog-filter-enter 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.catalog-work-card__link {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 0.75rem;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  text-decoration: none;
+  transition:
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.catalog-work-card__link:focus-visible {
+  outline: 3px solid var(--theme-accent);
+  outline-offset: 3px;
+}
+
+.catalog-work-card__cover {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #620807;
+}
+
+.catalog-work-card__image {
+  object-fit: cover;
+  transition: transform 260ms ease;
+}
+
+.catalog-work-card__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  padding: 1.25rem;
+  background: linear-gradient(145deg, #7b100c, #420604);
+  color: #fff9ee;
+}
+
+.catalog-work-card__fallback::before {
+  position: absolute;
+  inset: 13% auto auto 29%;
+  width: 66%;
+  aspect-ratio: 1;
+  border: 1px solid rgb(245 192 65 / 37%);
+  border-radius: 50%;
+  content: "";
+}
+
+.catalog-work-card__fallback-brand,
+.catalog-work-card__fallback-index {
+  position: relative;
+  z-index: 1;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.catalog-work-card__fallback-index {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  color: #f5c041;
+}
+
+.catalog-work-card__monogram {
+  position: absolute;
+  right: -0.1em;
+  bottom: -0.22em;
+  font-size: clamp(7rem, 25vw, 14rem);
+  font-weight: 900;
+  letter-spacing: -0.12em;
+  line-height: 1;
+  opacity: 0.13;
+}
+
+.catalog-work-card__category {
+  position: absolute;
+  top: 0.8rem;
+  left: 0.8rem;
+  max-width: calc(100% - 4.5rem);
+  overflow: hidden;
+  padding: 0.4rem 0.65rem;
+  border-radius: 0.25rem;
+  background: #fff9ee;
+  color: #5c130f;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.catalog-work-card__body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 1.25rem;
+}
+
+.catalog-work-card__meta,
+.catalog-work-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.catalog-work-card__meta {
+  color: var(--theme-muted);
+  font-size: 0.75rem;
+}
+
+.catalog-work-card__kicker {
+  color: var(--theme-accent);
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.catalog-work-card__title {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 0.8rem;
+  color: var(--theme-text);
+  font-size: 1.2rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.catalog-work-card__description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 0.65rem;
+  color: var(--theme-muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.catalog-work-card__footer {
+  margin-top: auto;
+  padding-top: 1.25rem;
+  color: var(--theme-muted);
+  font-size: 0.75rem;
+}
+
+.catalog-work-card__author {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-work-card__action {
+  display: inline-flex;
+  min-height: 2.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--theme-accent);
+  font-weight: 800;
+}
+
+.catalog-work-card--lead .catalog-work-card__cover {
+  aspect-ratio: 16 / 11;
+}
+
+.catalog-work-card--lead .catalog-work-card__body {
+  padding: 1.5rem;
+}
+
+.catalog-work-card--lead .catalog-work-card__title {
+  font-size: clamp(1.7rem, 4.5vw, 2.75rem);
+  -webkit-line-clamp: 3;
+}
+
+.catalog-work-card--lead .catalog-work-card__description {
+  max-width: 52ch;
+  -webkit-line-clamp: 3;
+}
+
+.catalog-work-card--support .catalog-work-card__link {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr);
+}
+
+.catalog-work-card--support .catalog-work-card__cover {
+  height: 100%;
+  aspect-ratio: 1;
+}
+
+.catalog-work-card--support .catalog-work-card__category,
+.catalog-work-card--support .catalog-work-card__description,
+.catalog-work-card--support .catalog-work-card__author,
+.catalog-work-card--support .catalog-work-card__action span {
+  display: none;
+}
+
+.catalog-work-card--support .catalog-work-card__body {
+  padding: 0.8rem 1rem;
+}
+
+.catalog-work-card--support .catalog-work-card__title {
+  margin-top: 0.35rem;
+  font-size: 1rem;
+}
+
+.catalog-work-card--support .catalog-work-card__footer {
+  padding-top: 0.3rem;
+}
+
+@media (min-width: 48rem) {
+  .catalog-work-card--lead .catalog-work-card__link {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  }
+
+  .catalog-work-card--lead .catalog-work-card__cover {
+    height: 100%;
+    min-height: 22rem;
+    aspect-ratio: auto;
+  }
+
+  .catalog-work-card--lead .catalog-work-card__body {
+    padding: 2rem;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .catalog-work-card__link:hover {
+    transform: translateY(-2px);
+    border-color: var(--theme-accent);
+  }
+
+  .catalog-work-card__link:hover .catalog-work-card__image {
+    transform: scale(1.025);
+  }
+}
+
+.catalog-loading {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--theme-border);
+  border-radius: 0.75rem;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.catalog-loading__message {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.catalog-loading__message svg {
+  color: var(--theme-accent);
+}
+
+.catalog-loading__track {
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--theme-accent) 20%, transparent);
+}
+
+.catalog-loading__progress {
+  display: block;
+  width: 32%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--theme-accent);
+  animation: catalog-loading-sweep 1.35s ease-in-out infinite;
+}
+
+@keyframes catalog-loading-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(315%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-library-page .catalog-filter-sheet {
+    animation: none;
+  }
+
+  .catalog-loading__progress {
+    animation: none;
+    transform: translateX(100%);
+  }
+
+  .catalog-work-card__link,
+  .catalog-work-card__image {
+    transition: none;
+  }
+}
+
+@media (max-width: 48rem) {
+  .registry-hero-glow,
+  .registry-kicker-dot,
+  .evidence-document,
+  .evidence-chain,
+  .evidence-seal {
+    animation: none;
   }
 }

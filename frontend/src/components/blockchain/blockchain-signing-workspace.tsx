@@ -15,7 +15,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   ApiError,
@@ -38,6 +38,12 @@ import {
   walletAddressesMatch,
   walletErrorCode,
 } from "@/lib/blockchain/eip1193";
+import {
+  clearPendingProofBroadcast,
+  readPendingProofBroadcast,
+  savePendingProofBroadcast,
+  type PendingProofBroadcast,
+} from "@/lib/blockchain/pending-proof-broadcast";
 
 type ConnectedWallet = { address: string; chainId: number } | null;
 
@@ -155,12 +161,15 @@ function estimatedGasFee(intent: THVProofRegistryIntent | null) {
 
 export function BlockchainSigningWorkspace() {
   const queryClient = useQueryClient();
+  const signingInFlight = useRef(false);
   const [connected, setConnected] = useState<ConnectedWallet>(null);
   const [selected, setSelected] = useState<THVProofRegistryQueueItem | null>(
     null,
   );
   const [preparedIntent, setPreparedIntent] =
     useState<THVProofRegistryIntent | null>(null);
+  const [pendingBroadcast, setPendingBroadcast] =
+    useState<PendingProofBroadcast | null>(null);
   const [busy, setBusy] = useState<"connect" | "link" | "sign" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [copiedTransaction, setCopiedTransaction] = useState(false);
@@ -212,7 +221,7 @@ export function BlockchainSigningWorkspace() {
       ? {
           ...selected,
           status: transactionStatus.data.status,
-          txHash: transactionStatus.data.txHash,
+          txHash: transactionStatus.data.txHash ?? selected.txHash,
           confirmations: transactionStatus.data.confirmations,
           errorCode: transactionStatus.data.errorCode,
         }
@@ -360,7 +369,20 @@ export function BlockchainSigningWorkspace() {
   }
 
   function openItem(item: THVProofRegistryQueueItem) {
-    setSelected(item);
+    const pending = !item.txHash
+      ? readPendingProofBroadcast(item.dossierId, item.version)
+      : null;
+    setPendingBroadcast(pending);
+    setSelected(
+      pending
+        ? {
+            ...item,
+            transactionId: pending.transactionId,
+            status: "SIGNING",
+            txHash: pending.transactionHash,
+          }
+        : item,
+    );
     setPreparedIntent(null);
     setMessage(null);
     setCopiedTransaction(false);
@@ -372,7 +394,14 @@ export function BlockchainSigningWorkspace() {
   }
 
   async function handleSign() {
-    if (!selected || !connected) return;
+    if (!selected || !connected || selected.txHash || signingInFlight.current)
+      return;
+    if (readPendingProofBroadcast(selected.dossierId, selected.version)) {
+      setMessage(
+        "Giao dịch đã được gửi từ ví. Hãy tiếp tục đồng bộ mã giao dịch trước khi ký lại.",
+      );
+      return;
+    }
     if (
       !wallet.data ||
       !walletAddressesMatch(wallet.data.walletAddress, connected.address)
@@ -386,6 +415,7 @@ export function BlockchainSigningWorkspace() {
       );
       return;
     }
+    signingInFlight.current = true;
     setBusy("sign");
     setMessage(null);
     let transactionHash: string | null = null;
@@ -400,6 +430,16 @@ export function BlockchainSigningWorkspace() {
         ...intent.transactionRequest,
         from: connected.address,
       });
+      const pending = {
+        dossierId: selected.dossierId,
+        version: selected.version,
+        transactionId: intent.transactionId,
+        intentId: intent.intentId,
+        transactionHash,
+        connectedWallet: connected.address,
+      };
+      savePendingProofBroadcast(pending);
+      setPendingBroadcast(pending);
       setSelected((current) =>
         current
           ? {
@@ -421,6 +461,8 @@ export function BlockchainSigningWorkspace() {
         transactionHash,
         connectedWallet: connected.address,
       });
+      clearPendingProofBroadcast(pending);
+      setPendingBroadcast(null);
       setSelected((current) =>
         current
           ? {
@@ -493,9 +535,109 @@ export function BlockchainSigningWorkspace() {
           : errorMessage(error),
       );
     } finally {
+      signingInFlight.current = false;
       setBusy(null);
     }
   }
+
+  const resumePendingBroadcast = useCallback(
+    async (pending: PendingProofBroadcast) => {
+      if (
+        !connected ||
+        !wallet.data ||
+        !walletAddressesMatch(
+          wallet.data.walletAddress,
+          pending.connectedWallet,
+        ) ||
+        !walletAddressesMatch(connected.address, pending.connectedWallet) ||
+        signingInFlight.current
+      ) {
+        return;
+      }
+      signingInFlight.current = true;
+      setBusy("sign");
+      try {
+        const submitted = await proofRegistrySigningApi.submitTransaction({
+          transactionId: pending.transactionId,
+          intentId: pending.intentId,
+          transactionHash: pending.transactionHash,
+          connectedWallet: pending.connectedWallet,
+        });
+        clearPendingProofBroadcast(pending);
+        setPendingBroadcast(null);
+        setSelected((current) =>
+          current?.dossierId === pending.dossierId &&
+          current.version === pending.version
+            ? {
+                ...current,
+                transactionId: submitted.transactionId,
+                status: submitted.status,
+                txHash: submitted.txHash,
+                confirmations: submitted.confirmations,
+                errorCode: submitted.errorCode,
+              }
+            : current,
+        );
+        setMessage(
+          "Đã đồng bộ mã giao dịch từ ví. Hệ thống đang chờ mạng Polygon xác nhận.",
+        );
+        await queryClient.invalidateQueries({
+          queryKey: ["blockchain", "proof-registry", "signing-queue"],
+        });
+      } catch {
+        try {
+          const status = await proofRegistrySigningApi.status(
+            pending.transactionId,
+          );
+          if (
+            status.txHash?.toLowerCase() ===
+              pending.transactionHash.toLowerCase() ||
+            status.status === "CONFIRMED"
+          ) {
+            clearPendingProofBroadcast(pending);
+            setPendingBroadcast(null);
+            setSelected((current) =>
+              current?.dossierId === pending.dossierId &&
+              current.version === pending.version
+                ? {
+                    ...current,
+                    transactionId: status.transactionId,
+                    status: status.status,
+                    txHash: status.txHash,
+                    confirmations: status.confirmations,
+                    errorCode: status.errorCode,
+                  }
+                : current,
+            );
+            setMessage(
+              "Đã tìm thấy giao dịch trên Polygon. Bạn không cần ký lại.",
+            );
+            return;
+          }
+        } catch {
+          // Keep the local hash so a retry never starts another wallet prompt.
+        }
+        setMessage(
+          "Chưa thể đồng bộ mã giao dịch. Giao dịch đã được gửi từ ví; hãy thử lại khi có kết nối.",
+        );
+      } finally {
+        signingInFlight.current = false;
+        setBusy(null);
+      }
+    },
+    [connected, queryClient, wallet.data],
+  );
+
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (active && pendingBroadcast)
+        void resumePendingBroadcast(pendingBroadcast);
+    });
+    return () => {
+      active = false;
+    };
+  }, [pendingBroadcast, resumePendingBroadcast]);
 
   const requiredChain = wallet.data?.chainId;
   const isWrongNetwork = Boolean(
@@ -1123,16 +1265,24 @@ export function BlockchainSigningWorkspace() {
               displayedSelected.txHash) ? (
               <button
                 className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-[var(--theme-border)] px-5 text-sm font-bold text-[var(--theme-text)] disabled:opacity-60 sm:w-auto"
-                disabled={transactionStatus.isFetching}
-                onClick={() => void transactionStatus.refetch()}
+                disabled={transactionStatus.isFetching || busy === "sign"}
+                onClick={() =>
+                  pendingBroadcast
+                    ? void resumePendingBroadcast(pendingBroadcast)
+                    : void transactionStatus.refetch()
+                }
                 type="button"
               >
                 <RefreshCw
                   className={`size-4 ${transactionStatus.isFetching ? "auth-activity-spinner" : ""}`}
                 />
-                {transactionStatus.isFetching
-                  ? "Đang kiểm tra Polygon…"
-                  : "Kiểm tra xác nhận ngay"}
+                {busy === "sign" && pendingBroadcast
+                  ? "Đang đồng bộ giao dịch…"
+                  : pendingBroadcast
+                    ? "Tiếp tục đồng bộ giao dịch"
+                    : transactionStatus.isFetching
+                      ? "Đang kiểm tra Polygon…"
+                      : "Kiểm tra xác nhận ngay"}
               </button>
             ) : null}
             {!displayedSelected.txHash &&

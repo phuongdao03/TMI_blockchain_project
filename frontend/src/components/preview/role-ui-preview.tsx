@@ -27,7 +27,7 @@ const roleOptions: ReadonlyArray<{
   home: string;
 }> = [
   { role: "VIEWER", label: "Khách xem", home: "/dashboard" },
-  { role: "USER", label: "Nhân viên / người dùng", home: "/dashboard" },
+  { role: "USER", label: "Người dùng", home: "/dashboard" },
   { role: "MODERATOR", label: "Moderator", home: "/work-allocations" },
   { role: "SUPER_ADMIN", label: "Super Admin", home: "/admin" },
 ];

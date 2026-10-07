@@ -31,6 +31,7 @@ import { FileUploader } from "@/components/media/file-uploader";
 import { DossierPaymentAction } from "@/components/payments/dossier-payment-action";
 import { PrivateDocumentVerification } from "@/components/documents/private-document-verification";
 import { Button } from "@/components/ui/button";
+import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
 import { dossierApi } from "@/lib/api/client";
 import { displayCnsDossierCode } from "@/lib/brand/identifiers";
 import type {
@@ -225,7 +226,13 @@ function EvidenceItem({
   );
 }
 
-function InformationStep({ dossier }: { dossier: DossierDetail }) {
+function InformationStep({
+  dossier,
+  onUnsavedChange,
+}: {
+  dossier: DossierDetail;
+  onUnsavedChange: (unsaved: boolean) => void;
+}) {
   const form = useForm<InfoValues>({
     resolver: zodResolver(infoSchema),
     defaultValues: {
@@ -243,28 +250,59 @@ function InformationStep({ dossier }: { dossier: DossierDetail }) {
         summary: next.summary || null,
         visibility: next.visibility,
       }),
-    onSuccess: (saved) => {
+    onSuccess: (saved, submitted) => {
       queryClient.setQueryData(dossierKeys.detail(dossier.id), {
         ...dossier,
         ...saved,
         evidences: dossier.evidences,
       });
-      form.reset({
-        title: saved.title,
-        summary: saved.summary ?? "",
-        visibility: saved.visibility,
-      });
+      const latest = form.getValues();
+      if (
+        latest.title === submitted.title &&
+        latest.summary === submitted.summary &&
+        latest.visibility === submitted.visibility
+      ) {
+        form.reset({
+          title: saved.title,
+          summary: saved.summary ?? "",
+          visibility: saved.visibility,
+        });
+      }
     },
   });
   const save = update.mutate;
 
   useEffect(() => {
-    if (!dossier.canEdit || !form.formState.isDirty || update.isPending) return;
+    onUnsavedChange(
+      dossier.canEdit && (form.formState.isDirty || update.isPending),
+    );
+  }, [
+    dossier.canEdit,
+    form.formState.isDirty,
+    onUnsavedChange,
+    update.isPending,
+  ]);
+
+  useEffect(() => {
+    if (
+      !dossier.canEdit ||
+      !form.formState.isDirty ||
+      update.isPending ||
+      update.isError
+    )
+      return;
     const parsed = infoSchema.safeParse(values);
     if (!parsed.success) return;
     const timeout = window.setTimeout(() => save(parsed.data), 700);
     return () => window.clearTimeout(timeout);
-  }, [dossier.canEdit, form.formState.isDirty, save, update.isPending, values]);
+  }, [
+    dossier.canEdit,
+    form.formState.isDirty,
+    save,
+    update.isError,
+    update.isPending,
+    values,
+  ]);
 
   return (
     <section className="space-y-5">
@@ -287,7 +325,11 @@ function InformationStep({ dossier }: { dossier: DossierDetail }) {
           ) : (
             <Save aria-hidden="true" className="size-3.5" />
           )}
-          {update.isPending ? "Đang lưu…" : "Tự động lưu"}
+          {update.isPending
+            ? "Đang lưu…"
+            : form.formState.isDirty
+              ? "Chưa lưu"
+              : "Đã lưu"}
         </span>
       </div>
       <div>
@@ -328,22 +370,41 @@ function InformationStep({ dossier }: { dossier: DossierDetail }) {
         </select>
       </div>
       {update.error ? (
-        <p
+        <div
           className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800"
           role="alert"
         >
-          Tự động lưu chưa thành công. Dữ liệu vẫn còn trên biểu mẫu.
-        </p>
+          <p>Tự động lưu chưa thành công. Dữ liệu vẫn còn trên biểu mẫu.</p>
+          <Button
+            className="mt-3"
+            onClick={() =>
+              void form.handleSubmit((next) => update.mutate(next))()
+            }
+            type="button"
+            variant="outline"
+          >
+            Thử lưu lại
+          </Button>
+        </div>
       ) : null}
     </section>
   );
 }
 
-export function DossierWorkspace({ dossierId }: { dossierId: string }) {
-  const [step, setStep] = useState<Step>("information");
+export function DossierWorkspace({
+  dossierId,
+  justCreated = false,
+}: {
+  dossierId: string;
+  justCreated?: boolean;
+}) {
+  const [step, setStep] = useState<Step>(
+    justCreated ? "evidence" : "information",
+  );
   const [evidenceTitle, setEvidenceTitle] = useState("");
   const [evidenceType, setEvidenceType] = useState("OWNERSHIP_DOCUMENT");
   const [queueLocked, setQueueLocked] = useState(false);
+  const [informationUnsaved, setInformationUnsaved] = useState(false);
   const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: dossierKeys.detail(dossierId),
@@ -431,6 +492,14 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
   }
 
   const dossier = detail.data;
+  const submissionComplete =
+    submit.isSuccess && dossier.status !== "NEEDS_SUPPLEMENT";
+  const supplementRequest = timeline.data
+    ?.filter(
+      (item) => item.toStatus === "NEEDS_SUPPLEMENT" && item.note?.trim(),
+    )
+    .at(-1)
+    ?.note?.trim();
   const missingRequiredRules = documentRules.filter(
     (rule) => rule.required && ruleProgress(rule, dossier.evidences) === 0,
   );
@@ -483,6 +552,86 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
         </p>
       </div>
 
+      {justCreated && dossier.status === "DRAFT" ? (
+        <WorkflowNextStep
+          action={{ href: "#dossier-steps", label: "Thêm tài liệu" }}
+          description="Thông tin ban đầu đã được lưu. Tải lên tài liệu bắt buộc, kiểm tra lại nội dung rồi nộp hồ sơ để bắt đầu kiểm duyệt."
+          title="Đã tạo hồ sơ nháp"
+          tone="success"
+        />
+      ) : null}
+
+      {submissionComplete && submit.data ? (
+        <section
+          className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950 sm:p-6"
+          role="status"
+        >
+          <h2 className="text-xl font-bold">Hồ sơ đã được gửi thành công</h2>
+          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+            <div>
+              <dt className="text-emerald-800">Mã hồ sơ</dt>
+              <dd className="mt-1 font-bold">
+                {displayCnsDossierCode(submit.data.dossier.code)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-emerald-800">Thời gian gửi</dt>
+              <dd className="mt-1 font-bold">
+                {new Date(submit.data.version.submittedAt).toLocaleString(
+                  "vi-VN",
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-emerald-800">Trạng thái</dt>
+              <dd className="mt-1 font-bold">
+                {dossierStatusLabel(submit.data.dossier.status)}
+              </dd>
+            </div>
+          </dl>
+          <p className="mt-4 text-sm font-medium">
+            Bước tiếp theo: Tinh Hoa Việt kiểm tra hồ sơ của bạn.
+          </p>
+          <ol
+            aria-label="Các bước sau khi nộp"
+            className="mt-4 grid gap-2 text-sm sm:grid-cols-3"
+          >
+            <li className="rounded-xl border border-emerald-200 bg-white/70 p-3">
+              <strong className="block">1. Đã tiếp nhận</strong>
+              <span className="mt-1 block">
+                Hồ sơ đã có mã để bạn theo dõi.
+              </span>
+            </li>
+            <li className="rounded-xl border border-emerald-200 bg-white/70 p-3">
+              <strong className="block">2. Kiểm duyệt hồ sơ</strong>
+              <span className="mt-1 block">
+                Tinh Hoa Việt đối chiếu thông tin và tài liệu.
+              </span>
+            </li>
+            <li className="rounded-xl border border-emerald-200 bg-white/70 p-3">
+              <strong className="block">3. Thông báo kết quả</strong>
+              <span className="mt-1 block">
+                Xem yêu cầu bổ sung hoặc kết quả khi trạng thái đổi.
+              </span>
+            </li>
+          </ol>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              className="inline-flex min-h-11 items-center rounded-xl bg-emerald-800 px-4 text-sm font-bold text-white hover:bg-emerald-900"
+              href="/dossiers"
+            >
+              Về hồ sơ của tôi
+            </Link>
+            <Link
+              className="inline-flex min-h-11 items-center rounded-xl border border-emerald-700 px-4 text-sm font-bold text-emerald-900 hover:bg-emerald-100"
+              href="/notifications"
+            >
+              Xem thông báo
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
       <section className="dossier-state-card overflow-hidden rounded-2xl border border-primary-200 bg-primary-50/70">
         <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
           <div>
@@ -492,10 +641,22 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
             <p className="mt-2 text-lg font-bold leading-7 text-neutral-950">
               {dossierGuidance[dossier.status].next}
             </p>
-            {dossier.canEdit ? (
+            {dossier.status === "NEEDS_SUPPLEMENT" ? (
+              <p className="mt-3 whitespace-pre-wrap rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-950">
+                {supplementRequest
+                  ? `Nội dung cần bổ sung: ${supplementRequest}`
+                  : "Chưa có nội dung yêu cầu cụ thể trong lịch sử hồ sơ. Vui lòng kiểm tra thông báo hoặc liên hệ hỗ trợ."}
+              </p>
+            ) : null}
+            {dossier.canEdit && !submissionComplete ? (
               <Button
                 className="mt-4"
-                disabled={queueLocked && nextPreparationStep !== "evidence"}
+                disabled={
+                  (queueLocked && nextPreparationStep !== "evidence") ||
+                  (step === "information" &&
+                    informationUnsaved &&
+                    nextPreparationStep !== "information")
+                }
                 onClick={() => setStep(nextPreparationStep)}
                 type="button"
               >
@@ -542,6 +703,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
         <nav
           aria-label="Các bước hoàn thiện hồ sơ"
           className="grid grid-cols-3 border-b border-[var(--theme-border)] bg-[var(--theme-surface)]"
+          id="dossier-steps"
         >
           {steps.map((item, index) => {
             const Icon = item.icon;
@@ -549,7 +711,12 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
             return (
               <button
                 aria-current={active ? "step" : undefined}
-                disabled={queueLocked && item.id !== "evidence"}
+                disabled={
+                  (queueLocked && item.id !== "evidence") ||
+                  (step === "information" &&
+                    informationUnsaved &&
+                    item.id !== "information")
+                }
                 className={cn(
                   "flex min-h-16 min-w-0 w-full flex-col justify-center gap-1 border-b-2 px-1 py-3 text-center transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-row sm:gap-3 sm:px-3 sm:text-left",
                   active
@@ -585,7 +752,10 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
 
         <div className="min-w-0 bg-[var(--theme-surface)] px-1 py-5 text-[var(--theme-text)] sm:px-3 sm:py-7 lg:px-5 lg:py-8">
           {step === "information" ? (
-            <InformationStep dossier={dossier} />
+            <InformationStep
+              dossier={dossier}
+              onUnsavedChange={setInformationUnsaved}
+            />
           ) : null}
 
           {step === "evidence" ? (
@@ -599,7 +769,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   nhiều tệp cùng loại.
                 </p>
               </div>
-              {dossier.canEdit ? (
+              {dossier.canEdit && !submissionComplete ? (
                 <div className="space-y-5 border-t border-[var(--theme-border)] pt-5">
                   {documentRules.length > 0 ? (
                     <fieldset className="space-y-3">
@@ -901,7 +1071,7 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   onRemove={() => undefined}
                 />
               ))}
-              {dossier.canEdit ? (
+              {dossier.canEdit && !submissionComplete ? (
                 <div className="rounded-2xl border border-primary-200 bg-primary-50 p-5">
                   <div className="flex items-start gap-3">
                     <BadgeCheck
@@ -920,7 +1090,9 @@ export function DossierWorkspace({ dossierId }: { dossierId: string }) {
                   </div>
                   <Button
                     className="mt-5 w-full sm:w-auto"
-                    disabled={!isComplete || submit.isPending}
+                    disabled={
+                      !isComplete || submit.isPending || submissionComplete
+                    }
                     onClick={() => submit.mutate()}
                   >
                     <Send aria-hidden="true" className="size-4" />

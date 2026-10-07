@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import (
@@ -99,6 +99,7 @@ async def deliver_public_work_media(
     cover_x: int | None = Query(default=None, alias="coverX", ge=0, le=100),
     cover_y: int | None = Query(default=None, alias="coverY", ge=0, le=100),
     cover_zoom: int | None = Query(default=None, alias="coverZoom", ge=100, le=300),
+    cover_width: Literal[320, 640, 960, 1280] = Query(default=1280, alias="coverWidth"),
     poster_time_ms: int | None = Query(
         default=None, alias="posterTimeMs", ge=0, le=86_400_000
     ),
@@ -113,6 +114,7 @@ async def deliver_public_work_media(
         cover_x=cover_x,
         cover_y=cover_y,
         cover_zoom=cover_zoom,
+        cover_width=cover_width,
         poster_time_ms=poster_time_ms,
     )
 

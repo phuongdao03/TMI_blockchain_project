@@ -1,10 +1,12 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 export function NavigationLoading() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const locationKey = `${pathname}?${searchParams.toString()}`;
   const [visible, setVisible] = useState(false);
   const startTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -16,6 +18,11 @@ export function NavigationLoading() {
       startTimer.current = null;
       stopTimer.current = null;
       setVisible(false);
+    };
+    const schedule = () => {
+      clear();
+      startTimer.current = setTimeout(() => setVisible(true), 120);
+      stopTimer.current = setTimeout(clear, 15_000);
     };
     const onClick = (event: MouseEvent) => {
       if (
@@ -48,16 +55,28 @@ export function NavigationLoading() {
         destination.search === window.location.search
       )
         return;
-      clear();
-      startTimer.current = setTimeout(() => setVisible(true), 120);
-      stopTimer.current = setTimeout(clear, 15_000);
+      schedule();
+    };
+    const onSubmit = (event: SubmitEvent) => {
+      if (event.defaultPrevented || !(event.target instanceof HTMLFormElement))
+        return;
+      const form = event.target;
+      if (
+        form.method.toLowerCase() !== "get" ||
+        (form.target && form.target !== "_self")
+      )
+        return;
+      const destination = new URL(form.action || window.location.href);
+      if (destination.origin === window.location.origin) schedule();
     };
     document.addEventListener("click", onClick, true);
+    document.addEventListener("submit", onSubmit);
     return () => {
       document.removeEventListener("click", onClick, true);
+      document.removeEventListener("submit", onSubmit);
       clear();
     };
-  }, [pathname]);
+  }, [locationKey]);
 
   return visible ? (
     <div className="navigation-loading" role="status" aria-live="polite">

@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  LoaderCircle,
   RotateCcw,
   Search,
   SlidersHorizontal,
@@ -39,6 +40,8 @@ export function PublicLibrary({
 }: CatalogParameters & { initialData?: PublicCatalogInitialData }) {
   const [filterOpen, setFilterOpen] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const filterTrigger = useRef<HTMLButtonElement>(null);
+  const filterPanel = useRef<HTMLDivElement>(null);
   const filters = { ...parameters, pageSize: 12 };
   const works = useQuery({
     queryKey: ["public-catalog-works", filters],
@@ -65,62 +68,113 @@ export function PublicLibrary({
   useEffect(() => {
     if (!filterOpen) return;
     closeButton.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setFilterOpen(false);
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyboard = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setFilterOpen(false);
+        filterTrigger.current?.focus();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(
+        filterPanel.current?.querySelectorAll<HTMLElement>(
+          "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled])",
+        ) ?? [],
+      );
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("keydown", handleKeyboard);
     return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyboard);
     };
   }, [filterOpen]);
 
   const total = works.data?.meta.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / 12));
   const activeFilterCount = countFilters(parameters);
+  const showFeatured = parameters.page === 1 && !hasFilters(parameters);
+  const featuredWorks = showFeatured
+    ? featured.data?.length
+      ? featured.data
+      : (works.data?.data.slice(0, 1) ?? [])
+    : [];
+  const featuredIds = new Set(featuredWorks.map((work) => work.id));
+  const leadWork = featuredWorks[0];
+  const resultWorks = (works.data?.data ?? []).filter(
+    (work) => !featuredIds.has(work.id),
+  );
 
   return (
-    <div className="public-theme-surface space-y-10">
-      {featured.data?.length ? (
-        <section aria-labelledby="featured-heading">
+    <div className="public-theme-surface space-y-9 sm:space-y-12">
+      {works.isPending ? (
+        <div
+          aria-label="Đang tải danh sách đề cử"
+          className="catalog-loading"
+          role="status"
+        >
+          <span className="catalog-loading__message">
+            <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+            Đang tải đề cử…
+          </span>
+          <span aria-hidden="true" className="catalog-loading__track">
+            <span className="catalog-loading__progress" />
+          </span>
+        </div>
+      ) : null}
+      {leadWork ? (
+        <section
+          aria-labelledby="featured-heading"
+          data-testid="catalog-featured"
+        >
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-bold tracking-[0.2em] text-gold-300 uppercase">
-                Tuyển chọn
+              <p className="text-xs font-bold tracking-[0.2em] text-[var(--theme-accent)] uppercase">
+                Khám phá trước
               </p>
               <h2
-                className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl"
+                className="mt-2 text-2xl font-bold tracking-tight text-[var(--theme-text)] sm:text-3xl"
                 id="featured-heading"
               >
                 Đề cử nổi bật
               </h2>
             </div>
-            <span className="hidden text-sm text-slate-400 sm:block">
-              Được biên tập theo thời hạn công bố
-            </span>
           </div>
           <div
             className={
-              featured.data.length > 1
-                ? "grid gap-x-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,.65fr)]"
-                : "max-w-5xl"
+              featuredWorks.length > 1
+                ? "grid gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(17rem,.45fr)] xl:gap-4"
+                : ""
             }
           >
-            {featured.data.map((work, index) => (
-              <div className={index === 0 ? "xl:row-span-2" : ""} key={work.id}>
-                <PublicWorkCard
-                  position={index + 1}
-                  source="featured"
-                  work={work}
-                />
+            <PublicWorkCard position={1} source="featured" work={leadWork} />
+            {featuredWorks.length > 1 ? (
+              <div className="grid content-start gap-3">
+                {featuredWorks.slice(1).map((work, index) => (
+                  <PublicWorkCard
+                    key={work.id}
+                    position={index + 2}
+                    source="featured"
+                    work={work}
+                  />
+                ))}
               </div>
-            ))}
+            ) : null}
           </div>
         </section>
       ) : null}
 
-      <section aria-labelledby="catalog-results-heading">
+      <section aria-labelledby="catalog-results-heading" id="catalog-search">
         <div className="border-y border-white/10 py-5">
           <form
             className="flex flex-col gap-3 lg:flex-row"
@@ -170,6 +224,7 @@ export function PublicLibrary({
             <Button
               className="lg:hidden"
               onClick={() => setFilterOpen(true)}
+              ref={filterTrigger}
               variant="outline"
             >
               <Filter className="size-4" /> Bộ lọc{" "}
@@ -178,7 +233,7 @@ export function PublicLibrary({
           </form>
         </div>
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[13rem_minmax(0,1fr)]">
+        <div className="mt-7 grid gap-7 lg:grid-cols-[12rem_minmax(0,1fr)] lg:gap-9">
           <div aria-label="Bộ lọc kết quả" className="hidden lg:block">
             <div className="sticky top-24 border-l border-white/15 pl-4">
               <div className="flex items-center gap-2 text-white">
@@ -248,12 +303,12 @@ export function PublicLibrary({
                   <X className="size-4" /> Xóa bộ lọc
                 </Link>
               </div>
-            ) : (
+            ) : resultWorks.length ? (
               <div
-                className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
+                className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
                 data-testid="public-album-grid"
               >
-                {works.data.data.map((work, index) => (
+                {resultWorks.map((work, index) => (
                   <PublicWorkCard
                     key={work.id}
                     position={(parameters.page - 1) * 12 + index + 1}
@@ -262,6 +317,10 @@ export function PublicLibrary({
                   />
                 ))}
               </div>
+            ) : (
+              <p className="text-sm text-[var(--theme-muted)]">
+                Các đề cử trên trang này đã được giới thiệu phía trên.
+              </p>
             )}
 
             {totalPages > 1 ? (
@@ -279,10 +338,13 @@ export function PublicLibrary({
         <div
           aria-labelledby="mobile-filter-title"
           aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-50 bg-black/70 lg:hidden"
           role="dialog"
         >
-          <div className="absolute inset-x-0 bottom-0 max-h-[90dvh] overflow-y-auto rounded-t-3xl border-t border-white/10 bg-ink-900 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          <div
+            className="catalog-filter-sheet absolute inset-x-0 bottom-0 max-h-[90dvh] overflow-y-auto rounded-t-3xl border-t border-white/10 bg-ink-900 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+            ref={filterPanel}
+          >
             <div className="flex items-center justify-between">
               <h2
                 className="text-xl font-bold text-white"
@@ -293,7 +355,10 @@ export function PublicLibrary({
               <button
                 aria-label="Đóng bộ lọc"
                 className="grid size-11 place-items-center rounded-full border border-white/10 text-white"
-                onClick={() => setFilterOpen(false)}
+                onClick={() => {
+                  setFilterOpen(false);
+                  filterTrigger.current?.focus();
+                }}
                 ref={closeButton}
                 type="button"
               >
@@ -407,19 +472,19 @@ function FilterForm({
 function CatalogSkeleton() {
   return (
     <div
-      aria-label="Đang tải danh sách đề cử"
-      className="divide-y divide-white/10 border-y border-white/10"
-      role="status"
+      aria-hidden="true"
+      className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
     >
-      {Array.from({ length: 5 }, (_, index) => (
+      {Array.from({ length: 6 }, (_, index) => (
         <div
-          className="grid animate-pulse grid-cols-[7rem_1fr] gap-4 py-5 sm:grid-cols-[9rem_1fr]"
+          className="overflow-hidden rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)]"
           key={index}
         >
-          <div className="thv-skeleton aspect-square sm:aspect-[4/3]" />
-          <div className="py-2">
-            <div className="thv-skeleton h-5 w-2/3" />
-            <div className="thv-skeleton mt-3 h-4 max-w-lg" />
+          <div className="aspect-[4/3] bg-[var(--theme-elevated)]" />
+          <div className="space-y-3 p-5">
+            <div className="h-4 w-1/3 rounded bg-[var(--theme-elevated)]" />
+            <div className="h-6 w-5/6 rounded bg-[var(--theme-elevated)]" />
+            <div className="h-4 w-2/3 rounded bg-[var(--theme-elevated)]" />
           </div>
         </div>
       ))}

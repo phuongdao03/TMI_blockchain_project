@@ -61,4 +61,25 @@ describe("DossierList", () => {
       status: "DRAFT",
     });
   });
+
+  it("guides a filtered empty result back to all dossiers", async () => {
+    listMock.mockResolvedValue({
+      data: [],
+      meta: { page: 1, pageSize: 10, total: 0 },
+    });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <DossierList page={1} pageSize={10} status="NEEDS_SUPPLEMENT" />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByText("Không có hồ sơ ở trạng thái này"),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "Xem tất cả hồ sơ" })
+        .getAttribute("href"),
+    ).toBe("/dossiers");
+  });
 });

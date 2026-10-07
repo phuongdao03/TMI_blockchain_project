@@ -18,7 +18,7 @@ vi.mock("@/lib/api/client", () => ({
   },
 }));
 
-function renderWorkspace() {
+function renderWorkspace(initialDossierId?: string) {
   candidateListMock.mockResolvedValue([
     {
       dossierId: "9155dbf5-bb3e-449d-8bf0-9572cc642cac",
@@ -29,7 +29,7 @@ function renderWorkspace() {
   ]);
   return render(
     <QueryClientProvider client={new QueryClient()}>
-      <PaymentRequestWorkspace />
+      <PaymentRequestWorkspace initialDossierId={initialDossierId} />
     </QueryClientProvider>,
   );
 }
@@ -45,6 +45,30 @@ describe("PaymentRequestWorkspace", () => {
     expect(
       screen.queryByText(/PayOS|webhook|UUID|payments\.issue/i),
     ).toBeNull();
+  });
+
+  it("selects the approved dossier from the next-step link", async () => {
+    renderWorkspace("9155dbf5-bb3e-449d-8bf0-9572cc642cac");
+    await screen.findByRole("option", { name: /CNS-2026-C53E911EDDDA/ });
+    expect(
+      (screen.getByLabelText("Hồ sơ đã phê duyệt") as HTMLSelectElement).value,
+    ).toBe("9155dbf5-bb3e-449d-8bf0-9572cc642cac");
+  });
+
+  it("does not submit an unknown dossier from the URL", async () => {
+    renderWorkspace("unknown-dossier");
+    await screen.findByRole("option", { name: /CNS-2026-C53E911EDDDA/ });
+    fireEvent.change(screen.getByLabelText("Số tiền cần thanh toán (VND)"), {
+      target: { value: "1500000" },
+    });
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Gửi yêu cầu thanh toán",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(issueMock).not.toHaveBeenCalled();
   });
 
   it("sends the operator-entered amount instead of a fixed frontend price", async () => {

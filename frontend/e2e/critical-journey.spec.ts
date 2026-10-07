@@ -54,14 +54,19 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       .locator(".dossier-type-option")
       .filter({ hasText: "Tác phẩm văn hóa" })
       .click();
-    await page
-      .getByLabel("Chủ sở hữu hoặc tác giả")
-      .fill("Trung tâm an ninh công nghệ số - THV");
-    await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
+    await page.getByRole("button", { name: "Tiếp tục nhập thông tin" }).click();
     await page
       .getByLabel("Tên tài sản hoặc tác phẩm")
       .fill("Video chào mừng thương hiệu Đề cử Tinh Hoa Việt Critical Journey");
     await page.getByLabel("Mô tả ngắn").fill("Hồ sơ E2E toàn luồng MVP.");
+    await page
+      .getByRole("button", { name: "Tiếp tục thông tin theo loại" })
+      .click();
+    await page
+      .getByLabel("Chủ sở hữu hoặc tác giả")
+      .fill("Trung tâm an ninh công nghệ số - THV");
+    await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
+    await page.getByRole("button", { name: "Kiểm tra thông tin" }).click();
     const createDossier = page.waitForResponse(
       (response) =>
         response.url().endsWith("/api/v1/dossiers") &&

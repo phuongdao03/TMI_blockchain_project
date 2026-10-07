@@ -25,6 +25,9 @@ from app.modules.media.errors import (
 )
 from app.modules.media.gateway import MediaContentTooLargeError, PublicDerivativeGateway
 from app.modules.media.models import MediaAsset, MediaEncryptionStatus, MediaStatus
+from app.modules.public.cloudinary_variants import (
+    cloudinary_video_variant as _cloudinary_video_variant,
+)
 from app.modules.public.cover import is_editorial_cover
 from app.modules.public.errors import (
     PublicMediaConflictError,
@@ -202,10 +205,6 @@ class PublicMediaQueryService:
                         row.media_kind is PublicMediaKind.VIDEO
                         and row.derivative_status
                         in {DerivativeStatus.READY, DerivativeStatus.PROCESSING}
-                        and not (
-                            row.derivative_url
-                            and "/video/upload/c_limit," in row.derivative_url
-                        )
                     )
                     else None
                 ),
@@ -213,17 +212,13 @@ class PublicMediaQueryService:
                     _cloudinary_video_variant(
                         row.derivative_url,
                         transformation=(
-                            "sp_auto:maxres_1080p"
+                            "sp_auto:maxres_1080p/f_m3u8"
                             if row.video_max_width == 1920
-                            else "sp_auto:maxres_720p"
+                            else "sp_auto:maxres_720p/f_m3u8"
                         ),
                         extension="m3u8",
                     )
                     if row.media_kind is PublicMediaKind.VIDEO
-                    and not (
-                        row.derivative_url
-                        and "/video/upload/c_limit," in row.derivative_url
-                    )
                     else None
                 ),
                 controls_preset=row.video_controls_preset,
@@ -234,26 +229,6 @@ class PublicMediaQueryService:
             )
             for row in rows
         )
-
-
-def _cloudinary_video_variant(
-    url: str | None,
-    *,
-    transformation: str,
-    extension: str,
-) -> str | None:
-    marker = "/video/upload/"
-    if url and url.startswith("/api/v1/public/works/"):
-        return None
-    if (
-        not url
-        or marker not in url
-        or not url.startswith("https://res.cloudinary.com/")
-    ):
-        return None
-    prefix, path = url.split(marker, 1)
-    base = path.rsplit(".", 1)[0]
-    return f"{prefix}{marker}{transformation}/{base}.{extension}"
 
 
 class PublicMediaService:
@@ -650,11 +625,32 @@ class PublicMediaWorker:
                 and relation.derivative_url is not None
             ):
                 pending_url = relation.derivative_url
+                pending_poster = _cloudinary_video_variant(
+                    pending_url,
+                    transformation=(
+                        f"so_{relation.poster_time_ms / 1000:g},q_auto,f_webp"
+                        if relation.poster_time_ms is not None
+                        else "so_auto,q_auto,f_webp"
+                    ),
+                    extension="webp",
+                )
+                pending_stream = _cloudinary_video_variant(
+                    pending_url,
+                    transformation=(
+                        "sp_auto:maxres_1080p/f_m3u8"
+                        if relation.video_max_width == 1920
+                        else "sp_auto:maxres_720p/f_m3u8"
+                    ),
+                    extension="m3u8",
+                )
             else:
                 pending_url = None
         if pending_url is not None:
-            if not await self._gateway.public_derivative_ready(pending_url):
-                return
+            for variant_url in (pending_url, pending_poster, pending_stream):
+                if variant_url and not await self._gateway.public_derivative_ready(
+                    variant_url
+                ):
+                    return
             async with self._session.begin():
                 current = await self._repository.get_relation(
                     relation_id, for_update=True
@@ -734,6 +730,7 @@ class PublicMediaWorker:
             height = asset.height
             video_quality_profile = relation.video_quality_profile
             video_max_width = relation.video_max_width
+            poster_time_ms = relation.poster_time_ms
             work = await self._repository.get_work(relation.public_work_id)
             source_version_no = (
                 await self._repository.source_version_number(work)
@@ -779,9 +776,20 @@ class PublicMediaWorker:
                         f"{VIDEO_QUALITY_TRANSFORMATIONS[video_quality_profile]},vc_auto,f_mp4"
                     )
                 ),
-                # Posters are served through a signed derivative URL when requested.
-                # Generating one synchronously here holds up the entire video upload.
-                eager_transformations=(),
+                eager_transformations=(
+                    (
+                        f"so_{poster_time_ms / 1000:g},q_auto,f_webp"
+                        if poster_time_ms is not None
+                        else "so_auto,q_auto,f_webp"
+                    ),
+                    (
+                        "sp_auto:maxres_1080p/f_m3u8"
+                        if video_max_width == 1920
+                        else "sp_auto:maxres_720p/f_m3u8"
+                    ),
+                )
+                if media_kind is PublicMediaKind.VIDEO
+                else (),
             )
         except MediaProviderRejectedError:
             await self._mark_failed(

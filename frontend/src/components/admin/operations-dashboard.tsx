@@ -150,6 +150,33 @@ export function OperationsDashboard({
         </header>
       ) : null}
 
+      {!showHeader ? (
+        <section
+          aria-label="Số hồ sơ theo bước xử lý"
+          className="grid gap-3 sm:grid-cols-3"
+        >
+          {(
+            [
+              ["SUBMITTED", "Đã nộp"],
+              ["PRECHECK", "Đang kiểm tra"],
+              ["UNDER_REVIEW", "Đang thẩm định"],
+            ] as const
+          ).map(([status, label]) => (
+            <Link
+              aria-label={`${label}: ${metrics.data.dossierFunnel[status] ?? 0} hồ sơ`}
+              className="flex min-h-24 items-center justify-between gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 hover:border-primary-300"
+              href={`/admin/reviews?status=${status}`}
+              key={status}
+            >
+              <span className="text-sm font-bold">{label}</span>
+              <strong className="text-2xl tabular-nums">
+                {metrics.data.dossierFunnel[status] ?? 0}
+              </strong>
+            </Link>
+          ))}
+        </section>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3">
         <p className="text-xs font-medium text-neutral-500">
           Dữ liệu hiện tại · cập nhật lúc{" "}

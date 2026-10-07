@@ -206,8 +206,25 @@ export function DashboardOverview() {
         </Link>
       </nav>
 
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-bold">Trạng thái của hồ sơ gần đây</h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            Số liệu dưới đây chỉ tính trên {visibleDossiers.length} hồ sơ vừa
+            tải.
+          </p>
+        </div>
+        {dossiers.data ? (
+          <Link
+            className="text-sm font-bold text-primary-700 hover:text-primary-800"
+            href="/dossiers"
+          >
+            Tổng cộng {dossiers.data.meta.total} hồ sơ
+          </Link>
+        ) : null}
+      </div>
       <section
-        aria-label="Chỉ số tổng quan"
+        aria-label="Trạng thái của hồ sơ gần đây"
         className="dashboard-overview__metrics dashboard-surface grid overflow-hidden rounded-xl border md:grid-cols-3"
       >
         {[

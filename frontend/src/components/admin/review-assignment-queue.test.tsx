@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -32,14 +32,20 @@ vi.mock("@/components/reviews/evidence-viewer", () => ({
   EvidenceViewer: () => <div>Tài liệu hồ sơ</div>,
 }));
 
-function renderQueue(initialDossierId?: string) {
+function renderQueue(
+  initialDossierId?: string,
+  initialStatus?: "SUBMITTED" | "PRECHECK" | "UNDER_REVIEW",
+) {
   return render(
     <QueryClientProvider
       client={
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <ReviewAssignmentQueue initialDossierId={initialDossierId} />
+      <ReviewAssignmentQueue
+        initialDossierId={initialDossierId}
+        initialStatus={initialStatus}
+      />
     </QueryClientProvider>,
   );
 }
@@ -69,6 +75,50 @@ describe("ReviewAssignmentQueue", () => {
         .getByRole("link", { name: /Mở để phân công/ })
         .getAttribute("href"),
     ).toBe("/admin/reviews/dossier-1");
+  });
+
+  it("opens the queue already filtered from an admin count", async () => {
+    list.mockResolvedValue({ data: [], meta: { total: 0 } });
+    renderQueue(undefined, "SUBMITTED");
+    expect(
+      await screen.findByText("Không có hồ sơ ở trạng thái này"),
+    ).toBeTruthy();
+    expect(list).toHaveBeenCalledWith({
+      status: "SUBMITTED",
+      page: 1,
+      pageSize: 20,
+    });
+  });
+
+  it("keeps later admin queue pages reachable", async () => {
+    const user = userEvent.setup();
+    list.mockImplementation(async ({ page }: { page: number }) => ({
+      data: [
+        {
+          dossierId: `dossier-${page}`,
+          dossierCode: `CNS-00${page}`,
+          dossierTitle: `Hồ sơ trang ${page}`,
+          status: "UNDER_REVIEW",
+          versionNo: 1,
+          submittedAt: "2026-09-07T00:00:00Z",
+          assignmentCount: 1,
+        },
+      ],
+      meta: { total: 21 },
+    }));
+    renderQueue();
+
+    expect(await screen.findByText("Hồ sơ trang 1")).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: /Xem tiến độ thẩm định/ }),
+    ).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Trang sau" }));
+    expect(await screen.findByText("Hồ sơ trang 2")).toBeDefined();
+    expect(list).toHaveBeenCalledWith({
+      status: undefined,
+      page: 2,
+      pageSize: 20,
+    });
   });
 
   it("lets an admin assign an active reviewer", async () => {
@@ -314,8 +364,12 @@ describe("ReviewAssignmentQueue", () => {
       "Đồng ý với báo cáo kiểm duyệt",
       true,
     );
-    expect(await screen.findByText("Đã ghi nhận quyết định")).toBeDefined();
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/blockchain"));
+    expect(await screen.findByText("Đã phê duyệt hồ sơ")).toBeDefined();
+    expect(
+      screen
+        .getByRole("link", { name: "Quyết định phí hồ sơ" })
+        .getAttribute("href"),
+    ).toBe("/admin/payments?dossierId=dossier-1");
   });
 
   it("shows a submitting state while the admin decision is pending", async () => {

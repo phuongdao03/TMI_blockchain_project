@@ -28,7 +28,7 @@ test("applicant sees a server-driven preparation journey", async ({ page }) => {
   await page.locator(".dossier-type-option").first().click();
 
   await expect(
-    page.getByRole("navigation", { name: "Các bước gửi hồ sơ" }),
+    page.getByRole("navigation", { name: "Các bước chuẩn bị hồ sơ nháp" }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Tài liệu cần chuẩn bị" }),

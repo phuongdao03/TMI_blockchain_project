@@ -50,5 +50,9 @@ describe("ReviewAssistancePanel", () => {
         "Cần chuyên gia cùng đối chiếu các bằng chứng chuyên ngành phức tạp.",
       requestedReviewerCount: 2,
     });
+    expect(
+      await screen.findByText("Đã gửi yêu cầu hỗ trợ cho Admin"),
+    ).toBeTruthy();
+    expect(screen.getByText(/Tiếp tục kiểm tra hồ sơ/)).toBeTruthy();
   });
 });

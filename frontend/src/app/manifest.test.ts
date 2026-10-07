@@ -15,13 +15,17 @@ describe("PWA manifest", () => {
       scope: "/",
       display: "standalone",
     });
-    expect(value.icons).toEqual([
-      {
-        src: "/assets/brand/thv-certificate-seal.png",
-        sizes: "1254x1254",
-        type: "image/png",
-        purpose: "any",
-      },
-    ]);
+    expect(value.icons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: "/pwa-icon-192.png",
+          sizes: "192x192",
+        }),
+        expect.objectContaining({
+          src: "/pwa-icon-512.png",
+          sizes: "512x512",
+        }),
+      ]),
+    );
   });
 });

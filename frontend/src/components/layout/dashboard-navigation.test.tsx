@@ -43,6 +43,24 @@ describe("DashboardNavigation work-allocation migration", () => {
         .getAttribute("href"),
     ).toBe("/work-allocations");
     expect(screen.queryByRole("link", { name: "Hồ sơ đánh giá" })).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Việc thẩm định" }).getAttribute("href"),
+    ).toBe("/reviews");
+  });
+
+  it("exposes the admin dossier intake queue beside other work", () => {
+    render(
+      <DashboardNavigation
+        roles={["SUPER_ADMIN"]}
+        showQuickNavigation={false}
+      />,
+    );
+
+    expect(
+      screen
+        .getByRole("link", { name: "Tiếp nhận hồ sơ" })
+        .getAttribute("href"),
+    ).toBe("/admin/reviews");
   });
 
   it("shows HR self-service links to USER employees without reviewer actions", () => {
@@ -89,6 +107,21 @@ describe("DashboardNavigation work-allocation migration", () => {
       </AuthUserProvider>,
     );
 
+    expect(screen.queryByRole("link", { name: "Chấm công" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Nghỉ phép" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Tăng ca" })).toBeNull();
+  });
+
+  it("shows the applicant preview without employee functions", () => {
+    render(
+      <DashboardNavigation
+        previewRole="USER"
+        roles={["USER"]}
+        showQuickNavigation={false}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Hồ sơ của tôi" })).toBeDefined();
     expect(screen.queryByRole("link", { name: "Chấm công" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Nghỉ phép" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Tăng ca" })).toBeNull();

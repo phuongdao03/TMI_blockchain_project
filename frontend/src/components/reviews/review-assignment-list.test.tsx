@@ -58,4 +58,42 @@ describe("ReviewAssignmentList", () => {
         .getAttribute("href"),
     ).toBe("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
   });
+
+  it("puts overdue active work first on the current page", async () => {
+    listMock.mockResolvedValue({
+      data: [
+        {
+          assignment: { id: "finished", status: "SUBMITTED", dueAt: null },
+          dossierCode: "CNS-1",
+          dossierTitle: "Việc đã xong",
+          versionNo: 1,
+        },
+        {
+          assignment: {
+            id: "overdue",
+            status: "IN_PROGRESS",
+            dueAt: "2020-01-01T00:00:00Z",
+          },
+          dossierCode: "CNS-2",
+          dossierTitle: "Việc trễ hạn",
+          versionNo: 1,
+        },
+      ],
+      meta: { page: 1, pageSize: 10, total: 2 },
+    });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ReviewAssignmentList page={1} pageSize={10} />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByText("Việc trễ hạn");
+    expect(screen.getByText("Trễ hạn")).toBeDefined();
+    expect(
+      screen.getAllByRole("article").map((item) => item.textContent),
+    ).toEqual([
+      expect.stringContaining("Việc trễ hạn"),
+      expect.stringContaining("Việc đã xong"),
+    ]);
+  });
 });
