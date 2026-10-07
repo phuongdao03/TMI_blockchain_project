@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
-import type { BrowserContext } from "@playwright/test";
+import { expect, test, type BrowserContext } from "@playwright/test";
+
+import { selectPublicTheme } from "./public-theme";
 
 const viewports = [
   { width: 320, height: 844 },
@@ -95,9 +96,22 @@ test("public navigation and primary actions remain keyboard accessible", async (
   page,
 }) => {
   await page.goto("/");
-  await expect(
-    page.getByRole("button", { name: "Theo thiết bị" }),
-  ).toBeEnabled();
+  if ((page.viewportSize()?.width ?? 1280) <= 608) {
+    await page.getByRole("button", { name: "Mở menu" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      page
+        .getByRole("navigation", { name: "Điều hướng di động" })
+        .getByRole("button", { name: "Theo thiết bị" }),
+    ).toBeEnabled();
+    await page.keyboard.press("Escape");
+  } else {
+    await expect(
+      page
+        .locator(".public-header__actions")
+        .getByRole("button", { name: "Theo thiết bị" }),
+    ).toBeEnabled();
+  }
   await page.keyboard.press("Tab");
   await expect
     .poll(() =>
@@ -127,8 +141,8 @@ test("verification remains readable in explicit light and dark themes", async ({
   for (const theme of [
     { label: "Giao diện sáng", value: "light" },
     { label: "Giao diện tối", value: "dark" },
-  ]) {
-    await page.getByRole("button", { name: theme.label }).click();
+  ] as const) {
+    await selectPublicTheme(page, theme.label);
     await expect(page.locator("html")).toHaveAttribute(
       "data-theme",
       theme.value,
@@ -146,13 +160,11 @@ test("transparency journey copy keeps contrast in light and dark themes", async 
 
   const heading = page.locator(".journey-workflow__intro h2");
   const summary = page.locator(".journey-workflow__intro .text-slate-400");
-  const options = page.locator(".theme-toggle-option");
-
-  await options.nth(1).click();
+  await selectPublicTheme(page, "Giao diện sáng");
   await expect(heading).toHaveCSS("color", "rgb(36, 21, 21)");
   await expect(summary).toHaveCSS("color", "rgb(107, 86, 86)");
 
-  await options.nth(2).click();
+  await selectPublicTheme(page, "Giao diện tối");
   await expect(heading).toHaveCSS("color", "rgb(255, 249, 243)");
   await expect(summary).toHaveCSS("color", "rgb(228, 201, 194)");
 });
