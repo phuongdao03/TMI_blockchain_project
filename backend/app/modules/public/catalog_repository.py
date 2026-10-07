@@ -40,12 +40,9 @@ def _thumbnail_url(media: PublicWorkMedia | None) -> str | None:
     if media.media_kind is not PublicMediaKind.VIDEO:
         return media.derivative_url
     if media.derivative_url.startswith("/api/v1/public/works/"):
-        suffix = (
-            f"&posterTimeMs={media.poster_time_ms}"
-            if media.poster_time_ms is not None
-            else ""
-        )
-        return f"{media.derivative_url}?poster=true{suffix}"
+        # Extracting a frame from a retained legacy video decrypts the whole
+        # original file and can hold a catalog image request for tens of seconds.
+        return None
     marker = "/video/upload/"
     if marker not in media.derivative_url or not media.derivative_url.startswith(
         "https://res.cloudinary.com/"

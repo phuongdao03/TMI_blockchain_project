@@ -120,7 +120,7 @@ async def _issuance_service(
         password_hash="unused",
         status=UserStatus.ACTIVE,
     )
-    category = Category(id=uuid4(), code=uuid4().hex[:12], name="Certificate")
+    category = Category(id=uuid4(), code="CERT", name="Certificate")
     dossier = Dossier(
         id=uuid4(),
         code=f"DOS-{uuid4().hex[:12]}",
@@ -282,7 +282,7 @@ def test_content_draft_blocks_issuance_until_admin_confirms() -> None:
                 title="Đồng diễn múa Saravan",
                 summary="Mô tả được duyệt",
                 subject="Trường Đại học Trà Vinh (TVU)",
-                category="Tài sản trí tuệ số",
+                category="Certificate",
             ),
         )
         await editor.confirm(principal, dossier_id)
@@ -293,8 +293,8 @@ def test_content_draft_blocks_issuance_until_admin_confirms() -> None:
         assert asset == {
             "title": "Đồng diễn múa Saravan",
             "summary": "Mô tả được duyệt",
-            "category": "Tài sản trí tuệ số",
-            "categoryCode": "",
+            "category": "Certificate",
+            "categoryCode": "CERT",
             "subject": "Trường Đại học Trà Vinh (TVU)",
         }
         await service._session.rollback()  # noqa: SLF001
@@ -342,10 +342,16 @@ def test_admin_can_confirm_content_while_payment_is_pending() -> None:
             service._session,
             enqueue_issue=enqueued.append,  # noqa: SLF001
         )
+        with pytest.raises(CertificateConflictError, match="active system category"):
+            await editor.update(
+                principal,
+                dossier_id,
+                CertificateContentRequest(title="Tên mới", category="Danh mục mới"),
+            )
         await editor.update(
             principal,
             dossier_id,
-            CertificateContentRequest(title="Tên mới", category="Danh mục mới"),
+            CertificateContentRequest(title="Tên mới", category="Certificate"),
         )
         draft = await editor.confirm(principal, dossier_id)
         assert draft.confirmed_at is not None

@@ -151,6 +151,8 @@ class PublicMediaQueryService:
                     row.media_kind is PublicMediaKind.VIDEO
                     and row.derivative_status
                     in {DerivativeStatus.PENDING, DerivativeStatus.PROCESSING}
+                    and row.derivative_url is not None
+                    and row.derivative_url.startswith("/api/v1/public/works/")
                 )
             )
         fallback = next(
@@ -195,7 +197,6 @@ class PublicMediaQueryService:
                             else "so_auto,q_auto,f_webp"
                         ),
                         extension="webp",
-                        poster_time_ms=row.poster_time_ms,
                     )
                     if (
                         row.media_kind is PublicMediaKind.VIDEO
@@ -240,12 +241,10 @@ def _cloudinary_video_variant(
     *,
     transformation: str,
     extension: str,
-    poster_time_ms: int | None = None,
 ) -> str | None:
     marker = "/video/upload/"
     if url and url.startswith("/api/v1/public/works/"):
-        suffix = f"&posterTimeMs={poster_time_ms}" if poster_time_ms is not None else ""
-        return f"{url}?poster=true{suffix}" if extension == "webp" else None
+        return None
     if (
         not url
         or marker not in url

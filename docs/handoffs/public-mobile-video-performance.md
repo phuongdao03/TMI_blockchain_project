@@ -22,6 +22,15 @@ the play and retry text to dark against the dark video surface.
   optimized derivative. The source-backed video stays visible during repair.
   If the provider fails, the source-backed video remains available and the job
   records a failure code instead of repeatedly retrying every 30 seconds.
+- On 2026-10-07, browser timing for the same page showed the old video poster
+  taking about 25.8 seconds through the proxy while a newer Cloudinary poster
+  took about 0.26 seconds. Catalog and detail output now omit that expensive
+  on-demand poster for legacy proxy video and show a placeholder until the
+  optimized derivative is ready.
+- Provider-rejected or temporarily unavailable legacy video derivatives are
+  retried after a one-hour cooldown, capped at five attempts. New video media
+  stays out of public output until its derivative is ready. When an adaptive
+  stream exists, the player starts with it and falls back to MP4 on failure.
 - The public header shows the full brand name on phones. The install link moves
   into the phone menu, opaque sticky controls avoid unnecessary blur, and the
   public search page no longer shows backend request duration.
@@ -33,6 +42,8 @@ release profile. Reopen the work and check that its public API media entry
 eventually has a `res.cloudinary.com` URL and a non-null `streamingUrl`. The
 benefit of the optimized video depends on that derivative completing; a
 provider failure keeps the slower source fallback available for review.
+If a legacy proxy reaches the retry cap, inspect its failure code and source
+integrity before manually regenerating it in the public work editor.
 
 Focused backend tests, frontend unit tests, desktop/mobile public E2E, lint,
 formatting, TypeScript and a production frontend build passed locally.

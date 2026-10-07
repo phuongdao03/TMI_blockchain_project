@@ -9,6 +9,7 @@ from app.modules.audit.service import AuditService
 from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.blockchain.models import Certificate, CertificateContentDraft
+from app.modules.certificates.category import require_active_category
 from app.modules.certificates.errors import (
     CertificateConflictError,
     CertificateForbiddenError,
@@ -50,6 +51,8 @@ class CertificateContentService:
 
     @staticmethod
     def _require_admin(principal: AuthPrincipal) -> None:
+        if "SUPER_ADMIN" not in principal.roles:
+            raise CertificateForbiddenError()
         AuthorizationPolicy.require_capability(
             principal,
             PolicyRequirement(
@@ -68,8 +71,18 @@ class CertificateContentService:
             dossier_code=dossier.code,
             dossier_title=dossier.title,
             dossier_status=dossier.status.value,
-            content=CertificateContentRequest.model_validate(draft.content_json),
+            content=CertificateContentService._content(draft),
             confirmed_at=draft.confirmed_at,
+        )
+
+    @staticmethod
+    def _content(draft: CertificateContentDraft) -> CertificateContentRequest:
+        return CertificateContentRequest.model_validate(
+            {
+                key: value
+                for key, value in draft.content_json.items()
+                if key in {"title", "summary", "subject", "category"}
+            }
         )
 
     async def list_drafts(
@@ -136,7 +149,11 @@ class CertificateContentService:
         )
         async with self._session.begin():
             dossier, draft = await self._editable(dossier_id)
-            draft.content_json = normalized.model_dump()
+            category = await require_active_category(self._session, normalized.category)
+            draft.content_json = {
+                **normalized.model_dump(),
+                "categoryCode": category.code,
+            }
             draft.confirmed_at = None
             draft.confirmed_by_user_id = None
             self._audit.record(
@@ -154,7 +171,9 @@ class CertificateContentService:
         self._require_admin(principal)
         async with self._session.begin():
             dossier, draft = await self._editable(dossier_id)
-            CertificateContentRequest.model_validate(draft.content_json)
+            content = self._content(draft)
+            category = await require_active_category(self._session, content.category)
+            draft.content_json = {**draft.content_json, "categoryCode": category.code}
             draft.confirmed_at = datetime.now(UTC)
             draft.confirmed_by_user_id = principal.user_id
             should_issue = dossier.status is DossierStatus.PAID

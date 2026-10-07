@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 
-import { adminCertificateApi } from "@/lib/api/client";
+import { adminCertificateApi, publicWorkAdminApi } from "@/lib/api/client";
 import type { CertificateContent } from "@/lib/api/types";
 
 export function CertificateContentDrafts() {
@@ -12,6 +12,10 @@ export function CertificateContentDrafts() {
   const drafts = useQuery({
     queryKey: ["admin", "certificate-content-drafts"],
     queryFn: adminCertificateApi.contentDrafts,
+  });
+  const categories = useQuery({
+    queryKey: ["admin", "public-work-categories"],
+    queryFn: publicWorkAdminApi.categories,
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<CertificateContent | null>(null);
@@ -41,6 +45,11 @@ export function CertificateContentDrafts() {
     selected &&
       content &&
       JSON.stringify(content) !== JSON.stringify(selected.content),
+  );
+  const activeCategories =
+    categories.data?.filter((item) => item.isActive) ?? [];
+  const categorySelected = activeCategories.some(
+    (item) => item.name === content?.category,
   );
 
   return (
@@ -134,16 +143,36 @@ export function CertificateContentDrafts() {
                 </button>
                 <label className="block text-sm font-bold">
                   Danh mục
-                  <input
-                    className="mt-1 min-h-11 w-full rounded-lg border border-[#c9ad60] bg-white px-3"
-                    maxLength={255}
+                  <select
+                    className="mt-1 min-h-11 w-full rounded-lg border border-[#c9ad60] bg-white px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
+                    disabled={categories.isPending || categories.isError}
                     required
-                    value={content.category}
+                    value={categorySelected ? content.category : ""}
                     onChange={(event) =>
                       setForm({ ...content, category: event.target.value })
                     }
-                  />
+                  >
+                    <option value="">Chọn danh mục đã có</option>
+                    {activeCategories.map((category) => (
+                      <option key={category.id} value={category.name}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
                 </label>
+                {!categories.isPending &&
+                !categorySelected &&
+                content.category ? (
+                  <p className="text-xs text-amber-800">
+                    Danh mục cũ: {content.category}. Hãy chọn danh mục đang hoạt
+                    động.
+                  </p>
+                ) : null}
+                {categories.isError ? (
+                  <p className="text-sm text-red-700" role="alert">
+                    Không tải được danh mục. Hãy tải lại trang.
+                  </p>
+                ) : null}
                 <label className="block text-sm font-bold">
                   Mô tả tác phẩm
                   <textarea
@@ -165,7 +194,12 @@ export function CertificateContentDrafts() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="submit"
-                    disabled={!dirty || save.isPending || confirm.isPending}
+                    disabled={
+                      !dirty ||
+                      !categorySelected ||
+                      save.isPending ||
+                      confirm.isPending
+                    }
                     className="min-h-11 rounded-lg border border-[#9b7427] px-4 font-bold disabled:opacity-50"
                   >
                     {save.isPending ? "Đang lưu…" : "Lưu nội dung"}
@@ -175,7 +209,7 @@ export function CertificateContentDrafts() {
                     disabled={
                       dirty ||
                       !content.title.trim() ||
-                      !content.category.trim() ||
+                      !categorySelected ||
                       confirm.isPending ||
                       save.isPending
                     }
@@ -198,7 +232,7 @@ export function CertificateContentDrafts() {
                 aria-label="Xem trước nội dung bằng xác lập"
               >
                 <p className="text-xs font-bold uppercase tracking-widest text-[#9b7427]">
-                  Xem trước nội dung
+                  Nội dung chung cho trang xác minh và PDF
                 </p>
                 <h3 className="mt-3 text-xl font-bold">BẰNG XÁC LẬP</h3>
                 <p className="mt-5 text-xs text-[#9b7427]">
@@ -218,6 +252,18 @@ export function CertificateContentDrafts() {
                 <p className="mt-3 text-sm">
                   <strong>Danh mục:</strong> {content.category || "Chưa có"}
                 </p>
+                <div className="mt-5 grid gap-3 border-t border-[#d8c798] pt-4 text-xs leading-5 sm:grid-cols-2">
+                  <p>
+                    <strong className="block text-[#720b17]">
+                      Trang xác minh
+                    </strong>
+                    Hiển thị công khai sau khi bằng được phát hành.
+                  </p>
+                  <p>
+                    <strong className="block text-[#720b17]">PDF tải về</strong>
+                    Được tạo từ cùng nội dung đã xác nhận.
+                  </p>
+                </div>
               </div>
             </div>
           ) : (

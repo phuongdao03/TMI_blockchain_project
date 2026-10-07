@@ -27,7 +27,6 @@ export function AdaptiveVideo({
   const videoRef = useRef<HTMLVideoElement>(null);
   const usingStreaming = useRef(false);
   const playRequested = useRef(false);
-  const preloadFailed = useRef(false);
   const destroyStreaming = useRef<(() => void) | null>(null);
   const startupTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [active, setActive] = useState(false);
@@ -36,8 +35,8 @@ export function AdaptiveVideo({
   const [loading, setLoading] = useState(false);
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || typeof IntersectionObserver === "undefined") return;
-    preloadFailed.current = false;
+    if (!video || streamingUrl || typeof IntersectionObserver === "undefined")
+      return;
     setWarmed(false);
 
     const connection = (
@@ -66,7 +65,7 @@ export function AdaptiveVideo({
     );
     observer.observe(video);
     return () => observer.disconnect();
-  }, [fallbackUrl]);
+  }, [fallbackUrl, streamingUrl]);
 
   useEffect(() => {
     return () => {
@@ -89,35 +88,38 @@ export function AdaptiveVideo({
     setLoading(true);
     setActive(true);
     playRequested.current = true;
-    if (preloadFailed.current && streamingUrl) {
+    if (streamingUrl) {
       void tryStreaming();
       return;
     }
+    startFallback();
+  }
+
+  function startFallback() {
+    const video = videoRef.current;
+    if (!video) return;
+    if (startupTimeout.current) clearTimeout(startupTimeout.current);
+    destroyStreaming.current?.();
+    destroyStreaming.current = null;
+    usingStreaming.current = false;
     if (video.getAttribute("src") !== fallbackUrl || video.error) {
       video.src = fallbackUrl;
       video.load();
     }
     void video.play().catch(() => undefined);
-    if (streamingUrl) {
-      startupTimeout.current = setTimeout(() => {
-        if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-          void tryStreaming();
-        }
-      }, 3000);
-    }
   }
 
   async function tryStreaming() {
     const video = videoRef.current;
-    if (!video || !streamingUrl || usingStreaming.current) {
-      setFailed(true);
-      setLoading(false);
-      return;
-    }
+    if (!video || !streamingUrl || usingStreaming.current) return;
     if (startupTimeout.current) clearTimeout(startupTimeout.current);
     usingStreaming.current = true;
     setFailed(false);
     setLoading(true);
+    startupTimeout.current = setTimeout(() => {
+      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA)
+        startFallback();
+    }, 8000);
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = streamingUrl;
       video.load();
@@ -125,9 +127,9 @@ export function AdaptiveVideo({
     }
     try {
       const { default: Hls } = await import("hls.js");
-      if (!videoRef.current || !Hls.isSupported()) {
-        setFailed(true);
-        setLoading(false);
+      if (!videoRef.current || !usingStreaming.current) return;
+      if (!Hls.isSupported()) {
+        startFallback();
         return;
       }
       const hls = new Hls({
@@ -137,18 +139,14 @@ export function AdaptiveVideo({
         maxBufferLength: 10,
         startLevel: 0,
       });
+      destroyStreaming.current = () => hls.destroy();
       hls.loadSource(streamingUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) {
-          setFailed(true);
-          setLoading(false);
-        }
+        if (data.fatal) startFallback();
       });
-      destroyStreaming.current = () => hls.destroy();
     } catch {
-      setFailed(true);
-      setLoading(false);
+      startFallback();
     }
   }
 
@@ -161,8 +159,12 @@ export function AdaptiveVideo({
         loop={loop}
         muted={muted}
         onError={() => {
-          if (playRequested.current) void tryStreaming();
-          else preloadFailed.current = true;
+          if (!playRequested.current) return;
+          if (usingStreaming.current) startFallback();
+          else {
+            setFailed(true);
+            setLoading(false);
+          }
         }}
         onCanPlay={() => {
           if (startupTimeout.current) clearTimeout(startupTimeout.current);
@@ -178,7 +180,10 @@ export function AdaptiveVideo({
         onStalled={() => {
           if (playRequested.current) {
             setLoading(true);
-            if (streamingUrl && !usingStreaming.current) void tryStreaming();
+            if (usingStreaming.current) {
+              if (startupTimeout.current) clearTimeout(startupTimeout.current);
+              startupTimeout.current = setTimeout(startFallback, 8000);
+            }
           }
         }}
         playsInline

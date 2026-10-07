@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
 import { CertificateContentDrafts } from "@/components/admin/certificate-content-drafts";
-import { adminCertificateApi } from "@/lib/api/client";
+import { adminCertificateApi, publicWorkAdminApi } from "@/lib/api/client";
 
 vi.mock("@/lib/api/client", () => ({
   adminCertificateApi: {
@@ -11,9 +11,32 @@ vi.mock("@/lib/api/client", () => ({
     updateContentDraft: vi.fn(),
     confirmContentDraft: vi.fn(),
   },
+  publicWorkAdminApi: { categories: vi.fn() },
 }));
 
 it("edits, removes, previews, and confirms certificate content", async () => {
+  vi.mocked(publicWorkAdminApi.categories).mockResolvedValue([
+    {
+      id: "category-1",
+      parentId: null,
+      code: "DIGITAL",
+      name: "Tài sản trí tuệ số",
+      slug: "digital",
+      description: null,
+      isActive: true,
+      displayOrder: 0,
+    },
+    {
+      id: "category-2",
+      parentId: null,
+      code: "HERITAGE",
+      name: "Di sản văn hóa",
+      slug: "heritage",
+      description: null,
+      isActive: true,
+      displayOrder: 1,
+    },
+  ]);
   const draft = {
     dossierId: "dossier-1",
     dossierCode: "THV-001",
@@ -56,6 +79,10 @@ it("edits, removes, previews, and confirms certificate content", async () => {
   fireEvent.click(
     screen.getByRole("button", { name: "Xóa tên người được ghi nhận" }),
   );
+  expect(screen.getByLabelText("Danh mục").tagName).toBe("SELECT");
+  fireEvent.change(screen.getByLabelText("Danh mục"), {
+    target: { value: "Di sản văn hóa" },
+  });
   expect(
     screen.getByLabelText("Xem trước nội dung bằng xác lập").textContent,
   ).not.toContain("Tác giả cũ");
@@ -63,7 +90,7 @@ it("edits, removes, previews, and confirms certificate content", async () => {
   await waitFor(() =>
     expect(adminCertificateApi.updateContentDraft).toHaveBeenCalledWith(
       "dossier-1",
-      { ...draft.content, subject: "" },
+      { ...draft.content, subject: "", category: "Di sản văn hóa" },
     ),
   );
   await waitFor(() =>

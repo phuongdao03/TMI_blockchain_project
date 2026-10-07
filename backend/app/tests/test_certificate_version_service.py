@@ -437,7 +437,7 @@ def test_existing_thv_content_correction_creates_new_version_and_pdf_job() -> No
             _,
             _,
             requester_id,
-            approver_id,
+            _,
         ) = await _fixture()
         async with sessions() as session:
             certificate = await session.get(Certificate, certificate_id)
@@ -484,14 +484,31 @@ def test_existing_thv_content_correction_creates_new_version_and_pdf_job() -> No
         requester = _principal(
             requester_id, "SUPER_ADMIN", permissions=("public_content.manage",)
         )
-        approver = _principal(
-            approver_id, "SUPER_ADMIN", permissions=("certificate.version.decide",)
-        )
         outsider = _principal(uuid4(), "APPLICANT", permissions=())
         with pytest.raises(CertificateForbiddenError):
             await service.current_content(outsider, certificate_id)
+        delegated_staff = _principal(
+            uuid4(), "EDITOR", permissions=("public_content.manage",)
+        )
+        with pytest.raises(CertificateForbiddenError):
+            await service.current_content(delegated_staff, certificate_id)
         current = await service.current_content(requester, certificate_id)
         assert current.content.subject == "Chưa công bố"
+        with pytest.raises(CertificateConflictError):
+            await service.request_content_correction(
+                requester,
+                certificate_id,
+                CertificateContentCorrectionRequest(
+                    expected_version_no=1,
+                    reason="Sửa danh mục trên bằng xác lập cũ.",
+                    content=CertificateContentRequest(
+                        title="Tên mới",
+                        summary="Mô tả mới",
+                        subject="Trường Đại học Trà Vinh (TVU)",
+                        category="Danh mục không tồn tại",
+                    ),
+                ),
+            )
         requested = await service.request_content_correction(
             requester,
             certificate_id,
@@ -502,17 +519,13 @@ def test_existing_thv_content_correction_creates_new_version_and_pdf_job() -> No
                     title="Tên mới",
                     summary="Mô tả mới",
                     subject="Trường Đại học Trà Vinh (TVU)",
-                    category="Danh mục mới",
+                    category="Certificate",
                 ),
             ),
         )
-        assert requested.status is CertificateVersionStatus.PENDING_APPROVAL
+        assert requested.status is CertificateVersionStatus.ACTIVE
         assert requested.content is not None
         assert requested.content["subject"] == "Trường Đại học Trà Vinh (TVU)"
-        with pytest.raises(CertificateForbiddenError):
-            await service.approve(requester, requested.id)
-        approved = await service.approve(approver, requested.id)
-        assert approved.status is CertificateVersionStatus.ACTIVE
         async with sessions() as check:
             certificate = await check.get(Certificate, certificate_id)
             predecessor = await check.get(
@@ -534,6 +547,7 @@ def test_existing_thv_content_correction_creates_new_version_and_pdf_job() -> No
             and updated.metadata_json["asset"]["subject"]
             == "Trường Đại học Trà Vinh (TVU)"
         )
+        assert updated.metadata_json["asset"]["categoryCode"] == "CERT"
         assert updated.blockchain_transaction_id == proof.id
         assert event is not None and event.event_type == "certificate.version.ready"
         assert recoverable == (requested.id,)

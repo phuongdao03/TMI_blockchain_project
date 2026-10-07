@@ -1,7 +1,7 @@
 import asyncio
 import base64
 import hashlib
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
 from unittest.mock import MagicMock, patch
@@ -41,6 +41,7 @@ from app.modules.media.gateway import (
     PublicDerivativeMetadata,
 )
 from app.modules.media.models import MediaAsset, MediaEncryptionStatus, MediaStatus
+from app.modules.public.catalog_repository import _thumbnail_url
 from app.modules.public.errors import (
     PublicMediaValidationError,
     PublicWorkForbiddenError,
@@ -83,6 +84,18 @@ def test_pending_public_media_reconciliation_is_scheduled() -> None:
         celery_app.conf.beat_schedule["reconcile-pending-public-media"]["task"]
         == reconcile_pending_public_media.name
     )
+
+
+def test_legacy_video_cover_does_not_block_catalog_on_frame_extraction() -> None:
+    relation = PublicWorkMedia(
+        id=uuid4(),
+        public_work_id=uuid4(),
+        media_asset_id=uuid4(),
+        media_kind=PublicMediaKind.VIDEO,
+        derivative_url="/api/v1/public/works/old/media/video",
+        poster_time_ms=8000,
+    )
+    assert _thumbnail_url(relation) is None
 
 
 class DerivativeGateway:
@@ -537,6 +550,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             )
             assert configured.derivative_status is DerivativeStatus.PENDING
             assert dispatcher.ids == [relation_id]
+            assert await service.list_public(work_id) == ()
 
             configured.derivative_status = DerivativeStatus.FAILED
             configured.failure_code = "PROVIDER_UNAVAILABLE"
@@ -611,7 +625,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             during_repair = await service.list_public(work_id)
             assert len(during_repair) == 1
             assert during_repair[0].url.startswith("/api/v1/public/works/")
-            assert during_repair[0].poster_url is not None
+            assert during_repair[0].poster_url is None
             relation.derivative_status = DerivativeStatus.READY
             await session.commit()
             with (
@@ -654,6 +668,19 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             ):
                 await public_media_tasks._reconcile_pending()
                 enqueue.assert_not_called()
+            relation.attempt_count = 1
+            relation.updated_at = datetime.now(UTC) - timedelta(hours=2)
+            await session.commit()
+            with (
+                patch.object(
+                    public_media_tasks, "get_session_factory", return_value=factory
+                ),
+                patch.object(
+                    public_media_tasks.generate_public_media_derivative, "delay"
+                ) as enqueue,
+            ):
+                await public_media_tasks._reconcile_pending()
+                enqueue.assert_called_once_with(str(relation_id))
             video_gateway.reject_as_bad_request = False
             video_gateway.pending = True
             relation.derivative_status = DerivativeStatus.PENDING
@@ -663,6 +690,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             await worker.process(relation_id)
             assert relation.derivative_status is DerivativeStatus.PROCESSING
             assert video_gateway.upload_count == 5
+            assert await service.list_public(work_id) == ()
             with (
                 patch.object(
                     public_media_tasks, "get_session_factory", return_value=factory

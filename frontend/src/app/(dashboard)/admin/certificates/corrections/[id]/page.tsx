@@ -23,8 +23,8 @@ export default async function CertificateCorrectionPage({
             Chỉnh nội dung bằng xác lập
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
-            Xem lại nội dung trước khi gửi duyệt. Quản trị viên khác sẽ quyết
-            định việc cấp phiên bản mới.
+            Kiểm tra nội dung dùng chung cho trang xác minh công khai và PDF tải
+            về trước khi phát hành phiên bản mới.
           </p>
         </header>
         <CertificateContentCorrection certificateId={id} key={id} />

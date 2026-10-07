@@ -195,7 +195,9 @@ class CertificateMetadataBuilder:
                 "category": str(
                     approved_content.get("category", category.get("name", ""))
                 ),
-                "categoryCode": str(category.get("code", "")),
+                "categoryCode": str(
+                    approved_content.get("categoryCode", category.get("code", ""))
+                ),
                 "subject": str(approved_content.get("subject", subject) or ""),
             },
             "issuedAt": _iso_utc(issued_at),

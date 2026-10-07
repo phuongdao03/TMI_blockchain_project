@@ -18,9 +18,8 @@ export default function CertificateCorrectionsPage() {
             Sửa bằng xác lập đã cấp
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
-            Tìm bằng đang có hiệu lực, chỉnh nội dung và gửi duyệt phiên bản
-            mới. Bằng hiện tại tiếp tục có hiệu lực trong lúc chờ duyệt; phiên
-            bản cũ được giữ để đối chiếu.
+            Tìm bằng đang có hiệu lực và phát hành bản điều chỉnh trong một lần
+            xác nhận của quản trị viên. Phiên bản cũ được giữ để đối chiếu.
           </p>
         </header>
         <CertificateCorrectionList />

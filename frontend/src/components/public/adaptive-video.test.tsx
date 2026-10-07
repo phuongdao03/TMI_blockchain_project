@@ -130,7 +130,7 @@ it("does not warm video when data saving is enabled", () => {
   }
 });
 
-it("starts the optimized video after a tap and falls back to HLS on error", () => {
+it("starts the adaptive stream and falls back to MP4 on error", () => {
   const load = vi
     .spyOn(HTMLMediaElement.prototype, "load")
     .mockImplementation(() => {});
@@ -149,11 +149,11 @@ it("starts the optimized video after a tap and falls back to HLS on error", () =
     fireEvent.click(
       screen.getByRole("button", { name: "Phát video tác phẩm" }),
     );
-    expect(video.getAttribute("src")).toBe("/optimized.mp4");
-    expect(video.preload).toBe("metadata");
-    expect(play).toHaveBeenCalled();
-    fireEvent.error(video);
     expect(video.getAttribute("src")).toBe("/adaptive.m3u8");
+    expect(video.preload).toBe("metadata");
+    fireEvent.error(video);
+    expect(video.getAttribute("src")).toBe("/optimized.mp4");
+    expect(play).toHaveBeenCalled();
   } finally {
     load.mockRestore();
     play.mockRestore();
@@ -161,7 +161,7 @@ it("starts the optimized video after a tap and falls back to HLS on error", () =
   }
 });
 
-it("switches to adaptive streaming when the initial video stalls", () => {
+it("does not warm the MP4 when adaptive streaming is available", () => {
   const load = vi
     .spyOn(HTMLMediaElement.prototype, "load")
     .mockImplementation(() => {});
@@ -170,6 +170,14 @@ it("switches to adaptive streaming when the initial video stalls", () => {
     .spyOn(HTMLMediaElement.prototype, "canPlayType")
     .mockReturnValue("maybe");
   try {
+    const observe = vi.fn();
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        observe = observe;
+        disconnect = vi.fn();
+      },
+    );
     const { container } = render(
       <AdaptiveVideo
         fallbackUrl="/optimized.mp4"
@@ -177,15 +185,17 @@ it("switches to adaptive streaming when the initial video stalls", () => {
       />,
     );
     const video = container.querySelector("video")!;
+    expect(observe).not.toHaveBeenCalled();
     fireEvent.click(
       screen.getByRole("button", { name: "Phát video tác phẩm" }),
     );
-    fireEvent.stalled(video);
     expect(video.getAttribute("src")).toBe("/adaptive.m3u8");
+    expect(load).toHaveBeenCalledTimes(1);
   } finally {
     load.mockRestore();
     play.mockRestore();
     canPlayType.mockRestore();
+    vi.unstubAllGlobals();
   }
 });
 

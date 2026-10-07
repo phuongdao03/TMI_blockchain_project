@@ -23,6 +23,7 @@ from app.modules.blockchain.models import (
     CertificateVersion,
     CertificateVersionStatus,
 )
+from app.modules.certificates.category import require_active_category
 from app.modules.certificates.errors import (
     CertificateConflictError,
     CertificateForbiddenError,
@@ -173,6 +174,10 @@ class CertificateVersionService:
                     raise CertificateConflictError(
                         "Certificate content has not changed."
                     )
+                category = await require_active_category(
+                    self._session, content["category"]
+                )
+                content["categoryCode"] = category.code
                 next_version_no = certificate.current_version_no + 1
                 metadata, metadata_hash = corrected_metadata(
                     predecessor.metadata_json,
@@ -210,11 +215,12 @@ class CertificateVersionService:
                     },
                 )
                 await self._session.flush()
-                return self._view(requested)
+                requested_id = requested.id
         except IntegrityError as exc:
             raise CertificateConflictError(
                 "A certificate correction is already being processed."
             ) from exc
+        return await self.approve(principal, requested_id)
 
     async def _verified_thv_proof(
         self, version: CertificateVersion
@@ -407,6 +413,17 @@ class CertificateVersionService:
             version = await self._certificates.get_version(version_id)
             if version is None:
                 raise CertificateNotFoundError()
+            predecessor = (
+                await self._certificates.get_version(version.predecessor_version_id)
+                if version.predecessor_version_id is not None
+                else None
+            )
+            is_content_correction = (
+                predecessor is not None
+                and predecessor.dossier_version_id == version.dossier_version_id
+            )
+            if is_content_correction:
+                self._require_content_manage(principal)
             if version.status not in {
                 CertificateVersionStatus.PENDING_APPROVAL,
                 CertificateVersionStatus.ANCHOR_PENDING,
@@ -414,7 +431,7 @@ class CertificateVersionService:
                 raise CertificateConflictError(
                     "Only a pending certificate correction can be approved."
                 )
-            if version.requested_by == principal.user_id:
+            if version.requested_by == principal.user_id and not is_content_correction:
                 raise CertificateForbiddenError()
             was_pending = version.status is CertificateVersionStatus.PENDING_APPROVAL
         async with self._session.begin():
@@ -628,6 +645,8 @@ class CertificateVersionService:
 
     @staticmethod
     def _require_content_manage(principal: AuthPrincipal) -> None:
+        if "SUPER_ADMIN" not in principal.roles:
+            raise CertificateForbiddenError()
         AuthorizationPolicy.require_capability(
             principal,
             PolicyRequirement(

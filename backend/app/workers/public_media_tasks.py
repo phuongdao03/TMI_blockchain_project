@@ -1,4 +1,5 @@
 import asyncio
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import and_, or_, select
@@ -60,6 +61,7 @@ async def _generate(relation_id: UUID) -> None:
 
 
 async def _reconcile_pending(*, limit: int = 100) -> None:
+    retry_before = datetime.now(UTC) - timedelta(hours=1)
     async with get_session_factory()() as session:
         relation_ids = tuple(
             await session.scalars(
@@ -79,7 +81,16 @@ async def _reconcile_pending(*, limit: int = 100) -> None:
                         and_(
                             PublicWorkMedia.media_kind == PublicMediaKind.VIDEO,
                             PublicWorkMedia.derivative_status == DerivativeStatus.READY,
-                            PublicWorkMedia.failure_code.is_(None),
+                            or_(
+                                PublicWorkMedia.failure_code.is_(None),
+                                and_(
+                                    PublicWorkMedia.failure_code.in_(
+                                        ("PROVIDER_REJECTED", "PROVIDER_UNAVAILABLE")
+                                    ),
+                                    PublicWorkMedia.attempt_count < 5,
+                                    PublicWorkMedia.updated_at <= retry_before,
+                                ),
+                            ),
                             PublicWorkMedia.derivative_url.like(
                                 "/api/v1/public/works/%/media/%"
                             ),
