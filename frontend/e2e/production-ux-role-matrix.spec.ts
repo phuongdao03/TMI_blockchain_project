@@ -50,7 +50,19 @@ async function authenticate(
 async function setTheme(page: Page, workspace: boolean, theme: "sáng" | "tối") {
   const label = `Giao diện ${theme}` as const;
   if (workspace) await selectWorkspaceTheme(page, label);
-  else await page.getByRole("button", { name: label }).click();
+  else if ((page.viewportSize()?.width ?? 1440) <= 608) {
+    await page.getByRole("button", { name: "Mở menu" }).click();
+    await page
+      .getByRole("navigation", { name: "Điều hướng di động" })
+      .getByRole("button", { name: label })
+      .click();
+    await page.getByRole("button", { name: "Đóng menu" }).first().click();
+  } else {
+    await page
+      .locator(".public-header__actions")
+      .getByRole("button", { name: label })
+      .click();
+  }
   await expect(page.locator("html")).toHaveAttribute(
     "data-theme",
     theme === "sáng" ? "light" : "dark",

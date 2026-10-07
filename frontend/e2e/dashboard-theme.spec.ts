@@ -46,7 +46,9 @@ test("dark mode keeps applicant dashboard surfaces and labels readable", async (
   await selectWorkspaceTheme(page, "Giao diện tối");
 
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  const metrics = page.getByRole("region", { name: "Chỉ số tổng quan" });
+  const metrics = page.getByRole("region", {
+    name: "Trạng thái của hồ sơ gần đây",
+  });
   await expect(metrics).not.toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(metrics).not.toHaveCSS("background-color", "rgb(251, 250, 247)");
   await expect(metrics.getByText("Việc cần làm")).toBeVisible();

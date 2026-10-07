@@ -77,6 +77,11 @@ test("dark mode keeps the selected dossier visibility card readable", async ({
 }) => {
   await page.goto("/dossiers/new");
   await selectWorkspaceTheme(page, "Giao diện tối");
+  await page
+    .locator(".dossier-type-option")
+    .filter({ hasText: "Tác phẩm văn hóa" })
+    .click();
+  await page.getByRole("button", { name: "Tiếp tục nhập thông tin" }).click();
 
   const privateOption = page
     .locator(".dossier-visibility-option")
