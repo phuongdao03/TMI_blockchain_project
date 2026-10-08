@@ -220,7 +220,7 @@ function AllocationCoverage({
             >
               <span className="min-w-0 truncate text-neutral-900 dark:text-neutral-100">
                 {memberLabels[member.userId] ?? member.userId}
-                  {member.responsibility === "LEAD" ? " · Phụ trách chính" : ""}
+                {member.responsibility === "LEAD" ? " · Phụ trách chính" : ""}
               </span>
               <span
                 className={
