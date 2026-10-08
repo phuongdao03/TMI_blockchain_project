@@ -97,6 +97,6 @@ write_release_tag() {
 }
 
 wait_for_release() {
-  compose_command up -d --remove-orphans --wait --wait-timeout "$DEPLOY_HEALTH_TIMEOUT_SECONDS"
+  compose_command up -d --remove-orphans --wait --wait-timeout "$DEPLOY_HEALTH_TIMEOUT_SECONDS" || return $?
   verify_public_health
 }

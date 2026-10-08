@@ -1,8 +1,41 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { access, readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+
+test("release wait rejects unhealthy Compose even if public liveness responds", (context) => {
+  const bash =
+    process.platform === "win32" ? "C:/Program Files/Git/bin/bash.exe" : "bash";
+  if (process.platform === "win32" && !existsSync(bash)) {
+    context.skip("Git Bash is unavailable");
+    return;
+  }
+
+  const result = spawnSync(
+    bash,
+    [
+      "-c",
+      [
+        "source infrastructure/scripts/release-lib.sh",
+        "DEPLOY_HEALTH_TIMEOUT_SECONDS=5",
+        "compose_command() { return 42; }",
+        "verify_public_health() { echo public-liveness-called; return 0; }",
+        "wait_for_release",
+      ].join("\n"),
+    ],
+    {
+      cwd: fileURLToPath(new URL("../", import.meta.url)),
+      encoding: "utf8",
+    },
+  );
+
+  assert.equal(result.status, 42, result.stderr);
+  assert.doesNotMatch(result.stdout, /public-liveness-called/);
+});
 
 test("video posters use a bounded minimal FFmpeg build, not the full runtime package", async () => {
   const backend = await read("backend/Dockerfile");
