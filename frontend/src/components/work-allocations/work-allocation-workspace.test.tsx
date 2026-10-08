@@ -49,8 +49,16 @@ describe("WorkAllocationWorkspace", () => {
           createdAt: null,
           lastLoginAt: null,
         },
+        {
+          id: "moderator-2",
+          email: "mai.nguyen@example.com",
+          role: "MODERATOR",
+          status: "ACTIVE",
+          createdAt: null,
+          lastLoginAt: null,
+        },
       ],
-      meta: { page: 1, pageSize: 100, total: 1 },
+      meta: { page: 1, pageSize: 100, total: 2 },
     });
     createMock.mockResolvedValue({ id: "allocation-1" });
     activateMock.mockResolvedValue({ id: "allocation-1", status: "ACTIVE" });
@@ -75,6 +83,10 @@ describe("WorkAllocationWorkspace", () => {
       target: { value: "Rà soát kế hoạch truyền thông" },
     });
     fireEvent.click(await screen.findByLabelText("linh.tran@example.com"));
+    fireEvent.click(screen.getByLabelText("mai.nguyen@example.com"));
+    fireEvent.change(screen.getByLabelText("Người phụ trách chính"), {
+      target: { value: "moderator-2" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Giao công việc" }));
 
     await waitFor(() => {
@@ -84,7 +96,10 @@ describe("WorkAllocationWorkspace", () => {
         description: null,
         dueAt: null,
         priority: "MEDIUM",
-        members: [{ userId: "moderator-1", responsibility: "CONTRIBUTOR" }],
+        members: [
+          { userId: "moderator-1", responsibility: "CONTRIBUTOR" },
+          { userId: "moderator-2", responsibility: "LEAD" },
+        ],
       });
       expect(activateMock).toHaveBeenCalledWith("allocation-1", []);
     });

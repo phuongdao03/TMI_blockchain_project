@@ -1,22 +1,66 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { MyWorkAllocationList } from "@/components/work-allocations/my-work-allocation-list";
 
 const listMock = vi.hoisted(() => vi.fn());
 const reviewListMock = vi.hoisted(() => vi.fn());
+const completeMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/link", () => ({ default: "a" }));
 
 vi.mock("@/lib/api/client", () => ({
   workAllocationSelfApi: {
     list: listMock,
+    complete: completeMock,
   },
   reviewApi: { list: reviewListMock },
 }));
 
 describe("MyWorkAllocationList", () => {
+  it("lets an assigned moderator finish a general task and shows the result", async () => {
+    reviewListMock.mockResolvedValue({ data: [], meta: { total: 0 } });
+    listMock.mockResolvedValue({
+      data: [
+        {
+          id: "general-1",
+          kind: "GENERIC",
+          objective: "Chuẩn bị sự kiện",
+          description: "Kiểm tra thiết bị",
+          status: "ACTIVE",
+          priority: "HIGH",
+          dueAt: null,
+          myCompletedAt: null,
+          myResponsibility: "LEAD",
+        },
+      ],
+      meta: { total: 1 },
+    });
+    completeMock.mockResolvedValue({
+      id: "general-1",
+      status: "ACTIVE",
+      myCompletedAt: "2026-10-08T00:00:00Z",
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MyWorkAllocationList />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText("Kiểm tra thiết bị")).toBeDefined();
+    expect(screen.getByText("Bạn phụ trách chính")).toBeDefined();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Hoàn thành phần việc" }),
+    );
+    await waitFor(() => expect(completeMock).toHaveBeenCalledWith("general-1"));
+    expect(
+      await screen.findByText("Bạn đã hoàn thành phần việc này"),
+    ).toBeDefined();
+  });
   it("shows legacy reviewer assignments even when no work allocation was created", async () => {
     listMock.mockResolvedValue({ data: [], meta: { total: 0 } });
     reviewListMock.mockResolvedValue({

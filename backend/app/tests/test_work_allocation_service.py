@@ -11,6 +11,7 @@ from app.modules.audit.models import AuditLog
 from app.modules.audit.service import AuditService
 from app.modules.auth.models import Role, User, UserRole, UserStatus
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.notifications.models import Notification
 from app.modules.work_allocations.models import (
     AllocationMember,
     WorkAllocation,
@@ -152,6 +153,130 @@ def test_work_allocation_roles_and_personal_list_enforce_boundaries() -> None:
                         _principal(user_id=uuid4(), role=role), page=1, page_size=20
                     )
                 assert list_error.value.code == "WORK_ALLOCATION_FORBIDDEN"
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_generic_work_tracks_each_assignee_and_completes_once() -> None:
+    async def exercise() -> None:
+        engine = create_async_engine("sqlite+aiosqlite://")
+        async with engine.begin() as connection:
+            await connection.run_sync(
+                lambda sync_connection: Base.metadata.create_all(
+                    sync_connection,
+                    tables=[
+                        User.__table__,
+                        Role.__table__,
+                        UserRole.__table__,
+                        AuditLog.__table__,
+                        Notification.__table__,
+                        WorkAllocation.__table__,
+                        WorkScope.__table__,
+                        AllocationMember.__table__,
+                    ],
+                )
+            )
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        admin_id, first_id, second_id = uuid4(), uuid4(), uuid4()
+        role_id = uuid4()
+        async with sessions.begin() as session:
+            session.add_all(
+                [
+                    User(id=admin_id, email="admin@example.com", password_hash=None),
+                    User(
+                        id=first_id,
+                        email="first@example.com",
+                        password_hash=None,
+                        status=UserStatus.ACTIVE,
+                    ),
+                    User(
+                        id=second_id,
+                        email="second@example.com",
+                        password_hash=None,
+                        status=UserStatus.ACTIVE,
+                    ),
+                    Role(id=role_id, code="MODERATOR"),
+                    UserRole(user_id=first_id, role_id=role_id),
+                    UserRole(user_id=second_id, role_id=role_id),
+                ]
+            )
+        admin = _principal(user_id=admin_id, role="SUPER_ADMIN")
+        first = _principal(user_id=first_id, role="MODERATOR")
+        second = _principal(user_id=second_id, role="MODERATOR")
+        async with sessions() as session:
+            service = WorkAllocationService(session)
+            created = await service.create_allocation(
+                admin,
+                CreateWorkAllocationRequest.model_validate(
+                    {
+                        "kind": "GENERIC",
+                        "objective": "Prepare event",
+                        "members": [
+                            {"userId": str(first_id), "responsibility": "LEAD"},
+                            {"userId": str(second_id), "responsibility": "CONTRIBUTOR"},
+                        ],
+                    }
+                ),
+                audit=AuditService(session),
+                request_id="work-test",
+                user_agent="pytest",
+            )
+            await service.activate_allocation(
+                admin,
+                created.id,
+                ActivateWorkAllocationRequest(scope_coverage=[]),
+                audit=AuditService(session),
+                request_id="work-test",
+                user_agent="pytest",
+            )
+            mine, _ = await service.list_my_allocations(first, page=1, page_size=20)
+            assert mine[0].my_completed_at is None
+            assert mine[0].my_responsibility.value == "LEAD"
+            first_done = await service.complete_my_generic_work(
+                first,
+                created.id,
+                audit=AuditService(session),
+                request_id="work-test",
+                user_agent="pytest",
+            )
+            assert first_done.status.value == "ACTIVE"
+            assert first_done.my_completed_at is not None
+            repeated = await service.complete_my_generic_work(
+                first,
+                created.id,
+                audit=AuditService(session),
+                request_id="work-test",
+                user_agent="pytest",
+            )
+            assert repeated.my_completed_at == first_done.my_completed_at
+            with pytest.raises(DomainError) as non_member_error:
+                await service.complete_my_generic_work(
+                    _principal(user_id=uuid4(), role="MODERATOR"),
+                    created.id,
+                    audit=AuditService(session),
+                    request_id="work-test",
+                    user_agent="pytest",
+                )
+            assert non_member_error.value.code == "WORK_ALLOCATION_FORBIDDEN"
+            assert (
+                await service.complete_my_generic_work(
+                    second,
+                    created.id,
+                    audit=AuditService(session),
+                    request_id="work-test",
+                    user_agent="pytest",
+                )
+            ).status.value == "COMPLETED"
+            with pytest.raises(DomainError) as error:
+                await service.complete_my_generic_work(
+                    admin,
+                    created.id,
+                    audit=AuditService(session),
+                    request_id="work-test",
+                    user_agent="pytest",
+                )
+            assert error.value.code == "WORK_ALLOCATION_FORBIDDEN"
         await engine.dispose()
 
     asyncio.run(exercise())

@@ -9,3 +9,4 @@ def test_work_allocation_api_exposes_admin_and_personal_routes() -> None:
     assert "get" in paths["/api/v1/admin/work-allocations/{allocation_id}"]
     assert "post" in paths["/api/v1/admin/work-allocations/{allocation_id}/activate"]
     assert "get" in paths["/api/v1/me/work-allocations"]
+    assert "post" in paths["/api/v1/me/work-allocations/{allocation_id}/complete"]

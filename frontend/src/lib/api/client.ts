@@ -81,6 +81,7 @@ import type {
   WorkTaskPriority,
   WorkTaskStatus,
   WorkAllocation,
+  MyWorkAllocation,
   WorkAllocationCreateInput,
   WorkAllocationDetail,
   JobActionInput,
@@ -2189,8 +2190,14 @@ export const workAllocationSelfApi = {
       page: String(filters.page ?? 1),
       pageSize: String(filters.pageSize ?? 20),
     });
-    return requestPaginated<WorkAllocation[]>(
+    return requestPaginated<MyWorkAllocation[]>(
       `/me/work-allocations?${parameters.toString()}`,
+    );
+  },
+  complete(allocationId: string) {
+    return request<MyWorkAllocation>(
+      `/me/work-allocations/${encodeURIComponent(allocationId)}/complete`,
+      { method: "POST" },
     );
   },
 };

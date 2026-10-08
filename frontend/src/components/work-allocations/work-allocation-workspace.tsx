@@ -265,6 +265,9 @@ export function WorkAllocationWorkspace() {
           rows={allocations.data?.data ?? []}
           selectedAllocationId={selectedAllocationId}
           selectedDetail={allocationDetail.data ?? null}
+          memberLabels={Object.fromEntries(
+            (staff.data?.data ?? []).map((person) => [person.id, person.email]),
+          )}
         />
       </section>
     </section>

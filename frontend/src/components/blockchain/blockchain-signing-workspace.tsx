@@ -29,6 +29,7 @@ import type {
 import {
   connectWallet,
   connectWalletWithConnector,
+  hasInjectedMetaMask,
   currentWallet,
   sendTransaction,
   signWalletChallenge,
@@ -307,7 +308,7 @@ export function BlockchainSigningWorkspace() {
     setBusy("connect");
     setMessage(null);
     const options = walletOptions?.() ?? [];
-    if (options.length > 1) {
+    if (options.length > 1 && !hasInjectedMetaMask()) {
       setBusy(null);
       setWalletPickerOpen(true);
       return;

@@ -3231,6 +3231,19 @@ summary {
   background: color-mix(in srgb, var(--theme-accent, #b7882f) 20%, transparent);
 }
 
+html[data-navigation-pending="true"]::after {
+  content: "";
+  position: fixed;
+  z-index: 1001;
+  top: env(safe-area-inset-top, 0px);
+  left: 0;
+  width: 42%;
+  height: 3px;
+  background: var(--theme-accent, #f6c515);
+  pointer-events: none;
+  animation: navigation-loading-progress 1.2s ease-in-out infinite alternate;
+}
+
 .navigation-loading__bar {
   display: block;
   width: 45%;

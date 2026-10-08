@@ -9,6 +9,8 @@ import { POLYGON_CHAIN_ID, wagmiConfig } from "@/lib/blockchain/wagmi-config";
 
 export type Eip1193Provider = {
   request<T>(args: { method: string; params?: unknown[] }): Promise<T>;
+  isMetaMask?: boolean;
+  providers?: Eip1193Provider[];
   on?(
     event: "accountsChanged" | "chainChanged" | "disconnect",
     listener: () => void,
@@ -45,7 +47,21 @@ function provider(): Eip1193Provider {
       "Không tìm thấy ví tương thích EIP-1193. Hãy cài MetaMask hoặc mở ví của bạn.",
     );
   }
-  return injected;
+  return (
+    injected.providers?.find(
+      (candidate: Eip1193Provider) => candidate.isMetaMask,
+    ) ?? injected
+  );
+}
+
+export function hasInjectedMetaMask(): boolean {
+  if (typeof window === "undefined") return false;
+  const injected = (window as Window & { ethereum?: Eip1193Provider }).ethereum;
+  return Boolean(
+    injected?.providers?.some(
+      (candidate: Eip1193Provider) => candidate.isMetaMask,
+    ) || injected?.isMetaMask,
+  );
 }
 
 async function activeProvider(): Promise<Eip1193Provider> {
@@ -126,6 +142,8 @@ export async function connectWallet(): Promise<{
   const address = accounts[0];
   if (!address) throw new Error("Ví không trả về địa chỉ tài khoản.");
   const chainId = await active.request<string>({ method: "eth_chainId" });
+  connectedProvider = active;
+  connectedConnectorUid = undefined;
   return { address, chainId: Number.parseInt(chainId, 16) };
 }
 

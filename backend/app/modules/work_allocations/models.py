@@ -184,6 +184,7 @@ class AllocationMember(UtcTimestampMixin, Base):
         Boolean, nullable=False, default=True, server_default=text("true")
     )
     deactivated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class WorkScopeReviewAssignment(UtcTimestampMixin, Base):

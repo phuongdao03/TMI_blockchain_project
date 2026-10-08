@@ -35,6 +35,11 @@ export function GenericAllocationForm({
   const [dueAt, setDueAt] = useState("");
   const [priority, setPriority] = useState<WorkAllocationPriority>("MEDIUM");
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [leadId, setLeadId] = useState<string | null>(null);
+  const selectedLeadId =
+    leadId && selectedMemberIds.includes(leadId)
+      ? leadId
+      : selectedMemberIds[0];
   const [formError, setFormError] = useState<string | null>(null);
   const create = useMutation({
     mutationFn: async () => {
@@ -46,7 +51,7 @@ export function GenericAllocationForm({
         priority,
         members: selectedMemberIds.map((userId) => ({
           userId,
-          responsibility: "CONTRIBUTOR",
+          responsibility: userId === selectedLeadId ? "LEAD" : "CONTRIBUTOR",
         })),
       });
       await workAllocationAdminApi.activate(created.id, []);
@@ -57,6 +62,7 @@ export function GenericAllocationForm({
       setDueAt("");
       setPriority("MEDIUM");
       setSelectedMemberIds([]);
+      setLeadId(null);
       setFormError(null);
       await onSaved();
     },
@@ -180,6 +186,25 @@ export function GenericAllocationForm({
           </div>
         )}
       </fieldset>
+
+      {selectedMemberIds.length > 0 ? (
+        <label className="mt-4 block text-sm font-bold text-neutral-800 dark:text-neutral-100">
+          Người phụ trách chính
+          <select
+            className={fieldClass}
+            onChange={(event) => setLeadId(event.target.value)}
+            value={selectedLeadId}
+          >
+            {staff
+              .filter((person) => selectedMemberIds.includes(person.id))
+              .map((person) => (
+                <option key={person.id} value={person.id}>
+                  {person.email}
+                </option>
+              ))}
+          </select>
+        </label>
+      ) : null}
 
       {formError || create.error ? (
         <p

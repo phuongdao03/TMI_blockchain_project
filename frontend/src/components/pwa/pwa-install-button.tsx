@@ -16,16 +16,32 @@ const INSTALL_PROMPT_READY = "pwa-install-prompt-ready";
 
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
+function storedInstallPrompt(): BeforeInstallPromptEvent | null {
+  return (
+    (window as Window & { __thvInstallPrompt?: BeforeInstallPromptEvent })
+      .__thvInstallPrompt ?? deferredPrompt
+  );
+}
+
+function clearInstallPrompt() {
+  deferredPrompt = null;
+  delete (window as Window & { __thvInstallPrompt?: BeforeInstallPromptEvent })
+    .__thvInstallPrompt;
+}
+
 function captureInstallPrompt(event: Event) {
   event.preventDefault();
   deferredPrompt = event as BeforeInstallPromptEvent;
+  (
+    window as Window & { __thvInstallPrompt?: BeforeInstallPromptEvent }
+  ).__thvInstallPrompt = deferredPrompt;
   window.dispatchEvent(new Event(INSTALL_PROMPT_READY));
 }
 
 async function requestInstall() {
-  const prompt = deferredPrompt;
+  const prompt = storedInstallPrompt();
   if (!prompt) return null;
-  deferredPrompt = null;
+  clearInstallPrompt();
   window.dispatchEvent(new Event(INSTALL_PROMPT_READY));
   await prompt.prompt();
   return (await prompt.userChoice).outcome;
@@ -56,9 +72,9 @@ export function PwaInstallButton({ className }: { className?: string }) {
     const standaloneCheck = window.setTimeout(() => {
       if (isStandalone()) setInstalled(true);
     }, 0);
-    const refresh = () => setPromptReady(Boolean(deferredPrompt));
+    const refresh = () => setPromptReady(Boolean(storedInstallPrompt()));
     const markInstalled = () => {
-      deferredPrompt = null;
+      clearInstallPrompt();
       setPromptReady(false);
       setInstalled(true);
     };
@@ -138,14 +154,14 @@ export function PwaInstallAction() {
   const [promptReady, setPromptReady] = useState(false);
 
   useEffect(() => {
-    const refresh = () => setPromptReady(Boolean(deferredPrompt));
+    const refresh = () => setPromptReady(Boolean(storedInstallPrompt()));
     const detect = window.setTimeout(() => {
       setPlatform(isAppleMobile() ? "ios" : "other");
       refresh();
       if (isStandalone()) setState("installed");
     }, 0);
     const installed = () => {
-      deferredPrompt = null;
+      clearInstallPrompt();
       setPromptReady(false);
       setState("installed");
     };
@@ -161,7 +177,7 @@ export function PwaInstallAction() {
   }, []);
 
   async function install() {
-    if (!deferredPrompt) {
+    if (!storedInstallPrompt()) {
       setPromptReady(false);
       return;
     }
@@ -171,7 +187,7 @@ export function PwaInstallAction() {
       setPromptReady(false);
       setState(outcome === "accepted" ? "accepted" : "idle");
     } catch {
-      deferredPrompt = null;
+      clearInstallPrompt();
       setPromptReady(false);
       setState("idle");
     }
@@ -179,14 +195,20 @@ export function PwaInstallAction() {
 
   if (state === "installed") {
     return (
-      <p className="text-sm font-bold text-emerald-400" role="status">
+      <p
+        className="text-sm font-bold text-emerald-700 dark:text-emerald-300"
+        role="status"
+      >
         Ứng dụng đã được cài đặt.
       </p>
     );
   }
   if (state === "accepted") {
     return (
-      <p className="text-sm font-semibold text-emerald-400" role="status">
+      <p
+        className="text-sm font-semibold text-emerald-700 dark:text-emerald-300"
+        role="status"
+      >
         Đã xác nhận cài đặt. Kiểm tra biểu tượng ứng dụng trên thiết bị.
       </p>
     );

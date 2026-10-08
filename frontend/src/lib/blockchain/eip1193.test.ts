@@ -21,7 +21,9 @@ vi.mock("@/lib/blockchain/wagmi-config", () => ({
 }));
 
 import {
+  connectWallet,
   connectWalletWithConnector,
+  hasInjectedMetaMask,
   subscribeWalletChanges,
   walletAddressesMatch,
   walletErrorCode,
@@ -34,6 +36,32 @@ beforeEach(() => {
 });
 
 describe("walletErrorCode", () => {
+  it("prefers the installed MetaMask provider when another wallet also injects", async () => {
+    const other = { request: vi.fn(), isMetaMask: false };
+    const metamask = {
+      request: vi.fn(async ({ method }: { method: string }) =>
+        method === "eth_requestAccounts"
+          ? ["0xbfa38182f0d24589e7898dd4892c58c3fda58042"]
+          : "0x89",
+      ),
+      isMetaMask: true,
+    };
+    Object.defineProperty(window, "ethereum", {
+      configurable: true,
+      value: { ...other, providers: [other, metamask] },
+    });
+
+    expect(hasInjectedMetaMask()).toBe(true);
+    expect(await connectWallet()).toEqual({
+      address: "0xbfa38182f0d24589e7898dd4892c58c3fda58042",
+      chainId: 137,
+    });
+    expect(metamask.request).toHaveBeenCalledWith({
+      method: "eth_requestAccounts",
+    });
+    expect(other.request).not.toHaveBeenCalled();
+    delete (window as Window & { ethereum?: unknown }).ethereum;
+  });
   it("classifies common provider errors without exposing raw messages", () => {
     expect(walletErrorCode({ code: 4001 })).toBe("USER_REJECTED");
     expect(walletErrorCode({ code: -32002 })).toBe("REQUEST_PENDING");

@@ -54,7 +54,7 @@ export function CertificateContentDrafts() {
 
   return (
     <section
-      className="rounded-2xl border border-[#d8c798] bg-[#fffdf5] p-4 sm:p-6"
+      className="rounded-2xl border border-[#d8c798] bg-[#fffdf5] p-4 text-[#2b1714] sm:p-6"
       aria-labelledby="certificate-drafts-title"
     >
       <h2

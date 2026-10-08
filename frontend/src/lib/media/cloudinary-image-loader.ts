@@ -30,3 +30,32 @@ export function cloudinaryPublicImageLoader({
     : path;
   return `${prefix}${marker}c_limit,w_${chosenWidth},q_auto,f_auto/${source}`;
 }
+
+export function isCloudinaryPublicPoster(src: string | null): src is string {
+  if (!src) return false;
+  try {
+    const url = new URL(src);
+    return (
+      url.protocol === "https:" &&
+      url.hostname === "res.cloudinary.com" &&
+      /\/video\/upload\/so_[^/]+\/v\d+\//.test(url.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function cloudinaryPublicPosterLoader({
+  src,
+  width,
+}: {
+  src: string;
+  width: number;
+}): string {
+  if (!isCloudinaryPublicPoster(src)) return src;
+  const chosenWidth = widths.find((candidate) => candidate >= width) ?? 1600;
+  return src.replace(
+    /(\/video\/upload\/)(so_[^/,]+)[^/]*(\/v\d+\/)/,
+    `$1$2,c_limit,w_${chosenWidth},q_auto:eco,f_webp$3`,
+  );
+}

@@ -462,6 +462,10 @@ class PublicMediaService:
                 relation.video_quality_profile != data.quality_profile
                 or relation.video_max_width != data.max_width
                 or relation.derivative_status is DerivativeStatus.FAILED
+                or (
+                    relation.derivative_url is not None
+                    and relation.derivative_url.startswith("/api/v1/public/works/")
+                )
             )
             before: dict[str, object] = {
                 "quality_profile": relation.video_quality_profile.value,

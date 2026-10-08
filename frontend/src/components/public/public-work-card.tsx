@@ -9,7 +9,9 @@ import { trackPublicCatalog } from "@/lib/analytics/public-catalog";
 import type { PublicCatalogWork } from "@/lib/api/types";
 import {
   cloudinaryPublicImageLoader,
+  cloudinaryPublicPosterLoader,
   isCloudinaryPublicImage,
+  isCloudinaryPublicPoster,
 } from "@/lib/media/cloudinary-image-loader";
 import {
   isPublicCoverImage,
@@ -31,11 +33,13 @@ export function PublicWorkCard({
   work: PublicCatalogWork;
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
   const isLead = source === "featured" && position === 1;
   const variant = source === "list" ? "list" : isLead ? "lead" : "support";
   const imageUrl = work.thumbnailUrl;
   const usesResponsiveCover = isPublicCoverImage(imageUrl);
   const usesCloudinaryImage = isCloudinaryPublicImage(imageUrl);
+  const usesCloudinaryPoster = isCloudinaryPublicPoster(imageUrl);
   const hasImage = Boolean(imageUrl && imageUrl !== failedUrl);
   const published = publishedDateFormatter.format(new Date(work.publishedAt));
 
@@ -74,16 +78,23 @@ export function PublicWorkCard({
                   ? publicCoverLoader
                   : usesCloudinaryImage
                     ? cloudinaryPublicImageLoader
-                    : undefined
+                    : usesCloudinaryPoster
+                      ? cloudinaryPublicPosterLoader
+                      : undefined
               }
               onError={() => setFailedUrl(imageUrl)}
+              onLoad={() => setLoadedUrl(imageUrl)}
               sizes={
                 isLead
                   ? "(max-width: 768px) 100vw, (max-width: 1280px) 80vw, 60vw"
                   : "(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
               }
               src={imageUrl}
-              unoptimized={!usesResponsiveCover && !usesCloudinaryImage}
+              unoptimized={
+                !usesResponsiveCover &&
+                !usesCloudinaryImage &&
+                !usesCloudinaryPoster
+              }
             />
           ) : (
             <div
@@ -101,6 +112,20 @@ export function PublicWorkCard({
               </span>
             </div>
           )}
+          {hasImage && loadedUrl !== imageUrl ? (
+            <span
+              className="pointer-events-none absolute inset-0 flex items-end bg-black/20 p-4 text-xs font-semibold text-white"
+              role="status"
+            >
+              <span className="inline-flex items-center gap-2 rounded-full bg-black/60 px-3 py-2">
+                <span
+                  className="size-3 animate-spin rounded-full border-2 border-white/40 border-t-white"
+                  aria-hidden="true"
+                />
+                Đang tải ảnh bìa…
+              </span>
+            </span>
+          ) : null}
           <span className="catalog-work-card__category">
             {work.categoryName}
           </span>

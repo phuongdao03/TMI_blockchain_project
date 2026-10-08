@@ -18,6 +18,7 @@ from app.modules.auth.dependencies import (
 from app.modules.work_allocations.schemas import (
     ActivateWorkAllocationRequest,
     CreateWorkAllocationRequest,
+    MyWorkAllocationData,
     WorkAllocationData,
     WorkAllocationDetailData,
 )
@@ -129,7 +130,9 @@ async def activate_work_allocation(
     )
 
 
-@self_router.get("", response_model=PaginatedSuccessEnvelope[list[WorkAllocationData]])
+@self_router.get(
+    "", response_model=PaginatedSuccessEnvelope[list[MyWorkAllocationData]]
+)
 async def list_my_work_allocations(
     request: Request,
     response: Response,
@@ -137,7 +140,7 @@ async def list_my_work_allocations(
     session: SessionDependency,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
-) -> PaginatedSuccessEnvelope[list[WorkAllocationData]]:
+) -> PaginatedSuccessEnvelope[list[MyWorkAllocationData]]:
     rows, total = await WorkAllocationService(session).list_my_allocations(
         principal,
         page=page,
@@ -152,4 +155,29 @@ async def list_my_work_allocations(
             page_size=page_size,
             total=total,
         ),
+    )
+
+
+@self_router.post(
+    "/{allocation_id}/complete",
+    response_model=SuccessEnvelope[MyWorkAllocationData],
+)
+async def complete_my_generic_work(
+    allocation_id: UUID,
+    request: Request,
+    response: Response,
+    principal: CsrfProtectedPrincipalDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[MyWorkAllocationData]:
+    data = await WorkAllocationService(session).complete_my_generic_work(
+        principal,
+        allocation_id,
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    _private_response(response)
+    return SuccessEnvelope(
+        data=data,
+        meta=ResponseMeta(request_id=request.state.request_id),
     )

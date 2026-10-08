@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, ClipboardList, Inbox, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -53,6 +53,18 @@ type ReviewFilter = "ALL" | "OPEN" | "DONE";
 
 export function MyWorkAllocationList() {
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("OPEN");
+  const [completedIds, setCompletedIds] = useState<string[]>([]);
+  const queryClient = useQueryClient();
+  const complete = useMutation({
+    mutationFn: (allocationId: string) =>
+      workAllocationSelfApi.complete(allocationId),
+    onSuccess: async (_result, allocationId) => {
+      setCompletedIds((ids) => [...ids, allocationId]);
+      await queryClient.invalidateQueries({
+        queryKey: ["my-work-allocations"],
+      });
+    },
+  });
   const allocations = useQuery({
     queryKey: ["my-work-allocations"],
     queryFn: () => workAllocationSelfApi.list({ pageSize: 50 }),
@@ -244,6 +256,50 @@ export function MyWorkAllocationList() {
                     ? ` · Hạn ${new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(new Date(allocation.dueAt))}`
                     : " · Chưa đặt hạn"}
                 </p>
+                {allocation.kind === "GENERIC" ? (
+                  <>
+                    {allocation.description ? (
+                      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[var(--theme-text)]">
+                        {allocation.description}
+                      </p>
+                    ) : null}
+                    <p className="mt-2 text-xs font-semibold text-[var(--theme-muted)]">
+                      {allocation.myResponsibility === "LEAD"
+                        ? "Bạn phụ trách chính"
+                        : "Bạn cùng thực hiện"}
+                    </p>
+                    {allocation.myCompletedAt ||
+                    completedIds.includes(allocation.id) ? (
+                      <p
+                        className="mt-4 text-sm font-semibold text-emerald-700 dark:text-emerald-300"
+                        role="status"
+                      >
+                        Bạn đã hoàn thành phần việc này
+                      </p>
+                    ) : allocation.status === "ACTIVE" ? (
+                      <button
+                        className="mt-4 min-h-11 rounded-lg bg-[var(--theme-accent)] px-4 text-sm font-bold text-[var(--theme-accent-contrast)] disabled:opacity-60"
+                        disabled={complete.isPending}
+                        onClick={() => complete.mutate(allocation.id)}
+                        type="button"
+                      >
+                        {complete.isPending &&
+                        complete.variables === allocation.id
+                          ? "Đang ghi nhận…"
+                          : "Hoàn thành phần việc"}
+                      </button>
+                    ) : null}
+                    {complete.isError &&
+                    complete.variables === allocation.id ? (
+                      <p
+                        className="mt-2 text-sm text-red-700 dark:text-red-300"
+                        role="alert"
+                      >
+                        Chưa thể ghi nhận hoàn thành. Vui lòng thử lại.
+                      </p>
+                    ) : null}
+                  </>
+                ) : null}
                 {allocation.kind === "DOSSIER_REVIEW" ? (
                   <Link
                     className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-sm font-bold text-neutral-800 transition hover:border-primary-400 hover:text-primary-700 dark:border-neutral-700 dark:text-neutral-100 dark:hover:border-primary-400 dark:hover:text-primary-200"

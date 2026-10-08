@@ -45,6 +45,54 @@ const allocationDetail: WorkAllocationDetail = {
 };
 
 describe("WorkAllocationList", () => {
+  it("shows real assignee progress for a general allocation", () => {
+    render(
+      <WorkAllocationList
+        isDetailError={false}
+        isDetailPending={false}
+        isError={false}
+        isPending={false}
+        onSelect={vi.fn()}
+        rows={[
+          {
+            ...dossierAllocation,
+            kind: "GENERIC",
+            dossierId: null,
+            dossierVersionId: null,
+          },
+        ]}
+        selectedAllocationId="allocation-1"
+        selectedDetail={{
+          ...allocationDetail,
+          kind: "GENERIC",
+          dossierId: null,
+          dossierVersionId: null,
+          scopes: [],
+          scopeCoverage: [],
+          members: [
+            {
+              id: "member-1",
+              allocationId: "allocation-1",
+              userId: "moderator-1",
+              responsibility: "LEAD",
+              assignedByUserId: "admin-1",
+              isActive: true,
+              deactivatedAt: null,
+              completedAt: "2026-10-08T00:00:00Z",
+              createdAt: "2026-10-01T00:00:00Z",
+              updatedAt: "2026-10-08T00:00:00Z",
+            },
+          ],
+        }}
+        memberLabels={{ "moderator-1": "linh@example.com" }}
+      />,
+    );
+    expect(screen.getByText("Người thực hiện · 1/1 hoàn thành")).toBeDefined();
+    expect(
+      screen.getByText("linh@example.com · Phụ trách chính"),
+    ).toBeDefined();
+    expect(screen.getByText("Đã xong")).toBeDefined();
+  });
   it("lets an admin activate an existing general draft", () => {
     const activateDraft = vi.fn();
     render(

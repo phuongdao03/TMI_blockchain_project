@@ -19,6 +19,8 @@ function installPrompt(outcome: "accepted" | "dismissed" = "accepted") {
 
 describe("PWA installation", () => {
   beforeEach(() => {
+    delete (window as Window & { __thvInstallPrompt?: Event })
+      .__thvInstallPrompt;
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
       value: vi.fn().mockReturnValue({ matches: false }),
@@ -44,6 +46,18 @@ describe("PWA installation", () => {
       await screen.findByRole("button", { name: "Cài ứng dụng" }),
     );
 
+    expect(prompt).toHaveBeenCalledOnce();
+  });
+
+  it("uses an install prompt captured before React mounted", async () => {
+    const { event, prompt } = installPrompt();
+    (window as Window & { __thvInstallPrompt?: Event }).__thvInstallPrompt =
+      event;
+    render(<PwaInstallButton />);
+
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Cài ứng dụng" }));
     expect(prompt).toHaveBeenCalledOnce();
   });
 

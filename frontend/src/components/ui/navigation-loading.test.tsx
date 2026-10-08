@@ -29,6 +29,7 @@ it("shows navigation feedback after a mobile link tap and clears on arrival", ()
     </>,
   );
   fireEvent.click(screen.getByRole("link", { name: "Bằng xác lập" }));
+  expect(document.documentElement.dataset.navigationPending).toBe("true");
   expect(screen.queryByRole("status")).toBeNull();
   act(() => vi.advanceTimersByTime(120));
   expect(screen.getByRole("status").textContent).toContain("Đang mở trang");
@@ -42,6 +43,7 @@ it("shows navigation feedback after a mobile link tap and clears on arrival", ()
     </>,
   );
   expect(screen.queryByRole("status")).toBeNull();
+  expect(document.documentElement.dataset.navigationPending).toBeUndefined();
 });
 
 it("shows progress for a search form and clears when its query arrives", () => {

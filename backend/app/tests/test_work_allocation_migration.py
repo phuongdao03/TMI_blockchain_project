@@ -10,6 +10,38 @@ from app.core.config import get_settings
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_generic_work_completion_column_is_reversible(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database_path = tmp_path / "completion.sqlite3"
+    monkeypatch.setenv(
+        "DATABASE_DIRECT_URL", f"sqlite+aiosqlite:///{database_path.as_posix()}"
+    )
+    monkeypatch.setenv("BLOCKCHAIN_NETWORK", "local")
+    monkeypatch.setenv("BLOCKCHAIN_CHAIN_ID", "31337")
+    get_settings.cache_clear()
+    config = Config(BACKEND_ROOT / "alembic.ini")
+
+    try:
+        command.upgrade(config, "0099_work_allocation_completion")
+        with sqlite3.connect(database_path) as connection:
+            names = {
+                row[1]
+                for row in connection.execute("PRAGMA table_info('allocation_members')")
+            }
+        assert "completed_at" in names
+
+        command.downgrade(config, "0098_certificate_content_drafts")
+        with sqlite3.connect(database_path) as connection:
+            names = {
+                row[1]
+                for row in connection.execute("PRAGMA table_info('allocation_members')")
+            }
+        assert "completed_at" not in names
+    finally:
+        get_settings.cache_clear()
+
+
 def test_work_allocation_schema_and_review_bridge_are_additive_and_reversible(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

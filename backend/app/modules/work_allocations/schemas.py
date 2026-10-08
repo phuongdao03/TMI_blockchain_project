@@ -176,6 +176,7 @@ class AllocationMemberData(WorkAllocationSchema):
     assigned_by_user_id: UUID
     is_active: bool
     deactivated_at: datetime | None
+    completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
@@ -199,6 +200,11 @@ class WorkAllocationData(WorkAllocationSchema):
     created_by_user_id: UUID
     created_at: datetime
     updated_at: datetime
+
+
+class MyWorkAllocationData(WorkAllocationData):
+    my_completed_at: datetime | None
+    my_responsibility: AllocationResponsibility
 
 
 class WorkAllocationDetailData(WorkAllocationData):

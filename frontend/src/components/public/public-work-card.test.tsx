@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it } from "vitest";
 
 import { PublicWorkCard } from "@/components/public/public-work-card";
@@ -25,4 +25,18 @@ it("renders responsive cover URLs for the public catalog", () => {
   const image = screen.getByRole("img", { name: "Ảnh bìa tác phẩm" });
   expect(image.getAttribute("srcset")).toContain("coverWidth=640");
   expect(image.getAttribute("src")).toContain("coverWidth=1280");
+});
+
+it("shows cover loading feedback until the poster has loaded", async () => {
+  Object.defineProperty(HTMLImageElement.prototype, "decode", {
+    configurable: true,
+    value: () => Promise.resolve(),
+  });
+  render(<PublicWorkCard work={work} position={1} source="list" />);
+  expect(screen.getByText("Đang tải ảnh bìa…")).toBeDefined();
+  fireEvent.load(screen.getByRole("img", { name: "Ảnh bìa tác phẩm" }));
+  await waitFor(() =>
+    expect(screen.queryByText("Đang tải ảnh bìa…")).toBeNull(),
+  );
+  Reflect.deleteProperty(HTMLImageElement.prototype, "decode");
 });

@@ -13,6 +13,7 @@ export function NavigationLoading() {
 
   useEffect(() => {
     const clear = () => {
+      delete document.documentElement.dataset.navigationPending;
       if (startTimer.current) clearTimeout(startTimer.current);
       if (stopTimer.current) clearTimeout(stopTimer.current);
       startTimer.current = null;
@@ -21,6 +22,7 @@ export function NavigationLoading() {
     };
     const schedule = () => {
       clear();
+      document.documentElement.dataset.navigationPending = "true";
       startTimer.current = setTimeout(() => setVisible(true), 120);
       stopTimer.current = setTimeout(clear, 15_000);
     };

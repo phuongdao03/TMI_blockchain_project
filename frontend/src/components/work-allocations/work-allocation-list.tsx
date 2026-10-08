@@ -29,6 +29,7 @@ export function WorkAllocationList({
   activatingDraftId,
   activationError,
   failedDraftId,
+  memberLabels = {},
 }: {
   rows: WorkAllocation[];
   isPending: boolean;
@@ -42,6 +43,7 @@ export function WorkAllocationList({
   activatingDraftId?: string | null;
   activationError?: unknown;
   failedDraftId?: string | null;
+  memberLabels?: Record<string, string>;
 }) {
   if (isPending) {
     return (
@@ -150,14 +152,17 @@ export function WorkAllocationList({
               }`}
             />
             {selectedAllocationId === allocation.id
-              ? "Ẩn phạm vi"
-              : "Xem phạm vi"}
+              ? "Ẩn chi tiết"
+              : allocation.kind === "GENERIC"
+                ? "Xem người thực hiện"
+                : "Xem phạm vi"}
           </button>
           {selectedAllocationId === allocation.id ? (
             <AllocationCoverage
               detail={selectedDetail}
               isError={isDetailError}
               isPending={isDetailPending}
+              memberLabels={memberLabels}
             />
           ) : null}
         </article>
@@ -170,10 +175,12 @@ function AllocationCoverage({
   detail,
   isPending,
   isError,
+  memberLabels,
 }: {
   detail: WorkAllocationDetail | null;
   isPending: boolean;
   isError: boolean;
+  memberLabels: Record<string, string>;
 }) {
   if (isPending) {
     return (
@@ -196,11 +203,38 @@ function AllocationCoverage({
       </p>
     );
   }
+  const activeMembers = detail.members.filter((member) => member.isActive);
   if (detail.scopes.length === 0) {
     return (
-      <p className="mt-4 text-sm text-neutral-600 dark:text-neutral-300">
-        Công việc chung này không giới hạn theo tài liệu hồ sơ.
-      </p>
+      <section className="mt-4 border-t border-neutral-200 pt-4 dark:border-neutral-800">
+        <h3 className="text-sm font-bold text-neutral-950 dark:text-white">
+          Người thực hiện ·{" "}
+          {activeMembers.filter((member) => member.completedAt).length}/
+          {activeMembers.length} hoàn thành
+        </h3>
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+          {activeMembers.map((member) => (
+            <li
+              className="flex items-center justify-between gap-3 rounded-lg bg-neutral-50 px-3 py-2 text-sm dark:bg-neutral-950"
+              key={member.id}
+            >
+              <span className="min-w-0 truncate text-neutral-900 dark:text-neutral-100">
+                {memberLabels[member.userId] ?? member.userId}
+                  {member.responsibility === "LEAD" ? " · Phụ trách chính" : ""}
+              </span>
+              <span
+                className={
+                  member.completedAt
+                    ? "shrink-0 font-semibold text-emerald-700 dark:text-emerald-300"
+                    : "shrink-0 text-neutral-600 dark:text-neutral-300"
+                }
+              >
+                {member.completedAt ? "Đã xong" : "Đang làm"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
     );
   }
   const coverageByScope = new Map(

@@ -1,11 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  cloudinaryPublicPosterLoader,
   cloudinaryPublicImageLoader,
   isCloudinaryPublicImage,
+  isCloudinaryPublicPoster,
 } from "@/lib/media/cloudinary-image-loader";
 
 describe("Cloudinary public image loader", () => {
+  it("delivers a mobile-sized poster extracted from a Cloudinary video", () => {
+    const src =
+      "https://res.cloudinary.com/demo/video/upload/so_auto,q_auto,f_webp/v123/public/video.webp";
+    expect(isCloudinaryPublicPoster(src)).toBe(true);
+    expect(cloudinaryPublicPosterLoader({ src, width: 390 })).toBe(
+      "https://res.cloudinary.com/demo/video/upload/so_auto,c_limit,w_640,q_auto:eco,f_webp/v123/public/video.webp",
+    );
+  });
   it("serves a smaller automatic-format image on mobile", () => {
     const src =
       "https://res.cloudinary.com/demo/image/upload/c_limit,w_1600,h_1600,q_auto,f_webp/v123/public/photo.webp";

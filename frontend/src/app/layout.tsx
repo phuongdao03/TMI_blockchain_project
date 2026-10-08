@@ -45,6 +45,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               "(()=>{try{const p=localStorage.getItem('thv-theme')||'system';const t=p==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;document.documentElement.dataset.theme=t;document.documentElement.dataset.themePreference=p}catch{document.documentElement.dataset.theme='light'}})()",
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__thvInstallPrompt=e;window.dispatchEvent(new Event('pwa-install-prompt-ready'))})",
+          }}
+        />
       </head>
       <body>
         <AppProviders>{children}</AppProviders>

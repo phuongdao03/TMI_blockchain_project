@@ -1648,6 +1648,11 @@ function VideoPresentationSettings({
           Video tự phát phải tắt tiếng để hoạt động ổn định trên điện thoại.
         </p>
       ) : null}
+      <p className="mt-3 text-xs leading-5 text-neutral-600">
+        Video độ phân giải cao cần tải nhiều dữ liệu hơn. Nếu phát chậm, chọn
+        Cân bằng và độ rộng 960px rồi lưu; video cũ sẽ được xử lý lại để có ảnh
+        bìa và bản phát phù hợp.
+      </p>
       {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
       <Button
         className="mt-3"

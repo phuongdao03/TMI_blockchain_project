@@ -26,6 +26,7 @@ from app.modules.work_allocations.schemas import (
     ActivateWorkAllocationRequest,
     AllocationMemberData,
     CreateWorkAllocationRequest,
+    MyWorkAllocationData,
     WorkAllocationData,
     WorkAllocationDetailData,
     WorkScopeCoverageData,
@@ -114,7 +115,8 @@ class WorkAllocationService:
         return AllocationMemberData.model_validate(
             {
                 field: cls._as_utc(getattr(member, field))
-                if field in {"deactivated_at", "created_at", "updated_at"}
+                if field
+                in {"deactivated_at", "completed_at", "created_at", "updated_at"}
                 else getattr(member, field)
                 for field in AllocationMemberData.model_fields
             }
@@ -460,7 +462,7 @@ class WorkAllocationService:
         *,
         page: int,
         page_size: int,
-    ) -> tuple[tuple[WorkAllocationData, ...], int]:
+    ) -> tuple[tuple[MyWorkAllocationData, ...], int]:
         self._require_moderator(principal)
         criteria = (
             AllocationMember.user_id == principal.user_id,
@@ -478,8 +480,8 @@ class WorkAllocationService:
         )
         rows = tuple(
             (
-                await self._session.scalars(
-                    select(WorkAllocation)
+                await self._session.execute(
+                    select(WorkAllocation, AllocationMember)
                     .join(AllocationMember)
                     .where(*criteria)
                     .order_by(WorkAllocation.created_at.desc())
@@ -488,7 +490,91 @@ class WorkAllocationService:
                 )
             ).all()
         )
-        return tuple(self._data(row) for row in rows), total
+        return tuple(
+            self._my_data(allocation, member) for allocation, member in rows
+        ), total
+
+    @classmethod
+    def _my_data(
+        cls, allocation: WorkAllocation, member: AllocationMember
+    ) -> MyWorkAllocationData:
+        return MyWorkAllocationData.model_validate(
+            {
+                **cls._data(allocation).model_dump(),
+                "my_completed_at": cls._as_utc(member.completed_at),
+                "my_responsibility": member.responsibility,
+            }
+        )
+
+    async def complete_my_generic_work(
+        self,
+        principal: AuthPrincipal,
+        allocation_id: UUID,
+        *,
+        audit: AuditService,
+        request_id: str | None,
+        user_agent: str | None,
+    ) -> MyWorkAllocationData:
+        self._require_moderator(principal)
+        allocation = await self._session.scalar(
+            select(WorkAllocation)
+            .where(WorkAllocation.id == allocation_id)
+            .with_for_update()
+        )
+        if allocation is None:
+            raise DomainError(
+                code="WORK_ALLOCATION_NOT_FOUND",
+                message="Work allocation was not found.",
+                status_code=404,
+            )
+        member = await self._session.scalar(
+            select(AllocationMember).where(
+                AllocationMember.allocation_id == allocation_id,
+                AllocationMember.user_id == principal.user_id,
+                AllocationMember.is_active.is_(True),
+            )
+        )
+        if member is None:
+            raise self._forbidden()
+        if allocation.kind is not WorkAllocationKind.GENERIC:
+            raise DomainError(
+                code="WORK_ALLOCATION_KIND_INVALID",
+                message="Only general work can be completed here.",
+                status_code=409,
+            )
+        if member.completed_at is not None:
+            return self._my_data(allocation, member)
+        if allocation.status is not WorkAllocationStatus.ACTIVE:
+            raise DomainError(
+                code="WORK_ALLOCATION_STATE_INVALID",
+                message="Only active work can be completed.",
+                status_code=409,
+            )
+        member.completed_at = datetime.now(UTC)
+        await self._session.flush()
+        remaining = await self._session.scalar(
+            select(func.count())
+            .select_from(AllocationMember)
+            .where(
+                AllocationMember.allocation_id == allocation_id,
+                AllocationMember.is_active.is_(True),
+                AllocationMember.completed_at.is_(None),
+            )
+        )
+        if not remaining:
+            allocation.status = WorkAllocationStatus.COMPLETED
+        audit.record(
+            actor_user_id=principal.user_id,
+            action="work.allocation.member.completed",
+            resource_type="work_allocation",
+            resource_id=str(allocation_id),
+            after={"status": allocation.status.value, "remaining_members": remaining},
+            request_id=request_id,
+            user_agent=user_agent,
+        )
+        await self._session.commit()
+        await self._session.refresh(allocation)
+        return self._my_data(allocation, member)
 
     async def _validate_members(self, payload: CreateWorkAllocationRequest) -> None:
         await self._validate_member_ids({member.user_id for member in payload.members})

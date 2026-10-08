@@ -17,6 +17,8 @@ const {
   submitTransaction,
   transactionStatus,
   MockApiError,
+  walletOptionsMock,
+  injectedMetaMaskMock,
 } = vi.hoisted(() => ({
   connectBrowserWallet: vi.fn(),
   currentBrowserWallet: vi.fn(),
@@ -27,6 +29,8 @@ const {
   sendBrowserTransaction: vi.fn(),
   submitTransaction: vi.fn(),
   transactionStatus: vi.fn(),
+  walletOptionsMock: vi.fn(() => [] as { id: string; name: string }[]),
+  injectedMetaMaskMock: vi.fn(() => false),
   MockApiError: class MockApiError extends Error {
     constructor(
       message: string,
@@ -61,7 +65,8 @@ vi.mock("@/lib/blockchain/eip1193", () => ({
   signWalletChallenge: vi.fn(),
   subscribeWalletChanges: vi.fn(() => () => undefined),
   switchChain: vi.fn(),
-  walletOptions: vi.fn(() => []),
+  walletOptions: walletOptionsMock,
+  hasInjectedMetaMask: injectedMetaMaskMock,
   walletAddressesMatch: (expected?: string | null, actual?: string | null) =>
     Boolean(
       expected && actual && expected.toLowerCase() === actual.toLowerCase(),
@@ -92,6 +97,8 @@ function Wrapper({ children }: { children: ReactNode }) {
 describe("BlockchainSigningWorkspace", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    walletOptionsMock.mockReturnValue([]);
+    injectedMetaMaskMock.mockReturnValue(false);
     window.localStorage.clear();
     currentWallet.mockResolvedValue(null);
     currentBrowserWallet.mockResolvedValue({ address: null, chainId: 137 });
@@ -862,6 +869,24 @@ describe("BlockchainSigningWorkspace", () => {
         "Bạn đã từ chối yêu cầu ký trong MetaMask. Giao dịch chưa được gửi.",
       ),
     ).toBeDefined();
+  });
+
+  it("opens the installed MetaMask directly even when other connectors exist", async () => {
+    walletOptionsMock.mockReturnValue([
+      { id: "metamask", name: "MetaMask" },
+      { id: "walletconnect", name: "WalletConnect" },
+    ]);
+    injectedMetaMaskMock.mockReturnValue(true);
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Kết nối ví" }));
+
+    await waitFor(() => expect(connectBrowserWallet).toHaveBeenCalledOnce());
+    expect(
+      screen.queryByRole("dialog", { name: "Chọn ví để kết nối" }),
+    ).toBeNull();
   });
 
   it.each([

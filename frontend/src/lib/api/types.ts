@@ -333,6 +333,11 @@ export interface WorkAllocation {
   updatedAt: string;
 }
 
+export interface MyWorkAllocation extends WorkAllocation {
+  myCompletedAt: string | null;
+  myResponsibility: AllocationResponsibility;
+}
+
 export interface WorkScope {
   id: string;
   allocationId: string;
@@ -353,6 +358,7 @@ export interface AllocationMember {
   assignedByUserId: string;
   isActive: boolean;
   deactivatedAt: string | null;
+  completedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
