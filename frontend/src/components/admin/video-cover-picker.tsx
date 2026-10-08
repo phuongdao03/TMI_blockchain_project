@@ -111,7 +111,8 @@ export function VideoCoverPicker({
             className="grid h-full place-content-center p-4 text-center text-sm text-neutral-700"
             role="status"
           >
-            Chưa tải được khung này. Chọn thời điểm khác hoặc dùng ảnh đã nộp.
+            Chưa tải được khung này. Bạn vẫn có thể lưu thời điểm đã chọn để hệ
+            thống tạo ảnh bìa.
           </p>
         )}
         {url && failedUrl !== url && loadedUrl !== url ? (
@@ -137,16 +138,11 @@ export function VideoCoverPicker({
             type="button"
             onClick={() => choose(ms)}
           >
-            <span className="relative block aspect-video">
-              <Image
-                alt=""
-                fill
-                loading="lazy"
-                sizes="128px"
-                src={frameUrl(ms)}
-                unoptimized
-                className="object-cover"
-              />
+            <span
+              aria-hidden="true"
+              className="grid aspect-video place-content-center bg-neutral-100 text-xs text-neutral-500"
+            >
+              {selectedTime === ms ? "Đang xem" : "Chọn khung"}
             </span>
             <span className="flex min-h-11 items-center justify-center">
               {ms / 1000}s
@@ -179,13 +175,7 @@ export function VideoCoverPicker({
         <Button
           type="button"
           className="w-full sm:w-auto"
-          disabled={
-            saving ||
-            selectedTime === null ||
-            !url ||
-            loadedUrl !== url ||
-            (url !== null && failedUrl === url)
-          }
+          disabled={saving || selectedTime === null}
           onClick={() => void save()}
         >
           {saving ? "Đang lưu khung bìa…" : "Lưu khung hình làm bìa"}

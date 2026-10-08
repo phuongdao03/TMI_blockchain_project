@@ -42,6 +42,16 @@ class PublicMediaRepository:
             )
         return cast(PublicWorkMedia | None, await self._session.scalar(statement))
 
+    async def get_poster_jpeg(self, relation_id: UUID) -> bytes | None:
+        return cast(
+            bytes | None,
+            await self._session.scalar(
+                select(PublicWorkMedia.poster_jpeg).where(
+                    PublicWorkMedia.id == relation_id
+                )
+            ),
+        )
+
     async def get_relation_with_asset(
         self, relation_id: UUID, *, for_update: bool = False
     ) -> tuple[PublicWorkMedia, MediaAsset] | None:

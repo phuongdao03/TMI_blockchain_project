@@ -13,6 +13,7 @@ from app.modules.media.gateway import CloudinaryMediaGateway
 from app.modules.media.models import MediaAsset, MediaEncryptionStatus, MediaStatus
 from app.modules.media.retained_content import read_retained_content
 from app.modules.public.catalog_repository import PublicWorkRepository
+from app.modules.public.cloudinary_variants import cloudinary_video_variant
 from app.modules.public.cover import crop_cover, is_editorial_cover
 from app.modules.public.errors import PublicWorkNotFoundError
 from app.modules.public.media_repository import PublicMediaRepository
@@ -97,6 +98,7 @@ class PublicMediaDeliveryService:
         cover_width: int = 1280,
     ) -> Response:
         repository = PublicMediaRepository(self.session)
+        stored_poster: bytes | None = None
         async with self.session.begin():
             joined = await repository.get_relation_with_asset(relation_id)
             context = await PublicWorkRepository(self.session).get_publication_context(
@@ -150,6 +152,22 @@ class PublicMediaDeliveryService:
                 if principal is None:
                     raise PublicWorkNotFoundError()
                 PublicMediaService._require_admin(principal)
+            if (
+                poster
+                and poster_time_ms is None
+                and asset.mime_type.startswith("video/")
+                and relation.poster_ready
+            ):
+                stored_poster = await repository.get_poster_jpeg(relation_id)
+        if stored_poster is not None:
+            return Response(
+                stored_poster,
+                media_type="image/jpeg",
+                headers={
+                    "Cache-Control": "private, max-age=300",
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
         if cover:
             if not asset.mime_type.startswith("image/"):
                 raise PublicWorkNotFoundError()
@@ -194,6 +212,18 @@ class PublicMediaDeliveryService:
             raise HTTPException(
                 status_code=422, detail="Thời điểm ảnh bìa nằm ngoài video."
             )
+        if poster and relation.derivative_status is DerivativeStatus.READY:
+            derivative_frame = cloudinary_video_variant(
+                getattr(relation, "derivative_url", None),
+                transformation=f"so_{selected_time / 1000:g},c_limit,w_960,q_auto",
+                extension="jpg",
+            )
+            if derivative_frame is not None:
+                return RedirectResponse(
+                    derivative_frame,
+                    status_code=307,
+                    headers={"Cache-Control": "private, max-age=300"},
+                )
         if asset.encryption_status is not MediaEncryptionStatus.ENCRYPTED:
             formats = {
                 "image/jpeg": "jpg",

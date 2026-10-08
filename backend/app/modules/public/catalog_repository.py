@@ -41,9 +41,13 @@ def _thumbnail_url(media: PublicWorkMedia | None) -> str | None:
     if media.media_kind is not PublicMediaKind.VIDEO:
         return media.derivative_url
     if media.derivative_url.startswith("/api/v1/public/works/"):
-        # Extracting a frame from a retained legacy video decrypts the whole
-        # original file and can hold a catalog image request for tens of seconds.
-        return None
+        # Serve the precomputed small frame, never decrypt a video per card view.
+        return (
+            f"/api/v1/public/works/{media.public_work_id}/media/{media.id}"
+            f"?poster=true&v={media.poster_time_ms or 0}"
+            if media.poster_ready
+            else None
+        )
     offset = (
         f"so_{media.poster_time_ms / 1000:g}"
         if media.poster_time_ms is not None
@@ -125,7 +129,19 @@ class PublicWorkRepository:
                 PublicWorkMedia.media_kind.in_(
                     (PublicMediaKind.IMAGE, PublicMediaKind.VIDEO)
                 ),
-                PublicWorkMedia.derivative_status == DerivativeStatus.READY,
+                or_(
+                    PublicWorkMedia.derivative_status == DerivativeStatus.READY,
+                    and_(
+                        PublicWorkMedia.media_kind == PublicMediaKind.VIDEO,
+                        PublicWorkMedia.derivative_status.in_(
+                            (DerivativeStatus.PENDING, DerivativeStatus.PROCESSING)
+                        ),
+                        PublicWorkMedia.poster_ready.is_(True),
+                        PublicWorkMedia.derivative_url.like(
+                            "/api/v1/public/works/%/media/%"
+                        ),
+                    ),
+                ),
                 PublicWorkMedia.derivative_url.is_not(None),
             )
             .order_by(

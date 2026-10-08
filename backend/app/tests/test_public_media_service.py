@@ -4,10 +4,11 @@ import hashlib
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -41,7 +42,7 @@ from app.modules.media.gateway import (
     PublicDerivativeMetadata,
 )
 from app.modules.media.models import MediaAsset, MediaEncryptionStatus, MediaStatus
-from app.modules.public.catalog_repository import _thumbnail_url
+from app.modules.public.catalog_repository import PublicWorkRepository, _thumbnail_url
 from app.modules.public.errors import (
     PublicMediaValidationError,
     PublicWorkForbiddenError,
@@ -96,6 +97,11 @@ def test_legacy_video_cover_does_not_block_catalog_on_frame_extraction() -> None
         poster_time_ms=8000,
     )
     assert _thumbnail_url(relation) is None
+    relation.poster_ready = True
+    assert _thumbnail_url(relation) == (
+        f"/api/v1/public/works/{relation.public_work_id}/media/{relation.id}"
+        "?poster=true&v=8000"
+    )
 
 
 class DerivativeGateway:
@@ -423,7 +429,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert kwargs["source_content"] == content
             assert kwargs["transformation"] == "c_limit,w_640,q_auto:eco,vc_auto,f_mp4"
             assert kwargs["eager_transformations"] == (
-                "so_auto,q_auto,f_webp",
+                f"so_{'auto' if self.upload_count == 1 else '8'},q_auto,f_webp",
                 "sp_auto:maxres_720p/f_m3u8",
             )
             assert str(kwargs["derivative_public_id"]).startswith("cns/local/dossiers/")
@@ -496,6 +502,7 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
                     title="Welcome video",
                     short_description="Approved public video",
                     category_id=category.id,
+                    publication_status=PublicationStatus.PUBLISHED,
                 )
                 video = MediaAsset(
                     id=video_id,
@@ -646,6 +653,34 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert public_video.poster_url is not None
             assert public_video.poster_url.endswith(".webp")
 
+            relation.poster_ready = True
+            relation.poster_jpeg = b"\xff\xd8old frame\xff\xd9"
+            await session.commit()
+            await service.configure_video(
+                _principal(owner_id, "SUPER_ADMIN"),
+                work_id,
+                relation_id,
+                PublicVideoPresentationInput(
+                    poster_media_asset_id=None,
+                    poster_time_ms=8000,
+                    controls_preset=VideoControlsPreset.MINIMAL,
+                    fit_mode=VideoFitMode.COVER,
+                    quality_profile=VideoQualityProfile.DATA_SAVER,
+                    max_width=640,
+                    autoplay=True,
+                    loop=True,
+                    muted=True,
+                ),
+                request_id="video-presentation-new-cover",
+            )
+            assert relation.poster_ready is False
+            assert relation.poster_jpeg is None
+            assert relation.derivative_status is DerivativeStatus.READY
+            assert dispatcher.ids == [relation_id, relation_id, relation_id]
+            changed_cover = (await service.list_public(work_id))[0]
+            assert changed_cover.poster_url is not None
+            assert "so_8" in changed_cover.poster_url
+
             # Earlier releases marked a source-backed 4K video READY even
             # though its public URL still pointed to the slow media proxy.
             relation.derivative_url = (
@@ -660,6 +695,8 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert during_repair[0].url.startswith("/api/v1/public/works/")
             assert during_repair[0].poster_url is None
             relation.derivative_status = DerivativeStatus.READY
+            relation.poster_time_ms = 8000
+            work.publication_status = PublicationStatus.DRAFT
             await session.commit()
             with (
                 patch.object(
@@ -671,14 +708,52 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             ):
                 await public_media_tasks._reconcile_pending()
                 enqueue.assert_called_once_with(str(relation_id))
-            await worker.process(relation_id)
+            with patch(
+                "app.modules.public.media_service.extract_video_poster",
+                new=AsyncMock(return_value=b"\xff\xd8small frame\xff\xd9"),
+            ):
+                await worker.process(relation_id)
             assert video_gateway.upload_count == 2
+            assert relation.poster_ready is True
+            assert work.publication_status is PublicationStatus.DRAFT
+            assert (
+                await session.scalar(
+                    select(PublicWorkMedia.poster_jpeg).where(
+                        PublicWorkMedia.id == relation_id
+                    )
+                )
+                == b"\xff\xd8small frame\xff\xd9"
+            )
+            assert _thumbnail_url(relation) is not None
             assert relation.derivative_url.startswith("https://res.cloudinary.com/")
+            work.publication_status = PublicationStatus.PUBLISHED
+            await session.commit()
+
+            relation.derivative_url = (
+                f"/api/v1/public/works/{work_id}/media/{relation_id}"
+            )
+            relation.derivative_status = DerivativeStatus.PROCESSING
+            await session.commit()
+            thumbnails = await PublicWorkRepository(session)._ready_thumbnails((work,))
+            assert thumbnails[work_id].id == relation_id
 
             relation.derivative_url = (
                 f"/api/v1/public/works/{work_id}/media/{relation_id}"
             )
             relation.derivative_public_id = None
+            relation.poster_ready = False
+            relation.poster_jpeg = None
+            await session.commit()
+            with patch(
+                "app.modules.public.media_service.extract_video_poster",
+                new=AsyncMock(side_effect=HTTPException(status_code=503)),
+            ) as extract:
+                await worker.process(relation_id)
+                extract.assert_awaited_once()
+            assert relation.failure_code == "POSTER_UNAVAILABLE"
+            assert relation.poster_ready is False
+            relation.poster_ready = True
+            relation.poster_jpeg = b"\xff\xd8small frame\xff\xd9"
             await session.commit()
             video_gateway.reject = True
             with pytest.raises(MediaProviderUnavailableError):

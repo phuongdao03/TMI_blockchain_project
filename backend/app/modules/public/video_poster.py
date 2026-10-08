@@ -76,6 +76,8 @@ def _extract(content: bytes, seconds: float = 0) -> bytes:
                 "image2pipe",
                 "-c:v",
                 "mjpeg",
+                "-q:v",
+                "5",
                 "pipe:1",
             ],
             stdout=subprocess.PIPE,

@@ -58,15 +58,9 @@ describe("VideoCoverPicker", () => {
       screen
         .getByRole("button", { name: "Lưu khung hình làm bìa" })
         .hasAttribute("disabled"),
-    ).toBe(true);
-    fireEvent.load(screen.getByAltText("Ảnh bìa đã chọn"));
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole("button", { name: "Lưu khung hình làm bìa" })
-          .hasAttribute("disabled"),
-      ).toBe(false),
-    );
+    ).toBe(false);
+    expect(screen.getAllByRole("img")).toHaveLength(1);
+    fireEvent.error(screen.getByAltText("Ảnh bìa đã chọn"));
     fireEvent.click(
       screen.getByRole("button", { name: "Lưu khung hình làm bìa" }),
     );

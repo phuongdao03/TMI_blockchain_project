@@ -377,17 +377,21 @@ def test_derivative_failure_logs_only_safe_diagnostics(
 
 def test_cloudinary_streams_private_content_with_a_hard_size_limit() -> None:
     async def exercise() -> None:
+        read_timeouts: list[float] = []
+
         async def handler(request: httpx.Request) -> httpx.Response:
             assert request.url.path.endswith("/image/download")
+            read_timeouts.append(request.extensions["timeout"]["read"])
             return httpx.Response(200, content=b"0123456789")
 
-        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler), timeout=5)
         gateway = CloudinaryMediaGateway(
             cloud_name="demo",
             api_key="api-key",
             api_secret="abcd",
             clock=lambda: 1_785_398_400,
             client=client,
+            derivative_timeout_seconds=180,
         )
         content = await gateway.download_asset(
             public_id="private/asset",
@@ -396,6 +400,18 @@ def test_cloudinary_streams_private_content_with_a_hard_size_limit() -> None:
             max_bytes=10,
         )
         assert content == b"0123456789"
+        assert read_timeouts[-1] == 5
+
+        assert (
+            await gateway.download_asset(
+                public_id="private/asset",
+                resource_type="image",
+                file_format="png",
+                max_bytes=20 * 1024 * 1024,
+            )
+            == b"0123456789"
+        )
+        assert read_timeouts[-1] == 180
 
         with pytest.raises(MediaContentTooLargeError):
             await gateway.download_asset(

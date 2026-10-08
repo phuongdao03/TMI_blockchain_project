@@ -361,7 +361,15 @@ class CloudinaryMediaGateway:
         )
         content = bytearray()
         try:
-            async with self._client.stream("GET", url) as response:
+            async with self._client.stream(
+                "GET",
+                url,
+                timeout=(
+                    self._derivative_timeout
+                    if max_bytes > 10 * 1024 * 1024
+                    else self._client.timeout
+                ),
+            ) as response:
                 response.raise_for_status()
                 declared_length = response.headers.get("content-length")
                 if declared_length is not None and int(declared_length) > max_bytes:

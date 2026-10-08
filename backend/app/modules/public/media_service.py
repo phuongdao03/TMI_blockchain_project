@@ -4,6 +4,7 @@ from typing import Protocol
 from uuid import UUID
 
 from cryptography.exceptions import InvalidTag
+from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,11 +21,13 @@ from app.modules.media.encryption import (
     EncryptedDocument,
 )
 from app.modules.media.errors import (
+    MediaInvalidStateError,
     MediaProviderRejectedError,
     MediaProviderUnavailableError,
 )
 from app.modules.media.gateway import MediaContentTooLargeError, PublicDerivativeGateway
 from app.modules.media.models import MediaAsset, MediaEncryptionStatus, MediaStatus
+from app.modules.media.retained_content import read_retained_content
 from app.modules.public.cloudinary_variants import (
     cloudinary_video_variant as _cloudinary_video_variant,
 )
@@ -39,12 +42,14 @@ from app.modules.public.errors import (
 from app.modules.public.media_repository import PublicMediaRepository
 from app.modules.public.models import (
     DerivativeStatus,
+    PublicationStatus,
     PublicMediaKind,
     PublicWorkMedia,
     VideoControlsPreset,
     VideoFitMode,
     VideoQualityProfile,
 )
+from app.modules.public.video_poster import extract_video_poster
 
 PUBLIC_MEDIA_ADMIN_ROLES = frozenset({"SUPER_ADMIN"})
 PUBLIC_MEDIA_MIME_KINDS = {
@@ -192,7 +197,13 @@ class PublicMediaQueryService:
                     if row.media_kind is PublicMediaKind.IMAGE
                     else ready_images.get(row.poster_media_asset_id)
                     if row.poster_media_asset_id is not None
-                    else _cloudinary_video_variant(
+                    else (
+                        f"/api/v1/public/works/{work_id}/media/{row.id}"
+                        f"?poster=true&v={row.poster_time_ms or 0}"
+                        if row.poster_ready
+                        else None
+                    )
+                    or _cloudinary_video_variant(
                         row.derivative_url,
                         transformation=(
                             f"so_{row.poster_time_ms / 1000:g},q_auto,f_webp"
@@ -458,14 +469,16 @@ class PublicMediaService:
                     raise PublicMediaValidationError(
                         "Poster must be a ready image from the same public work."
                     )
+            legacy_video_proxy = (
+                relation.derivative_url is not None
+                and relation.derivative_url.startswith("/api/v1/public/works/")
+            )
+            poster_changed = relation.poster_time_ms != data.poster_time_ms
             regenerate = (
                 relation.video_quality_profile != data.quality_profile
                 or relation.video_max_width != data.max_width
                 or relation.derivative_status is DerivativeStatus.FAILED
-                or (
-                    relation.derivative_url is not None
-                    and relation.derivative_url.startswith("/api/v1/public/works/")
-                )
+                or legacy_video_proxy
             )
             before: dict[str, object] = {
                 "quality_profile": relation.video_quality_profile.value,
@@ -477,6 +490,9 @@ class PublicMediaService:
             }
             relation.poster_media_asset_id = data.poster_media_asset_id
             relation.poster_time_ms = data.poster_time_ms
+            if poster_changed:
+                relation.poster_ready = False
+                relation.poster_jpeg = None
             relation.video_controls_preset = data.controls_preset
             relation.video_fit_mode = data.fit_mode
             relation.video_quality_profile = data.quality_profile
@@ -736,6 +752,15 @@ class PublicMediaWorker:
             video_max_width = relation.video_max_width
             poster_time_ms = relation.poster_time_ms
             work = await self._repository.get_work(relation.public_work_id)
+            needs_legacy_poster = (
+                legacy_video_proxy
+                and not relation.poster_ready
+                and work is not None
+                and (
+                    work.publication_status is PublicationStatus.PUBLISHED
+                    or relation.poster_time_ms is not None
+                )
+            )
             source_version_no = (
                 await self._repository.source_version_number(work)
                 if work is not None
@@ -766,6 +791,44 @@ class PublicMediaWorker:
         )
         try:
             source_content = await self._read_encrypted_source(asset)
+            if needs_legacy_poster:
+                poster_source = source_content
+                if poster_source is None:
+                    poster_source = await read_retained_content(
+                        asset, self._gateway, self._encryption_keyring
+                    )
+                selected_seconds = (
+                    poster_time_ms / 1000
+                    if poster_time_ms is not None
+                    else min(duration_ms / 4000, 30)
+                    if duration_ms
+                    else 0
+                )
+                try:
+                    frame = await extract_video_poster(poster_source, selected_seconds)
+                except HTTPException:
+                    if poster_time_ms is not None or selected_seconds == 0:
+                        await self._mark_failed(
+                            relation_id, "POSTER_UNAVAILABLE", preserve_fallback=True
+                        )
+                        return
+                    try:
+                        frame = await extract_video_poster(poster_source, 0)
+                    except HTTPException:
+                        await self._mark_failed(
+                            relation_id, "POSTER_UNAVAILABLE", preserve_fallback=True
+                        )
+                        return
+                del poster_source
+                async with self._session.begin():
+                    current = await self._repository.get_relation(
+                        relation_id, for_update=True
+                    )
+                    if current is None or current.poster_time_ms != poster_time_ms:
+                        return
+                    current.poster_jpeg = frame
+                    current.poster_ready = True
+                    self._event(current.public_work_id)
             derivative = await self._gateway.create_public_derivative(
                 source_public_id=source_public_id,
                 source_resource_type=source_resource_type,
@@ -814,6 +877,7 @@ class PublicMediaWorker:
             DocumentEncryptionConfigurationError,
             PublicMediaValidationError,
             MediaContentTooLargeError,
+            MediaInvalidStateError,
             ValueError,
         ):
             await self._mark_failed(
@@ -826,7 +890,14 @@ class PublicMediaWorker:
             ) from None
         async with self._session.begin():
             current = await self._repository.get_relation(relation_id, for_update=True)
-            if current is None or current.derivative_status is DerivativeStatus.READY:
+            if (
+                current is None
+                or current.derivative_status is DerivativeStatus.READY
+                or (
+                    media_kind is PublicMediaKind.VIDEO
+                    and current.poster_time_ms != poster_time_ms
+                )
+            ):
                 return
             current.derivative_status = (
                 DerivativeStatus.PROCESSING

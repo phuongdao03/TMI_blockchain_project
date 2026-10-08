@@ -19,7 +19,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.dialects.postgresql import TSVECTOR
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, deferred, mapped_column
 
 from app.db.base import Base, UtcTimestampMixin
 
@@ -371,6 +371,10 @@ class PublicWorkMedia(UtcTimestampMixin, Base):
     )
     derivative_url: Mapped[str | None] = mapped_column(Text)
     derivative_public_id: Mapped[str | None] = mapped_column(Text)
+    poster_jpeg: Mapped[bytes | None] = deferred(mapped_column(LargeBinary))
+    poster_ready: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
     derivative_mime_type: Mapped[str | None] = mapped_column(String(127))
     derivative_width: Mapped[int | None] = mapped_column(Integer)
     derivative_height: Mapped[int | None] = mapped_column(Integer)

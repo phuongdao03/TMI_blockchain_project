@@ -10,6 +10,37 @@ from app.core.config import get_settings
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_retained_video_poster_columns_are_reversible(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database_path = tmp_path / "public-video-poster.sqlite3"
+    monkeypatch.setenv(
+        "DATABASE_DIRECT_URL", f"sqlite+aiosqlite:///{database_path.as_posix()}"
+    )
+    monkeypatch.setenv("BLOCKCHAIN_NETWORK", "local")
+    monkeypatch.setenv("BLOCKCHAIN_CHAIN_ID", "31337")
+    get_settings.cache_clear()
+    config = Config(BACKEND_ROOT / "alembic.ini")
+    try:
+        command.upgrade(config, "0100_video_poster_cache")
+        with sqlite3.connect(database_path) as connection:
+            columns = {
+                row[1]
+                for row in connection.execute("PRAGMA table_info(public_work_media)")
+            }
+        assert {"poster_jpeg", "poster_ready"} <= columns
+
+        command.downgrade(config, "0099_work_allocation_completion")
+        with sqlite3.connect(database_path) as connection:
+            columns = {
+                row[1]
+                for row in connection.execute("PRAGMA table_info(public_work_media)")
+            }
+        assert not {"poster_jpeg", "poster_ready"} & columns
+    finally:
+        get_settings.cache_clear()
+
+
 def test_public_media_migration_is_reversible(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

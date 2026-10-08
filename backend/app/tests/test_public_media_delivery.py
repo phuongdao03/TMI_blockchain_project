@@ -79,7 +79,9 @@ def test_encrypted_video_poster_delivers_real_frame_without_upload(
             visibility=PublicWorkVisibility.PUBLIC,
         )
         relation = SimpleNamespace(
-            public_work_id=work_id, derivative_status=derivative_status
+            public_work_id=work_id,
+            derivative_status=derivative_status,
+            poster_ready=False,
         )
         asset = SimpleNamespace(
             id=uuid4(),
@@ -132,6 +134,29 @@ def test_encrypted_video_poster_delivers_real_frame_without_upload(
             assert response.body == jpeg_frame
             assert response.headers["cache-control"] == "private, no-store"
             assert gateway.mock_calls == []
+            relation.poster_ready = True
+            media.return_value.get_poster_jpeg = AsyncMock(return_value=jpeg_frame)
+            cached = await PublicMediaDeliveryService(session, gateway, None).deliver(
+                work_id, uuid4(), None, None, poster=True
+            )
+            assert cached.body == jpeg_frame
+            assert cached.headers["cache-control"] == "private, max-age=300"
+            assert reader.await_count == 1
+            relation.poster_ready = False
+            relation.derivative_status = DerivativeStatus.READY
+            relation.derivative_url = (
+                "https://res.cloudinary.com/demo/video/upload/"
+                "c_limit,w_640,q_auto:eco,vc_auto,f_mp4/public-video.mp4"
+            )
+            preview = await PublicMediaDeliveryService(session, gateway, None).deliver(
+                work_id, uuid4(), None, None, poster=True, poster_time_ms=8000
+            )
+            assert preview.status_code == 307
+            assert preview.headers["location"] == (
+                "https://res.cloudinary.com/demo/video/upload/"
+                "so_8,c_limit,w_960,q_auto/public-video.jpg"
+            )
+            assert reader.await_count == 1
             for requested in ("bytes=0-2", "bytes=3-5"):
                 seek = await PublicMediaDeliveryService(session, gateway, None).deliver(
                     work_id, uuid4(), None, requested
