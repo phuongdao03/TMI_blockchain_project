@@ -290,7 +290,7 @@ export function PublicShell({
               );
             })}
             <Link href="/install" onClick={() => closeMenu(false)}>
-              Cài ứng dụng
+              Tải ứng dụng
             </Link>
             <div className="public-mobile-nav__theme">
               <span>Giao diện</span>

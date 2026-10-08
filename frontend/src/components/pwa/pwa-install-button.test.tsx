@@ -27,12 +27,10 @@ describe("PWA installation", () => {
     });
   });
 
-  it("takes the header CTA to the installation guide when native install is unavailable", () => {
+  it("keeps the download CTA linked to installation when a native prompt is unavailable", () => {
     render(<PwaInstallButton />);
     expect(
-      screen
-        .getByRole("link", { name: "Xem hướng dẫn cài ứng dụng" })
-        .getAttribute("href"),
+      screen.getByRole("link", { name: "Tải ứng dụng" }).getAttribute("href"),
     ).toBe("/install");
   });
 
@@ -43,7 +41,7 @@ describe("PWA installation", () => {
 
     fireEvent(window, event);
     await user.click(
-      await screen.findByRole("button", { name: "Cài ứng dụng" }),
+      await screen.findByRole("button", { name: "Tải ứng dụng" }),
     );
 
     expect(prompt).toHaveBeenCalledOnce();
@@ -57,7 +55,7 @@ describe("PWA installation", () => {
 
     await userEvent
       .setup()
-      .click(await screen.findByRole("button", { name: "Cài ứng dụng" }));
+      .click(await screen.findByRole("button", { name: "Tải ứng dụng" }));
     expect(prompt).toHaveBeenCalledOnce();
   });
 
@@ -69,27 +67,22 @@ describe("PWA installation", () => {
 
     fireEvent(window, event);
     await user.click(
-      await screen.findByRole("button", { name: "Cài ứng dụng" }),
+      await screen.findByRole("button", { name: "Tải ứng dụng" }),
     );
 
     expect(
-      await screen.findByRole("link", { name: "Xem hướng dẫn cài ứng dụng" }),
+      await screen.findByRole("link", { name: "Tải ứng dụng" }),
     ).toBeDefined();
   });
 
   it("starts native installation only from the guide action", async () => {
     const user = userEvent.setup();
     const { event, prompt } = installPrompt();
-    render(
-      <>
-        <PwaInstallButton />
-        <PwaInstallAction />
-      </>,
-    );
+    render(<PwaInstallAction />);
     fireEvent(window, event);
     expect(prompt).not.toHaveBeenCalled();
     await user.click(
-      await screen.findByRole("button", { name: "Tiến hành cài đặt" }),
+      await screen.findByRole("button", { name: "Tải ứng dụng" }),
     );
     expect(prompt).toHaveBeenCalledOnce();
     await waitFor(() =>
@@ -99,19 +92,22 @@ describe("PWA installation", () => {
     );
   });
 
-  it("shows manual guidance when a native prompt is unavailable", async () => {
+  it("keeps both the install action and manual guidance when no prompt is available", async () => {
     render(<PwaInstallAction />);
     expect(
-      await screen.findByText(/Trình duyệt chưa cung cấp hộp thoại/),
+      await screen.findByText(/Nếu trình duyệt chưa mở hộp thoại cài đặt/),
     ).toBeDefined();
     expect(
       screen
         .getByRole("link", { name: "Xem cách cài trên thiết bị" })
         .getAttribute("href"),
     ).toBe("#install-device-steps");
-    expect(
-      screen.queryByRole("button", { name: "Tiến hành cài đặt" }),
-    ).toBeNull();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Tải ứng dụng" }));
+    expect(screen.getByRole("status").textContent).toContain(
+      "Chưa mở được hộp thoại cài đặt",
+    );
   });
 
   it("shows iPhone steps immediately without promising an automatic prompt", async () => {
@@ -121,9 +117,7 @@ describe("PWA installation", () => {
     try {
       render(<PwaInstallAction />);
       expect(await screen.findByText(/Safari.*Chia sẻ/)).toBeDefined();
-      expect(
-        screen.queryByRole("button", { name: "Tiến hành cài đặt" }),
-      ).toBeNull();
+      expect(screen.queryByRole("button", { name: "Tải ứng dụng" })).toBeNull();
       expect(
         screen
           .getByRole("link", { name: /Xem các bước trên iPhone/ })
@@ -141,9 +135,7 @@ describe("PWA installation", () => {
     });
     render(<PwaInstallButton />);
     await waitFor(() =>
-      expect(
-        screen.queryByRole("link", { name: "Xem hướng dẫn cài ứng dụng" }),
-      ).toBeNull(),
+      expect(screen.queryByRole("link", { name: "Tải ứng dụng" })).toBeNull(),
     );
   });
 });

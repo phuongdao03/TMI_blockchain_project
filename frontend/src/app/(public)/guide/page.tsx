@@ -240,7 +240,7 @@ export default function UserGuidePage() {
             <Steps
               items={[
                 "Mở trang Cài ứng dụng bằng chính thiết bị muốn cài.",
-                "Chọn Tiến hành cài đặt nếu trình duyệt hỗ trợ; nếu không, làm theo hướng dẫn thủ công cho thiết bị của bạn.",
+                "Nhấn Tải ứng dụng để mở hộp thoại cài nếu trình duyệt hỗ trợ; nếu chưa mở được, làm theo hướng dẫn cho thiết bị của bạn.",
                 "Kiểm tra biểu tượng Tinh Hoa Việt trên màn hình chính hoặc trong danh sách ứng dụng.",
               ]}
             />

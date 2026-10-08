@@ -22,9 +22,10 @@ export default function InstallPage() {
             Cài đặt trong vài bước
           </h1>
           <p className="mt-5 text-base leading-7 text-[var(--theme-muted)] sm:text-lg">
-            Mở trang trên thiết bị bạn muốn dùng. Nếu trình duyệt hỗ trợ, nút
-            bên dưới sẽ mở hộp thoại cài đặt; trên iPhone và iPad, hãy thêm ứng
-            dụng qua menu Chia sẻ của Safari.
+            Mở trang trên thiết bị bạn muốn dùng rồi nhấn Tải ứng dụng. Chrome
+            hoặc Edge sẽ mở hộp thoại cài khi cho phép; nếu chưa hiện, làm theo
+            hướng dẫn bên dưới. Trên iPhone và iPad, hãy dùng menu Chia sẻ của
+            Safari.
           </p>
         </header>
 
@@ -35,8 +36,8 @@ export default function InstallPage() {
             </h2>
             <ul className="mt-5 space-y-4 text-sm leading-6 text-[var(--theme-muted)]">
               {[
-                "Dùng trình duyệt trên chính điện thoại hoặc máy tính muốn cài.",
-                "Trên Chrome hoặc Edge, chọn Cài ứng dụng ngay khi nút cài xuất hiện.",
+                "Mở trang bằng Chrome hoặc Edge trên chính thiết bị muốn cài, không dùng chế độ ẩn danh.",
+                "Nhấn Tải ứng dụng; nếu chưa có hộp thoại, dùng mục cài ứng dụng trong menu trình duyệt.",
                 "Trên iPhone hoặc iPad, làm theo các bước trong Safari bên cạnh.",
               ].map((item) => (
                 <li className="flex gap-3" key={item}>
@@ -63,12 +64,15 @@ export default function InstallPage() {
                 chính, bật Mở dưới dạng ứng dụng nếu có, rồi chạm Thêm.
               </InstallStep>
               <InstallStep icon={SquarePlus} title="Điện thoại Android">
-                Mở menu trình duyệt, chọn Cài đặt ứng dụng hoặc Thêm vào màn
-                hình chính, rồi xác nhận.
+                Trong Chrome, chạm ⋮ → Cài đặt và tạo lối tắt → Cài đặt. Tùy
+                phiên bản, mục này có thể là Cài đặt ứng dụng hoặc Thêm vào màn
+                hình chính.
               </InstallStep>
               <InstallStep icon={MonitorSmartphone} title="Máy tính">
-                Nếu trình duyệt có mục Cài đặt ứng dụng, chọn mục đó và xác
-                nhận. Nếu không thấy, bạn vẫn có thể tiếp tục dùng website.
+                Trong Chrome, chọn ⋮ → Truyền, lưu và chia sẻ → Cài đặt trang
+                dưới dạng ứng dụng. Trong Edge, chọn ⋯ → Công cụ khác → Ứng dụng
+                → Cài đặt trang này dưới dạng ứng dụng. Bạn cũng có thể chọn
+                biểu tượng cài ở thanh địa chỉ nếu thấy.
               </InstallStep>
             </ol>
             <p className="mt-6 text-sm leading-6 text-[var(--theme-muted)]">

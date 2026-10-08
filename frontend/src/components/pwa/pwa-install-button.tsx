@@ -14,27 +14,23 @@ interface BeforeInstallPromptEvent extends Event {
 type NavigatorWithStandalone = Navigator & { standalone?: boolean };
 const INSTALL_PROMPT_READY = "pwa-install-prompt-ready";
 
-let deferredPrompt: BeforeInstallPromptEvent | null = null;
-
 function storedInstallPrompt(): BeforeInstallPromptEvent | null {
   return (
     (window as Window & { __thvInstallPrompt?: BeforeInstallPromptEvent })
-      .__thvInstallPrompt ?? deferredPrompt
+      .__thvInstallPrompt ?? null
   );
 }
 
 function clearInstallPrompt() {
-  deferredPrompt = null;
   delete (window as Window & { __thvInstallPrompt?: BeforeInstallPromptEvent })
     .__thvInstallPrompt;
 }
 
 function captureInstallPrompt(event: Event) {
   event.preventDefault();
-  deferredPrompt = event as BeforeInstallPromptEvent;
   (
     window as Window & { __thvInstallPrompt?: BeforeInstallPromptEvent }
-  ).__thvInstallPrompt = deferredPrompt;
+  ).__thvInstallPrompt = event as BeforeInstallPromptEvent;
   window.dispatchEvent(new Event(INSTALL_PROMPT_READY));
 }
 
@@ -102,18 +98,14 @@ export function PwaInstallButton({ className }: { className?: string }) {
         className="size-4 transition-transform group-hover:translate-y-0.5 motion-reduce:transition-none"
       />
       <span className="hidden whitespace-nowrap lg:inline">
-        {working
-          ? "Đang mở cài đặt…"
-          : promptReady
-            ? "Cài ứng dụng"
-            : "Cách cài ứng dụng"}
+        {working ? "Đang mở cài đặt…" : "Tải ứng dụng"}
       </span>
     </>
   );
   if (promptReady) {
     return (
       <button
-        aria-label="Cài ứng dụng"
+        aria-label="Tải ứng dụng"
         className={actionClass}
         disabled={working}
         onClick={async () => {
@@ -134,11 +126,7 @@ export function PwaInstallButton({ className }: { className?: string }) {
     );
   }
   return (
-    <Link
-      aria-label="Xem hướng dẫn cài ứng dụng"
-      className={actionClass}
-      href="/install"
-    >
+    <Link aria-label="Tải ứng dụng" className={actionClass} href="/install">
       {content}
     </Link>
   );
@@ -152,9 +140,14 @@ export function PwaInstallAction() {
     "unknown",
   );
   const [promptReady, setPromptReady] = useState(false);
+  const [manualNeeded, setManualNeeded] = useState(false);
 
   useEffect(() => {
-    const refresh = () => setPromptReady(Boolean(storedInstallPrompt()));
+    const refresh = () => {
+      const ready = Boolean(storedInstallPrompt());
+      setPromptReady(ready);
+      if (ready) setManualNeeded(false);
+    };
     const detect = window.setTimeout(() => {
       setPlatform(isAppleMobile() ? "ios" : "other");
       refresh();
@@ -179,6 +172,7 @@ export function PwaInstallAction() {
   async function install() {
     if (!storedInstallPrompt()) {
       setPromptReady(false);
+      setManualNeeded(true);
       return;
     }
     setState("working");
@@ -189,6 +183,7 @@ export function PwaInstallAction() {
     } catch {
       clearInstallPrompt();
       setPromptReady(false);
+      setManualNeeded(true);
       setState("idle");
     }
   }
@@ -233,21 +228,8 @@ export function PwaInstallAction() {
       </div>
     );
   }
-  if (!promptReady) {
-    return (
-      <div className="space-y-4">
-        <p className="text-sm leading-6 text-[var(--theme-muted)]">
-          Trình duyệt chưa cung cấp hộp thoại cài đặt. Bạn có thể cài từ menu
-          trình duyệt theo hướng dẫn bên cạnh.
-        </p>
-        <a className="install-guide__manual-link" href="#install-device-steps">
-          Xem cách cài trên thiết bị
-        </a>
-      </div>
-    );
-  }
   return (
-    <div>
+    <div className="space-y-4">
       <button
         className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary-700 px-6 text-sm font-bold text-white transition hover:bg-primary-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 sm:w-auto"
         disabled={state === "working"}
@@ -255,8 +237,21 @@ export function PwaInstallAction() {
         type="button"
       >
         <Download aria-hidden="true" className="size-5" />
-        {state === "working" ? "Đang mở cài đặt…" : "Tiến hành cài đặt"}
+        {state === "working" ? "Đang mở cài đặt…" : "Tải ứng dụng"}
       </button>
+      <p
+        className="text-sm leading-6 text-[var(--theme-muted)]"
+        role={manualNeeded ? "status" : undefined}
+      >
+        {manualNeeded
+          ? "Chưa mở được hộp thoại cài đặt. Hãy mở trang bằng Chrome hoặc Edge ở chế độ thường, rồi cài từ menu theo hướng dẫn bên cạnh."
+          : promptReady
+            ? "Nhấn nút để mở hộp thoại cài ứng dụng trên thiết bị này."
+            : "Nếu trình duyệt chưa mở hộp thoại cài đặt, hãy dùng menu Chrome hoặc Edge theo hướng dẫn bên cạnh."}
+      </p>
+      <a className="install-guide__manual-link" href="#install-device-steps">
+        Xem cách cài trên thiết bị
+      </a>
     </div>
   );
 }

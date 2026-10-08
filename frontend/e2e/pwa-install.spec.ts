@@ -10,7 +10,7 @@ test("exposes an installable PWA shell", async ({ page, request }) => {
   await page.goto("/");
 
   const headerInstallLink = page.getByRole("link", {
-    name: "Xem hướng dẫn cài ứng dụng",
+    name: "Tải ứng dụng",
   });
   if (await headerInstallLink.isVisible()) {
     await expect(headerInstallLink).toHaveAttribute("href", "/install");
@@ -20,7 +20,7 @@ test("exposes an installable PWA shell", async ({ page, request }) => {
       page
         .getByRole("navigation", { name: "Điều hướng di động" })
         .getByRole("link", {
-          name: "Cài ứng dụng",
+          name: "Tải ứng dụng",
         }),
     ).toHaveAttribute("href", "/install");
   }
@@ -44,5 +44,14 @@ test("exposes an installable PWA shell", async ({ page, request }) => {
       ),
     )
     .toBe(true);
+
+  await page.goto("/install");
+  const installGuide = page.locator(".install-guide");
+  await expect(
+    installGuide.getByRole("button", { name: "Tải ứng dụng" }),
+  ).toBeVisible();
+  await expect(
+    installGuide.getByRole("link", { name: "Xem cách cài trên thiết bị" }),
+  ).toBeVisible();
   expect(browserErrors).toEqual([]);
 });

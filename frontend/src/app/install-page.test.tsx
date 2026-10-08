@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import InstallPage from "@/app/(public)/install/page";
 
 vi.mock("@/components/pwa/pwa-install-button", () => ({
-  PwaInstallAction: () => <button>Tiến hành cài đặt</button>,
+  PwaInstallAction: () => <button>Tải ứng dụng</button>,
 }));
 
 describe("InstallPage", () => {
@@ -15,8 +15,6 @@ describe("InstallPage", () => {
     ).toBeDefined();
     expect(screen.getByText("iPhone hoặc iPad")).toBeDefined();
     expect(screen.getByText("Điện thoại Android")).toBeDefined();
-    expect(
-      screen.getByRole("button", { name: "Tiến hành cài đặt" }),
-    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "Tải ứng dụng" })).toBeDefined();
   });
 });
