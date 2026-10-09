@@ -813,9 +813,6 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert relation.derivative_status is DerivativeStatus.PROCESSING
             video_gateway.ready = True
             await worker.process(relation_id)
-            assert relation.derivative_status is DerivativeStatus.PROCESSING
-            video_gateway.hls_ready = True
-            await worker.process(relation_id)
             assert relation.derivative_status is DerivativeStatus.READY
             assert video_gateway.upload_count == 5
             ready_video = (await service.list_public(work_id))[0]
@@ -825,6 +822,48 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             assert "/c_limit," not in ready_video.streaming_url
             assert ready_video.poster_url is not None
             assert "/c_limit," not in ready_video.poster_url
+            cover_image = MediaAsset(
+                owner_user_id=owner_id,
+                cloudinary_public_id="private/owner/alternate-cover",
+                resource_type="image",
+                access_mode="authenticated",
+                original_filename="alternate.jpg",
+                mime_type="image/jpeg",
+                bytes=1024,
+                status=MediaStatus.ACTIVE,
+            )
+            session.add(cover_image)
+            await session.flush()
+            session.add(
+                PublicWorkMedia(
+                    public_work_id=work_id,
+                    media_asset_id=cover_image.id,
+                    media_kind=PublicMediaKind.IMAGE,
+                    sort_order=0,
+                    derivative_status=DerivativeStatus.READY,
+                    derivative_url="https://res.cloudinary.com/demo/image/upload/alternate.jpg",
+                )
+            )
+            work.thumbnail_media_id = video_id
+            await session.commit()
+            selected = await PublicWorkRepository(session)._ready_thumbnails((work,))
+            assert selected[work_id].id == relation_id
+            relation.derivative_status = DerivativeStatus.PROCESSING
+            relation.derivative_public_id = None
+            relation.derivative_url = None
+            relation.attempt_count = 1
+            relation.updated_at = datetime.now(UTC) - timedelta(hours=2)
+            await session.commit()
+            with (
+                patch.object(
+                    public_media_tasks, "get_session_factory", return_value=factory
+                ),
+                patch.object(
+                    public_media_tasks.generate_public_media_derivative, "delay"
+                ) as enqueue,
+            ):
+                await public_media_tasks._reconcile_pending()
+                enqueue.assert_called_once_with(str(relation_id))
         await engine.dispose()
 
     asyncio.run(exercise())

@@ -119,7 +119,7 @@ export function AdaptiveVideo({
     startupTimeout.current = setTimeout(() => {
       if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA)
         startFallback();
-    }, 8000);
+    }, 3000);
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = streamingUrl;
       video.load();
@@ -182,7 +182,7 @@ export function AdaptiveVideo({
             setLoading(true);
             if (usingStreaming.current) {
               if (startupTimeout.current) clearTimeout(startupTimeout.current);
-              startupTimeout.current = setTimeout(startFallback, 8000);
+              startupTimeout.current = setTimeout(startFallback, 3000);
             }
           }
         }}

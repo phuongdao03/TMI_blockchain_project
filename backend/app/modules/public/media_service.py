@@ -654,19 +654,13 @@ class PublicMediaWorker:
                     ),
                     extension="webp",
                 )
-                pending_stream = _cloudinary_video_variant(
-                    pending_url,
-                    transformation=(
-                        "sp_auto:maxres_1080p/f_m3u8"
-                        if relation.video_max_width == 1920
-                        else "sp_auto:maxres_720p/f_m3u8"
-                    ),
-                    extension="m3u8",
-                )
             else:
                 pending_url = None
         if pending_url is not None:
-            for variant_url in (pending_url, pending_poster, pending_stream):
+            # HLS is an optional playback enhancement. Cloudinary can finish
+            # MP4 and poster processing while the adaptive playlist remains
+            # unavailable; waiting for it hides the entire published work.
+            for variant_url in (pending_url, pending_poster):
                 if variant_url and not await self._gateway.public_derivative_ready(
                     variant_url
                 ):

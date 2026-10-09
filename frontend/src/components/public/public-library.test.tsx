@@ -160,7 +160,7 @@ describe("PublicLibrary", () => {
     expect(previousHref).not.toContain("page=");
   });
 
-  it("promotes the first public nomination when no curated feature exists", () => {
+  it("keeps all works in the catalog when no admin-selected feature exists", () => {
     const secondWork = {
       ...work,
       id: "work-2",
@@ -182,16 +182,34 @@ describe("PublicLibrary", () => {
       { wrapper },
     );
 
-    expect(
-      screen.getByRole("heading", { name: "Đề cử nổi bật" }),
-    ).toBeDefined();
+    expect(screen.queryByTestId("catalog-featured")).toBeNull();
+    expect(screen.getByTestId("public-album-grid").textContent).toContain(
+      "Đề cử thứ hai",
+    );
+    expect(screen.getByTestId("public-album-grid").textContent).toContain(
+      "Di sản số",
+    );
+  });
+
+  it("places an admin-selected work in the priority banner", () => {
+    render(
+      <PublicLibrary
+        initialData={{
+          featured: [{ ...work, isFeatured: true }],
+          works: {
+            success: true,
+            data: [work],
+            meta: { page: 1, pageSize: 12, total: 1 },
+          },
+        }}
+        page={1}
+      />,
+      { wrapper },
+    );
     expect(screen.getByTestId("catalog-featured").textContent).toContain(
       "Di sản số",
     );
     expect(screen.getByTestId("public-album-grid").textContent).toContain(
-      "Đề cử thứ hai",
-    );
-    expect(screen.getByTestId("public-album-grid").textContent).not.toContain(
       "Di sản số",
     );
   });

@@ -32,7 +32,7 @@ export interface CatalogParameters {
 }
 
 const controlClass =
-  "min-h-12 w-full rounded-xl border border-white/10 bg-ink-950 px-4 text-sm text-white outline-none transition focus:border-gold-300 focus:ring-2 focus:ring-gold-300/20";
+  "min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm text-[var(--theme-text)] outline-none transition focus:border-[var(--theme-accent)] focus:ring-2 focus:ring-[var(--theme-accent)]/20";
 
 export function PublicLibrary({
   initialData,
@@ -104,16 +104,9 @@ export function PublicLibrary({
   const totalPages = Math.max(1, Math.ceil(total / 12));
   const activeFilterCount = countFilters(parameters);
   const showFeatured = parameters.page === 1 && !hasFilters(parameters);
-  const featuredWorks = showFeatured
-    ? featured.data?.length
-      ? featured.data
-      : (works.data?.data.slice(0, 1) ?? [])
-    : [];
-  const featuredIds = new Set(featuredWorks.map((work) => work.id));
+  const featuredWorks = showFeatured ? (featured.data ?? []) : [];
   const leadWork = featuredWorks[0];
-  const resultWorks = (works.data?.data ?? []).filter(
-    (work) => !featuredIds.has(work.id),
-  );
+  const resultWorks = works.data?.data ?? [];
 
   return (
     <div className="public-theme-surface space-y-9 sm:space-y-12">
@@ -137,17 +130,21 @@ export function PublicLibrary({
           aria-labelledby="featured-heading"
           data-testid="catalog-featured"
         >
-          <div className="mb-5 flex items-end justify-between gap-4">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-4 border-t border-[var(--theme-border)] pt-6 sm:pt-8">
             <div>
               <p className="text-xs font-bold tracking-[0.2em] text-[var(--theme-accent)] uppercase">
-                Khám phá trước
+                Vị trí ưu tiên
               </p>
               <h2
                 className="mt-2 text-2xl font-bold tracking-tight text-[var(--theme-text)] sm:text-3xl"
                 id="featured-heading"
               >
-                Đề cử nổi bật
+                Tác phẩm nổi bật
               </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
+                Những tác phẩm được chọn để giới thiệu trước trong Thư viện đề
+                cử.
+              </p>
             </div>
           </div>
           <div
@@ -259,7 +256,13 @@ export function PublicLibrary({
                   className="mt-2 text-2xl font-bold text-white"
                   id="catalog-results-heading"
                 >
-                  {activeFilterCount ? "Kết quả phù hợp" : "Mới được công bố"}
+                  {activeFilterCount
+                    ? "Kết quả phù hợp"
+                    : parameters.sort === "popular"
+                      ? "Được xem nhiều"
+                      : parameters.sort === "featured"
+                        ? "Đề cử nổi bật"
+                        : "Tất cả tác phẩm"}
                 </h2>
               </div>
               {!works.isPending && !works.error ? (
@@ -305,7 +308,7 @@ export function PublicLibrary({
               </div>
             ) : resultWorks.length ? (
               <div
-                className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+                className={`grid gap-5 md:grid-cols-2 2xl:grid-cols-3${resultWorks.length === 1 ? " catalog-results--single" : ""}`}
                 data-testid="public-album-grid"
               >
                 {resultWorks.map((work, index) => (
@@ -317,11 +320,7 @@ export function PublicLibrary({
                   />
                 ))}
               </div>
-            ) : (
-              <p className="text-sm text-[var(--theme-muted)]">
-                Các đề cử trên trang này đã được giới thiệu phía trên.
-              </p>
-            )}
+            ) : null}
 
             {totalPages > 1 ? (
               <Pagination

@@ -161,6 +161,37 @@ it("starts the adaptive stream and falls back to MP4 on error", () => {
   }
 });
 
+it("falls back to MP4 promptly when an adaptive stream does not start", () => {
+  vi.useFakeTimers();
+  const load = vi
+    .spyOn(HTMLMediaElement.prototype, "load")
+    .mockImplementation(() => {});
+  const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+  const canPlayType = vi
+    .spyOn(HTMLMediaElement.prototype, "canPlayType")
+    .mockReturnValue("maybe");
+  try {
+    const { container } = render(
+      <AdaptiveVideo
+        fallbackUrl="/optimized.mp4"
+        streamingUrl="/pending.m3u8"
+      />,
+    );
+    const video = container.querySelector("video")!;
+    fireEvent.click(
+      screen.getByRole("button", { name: "Phát video tác phẩm" }),
+    );
+    expect(video.getAttribute("src")).toBe("/pending.m3u8");
+    act(() => vi.advanceTimersByTime(3_500));
+    expect(video.getAttribute("src")).toBe("/optimized.mp4");
+  } finally {
+    load.mockRestore();
+    play.mockRestore();
+    canPlayType.mockRestore();
+    vi.useRealTimers();
+  }
+});
+
 it("does not warm the MP4 when adaptive streaming is available", () => {
   const load = vi
     .spyOn(HTMLMediaElement.prototype, "load")

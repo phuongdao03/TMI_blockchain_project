@@ -10596,6 +10596,59 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
   padding-top: 0.3rem;
 }
 
+.catalog-work-card--list .catalog-work-card__link {
+  display: flex;
+  flex-direction: column;
+  border-radius: 1rem;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 5%);
+}
+
+.catalog-work-card--list .catalog-work-card__cover {
+  aspect-ratio: 16 / 10;
+}
+
+.catalog-work-card--list .catalog-work-card__body {
+  flex: 1;
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.catalog-work-card--list .catalog-work-card__meta {
+  border-bottom: 1px solid var(--theme-border);
+  padding-bottom: 0.85rem;
+}
+
+.catalog-work-card--list .catalog-work-card__title {
+  font-size: clamp(1.15rem, 1.8vw, 1.4rem);
+}
+
+.catalog-work-card--list .catalog-work-card__footer {
+  border-top: 1px solid var(--theme-border);
+  margin-top: 1.25rem;
+  padding-top: 0.85rem;
+}
+
+@media (min-width: 48rem) {
+  .catalog-results--single .catalog-work-card--list {
+    grid-column: 1 / -1;
+  }
+
+  .catalog-results--single .catalog-work-card--list .catalog-work-card__link {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  }
+
+  .catalog-results--single .catalog-work-card--list .catalog-work-card__cover {
+    height: 100%;
+    min-height: 21rem;
+    aspect-ratio: auto;
+  }
+
+  .catalog-results--single .catalog-work-card--list .catalog-work-card__body {
+    min-width: 0;
+    padding: clamp(1.5rem, 3vw, 2.5rem);
+  }
+}
+
 @media (min-width: 48rem) {
   .catalog-work-card--lead .catalog-work-card__link {
     display: grid;

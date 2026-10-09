@@ -128,6 +128,18 @@ async def _seed(session: AsyncSession, *, thumbnail: bool = True) -> tuple[UUID,
                 thumbnail_media_id=media_id if thumbnail else None,
             )
         )
+        if thumbnail:
+            session.add(
+                PublicWorkMedia(
+                    public_work_id=work_id,
+                    media_asset_id=media_id,
+                    media_kind=PublicMediaKind.IMAGE,
+                    sort_order=0,
+                    derivative_status=DerivativeStatus.READY,
+                    derivative_url="/api/v1/public/works/cover/media/ready",
+                    derivative_mime_type="image/jpeg",
+                )
+            )
     return work_id, owner_id
 
 
@@ -212,6 +224,29 @@ def test_publish_checklist_permission_version_and_reason(tmp_path: Path) -> None
                 assert work is not None
                 assert media_id is not None
                 work.thumbnail_media_id = media_id
+
+            with pytest.raises(PublicWorkNotPublishableError) as error:
+                await service.publish(
+                    _principal(owner_id, "SUPER_ADMIN"),
+                    work_id,
+                    expected_version=1,
+                    visibility=PublicWorkVisibility.PUBLIC,
+                    request_id="request-private-cover-only",
+                )
+            assert error.value.details == {"reasons": ["thumbnail_not_ready"]}
+
+            async with session.begin():
+                session.add(
+                    PublicWorkMedia(
+                        public_work_id=work_id,
+                        media_asset_id=media_id,
+                        media_kind=PublicMediaKind.IMAGE,
+                        sort_order=0,
+                        derivative_status=DerivativeStatus.READY,
+                        derivative_url="/api/v1/public/works/cover/media/ready",
+                        derivative_mime_type="image/jpeg",
+                    )
+                )
 
             published = await service.publish(
                 _principal(owner_id, "SUPER_ADMIN"),

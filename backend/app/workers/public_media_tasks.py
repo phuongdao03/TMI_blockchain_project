@@ -80,6 +80,17 @@ async def _reconcile_pending(*, limit: int = 100) -> None:
                         ),
                         and_(
                             PublicWorkMedia.media_kind == PublicMediaKind.VIDEO,
+                            PublicWorkMedia.derivative_status
+                            == DerivativeStatus.PROCESSING,
+                            or_(
+                                PublicWorkMedia.derivative_public_id.is_(None),
+                                PublicWorkMedia.derivative_url.is_(None),
+                            ),
+                            PublicWorkMedia.updated_at <= retry_before,
+                            PublicWorkMedia.attempt_count < 5,
+                        ),
+                        and_(
+                            PublicWorkMedia.media_kind == PublicMediaKind.VIDEO,
                             PublicWorkMedia.derivative_status == DerivativeStatus.READY,
                             or_(
                                 PublicWorkMedia.failure_code.is_(None),

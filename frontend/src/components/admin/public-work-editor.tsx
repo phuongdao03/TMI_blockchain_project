@@ -18,6 +18,7 @@ import {
   Send,
   ShieldAlert,
   Smartphone,
+  Star,
   Trash2,
 } from "lucide-react";
 import Image from "next/image";
@@ -189,6 +190,10 @@ export function PublicWorkEditor({
   const [pendingAction, setPendingAction] = useState<StateAction>();
   const [reason, setReason] = useState("");
   const [newTagName, setNewTagName] = useState("");
+  const [featureDays, setFeatureDays] = useState<"7" | "30" | "unlimited">(
+    "30",
+  );
+  const [featureMessage, setFeatureMessage] = useState("");
 
   const works = useQuery({
     queryKey: ["admin", "public-works", query, status, page],
@@ -351,6 +356,36 @@ export function PublicWorkEditor({
     onSuccess: async () => {
       setPendingAction(undefined);
       setReason("");
+      await refreshWork();
+    },
+  });
+
+  const featureWork = useMutation({
+    mutationFn: async (action: "feature" | "unfeature") => {
+      if (!selectedId || !detail.data) throw new Error("Chưa chọn tác phẩm.");
+      if (action === "unfeature") {
+        return publicWorkAdminApi.unfeature(selectedId, detail.data.version);
+      }
+      const now = new Date();
+      const end =
+        featureDays === "unlimited"
+          ? null
+          : new Date(
+              now.getTime() + Number(featureDays) * 86_400_000,
+            ).toISOString();
+      return publicWorkAdminApi.feature(
+        selectedId,
+        detail.data.version,
+        now.toISOString(),
+        end,
+      );
+    },
+    onSuccess: async (_work, action) => {
+      setFeatureMessage(
+        action === "feature"
+          ? "Tác phẩm đã được đưa vào khu vực ưu tiên."
+          : "Tác phẩm đã được gỡ khỏi khu vực ưu tiên.",
+      );
       await refreshWork();
     },
   });
@@ -961,6 +996,82 @@ export function PublicWorkEditor({
                         </Button>
                       ) : null}
                     </div>
+                    {detail.data.publicationStatus === "PUBLISHED" &&
+                    detail.data.visibility === "PUBLIC" ? (
+                      <div className="mt-5 border-t border-neutral-200 pt-5">
+                        <p className="flex items-center gap-2 text-sm font-bold text-neutral-950">
+                          <Star
+                            aria-hidden="true"
+                            className="size-4 text-amber-600"
+                          />
+                          Vị trí ưu tiên
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-neutral-600">
+                          Tác phẩm ưu tiên xuất hiện ở banner lớn của Thư viện
+                          đề cử.
+                        </p>
+                        {detail.data.featuredAt ? (
+                          <p className="mt-2 text-xs text-neutral-700">
+                            Bắt đầu:{" "}
+                            {new Date(
+                              detail.data.featuredAt,
+                            ).toLocaleDateString("vi-VN")}
+                            {detail.data.featuredUntil
+                              ? ` · Kết thúc: ${new Date(detail.data.featuredUntil).toLocaleDateString("vi-VN")}`
+                              : " · Không có ngày kết thúc"}
+                          </p>
+                        ) : null}
+                        <label className="mt-3 block text-xs font-semibold text-neutral-700">
+                          Thời hạn ưu tiên
+                          <select
+                            className={`${fieldClass} mt-1`}
+                            onChange={(event) =>
+                              setFeatureDays(
+                                event.target.value as typeof featureDays,
+                              )
+                            }
+                            value={featureDays}
+                          >
+                            <option value="7">7 ngày</option>
+                            <option value="30">30 ngày</option>
+                            <option value="unlimited">Không giới hạn</option>
+                          </select>
+                        </label>
+                        <div className="mt-3 grid gap-2">
+                          <Button
+                            disabled={isDirty || featureWork.isPending}
+                            onClick={() => featureWork.mutate("feature")}
+                            type="button"
+                          >
+                            <Star className="size-4" /> Đưa lên banner ưu tiên
+                          </Button>
+                          {detail.data.featuredAt ? (
+                            <Button
+                              disabled={isDirty || featureWork.isPending}
+                              onClick={() => featureWork.mutate("unfeature")}
+                              type="button"
+                              variant="outline"
+                            >
+                              Gỡ khỏi banner ưu tiên
+                            </Button>
+                          ) : null}
+                        </div>
+                        {featureMessage ? (
+                          <p
+                            className="mt-2 text-xs text-green-700"
+                            role="status"
+                          >
+                            {featureMessage}
+                          </p>
+                        ) : null}
+                        {featureWork.error ? (
+                          <p className="mt-2 text-xs text-red-700" role="alert">
+                            Không thể cập nhật vị trí ưu tiên. Tải lại trang rồi
+                            thử lại.
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
                     {detail.data.publicationStatus === "ARCHIVED" ? (
                       <p className="mt-3 text-xs leading-5 text-neutral-600">
                         Bản này đã ngừng công bố. Lý do lưu trữ được giữ trong

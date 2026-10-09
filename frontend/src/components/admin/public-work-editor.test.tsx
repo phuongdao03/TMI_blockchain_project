@@ -30,6 +30,7 @@ vi.mock("@/lib/api/client", () => {
       categories: vi.fn(),
       configureVideo: vi.fn(),
       createTag: vi.fn(),
+      feature: vi.fn(),
       get: vi.fn(),
       list: vi.fn(),
       media: vi.fn(),
@@ -40,6 +41,7 @@ vi.mock("@/lib/api/client", () => {
       reorderMedia: vi.fn(),
       tags: vi.fn(),
       transition: vi.fn(),
+      unfeature: vi.fn(),
       update: vi.fn(),
     },
   };
@@ -158,6 +160,57 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("PublicWorkEditor", () => {
+  it("lets an admin prioritize a published work in the lead banner", async () => {
+    vi.mocked(publicWorkAdminApi.get).mockResolvedValue({
+      ...work,
+      publicationStatus: "PUBLISHED",
+      publishedAt: "2026-09-01T00:00:00Z",
+    });
+    vi.mocked(publicWorkAdminApi.feature).mockResolvedValue({
+      ...work,
+      publicationStatus: "PUBLISHED",
+      featuredAt: "2026-10-09T00:00:00Z",
+      version: 3,
+    });
+    const user = userEvent.setup();
+    render(<PublicWorkEditor initialSelectedId={work.id} />, { wrapper });
+
+    await user.click(
+      await screen.findByRole("button", { name: "Đưa lên banner ưu tiên" }),
+    );
+    await waitFor(() =>
+      expect(publicWorkAdminApi.feature).toHaveBeenCalledWith(
+        work.id,
+        2,
+        expect.any(String),
+        expect.any(String),
+      ),
+    );
+  });
+
+  it("lets an admin remove a featured work", async () => {
+    vi.mocked(publicWorkAdminApi.get).mockResolvedValue({
+      ...work,
+      publicationStatus: "PUBLISHED",
+      publishedAt: "2026-09-01T00:00:00Z",
+      featuredAt: new Date(Date.now() - 60_000).toISOString(),
+      featuredUntil: null,
+    });
+    vi.mocked(publicWorkAdminApi.unfeature).mockResolvedValue({
+      ...work,
+      publicationStatus: "PUBLISHED",
+      version: 3,
+    });
+    const user = userEvent.setup();
+    render(<PublicWorkEditor initialSelectedId={work.id} />, { wrapper });
+
+    await user.click(
+      await screen.findByRole("button", { name: "Gỡ khỏi banner ưu tiên" }),
+    );
+    await waitFor(() =>
+      expect(publicWorkAdminApi.unfeature).toHaveBeenCalledWith(work.id, 2),
+    );
+  });
   it("copies a long dossier description into editable publication fields", async () => {
     const longSummary = "Di sản văn hóa và nghệ thuật Việt Nam. ".repeat(25);
     vi.mocked(publicWorkAdminApi.get).mockResolvedValueOnce({

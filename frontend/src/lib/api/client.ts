@@ -2402,6 +2402,23 @@ export const publicWorkAdminApi = {
       body: JSON.stringify({ expectedVersion, visibility: "PUBLIC" }),
     });
   },
+  feature(
+    workId: string,
+    expectedVersion: number,
+    featuredAt: string,
+    featuredUntil: string | null,
+  ) {
+    return request<PublicWorkAdmin>(`/admin/public-works/${workId}/feature`, {
+      method: "POST",
+      body: JSON.stringify({ expectedVersion, featuredAt, featuredUntil }),
+    });
+  },
+  unfeature(workId: string, expectedVersion: number) {
+    return request<PublicWorkAdmin>(`/admin/public-works/${workId}/unfeature`, {
+      method: "POST",
+      body: JSON.stringify({ expectedVersion }),
+    });
+  },
   transition(
     workId: string,
     action: "hide" | "suspend" | "archive",

@@ -15,7 +15,7 @@ from app.modules.blockchain.models import (
     CertificateVersion,
 )
 from app.modules.dossiers.models import Category, Dossier, DossierStatus, DossierVersion
-from app.modules.media.models import MediaAsset
+from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.organizations.models import Organization
 from app.modules.public.cloudinary_variants import cloudinary_video_variant
 from app.modules.public.models import (
@@ -78,6 +78,7 @@ class PublicWorkPublicationContext:
     category: Category
     thumbnail: MediaAsset | None
     has_ready_video: bool
+    has_ready_image: bool
     dossier_version: DossierVersion | None
 
 
@@ -165,8 +166,7 @@ class PublicWorkRepository:
                 (
                     media
                     for media in work_candidates
-                    if media.media_kind is PublicMediaKind.IMAGE
-                    and media.media_asset_id == work.thumbnail_media_id
+                    if media.media_asset_id == work.thumbnail_media_id
                 ),
                 next(
                     (
@@ -297,6 +297,18 @@ class PublicWorkRepository:
                 PublicWorkMedia.derivative_url.is_not(None),
             )
         )
+        ready_image = exists(
+            select(PublicWorkMedia.id)
+            .join(MediaAsset, MediaAsset.id == PublicWorkMedia.media_asset_id)
+            .where(
+                PublicWorkMedia.public_work_id == PublicWork.id,
+                PublicWorkMedia.media_kind == PublicMediaKind.IMAGE,
+                PublicWorkMedia.derivative_status == DerivativeStatus.READY,
+                PublicWorkMedia.derivative_url.is_not(None),
+                MediaAsset.status == MediaStatus.ACTIVE,
+                MediaAsset.deleted_at.is_(None),
+            )
+        )
         statement = (
             select(
                 PublicWork,
@@ -305,6 +317,7 @@ class PublicWorkRepository:
                 Category,
                 MediaAsset,
                 ready_video.label("has_ready_video"),
+                ready_image.label("has_ready_image"),
                 DossierVersion,
             )
             .join(Dossier, Dossier.id == PublicWork.dossier_id)
@@ -337,7 +350,8 @@ class PublicWorkRepository:
             category=row[3],
             thumbnail=row[4],
             has_ready_video=bool(row[5]),
-            dossier_version=row[6],
+            has_ready_image=bool(row[6]),
+            dossier_version=row[7],
         )
 
     async def claim_version(self, work: PublicWork, expected_version: int) -> bool:
@@ -544,6 +558,7 @@ class PublicWorkRepository:
             ),
             "featured": (
                 featured.desc(),
+                PublicWork.featured_at.desc().nullslast(),
                 PublicWork.published_at.desc(),
                 PublicWork.id.desc(),
             ),

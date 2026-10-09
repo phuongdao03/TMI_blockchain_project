@@ -1,6 +1,5 @@
 from app.modules.blockchain.models import CertificateStatus
 from app.modules.dossiers.models import DossierStatus
-from app.modules.media.models import MediaStatus
 from app.modules.public.catalog_repository import PublicWorkPublicationContext
 
 PUBLISHABLE_DOSSIER_STATUSES = frozenset(
@@ -41,11 +40,6 @@ def publication_checklist(
         reasons.append("category_inactive")
     if not (context.category.slug or "").strip():
         reasons.append("category_slug_required")
-    if not context.has_ready_video and (
-        context.thumbnail is None
-        or context.thumbnail.status is not MediaStatus.ACTIVE
-        or context.thumbnail.deleted_at is not None
-        or not context.thumbnail.mime_type.startswith("image/")
-    ):
+    if not context.has_ready_video and not context.has_ready_image:
         reasons.append("thumbnail_not_ready")
     return tuple(reasons)
