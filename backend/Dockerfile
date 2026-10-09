@@ -37,6 +37,7 @@ RUN curl --fail --show-error --location --retry 3 \
         --enable-filter=scale,format,color \
     && make -j2 \
     && make install \
+    && strip --strip-unneeded /opt/poster/bin/ffmpeg \
     && test "$(wc -c < /opt/poster/bin/ffmpeg)" -lt 20971520
 
 # Exercise the actual retained-video poster arguments at image build time.
@@ -68,8 +69,12 @@ COPY --from=poster-builder /build/ffmpeg/COPYING.LGPLv2.1 /usr/local/share/licen
 RUN ffmpeg -version
 
 COPY --from=builder /wheels /wheels
+# Keep runtime modules and license metadata; discard packaged tests and typing stubs.
 RUN python -m pip install --no-cache-dir --no-compile /wheels/*.whl \
     && rm -rf /wheels \
+    && find /usr/local/lib/python3.12/site-packages -type d \
+        \( -name test -o -name tests \) -prune -exec rm -rf {} \; \
+    && find /usr/local/lib/python3.12/site-packages -type f -name '*.pyi' -delete \
     && rm -rf /usr/local/lib/python3.12/site-packages/pip* \
         /usr/local/bin/pip*
 
