@@ -11929,3 +11929,18 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
     width: 100%;
   }
 }
+
+.brand-mark__wordmark-image {
+  display: block;
+  flex: 0 1 auto;
+  width: clamp(9rem, 14vw, 11.25rem);
+  min-width: 0;
+  height: auto;
+  object-fit: contain;
+}
+
+@media (max-width: 38rem) {
+  .brand-mark__wordmark-image {
+    width: clamp(7rem, 33vw, 9.25rem);
+  }
+}

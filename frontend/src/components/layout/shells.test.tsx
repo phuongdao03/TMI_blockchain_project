@@ -118,10 +118,10 @@ describe("layout shells", () => {
       decodeURIComponent(logo.getAttribute("src") ?? ""),
     );
 
-    expect(headerLogos).toHaveLength(1);
+    expect(headerLogos).toHaveLength(2);
     expect(sources[0]).toContain("/assets/brand/logo-tinh-hoa-viet.png");
-    expect(brandLink.textContent).toContain("Đề cử và xác lập");
-    expect(brandLink.textContent).toContain("Tinh Hoa Việt");
+    expect(sources[1]).toContain("/assets/brand/thv-wordmark-gold.png");
+    expect(brandLink.textContent).toBe("");
   });
 
   it("keeps public and auth footers limited to terms and privacy links", () => {

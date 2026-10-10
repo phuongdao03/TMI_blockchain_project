@@ -31,10 +31,16 @@ export function BrandMark({
         width={256}
       />
       {!sealOnly ? (
-        <span className="brand-mark__official-name" aria-hidden="true">
-          <span>Đề cử và xác lập</span>
-          <strong>Tinh Hoa Việt</strong>
-        </span>
+        <Image
+          alt=""
+          aria-hidden="true"
+          className="brand-mark__wordmark-image"
+          height={768}
+          priority
+          sizes="(max-width: 38rem) 132px, 180px"
+          src="/assets/brand/thv-wordmark-gold.png"
+          width={2048}
+        />
       ) : null}
       {showCredit ? (
         <span className="brand-mark__credit">Nền tảng Đề cử Tinh Hoa Việt</span>

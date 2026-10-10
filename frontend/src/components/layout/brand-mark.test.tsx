@@ -14,9 +14,9 @@ describe("BrandMark", () => {
       decodeURIComponent(logo.getAttribute("src") ?? ""),
     );
 
-    expect(sources).toHaveLength(1);
+    expect(sources).toHaveLength(2);
     expect(sources[0]).toContain("/assets/brand/logo-tinh-hoa-viet.png");
-    expect(homeLink.textContent).toContain("Tinh Hoa Việt");
+    expect(sources[1]).toContain("/assets/brand/thv-wordmark-gold.png");
   });
 
   it("renders the approved Tinh Hoa Việt wordmark", () => {
@@ -25,7 +25,8 @@ describe("BrandMark", () => {
     const homeLink = screen.getByRole("link", {
       name: "Đề cử và xác lập Tinh Hoa Việt",
     });
-    const logo = homeLink.querySelector("img");
+    const logo = homeLink.querySelector("img:first-of-type");
+    const wordmark = homeLink.querySelector("img.brand-mark__wordmark-image");
     const source = logo?.getAttribute("src");
 
     expect(logo).not.toBeNull();
@@ -34,6 +35,10 @@ describe("BrandMark", () => {
     expect(decodeURIComponent(source ?? "")).toContain(
       "/assets/brand/logo-tinh-hoa-viet.png",
     );
+    expect(decodeURIComponent(wordmark?.getAttribute("src") ?? "")).toContain(
+      "/assets/brand/thv-wordmark-gold.png",
+    );
+    expect(homeLink.textContent).not.toContain("Tinh Hoa Việt");
     expect(screen.queryByText(/Phát triển bởi/)).toBeNull();
   });
 
