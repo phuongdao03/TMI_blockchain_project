@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowDown,
+  ArrowUpRight,
   BadgeCheck,
   Clock3,
   Files,
@@ -121,10 +122,20 @@ export function OperationsDashboard({
     .filter(([status]) => !["REJECTED", "CERTIFICATE_ISSUED"].includes(status))
     .reduce((total, [, count]) => total + count, 0);
   const cards = [
-    ["Hồ sơ trễ hạn", metrics.data.overdueReviews, Clock3],
-    ["Thanh toán cần kiểm tra", metrics.data.paymentFailures, ReceiptText],
-    ["Phát hành cần xử lý", metrics.data.blockchainFailures, BadgeCheck],
-    ["Hồ sơ đang xử lý", activeDossiers, Files],
+    ["Hồ sơ trễ hạn", metrics.data.overdueReviews, Clock3, "/admin/reviews"],
+    [
+      "Thanh toán cần kiểm tra",
+      metrics.data.paymentFailures,
+      ReceiptText,
+      "/admin/payments",
+    ],
+    [
+      "Phát hành cần xử lý",
+      metrics.data.blockchainFailures,
+      BadgeCheck,
+      "/admin/certificates",
+    ],
+    ["Hồ sơ đang xử lý", activeDossiers, Files, "/admin/reviews"],
   ] as const;
   const urgentCount =
     metrics.data.overdueReviews +
@@ -153,7 +164,7 @@ export function OperationsDashboard({
       {!showHeader ? (
         <section
           aria-label="Số hồ sơ theo bước xử lý"
-          className="grid gap-3 sm:grid-cols-3"
+          className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)] sm:grid sm:grid-cols-3 sm:gap-3 sm:divide-y-0 sm:border-0"
         >
           {(
             [
@@ -164,12 +175,12 @@ export function OperationsDashboard({
           ).map(([status, label]) => (
             <Link
               aria-label={`${label}: ${metrics.data.dossierFunnel[status] ?? 0} hồ sơ`}
-              className="flex min-h-24 items-center justify-between gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 hover:border-primary-300"
+              className="flex min-h-14 items-center justify-between gap-3 py-2.5 hover:text-[var(--theme-accent)] sm:min-h-24 sm:rounded-xl sm:border sm:border-[var(--theme-border)] sm:bg-[var(--theme-surface)] sm:p-4 sm:hover:border-primary-300"
               href={`/admin/reviews?status=${status}`}
               key={status}
             >
               <span className="text-sm font-bold">{label}</span>
-              <strong className="text-2xl tabular-nums">
+              <strong className="text-xl tabular-nums sm:text-2xl">
                 {metrics.data.dossierFunnel[status] ?? 0}
               </strong>
             </Link>
@@ -224,110 +235,132 @@ export function OperationsDashboard({
       </section>
 
       <section
-        className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4"
+        className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)] sm:grid sm:grid-cols-2 sm:gap-3 sm:divide-y-0 sm:border-0 xl:grid-cols-4"
         aria-label="Chỉ số cần theo dõi"
+        id="hang-doi-xu-ly"
       >
-        {cards.map(([label, value, Icon]) => (
-          <article
-            className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
+        {cards.map(([label, value, Icon, href]) => (
+          <Link
+            aria-label={`${label}: ${value}`}
+            className="group flex min-h-20 items-center gap-4 py-3 text-[var(--theme-text)] transition-colors hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] sm:min-h-36 sm:flex-col sm:items-stretch sm:justify-between sm:rounded-xl sm:border sm:border-[var(--theme-border)] sm:bg-[var(--theme-surface)] sm:p-5 sm:hover:border-[var(--theme-accent)]"
+            href={href}
             key={label}
           >
-            <div className="flex items-start justify-between gap-2 sm:gap-4">
-              <p className="text-3xl font-bold tracking-[-0.04em] sm:text-4xl">
+            <div className="flex min-w-0 flex-1 items-center gap-4 sm:justify-between">
+              <p className="w-12 shrink-0 text-3xl font-bold tracking-[-0.04em] tabular-nums sm:w-auto sm:text-4xl">
                 {value}
               </p>
-              <Icon className="size-5 text-primary-700" />
+              <p className="min-w-0 flex-1 text-sm font-semibold leading-5 sm:hidden">
+                {label}
+              </p>
+              <Icon
+                aria-hidden="true"
+                className="size-5 shrink-0 text-[var(--theme-accent)]"
+              />
             </div>
-            <p className="mt-3 text-xs font-semibold leading-5 text-neutral-600 sm:mt-4 sm:text-sm">
+            <span className="hidden items-center justify-between gap-2 text-sm font-semibold text-[var(--theme-muted)] sm:flex">
               {label}
-            </p>
-          </article>
+              <ArrowUpRight
+                aria-hidden="true"
+                className="size-4 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+              />
+            </span>
+            <ArrowUpRight
+              aria-hidden="true"
+              className="size-4 shrink-0 text-[var(--theme-muted)] sm:hidden"
+            />
+          </Link>
         ))}
       </section>
 
-      <div
-        className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]"
-        id="hang-doi-xu-ly"
-      >
-        <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
-          <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
-            Tiến độ hồ sơ
-          </p>
-          <h2 className="mt-2 text-xl font-bold">Hồ sơ theo giai đoạn</h2>
-          <div
-            aria-label="Biểu đồ số hồ sơ theo giai đoạn"
-            className="mt-6 space-y-5"
-            role="img"
-          >
-            {Object.entries(metrics.data.dossierFunnel).map(
-              ([status, count]) => (
-                <div key={status}>
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm font-semibold">
-                      {dossierStatusLabels[status] ?? "Đang xử lý"}
-                    </span>
-                    <strong className="font-mono text-sm">{count}</strong>
-                  </div>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--theme-elevated)]">
-                    <div
-                      aria-hidden="true"
-                      className="h-full rounded-full bg-primary-600"
-                      style={{
-                        width: `${Math.max(7, (count / maxStageCount) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              ),
-            )}
+      {showHeader ? (
+        <>
+          <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+            <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
+              <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
+                Tiến độ hồ sơ
+              </p>
+              <h2 className="mt-2 text-xl font-bold">Hồ sơ theo giai đoạn</h2>
+              <div
+                aria-label="Biểu đồ số hồ sơ theo giai đoạn"
+                className="mt-6 space-y-5"
+                role="img"
+              >
+                {Object.entries(metrics.data.dossierFunnel).map(
+                  ([status, count]) => (
+                    <div key={status}>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-sm font-semibold">
+                          {dossierStatusLabels[status] ?? "Đang xử lý"}
+                        </span>
+                        <strong className="font-mono text-sm">{count}</strong>
+                      </div>
+                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--theme-elevated)]">
+                        <div
+                          aria-hidden="true"
+                          className="h-full rounded-full bg-primary-600"
+                          style={{
+                            width: `${Math.max(7, (count / maxStageCount) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ),
+                )}
+              </div>
+            </section>
+            <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
+              <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
+                Phân bổ rủi ro
+              </p>
+              <h2 className="mt-2 text-xl font-bold">Cơ cấu cảnh báo</h2>
+              <div className="mt-6">
+                <OperationsRiskChart
+                  blockchainFailures={metrics.data.blockchainFailures}
+                  overdueReviews={metrics.data.overdueReviews}
+                  paymentFailures={metrics.data.paymentFailures}
+                />
+              </div>
+            </section>
           </div>
-        </section>
-        <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
-          <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
-            Phân bổ rủi ro
-          </p>
-          <h2 className="mt-2 text-xl font-bold">Cơ cấu cảnh báo</h2>
-          <div className="mt-6">
-            <OperationsRiskChart
-              blockchainFailures={metrics.data.blockchainFailures}
-              overdueReviews={metrics.data.overdueReviews}
-              paymentFailures={metrics.data.paymentFailures}
-            />
-          </div>
-        </section>
-      </div>
-      <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
-              Phân công hiện tại
-            </p>
-            <h2 className="mt-2 text-xl font-bold">Khối lượng thẩm định</h2>
-          </div>
-          <p className="text-xs text-neutral-500">Số hồ sơ đang hoạt động</p>
-        </div>
-        <div className="mt-6">
-          <ReviewerWorkloadChart rows={metrics.data.reviewerWorkload} />
-        </div>
-      </section>
-      <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
-              Hệ thống nền
-            </p>
-            <h2 className="mt-2 text-xl font-bold">Sức khỏe tác vụ</h2>
-          </div>
-          <p className="text-xs text-neutral-500">
-            Hàng đợi lâu nhất:{" "}
-            {Math.round(metrics.data.oldestQueuedJobAgeSeconds / 60)} phút
-          </p>
-        </div>
-        <div className="mt-6">
-          <OperationsJobHealthChart counts={metrics.data.jobStatusCounts} />
-        </div>
-      </section>
-      {user?.roles.includes("SUPER_ADMIN") ? <JobOperationsWorkspace /> : null}
+          <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
+                  Phân công hiện tại
+                </p>
+                <h2 className="mt-2 text-xl font-bold">Khối lượng thẩm định</h2>
+              </div>
+              <p className="text-xs text-neutral-500">
+                Số hồ sơ đang hoạt động
+              </p>
+            </div>
+            <div className="mt-6">
+              <ReviewerWorkloadChart rows={metrics.data.reviewerWorkload} />
+            </div>
+          </section>
+          <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
+                  Hệ thống nền
+                </p>
+                <h2 className="mt-2 text-xl font-bold">Sức khỏe tác vụ</h2>
+              </div>
+              <p className="text-xs text-neutral-500">
+                Hàng đợi lâu nhất:{" "}
+                {Math.round(metrics.data.oldestQueuedJobAgeSeconds / 60)} phút
+              </p>
+            </div>
+            <div className="mt-6">
+              <OperationsJobHealthChart counts={metrics.data.jobStatusCounts} />
+            </div>
+          </section>
+          {user?.roles.includes("SUPER_ADMIN") ? (
+            <JobOperationsWorkspace />
+          ) : null}
+        </>
+      ) : null}
     </div>
   );
 }

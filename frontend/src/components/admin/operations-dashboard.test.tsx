@@ -106,6 +106,36 @@ describe("OperationsDashboard", () => {
         .getByRole("link", { name: "Đã nộp: 3 hồ sơ" })
         .getAttribute("href"),
     ).toBe("/admin/reviews?status=SUBMITTED");
+    expect(
+      screen.getByRole("link", { name: "Hồ sơ trễ hạn: 3" }),
+    ).toBeDefined();
+    expect(
+      screen.queryByRole("img", { name: "Biểu đồ số hồ sơ theo giai đoạn" }),
+    ).toBeNull();
+    expect(screen.queryByText("Sức khỏe tác vụ")).toBeNull();
+  });
+
+  it("opens the relevant queue from each priority count", async () => {
+    render(<OperationsDashboard />, { wrapper: Wrapper });
+
+    expect(
+      (
+        await screen.findByRole("link", { name: "Hồ sơ trễ hạn: 3" })
+      ).getAttribute("href"),
+    ).toBe("/admin/reviews");
+    expect(
+      screen
+        .getByRole("link", { name: "Thanh toán cần kiểm tra: 1" })
+        .getAttribute("href"),
+    ).toBe("/admin/payments");
+    expect(
+      screen
+        .getByRole("link", { name: "Phát hành cần xử lý: 2" })
+        .getAttribute("href"),
+    ).toBe("/admin/certificates");
+    expect(document.getElementById("hang-doi-xu-ly")).toBe(
+      screen.getByRole("region", { name: "Chỉ số cần theo dõi" }),
+    );
   });
 
   it("offers an in-place retry when the overview request fails", async () => {

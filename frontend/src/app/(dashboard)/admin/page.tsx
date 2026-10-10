@@ -1,6 +1,7 @@
 import {
   BookOpenText,
   ChartNoAxesCombined,
+  ChevronRight,
   ClipboardCheck,
   FilePenLine,
   FileClock,
@@ -80,7 +81,7 @@ export default function AdminPortalPage() {
             đúng khu vực xử lý hiện có.
           </p>
           <nav aria-label="Quy trình hồ sơ" className="mt-5">
-            <ol className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <ol className="divide-y divide-[var(--theme-border)] sm:grid sm:grid-cols-2 sm:gap-2 sm:divide-y-0 xl:grid-cols-4">
               {(
                 [
                   [
@@ -111,7 +112,7 @@ export default function AdminPortalPage() {
               ).map(([number, title, description, href]) => (
                 <li key={href}>
                   <Link
-                    className="flex h-full min-h-28 gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 transition-colors hover:border-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-600"
+                    className="flex h-full min-h-16 items-center gap-3 py-2.5 transition-colors hover:text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-600 sm:min-h-28 sm:items-start sm:rounded-xl sm:border sm:border-[var(--theme-border)] sm:bg-[var(--theme-elevated)] sm:p-4 sm:hover:border-primary-300"
                     href={href}
                   >
                     <span
@@ -128,6 +129,10 @@ export default function AdminPortalPage() {
                         {description}
                       </span>
                     </span>
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="ml-auto size-4 shrink-0 text-[var(--theme-muted)] sm:hidden"
+                    />
                   </Link>
                 </li>
               ))}

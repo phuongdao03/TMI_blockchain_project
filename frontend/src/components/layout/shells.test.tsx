@@ -94,8 +94,8 @@ describe("layout shells", () => {
     expect(registerLink.querySelector("svg")).not.toBeNull();
     expect(registerLink.classList.contains("button")).toBe(false);
     expect(
-      screen.getByRole("navigation", { name: "Truy cập tài khoản" }),
-    ).toBeDefined();
+      screen.queryByRole("navigation", { name: "Truy cập tài khoản" }),
+    ).toBeNull();
     expect(
       screen
         .getByRole("link", { name: "Danh sách đề cử" })
@@ -197,14 +197,19 @@ describe("layout shells", () => {
     expect(within(publicFooter).getByText("Đơn vị đồng hành")).toBeDefined();
     expect(
       within(publicFooter)
+        .getByRole("link", { name: "0834.11.22.88" })
+        .getAttribute("href"),
+    ).toBe("tel:0834112288");
+    expect(
+      within(publicFooter)
         .getByRole("link", { name: "0989.55.3535" })
         .getAttribute("href"),
     ).toBe("tel:0989553535");
     expect(
       within(publicFooter)
-        .getByRole("link", { name: "tinhhoanoidung@gmail.com" })
+        .getByRole("link", { name: "decu@tinhhoaviet.org.vn" })
         .getAttribute("href"),
-    ).toBe("mailto:tinhhoanoidung@gmail.com");
+    ).toBe("mailto:decu@tinhhoaviet.org.vn");
   });
 
   it("opens mobile navigation as a viewport drawer and restores trigger focus", async () => {
@@ -217,6 +222,9 @@ describe("layout shells", () => {
 
     const trigger = screen.getByRole("button", { name: /menu/i });
     await user.click(trigger);
+    expect(screen.getAllByRole("button", { name: "Đóng menu" })).toHaveLength(
+      1,
+    );
 
     const navigation = screen
       .getAllByRole("navigation")
@@ -228,6 +236,12 @@ describe("layout shells", () => {
     ).toBe(true);
     expect(
       within(navigation).getByRole("group", { name: "Chọn giao diện" }),
+    ).toBeDefined();
+    expect(
+      within(navigation).getByRole("link", { name: "Đăng nhập" }),
+    ).toBeDefined();
+    expect(
+      within(navigation).getByRole("link", { name: "Đăng ký" }),
     ).toBeDefined();
     const homeLink = within(navigation).getByRole("link", { name: /trang/i });
     await waitFor(() => expect(document.activeElement).toBe(homeLink));

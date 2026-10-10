@@ -122,6 +122,15 @@ const nextConfig: NextConfig = {
     return [
       { source: "/((?!__/auth/).*)", headers: securityHeaders },
       {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+        ],
+      },
+      {
         source: "/assets/institution/proposal-2026.pdf",
         headers: sameOriginPdfHeaders,
       },

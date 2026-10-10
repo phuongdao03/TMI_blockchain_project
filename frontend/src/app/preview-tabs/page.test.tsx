@@ -25,6 +25,8 @@ describe("PreviewTabsPage", () => {
     const markup = renderToStaticMarkup(<PreviewTabsPage />);
 
     expect(markup).toContain("/local-preview?screen=applicant-home");
+    expect(markup).toContain("/local-preview?screen=reviewer-queue");
+    expect(markup).toContain("/local-preview?screen=admin-portal");
   });
 
   it("does not expose the preview launcher in production", () => {

@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { metadata } from "@/app/layout";
 
 describe("application metadata", () => {
-  it("uses the approved THV emblem as the browser icon", () => {
+  it("uses the current THV logo as the browser and Apple icon", () => {
     expect(metadata.icons).toEqual({
-      icon: "/assets/brand/thv-certificate-seal.png",
-      apple: "/assets/brand/thv-certificate-seal.png",
+      icon: "/favicon-logo.png",
+      apple: "/apple-touch-logo.png",
     });
   });
 });

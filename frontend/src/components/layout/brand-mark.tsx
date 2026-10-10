@@ -26,6 +26,7 @@ export function BrandMark({
         className="brand-mark__official-logo"
         height={256}
         priority
+        sizes="(max-width: 38rem) 56px, 76px"
         src="/assets/brand/logo-tinh-hoa-viet.png"
         width={256}
       />

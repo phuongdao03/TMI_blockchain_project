@@ -1,4 +1,4 @@
-const CACHE_NAME = "thv-app-shell-v1";
+const CACHE_NAME = "thv-app-shell-v2";
 const OFFLINE_URL = "/offline";
 
 self.addEventListener("install", (event) => {

@@ -30,6 +30,7 @@ describe("BrandMark", () => {
 
     expect(logo).not.toBeNull();
     expect(logo?.getAttribute("alt")).toBe("");
+    expect(logo?.getAttribute("sizes")).toBe("(max-width: 38rem) 56px, 76px");
     expect(decodeURIComponent(source ?? "")).toContain(
       "/assets/brand/logo-tinh-hoa-viet.png",
     );

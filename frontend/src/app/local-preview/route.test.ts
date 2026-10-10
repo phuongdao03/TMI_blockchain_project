@@ -27,6 +27,27 @@ describe("local interface preview", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
+  it("opens the revised reviewer queue and admin home in mock sessions", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("AUTH_E2E_SHIM", "true");
+
+    for (const [screen, destination, persona] of [
+      ["reviewer-queue", "/reviews?status=IN_PROGRESS", "reviewer"],
+      ["admin-portal", "/admin", "super-admin"],
+    ]) {
+      const response = await GET(
+        new NextRequest(
+          `http://127.0.0.1:3100/local-preview?screen=${screen}`,
+          { headers: { host: "127.0.0.1:3100" } },
+        ),
+      );
+      expect(response.headers.get("location")).toBe(
+        `http://127.0.0.1:3100${destination}`,
+      );
+      expect(response.cookies.get("cns_e2e_persona")?.value).toBe(persona);
+    }
+  });
+
   it("does not provide a login bypass outside the local mock environment", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("AUTH_E2E_SHIM", "true");

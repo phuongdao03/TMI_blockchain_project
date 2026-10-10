@@ -45,13 +45,13 @@ export function ServiceWorkerRegistration({
         .catch(() => undefined);
     };
 
-    if (document.readyState === "complete") {
+    if (document.readyState !== "loading") {
       register();
       return;
     }
 
-    window.addEventListener("load", register, { once: true });
-    return () => window.removeEventListener("load", register);
+    document.addEventListener("DOMContentLoaded", register, { once: true });
+    return () => document.removeEventListener("DOMContentLoaded", register);
   }, [environment, forceEnable]);
 
   return null;

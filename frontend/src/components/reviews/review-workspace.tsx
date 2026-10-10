@@ -248,6 +248,35 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
         />
       ) : null}
 
+      {["IN_PROGRESS", "SUBMITTED"].includes(detail.assignment.status) &&
+      detail.snapshotJson ? (
+        <nav
+          aria-label="Đi tới nội dung thẩm định"
+          className="flex flex-wrap gap-2"
+        >
+          <a
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-semibold text-[var(--theme-text)] hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+            href="#review-evidence"
+          >
+            <Files
+              aria-hidden="true"
+              className="size-4 text-[var(--theme-accent)]"
+            />
+            Xem tài liệu
+          </a>
+          <a
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-semibold text-[var(--theme-text)] hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+            href="#review-scorecard"
+          >
+            <ClipboardCheck
+              aria-hidden="true"
+              className="size-4 text-[var(--theme-accent)]"
+            />
+            Mở phiếu thẩm định
+          </a>
+        </nav>
+      ) : null}
+
       <ol
         aria-label="Quy trình thẩm định"
         className="grid gap-3 border-b border-[var(--theme-border)] pb-6 md:grid-cols-3"
@@ -354,7 +383,8 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
         >
           <aside
             aria-label="Hồ sơ và tài liệu kiểm chứng"
-            className="min-w-0 space-y-4"
+            className="min-w-0 scroll-mt-24 space-y-4"
+            id="review-evidence"
           >
             {detail.snapshotJson.dossier.summary ? (
               <Card className="p-5">
@@ -385,22 +415,26 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
               </code>
             </details>
           </aside>
-          <FiveTScorecard
-            evidences={detail.snapshotJson.evidences ?? []}
-            initialReview={detail.review}
-            isSaving={save.isPending}
-            isSubmitting={submit.isPending}
-            onSave={async (draft) => {
-              await save.mutateAsync(draft);
-            }}
-            onSubmit={async () => {
-              await submit.mutateAsync();
-            }}
-            readOnly={detail.assignment.status === "SUBMITTED"}
-            requireEvidenceAssessments={detail.snapshotJson.schemaVersion >= 2}
-            rubric={detail.snapshotJson.dossier.dossierType?.reviewRubric}
-            saveError={save.error}
-          />
+          <div className="min-w-0 scroll-mt-24" id="review-scorecard">
+            <FiveTScorecard
+              evidences={detail.snapshotJson.evidences ?? []}
+              initialReview={detail.review}
+              isSaving={save.isPending}
+              isSubmitting={submit.isPending}
+              onSave={async (draft) => {
+                await save.mutateAsync(draft);
+              }}
+              onSubmit={async () => {
+                await submit.mutateAsync();
+              }}
+              readOnly={detail.assignment.status === "SUBMITTED"}
+              requireEvidenceAssessments={
+                detail.snapshotJson.schemaVersion >= 2
+              }
+              rubric={detail.snapshotJson.dossier.dossierType?.reviewRubric}
+              saveError={save.error}
+            />
+          </div>
         </div>
       ) : null}
     </div>

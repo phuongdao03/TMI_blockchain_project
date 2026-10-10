@@ -37,34 +37,39 @@ export default async function ReviewQueuePage({
           gửi báo cáo độc lập để Admin ra quyết định cuối.
         </p>
       </header>
-      <form className="review-queue__filters grid gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:grid-cols-[minmax(0,20rem)_auto] sm:items-end sm:justify-start">
-        <div>
-          <label
-            className="text-xs font-bold uppercase tracking-wider text-neutral-500"
-            htmlFor="review-status"
+      <details className="review-queue__filters rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)]">
+        <summary className="flex min-h-12 cursor-pointer items-center px-4 text-sm font-semibold text-[var(--theme-text)]">
+          Bộ lọc · {statuses.find(([value]) => value === (status ?? ""))?.[1]}
+        </summary>
+        <form className="grid gap-3 border-t border-[var(--theme-border)] p-3 sm:grid-cols-[minmax(0,20rem)_auto] sm:items-end sm:justify-start">
+          <div>
+            <label
+              className="text-xs font-bold uppercase tracking-wider text-neutral-500"
+              htmlFor="review-status"
+            >
+              Trạng thái phân công
+            </label>
+            <SelectControl
+              className="mt-2 min-h-11 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-3 text-sm font-semibold"
+              defaultValue={status ?? ""}
+              id="review-status"
+              name="status"
+            >
+              {statuses.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </SelectControl>
+          </div>
+          <button
+            className="min-h-11 rounded-lg bg-neutral-950 px-5 text-sm font-bold text-white hover:bg-neutral-800"
+            type="submit"
           >
-            Trạng thái phân công
-          </label>
-          <SelectControl
-            className="mt-2 min-h-11 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-3 text-sm font-semibold"
-            defaultValue={status ?? ""}
-            id="review-status"
-            name="status"
-          >
-            {statuses.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </SelectControl>
-        </div>
-        <button
-          className="min-h-11 rounded-lg bg-neutral-950 px-5 text-sm font-bold text-white hover:bg-neutral-800"
-          type="submit"
-        >
-          Áp dụng bộ lọc
-        </button>
-      </form>
+            Áp dụng bộ lọc
+          </button>
+        </form>
+      </details>
       <ReviewAssignmentList page={page} pageSize={10} status={status} />
     </div>
   );

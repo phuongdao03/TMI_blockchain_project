@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 const objectives = [
   {
     number: "01",
@@ -54,6 +56,15 @@ export function MissionContent() {
             mong muốn kết nối những đóng góp ấy với cộng đồng và tạo điều kiện
             để chúng tiếp tục được gìn giữ, phát huy theo thời gian.
           </p>
+          <figure className="mission-section__seal">
+            <Image
+              alt=""
+              height={256}
+              sizes="112px"
+              src="/assets/brand/logo-tinh-hoa-viet.png"
+              width={256}
+            />
+          </figure>
           <div className="mission-section__invitation">
             <p className="mission-section__eyebrow">Lời mời đồng hành</p>
             <p>

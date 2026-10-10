@@ -88,7 +88,7 @@ export function PwaInstallButton({ className }: { className?: string }) {
 
   if (installed) return null;
   const actionClass = cn(
-    "group inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm font-bold text-[var(--theme-text)] transition hover:border-primary-500 hover:bg-[var(--theme-surface-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 sm:px-4",
+    "pwa-install-button group inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm font-bold text-[var(--theme-text)] transition hover:border-primary-500 hover:bg-[var(--theme-surface-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 sm:px-4",
     className,
   );
   const content = (
@@ -97,7 +97,7 @@ export function PwaInstallButton({ className }: { className?: string }) {
         aria-hidden="true"
         className="size-4 transition-transform group-hover:translate-y-0.5 motion-reduce:transition-none"
       />
-      <span className="hidden whitespace-nowrap lg:inline">
+      <span className="pwa-install-button__label hidden whitespace-nowrap lg:inline">
         {working ? "Đang mở cài đặt…" : "Tải ứng dụng"}
       </span>
     </>
@@ -230,24 +230,26 @@ export function PwaInstallAction() {
   }
   return (
     <div className="space-y-4">
-      <button
-        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary-700 px-6 text-sm font-bold text-white transition hover:bg-primary-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 sm:w-auto"
-        disabled={state === "working"}
-        onClick={() => void install()}
-        type="button"
-      >
-        <Download aria-hidden="true" className="size-5" />
-        {state === "working" ? "Đang mở cài đặt…" : "Tải ứng dụng"}
-      </button>
+      {promptReady ? (
+        <button
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary-700 px-6 text-sm font-bold text-white transition hover:bg-primary-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 sm:w-auto"
+          disabled={state === "working"}
+          onClick={() => void install()}
+          type="button"
+        >
+          <Download aria-hidden="true" className="size-5" />
+          {state === "working" ? "Đang mở cài đặt…" : "Tải ứng dụng"}
+        </button>
+      ) : null}
       <p
         className="text-sm leading-6 text-[var(--theme-muted)]"
         role={manualNeeded ? "status" : undefined}
       >
         {manualNeeded
-          ? "Chưa mở được hộp thoại cài đặt. Hãy mở trang bằng Chrome hoặc Edge ở chế độ thường, rồi cài từ menu theo hướng dẫn bên cạnh."
+          ? "Trình duyệt chưa mở được hộp thoại cài đặt. Hãy cài từ menu Chrome hoặc Edge theo hướng dẫn bên dưới."
           : promptReady
             ? "Nhấn nút để mở hộp thoại cài ứng dụng trên thiết bị này."
-            : "Nếu trình duyệt chưa mở hộp thoại cài đặt, hãy dùng menu Chrome hoặc Edge theo hướng dẫn bên cạnh."}
+            : "Nếu trình duyệt chưa mở hộp thoại cài đặt, hãy dùng menu Chrome hoặc Edge theo các bước bên dưới."}
       </p>
       <a className="install-guide__manual-link" href="#install-device-steps">
         Xem cách cài trên thiết bị

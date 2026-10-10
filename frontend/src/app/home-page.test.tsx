@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import HomePage from "@/app/(public)/page";
@@ -10,7 +10,7 @@ vi.mock("@/components/public/featured-assets", () => ({
 describe("HomePage", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("uses honest preview CTAs before submissions are available", () => {
+  it("keeps account entry links available in preview mode", () => {
     vi.stubEnv("NEXT_PUBLIC_RELEASE_MODE", "preview");
     render(<HomePage />);
 
@@ -20,9 +20,30 @@ describe("HomePage", () => {
         name: "Suy tôn trí tuệ. Lưu truyền di sản.",
       }),
     ).toBeDefined();
+    const hero = document.querySelector(".registry-hero");
+    expect(hero?.querySelector('a[href="/register"]')?.textContent).toContain(
+      "Đăng ký",
+    );
+    expect(hero?.querySelector('a[href="/login"]')?.textContent).toContain(
+      "Đăng nhập",
+    );
+    expect(hero?.querySelector('a[href="/works"]')?.textContent).toContain(
+      "Khám phá đề cử",
+    );
+    expect(hero?.querySelector('form[action="/works"]')).not.toBeNull();
     expect(
-      screen.getByRole("link", { name: "Khám phá đề cử" }).getAttribute("href"),
-    ).toBe("/works");
+      hero?.querySelector(".registry-hero__copy--desktop")?.textContent,
+    ).toContain("đối chiếu thông tin được công bố");
+    expect(hero?.querySelector(".registry-hero__mobile-seal img")).toBeNull();
+    const missionLead = document.querySelector(".mission-section__lead");
+    const missionSeal = missionLead?.nextElementSibling;
+    expect(missionSeal?.classList.contains("mission-section__seal")).toBe(true);
+    expect(missionSeal?.querySelector("img")).not.toBeNull();
+    expect(
+      missionSeal?.nextElementSibling?.classList.contains(
+        "mission-section__invitation",
+      ),
+    ).toBe(true);
     expect(document.querySelectorAll(".registry-heritage img")).toHaveLength(1);
     expect(document.querySelector(".registry-heritage__outline")).toBeNull();
     expect(
@@ -44,11 +65,9 @@ describe("HomePage", () => {
         name: "Suy tôn trí tuệ. Lưu truyền di sản.",
       }),
     ).toBeDefined();
-    expect(
-      screen
-        .getAllByRole("link", { name: "Khám phá đề cử" })[0]
-        ?.getAttribute("href"),
-    ).toBe("/works");
+    const hero = document.querySelector(".registry-hero");
+    expect(hero?.querySelector('a[href="/register"]')).not.toBeNull();
+    expect(hero?.querySelector('a[href="/login"]')).not.toBeNull();
     expect(
       screen
         .getByRole("link", { name: "Xem văn bản thành lập" })
@@ -57,6 +76,12 @@ describe("HomePage", () => {
     expect(
       screen.getByRole("search", { name: "Tìm kiếm đề cử" }),
     ).toBeDefined();
+    expect(
+      document.querySelector(".registry-hero [role='search']"),
+    ).not.toBeNull();
+    expect(
+      document.querySelector(".home-featured [role='search']"),
+    ).not.toBeNull();
     expect(
       screen.queryByText(/Bình chọn và cổng gửi đề cử sẽ được mở/i),
     ).toBeNull();
@@ -101,9 +126,38 @@ describe("HomePage", () => {
     ).toHaveLength(3);
   });
 
+  it("keeps the original introduction, institution, process and featured order", () => {
+    render(<HomePage />);
+    const sections = [...document.querySelectorAll(".public-home > section")];
+    const position = (className: string) =>
+      sections.findIndex((section) => section.classList.contains(className));
+
+    for (const className of [
+      "mission-section",
+      "institution-section",
+      "home-journey",
+      "home-audiences",
+      "home-featured",
+    ]) {
+      expect(position(className)).toBeGreaterThan(0);
+    }
+
+    expect(position("mission-section")).toBeLessThan(
+      position("institution-section"),
+    );
+    expect(position("institution-section")).toBeLessThan(
+      position("home-journey"),
+    );
+    expect(position("home-journey")).toBeLessThan(position("home-audiences"));
+    expect(position("home-audiences")).toBeLessThan(position("home-featured"));
+  });
+
   it("publishes establishment evidence and the 2026 event dossier", () => {
     render(<HomePage />);
 
+    expect(
+      document.querySelector(".registry-hero__provenance")?.textContent,
+    ).toContain("Quyết định số 55 ngày 02/01/2026");
     expect(
       screen.getByRole("heading", { name: /Trung tâm Xác lập Tinh Hoa Việt/ }),
     ).toBeDefined();
@@ -117,13 +171,6 @@ describe("HomePage", () => {
         .getByRole("link", { name: "Tải proposal PDF" })
         .getAttribute("href"),
     ).toBe("/assets/institution/proposal-2026.pdf");
-    expect(
-      screen.getByRole("region", { name: "Trình xem proposal" }),
-    ).toBeDefined();
-    expect(
-      within(
-        screen.getByRole("region", { name: "Trình xem proposal" }),
-      ).getByRole("status").textContent,
-    ).toContain("Trang 1 / 53");
+    expect(screen.getByText("Đang chuẩn bị trình đọc tài liệu…")).toBeDefined();
   });
 });

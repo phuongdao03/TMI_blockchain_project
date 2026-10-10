@@ -109,3 +109,70 @@ Admin: Công việc hôm nay /admin
 - Implemented: role navigation for review intake; honest scope for user dashboard counters; staged type/core/type-specific/review creation with a full input summary; document-rule selection and upload after draft creation; submission receipt and supplement reason from dossier history; editing resumes when a submitted dossier later needs a supplement; autosave blocks step changes while data is unsaved and preserves edits made during an in-flight request; collapsed 5T criterion groups; ordered admin workflow entry; paginated admin intake with retry and stage-aware action; real admin stage counts linked to filtered queues; grouped dossier status filtering with all 16 statuses; reviewer queue priority for overdue work within the current page.
 - Verified: 633 frontend tests, 33 focused backend Cloudinary/blockchain tests, full ESLint, TypeScript, production build and `git diff --check` passed. After the final copy change, focused form tests, lint and production build passed. Chrome opened four role previews at 390 px: all had matching document widths with no horizontal overflow or console errors. A screenshot request stalled and was stopped; visual inspection from that request is not claimed. Authenticated browser E2E was attempted but the local Playwright/dev-server harness stalled, so end-to-end behavior is not claimed as verified.
 - Remaining: authenticated role journeys on staging or a local backend with test accounts; mobile device validation of upload, install and animations; audit secondary HR/finance/content/settings screens beyond the critical dossier path. Queue priority is limited to the current server page. The existing PATCH dossier contract cannot change type-specific `formData` after draft creation; the confirmation step now states this limitation. Cloudinary delivery and blockchain signing still require staging credentials and live integration validation. No backend contract was changed for the UX workflow.
+
+## Public UI follow-up — 2026-10-09
+
+- Audited the live public home, library, process, login and registration routes. Authenticated routes redirected to login without a session; no production data was changed.
+- Kept the existing pending editorial typography, mobile menu, reviewer anchors and admin queue work. Added a two-row public header at 1280–1664 px so all six destinations remain visible without clipping. Fixed sticky-header offsets for public in-page anchors and removed the duplicate accessible close control from the menu backdrop.
+- Browser checks: loaded local public routes at 320, 360, 375, 390, 430, 768 and 1280 px showed no horizontal overflow or page errors. Live home at 320, 390, 430, 768 and 1280 px also showed no horizontal overflow. Local menu navigation and document anchors were exercised directly.
+- Verification: full frontend tests, lint, typecheck, production build and `git diff --check` passed; focused tests also passed after the final contact correction. A focused admin Playwright run against the repository's mock server stalled during startup and was stopped, so authenticated E2E is not claimed. Authenticated staging journeys still require role-specific test accounts. The pending footer contact change was reverted to the production/proposal contact details.
+
+## Protected mobile follow-up — 2026-10-09
+
+- Applicant creation now filters the actual dossier types by Vietnamese text with or without accents. The list uses page scrolling on mobile, so all choices and the next action remain reachable. Type selection and progression to the information step were exercised against the local mock API.
+- Reviewer queue filters are collapsed until requested, bringing the current assignment action into the first 390 px viewport. The URL-driven filter and its existing query behavior remain intact.
+- Admin home presents workflow steps and live stage counts as compact mobile rows. Diagnostic charts and job operations remain on the existing `/admin/dashboard` route; the home emphasizes links to work queues. No API or permission logic changed.
+- Chrome with the repository mock API loaded these three protected routes at 320, 360, 375, 390, 430, 768 and 1280 px with no horizontal overflow. This is a local mock-backed browser check, not a production or staging role test.
+- Verification for this follow-up: the full 647-test frontend suite passed; the dossier form tests passed again after the final selection hint. ESLint, TypeScript typecheck, production build and `git diff --check` passed after the final code edit. The existing Next image warnings in the test environment did not fail the suite.
+
+## Homepage visual pass — 2026-10-09
+
+- Kept the established section order: introduction, program mission, institution documents and gallery, journey, fields, published nominations, account action. The published nominations section remains near the end as requested.
+- Unified homepage display headings on Newsreader with a responsive size scale and room for Vietnamese diacritics. Tightened section spacing without shortening or moving brand and institutional content.
+- Shortened the mobile hero by omitting its duplicate large emblem below the header; the official brand mark remains in the sticky header. At 769–1023 px, a smaller emblem balances the intro while the primary actions stay visible beside it.
+- Restricted entrance motion to the hero and reduced hover travel on journey links. Pressed buttons respond immediately; reduced-motion preference disables decorative motion.
+- Tightened the three existing field descriptions on mobile with consistent separators and spacing; their content and place in the page did not change.
+- Verified the revised homepage in Chrome at 320, 360, 390, 430, 768, 769, 820, 900, 1023, 1024, 1280 and 1440 px: no horizontal overflow; section order and main actions remain intact. At 820 px, both CTAs stay within the first viewport. The establishment-document anchor resolves, the search form still submits to `/works`, and reduced-motion disables hero animation.
+- Focused homepage/media tests (8), ESLint, TypeScript typecheck, production build and `git diff --check` passed after this visual pass. No production content or data was changed.
+
+## Mobile hero and header refinement — 2026-10-10
+
+- Changed the public header wordmark to the existing Newsreader display serif, with a title-case name and a compact institutional line. The official logo asset remains in place.
+- Removed the oversized hero seal above the mobile headline. A small seal now accompanies the establishment note after the main actions; desktop keeps its right-side seal. Homepage sections retain their existing order.
+- Reduced the mobile primary action width and hero height. Kept the establishment-document link and search route unchanged.
+- Verified the production build in Chrome at 320, 360, 375, 390, 430 and 768 px: the wordmark uses Newsreader, the primary action and establishment note are visible, and there is no horizontal overflow. Focused homepage/brand tests, targeted ESLint, TypeScript production compilation and `git diff --check` passed. Physical-device testing and deployment remain outstanding.
+
+## Opening section reflow — 2026-10-10
+
+- Reworked the phone and tablet hero as a single editorial reading path on a warm paper surface: introduction, actions, then establishment note. The header carries the only visible seal on these widths; the desktop illustration remains in place.
+- Kept the primary discovery action full width on phones and paired it with the document link on tablet. The mobile header is shorter while its official logo and serif name stay legible. The search and published nominations stay in their existing later positions.
+- Set the desktop hero illustration to native lazy loading, as it is hidden on mobile. Chrome checks against the new production build at 320, 360, 375, 390, 430, 768 and 1280 px showed no horizontal overflow. Focused homepage and brand tests passed (9/9); targeted ESLint and the production build passed. Physical-device testing and deployment remain outstanding.
+
+## Mobile hero theme correction — 2026-10-10
+
+- Fixed the dark-mode contrast regression caused by older `!important` text colors combined with the new light hero background. The mobile hero now has separate light and dark surface, text, action and divider colors.
+- Checked both themes against the production build in Chrome at 390 px, including switching to dark mode through the mobile menu. Titles, supporting copy, actions and establishment text are readable in each mode, with no horizontal overflow. The production build, 9 focused homepage/theme tests and `git diff --check` passed. Physical-device testing and deployment remain outstanding.
+
+## Mobile identity and account entry — 2026-10-10
+
+- Added a compact official seal beside the hero's organization label on phone and tablet, with a circular crop that works on both light and dark surfaces. The larger desktop seal remains in its existing position.
+- Replaced the hero's discovery CTA with direct `/register` and `/login` actions. The establishment-document anchor remains below them. The public works route remains available through navigation and the later discovery sections.
+- Shortened the hero's supporting sentence and hid the repeated establishment paragraph on mobile; the full Decision 55 facts and document remain in the institution section below. Homepage section order is unchanged.
+- Focused homepage tests passed (5/5). The production build and Chrome checks at 320, 360, 375, 390, 430, 768 and 1280 px passed with no horizontal overflow. Both mobile themes and the menu theme switch were checked. Physical-device validation and deployment remain outstanding.
+
+## Mobile seal placement follow-up — 2026-10-10
+
+- Moved the extra mobile seal out of the hero to the program introduction, immediately after its lead paragraph and before “Lời mời đồng hành”. The official header logo and desktop hero illustration remain in place.
+- Centered the circular seal at 112 px on phone and tablet; restored the small hero kicker dot. The homepage section order is unchanged.
+- The focused homepage tests, targeted ESLint and production build passed. Chrome checks at 320, 360, 390, 430, 768 and 1280 px found no horizontal overflow or page errors. Physical-device validation and deployment remain outstanding.
+
+## Desktop account action deduplication — 2026-10-10
+
+- At 1280 px and wider, the header already exposes `/register` and `/login`, so the duplicated hero pair is hidden. Below 1280 px the header pair is hidden and the hero pair remains visible.
+- Chrome checks at 390, 768, 1216, 1279, 1280, 1440 and 1920 px confirmed one visible account pair per viewport, the establishment-document link remained visible, and no horizontal overflow occurred. The production build passed.
+
+## Full desktop introduction restored — 2026-10-10
+
+- Restored the complete public introduction on screens from 1280 px, including the original description, nomination discovery action and hero search. The establishment facts now sit between the story and actions; the right-side official seal is larger on wide screens.
+- Kept the short account-oriented copy and account actions below 1280 px. Search remains in the later discovery section on mobile, not in its hero. Desktop account actions stay in the header, avoiding duplicate sign-in and registration buttons.
+- Focused homepage tests (5/5), targeted ESLint and the production build passed. Chrome verified dark mode at 390, 768, 1024, 1279, 1280, 1440 and 1920 px plus light mode at 1920 px, with no page errors or horizontal overflow. Physical-device testing and deployment remain outstanding.

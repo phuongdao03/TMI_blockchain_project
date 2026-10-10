@@ -48,9 +48,14 @@ describe("ProposalViewer", () => {
   it("supports keyboard navigation and bounded zoom", () => {
     render(<ProposalViewer />);
     const reader = screen.getByRole("region", { name: "Trình xem proposal" });
+    const firstPage = screen.getByRole("img", { name: /trang 1 trên 53/i });
+    expect(firstPage.getAttribute("src")).toContain("/_next/image?");
     fireEvent.keyDown(reader, { key: "ArrowRight" });
     expect(screen.getByRole("status").textContent).toContain("Trang 2 / 53");
     fireEvent.click(screen.getByRole("button", { name: "Phóng to trang" }));
+    expect(
+      screen.getByRole("img", { name: /trang 2 trên 53/i }).getAttribute("src"),
+    ).toBe("/assets/institution/proposal-pages/page-02.webp");
     expect(
       screen.getByRole("button", { name: "Đặt lại mức phóng to" }).textContent,
     ).toBe("125%");

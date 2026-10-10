@@ -87,52 +87,65 @@ export default function HomePage() {
               Suy tôn trí tuệ.{" "}
               <span className="text-gold-300">Lưu truyền di sản.</span>
             </h1>
-            <p className="mt-5 max-w-[41rem] text-[0.95rem] leading-7 text-slate-300 sm:mt-8 sm:text-lg sm:leading-8">
+            <p className="registry-hero__copy--compact mt-5 max-w-[41rem] text-[0.95rem] leading-7 text-slate-300 sm:mt-8 sm:text-lg sm:leading-8">
+              Tạo tài khoản để gửi hồ sơ và theo dõi hành trình xác lập.
+            </p>
+            <p className="registry-hero__copy--desktop mt-5 max-w-[41rem] text-[0.95rem] leading-7 text-slate-300 sm:mt-8 sm:text-lg sm:leading-8">
               Tinh Hoa Việt giới thiệu những giá trị tiêu biểu của con người, tổ
               chức, tri thức, văn hóa và sáng tạo Việt Nam qua hồ sơ có căn cứ.
               Tại đây, công chúng có thể khám phá đề cử, theo dõi trạng thái xác
               lập và đối chiếu thông tin được công bố.
-            </p>
-            <p className="registry-hero__organization">
-              Trung tâm Xác lập Tinh Hoa Việt trực thuộc Viện Những Vấn đề Phát
-              triển (VIDS), được thành lập theo Quyết định số 55 ngày
-              02/01/2026.
             </p>
           </div>
           <div className="registry-visual registry-visual--heritage relative min-w-0 self-stretch lg:-mr-14">
             <HeritageSymbols />
           </div>
           <div className="registry-hero__actions relative z-10 max-w-[44rem] lg:pb-8">
-            <div className="registry-hero__buttons mt-9 flex flex-col gap-3 sm:flex-row">
+            <div className="registry-hero__action-row">
+              <div className="registry-hero__buttons mt-9 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  className="registry-button registry-button-primary"
+                  href="/register"
+                >
+                  Đăng ký
+                </Link>
+                <Link
+                  className="registry-button registry-button-auth-secondary"
+                  href="/login"
+                >
+                  Đăng nhập
+                </Link>
+              </div>
               <Link
-                className="registry-button registry-button-primary"
+                className="registry-hero__discover registry-button registry-button-primary"
                 href="/works"
               >
-                Khám phá đề cử{" "}
+                Khám phá đề cử
                 <ArrowRight aria-hidden="true" className="size-4" />
               </Link>
               <Link
-                className="registry-button registry-button-secondary"
+                className="registry-hero__document-link"
                 href="#van-ban-thanh-lap"
               >
                 Xem văn bản thành lập
+                <ArrowRight aria-hidden="true" className="size-4" />
               </Link>
             </div>
             <form
               action="/works"
-              aria-label="Tìm kiếm đề cử"
-              className="registry-search mt-6"
+              aria-label="Tra cứu đề cử từ phần giới thiệu"
+              className="registry-hero__desktop-search registry-search mt-6"
               role="search"
             >
               <Search
                 aria-hidden="true"
                 className="size-5 shrink-0 text-slate-500"
               />
-              <label className="sr-only" htmlFor="registry-search-input">
+              <label className="sr-only" htmlFor="registry-hero-search-input">
                 Tìm theo tên, câu chuyện hoặc lĩnh vực
               </label>
               <input
-                id="registry-search-input"
+                id="registry-hero-search-input"
                 name="query"
                 placeholder="Tìm kiếm đề cử"
               />
@@ -155,6 +168,16 @@ export default function HomePage() {
                 </div>
               ))}
             </dl>
+          </div>
+          <div className="registry-hero__provenance">
+            <span className="registry-hero__provenance-label">
+              Thông tin thành lập
+            </span>
+            <p className="registry-hero__organization">
+              Trung tâm Xác lập Tinh Hoa Việt trực thuộc Viện Những Vấn đề Phát
+              triển (VIDS), được thành lập theo Quyết định số 55 ngày
+              02/01/2026.
+            </p>
           </div>
         </div>
       </section>
@@ -265,6 +288,23 @@ export default function HomePage() {
               <ArrowRight aria-hidden="true" className="ml-1 inline size-4" />
             </Link>
           </div>
+          <form
+            action="/works"
+            aria-label="Tìm kiếm đề cử"
+            className="home-featured__search registry-search"
+            role="search"
+          >
+            <Search aria-hidden="true" className="size-5 shrink-0" />
+            <label className="sr-only" htmlFor="registry-search-input">
+              Tìm theo tên, câu chuyện hoặc lĩnh vực
+            </label>
+            <input
+              id="registry-search-input"
+              name="query"
+              placeholder="Tác phẩm, chủ đề..."
+            />
+            <button type="submit">Tìm</button>
+          </form>
           <div className="mt-10 text-slate-900">
             <FeaturedAssets />
           </div>

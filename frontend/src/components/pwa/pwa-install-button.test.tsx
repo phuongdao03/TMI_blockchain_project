@@ -92,22 +92,17 @@ describe("PWA installation", () => {
     );
   });
 
-  it("keeps both the install action and manual guidance when no prompt is available", async () => {
+  it("shows actionable browser steps instead of a non-working button when no prompt is available", async () => {
     render(<PwaInstallAction />);
     expect(
       await screen.findByText(/Nếu trình duyệt chưa mở hộp thoại cài đặt/),
     ).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Tải ứng dụng" })).toBeNull();
     expect(
       screen
         .getByRole("link", { name: "Xem cách cài trên thiết bị" })
         .getAttribute("href"),
     ).toBe("#install-device-steps");
-    await userEvent
-      .setup()
-      .click(screen.getByRole("button", { name: "Tải ứng dụng" }));
-    expect(screen.getByRole("status").textContent).toContain(
-      "Chưa mở được hộp thoại cài đặt",
-    );
   });
 
   it("shows iPhone steps immediately without promising an automatic prompt", async () => {

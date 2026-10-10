@@ -53,9 +53,18 @@ const sections = [
     ],
   },
   {
+    title: "Người thẩm định",
+    description: "Xem hàng đợi và bộ lọc công việc đã được phân công.",
+    links: [
+      { label: "Hàng đợi thẩm định", screen: "reviewer-queue" },
+      { label: "Công việc được giao", screen: "reviewer-work" },
+    ],
+  },
+  {
     title: "Nhân viên quản trị",
     description: "Theo dõi công việc, thẩm định và bằng đã phát hành.",
     links: [
+      { label: "Trang công việc", screen: "admin-portal" },
       { label: "Tổng quan vận hành", screen: "admin-home" },
       { label: "Hồ sơ cần xem", screen: "admin-reviews" },
       { label: "Quản lý bằng", screen: "admin-certificates" },

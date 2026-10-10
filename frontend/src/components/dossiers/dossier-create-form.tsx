@@ -58,6 +58,14 @@ function displayFieldValue(value: unknown): string {
   return "Chưa điền";
 }
 
+function normalizeSearchText(value: string): string {
+  return value
+    .toLocaleLowerCase("vi")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replaceAll("đ", "d");
+}
+
 const mimeLabels: Record<string, string> = {
   "application/pdf": "PDF",
   "application/msword": "DOC",
@@ -80,6 +88,7 @@ export function DossierCreateForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const queryClient = useQueryClient();
   const [dossierTypeVersionId, setDossierTypeVersionId] = useState("");
+  const [typeQuery, setTypeQuery] = useState("");
   const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [prepareStep, setPrepareStep] = useState<0 | 1 | 2 | 3>(0);
   const [stepError, setStepError] = useState("");
@@ -100,6 +109,12 @@ export function DossierCreateForm() {
     (item) => item.currentVersion.id === dossierTypeVersionId,
   );
   const hasDossierTypes = (dossierTypes.data?.length ?? 0) > 0;
+  const normalizedTypeQuery = normalizeSearchText(typeQuery.trim());
+  const visibleDossierTypes = dossierTypes.data?.filter((item) =>
+    normalizeSearchText(
+      `${item.name} ${item.currentVersion.schema.description ?? ""}`,
+    ).includes(normalizedTypeQuery),
+  );
   const dossierTypeDescription = dossierType?.currentVersion.schema.description;
   const documentRules = dossierType?.currentVersion.schema.documentRules ?? [];
   const requiredFieldCount =
@@ -257,8 +272,40 @@ export function DossierCreateForm() {
             <p className="mt-1 text-sm text-neutral-500" id="dossier-type-help">
               Chọn một loại để nạp biểu mẫu đúng phiên bản.
             </p>
-            <div className="mt-3 grid max-h-[23rem] gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
-              {dossierTypes.data?.map((item) => {
+            {hasDossierTypes ? (
+              <>
+                <label
+                  className="mt-4 block text-xs font-semibold text-neutral-600"
+                  htmlFor="dossier-type-search"
+                >
+                  Tìm loại hồ sơ
+                </label>
+                <input
+                  autoComplete="off"
+                  className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)] focus:ring-2 focus:ring-[var(--theme-accent)]"
+                  id="dossier-type-search"
+                  onChange={(event) => setTypeQuery(event.target.value)}
+                  placeholder="Ví dụ: di sản, tác phẩm…"
+                  type="search"
+                  value={typeQuery}
+                />
+                {typeQuery.trim() ? (
+                  <div className="mt-2 text-xs text-neutral-600" role="status">
+                    <p>{visibleDossierTypes?.length ?? 0} loại phù hợp</p>
+                    {dossierType &&
+                    !visibleDossierTypes?.some(
+                      (item) => item.currentVersion.id === dossierTypeVersionId,
+                    ) ? (
+                      <p className="mt-1 font-semibold text-[var(--theme-text)]">
+                        Đang chọn: {dossierType.name}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+            <div className="mt-3 grid gap-2.5 sm:max-h-[23rem] sm:grid-cols-2 sm:gap-3 sm:overflow-y-auto sm:pr-1">
+              {visibleDossierTypes?.map((item) => {
                 const selected =
                   item.currentVersion.id === dossierTypeVersionId;
                 const description = item.currentVersion.schema.description;
@@ -298,6 +345,11 @@ export function DossierCreateForm() {
                 );
               })}
             </div>
+            {hasDossierTypes && visibleDossierTypes?.length === 0 ? (
+              <p className="mt-3 text-sm text-neutral-600" role="status">
+                Không tìm thấy loại phù hợp. Hãy thử tên hoặc chủ đề khác.
+              </p>
+            ) : null}
             {dossierTypes.isError ? (
               <div
                 className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4"

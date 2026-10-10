@@ -266,8 +266,9 @@ export function ProposalViewer() {
                   height={900}
                   loading="lazy"
                   priority={false}
+                  sizes="(max-width: 48rem) 100vw, 960px"
                   src={`/assets/institution/proposal-pages/page-${String(page).padStart(2, "0")}.webp`}
-                  unoptimized
+                  unoptimized={zoom > 100 || fullscreen || fallbackFullscreen}
                   width={1600}
                 />
               </div>

@@ -16,6 +16,11 @@ const screens = {
     path: "/certificates/7eaec2d2-c99a-42c9-8f1e-71462ba01ea0",
   },
   "reviewer-work": { persona: "reviewer", path: "/work-allocations" },
+  "reviewer-queue": {
+    persona: "reviewer",
+    path: "/reviews?status=IN_PROGRESS",
+  },
+  "admin-portal": { persona: "super-admin", path: "/admin" },
   "admin-home": { persona: "super-admin", path: "/admin/dashboard" },
   "admin-reviews": { persona: "super-admin", path: "/admin/reviews" },
   "admin-certificates": { persona: "super-admin", path: "/admin/certificates" },

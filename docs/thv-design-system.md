@@ -37,9 +37,10 @@ Không dùng neon, tím, hiệu ứng Web3 hoặc gradient nhiều màu. Màu th
 
 ## Typography
 
-- Primary: `Be Vietnam Pro`.
-- Fallback: `Inter`, system sans-serif.
-- Display headings use tight tracking and a maximum two-line measure.
+- Public and auth display headings: locally hosted `THV Newsreader` variable font, with `THV Noto Serif` and Georgia fallbacks. Keep it out of forms, tables and scoring controls.
+- Body and operational UI: system UI, `Segoe UI`, sans-serif. This avoids an extra network font request and keeps Vietnamese text readable.
+- Display headings use restrained tracking, responsive `clamp()` sizes and enough line height for Vietnamese diacritics.
+- Homepage hero and section headings share a local responsive display scale; section order follows the existing editorial story.
 - Body copy uses comfortable line height and a maximum readable width of 68 characters.
 - Technical identifiers use a mono font only where the identifier itself matters.
 
@@ -47,6 +48,7 @@ Không dùng neon, tím, hiệu ứng Web3 hoặc gradient nhiều màu. Màu th
 
 - Mobile-first breakpoints: 360–430, 768, 1024, 1280, 1440, 1920 px.
 - Public pages use a sticky header and a contained editorial canvas.
+- At 1280–1664 px, public navigation takes a second header row so every destination remains visible without clipping. Narrower screens use the menu.
 - Authenticated mobile pages use a compact header, scrollable content, and fixed bottom navigation.
 - Authenticated desktop pages use sidebar, context header, and content; shells never nest.
 - Standard content width is 1200–1320 px with 16/24/32 px responsive gutters.
@@ -65,6 +67,7 @@ Không dùng neon, tím, hiệu ứng Web3 hoặc gradient nhiều màu. Màu th
 - Focus ring: 3 px translucent primary outline with 2 px offset.
 - Loading states preserve layout; empty states explain the next useful action.
 - Reduced-motion preference disables decorative movement.
+- Motion tokens: quick 150 ms, standard 250 ms, emphasis 350–400 ms; use transform and opacity where motion helps orientation. `prefers-reduced-motion` reduces animation and transition durations to near zero.
 
 ## Content voice
 

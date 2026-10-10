@@ -2,8 +2,13 @@
 
 import {
   ArrowLeft,
+  BadgeCheck,
   BookOpen,
+  ChevronRight,
+  CircleHelp,
+  Download,
   FileText,
+  House,
   LayoutDashboard,
   LogIn,
   Menu,
@@ -11,6 +16,7 @@ import {
   MapPin,
   Music2,
   Phone,
+  Route,
   Search,
   UserPlus,
   X,
@@ -32,14 +38,17 @@ import { BrandMark } from "./brand-mark";
 import { DashboardContextHeader } from "./dashboard-context-header";
 import { DashboardNavigation } from "./dashboard-navigation";
 
-const publicLinks = [
-  { href: "/", label: "Trang chủ" },
-  { href: "/search", label: "Tìm đề cử" },
-  { href: "/works", label: "Danh sách đề cử" },
-  { href: "/process", label: "Quy trình" },
-  { href: "/verify", label: "Tra cứu bằng xác lập" },
-  { href: "/guide", label: "Hướng dẫn" },
+const publicPrimaryLinks = [
+  { href: "/", label: "Trang chủ", icon: House },
+  { href: "/search", label: "Tìm đề cử", icon: Search },
+  { href: "/works", label: "Danh sách đề cử", icon: BookOpen },
+  { href: "/process", label: "Quy trình", icon: Route },
 ];
+const publicUtilityLinks = [
+  { href: "/verify", label: "Tra cứu bằng xác lập", icon: BadgeCheck },
+  { href: "/guide", label: "Hướng dẫn", icon: CircleHelp },
+];
+const publicLinks = [...publicPrimaryLinks, ...publicUtilityLinks];
 
 export function PublicShell({
   children,
@@ -84,6 +93,31 @@ export function PublicShell({
         (menuReturnFocusRef.current ?? menuButtonRef.current)?.focus(),
       );
     }
+  };
+
+  const renderMobileLink = (item: (typeof publicLinks)[number]) => {
+    const active =
+      item.href === "/"
+        ? pathname === item.href
+        : pathname === item.href || pathname.startsWith(`${item.href}/`);
+    const Icon = item.icon;
+    return (
+      <Link
+        aria-current={active ? "page" : undefined}
+        className="public-mobile-nav__link"
+        key={item.href}
+        ref={item.href === "/" ? firstMobileLinkRef : undefined}
+        href={item.href}
+        onClick={() => closeMenu(false)}
+      >
+        <Icon aria-hidden="true" className="public-mobile-nav__icon" />
+        <span>{item.label}</span>
+        <ChevronRight
+          aria-hidden="true"
+          className="public-mobile-nav__chevron"
+        />
+      </Link>
+    );
   };
 
   useEffect(() => {
@@ -219,18 +253,6 @@ export function PublicShell({
           </button>
         </div>
       </header>
-      {!publicHeaderAction ? (
-        <nav aria-label="Truy cập tài khoản" className="public-mobile-auth">
-          <Link className="public-mobile-auth__login" href="/login">
-            <LogIn aria-hidden="true" />
-            Đăng nhập
-          </Link>
-          <Link className="public-mobile-auth__register" href="/register">
-            <UserPlus aria-hidden="true" />
-            Tạo tài khoản
-          </Link>
-        </nav>
-      ) : null}
       {publicHeaderAction ? (
         <div
           aria-label="Quay lại khu vực làm việc"
@@ -260,7 +282,7 @@ export function PublicShell({
           <button
             type="button"
             className="public-mobile-drawer__backdrop"
-            aria-label="Đóng menu"
+            aria-hidden="true"
             tabIndex={-1}
             onClick={() => closeMenu()}
           />
@@ -270,38 +292,57 @@ export function PublicShell({
             className="public-mobile-nav"
             aria-label="Điều hướng di động"
           >
-            {publicLinks.map((item, index) => {
-              const active =
-                item.href === "/"
-                  ? pathname === item.href
-                  : pathname === item.href ||
-                    pathname.startsWith(`${item.href}/`);
-              return (
-                <Link
-                  aria-current={active ? "page" : undefined}
-                  className="public-mobile-nav__link"
-                  key={item.href}
-                  ref={index === 0 ? firstMobileLinkRef : undefined}
-                  href={item.href}
-                  onClick={() => closeMenu(false)}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-            <Link href="/install" onClick={() => closeMenu(false)}>
-              Tải ứng dụng
-            </Link>
+            <div
+              aria-label="Khám phá"
+              className="public-mobile-nav__section"
+              role="group"
+            >
+              <span className="public-mobile-nav__section-label">Khám phá</span>
+              {publicPrimaryLinks.map(renderMobileLink)}
+            </div>
+            <div
+              aria-label="Tiện ích"
+              className="public-mobile-nav__section public-mobile-nav__section--secondary"
+              role="group"
+            >
+              <span className="public-mobile-nav__section-label">Tiện ích</span>
+              {publicUtilityLinks.map(renderMobileLink)}
+              <Link
+                aria-current={pathname === "/install" ? "page" : undefined}
+                className="public-mobile-nav__link"
+                href="/install"
+                onClick={() => closeMenu(false)}
+              >
+                <Download
+                  aria-hidden="true"
+                  className="public-mobile-nav__icon"
+                />
+                <span>Tải ứng dụng</span>
+                <ChevronRight
+                  aria-hidden="true"
+                  className="public-mobile-nav__chevron"
+                />
+              </Link>
+            </div>
             <div className="public-mobile-nav__theme">
               <span>Giao diện</span>
               <ThemeToggle />
             </div>
             {publicHeaderAction ? (
               <Link
+                className="public-mobile-nav__link public-mobile-nav__workspace"
                 href={publicHeaderAction.href}
                 onClick={() => closeMenu(false)}
               >
-                {publicHeaderAction.label}
+                <LayoutDashboard
+                  aria-hidden="true"
+                  className="public-mobile-nav__icon"
+                />
+                <span>{publicHeaderAction.label}</span>
+                <ChevronRight
+                  aria-hidden="true"
+                  className="public-mobile-nav__chevron"
+                />
               </Link>
             ) : (
               <div
@@ -453,13 +494,14 @@ export function PublicShell({
               <Phone aria-hidden="true" size={18} />
               <span>
                 <strong>Ban Đề cử và Xác lập</strong>
+                <a href="tel:0834112288">0834.11.22.88</a>
                 <a href="tel:0989553535">0989.55.3535</a>
               </span>
             </p>
             <p>
               <Mail aria-hidden="true" size={18} />
-              <a href="mailto:tinhhoanoidung@gmail.com">
-                tinhhoanoidung@gmail.com
+              <a href="mailto:decu@tinhhoaviet.org.vn">
+                decu@tinhhoaviet.org.vn
               </a>
             </p>
           </div>

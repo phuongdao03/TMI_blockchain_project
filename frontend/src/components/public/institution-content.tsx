@@ -2,7 +2,7 @@ import Image from "next/image";
 import { Download, FileText } from "lucide-react";
 
 import { HeritageGallery } from "./heritage-gallery";
-import { ProposalViewer } from "./proposal-viewer";
+import { DeferredProposalViewer } from "./deferred-proposal-viewer";
 import { WelcomeMusic } from "./welcome-music";
 
 const decision = "/assets/institution/decision.pdf";
@@ -109,7 +109,7 @@ export function InstitutionContent() {
               </div>
             </div>
           </div>
-          <ProposalViewer />
+          <DeferredProposalViewer />
         </div>
       </section>
     </>

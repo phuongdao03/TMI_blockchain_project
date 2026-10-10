@@ -56,4 +56,26 @@ describe("ServiceWorkerRegistration", () => {
       expect(register).toHaveBeenCalledWith("/sw.js", { scope: "/" }),
     );
   });
+
+  it("does not wait for images to finish loading before registering", async () => {
+    const register = vi.fn().mockResolvedValue(undefined);
+    const readyState = vi
+      .spyOn(document, "readyState", "get")
+      .mockReturnValue("interactive");
+    Object.defineProperty(window, "isSecureContext", {
+      configurable: true,
+      value: true,
+    });
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: { register },
+    });
+
+    try {
+      render(<ServiceWorkerRegistration environment="production" />);
+      await waitFor(() => expect(register).toHaveBeenCalledOnce());
+    } finally {
+      readyState.mockRestore();
+    }
+  });
 });

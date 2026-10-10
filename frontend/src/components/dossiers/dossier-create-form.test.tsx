@@ -39,6 +39,41 @@ describe("DossierCreateForm", () => {
     expect(activeStep?.className).not.toContain("bg-primary-50");
   });
 
+  it("finds dossier types without Vietnamese accents and restores the full list", async () => {
+    const user = userEvent.setup();
+    listTypesMock.mockResolvedValue([
+      {
+        id: "d1",
+        name: "Di sản văn hóa",
+        currentVersion: { id: "v1", versionNo: 1, schema: { fields: [] } },
+      },
+      {
+        id: "d2",
+        name: "Tác phẩm nghệ thuật",
+        currentVersion: { id: "v2", versionNo: 1, schema: { fields: [] } },
+      },
+    ]);
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <DossierCreateForm />
+      </QueryClientProvider>,
+    );
+
+    const search = await screen.findByRole("searchbox", {
+      name: "Tìm loại hồ sơ",
+    });
+    await user.type(search, "di san");
+    expect(screen.getAllByRole("radio")).toHaveLength(1);
+    expect(screen.getByRole("radio", { name: /Di sản văn hóa/ })).toBeDefined();
+    await user.click(screen.getByRole("radio", { name: /Di sản văn hóa/ }));
+    await user.clear(search);
+    await user.type(search, "tac pham");
+    expect(screen.getByText("Đang chọn: Di sản văn hóa")).toBeDefined();
+    await user.clear(search);
+    expect(screen.getAllByRole("radio")).toHaveLength(2);
+  });
+
   it("creates a valid draft and opens its workspace", async () => {
     const user = userEvent.setup();
     createMock.mockResolvedValue({

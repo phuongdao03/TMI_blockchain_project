@@ -6,10 +6,9 @@ export function HeritageSymbols() {
       <figure className="registry-heritage__logo">
         <Image
           alt="Biểu trưng Trung tâm Xác lập Tinh Hoa Việt"
-          fetchPriority="high"
           height={2048}
-          loading="eager"
-          sizes="(max-width: 48rem) 76vw, 38vw"
+          loading="lazy"
+          sizes="(max-width: 48rem) 88px, 38vw"
           src="/assets/brand/logo-tinh-hoa-viet.png"
           width={2048}
         />
