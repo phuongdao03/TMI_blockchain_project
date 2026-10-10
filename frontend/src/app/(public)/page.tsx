@@ -102,7 +102,10 @@ export default function HomePage() {
           </div>
           <div className="registry-hero__actions relative z-10 max-w-[44rem] lg:pb-8">
             <div className="registry-hero__action-row">
-              <div className="registry-hero__buttons mt-9 flex flex-col gap-3 sm:flex-row">
+              <nav
+                aria-label="Truy cập tài khoản"
+                className="registry-hero__buttons mt-9 flex flex-col gap-3 sm:flex-row"
+              >
                 <Link
                   className="registry-button registry-button-primary"
                   href="/register"
@@ -115,7 +118,7 @@ export default function HomePage() {
                 >
                   Đăng nhập
                 </Link>
-              </div>
+              </nav>
               <Link
                 className="registry-hero__discover registry-button registry-button-primary"
                 href="/works"

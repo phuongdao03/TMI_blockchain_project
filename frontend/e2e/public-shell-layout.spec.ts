@@ -8,7 +8,7 @@ test("mobile home shows account actions without opening the menu", async ({
 
   const actions = page.getByRole("navigation", { name: "Truy cập tài khoản" });
   const login = actions.getByRole("link", { name: "Đăng nhập" });
-  const register = actions.getByRole("link", { name: "Tạo tài khoản" });
+  const register = actions.getByRole("link", { name: "Đăng ký" });
   await expect(login).toBeVisible();
   await expect(register).toBeVisible();
   for (const action of [login, register]) {
