@@ -60,6 +60,7 @@ export function MissionContent() {
             <Image
               alt=""
               height={256}
+                loading="eager"
               sizes="112px"
               src="/assets/brand/logo-tinh-hoa-viet.png"
               width={256}

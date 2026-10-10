@@ -195,8 +195,11 @@ def test_editor_permissions_validation_version_slug_history_and_preview(
             serialized = repr(preview)
             assert "owner_user_id" not in serialized
             assert "private/owner" not in serialized
-            assert preview.media[0].is_thumbnail is True
-            assert preview.media[0].poster_url is not None
+            thumbnail = next(
+                item for item in preview.media if item.kind is PublicMediaKind.VIDEO
+            )
+            assert thumbnail.is_thumbnail is True
+            assert thumbnail.poster_url is not None
             assert preview.title == "Approved work — curated"
             assert await session.scalar(select(func.count()).select_from(AuditLog)) == 1
         await engine.dispose()
