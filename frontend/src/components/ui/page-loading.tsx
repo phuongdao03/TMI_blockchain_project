@@ -7,6 +7,9 @@ export function PageLoading() {
         <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
         Đang tải nội dung…
       </span>
+      <span aria-hidden="true" className="page-loading__track">
+        <span className="page-loading__progress" />
+      </span>
       <div aria-hidden="true" className="page-loading__placeholder">
         <div className="page-loading__shape page-loading__eyebrow" />
         <div className="page-loading__shape page-loading__title" />

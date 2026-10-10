@@ -1,9 +1,14 @@
+import asyncio
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from app.core.config import Settings
 from app.main import create_application
+from app.modules.public.dependencies import get_public_verification
+from app.modules.public.verification import UnavailableCertificateReader
 
 
 def preview_settings(**overrides: object) -> Settings:
@@ -29,6 +34,28 @@ def test_production_preview_does_not_require_payment_or_blockchain_credentials()
     assert settings.release_mode == "preview"
     assert settings.payment_provider == "disabled"
     assert settings.business_workflows_enabled is False
+
+
+def test_preview_certificate_lookup_does_not_construct_gateway() -> None:
+    async def exercise() -> None:
+        redis_client = AsyncMock()
+        with (
+            patch(
+                "app.modules.public.dependencies.THVProofRegistryGateway",
+                side_effect=AssertionError("preview must not initialize the chain"),
+            ),
+            patch(
+                "app.modules.public.dependencies.Redis.from_url",
+                return_value=redis_client,
+            ),
+        ):
+            dependency = get_public_verification(object(), preview_settings())
+            service = await anext(dependency)
+            assert isinstance(service._gateway, UnavailableCertificateReader)
+            await dependency.aclose()
+        redis_client.aclose.assert_awaited_once()
+
+    asyncio.run(exercise())
 
 
 def test_production_preview_still_rejects_raw_blockchain_private_keys() -> None:

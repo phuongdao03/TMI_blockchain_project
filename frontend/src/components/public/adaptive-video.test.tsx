@@ -130,6 +130,25 @@ it("does not warm video when data saving is enabled", () => {
   }
 });
 
+it("does not preload a large fallback video on touch devices", () => {
+  vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true })));
+  const observe = vi.fn();
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      observe = observe;
+      disconnect = vi.fn();
+    },
+  );
+  try {
+    const { container } = render(<AdaptiveVideo fallbackUrl="/video.mp4" />);
+    expect(container.querySelector("video")?.getAttribute("src")).toBeNull();
+    expect(observe).not.toHaveBeenCalled();
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
 it("starts the adaptive stream and falls back to MP4 on error", () => {
   const load = vi
     .spyOn(HTMLMediaElement.prototype, "load")

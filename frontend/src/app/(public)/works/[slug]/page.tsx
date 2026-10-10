@@ -52,6 +52,7 @@ export default async function PublicAssetPage({
   if (result.kind === "not_found") notFound();
   return (
     <PublicWorkDetailPage
+      disableViewTracking={process.env.RELEASE_MODE === "preview"}
       initialDetail={result.kind === "detail" ? result.detail : undefined}
       slug={slug}
     />

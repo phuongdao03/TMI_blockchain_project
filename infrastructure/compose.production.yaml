@@ -80,6 +80,7 @@ services:
     environment:
       API_BASE_URL: http://backend:8000
       APP_BASE_URL: ${APP_BASE_URL}
+      RELEASE_MODE: ${RELEASE_MODE}
     init: true
     logging: *default-logging
     networks:

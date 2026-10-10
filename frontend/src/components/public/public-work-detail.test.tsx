@@ -119,6 +119,18 @@ describe("PublicWorkDetailPage", () => {
     });
   });
 
+  it("does not send a view event disabled by preview mode", () => {
+    render(
+      <PublicWorkDetailPage
+        disableViewTracking
+        initialDetail={detail}
+        slug={detail.slug}
+      />,
+      { wrapper },
+    );
+    expect(publicApi.recordView).not.toHaveBeenCalled();
+  });
+
   it("renders a deliberate no-media state", async () => {
     render(<PublicWorkDetailPage initialDetail={detail} slug={detail.slug} />, {
       wrapper,

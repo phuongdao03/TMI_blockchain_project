@@ -36,9 +36,11 @@ import {
 } from "@/lib/media/cloudinary-image-loader";
 
 export function PublicWorkDetailPage({
+  disableViewTracking = false,
   initialDetail,
   slug,
 }: {
+  disableViewTracking?: boolean;
   initialDetail?: PublicWorkDetail;
   slug: string;
 }) {
@@ -81,20 +83,27 @@ export function PublicWorkDetailPage({
       </div>
     );
   }
-  return <PublicWorkPresentation detail={detail.data} />;
+  return (
+    <PublicWorkPresentation
+      detail={detail.data}
+      disableViewTracking={disableViewTracking}
+    />
+  );
 }
 
 export function PublicWorkPresentation({
   detail,
+  disableViewTracking = false,
   preview = false,
 }: {
   detail: PublicWorkDetail;
+  disableViewTracking?: boolean;
   preview?: boolean;
 }) {
   useEffect(() => {
-    if (!preview)
+    if (!preview && !disableViewTracking)
       void publicApi.recordView(detail.canonicalSlug).catch(() => undefined);
-  }, [detail.canonicalSlug, preview]);
+  }, [detail.canonicalSlug, disableViewTracking, preview]);
 
   const verification = useQuery({
     queryKey: [

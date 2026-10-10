@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { VerificationPanel } from "@/components/public/verification-panel";
@@ -28,6 +28,42 @@ function renderPanel() {
 }
 
 describe("VerificationPanel", () => {
+  it("shows a published certificate without implying a successful chain check", async () => {
+    verifyToken.mockResolvedValue({
+      status: "PENDING",
+      networkAvailable: false,
+      checkedAt: "2026-08-12T08:00:00Z",
+      certificateNumber: "THV-2026-0001",
+      assetTitle: "Tác phẩm công khai",
+      documents: [],
+    });
+    certificateVersions.mockResolvedValue([]);
+    renderPanel();
+
+    expect(await screen.findByText("Chưa thể đối chiếu trực tiếp")).toBeDefined();
+    expect(screen.getAllByText("THV-2026-0001").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/đã được xác nhận trên blockchain/)).toBeNull();
+  });
+
+  it("keeps a failed lookup retryable without claiming the certificate is invalid", async () => {
+    verifyToken.mockClear();
+    verifyToken
+      .mockRejectedValueOnce(new Error("service unavailable"))
+      .mockResolvedValueOnce({
+        status: "NOT_FOUND",
+        checkedAt: "2026-08-12T08:00:00Z",
+      });
+    renderPanel();
+
+    expect(
+      await screen.findByText("Chưa tải được kết quả tra cứu"),
+    ).toBeDefined();
+    expect(screen.queryByText(/Bằng xác lập đã hết hạn/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
+    await waitFor(() => expect(verifyToken).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("Không tìm thấy bằng xác lập")).toBeDefined();
+  });
+
   it("does not render document comparison controls on a public certificate", async () => {
     verifyToken.mockResolvedValue({
       status: "VALID",

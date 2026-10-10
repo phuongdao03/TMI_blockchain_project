@@ -35,7 +35,12 @@ export function AdaptiveVideo({
   const [loading, setLoading] = useState(false);
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || streamingUrl || typeof IntersectionObserver === "undefined")
+    if (
+      !video ||
+      streamingUrl ||
+      typeof IntersectionObserver === "undefined" ||
+      window.matchMedia?.("(pointer: coarse)").matches
+    )
       return;
     setWarmed(false);
 

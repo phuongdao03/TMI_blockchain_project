@@ -563,7 +563,12 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             )
             assert configured.derivative_status is DerivativeStatus.PENDING
             assert dispatcher.ids == [relation_id]
-            assert await service.list_public(work_id) == ()
+            pending_media = await service.list_public(work_id)
+            assert len(pending_media) == 1
+            assert pending_media[0].url == (
+                f"/api/v1/public/works/{work_id}/media/{relation_id}"
+            )
+            assert pending_media[0].streaming_url is None
 
             configured.derivative_status = DerivativeStatus.FAILED
             configured.failure_code = "PROVIDER_UNAVAILABLE"
@@ -798,7 +803,11 @@ def test_public_video_worker_creates_a_safe_playable_derivative(tmp_path: Path) 
             await worker.process(relation_id)
             assert relation.derivative_status is DerivativeStatus.PROCESSING
             assert video_gateway.upload_count == 5
-            assert await service.list_public(work_id) == ()
+            processing_media = await service.list_public(work_id)
+            assert len(processing_media) == 1
+            assert processing_media[0].url == (
+                f"/api/v1/public/works/{work_id}/media/{relation_id}"
+            )
             with (
                 patch.object(
                     public_media_tasks, "get_session_factory", return_value=factory

@@ -159,8 +159,6 @@ class PublicMediaQueryService:
                     row.media_kind is PublicMediaKind.VIDEO
                     and row.derivative_status
                     in {DerivativeStatus.PENDING, DerivativeStatus.PROCESSING}
-                    and row.derivative_url is not None
-                    and row.derivative_url.startswith("/api/v1/public/works/")
                 )
             )
         fallback = next(

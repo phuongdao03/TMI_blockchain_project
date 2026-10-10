@@ -175,8 +175,19 @@ export function VerificationPanel({
             </span>
           </div>
         ) : result.error ? (
-          <div className="border border-red-400/30 bg-red-400/5 p-6 text-red-200">
-            Chưa thể kiểm tra blockchain. Vui lòng thử lại sau.
+          <div className="rounded-xl border border-amber-400/30 bg-amber-400/5 p-5 text-amber-100 sm:p-6" role="alert">
+            <p className="font-semibold">Chưa tải được kết quả tra cứu</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              Dịch vụ tra cứu đang gián đoạn. Trạng thái của bằng xác lập chưa
+              được kiểm tra trong lần này.
+            </p>
+            <button
+              className="mt-4 min-h-11 rounded-lg border border-amber-300/40 px-4 text-sm font-semibold text-amber-100"
+              onClick={() => void result.refetch()}
+              type="button"
+            >
+              Thử lại
+            </button>
           </div>
         ) : result.data ? (
           <div className="space-y-8">
@@ -258,7 +269,15 @@ function VerificationResult({
   data: Awaited<ReturnType<typeof publicApi.verifyNumber>>;
 }) {
   const copy =
-    data.status === "VALID" && data.isCurrentVersion === false
+    data.status === "PENDING" && data.networkAvailable === false
+      ? {
+          title: "Chưa thể đối chiếu trực tiếp",
+          detail:
+            "Thông tin bằng đã công bố vẫn hiển thị. Kết nối với Polygon chưa khả dụng trong lần tra cứu này; vui lòng kiểm tra lại sau.",
+          tone: "text-warning",
+          icon: ShieldQuestion,
+        }
+      : data.status === "VALID" && data.isCurrentVersion === false
       ? {
           title: "Phiên bản cũ của bằng xác lập",
           detail:
@@ -267,16 +286,12 @@ function VerificationResult({
           icon: History,
         }
       : resultCopy[data.status];
-  const detail =
-    data.status === "PENDING" && data.networkAvailable === false
-      ? "Bản ghi bằng xác lập vẫn còn trong hệ thống. Polygon đang tạm thời không phản hồi nên chưa thể đối chiếu trực tiếp; vui lòng thử lại sau."
-      : copy.detail;
   const Icon = copy.icon;
   return (
     <section className="grid gap-6 border-y border-white/10 py-6 sm:py-8 lg:grid-cols-[1fr_1fr]">
       <div>
         <Icon
-          className={`size-10 ${copy.tone} ${data.status === "PENDING" ? "animate-spin" : ""}`}
+          className={`size-10 ${copy.tone} ${data.status === "PENDING" && data.networkAvailable !== false ? "animate-spin" : ""}`}
         />
         <p
           className={`mt-5 text-xs font-bold uppercase tracking-[0.18em] ${copy.tone}`}
@@ -286,7 +301,9 @@ function VerificationResult({
         <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
           {copy.title}
         </h2>
-        <p className="mt-3 text-sm leading-6 text-slate-400">{detail}</p>
+        <p className="mt-3 text-sm leading-6 text-slate-400">
+          {copy.detail}
+        </p>
       </div>
       <div>
         <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">

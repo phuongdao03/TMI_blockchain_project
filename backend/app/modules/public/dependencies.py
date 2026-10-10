@@ -26,7 +26,11 @@ from app.modules.public.dossier_verification import (
 from app.modules.public.media_delivery import PublicMediaDeliveryService
 from app.modules.public.rate_limit import RedisPublicRateLimiter
 from app.modules.public.service import PublicCatalogService
-from app.modules.public.verification import PublicVerificationService
+from app.modules.public.verification import (
+    CertificateReader,
+    PublicVerificationService,
+    UnavailableCertificateReader,
+)
 
 
 async def get_public_media_delivery(
@@ -84,18 +88,24 @@ async def get_public_verification(
     settings: SettingsDependency,
 ) -> AsyncIterator[PublicVerificationService]:
     address = settings.thv_proof_registry_contract_address
-    gateway = THVProofRegistryGateway(
-        rpc_url=settings.blockchain_rpc_url,
-        network=settings.blockchain_network,
-        chain_id=settings.blockchain_chain_id,
-        contract_address=address,
-        abi_path=settings.thv_proof_registry_contract_abi_path,
-        allowed_networks=SUPPORTED_CHAINS,
-        allowed_contracts={
-            settings.blockchain_network: set(settings.blockchain_contract_allowlist)
-            or {address}
-        },
+    check_chain = (
+        settings.release_mode == "full" and settings.thv_proof_registry_configured
     )
+    real_gateway: THVProofRegistryGateway | None = None
+    if check_chain:
+        real_gateway = THVProofRegistryGateway(
+            rpc_url=settings.blockchain_rpc_url,
+            network=settings.blockchain_network,
+            chain_id=settings.blockchain_chain_id,
+            contract_address=address,
+            abi_path=settings.thv_proof_registry_contract_abi_path,
+            allowed_networks=SUPPORTED_CHAINS,
+            allowed_contracts={
+                settings.blockchain_network: set(settings.blockchain_contract_allowlist)
+                or {address}
+            },
+        )
+    gateway: CertificateReader = real_gateway or UnavailableCertificateReader()
     repository = PublicCatalogService(session).repository
     redis_client: Redis = Redis.from_url(settings.redis_url)
     try:
@@ -113,7 +123,8 @@ async def get_public_verification(
             audit_session=session,
         )
     finally:
-        await gateway.close()
+        if real_gateway is not None:
+            await real_gateway.close()
         await redis_client.aclose()
 
 

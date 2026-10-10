@@ -11861,3 +11861,71 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
     display: flex;
   }
 }
+
+/* Keep route feedback visible above the mobile navigation, including at zoom. */
+.page-loading__track {
+  display: block;
+  width: min(100%, 16rem);
+  height: 3px;
+  margin-top: 0.8rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--theme-accent) 22%, transparent);
+}
+
+.verification-form .ui-select-control__frame,
+.verification-form .ui-select-control,
+.verification-form #verification-value {
+  width: 100%;
+  min-width: 0;
+}
+
+.page-loading__progress {
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--theme-accent);
+  animation: navigation-loading-progress 1.2s ease-in-out infinite alternate;
+}
+
+@media (max-width: 48rem) {
+  .public-shell .public-header {
+    backdrop-filter: none;
+  }
+
+  .public-shell--workspace {
+    padding-bottom: calc(6.25rem + env(safe-area-inset-bottom));
+  }
+
+  .verification-panel {
+    gap: 1.5rem;
+  }
+
+  .verification-form {
+    padding-block: 1.25rem;
+  }
+
+  .page-loading {
+    min-height: 45dvh;
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (min-width: 80rem) and (max-width: 104rem) {
+  .public-home .registry-hero__layout {
+    min-height: calc(100dvh - 8rem);
+    padding-block: clamp(2rem, 4vh, 3.5rem);
+  }
+
+  .public-home .registry-hero h1 {
+    font-size: clamp(2.8rem, 4.5vw, 4.2rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-loading__progress {
+    animation: none;
+    width: 100%;
+  }
+}

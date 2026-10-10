@@ -19,7 +19,7 @@ export function WorkCoverPlaceholder({
           : FileText;
   return (
     <div
-      className="flex aspect-video w-full flex-col justify-between bg-[var(--thv-red-dark)] p-5 text-[var(--thv-white)] sm:p-7"
+      className="flex aspect-video w-full flex-col justify-between border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 text-[var(--theme-text)] sm:p-7"
       aria-label={`Bìa mặc định: ${title}`}
     >
       <div className="flex items-center justify-between gap-3">
@@ -35,7 +35,7 @@ export function WorkCoverPlaceholder({
         {title}
       </p>
       <span className="text-xs opacity-75">
-        Tinh Hoa Việt · Ảnh đại diện đang cập nhật
+        Nội dung xem trước đang cập nhật
       </span>
     </div>
   );

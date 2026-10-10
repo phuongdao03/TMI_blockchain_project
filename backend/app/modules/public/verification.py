@@ -193,6 +193,13 @@ class CertificateReader(Protocol):
     async def get_proof(self, asset_id: bytes, version: int) -> THVProofRecord: ...
 
 
+class UnavailableCertificateReader:
+    """Keep published certificate data readable when live chain checks are off."""
+
+    async def get_proof(self, asset_id: bytes, version: int) -> THVProofRecord:
+        raise BlockchainGatewayError("Blockchain verification is unavailable.")
+
+
 ContextFinder = Callable[[str], Awaitable[VerificationContext | None]]
 
 
