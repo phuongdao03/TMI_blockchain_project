@@ -40,7 +40,9 @@ describe("VerificationPanel", () => {
     certificateVersions.mockResolvedValue([]);
     renderPanel();
 
-    expect(await screen.findByText("Chưa thể đối chiếu trực tiếp")).toBeDefined();
+    expect(
+      await screen.findByText("Chưa thể đối chiếu trực tiếp"),
+    ).toBeDefined();
     expect(screen.getAllByText("THV-2026-0001").length).toBeGreaterThan(0);
     expect(screen.queryByText(/đã được xác nhận trên blockchain/)).toBeNull();
   });
@@ -61,7 +63,9 @@ describe("VerificationPanel", () => {
     expect(screen.queryByText(/Bằng xác lập đã hết hạn/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
     await waitFor(() => expect(verifyToken).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText("Không tìm thấy bằng xác lập")).toBeDefined();
+    expect(
+      await screen.findByText("Không tìm thấy bằng xác lập"),
+    ).toBeDefined();
   });
 
   it("does not render document comparison controls on a public certificate", async () => {

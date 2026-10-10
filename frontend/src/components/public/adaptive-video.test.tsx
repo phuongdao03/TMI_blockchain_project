@@ -131,7 +131,10 @@ it("does not warm video when data saving is enabled", () => {
 });
 
 it("does not preload a large fallback video on touch devices", () => {
-  vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true })));
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({ matches: true })),
+  );
   const observe = vi.fn();
   vi.stubGlobal(
     "IntersectionObserver",

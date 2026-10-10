@@ -175,7 +175,10 @@ export function VerificationPanel({
             </span>
           </div>
         ) : result.error ? (
-          <div className="rounded-xl border border-amber-400/30 bg-amber-400/5 p-5 text-amber-100 sm:p-6" role="alert">
+          <div
+            className="rounded-xl border border-amber-400/30 bg-amber-400/5 p-5 text-amber-100 sm:p-6"
+            role="alert"
+          >
             <p className="font-semibold">Chưa tải được kết quả tra cứu</p>
             <p className="mt-2 text-sm leading-6 text-slate-300">
               Dịch vụ tra cứu đang gián đoạn. Trạng thái của bằng xác lập chưa
@@ -278,14 +281,14 @@ function VerificationResult({
           icon: ShieldQuestion,
         }
       : data.status === "VALID" && data.isCurrentVersion === false
-      ? {
-          title: "Phiên bản cũ của bằng xác lập",
-          detail:
-            "Dữ liệu của phiên bản này còn đối chiếu được, nhưng đã có phiên bản mới. Tra cứu bằng số bằng xác lập để xem nội dung hiện hành.",
-          tone: "text-warning",
-          icon: History,
-        }
-      : resultCopy[data.status];
+        ? {
+            title: "Phiên bản cũ của bằng xác lập",
+            detail:
+              "Dữ liệu của phiên bản này còn đối chiếu được, nhưng đã có phiên bản mới. Tra cứu bằng số bằng xác lập để xem nội dung hiện hành.",
+            tone: "text-warning",
+            icon: History,
+          }
+        : resultCopy[data.status];
   const Icon = copy.icon;
   return (
     <section className="grid gap-6 border-y border-white/10 py-6 sm:py-8 lg:grid-cols-[1fr_1fr]">
@@ -301,9 +304,7 @@ function VerificationResult({
         <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
           {copy.title}
         </h2>
-        <p className="mt-3 text-sm leading-6 text-slate-400">
-          {copy.detail}
-        </p>
+        <p className="mt-3 text-sm leading-6 text-slate-400">{copy.detail}</p>
       </div>
       <div>
         <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
