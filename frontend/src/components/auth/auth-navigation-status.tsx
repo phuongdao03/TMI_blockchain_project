@@ -3,7 +3,7 @@ import { LoaderCircle } from "lucide-react";
 export function AuthNavigationStatus() {
   return (
     <div
-      className="fixed inset-0 z-[100] grid place-items-center bg-[#140b0b]/90 px-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] grid place-items-center bg-[#140b0b]/90 px-6"
       role="status"
     >
       <div className="w-full max-w-sm rounded-xl border border-[#ad8883]/35 bg-[#211313] px-8 py-9 text-center text-[#f6e9df] shadow-2xl">

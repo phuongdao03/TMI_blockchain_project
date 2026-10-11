@@ -44,7 +44,7 @@ export function FeaturedAssets() {
         {[0, 1, 2].map((item) => (
           <div
             aria-hidden="true"
-            className="dashboard-skeleton h-48 animate-pulse rounded-xl"
+            className={`dashboard-skeleton h-48 rounded-xl ${nearViewport ? "animate-pulse" : ""}`}
             key={item}
           />
         ))}

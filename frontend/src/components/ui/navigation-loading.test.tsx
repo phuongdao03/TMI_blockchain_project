@@ -30,8 +30,7 @@ it("shows navigation feedback after a mobile link tap and clears on arrival", ()
   );
   fireEvent.click(screen.getByRole("link", { name: "Bằng xác lập" }));
   expect(document.documentElement.dataset.navigationPending).toBe("true");
-  expect(screen.queryByRole("status")).toBeNull();
-  act(() => vi.advanceTimersByTime(120));
+  expect(screen.getByRole("status")).toBeTruthy();
   expect(screen.getByRole("status").textContent).toContain("Đang mở trang");
   vi.mocked(usePathname).mockReturnValue("/certificates");
   rerender(
@@ -44,6 +43,27 @@ it("shows navigation feedback after a mobile link tap and clears on arrival", ()
   );
   expect(screen.queryByRole("status")).toBeNull();
   expect(document.documentElement.dataset.navigationPending).toBeUndefined();
+});
+
+it("keeps feedback visible during a slow navigation", () => {
+  vi.useFakeTimers();
+  render(
+    <>
+      <NavigationLoading />
+      <Link href="/works">Khám phá</Link>
+    </>,
+  );
+  fireEvent.click(screen.getByRole("link", { name: "Khám phá" }));
+  act(() => vi.advanceTimersByTime(15_000));
+  expect(screen.getByRole("status").textContent).toContain("vẫn đang tải");
+  expect(document.documentElement.dataset.navigationPending).toBe("true");
+});
+
+it("shows feedback for programmatic navigation", () => {
+  render(<NavigationLoading />);
+  act(() => window.dispatchEvent(new Event("thv:navigation-start")));
+  expect(screen.getByRole("status")).toBeTruthy();
+  expect(document.documentElement.dataset.navigationPending).toBe("true");
 });
 
 it("shows progress for a search form and clears when its query arrives", () => {

@@ -3,28 +3,31 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+export function startNavigationFeedback() {
+  window.dispatchEvent(new Event("thv:navigation-start"));
+}
+
 export function NavigationLoading() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const locationKey = `${pathname}?${searchParams.toString()}`;
   const [visible, setVisible] = useState(false);
-  const startTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [slow, setSlow] = useState(false);
+  const slowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const clear = () => {
       delete document.documentElement.dataset.navigationPending;
-      if (startTimer.current) clearTimeout(startTimer.current);
-      if (stopTimer.current) clearTimeout(stopTimer.current);
-      startTimer.current = null;
-      stopTimer.current = null;
+      if (slowTimer.current) clearTimeout(slowTimer.current);
+      slowTimer.current = null;
       setVisible(false);
+      setSlow(false);
     };
     const schedule = () => {
       clear();
       document.documentElement.dataset.navigationPending = "true";
-      startTimer.current = setTimeout(() => setVisible(true), 120);
-      stopTimer.current = setTimeout(clear, 15_000);
+      setVisible(true);
+      slowTimer.current = setTimeout(() => setSlow(true), 8_000);
     };
     const onClick = (event: MouseEvent) => {
       if (
@@ -73,17 +76,21 @@ export function NavigationLoading() {
     };
     document.addEventListener("click", onClick, true);
     document.addEventListener("submit", onSubmit);
+    window.addEventListener("thv:navigation-start", schedule);
     return () => {
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("submit", onSubmit);
+      window.removeEventListener("thv:navigation-start", schedule);
       clear();
     };
   }, [locationKey]);
 
   return visible ? (
     <div className="navigation-loading" role="status" aria-live="polite">
-      <span className="navigation-loading__message">Đang mở trang…</span>
-      <span className="navigation-loading__bar" aria-hidden="true" />
+      <span className="navigation-loading__message">
+        <span className="navigation-loading__spinner" aria-hidden="true" />
+        {slow ? "Trang phản hồi chậm, vẫn đang tải…" : "Đang mở trang…"}
+      </span>
     </div>
   ) : null;
 }

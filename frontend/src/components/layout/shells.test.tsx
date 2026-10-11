@@ -221,7 +221,9 @@ describe("layout shells", () => {
     );
 
     const trigger = screen.getByRole("button", { name: /menu/i });
+    const originalOverflow = document.body.style.overflow;
     await user.click(trigger);
+    expect(document.body.style.overflow).toBe(originalOverflow);
     expect(screen.getAllByRole("button", { name: "Đóng menu" })).toHaveLength(
       1,
     );

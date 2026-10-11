@@ -72,6 +72,8 @@ export function HeritageGallery() {
   const [expanded, setExpanded] = useState(false);
   const [loadedFile, setLoadedFile] = useState<string>();
   const [failedFile, setFailedFile] = useState<string>();
+  const [nearViewport, setNearViewport] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
   const expandButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const visible =
@@ -80,6 +82,25 @@ export function HeritageGallery() {
       : photos.filter((photo) => photo.category === category);
   const photo = visible[index] ?? visible[0]!;
   const largePhoto = `/assets/institution/${photo.file}`;
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    if (!("IntersectionObserver" in window)) {
+      queueMicrotask(() => setNearViewport(true));
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setNearViewport(true);
+        observer.disconnect();
+      },
+      { rootMargin: "400px" },
+    );
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!expanded) return;
@@ -145,7 +166,7 @@ export function HeritageGallery() {
           ))}
         </div>
         <div className="heritage-gallery">
-          <div className="heritage-gallery__stage">
+          <div className="heritage-gallery__stage" ref={stageRef}>
             <Image
               alt={photo.title}
               fill
@@ -156,7 +177,9 @@ export function HeritageGallery() {
               src={largePhoto}
               style={{ opacity: loadedFile === photo.file ? 1 : 0 }}
             />
-            {loadedFile !== photo.file && failedFile !== photo.file ? (
+            {nearViewport &&
+            loadedFile !== photo.file &&
+            failedFile !== photo.file ? (
               <ImageLoadingStatus />
             ) : null}
             {failedFile === photo.file ? (
@@ -206,23 +229,25 @@ export function HeritageGallery() {
           aria-label="Chọn ảnh trong bộ sưu tập"
           className="heritage-gallery__thumbnails"
         >
-          {visible.map((item, position) => (
-            <button
-              aria-current={position === index ? "true" : undefined}
-              aria-label={`Xem ảnh ${position + 1}: ${item.title}`}
-              key={item.file}
-              onClick={() => setIndex(position)}
-              type="button"
-            >
-              <Image
-                alt=""
-                height={90}
-                sizes="104px"
-                src={`/assets/institution/${item.file}`}
-                width={160}
-              />
-            </button>
-          ))}
+          {nearViewport
+            ? visible.map((item, position) => (
+                <button
+                  aria-current={position === index ? "true" : undefined}
+                  aria-label={`Xem ảnh ${position + 1}: ${item.title}`}
+                  key={item.file}
+                  onClick={() => setIndex(position)}
+                  type="button"
+                >
+                  <Image
+                    alt=""
+                    height={90}
+                    sizes="104px"
+                    src={`/assets/institution/${item.file}`}
+                    width={160}
+                  />
+                </button>
+              ))
+            : null}
         </div>
       </div>
       {expanded ? (

@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { startNavigationFeedback } from "@/components/ui/navigation-loading";
 import { paymentApi } from "@/lib/api/client";
 import type { DossierStatus } from "@/lib/api/types";
 
@@ -37,7 +38,10 @@ export function DossierPaymentAction({
   const checkout = useMutation({
     mutationFn: (obligationId: string) =>
       paymentApi.createCheckout(obligationId, crypto.randomUUID()),
-    onSuccess: (order) => router.push(`/payments/${order.id}`),
+    onSuccess: (order) => {
+      startNavigationFeedback();
+      router.push(`/payments/${order.id}`);
+    },
   });
 
   if (dossierStatus === "PAID") {

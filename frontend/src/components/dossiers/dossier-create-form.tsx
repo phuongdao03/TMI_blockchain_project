@@ -18,6 +18,7 @@ import { useRef, useState } from "react";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { startNavigationFeedback } from "@/components/ui/navigation-loading";
 import { ApiError, dossierApi } from "@/lib/api/client";
 import { dossierKeys } from "@/lib/dossiers/query-keys";
 
@@ -136,6 +137,7 @@ export function DossierCreateForm() {
     mutationFn: dossierApi.create,
     onSuccess: async (dossier) => {
       await queryClient.invalidateQueries({ queryKey: dossierKeys.lists() });
+      startNavigationFeedback();
       router.push(`/dossiers/${dossier.id}?created=1`);
     },
   });

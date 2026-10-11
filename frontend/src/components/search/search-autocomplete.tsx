@@ -4,6 +4,7 @@ import { FolderTree, Search, Tag } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 
+import { startNavigationFeedback } from "@/components/ui/navigation-loading";
 import { publicApi } from "@/lib/api/client";
 import type {
   SearchAutocompleteKind,
@@ -63,6 +64,7 @@ export function SearchAutocomplete({
 
   function selectSuggestion(item: SearchAutocompleteSuggestion) {
     setOpen(false);
+    startNavigationFeedback();
     router.push(suggestionHref(item));
   }
 

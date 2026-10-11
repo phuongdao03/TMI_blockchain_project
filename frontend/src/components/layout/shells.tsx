@@ -123,7 +123,6 @@ export function PublicShell({
   useEffect(() => {
     if (!menuOpen) return;
 
-    const previousOverflow = document.body.style.overflow;
     const handleDrawerKeyboard = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         closeMenu();
@@ -149,12 +148,10 @@ export function PublicShell({
       }
     };
 
-    document.body.style.overflow = "hidden";
     document.addEventListener("keydown", handleDrawerKeyboard);
     firstMobileLinkRef.current?.focus();
 
     return () => {
-      document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleDrawerKeyboard);
     };
   }, [menuOpen]);

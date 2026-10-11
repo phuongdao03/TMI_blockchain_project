@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { AuthCard, AuthLink } from "@/components/auth/auth-card";
 import { Button } from "@/components/ui/button";
+import { startNavigationFeedback } from "@/components/ui/navigation-loading";
 import { ApiError, authApi } from "@/lib/api/client";
 import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
 
@@ -38,6 +39,7 @@ export function StaffInvitationForm({
       } else {
         await authApi.acceptStaffInvitation(token, idToken);
       }
+      startNavigationFeedback();
       router.replace("/login?invitation=accepted&next=%2Faccount");
     } catch (cause) {
       setError(

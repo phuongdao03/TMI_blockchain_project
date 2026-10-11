@@ -430,6 +430,7 @@ html[data-theme="dark"] .institution-section {
 .heritage-gallery__thumbnails {
   display: flex;
   gap: 0.5rem;
+  min-height: 5rem;
   overflow-x: auto;
   padding-top: 0.75rem;
 }
@@ -2003,6 +2004,7 @@ body {
     border: 0;
     background: color-mix(in srgb, var(--theme-ink) 18%, transparent);
     cursor: default;
+    touch-action: none;
     animation: mobile-backdrop-enter var(--motion-fast) var(--ease-standard)
       both;
   }
@@ -2017,6 +2019,7 @@ body {
     max-height: calc(100dvh - 6.25rem);
     overflow-y: auto;
     overscroll-behavior: contain;
+    touch-action: pan-y;
     padding: 0.75rem 0.75rem max(0.75rem, env(safe-area-inset-bottom));
     border: 1px solid var(--theme-border);
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
@@ -3226,9 +3229,8 @@ summary {
   z-index: 1000;
   top: env(safe-area-inset-top, 0px);
   inset-inline: 0;
-  height: 3px;
+  height: 0;
   pointer-events: none;
-  background: color-mix(in srgb, var(--theme-accent, #b7882f) 20%, transparent);
 }
 
 html[data-navigation-pending="true"]::after {
@@ -3244,16 +3246,11 @@ html[data-navigation-pending="true"]::after {
   animation: navigation-loading-progress 1.2s ease-in-out infinite alternate;
 }
 
-.navigation-loading__bar {
-  display: block;
-  width: 45%;
-  height: 100%;
-  background: var(--theme-accent, #b7882f);
-  animation: navigation-loading-progress 1.2s ease-in-out infinite alternate;
-}
-
 .navigation-loading__message {
   position: fixed;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
   left: 50%;
   bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
@@ -3267,11 +3264,39 @@ html[data-navigation-pending="true"]::after {
   font-size: 0.875rem;
   font-weight: 700;
   box-shadow: 0 8px 24px #1a0b0b55;
+  animation: navigation-message-enter 180ms ease-out both;
+}
+
+.navigation-loading__spinner {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgb(255 249 230 / 35%);
+  border-top-color: #fff9e6;
+  border-radius: 50%;
+  animation: navigation-spinner-turn 700ms linear infinite;
 }
 
 @media (min-width: 48rem) {
   .navigation-loading__message {
     display: none;
+  }
+}
+
+@keyframes navigation-message-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 0.4rem);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes navigation-spinner-turn {
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -11924,8 +11949,14 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html[data-navigation-pending="true"]::after,
+  .navigation-loading__message,
+  .navigation-loading__spinner,
   .page-loading__progress {
     animation: none;
+  }
+
+  .page-loading__progress {
     width: 100%;
   }
 }
