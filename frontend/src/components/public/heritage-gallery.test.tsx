@@ -19,6 +19,9 @@ it("does not spin for a lazy image before the gallery nears the viewport", async
   );
 
   render(<HeritageGallery />);
+  expect(
+    screen.getByRole("group", { name: "Chọn ảnh trong bộ sưu tập" }),
+  ).toBeDefined();
   expect(screen.queryByText("Đang tải hình ảnh…")).toBeNull();
   expect(
     document.querySelectorAll(".heritage-gallery__thumbnails button"),

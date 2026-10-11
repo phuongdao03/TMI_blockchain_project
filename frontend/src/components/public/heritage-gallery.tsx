@@ -228,6 +228,7 @@ export function HeritageGallery() {
         <div
           aria-label="Chọn ảnh trong bộ sưu tập"
           className="heritage-gallery__thumbnails"
+          role="group"
         >
           {nearViewport
             ? visible.map((item, position) => (
