@@ -215,7 +215,7 @@ test("signed-in mobile visitor keeps quick navigation across discovery pages", a
   ).toBeVisible();
 });
 
-test("medium public shell keeps a one-tap return to the workspace", async ({
+test("medium desktop shell keeps direct navigation and workspace access", async ({
   context,
   page,
 }, testInfo) => {
@@ -250,5 +250,8 @@ test("medium public shell keeps a one-tap return to the workspace", async ({
   await page.goto("/verify");
 
   await expect(page.locator(".public-header__workspace")).toBeVisible();
-  await expect(page.locator(".public-header__menu")).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Điều hướng chính" }),
+  ).toBeVisible();
+  await expect(page.locator(".public-header__menu")).toBeHidden();
 });
