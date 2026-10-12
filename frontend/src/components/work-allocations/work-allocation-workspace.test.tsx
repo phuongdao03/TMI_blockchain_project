@@ -35,24 +35,49 @@ describe("WorkAllocationWorkspace", () => {
   it("closes active work and moves it out of the open queue", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     const active = {
-      id: "allocation-1", kind: "GENERIC", objective: "Lập báo cáo",
-      description: null, dossierId: null, dossierVersionId: null,
-      dueAt: null, priority: "MEDIUM", status: "ACTIVE",
-      createdByUserId: "admin-1", createdAt: "2026-10-01T00:00:00Z",
+      id: "allocation-1",
+      kind: "GENERIC",
+      objective: "Lập báo cáo",
+      description: null,
+      dossierId: null,
+      dossierVersionId: null,
+      dueAt: null,
+      priority: "MEDIUM",
+      status: "ACTIVE",
+      createdByUserId: "admin-1",
+      createdAt: "2026-10-01T00:00:00Z",
       updatedAt: "2026-10-01T00:00:00Z",
     };
     listMock.mockImplementation(({ state }: { state: string }) =>
-      Promise.resolve({ data: state === "OPEN" ? [active] : [], meta: { total: state === "OPEN" ? 1 : 0 } }),
+      Promise.resolve({
+        data: state === "OPEN" ? [active] : [],
+        meta: { total: state === "OPEN" ? 1 : 0 },
+      }),
     );
     staffListMock.mockResolvedValue({ data: [], meta: { total: 0 } });
     dossierListMock.mockResolvedValue({ data: [], meta: { total: 0 } });
     completeMock.mockResolvedValue({ ...active, status: "COMPLETED" });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><WorkAllocationWorkspace /></QueryClientProvider>);
-    fireEvent.click(await screen.findByRole("button", { name: "Đánh dấu hoàn thành" }));
-    await waitFor(() => expect(completeMock).toHaveBeenCalledWith("allocation-1"));
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <WorkAllocationWorkspace />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Đánh dấu hoàn thành" }),
+    );
+    await waitFor(() =>
+      expect(completeMock).toHaveBeenCalledWith("allocation-1"),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Đã hoàn thành" }));
-    await waitFor(() => expect(listMock).toHaveBeenCalledWith({ pageSize: 50, state: "COMPLETED" }));
+    await waitFor(() =>
+      expect(listMock).toHaveBeenCalledWith({
+        pageSize: 50,
+        state: "COMPLETED",
+      }),
+    );
     confirm.mockRestore();
   });
   it("creates a general allocation with an explicit responsible person", async () => {

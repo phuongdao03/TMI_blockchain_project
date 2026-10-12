@@ -16,10 +16,8 @@ def test_release_rejects_malformed_encryption_keys(tmp_path: Path) -> None:
     if bash is None:
         pytest.skip("Bash is unavailable")
 
-    release_lib = (
-        Path(__file__).resolve().parents[3]
-        / "infrastructure/scripts/release-lib.sh"
-    )
+    project_root = Path(__file__).resolve().parents[3]
+    release_lib = project_root / "infrastructure/scripts/release-lib.sh"
     env_file = tmp_path / ".env.production"
     command = 'source "$1"; require_encryption_key "$2" PII_ENCRYPTION_KEY'
 

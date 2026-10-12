@@ -65,7 +65,9 @@ describe("OperationsDashboard", () => {
       jobStatusCounts: {},
     });
     render(<OperationsDashboard />, { wrapper: Wrapper });
-    expect(await screen.findByText(/Hiện chưa có dữ liệu vận hành cần xử lý/)).toBeDefined();
+    expect(
+      await screen.findByText(/Hiện chưa có dữ liệu vận hành cần xử lý/),
+    ).toBeDefined();
     expect(screen.queryByText("Chưa tải được tổng quan vận hành")).toBeNull();
   });
   beforeEach(() => {

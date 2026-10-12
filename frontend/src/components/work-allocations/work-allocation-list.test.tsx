@@ -57,12 +57,17 @@ describe("WorkAllocationList", () => {
         onSelect={vi.fn()}
         onComplete={onComplete}
         onCancel={onCancel}
-        rows={[dossierAllocation, { ...dossierAllocation, id: "done", status: "COMPLETED" }]}
+        rows={[
+          dossierAllocation,
+          { ...dossierAllocation, id: "done", status: "COMPLETED" },
+        ]}
         selectedAllocationId={null}
         selectedDetail={null}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Đánh dấu hoàn thành" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Đánh dấu hoàn thành" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Hủy phân công" }));
     expect(onComplete).toHaveBeenCalledWith("allocation-1");
     expect(onCancel).toHaveBeenCalledWith("allocation-1");

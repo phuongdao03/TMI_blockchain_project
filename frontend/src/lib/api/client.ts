@@ -2147,7 +2147,13 @@ export const taskAdminApi = {
 };
 
 export const workAllocationAdminApi = {
-  list(filters: { page?: number; pageSize?: number; state?: "OPEN" | "COMPLETED" | "CANCELLED" | "ALL" } = {}) {
+  list(
+    filters: {
+      page?: number;
+      pageSize?: number;
+      state?: "OPEN" | "COMPLETED" | "CANCELLED" | "ALL";
+    } = {},
+  ) {
     const parameters = new URLSearchParams({
       page: String(filters.page ?? 1),
       pageSize: String(filters.pageSize ?? 20),

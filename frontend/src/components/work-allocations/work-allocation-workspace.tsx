@@ -38,7 +38,8 @@ export function WorkAllocationWorkspace() {
   const queryClient = useQueryClient();
   const allocations = useQuery({
     queryKey: ["work-allocations", listState],
-    queryFn: () => workAllocationAdminApi.list({ pageSize: 50, state: listState }),
+    queryFn: () =>
+      workAllocationAdminApi.list({ pageSize: 50, state: listState }),
   });
   const reviewDossiers = useQuery({
     queryKey: ["review-dossiers", "allocation-composer"],
@@ -70,7 +71,10 @@ export function WorkAllocationWorkspace() {
     },
   });
   const closeAllocation = useMutation({
-    mutationFn: ({ allocationId, target }: {
+    mutationFn: ({
+      allocationId,
+      target,
+    }: {
       allocationId: string;
       target: "COMPLETED" | "CANCELLED";
     }) =>
@@ -81,7 +85,9 @@ export function WorkAllocationWorkspace() {
       setClosedState(variables.target);
       setSelectedAllocationId(null);
       await queryClient.invalidateQueries({ queryKey: ["work-allocations"] });
-      await queryClient.invalidateQueries({ queryKey: ["my-work-allocations"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["my-work-allocations"],
+      });
     },
   });
   const requestClose = (
@@ -156,7 +162,8 @@ export function WorkAllocationWorkspace() {
           {closedState === "COMPLETED"
             ? "Đã hoàn thành phân công."
             : "Đã hủy phân công."}{" "}
-          Xem lại trong mục {closedState === "COMPLETED" ? "Đã hoàn thành" : "Đã hủy"}.
+          Xem lại trong mục{" "}
+          {closedState === "COMPLETED" ? "Đã hoàn thành" : "Đã hủy"}.
         </p>
       ) : null}
       {completedKind ? (
@@ -300,11 +307,13 @@ export function WorkAllocationWorkspace() {
           className="mb-4 flex flex-wrap gap-2"
           role="group"
         >
-          {([
-            ["OPEN", "Đang mở"],
-            ["COMPLETED", "Đã hoàn thành"],
-            ["CANCELLED", "Đã hủy"],
-          ] as const).map(([state, label]) => (
+          {(
+            [
+              ["OPEN", "Đang mở"],
+              ["COMPLETED", "Đã hoàn thành"],
+              ["CANCELLED", "Đã hủy"],
+            ] as const
+          ).map(([state, label]) => (
             <button
               aria-pressed={listState === state}
               className={`min-h-10 rounded-lg border px-4 text-sm font-bold ${listState === state ? "border-primary-700 bg-primary-700 text-white" : "border-[var(--theme-border)] text-[var(--theme-text)]"}`}
@@ -325,10 +334,14 @@ export function WorkAllocationWorkspace() {
           onComplete={(allocationId) => requestClose(allocationId, "COMPLETED")}
           onCancel={(allocationId) => requestClose(allocationId, "CANCELLED")}
           closingAllocationId={
-            closeAllocation.isPending ? closeAllocation.variables.allocationId : null
+            closeAllocation.isPending
+              ? closeAllocation.variables.allocationId
+              : null
           }
           closeError={
-            closeAllocation.isError ? closeAllocation.variables.allocationId : null
+            closeAllocation.isError
+              ? closeAllocation.variables.allocationId
+              : null
           }
           closeErrorCode={
             closeAllocation.error instanceof ApiError

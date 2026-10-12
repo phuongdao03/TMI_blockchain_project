@@ -1,11 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowRight,
-  FilePlus2,
-  FolderSearch,
-} from "lucide-react";
+import { ArrowRight, FilePlus2, FolderSearch } from "lucide-react";
 import Link from "next/link";
 
 import { DossierStatusBadge } from "@/components/dossiers/dossier-status";
@@ -64,7 +60,9 @@ export function DossierList({
         className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5"
         role="status"
       >
-        <p className="text-sm font-semibold text-neutral-600">Đang tải hồ sơ…</p>
+        <p className="text-sm font-semibold text-neutral-600">
+          Đang tải hồ sơ…
+        </p>
         {[0, 1, 2].map((item) => (
           <div
             aria-hidden="true"

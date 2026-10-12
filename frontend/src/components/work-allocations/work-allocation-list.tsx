@@ -179,7 +179,10 @@ export function WorkAllocationList({
             </div>
           ) : null}
           {closeError === allocation.id ? (
-            <p className="mt-2 text-sm text-red-700 dark:text-red-300" role="alert">
+            <p
+              className="mt-2 text-sm text-red-700 dark:text-red-300"
+              role="alert"
+            >
               {closeErrorCode === "WORK_ALLOCATION_REVIEW_INCOMPLETE"
                 ? "Cần hoàn tất các lượt thẩm định trước khi đóng phân công."
                 : "Chưa cập nhật được trạng thái. Vui lòng thử lại."}

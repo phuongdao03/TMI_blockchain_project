@@ -112,7 +112,9 @@ export function AccountSettings() {
       <Card className="shadow-none">
         <CardHeader className="border-b border-neutral-100">
           <CardTitle>
-            {tab === "profile" ? "Hồ sơ cá nhân và nhân viên" : "Quản trị tổ chức"}
+            {tab === "profile"
+              ? "Hồ sơ cá nhân và nhân viên"
+              : "Quản trị tổ chức"}
           </CardTitle>
           <CardDescription>
             {tab === "profile"
@@ -127,7 +129,10 @@ export function AccountSettings() {
                 className="flex min-h-40 items-center justify-center gap-3 text-sm text-neutral-500"
                 role="status"
               >
-                <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-5 animate-spin"
+                />
                 Đang tải hồ sơ…
               </p>
             ) : profileQuery.data ? (

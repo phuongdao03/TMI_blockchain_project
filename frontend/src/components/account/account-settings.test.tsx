@@ -31,8 +31,14 @@ it("loads an employee's editable profile without waiting for organizations", asy
     },
   });
   listOrganizations.mockRejectedValue(new Error("organization unavailable"));
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(<QueryClientProvider client={client}><AccountSettings /></QueryClientProvider>);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <AccountSettings />
+    </QueryClientProvider>,
+  );
   expect(await screen.findByLabelText("Họ và tên")).toBeDefined();
   expect(screen.getByText("NV-001")).toBeDefined();
   expect(listOrganizations).not.toHaveBeenCalled();
