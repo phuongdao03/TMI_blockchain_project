@@ -8464,7 +8464,9 @@ html[data-theme="dark"] .public-home .home-journey .font-mono {
     margin: 2rem auto 0;
     overflow: hidden;
     border-radius: 50%;
-    box-shadow: 0 0 0 1px #caa550, 0 0 0 0.65rem rgb(202 165 80 / 12%);
+    box-shadow:
+      0 0 0 1px #caa550,
+      0 0 0 0.65rem rgb(202 165 80 / 12%);
   }
 
   .mission-section__seal img {

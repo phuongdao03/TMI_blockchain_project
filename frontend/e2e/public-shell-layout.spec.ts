@@ -10,9 +10,11 @@ test("mobile home shows imagery and account actions without opening the menu", a
   await expect(story).toBeVisible();
   await expect
     .poll(() =>
-      story.locator("img").evaluateAll((images) =>
-        images.every((image) => (image as HTMLImageElement).naturalWidth > 0),
-      ),
+      story
+        .locator("img")
+        .evaluateAll((images) =>
+          images.every((image) => (image as HTMLImageElement).naturalWidth > 0),
+        ),
     )
     .toBe(true);
 
