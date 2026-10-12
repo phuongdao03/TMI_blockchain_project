@@ -92,12 +92,17 @@ describe("PWA installation", () => {
     );
   });
 
-  it("shows actionable browser steps instead of a non-working button when no prompt is available", async () => {
+  it("keeps the install action available while waiting for the browser prompt", async () => {
     render(<PwaInstallAction />);
     expect(
       await screen.findByText(/Nếu trình duyệt chưa mở hộp thoại cài đặt/),
     ).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Tải ứng dụng" })).toBeNull();
+    const installButton = screen.getByRole("button", { name: "Tải ứng dụng" });
+    await userEvent.setup().click(installButton);
+    expect(screen.getByRole("status").textContent).toContain(
+      "Trình duyệt chưa mở được hộp thoại cài đặt",
+    );
+    expect((installButton as HTMLButtonElement).disabled).toBe(false);
     expect(
       screen
         .getByRole("link", { name: "Xem cách cài trên thiết bị" })

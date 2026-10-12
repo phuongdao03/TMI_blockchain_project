@@ -53,10 +53,7 @@ test("exposes an installable PWA shell", async ({ page, request }) => {
   const nativeInstallAction = installGuide.getByRole("button", {
     name: "Tải ứng dụng",
   });
-  if (await nativeInstallAction.isVisible()) {
-    await expect(nativeInstallAction).toBeEnabled();
-  } else {
-    await expect(installGuide).toContainText("menu Chrome hoặc Edge");
-  }
+  await expect(nativeInstallAction).toBeVisible();
+  await expect(nativeInstallAction).toBeEnabled();
   expect(browserErrors).toEqual([]);
 });

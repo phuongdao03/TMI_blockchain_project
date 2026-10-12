@@ -230,17 +230,15 @@ export function PwaInstallAction() {
   }
   return (
     <div className="space-y-4">
-      {promptReady ? (
-        <button
-          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary-700 px-6 text-sm font-bold text-white transition hover:bg-primary-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 sm:w-auto"
-          disabled={state === "working"}
-          onClick={() => void install()}
-          type="button"
-        >
-          <Download aria-hidden="true" className="size-5" />
-          {state === "working" ? "Đang mở cài đặt…" : "Tải ứng dụng"}
-        </button>
-      ) : null}
+      <button
+        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary-700 px-6 text-sm font-bold text-white transition hover:bg-primary-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 sm:w-auto"
+        disabled={state === "working"}
+        onClick={() => void install()}
+        type="button"
+      >
+        <Download aria-hidden="true" className="size-5" />
+        {state === "working" ? "Đang mở cài đặt…" : "Tải ứng dụng"}
+      </button>
       <p
         className="text-sm leading-6 text-[var(--theme-muted)]"
         role={manualNeeded ? "status" : undefined}
