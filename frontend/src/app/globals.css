@@ -1966,7 +1966,7 @@ body {
   color: var(--thv-gold-light);
 }
 
-@media (max-width: 96rem) {
+@media (max-width: 63.99rem) {
   .public-header {
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -2108,7 +2108,7 @@ body {
 /* The shell width, rather than only the browser viewport, decides when the
    public header becomes compact. This also protects embedded/narrow layouts
    from squeezing the workspace action outside the visible header. */
-@container public-shell (max-width: 76rem) {
+@container public-shell (max-width: 63.99rem) {
   .public-header {
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -7634,7 +7634,7 @@ html[data-theme="dark"] .dashboard-main .bg-background {
 
 /* On compact public headers, the workspace entry lives in the menu drawer.
    This prevents the account action from squeezing the brand or theme control. */
-@media (max-width: 76rem) {
+@media (max-width: 63.99rem) {
   .public-shell .public-header {
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -7730,7 +7730,7 @@ html[data-theme="dark"] .public-library-page {
   color: var(--thv-gold-light);
 }
 
-@media (max-width: 76rem) {
+@media (max-width: 63.99rem) {
   .public-shell .public-header {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.75rem;
@@ -8459,7 +8459,7 @@ html[data-theme="dark"] .public-home .home-journey .font-mono {
 @media (max-width: 48rem) {
   .mission-section__seal {
     display: block;
-    width: 11rem;
+    width: min(13.5rem, 58vw);
     aspect-ratio: 1;
     margin: 2rem auto 0;
     overflow: hidden;
@@ -8619,15 +8619,6 @@ html[data-theme="dark"] .mission-section__objectives li {
   grid-area: visual;
 }
 
-.registry-hero__mobile-story {
-  display: none;
-}
-
-.registry-hero__mobile-landscape,
-.registry-hero__mobile-craft {
-  position: relative;
-}
-
 .public-home .registry-hero h1 {
   max-width: 15ch;
   font-size: clamp(2.5rem, 3.8vw, 3.5rem);
@@ -8653,35 +8644,66 @@ html[data-theme="dark"] .mission-section__objectives li {
 .registry-heritage {
   position: relative;
   width: min(100%, 40rem);
-  aspect-ratio: 1;
+  aspect-ratio: 1.14;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgb(246 197 21 / 45%);
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(circle at 76% 35%, rgb(240 168 81 / 30%), transparent 45%),
+    linear-gradient(125deg, #3c0913, #7d1b18 64%, #ad411b);
   scroll-margin-top: 7rem;
 }
 
+.registry-heritage__drum,
+.registry-heritage__bird,
 .registry-heritage__logo {
   position: absolute;
-  margin: 0;
-}
-
-.registry-heritage__logo img {
   display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  height: auto;
 }
 
-.registry-heritage__logo img {
-  transform: scale(1.23);
+.registry-heritage__drum {
+  top: -24%;
+  left: -18%;
+  width: 105%;
+  opacity: 0.66;
+  filter: sepia(1) saturate(2) brightness(1.5);
+}
+
+.registry-heritage__bird {
+  top: 1%;
+  left: -14%;
+  width: 54%;
+  -webkit-mask-image: radial-gradient(circle, #000 42%, transparent 73%);
+  mask-image: radial-gradient(circle, #000 42%, transparent 73%);
 }
 
 .registry-heritage__logo {
   z-index: 1;
-  top: 50%;
-  left: 50%;
-  width: 78%;
+  top: 10%;
+  right: 4%;
+  width: 68%;
   aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  overflow: hidden;
+  border: 1px solid rgb(255 207 108 / 75%);
   border-radius: 50%;
+  box-shadow: 0 0 0 0.5rem rgb(255 207 108 / 9%);
+  animation: heritage-seal-breathe 5s ease-in-out infinite alternate;
+}
+
+.registry-heritage__light {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 28%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 235 173 / 12%),
+    transparent
+  );
+  pointer-events: none;
+  transform: translate3d(-150%, 0, 0) skewX(-16deg);
+  animation: heritage-light-pass 5s linear infinite;
 }
 
 html[data-theme="light"] .public-home .registry-hero {
@@ -11354,8 +11376,8 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
   }
 }
 
-/* At laptop widths, keep every public destination visible on a second row. */
-@media (min-width: 80rem) and (max-width: 104rem) {
+/* Keep one desktop header structure across browser zoom levels. */
+@media (min-width: 64rem) {
   .public-header {
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: auto auto;
@@ -11751,63 +11773,34 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
   }
 
   .public-home .registry-visual--heritage {
-    display: none;
-  }
-
-  .public-home .registry-hero__mobile-story {
     grid-area: story;
-    display: block;
-    position: relative;
+    display: flex;
+    min-height: 0;
+    margin-top: 1.4rem;
+  }
+
+  .public-home .registry-heritage {
     width: 100%;
-    height: clamp(12.5rem, 55vw, 16rem);
-    margin: 1.5rem 0 0;
+    height: clamp(11rem, 52vw, 14rem);
+    aspect-ratio: auto;
   }
 
-  .registry-hero__mobile-landscape {
-    position: absolute;
-    inset: 0 2.25rem 1rem 0;
-    overflow: hidden;
-    border-radius: 0.85rem;
-    background: #314b3d;
+  .public-home .registry-heritage__drum {
+    top: -47%;
+    left: -15%;
+    width: 100%;
   }
 
-  .registry-hero__mobile-landscape::after {
-    position: absolute;
-    inset: 45% 0 0;
-    background: linear-gradient(transparent, rgb(18 27 22 / 76%));
-    content: "";
+  .public-home .registry-heritage__bird {
+    top: -7%;
+    left: -8%;
+    width: 48%;
   }
 
-  .registry-hero__mobile-landscape img,
-  .registry-hero__mobile-craft img {
-    object-fit: cover;
-  }
-
-  .registry-hero__mobile-craft {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: clamp(6.5rem, 32vw, 8rem);
-    aspect-ratio: 1;
-    overflow: hidden;
-    border: 3px solid var(--hero-surface);
-    border-radius: 0.85rem;
-    background: #ad7b45;
-  }
-
-  .registry-hero__mobile-story figcaption {
-    position: absolute;
-    bottom: 1.65rem;
-    left: 0.9rem;
-    max-width: calc(100% - 9.5rem);
-    border-left: 2px solid #f6c515;
-    padding-left: 0.55rem;
-    color: #fff8ed;
-    font-size: 0.73rem;
-    font-weight: 700;
-    letter-spacing: 0.025em;
-    line-height: 1.35;
-    text-shadow: 0 1px 5px rgb(0 0 0 / 55%);
+  .public-home .registry-heritage__logo {
+    top: 2%;
+    right: 4%;
+    width: 54%;
   }
 
   .public-home .registry-hero__actions {
@@ -11882,6 +11875,31 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
     color: var(--hero-note) !important;
     font-size: 0.75rem;
     line-height: 1.5;
+  }
+}
+
+@keyframes heritage-light-pass {
+  from {
+    transform: translate3d(-150%, 0, 0) skewX(-16deg);
+  }
+  to {
+    transform: translate3d(400%, 0, 0) skewX(-16deg);
+  }
+}
+
+@keyframes heritage-seal-breathe {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.025);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .registry-heritage__logo,
+  .registry-heritage__light {
+    animation: none;
   }
 }
 

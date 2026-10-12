@@ -6,8 +6,19 @@ test("mobile home shows imagery and account actions without opening the menu", a
   test.skip(testInfo.project.name !== "mobile-chrome");
   await page.goto("/");
 
-  const story = page.locator(".registry-hero__mobile-story");
+  const story = page.locator(".registry-heritage");
   await expect(story).toBeVisible();
+  await expect(story.locator("img")).toHaveCount(3);
+  const logo = story.locator(".registry-heritage__logo");
+  const bird = story.locator(".registry-heritage__bird");
+  expect((await logo.boundingBox())!.width).toBeGreaterThan(
+    (await bird.boundingBox())!.width,
+  );
+  await expect(story.locator(".registry-heritage__light")).toHaveCSS(
+    "animation-name",
+    "heritage-light-pass",
+  );
+  await expect(logo).toHaveCSS("animation-name", "heritage-seal-breathe");
   await expect
     .poll(() =>
       story
@@ -51,6 +62,41 @@ test("mobile home loads featured works when they approach the viewport", async (
 
   await page.locator(".home-featured").scrollIntoViewIfNeeded();
   await expect.poll(() => featuredRequests.length).toBe(1);
+});
+
+test("public header keeps a stable desktop navigation when viewport width changes", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chrome");
+  await page.goto("/");
+
+  const header = page.locator(".public-header");
+  const artwork = page.locator(".registry-heritage");
+  await expect(artwork).toBeVisible();
+  await expect(artwork.locator("img")).toHaveCount(3);
+  const navigation = page.getByRole("navigation", { name: "Điều hướng chính" });
+  const brand = header.locator(".brand-mark");
+
+  for (const width of [1024, 1280, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(navigation).toBeVisible();
+    const brandBox = await brand.boundingBox();
+    const navigationBox = await navigation.boundingBox();
+    expect(brandBox).not.toBeNull();
+    expect(navigationBox).not.toBeNull();
+    expect(navigationBox!.y).toBeGreaterThanOrEqual(
+      brandBox!.y + brandBox!.height,
+    );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+
+  await page.setViewportSize({ width: 1000, height: 900 });
+  await expect(navigation).toBeHidden();
+  await expect(page.getByRole("button", { name: "Mở menu" })).toBeVisible();
 });
 
 test("compact public shell keeps the account entry in its drawer and uses a full-height page frame", async ({

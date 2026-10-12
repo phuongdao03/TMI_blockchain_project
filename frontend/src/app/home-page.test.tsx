@@ -34,7 +34,6 @@ describe("HomePage", () => {
     expect(
       hero?.querySelector(".registry-hero__copy--desktop")?.textContent,
     ).toContain("đối chiếu thông tin được công bố");
-    expect(hero?.querySelector(".registry-hero__mobile-seal img")).toBeNull();
     const missionLead = document.querySelector(".mission-section__lead");
     const missionSeal = missionLead?.nextElementSibling;
     expect(missionSeal?.classList.contains("mission-section__seal")).toBe(true);
@@ -44,8 +43,10 @@ describe("HomePage", () => {
         "mission-section__invitation",
       ),
     ).toBe(true);
-    expect(document.querySelectorAll(".registry-heritage img")).toHaveLength(1);
-    expect(document.querySelector(".registry-heritage__outline")).toBeNull();
+    expect(hero?.querySelectorAll(".registry-heritage img")).toHaveLength(3);
+    expect(
+      hero?.querySelector(".registry-heritage__logo")?.getAttribute("src"),
+    ).toContain("logo-tinh-hoa-viet.png");
     expect(
       screen.getByRole("img", {
         name: "Biểu trưng Trung tâm Xác lập Tinh Hoa Việt",
