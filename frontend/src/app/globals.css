@@ -8646,64 +8646,88 @@ html[data-theme="dark"] .mission-section__objectives li {
   width: min(100%, 40rem);
   aspect-ratio: 1.14;
   margin: 0;
-  overflow: hidden;
-  border: 1px solid rgb(246 197 21 / 45%);
-  border-radius: 1.25rem;
-  background:
-    radial-gradient(circle at 76% 35%, rgb(240 168 81 / 30%), transparent 45%),
-    linear-gradient(125deg, #3c0913, #7d1b18 64%, #ad411b);
+  /* Clipping the halo at this box exposes a rectangular edge. */
+  overflow: visible;
+  border: 0;
+  background: transparent;
   scroll-margin-top: 7rem;
 }
 
 .registry-heritage__drum,
-.registry-heritage__bird,
-.registry-heritage__logo {
+.registry-heritage__bird {
   position: absolute;
   display: block;
   height: auto;
 }
 
 .registry-heritage__drum {
-  top: -24%;
-  left: -18%;
-  width: 105%;
-  opacity: 0.66;
+  top: 50%;
+  left: 50%;
+  width: 82%;
+  opacity: 0.38;
   filter: sepia(1) saturate(2) brightness(1.5);
+  transform: translate(-50%, -50%);
 }
 
 .registry-heritage__bird {
   top: 1%;
-  left: -14%;
-  width: 54%;
-  -webkit-mask-image: radial-gradient(circle, #000 42%, transparent 73%);
-  mask-image: radial-gradient(circle, #000 42%, transparent 73%);
+  left: -10%;
+  width: 24%;
+  opacity: 0.82;
+  -webkit-mask-image: radial-gradient(circle, #000 38%, transparent 66%);
+  mask-image: radial-gradient(circle, #000 38%, transparent 66%);
 }
 
-.registry-heritage__logo {
+.registry-heritage__seal {
+  position: absolute;
   z-index: 1;
   top: 10%;
   right: 4%;
   width: 68%;
   aspect-ratio: 1;
-  border: 1px solid rgb(255 207 108 / 75%);
+}
+
+.registry-heritage__glint {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
   border-radius: 50%;
-  box-shadow: 0 0 0 0.5rem rgb(255 207 108 / 9%);
-  animation: heritage-seal-breathe 5s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.registry-heritage__glint::before {
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  left: -55%;
+  width: 55%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 239 181 / 16%) 30%,
+    rgb(255 255 255 / 56%) 50%,
+    rgb(255 239 181 / 16%) 70%,
+    transparent
+  );
+  content: "";
+  animation: heritage-seal-glint 3.6s linear infinite;
+  will-change: transform;
+}
+
+.registry-heritage__logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 50%;
 }
 
 .registry-heritage__light {
   position: absolute;
-  inset: 0 auto 0 0;
-  width: 28%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgb(255 235 173 / 12%),
-    transparent
-  );
+  inset: 0;
+  border: 1px solid rgb(255 207 108 / 70%);
+  border-radius: 50%;
+  box-shadow: 0 0 2.25rem rgb(246 197 21 / 28%);
   pointer-events: none;
-  transform: translate3d(-150%, 0, 0) skewX(-16deg);
-  animation: heritage-light-pass 5s linear infinite;
 }
 
 html[data-theme="light"] .public-home .registry-hero {
@@ -8845,7 +8869,7 @@ html[data-theme="light"] .public-home .registry-search input::placeholder {
     margin-top: 0;
   }
 
-  .registry-heritage__logo {
+  .registry-heritage__seal {
     width: 76%;
   }
 }
@@ -11492,13 +11516,6 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
   }
 }
 
-@media (max-width: 48rem) {
-  .public-home .registry-hero__intro,
-  .public-home .registry-hero__actions {
-    animation: none;
-  }
-}
-
 @media (max-width: 38rem) {
   .public-shell > main {
     min-height: calc(100dvh - 4.75rem);
@@ -11711,7 +11728,10 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
     --hero-link: #f7e9d7;
     --hero-rule: rgb(255 248 237 / 24%);
     --hero-note: #d9c9c2;
-    background: var(--hero-surface) !important;
+    border-bottom: 0 !important;
+    background:
+      radial-gradient(circle at 70% 57%, rgb(151 39 20 / 26%), transparent 45%),
+      var(--hero-surface) !important;
   }
 
   html[data-theme="light"] .public-home .registry-hero {
@@ -11776,31 +11796,30 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
     grid-area: story;
     display: flex;
     min-height: 0;
-    margin-top: 1.4rem;
+    margin-top: 0.75rem;
   }
 
   .public-home .registry-heritage {
     width: 100%;
-    height: clamp(11rem, 52vw, 14rem);
+    height: clamp(15.5rem, 75vw, 20rem);
     aspect-ratio: auto;
   }
 
   .public-home .registry-heritage__drum {
-    top: -47%;
-    left: -15%;
-    width: 100%;
+    width: min(100%, clamp(15.5rem, 75vw, 18rem));
+    opacity: 0.26;
   }
 
   .public-home .registry-heritage__bird {
-    top: -7%;
-    left: -8%;
-    width: 48%;
+    top: 31%;
+    left: -3%;
+    width: 20%;
   }
 
-  .public-home .registry-heritage__logo {
-    top: 2%;
-    right: 4%;
-    width: 54%;
+  .public-home .registry-heritage__seal {
+    top: 7%;
+    right: 6%;
+    width: min(68%, 18rem);
   }
 
   .public-home .registry-hero__actions {
@@ -11878,28 +11897,56 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
   }
 }
 
-@keyframes heritage-light-pass {
-  from {
-    transform: translate3d(-150%, 0, 0) skewX(-16deg);
+@media (min-width: 46rem) and (max-width: 48rem) {
+  .public-home .registry-hero__layout {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    grid-template-areas:
+      "intro story"
+      "actions story";
+    column-gap: 1.5rem;
+    padding-block: 2.5rem;
   }
-  to {
-    transform: translate3d(400%, 0, 0) skewX(-16deg);
+
+  .public-home .registry-visual--heritage {
+    align-self: center;
+    margin-top: 0;
+  }
+
+  .public-home .registry-heritage {
+    height: clamp(16rem, 40vw, 21rem);
+  }
+
+  .public-home .registry-heritage__seal {
+    right: 2%;
+    width: 72%;
   }
 }
 
-@keyframes heritage-seal-breathe {
-  from {
-    transform: scale(1);
+@keyframes heritage-seal-glint {
+  0% {
+    transform: translate3d(0, 0, 0) skewX(-18deg);
   }
-  to {
-    transform: scale(1.025);
+  48%,
+  100% {
+    transform: translate3d(300%, 0, 0) skewX(-18deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .registry-heritage__logo,
-  .registry-heritage__light {
+  .registry-heritage__glint::before {
     animation: none;
+    opacity: 0;
+    will-change: auto;
+  }
+}
+
+@media (max-width: 48rem) and (prefers-reduced-motion: no-preference) {
+  .public-home .registry-hero__intro {
+    animation: thv-home-enter 420ms var(--ease-standard) both;
+  }
+
+  .public-home .registry-hero__actions {
+    animation: thv-home-enter 460ms 90ms var(--ease-standard) both;
   }
 }
 
