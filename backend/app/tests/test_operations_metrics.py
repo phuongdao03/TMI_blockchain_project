@@ -6,8 +6,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.core.errors import DomainError
+from app.db.base import Base
+from app.modules.auth.models import User
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.operations.repository import OperationsRepository
 from app.modules.operations.service import OperationsService
+from app.modules.reviews.models import ReviewAssignment
 
 
 class FixedMetricsRepository:
@@ -43,6 +47,23 @@ class FixedMetricsRepository:
 class MissingJobTablesRepository(FixedMetricsRepository):
     async def job_status_counts(self) -> dict[str, int]:
         raise SQLAlchemyError("job metrics unavailable")
+
+
+def test_reviewer_workload_query_handles_an_empty_database() -> None:
+    async def exercise() -> None:
+        engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+        async with engine.begin() as connection:
+            await connection.run_sync(
+                lambda sync_connection: Base.metadata.create_all(
+                    sync_connection,
+                    tables=[User.__table__, ReviewAssignment.__table__],
+                )
+            )
+        async with AsyncSession(engine) as session:
+            assert await OperationsRepository(session).reviewer_workload() == ()
+        await engine.dispose()
+
+    asyncio.run(exercise())
 
 
 def _principal(role: str, *permissions: str) -> AuthPrincipal:

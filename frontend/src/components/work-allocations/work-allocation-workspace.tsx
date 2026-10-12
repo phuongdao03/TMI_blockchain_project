@@ -10,12 +10,19 @@ import { WorkAllocationList } from "@/components/work-allocations/work-allocatio
 import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
 import {
   adminReviewApi,
+  ApiError,
   staffAccountsApi,
   workAllocationAdminApi,
 } from "@/lib/api/client";
 import type { AdminReviewDossierSummary } from "@/lib/api/types";
 
 export function WorkAllocationWorkspace() {
+  const [listState, setListState] = useState<
+    "OPEN" | "COMPLETED" | "CANCELLED"
+  >("OPEN");
+  const [closedState, setClosedState] = useState<
+    "COMPLETED" | "CANCELLED" | null
+  >(null);
   const [isCreating, setIsCreating] = useState(false);
   const [creationKind, setCreationKind] = useState<
     "GENERIC" | "DOSSIER_REVIEW"
@@ -30,8 +37,8 @@ export function WorkAllocationWorkspace() {
   >(null);
   const queryClient = useQueryClient();
   const allocations = useQuery({
-    queryKey: ["work-allocations"],
-    queryFn: () => workAllocationAdminApi.list({ pageSize: 50 }),
+    queryKey: ["work-allocations", listState],
+    queryFn: () => workAllocationAdminApi.list({ pageSize: 50, state: listState }),
   });
   const reviewDossiers = useQuery({
     queryKey: ["review-dossiers", "allocation-composer"],
@@ -62,6 +69,33 @@ export function WorkAllocationWorkspace() {
       setCompletedKind("ACTIVATED");
     },
   });
+  const closeAllocation = useMutation({
+    mutationFn: ({ allocationId, target }: {
+      allocationId: string;
+      target: "COMPLETED" | "CANCELLED";
+    }) =>
+      target === "COMPLETED"
+        ? workAllocationAdminApi.complete(allocationId)
+        : workAllocationAdminApi.cancel(allocationId),
+    onSuccess: async (_result, variables) => {
+      setClosedState(variables.target);
+      setSelectedAllocationId(null);
+      await queryClient.invalidateQueries({ queryKey: ["work-allocations"] });
+      await queryClient.invalidateQueries({ queryKey: ["my-work-allocations"] });
+    },
+  });
+  const requestClose = (
+    allocationId: string,
+    target: "COMPLETED" | "CANCELLED",
+  ) => {
+    const message =
+      target === "COMPLETED"
+        ? "Xác nhận công việc đã hoàn thành?"
+        : "Hủy phân công này? Hồ sơ và kết quả thẩm định đã ghi nhận vẫn được giữ lại.";
+    if (window.confirm(message)) {
+      closeAllocation.mutate({ allocationId, target });
+    }
+  };
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["work-allocations"] }),
@@ -114,6 +148,17 @@ export function WorkAllocationWorkspace() {
           </button>
         </div>
       </header>
+      {closedState ? (
+        <p
+          className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"
+          role="status"
+        >
+          {closedState === "COMPLETED"
+            ? "Đã hoàn thành phân công."
+            : "Đã hủy phân công."}{" "}
+          Xem lại trong mục {closedState === "COMPLETED" ? "Đã hoàn thành" : "Đã hủy"}.
+        </p>
+      ) : null}
       {completedKind ? (
         <WorkflowNextStep
           action={
@@ -250,11 +295,46 @@ export function WorkAllocationWorkspace() {
       ) : null}
 
       <section aria-label="Danh sách phân công" id="allocation-list">
+        <div
+          aria-label="Lọc trạng thái phân công"
+          className="mb-4 flex flex-wrap gap-2"
+          role="group"
+        >
+          {([
+            ["OPEN", "Đang mở"],
+            ["COMPLETED", "Đã hoàn thành"],
+            ["CANCELLED", "Đã hủy"],
+          ] as const).map(([state, label]) => (
+            <button
+              aria-pressed={listState === state}
+              className={`min-h-10 rounded-lg border px-4 text-sm font-bold ${listState === state ? "border-primary-700 bg-primary-700 text-white" : "border-[var(--theme-border)] text-[var(--theme-text)]"}`}
+              key={state}
+              onClick={() => setListState(state)}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <WorkAllocationList
           isDetailError={allocationDetail.isError}
           isDetailPending={allocationDetail.isPending}
           isError={allocations.isError}
           isPending={allocations.isPending}
+          onRetry={() => void allocations.refetch()}
+          onComplete={(allocationId) => requestClose(allocationId, "COMPLETED")}
+          onCancel={(allocationId) => requestClose(allocationId, "CANCELLED")}
+          closingAllocationId={
+            closeAllocation.isPending ? closeAllocation.variables.allocationId : null
+          }
+          closeError={
+            closeAllocation.isError ? closeAllocation.variables.allocationId : null
+          }
+          closeErrorCode={
+            closeAllocation.error instanceof ApiError
+              ? closeAllocation.error.code
+              : null
+          }
           onSelect={setSelectedAllocationId}
           onActivateDraft={(allocationId) => activateDraft.mutate(allocationId)}
           activatingDraftId={

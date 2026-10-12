@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Literal
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from sqlalchemy import func, select
@@ -337,16 +338,30 @@ class WorkAllocationService:
         *,
         page: int,
         page_size: int,
+        state: Literal["OPEN", "COMPLETED", "CANCELLED", "ALL"] = "ALL",
     ) -> tuple[tuple[WorkAllocationData, ...], int]:
         self._require_admin(principal)
+        if state == "OPEN":
+            filters = (
+                WorkAllocation.status.in_(
+                    (WorkAllocationStatus.DRAFT, WorkAllocationStatus.ACTIVE)
+                ),
+            )
+        elif state == "ALL":
+            filters = ()
+        else:
+            filters = (WorkAllocation.status == WorkAllocationStatus(state),)
         total = int(
-            await self._session.scalar(select(func.count()).select_from(WorkAllocation))
+            await self._session.scalar(
+                select(func.count()).select_from(WorkAllocation).where(*filters)
+            )
             or 0
         )
         rows = tuple(
             (
                 await self._session.scalars(
                     select(WorkAllocation)
+                    .where(*filters)
                     .order_by(WorkAllocation.created_at.desc())
                     .offset((page - 1) * page_size)
                     .limit(page_size)
@@ -354,6 +369,91 @@ class WorkAllocationService:
             ).all()
         )
         return tuple(self._data(row) for row in rows), total
+
+    async def close_allocation(
+        self,
+        principal: AuthPrincipal,
+        allocation_id: UUID,
+        *,
+        target: Literal["COMPLETED", "CANCELLED"],
+        audit: AuditService,
+        request_id: str | None,
+        user_agent: str | None,
+    ) -> WorkAllocationData:
+        self._require_admin(principal)
+        allocation = await self._session.scalar(
+            select(WorkAllocation)
+            .where(WorkAllocation.id == allocation_id)
+            .with_for_update()
+        )
+        if allocation is None:
+            raise DomainError(
+                code="WORK_ALLOCATION_NOT_FOUND",
+                message="Work allocation was not found.",
+                status_code=404,
+            )
+        if allocation.status not in (
+            (WorkAllocationStatus.ACTIVE,)
+            if target == "COMPLETED"
+            else (WorkAllocationStatus.DRAFT, WorkAllocationStatus.ACTIVE)
+        ):
+            raise DomainError(
+                code="WORK_ALLOCATION_STATE_INVALID",
+                message="This work allocation cannot be closed from its current state.",
+                status_code=409,
+            )
+        if (
+            target == "COMPLETED"
+            and allocation.kind is WorkAllocationKind.DOSSIER_REVIEW
+        ):
+            unfinished_reviews = await self._session.scalar(
+                select(func.count())
+                .select_from(WorkScopeReviewAssignment)
+                .join(WorkScope, WorkScope.id == WorkScopeReviewAssignment.scope_id)
+                .join(
+                    ReviewAssignment,
+                    ReviewAssignment.id
+                    == WorkScopeReviewAssignment.review_assignment_id,
+                )
+                .where(
+                    WorkScope.allocation_id == allocation_id,
+                    ReviewAssignment.status != ReviewAssignmentStatus.SUBMITTED,
+                )
+            )
+            if unfinished_reviews:
+                raise DomainError(
+                    code="WORK_ALLOCATION_REVIEW_INCOMPLETE",
+                    message=(
+                        "Finish the assigned dossier reviews before closing this work."
+                    ),
+                    status_code=409,
+                )
+        previous_status = allocation.status
+        allocation.status = WorkAllocationStatus(target)
+        if target == "COMPLETED" and allocation.kind is WorkAllocationKind.GENERIC:
+            members = await self._session.scalars(
+                select(AllocationMember).where(
+                    AllocationMember.allocation_id == allocation_id,
+                    AllocationMember.is_active.is_(True),
+                    AllocationMember.completed_at.is_(None),
+                )
+            )
+            now = datetime.now(UTC)
+            for member in members:
+                member.completed_at = now
+        audit.record(
+            actor_user_id=principal.user_id,
+            action=f"work.allocation.{target.lower()}",
+            resource_type="work_allocation",
+            resource_id=str(allocation_id),
+            before={"status": previous_status.value},
+            after={"status": allocation.status.value},
+            request_id=request_id,
+            user_agent=user_agent,
+        )
+        await self._session.commit()
+        await self._session.refresh(allocation)
+        return self._data(allocation)
 
     async def get_allocation(
         self,
@@ -467,7 +567,7 @@ class WorkAllocationService:
         criteria = (
             AllocationMember.user_id == principal.user_id,
             AllocationMember.is_active.is_(True),
-            WorkAllocation.status != WorkAllocationStatus.DRAFT,
+            WorkAllocation.status == WorkAllocationStatus.ACTIVE,
         )
         total = int(
             await self._session.scalar(

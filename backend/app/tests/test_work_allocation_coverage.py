@@ -2,7 +2,7 @@ import asyncio
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.errors import DomainError
@@ -279,6 +279,33 @@ def test_dossier_activation_requires_independent_scope_coverage() -> None:
             )
             assert audit is not None
             assert "review_assignment_ids" not in audit.after_json
+            with pytest.raises(DomainError) as premature_close:
+                await service.close_allocation(
+                    admin,
+                    allocation_id,
+                    target="COMPLETED",
+                    audit=AuditService(session),
+                    request_id="coverage-test",
+                    user_agent="pytest",
+                )
+            assert premature_close.value.code == "WORK_ALLOCATION_REVIEW_INCOMPLETE"
+            await session.execute(
+                update(ReviewAssignment)
+                .where(
+                    ReviewAssignment.id.in_((first_assignment_id, second_assignment_id))
+                )
+                .values(status=ReviewAssignmentStatus.SUBMITTED)
+            )
+            await session.commit()
+            closed = await service.close_allocation(
+                admin,
+                allocation_id,
+                target="COMPLETED",
+                audit=AuditService(session),
+                request_id="coverage-test",
+                user_agent="pytest",
+            )
+            assert closed.status is WorkAllocationStatus.COMPLETED
             with pytest.raises(DomainError) as detail_error:
                 await service.get_allocation(moderator, allocation_id)
             assert detail_error.value.code == "WORK_ALLOCATION_FORBIDDEN"

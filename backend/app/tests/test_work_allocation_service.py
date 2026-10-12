@@ -343,3 +343,138 @@ def test_work_allocation_requires_active_moderator_members() -> None:
         await engine.dispose()
 
     asyncio.run(exercise())
+
+
+def test_admin_can_close_open_work_and_reject_invalid_transitions() -> None:
+    async def exercise() -> None:
+        engine = create_async_engine("sqlite+aiosqlite://")
+        async with engine.begin() as connection:
+            await connection.run_sync(
+                lambda sync_connection: Base.metadata.create_all(
+                    sync_connection,
+                    tables=[
+                        User.__table__,
+                        Role.__table__,
+                        UserRole.__table__,
+                        AuditLog.__table__,
+                        Notification.__table__,
+                        WorkAllocation.__table__,
+                        WorkScope.__table__,
+                        AllocationMember.__table__,
+                    ],
+                )
+            )
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        admin_id, member_id, role_id = uuid4(), uuid4(), uuid4()
+        async with sessions.begin() as session:
+            session.add_all(
+                [
+                    User(id=admin_id, email="admin@example.com", password_hash=None),
+                    User(
+                        id=member_id,
+                        email="member@example.com",
+                        password_hash=None,
+                        status=UserStatus.ACTIVE,
+                    ),
+                    Role(id=role_id, code="MODERATOR"),
+                    UserRole(user_id=member_id, role_id=role_id),
+                ]
+            )
+        admin = _principal(user_id=admin_id, role="SUPER_ADMIN")
+        member = _principal(user_id=member_id, role="MODERATOR")
+        async with sessions() as session:
+            service = WorkAllocationService(session)
+            payload = CreateWorkAllocationRequest.model_validate(
+                {
+                    "kind": "GENERIC",
+                    "objective": "Close the report",
+                    "members": [{"userId": str(member_id), "responsibility": "LEAD"}],
+                }
+            )
+            draft = await service.create_allocation(
+                admin,
+                payload,
+                audit=AuditService(session),
+                request_id="lifecycle",
+                user_agent="pytest",
+            )
+            cancelled = await service.close_allocation(
+                admin,
+                draft.id,
+                target="CANCELLED",
+                audit=AuditService(session),
+                request_id="lifecycle",
+                user_agent="pytest",
+            )
+            assert cancelled.status.value == "CANCELLED"
+            with pytest.raises(DomainError) as invalid:
+                await service.close_allocation(
+                    admin,
+                    draft.id,
+                    target="COMPLETED",
+                    audit=AuditService(session),
+                    request_id="lifecycle",
+                    user_agent="pytest",
+                )
+            assert invalid.value.code == "WORK_ALLOCATION_STATE_INVALID"
+            active = await service.create_allocation(
+                admin,
+                payload,
+                audit=AuditService(session),
+                request_id="lifecycle",
+                user_agent="pytest",
+            )
+            await service.activate_allocation(
+                admin,
+                active.id,
+                ActivateWorkAllocationRequest(scope_coverage=[]),
+                audit=AuditService(session),
+                request_id="lifecycle",
+                user_agent="pytest",
+            )
+            with pytest.raises(DomainError) as forbidden:
+                await service.close_allocation(
+                    member,
+                    active.id,
+                    target="COMPLETED",
+                    audit=AuditService(session),
+                    request_id="lifecycle",
+                    user_agent="pytest",
+                )
+            assert forbidden.value.code == "WORK_ALLOCATION_FORBIDDEN"
+            completed = await service.close_allocation(
+                admin,
+                active.id,
+                target="COMPLETED",
+                audit=AuditService(session),
+                request_id="lifecycle",
+                user_agent="pytest",
+            )
+            assert completed.status.value == "COMPLETED"
+            assigned = await session.scalar(
+                select(AllocationMember).where(
+                    AllocationMember.allocation_id == active.id,
+                )
+            )
+            assert assigned is not None and assigned.completed_at is not None
+            mine, total = await service.list_my_allocations(
+                member, page=1, page_size=20
+            )
+            assert total == 0 and mine == ()
+            open_rows, open_total = await service.list_allocations(
+                admin,
+                page=1,
+                page_size=20,
+                state="OPEN",
+            )
+            assert open_total == 0 and open_rows == ()
+            closed_rows, closed_total = await service.list_allocations(
+                admin,
+                page=1,
+                page_size=20,
+                state="COMPLETED",
+            )
+            assert closed_total == 1 and closed_rows[0].id == active.id
+        await engine.dispose()
+
+    asyncio.run(exercise())

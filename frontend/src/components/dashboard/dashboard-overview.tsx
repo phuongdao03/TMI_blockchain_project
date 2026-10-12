@@ -293,7 +293,9 @@ export function DashboardOverview() {
           <div>
             {dossiers.isPending ? (
               <div className="space-y-3 px-6 py-5" role="status">
-                <span className="sr-only">Đang tải hồ sơ…</span>
+                <p className="text-sm font-semibold text-neutral-500">
+                  Đang tải hồ sơ…
+                </p>
                 {[0, 1, 2].map((item) => (
                   <div
                     aria-hidden="true"

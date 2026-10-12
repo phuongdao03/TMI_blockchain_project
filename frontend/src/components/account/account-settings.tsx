@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, CircleAlert, UserRound } from "lucide-react";
+import { Building2, CircleAlert, LoaderCircle, UserRound } from "lucide-react";
 import { useState } from "react";
 
 import { OrganizationPanel } from "@/components/account/organization-panel";
@@ -29,6 +29,7 @@ export function AccountSettings() {
   const organizationsQuery = useQuery({
     queryKey: ["organizations"],
     queryFn: () => organizationApi.list(),
+    enabled: tab === "organization",
   });
   const profileMutation = useMutation({
     mutationFn: (profile: ProfileUpdate) => profileApi.update(profile),
@@ -45,8 +46,8 @@ export function AccountSettings() {
   });
 
   const queryError =
-    profileQuery.error ??
-    organizationsQuery.error ??
+    (tab === "profile" ? profileQuery.error : null) ??
+    (tab === "organization" ? organizationsQuery.error : null) ??
     profileMutation.error ??
     avatarMutation.error;
 
@@ -111,18 +112,22 @@ export function AccountSettings() {
       <Card className="shadow-none">
         <CardHeader className="border-b border-neutral-100">
           <CardTitle>
-            {tab === "profile" ? "Thông tin cá nhân" : "Quản trị tổ chức"}
+            {tab === "profile" ? "Hồ sơ cá nhân và nhân viên" : "Quản trị tổ chức"}
           </CardTitle>
           <CardDescription>
             {tab === "profile"
-              ? "Thông tin cá nhân của bạn. Nếu có hồ sơ nhân viên, thông tin công việc được đồng bộ từ quản trị nhân sự."
+              ? "Tự cập nhật họ tên, số điện thoại và ảnh đại diện. Thông tin công việc do quản trị nhân sự quản lý."
               : "Quản lý thông tin tổ chức và thành viên theo đúng vai trò."}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           {tab === "profile" ? (
             profileQuery.isPending ? (
-              <p className="py-12 text-center text-sm text-neutral-500">
+              <p
+                className="flex min-h-40 items-center justify-center gap-3 text-sm text-neutral-500"
+                role="status"
+              >
+                <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
                 Đang tải hồ sơ…
               </p>
             ) : profileQuery.data ? (
@@ -134,7 +139,20 @@ export function AccountSettings() {
                 }}
                 profile={profileQuery.data}
               />
-            ) : null
+            ) : (
+              <div className="py-8 text-center">
+                <p className="text-sm text-[var(--theme-muted)]">
+                  Chưa thể tải hồ sơ cá nhân.
+                </p>
+                <button
+                  className="mt-3 min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-sm font-bold"
+                  onClick={() => void profileQuery.refetch()}
+                  type="button"
+                >
+                  Thử tải lại
+                </button>
+              </div>
+            )
           ) : organizationsQuery.isPending ? (
             <p className="py-12 text-center text-sm text-neutral-500">
               Đang tải tổ chức…

@@ -2147,11 +2147,12 @@ export const taskAdminApi = {
 };
 
 export const workAllocationAdminApi = {
-  list(filters: { page?: number; pageSize?: number } = {}) {
+  list(filters: { page?: number; pageSize?: number; state?: "OPEN" | "COMPLETED" | "CANCELLED" | "ALL" } = {}) {
     const parameters = new URLSearchParams({
       page: String(filters.page ?? 1),
       pageSize: String(filters.pageSize ?? 20),
     });
+    if (filters.state) parameters.set("state", filters.state);
     return requestPaginated<WorkAllocation[]>(
       `/admin/work-allocations?${parameters.toString()}`,
     );
@@ -2180,6 +2181,18 @@ export const workAllocationAdminApi = {
         method: "POST",
         body: JSON.stringify({ scopeCoverage }),
       },
+    );
+  },
+  complete(allocationId: string) {
+    return request<WorkAllocation>(
+      `/admin/work-allocations/${encodeURIComponent(allocationId)}/complete`,
+      { method: "POST" },
+    );
+  },
+  cancel(allocationId: string) {
+    return request<WorkAllocation>(
+      `/admin/work-allocations/${encodeURIComponent(allocationId)}/cancel`,
+      { method: "POST" },
     );
   },
 };

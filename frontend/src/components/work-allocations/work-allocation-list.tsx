@@ -20,12 +20,18 @@ export function WorkAllocationList({
   rows,
   isPending,
   isError,
+  onRetry,
   selectedAllocationId,
   selectedDetail,
   isDetailPending,
   isDetailError,
   onSelect,
   onActivateDraft,
+  onComplete,
+  onCancel,
+  closingAllocationId,
+  closeError,
+  closeErrorCode,
   activatingDraftId,
   activationError,
   failedDraftId,
@@ -34,12 +40,18 @@ export function WorkAllocationList({
   rows: WorkAllocation[];
   isPending: boolean;
   isError: boolean;
+  onRetry?: () => void;
   selectedAllocationId: string | null;
   selectedDetail: WorkAllocationDetail | null;
   isDetailPending: boolean;
   isDetailError: boolean;
   onSelect: (allocationId: string | null) => void;
   onActivateDraft?: (allocationId: string) => void;
+  onComplete?: (allocationId: string) => void;
+  onCancel?: (allocationId: string) => void;
+  closingAllocationId?: string | null;
+  closeError?: string | null;
+  closeErrorCode?: string | null;
   activatingDraftId?: string | null;
   activationError?: unknown;
   failedDraftId?: string | null;
@@ -49,25 +61,34 @@ export function WorkAllocationList({
     return (
       <div
         aria-busy="true"
-        className="grid min-h-56 place-items-center"
+        className="flex min-h-40 items-center justify-center gap-3"
         role="status"
       >
         <LoaderCircle
           aria-hidden="true"
           className="size-6 animate-spin text-primary-700"
         />
-        <span className="sr-only">Đang tải danh sách phân công</span>
+        <span className="text-sm font-semibold text-[var(--theme-muted)]">
+          Đang tải danh sách phân công…
+        </span>
       </div>
     );
   }
   if (isError) {
     return (
-      <p
+      <div
         className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-semibold text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
         role="alert"
       >
-        Chưa thể tải danh sách phân công. Vui lòng thử lại.
-      </p>
+        <p>Chưa thể tải danh sách phân công. Vui lòng thử lại.</p>
+        <button
+          className="mt-3 min-h-10 rounded-lg border border-red-300 px-3"
+          onClick={onRetry}
+          type="button"
+        >
+          Thử tải lại
+        </button>
+      </div>
     );
   }
   if (rows.length === 0) {
@@ -133,6 +154,35 @@ export function WorkAllocationList({
           {activationError && failedDraftId === allocation.id ? (
             <p className="mt-2 text-sm text-red-700" role="alert">
               Chưa thể kích hoạt công việc. Vui lòng thử lại.
+            </p>
+          ) : null}
+          {allocation.status === "ACTIVE" || allocation.status === "DRAFT" ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {allocation.status === "ACTIVE" ? (
+                <button
+                  className="min-h-10 rounded-lg border border-emerald-600 px-3 text-sm font-bold text-emerald-800 disabled:opacity-50 dark:text-emerald-300"
+                  disabled={Boolean(closingAllocationId)}
+                  onClick={() => onComplete?.(allocation.id)}
+                  type="button"
+                >
+                  Đánh dấu hoàn thành
+                </button>
+              ) : null}
+              <button
+                className="min-h-10 rounded-lg border border-red-300 px-3 text-sm font-bold text-red-800 disabled:opacity-50 dark:border-red-800 dark:text-red-300"
+                disabled={Boolean(closingAllocationId)}
+                onClick={() => onCancel?.(allocation.id)}
+                type="button"
+              >
+                Hủy phân công
+              </button>
+            </div>
+          ) : null}
+          {closeError === allocation.id ? (
+            <p className="mt-2 text-sm text-red-700 dark:text-red-300" role="alert">
+              {closeErrorCode === "WORK_ALLOCATION_REVIEW_INCOMPLETE"
+                ? "Cần hoàn tất các lượt thẩm định trước khi đóng phân công."
+                : "Chưa cập nhật được trạng thái. Vui lòng thử lại."}
             </p>
           ) : null}
           <button

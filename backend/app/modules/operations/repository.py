@@ -53,6 +53,7 @@ class OperationsRepository:
     async def reviewer_workload(self) -> tuple[tuple[str, int], ...]:
         rows = await self._session.execute(
             select(User.email, func.count())
+            .select_from(ReviewAssignment)
             .join(User, User.id == ReviewAssignment.reviewer_user_id)
             .where(
                 ReviewAssignment.status.in_(

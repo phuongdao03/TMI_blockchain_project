@@ -5,6 +5,7 @@ import { Suspense, type ReactNode, useState } from "react";
 
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { NavigationLoading } from "@/components/ui/navigation-loading";
+import { ApiError } from "@/lib/api/client";
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -13,6 +14,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             refetchOnWindowFocus: false,
+            retry: (failureCount, error) =>
+              failureCount < 1 &&
+              (!(error instanceof ApiError) || error.status >= 500),
+            retryDelay: 400,
           },
         },
       }),

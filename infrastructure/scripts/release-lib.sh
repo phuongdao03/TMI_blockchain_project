@@ -35,6 +35,22 @@ read_env_value() {
     "$env_file"
 }
 
+require_encryption_key() {
+  local env_file="$1"
+  local key_name="$2"
+  local encoded_key decoded_size
+  encoded_key="$(read_env_value "$env_file" "$key_name")"
+  if [[ -z "$encoded_key" ]] || ! printf '%s' "$encoded_key" | base64 --decode >/dev/null 2>&1; then
+    release_error "$key_name must be valid base64 encoding of 32 bytes"
+    return 65
+  fi
+  decoded_size="$(printf '%s' "$encoded_key" | base64 --decode 2>/dev/null | wc -c)"
+  if [[ "$decoded_size" -ne 32 ]]; then
+    release_error "$key_name must decode to exactly 32 bytes"
+    return 65
+  fi
+}
+
 require_production_environment() {
   local env_file="$1"
   [[ -f "$env_file" ]] || {
@@ -53,6 +69,9 @@ require_production_environment() {
     release_error "production environment still contains placeholder values"
     return 65
   fi
+  require_command base64 || return $?
+  require_encryption_key "$env_file" "PII_ENCRYPTION_KEY" || return $?
+  require_encryption_key "$env_file" "AUTH_OUTBOX_ENCRYPTION_KEY" || return $?
 }
 
 compose_command() {

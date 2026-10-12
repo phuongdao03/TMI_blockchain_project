@@ -5,7 +5,6 @@ import {
   ArrowRight,
   FilePlus2,
   FolderSearch,
-  LoaderCircle,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -55,18 +54,24 @@ export function DossierList({
   const { data, error, isPending, isFetching, refetch } = useQuery({
     queryKey: dossierKeys.list(filters),
     queryFn: () => dossierApi.list(filters),
+    staleTime: 20_000,
   });
 
   if (isPending) {
     return (
       <div
-        className="grid min-h-64 place-items-center rounded-2xl border border-neutral-200 bg-white"
+        aria-busy="true"
+        className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5"
         role="status"
       >
-        <span className="flex items-center gap-3 text-sm font-semibold text-neutral-600">
-          <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
-          Đang tải hồ sơ…
-        </span>
+        <p className="text-sm font-semibold text-neutral-600">Đang tải hồ sơ…</p>
+        {[0, 1, 2].map((item) => (
+          <div
+            aria-hidden="true"
+            className="h-16 animate-pulse rounded-xl bg-neutral-100"
+            key={item}
+          />
+        ))}
       </div>
     );
   }

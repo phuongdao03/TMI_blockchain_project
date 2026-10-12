@@ -54,6 +54,20 @@ function Wrapper({ children }: { children: ReactNode }) {
 }
 
 describe("OperationsDashboard", () => {
+  it("shows an empty state when valid metrics contain no work", async () => {
+    metrics.mockResolvedValueOnce({
+      ...metricsPayload,
+      dossierFunnel: {},
+      overdueReviews: 0,
+      reviewerWorkload: [],
+      paymentFailures: 0,
+      blockchainFailures: 0,
+      jobStatusCounts: {},
+    });
+    render(<OperationsDashboard />, { wrapper: Wrapper });
+    expect(await screen.findByText(/Hiện chưa có dữ liệu vận hành cần xử lý/)).toBeDefined();
+    expect(screen.queryByText("Chưa tải được tổng quan vận hành")).toBeNull();
+  });
   beforeEach(() => {
     metrics.mockReset().mockResolvedValue(metricsPayload);
     listReviewDossiers.mockReset().mockResolvedValue({

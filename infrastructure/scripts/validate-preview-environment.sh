@@ -107,4 +107,13 @@ for key in JWT_SECRET AUTH_CSRF_SECRET AUTH_OUTBOX_ENCRYPTION_KEY \
   fi
 done
 
+for key in AUTH_OUTBOX_ENCRYPTION_KEY PII_ENCRYPTION_KEY; do
+  value="$(read_value "$key")"
+  if ! printf '%s' "$value" | base64 --decode >/dev/null 2>&1 ||
+    [[ "$(printf '%s' "$value" | base64 --decode 2>/dev/null | wc -c)" -ne 32 ]]; then
+    echo "$key must be valid base64 encoding of exactly 32 bytes" >&2
+    exit 65
+  fi
+done
+
 echo "preview environment contract is valid"

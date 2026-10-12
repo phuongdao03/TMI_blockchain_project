@@ -43,6 +43,7 @@ export function OperationsDashboard({
   const metrics = useQuery({
     queryKey: ["admin", "operations"],
     queryFn: operationsApi.metrics,
+    staleTime: 20_000,
   });
   const reviewQueue = useQuery({
     queryKey: ["admin", "operations", "review-queue-fallback"],
@@ -56,7 +57,9 @@ export function OperationsDashboard({
         className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
         role="status"
       >
-        <span className="sr-only">Đang tổng hợp dữ liệu vận hành...</span>
+        <p className="text-sm font-semibold text-[var(--theme-muted)] sm:col-span-2 xl:col-span-4">
+          Đang tổng hợp dữ liệu vận hành…
+        </p>
         {Array.from({ length: 4 }, (_, index) => (
           <span
             aria-hidden="true"
@@ -141,12 +144,26 @@ export function OperationsDashboard({
     metrics.data.overdueReviews +
     metrics.data.paymentFailures +
     metrics.data.blockchainFailures;
+  const hasOperationalData =
+    Object.values(metrics.data.dossierFunnel).some((count) => count > 0) ||
+    metrics.data.reviewerWorkload.length > 0 ||
+    urgentCount > 0 ||
+    Object.values(metrics.data.jobStatusCounts).some((count) => count > 0);
   const maxStageCount = Math.max(
     1,
     ...Object.values(metrics.data.dossierFunnel),
   );
   return (
     <div className="mx-auto max-w-7xl space-y-8 text-[var(--theme-text)]">
+      {!hasOperationalData ? (
+        <p
+          className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 text-sm text-[var(--theme-muted)]"
+          role="status"
+        >
+          Hiện chưa có dữ liệu vận hành cần xử lý. Các chỉ số sẽ cập nhật khi có
+          hồ sơ hoặc công việc mới.
+        </p>
+      ) : null}
       {showHeader ? (
         <header>
           <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-primary-700">

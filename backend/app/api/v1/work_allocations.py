@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, Response, status
@@ -40,11 +40,13 @@ async def list_work_allocations(
     session: SessionDependency,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
+    state: Literal["OPEN", "COMPLETED", "CANCELLED", "ALL"] = "ALL",
 ) -> PaginatedSuccessEnvelope[list[WorkAllocationData]]:
     rows, total = await WorkAllocationService(session).list_allocations(
         principal,
         page=page,
         page_size=page_size,
+        state=state,
     )
     _private_response(response)
     return PaginatedSuccessEnvelope(
@@ -81,6 +83,56 @@ async def create_work_allocation(
     return SuccessEnvelope(
         data=data,
         meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/{allocation_id}/complete",
+    response_model=SuccessEnvelope[WorkAllocationData],
+)
+async def complete_work_allocation(
+    allocation_id: UUID,
+    request: Request,
+    response: Response,
+    principal: CsrfProtectedPrincipalDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[WorkAllocationData]:
+    data = await WorkAllocationService(session).close_allocation(
+        principal,
+        allocation_id,
+        target="COMPLETED",
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    _private_response(response)
+    return SuccessEnvelope(
+        data=data, meta=ResponseMeta(request_id=request.state.request_id)
+    )
+
+
+@router.post(
+    "/{allocation_id}/cancel",
+    response_model=SuccessEnvelope[WorkAllocationData],
+)
+async def cancel_work_allocation(
+    allocation_id: UUID,
+    request: Request,
+    response: Response,
+    principal: CsrfProtectedPrincipalDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[WorkAllocationData]:
+    data = await WorkAllocationService(session).close_allocation(
+        principal,
+        allocation_id,
+        target="CANCELLED",
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    _private_response(response)
+    return SuccessEnvelope(
+        data=data, meta=ResponseMeta(request_id=request.state.request_id)
     )
 
 

@@ -45,6 +45,28 @@ const allocationDetail: WorkAllocationDetail = {
 };
 
 describe("WorkAllocationList", () => {
+  it("offers close and cancel controls only for open work", () => {
+    const onComplete = vi.fn();
+    const onCancel = vi.fn();
+    render(
+      <WorkAllocationList
+        isDetailError={false}
+        isDetailPending={false}
+        isError={false}
+        isPending={false}
+        onSelect={vi.fn()}
+        onComplete={onComplete}
+        onCancel={onCancel}
+        rows={[dossierAllocation, { ...dossierAllocation, id: "done", status: "COMPLETED" }]}
+        selectedAllocationId={null}
+        selectedDetail={null}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Đánh dấu hoàn thành" }));
+    fireEvent.click(screen.getByRole("button", { name: "Hủy phân công" }));
+    expect(onComplete).toHaveBeenCalledWith("allocation-1");
+    expect(onCancel).toHaveBeenCalledWith("allocation-1");
+  });
   it("shows real assignee progress for a general allocation", () => {
     render(
       <WorkAllocationList
