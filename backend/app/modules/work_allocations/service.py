@@ -5,6 +5,7 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.errors import DomainError
 from app.modules.audit.service import AuditService
@@ -341,6 +342,7 @@ class WorkAllocationService:
         state: Literal["OPEN", "COMPLETED", "CANCELLED", "ALL"] = "ALL",
     ) -> tuple[tuple[WorkAllocationData, ...], int]:
         self._require_admin(principal)
+        filters: tuple[ColumnElement[bool], ...]
         if state == "OPEN":
             filters = (
                 WorkAllocation.status.in_(
