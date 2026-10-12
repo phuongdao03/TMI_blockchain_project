@@ -8459,11 +8459,12 @@ html[data-theme="dark"] .public-home .home-journey .font-mono {
 @media (max-width: 48rem) {
   .mission-section__seal {
     display: block;
-    width: 7rem;
+    width: 11rem;
     aspect-ratio: 1;
     margin: 2rem auto 0;
     overflow: hidden;
     border-radius: 50%;
+    box-shadow: 0 0 0 1px #caa550, 0 0 0 0.65rem rgb(202 165 80 / 12%);
   }
 
   .mission-section__seal img {
@@ -8614,6 +8615,15 @@ html[data-theme="dark"] .mission-section__objectives li {
 
 .registry-visual--heritage {
   grid-area: visual;
+}
+
+.registry-hero__mobile-story {
+  display: none;
+}
+
+.registry-hero__mobile-landscape,
+.registry-hero__mobile-craft {
+  position: relative;
 }
 
 .public-home .registry-hero h1 {
@@ -11702,6 +11712,7 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "intro"
+      "story"
       "actions";
     align-items: start;
     row-gap: 0;
@@ -11739,6 +11750,62 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
 
   .public-home .registry-visual--heritage {
     display: none;
+  }
+
+  .public-home .registry-hero__mobile-story {
+    grid-area: story;
+    display: block;
+    position: relative;
+    width: 100%;
+    height: clamp(12.5rem, 55vw, 16rem);
+    margin: 1.5rem 0 0;
+  }
+
+  .registry-hero__mobile-landscape {
+    position: absolute;
+    inset: 0 2.25rem 1rem 0;
+    overflow: hidden;
+    border-radius: 0.85rem;
+    background: #314b3d;
+  }
+
+  .registry-hero__mobile-landscape::after {
+    position: absolute;
+    inset: 45% 0 0;
+    background: linear-gradient(transparent, rgb(18 27 22 / 76%));
+    content: "";
+  }
+
+  .registry-hero__mobile-landscape img,
+  .registry-hero__mobile-craft img {
+    object-fit: cover;
+  }
+
+  .registry-hero__mobile-craft {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: clamp(6.5rem, 32vw, 8rem);
+    aspect-ratio: 1;
+    overflow: hidden;
+    border: 3px solid var(--hero-surface);
+    border-radius: 0.85rem;
+    background: #ad7b45;
+  }
+
+  .registry-hero__mobile-story figcaption {
+    position: absolute;
+    bottom: 1.65rem;
+    left: 0.9rem;
+    max-width: calc(100% - 9.5rem);
+    border-left: 2px solid #f6c515;
+    padding-left: 0.55rem;
+    color: #fff8ed;
+    font-size: 0.73rem;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+    line-height: 1.35;
+    text-shadow: 0 1px 5px rgb(0 0 0 / 55%);
   }
 
   .public-home .registry-hero__actions {

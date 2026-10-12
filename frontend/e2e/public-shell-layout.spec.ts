@@ -1,10 +1,20 @@
 import { expect, test } from "@playwright/test";
 
-test("mobile home shows account actions without opening the menu", async ({
+test("mobile home shows imagery and account actions without opening the menu", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile-chrome");
   await page.goto("/");
+
+  const story = page.locator(".registry-hero__mobile-story");
+  await expect(story).toBeVisible();
+  await expect
+    .poll(() =>
+      story.locator("img").evaluateAll((images) =>
+        images.every((image) => (image as HTMLImageElement).naturalWidth > 0),
+      ),
+    )
+    .toBe(true);
 
   const actions = page.getByRole("navigation", { name: "Truy cập tài khoản" });
   const login = actions.getByRole("link", { name: "Đăng nhập" });

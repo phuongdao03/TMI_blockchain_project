@@ -61,7 +61,7 @@ export function MissionContent() {
               alt=""
               height={256}
               loading="eager"
-              sizes="112px"
+              sizes="(max-width: 48rem) 176px, 112px"
               src="/assets/brand/logo-tinh-hoa-viet.png"
               width={256}
             />

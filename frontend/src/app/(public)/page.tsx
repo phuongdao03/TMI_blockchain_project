@@ -10,6 +10,7 @@ import {
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 import { FeaturedAssets } from "@/components/public/featured-assets";
 import { InstitutionContent } from "@/components/public/institution-content";
@@ -100,6 +101,26 @@ export default function HomePage() {
           <div className="registry-visual registry-visual--heritage relative min-w-0 self-stretch lg:-mr-14">
             <HeritageSymbols />
           </div>
+          <figure className="registry-hero__mobile-story">
+            <div className="registry-hero__mobile-landscape">
+              <Image
+                alt="Phong cảnh sông núi Việt Nam với thuyền trên mặt nước"
+                fill
+                loading="eager"
+                sizes="(max-width: 48rem) calc(100vw - 2rem), 1px"
+                src="/assets/institution/gallery-09-large.webp"
+              />
+            </div>
+            <div className="registry-hero__mobile-craft">
+              <Image
+                alt="Sản phẩm thủ công đan lát truyền thống"
+                fill
+                sizes="(max-width: 48rem) 32vw, 1px"
+                src="/assets/institution/gallery-02-large.webp"
+              />
+            </div>
+            <figcaption>Di sản trong từng nếp sống</figcaption>
+          </figure>
           <div className="registry-hero__actions relative z-10 max-w-[44rem] lg:pb-8">
             <div className="registry-hero__action-row">
               <nav
