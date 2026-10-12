@@ -120,6 +120,49 @@ describe("WorkAllocationList", () => {
     ).toBeDefined();
     expect(screen.getByText("Đã xong")).toBeDefined();
   });
+
+  it("does not show an active assignee after the allocation is completed", () => {
+    const completed = {
+      ...dossierAllocation,
+      kind: "GENERIC" as const,
+      status: "COMPLETED" as const,
+    };
+    render(
+      <WorkAllocationList
+        isDetailError={false}
+        isDetailPending={false}
+        isError={false}
+        isPending={false}
+        onSelect={vi.fn()}
+        rows={[completed]}
+        selectedAllocationId={completed.id}
+        selectedDetail={{
+          ...allocationDetail,
+          ...completed,
+          scopes: [],
+          scopeCoverage: [],
+          members: [
+            {
+              id: "member-1",
+              allocationId: completed.id,
+              userId: "moderator-1",
+              responsibility: "LEAD",
+              assignedByUserId: "admin-1",
+              isActive: true,
+              deactivatedAt: null,
+              completedAt: null,
+              createdAt: "2026-10-01T00:00:00Z",
+              updatedAt: "2026-10-01T00:00:00Z",
+            },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText("Hoàn thành")).toBeDefined();
+    expect(screen.getByText("Người thực hiện · 1/1 hoàn thành")).toBeDefined();
+    expect(screen.getByText("Đã xong")).toBeDefined();
+    expect(screen.queryByText("Đang làm")).toBeNull();
+  });
   it("lets an admin activate an existing general draft", () => {
     const activateDraft = vi.fn();
     render(

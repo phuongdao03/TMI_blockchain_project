@@ -8,6 +8,7 @@ import {
   Clock3,
   FilePlus2,
   FolderKanban,
+  LoaderCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -293,7 +294,11 @@ export function DashboardOverview() {
           <div>
             {dossiers.isPending ? (
               <div className="space-y-3 px-6 py-5" role="status">
-                <p className="text-sm font-semibold text-neutral-500">
+                <p className="flex items-center gap-2 text-sm font-semibold text-neutral-500">
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="thv-loading-spinner size-5"
+                  />
                   Đang tải hồ sơ…
                 </p>
                 {[0, 1, 2].map((item) => (

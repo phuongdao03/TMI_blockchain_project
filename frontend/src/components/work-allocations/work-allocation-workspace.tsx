@@ -23,6 +23,10 @@ export function WorkAllocationWorkspace() {
   const [closedState, setClosedState] = useState<
     "COMPLETED" | "CANCELLED" | null
   >(null);
+  const [pendingClose, setPendingClose] = useState<{
+    allocationId: string;
+    target: "COMPLETED" | "CANCELLED";
+  } | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [creationKind, setCreationKind] = useState<
     "GENERIC" | "DOSSIER_REVIEW"
@@ -71,36 +75,42 @@ export function WorkAllocationWorkspace() {
     },
   });
   const closeAllocation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       allocationId,
       target,
     }: {
       allocationId: string;
       target: "COMPLETED" | "CANCELLED";
-    }) =>
-      target === "COMPLETED"
+    }) => {
+      const result = await (target === "COMPLETED"
         ? workAllocationAdminApi.complete(allocationId)
-        : workAllocationAdminApi.cancel(allocationId),
+        : workAllocationAdminApi.cancel(allocationId));
+      if (result.status !== target) {
+        throw new Error("Work allocation status did not update.");
+      }
+      return result;
+    },
     onSuccess: async (_result, variables) => {
       setClosedState(variables.target);
-      setSelectedAllocationId(null);
+      setPendingClose(null);
+      setSelectedAllocationId(variables.allocationId);
       await queryClient.invalidateQueries({ queryKey: ["work-allocations"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["work-allocation", variables.allocationId],
+      });
       await queryClient.invalidateQueries({
         queryKey: ["my-work-allocations"],
       });
+      setListState(variables.target);
     },
   });
   const requestClose = (
     allocationId: string,
     target: "COMPLETED" | "CANCELLED",
   ) => {
-    const message =
-      target === "COMPLETED"
-        ? "Xác nhận công việc đã hoàn thành?"
-        : "Hủy phân công này? Hồ sơ và kết quả thẩm định đã ghi nhận vẫn được giữ lại.";
-    if (window.confirm(message)) {
-      closeAllocation.mutate({ allocationId, target });
-    }
+    closeAllocation.reset();
+    setClosedState(null);
+    setPendingClose({ allocationId, target });
   };
   const refresh = async () => {
     await Promise.all([
@@ -333,6 +343,11 @@ export function WorkAllocationWorkspace() {
           onRetry={() => void allocations.refetch()}
           onComplete={(allocationId) => requestClose(allocationId, "COMPLETED")}
           onCancel={(allocationId) => requestClose(allocationId, "CANCELLED")}
+          pendingClose={pendingClose}
+          onConfirmClose={() => {
+            if (pendingClose) closeAllocation.mutate(pendingClose);
+          }}
+          onDismissClose={() => setPendingClose(null)}
           closingAllocationId={
             closeAllocation.isPending
               ? closeAllocation.variables.allocationId

@@ -4,7 +4,10 @@ export function PageLoading() {
   return (
     <section className="page-loading" role="status">
       <span className="page-loading__message">
-        <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
+        <LoaderCircle
+          aria-hidden="true"
+          className="thv-loading-spinner size-5"
+        />
         Đang tải nội dung…
       </span>
       <span aria-hidden="true" className="page-loading__track">

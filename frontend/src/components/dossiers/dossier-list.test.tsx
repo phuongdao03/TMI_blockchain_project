@@ -11,6 +11,21 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 describe("DossierList", () => {
+  it("shows a rotating progress indicator while loading on a phone", () => {
+    listMock.mockReturnValue(new Promise(() => undefined));
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <DossierList page={1} pageSize={10} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole("status").getAttribute("aria-busy")).toBe("true");
+    expect(container.querySelector(".thv-loading-spinner")).not.toBeNull();
+  });
+
   it("renders filtered dossier records with status and next action", async () => {
     listMock.mockResolvedValue({
       success: true,

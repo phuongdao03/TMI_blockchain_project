@@ -1,7 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, FilePlus2, FolderSearch } from "lucide-react";
+import {
+  ArrowRight,
+  FilePlus2,
+  FolderSearch,
+  LoaderCircle,
+} from "lucide-react";
 import Link from "next/link";
 
 import { DossierStatusBadge } from "@/components/dossiers/dossier-status";
@@ -60,7 +65,11 @@ export function DossierList({
         className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5"
         role="status"
       >
-        <p className="text-sm font-semibold text-neutral-600">
+        <p className="flex items-center gap-2 text-sm font-semibold text-neutral-600">
+          <LoaderCircle
+            aria-hidden="true"
+            className="thv-loading-spinner size-5"
+          />
           Đang tải hồ sơ…
         </p>
         {[0, 1, 2].map((item) => (

@@ -44,6 +44,7 @@ describe("DashboardOverview", () => {
 
     expect(screen.getByRole("status").textContent).toContain("Đang tải hồ sơ");
     expect(container.querySelectorAll(".dashboard-skeleton")).toHaveLength(3);
+    expect(container.querySelector(".thv-loading-spinner")).not.toBeNull();
   });
 
   it("shows a task-focused empty state with one primary action", async () => {

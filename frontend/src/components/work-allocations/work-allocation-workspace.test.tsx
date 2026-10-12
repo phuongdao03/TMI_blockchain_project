@@ -9,6 +9,7 @@ const createMock = vi.hoisted(() => vi.fn());
 const activateMock = vi.hoisted(() => vi.fn());
 const completeMock = vi.hoisted(() => vi.fn());
 const cancelMock = vi.hoisted(() => vi.fn());
+const getMock = vi.hoisted(() => vi.fn());
 const staffListMock = vi.hoisted(() => vi.fn());
 const dossierListMock = vi.hoisted(() => vi.fn());
 const dossierGetMock = vi.hoisted(() => vi.fn());
@@ -21,6 +22,7 @@ vi.mock("@/lib/api/client", () => ({
     activate: activateMock,
     complete: completeMock,
     cancel: cancelMock,
+    get: getMock,
   },
   staffAccountsApi: {
     list: staffListMock,
@@ -33,7 +35,6 @@ vi.mock("@/lib/api/client", () => ({
 
 describe("WorkAllocationWorkspace", () => {
   it("closes active work and moves it out of the open queue", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     const active = {
       id: "allocation-1",
       kind: "GENERIC",
@@ -48,15 +49,30 @@ describe("WorkAllocationWorkspace", () => {
       createdAt: "2026-10-01T00:00:00Z",
       updatedAt: "2026-10-01T00:00:00Z",
     };
+    let currentStatus = "ACTIVE";
     listMock.mockImplementation(({ state }: { state: string }) =>
       Promise.resolve({
-        data: state === "OPEN" ? [active] : [],
-        meta: { total: state === "OPEN" ? 1 : 0 },
+        data:
+          (state === "OPEN" && currentStatus === "ACTIVE") ||
+          (state === "COMPLETED" && currentStatus === "COMPLETED")
+            ? [{ ...active, status: currentStatus }]
+            : [],
+        meta: { total: 1 },
       }),
     );
     staffListMock.mockResolvedValue({ data: [], meta: { total: 0 } });
     dossierListMock.mockResolvedValue({ data: [], meta: { total: 0 } });
-    completeMock.mockResolvedValue({ ...active, status: "COMPLETED" });
+    completeMock.mockImplementation(async () => {
+      currentStatus = "COMPLETED";
+      return { ...active, status: "COMPLETED" };
+    });
+    getMock.mockResolvedValue({
+      ...active,
+      status: "COMPLETED",
+      members: [],
+      scopes: [],
+      scopeCoverage: [],
+    });
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -68,17 +84,72 @@ describe("WorkAllocationWorkspace", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Đánh dấu hoàn thành" }),
     );
+    expect(completeMock).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Xác nhận hoàn thành" }),
+    );
     await waitFor(() =>
       expect(completeMock).toHaveBeenCalledWith("allocation-1"),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Đã hoàn thành" }));
     await waitFor(() =>
       expect(listMock).toHaveBeenCalledWith({
         pageSize: 50,
         state: "COMPLETED",
       }),
     );
-    confirm.mockRestore();
+    expect(await screen.findByText("Hoàn thành")).toBeDefined();
+    expect(
+      screen.queryByRole("button", { name: "Đánh dấu hoàn thành" }),
+    ).toBeNull();
+  });
+  it("keeps active work visible and explains a failed completion", async () => {
+    listMock.mockResolvedValue({
+      data: [
+        {
+          id: "allocation-2",
+          kind: "GENERIC",
+          objective: "Duyệt hồ sơ",
+          description: null,
+          dossierId: null,
+          dossierVersionId: null,
+          dueAt: null,
+          priority: "MEDIUM",
+          status: "ACTIVE",
+          createdByUserId: "admin-1",
+          createdAt: "2026-10-01T00:00:00Z",
+          updatedAt: "2026-10-01T00:00:00Z",
+        },
+      ],
+      meta: { total: 1 },
+    });
+    staffListMock.mockResolvedValue({ data: [], meta: { total: 0 } });
+    dossierListMock.mockResolvedValue({ data: [], meta: { total: 0 } });
+    completeMock.mockRejectedValue(new Error("Network unavailable"));
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <WorkAllocationWorkspace />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Đánh dấu hoàn thành" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Xác nhận hoàn thành" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      expect.stringContaining("Chưa cập nhật được trạng thái"),
+    );
+    expect(screen.getByText("Đang thực hiện")).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Đánh dấu hoàn thành" }),
+    ).toBeDefined();
   });
   it("creates a general allocation with an explicit responsible person", async () => {
     dossierListMock.mockResolvedValue({

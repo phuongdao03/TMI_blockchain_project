@@ -29,6 +29,9 @@ export function WorkAllocationList({
   onActivateDraft,
   onComplete,
   onCancel,
+  pendingClose,
+  onConfirmClose,
+  onDismissClose,
   closingAllocationId,
   closeError,
   closeErrorCode,
@@ -49,6 +52,12 @@ export function WorkAllocationList({
   onActivateDraft?: (allocationId: string) => void;
   onComplete?: (allocationId: string) => void;
   onCancel?: (allocationId: string) => void;
+  pendingClose?: {
+    allocationId: string;
+    target: "COMPLETED" | "CANCELLED";
+  } | null;
+  onConfirmClose?: () => void;
+  onDismissClose?: () => void;
   closingAllocationId?: string | null;
   closeError?: string | null;
   closeErrorCode?: string | null;
@@ -178,6 +187,45 @@ export function WorkAllocationList({
               </button>
             </div>
           ) : null}
+          {pendingClose?.allocationId === allocation.id ? (
+            <div
+              aria-label="Xác nhận cập nhật phân công"
+              className="mt-3 rounded-xl border border-[var(--theme-border)] p-4 text-sm text-[var(--theme-text)]"
+              role="group"
+            >
+              <p className="font-semibold">
+                {pendingClose.target === "COMPLETED"
+                  ? "Xác nhận công việc đã hoàn thành?"
+                  : "Xác nhận hủy phân công? Hồ sơ và kết quả thẩm định đã ghi nhận vẫn được giữ lại."}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary-700 px-4 font-bold text-white disabled:opacity-50"
+                  disabled={Boolean(closingAllocationId)}
+                  onClick={onConfirmClose}
+                  type="button"
+                >
+                  {closingAllocationId === allocation.id ? (
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="thv-loading-spinner size-4"
+                    />
+                  ) : null}
+                  {pendingClose.target === "COMPLETED"
+                    ? "Xác nhận hoàn thành"
+                    : "Xác nhận hủy"}
+                </button>
+                <button
+                  className="min-h-10 rounded-lg border border-[var(--theme-border)] px-4 font-semibold"
+                  disabled={Boolean(closingAllocationId)}
+                  onClick={onDismissClose}
+                  type="button"
+                >
+                  Quay lại
+                </button>
+              </div>
+            </div>
+          ) : null}
           {closeError === allocation.id ? (
             <p
               className="mt-2 text-sm text-red-700 dark:text-red-300"
@@ -257,13 +305,17 @@ function AllocationCoverage({
     );
   }
   const activeMembers = detail.members.filter((member) => member.isActive);
+  const completedMembers = activeMembers.filter(
+    (member) => member.completedAt || detail.status === "COMPLETED",
+  ).length;
   if (detail.scopes.length === 0) {
     return (
       <section className="mt-4 border-t border-neutral-200 pt-4 dark:border-neutral-800">
         <h3 className="text-sm font-bold text-neutral-950 dark:text-white">
           Người thực hiện ·{" "}
-          {activeMembers.filter((member) => member.completedAt).length}/
-          {activeMembers.length} hoàn thành
+          {detail.status === "CANCELLED"
+            ? "Đã hủy"
+            : `${completedMembers}/${activeMembers.length} hoàn thành`}
         </h3>
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {activeMembers.map((member) => (
@@ -277,12 +329,16 @@ function AllocationCoverage({
               </span>
               <span
                 className={
-                  member.completedAt
+                  member.completedAt || detail.status === "COMPLETED"
                     ? "shrink-0 font-semibold text-emerald-700 dark:text-emerald-300"
                     : "shrink-0 text-neutral-600 dark:text-neutral-300"
                 }
               >
-                {member.completedAt ? "Đã xong" : "Đang làm"}
+                {detail.status === "CANCELLED"
+                  ? "Đã hủy"
+                  : member.completedAt || detail.status === "COMPLETED"
+                    ? "Đã xong"
+                    : "Đang làm"}
               </span>
             </li>
           ))}

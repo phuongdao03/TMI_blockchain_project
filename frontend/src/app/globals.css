@@ -3277,6 +3277,12 @@ html[data-navigation-pending="true"]::after {
   animation: navigation-spinner-turn 700ms linear infinite;
 }
 
+.thv-loading-spinner {
+  flex: none;
+  transform-origin: center;
+  animation: navigation-spinner-turn 700ms linear infinite;
+}
+
 @media (min-width: 48rem) {
   .navigation-loading__message {
     display: none;
@@ -11951,13 +11957,20 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
 @media (prefers-reduced-motion: reduce) {
   html[data-navigation-pending="true"]::after,
   .navigation-loading__message,
-  .navigation-loading__spinner,
   .page-loading__progress {
     animation: none;
   }
 
   .page-loading__progress {
     width: 100%;
+  }
+
+  /* Essential progress feedback stays visible even when decorative motion is off. */
+  .thv-loading-spinner,
+  .navigation-loading__spinner,
+  .auth-activity-spinner,
+  .animate-spin {
+    animation: navigation-spinner-turn 900ms linear infinite !important;
   }
 }
 
