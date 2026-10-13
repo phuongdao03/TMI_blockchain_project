@@ -614,6 +614,21 @@ export function PublicWorkEditor({
                   <Check className="size-4" />{" "}
                   {save.isPending ? "Đang lưu…" : "Lưu thay đổi"}
                 </Button>
+                {!showPreview &&
+                availableActions[detail.data.publicationStatus].includes(
+                  "publish",
+                ) ? (
+                  <Button
+                    disabled={
+                      !detail.data.checklist.every((item) => item.passed) ||
+                      isDirty ||
+                      transition.isPending
+                    }
+                    onClick={() => setPendingAction("publish")}
+                  >
+                    <Send className="size-4" /> Xuất bản
+                  </Button>
+                ) : null}
               </div>
             </div>
 
@@ -946,22 +961,6 @@ export function PublicWorkEditor({
                       Phiên bản {detail.data.version}
                     </p>
                     <div className="mt-4 grid gap-2">
-                      {availableActions[detail.data.publicationStatus].includes(
-                        "publish",
-                      ) ? (
-                        <Button
-                          disabled={
-                            !detail.data.checklist.every(
-                              (item) => item.passed,
-                            ) ||
-                            isDirty ||
-                            transition.isPending
-                          }
-                          onClick={() => setPendingAction("publish")}
-                        >
-                          <Send className="size-4" /> Xuất bản
-                        </Button>
-                      ) : null}
                       {availableActions[detail.data.publicationStatus].includes(
                         "hide",
                       ) ? (

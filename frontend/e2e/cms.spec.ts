@@ -46,7 +46,11 @@ test("content admin creates, previews and publishes a sanitized post", async ({
   await expect(page.getByText("PUBLISHED")).toBeVisible();
 });
 
-test("content admin previews and publishes a public work", async ({ page }) => {
+test("content admin previews and publishes a public work", async ({
+  page,
+  isMobile,
+}) => {
+  if (isMobile) await page.setViewportSize({ width: 393, height: 600 });
   await page.goto("/admin/content");
   await page.getByRole("button", { name: /Di sản số THV/ }).click();
   await expect(page.getByLabel("Tiêu đề công khai")).toHaveValue(
