@@ -247,7 +247,7 @@ function PayrollEntryTable({
 }) {
   return (
     <div className="hidden overflow-x-auto sm:block">
-      <table className="min-w-[980px] w-full text-left">
+      <table className="workspace-record-table min-w-[980px] w-full text-left">
         <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
           <tr>
             <th className="px-5 py-3">Nhân viên</th>
@@ -264,7 +264,7 @@ function PayrollEntryTable({
         <tbody>
           {entries.map((entry) => (
             <tr className="border-t border-neutral-100" key={entry.id}>
-              <td className="px-5 py-4">
+              <td data-label="Nhân viên" className="px-5 py-4">
                 <p className="font-bold text-neutral-950">
                   {entry.employeeName}
                 </p>
@@ -272,25 +272,40 @@ function PayrollEntryTable({
                   {entry.employeeCode}
                 </p>
               </td>
-              <td className="px-5 py-4 text-right font-mono text-sm font-semibold text-neutral-800">
+              <td
+                data-label="Lương cơ bản"
+                className="px-5 py-4 text-right font-mono text-sm font-semibold text-neutral-800"
+              >
                 {formatVnd(entry.baseSalary)}
               </td>
-              <td className="px-5 py-4 text-right text-sm text-neutral-700">
+              <td
+                data-label="Công và OT"
+                className="px-5 py-4 text-right text-sm text-neutral-700"
+              >
                 <p>{entry.attendanceWorkdays} ngày</p>
                 <p className="mt-1 text-xs text-neutral-500">
                   {entry.approvedOvertimeHours} giờ OT
                 </p>
               </td>
-              <td className="px-5 py-4 text-right font-mono text-sm text-neutral-700">
+              <td
+                data-label="Phụ cấp"
+                className="px-5 py-4 text-right font-mono text-sm text-neutral-700"
+              >
                 {formatVnd(entry.allowance)}
               </td>
-              <td className="px-5 py-4 text-right font-mono text-sm text-neutral-700">
+              <td
+                data-label="Khấu trừ"
+                className="px-5 py-4 text-right font-mono text-sm text-neutral-700"
+              >
                 {formatVnd(entry.totalDeductions)}
               </td>
-              <td className="px-5 py-4 text-right font-mono text-sm font-bold text-emerald-800">
+              <td
+                data-label="Thực lĩnh"
+                className="px-5 py-4 text-right font-mono text-sm font-bold text-emerald-800"
+              >
                 {formatVnd(entry.netPay)}
               </td>
-              <td className="px-5 py-4 text-right">
+              <td data-label="Chi tiết" className="px-5 py-4 text-right">
                 {editable ? (
                   <button
                     className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-sm font-bold text-neutral-800 hover:bg-neutral-50"

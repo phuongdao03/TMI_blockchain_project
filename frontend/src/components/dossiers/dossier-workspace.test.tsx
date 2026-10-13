@@ -49,7 +49,7 @@ const dossier = {
       evidenceType: "OWNERSHIP_DOCUMENT",
       evidenceRole: "OWNERSHIP_DOCUMENT",
       accessScope: "INTERNAL",
-      title: "Giấy xác nhận quyền sở hữu",
+      title: "Bằng chứng về quyền sử dụng",
       description: null,
       issuedAt: null,
       displayOrder: 0,
@@ -141,7 +141,7 @@ describe("DossierWorkspace", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
-    expect(screen.getByText("Giấy xác nhận quyền sở hữu")).toBeDefined();
+    expect(screen.getByText("Bằng chứng về quyền sử dụng")).toBeDefined();
     await user.click(screen.getByRole("button", { name: "Nộp hồ sơ" }));
     expect(api.submit.mock.calls[0]?.[0]).toBe(dossier.id);
     expect(api.submit.mock.calls[0]?.[1]).toEqual(expect.any(String));
@@ -359,7 +359,7 @@ describe("DossierWorkspace", () => {
     ).toBeDefined();
     expect(
       document.querySelector(".dossier-state-summary")?.className,
-    ).toContain("bg-[var(--theme-elevated)]");
+    ).not.toContain("bg-[var(--theme-elevated)]");
     expect(screen.getByLabelText("Tên hồ sơ").hasAttribute("disabled")).toBe(
       true,
     );
@@ -439,5 +439,31 @@ describe("DossierWorkspace", () => {
     expect(other.hasAttribute("disabled")).toBe(true);
     await user.click(screen.getByRole("button", { name: "Xóa proof.pdf" }));
     expect(other.hasAttribute("disabled")).toBe(false);
+  });
+
+  it("uses neutral document labels when the dossier type has no document rules", async () => {
+    const user = userEvent.setup();
+    api.get.mockResolvedValue({ ...dossier, documentRules: [], evidences: [] });
+    api.versions.mockResolvedValue([]);
+    api.timeline.mockResolvedValue([]);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <DossierWorkspace dossierId={dossier.id} />
+      </QueryClientProvider>,
+    );
+
+    const steps = await screen.findByRole("navigation", {
+      name: "Các bước hoàn thiện hồ sơ",
+    });
+    await user.click(within(steps).getByRole("button", { name: /Bằng chứng/ }));
+
+    expect(
+      screen.getByRole("option", {
+        name: "Bằng chứng về quyền hoặc nguồn gốc",
+      }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("option", { name: "Nội dung hoặc đối tượng đề cử" }),
+    ).toBeDefined();
   });
 });

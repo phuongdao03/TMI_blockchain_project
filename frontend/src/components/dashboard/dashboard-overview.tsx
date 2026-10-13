@@ -176,219 +176,278 @@ export function DashboardOverview() {
         </Link>
       </section>
 
-      <nav aria-label="Lối tắt hồ sơ" className="grid gap-2 sm:grid-cols-3">
-        <Link
-          className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
-          href="/dossiers"
+      {!dossiers.isPending &&
+      !dossiers.isError &&
+      visibleDossiers.length === 0 ? (
+        <section
+          aria-labelledby="first-dossier-title"
+          className="dashboard-first-steps"
         >
-          Theo dõi hồ sơ
-        </Link>
-        <Link
-          className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
-          href={
-            primaryDossier &&
-            (primaryDossier.status === "DRAFT" ||
-              primaryDossier.status === "NEEDS_SUPPLEMENT")
-              ? `/dossiers/${primaryDossier.id}`
-              : "/dossiers/new"
-          }
-        >
-          {primaryDossier &&
-          (primaryDossier.status === "DRAFT" ||
-            primaryDossier.status === "NEEDS_SUPPLEMENT")
-            ? "Tải thêm tài liệu"
-            : "Gửi đề cử mới"}
-        </Link>
-        <Link
-          className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
-          href="/certificates"
-        >
-          Bằng xác lập của tôi
-        </Link>
-      </nav>
-
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-bold">Trạng thái của hồ sơ gần đây</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            Số liệu dưới đây chỉ tính trên {visibleDossiers.length} hồ sơ vừa
-            tải.
-          </p>
-        </div>
-        {dossiers.data ? (
-          <Link
-            className="text-sm font-bold text-primary-700 hover:text-primary-800"
-            href="/dossiers"
-          >
-            Tổng cộng {dossiers.data.meta.total} hồ sơ
-          </Link>
-        ) : null}
-      </div>
-      <section
-        aria-label="Trạng thái của hồ sơ gần đây"
-        className="dashboard-overview__metrics dashboard-surface grid overflow-hidden rounded-xl border md:grid-cols-3"
-      >
-        {[
-          {
-            label: "Việc cần làm",
-            value: dossiers.isPending ? "—" : String(attentionCount),
-            detail: "Hồ sơ cần bạn hoàn thiện, bổ sung hoặc thanh toán",
-            icon: FolderKanban,
-          },
-          {
-            label: "Đang xử lý",
-            value: dossiers.isPending ? "—" : String(processingCount),
-            detail: "Hồ sơ đã gửi và đang được Tinh Hoa Việt xem xét",
-            icon: Clock3,
-          },
-          {
-            label: "Bằng xác lập sẵn sàng",
-            value: dossiers.isPending ? "—" : String(certificateCount),
-            detail: "Bằng xác lập đã phát hành và có thể tải xuống",
-            icon: BadgeCheck,
-          },
-        ].map((item) => {
-          const Icon = item.icon;
-          return (
-            <article
-              className="relative border-b border-black/8 p-6 last:border-b-0 md:border-r md:border-b-0 md:last:border-r-0"
-              key={item.label}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
-                    {item.label}
-                  </p>
-                  <p className="mt-3 text-4xl font-bold tracking-[-0.04em]">
-                    {item.value}
-                  </p>
-                </div>
-                <span className="grid size-9 place-items-center rounded-lg border border-primary-100 bg-primary-50 text-primary-700">
-                  <Icon aria-hidden="true" className="size-5" />
-                </span>
-              </div>
-              <p className="mt-5 max-w-xs text-sm leading-6 text-neutral-600">
-                {item.detail}
-              </p>
-            </article>
-          );
-        })}
-      </section>
-
-      <section className="grid gap-5 xl:grid-cols-[1.45fr_0.55fr]">
-        <section className="dashboard-surface overflow-hidden rounded-xl border">
-          <header className="flex items-center justify-between border-b border-black/8 px-6 py-5">
-            <div>
-              <h2 className="text-lg font-bold">Hồ sơ gần đây</h2>
-              <p className="mt-1 text-sm text-neutral-500">
-                Tiếp tục đúng nơi bạn đang dở.
-              </p>
-            </div>
-            <Link
-              className="text-sm font-bold text-primary-700 hover:text-primary-800"
-              href="/dossiers"
-            >
-              Xem tất cả
-            </Link>
-          </header>
           <div>
-            {dossiers.isPending ? (
-              <div className="space-y-3 px-6 py-5" role="status">
-                <p className="flex items-center gap-2 text-sm font-semibold text-neutral-500">
-                  <LoaderCircle
-                    aria-hidden="true"
-                    className="thv-loading-spinner size-5"
-                  />
-                  Đang tải hồ sơ…
-                </p>
-                {[0, 1, 2].map((item) => (
-                  <div
-                    aria-hidden="true"
-                    className="dashboard-skeleton h-14 animate-pulse rounded-lg"
-                    key={item}
-                  />
-                ))}
-              </div>
-            ) : dossiers.isError ? (
-              <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center">
-                <p className="font-bold text-neutral-900">Chưa thể tải hồ sơ</p>
-                <p className="mt-1 max-w-sm text-sm leading-6 text-neutral-500">
-                  Vui lòng kiểm tra kết nối và thử tải lại trang để tiếp tục.
-                </p>
-                <button
-                  className="mt-4 min-h-11 rounded-xl border border-neutral-300 px-4 text-sm font-bold"
-                  onClick={() => void dossiers.refetch()}
-                  type="button"
-                >
-                  Thử lại
-                </button>
-              </div>
-            ) : dossiers.data?.data.length ? (
-              <div className="divide-y divide-neutral-100">
-                {dossiers.data.data.slice(0, 3).map((dossier) => (
-                  <Link
-                    className="flex min-h-20 flex-col items-start justify-center gap-2.5 px-4 py-4 hover:bg-neutral-50 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6"
-                    href={`/dossiers/${dossier.id}`}
-                    key={dossier.id}
-                  >
-                    <div className="min-w-0 max-w-full">
-                      <p className="truncate text-sm font-bold">
-                        {dossier.title}
-                      </p>
-                      <p className="mt-1 font-mono text-[0.68rem] text-neutral-400">
-                        {dossier.code}
-                      </p>
-                    </div>
-                    <DossierStatusBadge
-                      className="shrink-0 whitespace-nowrap"
-                      status={dossier.status}
-                    />
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center">
-                <FolderKanban
-                  aria-hidden="true"
-                  className="size-7 text-neutral-400"
-                />
-                <p className="mt-3 font-bold">Chưa có hồ sơ</p>
-                <p className="mt-1 text-sm text-neutral-500">
-                  Tạo hồ sơ đầu tiên để bắt đầu.
-                </p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-white/10 bg-neutral-950 p-6 text-white">
-          <div>
-            <BadgeCheck aria-hidden="true" className="size-6 text-gold-300" />
-            <h2 className="mt-6 text-lg font-bold">Cập nhật gần nhất</h2>
-            <p className="text-sm leading-6 text-slate-300">
-              Theo dõi những thay đổi quan trọng của hồ sơ.
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
+              Trước khi gửi
+            </p>
+            <h2 className="mt-2 text-xl font-bold" id="first-dossier-title">
+              Bắt đầu hồ sơ đầu tiên
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
+              Bạn sẽ được hướng dẫn theo loại hồ sơ đang mở. Các trường và tài
+              liệu cần chuẩn bị được hiển thị sau khi chọn loại.
             </p>
           </div>
-          <div className="mt-6 space-y-3 border-t border-white/10 pt-5">
-            {[
-              "Trạng thái dễ hiểu",
-              "Thông báo khi cần bổ sung",
-              "Bằng xác lập sẵn sàng để tải",
-            ].map((label) => (
-              <p
-                className="flex items-center gap-2 text-sm font-semibold text-slate-300"
-                key={label}
+          <ol className="mt-5 divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)] sm:grid sm:grid-cols-3 sm:divide-y-0">
+            <li className="py-4 sm:pr-6">
+              <strong className="text-sm">01 · Chọn loại hồ sơ phù hợp</strong>
+              <p className="mt-1 text-sm text-[var(--theme-muted)]">
+                Xem thông tin và tài liệu theo biểu mẫu hiện hành.
+              </p>
+            </li>
+            <li className="py-4 sm:border-l sm:border-[var(--theme-border)] sm:px-6">
+              <strong className="text-sm">
+                02 · Lưu bản nháp và bổ sung tài liệu
+              </strong>
+              <p className="mt-1 text-sm text-[var(--theme-muted)]">
+                Có thể quay lại để hoàn thiện trước khi gửi.
+              </p>
+            </li>
+            <li className="py-4 sm:border-l sm:border-[var(--theme-border)] sm:pl-6">
+              <strong className="text-sm">
+                03 · Kiểm tra, gửi và theo dõi
+              </strong>
+              <p className="mt-1 text-sm text-[var(--theme-muted)]">
+                Theo dõi trạng thái và yêu cầu bổ sung trong hồ sơ.
+              </p>
+            </li>
+          </ol>
+        </section>
+      ) : (
+        <>
+          <nav
+            aria-label="Lối tắt hồ sơ"
+            className="workspace-shortcut-list grid gap-2 sm:grid-cols-3"
+          >
+            <Link
+              className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
+              href="/dossiers"
+            >
+              Theo dõi hồ sơ
+            </Link>
+            <Link
+              className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
+              href={
+                primaryDossier &&
+                (primaryDossier.status === "DRAFT" ||
+                  primaryDossier.status === "NEEDS_SUPPLEMENT")
+                  ? `/dossiers/${primaryDossier.id}`
+                  : "/dossiers/new"
+              }
+            >
+              {primaryDossier &&
+              (primaryDossier.status === "DRAFT" ||
+                primaryDossier.status === "NEEDS_SUPPLEMENT")
+                ? "Tải thêm tài liệu"
+                : "Gửi đề cử mới"}
+            </Link>
+            <Link
+              className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
+              href="/certificates"
+            >
+              Bằng xác lập của tôi
+            </Link>
+          </nav>
+
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-bold">
+                Trạng thái của hồ sơ gần đây
+              </h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Số liệu dưới đây chỉ tính trên {visibleDossiers.length} hồ sơ
+                vừa tải.
+              </p>
+            </div>
+            {dossiers.data ? (
+              <Link
+                className="text-sm font-bold text-primary-700 hover:text-primary-800"
+                href="/dossiers"
               >
+                Tổng cộng {dossiers.data.meta.total} hồ sơ
+              </Link>
+            ) : null}
+          </div>
+          <section
+            aria-label="Trạng thái của hồ sơ gần đây"
+            className="dashboard-overview__metrics dashboard-surface grid overflow-hidden rounded-xl border md:grid-cols-3"
+          >
+            {[
+              {
+                label: "Việc cần làm",
+                value: dossiers.isPending ? "—" : String(attentionCount),
+                detail: "Hồ sơ cần bạn hoàn thiện, bổ sung hoặc thanh toán",
+                icon: FolderKanban,
+              },
+              {
+                label: "Đang xử lý",
+                value: dossiers.isPending ? "—" : String(processingCount),
+                detail: "Hồ sơ đã gửi và đang được Tinh Hoa Việt xem xét",
+                icon: Clock3,
+              },
+              {
+                label: "Bằng xác lập sẵn sàng",
+                value: dossiers.isPending ? "—" : String(certificateCount),
+                detail: "Bằng xác lập đã phát hành và có thể tải xuống",
+                icon: BadgeCheck,
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <article
+                  className="relative border-b border-black/8 p-6 last:border-b-0 md:border-r md:border-b-0 md:last:border-r-0"
+                  key={item.label}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
+                        {item.label}
+                      </p>
+                      <p className="mt-3 text-4xl font-bold tracking-[-0.04em]">
+                        {item.value}
+                      </p>
+                    </div>
+                    <span className="grid size-9 place-items-center rounded-lg border border-primary-100 bg-primary-50 text-primary-700">
+                      <Icon aria-hidden="true" className="size-5" />
+                    </span>
+                  </div>
+                  <p className="mt-5 max-w-xs text-sm leading-6 text-neutral-600">
+                    {item.detail}
+                  </p>
+                </article>
+              );
+            })}
+          </section>
+
+          <section className="grid gap-5 xl:grid-cols-[1.45fr_0.55fr]">
+            <section className="dashboard-surface overflow-hidden rounded-xl border">
+              <header className="flex items-center justify-between border-b border-black/8 px-6 py-5">
+                <div>
+                  <h2 className="text-lg font-bold">Hồ sơ gần đây</h2>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    Tiếp tục đúng nơi bạn đang dở.
+                  </p>
+                </div>
+                <Link
+                  className="text-sm font-bold text-primary-700 hover:text-primary-800"
+                  href="/dossiers"
+                >
+                  Xem tất cả
+                </Link>
+              </header>
+              <div>
+                {dossiers.isPending ? (
+                  <div className="space-y-3 px-6 py-5" role="status">
+                    <p className="flex items-center gap-2 text-sm font-semibold text-neutral-500">
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="thv-loading-spinner size-5"
+                      />
+                      Đang tải hồ sơ…
+                    </p>
+                    {[0, 1, 2].map((item) => (
+                      <div
+                        aria-hidden="true"
+                        className="dashboard-skeleton h-14 animate-pulse rounded-lg"
+                        key={item}
+                      />
+                    ))}
+                  </div>
+                ) : dossiers.isError ? (
+                  <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center">
+                    <p className="font-bold text-neutral-900">
+                      Chưa thể tải hồ sơ
+                    </p>
+                    <p className="mt-1 max-w-sm text-sm leading-6 text-neutral-500">
+                      Vui lòng kiểm tra kết nối và thử tải lại trang để tiếp
+                      tục.
+                    </p>
+                    <button
+                      className="mt-4 min-h-11 rounded-xl border border-neutral-300 px-4 text-sm font-bold"
+                      onClick={() => void dossiers.refetch()}
+                      type="button"
+                    >
+                      Thử lại
+                    </button>
+                  </div>
+                ) : dossiers.data?.data.length ? (
+                  <div className="divide-y divide-neutral-100">
+                    {dossiers.data.data.slice(0, 3).map((dossier) => (
+                      <Link
+                        className="flex min-h-20 flex-col items-start justify-center gap-2.5 px-4 py-4 hover:bg-neutral-50 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6"
+                        href={`/dossiers/${dossier.id}`}
+                        key={dossier.id}
+                      >
+                        <div className="min-w-0 max-w-full">
+                          <p className="truncate text-sm font-bold">
+                            {dossier.title}
+                          </p>
+                          <p className="mt-1 font-mono text-[0.68rem] text-neutral-400">
+                            {dossier.code}
+                          </p>
+                        </div>
+                        <DossierStatusBadge
+                          className="shrink-0 whitespace-nowrap"
+                          status={dossier.status}
+                        />
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center">
+                    <FolderKanban
+                      aria-hidden="true"
+                      className="size-7 text-neutral-400"
+                    />
+                    <p className="mt-3 font-bold">Chưa có hồ sơ</p>
+                    <p className="mt-1 text-sm text-neutral-500">
+                      Tạo hồ sơ đầu tiên để bắt đầu.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-white/10 bg-neutral-950 p-6 text-white">
+              <div>
                 <BadgeCheck
                   aria-hidden="true"
-                  className="size-4 text-gold-300"
+                  className="size-6 text-gold-300"
                 />
-                {label}
-              </p>
-            ))}
-          </div>
-        </section>
-      </section>
+                <h2 className="mt-6 text-lg font-bold">Cập nhật gần nhất</h2>
+                <p className="text-sm leading-6 text-slate-300">
+                  Theo dõi những thay đổi quan trọng của hồ sơ.
+                </p>
+              </div>
+              <div className="mt-6 space-y-3 border-t border-white/10 pt-5">
+                {[
+                  "Trạng thái dễ hiểu",
+                  "Thông báo khi cần bổ sung",
+                  "Bằng xác lập sẵn sàng để tải",
+                ].map((label) => (
+                  <p
+                    className="flex items-center gap-2 text-sm font-semibold text-slate-300"
+                    key={label}
+                  >
+                    <BadgeCheck
+                      aria-hidden="true"
+                      className="size-4 text-gold-300"
+                    />
+                    {label}
+                  </p>
+                ))}
+              </div>
+            </section>
+          </section>
+        </>
+      )}
     </div>
   );
 }

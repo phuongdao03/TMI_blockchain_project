@@ -157,6 +157,76 @@ describe("ReviewLifecyclePanel", () => {
     ).toBe("/admin/payments?dossierId=dossier-1");
   });
 
+  it("shows submitted criterion conclusions, rationale and cited files to Admin", () => {
+    listStaffMock.mockResolvedValue({ data: [], meta: { total: 0 } });
+    const report = readyDossier();
+    report.snapshotJson = {
+      schemaVersion: 2,
+      dossier: {
+        id: "dossier-1",
+        code: "HS-2026-01",
+        title: "Hồ sơ",
+        dossierType: {
+          reviewRubric: {
+            version: "2026.2",
+            title: "Tiêu chí hồ sơ",
+            assessmentMethod: "VERDICT",
+            gates: [],
+            criteria: [
+              {
+                key: "rights",
+                label: "Căn cứ quyền sử dụng",
+                description: "Kiểm tra quyền sử dụng.",
+              },
+            ],
+          },
+        },
+      },
+      evidences: [
+        {
+          id: "evidence-1",
+          mediaAssetId: "media-1",
+          evidenceType: "SOURCE_DOCUMENT",
+          title: "Bằng chứng quyền sử dụng",
+          description: null,
+          issuedAt: null,
+          displayOrder: 0,
+          isPublic: false,
+          media: {
+            mimeType: "application/pdf",
+            bytes: 1024,
+            sha256: "a".repeat(64),
+          },
+        },
+      ],
+    };
+    report.assignments[0]!.review = {
+      ...report.assignments[0]!.review!,
+      criterionVerdicts: {
+        rights: {
+          outcome: "MEETS",
+          rationale: "Đã đối chiếu căn cứ sử dụng với tài liệu đính kèm.",
+          evidenceMediaIds: ["media-1"],
+        },
+      },
+    };
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ReviewLifecyclePanel dossier={report} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("Căn cứ quyền sử dụng")).toBeTruthy();
+    expect(
+      screen.getByText("Đã đối chiếu căn cứ sử dụng với tài liệu đính kèm."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/Tài liệu dẫn chiếu: Bằng chứng quyền sử dụng/),
+    ).toBeTruthy();
+    expect(screen.getByText("Đáp ứng")).toBeTruthy();
+  });
+
   it("explains what follows a supplement request", async () => {
     const user = userEvent.setup();
     listStaffMock.mockResolvedValue({ data: [], meta: { total: 0 } });

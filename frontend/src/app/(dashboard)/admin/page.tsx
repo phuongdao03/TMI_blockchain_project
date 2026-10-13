@@ -81,7 +81,7 @@ export default function AdminPortalPage() {
             đúng khu vực xử lý hiện có.
           </p>
           <nav aria-label="Quy trình hồ sơ" className="mt-5">
-            <ol className="divide-y divide-[var(--theme-border)] sm:grid sm:grid-cols-2 sm:gap-2 sm:divide-y-0 xl:grid-cols-4">
+            <ol className="admin-workflow-list divide-y divide-[var(--theme-border)] sm:grid sm:grid-cols-2 sm:gap-2 sm:divide-y-0 xl:grid-cols-4">
               {(
                 [
                   [
@@ -174,7 +174,7 @@ export default function AdminPortalPage() {
               Quản lý đội ngũ →
             </Link>
           </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="admin-module-list mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {modules.map(({ href, title, description, icon: Icon, tone }) => (
               <Link
                 className="group rounded-2xl border border-neutral-200 bg-white p-5 transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500"

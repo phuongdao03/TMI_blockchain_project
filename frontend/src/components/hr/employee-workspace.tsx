@@ -806,7 +806,7 @@ export function EmployeeWorkspace({
       ) : null}
 
       <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
-        <table className="min-w-[980px] w-full text-left">
+        <table className="workspace-record-table min-w-[980px] w-full text-left">
           <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
             <tr>
               <th className="px-5 py-3">Nhân viên</th>
@@ -864,7 +864,7 @@ export function EmployeeWorkspace({
             ) : null}
             {rows.map((employee) => (
               <tr className="border-t border-neutral-100" key={employee.id}>
-                <td className="px-5 py-4">
+                <td data-label="Nhân viên" className="px-5 py-4">
                   <p className="font-bold text-neutral-950">
                     {employee.fullName}
                   </p>
@@ -872,21 +872,30 @@ export function EmployeeWorkspace({
                     {employee.employeeCode} · {employee.email}
                   </p>
                 </td>
-                <td className="px-5 py-4 text-sm text-neutral-700">
+                <td
+                  data-label="Phòng ban"
+                  className="px-5 py-4 text-sm text-neutral-700"
+                >
                   {employee.departmentName}
                 </td>
-                <td className="px-5 py-4 text-sm text-neutral-700">
+                <td
+                  data-label="Vị trí"
+                  className="px-5 py-4 text-sm text-neutral-700"
+                >
                   {employee.position}
                 </td>
-                <td className="px-5 py-4">
+                <td data-label="Trạng thái" className="px-5 py-4">
                   <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800">
                     {statusLabels[employee.employmentStatus]}
                   </span>
                 </td>
-                <td className="px-5 py-4 text-right font-mono text-sm font-bold text-neutral-800">
+                <td
+                  data-label="Lương cơ bản"
+                  className="px-5 py-4 text-right font-mono text-sm font-bold text-neutral-800"
+                >
                   {salary(employee.baseSalary)}
                 </td>
-                <td className="px-5 py-4">
+                <td data-label="Thao tác" className="px-5 py-4">
                   <button
                     className="min-h-9 rounded-lg border border-neutral-300 px-3 text-xs font-bold text-neutral-800 hover:bg-neutral-50"
                     onClick={() => beginEdit(employee)}

@@ -56,9 +56,14 @@ describe("DashboardOverview", () => {
     renderDashboard();
 
     await waitFor(() => {
-      expect(screen.getByText("Chưa có hồ sơ")).toBeDefined();
+      expect(
+        screen.getByRole("heading", { name: "Bắt đầu hồ sơ đầu tiên" }),
+      ).toBeDefined();
     });
     expect(screen.getByRole("link", { name: /Tạo hồ sơ mới/i })).toBeDefined();
+    expect(screen.getByText(/Chọn loại hồ sơ phù hợp/i)).toBeDefined();
+    expect(screen.queryByText("0")).toBeNull();
+    expect(screen.queryByText("Trạng thái của hồ sơ gần đây")).toBeNull();
     expect(
       screen.getByRole("heading", { level: 1, name: "Việc cần làm" }),
     ).toBeDefined();

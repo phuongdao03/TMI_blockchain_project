@@ -130,6 +130,19 @@ describe("DossierCreateForm", () => {
     expect(
       screen.getByRole("heading", { name: "Tài liệu cần chuẩn bị" }),
     ).toBeDefined();
+    const preflight = screen.getByRole("region", {
+      name: "Tài liệu cần chuẩn bị",
+    });
+    const selectedType = screen
+      .getByRole("radio", { name: /Tác phẩm văn hóa/ })
+      .closest("label");
+    expect(
+      preflight.compareDocumentPosition(selectedType ?? preflight) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      document.querySelectorAll(".dossier-create-form > section"),
+    ).toHaveLength(1);
     expect(screen.getByText("Tài liệu chứng minh nguồn gốc")).toBeDefined();
     expect(screen.getByText(/PDF, PNG/)).toBeDefined();
     expect(screen.getByText(/tối đa 10 MB · 3 tệp/)).toBeDefined();

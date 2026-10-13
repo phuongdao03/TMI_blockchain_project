@@ -5491,15 +5491,8 @@ html[data-theme="dark"] .dashboard-main textarea::placeholder {
 /* Dossier notices are semantic surfaces.  They do not inherit a pale utility
    background when the dashboard switches to dark mode. */
 .dossier-state-card {
-  border: 1px solid
-    color-mix(in srgb, var(--theme-accent) 35%, var(--theme-border));
-  border-left: 0.25rem solid var(--theme-accent);
-  border-radius: var(--radius-surface);
-  background: color-mix(
-    in srgb,
-    var(--theme-accent) 10%,
-    var(--theme-elevated)
-  );
+  border-block: 1px solid var(--theme-border);
+  background: transparent;
   color: var(--theme-text);
 }
 
@@ -12120,5 +12113,500 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
 @media (max-width: 38rem) {
   .brand-mark__wordmark-image {
     width: clamp(7rem, 33vw, 9.25rem);
+  }
+}
+
+/* Workspace information density: one surface per task, rows for supporting data. */
+.dashboard-main {
+  padding-inline: clamp(1rem, 2.5vw, 2.5rem);
+}
+
+.dashboard-page-stage,
+.dashboard-page-stage > * > :where(header, section, form, ol) {
+  animation: none;
+}
+
+.dashboard-context-header {
+  backdrop-filter: none;
+}
+
+.dashboard-page-stage
+  :where(
+    .ui-card,
+    .dashboard-surface,
+    .dossier-list-surface,
+    .audit-event-card
+  ) {
+  box-shadow: none;
+}
+
+.dashboard-page-stage
+  :where(
+    .ui-card .ui-card,
+    .dashboard-surface .dashboard-surface,
+    .dashboard-surface .ui-card,
+    .ui-card .dashboard-surface
+  ) {
+  border: 0;
+  border-radius: 1rem;
+  background: transparent;
+}
+
+.dashboard-page-stage
+  :is(section, article, aside, form)[class*="rounded-3xl"][class*="border"]:not(
+    [role="alert"],
+    [role="status"]
+  ) {
+  border-inline: 0;
+  box-shadow: none;
+}
+
+.dashboard-page-stage
+  :is(
+    section,
+    div,
+    article
+  )[class*="rounded-2xl"][class*="border-neutral-200"][class*="bg-white"]:not(
+    [role="alert"]
+  ) {
+  border: 0;
+  border-top: 1px solid var(--theme-border);
+  border-radius: 1.25rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dashboard-page-stage :where(.dossier-list-item, .audit-event-card) {
+  box-shadow: none;
+  transform: none;
+}
+
+.dashboard-page-stage :where(.dossier-journey__step) {
+  border-inline: 0;
+  border-top: 0;
+  border-radius: 0.875rem;
+  background: transparent;
+}
+
+.dashboard-page-stage :where(.dossier-journey__step--active) {
+  border-bottom: 2px solid var(--theme-accent);
+  box-shadow: none;
+}
+
+.dashboard-page-stage
+  :where(
+    .dossier-type-option,
+    .dossier-visibility-option,
+    .dossier-choice-option
+  ) {
+  min-height: 3.5rem;
+  border-inline: 0;
+  border-top: 0;
+  border-radius: 0.875rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dashboard-page-stage
+  :where(
+    .dossier-type-option:has(:checked),
+    .dossier-visibility-option:has(:checked),
+    .dossier-choice-option:has(:checked)
+  ) {
+  border-bottom: 2px solid var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-accent) 6%, transparent);
+}
+
+.dashboard-page-stage :where(.dossier-create-form > section) {
+  border-inline: 0;
+  border-radius: 1.25rem;
+  box-shadow: none;
+}
+
+.dashboard-page-stage
+  :where(
+    .dossier-create-form > section > section,
+    .dossier-create-form > section section li
+  ) {
+  border-inline: 0;
+  border-radius: 1rem;
+  background: transparent;
+}
+
+.dashboard-page-stage :where(.hero-grid-surface) {
+  box-shadow: none;
+}
+
+.payment-request-workspace > header,
+.payment-request-workspace > section > :is(form, aside) {
+  border: 0;
+  border-radius: 1.25rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+.payment-request-workspace > header {
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.payment-request-workspace > header > :first-child {
+  padding-inline: 0;
+}
+
+.payment-request-workspace > header > :first-child > :last-child {
+  border: 0;
+  border-radius: 0.875rem;
+  background: transparent;
+  padding-inline: 0;
+}
+
+.payment-request-workspace > section > form {
+  padding-inline: 0;
+}
+
+.payment-request-workspace > section > aside {
+  border-top: 1px solid var(--theme-border);
+  padding-inline: 0;
+}
+
+.payment-request-workspace .payment-mode {
+  border-inline: 0;
+  border-top: 0;
+  border-radius: 0.875rem;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.payment-request-workspace .payment-mode:hover {
+  transform: none;
+}
+
+.payment-request-workspace .payment-mode-selected {
+  border-bottom-color: var(--theme-accent);
+}
+
+.dashboard-page-stage :where(.public-theme-surface--embedded) {
+  border: 0;
+  border-top: 1px solid var(--theme-border);
+  border-radius: 1.25rem;
+  background: transparent;
+}
+
+.dashboard-page-stage
+  header[class*="rounded-3xl"][class*="border"][class*="bg-neutral-950"] {
+  border: 0;
+  border-radius: 1.5rem;
+  padding-block: clamp(1.25rem, 2vw, 2rem);
+  box-shadow: none;
+}
+
+.dashboard-page-stage header[class*="rounded-2xl"][class*="border"] {
+  border: 0;
+  border-bottom: 1px solid var(--theme-border);
+  border-radius: 1.25rem;
+  background: transparent;
+  padding-inline: 0;
+  box-shadow: none;
+}
+
+.dashboard-page-stage
+  form[class*="rounded-2xl"][class*="border"][class*="bg-white"] {
+  border: 0;
+  border-top: 1px solid var(--theme-border);
+  border-radius: 1.25rem;
+  background: transparent;
+  padding-inline: 0;
+  box-shadow: none;
+}
+
+.dashboard-page-stage :where(table) {
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-page-stage :where(thead) {
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.dashboard-page-stage :where(tbody > tr:hover) {
+  background: color-mix(in srgb, var(--theme-accent) 4%, transparent);
+}
+
+.dashboard-first-steps {
+  padding-block: 0.5rem 1rem;
+}
+
+.dossier-required-label::after {
+  content: " *";
+  color: var(--theme-accent);
+}
+
+.workspace-summary {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.workspace-summary-list,
+.workspace-priority-list {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 1rem;
+}
+
+.workspace-shortcut-list {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 1rem;
+}
+
+.workspace-shortcut-list > a {
+  min-height: 3.5rem;
+  border: 0;
+  border-bottom: 1px solid var(--theme-border);
+  border-radius: 0;
+  background: transparent;
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
+
+.workspace-summary-list > a,
+.workspace-priority-list > a {
+  min-height: 5rem;
+  border: 0;
+  border-bottom: 1px solid var(--theme-border);
+  border-radius: 0;
+  background: transparent;
+  padding: 1rem;
+  box-shadow: none;
+}
+
+.workspace-row-list:where(div) {
+  border-inline: 0;
+  border-radius: 1rem;
+  background: transparent;
+}
+
+.workspace-row-list :where(article) {
+  border-inline: 0;
+  border-radius: 0.875rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+.workspace-row-list:where(section) :where(article) {
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.workspace-row-list:where(div) :where(article) {
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.admin-workflow-list {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 1.25rem;
+}
+
+.admin-workflow-list a {
+  min-height: 5rem;
+  border: 0;
+  border-bottom: 1px solid var(--theme-border);
+  border-radius: 0;
+  background: transparent;
+  padding: 1rem;
+}
+
+.admin-module-list {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 1.25rem;
+}
+
+.admin-module-list > a {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  column-gap: 1rem;
+  align-content: start;
+  border: 0;
+  border-bottom: 1px solid var(--theme-border);
+  border-radius: 0;
+  background: transparent;
+  padding: 1.25rem 0.75rem;
+  box-shadow: none;
+  transform: none;
+}
+
+.admin-module-list > a:hover {
+  background: color-mix(in srgb, var(--theme-accent) 6%, transparent);
+  box-shadow: none;
+  transform: none;
+}
+
+.admin-module-list > a > :first-child {
+  grid-row: 1;
+  align-self: start;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0.5rem;
+}
+
+.admin-module-list > a > :not(:first-child) {
+  grid-column: 2;
+  min-height: 0;
+  margin-top: 0;
+}
+
+.admin-module-list > a > p {
+  margin-top: 0.25rem;
+}
+
+.admin-module-list > a > :last-child {
+  margin-top: 0.5rem;
+}
+
+.dashboard-page-stage :where(input, select, textarea) {
+  max-width: 100%;
+}
+
+.confirmation-dialog__surface {
+  box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 18%);
+}
+
+[role="dialog"][class*="backdrop-blur"] {
+  backdrop-filter: none;
+}
+
+@media (max-width: 76rem) and (min-width: 48.01rem) {
+  .dashboard-main {
+    padding-inline: clamp(1.25rem, 3vw, 2rem);
+  }
+}
+
+@media (min-width: 64rem) {
+  .payment-request-workspace > section > aside {
+    border-top: 0;
+    border-left: 1px solid var(--theme-border);
+    padding-left: 1.5rem;
+  }
+}
+
+@media (max-width: 56rem) {
+  .workspace-record-table {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .workspace-record-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .workspace-record-table tbody,
+  .workspace-record-table tbody tr {
+    display: block;
+  }
+
+  .workspace-record-table tbody tr {
+    padding-block: 0.75rem;
+    border-top: 1px solid var(--theme-border);
+  }
+
+  .workspace-record-table tbody td[data-label] {
+    display: grid;
+    width: 100%;
+    max-width: none;
+    grid-template-columns: minmax(6rem, 32%) minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+
+  .workspace-record-table tbody td[data-label]::before {
+    content: attr(data-label);
+    color: var(--theme-muted);
+    font-size: 0.75rem;
+    font-weight: 650;
+  }
+
+  .workspace-record-table tbody td[data-label] > :not(:first-child) {
+    grid-column: 2;
+  }
+
+  .workspace-record-table
+    tbody
+    td:is(
+      [data-label="Nhân viên"],
+      [data-label="Tài khoản"],
+      [data-label="Công việc"]
+    ) {
+    display: block;
+    padding-bottom: 0.75rem;
+  }
+
+  .workspace-record-table
+    tbody
+    td:is(
+      [data-label="Nhân viên"],
+      [data-label="Tài khoản"],
+      [data-label="Công việc"]
+    )::before {
+    display: none;
+  }
+
+  .workspace-record-table tbody td[data-label] > :where(div, p, span) {
+    min-width: 0;
+  }
+
+  .workspace-record-table tbody td[data-label] :where(button, a) {
+    min-height: 2.75rem;
+  }
+
+  .workspace-record-table tbody td[colspan] {
+    display: block;
+    max-width: none;
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .dashboard-main {
+    padding-inline: 1rem;
+  }
+
+  .dashboard-page-stage
+    :where(.ui-card, .dashboard-surface, .dossier-list-surface) {
+    border-inline: 0;
+    border-radius: 1rem;
+  }
+
+  .dashboard-page-stage :where(.ui-card) > :where(div[class*="p-6"]) {
+    padding-inline: 1rem;
+  }
+
+  .dashboard-page-stage :where(form[class*="grid"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-page-stage :where(.overflow-x-auto) {
+    max-width: 100%;
+    overscroll-behavior-inline: contain;
+  }
+
+  .dashboard-page-stage :where(.workspace-record-table) {
+    overflow: visible;
+  }
+
+  .dashboard-page-stage :where(.dashboard-overview__hero) {
+    padding: 1.5rem;
   }
 }

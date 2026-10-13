@@ -1,5 +1,6 @@
 "use client";
 
+import { formatEvidenceMimeType } from "@/components/reviews/review-evidence-format";
 import type { ReviewEvidenceSnapshot } from "@/lib/api/types";
 
 function toggle(values: string[], value: string) {
@@ -44,26 +45,28 @@ export function ReviewEvidenceSelect({
           Chọn ít nhất một tệp đã khóa.
         </p>
       </div>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-2 grid gap-x-6 gap-y-1 md:grid-cols-2">
         {evidences.map((evidence) => {
-          const inputId = `${label}-${evidence.mediaAssetId}`;
           const checked = value.includes(evidence.mediaAssetId);
           return (
             <label
-              className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm transition-colors duration-150 hover:border-primary-400 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 has-[:checked]:text-primary-900"
-              htmlFor={inputId}
+              className="grid min-h-12 cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-lg py-1.5 text-sm transition-colors hover:text-[var(--theme-accent)] has-[:checked]:text-[var(--theme-accent)]"
               key={evidence.mediaAssetId}
             >
               <input
                 checked={checked}
                 className="size-4 accent-primary-700"
                 disabled={disabled}
-                id={inputId}
                 onChange={() => onChange(toggle(value, evidence.mediaAssetId))}
                 type="checkbox"
               />
-              <span className="max-w-72 truncate font-semibold">
-                {evidence.title}
+              <span className="min-w-0">
+                <span className="block break-words font-semibold">
+                  {evidence.title}
+                </span>
+                <span className="mt-0.5 block text-xs text-[var(--theme-muted)]">
+                  Định dạng {formatEvidenceMimeType(evidence.media.mimeType)}
+                </span>
               </span>
             </label>
           );

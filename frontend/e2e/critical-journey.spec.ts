@@ -111,10 +111,10 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     await page.goto("/reviews");
     await page.getByRole("link", { name: "Tiếp tục thẩm định" }).click();
     await page
-      .getByLabel("Kết quả kiểm tra Giấy xác nhận quyền sở hữu")
+      .getByLabel("Kết quả kiểm tra Bằng chứng về quyền sử dụng nhãn hiệu")
       .selectOption("VALID");
     const criteria = [
-      "Căn cứ quyền sở hữu",
+      "Căn cứ quyền sử dụng nhãn hiệu",
       "Thông tin nhất quán",
       "Đủ căn cứ xác minh",
     ];

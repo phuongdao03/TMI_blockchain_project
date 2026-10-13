@@ -15,7 +15,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { PrivateDocumentVerification } from "@/components/documents/private-document-verification";
 import { ImageLoadingStatus } from "@/components/media/image-loading-status";
 import { formatEvidenceMimeType } from "@/components/reviews/review-evidence-format";
@@ -100,13 +99,21 @@ export function EvidenceViewer({
   const evidenceGroups = [
     ...grouped,
     ...(ungrouped.length
-      ? [{ key: "OTHER", label: "Tài liệu khác", items: ungrouped }]
+      ? [
+          {
+            key: "UNGROUPED",
+            label: documentRules.length
+              ? "Tài liệu chưa phân loại"
+              : "Tài liệu trong hồ sơ",
+            items: ungrouped,
+          },
+        ]
       : []),
   ];
 
   return (
-    <Card className="flex flex-col overflow-hidden">
-      <div className="border-b border-[var(--theme-border)] px-5 py-5 sm:px-6">
+    <section className="flex min-w-0 flex-col">
+      <div className="py-4">
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-accent)]">
           <ShieldCheck aria-hidden="true" className="size-4" />
           Bằng chứng phiên bản đã khóa
@@ -116,13 +123,13 @@ export function EvidenceViewer({
         </h2>
       </div>
       {evidences.length ? (
-        <div className="order-2 divide-y divide-[var(--theme-border)]">
+        <div className="order-2 space-y-4">
           {evidenceGroups.map((group) => (
             <section
               aria-labelledby={`evidence-group-${group.key}`}
               key={group.key}
             >
-              <div className="bg-[var(--theme-elevated)] px-5 py-2.5 sm:px-6">
+              <div className="py-3">
                 <h3
                   className="text-xs font-bold uppercase tracking-[0.1em] text-[var(--theme-muted)]"
                   id={`evidence-group-${group.key}`}
@@ -130,7 +137,7 @@ export function EvidenceViewer({
                   {group.label} · {group.items.length} tệp
                 </h3>
               </div>
-              <div className="divide-y divide-[var(--theme-border)]">
+              <div className="space-y-3">
                 {group.items.map((evidence) => {
                   const Icon = evidence.media.mimeType.startsWith("image/")
                     ? FileImage
@@ -144,7 +151,7 @@ export function EvidenceViewer({
                     activeMediaId === evidence.mediaAssetId;
                   return (
                     <article
-                      className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-3 px-5 py-4 sm:px-6"
+                      className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-3 py-4 lg:grid-cols-[auto_minmax(0,1fr)_auto]"
                       key={evidence.id}
                     >
                       <span className="grid size-10 place-items-center rounded-lg bg-[var(--theme-elevated)] text-[var(--theme-accent)]">
@@ -172,7 +179,7 @@ export function EvidenceViewer({
                       </div>
                       <Button
                         aria-label={`Xem ${evidence.title}`}
-                        className="col-span-2 w-full sm:col-start-2 sm:w-fit"
+                        className="col-span-2 w-full sm:col-start-2 sm:w-fit lg:col-span-1 lg:col-start-3 lg:row-start-1 lg:self-center"
                         disabled={mutation.isPending}
                         onClick={() => openEvidence(evidence)}
                         variant="outline"
@@ -358,6 +365,6 @@ export function EvidenceViewer({
           </a>
         </section>
       ) : null}
-    </Card>
+    </section>
   );
 }

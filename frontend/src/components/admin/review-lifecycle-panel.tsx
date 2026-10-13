@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { ReviewReportDetails } from "@/components/admin/review-report-details";
 import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
 
 import { adminReviewApi, staffAccountsApi } from "@/lib/api/client";
@@ -20,6 +21,7 @@ import type {
   AdminDossierDecision,
   AdminReviewAssistanceRequest,
   AdminReviewDossierDetail,
+  ReviewSnapshot,
   ReviewRecommendation,
 } from "@/lib/api/types";
 
@@ -68,10 +70,16 @@ function decisionRequestId(error: unknown): string | undefined {
   return undefined;
 }
 
-function ReviewReport({ item }: { item: AdminReviewAssignment }) {
+function ReviewReport({
+  item,
+  snapshot,
+}: {
+  item: AdminReviewAssignment;
+  snapshot: ReviewSnapshot;
+}) {
   const { assignment, review, reviewerEmail } = item;
   return (
-    <article className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:p-5">
+    <article className="border-t border-[var(--theme-border)] py-5 first:border-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-bold">{reviewerEmail}</p>
@@ -86,44 +94,51 @@ function ReviewReport({ item }: { item: AdminReviewAssignment }) {
         ) : null}
       </div>
       {review ? (
-        <dl className="mt-4 grid gap-4 border-t border-[var(--theme-border)] pt-4 md:grid-cols-2">
-          {review.totalScore !== null ? (
-            <div>
-              <dt className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                Tổng điểm
-              </dt>
-              <dd className="mt-1 font-bold">{review.totalScore}/100</dd>
-            </div>
-          ) : null}
+        <>
+          <dl className="mt-4 grid gap-4 border-t border-[var(--theme-border)] pt-4 md:grid-cols-2">
+            {review.totalScore !== null ? (
+              <div>
+                <dt className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+                  Tổng điểm
+                </dt>
+                <dd className="mt-1 font-bold">{review.totalScore}/100</dd>
+              </div>
+            ) : null}
+            {review.submittedAt ? (
+              <div>
+                <dt className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+                  Gửi lúc
+                </dt>
+                <dd className="mt-1">
+                  {new Date(review.submittedAt).toLocaleString("vi-VN")}
+                </dd>
+              </div>
+            ) : null}
+            {review.applicantFeedback ? (
+              <div className="md:col-span-2">
+                <dt className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+                  Nhận xét
+                </dt>
+                <dd className="mt-1 whitespace-pre-wrap">
+                  {review.applicantFeedback}
+                </dd>
+              </div>
+            ) : null}
+            {review.privateNote ? (
+              <div className="md:col-span-2">
+                <dt className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+                  Ghi chú nội bộ
+                </dt>
+                <dd className="mt-1 whitespace-pre-wrap">
+                  {review.privateNote}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
           {review.submittedAt ? (
-            <div>
-              <dt className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                Gửi lúc
-              </dt>
-              <dd className="mt-1">
-                {new Date(review.submittedAt).toLocaleString("vi-VN")}
-              </dd>
-            </div>
+            <ReviewReportDetails review={review} snapshot={snapshot} />
           ) : null}
-          {review.applicantFeedback ? (
-            <div className="md:col-span-2">
-              <dt className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                Nhận xét
-              </dt>
-              <dd className="mt-1 whitespace-pre-wrap">
-                {review.applicantFeedback}
-              </dd>
-            </div>
-          ) : null}
-          {review.privateNote ? (
-            <div className="md:col-span-2">
-              <dt className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                Ghi chú nội bộ
-              </dt>
-              <dd className="mt-1 whitespace-pre-wrap">{review.privateNote}</dd>
-            </div>
-          ) : null}
-        </dl>
+        </>
       ) : (
         <p className="mt-4 text-sm text-neutral-500">
           Reviewer chưa gửi báo cáo. Admin sẽ nhận thông báo ngay khi hoàn tất.
@@ -579,7 +594,11 @@ export function ReviewLifecyclePanel({
           </div>
           <div className="mt-5 space-y-3">
             {dossier.assignments.map((item) => (
-              <ReviewReport item={item} key={item.assignment.id} />
+              <ReviewReport
+                item={item}
+                key={item.assignment.id}
+                snapshot={dossier.snapshotJson}
+              />
             ))}
           </div>
         </section>

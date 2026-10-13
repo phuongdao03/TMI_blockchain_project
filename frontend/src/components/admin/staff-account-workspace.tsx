@@ -487,7 +487,7 @@ export function StaffAccountWorkspace({
           ) : null}
           {rows.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="min-w-[44rem] w-full text-left text-sm">
+              <table className="workspace-record-table min-w-[44rem] w-full text-left text-sm">
                 <thead className="bg-neutral-50 text-[11px] uppercase tracking-[0.14em] text-neutral-500">
                   <tr>
                     <th className="px-5 py-3 sm:px-6">Tài khoản</th>
@@ -510,7 +510,10 @@ export function StaffAccountWorkspace({
                         className="border-t border-neutral-100"
                         key={account.id}
                       >
-                        <td className="px-5 py-4 sm:px-6">
+                        <td
+                          data-label="Tài khoản"
+                          className="px-5 py-4 sm:px-6"
+                        >
                           <p className="font-semibold text-neutral-950">
                             {account.email}
                           </p>
@@ -520,7 +523,7 @@ export function StaffAccountWorkspace({
                               : "Chưa đăng nhập"}
                           </p>
                         </td>
-                        <td className="px-5 py-4 sm:px-6">
+                        <td data-label="Nhiệm vụ" className="px-5 py-4 sm:px-6">
                           <span className="inline-flex rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-2 text-xs font-semibold text-neutral-800">
                             {isProtected
                               ? "Quản trị hệ thống"
@@ -529,12 +532,15 @@ export function StaffAccountWorkspace({
                                 )?.label ?? account.role)}
                           </span>
                         </td>
-                        <td className="px-5 py-4 sm:px-6">
+                        <td
+                          data-label="Trạng thái"
+                          className="px-5 py-4 sm:px-6"
+                        >
                           <span className="inline-flex rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-xs font-bold text-neutral-700">
                             {staffStatusLabel(account.status)}
                           </span>
                         </td>
-                        <td className="px-5 py-4 sm:px-6">
+                        <td data-label="Thao tác" className="px-5 py-4 sm:px-6">
                           <div className="flex flex-wrap gap-2">
                             {account.status === "ACTIVE" &&
                             !isProtected &&

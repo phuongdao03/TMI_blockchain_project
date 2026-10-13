@@ -135,7 +135,10 @@ export function MyWorkAllocationList() {
         <EmptyState />
       ) : null}
       {separateReviews.length > 0 ? (
-        <section aria-label="Hồ sơ thẩm định được giao" className="space-y-3">
+        <section
+          aria-label="Hồ sơ thẩm định được giao"
+          className="workspace-row-list space-y-3"
+        >
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold text-[var(--theme-text)]">
@@ -228,7 +231,7 @@ export function MyWorkAllocationList() {
           <h2 className="text-xl font-bold text-[var(--theme-text)]">
             Đầu việc khác
           </h2>
-          <div className="grid gap-3" role="list">
+          <div className="workspace-row-list grid gap-3" role="list">
             {otherAllocations.map((allocation) => (
               <article
                 className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-[var(--theme-text)] sm:p-5"

@@ -98,7 +98,9 @@ describe("dashboard overview", () => {
     );
 
     expect(screen.getByRole("link", { name: "Tạo hồ sơ mới" })).toBeDefined();
-    expect(await screen.findByText("Chưa có hồ sơ")).toBeDefined();
+    expect(
+      await screen.findByRole("heading", { name: "Bắt đầu hồ sơ đầu tiên" }),
+    ).toBeDefined();
     expect(listMock).toHaveBeenCalledTimes(1);
   });
 
@@ -133,8 +135,10 @@ describe("dashboard overview", () => {
       }),
     ).toBeDefined();
     expect(screen.getByRole("link", { name: "Tạo hồ sơ mới" })).toBeDefined();
-    expect(await screen.findByText("Chưa có hồ sơ")).toBeDefined();
-    expect(screen.getByText("Cập nhật gần nhất")).toBeDefined();
+    expect(
+      await screen.findByRole("heading", { name: "Bắt đầu hồ sơ đầu tiên" }),
+    ).toBeDefined();
+    expect(screen.getByText(/Chọn loại hồ sơ phù hợp/)).toBeDefined();
   });
 
   it.each([
@@ -218,7 +222,9 @@ describe("dashboard overview", () => {
 
     expect(await screen.findByText("Chưa thể tải hồ sơ")).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
-    expect(await screen.findByText("Chưa có hồ sơ")).toBeDefined();
+    expect(
+      await screen.findByRole("heading", { name: "Bắt đầu hồ sơ đầu tiên" }),
+    ).toBeDefined();
     expect(listMock).toHaveBeenCalledTimes(2);
   });
 

@@ -87,6 +87,7 @@ function formatFileLimit(bytes: number): string {
 export function DossierCreateForm() {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const preflightRef = useRef<HTMLElement>(null);
   const queryClient = useQueryClient();
   const [dossierTypeVersionId, setDossierTypeVersionId] = useState("");
   const [typeQuery, setTypeQuery] = useState("");
@@ -236,16 +237,12 @@ export function DossierCreateForm() {
           ))}
         </ol>
       </nav>
-      <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
-        <div className="border-b border-neutral-100 bg-neutral-50/70 px-5 py-4 sm:px-6">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
-            Danh mục hồ sơ
-          </p>
-        </div>
-        <div className="flex items-start gap-4 p-5 sm:p-6">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-700">
-            <ShieldCheck aria-hidden="true" className="size-5" />
-          </span>
+      <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6">
+        <div className="flex items-start gap-3 border-b border-[var(--theme-border)] pb-4">
+          <ShieldCheck
+            aria-hidden="true"
+            className="mt-0.5 size-5 shrink-0 text-primary-700"
+          />
           <div>
             <h2 className="font-bold text-neutral-950">
               {dossierType?.name ?? "Chọn loại hồ sơ để bắt đầu"}
@@ -256,9 +253,6 @@ export function DossierCreateForm() {
             </p>
           </div>
         </div>
-      </section>
-
-      <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6">
         {prepareStep === 0 ? (
           <fieldset aria-describedby="dossier-type-help">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -306,6 +300,72 @@ export function DossierCreateForm() {
                 ) : null}
               </>
             ) : null}
+            {dossierType && prepareStep === 0 ? (
+              <section
+                aria-labelledby="document-preflight-title"
+                className="dossier-preflight border-y border-[var(--theme-border)] py-4"
+                ref={preflightRef}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="grid size-8 shrink-0 place-items-center text-primary-700">
+                    <ListChecks aria-hidden="true" className="size-5" />
+                  </span>
+                  <div>
+                    <h2 className="font-bold" id="document-preflight-title">
+                      Tài liệu cần chuẩn bị
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-neutral-600">
+                      {requiredFieldCount} trường thông tin bắt buộc ·{" "}
+                      {documentRules.length
+                        ? `${documentRules.length} nhóm tài liệu`
+                        : "Không có nhóm tài liệu bắt buộc riêng"}
+                      . Tệp được tải lên sau khi bản nháp được tạo.
+                    </p>
+                  </div>
+                </div>
+
+                {documentRules.length ? (
+                  <ul
+                    className="mt-3 divide-y divide-[var(--theme-border)]"
+                    role="list"
+                  >
+                    {documentRules.map((rule) => (
+                      <li className="py-3" key={rule.key}>
+                        <div className="flex items-start gap-3">
+                          <FileCheck2
+                            aria-hidden="true"
+                            className="mt-0.5 size-5 shrink-0 text-primary-700"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold">
+                              {rule.label ?? rule.documentType}
+                              {rule.required ? (
+                                <span className="ml-2 text-xs text-primary-700">
+                                  Bắt buộc
+                                </span>
+                              ) : null}
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-neutral-600">
+                              {rule.allowedMimeTypes
+                                .map((mime) => mimeLabels[mime] ?? mime)
+                                .join(", ")}{" "}
+                              · tối đa {formatFileLimit(rule.maxBytes)} ·{" "}
+                              {rule.maxCount ?? 1} tệp
+                            </p>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="mt-3 flex items-start gap-3 text-sm text-neutral-600">
+                    <Files aria-hidden="true" className="size-5 shrink-0" />
+                    Loại hồ sơ này chưa yêu cầu nhóm tệp riêng. Bạn vẫn có thể
+                    bổ sung bằng chứng trong bản nháp.
+                  </div>
+                )}
+              </section>
+            ) : null}
             <div className="mt-3 grid gap-2.5 sm:max-h-[23rem] sm:grid-cols-2 sm:gap-3 sm:overflow-y-auto sm:pr-1">
               {visibleDossierTypes?.map((item) => {
                 const selected =
@@ -324,6 +384,18 @@ export function DossierCreateForm() {
                         setDossierTypeVersionId(item.currentVersion.id);
                         setFormData({});
                         setStepError("");
+                        if (window.matchMedia?.("(max-width: 639px)").matches) {
+                          requestAnimationFrame(() =>
+                            preflightRef.current?.scrollIntoView({
+                              block: "start",
+                              behavior: window.matchMedia(
+                                "(prefers-reduced-motion: reduce)",
+                              ).matches
+                                ? "auto"
+                                : "smooth",
+                            }),
+                          );
+                        }
                       }}
                       type="radio"
                       value={item.currentVersion.id}
@@ -391,74 +463,11 @@ export function DossierCreateForm() {
 
         {hasDossierTypes ? (
           <>
-            {dossierType && prepareStep === 0 ? (
-              <section
-                aria-labelledby="document-preflight-title"
-                className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:p-5"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-700">
-                    <ListChecks aria-hidden="true" className="size-5" />
-                  </span>
-                  <div>
-                    <h2 className="font-bold" id="document-preflight-title">
-                      Tài liệu cần chuẩn bị
-                    </h2>
-                    <p className="mt-1 text-sm leading-6 text-neutral-600">
-                      {requiredFieldCount} trường thông tin bắt buộc ·{" "}
-                      {documentRules.length} nhóm tài liệu. Tệp được tải lên sau
-                      khi bản nháp được tạo.
-                    </p>
-                  </div>
-                </div>
-
-                {documentRules.length ? (
-                  <ul className="mt-4 grid gap-3 lg:grid-cols-2" role="list">
-                    {documentRules.map((rule) => (
-                      <li
-                        className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4"
-                        key={rule.key}
-                      >
-                        <div className="flex items-start gap-3">
-                          <FileCheck2
-                            aria-hidden="true"
-                            className="mt-0.5 size-5 shrink-0 text-primary-700"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold">
-                              {rule.label ?? rule.documentType}
-                              {rule.required ? (
-                                <span className="ml-2 text-xs text-primary-700">
-                                  Bắt buộc
-                                </span>
-                              ) : null}
-                            </p>
-                            <p className="mt-1 text-xs leading-5 text-neutral-600">
-                              {rule.allowedMimeTypes
-                                .map((mime) => mimeLabels[mime] ?? mime)
-                                .join(", ")}{" "}
-                              · tối đa {formatFileLimit(rule.maxBytes)} ·{" "}
-                              {rule.maxCount ?? 1} tệp
-                            </p>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-sm text-neutral-600">
-                    <Files aria-hidden="true" className="size-5 shrink-0" />
-                    Loại hồ sơ này chưa yêu cầu nhóm tệp riêng. Bạn vẫn có thể
-                    bổ sung bằng chứng trong bản nháp.
-                  </div>
-                )}
-              </section>
-            ) : null}
             {prepareStep === 1 ? (
               <>
                 <div>
                   <label
-                    className="text-sm font-bold text-neutral-900"
+                    className="dossier-required-label text-sm font-bold text-neutral-900"
                     htmlFor="dossier-title"
                   >
                     Tên tài sản hoặc tác phẩm
@@ -469,6 +478,7 @@ export function DossierCreateForm() {
                     id="dossier-title"
                     placeholder="Ví dụ: Bộ sưu tập văn hóa Việt"
                     {...form.register("title")}
+                    aria-required="true"
                   />
                   {form.formState.errors.title ? (
                     <p

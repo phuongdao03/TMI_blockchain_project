@@ -106,7 +106,7 @@ export function ModeratorHrDashboardSummary() {
   return (
     <section
       aria-labelledby="moderator-hr-dashboard-title"
-      className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 shadow-sm sm:p-6"
+      className="workspace-summary rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 shadow-sm sm:p-6"
     >
       <div className="flex flex-col gap-3 border-b border-[var(--theme-border)] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -146,7 +146,7 @@ export function ModeratorHrDashboardSummary() {
         ) : null}
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="workspace-summary-list mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <Link
           className="group min-w-0 min-h-32 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 transition-colors hover:border-[var(--theme-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-text)]"
           href="/attendance"

@@ -2205,7 +2205,7 @@ const server = createServer(async (request, response) => {
         documentRules: [
           {
             key: "ownership_document",
-            label: "Tài liệu chứng minh quyền sở hữu",
+            label: "Tài liệu về quyền sử dụng hoặc đại diện nhãn hiệu",
             documentType: "OWNERSHIP_DOCUMENT",
             required: false,
             allowedMimeTypes: ["application/pdf"],
@@ -2222,9 +2222,9 @@ const server = createServer(async (request, response) => {
           criteria: [
             {
               key: "ownership_basis",
-              label: "Căn cứ quyền sở hữu",
+              label: "Căn cứ quyền sử dụng nhãn hiệu",
               description:
-                "Tài liệu thể hiện được căn cứ để người nộp sử dụng hoặc sở hữu đối tượng trong hồ sơ.",
+                "Tài liệu thể hiện căn cứ để người nộp sử dụng hoặc đại diện cho nhãn hiệu trong hồ sơ.",
             },
             {
               key: "information_consistency",
@@ -2247,8 +2247,8 @@ const server = createServer(async (request, response) => {
         id: evidenceId,
         mediaAssetId: reviewMediaId,
         evidenceType: "OWNERSHIP_DOCUMENT",
-        title: "Giấy xác nhận quyền sở hữu",
-        description: "Tài liệu gốc đã được kiểm tra checksum.",
+        title: "Bằng chứng về quyền sử dụng nhãn hiệu",
+        description: "Tệp đính kèm đã được kiểm tra checksum.",
         issuedAt: "2026-07-20T08:00:00Z",
         displayOrder: 0,
         isPublic: false,
@@ -2563,6 +2563,39 @@ const server = createServer(async (request, response) => {
         canonicalHash: visible ? "b".repeat(64) : null,
         snapshotJson: visible ? reviewSnapshot : null,
         review,
+      }),
+    );
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === `/api/v1/admin/review-dossiers/${dossierId}` &&
+    superAdminAuthenticated
+  ) {
+    send(
+      response,
+      200,
+      envelope({
+        dossierId,
+        dossierCode: "HS-2026-REVIEW01",
+        dossierTitle: "Hồ sơ thương hiệu THV",
+        status: "UNDER_REVIEW",
+        versionNo: 1,
+        submittedAt: "2026-08-01T08:00:00Z",
+        assignmentCount: 1,
+        canonicalHash: "b".repeat(64),
+        snapshotJson: reviewSnapshot,
+        assignments: [
+          {
+            assignment: {
+              ...reviewAssignment,
+              reviewerUserId: reviewerUser.id,
+            },
+            reviewerEmail: reviewerUser.email,
+            review,
+          },
+        ],
+        assistanceRequests: [],
       }),
     );
     return;

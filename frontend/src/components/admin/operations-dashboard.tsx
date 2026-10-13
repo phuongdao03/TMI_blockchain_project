@@ -252,7 +252,7 @@ export function OperationsDashboard({
       </section>
 
       <section
-        className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)] sm:grid sm:grid-cols-2 sm:gap-3 sm:divide-y-0 sm:border-0 xl:grid-cols-4"
+        className="workspace-priority-list divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)] sm:grid sm:grid-cols-2 sm:gap-3 sm:divide-y-0 sm:border-0 xl:grid-cols-4"
         aria-label="Chỉ số cần theo dõi"
         id="hang-doi-xu-ly"
       >

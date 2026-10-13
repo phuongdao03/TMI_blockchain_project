@@ -264,7 +264,7 @@ export function AdminOvertimeWorkspace() {
             {overtime.data?.meta.total ?? 0} yêu cầu
           </span>
         </div>
-        <table className="min-w-[1050px] w-full text-left">
+        <table className="workspace-record-table min-w-[1050px] w-full text-left">
           <thead className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-500">
             <tr>
               <th className="px-5 py-3">Nhân viên</th>
@@ -320,7 +320,7 @@ export function AdminOvertimeWorkspace() {
             ) : null}
             {rows.map((item) => (
               <tr className="border-t border-neutral-100" key={item.id}>
-                <td className="px-5 py-4">
+                <td data-label="Nhân viên" className="px-5 py-4">
                   <p className="font-bold text-neutral-950">
                     {item.employeeName}
                   </p>
@@ -328,25 +328,34 @@ export function AdminOvertimeWorkspace() {
                     {item.employeeCode} · {item.departmentName}
                   </p>
                 </td>
-                <td className="px-5 py-4 text-sm text-neutral-700">
+                <td
+                  data-label="Thời gian"
+                  className="px-5 py-4 text-sm text-neutral-700"
+                >
                   {displayTime(item.startAt)}
                   <br />
                   {displayTime(item.endAt)}
                 </td>
-                <td className="max-w-72 px-5 py-4 text-sm text-neutral-700">
+                <td
+                  data-label="Lý do"
+                  className="max-w-72 px-5 py-4 text-sm text-neutral-700"
+                >
                   {item.reason}
                 </td>
-                <td className="px-5 py-4">
+                <td data-label="Trạng thái" className="px-5 py-4">
                   <span
                     className={`rounded-full px-2.5 py-1 text-xs font-bold ${tones[item.status]}`}
                   >
                     {labels[item.status]}
                   </span>
                 </td>
-                <td className="max-w-56 px-5 py-4 text-sm text-neutral-700">
+                <td
+                  data-label="Phản hồi"
+                  className="max-w-56 px-5 py-4 text-sm text-neutral-700"
+                >
                   {item.decisionNote ?? "—"}
                 </td>
-                <td className="px-5 py-4">
+                <td data-label="Xử lý" className="px-5 py-4">
                   {item.status === "PENDING" ? (
                     <div className="flex gap-2">
                       <button

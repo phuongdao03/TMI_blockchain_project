@@ -58,7 +58,7 @@ test("reviewer reviews each document and submits a criteria verdict", async ({
     }
   });
 
-  await page.goto("/reviews");
+  await page.goto("/reviews", { waitUntil: "domcontentloaded" });
   await expect(
     page
       .locator("main")
@@ -69,28 +69,38 @@ test("reviewer reviews each document and submits a criteria verdict", async ({
     "href",
     /\/reviews\/4155dbf5-bb3e-449d-8bf0-9572cc642cac$/,
   );
-  await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
+  await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac", {
+    waitUntil: "domcontentloaded",
+  });
   await expect(
     page.getByRole("heading", { level: 1, name: "Hồ sơ thương hiệu THV" }),
   ).toBeVisible();
   await expect(page.getByText("Bằng chứng phiên bản đã khóa")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Giấy xác nhận quyền sở hữu" }),
+    page.getByRole("heading", {
+      name: "Bằng chứng về quyền sử dụng nhãn hiệu",
+    }),
   ).toBeVisible();
   await expect(
-    page.getByText("Loại tài liệu: Tài liệu chứng minh quyền sở hữu"),
+    page.getByText(
+      "Loại tài liệu: Tài liệu về quyền sử dụng hoặc đại diện nhãn hiệu",
+    ),
   ).toBeVisible();
   await expect(page.getByText("Định dạng: PDF")).toBeVisible();
+  await page.screenshot({
+    fullPage: true,
+    path: testInfo.outputPath("review-form-before-submit.png"),
+  });
 
   const evidencePreview = page.getByRole("region", { name: /xem tr/i });
   await page.locator('button[aria-label^="Xem "]').first().click();
   await expect(evidencePreview).toBeVisible();
 
   await page
-    .getByLabel("Kết quả kiểm tra Giấy xác nhận quyền sở hữu")
+    .getByLabel("Kết quả kiểm tra Bằng chứng về quyền sử dụng nhãn hiệu")
     .selectOption("VALID");
   const criteria = [
-    "Căn cứ quyền sở hữu",
+    "Căn cứ quyền sử dụng nhãn hiệu",
     "Thông tin nhất quán",
     "Đủ căn cứ xác minh",
   ];
@@ -131,12 +141,39 @@ test("reviewer reviews each document and submits a criteria verdict", async ({
     path: testInfo.outputPath("review-submitted.png"),
   });
   expect(consoleIssues).toEqual([]);
+
+  await page.context().addCookies([
+    {
+      name: "cns_e2e_persona",
+      value: "super-admin",
+      domain: "127.0.0.1",
+      path: "/",
+    },
+  ]);
+  await page.goto("/admin/reviews/9155dbf5-bb3e-449d-8bf0-9572cc642cac", {
+    waitUntil: "domcontentloaded",
+  });
+  await expect(
+    page.getByRole("heading", { name: "Báo cáo kiểm duyệt" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Nhận định theo từng tiêu chí" }),
+  ).toContainText(
+    "Đã đối chiếu tài liệu và xác nhận căn cứ quyền sử dụng nhãn hiệu",
+  );
+  await expect(
+    page.getByRole("region", { name: "Nhận định theo từng tiêu chí" }),
+  ).toContainText("Bằng chứng về quyền sử dụng nhãn hiệu");
+  await page.screenshot({
+    fullPage: true,
+    path: testInfo.outputPath("admin-review-report.png"),
+  });
 });
 
 test("retired similarity route returns reviewer to the main queue", async ({
   page,
 }) => {
-  await page.goto("/reviews/similarity");
+  await page.goto("/reviews/similarity", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/reviews$/);
   await expect(
     page
@@ -145,8 +182,32 @@ test("retired similarity route returns reviewer to the main queue", async ({
   ).toBeVisible();
 });
 
-test("reviewer assessment remains legible in dark mode", async ({ page }) => {
-  await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
+test("reviewer form fits tablet width", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac", {
+    waitUntil: "domcontentloaded",
+  });
+  await expect(
+    page.getByRole("heading", { name: "Phiếu thẩm định hồ sơ" }),
+  ).toBeVisible();
+  const overflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth,
+  );
+  expect(overflow).toBe(false);
+  await page.screenshot({
+    fullPage: true,
+    path: testInfo.outputPath("review-form-tablet.png"),
+  });
+});
+
+test("reviewer assessment remains legible in dark mode", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac", {
+    waitUntil: "domcontentloaded",
+  });
   await selectWorkspaceTheme(page, "Giao diện tối");
 
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
@@ -161,11 +222,15 @@ test("reviewer assessment remains legible in dark mode", async ({ page }) => {
     .locator("fieldset")
     .filter({ hasText: "01" })
     .first();
-  await expect(firstCriterion).not.toHaveCSS(
+  await expect(firstCriterion).toBeVisible();
+  await expect(firstCriterion).toHaveCSS(
     "background-color",
     "rgba(0, 0, 0, 0)",
   );
-  await expect(firstCriterion).toBeVisible();
+  await page.screenshot({
+    fullPage: true,
+    path: testInfo.outputPath("review-form-dark.png"),
+  });
 
   await selectWorkspaceTheme(page, "Giao diện sáng");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");

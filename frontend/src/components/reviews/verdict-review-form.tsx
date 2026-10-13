@@ -13,7 +13,6 @@ import { ReviewEvidenceAssessments } from "@/components/reviews/review-evidence-
 import { ReviewEvidenceSelect } from "@/components/reviews/review-evidence-select";
 import { useReviewAutosave } from "@/components/reviews/use-review-autosave";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import type {
   CriterionVerdict,
@@ -285,8 +284,8 @@ export function VerdictReviewForm({
 
   return (
     <>
-      <Card className="overflow-hidden">
-        <header className="border-b border-[var(--theme-border)] bg-[var(--theme-elevated)] px-5 py-6 text-[var(--theme-text)] sm:px-8">
+      <section className="pt-6 text-[var(--theme-text)]">
+        <header className="pb-6">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent)]">
             Kết luận theo tiêu chí
           </p>
@@ -297,55 +296,34 @@ export function VerdictReviewForm({
           </p>
           <div
             aria-label="Tiến độ thẩm định"
-            className="mt-5 flex flex-wrap gap-2 text-xs font-semibold"
+            className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold"
           >
-            <span className="rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2">
+            <span>
               Tệp đã kiểm tra {reviewedFiles}/{evidences.length}
             </span>
-            <span className="rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2">
+            <span>
               Tiêu chí hoàn thành {completedCriteria}/{rubric.criteria.length}
             </span>
             <span
-              className={`rounded-md border px-3 py-2 ${complete ? "border-emerald-500 text-emerald-700" : "border-[var(--theme-border)] text-[var(--theme-muted)]"}`}
+              className={
+                complete ? "text-emerald-700" : "text-[var(--theme-muted)]"
+              }
             >
               {complete
                 ? "Sẵn sàng gửi"
                 : `${validationIssues.length} mục cần hoàn tất`}
             </span>
           </div>
-        </header>
-        <nav
-          aria-label="Các phần của phiếu thẩm định"
-          className="flex flex-wrap gap-2 border-b border-[var(--theme-border)] px-5 py-3 text-sm font-semibold sm:px-8"
-        >
-          <a
-            className="rounded-lg px-3 py-2 text-[var(--theme-accent)] hover:bg-[var(--theme-elevated)]"
-            href="#evidence-assessment-title"
-          >
-            1. Kiểm tra tệp
-          </a>
-          {rubric.gates.length ? (
-            <a
-              className="rounded-lg px-3 py-2 text-[var(--theme-accent)] hover:bg-[var(--theme-elevated)]"
-              href="#review-conditions"
+          {!complete ? (
+            <p
+              className="mt-2 text-xs leading-5 text-[var(--theme-muted)]"
+              role="status"
             >
-              2. Điều kiện tiếp nhận
-            </a>
+              Cần làm tiếp: {validationIssues[0]}
+            </p>
           ) : null}
-          <a
-            className="rounded-lg px-3 py-2 text-[var(--theme-accent)] hover:bg-[var(--theme-elevated)]"
-            href="#review-verdicts"
-          >
-            {rubric.gates.length ? "3" : "2"}. Kết luận tiêu chí
-          </a>
-          <a
-            className="rounded-lg px-3 py-2 text-[var(--theme-accent)] hover:bg-[var(--theme-elevated)]"
-            href="#review-final-result"
-          >
-            {rubric.gates.length ? "4" : "3"}. Gửi kết quả
-          </a>
-        </nav>
-        <form className="space-y-8 p-5 sm:p-8">
+        </header>
+        <form className="space-y-9">
           <ReviewEvidenceAssessments
             assessments={assessments}
             evidences={evidences}
@@ -358,7 +336,7 @@ export function VerdictReviewForm({
               <h3 className="text-lg font-bold" id="review-conditions">
                 Điều kiện tiếp nhận
               </h3>
-              <div className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]">
+              <div className="space-y-8">
                 {rubric.gates.map((gate) => {
                   const answer = gates[gate.key] ?? {
                     outcome: "PASS" as const,
@@ -367,7 +345,7 @@ export function VerdictReviewForm({
                   };
                   return (
                     <fieldset
-                      className="border-0 bg-[var(--theme-surface)] px-1 py-6"
+                      className="min-w-0 border-0 px-0 py-0"
                       disabled={readOnly}
                       key={gate.key}
                     >
@@ -375,10 +353,10 @@ export function VerdictReviewForm({
                       <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
                         {gate.description}
                       </p>
-                      <div className="mt-4 grid gap-4">
+                      <div className="mt-4 grid gap-4 md:grid-cols-[minmax(12rem,0.35fr)_minmax(0,1fr)]">
                         <select
                           aria-label={`Kết quả ${gate.label}`}
-                          className="min-h-11 rounded-lg border bg-[var(--theme-surface)] px-3"
+                          className="min-h-11 self-start rounded-lg border bg-[var(--theme-surface)] px-3"
                           onChange={(event) =>
                             setGates((current) => ({
                               ...current,
@@ -448,7 +426,7 @@ export function VerdictReviewForm({
                 Đánh giá dựa trên tài liệu thực tế của hồ sơ.
               </p>
             </div>
-            <div className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]">
+            <div className="space-y-10">
               {rubric.criteria.map((criterion, index) => {
                 const answer = verdicts[criterion.key] ?? {
                   outcome: "",
@@ -457,7 +435,7 @@ export function VerdictReviewForm({
                 };
                 return (
                   <fieldset
-                    className="border-0 bg-[var(--theme-surface)] px-1 py-6"
+                    className="min-w-0 border-0 px-0 py-0"
                     disabled={readOnly}
                     key={criterion.key}
                   >
@@ -470,10 +448,10 @@ export function VerdictReviewForm({
                     <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
                       {criterion.description}
                     </p>
-                    <div className="mt-4 grid gap-4">
+                    <div className="mt-4 grid gap-4 md:grid-cols-[minmax(12rem,0.35fr)_minmax(0,1fr)]">
                       <select
                         aria-label={`Kết luận ${criterion.label}`}
-                        className="min-h-11 rounded-lg border bg-[var(--theme-surface)] px-3"
+                        className="min-h-11 self-start rounded-lg border bg-[var(--theme-surface)] px-3"
                         id={`verdict-outcome-${criterion.key}`}
                         onChange={(event) =>
                           setVerdicts((current) => ({
@@ -538,11 +516,11 @@ export function VerdictReviewForm({
           </section>
 
           <section
-            className="grid scroll-mt-24 gap-4 rounded-xl border border-[var(--theme-border)] p-5 md:grid-cols-2"
+            className="grid scroll-mt-24 gap-4 border-t border-[var(--theme-border)] pt-6 md:grid-cols-2"
             id="review-final-result"
           >
             <div
-              className="rounded-xl bg-[var(--theme-elevated)] p-4"
+              className="border-l-2 border-[var(--theme-accent)] pl-4"
               role="status"
             >
               <p className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
@@ -587,7 +565,7 @@ export function VerdictReviewForm({
               {error}
             </p>
           ) : null}
-          <div className="flex flex-col justify-between gap-4 border-t pt-5 sm:flex-row sm:items-center">
+          <div className="flex flex-col justify-between gap-4 pt-2 sm:flex-row sm:items-center">
             <p
               aria-live="polite"
               className="flex items-center gap-2 text-xs font-semibold text-[var(--theme-muted)]"
@@ -628,7 +606,7 @@ export function VerdictReviewForm({
             ) : null}
           </div>
         </form>
-      </Card>
+      </section>
       <ConfirmationDialog
         confirmLabel="Xác nhận gửi"
         description="Sau khi gửi, kết luận và tài liệu dẫn chiếu sẽ được khóa."

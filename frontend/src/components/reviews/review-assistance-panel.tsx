@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CircleHelp, LoaderCircle, Send, UsersRound } from "lucide-react";
 import { useId, useState } from "react";
 
-import { Card } from "@/components/ui/card";
 import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
 import { reviewApi } from "@/lib/api/client";
 import type { ReviewAssistanceRequest } from "@/lib/api/types";
@@ -59,17 +58,20 @@ export function ReviewAssistancePanel({
     !requestHelp.isPending;
 
   return (
-    <Card className="overflow-hidden border-primary-200 bg-[linear-gradient(135deg,var(--theme-surface),var(--theme-elevated))] p-0">
-      <div className="border-b border-primary-100 bg-primary-50/60 px-5 py-4 sm:px-6">
+    <section
+      className="review-assistance scroll-mt-24 border-t border-[var(--theme-border)] pt-6 text-[var(--theme-text)]"
+      id="review-assistance"
+    >
+      <div>
         <div className="flex items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-700 text-white shadow-sm">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--theme-elevated)] text-[var(--theme-accent)]">
             <UsersRound aria-hidden="true" className="size-5" />
           </span>
           <div>
-            <h2 className="text-lg font-bold text-neutral-900">
+            <h2 className="text-lg font-bold text-[var(--theme-text)]">
               Phối hợp thẩm định
             </h2>
-            <p className="mt-1 text-sm leading-6 text-neutral-600">
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--theme-muted)]">
               Với hồ sơ phức tạp, hãy nêu rõ phần việc cần thêm chuyên môn.
               Super Admin sẽ cân nhắc và chỉ định moderator phù hợp.
             </p>
@@ -77,7 +79,7 @@ export function ReviewAssistancePanel({
         </div>
       </div>
 
-      <div className="space-y-4 p-5 sm:p-6">
+      <div className="mt-4 space-y-4 pl-0 sm:pl-12">
         {requestHelp.isSuccess ? (
           <WorkflowNextStep
             action={{ href: "#review-form", label: "Tiếp tục báo cáo" }}
@@ -87,40 +89,29 @@ export function ReviewAssistancePanel({
           />
         ) : null}
         {requests.length > 0 ? (
-          <div className="space-y-3" aria-label="Lịch sử yêu cầu hỗ trợ">
+          <div
+            className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]"
+            aria-label="Lịch sử yêu cầu hỗ trợ"
+          >
             {requests.map((item) => (
-              <article
-                className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4"
-                key={item.id}
-              >
+              <article className="py-4" key={item.id}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="text-sm font-bold text-neutral-800">
+                    <p className="text-sm font-bold text-[var(--theme-text)]">
                       {assistanceStatus[item.status]}
                     </p>
-                    <p className="mt-1 text-xs text-neutral-500">
+                    <p className="mt-1 text-xs text-[var(--theme-muted)]">
                       {requestDate(item.createdAt)} · cần thêm{" "}
                       {item.requestedReviewerCount} moderator
                     </p>
                   </div>
-                  <span
-                    className={
-                      item.status === "PENDING"
-                        ? "rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-900"
-                        : item.status === "APPROVED"
-                          ? "rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-900"
-                          : "rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-bold text-neutral-700"
-                    }
-                  >
-                    {item.status}
-                  </span>
                 </div>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-700">
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[var(--theme-text)]">
                   {item.reason}
                 </p>
                 {item.decisionReason ? (
-                  <p className="mt-3 border-t border-[var(--theme-border)] pt-3 text-sm leading-6 text-neutral-600">
-                    <span className="font-bold text-neutral-800">
+                  <p className="mt-3 border-t border-[var(--theme-border)] pt-3 text-sm leading-6 text-[var(--theme-muted)]">
+                    <span className="font-bold text-[var(--theme-text)]">
                       Phản hồi:
                     </span>{" "}
                     {item.decisionReason}
@@ -132,78 +123,83 @@ export function ReviewAssistancePanel({
         ) : null}
 
         {canRequest && !pending && !requestHelp.isSuccess ? (
-          <form
-            className="space-y-4 rounded-xl border border-dashed border-primary-300 bg-white/60 p-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (canSubmit) requestHelp.mutate();
-            }}
-          >
-            <div className="flex items-center gap-2 text-sm font-bold text-neutral-800">
-              <CircleHelp
-                aria-hidden="true"
-                className="size-4 text-primary-700"
-              />
+          <details className="group border-t border-[var(--theme-border)] pt-3">
+            <summary className="min-h-11 cursor-pointer font-semibold text-[var(--theme-accent)] marker:text-[var(--theme-accent)]">
               Gửi yêu cầu hỗ trợ
-            </div>
-            <label className="block text-sm font-semibold" htmlFor={reasonId}>
-              Lý do cần hỗ trợ
-              <textarea
-                className="mt-2 min-h-28 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm leading-6 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
-                disabled={requestHelp.isPending}
-                id={reasonId}
-                maxLength={2000}
-                onChange={(event) => setReason(event.target.value)}
-                placeholder="Mô tả độ phức tạp, phần cần đối chiếu hoặc chuyên môn cần bổ sung…"
-                value={reason}
-              />
-            </label>
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <label className="text-sm font-semibold" htmlFor={countId}>
-                Số moderator cần thêm
-                <select
-                  className="mt-2 block min-h-11 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 font-medium outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
+            </summary>
+            <form
+              className="mt-3 space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (canSubmit) requestHelp.mutate();
+              }}
+            >
+              <div className="flex items-center gap-2 text-sm font-bold text-[var(--theme-text)]">
+                <CircleHelp
+                  aria-hidden="true"
+                  className="size-4 text-primary-700"
+                />
+                Nêu rõ phần việc cần thêm chuyên môn
+              </div>
+              <label className="block text-sm font-semibold" htmlFor={reasonId}>
+                Lý do cần hỗ trợ
+                <textarea
+                  className="mt-2 min-h-28 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm leading-6 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
                   disabled={requestHelp.isPending}
-                  id={countId}
-                  onChange={(event) =>
-                    setRequestedReviewerCount(Number(event.target.value))
-                  }
-                  value={requestedReviewerCount}
-                >
-                  {Array.from({ length: 10 }, (_, index) => index + 1).map(
-                    (count) => (
-                      <option key={count} value={count}>
-                        {count} người
-                      </option>
-                    ),
-                  )}
-                </select>
+                  id={reasonId}
+                  maxLength={2000}
+                  onChange={(event) => setReason(event.target.value)}
+                  placeholder="Mô tả độ phức tạp, phần cần đối chiếu hoặc chuyên môn cần bổ sung…"
+                  value={reason}
+                />
               </label>
-              <button
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary-700 px-4 text-sm font-bold text-white transition hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!canSubmit}
-                type="submit"
-              >
-                {requestHelp.isPending ? (
-                  <LoaderCircle
-                    aria-hidden="true"
-                    className="size-4 animate-spin"
-                  />
-                ) : (
-                  <Send aria-hidden="true" className="size-4" />
-                )}
-                Gửi Admin
-              </button>
-            </div>
-            <p className="text-xs leading-5 text-neutral-500">
-              Tối thiểu 20 ký tự. Bạn chỉ có thể có một yêu cầu đang chờ xử lý
-              cho mỗi phân công.
-            </p>
-          </form>
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <label className="text-sm font-semibold" htmlFor={countId}>
+                  Số moderator cần thêm
+                  <select
+                    className="mt-2 block min-h-11 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 font-medium outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
+                    disabled={requestHelp.isPending}
+                    id={countId}
+                    onChange={(event) =>
+                      setRequestedReviewerCount(Number(event.target.value))
+                    }
+                    value={requestedReviewerCount}
+                  >
+                    {Array.from({ length: 10 }, (_, index) => index + 1).map(
+                      (count) => (
+                        <option key={count} value={count}>
+                          {count} người
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+                <button
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary-700 px-4 text-sm font-bold text-white transition hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!canSubmit}
+                  type="submit"
+                >
+                  {requestHelp.isPending ? (
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="size-4 animate-spin"
+                    />
+                  ) : (
+                    <Send aria-hidden="true" className="size-4" />
+                  )}
+                  Gửi Admin
+                </button>
+              </div>
+              <p className="text-xs leading-5 text-[var(--theme-muted)]">
+                Tối thiểu 20 ký tự. Bạn chỉ có thể có một yêu cầu đang chờ xử lý
+                cho mỗi phân công.
+              </p>
+            </form>
+          </details>
         ) : null}
 
         {!canRequest && requests.length === 0 ? (
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-[var(--theme-muted)]">
             Yêu cầu hỗ trợ chỉ mở khi phân công đang được thực hiện.
           </p>
         ) : null}
@@ -217,6 +213,6 @@ export function ReviewAssistancePanel({
           </p>
         ) : null}
       </div>
-    </Card>
+    </section>
   );
 }

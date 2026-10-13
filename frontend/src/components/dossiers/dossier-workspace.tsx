@@ -558,6 +558,7 @@ export function DossierWorkspace({
           description="Thông tin ban đầu đã được lưu. Tải lên tài liệu bắt buộc, kiểm tra lại nội dung rồi nộp hồ sơ để bắt đầu kiểm duyệt."
           title="Đã tạo hồ sơ nháp"
           tone="success"
+          variant="inline"
         />
       ) : null}
 
@@ -594,21 +595,21 @@ export function DossierWorkspace({
           </p>
           <ol
             aria-label="Các bước sau khi nộp"
-            className="mt-4 grid gap-2 text-sm sm:grid-cols-3"
+            className="mt-4 grid gap-4 border-y border-emerald-200 py-4 text-sm sm:grid-cols-3"
           >
-            <li className="rounded-xl border border-emerald-200 bg-white/70 p-3">
+            <li>
               <strong className="block">1. Đã tiếp nhận</strong>
               <span className="mt-1 block">
                 Hồ sơ đã có mã để bạn theo dõi.
               </span>
             </li>
-            <li className="rounded-xl border border-emerald-200 bg-white/70 p-3">
+            <li>
               <strong className="block">2. Kiểm duyệt hồ sơ</strong>
               <span className="mt-1 block">
                 Tinh Hoa Việt đối chiếu thông tin và tài liệu.
               </span>
             </li>
-            <li className="rounded-xl border border-emerald-200 bg-white/70 p-3">
+            <li>
               <strong className="block">3. Thông báo kết quả</strong>
               <span className="mt-1 block">
                 Xem yêu cầu bổ sung hoặc kết quả khi trạng thái đổi.
@@ -632,8 +633,8 @@ export function DossierWorkspace({
         </section>
       ) : null}
 
-      <section className="dossier-state-card overflow-hidden rounded-2xl border border-primary-200 bg-primary-50/70">
-        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
+      <section className="dossier-state-card">
+        <div className="grid gap-5 py-5 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
               Việc cần làm tiếp theo
@@ -665,7 +666,7 @@ export function DossierWorkspace({
               </Button>
             ) : null}
           </div>
-          <div className="dossier-state-summary rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 text-sm text-[var(--theme-text)]">
+          <div className="dossier-state-summary border-t border-[var(--theme-border)] pt-4 text-sm text-[var(--theme-text)] lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
             <p className="font-bold text-neutral-950">
               {dossierStatusLabel(dossier.status)}
             </p>
@@ -830,9 +831,11 @@ export function DossierWorkspace({
                         disabled={queueLocked || attach.isPending}
                       >
                         <option value="OWNERSHIP_DOCUMENT">
-                          Tài liệu quyền sở hữu
+                          Bằng chứng về quyền hoặc nguồn gốc
                         </option>
-                        <option value="CREATIVE_WORK">Tác phẩm gốc</option>
+                        <option value="CREATIVE_WORK">
+                          Nội dung hoặc đối tượng đề cử
+                        </option>
                         <option value="OTHER">Tài liệu khác</option>
                       </select>
                     </div>
@@ -854,7 +857,7 @@ export function DossierWorkspace({
                       · {evidenceScopeLabel(selectedRule.defaultVisibility)}.
                     </p>
                   ) : null}
-                  <details className="rounded-xl border border-[var(--theme-border)] px-4 py-3">
+                  <details className="border-y border-[var(--theme-border)] py-3">
                     <summary className="cursor-pointer text-sm font-semibold">
                       Đặt tên hiển thị cho tài liệu (tùy chọn)
                     </summary>
@@ -948,8 +951,8 @@ export function DossierWorkspace({
                     />
                   ))
                 ) : (
-                  <div className="flex items-start gap-3 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-4">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white text-neutral-500 ring-1 ring-neutral-200">
+                  <div className="flex items-start gap-3 border-y border-[var(--theme-border)] py-4">
+                    <span className="grid size-9 shrink-0 place-items-center text-[var(--theme-muted)]">
                       <FileCheck2 aria-hidden="true" className="size-4" />
                     </span>
                     <div>
@@ -1009,8 +1012,11 @@ export function DossierWorkspace({
                   </Button>
                 </div>
               ) : null}
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="flex items-start gap-3 rounded-xl border border-neutral-200 p-4">
+              <div
+                aria-label="Kiểm tra trước khi nộp"
+                className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]"
+              >
+                <div className="flex items-start gap-3 py-4">
                   <CheckCircle2
                     aria-hidden="true"
                     className="mt-0.5 size-5 text-emerald-600"
@@ -1024,15 +1030,15 @@ export function DossierWorkspace({
                       {dossier.title}
                     </p>
                     <Button
-                      className="mt-2"
-                      variant="outline"
+                      className="mt-2 px-0 text-[var(--theme-accent)]"
+                      variant="ghost"
                       onClick={() => setStep("information")}
                     >
                       Xem / sửa thông tin
                     </Button>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 rounded-xl border border-neutral-200 p-4">
+                <div className="flex items-start gap-3 py-4">
                   {isComplete ? (
                     <CheckCircle2
                       aria-hidden="true"
@@ -1054,8 +1060,8 @@ export function DossierWorkspace({
                         : `${dossier.evidences.length} tệp sẵn sàng`}
                     </p>
                     <Button
-                      className="mt-2"
-                      variant="outline"
+                      className="mt-2 px-0 text-[var(--theme-accent)]"
+                      variant="ghost"
                       onClick={() => setStep("evidence")}
                     >
                       Xem / sửa tài liệu
@@ -1072,17 +1078,17 @@ export function DossierWorkspace({
                 />
               ))}
               {dossier.canEdit && !submissionComplete ? (
-                <div className="rounded-2xl border border-primary-200 bg-primary-50 p-5">
+                <div>
                   <div className="flex items-start gap-3">
                     <BadgeCheck
                       aria-hidden="true"
-                      className="mt-0.5 size-5 text-primary-700"
+                      className="mt-0.5 size-5 text-[var(--theme-accent)]"
                     />
                     <div>
-                      <p className="font-bold text-primary-950">
+                      <p className="font-bold text-[var(--theme-text)]">
                         Xác nhận nộp hồ sơ
                       </p>
-                      <p className="mt-1 text-sm leading-6 text-primary-900/70">
+                      <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
                         Sau khi nộp, bạn không thể sửa phiên bản này trừ khi có
                         yêu cầu bổ sung.
                       </p>
@@ -1116,11 +1122,11 @@ export function DossierWorkspace({
               <div className="grid min-w-0 gap-5 lg:grid-cols-2">
                 <div className="min-w-0">
                   <h3 className="font-bold">Phiên bản</h3>
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-3 divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]">
                     {versions.data?.length ? (
                       versions.data.map((version) => (
                         <div
-                          className="min-w-0 overflow-hidden rounded-xl border border-neutral-200 p-4"
+                          className="min-w-0 overflow-hidden py-3"
                           key={version.id}
                         >
                           <p className="text-sm font-bold">
@@ -1143,13 +1149,10 @@ export function DossierWorkspace({
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-bold">Dòng thời gian</h3>
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-3 divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]">
                     {timeline.data?.length ? (
                       timeline.data.map((item) => (
-                        <div
-                          className="flex gap-3 rounded-xl border border-neutral-200 p-4"
-                          key={item.id}
-                        >
+                        <div className="flex gap-3 py-3" key={item.id}>
                           <span className="mt-1 size-2 rounded-full bg-primary-600" />
                           <div>
                             <p className="text-sm font-bold">

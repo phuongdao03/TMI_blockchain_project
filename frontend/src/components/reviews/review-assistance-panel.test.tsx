@@ -32,6 +32,13 @@ describe("ReviewAssistancePanel", () => {
     requestAssistanceMock.mockResolvedValue({ id: "request-1" });
     renderPanel();
 
+    const disclosure = screen
+      .getByText("Gửi yêu cầu hỗ trợ")
+      .closest("details");
+    expect(disclosure?.open).toBe(false);
+    await user.click(screen.getByText("Gửi yêu cầu hỗ trợ"));
+    expect(disclosure?.open).toBe(true);
+
     const send = screen.getByRole("button", { name: "Gửi Admin" });
     expect((send as HTMLButtonElement).disabled).toBe(true);
 

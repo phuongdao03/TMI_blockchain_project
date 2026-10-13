@@ -131,9 +131,6 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
   const detail = query.data;
   const deadline = reviewDeadlineState(detail.assignment.dueAt);
   const evidenceCount = detail.snapshotJson?.evidences.length ?? 0;
-  const usesVerdictReview =
-    detail.snapshotJson?.dossier.dossierType?.reviewRubric?.assessmentMethod ===
-    "VERDICT";
   const terminal = ["CONFLICTED", "CANCELLED"].includes(
     detail.assignment.status,
   );
@@ -146,7 +143,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
         <ArrowLeft aria-hidden="true" className="size-4" />
         Trở lại hàng đợi
       </Link>
-      <header className="border-l-4 border-l-primary-700 border-y border-r border-[var(--theme-border)] bg-[var(--theme-surface)] px-6 py-6 text-[var(--theme-text)] sm:px-8">
+      <header className="border-b border-[var(--theme-border)] pb-6 text-[var(--theme-text)]">
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
           <div>
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent)]">
@@ -169,18 +166,21 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           description="Admin sẽ đọc báo cáo và ra quyết định cuối. Bạn có thể tiếp tục các hồ sơ khác trong hàng đợi."
           title="Đã gửi báo cáo cho Admin"
           tone="success"
+          variant="inline"
         />
       ) : detail.assignment.status === "IN_PROGRESS" ? (
         <WorkflowNextStep
-          action={{ href: "#review-form", label: "Tiếp tục báo cáo" }}
+          action={{ href: "#review-scorecard", label: "Tiếp tục báo cáo" }}
           description="Kiểm tra từng bằng chứng, lưu nội dung đang làm và gửi báo cáo khi đã hoàn tất. Sau khi gửi, Admin sẽ ra quyết định cuối."
           title="Việc cần làm · Hoàn tất báo cáo thẩm định"
+          variant="inline"
         />
       ) : detail.assignment.status === "ASSIGNED" ? (
         <div className="space-y-4">
           <WorkflowNextStep
             description="Xác nhận có hay không có xung đột lợi ích trước khi xem tài liệu và lập báo cáo. Nếu có xung đột, phân công sẽ kết thúc để Admin giao người khác."
             title="Trước khi thẩm định · Xác nhận xung đột lợi ích"
+            variant="inline"
           />
           <div className="space-y-4 border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -245,6 +245,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           description="Đã ghi nhận xung đột lợi ích và kết thúc phân công này. Admin sẽ chọn người thẩm định khác; bạn có thể tiếp tục công việc còn lại."
           title="Đã báo xung đột cho Admin"
           tone="success"
+          variant="inline"
         />
       ) : null}
 
@@ -252,10 +253,10 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
       detail.snapshotJson ? (
         <nav
           aria-label="Đi tới nội dung thẩm định"
-          className="flex flex-wrap gap-2"
+          className="flex flex-wrap gap-x-6 gap-y-1 border-b border-[var(--theme-border)] pb-3"
         >
           <a
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-semibold text-[var(--theme-text)] hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
             href="#review-evidence"
           >
             <Files
@@ -265,7 +266,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
             Xem tài liệu
           </a>
           <a
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-semibold text-[var(--theme-text)] hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
             href="#review-scorecard"
           >
             <ClipboardCheck
@@ -274,44 +275,22 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
             />
             Mở phiếu thẩm định
           </a>
+          {detail.assignment.status === "IN_PROGRESS" ? (
+            <a
+              className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+              href="#review-assistance"
+            >
+              Cần phối hợp thẩm định?
+            </a>
+          ) : null}
         </nav>
       ) : null}
 
-      <ol
-        aria-label="Quy trình thẩm định"
-        className="grid gap-3 border-b border-[var(--theme-border)] pb-6 md:grid-cols-3"
-      >
-        {(usesVerdictReview
-          ? [
-              ["01", "Kiểm tra bằng chứng", "Xem từng tài liệu đã khóa"],
-              ["02", "Lập báo cáo", "Kết luận và nêu căn cứ"],
-              ["03", "Gửi Admin", "Xác nhận và hoàn tất"],
-            ]
-          : [
-              ["01", "Kiểm tra bằng chứng", "Xem tài liệu đã khóa"],
-              ["02", "Đánh giá 5T", "Chấm điểm và ghi nhận xét"],
-              ["03", "Gửi Admin", "Xác nhận và hoàn tất"],
-            ]
-        ).map(([number, title, description]) => (
-          <li className="grid grid-cols-[2rem_1fr] gap-3 py-2" key={number}>
-            <span className="grid size-8 place-items-center rounded-full bg-[var(--theme-elevated)] font-mono text-xs font-bold text-[var(--theme-accent)]">
-              {number}
-            </span>
-            <div>
-              <p className="text-sm font-bold">{title}</p>
-              <p className="mt-1 text-xs leading-5 text-[var(--theme-muted)]">
-                {description}
-              </p>
-            </div>
-          </li>
-        ))}
-      </ol>
-
       <section
         aria-label="Thông tin kiểm soát phiên thẩm định"
-        className="grid overflow-hidden border-y border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text)] sm:grid-cols-3"
+        className="flex flex-wrap gap-x-8 gap-y-3 border-y border-[var(--theme-border)] bg-[var(--theme-surface)] py-4 text-[var(--theme-text)]"
       >
-        <article className="border-b border-[var(--theme-border)] p-4 sm:border-b-0 sm:border-r sm:p-5">
+        <article className="min-w-48 flex-1">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
             <Clock3 aria-hidden="true" className="size-4" /> Thời hạn xử lý
           </p>
@@ -324,7 +303,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
             {deadline.detail}
           </p>
         </article>
-        <article className="border-b border-[var(--theme-border)] p-4 sm:border-b-0 sm:border-r sm:p-5">
+        <article className="min-w-48 flex-1">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
             <Files aria-hidden="true" className="size-4" /> Bộ bằng chứng
           </p>
@@ -333,7 +312,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
             Chỉ dẫn chiếu nội dung thuộc phiên bản {detail.versionNo}
           </p>
         </article>
-        <article className="p-4 sm:p-5">
+        <article className="min-w-48 flex-1">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
             <LockKeyhole aria-hidden="true" className="size-4" /> Phạm vi thao
             tác
@@ -359,11 +338,6 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           </span>
         </p>
       ) : null}
-      <ReviewAssistancePanel
-        assignmentId={assignmentId}
-        canRequest={detail.assignment.status === "IN_PROGRESS"}
-        requests={detail.assistanceRequests ?? []}
-      />
       {terminal ? (
         <Card className="p-8 text-center">
           <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-amber-50 text-amber-700">
@@ -377,24 +351,21 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
       ) : null}
       {["IN_PROGRESS", "SUBMITTED"].includes(detail.assignment.status) &&
       detail.snapshotJson ? (
-        <div
-          className="grid items-start gap-6 xl:grid-cols-[minmax(21rem,0.85fr)_minmax(34rem,1.15fr)]"
-          id="review-form"
-        >
+        <div className="space-y-8" id="review-form">
           <aside
             aria-label="Hồ sơ và tài liệu kiểm chứng"
             className="min-w-0 scroll-mt-24 space-y-4"
             id="review-evidence"
           >
             {detail.snapshotJson.dossier.summary ? (
-              <Card className="p-5">
+              <div className="pb-2">
                 <p className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
                   Tóm tắt của người nộp
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[var(--theme-text)]">
                   {detail.snapshotJson.dossier.summary}
                 </p>
-              </Card>
+              </div>
             ) : null}
             <EvidenceViewer
               documentRules={
@@ -402,7 +373,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
               }
               evidences={detail.snapshotJson.evidences ?? []}
             />
-            <details className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 text-sm">
+            <details className="py-3 text-sm">
               <summary className="flex cursor-pointer items-center gap-2 font-semibold text-[var(--theme-text)]">
                 <CheckCircle2
                   aria-hidden="true"
@@ -437,6 +408,11 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           </div>
         </div>
       ) : null}
+      <ReviewAssistancePanel
+        assignmentId={assignmentId}
+        canRequest={detail.assignment.status === "IN_PROGRESS"}
+        requests={detail.assistanceRequests ?? []}
+      />
     </div>
   );
 }

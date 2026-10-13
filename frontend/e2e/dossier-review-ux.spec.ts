@@ -81,17 +81,42 @@ test("reviewer sees live progress and the next blocking action", async ({
       sameSite: "Lax",
     },
   ]);
-  await page.goto("/reviews");
+  await page.goto("/reviews", { waitUntil: "domcontentloaded" });
   await page.getByRole("link", { name: "Tiếp tục thẩm định" }).click();
   await expect(page.getByText("Đã quá hạn xử lý")).toBeVisible();
   await expect(page.getByText("1 tài liệu đã khóa")).toBeVisible();
   await expect(page.getByText("Tóm tắt của người nộp")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Tiếp tục báo cáo" }),
+  ).toHaveAttribute("href", "#review-scorecard");
+  const reviewLayout = await page
+    .locator("#review-form")
+    .evaluate((element) => {
+      const evidence = element
+        .querySelector("#review-evidence")!
+        .getBoundingClientRect();
+      const scorecard = element
+        .querySelector("#review-scorecard")!
+        .getBoundingClientRect();
+      return {
+        evidenceBottom: evidence.bottom,
+        evidenceWidth: evidence.width,
+        scorecardTop: scorecard.top,
+        scorecardWidth: scorecard.width,
+      };
+    });
+  expect(reviewLayout.scorecardTop).toBeGreaterThanOrEqual(
+    reviewLayout.evidenceBottom - 2,
+  );
+  expect(reviewLayout.scorecardWidth).toBeGreaterThanOrEqual(
+    reviewLayout.evidenceWidth * 0.95,
+  );
   await page
-    .getByRole("button", { name: "Xem Giấy xác nhận quyền sở hữu" })
+    .getByRole("button", { name: "Xem Bằng chứng về quyền sử dụng nhãn hiệu" })
     .click();
   await expect(
     page.getByRole("region", {
-      name: "Xem trước Giấy xác nhận quyền sở hữu",
+      name: "Xem trước Bằng chứng về quyền sử dụng nhãn hiệu",
     }),
   ).toBeVisible();
   await expect(
@@ -100,6 +125,8 @@ test("reviewer sees live progress and the next blocking action", async ({
   await expect(page.getByText("Kết luận từng tiêu chí")).toBeVisible();
   await expect(page.getByText("0/5 tiêu chí hoàn tất")).toHaveCount(0);
   await expect(
-    page.getByText("Loại tài liệu: Tài liệu chứng minh quyền sở hữu"),
+    page.getByText(
+      "Loại tài liệu: Tài liệu về quyền sử dụng hoặc đại diện nhãn hiệu",
+    ),
   ).toBeVisible();
 });

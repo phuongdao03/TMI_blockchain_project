@@ -1,23 +1,34 @@
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
+import { cn } from "@/lib/utils";
+
 export function WorkflowNextStep({
   title,
   description,
   action,
   tone = "info",
+  variant = "panel",
 }: {
   title: string;
   description: string;
   action?: { href: string; label: string };
   tone?: "info" | "success";
+  variant?: "panel" | "inline";
 }) {
   const success = tone === "success";
 
   return (
     <section
       aria-live={success ? "polite" : undefined}
-      className={`flex flex-col gap-4 rounded-xl border border-[var(--theme-border)] border-l-4 bg-[var(--theme-surface)] p-4 text-[var(--theme-text)] sm:flex-row sm:items-center sm:justify-between sm:p-5 ${success ? "border-l-emerald-600" : "border-l-[var(--theme-accent)]"}`}
+      className={cn(
+        "flex flex-col gap-4 text-[var(--theme-text)] sm:flex-row sm:items-center sm:justify-between",
+        variant === "inline"
+          ? "border-b border-[var(--theme-border)] pb-5"
+          : "rounded-xl border border-[var(--theme-border)] border-l-4 bg-[var(--theme-surface)] p-4 sm:p-5",
+        variant === "panel" &&
+          (success ? "border-l-emerald-600" : "border-l-[var(--theme-accent)]"),
+      )}
       role={success ? "status" : undefined}
     >
       <div className="flex min-w-0 items-start gap-3">

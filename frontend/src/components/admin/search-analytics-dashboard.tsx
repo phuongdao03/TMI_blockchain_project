@@ -181,7 +181,7 @@ export function SearchAnalyticsDashboard() {
               </span>
             </div>
             <div className="mt-6 overflow-x-auto">
-              <table className="w-full min-w-[44rem] text-left text-sm">
+              <table className="workspace-record-table w-full min-w-[44rem] text-left text-sm">
                 <thead className="border-b border-neutral-200 text-neutral-500">
                   <tr>
                     <th className="py-3">Ngày</th>
@@ -197,15 +197,15 @@ export function SearchAnalyticsDashboard() {
                       className="border-b border-neutral-100"
                       key={`${point.periodStart}-${point.categorySlug ?? "all"}`}
                     >
-                      <td className="py-4 font-semibold">
+                      <td data-label="Ngày" className="py-4 font-semibold">
                         {new Intl.DateTimeFormat("vi-VN", {
                           dateStyle: "medium",
                         }).format(new Date(point.periodStart))}
                       </td>
-                      <td>{point.searchCount}</td>
-                      <td>{point.zeroResultCount}</td>
-                      <td>{point.clickCount}</td>
-                      <td>{point.latencyP95Ms} ms</td>
+                      <td data-label="Tìm kiếm">{point.searchCount}</td>
+                      <td data-label="Zero result">{point.zeroResultCount}</td>
+                      <td data-label="Click">{point.clickCount}</td>
+                      <td data-label="P95">{point.latencyP95Ms} ms</td>
                     </tr>
                   ))}
                 </tbody>

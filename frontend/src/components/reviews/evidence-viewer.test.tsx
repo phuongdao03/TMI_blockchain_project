@@ -147,6 +147,8 @@ describe("EvidenceViewer", () => {
       </QueryClientProvider>,
     );
 
+    expect(screen.getByText("Tài liệu trong hồ sơ · 1 tệp")).toBeDefined();
+
     await user.click(
       screen.getByRole("button", { name: "Xem Video giới thiệu" }),
     );

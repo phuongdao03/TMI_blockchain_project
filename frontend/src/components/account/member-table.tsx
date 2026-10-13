@@ -106,7 +106,7 @@ export function MemberTable({
           <p className="text-sm font-semibold">{members.length} thành viên</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[38rem] text-left text-sm">
+          <table className="workspace-record-table w-full min-w-[38rem] text-left text-sm">
             <thead className="text-xs uppercase tracking-wider text-neutral-500">
               <tr>
                 <th className="px-4 py-3 font-semibold">Tài khoản</th>
@@ -118,13 +118,19 @@ export function MemberTable({
             <tbody className="divide-y divide-neutral-100">
               {members.map((member) => (
                 <tr key={member.userId}>
-                  <td className="px-4 py-4 font-medium text-neutral-950">
+                  <td
+                    data-label="Tài khoản"
+                    className="px-4 py-4 font-medium text-neutral-950"
+                  >
                     {member.email}
                   </td>
-                  <td className="px-4 py-4 text-neutral-600">
+                  <td
+                    data-label="Vai trò"
+                    className="px-4 py-4 text-neutral-600"
+                  >
                     {roleLabels[member.roleCode]}
                   </td>
-                  <td className="px-4 py-4">
+                  <td data-label="Trạng thái" className="px-4 py-4">
                     <span
                       className={
                         member.status === "ACTIVE"
@@ -135,7 +141,7 @@ export function MemberTable({
                       {statusLabels[member.status]}
                     </span>
                   </td>
-                  <td className="px-4 py-4 text-right">
+                  <td data-label="Thao tác" className="px-4 py-4 text-right">
                     {canManage && member.userId !== ownerUserId ? (
                       <Button
                         aria-label={`Xóa ${member.email}`}

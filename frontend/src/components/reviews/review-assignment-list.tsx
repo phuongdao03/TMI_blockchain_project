@@ -151,7 +151,7 @@ export function ReviewAssignmentList({
       <p className="text-xs text-[var(--theme-muted)]">
         Việc trễ hạn và đang xử lý được đưa lên trước trong trang này.
       </p>
-      <div className="overflow-hidden rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text)]">
+      <div className="workspace-row-list overflow-hidden rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text)]">
         <div className="divide-y divide-[var(--theme-border)]">
           {orderedAssignments.map((item) => (
             <article

@@ -448,7 +448,7 @@ function ScoredReviewForm({
                 Mỗi kết luận cần có bằng chứng thuộc phiên bản hồ sơ đã khóa.
               </p>
             </div>
-            <div className="rounded-xl border border-primary-200 bg-[var(--theme-surface)] px-4 py-2 text-right">
+            <div className="border-l-2 border-primary-600 pl-4 text-left sm:text-right">
               <p className="text-xs text-neutral-500">Tổng điểm tạm tính</p>
               <strong className="text-2xl text-primary-800">{total}/100</strong>
             </div>
@@ -463,7 +463,7 @@ function ScoredReviewForm({
           />
           <section
             aria-label="Tiến độ phiếu thẩm định"
-            className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:p-5"
+            className="border-y border-[var(--theme-border)] py-4"
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -474,21 +474,23 @@ function ScoredReviewForm({
                   Tiếp theo: {nextAction}
                 </p>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <span className="rounded-lg bg-[var(--theme-surface)] px-3 py-2">
-                  <strong className="block text-base">
+              <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-[var(--theme-muted)]">
+                <span>
+                  <strong className="text-[var(--theme-text)]">
                     {evidences.length}
-                  </strong>
+                  </strong>{" "}
                   bằng chứng
                 </span>
-                <span className="rounded-lg bg-[var(--theme-surface)] px-3 py-2">
-                  <strong className="block text-base">{findings.length}</strong>
+                <span>
+                  <strong className="text-[var(--theme-text)]">
+                    {findings.length}
+                  </strong>{" "}
                   phát hiện
                 </span>
-                <span className="rounded-lg bg-[var(--theme-surface)] px-3 py-2">
-                  <strong className="block text-base">
+                <span>
+                  <strong className="text-[var(--theme-text)]">
                     {completedChecklist}/5
-                  </strong>
+                  </strong>{" "}
                   xác nhận
                 </span>
               </div>
@@ -511,26 +513,26 @@ function ScoredReviewForm({
               className="mt-4 flex gap-2 overflow-x-auto pb-1 text-xs font-bold"
             >
               <a
-                className="whitespace-nowrap rounded-lg border px-3 py-2"
+                className="whitespace-nowrap py-2 text-[var(--theme-accent)]"
                 href="#review-criteria"
               >
                 Tiêu chí 5T
               </a>
               <a
-                className="whitespace-nowrap rounded-lg border px-3 py-2"
+                className="whitespace-nowrap py-2 text-[var(--theme-accent)]"
                 href="#review-findings"
               >
                 Phát hiện
               </a>
               <a
-                className="whitespace-nowrap rounded-lg border px-3 py-2"
+                className="whitespace-nowrap py-2 text-[var(--theme-accent)]"
                 href="#review-decision"
               >
                 Kiến nghị & gửi
               </a>
             </nav>
           </section>
-          <section className="rounded-2xl border border-[var(--theme-border)] p-4 sm:p-5">
+          <section className="border-b border-[var(--theme-border)] pb-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
@@ -545,10 +547,10 @@ function ScoredReviewForm({
                 liệu và nêu rõ căn cứ kiểm chứng.
               </p>
             </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
+            <div className="mt-4 grid gap-x-5 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
               {scoreBands.map((band) => (
                 <div
-                  className="rounded-xl bg-[var(--theme-elevated)] p-3"
+                  className="border-t border-[var(--theme-border)] pt-2"
                   key={band.label}
                 >
                   <strong className="text-sm">
@@ -708,7 +710,7 @@ function ScoredReviewForm({
           </div>
 
           <div
-            className="grid gap-5 rounded-2xl border p-5 md:grid-cols-2"
+            className="grid gap-5 border-t border-[var(--theme-border)] pt-6 md:grid-cols-2"
             id="review-decision"
           >
             <div>

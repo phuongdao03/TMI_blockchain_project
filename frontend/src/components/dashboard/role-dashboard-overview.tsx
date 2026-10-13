@@ -166,7 +166,7 @@ export function RoleDashboardOverview({
       {isStaff ? (
         <nav
           aria-label="Lối tắt công việc"
-          className="grid gap-2 sm:grid-cols-3"
+          className="workspace-shortcut-list grid gap-2 sm:grid-cols-3"
         >
           {staffShortcuts.map(([label, href]) => (
             <Link

@@ -392,7 +392,7 @@ export function AdminAttendanceWorkspace() {
             {attendance.data?.meta.total ?? 0} bản ghi
           </span>
         </div>
-        <table className="min-w-[1000px] w-full text-left">
+        <table className="workspace-record-table min-w-[1000px] w-full text-left">
           <thead className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-500">
             <tr>
               <th className="px-5 py-3">Nhân viên</th>
@@ -455,7 +455,7 @@ export function AdminAttendanceWorkspace() {
             {rows.map((item) => (
               <Fragment key={item.id}>
                 <tr className="border-t border-neutral-100">
-                  <td className="px-5 py-4">
+                  <td data-label="Nhân viên" className="px-5 py-4">
                     <p className="font-bold text-neutral-950">
                       {item.employeeName}
                     </p>
@@ -463,30 +463,45 @@ export function AdminAttendanceWorkspace() {
                       {item.employeeCode}
                     </p>
                   </td>
-                  <td className="px-5 py-4 text-sm text-neutral-700">
+                  <td
+                    data-label="Phòng ban"
+                    className="px-5 py-4 text-sm text-neutral-700"
+                  >
                     {item.departmentName}
                   </td>
-                  <td className="px-5 py-4 text-sm font-semibold text-neutral-800">
+                  <td
+                    data-label="Ngày công"
+                    className="px-5 py-4 text-sm font-semibold text-neutral-800"
+                  >
                     {formatDate(item.workDate)}
                   </td>
-                  <td className="px-5 py-4 text-sm text-neutral-700">
-                    <Clock3
-                      aria-hidden="true"
-                      className="mr-1 inline size-3.5 text-neutral-400"
-                    />
-                    {formatTime(item.checkInAt)} / {formatTime(item.checkOutAt)}
+                  <td
+                    data-label="Giờ vào / ra"
+                    className="px-5 py-4 text-sm text-neutral-700"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <Clock3
+                        aria-hidden="true"
+                        className="size-3.5 shrink-0 text-neutral-400"
+                      />
+                      {formatTime(item.checkInAt)} /{" "}
+                      {formatTime(item.checkOutAt)}
+                    </span>
                   </td>
-                  <td className="px-5 py-4">
+                  <td data-label="Trạng thái" className="px-5 py-4">
                     <span
                       className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusStyles[item.status]}`}
                     >
                       {statusLabels[item.status]}
                     </span>
                   </td>
-                  <td className="px-5 py-4 text-sm text-neutral-700">
+                  <td
+                    data-label="Chênh lệch"
+                    className="px-5 py-4 text-sm text-neutral-700"
+                  >
                     Muộn {item.lateMinutes}′ · Sớm {item.earlyLeaveMinutes}′
                   </td>
-                  <td className="px-5 py-4">
+                  <td data-label="Thao tác" className="px-5 py-4">
                     <div className="flex flex-wrap gap-2">
                       <button
                         aria-controls={`attendance-gps-${item.id}`}

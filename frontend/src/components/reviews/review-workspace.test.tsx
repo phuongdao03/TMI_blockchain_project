@@ -21,7 +21,9 @@ vi.mock("@/components/reviews/five-t-scorecard", () => ({
   FiveTScorecard: () => <div>Phiếu thẩm định</div>,
 }));
 vi.mock("@/components/reviews/review-assistance-panel", () => ({
-  ReviewAssistancePanel: () => null,
+  ReviewAssistancePanel: () => (
+    <div data-testid="review-assistance">Hỗ trợ</div>
+  ),
 }));
 
 describe("ReviewWorkspace", () => {
@@ -59,5 +61,14 @@ describe("ReviewWorkspace", () => {
     ).toBe("#review-scorecard");
     expect(document.getElementById("review-evidence")).toBeDefined();
     expect(document.getElementById("review-scorecard")).toBeDefined();
+    expect(
+      document
+        .getElementById("review-form")
+        ?.compareDocumentPosition(screen.getByTestId("review-assistance")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("list", { name: "Quy trình thẩm định" }),
+    ).toBeNull();
   });
 });

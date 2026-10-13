@@ -93,7 +93,7 @@ export function JobOperationsWorkspace() {
         </p>
       ) : (
         <div className="mt-6 overflow-x-auto border-y border-neutral-200">
-          <table className="w-full min-w-[760px] text-left text-sm">
+          <table className="workspace-record-table w-full min-w-[760px] text-left text-sm">
             <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
               <tr>
                 <th className="px-4 py-3">Công việc</th>
@@ -106,7 +106,10 @@ export function JobOperationsWorkspace() {
             <tbody className="divide-y divide-neutral-200">
               {jobs.data.data.map((job) => (
                 <tr key={job.id}>
-                  <td className="px-4 py-4 font-semibold">
+                  <td
+                    data-label="Công việc"
+                    className="px-4 py-4 font-semibold"
+                  >
                     {taskLabels[job.taskName] ?? "Tác vụ vận hành"}
                     <details className="mt-1 font-normal text-neutral-500">
                       <summary className="cursor-pointer text-xs">
@@ -117,17 +120,25 @@ export function JobOperationsWorkspace() {
                       </span>
                     </details>
                   </td>
-                  <td className="px-4 py-4">{statusLabels[job.status]}</td>
-                  <td className="px-4 py-4 tabular-nums">
+                  <td data-label="Trạng thái" className="px-4 py-4">
+                    {statusLabels[job.status]}
+                  </td>
+                  <td
+                    data-label="Số lần thử"
+                    className="px-4 py-4 tabular-nums"
+                  >
                     {job.totalAttempts}/{job.maxAttempts}
                   </td>
-                  <td className="px-4 py-4 text-neutral-600">
+                  <td
+                    data-label="Cập nhật"
+                    className="px-4 py-4 text-neutral-600"
+                  >
                     {new Intl.DateTimeFormat("vi-VN", {
                       dateStyle: "short",
                       timeStyle: "short",
                     }).format(new Date(job.updatedAt))}
                   </td>
-                  <td className="px-4 py-4 text-right">
+                  <td data-label="Thao tác" className="px-4 py-4 text-right">
                     {job.status === "DEAD_LETTERED" ? (
                       <button
                         className="font-bold text-primary-700"
