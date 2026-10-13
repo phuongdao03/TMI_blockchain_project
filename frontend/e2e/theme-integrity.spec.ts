@@ -30,15 +30,18 @@ test("operations surfaces switch cleanly between light and dark themes", async (
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
   const editor = page.locator(".cms-workspace").locator("section").first();
-  const darkBackground = await editor.evaluate(
-    (element) => getComputedStyle(element).backgroundColor,
-  );
-  expect(darkBackground).not.toBe("rgb(255, 255, 255)");
+  const darkAppearance = await editor.evaluate((element) => ({
+    background: getComputedStyle(element).backgroundColor,
+    text: getComputedStyle(element).color,
+  }));
+  expect(darkAppearance.background).not.toBe("rgb(255, 255, 255)");
 
   await selectWorkspaceTheme(page, "Giao diện sáng");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-  const lightBackground = await editor.evaluate(
-    (element) => getComputedStyle(element).backgroundColor,
-  );
-  expect(lightBackground).toBe("rgb(255, 255, 255)");
+  const lightAppearance = await editor.evaluate((element) => ({
+    background: getComputedStyle(element).backgroundColor,
+    text: getComputedStyle(element).color,
+  }));
+  expect(lightAppearance.background).toBe("rgba(0, 0, 0, 0)");
+  expect(lightAppearance.text).not.toBe(darkAppearance.text);
 });
