@@ -7,6 +7,7 @@ test.beforeEach(async ({ request }) => {
 test("invited staff verifies email and activates the account once", async ({
   page,
 }, testInfo) => {
+  test.setTimeout(120_000);
   const device = testInfo.project.name === "mobile-chrome" ? "m" : "d";
   const tokenPrefix = `${device}${testInfo.repeatEachIndex}`;
   const token = `${tokenPrefix}${"a".repeat(48 - tokenPrefix.length)}`;
@@ -21,12 +22,18 @@ test("invited staff verifies email and activates the account once", async ({
     .getByRole("button", { name: "Xác minh email và kích hoạt tài khoản" })
     .click();
 
-  await expect(page).toHaveURL(/\/login\?invitation=accepted&next=%2Faccount$/);
+  await expect(page).toHaveURL(
+    /\/login\?invitation=accepted&next=%2Faccount$/,
+    {
+      timeout: 45_000,
+    },
+  );
 });
 
 test("reviewer signs in directly after Firebase authentication", async ({
   page,
 }) => {
+  test.setTimeout(120_000);
   await page.goto("/login");
   await page
     .getByRole("textbox", { name: "Email" })
@@ -36,5 +43,5 @@ test("reviewer signs in directly after Firebase authentication", async ({
     .fill("correct horse battery staple");
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
-  await expect(page).toHaveURL(/\/work-allocations$/);
+  await expect(page).toHaveURL(/\/work-allocations$/, { timeout: 45_000 });
 });

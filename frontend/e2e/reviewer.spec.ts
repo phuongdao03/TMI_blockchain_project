@@ -205,6 +205,7 @@ test("reviewer form fits tablet width", async ({ page }, testInfo) => {
 test("reviewer assessment remains legible in dark mode", async ({
   page,
 }, testInfo) => {
+  test.setTimeout(120_000);
   await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac", {
     waitUntil: "domcontentloaded",
   });

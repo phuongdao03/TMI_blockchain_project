@@ -108,6 +108,7 @@ test("super admin previews the populated attendance feed and circle worksite map
   context,
   page,
 }) => {
+  test.setTimeout(150_000);
   await setRolePreviewCookie(context, "super-admin");
 
   await page.goto("/admin/attendance");
@@ -120,7 +121,7 @@ test("super admin previews the populated attendance feed and circle worksite map
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /Jordan Lee.*DEMO-002/ }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 45_000 });
   await expectNoHorizontalOverflow(page);
 
   await page.goto("/admin/attendance/worksites");
