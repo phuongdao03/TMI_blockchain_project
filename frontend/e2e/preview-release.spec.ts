@@ -72,7 +72,9 @@ test("discovery keeps an authenticated return path across public screens", async
   const dashboardNavigation = page.getByRole("navigation", {
     name: "Điều hướng",
   });
-  await dashboardNavigation.getByRole("link", { name: "Thư viện đề cử" }).click();
+  await dashboardNavigation
+    .getByRole("link", { name: "Thư viện đề cử" })
+    .click();
   await expect(page).toHaveURL(/\/works$/, { timeout: 30_000 });
   const returnNavigation = page.getByRole("navigation", {
     name: "Quay lại khu vực làm việc",

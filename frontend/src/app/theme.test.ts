@@ -161,7 +161,7 @@ describe("THV identity theme", () => {
   });
 
   it("sends old search links to the public library", () => {
-    expect(publicSearchPage).toContain('redirect(`/works');
+    expect(publicSearchPage).toContain("redirect(`/works");
     expect(publicSearchPage).toContain('query.set("query", keyword)');
   });
 
