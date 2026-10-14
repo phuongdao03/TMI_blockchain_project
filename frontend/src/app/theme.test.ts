@@ -160,13 +160,9 @@ describe("THV identity theme", () => {
     );
   });
 
-  it("keeps public search on semantic surfaces instead of a permanently dark panel", () => {
-    expect(publicSearchPage).not.toContain("bg-[#151515]");
-    expect(publicSearchPage).not.toContain("text-white");
-    expect(stylesheet).toContain(".public-search-surface");
-    expect(stylesheet).toContain(
-      'html[data-theme="dark"] .public-search-surface',
-    );
+  it("sends old search links to the public library", () => {
+    expect(publicSearchPage).toContain('redirect(`/works');
+    expect(publicSearchPage).toContain('query.set("query", keyword)');
   });
 
   it("maps public work detail and dashboard cards to semantic theme surfaces", () => {

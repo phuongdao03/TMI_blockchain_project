@@ -115,13 +115,13 @@ const viewerTasks: GuideTask[] = [
     id: "search",
     title: "Tìm nội dung công khai",
     steps: [
-      "Mở Tìm đề cử, nhập tên tác phẩm hoặc từ khóa, rồi thu hẹp bằng danh mục nếu cần.",
+      "Mở Thư viện đề cử, nhập tên tác phẩm hoặc từ khóa, rồi thu hẹp bằng danh mục nếu cần.",
       "Mở kết quả để xem thông tin đã công bố; kiểm tra tên, chủ thể và trạng thái hiển thị.",
     ],
     result:
       "Bạn xem được nội dung công khai mà không cần quyền kiểm duyệt hay hồ sơ nhân viên.",
-    href: "/search",
-    action: "Tìm đề cử",
+    href: "/works",
+    action: "Mở thư viện đề cử",
   },
   {
     id: "verify",

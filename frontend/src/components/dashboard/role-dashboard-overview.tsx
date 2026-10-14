@@ -1,7 +1,7 @@
 import {
   ArrowRight,
+  BookOpen,
   ClipboardCheck,
-  Search,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -17,14 +17,14 @@ interface Action {
   href: string;
   label: string;
   detail: string;
-  icon: typeof Search;
+  icon: typeof BookOpen;
 }
 
 const publicAction: Action = {
-  href: "/search",
-  label: "Tìm kiếm đề cử",
+  href: "/works",
+  label: "Thư viện đề cử",
   detail: "Tìm theo tên, chủ đề hoặc danh mục.",
-  icon: Search,
+  icon: BookOpen,
 };
 
 const staffWorkspaces: Record<
@@ -87,7 +87,7 @@ export function RoleDashboardOverview({
       ? ([
           ["Hồ sơ cần thẩm định", "/reviews"],
           ["Công việc được giao", "/work-allocations"],
-          ["Tra cứu hồ sơ", "/search"],
+          ["Thư viện đề cử", "/works"],
         ] as const)
       : ([
           ["Tổng quan vận hành", "/admin/dashboard"],

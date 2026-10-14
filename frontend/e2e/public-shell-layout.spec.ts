@@ -290,16 +290,12 @@ test("signed-in mobile visitor keeps quick navigation across discovery pages", a
   await page.goto("/dashboard");
   await page
     .getByRole("navigation", { name: "Điều hướng nhanh" })
-    .getByRole("link", { name: "Tìm đề cử" })
+    .getByRole("link", { name: "Thư viện đề cử" })
     .click();
 
   const quickNavigation = page.getByRole("navigation", {
     name: "Điều hướng nhanh",
   });
-  await expect(
-    quickNavigation.getByRole("link", { name: "Tìm đề cử" }),
-  ).toHaveAttribute("aria-current", "page");
-  await quickNavigation.getByRole("link", { name: "Thư viện đề cử" }).click();
   await expect(
     quickNavigation.getByRole("link", { name: "Thư viện đề cử" }),
   ).toHaveAttribute("aria-current", "page");

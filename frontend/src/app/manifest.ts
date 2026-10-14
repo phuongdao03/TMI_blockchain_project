@@ -31,9 +31,9 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       {
-        name: "Tìm đề cử",
-        short_name: "Tìm đề cử",
-        url: "/search",
+        name: "Thư viện đề cử",
+        short_name: "Thư viện",
+        url: "/works",
       },
       {
         name: "Tra cứu bằng xác lập",

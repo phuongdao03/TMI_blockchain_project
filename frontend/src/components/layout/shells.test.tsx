@@ -438,7 +438,7 @@ describe("layout shells", () => {
     expect(
       within(quickNavigation)
         .getAllByRole("link")
-        .some((link) => link.getAttribute("href") === "/search"),
+        .some((link) => link.getAttribute("href") === "/works"),
     ).toBe(true);
     expect(
       within(quickNavigation)
@@ -537,7 +537,7 @@ describe("layout shells", () => {
     );
 
     const links = screen.getAllByRole("link");
-    for (const href of ["/dashboard", "/search", "/works"]) {
+    for (const href of ["/dashboard", "/works"]) {
       expect(links.some((link) => link.getAttribute("href") === href)).toBe(
         true,
       );
@@ -721,7 +721,7 @@ describe("layout shells", () => {
   });
 
   it("keeps signed-in discovery pages inside the public shell", () => {
-    navigationState.pathname = "/search";
+    navigationState.pathname = "/works";
     render(
       <PublicExperienceShell
         user={{
@@ -731,7 +731,7 @@ describe("layout shells", () => {
           accountType: "PUBLIC_USER",
         }}
       >
-        <h1>Tìm kiếm đề cử</h1>
+        <h1>Thư viện đề cử</h1>
       </PublicExperienceShell>,
     );
 
@@ -748,7 +748,7 @@ describe("layout shells", () => {
     });
     expect(
       within(quickNavigation)
-        .getByRole("link", { name: "Tìm đề cử" })
+        .getByRole("link", { name: "Thư viện đề cử" })
         .getAttribute("aria-current"),
     ).toBe("page");
     expect(

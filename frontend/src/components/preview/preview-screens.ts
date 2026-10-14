@@ -9,16 +9,6 @@ export type PreviewScreen = {
 };
 
 const screens: Record<string, PreviewScreen> = {
-  "/search": {
-    title: "Tìm đề cử",
-    eyebrow: "Tra cứu",
-    description: "Tìm tác phẩm theo tên, lĩnh vực và trạng thái công bố.",
-    columns: ["Tác phẩm", "Lĩnh vực", "Trạng thái"],
-    rows: [
-      ["Sắc màu di sản", "Văn hóa", "Đã công bố"],
-      ["Hành trình nghề Việt", "Nghệ thuật", "Đang giới thiệu"],
-    ],
-  },
   "/works": {
     title: "Thư viện đề cử",
     eyebrow: "Khám phá",
@@ -324,7 +314,7 @@ const screens: Record<string, PreviewScreen> = {
   },
 };
 
-const common = ["/search", "/works", "/verify", "/notifications", "/account"];
+const common = ["/works", "/verify", "/notifications", "/account"];
 const permittedPaths: Record<WorkspacePersona, readonly string[]> = {
   VIEWER: ["/dashboard", ...common, "/activity", "/help", "/guide"],
   USER: [

@@ -225,5 +225,5 @@ function kindLabel(kind: SearchAutocompleteKind) {
 function suggestionHref(item: SearchAutocompleteSuggestion) {
   const slug = encodeURIComponent(item.slug);
   if (item.kind === "work") return `/works/${slug}`;
-  return `/search?${item.kind === "category" ? "category" : "tags"}=${slug}`;
+  return `/works?${item.kind === "category" ? "category" : "tag"}=${slug}`;
 }

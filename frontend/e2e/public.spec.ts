@@ -62,9 +62,7 @@ test("public portal is professional, responsive and verifiable", async ({
     .count();
   if (previewCatalog) {
     await page.goto("/search");
-    await expect(
-      page.getByRole("heading", { name: "Tìm nội dung bạn quan tâm" }),
-    ).toBeVisible();
+    await expect(page).toHaveURL(/\/works$/);
     await page.goto("/verify");
     await expect(
       page.getByRole("heading", { name: "Kiểm tra bằng xác lập" }),
@@ -86,40 +84,15 @@ test("public portal is professional, responsive and verifiable", async ({
   await autocomplete.press("Enter");
   await expect(page).toHaveURL(/\/works\/video-chao-mung-tinh-hoa-viet$/);
   await page.goto("/works");
-  await page.goto("/search?q=bo&category=brand&sort=relevance");
+  await page.goto("/search?q=bo&category=brand");
+  await expect(page).toHaveURL(/\/works\?query=bo&category=brand$/);
   await expect(
-    page.getByRole("heading", { name: /Tìm nội dung bạn quan tâm/ }),
+    page.getByRole("heading", { name: "Thư viện đề cử" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: /Bỏ danh mục Thương hiệu/ }),
-  ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Trang tiếp" })).toHaveAttribute(
-    "href",
-    /cursor=e2e-next-cursor/,
-  );
-  await expect(page.getByText("THV-2026-7EAEC2D2C99A")).toBeVisible();
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
-    "content",
-    /noindex/,
-  );
-  await expect(page.getByText("Lịch sử đang tắt")).toHaveCount(0);
-  await page.reload();
-  await expect(page.getByLabel("Sắp xếp kết quả")).toHaveValue("relevance");
-  await page.getByRole("link", { name: "Trang tiếp" }).click();
-  await expect(page).toHaveURL(/cursor=e2e-next-cursor/);
-  await page.goBack();
-  await expect(page).toHaveURL(/q=bo&category=brand&sort=relevance$/);
-  if (testInfo.project.name === "mobile-chrome") {
-    await page.getByRole("button", { name: /Bộ lọc/ }).click();
-    const closeSearchFilter = page.getByRole("button", { name: "Đóng bộ lọc" });
-    await expect(closeSearchFilter).toBeFocused();
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog")).toBeHidden();
-  }
   await page.screenshot({
     caret: "initial",
     fullPage: true,
-    path: testInfo.outputPath("search-results.png"),
+    path: testInfo.outputPath("library-results.png"),
   });
 
   await page.goto("/works?category=brand&tag=featured&sort=popular");

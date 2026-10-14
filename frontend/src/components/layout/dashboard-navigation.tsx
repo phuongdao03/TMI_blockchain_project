@@ -15,7 +15,6 @@ import {
   History,
   LayoutDashboard,
   Menu,
-  Search,
   Settings,
   ShieldCheck,
   Signature,
@@ -50,7 +49,6 @@ type NavigationSection = {
 
 const discoveryItems: NavigationItem[] = [
   { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
-  { href: "/search", label: "Tìm đề cử", icon: Search },
   { href: "/works", label: "Thư viện đề cử", icon: BookOpen },
   { href: "/verify", label: "Tra cứu bằng xác lập", icon: ShieldCheck },
 ];
@@ -292,7 +290,7 @@ function mobileItemsFor(
     (item) => item.href.startsWith("/admin/") || item.href === "/blockchain",
   );
   const priorities: Record<WorkspacePersona, string[]> = {
-    VIEWER: ["/dashboard", "/search", "/works"],
+    VIEWER: ["/dashboard", "/works"],
     USER: ["/dashboard", "/dossiers", "/attendance", "/leave"],
     MODERATOR: ["/reviews", "/work-allocations", "/attendance", "/leave"],
     SUPER_ADMIN: [

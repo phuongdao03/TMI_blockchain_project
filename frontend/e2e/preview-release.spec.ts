@@ -72,8 +72,8 @@ test("discovery keeps an authenticated return path across public screens", async
   const dashboardNavigation = page.getByRole("navigation", {
     name: "Điều hướng",
   });
-  await dashboardNavigation.getByRole("link", { name: "Tìm đề cử" }).click();
-  await expect(page).toHaveURL(/\/search$/, { timeout: 30_000 });
+  await dashboardNavigation.getByRole("link", { name: "Thư viện đề cử" }).click();
+  await expect(page).toHaveURL(/\/works$/, { timeout: 30_000 });
   const returnNavigation = page.getByRole("navigation", {
     name: "Quay lại khu vực làm việc",
   });
@@ -85,15 +85,11 @@ test("discovery keeps an authenticated return path across public screens", async
     }),
   ).toHaveAttribute("href", "/dossiers");
   await expect(
-    page.getByRole("heading", { name: "Tìm nội dung bạn quan tâm" }),
+    page.getByRole("heading", { name: "Thư viện đề cử" }),
   ).toBeVisible();
-  await expect(
-    page.getByText("Tìm kiếm đề cử", { exact: true }).last(),
-  ).toBeVisible();
-  await expect(page.getByText("Quay lại thư viện")).toHaveCount(0);
   await page.screenshot({
     fullPage: true,
-    path: testInfo.outputPath("workspace-search-desktop.png"),
+    path: testInfo.outputPath("workspace-library-desktop.png"),
   });
 
   await page.goto("/works");

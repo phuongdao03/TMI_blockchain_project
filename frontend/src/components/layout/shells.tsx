@@ -17,7 +17,6 @@ import {
   Music2,
   Phone,
   Route,
-  Search,
   UserPlus,
   X,
 } from "lucide-react";
@@ -40,7 +39,6 @@ import { DashboardNavigation } from "./dashboard-navigation";
 
 const publicPrimaryLinks = [
   { href: "/", label: "Trang chủ", icon: House },
-  { href: "/search", label: "Tìm đề cử", icon: Search },
   { href: "/works", label: "Danh sách đề cử", icon: BookOpen },
   { href: "/process", label: "Quy trình", icon: Route },
 ];
@@ -76,7 +74,6 @@ export function PublicShell({
               ? FileText
               : LayoutDashboard,
         },
-        { href: "/search", label: "Tìm đề cử", icon: Search },
         { href: "/works", label: "Thư viện đề cử", icon: BookOpen },
       ]
     : [];

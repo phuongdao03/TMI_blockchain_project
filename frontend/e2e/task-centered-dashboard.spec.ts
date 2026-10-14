@@ -123,8 +123,8 @@ test("viewer dashboard keeps public discovery as its primary action", async ({
   ).toBeVisible();
   await expect(page.getByText("Không gian tra cứu")).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Tìm kiếm đề cử" }),
-  ).toHaveAttribute("href", "/search");
+    page.getByRole("main").getByRole("link", { name: "Thư viện đề cử" }),
+  ).toHaveAttribute("href", "/works");
 
   const targetViewports =
     testInfo.project.name === "desktop-chrome"
@@ -208,7 +208,7 @@ test("mobile workspace drawer exposes complete navigation and restores focus", a
     path: testInfo.outputPath("mobile-workspace-drawer.png"),
   });
   const menuText = await drawer
-    .getByRole("link", { name: "Tìm đề cử" })
+    .getByRole("link", { name: "Thư viện đề cử" })
     .evaluate((link) => getComputedStyle(link).color);
   expect(menuText).toBe(
     await drawer.evaluate((panel) => getComputedStyle(panel).color),
@@ -285,7 +285,7 @@ test("mobile workspace navigation stays compact, centered and touch friendly", a
 
   const controls = navigation.locator(".dashboard-mobile-navigation__link");
   await expect(
-    navigation.getByRole("link", { name: "Tìm đề cử", exact: true }),
+    navigation.getByRole("link", { name: "Thư viện đề cử", exact: true }),
   ).toBeVisible();
   for (const control of await controls.all()) {
     const box = await control.boundingBox();
