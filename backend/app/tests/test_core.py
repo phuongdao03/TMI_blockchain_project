@@ -3,6 +3,7 @@ import logging
 from asyncio import run
 from pathlib import Path
 from typing import Final
+from unittest.mock import AsyncMock
 from uuid import UUID
 
 import httpx
@@ -398,6 +399,39 @@ def test_cloudinary_readiness_probe_uses_the_minimal_ping_endpoint() -> None:
     )
     try:
         assert probe._url == "https://api.cloudinary.com/v1_1/cns-production/ping"
+    finally:
+        run(probe.close())
+
+
+def test_cloudinary_readiness_reuses_recent_success_and_retries_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    probe = CloudinaryProbe(
+        cloud_name="cns-production",
+        api_key="cloudinary-api-key",
+        api_secret="cloudinary-api-secret",
+        timeout_seconds=4,
+    )
+    now = [100.0]
+    get = AsyncMock(
+        side_effect=[
+            httpx.Response(200),
+            httpx.Response(503),
+            httpx.Response(200),
+        ]
+    )
+    monkeypatch.setattr("app.core.probes.monotonic", lambda: now[0], raising=False)
+    monkeypatch.setattr(probe._client, "get", get)
+    try:
+        assert run(probe.check()) is True
+        now[0] += 119
+        assert run(probe.check()) is True
+        assert get.await_count == 1
+
+        now[0] += 2
+        assert run(probe.check()) is False
+        assert run(probe.check()) is True
+        assert get.await_count == 3
     finally:
         run(probe.close())
 

@@ -1,4 +1,5 @@
 import asyncio
+from time import monotonic
 from typing import Literal
 from urllib.parse import quote
 
@@ -62,6 +63,8 @@ class AnvilProbe:
 class CloudinaryProbe:
     """Validate that Cloudinary accepts the configured production credentials."""
 
+    _success_ttl_seconds = 120
+
     def __init__(
         self,
         *,
@@ -74,13 +77,29 @@ class CloudinaryProbe:
         self._client = httpx.AsyncClient(
             auth=(api_key, api_secret), timeout=timeout_seconds
         )
+        self._last_success_at: float | None = None
+        self._check_lock = asyncio.Lock()
 
     async def check(self) -> bool:
-        try:
-            response = await self._client.get(self._url)
-            return response.is_success
-        except httpx.HTTPError:
+        if self._recently_healthy():
+            return True
+        async with self._check_lock:
+            if self._recently_healthy():
+                return True
+            try:
+                response = await self._client.get(self._url)
+            except httpx.HTTPError:
+                return False
+            if response.is_success:
+                self._last_success_at = monotonic()
+                return True
             return False
+
+    def _recently_healthy(self) -> bool:
+        return (
+            self._last_success_at is not None
+            and monotonic() - self._last_success_at < self._success_ttl_seconds
+        )
 
     async def close(self) -> None:
         await self._client.aclose()

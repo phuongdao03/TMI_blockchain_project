@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     database_url: SecretStr | None = None
     database_direct_url: SecretStr | None = None
     database_null_pool: bool = False
-    readiness_timeout_seconds: float = Field(default=1.0, gt=0, le=10)
+    readiness_timeout_seconds: float = Field(default=4.0, gt=0, le=10)
     auth_outbox_encryption_key: SecretStr | None = None
     pii_encryption_key: SecretStr | None = None
     audit_integrity_key: SecretStr | None = None
