@@ -360,6 +360,13 @@ describe("BlockchainSigningWorkspace", () => {
     });
     sendBrowserTransaction.mockResolvedValue(transactionHash);
     submitTransaction.mockImplementation(() => new Promise(() => undefined));
+    transactionStatus.mockResolvedValue({
+      transactionId: "transaction-ready",
+      status: "SIGNING",
+      txHash: null,
+      confirmations: 0,
+      errorCode: null,
+    });
 
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
     await user.click(
@@ -371,10 +378,12 @@ describe("BlockchainSigningWorkspace", () => {
 
     expect(
       await screen.findByText(
-        "Đã nhận mã giao dịch. Hệ thống đang đồng bộ với mạng Polygon.",
+        "Giao dịch đã gửi, đang chờ mạng Polygon xác nhận.",
       ),
     ).toBeDefined();
     expect(screen.getByText(transactionHash)).toBeDefined();
+    expect(screen.getByText("Đang chờ Polygon xác nhận")).toBeDefined();
+    expect(screen.queryByText("Đang chờ xác nhận ví")).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Mở lại MetaMask để ký" }),
     ).toBeNull();

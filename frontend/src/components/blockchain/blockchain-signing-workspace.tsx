@@ -175,6 +175,7 @@ export function BlockchainSigningWorkspace() {
   const [message, setMessage] = useState<string | null>(null);
   const [copiedTransaction, setCopiedTransaction] = useState(false);
   const [walletPickerOpen, setWalletPickerOpen] = useState(false);
+  const [pollStartedAt, setPollStartedAt] = useState(() => Date.now());
 
   const wallet = useQuery({
     queryKey: ["blockchain", "wallet"],
@@ -203,6 +204,7 @@ export function BlockchainSigningWorkspace() {
     ),
     retry: false,
     refetchInterval: (query) => {
+      if (Date.now() - pollStartedAt >= 5 * 60_000) return false;
       if (
         query.state.data &&
         terminalStatuses.has(query.state.data.status) &&
@@ -221,7 +223,11 @@ export function BlockchainSigningWorkspace() {
     selected && transactionStatus.data?.transactionId === selected.transactionId
       ? {
           ...selected,
-          status: transactionStatus.data.status,
+          status:
+            (transactionStatus.data.txHash ?? selected.txHash) &&
+            ["CREATED", "SIGNING"].includes(transactionStatus.data.status)
+              ? "BROADCAST"
+              : transactionStatus.data.status,
           txHash: transactionStatus.data.txHash ?? selected.txHash,
           confirmations: transactionStatus.data.confirmations,
           errorCode: transactionStatus.data.errorCode,
@@ -370,6 +376,7 @@ export function BlockchainSigningWorkspace() {
   }
 
   function openItem(item: THVProofRegistryQueueItem) {
+    setPollStartedAt(() => Date.now());
     const pending = !item.txHash
       ? readPendingProofBroadcast(item.dossierId, item.version)
       : null;
@@ -379,10 +386,12 @@ export function BlockchainSigningWorkspace() {
         ? {
             ...item,
             transactionId: pending.transactionId,
-            status: "SIGNING",
+            status: "BROADCAST",
             txHash: pending.transactionHash,
           }
-        : item,
+        : item.txHash && ["CREATED", "SIGNING"].includes(item.status)
+          ? { ...item, status: "BROADCAST" }
+          : item,
     );
     setPreparedIntent(null);
     setMessage(null);
@@ -431,6 +440,7 @@ export function BlockchainSigningWorkspace() {
         ...intent.transactionRequest,
         from: connected.address,
       });
+      setPollStartedAt(Date.now());
       const pending = {
         dossierId: selected.dossierId,
         version: selected.version,
@@ -446,7 +456,7 @@ export function BlockchainSigningWorkspace() {
           ? {
               ...current,
               transactionId: intent.transactionId,
-              status: "SIGNING",
+              status: "BROADCAST",
               txHash: transactionHash,
               confirmations: 0,
               errorCode: null,
@@ -1020,14 +1030,6 @@ export function BlockchainSigningWorkspace() {
                       className="size-4 shrink-0"
                       aria-hidden="true"
                     />
-                  ) : current &&
-                    (displayedSelected.status === "SIGNING" ||
-                      displayedSelected.status === "BROADCAST" ||
-                      busy === "sign") ? (
-                    <LoaderCircle
-                      className="auth-activity-spinner size-4 shrink-0"
-                      aria-hidden="true"
-                    />
                   ) : (
                     <Circle className="size-4 shrink-0" aria-hidden="true" />
                   )}
@@ -1055,8 +1057,9 @@ export function BlockchainSigningWorkspace() {
                 displayedSelected.txHash)) &&
             !transactionStatus.error ? (
               <p className="mt-1 text-sm text-neutral-600">
-                Hệ thống tự kiểm tra kết quả định kỳ. Trạng thái chỉ chuyển
-                thành “Đã ghi nhận” sau khi mạng Polygon xác nhận hoàn tất.
+                Hệ thống đối soát kết quả; bạn có thể kiểm tra lại bất kỳ lúc
+                nào. Trạng thái chỉ chuyển thành “Đã ghi nhận” sau khi mạng
+                Polygon xác nhận hoàn tất.
               </p>
             ) : null}
           </div>
@@ -1301,13 +1304,9 @@ export function BlockchainSigningWorkspace() {
                 onClick={() => void handleSign()}
                 type="button"
               >
-                {busy === "sign" ? (
-                  <LoaderCircle className="auth-activity-spinner size-4" />
-                ) : (
-                  <FileCheck2 className="size-4" />
-                )}
+                <FileCheck2 className="size-4" />
                 {busy === "sign"
-                  ? "Đang mở MetaMask…"
+                  ? "Kiểm tra cửa sổ ví…"
                   : displayedSelected.status === "SIGNING"
                     ? "Mở lại MetaMask để ký"
                     : "Ký và ghi nhận blockchain"}

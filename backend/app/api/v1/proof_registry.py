@@ -117,7 +117,7 @@ async def record_proof_transaction_status(
     view = await service.transaction_status(
         principal,
         transaction_id=transaction_id,
-        reconcile=True,
+        reconcile=False,
     )
     return _success(request, THVProofRegistryStatusData.model_validate(view))  # type: ignore[return-value]
 

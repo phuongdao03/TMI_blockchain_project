@@ -13,6 +13,10 @@ class PaymentGatewayError(Exception):
     """Provider communication or response failure."""
 
 
+class PaymentGatewayUnavailableError(PaymentGatewayError):
+    """A request may have reached the provider before its response was lost."""
+
+
 class InvalidWebhookError(PaymentGatewayError):
     """Webhook authenticity, freshness, or payload validation failure."""
 
@@ -86,6 +90,7 @@ class MockPaymentGateway:
         self._uuid_factory = uuid_factory or uuid4
         self._webhook_tolerance_seconds = webhook_tolerance_seconds
         self._orders: dict[str, ProviderOrder] = {}
+        self._order_codes: dict[str, str] = {}
 
     async def create_order(
         self,
@@ -95,20 +100,28 @@ class MockPaymentGateway:
         currency: str,
         expires_at: datetime,
     ) -> ProviderOrder:
-        del amount_minor, currency, expires_at
+        del expires_at
+        if order_code in self._order_codes:
+            return self._orders[self._order_codes[order_code]]
         provider_order_id = f"mock-{self._uuid_factory()}"
         order = ProviderOrder(
             provider_order_id=provider_order_id,
             checkout_url=f"{self._checkout_base_url}/{provider_order_id}",
             qr_payload=f"CNS|{order_code}|{provider_order_id}",
             status=PaymentStatusName.PENDING,
+            order_code=order_code,
+            amount_minor=amount_minor,
+            currency=currency,
         )
         self._orders[provider_order_id] = order
+        self._order_codes[order_code] = provider_order_id
         return order
 
     async def get_order(self, provider_order_id: str) -> ProviderOrder:
         try:
-            return self._orders[provider_order_id]
+            return self._orders[
+                self._order_codes.get(provider_order_id, provider_order_id)
+            ]
         except KeyError as exc:
             raise PaymentGatewayError("Provider order was not found.") from exc
 
@@ -125,6 +138,9 @@ class MockPaymentGateway:
             checkout_url=order.checkout_url,
             qr_payload=order.qr_payload,
             status="CANCELLED",
+            order_code=order.order_code,
+            amount_minor=order.amount_minor,
+            currency=order.currency,
         )
         self._orders[provider_order_id] = cancelled
         return cancelled
@@ -164,18 +180,24 @@ class MockPaymentGateway:
         )
         currency = self._required_string(payload, "currency", 3).upper()
         amount_minor = payload.get("amount_minor")
+        order_code = payload.get("order_code")
         if (
             not isinstance(amount_minor, int)
             or isinstance(amount_minor, bool)
             or amount_minor <= 0
         ):
             raise InvalidWebhookError("Webhook amount is invalid.")
+        if order_code is not None and (
+            not isinstance(order_code, str) or not order_code.isdigit()
+        ):
+            raise InvalidWebhookError("Webhook order code is invalid.")
         return VerifiedPaymentEvent(
             provider_event_id=event_id,
             event_type=event_type,
             provider_order_id=provider_order_id,
             amount_minor=amount_minor,
             currency=currency,
+            order_code=order_code,
             payload_redacted={
                 "event_type": event_type,
                 "provider_order_id": provider_order_id,

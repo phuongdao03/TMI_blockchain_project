@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PaymentWorkspace } from "@/components/payments/payment-workspace";
 
@@ -18,6 +18,10 @@ describe("PaymentWorkspace", () => {
   beforeEach(() => {
     getMock.mockReset();
     cancelMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("renders the server-confirmed receipt and never trusts a redirect flag", async () => {
@@ -123,5 +127,41 @@ describe("PaymentWorkspace", () => {
       "payment-3",
       "Tôi cần kiểm tra lại hồ sơ",
     );
+  });
+
+  it("offers manual status refresh after bounded payment polling", async () => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(0);
+    getMock.mockResolvedValue({
+      id: "payment-pending",
+      orderCode: "123458",
+      dossierId: "dossier-1",
+      provider: "payos",
+      providerOrderId: "payos-link-3",
+      amountMinor: 10_000,
+      currency: "VND",
+      status: "PENDING",
+      expiresAt: "2026-08-01T08:15:00Z",
+      paidAt: null,
+      checkoutUrl: null,
+      qrPayload: null,
+      createdAt: "2026-08-01T08:00:00Z",
+      updatedAt: "2026-08-01T08:03:00Z",
+    });
+    const client = new QueryClient();
+    const view = () => (
+      <QueryClientProvider client={client}>
+        <PaymentWorkspace orderId="payment-pending" />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(view());
+    expect(await screen.findByText(/tối đa 5 phút/)).toBeTruthy();
+
+    now.mockReturnValue(300_001);
+    rerender(view());
+    expect(screen.getByText(/tối đa 5 phút/)).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Kiểm tra trạng thái ngay" }),
+    );
+    expect(getMock).toHaveBeenCalledTimes(2);
   });
 });

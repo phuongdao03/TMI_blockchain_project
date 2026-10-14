@@ -455,67 +455,20 @@ class THVProofRegistryService:
             }:
                 raise BlockchainConflictError("Transaction cannot be submitted now.")
 
-            # Persist the wallet result before asking an RPC node about it. A freshly
-            # broadcast transaction can take a few seconds to propagate between the
-            # wallet's node and our node; retaining the hash makes that window fully
-            # recoverable after a refresh or a temporary API interruption.
+            # A wallet hash is evidence of submission, not confirmation. Persist it
+            # and return without waiting for RPC propagation; reconciliation validates
+            # the transaction, receipt, event and contract state separately.
             transaction.tx_hash = transaction_hash
             transaction.signer_user_id = principal.user_id
             transaction.signer_wallet_address = wallet.wallet_address
             transaction.broadcast_at = transaction.broadcast_at or now
             transaction.error_code = None
             transaction.error_message = None
-            if intent.status in {
-                BlockchainTransactionIntentStatus.PREPARED,
-                BlockchainTransactionIntentStatus.EXPIRED,
-            }:
-                intent.status = BlockchainTransactionIntentStatus.SUBMITTED
-                intent.submitted_at = now
-            expected_call_hash = intent.encoded_call_hash
-            expected_wallet = intent.expected_wallet_address
-            expected_contract = intent.contract_address
-            expected_chain = int(intent.chain_id)
-        try:
-            chain_transaction = await self._gateway.transaction(transaction_hash)
-        except BlockchainGatewayError:
-            chain_transaction = None
-        if chain_transaction is None:
-            async with self._session.begin():
-                return self._status_view(
-                    await self._required_transaction(transaction_id)
-                )
-        if not self._transaction_matches_intent(
-            chain_transaction,
-            expected_wallet=expected_wallet,
-            connected_wallet=wallet.wallet_address,
-            expected_contract=expected_contract,
-            expected_chain=expected_chain,
-            expected_call_hash=expected_call_hash,
-        ):
-            await self._fail_transaction(
-                transaction_id,
-                "TRANSACTION_MISMATCH",
-                "Blockchain transaction does not match intent.",
-            )
-            raise BlockchainConflictError(
-                "Blockchain transaction does not match intent."
-            )
-        async with self._session.begin():
-            intent = await self._required_intent(intent_id, for_update=True)
-            transaction = await self._required_transaction(
-                transaction_id, for_update=True
-            )
-            if transaction.tx_hash != transaction_hash:
-                raise BlockchainConflictError(
-                    "Transaction hash changed during submission."
-                )
             if transaction.status in {
                 BlockchainTransactionStatus.CREATED,
                 BlockchainTransactionStatus.SIGNING,
             }:
                 transaction.status = BlockchainTransactionStatus.BROADCAST
-            transaction.error_code = None
-            transaction.error_message = None
             if intent.status in {
                 BlockchainTransactionIntentStatus.PREPARED,
                 BlockchainTransactionIntentStatus.EXPIRED,
@@ -529,7 +482,7 @@ class THVProofRegistryService:
         principal: AuthPrincipal,
         *,
         transaction_id: UUID,
-        reconcile: bool = True,
+        reconcile: bool = False,
     ) -> THVProofRegistryStatusView:
         self._require_signer(principal)
         if reconcile:
@@ -555,7 +508,6 @@ class THVProofRegistryService:
                             BlockchainTransaction.status.in_(
                                 (
                                     BlockchainTransactionStatus.BROADCAST,
-                                    BlockchainTransactionStatus.CONFIRMED,
                                     BlockchainTransactionStatus.SIGNING,
                                     BlockchainTransactionStatus.FAILED,
                                 )
@@ -586,8 +538,9 @@ class THVProofRegistryService:
 
     async def _reconcile(self, transaction_id: UUID) -> None:
         certificate_dossier_id: UUID | None = None
-        await self._promote_visible_signing_transaction(transaction_id)
         if await self._recover_missing_transaction_hash(transaction_id):
+            return
+        if not await self._promote_visible_signing_transaction(transaction_id):
             return
         async with self._session.begin():
             transaction = await self._required_transaction(transaction_id)
@@ -873,14 +826,18 @@ class THVProofRegistryService:
             self._enqueue_certificate_issue(certificate_dossier_id)
         return True
 
-    async def _promote_visible_signing_transaction(self, transaction_id: UUID) -> None:
+    async def _promote_visible_signing_transaction(self, transaction_id: UUID) -> bool:
         async with self._session.begin():
             transaction = await self._required_transaction(transaction_id)
             if (
-                transaction.status is not BlockchainTransactionStatus.SIGNING
+                transaction.status
+                not in {
+                    BlockchainTransactionStatus.SIGNING,
+                    BlockchainTransactionStatus.BROADCAST,
+                }
                 or transaction.tx_hash is None
             ):
-                return
+                return True
             intent = cast(
                 BlockchainTransactionIntent | None,
                 await self._session.scalar(
@@ -909,7 +866,7 @@ class THVProofRegistryService:
                 ),
             )
             if intent is None or transaction.signer_wallet_address is None:
-                return
+                return False
             tx_hash = transaction.tx_hash
             expected_wallet = intent.expected_wallet_address
             connected_wallet = transaction.signer_wallet_address
@@ -925,7 +882,7 @@ class THVProofRegistryService:
                 "THV proof transaction lookup is unavailable."
             ) from exc
         if chain_transaction is None:
-            return
+            return False
         if not self._transaction_matches_intent(
             chain_transaction,
             expected_wallet=expected_wallet,
@@ -939,7 +896,7 @@ class THVProofRegistryService:
                 "TRANSACTION_MISMATCH",
                 "Blockchain transaction does not match intent.",
             )
-            return
+            return False
 
         async with self._session.begin():
             transaction = await self._required_transaction(
@@ -959,6 +916,7 @@ class THVProofRegistryService:
             }:
                 intent.status = BlockchainTransactionIntentStatus.SUBMITTED
                 intent.submitted_at = self._clock()
+        return True
 
     @staticmethod
     def _transaction_matches_intent(

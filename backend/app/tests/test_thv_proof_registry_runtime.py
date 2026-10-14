@@ -73,6 +73,7 @@ class ProofRegistryGateway:
         self.recorded = False
         self.transaction_available = True
         self.receipt_available = True
+        self.receipt_calls = 0
         self.latest_block = 11
         self.transaction_hash = "0x" + "90" * 32
         self.transaction_recipient = CONTRACT
@@ -136,6 +137,7 @@ class ProofRegistryGateway:
         )
 
     async def receipt(self, tx_hash: str) -> TransactionReceipt | None:
+        self.receipt_calls += 1
         if tx_hash != self.transaction_hash or not self.receipt_available:
             return None
         return TransactionReceipt(
@@ -702,7 +704,7 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version(
             transaction_hash=gateway.transaction_hash,
             connected_wallet=WALLET,
         )
-        assert submitted.status is BlockchainTransactionStatus.SIGNING
+        assert submitted.status is BlockchainTransactionStatus.BROADCAST
         assert submitted.tx_hash == gateway.transaction_hash
         async with sessions() as session:
             submitted_intent = await session.get(
@@ -748,6 +750,12 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version(
 
         gateway.receipt_available = True
         gateway.latest_block = 10
+        cached = await service.transaction_status(
+            principal,
+            transaction_id=intent.transaction_id,
+        )
+        assert cached.status is BlockchainTransactionStatus.BROADCAST
+        assert cached.confirmations == 0
         without_confirmations = await service.transaction_status(
             principal,
             transaction_id=intent.transaction_id,
@@ -802,6 +810,9 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version(
         )
         assert confirmed_again.status is BlockchainTransactionStatus.CONFIRMED
         assert issuance_requests == [dossier.id]
+        receipt_calls = gateway.receipt_calls
+        await service.reconcile_pending()
+        assert gateway.receipt_calls == receipt_calls
         assert await service.signing_queue(principal) == []
         async with sessions() as session:
             stored_transaction = await session.get(

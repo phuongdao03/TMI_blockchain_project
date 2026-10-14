@@ -51,11 +51,16 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
   const queryClient = useQueryClient();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [pollStartedAt] = useState(() => Date.now());
   const order = useQuery({
     queryKey: paymentKeys.detail(orderId),
     queryFn: () => paymentApi.get(orderId),
     refetchInterval: ({ state }) =>
-      state.data && POLLING_STATUSES.has(state.data.status) ? 3_000 : false,
+      state.data &&
+      POLLING_STATUSES.has(state.data.status) &&
+      Date.now() - pollStartedAt < 5 * 60_000
+        ? 3_000
+        : false,
   });
   const cancel = useMutation({
     mutationFn: () => paymentApi.cancel(orderId, cancelReason.trim()),
@@ -203,9 +208,16 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                 <div>
                   <h2 className="font-bold">Đang chờ xác nhận</h2>
                   <p className="mt-1 text-sm leading-6 text-amber-800">
-                    Trang tự kiểm tra trạng thái mỗi 3 giây. Bạn có thể giữ
-                    trang này mở sau khi hoàn tất thanh toán.
+                    Trang tự kiểm tra trạng thái mỗi 3 giây trong tối đa 5 phút.
+                    Hệ thống vẫn tiếp tục đối soát thanh toán ở nền.
                   </p>
+                  <button
+                    className="mt-3 min-h-11 text-sm font-bold underline underline-offset-4"
+                    onClick={() => void order.refetch()}
+                    type="button"
+                  >
+                    Kiểm tra trạng thái ngay
+                  </button>
                 </div>
               </div>
             )}

@@ -150,6 +150,42 @@ def test_payos_create_order_maps_timeout() -> None:
     asyncio.run(exercise())
 
 
+def test_payos_create_timeout_recovers_existing_link_by_order_code() -> None:
+    async def exercise() -> None:
+        requests: list[tuple[str, str]] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append((request.method, request.url.path))
+            if request.method == "POST":
+                raise httpx.ReadTimeout("response lost", request=request)
+            assert request.url.path == "/v2/payment-requests/123456"
+            return _response(
+                {
+                    "id": "payos-link-1",
+                    "orderCode": 123456,
+                    "amount": 10_000,
+                    "status": "PENDING",
+                }
+            )
+
+        gateway = _gateway(httpx.MockTransport(handler))
+        recovered = await gateway.create_order(
+            order_code="123456",
+            amount_minor=10_000,
+            currency="VND",
+            expires_at=NOW,
+        )
+        assert recovered.provider_order_id == "payos-link-1"
+        assert recovered.checkout_url == "https://pay.payos.vn/web/payos-link-1"
+        assert requests == [
+            ("POST", "/v2/payment-requests"),
+            ("GET", "/v2/payment-requests/123456"),
+        ]
+        await gateway.close()
+
+    asyncio.run(exercise())
+
+
 @pytest.mark.parametrize(
     "data",
     [

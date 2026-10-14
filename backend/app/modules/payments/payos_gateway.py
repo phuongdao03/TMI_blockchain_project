@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import hmac
 import json
+import re
 import secrets
 from collections.abc import Mapping
 from datetime import datetime
@@ -13,6 +14,7 @@ import httpx
 from app.modules.payments.gateway import (
     InvalidWebhookError,
     PaymentGatewayError,
+    PaymentGatewayUnavailableError,
     ProviderOrder,
     VerifiedPaymentEvent,
 )
@@ -96,12 +98,24 @@ class PayOSGateway:
             "expiredAt": int(expires_at.timestamp()),
             "signature": self._sign(signed_data),
         }
-        response = await self._request(
-            "POST",
-            "/v2/payment-requests",
-            json=payload,
-            safe_to_retry=False,
-        )
+        try:
+            response = await self._request(
+                "POST",
+                "/v2/payment-requests",
+                json=payload,
+                safe_to_retry=False,
+            )
+        except PaymentGatewayUnavailableError as exc:
+            # The POST may have succeeded. Resolve its unique order code before
+            # allowing any caller to consider another checkout.
+            recovered = await self.get_order(order_code)
+            if (
+                recovered.order_code != order_code
+                or recovered.amount_minor != amount_minor
+                or recovered.currency not in {None, currency}
+            ):
+                raise PaymentGatewayError("payOS returned a mismatched order.") from exc
+            return recovered
         data = self._verified_response_data(response)
         if data.get("orderCode") != int(order_code):
             raise PaymentGatewayError("payOS returned a mismatched order code.")
@@ -224,7 +238,9 @@ class PayOSGateway:
                 if attempt + 1 < attempts:
                     await asyncio.sleep(0)
                     continue
-                raise PaymentGatewayError("payOS is temporarily unavailable.") from exc
+                raise PaymentGatewayUnavailableError(
+                    "payOS is temporarily unavailable."
+                ) from exc
             if (
                 response.status_code in _RETRYABLE_STATUS_CODES
                 and attempt + 1 < attempts
@@ -281,6 +297,9 @@ class PayOSGateway:
             raise PaymentGatewayError("payOS returned an invalid payment amount.")
         checkout_url = data.get("checkoutUrl")
         qr_payload = data.get("qrCode")
+        if not expect_checkout and checkout_url is None and status == "PENDING":
+            self._validate_identifier(provider_id)
+            checkout_url = f"https://{_PAYOS_CHECKOUT_HOST}/web/{provider_id}"
         if expect_checkout:
             if not isinstance(checkout_url, str) or (
                 urlparse(checkout_url).scheme != "https"
@@ -312,7 +331,7 @@ class PayOSGateway:
 
     @staticmethod
     def _validate_identifier(value: str) -> None:
-        if not value or len(value) > 128 or any(char.isspace() for char in value):
+        if re.fullmatch(r"[A-Za-z0-9-]{1,128}", value) is None:
             raise PaymentGatewayError("Payment identifier is invalid.")
 
     async def close(self) -> None:

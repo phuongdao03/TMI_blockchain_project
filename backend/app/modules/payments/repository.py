@@ -43,6 +43,16 @@ class PaymentRepository:
             ),
         )
 
+    async def get_by_order_code(
+        self, order_code: str, *, for_update: bool = False
+    ) -> PaymentOrder | None:
+        statement = select(PaymentOrder).where(PaymentOrder.order_code == order_code)
+        if for_update:
+            statement = statement.with_for_update().execution_options(
+                populate_existing=True
+            )
+        return cast(PaymentOrder | None, await self._session.scalar(statement))
+
     async def get_by_provider_order(
         self,
         provider: str,

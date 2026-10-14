@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import hmac
 import json
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -23,10 +24,16 @@ from app.modules.media.models import MediaAsset  # noqa: F401
 from app.modules.notifications.models import Notification
 from app.modules.payments.errors import (
     PaymentAmountMismatchError,
+    PaymentConflictError,
     PaymentForbiddenError,
     PaymentInvalidWebhookError,
+    PaymentProviderError,
 )
-from app.modules.payments.gateway import MockPaymentGateway, ProviderOrder
+from app.modules.payments.gateway import (
+    MockPaymentGateway,
+    PaymentGatewayError,
+    ProviderOrder,
+)
 from app.modules.payments.models import PaymentEvent, PaymentOrder, PaymentStatus
 from app.modules.payments.service import PaymentService
 
@@ -37,8 +44,11 @@ ADMIN_ID = UUID("70fe624c-6706-4f3a-97fb-0d12f1a33db2")
 
 class ReconciliationGateway(MockPaymentGateway):
     status = "PENDING"
+    transaction_probe: Callable[[], bool] | None = None
 
     async def get_order(self, provider_order_id: str) -> ProviderOrder:
+        if self.transaction_probe is not None:
+            assert not self.transaction_probe()
         order = await super().get_order(provider_order_id)
         return ProviderOrder(
             provider_order_id=order.provider_order_id,
@@ -50,6 +60,7 @@ class ReconciliationGateway(MockPaymentGateway):
 
 class TrackingGateway(MockPaymentGateway):
     create_called = False
+    transaction_probe: Callable[[], bool] | None = None
 
     async def create_order(
         self,
@@ -60,12 +71,46 @@ class TrackingGateway(MockPaymentGateway):
         expires_at: datetime,
     ) -> ProviderOrder:
         self.create_called = True
+        if self.transaction_probe is not None:
+            assert not self.transaction_probe()
         return await super().create_order(
             order_code=order_code,
             amount_minor=amount_minor,
             currency=currency,
             expires_at=expires_at,
         )
+
+
+class LostCheckoutResponseGateway(MockPaymentGateway):
+    create_calls = 0
+
+    async def create_order(
+        self,
+        *,
+        order_code: str,
+        amount_minor: int,
+        currency: str,
+        expires_at: datetime,
+    ) -> ProviderOrder:
+        self.create_calls += 1
+        await super().create_order(
+            order_code=order_code,
+            amount_minor=amount_minor,
+            currency=currency,
+            expires_at=expires_at,
+        )
+        raise PaymentGatewayError("response lost")
+
+
+class CancelRaceGateway(MockPaymentGateway):
+    on_cancel: Callable[[], Awaitable[None]] | None = None
+
+    async def cancel_order(
+        self, provider_order_id: str, *, reason: str
+    ) -> ProviderOrder:
+        if self.on_cancel is not None:
+            await self.on_cancel()
+        return await super().cancel_order(provider_order_id, reason=reason)
 
 
 async def _service(
@@ -157,18 +202,20 @@ def _webhook(
     *,
     amount_minor: int = 1_000_000,
     event_id: str = "evt-paid-1",
+    event_type: str = "payment.paid",
+    order_code: str | None = None,
 ) -> tuple[bytes, str, int]:
     timestamp = int(NOW.timestamp())
-    body = json.dumps(
-        {
-            "event_id": event_id,
-            "event_type": "payment.paid",
-            "provider_order_id": "mock-provider-order",
-            "amount_minor": amount_minor,
-            "currency": "VND",
-        },
-        separators=(",", ":"),
-    ).encode()
+    payload = {
+        "event_id": event_id,
+        "event_type": event_type,
+        "provider_order_id": "mock-provider-order",
+        "amount_minor": amount_minor,
+        "currency": "VND",
+    }
+    if order_code is not None:
+        payload["order_code"] = order_code
+    body = json.dumps(payload, separators=(",", ":")).encode()
     signature = hmac.new(
         b"payment-secret",
         str(timestamp).encode() + b"." + body,
@@ -205,6 +252,26 @@ def test_admin_issues_exact_payment_amount_and_notifies_owner() -> None:
         assert order.amount_minor == 1_500_000
         assert order.description == "Phí xác lập và phát hành chứng thư"
         assert order.issued_by_user_id == operator.user_id
+        replay = await service.issue_order(
+            operator,
+            DOSSIER_ID,
+            idempotency_key="admin-issued-payment-1",
+            amount_minor=1_500_000,
+            currency="VND",
+            description="Phí xác lập và phát hành chứng thư",
+            due_at=NOW.replace(day=7, month=8),
+        )
+        assert replay.id == order.id
+        with pytest.raises(PaymentConflictError):
+            await service.issue_order(
+                operator,
+                DOSSIER_ID,
+                idempotency_key="admin-issued-payment-1",
+                amount_minor=1_600_000,
+                currency="VND",
+                description="Phí xác lập và phát hành chứng thư",
+                due_at=NOW.replace(day=7, month=8),
+            )
         async with sessions() as session:
             notification = await session.scalar(select(Notification))
             assert notification is not None
@@ -300,7 +367,9 @@ def test_admin_can_waive_payment_and_make_dossier_ready_for_signing() -> None:
 
 def test_create_order_is_idempotent_and_transitions_dossier() -> None:
     async def exercise() -> None:
-        service, sessions, engine, principal = await _service()
+        gateway = TrackingGateway(webhook_secret="payment-secret")
+        service, sessions, engine, principal = await _service(gateway=gateway)
+        gateway.transaction_probe = lambda: service._session.in_transaction()
         created = await service.create_order(
             principal,
             DOSSIER_ID,
@@ -324,6 +393,89 @@ def test_create_order_is_idempotent_and_transitions_dossier() -> None:
             audits = tuple((await session.scalars(select(AuditLog))).all())
             assert [row.action for row in audits] == ["payment.order.created"]
             assert audits[0].actor_user_id == principal.user_id
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_lost_checkout_response_keeps_reservation_and_recovers_without_new_link() -> (
+    None
+):
+    async def exercise() -> None:
+        gateway = LostCheckoutResponseGateway(
+            webhook_secret="payment-secret", uuid_factory=lambda: "provider-order"
+        )
+        service, sessions, engine, principal = await _service(gateway=gateway)
+        with pytest.raises(PaymentProviderError):
+            await service.create_order(
+                principal, DOSSIER_ID, idempotency_key="lost-response"
+            )
+        async with sessions() as session:
+            reserved = await session.scalar(select(PaymentOrder))
+            assert reserved is not None
+            assert reserved.status is PaymentStatus.PROCESSING
+            assert reserved.provider_order_id is None
+            order_id = reserved.id
+        recovered = await service.create_order(
+            principal, DOSSIER_ID, idempotency_key="lost-response"
+        )
+        assert recovered.id == order_id
+        assert recovered.status is PaymentStatus.PENDING
+        assert recovered.checkout_url is not None
+        assert gateway.create_calls == 1
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_paid_webhook_can_settle_a_reserved_order_before_checkout_response() -> None:
+    async def exercise() -> None:
+        issue_queue: list[UUID] = []
+        gateway = LostCheckoutResponseGateway(
+            webhook_secret="payment-secret", uuid_factory=lambda: "provider-order"
+        )
+        service, sessions, engine, principal = await _service(issue_queue, gateway)
+        with pytest.raises(PaymentProviderError):
+            await service.create_order(
+                principal, DOSSIER_ID, idempotency_key="webhook-before-response"
+            )
+        async with sessions() as session:
+            reserved = await session.scalar(select(PaymentOrder))
+            assert reserved is not None
+            order_code = reserved.order_code
+        body, signature, timestamp = _webhook(order_code=order_code)
+        paid = await service.process_webhook(
+            raw_body=body, signature=signature, timestamp=timestamp
+        )
+        assert paid.status is PaymentStatus.PAID
+        assert paid.provider_order_id == "mock-provider-order"
+        assert issue_queue == [DOSSIER_ID]
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_reconciliation_worker_recovers_a_reserved_checkout() -> None:
+    async def exercise() -> None:
+        gateway = LostCheckoutResponseGateway(
+            webhook_secret="payment-secret", uuid_factory=lambda: "provider-order"
+        )
+        service, sessions, engine, principal = await _service(gateway=gateway)
+        with pytest.raises(PaymentProviderError):
+            await service.create_order(
+                principal, DOSSIER_ID, idempotency_key="worker-recovers-checkout"
+            )
+        assert await service.reconcile_pending() == 1
+        async with sessions() as session:
+            order = await session.scalar(select(PaymentOrder))
+            assert order is not None
+            assert order.status is PaymentStatus.PENDING
+            assert order.provider_order_id == "mock-provider-order"
+            assert order.metadata_json["checkout_url"] is not None
+        assert gateway.create_calls == 1
         await service.close()
         await engine.dispose()
 
@@ -363,6 +515,37 @@ def test_applicant_cancels_pending_order_and_can_restart_payment() -> None:
             ]
             assert audits[-1].actor_user_id == principal.user_id
 
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_webhook_paid_during_cancellation_keeps_payment_paid() -> None:
+    async def exercise() -> None:
+        gateway = CancelRaceGateway(
+            webhook_secret="payment-secret", uuid_factory=lambda: "provider-order"
+        )
+        service, sessions, engine, principal = await _service(gateway=gateway)
+        order = await service.create_order(
+            principal, DOSSIER_ID, idempotency_key="cancel-race"
+        )
+        body, signature, timestamp = _webhook()
+
+        async def settle() -> None:
+            await service.process_webhook(
+                raw_body=body, signature=signature, timestamp=timestamp
+            )
+
+        gateway.on_cancel = settle
+        result = await service.cancel_order(
+            principal, order.id, reason="Applicant cancelled checkout"
+        )
+        assert result.status is PaymentStatus.PAID
+        async with sessions() as session:
+            dossier = await session.get(Dossier, DOSSIER_ID)
+            assert dossier is not None
+            assert dossier.status is DossierStatus.PAID
         await service.close()
         await engine.dispose()
 
@@ -451,6 +634,121 @@ def test_paid_webhook_is_atomic_and_duplicate_is_idempotent() -> None:
     asyncio.run(exercise())
 
 
+def test_stale_failed_webhook_cannot_regress_paid_order() -> None:
+    async def exercise() -> None:
+        issue_queue: list[UUID] = []
+        service, sessions, engine, principal = await _service(issue_queue)
+        order = await service.create_order(
+            principal, DOSSIER_ID, idempotency_key="stale-failed-webhook"
+        )
+        body, signature, timestamp = _webhook()
+        await service.process_webhook(
+            raw_body=body, signature=signature, timestamp=timestamp
+        )
+        failed_body, failed_signature, timestamp = _webhook(
+            event_id="evt-failed-late", event_type="payment.failed"
+        )
+        result = await service.process_webhook(
+            raw_body=failed_body,
+            signature=failed_signature,
+            timestamp=timestamp,
+        )
+        assert result.id == order.id
+        assert result.status is PaymentStatus.PAID
+        assert issue_queue == [DOSSIER_ID]
+        async with sessions() as session:
+            events = tuple((await session.scalars(select(PaymentEvent))).all())
+            assert len(events) == 2
+            assert all(event.processed_at is not None for event in events)
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_late_paid_webhook_after_cancellation_is_recorded_for_review() -> None:
+    async def exercise() -> None:
+        issue_queue: list[UUID] = []
+        service, sessions, engine, principal = await _service(issue_queue)
+        order = await service.create_order(
+            principal, DOSSIER_ID, idempotency_key="late-paid-after-cancel"
+        )
+        await service.cancel_order(principal, order.id, reason="Changed payment method")
+        body, signature, timestamp = _webhook(event_id="evt-paid-after-cancel")
+
+        result = await service.process_webhook(
+            raw_body=body, signature=signature, timestamp=timestamp
+        )
+        assert result.status is PaymentStatus.CANCELLED
+        assert issue_queue == []
+        async with sessions() as session:
+            event = await session.scalar(
+                select(PaymentEvent).where(
+                    PaymentEvent.provider_event_id == "evt-paid-after-cancel"
+                )
+            )
+            dossier = await session.get(Dossier, DOSSIER_ID)
+            audits = tuple((await session.scalars(select(AuditLog))).all())
+            assert event is not None and event.processed_at is not None
+            assert dossier is not None and dossier.status is DossierStatus.APPROVED
+            assert audits[-1].action == "payment.webhook.conflict"
+            assert audits[-1].after_json == {"outcome": "PAID_AFTER_CANCELLED"}
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_stale_processing_webhook_does_not_reopen_cancelled_order() -> None:
+    async def exercise() -> None:
+        service, sessions, engine, principal = await _service()
+        order = await service.create_order(
+            principal, DOSSIER_ID, idempotency_key="stale-processing-after-cancel"
+        )
+        await service.cancel_order(principal, order.id, reason="Changed payment method")
+        body, signature, timestamp = _webhook(
+            event_id="evt-processing-after-cancel", event_type="payment.processing"
+        )
+        result = await service.process_webhook(
+            raw_body=body, signature=signature, timestamp=timestamp
+        )
+        assert result.status is PaymentStatus.CANCELLED
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_stale_provider_snapshot_does_not_reopen_cancelled_order() -> None:
+    async def exercise() -> None:
+        gateway = ReconciliationGateway(webhook_secret="payment-secret")
+        service, sessions, engine, principal = await _service(gateway=gateway)
+        order = await service.create_order(
+            principal, DOSSIER_ID, idempotency_key="stale-provider-after-cancel"
+        )
+        await service.cancel_order(principal, order.id, reason="Changed payment method")
+        finance = AuthPrincipal(
+            user_id=principal.user_id,
+            session_id=principal.session_id,
+            email=principal.email,
+            roles=("SUPER_ADMIN",),
+        )
+        gateway.status = "PENDING"
+        result = await service.reconcile_order(finance, order.id)
+        assert result.status is PaymentStatus.CANCELLED
+        gateway.status = "PAID"
+        conflicted = await service.reconcile_order(finance, order.id)
+        assert conflicted.status is PaymentStatus.CANCELLED
+        async with sessions() as session:
+            audits = tuple((await session.scalars(select(AuditLog))).all())
+            assert audits[-1].action == "payment.reconciliation.conflict"
+            assert audits[-1].after_json == {"outcome": "PAID_AFTER_CANCELLED"}
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 def test_webhook_rejects_tampering_and_wrong_amount_without_marking_paid() -> None:
     async def exercise() -> None:
         service, sessions, engine, principal = await _service()
@@ -501,6 +799,7 @@ def test_reconciliation_confirms_paid_once_and_enqueues_issuance_once() -> None:
             uuid_factory=lambda: "provider-order",
         )
         service, sessions, engine, applicant = await _service(issue_queue, gateway)
+        gateway.transaction_probe = lambda: service._session.in_transaction()
         order = await service.create_order(
             applicant,
             DOSSIER_ID,
@@ -529,6 +828,42 @@ def test_reconciliation_confirms_paid_once_and_enqueues_issuance_once() -> None:
                 "payment.order.created",
                 "payment.order.reconciled",
             ]
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_stale_provider_status_cannot_regress_a_paid_order() -> None:
+    async def exercise() -> None:
+        issue_queue: list[UUID] = []
+        gateway = ReconciliationGateway(
+            webhook_secret="payment-secret",
+            uuid_factory=lambda: "provider-order",
+        )
+        service, sessions, engine, applicant = await _service(issue_queue, gateway)
+        order = await service.create_order(
+            applicant, DOSSIER_ID, idempotency_key="stale-paid-order"
+        )
+        body, signature, timestamp = _webhook()
+        await service.process_webhook(
+            raw_body=body, signature=signature, timestamp=timestamp
+        )
+        finance = AuthPrincipal(
+            user_id=applicant.user_id,
+            session_id=applicant.session_id,
+            email=applicant.email,
+            roles=("SUPER_ADMIN",),
+        )
+        for stale_status in ("PROCESSING", "FAILED", "CANCELLED"):
+            gateway.status = stale_status
+            reconciled = await service.reconcile_order(finance, order.id)
+            assert reconciled.status is PaymentStatus.PAID
+        async with sessions() as session:
+            dossier = await session.get(Dossier, DOSSIER_ID)
+            assert dossier is not None
+            assert dossier.status is DossierStatus.PAID
+        assert issue_queue == [DOSSIER_ID]
         await service.close()
         await engine.dispose()
 
