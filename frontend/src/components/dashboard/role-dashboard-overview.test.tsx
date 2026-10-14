@@ -9,7 +9,11 @@ describe("RoleDashboardOverview", () => {
       <RoleDashboardOverview accountType="PUBLIC_USER" persona="VIEWER" />,
     );
 
-    expect(screen.getByRole("link", { name: /Tìm kiếm đề cử/i })).toBeDefined();
+    expect(
+      screen
+        .getByRole("link", { name: /Thư viện đề cử/i })
+        .getAttribute("href"),
+    ).toBe("/works");
     expect(
       screen.getByRole("button", { name: /Gửi tác phẩm hoặc hồ sơ/i }),
     ).toBeDefined();
