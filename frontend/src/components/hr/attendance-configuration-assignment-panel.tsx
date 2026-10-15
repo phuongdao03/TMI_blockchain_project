@@ -271,6 +271,7 @@ export function AttendanceAssignmentPanel({
             </p>
           </div>
           <button
+            aria-expanded={showForm}
             className="min-h-10 rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white disabled:opacity-50"
             disabled={!selectedWorksite}
             onClick={() => {

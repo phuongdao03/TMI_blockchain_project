@@ -52,9 +52,17 @@ async function renderWorkspace() {
     </QueryClientProvider>,
   );
   fireEvent.click(screen.getByText(/GPS .*C/));
-  fireEvent.click(
-    await screen.findByRole("button", { name: "Thêm nhân viên" }),
+  const worksiteButton = await screen.findByRole("button", {
+    name: new RegExp(worksite.code),
+  });
+  fireEvent.click(worksiteButton);
+  const addEmployee = await screen.findByRole("button", {
+    name: "Thêm nhân viên",
+  });
+  await waitFor(() =>
+    expect((addEmployee as HTMLButtonElement).disabled).toBe(false),
   );
+  fireEvent.click(addEmployee);
   return view;
 }
 
@@ -394,6 +402,15 @@ describe("AttendanceConfigurationWorkspace", () => {
     fireEvent.change(screen.getByLabelText("Ngày hiệu lực phân công"), {
       target: { value: "2026-09-30" },
     });
+    await waitFor(() =>
+      expect(
+        (
+          screen.getByRole("button", {
+            name: "Lưu phân công",
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(false),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Lưu phân công" }));
 
     expect(
@@ -430,6 +447,15 @@ describe("AttendanceConfigurationWorkspace", () => {
     fireEvent.change(screen.getByLabelText("Ngày hiệu lực phân công"), {
       target: { value: "2026-10-02" },
     });
+    await waitFor(() =>
+      expect(
+        (
+          screen.getByRole("button", {
+            name: "Lưu phân công",
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(false),
+    );
     fireEvent.click(screen.getByRole("checkbox", { name: "Thứ 7" }));
     fireEvent.change(screen.getByLabelText("Giờ bắt đầu"), {
       target: { value: "09:00" },
