@@ -125,12 +125,13 @@ class CommunityAdminService:
                 if row is None:
                     raise CommunityNotFoundError()
                 return CommunityReportSubmission(row, False)
-            target = (
-                await self._repository.get_public_post(post_id)
-                if post_id is not None
-                else await self._repository.get_public_comment(comment_id)
-            )
-            if target is None:
+            if post_id is not None:
+                if await self._repository.get_public_post(post_id) is None:
+                    raise CommunityNotFoundError()
+            elif comment_id is not None:
+                if await self._repository.get_public_comment(comment_id) is None:
+                    raise CommunityNotFoundError()
+            else:
                 raise CommunityNotFoundError()
             report = CommunityReport(
                 id=uuid4(),
@@ -216,6 +217,8 @@ class CommunityAdminService:
                         report_id=report.id,
                     )
                 else:
+                    if report.comment_id is None:
+                        raise CommunityConflictError()
                     comment = await self._repository.get_comment(
                         report.comment_id, for_update=True
                     )

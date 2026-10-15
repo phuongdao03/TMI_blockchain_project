@@ -1,14 +1,18 @@
 import hashlib
 import re
 import unicodedata
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID
 
 from sqlalchemy import and_, delete, exists, func, literal, or_, select
+from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
+from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.selectable import Select
 
 from app.modules.auth.models import User, UserStatus
 from app.modules.community.errors import CommunityNotFoundError
@@ -57,6 +61,22 @@ class CommunityPostRow:
     related_work_title: str | None
     related_work_slug: str | None
     tags: tuple[CommunityTag, ...]
+
+
+CommunityPostTuple = tuple[
+    CommunityPost,
+    CommunityCategory,
+    str | None,
+    str | None,
+    str | None,
+    int,
+    int,
+    bool,
+    bool,
+    UUID | None,
+    str | None,
+    str | None,
+]
 
 
 class CommunityRepository:
@@ -189,18 +209,16 @@ class CommunityRepository:
             )
         if author_user_id is not None:
             filters.append(CommunityPost.author_user_id == author_user_id)
-        total = int(
-            await self._session.scalar(
-                select(func.count(CommunityPost.id))
-                .join(
-                    CommunityCategory,
-                    CommunityCategory.id == CommunityPost.category_id,
-                )
-                .join(User, User.id == CommunityPost.author_user_id)
-                .where(*filters)
+        count_result = await self._session.execute(
+            select(func.count(CommunityPost.id))
+            .join(
+                CommunityCategory,
+                CommunityCategory.id == CommunityPost.category_id,
             )
-            or 0
+            .join(User, User.id == CommunityPost.author_user_id)
+            .where(*filters)
         )
+        total = int(count_result.scalar_one() or 0)
         like_count = self._like_count_expression()
         comment_count = self._comment_count_expression()
         ordering = {
@@ -240,19 +258,17 @@ class CommunityRepository:
             CommunityPostStatus.PUBLISHED,
             CommunityPostStatus.REJECTED,
         )
-        filters: list[object] = [
+        filters: list[ColumnElement[bool]] = [
             CommunityPost.author_user_id == user_id,
             CommunityPost.deleted_at.is_(None),
             CommunityPost.status.in_(owner_statuses),
         ]
         if status is not None:
             filters.append(CommunityPost.status == status)
-        total = int(
-            await self._session.scalar(
-                select(func.count(CommunityPost.id)).where(*filters)
-            )
-            or 0
+        count_result = await self._session.execute(
+            select(func.count(CommunityPost.id)).where(*filters)
         )
+        total = int(count_result.scalar_one() or 0)
         result = await self._session.execute(
             self._post_rows_statement(viewer_user_id=user_id)
             .where(*filters)
@@ -544,7 +560,7 @@ class CommunityRepository:
         self._session.add(log)
 
     @staticmethod
-    def _like_count_expression():
+    def _like_count_expression() -> ColumnElement[int]:
         like_user = aliased(User)
         return (
             select(func.count(CommunityLike.id))
@@ -557,7 +573,7 @@ class CommunityRepository:
         )
 
     @staticmethod
-    def _comment_count_expression():
+    def _comment_count_expression() -> ColumnElement[int]:
         comment_user = aliased(User)
         return (
             select(func.count(CommunityComment.id))
@@ -572,7 +588,7 @@ class CommunityRepository:
         )
 
     @staticmethod
-    def _public_filters() -> list[object]:
+    def _public_filters() -> list[ColumnElement[bool]]:
         return [
             CommunityPost.status == CommunityPostStatus.PUBLISHED,
             CommunityPost.deleted_at.is_(None),
@@ -582,11 +598,13 @@ class CommunityRepository:
         ]
 
     @staticmethod
-    def _post_rows_statement(*, viewer_user_id: UUID | None = None):
+    def _post_rows_statement(
+        *, viewer_user_id: UUID | None = None
+    ) -> Select[CommunityPostTuple]:
         like_count = CommunityRepository._like_count_expression()
         comment_count = CommunityRepository._comment_count_expression()
-        viewer_has_liked = literal(False)
-        viewer_has_bookmarked = literal(False)
+        viewer_has_liked: ColumnElement[bool] = literal(False)
+        viewer_has_bookmarked: ColumnElement[bool] = literal(False)
         if viewer_user_id is not None:
             viewer_has_liked = (
                 select(CommunityLike.id)
@@ -646,22 +664,7 @@ class CommunityRepository:
 
     @staticmethod
     def _rows(
-        rows: list[
-            tuple[
-                CommunityPost,
-                CommunityCategory,
-                str | None,
-                str | None,
-                str | None,
-                int,
-                int,
-                bool,
-                bool,
-                UUID | None,
-                str | None,
-                str | None,
-            ]
-        ],
+        rows: Sequence[Row[CommunityPostTuple]],
     ) -> tuple[CommunityPostRow, ...]:
         return tuple(
             CommunityPostRow(

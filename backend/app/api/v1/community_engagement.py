@@ -1,4 +1,5 @@
-from typing import Annotated, Any, Literal
+from datetime import datetime
+from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
@@ -15,10 +16,12 @@ from app.modules.auth.dependencies import (
     CurrentPrincipalDependency,
     OptionalCurrentPrincipalDependency,
 )
+from app.modules.auth.session_service import AuthPrincipal
 from app.modules.community.dependencies import CommunityEngagementServiceDependency
 from app.modules.community.engagement_repository import (
     CommunityCommentRow,
     CommunityCommentThread,
+    CommunityMemberListRecord,
 )
 from app.modules.community.engagement_schemas import (
     CommunityBookmarkStateData,
@@ -94,7 +97,7 @@ def _post_data(row: CommunityPostRow) -> CommunityPostData:
             row.author_avatar_url,
             row.post.author_user_id,
         ),
-        published_at=row.post.published_at,
+        published_at=cast(datetime, row.post.published_at),
         view_count=row.post.view_count,
         is_pinned=row.post.pinned_at is not None,
         like_count=row.like_count,
@@ -174,7 +177,7 @@ def _comment_thread_data(
         replies=[
             CommunityCommentReplyData(
                 id=reply.comment.id,
-                parent_id=reply.comment.parent_id,
+                parent_id=cast(UUID, reply.comment.parent_id),
                 content=(
                     _DELETED_COMMENT_CONTENT
                     if reply.comment.deleted_at is not None
@@ -233,7 +236,9 @@ def _member_data(view: CommunityMemberView) -> CommunityMemberData:
     )
 
 
-def _member_list_item(record) -> CommunityMemberListItemData:
+def _member_list_item(
+    record: CommunityMemberListRecord,
+) -> CommunityMemberListItemData:
     return CommunityMemberListItemData(
         id=record.user.id,
         username=record.profile.username,
@@ -585,9 +590,9 @@ async def list_bookmarks(
 async def _member_relation_page(
     *,
     username: str,
-    relation_kind: str,
+    relation_kind: Literal["followers", "following"],
     request: Request,
-    principal,
+    principal: AuthPrincipal | None,
     service: CommunityEngagementService,
     page: int,
     page_size: int,

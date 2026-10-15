@@ -1,11 +1,15 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID
 
 from sqlalchemy import case, func, or_, select
+from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
+from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.selectable import Select
 
 from app.modules.auth.models import User, UserStatus
 from app.modules.community.models import (
@@ -39,6 +43,23 @@ class CommunityReportRow:
     comment_author_username: str | None
     comment_author_display_name: str | None
     comment_author_avatar_url: str | None
+
+
+CommunityReportTuple = tuple[
+    CommunityReport,
+    str | None,
+    str | None,
+    str | None,
+    CommunityPost | None,
+    str | None,
+    str | None,
+    str | None,
+    CommunityComment | None,
+    CommunityPost | None,
+    str | None,
+    str | None,
+    str | None,
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,7 +146,7 @@ class CommunityAdminRepository:
         offset: int,
         limit: int,
     ) -> tuple[tuple[CommunityPostRow, ...], int]:
-        filters: list[object] = []
+        filters: list[ColumnElement[bool]] = []
         if status is not None:
             filters.append(CommunityPost.status == status)
         if query:
@@ -137,18 +158,16 @@ class CommunityAdminRepository:
                     CommunityPost.content.ilike(pattern, escape="\\"),
                 )
             )
-        total = int(
-            await self._session.scalar(
-                select(func.count(CommunityPost.id))
-                .join(
-                    CommunityCategory,
-                    CommunityCategory.id == CommunityPost.category_id,
-                )
-                .join(User, User.id == CommunityPost.author_user_id)
-                .where(*filters)
+        count_result = await self._session.execute(
+            select(func.count(CommunityPost.id))
+            .join(
+                CommunityCategory,
+                CommunityCategory.id == CommunityPost.category_id,
             )
-            or 0
+            .join(User, User.id == CommunityPost.author_user_id)
+            .where(*filters)
         )
+        total = int(count_result.scalar_one() or 0)
         rows = await self._session.execute(
             CommunityRepository._post_rows_statement()
             .where(*filters)
@@ -169,7 +188,7 @@ class CommunityAdminRepository:
         limit: int,
     ) -> tuple[tuple[CommunityAdminCommentRow, ...], int]:
         author_profile = aliased(CommunityProfile)
-        filters: list[object] = []
+        filters: list[ColumnElement[bool]] = []
         if post_id is not None:
             filters.append(CommunityComment.post_id == post_id)
         if author_username is not None:
@@ -220,18 +239,16 @@ class CommunityAdminRepository:
             )
             .where(*filters)
         )
-        total = int(
-            await self._session.scalar(
-                select(func.count(CommunityComment.id))
-                .join(CommunityPost, CommunityPost.id == CommunityComment.post_id)
-                .outerjoin(
-                    author_profile,
-                    author_profile.user_id == CommunityComment.author_user_id,
-                )
-                .where(*filters)
+        count_result = await self._session.execute(
+            select(func.count(CommunityComment.id))
+            .join(CommunityPost, CommunityPost.id == CommunityComment.post_id)
+            .outerjoin(
+                author_profile,
+                author_profile.user_id == CommunityComment.author_user_id,
             )
-            or 0
+            .where(*filters)
         )
+        total = int(count_result.scalar_one() or 0)
         rows = await self._session.execute(
             base.order_by(
                 CommunityComment.created_at.desc(), CommunityComment.id.desc()
@@ -260,7 +277,7 @@ class CommunityAdminRepository:
         offset: int,
         limit: int,
     ) -> CommunityAdminMemberPage:
-        filters: list[object] = [User.status == UserStatus.ACTIVE]
+        filters: list[ColumnElement[bool]] = [User.status == UserStatus.ACTIVE]
         if query:
             pattern = _like_pattern(query)
             filters.append(
@@ -318,14 +335,12 @@ class CommunityAdminRepository:
             (latest_post >= latest_comment, latest_post),
             else_=latest_comment,
         )
-        total = int(
-            await self._session.scalar(
-                select(func.count(User.id))
-                .outerjoin(CommunityProfile, CommunityProfile.user_id == User.id)
-                .where(*filters)
-            )
-            or 0
+        count_result = await self._session.execute(
+            select(func.count(User.id))
+            .outerjoin(CommunityProfile, CommunityProfile.user_id == User.id)
+            .where(*filters)
         )
+        total = int(count_result.scalar_one() or 0)
         rows = await self._session.execute(
             select(
                 User,
@@ -429,7 +444,16 @@ class CommunityAdminRepository:
             if _as_utc(restriction.starts_at) <= now < _as_utc(restriction.expires_at)
             else "EXPIRED"
         )
-        return CommunityRestrictionRow(*values, status)
+        return CommunityRestrictionRow(
+            restriction=restriction,
+            member_username=values[1],
+            member_display_name=values[2],
+            member_avatar_url=values[3],
+            actor_username=values[4],
+            actor_display_name=values[5],
+            actor_avatar_url=values[6],
+            status=status,
+        )
 
     async def list_member_restrictions(
         self, member_id: UUID, *, offset: int, limit: int
@@ -483,7 +507,18 @@ class CommunityAdminRepository:
                 )
                 else "EXPIRED"
             )
-            result.append(CommunityRestrictionRow(*row, status))
+            result.append(
+                CommunityRestrictionRow(
+                    restriction=restriction,
+                    member_username=row[1],
+                    member_display_name=row[2],
+                    member_avatar_url=row[3],
+                    actor_username=row[4],
+                    actor_display_name=row[5],
+                    actor_avatar_url=row[6],
+                    status=status,
+                )
+            )
         return CommunityRestrictionPage(tuple(result), total)
 
     async def get_public_post(self, post_id: UUID) -> CommunityPost | None:
@@ -562,7 +597,7 @@ class CommunityAdminRepository:
         post_id: UUID | None,
         comment_id: UUID | None,
     ) -> CommunityReport | None:
-        filters: list[object] = [
+        filters: list[ColumnElement[bool]] = [
             CommunityReport.reporter_user_id == reporter_user_id,
             CommunityReport.status == "OPEN",
         ]
@@ -623,7 +658,7 @@ class CommunityAdminRepository:
         return CommunityReportPage(items=self._report_rows(result.all()), total=total)
 
     @staticmethod
-    def _report_rows_statement():
+    def _report_rows_statement() -> Select[CommunityReportTuple]:
         reporter_profile = aliased(CommunityProfile)
         post_target = aliased(CommunityPost)
         post_author_profile = aliased(CommunityProfile)
@@ -665,8 +700,27 @@ class CommunityAdminRepository:
         )
 
     @staticmethod
-    def _report_rows(rows: list[tuple[object, ...]]) -> tuple[CommunityReportRow, ...]:
-        return tuple(CommunityReportRow(*row) for row in rows)
+    def _report_rows(
+        rows: Sequence[Row[CommunityReportTuple]],
+    ) -> tuple[CommunityReportRow, ...]:
+        return tuple(
+            CommunityReportRow(
+                report=row[0],
+                reporter_username=row[1],
+                reporter_display_name=row[2],
+                reporter_avatar_url=row[3],
+                post=row[4],
+                post_author_username=row[5],
+                post_author_display_name=row[6],
+                post_author_avatar_url=row[7],
+                comment=row[8],
+                comment_post=row[9],
+                comment_author_username=row[10],
+                comment_author_display_name=row[11],
+                comment_author_avatar_url=row[12],
+            )
+            for row in rows
+        )
 
     async def list_categories(self) -> tuple[CommunityCategory, ...]:
         result = await self._session.scalars(
@@ -720,17 +774,15 @@ class CommunityAdminRepository:
         limit: int,
     ) -> CommunityModerationEventPage:
         actor_profile = aliased(CommunityProfile)
-        filters: list[object] = []
+        filters: list[ColumnElement[bool]] = []
         if target_type is not None:
             filters.append(CommunityModerationEvent.target_type == target_type)
         if target_id is not None:
             filters.append(CommunityModerationEvent.target_id == target_id)
-        total = int(
-            await self._session.scalar(
-                select(func.count(CommunityModerationEvent.id)).where(*filters)
-            )
-            or 0
+        count_result = await self._session.execute(
+            select(func.count(CommunityModerationEvent.id)).where(*filters)
         )
+        total = int(count_result.scalar_one() or 0)
         rows = await self._session.execute(
             select(
                 CommunityModerationEvent,

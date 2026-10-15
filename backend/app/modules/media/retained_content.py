@@ -1,3 +1,4 @@
+import builtins
 import hashlib
 from typing import Protocol
 from uuid import UUID
@@ -14,18 +15,41 @@ from app.modules.media.models import MediaEncryptionStatus
 
 
 class RetainedContentAsset(Protocol):
-    id: UUID
-    bytes: int
-    encryption_status: MediaEncryptionStatus
-    sha256: str | None
-    encryption_key_id: str | None
-    encryption_nonce: bytes | None
-    encryption_tag: bytes | None
-    encrypted_object_public_id: str | None
-    encrypted_bytes: int | None
-    mime_type: str
-    cloudinary_public_id: str
-    resource_type: str
+    @property
+    def id(self) -> UUID: ...
+
+    @property
+    def bytes(self) -> int: ...
+
+    @property
+    def encryption_status(self) -> MediaEncryptionStatus: ...
+
+    @property
+    def sha256(self) -> str | None: ...
+
+    @property
+    def encryption_key_id(self) -> str | None: ...
+
+    @property
+    def encryption_nonce(self) -> builtins.bytes | None: ...
+
+    @property
+    def encryption_tag(self) -> builtins.bytes | None: ...
+
+    @property
+    def encrypted_object_public_id(self) -> str | None: ...
+
+    @property
+    def encrypted_bytes(self) -> int | None: ...
+
+    @property
+    def mime_type(self) -> str: ...
+
+    @property
+    def cloudinary_public_id(self) -> str: ...
+
+    @property
+    def resource_type(self) -> str: ...
 
 
 class RetainedDownloadGateway(Protocol):

@@ -1,3 +1,4 @@
+import builtins
 import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -73,8 +74,8 @@ class _RetainedImageSnapshot:
     encryption_status: MediaEncryptionStatus
     sha256: str | None
     encryption_key_id: str | None
-    encryption_nonce: bytes | None
-    encryption_tag: bytes | None
+    encryption_nonce: builtins.bytes | None
+    encryption_tag: builtins.bytes | None
     encrypted_object_public_id: str | None
     encrypted_bytes: int | None
     mime_type: str

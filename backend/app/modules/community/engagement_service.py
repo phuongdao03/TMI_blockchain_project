@@ -1,6 +1,7 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Literal, TypeVar
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
@@ -42,6 +43,8 @@ from app.modules.engagement.redis import RedisViewDeduplicator
 from app.modules.media.models import MediaAsset, MediaConfidentiality, MediaStatus
 from app.modules.media.types import AVATAR_IMAGE_MIME_TYPES, MediaPurpose
 from app.modules.notifications.service import NotificationService
+
+_RelationT = TypeVar("_RelationT")
 
 _DISPLAY_NAME_FALLBACK = "Thành viên"
 
@@ -171,7 +174,7 @@ class CommunityEngagementService:
     ) -> CommunityCommentRow:
         async with self._session.begin():
             comment = await self._repository.get_comment_for_update(comment_id)
-            self._require_comment_owner(comment, principal)
+            comment = self._require_comment_owner(comment, principal)
             if comment.deleted_at is not None:
                 raise CommunityConflictError()
             await self._ensure_not_restricted(principal.user_id, "COMMENTS")
@@ -189,7 +192,7 @@ class CommunityEngagementService:
     ) -> None:
         async with self._session.begin():
             comment = await self._repository.get_comment_for_update(comment_id)
-            self._require_comment_owner(comment, principal)
+            comment = self._require_comment_owner(comment, principal)
             if comment.deleted_at is not None:
                 return
             comment.content = "Bình luận đã bị xóa."
@@ -573,13 +576,16 @@ class CommunityEngagementService:
     def _require_comment_owner(
         comment: CommunityComment | None,
         principal: AuthPrincipal,
-    ) -> None:
+    ) -> CommunityComment:
         if comment is None:
             raise CommunityNotFoundError()
         if comment.author_user_id != principal.user_id:
             raise CommunityForbiddenError()
+        return comment
 
-    async def _insert_if_absent(self, relation: object, add) -> bool:
+    async def _insert_if_absent(
+        self, relation: _RelationT, add: Callable[[_RelationT], None]
+    ) -> bool:
         try:
             async with self._session.begin_nested():
                 add(relation)

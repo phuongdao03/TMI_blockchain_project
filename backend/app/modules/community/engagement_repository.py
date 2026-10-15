@@ -1,10 +1,14 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal, cast
+from typing import Any, Literal, cast
 from uuid import UUID
 
 from sqlalchemy import func, literal, or_, select, update
+from sqlalchemy.engine import CursorResult, Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
+from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.selectable import Select
 
 from app.modules.auth.models import User, UserStatus
 from app.modules.community.models import (
@@ -29,6 +33,11 @@ class CommunityCommentRow:
     author_avatar_url: str | None
     like_count: int
     viewer_has_liked: bool
+
+
+CommunityCommentTuple = tuple[
+    CommunityComment, str | None, str | None, str | None, int, bool
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,22 +108,20 @@ class CommunityEngagementRepository:
         limit: int,
     ) -> tuple[tuple[CommunityPostRow, ...], int]:
         public_filters = self._posts._public_filters()
-        total = int(
-            await self._session.scalar(
-                select(func.count(CommunityBookmark.id))
-                .join(
-                    CommunityPost,
-                    CommunityPost.id == CommunityBookmark.post_id,
-                )
-                .join(
-                    CommunityCategory,
-                    CommunityCategory.id == CommunityPost.category_id,
-                )
-                .join(User, User.id == CommunityPost.author_user_id)
-                .where(*public_filters, CommunityBookmark.user_id == user_id)
+        count_result = await self._session.execute(
+            select(func.count(CommunityBookmark.id))
+            .join(
+                CommunityPost,
+                CommunityPost.id == CommunityBookmark.post_id,
             )
-            or 0
+            .join(
+                CommunityCategory,
+                CommunityCategory.id == CommunityPost.category_id,
+            )
+            .join(User, User.id == CommunityPost.author_user_id)
+            .where(*public_filters, CommunityBookmark.user_id == user_id)
         )
+        total = int(count_result.scalar_one() or 0)
         bookmark_entry = aliased(CommunityBookmark)
         result = await self._session.execute(
             self._posts._post_rows_statement(viewer_user_id=viewer_user_id)
@@ -182,7 +189,7 @@ class CommunityEngagementRepository:
         else:
             relation_filter = CommunityFollow.follower_user_id == member_id
             listed_user_id = CommunityFollow.followed_user_id
-        viewer_is_following = literal(False)
+        viewer_is_following: ColumnElement[bool] = literal(False)
         if viewer_user_id is not None:
             followed_relation = aliased(CommunityFollow)
             viewer_is_following = (
@@ -373,7 +380,8 @@ class CommunityEngagementRepository:
             root_id: [] for root_id in root_ids
         }
         for row in reply_rows:
-            replies_by_parent[row[6]].append(self._comment_rows([row[:6]])[0])
+            reply = CommunityCommentRow(row[0], row[1], row[2], row[3], row[4], row[5])
+            replies_by_parent[cast(UUID, row[6])].append(reply)
         return CommunityCommentPage(
             items=tuple(
                 CommunityCommentThread(
@@ -406,7 +414,7 @@ class CommunityEngagementRepository:
         result = await self._session.execute(
             select(CommunityComment).where(CommunityComment.id == comment_id).limit(1)
         )
-        return cast(CommunityComment | None, result.scalar_one_or_none())
+        return result.scalar_one_or_none()
 
     async def get_comment_for_update(self, comment_id: UUID) -> CommunityComment | None:
         result = await self._session.scalar(
@@ -414,7 +422,7 @@ class CommunityEngagementRepository:
             .where(CommunityComment.id == comment_id)
             .with_for_update()
         )
-        return cast(CommunityComment | None, result)
+        return result
 
     async def get_like(self, post_id: UUID, user_id: UUID) -> CommunityLike | None:
         result = await self._session.scalar(
@@ -423,7 +431,7 @@ class CommunityEngagementRepository:
                 CommunityLike.user_id == user_id,
             )
         )
-        return cast(CommunityLike | None, result)
+        return result
 
     async def get_bookmark(
         self, post_id: UUID, user_id: UUID
@@ -434,7 +442,7 @@ class CommunityEngagementRepository:
                 CommunityBookmark.user_id == user_id,
             )
         )
-        return cast(CommunityBookmark | None, result)
+        return result
 
     async def get_follow(
         self, follower_user_id: UUID, followed_user_id: UUID
@@ -445,7 +453,7 @@ class CommunityEngagementRepository:
                 CommunityFollow.followed_user_id == followed_user_id,
             )
         )
-        return cast(CommunityFollow | None, result)
+        return result
 
     def add_comment(self, comment: CommunityComment) -> None:
         self._session.add(comment)
@@ -482,25 +490,28 @@ class CommunityEngagementRepository:
         )
 
     async def increment_public_post_view(self, post_id: UUID) -> bool:
-        result = await self._session.execute(
-            update(CommunityPost)
-            .where(
-                CommunityPost.id == post_id,
-                CommunityPost.status == CommunityPostStatus.PUBLISHED,
-                CommunityPost.deleted_at.is_(None),
-                CommunityPost.published_at.is_not(None),
-                CommunityPost.category_id.in_(
-                    select(CommunityCategory.id).where(
-                        CommunityCategory.is_active.is_(True)
-                    )
-                ),
-                CommunityPost.author_user_id.in_(
-                    select(User.id).where(User.status == UserStatus.ACTIVE)
-                ),
-            )
-            .values(view_count=CommunityPost.view_count + 1)
+        result = cast(
+            CursorResult[Any],
+            await self._session.execute(
+                update(CommunityPost)
+                .where(
+                    CommunityPost.id == post_id,
+                    CommunityPost.status == CommunityPostStatus.PUBLISHED,
+                    CommunityPost.deleted_at.is_(None),
+                    CommunityPost.published_at.is_not(None),
+                    CommunityPost.category_id.in_(
+                        select(CommunityCategory.id).where(
+                            CommunityCategory.is_active.is_(True)
+                        )
+                    ),
+                    CommunityPost.author_user_id.in_(
+                        select(User.id).where(User.status == UserStatus.ACTIVE)
+                    ),
+                )
+                .values(view_count=CommunityPost.view_count + 1)
+            ),
         )
-        return result.rowcount == 1
+        return bool(result.rowcount == 1)
 
     def add_like(self, like: CommunityLike) -> None:
         self._session.add(like)
@@ -538,7 +549,9 @@ class CommunityEngagementRepository:
         )
 
     @staticmethod
-    def _comment_rows_statement(*, viewer_user_id: UUID | None = None):
+    def _comment_rows_statement(
+        *, viewer_user_id: UUID | None = None
+    ) -> Select[CommunityCommentTuple]:
         like_user = aliased(User)
         like_count = (
             select(func.count(CommunityCommentLike.id))
@@ -547,7 +560,7 @@ class CommunityEngagementRepository:
             .where(like_user.status == UserStatus.ACTIVE)
             .scalar_subquery()
         )
-        viewer_has_liked = literal(False)
+        viewer_has_liked: ColumnElement[bool] = literal(False)
         if viewer_user_id is not None:
             viewer_has_liked = (
                 select(CommunityCommentLike.id)
@@ -575,16 +588,7 @@ class CommunityEngagementRepository:
 
     @staticmethod
     def _comment_rows(
-        rows: list[
-            tuple[
-                CommunityComment,
-                str | None,
-                str | None,
-                str | None,
-                int,
-                bool,
-            ]
-        ],
+        rows: Sequence[Row[CommunityCommentTuple]],
     ) -> tuple[CommunityCommentRow, ...]:
         return tuple(
             CommunityCommentRow(

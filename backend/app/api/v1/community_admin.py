@@ -1,4 +1,5 @@
-from typing import Annotated, Any, Literal
+from datetime import UTC, datetime
+from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
@@ -48,6 +49,7 @@ from app.modules.community.admin_schemas import (
     CommunitySettingsRequest,
 )
 from app.modules.community.dependencies import CommunityAdminServiceDependency
+from app.modules.community.models import CommunityReportReason
 from app.modules.community.rate_limit import (
     enforce_community_content_write_rate_limit,
     enforce_community_report_write_rate_limit,
@@ -90,6 +92,7 @@ def _report_data(row: CommunityReportRow) -> CommunityReportData:
         row.reporter_display_name,
         row.reporter_avatar_url,
     )
+    preview: CommunityReportPostPreview | CommunityReportCommentPreview
     if row.post is not None:
         post = row.post
         preview = CommunityReportPostPreview(
@@ -109,8 +112,8 @@ def _report_data(row: CommunityReportRow) -> CommunityReportData:
         target_id = post.id
     else:
         comment = row.comment
-        post = row.comment_post
-        if comment is None or post is None:
+        comment_post = row.comment_post
+        if comment is None or comment_post is None:
             raise ValueError("Report target is missing despite foreign key integrity.")
         is_deleted = (
             comment.deleted_at is not None or comment.moderation_hidden_at is not None
@@ -118,9 +121,9 @@ def _report_data(row: CommunityReportRow) -> CommunityReportData:
         preview = CommunityReportCommentPreview(
             type="COMMENT",
             id=comment.id,
-            post_id=post.id,
-            post_slug=post.slug,
-            post_title=post.title,
+            post_id=comment_post.id,
+            post_slug=comment_post.slug,
+            post_title=comment_post.title,
             content=(
                 _DELETED_COMMENT
                 if comment.deleted_at is not None
@@ -146,12 +149,14 @@ def _report_data(row: CommunityReportRow) -> CommunityReportData:
         id=report.id,
         target_type=target_type,
         target_id=target_id,
-        status=report.status,
-        reason=report.reason,
+        status=cast(Literal["OPEN", "RESOLVED", "DISMISSED"], report.status),
+        reason=cast(CommunityReportReason, report.reason),
         details=report.details,
         created_at=report.created_at,
         resolved_at=report.resolved_at,
-        resolution_action=report.resolution_action,
+        resolution_action=cast(
+            Literal["HIDE", "DISMISS"] | None, report.resolution_action
+        ),
         resolution_reason=report.resolution_reason,
         reporter=reporter,
         target_preview=preview,
@@ -162,7 +167,10 @@ def _event_data(row: CommunityModerationEventRow) -> CommunityModerationEventDat
     event = row.event
     return CommunityModerationEventData(
         id=event.id,
-        target_type=event.target_type,
+        target_type=cast(
+            Literal["POST", "COMMENT", "MEMBER", "CATEGORY", "SETTINGS"],
+            event.target_type,
+        ),
         target_id=event.target_id,
         action=event.action,
         actor_id=event.actor_user_id,
@@ -175,7 +183,7 @@ def _event_data(row: CommunityModerationEventRow) -> CommunityModerationEventDat
         reason=event.reason,
         request_id=event.request_id,
         created_at=event.created_at,
-        event_data=event.event_data,
+        metadata=event.event_data,
     )
 
 
@@ -239,8 +247,8 @@ def _restriction_data(row: CommunityRestrictionRow) -> CommunityMemberRestrictio
             row.member_display_name,
             row.member_avatar_url,
         ),
-        scope=restriction.scope,
-        status=row.status,
+        scope=cast(Literal["POSTS", "COMMENTS"], restriction.scope),
+        status=cast(Literal["ACTIVE", "EXPIRED", "REVOKED"], row.status),
         reason=restriction.reason,
         starts_at=_as_utc(restriction.starts_at),
         expires_at=_as_utc(restriction.expires_at),
@@ -254,9 +262,7 @@ def _restriction_data(row: CommunityRestrictionRow) -> CommunityMemberRestrictio
     )
 
 
-def _as_utc(value):
-    from datetime import UTC
-
+def _as_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
@@ -394,7 +400,7 @@ async def _post_visibility(
         data=CommunityModerationStateData(
             target_type="POST",
             target_id=post_id,
-            state=state_value,
+            state=cast(Literal["HIDDEN", "VISIBLE"], state_value),
         ),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
@@ -475,7 +481,8 @@ async def _comment_visibility(
     )
     return SuccessEnvelope(
         data=CommunityAdminCommentStateData(
-            comment_id=comment_id, visibility=state_value
+            comment_id=comment_id,
+            visibility=cast(Literal["VISIBLE", "HIDDEN", "DELETED"], state_value),
         ),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
@@ -712,7 +719,8 @@ async def admin_delete_comment(
     )
     return SuccessEnvelope(
         data=CommunityAdminCommentStateData(
-            comment_id=comment_id, visibility=visibility
+            comment_id=comment_id,
+            visibility=cast(Literal["VISIBLE", "HIDDEN", "DELETED"], visibility),
         ),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
@@ -753,7 +761,7 @@ async def list_admin_members(
             active_restrictions=[
                 CommunityAdminActiveRestriction(
                     id=restriction.id,
-                    scope=restriction.scope,
+                    scope=cast(Literal["POSTS", "COMMENTS"], restriction.scope),
                     expires_at=_as_utc(restriction.expires_at),
                 )
                 for restriction in row.active_restrictions

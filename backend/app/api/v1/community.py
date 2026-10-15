@@ -1,4 +1,5 @@
-from typing import Annotated, Any, Literal
+from datetime import datetime
+from typing import Annotated, Any, Literal, cast
 from urllib.parse import quote
 from uuid import UUID
 
@@ -146,7 +147,7 @@ def _public_data(row: CommunityPostRow) -> CommunityPostData:
         excerpt=row.post.excerpt,
         category=_category(row),
         author=_author(row),
-        published_at=row.post.published_at,
+        published_at=cast(datetime, row.post.published_at),
         view_count=row.post.view_count,
         is_pinned=row.post.pinned_at is not None,
         like_count=row.like_count,
