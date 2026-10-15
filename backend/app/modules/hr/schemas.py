@@ -326,6 +326,19 @@ class AttendanceAssignmentData(HrSchema):
     updated_at: datetime
 
 
+class UpdateAttendanceAssignmentEndRequest(HrSchema):
+    effective_to: date
+    reason: Annotated[str, Field(min_length=10, max_length=500)]
+
+    @field_validator("reason")
+    @classmethod
+    def require_reason(cls, value: str) -> str:
+        stripped = value.strip()
+        if len(stripped) < 10:
+            raise ValueError("A reason of at least 10 characters is required.")
+        return stripped
+
+
 class AttendanceLocationExceptionDecisionRequest(HrSchema):
     status: AttendanceLocationExceptionStatus
     decision_note: Annotated[str, Field(min_length=2, max_length=2000)]

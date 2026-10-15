@@ -14,6 +14,7 @@ from app.modules.audit.service import AuditService
 from app.modules.auth.models import User
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.hr.models import (
+    Attendance,
     AttendanceAssignment,
     AttendanceWorksite,
     AttendanceWorksitePolicy,
@@ -26,6 +27,7 @@ from app.modules.hr.schemas import (
     CreateAttendanceAssignmentRequest,
     CreateAttendanceWorksitePolicyRequest,
     CreateAttendanceWorksiteRequest,
+    UpdateAttendanceAssignmentEndRequest,
     UpdateAttendanceWorksiteRequest,
 )
 from app.modules.hr.service import HrService
@@ -43,6 +45,7 @@ async def _create_global_attendance_tables(engine: object) -> None:
                     AttendanceWorksite.__table__,
                     AttendanceWorksitePolicy.__table__,
                     AttendanceAssignment.__table__,
+                    Attendance.__table__,
                     AuditLog.__table__,
                 ],
             )
@@ -163,6 +166,142 @@ def test_super_admin_manages_append_only_worksite_policy_and_assignment() -> Non
             assert len(audit_rows) == 3
             assert all("latitude" not in row.after_json for row in audit_rows)
             assert all("longitude" not in row.after_json for row in audit_rows)
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_ending_old_assignment_allows_a_move_without_erasing_attendance() -> None:
+    async def exercise() -> None:
+        engine = create_async_engine("sqlite+aiosqlite://")
+        await _create_global_attendance_tables(engine)
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        admin = _principal(roles=("SUPER_ADMIN",))
+        async with sessions.begin() as session:
+            session.add(User(id=admin.user_id, email=admin.email, password_hash=None))
+            department = Department(code="OPS", name="Operations")
+            session.add(department)
+            await session.flush()
+            employee = Employee(
+                employee_code="OPS-MOVE",
+                full_name="Avery Patel",
+                email="avery@example.com",
+                department_id=department.id,
+                position="Reviewer",
+                join_date=date(2026, 10, 1),
+            )
+            session.add(employee)
+            await session.flush()
+            employee_id = employee.id
+
+        async with sessions() as session:
+            service = HrService(session)
+            old_site = await service.create_attendance_worksite(
+                admin,
+                CreateAttendanceWorksiteRequest(code="OLD", name="Old Office"),
+                audit=AuditService(session),
+                request_id="move",
+                user_agent="pytest",
+            )
+            new_site = await service.create_attendance_worksite(
+                admin,
+                CreateAttendanceWorksiteRequest(code="NEW", name="New Office"),
+                audit=AuditService(session),
+                request_id="move",
+                user_agent="pytest",
+            )
+            for site in (old_site, new_site):
+                await service.create_attendance_worksite_policy(
+                    admin,
+                    site.id,
+                    _policy_request(effective_from=date(2026, 10, 1)),
+                    audit=AuditService(session),
+                    request_id="move",
+                    user_agent="pytest",
+                )
+            old = await service.create_attendance_assignment(
+                admin,
+                CreateAttendanceAssignmentRequest(
+                    employee_id=employee_id,
+                    worksite_id=old_site.id,
+                    effective_from=date(2026, 10, 1),
+                    schedule_code="CUSTOM",
+                    holiday_calendar_code="CUSTOM",
+                ),
+                audit=AuditService(session),
+                request_id="move",
+                user_agent="pytest",
+            )
+            session.add(
+                Attendance(employee_id=employee_id, work_date=date(2026, 10, 5))
+            )
+            await session.commit()
+
+            with pytest.raises(DomainError) as history_conflict:
+                await service.update_attendance_assignment_end(
+                    admin,
+                    old.id,
+                    UpdateAttendanceAssignmentEndRequest(
+                        effective_to=date(2026, 10, 4),
+                        reason="Move employee to the new office",
+                    ),
+                    audit=AuditService(session),
+                    request_id="move",
+                    user_agent="pytest",
+                )
+            assert (
+                history_conflict.value.code
+                == "HR_ATTENDANCE_ASSIGNMENT_HISTORY_CONFLICT"
+            )
+
+            closed = await service.update_attendance_assignment_end(
+                admin,
+                old.id,
+                UpdateAttendanceAssignmentEndRequest(
+                    effective_to=date(2026, 10, 14),
+                    reason="Move employee to the new office",
+                ),
+                audit=AuditService(session),
+                request_id="move",
+                user_agent="pytest",
+            )
+            assert closed.effective_to == date(2026, 10, 14)
+            moved = await service.create_attendance_assignment(
+                admin,
+                CreateAttendanceAssignmentRequest(
+                    employee_id=employee_id,
+                    worksite_id=new_site.id,
+                    effective_from=date(2026, 10, 15),
+                    schedule_code="CUSTOM",
+                    holiday_calendar_code="CUSTOM",
+                ),
+                audit=AuditService(session),
+                request_id="move",
+                user_agent="pytest",
+            )
+            assert moved.worksite_code == "NEW"
+            assert await session.scalar(
+                select(Attendance).where(Attendance.employee_id == employee_id)
+            )
+            with pytest.raises(DomainError) as overlap:
+                await service.update_attendance_assignment_end(
+                    admin,
+                    old.id,
+                    UpdateAttendanceAssignmentEndRequest(
+                        effective_to=date(2026, 10, 15),
+                        reason="Extend old assignment after the move",
+                    ),
+                    audit=AuditService(session),
+                    request_id="move",
+                    user_agent="pytest",
+                )
+            assert overlap.value.code == "HR_ATTENDANCE_ASSIGNMENT_OVERLAP"
+            audit_log = await session.scalar(
+                select(AuditLog).where(
+                    AuditLog.action == "hr.attendance_assignment.end_adjusted"
+                )
+            )
+            assert audit_log is not None
         await engine.dispose()
 
     asyncio.run(exercise())

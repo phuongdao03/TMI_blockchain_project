@@ -12,6 +12,7 @@ const createPolicyMock = vi.hoisted(() => vi.fn());
 const correctPolicyMock = vi.hoisted(() => vi.fn());
 const listAssignmentsMock = vi.hoisted(() => vi.fn());
 const createAssignmentMock = vi.hoisted(() => vi.fn());
+const updateAssignmentEndMock = vi.hoisted(() => vi.fn());
 const listEmployeesMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/link", () => ({ default: "a" }));
@@ -27,6 +28,7 @@ vi.mock("@/lib/api/client", () => ({
     correctPolicy: correctPolicyMock,
     listAssignments: listAssignmentsMock,
     createAssignment: createAssignmentMock,
+    updateAssignmentEnd: updateAssignmentEndMock,
   },
   hrEmployeeApi: { list: listEmployeesMock },
 }));
@@ -75,6 +77,83 @@ function mockQueries() {
 }
 
 describe("AttendanceConfigurationWorkspace", () => {
+  it("finds an employee's assignment at another site and ends it with a reason", async () => {
+    mockQueries();
+    const oldSite = { ...worksite, id: "worksite-old", code: "OLD", name: "Old Office" };
+    listWorksitesMock.mockResolvedValue({
+      data: [worksite, oldSite], meta: { total: 2 },
+    });
+    listEmployeesMock.mockResolvedValue({
+      data: [{ id: "employee-1", employeeCode: "CNS-03", fullName: "Đào Nguyên Phương" }],
+      meta: { total: 1 },
+    });
+    listAssignmentsMock.mockImplementation(async (filters: { employeeId?: string }) => ({
+      data: filters.employeeId ? [{
+        id: "assignment-old", employeeId: "employee-1", employeeCode: "CNS-03",
+        employeeName: "Đào Nguyên Phương", worksiteId: oldSite.id,
+        worksiteCode: oldSite.code, worksiteName: oldSite.name,
+        effectiveFrom: "2026-10-01", effectiveTo: null,
+        scheduleCode: "CUSTOM", holidayCalendarCode: "CUSTOM",
+        workDays: [0, 1, 2, 3, 4], startTime: "08:00", endTime: "17:00",
+        holidayDates: [], createdAt: "2026-10-01T00:00:00Z",
+        updatedAt: "2026-10-01T00:00:00Z",
+      }] : [],
+      meta: { total: filters.employeeId ? 1 : 0 },
+    }));
+    updateAssignmentEndMock.mockResolvedValue({ id: "assignment-old" });
+    renderWorkspace();
+    await screen.findByRole("option", { name: "CNS-03 · Đào Nguyên Phương" });
+    fireEvent.change(screen.getByLabelText("Nhân viên"), {
+      target: { value: "employee-1" },
+    });
+    expect(await screen.findByText("OLD · Old Office")).toBeDefined();
+    fireEvent.change(screen.getByLabelText("Ngày kết thúc phân công OLD"), {
+      target: { value: "2026-10-14" },
+    });
+    fireEvent.change(screen.getByLabelText("Lý do điều chỉnh phân công OLD"), {
+      target: { value: "Chuyển sang địa điểm mới từ 15/10" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Kết thúc phân công OLD" }));
+    await waitFor(() => expect(updateAssignmentEndMock).toHaveBeenCalledWith(
+      "assignment-old", {
+        effectiveTo: "2026-10-14",
+        reason: "Chuyển sang địa điểm mới từ 15/10",
+      },
+    ));
+  });
+
+  it("shows how to inspect an expired GPS policy that blocks attendance", async () => {
+    mockQueries();
+    listPoliciesMock.mockResolvedValue({
+      data: [
+        {
+          id: "policy-expired",
+          worksiteId: worksite.id,
+          effectiveFrom: "2020-01-01",
+          effectiveTo: "2020-01-02",
+          timezone: "Asia/Singapore",
+          latitude: "1.352100",
+          longitude: "103.819800",
+          radiusMeters: 250,
+          maxAccuracyMeters: 35,
+          createdAt: "2020-01-01T00:00:00Z",
+          updatedAt: "2020-01-01T00:00:00Z",
+        },
+      ],
+      meta: { total: 1 },
+    });
+    renderWorkspace();
+
+    expect(
+      (await screen.findByRole("link", { name: "Xem chính sách GPS" })).getAttribute(
+        "href",
+      ),
+    ).toBe("#attendance-policy-title");
+    expect(
+      await screen.findByText(/chính sách GPS.*hết hiệu lực.*không thể chấm công/i),
+    ).toBeDefined();
+  });
+
   it("carries a searched account email to the employee profile form", async () => {
     mockQueries();
     listPoliciesMock.mockResolvedValue({

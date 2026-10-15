@@ -98,14 +98,20 @@ export function AttendancePolicyPanel({
   const canConfigure = selectedWorksite?.status === "ACTIVE";
   const rows = policies.data?.data ?? [];
   const latestPolicy = rows[0] ?? null;
-  const correctablePolicy =
+  const currentPolicy =
     rows.find((policy) => {
       const today = localDateIn(policy.timezone);
       return (
         policy.effectiveFrom <= today &&
         (!policy.effectiveTo || policy.effectiveTo >= today)
       );
-    }) ??
+    }) ?? null;
+  const expiredPolicy = rows.find(
+    (policy) =>
+      policy.effectiveTo && policy.effectiveTo < localDateIn(policy.timezone),
+  );
+  const correctablePolicy =
+    currentPolicy ??
     rows.find(
       (policy) => policy.effectiveFrom > localDateIn(policy.timezone),
     ) ??
@@ -279,6 +285,21 @@ export function AttendancePolicyPanel({
           </button>
         ) : null}
       </div>
+
+      {selectedWorksite && !policies.isPending && !policies.isError &&
+      (selectedWorksite.status !== "ACTIVE" || !currentPolicy) ? (
+        <p
+          className="mt-4 flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950"
+          role="status"
+        >
+          <CircleAlert aria-hidden="true" className="mt-1 size-4 shrink-0" />
+          {selectedWorksite.status !== "ACTIVE"
+            ? "Địa điểm đang tạm ngưng; nhân viên không thể chấm công dù đã được phân công. Kích hoạt địa điểm ở bước 01."
+            : expiredPolicy
+              ? `Chính sách GPS đã hết hiệu lực ngày ${expiredPolicy.effectiveTo}; nhân viên không thể chấm công dù phân công còn mở. Tạo phiên bản mới với ngày hiệu lực phù hợp.`
+              : "Chưa có chính sách GPS hiệu lực hôm nay; nhân viên không thể chấm công dù đã được phân công. Hãy thiết lập vùng chấm công."}
+        </p>
+      ) : null}
 
       {latestPolicy && !showForm ? (
         <p className="mt-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 text-sm leading-6 text-[var(--theme-text)]">

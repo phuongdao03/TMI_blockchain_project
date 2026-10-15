@@ -23,6 +23,7 @@ export function AttendanceConfigurationWorkspace() {
     null,
   );
   const [employeeSearch, setEmployeeSearch] = useState("");
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const worksites = useQuery({
     queryKey: ["hr", "attendance-worksites"],
@@ -55,6 +56,15 @@ export function AttendanceConfigurationWorkspace() {
       }),
     enabled: Boolean(resolvedSelectedWorksiteId),
   });
+  const employeeAssignments = useQuery({
+    queryKey: ["hr", "attendance-assignments", "employee", selectedEmployeeId],
+    queryFn: () =>
+      hrAttendanceConfigurationApi.listAssignments({
+        pageSize,
+        employeeId: selectedEmployeeId,
+      }),
+    enabled: Boolean(selectedEmployeeId),
+  });
   const employees = useQuery({
     queryKey: ["hr", "employee-candidates", employeeSearch],
     queryFn: () =>
@@ -82,7 +92,7 @@ export function AttendanceConfigurationWorkspace() {
   };
   const refreshAssignments = async () => {
     await queryClient.invalidateQueries({
-      queryKey: ["hr", "attendance-assignments", resolvedSelectedWorksiteId],
+      queryKey: ["hr", "attendance-assignments"],
     });
   };
   const createWorksite = useMutation({
@@ -145,6 +155,25 @@ export function AttendanceConfigurationWorkspace() {
       hrAttendanceConfigurationApi.createAssignment(input),
     onSuccess: async () => {
       setNotice("Đã phân công địa điểm làm việc cho nhân viên.");
+      await refreshAssignments();
+    },
+  });
+  const updateAssignmentEnd = useMutation({
+    mutationFn: ({
+      assignmentId,
+      effectiveTo,
+      reason,
+    }: {
+      assignmentId: string;
+      effectiveTo: string;
+      reason: string;
+    }) =>
+      hrAttendanceConfigurationApi.updateAssignmentEnd(assignmentId, {
+        effectiveTo,
+        reason,
+      }),
+    onSuccess: async () => {
+      setNotice("Đã điều chỉnh ngày kết thúc phân công và giữ nguyên lịch sử chấm công.");
       await refreshAssignments();
     },
   });
@@ -236,11 +265,17 @@ export function AttendanceConfigurationWorkspace() {
         />
         <AttendanceAssignmentPanel
           assignments={assignments}
+          employeeAssignments={employeeAssignments}
           employeeSearch={employeeSearch}
           employees={employees}
           policies={policies.data?.data ?? []}
           isSaving={createAssignment.isPending}
+          isUpdating={updateAssignmentEnd.isPending}
           onEmployeeSearch={setEmployeeSearch}
+          onEmployeeSelect={setSelectedEmployeeId}
+          onEndAssignment={(assignmentId, effectiveTo, reason) =>
+            updateAssignmentEnd.mutateAsync({ assignmentId, effectiveTo, reason })
+          }
           onRetry={() => void assignments.refetch()}
           onRetryEmployees={() => void employees.refetch()}
           onSave={(input) => createAssignment.mutateAsync(input)}

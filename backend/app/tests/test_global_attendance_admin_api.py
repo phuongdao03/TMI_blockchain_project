@@ -145,6 +145,14 @@ class StubGlobalAttendanceAdminService:
         assert payload.employee_id == self.assignment.employee_id
         return self.assignment
 
+    async def update_attendance_assignment_end(
+        self, principal, assignment_id, payload, **kwargs
+    ):
+        assert principal.roles == ("SUPER_ADMIN",)
+        assert assignment_id == self.assignment.id
+        assert payload.reason == "Move employee to a new worksite"
+        return self.assignment.model_copy(update={"effective_to": payload.effective_to})
+
     async def decide_attendance_location_exception(
         self, principal, exception_id, payload, **kwargs
     ):
@@ -242,6 +250,38 @@ def test_global_attendance_admin_create_contracts_are_camel_case(
         assert policy.json()["data"]["maxAccuracyMeters"] == 40
         assert assignment.status_code == 201
         assert assignment.json()["data"]["employeeName"] == "Avery Patel"
+
+    asyncio.run(exercise())
+
+
+def test_global_attendance_admin_end_assignment_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def exercise() -> None:
+        service = StubGlobalAttendanceAdminService()
+        path = f"/api/v1/admin/hr/attendance-assignments/{service.assignment.id}"
+        response = await _request(
+            monkeypatch,
+            service,
+            "PATCH",
+            path,
+            json={
+                "effectiveTo": "2026-10-14",
+                "reason": "Move employee to a new worksite",
+            },
+        )
+        assert response.status_code == 200
+        assert response.json()["data"]["effectiveTo"] == "2026-10-14"
+
+        invalid = await _request(
+            monkeypatch,
+            service,
+            "PATCH",
+            path,
+            json={"effectiveTo": "2026-10-14", "reason": "short"},
+        )
+        assert invalid.status_code == 422
+        assert invalid.json()["error"]["code"] == "VALIDATION_ERROR"
 
     asyncio.run(exercise())
 

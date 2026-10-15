@@ -248,6 +248,13 @@ export function AttendanceWorksitePanel({
                         {worksite.name}
                       </span>
                     </button>
+                    <a
+                      className="mt-3 inline-flex min-h-10 items-center text-xs font-bold text-primary-700 underline-offset-4 hover:underline"
+                      href="#attendance-policy-title"
+                      onClick={() => onSelect(worksite.id)}
+                    >
+                      Xem chính sách GPS
+                    </a>
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-bold ${isActive ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-600"}`}

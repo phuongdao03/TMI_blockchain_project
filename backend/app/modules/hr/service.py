@@ -68,6 +68,7 @@ from app.modules.hr.schemas import (
     LeaveRequestData,
     OvertimeDecisionRequest,
     OvertimeRequestData,
+    UpdateAttendanceAssignmentEndRequest,
     UpdateAttendanceRequest,
     UpdateAttendanceWorksiteRequest,
     UpdateDepartmentRequest,
@@ -1636,6 +1637,135 @@ class HrService:
             employee_name=employee.full_name,
             worksite_code=worksite.code,
             worksite_name=worksite.name,
+        )
+
+    async def update_attendance_assignment_end(
+        self,
+        principal: AuthPrincipal,
+        assignment_id: UUID,
+        payload: UpdateAttendanceAssignmentEndRequest,
+        *,
+        audit: AuditService,
+        request_id: str,
+        user_agent: str | None,
+    ) -> AttendanceAssignmentData:
+        self._require_attendance_configuration_admin(principal)
+        employee_id = await self._session.scalar(
+            select(AttendanceAssignment.employee_id).where(
+                AttendanceAssignment.id == assignment_id
+            )
+        )
+        if employee_id is None:
+            raise DomainError(
+                code="HR_ATTENDANCE_ASSIGNMENT_NOT_FOUND",
+                message="Attendance assignment not found.",
+                status_code=404,
+            )
+        await self._session.scalar(
+            select(Employee.id).where(Employee.id == employee_id).with_for_update()
+        )
+        row = (
+            await self._session.execute(
+                select(
+                    AttendanceAssignment,
+                    Employee.employee_code,
+                    Employee.full_name,
+                    AttendanceWorksite.code,
+                    AttendanceWorksite.name,
+                )
+                .join(Employee, Employee.id == AttendanceAssignment.employee_id)
+                .join(
+                    AttendanceWorksite,
+                    AttendanceWorksite.id == AttendanceAssignment.worksite_id,
+                )
+                .where(AttendanceAssignment.id == assignment_id)
+                .with_for_update(of=AttendanceAssignment)
+            )
+        ).one_or_none()
+        if row is None:
+            raise DomainError(
+                code="HR_ATTENDANCE_ASSIGNMENT_NOT_FOUND",
+                message="Attendance assignment not found.",
+                status_code=404,
+            )
+        assignment, employee_code, employee_name, worksite_code, worksite_name = row
+        if payload.effective_to < assignment.effective_from:
+            raise DomainError(
+                code="HR_ATTENDANCE_ASSIGNMENT_INVALID_RANGE",
+                message="Assignment end date cannot precede its start date.",
+                status_code=422,
+            )
+        if payload.effective_to == assignment.effective_to:
+            return self._attendance_assignment_data(
+                assignment,
+                employee_code=employee_code,
+                employee_name=employee_name,
+                worksite_code=worksite_code,
+                worksite_name=worksite_name,
+            )
+        if (
+            assignment.effective_to is None
+            or payload.effective_to < assignment.effective_to
+        ):
+            history_criteria = [
+                Attendance.employee_id == assignment.employee_id,
+                Attendance.work_date >= assignment.effective_from,
+                Attendance.work_date > payload.effective_to,
+            ]
+            if assignment.effective_to is not None:
+                history_criteria.append(Attendance.work_date <= assignment.effective_to)
+            historical_attendance = await self._session.scalar(
+                select(Attendance.id).where(*history_criteria)
+            )
+            if historical_attendance is not None:
+                raise DomainError(
+                    code="HR_ATTENDANCE_ASSIGNMENT_HISTORY_CONFLICT",
+                    message="The end date would exclude recorded attendance.",
+                    status_code=409,
+                )
+        overlap = await self._session.scalar(
+            select(AttendanceAssignment.id).where(
+                AttendanceAssignment.employee_id == assignment.employee_id,
+                AttendanceAssignment.id != assignment.id,
+                *self._effective_range_overlap(
+                    AttendanceAssignment,
+                    effective_from=assignment.effective_from,
+                    effective_to=payload.effective_to,
+                ),
+            )
+        )
+        if overlap is not None:
+            raise DomainError(
+                code="HR_ATTENDANCE_ASSIGNMENT_OVERLAP",
+                message=(
+                    "This employee already has an assignment in that effective period."
+                ),
+                status_code=409,
+            )
+        before = self._attendance_assignment_audit_snapshot(assignment)
+        assignment.effective_to = payload.effective_to
+        await self._session.flush()
+        audit.record(
+            actor_user_id=principal.user_id,
+            action="hr.attendance_assignment.end_adjusted",
+            resource_type="attendance_assignment",
+            resource_id=str(assignment.id),
+            before=before,
+            after={
+                **self._attendance_assignment_audit_snapshot(assignment),
+                "reason": payload.reason,
+            },
+            request_id=request_id,
+            user_agent=user_agent,
+        )
+        await self._session.commit()
+        await self._session.refresh(assignment)
+        return self._attendance_assignment_data(
+            assignment,
+            employee_code=employee_code,
+            employee_name=employee_name,
+            worksite_code=worksite_code,
+            worksite_name=worksite_name,
         )
 
     async def _self_employee(self, principal: AuthPrincipal) -> Employee:

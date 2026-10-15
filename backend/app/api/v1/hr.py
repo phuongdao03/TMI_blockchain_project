@@ -66,6 +66,7 @@ from app.modules.hr.schemas import (
     PayrollEntryData,
     PayrollPeriodData,
     PayrollPeriodDetailData,
+    UpdateAttendanceAssignmentEndRequest,
     UpdateAttendanceRequest,
     UpdateAttendanceWorksiteRequest,
     UpdateDepartmentRequest,
@@ -372,6 +373,32 @@ async def create_attendance_assignment(
 ) -> SuccessEnvelope[AttendanceAssignmentData]:
     data = await HrService(session).create_attendance_assignment(
         principal,
+        payload,
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    _private_location_response(response)
+    return SuccessEnvelope(
+        data=data, meta=ResponseMeta(request_id=request.state.request_id)
+    )
+
+
+@router.patch(
+    "/attendance-assignments/{assignment_id}",
+    response_model=SuccessEnvelope[AttendanceAssignmentData],
+)
+async def update_attendance_assignment_end(
+    assignment_id: UUID,
+    payload: UpdateAttendanceAssignmentEndRequest,
+    request: Request,
+    response: Response,
+    principal: CsrfProtectedPrincipalDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[AttendanceAssignmentData]:
+    data = await HrService(session).update_attendance_assignment_end(
+        principal,
+        assignment_id,
         payload,
         audit=AuditService(session),
         request_id=request.state.request_id,

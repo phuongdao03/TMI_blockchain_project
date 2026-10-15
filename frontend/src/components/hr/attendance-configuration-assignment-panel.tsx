@@ -39,22 +39,34 @@ type EmployeeQuery = {
 
 export function AttendanceAssignmentPanel({
   assignments,
+  employeeAssignments,
   employeeSearch,
   employees,
   policies,
   isSaving,
+  isUpdating,
   onEmployeeSearch,
+  onEmployeeSelect,
+  onEndAssignment,
   onRetry,
   onRetryEmployees,
   onSave,
   selectedWorksite,
 }: {
   assignments: AssignmentQuery;
+  employeeAssignments: AssignmentQuery;
   employeeSearch: string;
   employees: EmployeeQuery;
   policies: AttendanceWorksitePolicy[];
   isSaving: boolean;
+  isUpdating: boolean;
   onEmployeeSearch: (value: string) => void;
+  onEmployeeSelect: (value: string) => void;
+  onEndAssignment: (
+    assignmentId: string,
+    effectiveTo: string,
+    reason: string,
+  ) => Promise<unknown>;
   onRetry: () => void;
   onRetryEmployees: () => void;
   onSave: (input: AssignmentInput) => Promise<unknown>;
@@ -123,6 +135,7 @@ export function AttendanceAssignmentPanel({
         holidayDates,
       });
       setEmployeeId("");
+      onEmployeeSelect("");
       setEffectiveFrom("");
       setEffectiveTo("");
       setWorkDays([0, 1, 2, 3, 4]);
@@ -134,7 +147,7 @@ export function AttendanceAssignmentPanel({
       setFormError(
         error instanceof ApiError &&
           error.code === "HR_ATTENDANCE_ASSIGNMENT_OVERLAP"
-          ? "Nhân viên đã có phân công trong khoảng thời gian này. Chọn giai đoạn khác."
+          ? "Nhân viên đã có phân công trong khoảng thời gian này. Chọn nhân viên để xem phân công ở mọi địa điểm, rồi kết thúc phân công cũ trước ngày bắt đầu mới."
           : error instanceof ApiError &&
               error.code === "HR_ATTENDANCE_ASSIGNMENT_POLICY_REQUIRED"
             ? "Ngày phân công chưa có vùng chấm công hiệu lực. Kiểm tra lại chính sách."
@@ -180,7 +193,7 @@ export function AttendanceAssignmentPanel({
           Tìm nhân viên đang hoạt động
           <input
             className={fieldClass}
-            disabled={!canAssign}
+            disabled={!selectedWorksite}
             id="attendance-assignment-search"
             onChange={(event) => onEmployeeSearch(event.target.value)}
             placeholder="Mã, tên hoặc email"
@@ -221,9 +234,12 @@ export function AttendanceAssignmentPanel({
           Nhân viên
           <select
             className={fieldClass}
-            disabled={!canAssign || employees.isPending}
+            disabled={!selectedWorksite || employees.isPending}
             id="attendance-assignment-employee"
-            onChange={(event) => setEmployeeId(event.target.value)}
+            onChange={(event) => {
+              setEmployeeId(event.target.value);
+              onEmployeeSelect(event.target.value);
+            }}
             value={employeeId}
           >
             <option value="">
@@ -240,6 +256,39 @@ export function AttendanceAssignmentPanel({
           Chỉ hồ sơ nhân viên đang làm việc mới xuất hiện. Nếu tài khoản chưa có
           trong danh sách, mở Nhân sự để hoàn tất hồ sơ công việc.
         </p>
+        {employeeId ? (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+            <h3 className="text-sm font-bold text-neutral-950">
+              Phân công của nhân viên tại mọi địa điểm
+            </h3>
+            <p className="mt-1 text-sm leading-6 text-neutral-700">
+              Khi chuyển địa điểm, chọn ngày kết thúc phân công cũ trước ngày
+              bắt đầu mới. Bản ghi chấm công trước đó được giữ lại.
+            </p>
+            {employeeAssignments.isPending ? (
+              <p className="mt-3 text-sm text-neutral-600">Đang tải phân công...</p>
+            ) : employeeAssignments.isError ? (
+              <p className="mt-3 text-sm text-rose-700" role="alert">
+                Không thể tải phân công của nhân viên.
+              </p>
+            ) : (employeeAssignments.data?.data.length ?? 0) === 0 ? (
+              <p className="mt-3 text-sm text-neutral-600">
+                Nhân viên chưa có phân công.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {employeeAssignments.data?.data.map((assignment) => (
+                  <EndAssignmentItem
+                    assignment={assignment}
+                    isUpdating={isUpdating}
+                    key={assignment.id}
+                    onEnd={onEndAssignment}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <label
             className="block text-sm font-semibold text-neutral-800"
@@ -453,6 +502,105 @@ export function AttendanceAssignmentPanel({
         </ul>
       </div>
     </section>
+  );
+}
+
+function EndAssignmentItem({
+  assignment,
+  isUpdating,
+  onEnd,
+}: {
+  assignment: AttendanceAssignment;
+  isUpdating: boolean;
+  onEnd: (
+    assignmentId: string,
+    effectiveTo: string,
+    reason: string,
+  ) => Promise<unknown>;
+}) {
+  const [effectiveTo, setEffectiveTo] = useState(assignment.effectiveTo ?? "");
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const label = assignment.worksiteCode;
+
+  async function saveEnd() {
+    setError(null);
+    if (!effectiveTo || effectiveTo < assignment.effectiveFrom) {
+      setError("Ngày kết thúc phải từ ngày bắt đầu phân công trở đi.");
+      return;
+    }
+    if (reason.trim().length < 10) {
+      setError("Nhập lý do điều chỉnh ít nhất 10 ký tự.");
+      return;
+    }
+    try {
+      await onEnd(assignment.id, effectiveTo, reason.trim());
+      setReason("");
+    } catch (cause) {
+      setError(
+        cause instanceof ApiError &&
+          cause.code === "HR_ATTENDANCE_ASSIGNMENT_HISTORY_CONFLICT"
+          ? "Ngày kết thúc đang trước một bản ghi chấm công đã có. Chọn ngày sau bản ghi đó."
+          : cause instanceof ApiError &&
+              cause.code === "HR_ATTENDANCE_ASSIGNMENT_OVERLAP"
+            ? "Ngày kết thúc đang trùng với phân công khác của nhân viên."
+            : "Không thể điều chỉnh phân công. Kiểm tra ngày và thử lại.",
+      );
+    }
+  }
+
+  return (
+    <li className="rounded-xl border border-amber-200 bg-white p-4">
+      <p className="text-sm font-bold text-neutral-950">
+        {assignment.worksiteCode} · {assignment.worksiteName}
+      </p>
+      <p className="mt-1 text-xs text-neutral-600">
+        Hiệu lực {assignment.effectiveFrom} → {assignment.effectiveTo ?? "đang mở"}
+      </p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="text-sm font-semibold text-neutral-800">
+          Ngày kết thúc phân công {label}
+          <input
+            className={fieldClass}
+            min={assignment.effectiveFrom}
+            onChange={(event) => setEffectiveTo(event.target.value)}
+            type="date"
+            value={effectiveTo}
+          />
+        </label>
+        <label className="text-sm font-semibold text-neutral-800">
+          Lý do điều chỉnh phân công {label}
+          <input
+            className={fieldClass}
+            maxLength={500}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Ví dụ: Chuyển sang địa điểm mới"
+            type="text"
+            value={reason}
+          />
+        </label>
+      </div>
+      {error ? (
+        <p className="mt-2 text-sm text-rose-700" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <button
+        className="mt-3 min-h-11 rounded-xl border border-amber-500 bg-white px-4 text-sm font-bold text-amber-950 disabled:opacity-50"
+        disabled={
+          isUpdating ||
+          !effectiveTo ||
+          reason.trim().length < 10 ||
+          effectiveTo === assignment.effectiveTo
+        }
+        onClick={() => void saveEnd()}
+        type="button"
+      >
+        {assignment.effectiveTo
+          ? `Điều chỉnh ngày kết thúc ${label}`
+          : `Kết thúc phân công ${label}`}
+      </button>
+    </li>
   );
 }
 

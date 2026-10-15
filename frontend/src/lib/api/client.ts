@@ -1877,6 +1877,15 @@ export const hrAttendanceConfigurationApi = {
       body: JSON.stringify(input),
     });
   },
+  updateAssignmentEnd(
+    assignmentId: string,
+    input: { effectiveTo: string; reason: string },
+  ) {
+    return request<AttendanceAssignment>(
+      `/admin/hr/attendance-assignments/${encodeURIComponent(assignmentId)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
 };
 
 export const hrPayrollApi = {
