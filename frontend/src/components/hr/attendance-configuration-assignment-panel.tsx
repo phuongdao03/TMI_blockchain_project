@@ -109,8 +109,11 @@ export function AttendanceAssignmentPanel({
       (!row.effectiveTo || row.effectiveTo >= effectiveFrom) &&
       (!effectiveTo || row.effectiveFrom <= effectiveTo),
   );
+  const conflictingAssignment =
+    conflicts.length === 1 ? (conflicts[0] ?? null) : null;
   const transferable =
-    conflicts.length === 1 && conflicts[0].effectiveFrom < effectiveFrom;
+    conflictingAssignment !== null &&
+    conflictingAssignment.effectiveFrom < effectiveFrom;
   const previousEnd = effectiveFrom
     ? new Date(Date.parse(`${effectiveFrom}T00:00:00Z`) - 86400000)
         .toISOString()
@@ -194,10 +197,10 @@ export function AttendanceAssignmentPanel({
         startTime,
         endTime,
         holidayDates,
-        ...(transferable && transferConfirmed
+        ...(transferable && transferConfirmed && conflictingAssignment
           ? {
-              replaceAssignmentId: conflicts[0].id,
-              transferReason: `Chuyển phân công từ ${conflicts[0].worksiteCode} sang ${selectedWorksite.code} từ ${effectiveFrom}`,
+              replaceAssignmentId: conflictingAssignment.id,
+              transferReason: `Chuyển phân công từ ${conflictingAssignment.worksiteCode} sang ${selectedWorksite.code} từ ${effectiveFrom}`,
             }
           : {}),
       });
@@ -547,7 +550,7 @@ export function AttendanceAssignmentPanel({
                   </li>
                 ))}
               </ul>
-              {transferable ? (
+              {transferable && conflictingAssignment ? (
                 <label className="mt-3 flex cursor-pointer items-start gap-3">
                   <input
                     type="checkbox"
@@ -558,9 +561,9 @@ export function AttendanceAssignmentPanel({
                     }
                   />
                   <span>
-                    Kết thúc phân công tại {conflicts[0].worksiteCode} ngày{" "}
-                    {previousEnd} và chuyển sang {selectedWorksite?.code} từ{" "}
-                    {effectiveFrom}. Giữ lịch sử chấm công.
+                    Kết thúc phân công tại {conflictingAssignment.worksiteCode}{" "}
+                    ngày {previousEnd} và chuyển sang {selectedWorksite?.code}{" "}
+                    từ {effectiveFrom}. Giữ lịch sử chấm công.
                   </span>
                 </label>
               ) : (
