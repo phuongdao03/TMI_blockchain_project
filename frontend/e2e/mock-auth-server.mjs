@@ -587,14 +587,14 @@ function envelope(data) {
   });
 }
 
-function paginatedEnvelope(data) {
+function paginatedEnvelope(data, { page = 1, pageSize = 20 } = {}) {
   return JSON.stringify({
     success: true,
     data,
     meta: {
       requestId: "e2e-request",
-      page: 1,
-      pageSize: 20,
+      page,
+      pageSize,
       total: data.length,
     },
   });
@@ -1238,6 +1238,19 @@ const server = createServer(async (request, response) => {
       Location: "/api/v1/public/works/video-chao-mung-tinh-hoa-viet",
     });
     response.end();
+    return;
+  }
+  if (request.method === "GET" && path === "/api/v1/community/posts") {
+    const searchParams = new URL(request.url ?? "/", "http://127.0.0.1")
+      .searchParams;
+    send(
+      response,
+      200,
+      paginatedEnvelope([], {
+        page: Number(searchParams.get("page") ?? 1),
+        pageSize: Number(searchParams.get("pageSize") ?? 20),
+      }),
+    );
     return;
   }
   if (

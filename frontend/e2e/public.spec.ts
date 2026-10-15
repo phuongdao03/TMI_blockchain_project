@@ -7,6 +7,7 @@ test("public portal is professional, responsive and verifiable", async ({
   // The first desktop worker compiles several public routes on a cold CI runner.
   test.setTimeout(120_000);
   const consoleProblems: string[] = [];
+  const unauthorizedResponses: string[] = [];
   const searchHistoryRequests: string[] = [];
   page.on("console", (message) => {
     if (["error", "warning"].includes(message.type())) {
@@ -16,6 +17,11 @@ test("public portal is professional, responsive and verifiable", async ({
   page.on("request", (request) => {
     if (request.url().includes("/api/v1/me/search-history")) {
       searchHistoryRequests.push(request.url());
+    }
+  });
+  page.on("response", (response) => {
+    if (response.status() === 401) {
+      unauthorizedResponses.push(response.url());
     }
   });
 
@@ -67,7 +73,7 @@ test("public portal is professional, responsive and verifiable", async ({
     await expect(
       page.getByRole("heading", { name: "Kiểm tra bằng xác lập" }),
     ).toBeVisible();
-    expect(consoleProblems).toEqual([]);
+    expect(consoleProblems, JSON.stringify(unauthorizedResponses)).toEqual([]);
     expect(searchHistoryRequests).toEqual([]);
     return;
   }
@@ -205,6 +211,6 @@ test("public portal is professional, responsive and verifiable", async ({
   expect(worksXml).toContain("/works/video-chao-mung-tinh-hoa-viet");
   expect(worksXml).not.toContain("chia-se-rieng");
 
-  expect(consoleProblems).toEqual([]);
+  expect(consoleProblems, JSON.stringify(unauthorizedResponses)).toEqual([]);
   expect(searchHistoryRequests).toEqual([]);
 });

@@ -31,6 +31,7 @@ def upgrade() -> None:
             ["avatar_media_id"],
             unique=True,
         )
+    _restore_username_index_on_sqlite()
 
 
 def downgrade() -> None:
@@ -41,3 +42,15 @@ def downgrade() -> None:
             type_="foreignkey",
         )
         batch_op.drop_column("avatar_media_id")
+    _restore_username_index_on_sqlite()
+
+
+def _restore_username_index_on_sqlite() -> None:
+    # SQLite batch table recreation drops expression indexes it cannot reflect.
+    if op.get_bind().dialect.name == "sqlite":
+        op.create_index(
+            "uq_community_profiles_username_ci",
+            "community_profiles",
+            [sa.text("lower(username)")],
+            unique=True,
+        )
