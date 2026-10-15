@@ -11,6 +11,9 @@ const {
   connectBrowserWallet,
   currentBrowserWallet,
   currentWallet,
+  issueWalletChallenge,
+  verifyWalletLink,
+  signBrowserChallenge,
   prepareIntent,
   proofQueue,
   sendBrowserTransaction,
@@ -24,6 +27,9 @@ const {
   currentBrowserWallet: vi.fn(),
   connectWalletWithConnector: vi.fn(),
   currentWallet: vi.fn(),
+  issueWalletChallenge: vi.fn(),
+  verifyWalletLink: vi.fn(),
+  signBrowserChallenge: vi.fn(),
   prepareIntent: vi.fn(),
   proofQueue: vi.fn(),
   sendBrowserTransaction: vi.fn(),
@@ -46,8 +52,8 @@ vi.mock("@/lib/api/client", () => ({
   ApiError: MockApiError,
   walletLinkApi: {
     currentWallet,
-    issueWalletChallenge: vi.fn(),
-    verifyWalletLink: vi.fn(),
+    issueWalletChallenge,
+    verifyWalletLink,
   },
   proofRegistrySigningApi: {
     queue: proofQueue,
@@ -62,7 +68,7 @@ vi.mock("@/lib/blockchain/eip1193", () => ({
   connectWalletWithConnector: vi.fn(),
   currentWallet: currentBrowserWallet,
   sendTransaction: sendBrowserTransaction,
-  signWalletChallenge: vi.fn(),
+  signWalletChallenge: signBrowserChallenge,
   subscribeWalletChanges: vi.fn(() => () => undefined),
   switchChain: vi.fn(),
   walletOptions: walletOptionsMock,
@@ -101,6 +107,19 @@ describe("BlockchainSigningWorkspace", () => {
     injectedMetaMaskMock.mockReturnValue(false);
     window.localStorage.clear();
     currentWallet.mockResolvedValue(null);
+    issueWalletChallenge.mockResolvedValue({
+      id: "challenge-1",
+      nonce: "challenge-nonce",
+      message: "THV wallet verification",
+    });
+    signBrowserChallenge.mockResolvedValue("0xsignature");
+    verifyWalletLink.mockResolvedValue({
+      id: "wallet-link",
+      walletAddress: "0x3434343434343434343434343434343434",
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-26T00:00:00Z",
+    });
     currentBrowserWallet.mockResolvedValue({ address: null, chainId: 137 });
     proofQueue.mockResolvedValue([]);
     connectBrowserWallet.mockResolvedValue({
@@ -127,6 +146,109 @@ describe("BlockchainSigningWorkspace", () => {
 
     expect(await screen.findByText("0x3434…3434")).toBeDefined();
     expect(currentBrowserWallet).toHaveBeenCalledOnce();
+  });
+
+  it("checks an authorized wallet on production without sending a transaction", async () => {
+    const address = "0x3434343434343434343434343434343434";
+    currentWallet.mockResolvedValue({
+      id: "wallet-link",
+      walletAddress: address,
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-26T00:00:00Z",
+    });
+    currentBrowserWallet.mockResolvedValue({ address, chainId: 137 });
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Kiểm tra ví ký" }));
+
+    await waitFor(() =>
+      expect(verifyWalletLink).toHaveBeenCalledWith({
+        challengeId: "challenge-1",
+        nonce: "challenge-nonce",
+        signature: "0xsignature",
+      }),
+    );
+    expect(issueWalletChallenge).toHaveBeenCalledWith(address, 137);
+    expect(signBrowserChallenge).toHaveBeenCalledWith(
+      "THV wallet verification",
+      address,
+    );
+    expect(
+      await screen.findByText(/Đã kiểm tra ví ký thành công/),
+    ).toBeDefined();
+    expect(prepareIntent).not.toHaveBeenCalled();
+    expect(sendBrowserTransaction).not.toHaveBeenCalled();
+  });
+
+  it("explains a revoked contract signer role during a safe wallet check", async () => {
+    const address = "0x3434343434343434343434343434343434343434";
+    currentWallet.mockResolvedValue({
+      id: "wallet-link",
+      walletAddress: address,
+      chainId: 137,
+      status: "ACTIVE",
+      verifiedAt: "2026-08-26T00:00:00Z",
+    });
+    currentBrowserWallet.mockResolvedValue({ address, chainId: 137 });
+    verifyWalletLink.mockRejectedValue(
+      new MockApiError("Forbidden", "BLOCKCHAIN_FORBIDDEN", 403),
+    );
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Kiểm tra ví ký" }));
+
+    expect(
+      (
+        await screen.findByText(
+          "Ví không còn quyền ký trên hợp đồng Polygon. Hãy kiểm tra quyền ví với quản trị hệ thống.",
+        )
+      ).closest('[role="alert"]'),
+    ).not.toBeNull();
+    expect(sendBrowserTransaction).not.toHaveBeenCalled();
+  });
+
+  it("clears a failed connection notice after MetaMask finishes connecting", async () => {
+    connectBrowserWallet.mockRejectedValue(
+      Object.assign(new Error("User rejected the request"), { code: 4001 }),
+    );
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Kết nối ví" }));
+    expect(await screen.findByText(/Bạn đã từ chối kết nối ví/)).toBeDefined();
+
+    currentBrowserWallet.mockResolvedValue({
+      address: "0x3434343434343434343434343434343434",
+      chainId: 137,
+    });
+    act(() => window.dispatchEvent(new Event("focus")));
+    await waitFor(() => {
+      expect(screen.queryByText(/Bạn đã từ chối kết nối ví/)).toBeNull();
+      expect(screen.getByText("0x3434…3434")).toBeDefined();
+    });
+  });
+
+  it("treats a wallet as connected when MetaMask grants access despite a request error", async () => {
+    connectBrowserWallet.mockRejectedValue(
+      new Error("Provider request failed"),
+    );
+    currentBrowserWallet.mockResolvedValue({
+      address: "0x3434343434343434343434343434343434",
+      chainId: 137,
+    });
+    render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
+
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Làm mới kết nối" }));
+
+    expect(await screen.findByText("Ví đã kết nối")).toBeDefined();
+    expect(screen.queryByText(/Chưa thể kết nối ví/)).toBeNull();
   });
 
   it("accepts checksum casing differences for the authorized wallet", async () => {
@@ -864,7 +986,7 @@ describe("BlockchainSigningWorkspace", () => {
     ).toBeDefined();
   });
 
-  it("explains when the user rejects MetaMask", async () => {
+  it("explains when the user rejects a wallet connection", async () => {
     const user = userEvent.setup();
     connectBrowserWallet.mockRejectedValue(
       Object.assign(new Error("User rejected the request"), { code: 4001 }),
@@ -875,7 +997,7 @@ describe("BlockchainSigningWorkspace", () => {
 
     expect(
       await screen.findByText(
-        "Bạn đã từ chối yêu cầu ký trong MetaMask. Giao dịch chưa được gửi.",
+        "Bạn đã từ chối kết nối ví. Hãy chọn Kết nối ví để thử lại.",
       ),
     ).toBeDefined();
   });

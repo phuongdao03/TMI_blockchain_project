@@ -80,7 +80,10 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function errorMessage(error: unknown) {
+function errorMessage(
+  error: unknown,
+  action: "connect" | "verify" | "transaction" = "transaction",
+) {
   const walletError = error as { code?: number | string; message?: string };
   const providerCode = walletErrorCode(error);
   if (providerCode === "NO_WALLET") {
@@ -95,8 +98,18 @@ function errorMessage(error: unknown) {
   if (providerCode === "DISCONNECTED" || providerCode === "CHAIN_UNAVAILABLE") {
     return "Ví đã ngắt kết nối. Hãy mở khóa ví và thử kết nối lại.";
   }
-  if (walletError?.code === 4001 || walletError?.code === "ACTION_REJECTED") {
+  if (providerCode === "USER_REJECTED") {
+    if (action === "connect")
+      return "Bạn đã từ chối kết nối ví. Hãy chọn Kết nối ví để thử lại.";
+    if (action === "verify")
+      return "Bạn đã từ chối ký thông điệp kiểm tra. Không có giao dịch nào được gửi.";
     return "Bạn đã từ chối yêu cầu ký trong MetaMask. Giao dịch chưa được gửi.";
+  }
+  if (action === "verify" && error instanceof ApiError) {
+    if (error.status === 403)
+      return "Ví không còn quyền ký trên hợp đồng Polygon. Hãy kiểm tra quyền ví với quản trị hệ thống.";
+    if (error.status === 503)
+      return "Chưa thể kiểm tra quyền ví trên Polygon lúc này. Hãy thử lại sau.";
   }
   if (
     walletError?.code === -32000 ||
@@ -104,6 +117,10 @@ function errorMessage(error: unknown) {
   ) {
     return "Ví không đủ POL để trả phí gas. Hãy nạp thêm POL rồi thử lại.";
   }
+  if (action === "connect")
+    return "Chưa thể kết nối ví. Hãy mở khóa ví, kiểm tra quyền truy cập của trang web rồi thử lại.";
+  if (action === "verify")
+    return "Chưa thể xác minh ví ký. Hãy kiểm tra cửa sổ ví và thử lại.";
   return "Chưa thể hoàn tất thao tác. Vui lòng thử lại hoặc liên hệ bộ phận vận hành.";
 }
 
@@ -173,6 +190,10 @@ export function BlockchainSigningWorkspace() {
     useState<PendingProofBroadcast | null>(null);
   const [busy, setBusy] = useState<"connect" | "link" | "sign" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(
+    null,
+  );
   const [copiedTransaction, setCopiedTransaction] = useState(false);
   const [walletPickerOpen, setWalletPickerOpen] = useState(false);
   const [pollStartedAt, setPollStartedAt] = useState(() => Date.now());
@@ -253,11 +274,15 @@ export function BlockchainSigningWorkspace() {
   const refreshWalletState = useCallback(async () => {
     try {
       const next = await currentWallet();
-      setConnected(
-        next.address ? { address: next.address, chainId: next.chainId } : null,
-      );
+      const available = next.address
+        ? { address: next.address, chainId: next.chainId }
+        : null;
+      setConnected(available);
+      if (next.address) setConnectionError(null);
+      return available;
     } catch {
       setConnected(null);
+      return null;
     }
   }, []);
 
@@ -313,6 +338,8 @@ export function BlockchainSigningWorkspace() {
   async function handleConnect() {
     setBusy("connect");
     setMessage(null);
+    setConnectionError(null);
+    setVerificationError(null);
     const options = walletOptions?.() ?? [];
     if (options.length > 1 && !hasInjectedMetaMask()) {
       setBusy(null);
@@ -322,7 +349,8 @@ export function BlockchainSigningWorkspace() {
     try {
       setConnected(await connectWallet());
     } catch (error) {
-      setMessage(errorMessage(error));
+      if (!(await refreshWalletState()))
+        setConnectionError(errorMessage(error, "connect"));
     } finally {
       setBusy(null);
     }
@@ -331,11 +359,15 @@ export function BlockchainSigningWorkspace() {
   async function handleConnectWithConnector(connectorId: string) {
     setBusy("connect");
     setMessage(null);
+    setConnectionError(null);
+    setVerificationError(null);
     try {
       setConnected(await connectWalletWithConnector(connectorId));
       setWalletPickerOpen(false);
     } catch (error) {
-      setMessage(errorMessage(error));
+      if (!(await refreshWalletState()))
+        setConnectionError(errorMessage(error, "connect"));
+      setWalletPickerOpen(false);
     } finally {
       setBusy(null);
     }
@@ -352,6 +384,7 @@ export function BlockchainSigningWorkspace() {
     }
     setBusy("link");
     setMessage(null);
+    setVerificationError(null);
     try {
       const challenge = await walletLinkApi.issueWalletChallenge(
         connected.address,
@@ -367,9 +400,13 @@ export function BlockchainSigningWorkspace() {
         signature,
       });
       await queryClient.invalidateQueries({ queryKey: ["blockchain"] });
-      setMessage("Ví của tổ chức đã được xác minh và sẵn sàng sử dụng.");
+      setMessage(
+        wallet.data
+          ? "Đã kiểm tra ví ký thành công. Ví và quyền ký hợp lệ; không có giao dịch nào được gửi."
+          : "Ví của tổ chức đã được xác minh và sẵn sàng sử dụng.",
+      );
     } catch (error) {
-      setMessage(errorMessage(error));
+      setVerificationError(errorMessage(error, "verify"));
     } finally {
       setBusy(null);
     }
@@ -650,7 +687,7 @@ export function BlockchainSigningWorkspace() {
     };
   }, [pendingBroadcast, resumePendingBroadcast]);
 
-  const requiredChain = wallet.data?.chainId;
+  const requiredChain = wallet.data?.chainId ?? 137;
   const isWrongNetwork = Boolean(
     connected && requiredChain && connected.chainId !== requiredChain,
   );
@@ -659,6 +696,8 @@ export function BlockchainSigningWorkspace() {
       wallet.data &&
       !walletAddressesMatch(connected.address, wallet.data.walletAddress),
   );
+  const notice = connectionError ?? verificationError ?? message;
+  const noticeIsError = Boolean(connectionError || verificationError);
 
   if (wallet.isPending)
     return (
@@ -721,34 +760,47 @@ export function BlockchainSigningWorkspace() {
               trong hệ thống Tinh Hoa Việt.
             </p>
           </div>
-          <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-bold text-neutral-950 hover:bg-neutral-100 disabled:opacity-60"
-            disabled={busy === "connect"}
-            onClick={() => void handleConnect()}
-            type="button"
-          >
-            {busy === "connect" ? (
-              <LoaderCircle
-                className="auth-activity-spinner size-4"
-                aria-hidden="true"
-              />
-            ) : (
-              <WalletCards className="size-4" aria-hidden="true" />
-            )}
-            {connected ? "Kết nối lại ví" : "Kết nối ví"}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            {connected ? (
+              <span className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/30 px-3 text-sm font-semibold text-white">
+                <CheckCircle2 className="size-4" aria-hidden="true" />
+                Ví đã kết nối
+              </span>
+            ) : null}
+            <button
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-bold text-neutral-950 hover:bg-neutral-100 disabled:opacity-60"
+              disabled={busy === "connect"}
+              onClick={() => void handleConnect()}
+              type="button"
+            >
+              {busy === "connect" ? (
+                <LoaderCircle
+                  className="auth-activity-spinner size-4"
+                  aria-hidden="true"
+                />
+              ) : (
+                <WalletCards className="size-4" aria-hidden="true" />
+              )}
+              {connected ? "Làm mới kết nối" : "Kết nối ví"}
+            </button>
+          </div>
         </div>
       </header>
 
-      {message ? (
+      {notice ? (
         <div
-          className="flex items-start gap-3 rounded-xl border border-primary-200 bg-primary-50 px-5 py-4 text-sm leading-6 text-primary-950"
-          role="status"
+          className={`flex items-start gap-3 rounded-xl border px-5 py-4 text-sm leading-6 ${noticeIsError ? "border-amber-300 bg-amber-50 text-amber-950" : "border-primary-200 bg-primary-50 text-primary-950"}`}
+          role={noticeIsError ? "alert" : "status"}
           aria-live="polite"
         >
           {busy ? (
             <LoaderCircle
               className="auth-activity-spinner mt-0.5 size-4 shrink-0"
+              aria-hidden="true"
+            />
+          ) : noticeIsError ? (
+            <AlertTriangle
+              className="mt-0.5 size-4 shrink-0"
               aria-hidden="true"
             />
           ) : (
@@ -757,7 +809,7 @@ export function BlockchainSigningWorkspace() {
               aria-hidden="true"
             />
           )}
-          <p>{message}</p>
+          <p>{notice}</p>
         </div>
       ) : null}
 
@@ -891,20 +943,28 @@ export function BlockchainSigningWorkspace() {
               ) : null}
             </div>
           ) : null}
-          {!wallet.data && connected ? (
-            <button
-              className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary-700 px-4 text-sm font-bold text-white disabled:opacity-60"
-              disabled={busy === "link"}
-              onClick={() => void handleVerifyWallet()}
-              type="button"
-            >
-              {busy === "link" ? (
-                <LoaderCircle className="auth-activity-spinner size-4" />
-              ) : (
-                <BadgeCheck className="size-4" />
-              )}
-              Xác minh ví của tổ chức
-            </button>
+          {connected && !isWrongWallet && !isWrongNetwork ? (
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary-700 px-4 text-sm font-bold text-white disabled:opacity-60"
+                disabled={busy === "link"}
+                onClick={() => void handleVerifyWallet()}
+                type="button"
+              >
+                {busy === "link" ? (
+                  <LoaderCircle className="auth-activity-spinner size-4" />
+                ) : (
+                  <BadgeCheck className="size-4" />
+                )}
+                {wallet.data ? "Kiểm tra ví ký" : "Xác minh ví của tổ chức"}
+              </button>
+              {wallet.data ? (
+                <p className="text-sm text-neutral-600">
+                  Ký thông điệp kiểm tra, không tạo hồ sơ, không gửi giao dịch
+                  và không tốn gas.
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </article>
       </section>

@@ -40,9 +40,11 @@ describe("walletErrorCode", () => {
     const other = { request: vi.fn(), isMetaMask: false };
     const metamask = {
       request: vi.fn(async ({ method }: { method: string }) =>
-        method === "eth_requestAccounts"
-          ? ["0xbfa38182f0d24589e7898dd4892c58c3fda58042"]
-          : "0x89",
+        method === "eth_accounts"
+          ? []
+          : method === "eth_requestAccounts"
+            ? ["0xbfa38182f0d24589e7898dd4892c58c3fda58042"]
+            : "0x89",
       ),
       isMetaMask: true,
     };
@@ -60,6 +62,25 @@ describe("walletErrorCode", () => {
       method: "eth_requestAccounts",
     });
     expect(other.request).not.toHaveBeenCalled();
+    delete (window as Window & { ethereum?: unknown }).ethereum;
+  });
+  it("reuses an authorized MetaMask account without requesting permission again", async () => {
+    const address = "0xbfa38182f0d24589e7898dd4892c58c3fda58042";
+    const injected = {
+      isMetaMask: true,
+      request: vi.fn(async ({ method }: { method: string }) =>
+        method === "eth_accounts" ? [address] : "0x89",
+      ),
+    };
+    Object.defineProperty(window, "ethereum", {
+      configurable: true,
+      value: injected,
+    });
+
+    expect(await connectWallet()).toEqual({ address, chainId: 137 });
+    expect(injected.request).not.toHaveBeenCalledWith({
+      method: "eth_requestAccounts",
+    });
     delete (window as Window & { ethereum?: unknown }).ethereum;
   });
   it("classifies common provider errors without exposing raw messages", () => {

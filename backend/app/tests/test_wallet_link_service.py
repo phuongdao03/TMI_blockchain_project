@@ -56,6 +56,7 @@ def test_wallet_link_requires_thv_verifier_role() -> None:
             roles=("SUPER_ADMIN",),
             permissions=("blockchain.sign",),
         )
+        nonces = iter(("thv-verifier-role-test", "thv-recheck-test"))
         async with sessions() as session:
             service = WalletLinkService(
                 session=session,
@@ -75,7 +76,7 @@ def test_wallet_link_requires_thv_verifier_role() -> None:
                     ),  # type: ignore[arg-type]
                 ),
                 clock=lambda: NOW,
-                nonce_factory=lambda: "thv-verifier-role-test",
+                nonce_factory=nonces.__next__,
             )
             challenge = await service.create_wallet_challenge(
                 principal,
@@ -103,6 +104,22 @@ def test_wallet_link_requires_thv_verifier_role() -> None:
             )
             assert linked.wallet_address == account.address
             assert linked.chain_id == 137
+
+            recheck = await service.create_wallet_challenge(
+                principal,
+                wallet_address=account.address,
+                chain_id=137,
+            )
+            recheck_signature = Account.sign_message(
+                encode_defunct(text=recheck.message), account.key
+            ).signature.hex()
+            verified_again = await service.verify_wallet_link(
+                principal,
+                challenge_id=recheck.id,
+                nonce=recheck.nonce,
+                signature=recheck_signature,
+            )
+            assert verified_again.id == linked.id
 
         await engine.dispose()
 

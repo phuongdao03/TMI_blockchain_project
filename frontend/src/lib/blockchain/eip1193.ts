@@ -136,9 +136,10 @@ export async function connectWallet(): Promise<{
   chainId: number;
 }> {
   const active = provider();
-  const accounts = await active.request<string[]>({
-    method: "eth_requestAccounts",
-  });
+  const authorized = await active.request<string[]>({ method: "eth_accounts" });
+  const accounts = authorized.length
+    ? authorized
+    : await active.request<string[]>({ method: "eth_requestAccounts" });
   const address = accounts[0];
   if (!address) throw new Error("Ví không trả về địa chỉ tài khoản.");
   const chainId = await active.request<string>({ method: "eth_chainId" });
