@@ -286,7 +286,9 @@ export function AttendancePolicyPanel({
         ) : null}
       </div>
 
-      {selectedWorksite && !policies.isPending && !policies.isError &&
+      {selectedWorksite &&
+      !policies.isPending &&
+      !policies.isError &&
       (selectedWorksite.status !== "ACTIVE" || !currentPolicy) ? (
         <p
           className="mt-4 flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950"

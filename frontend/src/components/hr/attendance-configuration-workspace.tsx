@@ -173,7 +173,9 @@ export function AttendanceConfigurationWorkspace() {
         reason,
       }),
     onSuccess: async () => {
-      setNotice("Đã điều chỉnh ngày kết thúc phân công và giữ nguyên lịch sử chấm công.");
+      setNotice(
+        "Đã điều chỉnh ngày kết thúc phân công và giữ nguyên lịch sử chấm công.",
+      );
       await refreshAssignments();
     },
   });
@@ -274,7 +276,11 @@ export function AttendanceConfigurationWorkspace() {
           onEmployeeSearch={setEmployeeSearch}
           onEmployeeSelect={setSelectedEmployeeId}
           onEndAssignment={(assignmentId, effectiveTo, reason) =>
-            updateAssignmentEnd.mutateAsync({ assignmentId, effectiveTo, reason })
+            updateAssignmentEnd.mutateAsync({
+              assignmentId,
+              effectiveTo,
+              reason,
+            })
           }
           onRetry={() => void assignments.refetch()}
           onRetryEmployees={() => void employees.refetch()}

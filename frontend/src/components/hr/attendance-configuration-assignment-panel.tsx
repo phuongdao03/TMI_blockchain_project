@@ -266,7 +266,9 @@ export function AttendanceAssignmentPanel({
               bắt đầu mới. Bản ghi chấm công trước đó được giữ lại.
             </p>
             {employeeAssignments.isPending ? (
-              <p className="mt-3 text-sm text-neutral-600">Đang tải phân công...</p>
+              <p className="mt-3 text-sm text-neutral-600">
+                Đang tải phân công...
+              </p>
             ) : employeeAssignments.isError ? (
               <p className="mt-3 text-sm text-rose-700" role="alert">
                 Không thể tải phân công của nhân viên.
@@ -555,7 +557,8 @@ function EndAssignmentItem({
         {assignment.worksiteCode} · {assignment.worksiteName}
       </p>
       <p className="mt-1 text-xs text-neutral-600">
-        Hiệu lực {assignment.effectiveFrom} → {assignment.effectiveTo ?? "đang mở"}
+        Hiệu lực {assignment.effectiveFrom} →{" "}
+        {assignment.effectiveTo ?? "đang mở"}
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="text-sm font-semibold text-neutral-800">
