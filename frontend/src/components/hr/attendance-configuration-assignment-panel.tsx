@@ -81,9 +81,43 @@ export function AttendanceAssignmentPanel({
   const [holidayDate, setHolidayDate] = useState("");
   const [holidayDates, setHolidayDates] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const rows = assignments.data?.data ?? [];
+  const today = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: policies[0]?.timezone ?? "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const currentRows = rows.filter(
+    (assignment) => !assignment.effectiveTo || assignment.effectiveTo >= today,
+  );
+  const historyRows = rows.filter(
+    (assignment) => assignment.effectiveTo && assignment.effectiveTo < today,
+  );
+  const selectedEmployeeAssignment = [
+    ...rows,
+    ...(employeeAssignments.data?.data ?? []),
+  ].find((assignment) => assignment.employeeId === employeeId);
   const hasPolicy = policies.length > 0;
   const canAssign = selectedWorksite?.status === "ACTIVE" && hasPolicy;
+
+  function prepareEdit(assignment: AttendanceAssignment) {
+    setEmployeeId(assignment.employeeId);
+    onEmployeeSelect(assignment.employeeId);
+    setWorkDays(assignment.workDays ?? [0, 1, 2, 3, 4]);
+    setStartTime(assignment.startTime?.slice(0, 5) ?? "08:00");
+    setEndTime(assignment.endTime?.slice(0, 5) ?? "17:00");
+    setHolidayDates(assignment.holidayDates ?? []);
+    setEffectiveFrom("");
+    setEffectiveTo("");
+    setFormError(
+      "Đã điền lịch hiện tại. Kết thúc phân công cũ trước ngày hiệu lực mới, rồi lưu giai đoạn mới để giữ lịch sử.",
+    );
+    document.getElementById("attendance-assignment-form")?.scrollIntoView?.({
+      behavior: "smooth",
+    });
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -182,8 +216,104 @@ export function AttendanceAssignmentPanel({
         </div>
       </div>
 
+      <div className="mt-5 rounded-2xl border border-neutral-200 p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-bold text-neutral-950">
+              Nhân viên tại {selectedWorksite?.name ?? "địa điểm đang chọn"}
+            </h3>
+            <p className="mt-1 text-sm text-neutral-600">
+              {currentRows.length} phân công đang hoặc sắp có hiệu lực
+            </p>
+          </div>
+          <button
+            className="min-h-10 rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white disabled:opacity-50"
+            disabled={!canAssign}
+            onClick={() =>
+              document.getElementById("attendance-assignment-search")?.focus()
+            }
+            type="button"
+          >
+            Thêm nhân viên
+          </button>
+        </div>
+        {assignments.isPending ? (
+          <p className="mt-3 text-sm text-neutral-600">Đang tải nhân viên...</p>
+        ) : assignments.isError ? (
+          <p className="mt-3 text-sm text-rose-700" role="alert">
+            Không thể tải nhân viên của địa điểm.
+            <button
+              className="ml-2 font-bold underline"
+              onClick={onRetry}
+              type="button"
+            >
+              Thử lại
+            </button>
+          </p>
+        ) : currentRows.length === 0 ? (
+          <p className="mt-3 rounded-xl border border-dashed border-neutral-300 p-4 text-sm text-neutral-600">
+            Chưa có nhân viên được phân công tại địa điểm này.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-3" role="list">
+            {currentRows.map((assignment) => (
+              <li
+                className="rounded-xl border border-neutral-200 p-4"
+                key={assignment.id}
+              >
+                <p className="font-bold text-neutral-950">
+                  {assignment.employeeCode} · {assignment.employeeName}
+                </p>
+                <p className="mt-1 text-sm text-neutral-600">
+                  {assignment.workDays
+                    ?.map((day) => weekdays[day])
+                    .join(", ") || "Lịch cũ"}
+                  {assignment.startTime && assignment.endTime
+                    ? ` · ${assignment.startTime.slice(0, 5)}–${assignment.endTime.slice(0, 5)}`
+                    : ""}
+                  {` · ${assignment.effectiveFrom} → ${assignment.effectiveTo ?? "mở"}`}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    aria-label={`Sửa lịch ${assignment.employeeCode}`}
+                    className="min-h-10 rounded-lg border border-neutral-300 px-3 text-sm font-semibold"
+                    onClick={() => prepareEdit(assignment)}
+                    type="button"
+                  >
+                    Sửa lịch
+                  </button>
+                  <button
+                    aria-expanded={removingId === assignment.id}
+                    aria-label={`Gỡ ${assignment.employeeCode} khỏi văn phòng`}
+                    className="min-h-10 rounded-lg border border-rose-200 px-3 text-sm font-semibold text-rose-800"
+                    onClick={() =>
+                      setRemovingId((current) =>
+                        current === assignment.id ? null : assignment.id,
+                      )
+                    }
+                    type="button"
+                  >
+                    Gỡ khỏi văn phòng
+                  </button>
+                </div>
+                {removingId === assignment.id ? (
+                  <ul className="mt-3">
+                    <EndAssignmentItem
+                      assignment={assignment}
+                      isUpdating={isUpdating}
+                      onEnd={onEndAssignment}
+                    />
+                  </ul>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <form
         className="mt-5 rounded-2xl bg-neutral-50 p-4 sm:p-5"
+        id="attendance-assignment-form"
         onSubmit={submit}
       >
         <label
@@ -250,6 +380,15 @@ export function AttendanceAssignmentPanel({
                 {employee.employeeCode} · {employee.fullName}
               </option>
             ))}
+            {selectedEmployeeAssignment &&
+            !(employees.data?.data ?? []).some(
+              (employee) => employee.id === employeeId,
+            ) ? (
+              <option value={selectedEmployeeAssignment.employeeId}>
+                {selectedEmployeeAssignment.employeeCode} ·{" "}
+                {selectedEmployeeAssignment.employeeName}
+              </option>
+            ) : null}
           </select>
         </label>
         <p className="mt-2 text-xs leading-5 text-neutral-600">
@@ -458,51 +597,21 @@ export function AttendanceAssignmentPanel({
         </button>
       </form>
 
-      <div className="mt-5" aria-live="polite">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-bold text-neutral-950">
-            Phân công đã ghi nhận
-          </h3>
-          <span className="text-xs font-semibold text-neutral-500">
-            {assignments.data?.meta.total ?? 0} bản ghi
-          </span>
-        </div>
-        {assignments.isPending ? (
-          <div
-            aria-busy="true"
-            className="mt-3 h-24 animate-pulse rounded-xl bg-neutral-100"
-          />
-        ) : null}
-        {assignments.isError ? (
-          <p
-            className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800"
-            role="alert"
-          >
-            Không thể tải phân công.
-            <button
-              className="ml-2 font-bold underline"
-              onClick={onRetry}
-              type="button"
-            >
-              Thử lại
-            </button>
-          </p>
-        ) : null}
-        {!assignments.isPending && !assignments.isError && rows.length === 0 ? (
-          <p className="mt-3 rounded-xl border border-dashed border-neutral-300 p-4 text-sm leading-6 text-neutral-600">
-            Chưa có phân công. Chỉ gán sau khi chính sách GPS của địa điểm đã
-            được thiết lập.
-          </p>
-        ) : null}
-        <ul className="mt-3 grid gap-3 sm:grid-cols-2" role="list">
-          {rows.map((assignment) => (
-            <AssignmentHistoryItem
-              assignment={assignment}
-              key={assignment.id}
-            />
-          ))}
-        </ul>
-      </div>
+      {historyRows.length > 0 ? (
+        <details className="mt-5 rounded-xl border border-neutral-200 p-4">
+          <summary className="cursor-pointer text-sm font-bold text-neutral-800">
+            Lịch sử phân công · {historyRows.length} bản ghi
+          </summary>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2" role="list">
+            {historyRows.map((assignment) => (
+              <AssignmentHistoryItem
+                assignment={assignment}
+                key={assignment.id}
+              />
+            ))}
+          </ul>
+        </details>
+      ) : null}
     </section>
   );
 }

@@ -77,6 +77,124 @@ function mockQueries() {
 }
 
 describe("AttendanceConfigurationWorkspace", () => {
+  it("hides paused worksites until an admin chooses to show them", async () => {
+    mockQueries();
+    listWorksitesMock.mockResolvedValue({
+      data: [
+        { ...worksite, id: "old-site", name: "Old Office", status: "INACTIVE" },
+        worksite,
+      ],
+      meta: { total: 2 },
+    });
+    renderWorkspace();
+    expect(await screen.findByText("Singapore Hub")).toBeDefined();
+    expect(screen.queryByText("Old Office")).toBeNull();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Hiện địa điểm tạm ngưng" }),
+    );
+    expect(await screen.findByText("Old Office")).toBeDefined();
+  });
+
+  it("removes a worksite from the active list while keeping a restore path", async () => {
+    mockQueries();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    let status = "ACTIVE";
+    listWorksitesMock.mockImplementation(async () => ({
+      data: [{ ...worksite, status }],
+      meta: { total: 1 },
+    }));
+    updateWorksiteMock.mockImplementation(async () => {
+      status = "INACTIVE";
+      return { ...worksite, status };
+    });
+    renderWorkspace();
+    await screen.findByText("Singapore Hub");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Xóa khỏi danh sách Singapore Hub" }),
+    );
+    await waitFor(() =>
+      expect(updateWorksiteMock).toHaveBeenCalledWith("worksite-1", {
+        status: "INACTIVE",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByText("Singapore Hub")).toBeNull());
+    fireEvent.click(
+      screen.getByRole("button", { name: "Hiện địa điểm tạm ngưng" }),
+    );
+    expect(await screen.findByText("Singapore Hub")).toBeDefined();
+    expect(confirm).toHaveBeenCalled();
+    confirm.mockRestore();
+  });
+
+  it("edits an office assignment by preparing a new period and can remove its employee", async () => {
+    mockQueries();
+    listPoliciesMock.mockResolvedValue({
+      data: [
+        {
+          id: "policy-1",
+          worksiteId: worksite.id,
+          effectiveFrom: "2026-10-01",
+          effectiveTo: null,
+        },
+      ],
+      meta: { total: 1 },
+    });
+    listEmployeesMock.mockResolvedValue({
+      data: [
+        {
+          id: "employee-1",
+          employeeCode: "CNS-03",
+          fullName: "Đào Nguyên Phương",
+        },
+      ],
+      meta: { total: 1 },
+    });
+    listAssignmentsMock.mockResolvedValue({
+      data: [
+        {
+          id: "assignment-1",
+          employeeId: "employee-1",
+          employeeCode: "CNS-03",
+          employeeName: "Đào Nguyên Phương",
+          worksiteId: worksite.id,
+          worksiteCode: worksite.code,
+          worksiteName: worksite.name,
+          effectiveFrom: "2026-10-01",
+          effectiveTo: null,
+          scheduleCode: "CUSTOM",
+          holidayCalendarCode: "CUSTOM",
+          workDays: [0, 1, 2, 3, 4, 5],
+          startTime: "09:00",
+          endTime: "18:00",
+          holidayDates: [],
+          createdAt: "2026-10-01T00:00:00Z",
+          updatedAt: "2026-10-01T00:00:00Z",
+        },
+      ],
+      meta: { total: 1 },
+    });
+    renderWorkspace();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Sửa lịch CNS-03" }),
+    );
+    expect(
+      (screen.getByLabelText("Nhân viên") as HTMLSelectElement).value,
+    ).toBe("employee-1");
+    expect(
+      (screen.getByLabelText("Giờ bắt đầu") as HTMLInputElement).value,
+    ).toBe("09:00");
+    expect(
+      (screen.getByLabelText("Ngày hiệu lực phân công") as HTMLInputElement)
+        .value,
+    ).toBe("");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Gỡ CNS-03 khỏi văn phòng" }),
+    );
+    expect(
+      await screen.findByLabelText(`Ngày kết thúc phân công ${worksite.code}`),
+    ).toBeDefined();
+  });
+
   it("finds an employee's assignment at another site and ends it with a reason", async () => {
     mockQueries();
     const oldSite = {

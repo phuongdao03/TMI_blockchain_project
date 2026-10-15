@@ -38,7 +38,7 @@ export function AttendanceWorksitePanel({
   isUpdating: boolean;
   onCreate: (input: WorksiteInput) => Promise<unknown>;
   onRetry: () => void;
-  onSelect: (worksiteId: string) => void;
+  onSelect: (worksiteId: string | null) => void;
   onRename: (worksite: AttendanceWorksite, name: string) => Promise<unknown>;
   onToggleActive: (worksite: AttendanceWorksite) => Promise<unknown>;
   selectedWorksiteId: string | null;
@@ -50,7 +50,11 @@ export function AttendanceWorksitePanel({
   const [formError, setFormError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
   const items = worksites.data?.data ?? [];
+  const activeItems = items.filter((item) => item.status === "ACTIVE");
+  const inactiveCount = items.length - activeItems.length;
+  const visibleItems = showInactive ? items : activeItems;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -70,11 +74,23 @@ export function AttendanceWorksitePanel({
   }
 
   async function toggle(worksite: AttendanceWorksite) {
-    const nextState = worksite.status === "ACTIVE" ? "tạm ngưng" : "kích hoạt";
-    if (!window.confirm(`Xác nhận ${nextState} ${worksite.name}?`)) return;
+    const isActive = worksite.status === "ACTIVE";
+    if (
+      !window.confirm(
+        isActive
+          ? `Ẩn ${worksite.name} khỏi danh sách? Nhân viên sẽ không thể chấm công tại đây; lịch sử vẫn được giữ.`
+          : `Khôi phục ${worksite.name} để tiếp tục sử dụng?`,
+      )
+    )
+      return;
     setFormError(null);
     try {
       await onToggleActive(worksite);
+      if (isActive && selectedWorksiteId === worksite.id && !showInactive) {
+        onSelect(
+          activeItems.find((item) => item.id !== worksite.id)?.id ?? null,
+        );
+      }
     } catch {
       setFormError("Không thể cập nhật trạng thái điểm chấm công.");
     }
@@ -118,8 +134,30 @@ export function AttendanceWorksitePanel({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-700">
-            {worksites.data?.meta.total ?? 0} địa điểm
+            {activeItems.length} địa điểm đang dùng
           </span>
+          {inactiveCount > 0 ? (
+            <button
+              aria-expanded={showInactive}
+              className="min-h-11 rounded-xl border border-neutral-300 px-4 text-sm font-semibold text-neutral-800"
+              onClick={() => {
+                if (
+                  showInactive &&
+                  selectedWorksiteId &&
+                  items.find((item) => item.id === selectedWorksiteId)
+                    ?.status === "INACTIVE"
+                ) {
+                  onSelect(activeItems[0]?.id ?? null);
+                }
+                setShowInactive((current) => !current);
+              }}
+              type="button"
+            >
+              {showInactive
+                ? "Ẩn địa điểm tạm ngưng"
+                : "Hiện địa điểm tạm ngưng"}
+            </button>
+          ) : null}
           {items.length > 0 ? (
             <button
               aria-expanded={showCreate}
@@ -213,22 +251,28 @@ export function AttendanceWorksitePanel({
               </button>
             </div>
           ) : null}
-          {!worksites.isPending && !worksites.isError && items.length === 0 ? (
+          {!worksites.isPending &&
+          !worksites.isError &&
+          visibleItems.length === 0 ? (
             <div className="flex min-h-44 flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 p-5 text-center">
               <Building2
                 aria-hidden="true"
                 className="size-7 text-neutral-400"
               />
               <p className="mt-3 text-sm font-bold text-neutral-800">
-                Chưa có điểm chấm công
+                {items.length === 0
+                  ? "Chưa có điểm chấm công"
+                  : "Không có địa điểm đang hoạt động"}
               </p>
               <p className="mt-1 text-sm text-neutral-600">
-                Tạo địa điểm đầu tiên ở biểu mẫu bên trái.
+                {items.length === 0
+                  ? "Tạo địa điểm đầu tiên ở biểu mẫu bên trái."
+                  : "Hiện địa điểm tạm ngưng để khôi phục khi cần."}
               </p>
             </div>
           ) : null}
           <ul className="grid gap-3 sm:grid-cols-2" role="list">
-            {items.map((worksite) => {
+            {visibleItems.map((worksite) => {
               const selected = worksite.id === selectedWorksiteId;
               const isActive = worksite.status === "ACTIVE";
               return (
@@ -274,14 +318,14 @@ export function AttendanceWorksitePanel({
                           <Pencil aria-hidden="true" className="size-4" /> Sửa
                         </button>
                         <button
-                          aria-label={`${isActive ? "Tạm ngưng" : "Kích hoạt"} ${worksite.name}`}
+                          aria-label={`${isActive ? "Xóa khỏi danh sách" : "Khôi phục"} ${worksite.name}`}
                           className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-neutral-200 px-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-400 hover:text-neutral-950 disabled:opacity-50"
                           disabled={isUpdating}
                           onClick={() => void toggle(worksite)}
                           type="button"
                         >
                           <Power aria-hidden="true" className="size-4" />{" "}
-                          {isActive ? "Tạm ngưng" : "Kích hoạt"}
+                          {isActive ? "Xóa khỏi danh sách" : "Khôi phục"}
                         </button>
                       </div>
                     </div>

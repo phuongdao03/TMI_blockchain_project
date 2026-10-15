@@ -32,7 +32,7 @@ export function AttendanceConfigurationWorkspace() {
   const worksiteRows = worksites.data?.data ?? [];
   const selectedWorksite =
     worksiteRows.find((item) => item.id === selectedWorksiteId) ??
-    worksiteRows[0] ??
+    worksiteRows.find((item) => item.status === "ACTIVE") ??
     null;
   const resolvedSelectedWorksiteId = selectedWorksite?.id ?? null;
   const policies = useQuery({
