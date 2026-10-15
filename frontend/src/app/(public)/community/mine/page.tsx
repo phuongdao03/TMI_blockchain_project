@@ -13,7 +13,10 @@ export const metadata: Metadata = {
 export default async function CommunityMinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string | string[]; page?: string | string[] }>;
+  searchParams: Promise<{
+    status?: string | string[];
+    page?: string | string[];
+  }>;
 }) {
   const authState = await getServerAuthState();
   const input = await searchParams;
@@ -37,9 +40,18 @@ function one(value: string | string[] | undefined): string | undefined {
 
 function parsePage(value: string | undefined): number {
   const page = Number(value);
-  return Number.isFinite(page) ? Math.max(1, Math.min(10_000, Math.floor(page))) : 1;
+  return Number.isFinite(page)
+    ? Math.max(1, Math.min(10_000, Math.floor(page)))
+    : 1;
 }
 
-function isOwnerStatus(value: string | undefined): value is CommunityOwnerPostStatus {
-  return value === "DRAFT" || value === "PENDING" || value === "PUBLISHED" || value === "REJECTED";
+function isOwnerStatus(
+  value: string | undefined,
+): value is CommunityOwnerPostStatus {
+  return (
+    value === "DRAFT" ||
+    value === "PENDING" ||
+    value === "PUBLISHED" ||
+    value === "REJECTED"
+  );
 }

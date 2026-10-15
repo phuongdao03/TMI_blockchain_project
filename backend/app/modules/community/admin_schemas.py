@@ -107,10 +107,7 @@ class CommunityCategoryPatchRequest(CommunitySchema):
         fields = self.model_fields_set - {"reason"}
         if not fields:
             raise ValueError("At least one category field must be provided.")
-        if any(
-            getattr(self, field) is None
-            for field in fields - {"icon"}
-        ):
+        if any(getattr(self, field) is None for field in fields - {"icon"}):
             raise ValueError("Only icon may be explicitly cleared.")
         if self.slug is not None and not _CATEGORY_SLUG.fullmatch(self.slug):
             raise ValueError(

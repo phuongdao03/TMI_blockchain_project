@@ -59,9 +59,9 @@ describe("CommunityModerationQueue", () => {
     ).toBeDefined();
     expect(screen.getByText("Nguyễn Minh An")).toBeDefined();
     expect(
-      screen.getByRole("button", { name: "Duyệt và đăng bài" }).hasAttribute(
-        "disabled",
-      ),
+      screen
+        .getByRole("button", { name: "Duyệt và đăng bài" })
+        .hasAttribute("disabled"),
     ).toBe(true);
 
     await user.type(

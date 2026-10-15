@@ -16,7 +16,9 @@ const api = vi.hoisted(() => ({
   bookmarkPost: vi.fn(),
   unbookmarkPost: vi.fn(),
 }));
-const auth = vi.hoisted(() => ({ user: { id: "viewer-1" } as { id: string } | null }));
+const auth = vi.hoisted(() => ({
+  user: { id: "viewer-1" } as { id: string } | null,
+}));
 
 vi.mock("@/lib/api/client", () => ({ communityApi: api }));
 vi.mock("@/lib/auth/user-context", () => ({
@@ -128,20 +130,26 @@ describe("CommunityPostEngagement", () => {
     const user = userEvent.setup();
     renderEngagement();
 
-    expect(await screen.findByText("Chia sẻ hay <script>không chạy</script>")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Lan Anh" }).getAttribute("href")).toBe(
-      "/community/members/lan-anh",
-    );
+    expect(
+      await screen.findByText("Chia sẻ hay <script>không chạy</script>"),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Lan Anh" }).getAttribute("href"),
+    ).toBe("/community/members/lan-anh");
     expect(screen.getByText("Mình cũng từng ghé nơi này.")).toBeDefined();
     expect(document.querySelector("script")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Thích bài viết" }));
-    expect(await screen.findByRole("button", { name: "Bỏ thích bài viết" })).toBeDefined();
+    expect(
+      await screen.findByRole("button", { name: "Bỏ thích bài viết" }),
+    ).toBeDefined();
     expect(api.likePost).toHaveBeenCalledWith("post-1");
     expect(screen.getByText("11 lượt thích")).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Lưu bài viết" }));
-    expect(await screen.findByRole("button", { name: "Đã lưu bài viết" })).toBeDefined();
+    expect(
+      await screen.findByRole("button", { name: "Đã lưu bài viết" }),
+    ).toBeDefined();
     expect(api.bookmarkPost).toHaveBeenCalledWith("post-1");
   });
 
@@ -149,7 +157,10 @@ describe("CommunityPostEngagement", () => {
     const user = userEvent.setup();
     renderEngagement();
 
-    await user.type(await screen.findByLabelText("Bình luận của bạn"), "Ý kiến mới");
+    await user.type(
+      await screen.findByLabelText("Bình luận của bạn"),
+      "Ý kiến mới",
+    );
     await user.click(screen.getByRole("button", { name: "Gửi bình luận" }));
 
     await waitFor(() =>
@@ -159,11 +170,16 @@ describe("CommunityPostEngagement", () => {
     );
     expect(await screen.findByText("Ý kiến mới")).toBeDefined();
 
-    const originalRoot = screen.getByText("Chia sẻ hay <script>không chạy</script>").closest("article");
+    const originalRoot = screen
+      .getByText("Chia sẻ hay <script>không chạy</script>")
+      .closest("article");
     expect(originalRoot).not.toBeNull();
     expect(screen.getByText("Mình cũng từng ghé nơi này.")).toBeDefined();
     await user.click(screen.getByRole("button", { name: "Trả lời Minh An" }));
-    await user.type(await screen.findByLabelText("Nội dung trả lời"), "Một phản hồi");
+    await user.type(
+      await screen.findByLabelText("Nội dung trả lời"),
+      "Một phản hồi",
+    );
     await user.click(screen.getByRole("button", { name: "Gửi trả lời" }));
 
     await waitFor(() =>
@@ -179,11 +195,19 @@ describe("CommunityPostEngagement", () => {
     const user = userEvent.setup();
     renderEngagement();
 
-    expect(await screen.findByText("Chia sẻ hay <script>không chạy</script>")).toBeDefined();
-    expect(screen.getAllByRole("button", { name: "Chỉnh sửa bình luận" })).toHaveLength(1);
-    expect(screen.getAllByRole("button", { name: "Xóa bình luận" })).toHaveLength(1);
+    expect(
+      await screen.findByText("Chia sẻ hay <script>không chạy</script>"),
+    ).toBeDefined();
+    expect(
+      screen.getAllByRole("button", { name: "Chỉnh sửa bình luận" }),
+    ).toHaveLength(1);
+    expect(
+      screen.getAllByRole("button", { name: "Xóa bình luận" }),
+    ).toHaveLength(1);
 
-    await user.click(screen.getByRole("button", { name: "Chỉnh sửa bình luận" }));
+    await user.click(
+      screen.getByRole("button", { name: "Chỉnh sửa bình luận" }),
+    );
     const editor = screen.getByRole("textbox", { name: "Chỉnh sửa bình luận" });
     await user.clear(editor);
     await user.type(editor, "Nội dung đã chỉnh sửa");
@@ -201,7 +225,9 @@ describe("CommunityPostEngagement", () => {
     expect(await screen.findByText("Bình luận đã bị xóa.")).toBeDefined();
     expect(screen.getByText("Mình cũng từng ghé nơi này.")).toBeDefined();
     expect(screen.queryByRole("link", { name: "Lan Anh" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Chỉnh sửa bình luận" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Chỉnh sửa bình luận" }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: "Xóa bình luận" })).toBeNull();
   });
 
@@ -209,7 +235,9 @@ describe("CommunityPostEngagement", () => {
     auth.user = null;
     renderEngagement();
 
-    expect(await screen.findByRole("link", { name: "Đăng nhập để tham gia" })).toBeDefined();
+    expect(
+      await screen.findByRole("link", { name: "Đăng nhập để tham gia" }),
+    ).toBeDefined();
     expect(screen.queryByRole("button", { name: "Gửi bình luận" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Thích bài viết" })).toBeNull();
   });

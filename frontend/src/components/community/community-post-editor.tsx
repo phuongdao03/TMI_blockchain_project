@@ -1,9 +1,32 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Bold, Heading2, Italic, Link2 as LinkIcon, List, ListOrdered, LoaderCircle, Quote, Redo2, Save, Send, Undo2, Eye, Pencil } from "lucide-react";
+import {
+  ArrowLeft,
+  Bold,
+  Heading2,
+  Italic,
+  Link2 as LinkIcon,
+  List,
+  ListOrdered,
+  LoaderCircle,
+  Quote,
+  Redo2,
+  Save,
+  Send,
+  Undo2,
+  Eye,
+  Pencil,
+} from "lucide-react";
 import Link from "next/link";
-import { startTransition, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  startTransition,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { CommunityMarkdown } from "@/components/community/community-markdown";
 import { CommunityPostImages } from "@/components/community/community-post-images";
@@ -35,7 +58,9 @@ export function CommunityPostEditor({
   const [categoryId, setCategoryId] = useState("");
   const [relatedWorkSearch, setRelatedWorkSearch] = useState("");
   const [relatedWorkQuery, setRelatedWorkQuery] = useState("");
-  const [relatedWork, setRelatedWork] = useState<CommunityRelatedWork | null>(initialRelatedWork ?? null);
+  const [relatedWork, setRelatedWork] = useState<CommunityRelatedWork | null>(
+    initialRelatedWork ?? null,
+  );
   const [imageMediaIds, setImageMediaIds] = useState<string[]>([]);
   const [hasQueuedImages, setHasQueuedImages] = useState(false);
   const [uploaderSession, setUploaderSession] = useState(0);
@@ -47,7 +72,9 @@ export function CommunityPostEditor({
   const [previewMode, setPreviewMode] = useState(false);
   const [ownerLoadApplied, setOwnerLoadApplied] = useState(false);
   const [canEditLoadedPost, setCanEditLoadedPost] = useState(true);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [autoSaveStatus, setAutoSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   const [autoSaveRevision, setAutoSaveRevision] = useState(0);
   const [historyCursor, setHistoryCursor] = useState({ index: 0, length: 1 });
   const editorRef = useRef<HTMLTextAreaElement>(null);
@@ -64,7 +91,9 @@ export function CommunityPostEditor({
     if (!ownerPost.data || ownerLoadApplied) return;
     startTransition(() => {
       const loaded = ownerPost.data!;
-      setCanEditLoadedPost(loaded.status === "DRAFT" || loaded.status === "REJECTED");
+      setCanEditLoadedPost(
+        loaded.status === "DRAFT" || loaded.status === "REJECTED",
+      );
       setTitle(loaded.title);
       setContent(loaded.content);
       setCategoryId(loaded.category.id);
@@ -73,14 +102,16 @@ export function CommunityPostEditor({
       setImageMediaIds(loaded.images.map((image) => image.id));
       setDraft(loaded);
       lastAutoSaveAttemptRef.current = null;
-      setSavedInput(snapshotInput({
-        title: loaded.title,
-        content: loaded.content,
-        categoryId: loaded.category.id,
-        tags: loaded.tags.map((tag) => tag.name),
-        relatedWorkId: loaded.relatedWork?.id ?? null,
-        imageMediaIds: loaded.images.map((image) => image.id),
-      }));
+      setSavedInput(
+        snapshotInput({
+          title: loaded.title,
+          content: loaded.content,
+          categoryId: loaded.category.id,
+          tags: loaded.tags.map((tag) => tag.name),
+          relatedWorkId: loaded.relatedWork?.id ?? null,
+          imageMediaIds: loaded.images.map((image) => image.id),
+        }),
+      );
       historyRef.current = { values: [loaded.content], index: 0 };
       setHistoryCursor({ index: 0, length: 1 });
       setOwnerLoadApplied(true);
@@ -88,26 +119,31 @@ export function CommunityPostEditor({
   }, [ownerPost.data, ownerLoadApplied]);
   const relatedWorks = useQuery({
     queryKey: ["community", "public-work-search", relatedWorkQuery],
-    queryFn: () => publicApi.works({
-      query: relatedWorkQuery,
-      page: 1,
-      pageSize: 6,
-      sort: "newest",
-    }),
+    queryFn: () =>
+      publicApi.works({
+        query: relatedWorkQuery,
+        page: 1,
+        pageSize: 6,
+        sort: "newest",
+      }),
     enabled: relatedWorkQuery.length >= 2,
   });
-  const input = useMemo<CommunityPostInput>(() => ({
-    title: title.trim(),
-    content: content.trim(),
-    categoryId,
-    ...(tags.length ? { tags } : {}),
-    relatedWorkId: relatedWork?.id ?? null,
-    imageMediaIds,
-  }), [categoryId, content, imageMediaIds, relatedWork?.id, tags, title]);
+  const input = useMemo<CommunityPostInput>(
+    () => ({
+      title: title.trim(),
+      content: content.trim(),
+      categoryId,
+      ...(tags.length ? { tags } : {}),
+      relatedWorkId: relatedWork?.id ?? null,
+      imageMediaIds,
+    }),
+    [categoryId, content, imageMediaIds, relatedWork?.id, tags, title],
+  );
   const valid = Boolean(input.title && input.content && input.categoryId);
   const changedSinceSave = !sameInput(input, savedInput);
   const submitted = draft?.status === "PENDING";
-  const ownerLoading = Boolean(postId) && !ownerLoadApplied && ownerPost.isPending;
+  const ownerLoading =
+    Boolean(postId) && !ownerLoadApplied && ownerPost.isPending;
   const ownerNotFoundOrFailed = Boolean(postId) && ownerPost.isError;
 
   function setEditorContent(next: string) {
@@ -122,13 +158,25 @@ export function CommunityPostEditor({
 
   function moveEditorHistory(direction: -1 | 1) {
     const history = historyRef.current;
-    const index = Math.max(0, Math.min(history.values.length - 1, history.index + direction));
+    const index = Math.max(
+      0,
+      Math.min(history.values.length - 1, history.index + direction),
+    );
     historyRef.current = { ...history, index };
     setHistoryCursor({ index, length: history.values.length });
     setContent(history.values[index] ?? "");
   }
 
-  function formatSelection(kind: "heading" | "bold" | "italic" | "bullet" | "numbered" | "quote" | "link") {
+  function formatSelection(
+    kind:
+      | "heading"
+      | "bold"
+      | "italic"
+      | "bullet"
+      | "numbered"
+      | "quote"
+      | "link",
+  ) {
     const editor = editorRef.current;
     const start = editor?.selectionStart ?? content.length;
     const end = editor?.selectionEnd ?? start;
@@ -137,21 +185,44 @@ export function CommunityPostEditor({
     if (kind === "heading") replacement = `## ${selected || "Tiêu đề"}`;
     if (kind === "bold") replacement = `**${replacement}**`;
     if (kind === "italic") replacement = `*${replacement}*`;
-    if (kind === "bullet") replacement = (selected || "Mục danh sách").split("\n").map((line) => `- ${line}`).join("\n");
-    if (kind === "numbered") replacement = (selected || "Mục danh sách").split("\n").map((line, index) => `${index + 1}. ${line}`).join("\n");
-    if (kind === "quote") replacement = (selected || "Trích dẫn").split("\n").map((line) => `> ${line}`).join("\n");
+    if (kind === "bullet")
+      replacement = (selected || "Mục danh sách")
+        .split("\n")
+        .map((line) => `- ${line}`)
+        .join("\n");
+    if (kind === "numbered")
+      replacement = (selected || "Mục danh sách")
+        .split("\n")
+        .map((line, index) => `${index + 1}. ${line}`)
+        .join("\n");
+    if (kind === "quote")
+      replacement = (selected || "Trích dẫn")
+        .split("\n")
+        .map((line) => `> ${line}`)
+        .join("\n");
     if (kind === "link") replacement = `[${selected || "văn bản liên kết"}](/)`;
     const next = `${content.slice(0, start)}${replacement}${content.slice(end)}`;
     setEditorContent(next);
     requestAnimationFrame(() => {
       editorRef.current?.focus();
-      editorRef.current?.setSelectionRange(start + replacement.length, start + replacement.length);
+      editorRef.current?.setSelectionRange(
+        start + replacement.length,
+        start + replacement.length,
+      );
     });
   }
 
   function addTag() {
     const tag = tagInput.trim().replace(/\s+/g, " ");
-    if (!tag || tag.length > 40 || tags.some((existing) => existing.toLocaleLowerCase() === tag.toLocaleLowerCase()) || tags.length >= 10) return;
+    if (
+      !tag ||
+      tag.length > 40 ||
+      tags.some(
+        (existing) => existing.toLocaleLowerCase() === tag.toLocaleLowerCase(),
+      ) ||
+      tags.length >= 10
+    )
+      return;
     setTags((current) => [...current, tag]);
     setTagInput("");
   }
@@ -176,9 +247,15 @@ export function CommunityPostEditor({
 
   useEffect(() => {
     if (
-      !valid || !changedSinceSave || busy || hasQueuedImages || submitted ||
-      !canEditLoadedPost || (postId && !ownerLoadApplied)
-    ) return;
+      !valid ||
+      !changedSinceSave ||
+      busy ||
+      hasQueuedImages ||
+      submitted ||
+      !canEditLoadedPost ||
+      (postId && !ownerLoadApplied)
+    )
+      return;
     const snapshot = snapshotInput(input);
     const attemptKey = JSON.stringify(snapshot);
     if (lastAutoSaveAttemptRef.current === attemptKey) return;
@@ -294,7 +371,8 @@ export function CommunityPostEditor({
             {postId ? "Chỉnh sửa bài viết" : "Viết bài mới"}
           </h1>
           <p className="mt-3 text-sm leading-6 text-[var(--theme-muted)] sm:text-base">
-            Bài viết được lưu nháp trước và chỉ xuất hiện sau khi được kiểm duyệt.
+            Bài viết được lưu nháp trước và chỉ xuất hiện sau khi được kiểm
+            duyệt.
           </p>
         </header>
 
@@ -333,35 +411,66 @@ export function CommunityPostEditor({
         ) : null}
 
         {ownerLoading ? (
-          <p aria-busy="true" className="mt-7 flex items-center gap-2 text-sm text-[var(--theme-muted)]" role="status">
-            <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />Đang tải bài viết của bạn…
+          <p
+            aria-busy="true"
+            className="mt-7 flex items-center gap-2 text-sm text-[var(--theme-muted)]"
+            role="status"
+          >
+            <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+            Đang tải bài viết của bạn…
           </p>
         ) : null}
         {ownerNotFoundOrFailed ? (
-          <div className="mt-7 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900" role="alert">
-            Không thể tải bài viết để chỉnh sửa. Bài viết có thể không thuộc về bạn hoặc đã bị xóa.
-            <Link className="ml-2 font-bold underline" href="/community/mine">Quay lại bài viết của tôi</Link>
+          <div
+            className="mt-7 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900"
+            role="alert"
+          >
+            Không thể tải bài viết để chỉnh sửa. Bài viết có thể không thuộc về
+            bạn hoặc đã bị xóa.
+            <Link className="ml-2 font-bold underline" href="/community/mine">
+              Quay lại bài viết của tôi
+            </Link>
           </div>
         ) : null}
         {postId && ownerLoadApplied && !canEditLoadedPost ? (
-          <p className="mt-7 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-sm leading-6 text-[var(--theme-muted)]" role="status">
-            Bài viết này đang chờ kiểm duyệt hoặc đã xuất bản nên chỉ có thể xem. <Link className="font-bold text-[var(--theme-accent)] underline" href="/community/mine">Quay lại bài viết của tôi</Link>
+          <p
+            className="mt-7 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-sm leading-6 text-[var(--theme-muted)]"
+            role="status"
+          >
+            Bài viết này đang chờ kiểm duyệt hoặc đã xuất bản nên chỉ có thể
+            xem.{" "}
+            <Link
+              className="font-bold text-[var(--theme-accent)] underline"
+              href="/community/mine"
+            >
+              Quay lại bài viết của tôi
+            </Link>
           </p>
         ) : null}
 
         {categories.isPending ? (
-          <p aria-busy="true" className="mt-7 flex items-center gap-2 text-sm text-[var(--theme-muted)]" role="status">
+          <p
+            aria-busy="true"
+            className="mt-7 flex items-center gap-2 text-sm text-[var(--theme-muted)]"
+            role="status"
+          >
             <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
             Đang tải chuyên mục…
           </p>
         ) : null}
         {categories.isError ? (
-          <div className="mt-7 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900" role="alert">
+          <div
+            className="mt-7 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900"
+            role="alert"
+          >
             Không thể tải chuyên mục. Vui lòng tải lại trang.
           </div>
         ) : null}
         {categories.data?.length === 0 ? (
-          <p className="mt-7 rounded-xl border border-[var(--theme-border)] p-4 text-sm text-[var(--theme-muted)]" role="status">
+          <p
+            className="mt-7 rounded-xl border border-[var(--theme-border)] p-4 text-sm text-[var(--theme-muted)]"
+            role="status"
+          >
             Hiện chưa có chuyên mục để đăng bài.
           </p>
         ) : null}
@@ -413,24 +522,101 @@ export function CommunityPostEditor({
             </label>
             <div>
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <label className="block text-sm font-semibold text-[var(--theme-text)]" htmlFor="community-post-content">Nội dung</label>
-                <div aria-label="Chế độ nội dung" className="inline-flex rounded-lg border border-[var(--theme-border)] p-1" role="group">
-                  <button aria-pressed={!previewMode} className="inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]" disabled={!canEditLoadedPost} onClick={() => setPreviewMode(false)} type="button"><Pencil aria-hidden="true" className="size-4" />Soạn thảo</button>
-                  <button aria-pressed={previewMode} className="inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]" onClick={() => setPreviewMode(true)} type="button"><Eye aria-hidden="true" className="size-4" />Xem trước</button>
+                <label
+                  className="block text-sm font-semibold text-[var(--theme-text)]"
+                  htmlFor="community-post-content"
+                >
+                  Nội dung
+                </label>
+                <div
+                  aria-label="Chế độ nội dung"
+                  className="inline-flex rounded-lg border border-[var(--theme-border)] p-1"
+                  role="group"
+                >
+                  <button
+                    aria-pressed={!previewMode}
+                    className="inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                    disabled={!canEditLoadedPost}
+                    onClick={() => setPreviewMode(false)}
+                    type="button"
+                  >
+                    <Pencil aria-hidden="true" className="size-4" />
+                    Soạn thảo
+                  </button>
+                  <button
+                    aria-pressed={previewMode}
+                    className="inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                    onClick={() => setPreviewMode(true)}
+                    type="button"
+                  >
+                    <Eye aria-hidden="true" className="size-4" />
+                    Xem trước
+                  </button>
                 </div>
               </div>
               {!previewMode ? (
                 <>
-                  <div aria-label="Định dạng Markdown" className="mt-2 flex flex-wrap gap-1 rounded-t-xl border border-b-0 border-[var(--theme-border)] bg-[var(--theme-elevated)] p-2" role="toolbar">
-                    <ToolbarButton label="Tiêu đề cấp 2" onClick={() => formatSelection("heading")}><Heading2 aria-hidden="true" className="size-4" /></ToolbarButton>
-                    <ToolbarButton label="In đậm" onClick={() => formatSelection("bold")}><Bold aria-hidden="true" className="size-4" /></ToolbarButton>
-                    <ToolbarButton label="In nghiêng" onClick={() => formatSelection("italic")}><Italic aria-hidden="true" className="size-4" /></ToolbarButton>
-                    <ToolbarButton label="Danh sách" onClick={() => formatSelection("bullet")}><List aria-hidden="true" className="size-4" /></ToolbarButton>
-                    <ToolbarButton label="Danh sách có thứ tự" onClick={() => formatSelection("numbered")}><ListOrdered aria-hidden="true" className="size-4" /></ToolbarButton>
-                    <ToolbarButton label="Trích dẫn" onClick={() => formatSelection("quote")}><Quote aria-hidden="true" className="size-4" /></ToolbarButton>
-                    <ToolbarButton label="Chèn liên kết nội bộ" onClick={() => formatSelection("link")}><LinkIcon aria-hidden="true" className="size-4" /></ToolbarButton>
-                    <ToolbarButton disabled={historyCursor.index <= 0} label="Hoàn tác" onClick={() => moveEditorHistory(-1)}><Undo2 aria-hidden="true" className="size-4" /></ToolbarButton>
-                    <ToolbarButton disabled={historyCursor.index >= historyCursor.length - 1} label="Làm lại" onClick={() => moveEditorHistory(1)}><Redo2 aria-hidden="true" className="size-4" /></ToolbarButton>
+                  <div
+                    aria-label="Định dạng Markdown"
+                    className="mt-2 flex flex-wrap gap-1 rounded-t-xl border border-b-0 border-[var(--theme-border)] bg-[var(--theme-elevated)] p-2"
+                    role="toolbar"
+                  >
+                    <ToolbarButton
+                      label="Tiêu đề cấp 2"
+                      onClick={() => formatSelection("heading")}
+                    >
+                      <Heading2 aria-hidden="true" className="size-4" />
+                    </ToolbarButton>
+                    <ToolbarButton
+                      label="In đậm"
+                      onClick={() => formatSelection("bold")}
+                    >
+                      <Bold aria-hidden="true" className="size-4" />
+                    </ToolbarButton>
+                    <ToolbarButton
+                      label="In nghiêng"
+                      onClick={() => formatSelection("italic")}
+                    >
+                      <Italic aria-hidden="true" className="size-4" />
+                    </ToolbarButton>
+                    <ToolbarButton
+                      label="Danh sách"
+                      onClick={() => formatSelection("bullet")}
+                    >
+                      <List aria-hidden="true" className="size-4" />
+                    </ToolbarButton>
+                    <ToolbarButton
+                      label="Danh sách có thứ tự"
+                      onClick={() => formatSelection("numbered")}
+                    >
+                      <ListOrdered aria-hidden="true" className="size-4" />
+                    </ToolbarButton>
+                    <ToolbarButton
+                      label="Trích dẫn"
+                      onClick={() => formatSelection("quote")}
+                    >
+                      <Quote aria-hidden="true" className="size-4" />
+                    </ToolbarButton>
+                    <ToolbarButton
+                      label="Chèn liên kết nội bộ"
+                      onClick={() => formatSelection("link")}
+                    >
+                      <LinkIcon aria-hidden="true" className="size-4" />
+                    </ToolbarButton>
+                    <ToolbarButton
+                      disabled={historyCursor.index <= 0}
+                      label="Hoàn tác"
+                      onClick={() => moveEditorHistory(-1)}
+                    >
+                      <Undo2 aria-hidden="true" className="size-4" />
+                    </ToolbarButton>
+                    <ToolbarButton
+                      disabled={historyCursor.index >= historyCursor.length - 1}
+                      label="Làm lại"
+                      onClick={() => moveEditorHistory(1)}
+                    >
+                      <Redo2 aria-hidden="true" className="size-4" />
+                    </ToolbarButton>
                   </div>
                   <textarea
                     className={`${controlClass} mt-0 min-h-64 resize-y rounded-t-none py-3 leading-7`}
@@ -444,8 +630,18 @@ export function CommunityPostEditor({
                   />
                 </>
               ) : (
-                <div aria-label="Bản xem trước nội dung" className="mt-2 min-h-64 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6" role="region">
-                  {content.trim() ? <CommunityMarkdown content={content} /> : <p className="text-sm text-[var(--theme-muted)]">Nội dung xem trước sẽ hiển thị tại đây.</p>}
+                <div
+                  aria-label="Bản xem trước nội dung"
+                  className="mt-2 min-h-64 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
+                  role="region"
+                >
+                  {content.trim() ? (
+                    <CommunityMarkdown content={content} />
+                  ) : (
+                    <p className="text-sm text-[var(--theme-muted)]">
+                      Nội dung xem trước sẽ hiển thị tại đây.
+                    </p>
+                  )}
                 </div>
               )}
               <span
@@ -457,13 +653,79 @@ export function CommunityPostEditor({
               </span>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[var(--theme-text)]" htmlFor="community-post-tags">Thẻ chủ đề <span className="font-normal text-[var(--theme-muted)]">(tối đa 10)</span></label>
+              <label
+                className="block text-sm font-semibold text-[var(--theme-text)]"
+                htmlFor="community-post-tags"
+              >
+                Thẻ chủ đề{" "}
+                <span className="font-normal text-[var(--theme-muted)]">
+                  (tối đa 10)
+                </span>
+              </label>
               <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                <input autoComplete="off" className={searchControlClass} disabled={busy !== null || submitted || !canEditLoadedPost || tags.length >= 10} id="community-post-tags" maxLength={40} onChange={(event) => setTagInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addTag(); } }} placeholder="Ví dụ: làng nghề" value={tagInput} />
-                <button className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:opacity-50" disabled={!tagInput.trim() || tags.length >= 10 || busy !== null || submitted || !canEditLoadedPost} onClick={addTag} type="button">Thêm thẻ</button>
+                <input
+                  autoComplete="off"
+                  className={searchControlClass}
+                  disabled={
+                    busy !== null ||
+                    submitted ||
+                    !canEditLoadedPost ||
+                    tags.length >= 10
+                  }
+                  id="community-post-tags"
+                  maxLength={40}
+                  onChange={(event) => setTagInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      addTag();
+                    }
+                  }}
+                  placeholder="Ví dụ: làng nghề"
+                  value={tagInput}
+                />
+                <button
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:opacity-50"
+                  disabled={
+                    !tagInput.trim() ||
+                    tags.length >= 10 ||
+                    busy !== null ||
+                    submitted ||
+                    !canEditLoadedPost
+                  }
+                  onClick={addTag}
+                  type="button"
+                >
+                  Thêm thẻ
+                </button>
               </div>
-              <ul aria-label="Thẻ đã chọn" className="mt-3 flex flex-wrap gap-2">
-                {tags.map((tag) => <li className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] pl-3 pr-1 text-sm text-[var(--theme-text)]" key={tag}>{tag}<button aria-label={`Xóa thẻ ${tag}`} className="grid size-8 place-items-center rounded-full text-[var(--theme-muted)] hover:bg-[var(--theme-elevated)] focus-visible:outline-2 focus-visible:outline-[var(--theme-accent)] disabled:opacity-50" disabled={busy !== null || submitted || !canEditLoadedPost} onClick={() => setTags((current) => current.filter((item) => item !== tag))} type="button">×</button></li>)}
+              <ul
+                aria-label="Thẻ đã chọn"
+                className="mt-3 flex flex-wrap gap-2"
+              >
+                {tags.map((tag) => (
+                  <li
+                    className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] pl-3 pr-1 text-sm text-[var(--theme-text)]"
+                    key={tag}
+                  >
+                    {tag}
+                    <button
+                      aria-label={`Xóa thẻ ${tag}`}
+                      className="grid size-8 place-items-center rounded-full text-[var(--theme-muted)] hover:bg-[var(--theme-elevated)] focus-visible:outline-2 focus-visible:outline-[var(--theme-accent)] disabled:opacity-50"
+                      disabled={
+                        busy !== null || submitted || !canEditLoadedPost
+                      }
+                      onClick={() =>
+                        setTags((current) =>
+                          current.filter((item) => item !== tag),
+                        )
+                      }
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
               </ul>
             </div>
             <section
@@ -474,19 +736,26 @@ export function CommunityPostEditor({
                 className="text-sm font-bold text-[var(--theme-text)]"
                 id="community-related-work-heading"
               >
-                Tác phẩm liên quan <span className="font-normal text-[var(--theme-muted)]">(không bắt buộc)</span>
+                Tác phẩm liên quan{" "}
+                <span className="font-normal text-[var(--theme-muted)]">
+                  (không bắt buộc)
+                </span>
               </h2>
               <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
-                Tìm trong danh mục tác phẩm đã xuất bản rồi chọn kết quả. Không nhập liên kết hoặc mã tác phẩm.
+                Tìm trong danh mục tác phẩm đã xuất bản rồi chọn kết quả. Không
+                nhập liên kết hoặc mã tác phẩm.
               </p>
               <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                <label className="sr-only" htmlFor="community-related-work-search">
+                <label
+                  className="sr-only"
+                  htmlFor="community-related-work-search"
+                >
                   Tìm tác phẩm đã xuất bản
                 </label>
                 <input
                   autoComplete="off"
                   className={searchControlClass}
-                disabled={busy !== null || submitted || !canEditLoadedPost}
+                  disabled={busy !== null || submitted || !canEditLoadedPost}
                   id="community-related-work-search"
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
@@ -502,7 +771,12 @@ export function CommunityPostEditor({
                 />
                 <button
                   className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={relatedWorkSearch.trim().length < 2 || busy !== null || submitted || !canEditLoadedPost}
+                  disabled={
+                    relatedWorkSearch.trim().length < 2 ||
+                    busy !== null ||
+                    submitted ||
+                    !canEditLoadedPost
+                  }
                   onClick={searchRelatedWorks}
                   type="button"
                 >
@@ -512,7 +786,8 @@ export function CommunityPostEditor({
               {relatedWork ? (
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--theme-border)] p-3">
                   <p className="text-sm text-[var(--theme-text)]" role="status">
-                    Đã liên kết: <span className="font-semibold">{relatedWork.title}</span>
+                    Đã liên kết:{" "}
+                    <span className="font-semibold">{relatedWork.title}</span>
                   </p>
                   <button
                     className="min-h-10 rounded-lg px-3 text-sm font-semibold text-[var(--theme-muted)] underline underline-offset-4 hover:text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:opacity-50"
@@ -527,31 +802,68 @@ export function CommunityPostEditor({
               {relatedWorkQuery ? (
                 <div aria-live="polite" className="mt-3">
                   {relatedWorks.isFetching ? (
-                    <p className="text-sm text-[var(--theme-muted)]" role="status">Đang tìm tác phẩm công khai…</p>
+                    <p
+                      className="text-sm text-[var(--theme-muted)]"
+                      role="status"
+                    >
+                      Đang tìm tác phẩm công khai…
+                    </p>
                   ) : null}
                   {relatedWorks.isError ? (
-                    <div className="flex flex-wrap items-center gap-3" role="alert">
-                      <p className="text-sm text-red-800">Chưa thể tìm tác phẩm. Vui lòng thử lại.</p>
-                      <button className="text-sm font-bold underline underline-offset-4" onClick={() => void relatedWorks.refetch()} type="button">Thử lại</button>
+                    <div
+                      className="flex flex-wrap items-center gap-3"
+                      role="alert"
+                    >
+                      <p className="text-sm text-red-800">
+                        Chưa thể tìm tác phẩm. Vui lòng thử lại.
+                      </p>
+                      <button
+                        className="text-sm font-bold underline underline-offset-4"
+                        onClick={() => void relatedWorks.refetch()}
+                        type="button"
+                      >
+                        Thử lại
+                      </button>
                     </div>
                   ) : null}
                   {relatedWorks.data?.data.length === 0 ? (
-                    <p className="text-sm text-[var(--theme-muted)]" role="status">Không tìm thấy tác phẩm đã xuất bản phù hợp.</p>
+                    <p
+                      className="text-sm text-[var(--theme-muted)]"
+                      role="status"
+                    >
+                      Không tìm thấy tác phẩm đã xuất bản phù hợp.
+                    </p>
                   ) : null}
                   {relatedWorks.data?.data.length ? (
-                    <ul aria-label="Kết quả tác phẩm công khai" className="mt-2 divide-y divide-[var(--theme-border)] rounded-lg border border-[var(--theme-border)]">
+                    <ul
+                      aria-label="Kết quả tác phẩm công khai"
+                      className="mt-2 divide-y divide-[var(--theme-border)] rounded-lg border border-[var(--theme-border)]"
+                    >
                       {relatedWorks.data.data.map((work) => (
                         <li key={work.id}>
                           <button
                             aria-pressed={relatedWork?.id === work.id}
                             aria-label={`Chọn tác phẩm: ${work.title}`}
                             className="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm font-semibold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)] focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[var(--theme-accent)] disabled:opacity-50"
-                            disabled={busy !== null || submitted || !canEditLoadedPost}
-                            onClick={() => setRelatedWork({ id: work.id, title: work.title, slug: work.slug })}
+                            disabled={
+                              busy !== null || submitted || !canEditLoadedPost
+                            }
+                            onClick={() =>
+                              setRelatedWork({
+                                id: work.id,
+                                title: work.title,
+                                slug: work.slug,
+                              })
+                            }
                             type="button"
                           >
                             <span className="break-words">{work.title}</span>
-                            <span aria-hidden="true" className="shrink-0 text-xs text-[var(--theme-muted)]">{relatedWork?.id === work.id ? "Đã chọn" : "Chọn"}</span>
+                            <span
+                              aria-hidden="true"
+                              className="shrink-0 text-xs text-[var(--theme-muted)]"
+                            >
+                              {relatedWork?.id === work.id ? "Đã chọn" : "Chọn"}
+                            </span>
                           </button>
                         </li>
                       ))}
@@ -568,10 +880,18 @@ export function CommunityPostEditor({
                 className="text-sm font-bold text-[var(--theme-text)]"
                 id="community-post-images-heading"
               >
-                Ảnh đính kèm <span className="font-normal text-[var(--theme-muted)]">(không bắt buộc, tối đa {COMMUNITY_IMAGE_MAX_COUNT} ảnh)</span>
+                Ảnh đính kèm{" "}
+                <span className="font-normal text-[var(--theme-muted)]">
+                  (không bắt buộc, tối đa {COMMUNITY_IMAGE_MAX_COUNT} ảnh)
+                </span>
               </h2>
               <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
-                Chọn JPEG, PNG hoặc WebP tối đa {(COMMUNITY_IMAGE_MAX_BYTES / 1_048_576).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} MB. Ảnh được kiểm tra an toàn trước khi đính kèm.
+                Chọn JPEG, PNG hoặc WebP tối đa{" "}
+                {(COMMUNITY_IMAGE_MAX_BYTES / 1_048_576).toLocaleString(
+                  "vi-VN",
+                  { maximumFractionDigits: 1 },
+                )}{" "}
+                MB. Ảnh được kiểm tra an toàn trước khi đính kèm.
               </p>
               <div className="mt-4">
                 <FileUploader
@@ -580,14 +900,20 @@ export function CommunityPostEditor({
                     allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
                     maxBytes: COMMUNITY_IMAGE_MAX_BYTES,
                   }}
-                disabled={busy !== null || submitted || !canEditLoadedPost}
+                  disabled={busy !== null || submitted || !canEditLoadedPost}
                   key={uploaderSession}
                   label="Ảnh bài viết"
-                  maxFiles={Math.max(0, COMMUNITY_IMAGE_MAX_COUNT - imageMediaIds.length)}
+                  maxFiles={Math.max(
+                    0,
+                    COMMUNITY_IMAGE_MAX_COUNT - imageMediaIds.length,
+                  )}
                   multiple
                   onComplete={(asset) => {
                     setImageMediaIds((current) => {
-                      if (current.includes(asset.id) || current.length >= COMMUNITY_IMAGE_MAX_COUNT) {
+                      if (
+                        current.includes(asset.id) ||
+                        current.length >= COMMUNITY_IMAGE_MAX_COUNT
+                      ) {
                         return current;
                       }
                       return [...current, asset.id];
@@ -598,7 +924,10 @@ export function CommunityPostEditor({
                 />
               </div>
               {hasQueuedImages ? (
-                <p className="mt-3 text-sm font-semibold text-[var(--theme-muted)]" role="status">
+                <p
+                  className="mt-3 text-sm font-semibold text-[var(--theme-muted)]"
+                  role="status"
+                >
                   Tải xong và chờ kiểm tra ảnh trước khi lưu bài viết.
                 </p>
               ) : null}
@@ -618,8 +947,18 @@ export function CommunityPostEditor({
                       <button
                         aria-label={`Đưa ảnh ${index + 1} lên trước`}
                         className="min-h-10 rounded-lg px-3 text-sm font-semibold text-[var(--theme-muted)] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:opacity-50"
-                        disabled={index === 0 || busy !== null || hasQueuedImages || submitted || !canEditLoadedPost}
-                        onClick={() => setImageMediaIds((current) => reorderCommunityImages(current, index, -1))}
+                        disabled={
+                          index === 0 ||
+                          busy !== null ||
+                          hasQueuedImages ||
+                          submitted ||
+                          !canEditLoadedPost
+                        }
+                        onClick={() =>
+                          setImageMediaIds((current) =>
+                            reorderCommunityImages(current, index, -1),
+                          )
+                        }
                         type="button"
                       >
                         Chuyển lên
@@ -627,8 +966,18 @@ export function CommunityPostEditor({
                       <button
                         aria-label={`Đưa ảnh ${index + 1} xuống sau`}
                         className="min-h-10 rounded-lg px-3 text-sm font-semibold text-[var(--theme-muted)] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:opacity-50"
-                        disabled={index === imageMediaIds.length - 1 || busy !== null || hasQueuedImages || submitted || !canEditLoadedPost}
-                        onClick={() => setImageMediaIds((current) => reorderCommunityImages(current, index, 1))}
+                        disabled={
+                          index === imageMediaIds.length - 1 ||
+                          busy !== null ||
+                          hasQueuedImages ||
+                          submitted ||
+                          !canEditLoadedPost
+                        }
+                        onClick={() =>
+                          setImageMediaIds((current) =>
+                            reorderCommunityImages(current, index, 1),
+                          )
+                        }
                         type="button"
                       >
                         Chuyển xuống
@@ -636,8 +985,17 @@ export function CommunityPostEditor({
                       <button
                         aria-label={`Xóa ảnh ${index + 1}`}
                         className="min-h-10 rounded-lg px-3 text-sm font-semibold text-red-700 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:opacity-50"
-                        disabled={busy !== null || hasQueuedImages || submitted || !canEditLoadedPost}
-                        onClick={() => setImageMediaIds((current) => current.filter((id) => id !== mediaId))}
+                        disabled={
+                          busy !== null ||
+                          hasQueuedImages ||
+                          submitted ||
+                          !canEditLoadedPost
+                        }
+                        onClick={() =>
+                          setImageMediaIds((current) =>
+                            current.filter((id) => id !== mediaId),
+                          )
+                        }
                         type="button"
                       >
                         Xóa
@@ -658,17 +1016,42 @@ export function CommunityPostEditor({
               ) : null}
             </section>
             <div className="flex flex-col-reverse gap-3 border-t border-[var(--theme-border)] pt-5 sm:flex-row sm:justify-end">
-              <p aria-live="polite" className="self-center text-sm text-[var(--theme-muted)]" role="status">
-                {!valid ? "Nhập tiêu đề, nội dung và chuyên mục để bật tự lưu." : autoSaveStatus === "saving" ? "Đang tự lưu bản nháp…" : autoSaveStatus === "saved" ? "Bản nháp đã tự lưu." : autoSaveStatus === "error" ? "Chưa thể tự lưu. Hãy thử lại bằng nút lưu bản nháp." : changedSinceSave ? "Thay đổi sẽ tự lưu khi bạn tạm dừng nhập." : ""}
+              <p
+                aria-live="polite"
+                className="self-center text-sm text-[var(--theme-muted)]"
+                role="status"
+              >
+                {!valid
+                  ? "Nhập tiêu đề, nội dung và chuyên mục để bật tự lưu."
+                  : autoSaveStatus === "saving"
+                    ? "Đang tự lưu bản nháp…"
+                    : autoSaveStatus === "saved"
+                      ? "Bản nháp đã tự lưu."
+                      : autoSaveStatus === "error"
+                        ? "Chưa thể tự lưu. Hãy thử lại bằng nút lưu bản nháp."
+                        : changedSinceSave
+                          ? "Thay đổi sẽ tự lưu khi bạn tạm dừng nhập."
+                          : ""}
               </p>
               <button
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--theme-border)] px-5 text-sm font-bold text-[var(--theme-text)] transition hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!valid || !changedSinceSave || busy !== null || autoSaveStatus === "saving" || hasQueuedImages || submitted || !canEditLoadedPost}
+                disabled={
+                  !valid ||
+                  !changedSinceSave ||
+                  busy !== null ||
+                  autoSaveStatus === "saving" ||
+                  hasQueuedImages ||
+                  submitted ||
+                  !canEditLoadedPost
+                }
                 onClick={() => void saveDraft()}
                 type="button"
               >
                 {busy === "save" ? (
-                  <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-4 animate-spin"
+                  />
                 ) : (
                   <Save aria-hidden="true" className="size-4" />
                 )}
@@ -676,11 +1059,21 @@ export function CommunityPostEditor({
               </button>
               <button
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--theme-accent)] px-5 text-sm font-bold text-[var(--theme-accent-contrast)] transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!valid || busy !== null || autoSaveStatus === "saving" || hasQueuedImages || submitted || !canEditLoadedPost}
+                disabled={
+                  !valid ||
+                  busy !== null ||
+                  autoSaveStatus === "saving" ||
+                  hasQueuedImages ||
+                  submitted ||
+                  !canEditLoadedPost
+                }
                 type="submit"
               >
                 {busy === "submit" ? (
-                  <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-4 animate-spin"
+                  />
                 ) : (
                   <Send aria-hidden="true" className="size-4" />
                 )}
@@ -764,7 +1157,10 @@ function reorderCommunityImages(
   const target = index + direction;
   if (target < 0 || target >= imageIds.length) return imageIds;
   const reordered = [...imageIds];
-  [reordered[index], reordered[target]] = [reordered[target]!, reordered[index]!];
+  [reordered[index], reordered[target]] = [
+    reordered[target]!,
+    reordered[index]!,
+  ];
   return reordered;
 }
 

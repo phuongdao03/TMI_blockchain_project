@@ -28,16 +28,24 @@ describe("CommunityMarkdown", () => {
     expect(screen.getByRole("heading", { name: "Câu chuyện" })).toBeDefined();
     expect(screen.getByText("điều hay").tagName).toBe("STRONG");
     expect(screen.getByText("một điều khác").tagName).toBe("EM");
-    expect(screen.getByRole("list", { name: "Danh sách không thứ tự" })).toBeDefined();
-    expect(screen.getByRole("list", { name: "Danh sách có thứ tự" })).toBeDefined();
+    expect(
+      screen.getByRole("list", { name: "Danh sách không thứ tự" }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("list", { name: "Danh sách có thứ tự" }),
+    ).toBeDefined();
     expect(screen.getByRole("blockquote")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Đọc thêm" }).getAttribute("href")).toBe("/works/gom-lang-co");
+    expect(
+      screen.getByRole("link", { name: "Đọc thêm" }).getAttribute("href"),
+    ).toBe("/works/gom-lang-co");
   });
 
   it("renders raw HTML and unsafe URL syntax as text without creating elements or links", () => {
     render(
       <CommunityMarkdown
-        content={'<img src=x onerror=alert(1)>\n\n[javascript](javascript:alert(1))'}
+        content={
+          "<img src=x onerror=alert(1)>\n\n[javascript](javascript:alert(1))"
+        }
       />,
     );
 
@@ -50,7 +58,7 @@ describe("CommunityMarkdown", () => {
   it("does not allow protocol-relative or backslash links", () => {
     render(
       <CommunityMarkdown
-        content={'[ngoài](//evil.test)\n\n[ngoài nữa](/\\evil.test)'}
+        content={"[ngoài](//evil.test)\n\n[ngoài nữa](/\\evil.test)"}
       />,
     );
 

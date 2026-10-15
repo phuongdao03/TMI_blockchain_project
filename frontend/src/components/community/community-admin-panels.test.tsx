@@ -40,14 +40,24 @@ const postReport = {
   resolvedAt: null,
   resolutionAction: null,
   resolutionReason: null,
-  reporter: { id: "reporter-1", username: "hoa", displayName: "Hoa", avatarUrl: null },
+  reporter: {
+    id: "reporter-1",
+    username: "hoa",
+    displayName: "Hoa",
+    avatarUrl: null,
+  },
   targetPreview: {
     type: "POST",
     id: "post-1",
     slug: "quang-cao",
     title: "Bài viết quảng cáo",
     excerpt: "Một đoạn giới thiệu.",
-    author: { id: "author-1", username: "an", displayName: "An", avatarUrl: null },
+    author: {
+      id: "author-1",
+      username: "an",
+      displayName: "An",
+      avatarUrl: null,
+    },
   },
 };
 const category = {
@@ -77,23 +87,46 @@ beforeEach(() => {
   api.resolveReport.mockResolvedValue({ ...postReport, status: "RESOLVED" });
   api.moderationHistory.mockResolvedValue({
     success: true,
-    data: [{
-      id: "event-1",
-      targetType: "POST",
-      targetId: "post-1",
-      action: "POST_HIDDEN",
-      actorId: "admin-1",
-      actor: { id: "admin-1", username: "admin", displayName: "Quản trị viên", avatarUrl: null },
-      reason: "Nội dung vi phạm.",
-      requestId: "req-1",
-      createdAt: "2026-10-14T10:00:00Z",
-    }],
+    data: [
+      {
+        id: "event-1",
+        targetType: "POST",
+        targetId: "post-1",
+        action: "POST_HIDDEN",
+        actorId: "admin-1",
+        actor: {
+          id: "admin-1",
+          username: "admin",
+          displayName: "Quản trị viên",
+          avatarUrl: null,
+        },
+        reason: "Nội dung vi phạm.",
+        requestId: "req-1",
+        createdAt: "2026-10-14T10:00:00Z",
+      },
+    ],
     meta: { requestId: "history-1", page: 1, pageSize: 20, total: 1 },
   });
-  api.hidePost.mockResolvedValue({ targetType: "POST", targetId: "post-1", state: "HIDDEN" });
-  api.restorePost.mockResolvedValue({ targetType: "POST", targetId: "post-1", state: "VISIBLE" });
-  api.hideComment.mockResolvedValue({ targetType: "COMMENT", targetId: "comment-1", state: "HIDDEN" });
-  api.restoreComment.mockResolvedValue({ targetType: "COMMENT", targetId: "comment-1", state: "VISIBLE" });
+  api.hidePost.mockResolvedValue({
+    targetType: "POST",
+    targetId: "post-1",
+    state: "HIDDEN",
+  });
+  api.restorePost.mockResolvedValue({
+    targetType: "POST",
+    targetId: "post-1",
+    state: "VISIBLE",
+  });
+  api.hideComment.mockResolvedValue({
+    targetType: "COMMENT",
+    targetId: "comment-1",
+    state: "HIDDEN",
+  });
+  api.restoreComment.mockResolvedValue({
+    targetType: "COMMENT",
+    targetId: "comment-1",
+    state: "VISIBLE",
+  });
   api.categories.mockResolvedValue([category]);
   api.createCategory.mockResolvedValue({ ...category, id: "category-2" });
   api.updateCategory.mockResolvedValue({ ...category, isActive: false });
@@ -117,7 +150,12 @@ describe("community admin panels", () => {
         { ...postReport, reason: "ADVERTISING" },
         { ...postReport, id: "report-privacy", reason: "PRIVACY_VIOLATION" },
       ],
-      meta: { requestId: "reports-expanded-reasons", page: 1, pageSize: 20, total: 2 },
+      meta: {
+        requestId: "reports-expanded-reasons",
+        page: 1,
+        pageSize: 20,
+        total: 2,
+      },
     });
     render(<CommunityReportQueue />, { wrapper });
 
@@ -129,15 +167,24 @@ describe("community admin panels", () => {
     const user = userEvent.setup();
     render(<CommunityReportQueue />, { wrapper });
 
-    expect(await screen.findByRole("heading", { name: "Bài viết quảng cáo" })).toBeDefined();
+    expect(
+      await screen.findByRole("heading", { name: "Bài viết quảng cáo" }),
+    ).toBeDefined();
     expect(screen.getByText("Hoa")).toBeDefined();
-    await user.type(screen.getByLabelText("Lý do xử lý"), "Ẩn nội dung quảng cáo.");
-    await user.click(screen.getByRole("button", { name: "Ẩn nội dung và xử lý" }));
+    await user.type(
+      screen.getByLabelText("Lý do xử lý"),
+      "Ẩn nội dung quảng cáo.",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Ẩn nội dung và xử lý" }),
+    );
 
-    await waitFor(() => expect(api.resolveReport).toHaveBeenCalledWith("report-1", {
-      action: "HIDE",
-      reason: "Ẩn nội dung quảng cáo.",
-    }));
+    await waitFor(() =>
+      expect(api.resolveReport).toHaveBeenCalledWith("report-1", {
+        action: "HIDE",
+        reason: "Ẩn nội dung quảng cáo.",
+      }),
+    );
   });
 
   it("filters and displays append-only moderation history metadata", async () => {
@@ -148,10 +195,12 @@ describe("community admin panels", () => {
     expect(screen.getByText(/req-1/)).toBeDefined();
     await user.type(screen.getByLabelText("Mã nội dung"), "post-1");
     await user.click(screen.getByRole("button", { name: "Lọc lịch sử" }));
-    await waitFor(() => expect(api.moderationHistory).toHaveBeenLastCalledWith(
-      expect.objectContaining({ targetId: "post-1", page: 1, pageSize: 20 }),
-      expect.any(AbortSignal),
-    ));
+    await waitFor(() =>
+      expect(api.moderationHistory).toHaveBeenLastCalledWith(
+        expect.objectContaining({ targetId: "post-1", page: 1, pageSize: 20 }),
+        expect.any(AbortSignal),
+      ),
+    );
   });
 
   it("hides or restores the selected post/comment with an audit reason", async () => {
@@ -161,18 +210,30 @@ describe("community admin panels", () => {
     await user.selectOptions(screen.getByLabelText("Loại nội dung"), "COMMENT");
     await user.selectOptions(screen.getByLabelText("Thao tác"), "hide");
     await user.type(screen.getByLabelText("Mã nội dung"), "comment-1");
-    await user.type(screen.getByLabelText("Lý do"), "Nội dung cần được xem xét.");
+    await user.type(
+      screen.getByLabelText("Lý do"),
+      "Nội dung cần được xem xét.",
+    );
     await user.click(screen.getByRole("button", { name: "Ẩn nội dung" }));
-    await waitFor(() => expect(api.hideComment).toHaveBeenCalledWith("comment-1", {
-      reason: "Nội dung cần được xem xét.",
-    }));
+    await waitFor(() =>
+      expect(api.hideComment).toHaveBeenCalledWith("comment-1", {
+        reason: "Nội dung cần được xem xét.",
+      }),
+    );
 
     await user.selectOptions(screen.getByLabelText("Thao tác"), "restore");
-    await user.type(screen.getAllByRole("textbox").at(-1)!, "Nội dung đã được rà soát.");
-    await user.click(screen.getByRole("button", { name: "Khôi phục nội dung" }));
-    await waitFor(() => expect(api.restoreComment).toHaveBeenCalledWith("comment-1", {
-      reason: "Nội dung đã được rà soát.",
-    }));
+    await user.type(
+      screen.getAllByRole("textbox").at(-1)!,
+      "Nội dung đã được rà soát.",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Khôi phục nội dung" }),
+    );
+    await waitFor(() =>
+      expect(api.restoreComment).toHaveBeenCalledWith("comment-1", {
+        reason: "Nội dung đã được rà soát.",
+      }),
+    );
   });
 
   it("creates and edits categories with a required reason", async () => {
@@ -182,38 +243,65 @@ describe("community admin panels", () => {
     await screen.findByRole("heading", { name: "Văn hóa" });
     await user.type(screen.getByLabelText("Tên danh mục mới"), "Chuyện làng");
     await user.type(screen.getByLabelText("Slug danh mục mới"), "chuyen-lang");
-    await user.type(screen.getByLabelText("Mô tả danh mục mới"), "Chuyện tại quê hương.");
-    await user.type(screen.getByLabelText("Lý do tạo danh mục"), "Bổ sung chủ đề mới.");
+    await user.type(
+      screen.getByLabelText("Mô tả danh mục mới"),
+      "Chuyện tại quê hương.",
+    );
+    await user.type(
+      screen.getByLabelText("Lý do tạo danh mục"),
+      "Bổ sung chủ đề mới.",
+    );
     await user.click(screen.getByRole("button", { name: "Tạo danh mục" }));
-    await waitFor(() => expect(api.createCategory).toHaveBeenCalledWith(expect.objectContaining({
-      name: "Chuyện làng",
-      slug: "chuyen-lang",
-      description: "Chuyện tại quê hương.",
-      reason: "Bổ sung chủ đề mới.",
-    })));
+    await waitFor(() =>
+      expect(api.createCategory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Chuyện làng",
+          slug: "chuyen-lang",
+          description: "Chuyện tại quê hương.",
+          reason: "Bổ sung chủ đề mới.",
+        }),
+      ),
+    );
 
-    await user.click(screen.getByRole("button", { name: "Chỉnh sửa danh mục: Văn hóa" }));
+    await user.click(
+      screen.getByRole("button", { name: "Chỉnh sửa danh mục: Văn hóa" }),
+    );
     await user.clear(screen.getByLabelText("Lý do cập nhật danh mục"));
-    await user.type(screen.getByLabelText("Lý do cập nhật danh mục"), "Tạm ngừng chủ đề.");
+    await user.type(
+      screen.getByLabelText("Lý do cập nhật danh mục"),
+      "Tạm ngừng chủ đề.",
+    );
     await user.click(screen.getByRole("button", { name: "Lưu danh mục" }));
-    await waitFor(() => expect(api.updateCategory).toHaveBeenCalledWith("category-1", expect.objectContaining({
-      reason: "Tạm ngừng chủ đề.",
-    })));
+    await waitFor(() =>
+      expect(api.updateCategory).toHaveBeenCalledWith(
+        "category-1",
+        expect.objectContaining({
+          reason: "Tạm ngừng chủ đề.",
+        }),
+      ),
+    );
   });
 
   it("updates the pre-moderation setting with a required audit reason", async () => {
     const user = userEvent.setup();
     render(<CommunitySettingsPanel />, { wrapper });
 
-    const enabled = await screen.findByRole("checkbox", { name: "Bật duyệt trước khi đăng" });
+    const enabled = await screen.findByRole("checkbox", {
+      name: "Bật duyệt trước khi đăng",
+    });
     expect((enabled as HTMLInputElement).checked).toBe(true);
     await user.click(enabled);
-    await user.type(screen.getByLabelText("Lý do thay đổi"), "Đã hoàn tất giai đoạn thử nghiệm.");
+    await user.type(
+      screen.getByLabelText("Lý do thay đổi"),
+      "Đã hoàn tất giai đoạn thử nghiệm.",
+    );
     await user.click(screen.getByRole("button", { name: "Lưu cài đặt" }));
 
-    await waitFor(() => expect(api.updateSettings).toHaveBeenCalledWith({
-      preModerationEnabled: false,
-      reason: "Đã hoàn tất giai đoạn thử nghiệm.",
-    }));
+    await waitFor(() =>
+      expect(api.updateSettings).toHaveBeenCalledWith({
+        preModerationEnabled: false,
+        reason: "Đã hoàn tất giai đoạn thử nghiệm.",
+      }),
+    );
   });
 });

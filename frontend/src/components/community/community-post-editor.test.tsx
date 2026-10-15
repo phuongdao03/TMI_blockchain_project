@@ -27,7 +27,11 @@ const api = vi.hoisted(() => ({
 }));
 const router = vi.hoisted(() => ({ push: vi.fn() }));
 
-vi.mock("@/lib/api/client", () => ({ communityApi: api, communityMemberApi: api, publicApi: { works: api.works } }));
+vi.mock("@/lib/api/client", () => ({
+  communityApi: api,
+  communityMemberApi: api,
+  publicApi: { works: api.works },
+}));
 vi.mock("@/components/media/file-uploader", () => ({
   FileUploader: ({
     constraints,
@@ -117,13 +121,26 @@ beforeEach(() => {
   });
   api.submitPost.mockResolvedValue({ id: "post-1", status: "PENDING" });
   api.myPost.mockResolvedValue(null);
-  api.works.mockResolvedValue({ success: true, data: [], meta: { page: 1, pageSize: 6, total: 0 } });
+  api.works.mockResolvedValue({
+    success: true,
+    data: [],
+    meta: { page: 1, pageSize: 6, total: 0 },
+  });
 });
 
 describe("CommunityPostEditor", () => {
   it("formats editor text, previews it safely, and saves tags with a preselected work", async () => {
     const user = userEvent.setup();
-    render(<CommunityPostEditor relatedWork={{ id: "work-1", title: "Gốm làng cổ", slug: "gom-lang-co" }} />, { wrapper });
+    render(
+      <CommunityPostEditor
+        relatedWork={{
+          id: "work-1",
+          title: "Gốm làng cổ",
+          slug: "gom-lang-co",
+        }}
+      />,
+      { wrapper },
+    );
 
     const content = await screen.findByLabelText("Nội dung");
     await user.type(content, "Hello");
@@ -133,41 +150,70 @@ describe("CommunityPostEditor", () => {
 
     await user.click(screen.getByRole("button", { name: "Xem trước" }));
     expect((await screen.findByText("Hello")).tagName).toBe("STRONG");
-    expect(screen.getByText(/Đã liên kết:/).textContent).toContain("Gốm làng cổ");
+    expect(screen.getByText(/Đã liên kết:/).textContent).toContain(
+      "Gốm làng cổ",
+    );
 
-    await user.type(screen.getByLabelText("Thẻ chủ đề (tối đa 10)"), "làng nghề");
+    await user.type(
+      screen.getByLabelText("Thẻ chủ đề (tối đa 10)"),
+      "làng nghề",
+    );
     await user.keyboard("{Enter}");
     await user.type(await screen.findByLabelText("Tiêu đề"), "Câu chuyện");
     await user.selectOptions(screen.getByLabelText("Chuyên mục"), "cat-1");
     await user.click(screen.getByRole("button", { name: "Lưu bản nháp" }));
 
-    await waitFor(() => expect(api.createPost).toHaveBeenCalledWith(expect.objectContaining({
-      title: "Câu chuyện",
-      content: "**Hello**",
-      tags: ["làng nghề"],
-      relatedWorkId: "work-1",
-    })));
+    await waitFor(() =>
+      expect(api.createPost).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Câu chuyện",
+          content: "**Hello**",
+          tags: ["làng nghề"],
+          relatedWorkId: "work-1",
+        }),
+      ),
+    );
   });
 
   it("loads and resumes an editable owned draft", async () => {
     const user = userEvent.setup();
     api.myPost.mockResolvedValue({
-      id: "draft-1", slug: "ban-nhap", title: "Bản nháp", content: "Nội dung cũ.", status: "DRAFT",
-      category: { id: "cat-1", name: "Di sản", slug: "di-san" }, tags: [{ id: "tag-1", name: "làng nghề", slug: "lang-nghe" }],
-      relatedWork: null, images: [], moderationReason: null,
-      createdAt: "2026-10-13T09:00:00Z", updatedAt: "2026-10-14T09:00:00Z",
+      id: "draft-1",
+      slug: "ban-nhap",
+      title: "Bản nháp",
+      content: "Nội dung cũ.",
+      status: "DRAFT",
+      category: { id: "cat-1", name: "Di sản", slug: "di-san" },
+      tags: [{ id: "tag-1", name: "làng nghề", slug: "lang-nghe" }],
+      relatedWork: null,
+      images: [],
+      moderationReason: null,
+      createdAt: "2026-10-13T09:00:00Z",
+      updatedAt: "2026-10-14T09:00:00Z",
     });
     render(<CommunityPostEditor postId="draft-1" />, { wrapper });
 
     const title = await screen.findByLabelText("Tiêu đề");
-    await waitFor(() => expect((title as HTMLInputElement).value).toBe("Bản nháp"));
-    expect((screen.getByLabelText("Nội dung") as HTMLTextAreaElement).value).toBe("Nội dung cũ.");
+    await waitFor(() =>
+      expect((title as HTMLInputElement).value).toBe("Bản nháp"),
+    );
+    expect(
+      (screen.getByLabelText("Nội dung") as HTMLTextAreaElement).value,
+    ).toBe("Nội dung cũ.");
     expect(screen.getByText("làng nghề")).toBeDefined();
     await user.clear(title);
     await user.type(title, "Bản nháp đã sửa");
     await user.click(screen.getByRole("button", { name: "Lưu bản nháp" }));
 
-    await waitFor(() => expect(api.updatePost).toHaveBeenCalledWith("draft-1", expect.objectContaining({ title: "Bản nháp đã sửa", tags: ["làng nghề"] })));
+    await waitFor(() =>
+      expect(api.updatePost).toHaveBeenCalledWith(
+        "draft-1",
+        expect.objectContaining({
+          title: "Bản nháp đã sửa",
+          tags: ["làng nghề"],
+        }),
+      ),
+    );
   });
 
   it("saves a draft, updates its edited source, then submits it for review", async () => {
@@ -188,8 +234,7 @@ describe("CommunityPostEditor", () => {
         imageMediaIds: [],
       }),
     );
-    expect(await screen.findByText("Bản nháp đã được lưu."))
-      .toBeDefined();
+    expect(await screen.findByText("Bản nháp đã được lưu.")).toBeDefined();
 
     const content = screen.getByLabelText("Nội dung");
     await user.clear(content);
@@ -206,8 +251,9 @@ describe("CommunityPostEditor", () => {
       }),
     );
     expect(api.submitPost).toHaveBeenCalledWith("post-1");
-    expect(await screen.findByText("Bài viết đã được gửi để kiểm duyệt."))
-      .toBeDefined();
+    expect(
+      await screen.findByText("Bài viết đã được gửi để kiểm duyệt."),
+    ).toBeDefined();
   });
 
   it("creates the draft before submitting when the user skips saving", async () => {
@@ -227,43 +273,69 @@ describe("CommunityPostEditor", () => {
     const user = userEvent.setup();
     api.works.mockResolvedValueOnce({
       success: true,
-      data: [{
-        id: "public-work-1",
-        title: "Nghề gốm truyền thống",
-        slug: "nghe-gom-truyen-thong",
-        shortDescription: "Thông tin catalog không hiển thị trong liên kết.",
-        authorDisplayName: "Tác giả",
-        categoryName: "Di sản",
-        categorySlug: "di-san",
-        tags: [],
-        publishedAt: "2026-10-10T00:00:00Z",
-        isFeatured: false,
-        thumbnailUrl: null,
-        thumbnailAltText: null,
-      }],
+      data: [
+        {
+          id: "public-work-1",
+          title: "Nghề gốm truyền thống",
+          slug: "nghe-gom-truyen-thong",
+          shortDescription: "Thông tin catalog không hiển thị trong liên kết.",
+          authorDisplayName: "Tác giả",
+          categoryName: "Di sản",
+          categorySlug: "di-san",
+          tags: [],
+          publishedAt: "2026-10-10T00:00:00Z",
+          isFeatured: false,
+          thumbnailUrl: null,
+          thumbnailAltText: null,
+        },
+      ],
       meta: { page: 1, pageSize: 6, total: 1 },
     });
     render(<CommunityPostEditor />, { wrapper });
 
-    await user.type(await screen.findByLabelText("Tiêu đề"), "Câu chuyện làng nghề");
-    await user.type(screen.getByLabelText("Nội dung"), "Một câu chuyện về nghề gốm.");
+    await user.type(
+      await screen.findByLabelText("Tiêu đề"),
+      "Câu chuyện làng nghề",
+    );
+    await user.type(
+      screen.getByLabelText("Nội dung"),
+      "Một câu chuyện về nghề gốm.",
+    );
     await user.selectOptions(screen.getByLabelText("Chuyên mục"), "cat-1");
     await user.type(screen.getByLabelText("Tìm tác phẩm đã xuất bản"), "gốm");
-    await user.type(screen.getByLabelText("Tìm tác phẩm đã xuất bản"), "{Enter}");
+    await user.type(
+      screen.getByLabelText("Tìm tác phẩm đã xuất bản"),
+      "{Enter}",
+    );
 
-    expect(await screen.findByRole("button", { name: "Chọn tác phẩm: Nghề gốm truyền thống" })).toBeDefined();
-    expect(api.works).toHaveBeenCalledWith({ query: "gốm", page: 1, pageSize: 6, sort: "newest" });
+    expect(
+      await screen.findByRole("button", {
+        name: "Chọn tác phẩm: Nghề gốm truyền thống",
+      }),
+    ).toBeDefined();
+    expect(api.works).toHaveBeenCalledWith({
+      query: "gốm",
+      page: 1,
+      pageSize: 6,
+      sort: "newest",
+    });
     expect(api.submitPost).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "Chọn tác phẩm: Nghề gốm truyền thống" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Chọn tác phẩm: Nghề gốm truyền thống",
+      }),
+    );
     await user.click(screen.getByRole("button", { name: "Lưu bản nháp" }));
 
-    await waitFor(() => expect(api.createPost).toHaveBeenCalledWith({
-      title: "Câu chuyện làng nghề",
-      content: "Một câu chuyện về nghề gốm.",
-      categoryId: "cat-1",
-      relatedWorkId: "public-work-1",
-      imageMediaIds: [],
-    }));
+    await waitFor(() =>
+      expect(api.createPost).toHaveBeenCalledWith({
+        title: "Câu chuyện làng nghề",
+        content: "Một câu chuyện về nghề gốm.",
+        categoryId: "cat-1",
+        relatedWorkId: "public-work-1",
+        imageMediaIds: [],
+      }),
+    );
     expect(screen.getAllByText("Nghề gốm truyền thống").length).toBe(2);
   });
 
@@ -271,59 +343,78 @@ describe("CommunityPostEditor", () => {
     const user = userEvent.setup();
     api.works.mockResolvedValue({
       success: true,
-      data: [{ id: "public-work-2", title: "Áo dài Việt", slug: "ao-dai-viet" }],
+      data: [
+        { id: "public-work-2", title: "Áo dài Việt", slug: "ao-dai-viet" },
+      ],
       meta: { page: 1, pageSize: 6, total: 1 },
     });
     render(<CommunityPostEditor />, { wrapper });
 
     await user.type(await screen.findByLabelText("Tiêu đề"), "Ký ức áo dài");
-    await user.type(screen.getByLabelText("Nội dung"), "Câu chuyện về trang phục.");
+    await user.type(
+      screen.getByLabelText("Nội dung"),
+      "Câu chuyện về trang phục.",
+    );
     await user.selectOptions(screen.getByLabelText("Chuyên mục"), "cat-1");
     await user.click(screen.getByRole("button", { name: "Lưu bản nháp" }));
     await waitFor(() => expect(api.createPost).toHaveBeenCalled());
 
-    await user.type(screen.getByLabelText("Tìm tác phẩm đã xuất bản"), "áo dài");
+    await user.type(
+      screen.getByLabelText("Tìm tác phẩm đã xuất bản"),
+      "áo dài",
+    );
     await user.click(screen.getByRole("button", { name: "Tìm tác phẩm" }));
-    await user.click(await screen.findByRole("button", { name: "Chọn tác phẩm: Áo dài Việt" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Chọn tác phẩm: Áo dài Việt" }),
+    );
     await user.click(screen.getByRole("button", { name: "Lưu bản nháp" }));
 
-    await waitFor(() => expect(api.updatePost).toHaveBeenCalledWith("post-1", expect.objectContaining({
-      relatedWorkId: "public-work-2",
-    })));
+    await waitFor(() =>
+      expect(api.updatePost).toHaveBeenCalledWith(
+        "post-1",
+        expect.objectContaining({
+          relatedWorkId: "public-work-2",
+        }),
+      ),
+    );
   });
 
   it("uploads inspected community images and previews only backend attachment DTOs", async () => {
     const user = userEvent.setup();
-    api.createPost.mockImplementation(async (input: { imageMediaIds: string[] }) => ({
-      id: "post-1",
-      slug: "ky-uc-lang-co",
-      title: "Ký ức làng cổ",
-      content: "Nội dung.",
-      status: "DRAFT",
-      category: { id: "cat-1", name: "Di sản", slug: "di-san" },
-      relatedWork: null,
-      images: input.imageMediaIds.map((id) => ({
-        id,
-        url: `/api/v1/community/posts/ky-uc-lang-co/media/${id}`,
-      })),
-      createdAt: "2026-10-14T09:00:00Z",
-      updatedAt: "2026-10-14T09:00:00Z",
-    }));
-    api.updatePost.mockImplementation(async (_id: string, input: { imageMediaIds: string[] }) => ({
-      id: "post-1",
-      slug: "ky-uc-lang-co",
-      title: "Ký ức làng cổ",
-      content: "Nội dung.",
-      status: "DRAFT",
-      category: { id: "cat-1", name: "Di sản", slug: "di-san" },
-      relatedWork: null,
-      images: input.imageMediaIds.map((id) => ({
-        id,
-        url: `/api/v1/community/posts/ky-uc-lang-co/media/${id}`,
-      })),
-      createdAt: "2026-10-14T09:00:00Z",
-      updatedAt: "2026-10-14T09:00:00Z",
-    }));
+    api.createPost.mockImplementation(
+      async (input: { imageMediaIds: string[] }) => ({
+        id: "post-1",
+        slug: "ky-uc-lang-co",
+        title: "Ký ức làng cổ",
+        content: "Nội dung.",
+        status: "DRAFT",
+        category: { id: "cat-1", name: "Di sản", slug: "di-san" },
+        relatedWork: null,
+        images: input.imageMediaIds.map((id) => ({
+          id,
+          url: `/api/v1/community/posts/ky-uc-lang-co/media/${id}`,
+        })),
+        createdAt: "2026-10-14T09:00:00Z",
+        updatedAt: "2026-10-14T09:00:00Z",
+      }),
+    );
+    api.updatePost.mockImplementation(
+      async (_id: string, input: { imageMediaIds: string[] }) => ({
+        id: "post-1",
+        slug: "ky-uc-lang-co",
+        title: "Ký ức làng cổ",
+        content: "Nội dung.",
+        status: "DRAFT",
+        category: { id: "cat-1", name: "Di sản", slug: "di-san" },
+        relatedWork: null,
+        images: input.imageMediaIds.map((id) => ({
+          id,
+          url: `/api/v1/community/posts/ky-uc-lang-co/media/${id}`,
+        })),
+        createdAt: "2026-10-14T09:00:00Z",
+        updatedAt: "2026-10-14T09:00:00Z",
+      }),
+    );
     render(<CommunityPostEditor />, { wrapper });
 
     const uploader = await screen.findByTestId("community-image-uploader");
@@ -338,12 +429,18 @@ describe("CommunityPostEditor", () => {
     await user.type(await screen.findByLabelText("Tiêu đề"), "Ký ức làng cổ");
     await user.type(screen.getByLabelText("Nội dung"), "Nội dung.");
     await user.selectOptions(screen.getByLabelText("Chuyên mục"), "cat-1");
-    await user.click(screen.getByRole("button", { name: "Upload inspected image 1" }));
+    await user.click(
+      screen.getByRole("button", { name: "Upload inspected image 1" }),
+    );
     await user.click(screen.getByRole("button", { name: "Lưu bản nháp" }));
 
-    await waitFor(() => expect(api.createPost).toHaveBeenCalledWith(expect.objectContaining({
-      imageMediaIds: ["image-1"],
-    })));
+    await waitFor(() =>
+      expect(api.createPost).toHaveBeenCalledWith(
+        expect.objectContaining({
+          imageMediaIds: ["image-1"],
+        }),
+      ),
+    );
     const preview = await screen.findByRole("img", {
       name: "Ký ức làng cổ — ảnh đính kèm 1",
     });
@@ -354,59 +451,83 @@ describe("CommunityPostEditor", () => {
 
   it("persists attachment order and removal in the ordered image ID list", async () => {
     const user = userEvent.setup();
-    api.createPost.mockImplementation(async (input: { imageMediaIds: string[] }) => ({
-      id: "post-1",
-      slug: "ky-uc-lang-co",
-      title: "Ký ức làng cổ",
-      content: "Nội dung.",
-      status: "DRAFT",
-      category: { id: "cat-1", name: "Di sản", slug: "di-san" },
-      relatedWork: null,
-      images: input.imageMediaIds.map((id) => ({
-        id,
-        url: `/api/v1/community/posts/ky-uc-lang-co/media/${id}`,
-      })),
-      createdAt: "2026-10-14T09:00:00Z",
-      updatedAt: "2026-10-14T09:00:00Z",
-    }));
-    api.updatePost.mockImplementation(async (_id: string, input: { imageMediaIds: string[] }) => ({
-      id: "post-1",
-      slug: "ky-uc-lang-co",
-      title: "Ký ức làng cổ",
-      content: "Nội dung.",
-      status: "DRAFT",
-      category: { id: "cat-1", name: "Di sản", slug: "di-san" },
-      relatedWork: null,
-      images: input.imageMediaIds.map((id) => ({
-        id,
-        url: `/api/v1/community/posts/ky-uc-lang-co/media/${id}`,
-      })),
-      createdAt: "2026-10-14T09:00:00Z",
-      updatedAt: "2026-10-14T09:00:00Z",
-    }));
+    api.createPost.mockImplementation(
+      async (input: { imageMediaIds: string[] }) => ({
+        id: "post-1",
+        slug: "ky-uc-lang-co",
+        title: "Ký ức làng cổ",
+        content: "Nội dung.",
+        status: "DRAFT",
+        category: { id: "cat-1", name: "Di sản", slug: "di-san" },
+        relatedWork: null,
+        images: input.imageMediaIds.map((id) => ({
+          id,
+          url: `/api/v1/community/posts/ky-uc-lang-co/media/${id}`,
+        })),
+        createdAt: "2026-10-14T09:00:00Z",
+        updatedAt: "2026-10-14T09:00:00Z",
+      }),
+    );
+    api.updatePost.mockImplementation(
+      async (_id: string, input: { imageMediaIds: string[] }) => ({
+        id: "post-1",
+        slug: "ky-uc-lang-co",
+        title: "Ký ức làng cổ",
+        content: "Nội dung.",
+        status: "DRAFT",
+        category: { id: "cat-1", name: "Di sản", slug: "di-san" },
+        relatedWork: null,
+        images: input.imageMediaIds.map((id) => ({
+          id,
+          url: `/api/v1/community/posts/ky-uc-lang-co/media/${id}`,
+        })),
+        createdAt: "2026-10-14T09:00:00Z",
+        updatedAt: "2026-10-14T09:00:00Z",
+      }),
+    );
     render(<CommunityPostEditor />, { wrapper });
 
     await user.type(await screen.findByLabelText("Tiêu đề"), "Ký ức làng cổ");
     await user.type(screen.getByLabelText("Nội dung"), "Nội dung.");
     await user.selectOptions(screen.getByLabelText("Chuyên mục"), "cat-1");
-    await user.click(screen.getByRole("button", { name: "Upload inspected image 1" }));
-    await user.click(screen.getByRole("button", { name: "Upload inspected image 2" }));
+    await user.click(
+      screen.getByRole("button", { name: "Upload inspected image 1" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Upload inspected image 2" }),
+    );
     await user.click(screen.getByRole("button", { name: "Lưu bản nháp" }));
-    await waitFor(() => expect(api.createPost).toHaveBeenCalledWith(expect.objectContaining({
-      imageMediaIds: ["image-1", "image-2"],
-    })));
+    await waitFor(() =>
+      expect(api.createPost).toHaveBeenCalledWith(
+        expect.objectContaining({
+          imageMediaIds: ["image-1", "image-2"],
+        }),
+      ),
+    );
 
-    await user.click(screen.getByRole("button", { name: "Đưa ảnh 2 lên trước" }));
+    await user.click(
+      screen.getByRole("button", { name: "Đưa ảnh 2 lên trước" }),
+    );
     await user.click(screen.getByRole("button", { name: "Lưu bản nháp" }));
-    await waitFor(() => expect(api.updatePost).toHaveBeenLastCalledWith("post-1", expect.objectContaining({
-      imageMediaIds: ["image-2", "image-1"],
-    })));
+    await waitFor(() =>
+      expect(api.updatePost).toHaveBeenLastCalledWith(
+        "post-1",
+        expect.objectContaining({
+          imageMediaIds: ["image-2", "image-1"],
+        }),
+      ),
+    );
 
     await user.click(screen.getByRole("button", { name: "Xóa ảnh 1" }));
     await user.click(screen.getByRole("button", { name: "Lưu bản nháp" }));
-    await waitFor(() => expect(api.updatePost).toHaveBeenLastCalledWith("post-1", expect.objectContaining({
-      imageMediaIds: ["image-1"],
-    })));
+    await waitFor(() =>
+      expect(api.updatePost).toHaveBeenLastCalledWith(
+        "post-1",
+        expect.objectContaining({
+          imageMediaIds: ["image-1"],
+        }),
+      ),
+    );
   });
 
   it("automatically saves a complete draft after editing pauses", async () => {
@@ -417,11 +538,17 @@ describe("CommunityPostEditor", () => {
     await user.type(screen.getByLabelText("Nội dung"), "Auto save content");
     await user.selectOptions(screen.getByLabelText("Chuyên mục"), "cat-1");
 
-    await waitFor(() => expect(api.createPost).toHaveBeenCalledWith(expect.objectContaining({
-      title: "Auto save title",
-      content: "Auto save content",
-      categoryId: "cat-1",
-    })), { timeout: 4_000 });
+    await waitFor(
+      () =>
+        expect(api.createPost).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: "Auto save title",
+            content: "Auto save content",
+            categoryId: "cat-1",
+          }),
+        ),
+      { timeout: 4_000 },
+    );
     expect(await screen.findByText("Bản nháp đã tự lưu.")).toBeDefined();
   });
 });

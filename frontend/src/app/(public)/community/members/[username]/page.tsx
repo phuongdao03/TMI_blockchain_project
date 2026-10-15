@@ -19,7 +19,10 @@ export default async function CommunityMemberPage({
     ? Math.max(1, Math.min(10_000, Math.floor(pageValue)))
     : 1;
   const viewValue = singleValue(input.view);
-  const view = viewValue === "followers" || viewValue === "following" ? viewValue : "posts";
+  const view =
+    viewValue === "followers" || viewValue === "following"
+      ? viewValue
+      : "posts";
   return <CommunityMemberProfile page={page} username={username} view={view} />;
 }
 

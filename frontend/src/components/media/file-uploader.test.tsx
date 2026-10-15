@@ -187,10 +187,12 @@ describe("FileUploader", () => {
       signature: "b".repeat(40),
     };
     deleteAssetMock.mockResolvedValue({ status: "deleted" });
-    uploadMediaMock.mockImplementationOnce(async (_file, _purpose, callbacks) => {
-      callbacks.onTransferred(checkpoint);
-      throw new Error("Việc kiểm tra hình ảnh bị gián đoạn.");
-    });
+    uploadMediaMock.mockImplementationOnce(
+      async (_file, _purpose, callbacks) => {
+        callbacks.onTransferred(checkpoint);
+        throw new Error("Việc kiểm tra hình ảnh bị gián đoạn.");
+      },
+    );
     render(
       <FileUploader
         cleanupCompletedOnRemove

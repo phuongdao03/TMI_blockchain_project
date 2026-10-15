@@ -40,9 +40,7 @@ def upgrade() -> None:
             "length(trim(username)) > 0",
             name="ck_community_profiles_username_not_empty",
         ),
-        sa.ForeignKeyConstraint(
-            ["user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("user_id"),
         sa.UniqueConstraint("username", name="uq_community_profiles_username"),
     )
@@ -82,9 +80,7 @@ def upgrade() -> None:
             "parent_id IS NULL OR parent_id <> id",
             name="ck_community_comments_parent_not_self",
         ),
-        sa.ForeignKeyConstraint(
-            ["author_user_id"], ["users.id"], ondelete="RESTRICT"
-        ),
+        sa.ForeignKeyConstraint(["author_user_id"], ["users.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(
             ["parent_id"], ["community_comments.id"], ondelete="RESTRICT"
         ),
@@ -121,9 +117,7 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "post_id", "user_id", name="uq_community_likes_post_user"
-        ),
+        sa.UniqueConstraint("post_id", "user_id", name="uq_community_likes_post_user"),
     )
     op.create_index("ix_community_likes_post", "community_likes", ["post_id"])
 
@@ -180,12 +174,8 @@ def upgrade() -> None:
             "follower_user_id <> followed_user_id",
             name="ck_community_follows_self_follow_not_allowed",
         ),
-        sa.ForeignKeyConstraint(
-            ["followed_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["follower_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["followed_user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["follower_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "follower_user_id", "followed_user_id", name="uq_community_follows_pair"
@@ -218,7 +208,5 @@ def downgrade() -> None:
         table_name="community_comments",
     )
     op.drop_table("community_comments")
-    op.drop_index(
-        "ix_community_profiles_display_name", table_name="community_profiles"
-    )
+    op.drop_index("ix_community_profiles_display_name", table_name="community_profiles")
     op.drop_table("community_profiles")

@@ -8,15 +8,23 @@ import { CommunityMinePosts } from "@/components/community/community-mine-posts"
 
 const api = vi.hoisted(() => ({ myPosts: vi.fn(), deletePost: vi.fn() }));
 const auth = vi.hoisted(() => ({ user: { id: "member-1" } }));
-vi.mock("@/lib/api/client", () => ({ communityMemberApi: api, communityApi: api }));
+vi.mock("@/lib/api/client", () => ({
+  communityMemberApi: api,
+  communityApi: api,
+}));
 vi.mock("@/lib/auth/user-context", () => ({ useAuthUser: () => auth.user }));
 
 function wrapper({ children }: { children: ReactNode }) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-const post = (id: string, status: "DRAFT" | "PENDING" | "REJECTED" | "PUBLISHED") => ({
+const post = (
+  id: string,
+  status: "DRAFT" | "PENDING" | "REJECTED" | "PUBLISHED",
+) => ({
   id,
   slug: `slug-${id}`,
   title: `Bài ${status}`,
@@ -34,7 +42,12 @@ const post = (id: string, status: "DRAFT" | "PENDING" | "REJECTED" | "PUBLISHED"
 beforeEach(() => {
   vi.clearAllMocks();
   api.myPosts.mockResolvedValue({
-    data: [post("draft-1", "DRAFT"), post("pending-1", "PENDING"), post("rejected-1", "REJECTED"), post("published-1", "PUBLISHED")],
+    data: [
+      post("draft-1", "DRAFT"),
+      post("pending-1", "PENDING"),
+      post("rejected-1", "REJECTED"),
+      post("published-1", "PUBLISHED"),
+    ],
     meta: { requestId: "owner-posts", page: 1, pageSize: 20, total: 4 },
   });
   api.deletePost.mockResolvedValue(undefined);
@@ -44,25 +57,44 @@ describe("CommunityMinePosts", () => {
   it("shows status filters, resumes draft/rejected posts, and opens published posts read-only", async () => {
     render(<CommunityMinePosts page={1} />, { wrapper });
 
-    expect(await screen.findByRole("heading", { name: "Bài DRAFT" })).toBeDefined();
-    expect(screen.getByRole("link", { name: "Tiếp tục chỉnh sửa: Bài DRAFT" }).getAttribute("href"))
-      .toBe("/community/new?postId=draft-1");
-    expect(screen.getByRole("link", { name: "Tiếp tục chỉnh sửa: Bài REJECTED" }).getAttribute("href"))
-      .toBe("/community/new?postId=rejected-1");
+    expect(
+      await screen.findByRole("heading", { name: "Bài DRAFT" }),
+    ).toBeDefined();
+    expect(
+      screen
+        .getByRole("link", { name: "Tiếp tục chỉnh sửa: Bài DRAFT" })
+        .getAttribute("href"),
+    ).toBe("/community/new?postId=draft-1");
+    expect(
+      screen
+        .getByRole("link", { name: "Tiếp tục chỉnh sửa: Bài REJECTED" })
+        .getAttribute("href"),
+    ).toBe("/community/new?postId=rejected-1");
     expect(screen.getByText("Bổ sung nguồn")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Xem bài đã đăng: Bài PUBLISHED" }).getAttribute("href"))
-      .toBe("/community/posts/slug-published-1");
+    expect(
+      screen
+        .getByRole("link", { name: "Xem bài đã đăng: Bài PUBLISHED" })
+        .getAttribute("href"),
+    ).toBe("/community/posts/slug-published-1");
     expect(screen.getByText("Đang chờ kiểm duyệt")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Bản nháp" }).getAttribute("href")).toBe("/community/mine?status=DRAFT&page=1");
+    expect(
+      screen.getByRole("link", { name: "Bản nháp" }).getAttribute("href"),
+    ).toBe("/community/mine?status=DRAFT&page=1");
   });
 
   it("asks for confirmation before soft-deleting an owned post", async () => {
     const user = userEvent.setup();
     render(<CommunityMinePosts page={1} />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: "Xóa bài: Bài DRAFT" }));
-    expect(screen.getByRole("button", { name: "Xác nhận xóa: Bài DRAFT" })).toBeDefined();
-    await user.click(screen.getByRole("button", { name: "Xác nhận xóa: Bài DRAFT" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Xóa bài: Bài DRAFT" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Xác nhận xóa: Bài DRAFT" }),
+    ).toBeDefined();
+    await user.click(
+      screen.getByRole("button", { name: "Xác nhận xóa: Bài DRAFT" }),
+    );
     expect(api.deletePost).toHaveBeenCalledWith("draft-1");
   });
 });

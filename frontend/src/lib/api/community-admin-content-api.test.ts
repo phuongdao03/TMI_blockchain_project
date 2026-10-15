@@ -9,13 +9,22 @@ describe("community COM012 admin API", () => {
   });
 
   it("searches paginated post/comment workspaces with the documented filters", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
-      Promise.resolve(pageResponse()),
-    );
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(() => Promise.resolve(pageResponse()));
 
-    await communityAdminApi.workspacePosts({ q: "thợ gốm", status: "HIDDEN", page: 2, pageSize: 30 });
+    await communityAdminApi.workspacePosts({
+      q: "thợ gốm",
+      status: "HIDDEN",
+      page: 2,
+      pageSize: 30,
+    });
     await communityAdminApi.workspaceComments({
-      q: "bình luận", postId: "post/1", authorUsername: "lan-anh", visibility: "DELETED", page: 3,
+      q: "bình luận",
+      postId: "post/1",
+      authorUsername: "lan-anh",
+      visibility: "DELETED",
+      page: 3,
     });
     await communityAdminApi.members({ q: "lan", page: 4, pageSize: 25 });
     await communityAdminApi.memberRestrictions("member/1", 2);
@@ -29,9 +38,9 @@ describe("community COM012 admin API", () => {
   });
 
   it("sends CSRF-protected post, comment, and restriction moderation actions", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
-      Promise.resolve(successResponse({})),
-    );
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(() => Promise.resolve(successResponse({})));
     const reason = { reason: "Đã xem xét nội dung." };
 
     await communityAdminApi.pinPost("post/1", reason);
@@ -44,11 +53,19 @@ describe("community COM012 admin API", () => {
     await communityAdminApi.restoreWorkspaceComment("comment/1", reason);
     await communityAdminApi.deleteWorkspaceComment("comment/1", reason);
     await communityAdminApi.createMemberRestriction("member/1", {
-      scope: "COMMENTS", durationMinutes: 60, reason: "Cần rà soát thêm.",
+      scope: "COMMENTS",
+      durationMinutes: 60,
+      reason: "Cần rà soát thêm.",
     });
-    await communityAdminApi.revokeMemberRestriction("member/1", "restriction/1", reason);
+    await communityAdminApi.revokeMemberRestriction(
+      "member/1",
+      "restriction/1",
+      reason,
+    );
 
-    expect(fetchMock.mock.calls.map(([url, init]) => [url, init?.method])).toEqual([
+    expect(
+      fetchMock.mock.calls.map(([url, init]) => [url, init?.method]),
+    ).toEqual([
       ["/api/v1/admin/community/posts/post%2F1/pin", "POST"],
       ["/api/v1/admin/community/posts/post%2F1/unpin", "POST"],
       ["/api/v1/admin/community/posts/post%2F1/comments/lock", "POST"],
@@ -59,24 +76,39 @@ describe("community COM012 admin API", () => {
       ["/api/v1/admin/community/comments/comment%2F1/restore", "POST"],
       ["/api/v1/admin/community/comments/comment%2F1/delete", "POST"],
       ["/api/v1/admin/community/members/member%2F1/restrictions", "POST"],
-      ["/api/v1/admin/community/members/member%2F1/restrictions/restriction%2F1", "DELETE"],
+      [
+        "/api/v1/admin/community/members/member%2F1/restrictions/restriction%2F1",
+        "DELETE",
+      ],
     ]);
     expect(fetchMock.mock.calls[4]?.[1]?.body).toBe(JSON.stringify(reason));
     expect(fetchMock.mock.calls[8]?.[1]?.body).toBe(JSON.stringify(reason));
     for (const [, init] of fetchMock.mock.calls) {
-      expect(new Headers(init?.headers).get("X-CSRF-Token")).toBe("community-csrf");
+      expect(new Headers(init?.headers).get("X-CSRF-Token")).toBe(
+        "community-csrf",
+      );
     }
   });
 });
 
 function pageResponse() {
-  return new Response(JSON.stringify({ success: true, data: [], meta: { requestId: "admin", page: 1, pageSize: 20, total: 0 } }), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data: [],
+      meta: { requestId: "admin", page: 1, pageSize: 20, total: 0 },
+    }),
+    {
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 }
 
 function successResponse(data: unknown) {
-  return new Response(JSON.stringify({ success: true, data, meta: { requestId: "admin" } }), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify({ success: true, data, meta: { requestId: "admin" } }),
+    {
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 }

@@ -51,11 +51,17 @@ describe("CommunityPostDetail", () => {
       viewCount: 17,
       viewerHasLiked: false,
       viewerHasBookmarked: false,
-      relatedWork: { id: "work-2", title: "Nghệ thuật khảm trai", slug: "nghe-thuat-kham-trai" },
-      images: [{
-        id: "detail-image",
-        url: "/api/v1/community/posts/chuyen-di-lang-co/media/detail-image",
-      }],
+      relatedWork: {
+        id: "work-2",
+        title: "Nghệ thuật khảm trai",
+        slug: "nghe-thuat-kham-trai",
+      },
+      images: [
+        {
+          id: "detail-image",
+          url: "/api/v1/community/posts/chuyen-di-lang-co/media/detail-image",
+        },
+      ],
     });
     api.comments.mockResolvedValue({
       success: true,
@@ -72,31 +78,42 @@ describe("CommunityPostDetail", () => {
       await screen.findByRole("heading", { name: "Ký ức về ngôi làng" }),
     ).toBeDefined();
     expect(
-      screen.getByText((_, element) =>
-        element?.tagName === "P" &&
-        Boolean(element.textContent?.includes("<script>alert(1)</script>")),
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "P" &&
+          Boolean(element.textContent?.includes("<script>alert(1)</script>")),
       ),
     ).toBeDefined();
     expect(document.querySelector("script")).toBeNull();
     expect(screen.getByText("Thành viên cộng đồng")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Tác phẩm liên quan: Nghệ thuật khảm trai" }).getAttribute("href")).toBe("/works/nghe-thuat-kham-trai");
+    expect(
+      screen
+        .getByRole("link", { name: "Tác phẩm liên quan: Nghệ thuật khảm trai" })
+        .getAttribute("href"),
+    ).toBe("/works/nghe-thuat-kham-trai");
     const image = screen.getByRole("img", {
       name: "Ký ức về ngôi làng — ảnh đính kèm 1",
     });
     expect(image.getAttribute("src")).toBe(
       "/api/v1/community/posts/chuyen-di-lang-co/media/detail-image",
     );
-    expect(await screen.findByRole("heading", { name: "Thảo luận" })).toBeDefined();
+    expect(
+      await screen.findByRole("heading", { name: "Thảo luận" }),
+    ).toBeDefined();
     expect(api.post).toHaveBeenCalledWith(
       "chuyen-di-lang-co",
       expect.any(AbortSignal),
     );
-    await waitFor(() => expect(api.recordPostView).toHaveBeenCalledWith("post-1"));
+    await waitFor(() =>
+      expect(api.recordPostView).toHaveBeenCalledWith("post-1"),
+    );
     expect(screen.getByText("17 lượt xem")).toBeDefined();
   });
 
   it("does not reveal whether an unavailable slug is a draft or rejected post", async () => {
-    api.post.mockRejectedValueOnce(Object.assign(new Error("not found"), { status: 404 }));
+    api.post.mockRejectedValueOnce(
+      Object.assign(new Error("not found"), { status: 404 }),
+    );
     render(<CommunityPostDetail slug="private-draft" />, { wrapper });
 
     expect(

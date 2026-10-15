@@ -29,8 +29,7 @@ def test_community_admin_migration_defaults_constraints_permissions_and_downgrad
         command.upgrade(config, "0103_community_reports_admin")
         with sqlite3.connect(database_path) as connection:
             settings = connection.execute(
-                "SELECT singleton_id, pre_moderation_enabled "
-                "FROM community_settings"
+                "SELECT singleton_id, pre_moderation_enabled FROM community_settings"
             ).fetchone()
             permission_codes = {
                 row[0]
@@ -45,9 +44,7 @@ def test_community_admin_migration_defaults_constraints_permissions_and_downgrad
             ).fetchone()
             report_indexes = {
                 row[1]: row[2]
-                for row in connection.execute(
-                    "PRAGMA index_list('community_reports')"
-                )
+                for row in connection.execute("PRAGMA index_list('community_reports')")
             }
             event_columns = {
                 row[1]
@@ -57,9 +54,7 @@ def test_community_admin_migration_defaults_constraints_permissions_and_downgrad
             }
             comment_columns = {
                 row[1]
-                for row in connection.execute(
-                    "PRAGMA table_info('community_comments')"
-                )
+                for row in connection.execute("PRAGMA table_info('community_comments')")
             }
             tables = {
                 row[0]

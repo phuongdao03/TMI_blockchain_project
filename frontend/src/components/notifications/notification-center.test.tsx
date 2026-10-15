@@ -97,9 +97,15 @@ describe("NotificationCenter reviewer invitation", () => {
     });
     renderCenter();
 
-    const safeLink = await screen.findByRole("link", { name: /Có bình luận mới/ });
-    expect(safeLink.getAttribute("href")).toBe("/community/posts/lang-nghe-xua");
+    const safeLink = await screen.findByRole("link", {
+      name: /Có bình luận mới/,
+    });
+    expect(safeLink.getAttribute("href")).toBe(
+      "/community/posts/lang-nghe-xua",
+    );
     expect(screen.queryByRole("link", { name: /Có phản hồi mới/ })).toBeNull();
-    expect(screen.getByRole("button", { name: /Có phản hồi mới/ })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: /Có phản hồi mới/ }),
+    ).toBeDefined();
   });
 });

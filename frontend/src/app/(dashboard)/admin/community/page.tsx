@@ -9,7 +9,10 @@ export const metadata: Metadata = {
 
 export default function CommunityModerationPage() {
   return (
-    <RoleGate allowed={["SUPER_ADMIN"]} permissions={["community.moderate", "community.manage"]}>
+    <RoleGate
+      allowed={["SUPER_ADMIN"]}
+      permissions={["community.moderate", "community.manage"]}
+    >
       <CommunityAdminWorkspace />
     </RoleGate>
   );

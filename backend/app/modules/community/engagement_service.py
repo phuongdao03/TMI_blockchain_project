@@ -131,11 +131,9 @@ class CommunityEngagementService:
                 await NotificationService(self._session).consume_in_transaction(
                     event_id=comment.id,
                     user_id=recipient_id,
-                    event_type=(
-                        "COMMUNITY_REPLY" if is_reply else "COMMUNITY_COMMENT"
-                    ),
+                    event_type=("COMMUNITY_REPLY" if is_reply else "COMMUNITY_COMMENT"),
                     title="Có phản hồi mới" if is_reply else "Có bình luận mới",
-                    body=f'Có hoạt động mới trong bài viết “{post.post.title}”.',
+                    body=f"Có hoạt động mới trong bài viết “{post.post.title}”.",
                     data={
                         "actionPath": (
                             f"/community/posts/{quote(post.post.slug, safe='-._~')}"
@@ -149,9 +147,7 @@ class CommunityEngagementService:
                     event_id=comment.id,
                     user_id=mentioned_user_id,
                     event_type="COMMUNITY_MENTION",
-                    title=(
-                        "Báº¡n Ä‘Æ°á»£c nháº¯c Ä‘áº¿n trong cá»™ng Ä‘á»“ng"
-                    ),
+                    title=("Báº¡n Ä‘Æ°á»£c nháº¯c Ä‘áº¿n trong cá»™ng Ä‘á»“ng"),
                     body=(
                         "CÃ³ thÃ nh viÃªn nháº¯c Ä‘áº¿n báº¡n "
                         "trong má»™t cuá»™c tháº£o luáº­n."
@@ -278,7 +274,7 @@ class CommunityEngagementService:
                         user_id=post.post.author_user_id,
                         event_type="COMMUNITY_POST_LIKED",
                         title="Bài viết có lượt thích mới",
-                        body=f'Bài viết “{post.post.title}” có lượt thích mới.',
+                        body=f"Bài viết “{post.post.title}” có lượt thích mới.",
                         data={
                             "actionPath": (
                                 f"/community/posts/{quote(post.post.slug, safe='-._~')}"
@@ -490,9 +486,7 @@ class CommunityEngagementService:
             member = await self._repository.get_active_user(member_id)
             if member is None:
                 raise CommunityNotFoundError()
-            follower_profile = await self._ensure_community_profile(
-                principal.user_id
-            )
+            follower_profile = await self._ensure_community_profile(principal.user_id)
             await self._ensure_community_profile(member_id)
             relation = await self._repository.get_follow(
                 principal.user_id,

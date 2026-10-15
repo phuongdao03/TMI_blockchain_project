@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CommunityAdminWorkspace } from "@/components/community/community-admin-workspace";
 
-const auth = vi.hoisted(() => ({ user: { roles: [] as string[], permissions: [] as string[] } }));
+const auth = vi.hoisted(() => ({
+  user: { roles: [] as string[], permissions: [] as string[] },
+}));
 
 vi.mock("@/lib/auth/user-context", () => ({ useAuthUser: () => auth.user }));
 vi.mock("@/components/community/community-moderation-queue", () => ({

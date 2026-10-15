@@ -17,7 +17,10 @@ describe("CommunitySavedPage", () => {
   });
 
   it("redirects unauthenticated visitors to sign in", async () => {
-    auth.getServerAuthState.mockResolvedValue({ user: null, hasRefreshCookie: false });
+    auth.getServerAuthState.mockResolvedValue({
+      user: null,
+      hasRefreshCookie: false,
+    });
 
     await CommunitySavedPage({ searchParams: Promise.resolve({ page: "2" }) });
 

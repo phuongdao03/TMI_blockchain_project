@@ -670,10 +670,9 @@ class CommunityAdminService:
             )
             if restriction is None:
                 raise CommunityNotFoundError()
-            if (
-                restriction.revoked_at is not None
-                or _as_utc(restriction.expires_at) <= datetime.now(UTC)
-            ):
+            if restriction.revoked_at is not None or _as_utc(
+                restriction.expires_at
+            ) <= datetime.now(UTC):
                 raise CommunityConflictError()
             now = datetime.now(UTC)
             restriction.revoked_at = now
@@ -721,9 +720,7 @@ class CommunityAdminService:
                 comment.pre_delete_hidden_at = None
                 action = CommunityModerationEventAction.COMMENT_ADMIN_RESTORED
                 state = (
-                    "HIDDEN"
-                    if comment.moderation_hidden_at is not None
-                    else "VISIBLE"
+                    "HIDDEN" if comment.moderation_hidden_at is not None else "VISIBLE"
                 )
             elif visible:
                 if comment.moderation_hidden_at is None:
@@ -825,8 +822,10 @@ class CommunityAdminService:
             )
             for name in editable_fields:
                 value = getattr(payload, name)
-                if name in payload.model_fields_set and value is not None or (
-                    name == "icon" and name in payload.model_fields_set
+                if (
+                    name in payload.model_fields_set
+                    and value is not None
+                    or (name == "icon" and name in payload.model_fields_set)
                 ):
                     setattr(category, name, value)
             current = {

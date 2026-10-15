@@ -45,7 +45,13 @@ export function CommunityCommentThreads({
     mutationFn: (input: CommunityCommentInput) =>
       communityApi.createComment(postId, input),
     onSuccess: (created, input) => {
-      addCreatedComment(queryClient, commentsKey, created, input.parentId, sort);
+      addCreatedComment(
+        queryClient,
+        commentsKey,
+        created,
+        input.parentId,
+        sort,
+      );
       setCommentCount((count) => count + 1);
       if (input.parentId) {
         setReplyDraft("");
@@ -56,8 +62,13 @@ export function CommunityCommentThreads({
     },
   });
   const editComment = useMutation({
-    mutationFn: ({ commentId, content }: { commentId: string; content: string }) =>
-      communityApi.updateComment(commentId, { content }),
+    mutationFn: ({
+      commentId,
+      content,
+    }: {
+      commentId: string;
+      content: string;
+    }) => communityApi.updateComment(commentId, { content }),
     onSuccess: (updated) => replaceComment(queryClient, commentsKey, updated),
   });
   const deleteComment = useMutation({
@@ -73,22 +84,43 @@ export function CommunityCommentThreads({
       })),
   });
   const toggleCommentLike = useMutation({
-    mutationFn: ({ commentId, liked }: { commentId: string; liked: boolean }) =>
-      liked ? communityApi.unlikeComment(commentId) : communityApi.likeComment(commentId),
+    mutationFn: ({
+      commentId,
+      liked,
+    }: {
+      commentId: string;
+      liked: boolean;
+    }) =>
+      liked
+        ? communityApi.unlikeComment(commentId)
+        : communityApi.likeComment(commentId),
     onSuccess: (result) => {
-      queryClient.setQueriesData<CommunityPageResponse<CommunityCommentThread[]>>(
-        { queryKey: ["community", "comments", postId] },
-        (current) => current ? {
-          ...current,
-          data: current.data.map((thread) => updateCommentLike(thread, result.commentId, result.likeCount, result.isLiked)),
-        } : current,
+      queryClient.setQueriesData<
+        CommunityPageResponse<CommunityCommentThread[]>
+      >({ queryKey: ["community", "comments", postId] }, (current) =>
+        current
+          ? {
+              ...current,
+              data: current.data.map((thread) =>
+                updateCommentLike(
+                  thread,
+                  result.commentId,
+                  result.likeCount,
+                  result.isLiked,
+                ),
+              ),
+            }
+          : current,
       );
     },
   });
   const threads = comments.data?.data ?? [];
   const totalPages = Math.max(
     1,
-    Math.ceil((comments.data?.meta.total ?? 0) / (comments.data?.meta.pageSize || PAGE_SIZE)),
+    Math.ceil(
+      (comments.data?.meta.total ?? 0) /
+        (comments.data?.meta.pageSize || PAGE_SIZE),
+    ),
   );
 
   function submitComment(event: FormEvent<HTMLFormElement>) {
@@ -106,9 +138,16 @@ export function CommunityCommentThreads({
   }
 
   return (
-    <section aria-busy={comments.isPending} aria-labelledby="community-comments-title" className="mt-10 border-t border-[var(--theme-border)] pt-7 sm:mt-12 sm:pt-9">
+    <section
+      aria-busy={comments.isPending}
+      aria-labelledby="community-comments-title"
+      className="mt-10 border-t border-[var(--theme-border)] pt-7 sm:mt-12 sm:pt-9"
+    >
       <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="community-comments-title" className="text-2xl font-bold text-[var(--theme-text)]">
+        <h2
+          id="community-comments-title"
+          className="text-2xl font-bold text-[var(--theme-text)]"
+        >
           Thảo luận
         </h2>
         <p aria-live="polite" className="text-sm text-[var(--theme-muted)]">
@@ -117,15 +156,28 @@ export function CommunityCommentThreads({
       </header>
       <label className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--theme-muted)]">
         Sắp xếp bình luận
-        <select className="min-h-10 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]" onChange={(event) => { setSort(event.target.value as CommunityCommentSort); setPage(1); }} value={sort}>
+        <select
+          className="min-h-10 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+          onChange={(event) => {
+            setSort(event.target.value as CommunityCommentSort);
+            setPage(1);
+          }}
+          value={sort}
+        >
           <option value="oldest">Cũ nhất</option>
           <option value="newest">Mới nhất</option>
         </select>
       </label>
 
       {user ? (
-        <form className="mt-5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5" onSubmit={submitComment}>
-          <label className="block text-sm font-semibold text-[var(--theme-text)]" htmlFor="community-comment-draft">
+        <form
+          className="mt-5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5"
+          onSubmit={submitComment}
+        >
+          <label
+            className="block text-sm font-semibold text-[var(--theme-text)]"
+            htmlFor="community-comment-draft"
+          >
             Bình luận của bạn
           </label>
           <textarea
@@ -137,12 +189,27 @@ export function CommunityCommentThreads({
             required
             value={commentDraft}
           />
-          <p id="community-comment-help" className="mt-2 text-xs leading-5 text-[var(--theme-muted)]">
-            Hãy trao đổi lịch sự. Nội dung bình luận là văn bản thuần, không nhập HTML.
+          <p
+            id="community-comment-help"
+            className="mt-2 text-xs leading-5 text-[var(--theme-muted)]"
+          >
+            Hãy trao đổi lịch sự. Nội dung bình luận là văn bản thuần, không
+            nhập HTML.
           </p>
           <div className="mt-3 flex justify-end">
-            <button className={submitClass} disabled={!commentDraft.trim() || createComment.isPending} type="submit">
-              {createComment.isPending ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <Send aria-hidden="true" className="size-4" />}
+            <button
+              className={submitClass}
+              disabled={!commentDraft.trim() || createComment.isPending}
+              type="submit"
+            >
+              {createComment.isPending ? (
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-4 animate-spin"
+                />
+              ) : (
+                <Send aria-hidden="true" className="size-4" />
+              )}
               Gửi bình luận
             </button>
           </div>
@@ -154,15 +221,28 @@ export function CommunityCommentThreads({
       )}
 
       {createComment.isError ? (
-        <p className="mt-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-900" role="alert">
-          Chưa thể gửi bình luận. Vui lòng kiểm tra nội dung hoặc kết nối rồi thử lại.
+        <p
+          className="mt-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-900"
+          role="alert"
+        >
+          Chưa thể gửi bình luận. Vui lòng kiểm tra nội dung hoặc kết nối rồi
+          thử lại.
         </p>
       ) : null}
       {comments.isPending ? <CommentSkeleton /> : null}
       {comments.isError ? (
-        <div className="mt-5 rounded-xl border border-[var(--theme-border)] p-5" role="alert">
-          <p className="text-sm font-semibold text-[var(--theme-text)]">Chưa thể tải thảo luận.</p>
-          <button className={`${secondaryClass} mt-3`} onClick={() => void comments.refetch()} type="button">
+        <div
+          className="mt-5 rounded-xl border border-[var(--theme-border)] p-5"
+          role="alert"
+        >
+          <p className="text-sm font-semibold text-[var(--theme-text)]">
+            Chưa thể tải thảo luận.
+          </p>
+          <button
+            className={`${secondaryClass} mt-3`}
+            onClick={() => void comments.refetch()}
+            type="button"
+          >
             <RotateCcw aria-hidden="true" className="size-4" /> Thử tải lại
           </button>
         </div>
@@ -178,14 +258,22 @@ export function CommunityCommentThreads({
             <CommentThread
               key={thread.id}
               onReply={(commentId) => {
-                setReplyingTo((current) => current === commentId ? null : commentId);
+                setReplyingTo((current) =>
+                  current === commentId ? null : commentId,
+                );
                 setReplyDraft("");
               }}
               onReplyDraftChange={setReplyDraft}
-              onDeleteComment={(commentId) => deleteComment.mutateAsync(commentId)}
-              onToggleLike={(commentId, liked) => toggleCommentLike.mutateAsync({ commentId, liked })}
+              onDeleteComment={(commentId) =>
+                deleteComment.mutateAsync(commentId)
+              }
+              onToggleLike={(commentId, liked) =>
+                toggleCommentLike.mutateAsync({ commentId, liked })
+              }
               onUpdateComment={(commentId, content) =>
-                editComment.mutateAsync({ commentId, content }).then(() => undefined)
+                editComment
+                  .mutateAsync({ commentId, content })
+                  .then(() => undefined)
               }
               onSubmitReply={submitReply}
               replyDraft={replyDraft}
@@ -200,12 +288,29 @@ export function CommunityCommentThreads({
         </div>
       ) : null}
       {totalPages > 1 ? (
-        <nav aria-label="Phân trang bình luận" className="mt-5 flex items-center justify-between gap-3 border-t border-[var(--theme-border)] py-4">
-          <button className={secondaryClass} disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} type="button">
+        <nav
+          aria-label="Phân trang bình luận"
+          className="mt-5 flex items-center justify-between gap-3 border-t border-[var(--theme-border)] py-4"
+        >
+          <button
+            className={secondaryClass}
+            disabled={page <= 1}
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            type="button"
+          >
             Trang trước
           </button>
-          <p aria-live="polite" className="text-sm text-[var(--theme-muted)]">Trang {page} / {totalPages}</p>
-          <button className={secondaryClass} disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))} type="button">
+          <p aria-live="polite" className="text-sm text-[var(--theme-muted)]">
+            Trang {page} / {totalPages}
+          </p>
+          <button
+            className={secondaryClass}
+            disabled={page >= totalPages}
+            onClick={() =>
+              setPage((current) => Math.min(totalPages, current + 1))
+            }
+            type="button"
+          >
             Trang sau
           </button>
         </nav>
@@ -247,7 +352,10 @@ function CommentThread({
     ? "đã xóa"
     : thread.author?.displayName?.trim() || "Thành viên";
   return (
-    <article aria-label={`Bình luận của ${authorName}`} className="py-5 first:pt-0">
+    <article
+      aria-label={`Bình luận của ${authorName}`}
+      className="py-5 first:pt-0"
+    >
       <CommentBody
         author={thread.author}
         commentId={thread.id}
@@ -265,15 +373,22 @@ function CommentThread({
       {thread.replies.length ? (
         <div className="ml-3 mt-4 space-y-4 border-l-2 border-[var(--theme-border)] pl-4 sm:ml-6 sm:pl-5">
           {thread.replies.map((reply) => {
-            const parent = reply.parentId === thread.id
-              ? thread
-              : thread.replies.find((candidate) => candidate.id === reply.parentId);
-            const replyTargetName = parent?.author?.displayName?.trim() || "thành viên";
-            const replyAuthorName = reply.author?.displayName?.trim() || "thành viên";
+            const parent =
+              reply.parentId === thread.id
+                ? thread
+                : thread.replies.find(
+                    (candidate) => candidate.id === reply.parentId,
+                  );
+            const replyTargetName =
+              parent?.author?.displayName?.trim() || "thành viên";
+            const replyAuthorName =
+              reply.author?.displayName?.trim() || "thành viên";
             return (
               <div key={reply.id}>
                 {reply.parentId !== thread.id ? (
-                  <p className="mb-1 text-xs text-[var(--theme-muted)]">Trả lời {replyTargetName}</p>
+                  <p className="mb-1 text-xs text-[var(--theme-muted)]">
+                    Trả lời {replyTargetName}
+                  </p>
                 ) : null}
                 <CommentBody
                   author={reply.author}
@@ -315,7 +430,12 @@ function CommentThread({
         </div>
       ) : null}
       {canReply ? (
-        <button aria-label={`Trả lời ${authorName}`} className="mt-3 inline-flex min-h-9 items-center rounded-md px-2 text-sm font-semibold text-[var(--theme-accent)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]" onClick={() => onReply(thread.id)} type="button">
+        <button
+          aria-label={`Trả lời ${authorName}`}
+          className="mt-3 inline-flex min-h-9 items-center rounded-md px-2 text-sm font-semibold text-[var(--theme-accent)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+          onClick={() => onReply(thread.id)}
+          type="button"
+        >
           Trả lời
         </button>
       ) : null}
@@ -349,14 +469,32 @@ function ReplyComposer({
   targetName: string;
 }) {
   return (
-    <form className="ml-3 mt-3 rounded-xl border border-[var(--theme-border)] p-3 sm:ml-6 sm:p-4" onSubmit={onSubmit}>
-      <p className="mb-2 text-xs text-[var(--theme-muted)]">Trả lời {targetName}</p>
-      <label className="block text-sm font-semibold text-[var(--theme-text)]" htmlFor={`community-reply-${commentId}`}>
+    <form
+      className="ml-3 mt-3 rounded-xl border border-[var(--theme-border)] p-3 sm:ml-6 sm:p-4"
+      onSubmit={onSubmit}
+    >
+      <p className="mb-2 text-xs text-[var(--theme-muted)]">
+        Trả lời {targetName}
+      </p>
+      <label
+        className="block text-sm font-semibold text-[var(--theme-text)]"
+        htmlFor={`community-reply-${commentId}`}
+      >
         Nội dung trả lời
       </label>
-      <textarea className={inputClass} id={`community-reply-${commentId}`} onChange={(event) => onDraftChange(event.target.value)} required value={draft} />
+      <textarea
+        className={inputClass}
+        id={`community-reply-${commentId}`}
+        onChange={(event) => onDraftChange(event.target.value)}
+        required
+        value={draft}
+      />
       <div className="mt-3 flex justify-end">
-        <button className={submitClass} disabled={!draft.trim() || submitting} type="submit">
+        <button
+          className={submitClass}
+          disabled={!draft.trim() || submitting}
+          type="submit"
+        >
           <Send aria-hidden="true" className="size-4" /> Gửi trả lời
         </button>
       </div>
@@ -423,31 +561,107 @@ function CommentBody({
     <div>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
         {author ? (
-          <Link className="font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]" href={`/community/members/${encodeURIComponent(author.username)}`}>
+          <Link
+            className="font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+            href={`/community/members/${encodeURIComponent(author.username)}`}
+          >
             {name}
           </Link>
-        ) : <span className="font-semibold text-[var(--theme-muted)]">Thành viên</span>}
-        <time className="text-xs text-[var(--theme-muted)]" dateTime={createdAt}>{formatDate(createdAt)}</time>
+        ) : (
+          <span className="font-semibold text-[var(--theme-muted)]">
+            Thành viên
+          </span>
+        )}
+        <time
+          className="text-xs text-[var(--theme-muted)]"
+          dateTime={createdAt}
+        >
+          {formatDate(createdAt)}
+        </time>
       </div>
       {editing ? (
-        <form className="mt-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:p-4" onSubmit={saveEdit}>
-          <label className="block text-sm font-semibold text-[var(--theme-text)]" htmlFor={`community-comment-edit-${commentId}`}>Chỉnh sửa bình luận</label>
-          <textarea className={inputClass} id={`community-comment-edit-${commentId}`} onChange={(event) => setDraft(event.target.value)} required value={draft} />
+        <form
+          className="mt-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:p-4"
+          onSubmit={saveEdit}
+        >
+          <label
+            className="block text-sm font-semibold text-[var(--theme-text)]"
+            htmlFor={`community-comment-edit-${commentId}`}
+          >
+            Chỉnh sửa bình luận
+          </label>
+          <textarea
+            className={inputClass}
+            id={`community-comment-edit-${commentId}`}
+            onChange={(event) => setDraft(event.target.value)}
+            required
+            value={draft}
+          />
           <div className="mt-3 flex flex-wrap justify-end gap-2">
-            <button className={secondaryClass} onClick={() => { setDraft(content); setEditing(false); }} type="button">Hủy chỉnh sửa</button>
-            <button className={submitClass} disabled={!draft.trim()} type="submit">Lưu chỉnh sửa</button>
+            <button
+              className={secondaryClass}
+              onClick={() => {
+                setDraft(content);
+                setEditing(false);
+              }}
+              type="button"
+            >
+              Hủy chỉnh sửa
+            </button>
+            <button
+              className={submitClass}
+              disabled={!draft.trim()}
+              type="submit"
+            >
+              Lưu chỉnh sửa
+            </button>
           </div>
         </form>
-      ) : <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--theme-text)]">{content}</p>}
+      ) : (
+        <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--theme-text)]">
+          {content}
+        </p>
+      )}
       {ownsComment ? (
         <div className="mt-2 flex flex-wrap gap-2">
-          <button aria-label="Chỉnh sửa bình luận" className={commentActionClass} onClick={() => { setDraft(content); setEditing(true); }} type="button">Chỉnh sửa</button>
-          <button aria-label="Xóa bình luận" className={commentActionClass} onClick={() => void deleteOwnedComment()} type="button">Xóa</button>
+          <button
+            aria-label="Chỉnh sửa bình luận"
+            className={commentActionClass}
+            onClick={() => {
+              setDraft(content);
+              setEditing(true);
+            }}
+            type="button"
+          >
+            Chỉnh sửa
+          </button>
+          <button
+            aria-label="Xóa bình luận"
+            className={commentActionClass}
+            onClick={() => void deleteOwnedComment()}
+            type="button"
+          >
+            Xóa
+          </button>
         </div>
       ) : null}
       {!isDeleted ? (
         <div className="mt-2">
-          {userId ? <button aria-pressed={viewerHasLiked} className={commentActionClass} disabled={liking} onClick={() => void onToggleLike(commentId, viewerHasLiked)} type="button">{viewerHasLiked ? "Bỏ thích" : "Thích"} bình luận ({likeCount})</button> : <span className="text-xs text-[var(--theme-muted)]">{likeCount} lượt thích</span>}
+          {userId ? (
+            <button
+              aria-pressed={viewerHasLiked}
+              className={commentActionClass}
+              disabled={liking}
+              onClick={() => void onToggleLike(commentId, viewerHasLiked)}
+              type="button"
+            >
+              {viewerHasLiked ? "Bỏ thích" : "Thích"} bình luận ({likeCount})
+            </button>
+          ) : (
+            <span className="text-xs text-[var(--theme-muted)]">
+              {likeCount} lượt thích
+            </span>
+          )}
           <CommunityReportAction
             targetId={commentId}
             targetLabel={`Bình luận của ${name}`}
@@ -455,14 +669,24 @@ function CommentBody({
           />
         </div>
       ) : null}
-      {actionError ? <p className="mt-2 text-sm font-semibold text-red-700" role="alert">Chưa thể cập nhật bình luận. Vui lòng thử lại.</p> : null}
+      {actionError ? (
+        <p className="mt-2 text-sm font-semibold text-red-700" role="alert">
+          Chưa thể cập nhật bình luận. Vui lòng thử lại.
+        </p>
+      ) : null}
     </div>
   );
 }
 
 function addCreatedComment(
   queryClient: ReturnType<typeof useQueryClient>,
-  queryKey: readonly ["community", "comments", string, number, CommunityCommentSort],
+  queryKey: readonly [
+    "community",
+    "comments",
+    string,
+    number,
+    CommunityCommentSort,
+  ],
   created: CommunityCommentCreateResult,
   parentId?: string,
   sort: CommunityCommentSort = "oldest",
@@ -476,8 +700,15 @@ function addCreatedComment(
         return {
           ...current,
           data: current.data.map((thread) =>
-            thread.id === parentId || thread.replies.some((item) => item.id === parentId)
-              ? { ...thread, replies: sort === "newest" ? [reply, ...thread.replies] : [...thread.replies, reply] }
+            thread.id === parentId ||
+            thread.replies.some((item) => item.id === parentId)
+              ? {
+                  ...thread,
+                  replies:
+                    sort === "newest"
+                      ? [reply, ...thread.replies]
+                      : [...thread.replies, reply],
+                }
               : thread,
           ),
         };
@@ -489,7 +720,10 @@ function addCreatedComment(
       };
       return {
         ...current,
-        data: sort === "newest" ? [thread, ...current.data] : [...current.data, thread],
+        data:
+          sort === "newest"
+            ? [thread, ...current.data]
+            : [...current.data, thread],
         meta: { ...current.meta, total: current.meta.total + 1 },
       };
     },
@@ -498,7 +732,13 @@ function addCreatedComment(
 
 function replaceComment(
   queryClient: ReturnType<typeof useQueryClient>,
-  queryKey: readonly ["community", "comments", string, number, CommunityCommentSort],
+  queryKey: readonly [
+    "community",
+    "comments",
+    string,
+    number,
+    CommunityCommentSort,
+  ],
   updated: CommunityCommentCreateResult,
 ) {
   updateCachedComment(queryClient, queryKey, updated.id, (current) => {
@@ -515,28 +755,41 @@ function replaceComment(
 
 function updateCachedComment(
   queryClient: ReturnType<typeof useQueryClient>,
-  queryKey: readonly ["community", "comments", string, number, CommunityCommentSort],
+  queryKey: readonly [
+    "community",
+    "comments",
+    string,
+    number,
+    CommunityCommentSort,
+  ],
   commentId: string,
   update: (comment: CommunityCommentFields) => CommunityCommentFields,
 ) {
   queryClient.setQueryData<CommunityPageResponse<CommunityCommentThread[]>>(
     queryKey,
-    (current) => current ? {
-      ...current,
-      data: current.data.map((thread) => {
-        if (thread.id === commentId) {
-          return { ...update(thread), parentId: null, replies: thread.replies };
-        }
-        return {
-          ...thread,
-          replies: thread.replies.map((reply) =>
-            reply.id === commentId
-              ? { ...update(reply), parentId: reply.parentId }
-              : reply,
-          ),
-        };
-      }),
-    } : current,
+    (current) =>
+      current
+        ? {
+            ...current,
+            data: current.data.map((thread) => {
+              if (thread.id === commentId) {
+                return {
+                  ...update(thread),
+                  parentId: null,
+                  replies: thread.replies,
+                };
+              }
+              return {
+                ...thread,
+                replies: thread.replies.map((reply) =>
+                  reply.id === commentId
+                    ? { ...update(reply), parentId: reply.parentId }
+                    : reply,
+                ),
+              };
+            }),
+          }
+        : current,
   );
 }
 
@@ -549,15 +802,25 @@ function updateCommentLike(
   if (thread.id === commentId) return { ...thread, likeCount, viewerHasLiked };
   return {
     ...thread,
-    replies: thread.replies.map((reply) => reply.id === commentId ? { ...reply, likeCount, viewerHasLiked } : reply),
+    replies: thread.replies.map((reply) =>
+      reply.id === commentId ? { ...reply, likeCount, viewerHasLiked } : reply,
+    ),
   };
 }
 
 function CommentSkeleton() {
   return (
-    <div aria-label="Đang tải bình luận" className="mt-5 space-y-4" role="status">
+    <div
+      aria-label="Đang tải bình luận"
+      className="mt-5 space-y-4"
+      role="status"
+    >
       {Array.from({ length: 2 }, (_, index) => (
-        <div aria-hidden="true" className="animate-pulse border-b border-[var(--theme-border)] py-5" key={index}>
+        <div
+          aria-hidden="true"
+          className="animate-pulse border-b border-[var(--theme-border)] py-5"
+          key={index}
+        >
           <div className="h-4 w-28 rounded bg-[var(--theme-elevated)]" />
           <div className="mt-3 h-4 w-4/5 rounded bg-[var(--theme-elevated)]" />
         </div>
@@ -572,7 +835,11 @@ function formatDate(value: string): string {
   return new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(date);
 }
 
-const inputClass = "mt-2 min-h-24 w-full resize-y rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm leading-6 text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)] focus:ring-2 focus:ring-[var(--theme-accent)]/20";
-const submitClass = "inline-flex min-h-10 items-center gap-2 rounded-lg bg-[var(--theme-accent)] px-4 text-sm font-bold text-[var(--theme-accent-contrast)] transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:cursor-not-allowed disabled:opacity-50";
-const secondaryClass = "inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--theme-border)] px-3 text-sm font-bold text-[var(--theme-text)] hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:cursor-not-allowed disabled:opacity-50";
-const commentActionClass = "inline-flex min-h-9 items-center rounded-md px-2 text-xs font-semibold text-[var(--theme-muted)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]";
+const inputClass =
+  "mt-2 min-h-24 w-full resize-y rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm leading-6 text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)] focus:ring-2 focus:ring-[var(--theme-accent)]/20";
+const submitClass =
+  "inline-flex min-h-10 items-center gap-2 rounded-lg bg-[var(--theme-accent)] px-4 text-sm font-bold text-[var(--theme-accent-contrast)] transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:cursor-not-allowed disabled:opacity-50";
+const secondaryClass =
+  "inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--theme-border)] px-3 text-sm font-bold text-[var(--theme-text)] hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:cursor-not-allowed disabled:opacity-50";
+const commentActionClass =
+  "inline-flex min-h-9 items-center rounded-md px-2 text-xs font-semibold text-[var(--theme-muted)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]";

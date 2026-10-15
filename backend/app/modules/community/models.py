@@ -216,9 +216,7 @@ class CommunityPost(UtcTimestampMixin, Base):
         server_default="0",
     )
     pinned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    comments_locked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    comments_locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     pre_delete_status: Mapped[str | None] = mapped_column(String(16))
     admin_deleted: Mapped[bool] = mapped_column(
         nullable=False,
@@ -242,9 +240,7 @@ class CommunityPost(UtcTimestampMixin, Base):
 
 class CommunityPostTag(Base):
     __tablename__ = "community_post_tags"
-    __table_args__ = (
-        Index("ix_community_post_tags_tag_post", "tag_id", "post_id"),
-    )
+    __table_args__ = (Index("ix_community_post_tags_tag_post", "tag_id", "post_id"),)
 
     post_id: Mapped[UUID] = mapped_column(
         Uuid,
@@ -512,9 +508,7 @@ class CommunityReport(Base):
 
 class CommunitySettings(Base):
     __tablename__ = "community_settings"
-    __table_args__ = (
-        CheckConstraint("singleton_id = 1", name="singleton_id_valid"),
-    )
+    __table_args__ = (CheckConstraint("singleton_id = 1", name="singleton_id_valid"),)
 
     singleton_id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     pre_moderation_enabled: Mapped[bool] = mapped_column(

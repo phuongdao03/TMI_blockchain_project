@@ -117,24 +117,22 @@ class CommunityTestApp:
                 yield session
 
         self.app.dependency_overrides[get_session] = session_override
-        self.app.dependency_overrides[get_current_principal] = (
-            lambda: self.principal
+        self.app.dependency_overrides[get_current_principal] = lambda: self.principal
+        self.app.dependency_overrides[get_optional_current_principal] = lambda: (
+            self.viewer_principal
         )
-        self.app.dependency_overrides[get_optional_current_principal] = (
-            lambda: self.viewer_principal
+        self.app.dependency_overrides[get_csrf_protected_principal] = lambda: (
+            self.principal
         )
-        self.app.dependency_overrides[get_csrf_protected_principal] = (
-            lambda: self.principal
+        self.app.dependency_overrides[enforce_community_content_write_rate_limit] = (
+            lambda: None
         )
-        self.app.dependency_overrides[
-            enforce_community_content_write_rate_limit
-        ] = lambda: None
-        self.app.dependency_overrides[
-            enforce_community_engagement_write_rate_limit
-        ] = lambda: None
-        self.app.dependency_overrides[
-            enforce_community_report_write_rate_limit
-        ] = lambda: None
+        self.app.dependency_overrides[enforce_community_engagement_write_rate_limit] = (
+            lambda: None
+        )
+        self.app.dependency_overrides[enforce_community_report_write_rate_limit] = (
+            lambda: None
+        )
         self.client = TestClient(self.app)
 
     def set_principal(
@@ -213,9 +211,7 @@ def test_community_rate_limit_uses_standard_429_error_envelope(
     def limited() -> None:
         raise CommunityRateLimitedError(retry_after_seconds=17)
 
-    app.app.dependency_overrides[
-        enforce_community_content_write_rate_limit
-    ] = limited
+    app.app.dependency_overrides[enforce_community_content_write_rate_limit] = limited
     try:
         response = app.client.post(
             "/api/v1/community/posts",
@@ -475,9 +471,7 @@ def test_owner_draft_submit_edit_delete_flow_is_pre_moderated(tmp_path: Path) ->
         slug = data["slug"]
         assert test_app.client.get(f"/api/v1/community/posts/{slug}").status_code == 404
 
-        submitted = test_app.client.post(
-            f"/api/v1/community/posts/{post_id}/submit"
-        )
+        submitted = test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
         assert submitted.status_code == 200
         assert submitted.json()["data"]["status"] == "PENDING"
         assert test_app.client.get(f"/api/v1/community/posts/{slug}").status_code == 404
@@ -488,9 +482,7 @@ def test_owner_draft_submit_edit_delete_flow_is_pre_moderated(tmp_path: Path) ->
             json={**payload, "title": "Changed by another member"},
         )
         assert denied.status_code == 403
-        denied_delete = test_app.client.delete(
-            f"/api/v1/community/posts/{post_id}"
-        )
+        denied_delete = test_app.client.delete(f"/api/v1/community/posts/{post_id}")
         assert denied_delete.status_code == 403
 
         test_app.set_principal(OWNER_ID)
@@ -552,9 +544,7 @@ def test_moderation_requires_explicit_permission_and_rejection_is_editable(
         assert forbidden_publish.status_code == 403
 
         test_app.set_principal(OTHER_ID, permissions=("community.moderate",))
-        queue = test_app.client.get(
-            "/api/v1/admin/community/posts?status=PENDING"
-        )
+        queue = test_app.client.get("/api/v1/admin/community/posts?status=PENDING")
         assert queue.status_code == 200
         assert queue.json()["meta"]["total"] == 1
         assert queue.json()["data"][0]["id"] == post_id
@@ -582,9 +572,7 @@ def test_moderation_requires_explicit_permission_and_rejection_is_editable(
         assert edit.json()["data"]["status"] == "DRAFT"
         assert edit.json()["data"]["moderationReason"] is None
 
-        resubmitted = test_app.client.post(
-            f"/api/v1/community/posts/{post_id}/submit"
-        )
+        resubmitted = test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
         assert resubmitted.status_code == 200
         assert resubmitted.json()["data"]["status"] == "PENDING"
         logs = _moderation_logs(test_app, UUID(post_id))
@@ -682,9 +670,10 @@ def test_reports_deduplicate_and_moderator_hide_restore_is_audited(
         assert resolved.status_code == 200, resolved.text
         assert resolved.json()["data"]["status"] == "RESOLVED"
         assert resolved.json()["data"]["resolutionAction"] == "HIDE"
-        assert test_app.client.get(
-            "/api/v1/community/posts/reportable-post"
-        ).status_code == 404
+        assert (
+            test_app.client.get("/api/v1/community/posts/reportable-post").status_code
+            == 404
+        )
         repeated_resolution = test_app.client.post(
             f"/api/v1/admin/community/reports/{first.json()['data']['id']}/resolve",
             json={"action": "DISMISS", "reason": "Already handled."},
@@ -708,9 +697,10 @@ def test_reports_deduplicate_and_moderator_hide_restore_is_audited(
             json={"reason": "Second appeal accepted."},
         )
         assert visible_again.json()["data"]["state"] == "VISIBLE"
-        assert test_app.client.get(
-            "/api/v1/community/posts/reportable-post"
-        ).status_code == 200
+        assert (
+            test_app.client.get("/api/v1/community/posts/reportable-post").status_code
+            == 200
+        )
 
         history = test_app.client.get(
             "/api/v1/admin/community/moderation-history"
@@ -768,9 +758,7 @@ def test_reported_comment_uses_tombstone_and_can_be_restored(
             json={"action": "HIDE", "reason": "Confirmed harassment."},
         )
         assert hidden.status_code == 200, hidden.text
-        thread = test_app.client.get(
-            f"/api/v1/community/posts/{post_id}/comments"
-        )
+        thread = test_app.client.get(f"/api/v1/community/posts/{post_id}/comments")
         item = thread.json()["data"][0]
         assert item["content"] == "Bình luận đã bị ẩn."
         assert item["author"] is None
@@ -781,12 +769,8 @@ def test_reported_comment_uses_tombstone_and_can_be_restored(
             json={"reason": "Moderation appeal accepted."},
         )
         assert restored.status_code == 200, restored.text
-        thread = test_app.client.get(
-            f"/api/v1/community/posts/{post_id}/comments"
-        )
-        assert thread.json()["data"][0]["content"] == (
-            "Comment subject to moderation."
-        )
+        thread = test_app.client.get(f"/api/v1/community/posts/{post_id}/comments")
+        assert thread.json()["data"][0]["content"] == ("Comment subject to moderation.")
     finally:
         test_app.close()
 
@@ -801,9 +785,7 @@ def test_community_admin_categories_and_settings_use_manage_permission(
         assert forbidden.status_code == 403
 
         test_app.set_principal(OWNER_ID, permissions=("community.moderate",))
-        forbidden_manage = test_app.client.get(
-            "/api/v1/admin/community/settings"
-        )
+        forbidden_manage = test_app.client.get("/api/v1/admin/community/settings")
         assert forbidden_manage.status_code == 403
 
         test_app.set_principal(OWNER_ID, permissions=("community.manage",))
@@ -866,9 +848,7 @@ def test_community_admin_categories_and_settings_use_manage_permission(
             },
         )
         post_id = created_post.json()["data"]["id"]
-        submitted = test_app.client.post(
-            f"/api/v1/community/posts/{post_id}/submit"
-        )
+        submitted = test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
         assert submitted.status_code == 200
         assert submitted.json()["data"]["status"] == "PUBLISHED"
 
@@ -935,9 +915,7 @@ def test_community_comment_threads_are_public_only_and_flatten_deeper_replies(
             json={"content": "Not the owner."},
         )
         assert denied_edit.status_code == 403
-        denied_delete = test_app.client.delete(
-            f"/api/v1/community/comments/{root_id}"
-        )
+        denied_delete = test_app.client.delete(f"/api/v1/community/comments/{root_id}")
         assert denied_delete.status_code == 403
 
         test_app.set_principal(OWNER_ID)
@@ -964,14 +942,10 @@ def test_community_comment_threads_are_public_only_and_flatten_deeper_replies(
         deep_reply_id = deep_reply.json()["data"]["id"]
 
         test_app.set_principal(OWNER_ID)
-        deleted_root = test_app.client.delete(
-            f"/api/v1/community/comments/{root_id}"
-        )
+        deleted_root = test_app.client.delete(f"/api/v1/community/comments/{root_id}")
         assert deleted_root.status_code == 204
 
-        hidden = test_app.client.get(
-            f"/api/v1/community/posts/{draft_id}/comments"
-        )
+        hidden = test_app.client.get(f"/api/v1/community/posts/{draft_id}/comments")
         assert hidden.status_code == 404
 
         unsafe = test_app.client.post(
@@ -1001,9 +975,7 @@ def test_community_comment_threads_are_public_only_and_flatten_deeper_replies(
         assert "private-owner@example.test" not in serialized
         assert "private-phone" not in serialized
         assert "employment" not in serialized
-        post_detail = test_app.client.get(
-            "/api/v1/community/posts/commentable-post"
-        )
+        post_detail = test_app.client.get("/api/v1/community/posts/commentable-post")
         assert post_detail.status_code == 200
         assert post_detail.json()["data"]["commentCount"] == 2
 
@@ -1037,18 +1009,14 @@ def test_likes_bookmarks_follows_and_member_reads_use_safe_profiles(
             status=CommunityPostStatus.DRAFT,
         )
 
-        first_like = test_app.client.put(
-            f"/api/v1/community/posts/{post_id}/like"
-        )
+        first_like = test_app.client.put(f"/api/v1/community/posts/{post_id}/like")
         assert first_like.status_code == 200, first_like.text
         assert first_like.json()["data"] == {
             "postId": str(post_id),
             "likeCount": 1,
             "isLiked": True,
         }
-        repeated_like = test_app.client.put(
-            f"/api/v1/community/posts/{post_id}/like"
-        )
+        repeated_like = test_app.client.put(f"/api/v1/community/posts/{post_id}/like")
         assert repeated_like.json()["data"]["likeCount"] == 1
         test_app.viewer_principal = _principal(OWNER_ID)
         personalized_post = test_app.client.get(
@@ -1060,9 +1028,7 @@ def test_likes_bookmarks_follows_and_member_reads_use_safe_profiles(
         test_app.viewer_principal = None
 
         test_app.set_principal(OTHER_ID)
-        second_like = test_app.client.put(
-            f"/api/v1/community/posts/{post_id}/like"
-        )
+        second_like = test_app.client.put(f"/api/v1/community/posts/{post_id}/like")
         assert second_like.json()["data"]["likeCount"] == 2
         removed_other_like = test_app.client.delete(
             f"/api/v1/community/posts/{post_id}/like"
@@ -1074,9 +1040,7 @@ def test_likes_bookmarks_follows_and_member_reads_use_safe_profiles(
         }
 
         test_app.set_principal(OWNER_ID)
-        bookmark = test_app.client.put(
-            f"/api/v1/community/posts/{post_id}/bookmark"
-        )
+        bookmark = test_app.client.put(f"/api/v1/community/posts/{post_id}/bookmark")
         assert bookmark.status_code == 200
         assert bookmark.json()["data"] == {
             "postId": str(post_id),
@@ -1088,9 +1052,7 @@ def test_likes_bookmarks_follows_and_member_reads_use_safe_profiles(
         )
         assert bookmarks.status_code == 200
         assert bookmarks.json()["meta"]["total"] == 1
-        assert [item["id"] for item in bookmarks.json()["data"]] == [
-            str(post_id)
-        ]
+        assert [item["id"] for item in bookmarks.json()["data"]] == [str(post_id)]
 
         own_profile = test_app.client.get("/api/v1/community/members/me")
         assert own_profile.status_code == 200
@@ -1112,9 +1074,7 @@ def test_likes_bookmarks_follows_and_member_reads_use_safe_profiles(
         assert member_posts.json()["meta"]["total"] == 1
         assert member_posts.json()["data"][0]["slug"] == "member-public-post"
 
-        followed = test_app.client.put(
-            f"/api/v1/community/members/{OTHER_ID}/follow"
-        )
+        followed = test_app.client.put(f"/api/v1/community/members/{OTHER_ID}/follow")
         assert followed.status_code == 200
         assert followed.json()["data"] == {
             "memberId": str(OTHER_ID),
@@ -1145,9 +1105,7 @@ def test_likes_bookmarks_follows_and_member_reads_use_safe_profiles(
             f"/api/v1/community/posts/{post_id}/bookmark"
         )
         assert unbookmark.json()["data"]["isBookmarked"] is False
-        empty_bookmarks = test_app.client.get(
-            "/api/v1/community/members/me/bookmarks"
-        )
+        empty_bookmarks = test_app.client.get("/api/v1/community/members/me/bookmarks")
         assert empty_bookmarks.json()["meta"]["total"] == 0
     finally:
         test_app.close()
@@ -1203,13 +1161,9 @@ def test_related_work_link_requires_current_public_visibility_and_is_allowlisted
             json={"reason": "Approved public work link."},
         )
         assert published.status_code == 200, published.text
-        public_detail = test_app.client.get(
-            f"/api/v1/community/posts/{post_slug}"
-        )
+        public_detail = test_app.client.get(f"/api/v1/community/posts/{post_slug}")
         assert public_detail.status_code == 200, public_detail.text
-        assert public_detail.json()["data"]["relatedWork"]["id"] == str(
-            public_work_id
-        )
+        assert public_detail.json()["data"]["relatedWork"]["id"] == str(public_work_id)
 
         async def hide_work() -> None:
             async with test_app.sessions() as session:
@@ -1219,9 +1173,7 @@ def test_related_work_link_requires_current_public_visibility_and_is_allowlisted
                     work.publication_status = PublicationStatus.HIDDEN
 
         asyncio.run(hide_work())
-        no_longer_public = test_app.client.get(
-            f"/api/v1/community/posts/{post_slug}"
-        )
+        no_longer_public = test_app.client.get(f"/api/v1/community/posts/{post_slug}")
         assert no_longer_public.status_code == 200
         assert no_longer_public.json()["data"]["relatedWork"] is None
         serialized = str(no_longer_public.json())
@@ -1273,9 +1225,7 @@ def test_community_notifications_cover_events_without_self_or_duplicate_alerts(
         author_notifications = test_app.client.get(
             "/api/v1/notifications?page=1&pageSize=50"
         ).json()["data"]
-        assert [item["type"] for item in author_notifications] == [
-            "COMMUNITY_REPLY"
-        ]
+        assert [item["type"] for item in author_notifications] == ["COMMUNITY_REPLY"]
         assert author_notifications[0]["data"] == {
             "actionPath": "/community/posts/community-notification-post"
         }
@@ -1290,9 +1240,7 @@ def test_community_notifications_cover_events_without_self_or_duplicate_alerts(
         test_app.client.delete(f"/api/v1/community/posts/{post_id}/like")
         test_app.client.put(f"/api/v1/community/posts/{post_id}/like")
 
-        followed = test_app.client.put(
-            f"/api/v1/community/members/{OWNER_ID}/follow"
-        )
+        followed = test_app.client.put(f"/api/v1/community/members/{OWNER_ID}/follow")
         assert followed.status_code == 200
         test_app.set_principal(OWNER_ID)
         owner_notifications = test_app.client.get(
@@ -1305,9 +1253,7 @@ def test_community_notifications_cover_events_without_self_or_duplicate_alerts(
             "COMMUNITY_POST_LIKED"
         ) == 2
         follow_notification = next(
-            item
-            for item in owner_notifications
-            if item["type"] == "COMMUNITY_FOLLOW"
+            item for item in owner_notifications if item["type"] == "COMMUNITY_FOLLOW"
         )
         assert follow_notification["data"] == {
             "actionPath": f"/community/members/member-{OTHER_ID.hex}"
@@ -1458,8 +1404,8 @@ def test_community_image_delivery_checks_public_association_and_owner_preview(
 ) -> None:
     test_app = CommunityTestApp(tmp_path)
     try:
-        test_app.app.dependency_overrides[get_media_service] = (
-            lambda: _CommunityImageReader()
+        test_app.app.dependency_overrides[get_media_service] = lambda: (
+            _CommunityImageReader()
         )
         media_id = _insert_community_image(test_app)
         created = test_app.client.post(
@@ -1488,9 +1434,7 @@ def test_community_image_delivery_checks_public_association_and_owner_preview(
         assert owner_preview.headers["x-content-type-options"] == "nosniff"
         assert owner_preview.headers["cache-control"] == "private, no-store"
 
-        submitted = test_app.client.post(
-            f"/api/v1/community/posts/{post['id']}/submit"
-        )
+        submitted = test_app.client.post(f"/api/v1/community/posts/{post['id']}/submit")
         assert submitted.status_code == 200
         test_app.set_principal(OTHER_ID, permissions=("community.moderate",))
         published = test_app.client.post(
@@ -1702,12 +1646,14 @@ def test_feed_search_sorts_following_and_rejects_unbounded_queries(
         search = test_app.client.get("/api/v1/community/posts?q=needle%20sEaRcH")
         assert search.status_code == 200, search.text
         assert [item["id"] for item in search.json()["data"]] == [str(recent_id)]
-        assert test_app.client.get(
-            f"/api/v1/community/posts?q={'x' * 121}"
-        ).status_code == 422
-        assert test_app.client.get(
-            "/api/v1/community/posts?pageSize=51"
-        ).status_code == 422
+        assert (
+            test_app.client.get(f"/api/v1/community/posts?q={'x' * 121}").status_code
+            == 422
+        )
+        assert (
+            test_app.client.get("/api/v1/community/posts?pageSize=51").status_code
+            == 422
+        )
 
         recent = test_app.client.get("/api/v1/community/posts?sort=recent")
         popular = test_app.client.get("/api/v1/community/posts?sort=popular")
@@ -1726,17 +1672,11 @@ def test_feed_search_sorts_following_and_rejects_unbounded_queries(
         assert anonymous_following.status_code == 401
         test_app.set_principal(OWNER_ID)
         test_app.viewer_principal = _principal(OWNER_ID)
-        followed = test_app.client.put(
-            f"/api/v1/community/members/{OTHER_ID}/follow"
-        )
+        followed = test_app.client.put(f"/api/v1/community/members/{OTHER_ID}/follow")
         assert followed.status_code == 200, followed.text
-        following = test_app.client.get(
-            "/api/v1/community/posts?sort=following"
-        )
+        following = test_app.client.get("/api/v1/community/posts?sort=following")
         assert following.status_code == 200, following.text
-        assert [item["id"] for item in following.json()["data"]] == [
-            str(followed_id)
-        ]
+        assert [item["id"] for item in following.json()["data"]] == [str(followed_id)]
     finally:
         test_app.close()
 
@@ -1788,9 +1728,12 @@ def test_owner_post_list_and_read_include_only_owned_manageable_statuses(
         assert [item["id"] for item in pending.json()["data"]] == [
             str(own_posts[CommunityPostStatus.PENDING])
         ]
-        assert test_app.client.get(
-            "/api/v1/community/members/me/posts?status=HIDDEN"
-        ).status_code == 422
+        assert (
+            test_app.client.get(
+                "/api/v1/community/members/me/posts?status=HIDDEN"
+            ).status_code
+            == 422
+        )
 
         for status in (
             CommunityPostStatus.DRAFT,
@@ -1813,9 +1756,12 @@ def test_owner_post_list_and_read_include_only_owned_manageable_statuses(
         assert private_read.status_code == 404
         test_app.set_principal(OWNER_ID)
         for status in (CommunityPostStatus.HIDDEN, CommunityPostStatus.DELETED):
-            assert test_app.client.get(
-                f"/api/v1/community/members/me/posts/{own_posts[status]}"
-            ).status_code == 404
+            assert (
+                test_app.client.get(
+                    f"/api/v1/community/members/me/posts/{own_posts[status]}"
+                ).status_code
+                == 404
+            )
     finally:
         test_app.close()
 
@@ -1856,9 +1802,7 @@ def test_public_feed_related_work_filter_rechecks_public_visibility(
             f"/api/v1/community/posts?relatedWorkId={public_work_id}"
         )
         assert visible.status_code == 200, visible.text
-        assert [item["id"] for item in visible.json()["data"]] == [
-            str(linked_post_id)
-        ]
+        assert [item["id"] for item in visible.json()["data"]] == [str(linked_post_id)]
         assert visible.json()["data"][0]["relatedWork"] == {
             "id": str(public_work_id),
             "title": "Public title: related-public-work",
@@ -1881,8 +1825,8 @@ def test_owner_can_preview_private_post_images_until_rejected_is_resumed(
     test_app = CommunityTestApp(tmp_path)
     try:
         test_app.viewer_principal = _principal(OWNER_ID)
-        test_app.app.dependency_overrides[get_media_service] = (
-            lambda: _CommunityImageReader()
+        test_app.app.dependency_overrides[get_media_service] = lambda: (
+            _CommunityImageReader()
         )
         media_id = _insert_community_image(test_app)
         created = test_app.client.post(
@@ -1907,9 +1851,7 @@ def test_owner_can_preview_private_post_images_until_rejected_is_resumed(
         owner_list = test_app.client.get("/api/v1/community/members/me/posts")
         assert image_url in str(owner_list.json())
 
-        submitted = test_app.client.post(
-            f"/api/v1/community/posts/{post_id}/submit"
-        )
+        submitted = test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
         assert submitted.status_code == 200
         assert test_app.client.get(image_url).status_code == 200
         test_app.viewer_principal = None
@@ -1931,9 +1873,7 @@ def test_owner_can_preview_private_post_images_until_rejected_is_resumed(
         assert owner_detail.status_code == 200
         assert owner_detail.json()["data"]["status"] == "REJECTED"
         assert test_app.client.get(image_url).status_code == 200
-        assert test_app.client.get(
-            f"/api/v1/community/posts/{slug}"
-        ).status_code == 404
+        assert test_app.client.get(f"/api/v1/community/posts/{slug}").status_code == 404
     finally:
         test_app.close()
 
@@ -2001,9 +1941,7 @@ def test_comment_likes_and_ordered_thread_projection(tmp_path: Path) -> None:
         }
         repeated_like = test_app.client.put(comment_like_url)
         assert repeated_like.json()["data"]["likeCount"] == 1
-        reply_like = test_app.client.put(
-            f"/api/v1/community/comments/{reply_new}/like"
-        )
+        reply_like = test_app.client.put(f"/api/v1/community/comments/{reply_new}/like")
         assert reply_like.json()["data"]["likeCount"] == 1
 
         test_app.viewer_principal = _principal(OWNER_ID)
@@ -2055,6 +1993,7 @@ def test_member_profile_edit_and_public_follower_lists_are_safe(
 ) -> None:
     test_app = CommunityTestApp(tmp_path)
     try:
+
         async def add_other_profile() -> None:
             async with test_app.sessions() as session:
                 session.add(
@@ -2101,13 +2040,19 @@ def test_member_profile_edit_and_public_follower_lists_are_safe(
         )
         assert reserved.status_code == 422
 
-        assert test_app.client.put(
-            f"/api/v1/community/members/{OTHER_ID}/follow"
-        ).status_code == 200
+        assert (
+            test_app.client.put(
+                f"/api/v1/community/members/{OTHER_ID}/follow"
+            ).status_code
+            == 200
+        )
         test_app.set_principal(OTHER_ID)
-        assert test_app.client.put(
-            f"/api/v1/community/members/{OWNER_ID}/follow"
-        ).status_code == 200
+        assert (
+            test_app.client.put(
+                f"/api/v1/community/members/{OWNER_ID}/follow"
+            ).status_code
+            == 200
+        )
 
         test_app.viewer_principal = _principal(OWNER_ID)
         followers = test_app.client.get(
@@ -2129,9 +2074,12 @@ def test_member_profile_edit_and_public_follower_lists_are_safe(
                 "viewerIsFollowing": True,
             }
             assert "private-other@example.test" not in str(page)
-        assert test_app.client.get(
-            "/api/v1/community/members/new_user-1/followers?pageSize=51"
-        ).status_code == 422
+        assert (
+            test_app.client.get(
+                "/api/v1/community/members/new_user-1/followers?pageSize=51"
+            ).status_code
+            == 422
+        )
     finally:
         test_app.close()
 
@@ -2186,9 +2134,7 @@ def test_post_views_use_signed_visitor_dedup_and_stay_public_only(
             slug="private-view-community-post",
             status=CommunityPostStatus.DRAFT,
         )
-        before = test_app.client.get(
-            "/api/v1/community/posts/viewable-community-post"
-        )
+        before = test_app.client.get("/api/v1/community/posts/viewable-community-post")
         assert before.status_code == 200, before.text
         assert before.json()["data"]["viewCount"] == 0
 
@@ -2198,14 +2144,10 @@ def test_post_views_use_signed_visitor_dedup_and_stay_public_only(
         assert "cns_engagement_visitor" in first_view.headers.get("set-cookie", "")
         repeated_view = test_app.client.post(view_url)
         assert repeated_view.status_code == 204
-        after = test_app.client.get(
-            "/api/v1/community/posts/viewable-community-post"
-        )
+        after = test_app.client.get("/api/v1/community/posts/viewable-community-post")
         assert after.json()["data"]["viewCount"] == 1
 
-        private_view = test_app.client.post(
-            f"/api/v1/community/posts/{draft_id}/views"
-        )
+        private_view = test_app.client.post(f"/api/v1/community/posts/{draft_id}/views")
         assert private_view.status_code == 404
     finally:
         test_app.close()
@@ -2321,9 +2263,12 @@ def test_admin_post_workspace_and_reversible_moderation_states(
             "deletedAt": deleted.json()["data"]["deletedAt"],
             "restoredStatus": None,
         }
-        assert test_app.client.get(
-            "/api/v1/community/posts/admin-workspace-searchable-post"
-        ).status_code == 404
+        assert (
+            test_app.client.get(
+                "/api/v1/community/posts/admin-workspace-searchable-post"
+            ).status_code
+            == 404
+        )
         restored = test_app.client.post(
             f"/api/v1/admin/community/posts/{post_id}/restore",
             json={"reason": "The policy issue was resolved."},
@@ -2365,15 +2310,21 @@ def test_admin_post_workspace_and_reversible_moderation_states(
         )
         assert owner_delete.status_code == 204
         test_app.set_principal(OTHER_ID, permissions=("community.moderate",))
-        assert test_app.client.request(
-            "DELETE",
-            f"/api/v1/admin/community/posts/{owner_deleted_post}",
-            json={"reason": "Cannot convert an owner deletion."},
-        ).status_code == 409
-        assert test_app.client.post(
-            f"/api/v1/admin/community/posts/{owner_deleted_post}/restore",
-            json={"reason": "Owner deletion cannot be reversed by admin."},
-        ).status_code == 409
+        assert (
+            test_app.client.request(
+                "DELETE",
+                f"/api/v1/admin/community/posts/{owner_deleted_post}",
+                json={"reason": "Cannot convert an owner deletion."},
+            ).status_code
+            == 409
+        )
+        assert (
+            test_app.client.post(
+                f"/api/v1/admin/community/posts/{owner_deleted_post}/restore",
+                json={"reason": "Owner deletion cannot be reversed by admin."},
+            ).status_code
+            == 409
+        )
         history = test_app.client.get(
             "/api/v1/admin/community/moderation-history"
             f"?targetType=POST&targetId={post_id}"
@@ -2466,8 +2417,7 @@ def test_admin_comment_workspace_preserves_visibility_and_owner_deletes(
         assert deleted.status_code == 200, deleted.text
         assert deleted.json()["data"]["visibility"] == "DELETED"
         deleted_workspace = test_app.client.get(
-            "/api/v1/admin/community/comments?visibility=DELETED"
-            "&q=Searchable%20content"
+            "/api/v1/admin/community/comments?visibility=DELETED&q=Searchable%20content"
         )
         deleted_item = next(
             item
@@ -2629,8 +2579,7 @@ def test_admin_member_finder_and_time_bounded_restrictions(
         test_app.set_principal(OTHER_ID, permissions=("community.moderate",))
         revoked = test_app.client.request(
             "DELETE",
-            f"/api/v1/admin/community/members/{OWNER_ID}/restrictions/"
-            f"{restriction_id}",
+            f"/api/v1/admin/community/members/{OWNER_ID}/restrictions/{restriction_id}",
             json={"reason": "The temporary restriction is no longer needed."},
         )
         assert revoked.status_code == 200, revoked.text
@@ -2708,8 +2657,7 @@ def test_community_comment_mentions_create_safe_deduplicated_notifications(
             f"/api/v1/community/posts/{post_id}/comments",
             json={
                 "content": (
-                    "Please see @COMMUNITY-OWNER, @community-owner, "
-                    "and @unknown-user."
+                    "Please see @COMMUNITY-OWNER, @community-owner, and @unknown-user."
                 )
             },
         )
@@ -2728,9 +2676,12 @@ def test_community_comment_mentions_create_safe_deduplicated_notifications(
         assert "private-other@example.test" not in str(notifications)
 
         test_app.set_principal(OTHER_ID)
-        assert test_app.client.get(
-            "/api/v1/notifications?page=1&pageSize=50"
-        ).json()["meta"]["total"] == 0
+        assert (
+            test_app.client.get("/api/v1/notifications?page=1&pageSize=50").json()[
+                "meta"
+            ]["total"]
+            == 0
+        )
     finally:
         test_app.close()
 
@@ -2751,9 +2702,7 @@ def test_community_post_mentions_notify_only_after_publication(
         )
         assert created.status_code == 201, created.text
         post_id = created.json()["data"]["id"]
-        submitted = test_app.client.post(
-            f"/api/v1/community/posts/{post_id}/submit"
-        )
+        submitted = test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
         assert submitted.status_code == 200, submitted.text
 
         test_app.set_principal(OWNER_ID)

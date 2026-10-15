@@ -147,7 +147,9 @@ export function useMediaUploader({
         try {
           await mediaApi.deleteAsset(item.completion.mediaId);
         } catch {
-          setSelectionError("Không thể xóa tệp đã tải lên. Hãy thử lại hoặc giữ tệp trong hàng đợi.");
+          setSelectionError(
+            "Không thể xóa tệp đã tải lên. Hãy thử lại hoặc giữ tệp trong hàng đợi.",
+          );
           return;
         }
       }

@@ -14,7 +14,10 @@ vi.mock("@/components/auth/role-gate", () => ({
     children: ReactNode;
     permissions: string[];
   }) => (
-    <div data-allowed={allowed.join(",")} data-permissions={permissions.join(",")}>
+    <div
+      data-allowed={allowed.join(",")}
+      data-permissions={permissions.join(",")}
+    >
       {children}
     </div>
   ),
@@ -28,7 +31,9 @@ describe("CommunityModerationPage", () => {
     const { container } = render(<CommunityModerationPage />);
 
     expect(screen.getByText("Community admin workspace")).toBeDefined();
-    expect(container.firstElementChild?.getAttribute("data-allowed")).toBe("SUPER_ADMIN");
+    expect(container.firstElementChild?.getAttribute("data-allowed")).toBe(
+      "SUPER_ADMIN",
+    );
     expect(container.firstElementChild?.getAttribute("data-permissions")).toBe(
       "community.moderate,community.manage",
     );

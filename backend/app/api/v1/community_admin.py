@@ -17,24 +17,27 @@ from app.modules.auth.dependencies import (
 from app.modules.community.admin_repository import (
     CommunityAdminCommentRow,
     CommunityModerationEventRow,
-    CommunityRestrictionRow,
     CommunityReportRow,
+    CommunityRestrictionRow,
 )
 from app.modules.community.admin_schemas import (
     CommunityActionRequest,
+    CommunityAdminActiveRestriction,
     CommunityAdminCategoryData,
     CommunityAdminCommentPostData,
     CommunityAdminCommentStateData,
     CommunityAdminCommentWorkspaceData,
     CommunityAdminMemberCard,
     CommunityAdminMemberWorkspaceData,
-    CommunityAdminActiveRestriction,
     CommunityAdminPostDeletionData,
     CommunityAdminPostLockData,
     CommunityAdminPostPinData,
     CommunityAdminSettingsData,
     CommunityCategoryCreateRequest,
     CommunityCategoryPatchRequest,
+    CommunityMemberRestrictionCreateRequest,
+    CommunityMemberRestrictionData,
+    CommunityMemberRestrictionRevokeRequest,
     CommunityModerationEventData,
     CommunityModerationStateData,
     CommunityReportCommentPreview,
@@ -43,9 +46,6 @@ from app.modules.community.admin_schemas import (
     CommunityReportRequest,
     CommunityReportResolutionRequest,
     CommunitySettingsRequest,
-    CommunityMemberRestrictionCreateRequest,
-    CommunityMemberRestrictionData,
-    CommunityMemberRestrictionRevokeRequest,
 )
 from app.modules.community.dependencies import CommunityAdminServiceDependency
 from app.modules.community.rate_limit import (
@@ -113,8 +113,7 @@ def _report_data(row: CommunityReportRow) -> CommunityReportData:
         if comment is None or post is None:
             raise ValueError("Report target is missing despite foreign key integrity.")
         is_deleted = (
-            comment.deleted_at is not None
-            or comment.moderation_hidden_at is not None
+            comment.deleted_at is not None or comment.moderation_hidden_at is not None
         )
         preview = CommunityReportCommentPreview(
             type="COMMENT",
@@ -180,7 +179,9 @@ def _event_data(row: CommunityModerationEventRow) -> CommunityModerationEventDat
     )
 
 
-def _admin_comment_data(row: CommunityAdminCommentRow) -> CommunityAdminCommentWorkspaceData:
+def _admin_comment_data(
+    row: CommunityAdminCommentRow,
+) -> CommunityAdminCommentWorkspaceData:
     comment = row.comment
     deleted = comment.deleted_at is not None
     author = _author(
@@ -200,8 +201,10 @@ def _admin_comment_data(row: CommunityAdminCommentRow) -> CommunityAdminCommentW
         like_count=row.like_count,
         viewer_has_liked=False,
         visibility=(
-            "DELETED" if deleted
-            else "HIDDEN" if comment.moderation_hidden_at is not None
+            "DELETED"
+            if deleted
+            else "HIDDEN"
+            if comment.moderation_hidden_at is not None
             else "VISIBLE"
         ),
         post=CommunityAdminCommentPostData(
@@ -410,9 +413,7 @@ async def hide_post(
     principal: CsrfProtectedPrincipalDependency,
     service: CommunityAdminServiceDependency,
 ) -> SuccessEnvelope[CommunityModerationStateData]:
-    return await _post_visibility(
-        post_id, False, payload, request, principal, service
-    )
+    return await _post_visibility(post_id, False, payload, request, principal, service)
 
 
 @admin_router.post(
@@ -473,7 +474,9 @@ async def _comment_visibility(
         request_id=request.state.request_id,
     )
     return SuccessEnvelope(
-        data=CommunityAdminCommentStateData(comment_id=comment_id, visibility=state_value),
+        data=CommunityAdminCommentStateData(
+            comment_id=comment_id, visibility=state_value
+        ),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 
@@ -659,7 +662,9 @@ async def list_admin_comments(
     service: CommunityAdminServiceDependency,
     query: Annotated[str | None, Query(alias="q", min_length=1, max_length=160)] = None,
     post_id: Annotated[UUID | None, Query(alias="postId")] = None,
-    author_username: Annotated[str | None, Query(alias="authorUsername", min_length=1, max_length=64)] = None,
+    author_username: Annotated[
+        str | None, Query(alias="authorUsername", min_length=1, max_length=64)
+    ] = None,
     visibility: Annotated[
         Literal["VISIBLE", "HIDDEN", "DELETED", "ALL"], Query()
     ] = "ALL",
@@ -706,7 +711,9 @@ async def admin_delete_comment(
         request_id=request.state.request_id,
     )
     return SuccessEnvelope(
-        data=CommunityAdminCommentStateData(comment_id=comment_id, visibility=visibility),
+        data=CommunityAdminCommentStateData(
+            comment_id=comment_id, visibility=visibility
+        ),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 

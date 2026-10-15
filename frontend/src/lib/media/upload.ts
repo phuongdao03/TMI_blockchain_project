@@ -45,7 +45,9 @@ function publicLimit(
   min = 1,
 ): number {
   const configured = Number(value);
-  return Number.isSafeInteger(configured) && configured >= min && configured <= max
+  return Number.isSafeInteger(configured) &&
+    configured >= min &&
+    configured <= max
     ? configured
     : fallback;
 }

@@ -39,7 +39,9 @@ const categories = [
 ];
 
 function wrapper({ children }: { children: ReactNode }) {
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
 }
 
 beforeEach(() => {
@@ -69,11 +71,17 @@ beforeEach(() => {
         commentCount: 2,
         viewerHasLiked: false,
         viewerHasBookmarked: false,
-        relatedWork: { id: "work-1", title: "Gốm làng cổ", slug: "gom-lang-co" },
-        images: [{
-          id: "image-1",
-          url: "/api/v1/community/posts/chuyen-di-lang-co/media/image-1",
-        }],
+        relatedWork: {
+          id: "work-1",
+          title: "Gốm làng cổ",
+          slug: "gom-lang-co",
+        },
+        images: [
+          {
+            id: "image-1",
+            url: "/api/v1/community/posts/chuyen-di-lang-co/media/image-1",
+          },
+        ],
       },
     ],
     meta: { requestId: "feed-1", page: 2, pageSize: 10, total: 25 },
@@ -97,7 +105,11 @@ describe("CommunityFeed", () => {
     expect(image.getAttribute("src")).toBe(
       "/api/v1/community/posts/chuyen-di-lang-co/media/image-1",
     );
-    expect(screen.getByRole("link", { name: "Tác phẩm liên quan: Gốm làng cổ" }).getAttribute("href")).toBe("/works/gom-lang-co");
+    expect(
+      screen
+        .getByRole("link", { name: "Tác phẩm liên quan: Gốm làng cổ" })
+        .getAttribute("href"),
+    ).toBe("/works/gom-lang-co");
     expect(screen.getByText("Thành viên cộng đồng")).toBeDefined();
     expect(
       screen
@@ -142,10 +154,26 @@ describe("CommunityFeed", () => {
       },
       expect.any(AbortSignal),
     );
-    expect((screen.getByRole("searchbox", { name: "Tìm kiếm bài viết" }) as HTMLInputElement).value).toBe("tranh Đông Hồ");
-    expect(screen.getByRole("link", { name: "Thảo luận nhiều" }).getAttribute("href")).toContain("sort=discussed");
-    expect(screen.getByRole("link", { name: "#Tranh dân gian" }).getAttribute("href")).toContain("tag=tranh-dan-gian");
-    expect(screen.getByRole("link", { name: "Trang sau" }).getAttribute("href")).toContain("relatedWorkId=work-1");
+    expect(
+      (
+        screen.getByRole("searchbox", {
+          name: "Tìm kiếm bài viết",
+        }) as HTMLInputElement
+      ).value,
+    ).toBe("tranh Đông Hồ");
+    expect(
+      screen
+        .getByRole("link", { name: "Thảo luận nhiều" })
+        .getAttribute("href"),
+    ).toContain("sort=discussed");
+    expect(
+      screen
+        .getByRole("link", { name: "#Tranh dân gian" })
+        .getAttribute("href"),
+    ).toContain("tag=tranh-dan-gian");
+    expect(
+      screen.getByRole("link", { name: "Trang sau" }).getAttribute("href"),
+    ).toContain("relatedWorkId=work-1");
   });
 
   it("shows a clear empty state when a selected category has no posts", async () => {
@@ -161,27 +189,33 @@ describe("CommunityFeed", () => {
     expect(
       await screen.findByText("Chưa có bài viết trong chuyên mục này."),
     ).toBeDefined();
-    expect(screen.getByRole("link", { name: "Viết bài đầu tiên" })).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Viết bài đầu tiên" }),
+    ).toBeDefined();
   });
 
   it("does not render an image URL unless it matches the backend community delivery path", async () => {
     api.posts.mockResolvedValueOnce({
       success: true,
-      data: [{
-        id: "post-2",
-        slug: "bai-viet-cong-khai",
-        title: "Bài viết công khai",
-        excerpt: null,
-        category: { id: "cat-1", name: "Di sản", slug: "di-san" },
-        author: { displayName: "Thành viên" },
-        publishedAt: "2026-10-13T09:00:00Z",
-        likeCount: 0,
-        commentCount: 0,
-        viewerHasLiked: false,
-        viewerHasBookmarked: false,
-        relatedWork: null,
-        images: [{ id: "image-2", url: "https://tracker.example.test/pixel.png" }],
-      }],
+      data: [
+        {
+          id: "post-2",
+          slug: "bai-viet-cong-khai",
+          title: "Bài viết công khai",
+          excerpt: null,
+          category: { id: "cat-1", name: "Di sản", slug: "di-san" },
+          author: { displayName: "Thành viên" },
+          publishedAt: "2026-10-13T09:00:00Z",
+          likeCount: 0,
+          commentCount: 0,
+          viewerHasLiked: false,
+          viewerHasBookmarked: false,
+          relatedWork: null,
+          images: [
+            { id: "image-2", url: "https://tracker.example.test/pixel.png" },
+          ],
+        },
+      ],
       meta: { requestId: "feed-image-url", page: 1, pageSize: 20, total: 1 },
     });
     render(<CommunityFeed page={1} />, { wrapper });
@@ -212,15 +246,18 @@ describe("CommunityFeed", () => {
 
     await screen.findByRole("heading", { name: "Cộng đồng" });
     expect(
-      queryClient.getQueryCache().getAll().some((query) =>
-        query.queryKey.some(
-          (part) =>
-            typeof part === "object" &&
-            part !== null &&
-            "viewerKey" in part &&
-            part.viewerKey === "viewer-7",
+      queryClient
+        .getQueryCache()
+        .getAll()
+        .some((query) =>
+          query.queryKey.some(
+            (part) =>
+              typeof part === "object" &&
+              part !== null &&
+              "viewerKey" in part &&
+              part.viewerKey === "viewer-7",
+          ),
         ),
-      ),
     ).toBe(true);
   });
 });

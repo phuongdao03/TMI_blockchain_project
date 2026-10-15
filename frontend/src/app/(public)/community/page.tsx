@@ -36,7 +36,16 @@ export default async function CommunityPage({
     ? Math.max(1, Math.min(10_000, Math.floor(pageValue)))
     : 1;
 
-  return <CommunityFeed category={category} tag={tag} relatedWorkId={relatedWorkId} q={q} sort={sort} page={page} />;
+  return (
+    <CommunityFeed
+      category={category}
+      tag={tag}
+      relatedWorkId={relatedWorkId}
+      q={q}
+      sort={sort}
+      page={page}
+    />
+  );
 }
 
 function singleValue(value: string | string[] | undefined): string | undefined {
@@ -50,6 +59,13 @@ function normalizedFilter(
   return singleValue(value)?.trim().slice(0, maxLength) || undefined;
 }
 
-function isCommunityPostSort(value: string | undefined): value is CommunityPostSort {
-  return value === "recent" || value === "popular" || value === "discussed" || value === "following";
+function isCommunityPostSort(
+  value: string | undefined,
+): value is CommunityPostSort {
+  return (
+    value === "recent" ||
+    value === "popular" ||
+    value === "discussed" ||
+    value === "following"
+  );
 }

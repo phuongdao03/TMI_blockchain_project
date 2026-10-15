@@ -1,15 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
 
-const sitemap = vi.hoisted(() => ({ loadSitemapManifest: vi.fn(), loadCommunityPostSitemapManifest: vi.fn() }));
-vi.mock("@/lib/api/public-seo-server", () => ({ loadSitemapManifest: sitemap.loadSitemapManifest }));
-vi.mock("@/lib/api/community-sitemap-server", () => ({ loadCommunityPostSitemapManifest: sitemap.loadCommunityPostSitemapManifest }));
+const sitemap = vi.hoisted(() => ({
+  loadSitemapManifest: vi.fn(),
+  loadCommunityPostSitemapManifest: vi.fn(),
+}));
+vi.mock("@/lib/api/public-seo-server", () => ({
+  loadSitemapManifest: sitemap.loadSitemapManifest,
+}));
+vi.mock("@/lib/api/community-sitemap-server", () => ({
+  loadCommunityPostSitemapManifest: sitemap.loadCommunityPostSitemapManifest,
+}));
 
 import { GET } from "@/app/sitemap.xml/route";
 
 describe("sitemap index", () => {
   it("includes paged public community sitemap routes", async () => {
     sitemap.loadSitemapManifest.mockResolvedValue({ pageCount: 1 });
-    sitemap.loadCommunityPostSitemapManifest.mockResolvedValue({ pageCount: 2 });
+    sitemap.loadCommunityPostSitemapManifest.mockResolvedValue({
+      pageCount: 2,
+    });
 
     const response = await GET();
     const xml = await response.text();
@@ -21,7 +30,9 @@ describe("sitemap index", () => {
 
   it("omits community sitemap entries when its public feed is unavailable", async () => {
     sitemap.loadSitemapManifest.mockResolvedValue({ pageCount: 0 });
-    sitemap.loadCommunityPostSitemapManifest.mockResolvedValue({ pageCount: 0 });
+    sitemap.loadCommunityPostSitemapManifest.mockResolvedValue({
+      pageCount: 0,
+    });
 
     const xml = await (await GET()).text();
 

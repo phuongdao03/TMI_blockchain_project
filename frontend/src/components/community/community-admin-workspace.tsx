@@ -17,27 +17,43 @@ import {
 } from "@/components/community/community-admin-content-workspaces";
 import { useAuthUser } from "@/lib/auth/user-context";
 
-type WorkspaceView = "pending" | "posts" | "comments" | "members" | "reports" | "visibility" | "history" | "categories" | "settings";
+type WorkspaceView =
+  | "pending"
+  | "posts"
+  | "comments"
+  | "members"
+  | "reports"
+  | "visibility"
+  | "history"
+  | "categories"
+  | "settings";
 
 export function CommunityAdminWorkspace() {
   const user = useAuthUser();
   const isSuperAdmin = user?.roles.includes("SUPER_ADMIN") ?? false;
-  const canModerate = isSuperAdmin || (user?.permissions?.includes("community.moderate") ?? false);
-  const canManage = isSuperAdmin || (user?.permissions?.includes("community.manage") ?? false);
+  const canModerate =
+    isSuperAdmin ||
+    (user?.permissions?.includes("community.moderate") ?? false);
+  const canManage =
+    isSuperAdmin || (user?.permissions?.includes("community.manage") ?? false);
   const views: { id: WorkspaceView; label: string }[] = [
-    ...(canModerate ? [
-      { id: "pending" as const, label: "Bài chờ duyệt" },
-      { id: "posts" as const, label: "Bài viết" },
-      { id: "comments" as const, label: "Bình luận" },
-      { id: "members" as const, label: "Thành viên" },
-      { id: "reports" as const, label: "Báo cáo" },
-      { id: "visibility" as const, label: "Ẩn / khôi phục" },
-      { id: "history" as const, label: "Lịch sử" },
-    ] : []),
-    ...(canManage ? [
-      { id: "categories" as const, label: "Danh mục" },
-      { id: "settings" as const, label: "Cài đặt" },
-    ] : []),
+    ...(canModerate
+      ? [
+          { id: "pending" as const, label: "Bài chờ duyệt" },
+          { id: "posts" as const, label: "Bài viết" },
+          { id: "comments" as const, label: "Bình luận" },
+          { id: "members" as const, label: "Thành viên" },
+          { id: "reports" as const, label: "Báo cáo" },
+          { id: "visibility" as const, label: "Ẩn / khôi phục" },
+          { id: "history" as const, label: "Lịch sử" },
+        ]
+      : []),
+    ...(canManage
+      ? [
+          { id: "categories" as const, label: "Danh mục" },
+          { id: "settings" as const, label: "Cài đặt" },
+        ]
+      : []),
   ];
   const [selectedView, setSelectedView] = useState<WorkspaceView>(
     canModerate ? "pending" : "categories",
@@ -48,14 +64,23 @@ export function CommunityAdminWorkspace() {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
       <header className="mb-6 border-b border-[var(--theme-border)] pb-5">
-        <p className="text-xs font-bold tracking-[0.16em] text-[var(--theme-accent)] uppercase">Không gian quản trị</p>
-        <h1 className="mt-2 text-3xl font-bold text-[var(--theme-text)]">Cộng đồng</h1>
+        <p className="text-xs font-bold tracking-[0.16em] text-[var(--theme-accent)] uppercase">
+          Không gian quản trị
+        </p>
+        <h1 className="mt-2 text-3xl font-bold text-[var(--theme-text)]">
+          Cộng đồng
+        </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
-          Xem xét nội dung và quản lý các thiết lập cộng đồng theo quyền được cấp.
+          Xem xét nội dung và quản lý các thiết lập cộng đồng theo quyền được
+          cấp.
         </p>
       </header>
 
-      <div aria-label="Công cụ quản trị cộng đồng" className="mb-6 flex flex-wrap gap-2" role="group">
+      <div
+        aria-label="Công cụ quản trị cộng đồng"
+        className="mb-6 flex flex-wrap gap-2"
+        role="group"
+      >
         {views.map((view) => (
           <button
             aria-pressed={selectedView === view.id}
@@ -70,15 +95,33 @@ export function CommunityAdminWorkspace() {
       </div>
 
       <div aria-live="polite" className="min-w-0">
-        {selectedView === "pending" && canModerate ? <CommunityModerationQueue /> : null}
-        {selectedView === "posts" && canModerate ? <CommunityAdminPostsWorkspace /> : null}
-        {selectedView === "comments" && canModerate ? <CommunityAdminCommentsWorkspace /> : null}
-        {selectedView === "members" && canModerate ? <CommunityAdminMembersWorkspace /> : null}
-        {selectedView === "reports" && canModerate ? <CommunityReportQueue /> : null}
-        {selectedView === "visibility" && canModerate ? <CommunityVisibilityPanel /> : null}
-        {selectedView === "history" && canModerate ? <CommunityModerationHistoryPanel /> : null}
-        {selectedView === "categories" && canManage ? <CommunityCategoryManagement /> : null}
-        {selectedView === "settings" && canManage ? <CommunitySettingsPanel /> : null}
+        {selectedView === "pending" && canModerate ? (
+          <CommunityModerationQueue />
+        ) : null}
+        {selectedView === "posts" && canModerate ? (
+          <CommunityAdminPostsWorkspace />
+        ) : null}
+        {selectedView === "comments" && canModerate ? (
+          <CommunityAdminCommentsWorkspace />
+        ) : null}
+        {selectedView === "members" && canModerate ? (
+          <CommunityAdminMembersWorkspace />
+        ) : null}
+        {selectedView === "reports" && canModerate ? (
+          <CommunityReportQueue />
+        ) : null}
+        {selectedView === "visibility" && canModerate ? (
+          <CommunityVisibilityPanel />
+        ) : null}
+        {selectedView === "history" && canModerate ? (
+          <CommunityModerationHistoryPanel />
+        ) : null}
+        {selectedView === "categories" && canManage ? (
+          <CommunityCategoryManagement />
+        ) : null}
+        {selectedView === "settings" && canManage ? (
+          <CommunitySettingsPanel />
+        ) : null}
       </div>
     </main>
   );

@@ -14,7 +14,10 @@ export function CommunityMarkdown({ content }: { content: string }) {
         if (block.type === "heading") {
           const Heading = headingElements[block.level - 1] ?? "h2";
           return (
-            <Heading className="font-bold leading-tight" key={`heading-${index}`}>
+            <Heading
+              className="font-bold leading-tight"
+              key={`heading-${index}`}
+            >
               {renderInline(block.text)}
             </Heading>
           );
@@ -38,8 +41,14 @@ export function CommunityMarkdown({ content }: { content: string }) {
         const List = block.ordered ? "ol" : "ul";
         return (
           <List
-            aria-label={block.ordered ? "Danh sách có thứ tự" : "Danh sách không thứ tự"}
-            className={block.ordered ? "list-decimal space-y-1 pl-7" : "list-disc space-y-1 pl-7"}
+            aria-label={
+              block.ordered ? "Danh sách có thứ tự" : "Danh sách không thứ tự"
+            }
+            className={
+              block.ordered
+                ? "list-decimal space-y-1 pl-7"
+                : "list-disc space-y-1 pl-7"
+            }
             key={`list-${index}`}
           >
             {block.items.map((item, itemIndex) => (
@@ -68,7 +77,11 @@ function parseBlocks(content: string): MarkdownBlock[] {
 
     const heading = /^(#{1,6})\s+(.+)$/.exec(line);
     if (heading) {
-      blocks.push({ type: "heading", level: heading[1]!.length, text: heading[2]! });
+      blocks.push({
+        type: "heading",
+        level: heading[1]!.length,
+        text: heading[2]!,
+      });
       index += 1;
       continue;
     }
@@ -168,8 +181,10 @@ function safeMarkdownHref(value: string): string | null {
   if (hasScheme && !/^https?:\/\//i.test(href)) return null;
   try {
     const parsed = new URL(href, "https://community.invalid");
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
-    if (!hasScheme && parsed.origin !== "https://community.invalid") return null;
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
+      return null;
+    if (!hasScheme && parsed.origin !== "https://community.invalid")
+      return null;
     return href;
   } catch {
     return null;

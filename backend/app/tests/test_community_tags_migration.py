@@ -30,9 +30,7 @@ def test_community_tags_migration_adds_constraints_and_downgrades_safely(
         with sqlite3.connect(database_path) as connection:
             tag_columns = {
                 row[1]
-                for row in connection.execute(
-                    "PRAGMA table_info('community_tags')"
-                )
+                for row in connection.execute("PRAGMA table_info('community_tags')")
             }
             relation_columns = {
                 row[1]

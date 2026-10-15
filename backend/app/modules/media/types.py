@@ -18,9 +18,7 @@ class MediaPurpose(StrEnum):
 COMMUNITY_POST_IMAGE_MAX_BYTES = 5_242_880
 COMMUNITY_POST_IMAGE_MAX_COUNT = 5
 COMMUNITY_POST_IMAGE_MAX_COUNT_HARD_LIMIT = 10
-COMMUNITY_POST_IMAGE_MIME_TYPES = frozenset(
-    {"image/jpeg", "image/png", "image/webp"}
-)
+COMMUNITY_POST_IMAGE_MIME_TYPES = frozenset({"image/jpeg", "image/png", "image/webp"})
 AVATAR_IMAGE_MIME_TYPES = frozenset({"image/jpeg", "image/png", "image/webp"})
 
 

@@ -20,8 +20,10 @@ export default async function CommunityNewPage({
 }) {
   const input = (await searchParams) ?? {};
   const postId = one(input.postId)?.trim().slice(0, 100) || undefined;
-  const relatedWorkId = one(input.relatedWorkId)?.trim().slice(0, 100) || undefined;
-  const relatedWorkSlug = one(input.relatedWorkSlug)?.trim().slice(0, 100) || undefined;
+  const relatedWorkId =
+    one(input.relatedWorkId)?.trim().slice(0, 100) || undefined;
+  const relatedWorkSlug =
+    one(input.relatedWorkSlug)?.trim().slice(0, 100) || undefined;
   const params = new URLSearchParams();
   if (postId) params.set("postId", postId);
   if (relatedWorkId && relatedWorkSlug) {
@@ -35,7 +37,11 @@ export default async function CommunityNewPage({
   }
 
   let relatedWork = null;
-  if (relatedWorkId && relatedWorkSlug && /^[\p{L}\p{N}-]+$/u.test(relatedWorkSlug)) {
+  if (
+    relatedWorkId &&
+    relatedWorkSlug &&
+    /^[\p{L}\p{N}-]+$/u.test(relatedWorkSlug)
+  ) {
     const result = await loadPublicWork(relatedWorkSlug);
     if (result.kind === "detail" && result.detail.id === relatedWorkId) {
       relatedWork = {

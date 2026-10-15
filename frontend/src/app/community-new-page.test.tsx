@@ -16,7 +16,10 @@ describe("CommunityNewPage", () => {
   });
 
   it("sends visitors to sign in before showing the authenticated editor", async () => {
-    auth.getServerAuthState.mockResolvedValue({ user: null, hasRefreshCookie: false });
+    auth.getServerAuthState.mockResolvedValue({
+      user: null,
+      hasRefreshCookie: false,
+    });
 
     await CommunityNewPage({ searchParams: Promise.resolve({}) });
 
@@ -26,13 +29,26 @@ describe("CommunityNewPage", () => {
   });
 
   it("prefills only a published work whose ID matches the public slug lookup", async () => {
-    auth.getServerAuthState.mockResolvedValue({ user: { id: "member-1" }, hasRefreshCookie: true });
+    auth.getServerAuthState.mockResolvedValue({
+      user: { id: "member-1" },
+      hasRefreshCookie: true,
+    });
     publicWork.loadPublicWork.mockResolvedValue({
       kind: "detail",
-      detail: { id: "work-1", title: "Gốm làng cổ", canonicalSlug: "gom-lang-co" },
+      detail: {
+        id: "work-1",
+        title: "Gốm làng cổ",
+        canonicalSlug: "gom-lang-co",
+      },
     });
 
-    const page = await CommunityNewPage({ searchParams: Promise.resolve({ postId: "post-1", relatedWorkId: "work-1", relatedWorkSlug: "gom-lang-co" }) });
+    const page = await CommunityNewPage({
+      searchParams: Promise.resolve({
+        postId: "post-1",
+        relatedWorkId: "work-1",
+        relatedWorkSlug: "gom-lang-co",
+      }),
+    });
 
     expect(page.props).toMatchObject({
       postId: "post-1",
@@ -41,13 +57,25 @@ describe("CommunityNewPage", () => {
   });
 
   it("does not trust an arbitrary related work ID from the query string", async () => {
-    auth.getServerAuthState.mockResolvedValue({ user: { id: "member-1" }, hasRefreshCookie: true });
+    auth.getServerAuthState.mockResolvedValue({
+      user: { id: "member-1" },
+      hasRefreshCookie: true,
+    });
     publicWork.loadPublicWork.mockResolvedValue({
       kind: "detail",
-      detail: { id: "different-work", title: "Gốm làng cổ", canonicalSlug: "gom-lang-co" },
+      detail: {
+        id: "different-work",
+        title: "Gốm làng cổ",
+        canonicalSlug: "gom-lang-co",
+      },
     });
 
-    const page = await CommunityNewPage({ searchParams: Promise.resolve({ relatedWorkId: "forged-id", relatedWorkSlug: "gom-lang-co" }) });
+    const page = await CommunityNewPage({
+      searchParams: Promise.resolve({
+        relatedWorkId: "forged-id",
+        relatedWorkSlug: "gom-lang-co",
+      }),
+    });
 
     expect(page.props.relatedWork).toBeNull();
   });

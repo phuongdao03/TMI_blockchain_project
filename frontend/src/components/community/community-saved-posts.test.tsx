@@ -60,12 +60,20 @@ describe("CommunitySavedPosts", () => {
     const user = userEvent.setup();
     render(<CommunitySavedPosts page={1} />, { wrapper });
 
-    expect(await screen.findByRole("heading", { name: "Bài đã lưu" })).toBeDefined();
-    expect(await screen.findByRole("heading", { name: "Ký ức làng cổ" })).toBeDefined();
+    expect(
+      await screen.findByRole("heading", { name: "Bài đã lưu" }),
+    ).toBeDefined();
+    expect(
+      await screen.findByRole("heading", { name: "Ký ức làng cổ" }),
+    ).toBeDefined();
     expect(api.bookmarks).toHaveBeenCalledWith(1, expect.any(AbortSignal));
 
-    await user.click(screen.getByRole("button", { name: "Bỏ lưu bài viết: Ký ức làng cổ" }));
-    await waitFor(() => expect(api.unbookmarkPost).toHaveBeenCalledWith("post-1"));
+    await user.click(
+      screen.getByRole("button", { name: "Bỏ lưu bài viết: Ký ức làng cổ" }),
+    );
+    await waitFor(() =>
+      expect(api.unbookmarkPost).toHaveBeenCalledWith("post-1"),
+    );
     expect(await screen.findByText("Bài viết đã được bỏ lưu.")).toBeDefined();
 
     const nextPage = await screen.findByRole("link", { name: "Trang sau" });
@@ -81,6 +89,8 @@ describe("CommunitySavedPosts", () => {
     render(<CommunitySavedPosts page={1} />, { wrapper });
 
     expect(await screen.findByText("Bạn chưa lưu bài viết nào.")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Khám phá bài viết" })).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Khám phá bài viết" }),
+    ).toBeDefined();
   });
 });

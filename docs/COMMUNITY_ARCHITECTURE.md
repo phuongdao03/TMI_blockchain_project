@@ -556,7 +556,7 @@ guests to sign in before writing.
 `PATCH /community/members/me` may include `avatarMediaId`. A non-null ID must
 refer to an active, inspected, private `AVATAR` asset owned by the current
 member and within the configured avatar byte limit. Null clears the attachment.
-Migration `0110_community_profile_avatar_media` adds the nullable FK with
+Migration `0110_community_avatar_media` adds the nullable FK with
 `ON DELETE SET NULL`. The existing safe author projection carries the
 same-origin `/api/v1/community/avatars/{mediaId}` path.
 

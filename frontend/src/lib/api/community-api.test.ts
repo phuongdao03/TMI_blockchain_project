@@ -14,11 +14,18 @@ describe("community API client", () => {
 
   it("loads categories and filters the paginated feed by category", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
-      Promise.resolve(response({
-        success: true,
-        data: [],
-        meta: { requestId: "community-feed", page: 2, pageSize: 20, total: 0 },
-      })),
+      Promise.resolve(
+        response({
+          success: true,
+          data: [],
+          meta: {
+            requestId: "community-feed",
+            page: 2,
+            pageSize: 20,
+            total: 0,
+          },
+        }),
+      ),
     );
 
     await communityApi.categories();
@@ -32,11 +39,18 @@ describe("community API client", () => {
 
   it("serializes all discovery filters without losing pagination", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
-      Promise.resolve(response({
-        success: true,
-        data: [],
-        meta: { requestId: "community-discovery", page: 3, pageSize: 25, total: 0 },
-      })),
+      Promise.resolve(
+        response({
+          success: true,
+          data: [],
+          meta: {
+            requestId: "community-discovery",
+            page: 3,
+            pageSize: 25,
+            total: 0,
+          },
+        }),
+      ),
     );
 
     await communityApi.posts({
@@ -56,11 +70,18 @@ describe("community API client", () => {
 
   it("writes community tag labels and reads owner posts with optional status", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
-      Promise.resolve(response({
-        success: true,
-        data: [],
-        meta: { requestId: "community-owner", page: 2, pageSize: 25, total: 0 },
-      })),
+      Promise.resolve(
+        response({
+          success: true,
+          data: [],
+          meta: {
+            requestId: "community-owner",
+            page: 2,
+            pageSize: 25,
+            total: 0,
+          },
+        }),
+      ),
     );
     const input = {
       title: "Bài viết",
@@ -70,7 +91,11 @@ describe("community API client", () => {
     };
 
     await communityApi.createPost(input);
-    await communityMemberApi.myPosts({ status: "REJECTED", page: 2, pageSize: 25 });
+    await communityMemberApi.myPosts({
+      status: "REJECTED",
+      page: 2,
+      pageSize: 25,
+    });
     await communityMemberApi.myPost("post/1");
 
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
@@ -87,11 +112,13 @@ describe("community API client", () => {
 
   it("reads post slugs as path segments and preserves ordered image IDs in draft input", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
-      Promise.resolve(response({
-        success: true,
-        data: { id: "post-1", slug: "a/b", title: "Bài viết" },
-        meta: { requestId: "community-write" },
-      })),
+      Promise.resolve(
+        response({
+          success: true,
+          data: { id: "post-1", slug: "a/b", title: "Bài viết" },
+          meta: { requestId: "community-write" },
+        }),
+      ),
     );
     const input = {
       title: "Bài viết",
@@ -103,9 +130,7 @@ describe("community API client", () => {
     await communityApi.post("a/b");
     await communityApi.createPost(input);
 
-    expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      "/api/v1/community/posts/a%2Fb",
-    );
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/community/posts/a%2Fb");
     expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/v1/community/posts");
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
       method: "POST",
@@ -118,11 +143,13 @@ describe("community API client", () => {
 
   it("updates and submits drafts through the authenticated mutation contract", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
-      Promise.resolve(response({
-        success: true,
-        data: { id: "post/2", status: "PENDING" },
-        meta: { requestId: "community-submit" },
-      })),
+      Promise.resolve(
+        response({
+          success: true,
+          data: { id: "post/2", status: "PENDING" },
+          meta: { requestId: "community-submit" },
+        }),
+      ),
     );
     const input = {
       title: "Tiêu đề",
@@ -151,22 +178,35 @@ describe("community API client", () => {
   });
 
   it("soft-deletes an owned post through the CSRF protected API helper", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 204 }));
 
     await communityApi.deletePost("post/1");
 
-    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/community/posts/post%2F1");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/v1/community/posts/post%2F1",
+    );
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: "DELETE" });
-    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("X-CSRF-Token")).toBe("community-csrf");
+    expect(
+      new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("X-CSRF-Token"),
+    ).toBe("community-csrf");
   });
 
   it("loads the pending queue and requires reasons for publish and reject", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
-      Promise.resolve(response({
-        success: true,
-        data: [],
-        meta: { requestId: "community-queue", page: 1, pageSize: 20, total: 0 },
-      })),
+      Promise.resolve(
+        response({
+          success: true,
+          data: [],
+          meta: {
+            requestId: "community-queue",
+            page: 1,
+            pageSize: 20,
+            total: 0,
+          },
+        }),
+      ),
     );
 
     await communityAdminApi.pendingPosts(3);

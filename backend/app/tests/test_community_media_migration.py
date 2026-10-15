@@ -29,12 +29,12 @@ def test_community_media_migration_keeps_legacy_purpose_null_and_downgrades(
         command.upgrade(config, "0105_community_post_media")
         with sqlite3.connect(database_path) as connection:
             media_columns = {
-                row[1]: row for row in connection.execute(
-                    "PRAGMA table_info('media_assets')"
-                )
+                row[1]: row
+                for row in connection.execute("PRAGMA table_info('media_assets')")
             }
             relation_columns = {
-                row[1] for row in connection.execute(
+                row[1]
+                for row in connection.execute(
                     "PRAGMA table_info('community_post_media')"
                 )
             }

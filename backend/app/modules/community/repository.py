@@ -117,9 +117,7 @@ class CommunityRepository:
     async def get_category(
         self, category_id: UUID, *, active_only: bool = False
     ) -> CommunityCategory | None:
-        statement = select(CommunityCategory).where(
-            CommunityCategory.id == category_id
-        )
+        statement = select(CommunityCategory).where(CommunityCategory.id == category_id)
         if active_only:
             statement = statement.where(CommunityCategory.is_active.is_(True))
         return cast(CommunityCategory | None, await self._session.scalar(statement))
@@ -170,9 +168,7 @@ class CommunityRepository:
             )
         if query is not None:
             escaped_query = (
-                query.replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_")
+                query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
             )
             pattern = f"%{escaped_query}%"
             filters.append(
@@ -465,9 +461,7 @@ class CommunityRepository:
         )
         return cast(MediaAsset | None, await self._session.scalar(statement.limit(1)))
 
-    async def get_community_profile(
-        self, user_id: UUID
-    ) -> CommunityProfile | None:
+    async def get_community_profile(self, user_id: UUID) -> CommunityProfile | None:
         return cast(
             CommunityProfile | None,
             await self._session.scalar(
@@ -488,9 +482,8 @@ class CommunityRepository:
         media_ids: list[UUID],
         owner_user_id: UUID,
     ) -> None:
-        if (
-            len(media_ids) > self._image_max_count
-            or len(set(media_ids)) != len(media_ids)
+        if len(media_ids) > self._image_max_count or len(set(media_ids)) != len(
+            media_ids
         ):
             raise CommunityNotFoundError()
         if media_ids:
@@ -668,7 +661,7 @@ class CommunityRepository:
                 str | None,
                 str | None,
             ]
-        ]
+        ],
     ) -> tuple[CommunityPostRow, ...]:
         return tuple(
             CommunityPostRow(

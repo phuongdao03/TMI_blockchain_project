@@ -35,9 +35,16 @@ export function CommunityFeed({
     staleTime: 5 * 60_000,
   });
   const posts = useQuery({
-    queryKey: ["community", "posts", { page, category, tag, q, sort, relatedWorkId, viewerKey }],
+    queryKey: [
+      "community",
+      "posts",
+      { page, category, tag, q, sort, relatedWorkId, viewerKey },
+    ],
     queryFn: ({ signal }) =>
-      communityApi.posts({ page, category, tag, q, sort, relatedWorkId }, signal),
+      communityApi.posts(
+        { page, category, tag, q, sort, relatedWorkId },
+        signal,
+      ),
     staleTime: 30_000,
     enabled: !(sort === "following" && !user),
   });
@@ -66,16 +73,31 @@ export function CommunityFeed({
           </div>
           <Link
             className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-[var(--theme-accent)] px-5 text-sm font-bold text-[var(--theme-accent-contrast)] transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-            href={user ? "/community/new" : `/login?next=${encodeURIComponent("/community/new")}`}
+            href={
+              user
+                ? "/community/new"
+                : `/login?next=${encodeURIComponent("/community/new")}`
+            }
           >
             {user ? "Viết bài mới" : "Đăng nhập để viết bài"}
           </Link>
         </header>
 
         {!user ? (
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 text-sm" role="status">
-            <p className="text-[var(--theme-muted)]">Bạn đang ở chế độ chỉ đọc. Đăng nhập để đăng bài, bình luận và tương tác.</p>
-            <Link className="font-bold text-[var(--theme-accent)] underline underline-offset-4" href={`/login?next=${encodeURIComponent("/community")}`}>Đăng nhập</Link>
+          <div
+            className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 text-sm"
+            role="status"
+          >
+            <p className="text-[var(--theme-muted)]">
+              Bạn đang ở chế độ chỉ đọc. Đăng nhập để đăng bài, bình luận và
+              tương tác.
+            </p>
+            <Link
+              className="font-bold text-[var(--theme-accent)] underline underline-offset-4"
+              href={`/login?next=${encodeURIComponent("/community")}`}
+            >
+              Đăng nhập
+            </Link>
           </div>
         ) : null}
 
@@ -90,7 +112,11 @@ export function CommunityFeed({
             Khám phá theo chuyên mục
           </h2>
           {categories.isPending ? (
-            <p aria-busy="true" className="text-sm text-[var(--theme-muted)]" role="status">
+            <p
+              aria-busy="true"
+              className="text-sm text-[var(--theme-muted)]"
+              role="status"
+            >
               Đang tải chuyên mục…
             </p>
           ) : null}
@@ -116,7 +142,10 @@ export function CommunityFeed({
               <Link
                 aria-current={!category ? "page" : undefined}
                 className={categoryClass(!category)}
-                href={communityFeedHref({ category: undefined, tag, q, sort, relatedWorkId }, 1)}
+                href={communityFeedHref(
+                  { category: undefined, tag, q, sort, relatedWorkId },
+                  1,
+                )}
               >
                 Tất cả
               </Link>
@@ -124,7 +153,10 @@ export function CommunityFeed({
                 <Link
                   aria-current={category === item.slug ? "page" : undefined}
                   className={categoryClass(category === item.slug)}
-                  href={communityFeedHref({ category: item.slug, tag, q, sort, relatedWorkId }, 1)}
+                  href={communityFeedHref(
+                    { category: item.slug, tag, q, sort, relatedWorkId },
+                    1,
+                  )}
                   key={item.id}
                 >
                   {item.name}
@@ -134,9 +166,19 @@ export function CommunityFeed({
           ) : null}
         </section>
 
-        <section aria-label="Tìm kiếm và sắp xếp bài viết" className="border-b border-[var(--theme-border)] py-5 sm:py-6">
-          <form action="/community" aria-label="Tìm kiếm bài viết" className="flex flex-col gap-2 sm:flex-row" role="search">
-            <label className="sr-only" htmlFor="community-feed-search">Tìm kiếm bài viết</label>
+        <section
+          aria-label="Tìm kiếm và sắp xếp bài viết"
+          className="border-b border-[var(--theme-border)] py-5 sm:py-6"
+        >
+          <form
+            action="/community"
+            aria-label="Tìm kiếm bài viết"
+            className="flex flex-col gap-2 sm:flex-row"
+            role="search"
+          >
+            <label className="sr-only" htmlFor="community-feed-search">
+              Tìm kiếm bài viết
+            </label>
             <input
               className="min-h-11 min-w-0 flex-1 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
               defaultValue={q ?? ""}
@@ -146,23 +188,42 @@ export function CommunityFeed({
               placeholder="Tìm trong tiêu đề và nội dung"
               type="search"
             />
-            {category ? <input name="category" type="hidden" value={category} /> : null}
+            {category ? (
+              <input name="category" type="hidden" value={category} />
+            ) : null}
             {tag ? <input name="tag" type="hidden" value={tag} /> : null}
-            {relatedWorkId ? <input name="relatedWorkId" type="hidden" value={relatedWorkId} /> : null}
-            {sort !== "recent" ? <input name="sort" type="hidden" value={sort} /> : null}
-            <button className="min-h-11 rounded-lg bg-[var(--theme-accent)] px-5 text-sm font-bold text-[var(--theme-accent-contrast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]" type="submit">
+            {relatedWorkId ? (
+              <input name="relatedWorkId" type="hidden" value={relatedWorkId} />
+            ) : null}
+            {sort !== "recent" ? (
+              <input name="sort" type="hidden" value={sort} />
+            ) : null}
+            <button
+              className="min-h-11 rounded-lg bg-[var(--theme-accent)] px-5 text-sm font-bold text-[var(--theme-accent-contrast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+              type="submit"
+            >
               Tìm bài viết
             </button>
           </form>
-          <nav aria-label="Sắp xếp bài viết" className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          <nav
+            aria-label="Sắp xếp bài viết"
+            className="mt-4 flex gap-2 overflow-x-auto pb-1"
+          >
             {sortOptions.map((option) => {
-              const filters: CommunityPostFilters = { category, tag, q, sort: option.value, relatedWorkId };
+              const filters: CommunityPostFilters = {
+                category,
+                tag,
+                q,
+                sort: option.value,
+                relatedWorkId,
+              };
               const href = communityFeedHref(filters, 1);
               const selected = sort === option.value;
               const className = categoryClass(selected);
-              const target = option.value === "following" && !user
-                ? `/login?next=${encodeURIComponent(href)}`
-                : href;
+              const target =
+                option.value === "following" && !user
+                  ? `/login?next=${encodeURIComponent(href)}`
+                  : href;
               return (
                 <Link
                   aria-current={selected ? "page" : undefined}
@@ -183,9 +244,17 @@ export function CommunityFeed({
           className="min-w-0"
         >
           {needsFollowingLogin ? (
-            <div className="my-8 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5" role="status">
-              <p className="font-bold text-[var(--theme-text)]">Đăng nhập để xem bài viết từ người bạn theo dõi.</p>
-              <Link className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-[var(--theme-accent)] px-4 text-sm font-bold text-[var(--theme-accent-contrast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]" href={`/login?next=${encodeURIComponent(communityFeedHref({ category, tag, q, sort, relatedWorkId }, page))}`}>
+            <div
+              className="my-8 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5"
+              role="status"
+            >
+              <p className="font-bold text-[var(--theme-text)]">
+                Đăng nhập để xem bài viết từ người bạn theo dõi.
+              </p>
+              <Link
+                className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-[var(--theme-accent)] px-4 text-sm font-bold text-[var(--theme-accent-contrast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                href={`/login?next=${encodeURIComponent(communityFeedHref({ category, tag, q, sort, relatedWorkId }, page))}`}
+              >
                 Đăng nhập
               </Link>
             </div>
@@ -245,7 +314,10 @@ export function CommunityFeed({
                   {page > 1 ? (
                     <Link
                       className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-                      href={communityFeedHref({ category, tag, q, sort, relatedWorkId }, page - 1)}
+                      href={communityFeedHref(
+                        { category, tag, q, sort, relatedWorkId },
+                        page - 1,
+                      )}
                     >
                       <ArrowLeft aria-hidden="true" className="size-4" /> Trang
                       trước
@@ -253,15 +325,22 @@ export function CommunityFeed({
                   ) : (
                     <span />
                   )}
-                  <p aria-live="polite" className="text-sm text-[var(--theme-muted)]">
+                  <p
+                    aria-live="polite"
+                    className="text-sm text-[var(--theme-muted)]"
+                  >
                     Trang {page} / {totalPages}
                   </p>
                   {page < totalPages ? (
                     <Link
                       className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-                      href={communityFeedHref({ category, tag, q, sort, relatedWorkId }, page + 1)}
+                      href={communityFeedHref(
+                        { category, tag, q, sort, relatedWorkId },
+                        page + 1,
+                      )}
                     >
-                      Trang sau <ArrowRight aria-hidden="true" className="size-4" />
+                      Trang sau{" "}
+                      <ArrowRight aria-hidden="true" className="size-4" />
                     </Link>
                   ) : (
                     <span />
@@ -294,7 +373,11 @@ const sortOptions: { value: CommunityPostSort; label: string }[] = [
 
 function FeedSkeleton() {
   return (
-    <div aria-label="Đang tải bài viết cộng đồng" className="py-4" role="status">
+    <div
+      aria-label="Đang tải bài viết cộng đồng"
+      className="py-4"
+      role="status"
+    >
       {Array.from({ length: 3 }, (_, index) => (
         <div
           aria-hidden="true"

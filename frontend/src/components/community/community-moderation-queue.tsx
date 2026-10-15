@@ -1,7 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronLeft, ChevronRight, LoaderCircle, RotateCcw, X } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  LoaderCircle,
+  RotateCcw,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 
 import { communityAdminApi } from "@/lib/api/client";
@@ -31,13 +38,17 @@ export function CommunityModerationQueue() {
         ? communityAdminApi.publishPost(postId, { reason })
         : communityAdminApi.rejectPost(postId, { reason }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["community", "admin", "pending"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["community", "admin", "pending"],
+      });
     },
   });
   const posts = queue.data?.data ?? [];
   const totalPages = Math.max(
     1,
-    Math.ceil((queue.data?.meta.total ?? 0) / (queue.data?.meta.pageSize || PAGE_SIZE)),
+    Math.ceil(
+      (queue.data?.meta.total ?? 0) / (queue.data?.meta.pageSize || PAGE_SIZE),
+    ),
   );
 
   function decide(postId: string, action: "publish" | "reject") {
@@ -56,13 +67,17 @@ export function CommunityModerationQueue() {
           Kiểm duyệt cộng đồng
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-muted)] sm:text-base">
-          Xem nội dung đang chờ, ghi lý do và quyết định trước khi bài viết xuất hiện công khai.
+          Xem nội dung đang chờ, ghi lý do và quyết định trước khi bài viết xuất
+          hiện công khai.
         </p>
       </header>
 
       {queue.isPending ? <QueueSkeleton /> : null}
       {queue.isError ? (
-        <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6" role="alert">
+        <div
+          className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6"
+          role="alert"
+        >
           <h2 className="font-bold text-[var(--theme-text)]">
             Chưa thể tải hàng đợi kiểm duyệt.
           </h2>
@@ -90,7 +105,10 @@ export function CommunityModerationQueue() {
       ) : null}
 
       {posts.length > 0 ? (
-        <section aria-label="Bài viết chờ kiểm duyệt" aria-busy={transition.isPending}>
+        <section
+          aria-label="Bài viết chờ kiểm duyệt"
+          aria-busy={transition.isPending}
+        >
           <div className="space-y-4">
             {posts.map((post) => (
               <ModerationCard
@@ -107,8 +125,12 @@ export function CommunityModerationQueue() {
             ))}
           </div>
           {transition.isError ? (
-            <p className="mt-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-900" role="alert">
-              Không thể cập nhật trạng thái bài viết. Hàng đợi có thể đã thay đổi, vui lòng tải lại.
+            <p
+              className="mt-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-900"
+              role="alert"
+            >
+              Không thể cập nhật trạng thái bài viết. Hàng đợi có thể đã thay
+              đổi, vui lòng tải lại.
             </p>
           ) : null}
           {totalPages > 1 ? (
@@ -122,15 +144,21 @@ export function CommunityModerationQueue() {
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
                 type="button"
               >
-                <ChevronLeft aria-hidden="true" className="size-4" /> Trang trước
+                <ChevronLeft aria-hidden="true" className="size-4" /> Trang
+                trước
               </button>
-              <p aria-live="polite" className="text-sm text-[var(--theme-muted)]">
+              <p
+                aria-live="polite"
+                className="text-sm text-[var(--theme-muted)]"
+              >
                 Trang {page} / {totalPages}
               </p>
               <button
                 className={paginationClass}
                 disabled={page >= totalPages}
-                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                onClick={() =>
+                  setPage((current) => Math.min(totalPages, current + 1))
+                }
                 type="button"
               >
                 Trang sau <ChevronRight aria-hidden="true" className="size-4" />
@@ -165,7 +193,9 @@ function ModerationCard({
         <span className="text-[var(--theme-accent)]">{post.category.name}</span>
         <span aria-hidden="true">·</span>
         <span>{post.author.displayName?.trim() || "Thành viên cộng đồng"}</span>
-        <time dateTime={post.submittedAt}>Gửi lúc {formatDate(post.submittedAt)}</time>
+        <time dateTime={post.submittedAt}>
+          Gửi lúc {formatDate(post.submittedAt)}
+        </time>
       </div>
       <h2 className="mt-3 text-xl font-bold leading-snug text-[var(--theme-text)] sm:text-2xl">
         {post.title}
@@ -200,7 +230,10 @@ function ModerationCard({
             type="button"
           >
             {pending ? (
-              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+              <LoaderCircle
+                aria-hidden="true"
+                className="size-4 animate-spin"
+              />
             ) : (
               <Check aria-hidden="true" className="size-4" />
             )}
@@ -225,7 +258,11 @@ const paginationClass =
 
 function QueueSkeleton() {
   return (
-    <div aria-label="Đang tải hàng đợi kiểm duyệt" className="space-y-4" role="status">
+    <div
+      aria-label="Đang tải hàng đợi kiểm duyệt"
+      className="space-y-4"
+      role="status"
+    >
       {Array.from({ length: 3 }, (_, index) => (
         <div
           aria-hidden="true"
@@ -240,5 +277,8 @@ function QueueSkeleton() {
 function formatDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(date);
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }

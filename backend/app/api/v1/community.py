@@ -69,6 +69,7 @@ def _author(row: CommunityPostRow) -> CommunityAuthorData:
         avatar_url=row.author_avatar_url,
     )
 
+
 def _category(row: CommunityPostRow) -> CommunityCategoryData:
     return CommunityCategoryData.model_validate(row.category)
 
@@ -205,8 +206,7 @@ async def list_categories(
     categories = await service.list_categories()
     return SuccessEnvelope(
         data=[
-            CommunityCategoryData.model_validate(category)
-            for category in categories
+            CommunityCategoryData.model_validate(category) for category in categories
         ],
         meta=ResponseMeta(request_id=request.state.request_id),
     )
@@ -224,9 +224,7 @@ async def list_posts(
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=50)] = 20,
     category: Annotated[str | None, Query(min_length=1, max_length=120)] = None,
     tag: Annotated[str | None, Query(min_length=1, max_length=64)] = None,
-    related_work_id: Annotated[
-        UUID | None, Query(alias="relatedWorkId")
-    ] = None,
+    related_work_id: Annotated[UUID | None, Query(alias="relatedWorkId")] = None,
     query: Annotated[
         str | None,
         Query(alias="q", min_length=1, max_length=120, pattern=r".*\S.*"),
@@ -490,9 +488,7 @@ async def moderation_queue(
     service: CommunityAdminServiceDependency,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=50)] = 20,
-    post_status: Annotated[
-        CommunityPostStatus | None, Query(alias="status")
-    ] = None,
+    post_status: Annotated[CommunityPostStatus | None, Query(alias="status")] = None,
     query: Annotated[str | None, Query(alias="q", min_length=1, max_length=160)] = None,
 ) -> PaginatedSuccessEnvelope[list[CommunityAdminPostWorkspaceData]]:
     result = await service.list_admin_posts(

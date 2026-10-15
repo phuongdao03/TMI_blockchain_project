@@ -1,6 +1,6 @@
 """Attach inspected media assets to community profile avatars.
 
-Revision ID: 0110_community_profile_avatar_media
+Revision ID: 0110_community_avatar_media
 Revises: 0109_community_admin_workspaces
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0110_community_profile_avatar_media"
+revision: str = "0110_community_avatar_media"
 down_revision: str | None = "0109_community_admin_workspaces"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

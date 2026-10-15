@@ -95,12 +95,16 @@ export function CommunityPostDetail({ slug }: { slug: string }) {
             {article.title}
           </h1>
           <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--theme-muted)]">
-            <span>{article.author.displayName?.trim() || "Thành viên cộng đồng"}</span>
+            <span>
+              {article.author.displayName?.trim() || "Thành viên cộng đồng"}
+            </span>
             <span aria-hidden="true">·</span>
             <time dateTime={article.publishedAt}>
               {formatPublishedDate(article.publishedAt)}
             </time>
-            <span aria-label={`${article.viewCount} lượt xem`}>{article.viewCount} lượt xem</span>
+            <span aria-label={`${article.viewCount} lượt xem`}>
+              {article.viewCount} lượt xem
+            </span>
           </div>
         </header>
         {article.excerpt ? (
@@ -140,7 +144,9 @@ function StatePanel({
         className="mx-auto max-w-2xl rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-7 text-center sm:p-10"
         role={role}
       >
-        <h1 className="text-2xl font-bold text-[var(--theme-text)]">{heading}</h1>
+        <h1 className="text-2xl font-bold text-[var(--theme-text)]">
+          {heading}
+        </h1>
         <p className="mt-3 text-sm leading-6 text-[var(--theme-muted)]">
           {message}
         </p>

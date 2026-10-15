@@ -237,9 +237,7 @@ def upgrade() -> None:
     )
     connection = op.get_bind()
     existing = connection.scalar(
-        sa.select(permissions.c.id).where(
-            permissions.c.code == "community.moderate"
-        )
+        sa.select(permissions.c.id).where(permissions.c.code == "community.moderate")
     )
     if existing is None:
         connection.execute(
@@ -261,9 +259,7 @@ def downgrade() -> None:
         table_name="community_moderation_logs",
     )
     op.drop_table("community_moderation_logs")
-    op.drop_index(
-        "ix_community_posts_author_updated", table_name="community_posts"
-    )
+    op.drop_index("ix_community_posts_author_updated", table_name="community_posts")
     op.drop_index(
         "ix_community_posts_category_status_published", table_name="community_posts"
     )

@@ -327,8 +327,15 @@ class CommunityAdminRepository:
             or 0
         )
         rows = await self._session.execute(
-            select(User, CommunityProfile, published_count, comment_count,
-                   follower_count, following_count, activity_at)
+            select(
+                User,
+                CommunityProfile,
+                published_count,
+                comment_count,
+                follower_count,
+                following_count,
+                activity_at,
+            )
             .outerjoin(CommunityProfile, CommunityProfile.user_id == User.id)
             .where(*filters)
             .order_by(User.created_at.desc(), User.id.desc())
@@ -356,8 +363,12 @@ class CommunityAdminRepository:
                 active_by_user[restriction.member_user_id].append(restriction)
         items = tuple(
             CommunityAdminMemberRow(
-                user=row[0], profile=row[1], published_post_count=row[2],
-                comment_count=row[3], follower_count=row[4], following_count=row[5],
+                user=row[0],
+                profile=row[1],
+                published_post_count=row[2],
+                comment_count=row[3],
+                follower_count=row[4],
+                following_count=row[5],
                 last_activity_at=row[6],
                 active_restrictions=tuple(active_by_user[row[0].id]),
             )
@@ -412,7 +423,8 @@ class CommunityAdminRepository:
             return None
         restriction = values[0]
         status = (
-            "REVOKED" if restriction.revoked_at is not None
+            "REVOKED"
+            if restriction.revoked_at is not None
             else "ACTIVE"
             if _as_utc(restriction.starts_at) <= now < _as_utc(restriction.expires_at)
             else "EXPIRED"
@@ -436,8 +448,12 @@ class CommunityAdminRepository:
         rows = await self._session.execute(
             select(
                 CommunityMemberRestriction,
-                member.username, member.display_name, member.avatar_url,
-                actor.username, actor.display_name, actor.avatar_url,
+                member.username,
+                member.display_name,
+                member.avatar_url,
+                actor.username,
+                actor.display_name,
+                actor.avatar_url,
             )
             .join(User, User.id == CommunityMemberRestriction.member_user_id)
             .outerjoin(
@@ -457,7 +473,8 @@ class CommunityAdminRepository:
         for row in rows.all():
             restriction = row[0]
             status = (
-                "REVOKED" if restriction.revoked_at is not None
+                "REVOKED"
+                if restriction.revoked_at is not None
                 else "ACTIVE"
                 if (
                     _as_utc(restriction.starts_at)
@@ -468,7 +485,6 @@ class CommunityAdminRepository:
             )
             result.append(CommunityRestrictionRow(*row, status))
         return CommunityRestrictionPage(tuple(result), total)
-
 
     async def get_public_post(self, post_id: UUID) -> CommunityPost | None:
         author = aliased(User)
@@ -736,9 +752,7 @@ class CommunityAdminRepository:
             .limit(limit)
         )
         return CommunityModerationEventPage(
-            items=tuple(
-                CommunityModerationEventRow(*row) for row in rows.all()
-            ),
+            items=tuple(CommunityModerationEventRow(*row) for row in rows.all()),
             total=total,
         )
 

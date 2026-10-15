@@ -30,15 +30,11 @@ def test_community_related_work_migration_adds_nullable_set_null_reference(
         with sqlite3.connect(database_path) as connection:
             columns = {
                 row[1]
-                for row in connection.execute(
-                    "PRAGMA table_info('community_posts')"
-                )
+                for row in connection.execute("PRAGMA table_info('community_posts')")
             }
             indexes = {
                 row[1]: row[2]
-                for row in connection.execute(
-                    "PRAGMA index_list('community_posts')"
-                )
+                for row in connection.execute("PRAGMA index_list('community_posts')")
             }
             foreign_keys = list(
                 connection.execute("PRAGMA foreign_key_list('community_posts')")
@@ -46,17 +42,14 @@ def test_community_related_work_migration_adds_nullable_set_null_reference(
         assert "related_work_id" in columns
         assert indexes.get("ix_community_posts_related_work_id") == 0
         assert any(
-            row[2] == "public_works" and row[6] == "SET NULL"
-            for row in foreign_keys
+            row[2] == "public_works" and row[6] == "SET NULL" for row in foreign_keys
         )
 
         command.downgrade(config, "0103_community_reports_admin")
         with sqlite3.connect(database_path) as connection:
             columns_after = {
                 row[1]
-                for row in connection.execute(
-                    "PRAGMA table_info('community_posts')"
-                )
+                for row in connection.execute("PRAGMA table_info('community_posts')")
             }
         assert "related_work_id" not in columns_after
     finally:

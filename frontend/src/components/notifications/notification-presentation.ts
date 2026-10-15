@@ -144,7 +144,8 @@ function safeInternalPath(value: unknown): string | null {
     value.startsWith("//") ||
     value.includes("\\") ||
     /[\u0000-\u001f\u007f]/.test(value)
-  ) return null;
+  )
+    return null;
   try {
     const parsed = new URL(value, INTERNAL_BASE);
     if (parsed.origin !== INTERNAL_BASE || !parsed.pathname.startsWith("/")) {

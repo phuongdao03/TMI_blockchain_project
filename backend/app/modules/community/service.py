@@ -90,9 +90,7 @@ class CommunityService:
                 related_work_id=related_work_id,
                 query=query,
                 sort=sort,
-                following_user_id=(
-                    viewer_user_id if sort == "following" else None
-                ),
+                following_user_id=(viewer_user_id if sort == "following" else None),
                 viewer_user_id=viewer_user_id,
                 offset=(page - 1) * page_size,
                 limit=page_size,
@@ -492,15 +490,13 @@ class CommunityService:
         if post.author_user_id == actor.user_id:
             return
         event_type = (
-            "COMMUNITY_POST_PUBLISHED"
-            if published
-            else "COMMUNITY_POST_REJECTED"
+            "COMMUNITY_POST_PUBLISHED" if published else "COMMUNITY_POST_REJECTED"
         )
         title = "Bài viết đã được duyệt" if published else "Bài viết chưa được duyệt"
         body = (
-            f'Bài viết “{post.title}” đã được duyệt.'
+            f"Bài viết “{post.title}” đã được duyệt."
             if published
-            else f'Bài viết “{post.title}” chưa được duyệt.'
+            else f"Bài viết “{post.title}” chưa được duyệt."
         )
         action_path = (
             f"/community/posts/{quote(post.slug, safe='-._~')}"
@@ -535,9 +531,7 @@ class CommunityService:
                 title="Báº¡n Ä‘Æ°á»£c nháº¯c Ä‘áº¿n trong cá»™ng Ä‘á»“ng",
                 body="CÃ³ thÃ nh viÃªn nháº¯c Ä‘áº¿n báº¡n trong má»™t bÃ i viáº¿t.",
                 data={
-                    "actionPath": (
-                        f"/community/posts/{quote(post.slug, safe='-._~')}"
-                    )
+                    "actionPath": (f"/community/posts/{quote(post.slug, safe='-._~')}")
                 },
             )
 

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 
 from alembic import command
 from app.core.config import get_settings
@@ -16,6 +17,18 @@ EXPECTED_CATEGORY_SLUGS = {
     "sharing-experiences",
     "feedback-suggestions",
 }
+
+
+def test_alembic_revision_ids_fit_version_column() -> None:
+    script = ScriptDirectory.from_config(Config(BACKEND_ROOT / "alembic.ini"))
+
+    oversized_revision_ids = [
+        revision.revision
+        for revision in script.walk_revisions()
+        if len(revision.revision) > 32
+    ]
+
+    assert oversized_revision_ids == []
 
 
 def test_community_migration_seeds_categories_without_granting_moderator(
@@ -37,9 +50,7 @@ def test_community_migration_seeds_categories_without_granting_moderator(
         with sqlite3.connect(database_path) as connection:
             slugs = {
                 row[0]
-                for row in connection.execute(
-                    "SELECT slug FROM community_categories"
-                )
+                for row in connection.execute("SELECT slug FROM community_categories")
             }
             permission = connection.execute(
                 "SELECT id FROM permissions WHERE code = 'community.moderate'"

@@ -39,9 +39,7 @@ def test_community_admin_workspace_migration_is_reversible(
             }
             comment_columns = {
                 row[1]
-                for row in connection.execute(
-                    "PRAGMA table_info(community_comments)"
-                )
+                for row in connection.execute("PRAGMA table_info(community_comments)")
             }
             event_sql = connection.execute(
                 "SELECT sql FROM sqlite_master WHERE type='table' "
@@ -71,9 +69,7 @@ def test_community_admin_workspace_migration_is_reversible(
             }
             comment_columns = {
                 row[1]
-                for row in connection.execute(
-                    "PRAGMA table_info(community_comments)"
-                )
+                for row in connection.execute("PRAGMA table_info(community_comments)")
             }
             event_sql = connection.execute(
                 "SELECT sql FROM sqlite_master WHERE type='table' "

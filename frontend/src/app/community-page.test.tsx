@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/components/community/community-feed", () => ({
-  CommunityFeed: (props: Record<string, unknown>) => <div data-props={JSON.stringify(props)} />,
+  CommunityFeed: (props: Record<string, unknown>) => (
+    <div data-props={JSON.stringify(props)} />
+  ),
 }));
 
 import CommunityPage from "@/app/(public)/community/page";

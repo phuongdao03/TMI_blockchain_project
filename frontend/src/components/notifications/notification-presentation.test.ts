@@ -91,21 +91,27 @@ describe("notification presentation", () => {
         .actionPath,
     ).toBeNull();
     expect(
-      presentNotification({ ...base, data: { actionPath: "/\\evil.test/path" } })
-        .actionPath,
+      presentNotification({
+        ...base,
+        data: { actionPath: "/\\evil.test/path" },
+      }).actionPath,
     ).toBeNull();
     expect(
-      presentNotification({ ...base, data: { actionPath: "javascript:alert(1)" } })
-        .actionPath,
+      presentNotification({
+        ...base,
+        data: { actionPath: "javascript:alert(1)" },
+      }).actionPath,
     ).toBeNull();
   });
 
   it("labels community notifications and preserves their safe internal actions", () => {
-    expect(presentNotification({
-      ...base,
-      type: "COMMUNITY_REPLY",
-      data: { actionPath: "/community/posts/lang-nghe-xua" },
-    })).toMatchObject({
+    expect(
+      presentNotification({
+        ...base,
+        type: "COMMUNITY_REPLY",
+        data: { actionPath: "/community/posts/lang-nghe-xua" },
+      }),
+    ).toMatchObject({
       actionLabel: "Xem phản hồi",
       groupLabel: "Cộng đồng",
       actionPath: "/community/posts/lang-nghe-xua",
@@ -113,11 +119,13 @@ describe("notification presentation", () => {
   });
 
   it("labels community mention notifications", () => {
-    expect(presentNotification({
-      ...base,
-      type: "COMMUNITY_MENTION",
-      data: { actionPath: "/community/posts/lang-nghe-xua" },
-    })).toMatchObject({
+    expect(
+      presentNotification({
+        ...base,
+        type: "COMMUNITY_MENTION",
+        data: { actionPath: "/community/posts/lang-nghe-xua" },
+      }),
+    ).toMatchObject({
       actionLabel: "Xem nội dung",
       groupLabel: "Được nhắc đến",
       actionPath: "/community/posts/lang-nghe-xua",

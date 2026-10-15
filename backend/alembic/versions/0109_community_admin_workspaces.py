@@ -30,9 +30,7 @@ _EVENT_ACTIONS = (
 def upgrade() -> None:
     with op.batch_alter_table("community_posts") as batch_op:
         batch_op.add_column(sa.Column("pinned_at", sa.DateTime(timezone=True)))
-        batch_op.add_column(
-            sa.Column("comments_locked_at", sa.DateTime(timezone=True))
-        )
+        batch_op.add_column(sa.Column("comments_locked_at", sa.DateTime(timezone=True)))
         batch_op.add_column(sa.Column("pre_delete_status", sa.String(length=16)))
         batch_op.add_column(
             sa.Column(

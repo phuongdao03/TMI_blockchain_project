@@ -17,8 +17,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 REPORT_REASONS = (
-    "'SPAM', 'HARASSMENT', 'HATE_SPEECH', 'MISINFORMATION', "
-    "'COPYRIGHT', 'OTHER'"
+    "'SPAM', 'HARASSMENT', 'HATE_SPEECH', 'MISINFORMATION', 'COPYRIGHT', 'OTHER'"
 )
 EVENT_ACTIONS = (
     "'SUBMITTED', 'PUBLISHED', 'REJECTED', 'OWNER_DELETED', 'POST_HIDDEN', "
@@ -86,22 +85,26 @@ def upgrade() -> None:
             name="ck_community_reports_resolution_state_consistent",
         ),
         sa.ForeignKeyConstraint(
-            ["reporter_user_id"], ["users.id"],
+            ["reporter_user_id"],
+            ["users.id"],
             name="fk_community_reports_reporter_user_id_users",
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
-            ["post_id"], ["community_posts.id"],
+            ["post_id"],
+            ["community_posts.id"],
             name="fk_community_reports_post_id_community_posts",
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
-            ["comment_id"], ["community_comments.id"],
+            ["comment_id"],
+            ["community_comments.id"],
             name="fk_community_reports_comment_id_community_comments",
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
-            ["resolved_by_user_id"], ["users.id"],
+            ["resolved_by_user_id"],
+            ["users.id"],
             name="fk_community_reports_resolved_by_user_id_users",
             ondelete="RESTRICT",
         ),
@@ -149,7 +152,8 @@ def upgrade() -> None:
             name="ck_community_settings_singleton_id_valid",
         ),
         sa.ForeignKeyConstraint(
-            ["updated_by_user_id"], ["users.id"],
+            ["updated_by_user_id"],
+            ["users.id"],
             name="fk_community_settings_updated_by_user_id_users",
             ondelete="SET NULL",
         ),
@@ -191,12 +195,14 @@ def upgrade() -> None:
             name="ck_community_moderation_events_action_valid",
         ),
         sa.ForeignKeyConstraint(
-            ["actor_user_id"], ["users.id"],
+            ["actor_user_id"],
+            ["users.id"],
             name="fk_community_moderation_events_actor_user_id_users",
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
-            ["report_id"], ["community_reports.id"],
+            ["report_id"],
+            ["community_reports.id"],
             name="fk_community_moderation_events_report_id_community_reports",
             ondelete="RESTRICT",
         ),
@@ -230,9 +236,7 @@ def upgrade() -> None:
         sa.column("code", sa.String()),
     )
     existing = connection.scalar(
-        sa.select(permissions.c.id).where(
-            permissions.c.code == "community.manage"
-        )
+        sa.select(permissions.c.id).where(permissions.c.code == "community.manage")
     )
     if existing is None:
         connection.execute(
@@ -254,7 +258,9 @@ def downgrade() -> None:
         permissions.c.code == "community.manage"
     )
     op.get_bind().execute(
-        role_permissions.delete().where(role_permissions.c.permission_id.in_(manage_ids))
+        role_permissions.delete().where(
+            role_permissions.c.permission_id.in_(manage_ids)
+        )
     )
     op.get_bind().execute(
         permissions.delete().where(permissions.c.code == "community.manage")

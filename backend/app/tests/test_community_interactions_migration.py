@@ -39,9 +39,7 @@ def test_community_interactions_migration_is_reversible(
             }
             indexes = {
                 row[1]
-                for row in connection.execute(
-                    "PRAGMA index_list(community_profiles)"
-                )
+                for row in connection.execute("PRAGMA index_list(community_profiles)")
             }
             like_columns = {
                 row[1]
@@ -68,9 +66,7 @@ def test_community_interactions_migration_is_reversible(
             }
             indexes = {
                 row[1]
-                for row in connection.execute(
-                    "PRAGMA index_list(community_profiles)"
-                )
+                for row in connection.execute("PRAGMA index_list(community_profiles)")
             }
         assert "community_comment_likes" not in tables
         assert "view_count" not in post_columns

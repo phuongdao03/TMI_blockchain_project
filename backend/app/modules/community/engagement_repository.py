@@ -332,13 +332,17 @@ class CommunityEngagementRepository:
         if not roots:
             return CommunityCommentPage(items=(), total=total)
         root_ids = tuple(row.comment.id for row in roots)
-        reply_ids = select(
-            CommunityComment.id.label("comment_id"),
-            CommunityComment.parent_id.label("root_id"),
-        ).where(
-            CommunityComment.post_id == post_id,
-            CommunityComment.parent_id.in_(root_ids),
-        ).cte("community_comment_descendants", recursive=True)
+        reply_ids = (
+            select(
+                CommunityComment.id.label("comment_id"),
+                CommunityComment.parent_id.label("root_id"),
+            )
+            .where(
+                CommunityComment.post_id == post_id,
+                CommunityComment.parent_id.in_(root_ids),
+            )
+            .cte("community_comment_descendants", recursive=True)
+        )
         child = aliased(CommunityComment)
         reply_ids = reply_ids.union_all(
             select(child.id.label("comment_id"), reply_ids.c.root_id).where(
@@ -404,9 +408,7 @@ class CommunityEngagementRepository:
         )
         return cast(CommunityComment | None, result.scalar_one_or_none())
 
-    async def get_comment_for_update(
-        self, comment_id: UUID
-    ) -> CommunityComment | None:
+    async def get_comment_for_update(self, comment_id: UUID) -> CommunityComment | None:
         result = await self._session.scalar(
             select(CommunityComment)
             .where(CommunityComment.id == comment_id)

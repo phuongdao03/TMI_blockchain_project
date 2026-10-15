@@ -166,17 +166,11 @@ def _comment_thread_data(
             if not root_hidden
             else _HIDDEN_COMMENT_CONTENT
         ),
-        author=(
-            None
-            if root_tombstone
-            else _comment_author(thread.root)
-        ),
+        author=(None if root_tombstone else _comment_author(thread.root)),
         is_deleted=root_tombstone,
         created_at=thread.root.comment.created_at,
         like_count=0 if root_tombstone else thread.root.like_count,
-        viewer_has_liked=(
-            False if root_tombstone else thread.root.viewer_has_liked
-        ),
+        viewer_has_liked=(False if root_tombstone else thread.root.viewer_has_liked),
         replies=[
             CommunityCommentReplyData(
                 id=reply.comment.id,

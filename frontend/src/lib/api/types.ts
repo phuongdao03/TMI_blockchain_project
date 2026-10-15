@@ -558,7 +558,11 @@ export interface CommunityPostImage {
   url: string;
 }
 
-export type CommunityPostSort = "recent" | "popular" | "discussed" | "following";
+export type CommunityPostSort =
+  | "recent"
+  | "popular"
+  | "discussed"
+  | "following";
 
 export interface CommunityPostFilters {
   page?: number;
@@ -629,7 +633,8 @@ export type CommunityOwnerPostStatus =
   | "PUBLISHED"
   | "REJECTED";
 
-export interface CommunityOwnerPost extends Omit<CommunityPostWriteResult, "status"> {
+export interface CommunityOwnerPost
+  extends Omit<CommunityPostWriteResult, "status"> {
   status: CommunityOwnerPostStatus;
   moderationReason: string | null;
 }
@@ -837,7 +842,10 @@ export interface CommunityAdminSettingsInput {
   reason: string;
 }
 
-export type CommunityModerationTargetType = CommunityTargetType | "CATEGORY" | "SETTINGS";
+export type CommunityModerationTargetType =
+  | CommunityTargetType
+  | "CATEGORY"
+  | "SETTINGS";
 
 export interface CommunityModerationEvent {
   id: string;

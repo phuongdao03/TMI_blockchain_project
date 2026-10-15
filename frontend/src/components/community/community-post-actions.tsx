@@ -23,7 +23,11 @@ export interface CommunityInteractionPost {
   viewerHasBookmarked: boolean;
 }
 
-export function CommunityPostActions({ post }: { post: CommunityInteractionPost }) {
+export function CommunityPostActions({
+  post,
+}: {
+  post: CommunityInteractionPost;
+}) {
   const user = useAuthUser();
   const viewerKey = user?.id ?? "anonymous";
   const queryClient = useQueryClient();
@@ -32,7 +36,9 @@ export function CommunityPostActions({ post }: { post: CommunityInteractionPost 
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const like = useMutation({
     mutationFn: () =>
-      isLiked ? communityApi.unlikePost(post.id) : communityApi.likePost(post.id),
+      isLiked
+        ? communityApi.unlikePost(post.id)
+        : communityApi.likePost(post.id),
     onSuccess: (result) => {
       setIsLiked(result.isLiked);
       setLikeCount(result.likeCount);
@@ -53,7 +59,9 @@ export function CommunityPostActions({ post }: { post: CommunityInteractionPost 
         viewerHasBookmarked: result.isBookmarked,
       });
       if (!result.isBookmarked) {
-        void queryClient.invalidateQueries({ queryKey: ["community", "bookmarks"] });
+        void queryClient.invalidateQueries({
+          queryKey: ["community", "bookmarks"],
+        });
       }
     },
   });
@@ -71,7 +79,11 @@ export function CommunityPostActions({ post }: { post: CommunityInteractionPost 
           Đăng nhập để tham gia
         </Link>
         <div className="mt-2">
-          <CommunityReportAction targetId={post.id} targetLabel={`Bài viết: ${post.slug}`} targetType="POST" />
+          <CommunityReportAction
+            targetId={post.id}
+            targetLabel={`Bài viết: ${post.slug}`}
+            targetType="POST"
+          />
         </div>
       </div>
     );
@@ -86,7 +98,10 @@ export function CommunityPostActions({ post }: { post: CommunityInteractionPost 
         onClick={() => like.mutate()}
         type="button"
       >
-        <Heart aria-hidden="true" className={isLiked ? "size-4 fill-current" : "size-4"} />
+        <Heart
+          aria-hidden="true"
+          className={isLiked ? "size-4 fill-current" : "size-4"}
+        />
         {isLiked ? "Bỏ thích bài viết" : "Thích bài viết"}
       </button>
       <p aria-live="polite" className="text-sm text-[var(--theme-muted)]">
@@ -99,7 +114,10 @@ export function CommunityPostActions({ post }: { post: CommunityInteractionPost 
         onClick={() => bookmark.mutate()}
         type="button"
       >
-        <Bookmark aria-hidden="true" className={isBookmarked ? "size-4 fill-current" : "size-4"} />
+        <Bookmark
+          aria-hidden="true"
+          className={isBookmarked ? "size-4 fill-current" : "size-4"}
+        />
         {isBookmarked ? "Đã lưu bài viết" : "Lưu bài viết"}
       </button>
       <Link
@@ -108,10 +126,18 @@ export function CommunityPostActions({ post }: { post: CommunityInteractionPost 
       >
         Bài đã lưu
       </Link>
-      <CommunityReportAction targetId={post.id} targetLabel={`Bài viết: ${post.slug}`} targetType="POST" />
+      <CommunityReportAction
+        targetId={post.id}
+        targetLabel={`Bài viết: ${post.slug}`}
+        targetType="POST"
+      />
       {like.isError || bookmark.isError ? (
-        <p className="basis-full text-sm font-semibold text-red-700" role="alert">
-          Chưa thể cập nhật. Vui lòng kiểm tra kết nối hoặc đăng nhập rồi thử lại.
+        <p
+          className="basis-full text-sm font-semibold text-red-700"
+          role="alert"
+        >
+          Chưa thể cập nhật. Vui lòng kiểm tra kết nối hoặc đăng nhập rồi thử
+          lại.
         </p>
       ) : null}
     </div>
@@ -131,7 +157,12 @@ function updatePostCaches(
   queryClient: ReturnType<typeof useQueryClient>,
   post: CommunityInteractionPost,
   viewerKey: string,
-  change: Partial<Pick<CommunityPostSummary, "likeCount" | "viewerHasLiked" | "viewerHasBookmarked">>,
+  change: Partial<
+    Pick<
+      CommunityPostSummary,
+      "likeCount" | "viewerHasLiked" | "viewerHasBookmarked"
+    >
+  >,
 ) {
   queryClient.setQueryData<CommunityPostDetail>(
     ["community", "post", post.slug, viewerKey],

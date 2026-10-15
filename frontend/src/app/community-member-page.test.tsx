@@ -1,9 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/components/community/community-member-profile", () => ({
-  CommunityMemberProfile: ({ username, page, view }: { username: string; page: number; view: string }) => (
-    <div data-username={username} data-page={page} data-view={view} />
-  ),
+  CommunityMemberProfile: ({
+    username,
+    page,
+    view,
+  }: {
+    username: string;
+    page: number;
+    view: string;
+  }) => <div data-username={username} data-page={page} data-view={view} />,
 }));
 
 import CommunityMemberPage from "@/app/(public)/community/members/[username]/page";

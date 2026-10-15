@@ -76,10 +76,20 @@ beforeEach(() => {
     isFollowing: false,
     followerCount: 9,
   });
-  api.updateProfile.mockImplementation((input) => Promise.resolve({ ...member, ...input }));
+  api.updateProfile.mockImplementation((input) =>
+    Promise.resolve({ ...member, ...input }),
+  );
   api.followers.mockResolvedValue({
     success: true,
-    data: [{ id: "member-3", username: "minh", displayName: "Minh", avatarUrl: null, viewerIsFollowing: false }],
+    data: [
+      {
+        id: "member-3",
+        username: "minh",
+        displayName: "Minh",
+        avatarUrl: null,
+        viewerIsFollowing: false,
+      },
+    ],
     meta: { requestId: "followers", page: 1, pageSize: 20, total: 1 },
   });
   api.following.mockResolvedValue({
@@ -94,19 +104,38 @@ describe("CommunityMemberProfile", () => {
     const user = userEvent.setup();
     render(<CommunityMemberProfile username="lan-anh" />, { wrapper });
 
-    expect(await screen.findByRole("heading", { name: "Lan Anh" })).toBeDefined();
-    expect(screen.getByText("Ghi lại chuyện làng và những người tôi gặp.")).toBeDefined();
+    expect(
+      await screen.findByRole("heading", { name: "Lan Anh" }),
+    ).toBeDefined();
+    expect(
+      screen.getByText("Ghi lại chuyện làng và những người tôi gặp."),
+    ).toBeDefined();
     expect(screen.getAllByText("Người theo dõi").length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "Người theo dõi 9" })).toBeDefined();
-    expect(await screen.findByRole("heading", { name: "Ký ức làng cổ" })).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Người theo dõi 9" }),
+    ).toBeDefined();
+    expect(
+      await screen.findByRole("heading", { name: "Ký ức làng cổ" }),
+    ).toBeDefined();
     expect(screen.queryByText(/@example\.com|Số điện thoại/i)).toBeNull();
-    expect(api.profile).toHaveBeenCalledWith("lan-anh", expect.any(AbortSignal));
-    expect(api.posts).toHaveBeenCalledWith("lan-anh", 1, expect.any(AbortSignal));
+    expect(api.profile).toHaveBeenCalledWith(
+      "lan-anh",
+      expect.any(AbortSignal),
+    );
+    expect(api.posts).toHaveBeenCalledWith(
+      "lan-anh",
+      1,
+      expect.any(AbortSignal),
+    );
 
     await user.click(screen.getByRole("button", { name: "Theo dõi" }));
-    expect(await screen.findByRole("button", { name: "Đang theo dõi" })).toBeDefined();
+    expect(
+      await screen.findByRole("button", { name: "Đang theo dõi" }),
+    ).toBeDefined();
     expect(api.follow).toHaveBeenCalledWith("member-2");
-    expect(screen.getByRole("link", { name: "Người theo dõi 10" })).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Người theo dõi 10" }),
+    ).toBeDefined();
   });
 
   it("paginates only the member's published posts", async () => {
@@ -125,7 +154,9 @@ describe("CommunityMemberProfile", () => {
     render(<CommunityMemberProfile username="lan-anh" />, { wrapper });
 
     const nextPage = await screen.findByRole("link", { name: "Trang sau" });
-    expect(nextPage.getAttribute("href")).toBe("/community/members/lan-anh?page=2");
+    expect(nextPage.getAttribute("href")).toBe(
+      "/community/members/lan-anh?page=2",
+    );
   });
 
   it("does not offer a self-follow action", async () => {
@@ -133,7 +164,9 @@ describe("CommunityMemberProfile", () => {
     api.profile.mockResolvedValue({ ...member, viewerIsFollowing: false });
     render(<CommunityMemberProfile username="lan-anh" />, { wrapper });
 
-    expect(await screen.findByRole("heading", { name: "Lan Anh" })).toBeDefined();
+    expect(
+      await screen.findByRole("heading", { name: "Lan Anh" }),
+    ).toBeDefined();
     expect(screen.queryByRole("button", { name: /theo dõi/i })).toBeNull();
   });
 
@@ -142,21 +175,40 @@ describe("CommunityMemberProfile", () => {
     auth.user = { id: "member-2" };
     render(<CommunityMemberProfile username="lan-anh" />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: "Chỉnh sửa hồ sơ" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Chỉnh sửa hồ sơ" }),
+    );
     await user.clear(screen.getByRole("textbox", { name: "Tên hiển thị" }));
-    await user.type(screen.getByRole("textbox", { name: "Tên hiển thị" }), "Lan Anh mới");
+    await user.type(
+      screen.getByRole("textbox", { name: "Tên hiển thị" }),
+      "Lan Anh mới",
+    );
     await user.click(screen.getByRole("button", { name: "Lưu hồ sơ" }));
 
-    expect(api.updateProfile).toHaveBeenCalledWith(expect.objectContaining({ displayName: "Lan Anh mới" }));
-    expect(await screen.findByRole("heading", { name: "Lan Anh mới" })).toBeDefined();
+    expect(api.updateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ displayName: "Lan Anh mới" }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Lan Anh mới" }),
+    ).toBeDefined();
   });
 
   it("shows the public follower list and exposes follower/following links", async () => {
-    render(<CommunityMemberProfile username="lan-anh" view="followers" />, { wrapper });
+    render(<CommunityMemberProfile username="lan-anh" view="followers" />, {
+      wrapper,
+    });
 
-    expect(await screen.findByRole("heading", { name: "Người theo dõi của Lan Anh" })).toBeDefined();
+    expect(
+      await screen.findByRole("heading", {
+        name: "Người theo dõi của Lan Anh",
+      }),
+    ).toBeDefined();
     expect(await screen.findByRole("link", { name: "Minh" })).toBeDefined();
-    expect(api.followers).toHaveBeenCalledWith("lan-anh", 1, expect.any(AbortSignal));
+    expect(api.followers).toHaveBeenCalledWith(
+      "lan-anh",
+      1,
+      expect.any(AbortSignal),
+    );
     expect(screen.getByRole("link", { name: "Đang theo dõi 4" })).toBeDefined();
   });
 });

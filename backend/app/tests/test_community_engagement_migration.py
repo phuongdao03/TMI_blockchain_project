@@ -44,13 +44,9 @@ def test_community_engagement_migration_backfills_safe_profiles_and_downgrades(
             unique_indexes = {
                 tuple(
                     column[2]
-                    for column in connection.execute(
-                        f"PRAGMA index_info('{index[1]}')"
-                    )
+                    for column in connection.execute(f"PRAGMA index_info('{index[1]}')")
                 )
-                for index in connection.execute(
-                    "PRAGMA index_list(community_likes)"
-                )
+                for index in connection.execute("PRAGMA index_list(community_likes)")
                 if index[2]
             }
             tables = {
