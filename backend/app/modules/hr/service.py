@@ -1604,10 +1604,12 @@ class HrService:
         )
         if payload.replace_assignment_id is not None:
             previous = await self._session.scalar(
-                select(AttendanceAssignment).where(
+                select(AttendanceAssignment)
+                .where(
                     AttendanceAssignment.id == payload.replace_assignment_id,
                     AttendanceAssignment.employee_id == employee.id,
-                ).with_for_update()
+                )
+                .with_for_update()
             )
             if (
                 previous is None
@@ -1620,7 +1622,9 @@ class HrService:
             ):
                 raise DomainError(
                     code="HR_ATTENDANCE_TRANSFER_STALE",
-                    message="The previous assignment no longer covers the transfer date.",
+                    message=(
+                        "The previous assignment no longer covers the transfer date."
+                    ),
                     status_code=409,
                 )
             history_criteria = [
@@ -1629,7 +1633,10 @@ class HrService:
             ]
             if previous.effective_to is not None:
                 history_criteria.append(Attendance.work_date <= previous.effective_to)
-            if await self._session.scalar(select(Attendance.id).where(*history_criteria)):
+            historical_attendance = await self._session.scalar(
+                select(Attendance.id).where(*history_criteria)
+            )
+            if historical_attendance:
                 raise DomainError(
                     code="HR_ATTENDANCE_ASSIGNMENT_HISTORY_CONFLICT",
                     message="The transfer date would exclude recorded attendance.",
@@ -1651,7 +1658,9 @@ class HrService:
         if overlap is not None:
             raise DomainError(
                 code="HR_ATTENDANCE_ASSIGNMENT_OVERLAP",
-                message="This employee already has an assignment in that effective period.",
+                message=(
+                    "This employee already has an assignment in that effective period."
+                ),
                 status_code=409,
             )
         if previous is not None:

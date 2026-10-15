@@ -287,7 +287,9 @@ class CreateAttendanceAssignmentRequest(EffectiveDatedAttendanceRequest):
     def validate_work_schedule(self) -> "CreateAttendanceAssignmentRequest":
         if self.replace_assignment_id is not None:
             if not self.transfer_reason or len(self.transfer_reason.strip()) < 10:
-                raise ValueError("A transfer reason of at least 10 characters is required.")
+                raise ValueError(
+                    "A transfer reason of at least 10 characters is required."
+                )
             self.transfer_reason = self.transfer_reason.strip()
         elif self.transfer_reason is not None:
             raise ValueError("A transfer requires the previous assignment ID.")

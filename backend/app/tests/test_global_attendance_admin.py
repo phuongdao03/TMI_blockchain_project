@@ -611,24 +611,36 @@ def test_transfer_assignment_is_atomic_and_preserves_history(blocked: bool) -> N
             if blocked:
                 with pytest.raises(DomainError) as error:
                     await service.create_attendance_assignment(
-                        admin, payload, audit=AuditService(session),
-                        request_id="transfer", user_agent="pytest",
+                        admin,
+                        payload,
+                        audit=AuditService(session),
+                        request_id="transfer",
+                        user_agent="pytest",
                     )
                 assert error.value.code == "HR_ATTENDANCE_ASSIGNMENT_HISTORY_CONFLICT"
                 await session.rollback()
             else:
                 moved = await service.create_attendance_assignment(
-                    admin, payload, audit=AuditService(session),
-                    request_id="transfer", user_agent="pytest",
+                    admin,
+                    payload,
+                    audit=AuditService(session),
+                    request_id="transfer",
+                    user_agent="pytest",
                 )
                 assert moved.worksite_id == new_site.id
             stored = await session.get(AttendanceAssignment, old.id)
             assert stored.effective_to == (None if blocked else date(2026, 10, 14))
             rows, count = await service.list_attendance_assignments(
-                admin, page=1, page_size=100, employee_id=employee_id, worksite_id=None,
+                admin,
+                page=1,
+                page_size=100,
+                employee_id=employee_id,
+                worksite_id=None,
             )
             assert count == (1 if blocked else 2)
-            assert await session.scalar(select(Attendance.id).where(Attendance.employee_id == employee_id))
+            assert await session.scalar(
+                select(Attendance.id).where(Attendance.employee_id == employee_id)
+            )
         await engine.dispose()
 
     asyncio.run(exercise())

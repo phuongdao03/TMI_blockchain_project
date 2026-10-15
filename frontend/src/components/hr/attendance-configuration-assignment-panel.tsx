@@ -455,9 +455,9 @@ export function AttendanceAssignmentPanel({
               Phân công của nhân viên tại mọi địa điểm
             </h3>
             <p className="mt-1 text-sm leading-6 text-neutral-700">
-                Chọn nhân viên và ngày bắt đầu để kiểm tra phân công tại mọi
-                văn phòng. Có thể xác nhận chuyển sang địa điểm này; lịch sử
-                chấm công vẫn được giữ.
+              Chọn nhân viên và ngày bắt đầu để kiểm tra phân công tại mọi văn
+              phòng. Có thể xác nhận chuyển sang địa điểm này; lịch sử chấm công
+              vẫn được giữ.
             </p>
             {employeeAssignments.isPending ? (
               <p className="mt-3 text-sm text-neutral-600">
