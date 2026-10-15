@@ -81,6 +81,7 @@ class ProofRegistryGateway:
         self.receipt_contract_address = CONTRACT
         self.asset_id = bytes(32)
         self.proof_hash = bytes(32)
+        self.receipt_proof_hash_override: bytes | None = None
         self.version = 0
 
     async def has_verifier_role(self, wallet_address: str) -> bool:
@@ -150,7 +151,7 @@ class ProofRegistryGateway:
             proof_recorded_events=(
                 ProofRecordedEvent(
                     asset_id=self.asset_id,
-                    proof_hash=self.proof_hash,
+                    proof_hash=self.receipt_proof_hash_override or self.proof_hash,
                     version=self.version,
                     signer=WALLET,
                     timestamp=int(NOW.timestamp()),
@@ -794,6 +795,19 @@ def test_thv_proof_intent_requires_a_payment_ready_dossier_version(
         assert recovered_after_failure.confirmations == 1
 
         gateway.latest_block = 11
+
+        # A mined transaction must not become confirmed if its event records
+        # a different dossier hash, even after enough block confirmations.
+        gateway.receipt_proof_hash_override = bytes.fromhex("cd" * 32)
+        mismatched = await service.transaction_status(
+            principal,
+            transaction_id=intent.transaction_id,
+            reconcile=True,
+        )
+        assert mismatched.status is BlockchainTransactionStatus.FAILED
+        assert mismatched.error_code == "PROOF_EVENT_MISMATCH"
+        assert issuance_requests == []
+        gateway.receipt_proof_hash_override = None
 
         confirmed = await service.transaction_status(
             principal,

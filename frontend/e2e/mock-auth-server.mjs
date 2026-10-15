@@ -1780,6 +1780,31 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "POST" &&
+    path === "/api/e2e/confirm-blockchain-signing"
+  ) {
+    if (
+      blockchainSigningStatus.status !== "BROADCAST" ||
+      !blockchainSigningStatus.txHash
+    ) {
+      const failure = error(
+        409,
+        "SIGNING_NOT_BROADCAST",
+        "No transaction is awaiting confirmation.",
+      );
+      send(response, failure.status, failure.body);
+      return;
+    }
+    blockchainSigningStatus = {
+      ...blockchainSigningStatus,
+      status: "CONFIRMED",
+      confirmations: 2,
+      confirmedAt: "2026-08-23T10:05:00Z",
+    };
+    send(response, 200, envelope(blockchainSigningStatus));
+    return;
+  }
+  if (
+    request.method === "POST" &&
     path === "/api/v1/admin/blockchain/transactions/failure-e2e/retry" &&
     authenticated
   ) {

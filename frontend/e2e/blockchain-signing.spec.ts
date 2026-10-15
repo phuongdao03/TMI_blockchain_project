@@ -44,8 +44,9 @@ test.beforeEach(async ({ context, page, request }) => {
   );
 });
 
-test("Super Admin sends a THV proof and sees Polygon confirmation progress", async ({
+test("Super Admin signs a THV proof and sees confirmed hash evidence", async ({
   page,
+  request,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chrome");
   await page.goto("/blockchain");
@@ -91,6 +92,23 @@ test("Super Admin sends a THV proof and sees Polygon confirmation progress", asy
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     transactionHash,
   );
+
+  const confirmed = await request.post(
+    "http://127.0.0.1:4010/api/e2e/confirm-blockchain-signing",
+  );
+  expect(confirmed.ok()).toBe(true);
+  await page.getByRole("button", { name: /Kiểm tra xác nhận ngay/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Bằng chứng có thể tự kiểm tra" }),
+  ).toBeVisible();
+  await expect(page.getByText(`0x${"a".repeat(64)}`)).toBeVisible();
+  await expect(
+    page.getByText("2 lượt xác nhận trên Polygon; có thể đối chiếu độc lập."),
+  ).toBeVisible();
+  await expect(confirmedStep).toHaveAttribute("aria-current", "step");
+  await expect(
+    page.getByRole("button", { name: "Ký và ghi nhận blockchain" }),
+  ).toHaveCount(0);
 });
 
 test("blockchain workspace remains visible and usable at 320px", async ({
