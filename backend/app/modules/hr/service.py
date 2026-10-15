@@ -1596,25 +1596,83 @@ class HrService:
                 ),
                 status_code=422,
             )
-        overlap = await self._session.scalar(
-            select(AttendanceAssignment.id).where(
-                AttendanceAssignment.employee_id == employee.id,
-                *self._effective_range_overlap(
-                    AttendanceAssignment,
-                    effective_from=payload.effective_from,
-                    effective_to=payload.effective_to,
-                ),
+        previous = None
+        previous_end = (
+            payload.effective_from - timedelta(days=1)
+            if payload.effective_from > date.min
+            else None
+        )
+        if payload.replace_assignment_id is not None:
+            previous = await self._session.scalar(
+                select(AttendanceAssignment).where(
+                    AttendanceAssignment.id == payload.replace_assignment_id,
+                    AttendanceAssignment.employee_id == employee.id,
+                ).with_for_update()
             )
+            if (
+                previous is None
+                or previous_end is None
+                or previous.effective_from > previous_end
+                or (
+                    previous.effective_to is not None
+                    and previous.effective_to < payload.effective_from
+                )
+            ):
+                raise DomainError(
+                    code="HR_ATTENDANCE_TRANSFER_STALE",
+                    message="The previous assignment no longer covers the transfer date.",
+                    status_code=409,
+                )
+            history_criteria = [
+                Attendance.employee_id == employee.id,
+                Attendance.work_date >= payload.effective_from,
+            ]
+            if previous.effective_to is not None:
+                history_criteria.append(Attendance.work_date <= previous.effective_to)
+            if await self._session.scalar(select(Attendance.id).where(*history_criteria)):
+                raise DomainError(
+                    code="HR_ATTENDANCE_ASSIGNMENT_HISTORY_CONFLICT",
+                    message="The transfer date would exclude recorded attendance.",
+                    status_code=409,
+                )
+        overlap_criteria = [
+            AttendanceAssignment.employee_id == employee.id,
+            *self._effective_range_overlap(
+                AttendanceAssignment,
+                effective_from=payload.effective_from,
+                effective_to=payload.effective_to,
+            ),
+        ]
+        if previous is not None:
+            overlap_criteria.append(AttendanceAssignment.id != previous.id)
+        overlap = await self._session.scalar(
+            select(AttendanceAssignment.id).where(*overlap_criteria)
         )
         if overlap is not None:
             raise DomainError(
                 code="HR_ATTENDANCE_ASSIGNMENT_OVERLAP",
-                message=(
-                    "This employee already has an assignment in that effective period."
-                ),
+                message="This employee already has an assignment in that effective period.",
                 status_code=409,
             )
-        assignment_values = payload.model_dump(by_alias=False)
+        if previous is not None:
+            before = self._attendance_assignment_audit_snapshot(previous)
+            previous.effective_to = previous_end
+            audit.record(
+                actor_user_id=principal.user_id,
+                action="hr.attendance_assignment.end_adjusted",
+                resource_type="attendance_assignment",
+                resource_id=str(previous.id),
+                before=before,
+                after={
+                    **self._attendance_assignment_audit_snapshot(previous),
+                    "reason": payload.transfer_reason,
+                },
+                request_id=request_id,
+                user_agent=user_agent,
+            )
+        assignment_values = payload.model_dump(
+            by_alias=False, exclude={"replace_assignment_id", "transfer_reason"}
+        )
         assignment_values["holiday_dates"] = [
             value.isoformat() for value in payload.holiday_dates or []
         ]

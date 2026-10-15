@@ -16,6 +16,8 @@ export type PolicyCorrectionInput = Pick<
 > & { reason: string };
 
 export type AssignmentInput = {
+  replaceAssignmentId?: string;
+  transferReason?: string;
   employeeId: string;
   worksiteId: string;
   effectiveFrom: string;

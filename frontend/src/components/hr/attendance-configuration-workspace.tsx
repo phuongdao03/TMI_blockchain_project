@@ -17,6 +17,27 @@ import { AttendanceWorksitePanel } from "./attendance-configuration-worksite-pan
 
 const pageSize = 100;
 
+async function loadAssignments(filters: {
+  employeeId?: string;
+  worksiteId?: string;
+}) {
+  const first = await hrAttendanceConfigurationApi.listAssignments({
+    ...filters,
+    pageSize,
+  });
+  const data = [...first.data];
+  for (let page = 2; data.length < first.meta.total; page += 1) {
+    const next = await hrAttendanceConfigurationApi.listAssignments({
+      ...filters,
+      page,
+      pageSize,
+    });
+    if (!next.data.length) throw new Error("Incomplete assignment list");
+    data.push(...next.data);
+  }
+  return { ...first, data };
+}
+
 export function AttendanceConfigurationWorkspace() {
   const queryClient = useQueryClient();
   const [selectedWorksiteId, setSelectedWorksiteId] = useState<string | null>(
@@ -50,8 +71,7 @@ export function AttendanceConfigurationWorkspace() {
   const assignments = useQuery({
     queryKey: ["hr", "attendance-assignments", resolvedSelectedWorksiteId],
     queryFn: () =>
-      hrAttendanceConfigurationApi.listAssignments({
-        pageSize,
+      loadAssignments({
         worksiteId: resolvedSelectedWorksiteId ?? undefined,
       }),
     enabled: Boolean(resolvedSelectedWorksiteId),
@@ -59,8 +79,7 @@ export function AttendanceConfigurationWorkspace() {
   const employeeAssignments = useQuery({
     queryKey: ["hr", "attendance-assignments", "employee", selectedEmployeeId],
     queryFn: () =>
-      hrAttendanceConfigurationApi.listAssignments({
-        pageSize,
+      loadAssignments({
         employeeId: selectedEmployeeId,
       }),
     enabled: Boolean(selectedEmployeeId),
@@ -183,7 +202,7 @@ export function AttendanceConfigurationWorkspace() {
   return (
     <section
       aria-labelledby="attendance-configuration-title"
-      className="mx-auto max-w-7xl space-y-6 pb-12"
+      className="w-full space-y-5 pb-12"
     >
       <header className="relative overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-950 px-5 py-7 text-white shadow-sm sm:px-8 sm:py-9">
         <div className="absolute -right-10 -top-12 size-48 rounded-full bg-primary-500/15 blur-3xl" />
@@ -199,9 +218,8 @@ export function AttendanceConfigurationWorkspace() {
             Chấm công theo địa điểm
           </h1>
           <p className="mt-3 text-sm leading-6 text-neutral-300 sm:text-base">
-            Thực hiện lần lượt ba bước: chọn địa điểm, lưu vùng GPS và phân công
-            nhân viên. Sau khi lưu một bước, thông tin ở bước tiếp theo sẽ được
-            mở để bạn tiếp tục.
+            Chọn văn phòng để xem nhân viên, thêm người hoặc chuyển nơi làm
+            việc. Mở cấu hình GPS khi cần thay đổi vùng chấm công.
           </p>
         </div>
       </header>
@@ -248,24 +266,9 @@ export function AttendanceConfigurationWorkspace() {
         worksites={worksites}
       />
 
-      <div className="mx-auto max-w-5xl space-y-6">
-        <AttendancePolicyPanel
-          isSaving={createPolicy.isPending || correctPolicy.isPending}
-          key={resolvedSelectedWorksiteId ?? "no-worksite"}
-          onRetry={() => void policies.refetch()}
-          onCorrect={(policyId, input) =>
-            correctPolicy.mutateAsync({ policyId, input })
-          }
-          onSave={(input) =>
-            createPolicy.mutateAsync({
-              worksiteId: resolvedSelectedWorksiteId!,
-              input,
-            })
-          }
-          policies={policies}
-          selectedWorksite={selectedWorksite}
-        />
+      <div className="flex flex-col gap-5">
         <AttendanceAssignmentPanel
+          key={resolvedSelectedWorksiteId ?? "no-assignment-site"}
           assignments={assignments}
           employeeAssignments={employeeAssignments}
           employeeSearch={employeeSearch}
@@ -282,11 +285,36 @@ export function AttendanceConfigurationWorkspace() {
               reason,
             })
           }
-          onRetry={() => void assignments.refetch()}
+          onRetry={() =>
+            void queryClient.invalidateQueries({
+              queryKey: ["hr", "attendance-assignments"],
+            })
+          }
           onRetryEmployees={() => void employees.refetch()}
           onSave={(input) => createAssignment.mutateAsync(input)}
           selectedWorksite={selectedWorksite}
         />
+        <details className="rounded-2xl border border-neutral-200 bg-white p-4">
+          <summary className="cursor-pointer text-base font-bold">
+            GPS · Cấu hình vùng chấm công
+          </summary>
+          <AttendancePolicyPanel
+            isSaving={createPolicy.isPending || correctPolicy.isPending}
+            key={resolvedSelectedWorksiteId ?? "no-worksite"}
+            onRetry={() => void policies.refetch()}
+            onCorrect={(policyId, input) =>
+              correctPolicy.mutateAsync({ policyId, input })
+            }
+            onSave={(input) =>
+              createPolicy.mutateAsync({
+                worksiteId: resolvedSelectedWorksiteId!,
+                input,
+              })
+            }
+            policies={policies}
+            selectedWorksite={selectedWorksite}
+          />
+        </details>
       </div>
     </section>
   );

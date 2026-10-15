@@ -529,3 +529,106 @@ def test_global_attendance_policy_rejects_unknown_iana_timezone() -> None:
             radius_meters=100,
             max_accuracy_meters=25,
         )
+
+
+@pytest.mark.parametrize("blocked", [False, True])
+def test_transfer_assignment_is_atomic_and_preserves_history(blocked: bool) -> None:
+    async def exercise() -> None:
+        engine = create_async_engine("sqlite+aiosqlite://")
+        await _create_global_attendance_tables(engine)
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        admin = _principal(roles=("SUPER_ADMIN",))
+        async with sessions.begin() as session:
+            session.add(User(id=admin.user_id, email=admin.email, password_hash=None))
+            department = Department(code="OPS", name="Operations")
+            session.add(department)
+            await session.flush()
+            employee = Employee(
+                employee_code="OPS-MOVE",
+                full_name="Avery Patel",
+                email="avery@example.com",
+                department_id=department.id,
+                position="Reviewer",
+                join_date=date(2026, 10, 1),
+            )
+            session.add(employee)
+            await session.flush()
+            employee_id = employee.id
+
+        async with sessions() as session:
+            service = HrService(session)
+            old_site = await service.create_attendance_worksite(
+                admin,
+                CreateAttendanceWorksiteRequest(code="OLD", name="Old Office"),
+                audit=AuditService(session),
+                request_id="move",
+                user_agent="pytest",
+            )
+            new_site = await service.create_attendance_worksite(
+                admin,
+                CreateAttendanceWorksiteRequest(code="NEW", name="New Office"),
+                audit=AuditService(session),
+                request_id="move",
+                user_agent="pytest",
+            )
+            for site in (old_site, new_site):
+                await service.create_attendance_worksite_policy(
+                    admin,
+                    site.id,
+                    _policy_request(effective_from=date(2026, 10, 1)),
+                    audit=AuditService(session),
+                    request_id="move",
+                    user_agent="pytest",
+                )
+            old = await service.create_attendance_assignment(
+                admin,
+                CreateAttendanceAssignmentRequest(
+                    employee_id=employee_id,
+                    worksite_id=old_site.id,
+                    effective_from=date(2026, 10, 1),
+                    schedule_code="CUSTOM",
+                    holiday_calendar_code="CUSTOM",
+                ),
+                audit=AuditService(session),
+                request_id="move",
+                user_agent="pytest",
+            )
+            session.add(
+                Attendance(employee_id=employee_id, work_date=date(2026, 10, 5))
+            )
+            await session.commit()
+
+            target_start = date(2026, 10, 5) if blocked else date(2026, 10, 15)
+            payload = CreateAttendanceAssignmentRequest(
+                employee_id=employee_id,
+                worksite_id=new_site.id,
+                effective_from=target_start,
+                schedule_code="CUSTOM",
+                holiday_calendar_code="CUSTOM",
+                replace_assignment_id=old.id,
+                transfer_reason="Transfer employee to new office",
+            )
+            if blocked:
+                with pytest.raises(DomainError) as error:
+                    await service.create_attendance_assignment(
+                        admin, payload, audit=AuditService(session),
+                        request_id="transfer", user_agent="pytest",
+                    )
+                assert error.value.code == "HR_ATTENDANCE_ASSIGNMENT_HISTORY_CONFLICT"
+                await session.rollback()
+            else:
+                moved = await service.create_attendance_assignment(
+                    admin, payload, audit=AuditService(session),
+                    request_id="transfer", user_agent="pytest",
+                )
+                assert moved.worksite_id == new_site.id
+            stored = await session.get(AttendanceAssignment, old.id)
+            assert stored.effective_to == (None if blocked else date(2026, 10, 14))
+            rows, count = await service.list_attendance_assignments(
+                admin, page=1, page_size=100, employee_id=employee_id, worksite_id=None,
+            )
+            assert count == (1 if blocked else 2)
+            assert await session.scalar(select(Attendance.id).where(Attendance.employee_id == employee_id))
+        await engine.dispose()
+
+    asyncio.run(exercise())

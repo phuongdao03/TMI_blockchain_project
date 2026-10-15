@@ -42,15 +42,20 @@ const worksite = {
   updatedAt: "2026-09-21T08:00:00Z",
 };
 
-function renderWorkspace() {
+async function renderWorkspace() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <AttendanceConfigurationWorkspace />
     </QueryClientProvider>,
   );
+  fireEvent.click(screen.getByText(/GPS .*C/));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Thêm nhân viên" }),
+  );
+  return view;
 }
 
 function mockQueries() {
@@ -86,7 +91,7 @@ describe("AttendanceConfigurationWorkspace", () => {
       ],
       meta: { total: 2 },
     });
-    renderWorkspace();
+    await renderWorkspace();
     expect(await screen.findByText("Singapore Hub")).toBeDefined();
     expect(screen.queryByText("Old Office")).toBeNull();
     fireEvent.click(
@@ -107,7 +112,7 @@ describe("AttendanceConfigurationWorkspace", () => {
       status = "INACTIVE";
       return { ...worksite, status };
     });
-    renderWorkspace();
+    await renderWorkspace();
     await screen.findByText("Singapore Hub");
     fireEvent.click(
       screen.getByRole("button", { name: "Xóa khỏi danh sách Singapore Hub" }),
@@ -173,7 +178,7 @@ describe("AttendanceConfigurationWorkspace", () => {
       ],
       meta: { total: 1 },
     });
-    renderWorkspace();
+    await renderWorkspace();
     fireEvent.click(
       await screen.findByRole("button", { name: "Sửa lịch CNS-03" }),
     );
@@ -246,7 +251,7 @@ describe("AttendanceConfigurationWorkspace", () => {
       }),
     );
     updateAssignmentEndMock.mockResolvedValue({ id: "assignment-old" });
-    renderWorkspace();
+    await renderWorkspace();
     await screen.findByRole("option", { name: "CNS-03 · Đào Nguyên Phương" });
     fireEvent.change(screen.getByLabelText("Nhân viên"), {
       target: { value: "employee-1" },
@@ -289,7 +294,7 @@ describe("AttendanceConfigurationWorkspace", () => {
       ],
       meta: { total: 1 },
     });
-    renderWorkspace();
+    await renderWorkspace();
 
     expect(
       (
@@ -316,7 +321,7 @@ describe("AttendanceConfigurationWorkspace", () => {
       ],
       meta: { total: 1 },
     });
-    renderWorkspace();
+    await renderWorkspace();
     const search = await screen.findByLabelText("Tìm nhân viên đang hoạt động");
     fireEvent.change(search, { target: { value: "reviewer@example.com" } });
     expect(
@@ -330,7 +335,7 @@ describe("AttendanceConfigurationWorkspace", () => {
 
   it("explains the missing employee profile and blocks assignment until a policy exists", async () => {
     mockQueries();
-    renderWorkspace();
+    await renderWorkspace();
 
     expect(await screen.findByText("Singapore Hub")).toBeDefined();
     expect(
@@ -378,7 +383,7 @@ describe("AttendanceConfigurationWorkspace", () => {
       ],
       meta: { total: 1 },
     });
-    renderWorkspace();
+    await renderWorkspace();
 
     expect(
       await screen.findByRole("option", { name: "NV001 · Nguyễn An" }),
@@ -417,7 +422,7 @@ describe("AttendanceConfigurationWorkspace", () => {
       meta: { total: 1 },
     });
     createAssignmentMock.mockResolvedValue({ id: "assignment-1" });
-    renderWorkspace();
+    await renderWorkspace();
     await screen.findByRole("option", { name: "NV001 · Nguyễn An" });
     fireEvent.change(screen.getByLabelText("Nhân viên"), {
       target: { value: "employee-1" },
@@ -456,7 +461,7 @@ describe("AttendanceConfigurationWorkspace", () => {
       ...worksite,
       name: "Văn phòng Singapore",
     });
-    renderWorkspace();
+    await renderWorkspace();
 
     fireEvent.click(
       await screen.findByRole("button", { name: "Đổi tên Singapore Hub" }),
@@ -475,7 +480,7 @@ describe("AttendanceConfigurationWorkspace", () => {
   it("creates a worksite from the administration workspace", async () => {
     mockQueries();
     createWorksiteMock.mockResolvedValue(worksite);
-    renderWorkspace();
+    await renderWorkspace();
 
     expect(await screen.findByText("Chấm công theo địa điểm")).toBeDefined();
     fireEvent.click(
@@ -500,7 +505,7 @@ describe("AttendanceConfigurationWorkspace", () => {
   it("submits an explicit per-worksite GPS policy without hidden defaults", async () => {
     mockQueries();
     createPolicyMock.mockResolvedValue({ id: "policy-1" });
-    renderWorkspace();
+    await renderWorkspace();
 
     expect(await screen.findByText("Singapore Hub")).toBeDefined();
     fireEvent.change(screen.getByLabelText("Ngày hiệu lực"), {
@@ -557,7 +562,7 @@ describe("AttendanceConfigurationWorkspace", () => {
       ],
       meta: { requestId: "test", page: 1, pageSize: 100, total: 1 },
     });
-    renderWorkspace();
+    await renderWorkspace();
 
     fireEvent.click(
       await screen.findByRole("button", { name: "Tạo phiên bản mới" }),
@@ -602,7 +607,7 @@ describe("AttendanceConfigurationWorkspace", () => {
       meta: { total: 1 },
     });
     correctPolicyMock.mockResolvedValue({ id: "policy-current" });
-    renderWorkspace();
+    await renderWorkspace();
     fireEvent.click(
       await screen.findByRole("button", { name: "Sửa vị trí đã lưu" }),
     );

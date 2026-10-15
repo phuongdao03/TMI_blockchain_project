@@ -1861,6 +1861,8 @@ export const hrAttendanceConfigurationApi = {
     );
   },
   createAssignment(input: {
+    replaceAssignmentId?: string;
+    transferReason?: string;
     employeeId: string;
     worksiteId: string;
     effectiveFrom: string;

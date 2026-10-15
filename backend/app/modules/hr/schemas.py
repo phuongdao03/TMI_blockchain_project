@@ -272,6 +272,8 @@ class AttendanceWorksitePolicyData(HrSchema):
 class CreateAttendanceAssignmentRequest(EffectiveDatedAttendanceRequest):
     employee_id: UUID
     worksite_id: UUID
+    replace_assignment_id: UUID | None = None
+    transfer_reason: Annotated[str | None, Field(max_length=500)] = None
     schedule_code: Annotated[str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")]
     holiday_calendar_code: Annotated[
         str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
@@ -283,6 +285,12 @@ class CreateAttendanceAssignmentRequest(EffectiveDatedAttendanceRequest):
 
     @model_validator(mode="after")
     def validate_work_schedule(self) -> "CreateAttendanceAssignmentRequest":
+        if self.replace_assignment_id is not None:
+            if not self.transfer_reason or len(self.transfer_reason.strip()) < 10:
+                raise ValueError("A transfer reason of at least 10 characters is required.")
+            self.transfer_reason = self.transfer_reason.strip()
+        elif self.transfer_reason is not None:
+            raise ValueError("A transfer requires the previous assignment ID.")
         schedule_fields = (self.work_days, self.start_time, self.end_time)
         if any(value is not None for value in schedule_fields):
             if any(value is None for value in schedule_fields):

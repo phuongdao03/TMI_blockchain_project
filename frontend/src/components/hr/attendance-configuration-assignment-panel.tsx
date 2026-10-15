@@ -82,6 +82,8 @@ export function AttendanceAssignmentPanel({
   const [holidayDates, setHolidayDates] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [transferConfirmed, setTransferConfirmed] = useState(false);
   const rows = assignments.data?.data ?? [];
   const today = new Intl.DateTimeFormat("sv-SE", {
     timeZone: policies[0]?.timezone ?? "Asia/Ho_Chi_Minh",
@@ -101,8 +103,23 @@ export function AttendanceAssignmentPanel({
   ].find((assignment) => assignment.employeeId === employeeId);
   const hasPolicy = policies.length > 0;
   const canAssign = selectedWorksite?.status === "ACTIVE" && hasPolicy;
+  const conflicts = (employeeAssignments.data?.data ?? []).filter(
+    (row) =>
+      effectiveFrom &&
+      (!row.effectiveTo || row.effectiveTo >= effectiveFrom) &&
+      (!effectiveTo || row.effectiveFrom <= effectiveTo),
+  );
+  const transferable =
+    conflicts.length === 1 && conflicts[0].effectiveFrom < effectiveFrom;
+  const previousEnd = effectiveFrom
+    ? new Date(Date.parse(`${effectiveFrom}T00:00:00Z`) - 86400000)
+        .toISOString()
+        .slice(0, 10)
+    : "";
 
   function prepareEdit(assignment: AttendanceAssignment) {
+    setShowForm(true);
+    setTransferConfirmed(false);
     setEmployeeId(assignment.employeeId);
     onEmployeeSelect(assignment.employeeId);
     setWorkDays(assignment.workDays ?? [0, 1, 2, 3, 4]);
@@ -156,6 +173,16 @@ export function AttendanceAssignmentPanel({
       return;
     }
     try {
+      if (employeeAssignments.isPending || employeeAssignments.isError) {
+        setFormError("Chờ tải đầy đủ phân công của nhân viên trước khi lưu.");
+        return;
+      }
+      if (conflicts.length && (!transferable || !transferConfirmed)) {
+        setFormError(
+          "Xem phân công trùng bên dưới và xác nhận chuyển hoặc điều chỉnh ngày.",
+        );
+        return;
+      }
       await onSave({
         employeeId,
         worksiteId: selectedWorksite.id,
@@ -167,6 +194,12 @@ export function AttendanceAssignmentPanel({
         startTime,
         endTime,
         holidayDates,
+        ...(transferable && transferConfirmed
+          ? {
+              replaceAssignmentId: conflicts[0].id,
+              transferReason: `Chuyển phân công từ ${conflicts[0].worksiteCode} sang ${selectedWorksite.code} từ ${effectiveFrom}`,
+            }
+          : {}),
       });
       setEmployeeId("");
       onEmployeeSelect("");
@@ -177,15 +210,23 @@ export function AttendanceAssignmentPanel({
       setEndTime("17:00");
       setHolidayDate("");
       setHolidayDates([]);
+      setShowForm(false);
+      setTransferConfirmed(false);
     } catch (error) {
       setFormError(
         error instanceof ApiError &&
           error.code === "HR_ATTENDANCE_ASSIGNMENT_OVERLAP"
-          ? "Nhân viên đã có phân công trong khoảng thời gian này. Chọn nhân viên để xem phân công ở mọi địa điểm, rồi kết thúc phân công cũ trước ngày bắt đầu mới."
+          ? "Có phân công khác vừa thay đổi. Tải lại danh sách bên dưới để xem văn phòng và ngày đang bị trùng."
           : error instanceof ApiError &&
-              error.code === "HR_ATTENDANCE_ASSIGNMENT_POLICY_REQUIRED"
-            ? "Ngày phân công chưa có vùng chấm công hiệu lực. Kiểm tra lại chính sách."
-            : "Không thể lưu phân công. Kiểm tra dữ liệu và thử lại.",
+              error.code === "HR_ATTENDANCE_ASSIGNMENT_HISTORY_CONFLICT"
+            ? "Đã có chấm công từ ngày chuyển. Chọn ngày chuyển sau bản ghi chấm công cuối cùng; phân công cũ chưa bị thay đổi."
+            : error instanceof ApiError &&
+                error.code === "HR_ATTENDANCE_TRANSFER_STALE"
+              ? "Phân công cũ đã thay đổi hoặc ngày chuyển chưa phù hợp. Tải lại trang để kiểm tra."
+              : error instanceof ApiError &&
+                  error.code === "HR_ATTENDANCE_ASSIGNMENT_POLICY_REQUIRED"
+                ? "Ngày phân công chưa có vùng chấm công hiệu lực. Kiểm tra lại chính sách."
+                : "Không thể lưu phân công. Kiểm tra dữ liệu và thử lại.",
       );
     }
   }
@@ -201,7 +242,7 @@ export function AttendanceAssignmentPanel({
         </span>
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
-            03 · Phân công
+            Nhân viên · Văn phòng đang chọn
           </p>
           <h2
             className="mt-1 text-xl font-bold text-neutral-950"
@@ -228,10 +269,11 @@ export function AttendanceAssignmentPanel({
           </div>
           <button
             className="min-h-10 rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white disabled:opacity-50"
-            disabled={!canAssign}
-            onClick={() =>
-              document.getElementById("attendance-assignment-search")?.focus()
-            }
+            disabled={!selectedWorksite}
+            onClick={() => {
+              setShowForm(true);
+              setTransferConfirmed(false);
+            }}
             type="button"
           >
             Thêm nhân viên
@@ -312,10 +354,21 @@ export function AttendanceAssignmentPanel({
       </div>
 
       <form
+        hidden={!showForm}
         className="mt-5 rounded-2xl bg-neutral-50 p-4 sm:p-5"
         id="attendance-assignment-form"
         onSubmit={submit}
       >
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h3 className="text-lg font-bold">Thêm hoặc chuyển nhân viên</h3>
+          <button
+            type="button"
+            onClick={() => setShowForm(false)}
+            className="min-h-11 px-3 font-semibold"
+          >
+            Đóng biểu mẫu
+          </button>
+        </div>
         <label
           className="block text-sm font-semibold text-neutral-800"
           htmlFor="attendance-assignment-search"
@@ -368,6 +421,7 @@ export function AttendanceAssignmentPanel({
             id="attendance-assignment-employee"
             onChange={(event) => {
               setEmployeeId(event.target.value);
+              setTransferConfirmed(false);
               onEmployeeSelect(event.target.value);
             }}
             value={employeeId}
@@ -401,8 +455,9 @@ export function AttendanceAssignmentPanel({
               Phân công của nhân viên tại mọi địa điểm
             </h3>
             <p className="mt-1 text-sm leading-6 text-neutral-700">
-              Khi chuyển địa điểm, chọn ngày kết thúc phân công cũ trước ngày
-              bắt đầu mới. Bản ghi chấm công trước đó được giữ lại.
+                Chọn nhân viên và ngày bắt đầu để kiểm tra phân công tại mọi
+                văn phòng. Có thể xác nhận chuyển sang địa điểm này; lịch sử
+                chấm công vẫn được giữ.
             </p>
             {employeeAssignments.isPending ? (
               <p className="mt-3 text-sm text-neutral-600">
@@ -417,16 +472,22 @@ export function AttendanceAssignmentPanel({
                 Nhân viên chưa có phân công.
               </p>
             ) : (
-              <ul className="mt-3 space-y-3">
-                {employeeAssignments.data?.data.map((assignment) => (
-                  <EndAssignmentItem
-                    assignment={assignment}
-                    isUpdating={isUpdating}
-                    key={assignment.id}
-                    onEnd={onEndAssignment}
-                  />
-                ))}
-              </ul>
+              <details className="mt-3 rounded-xl border border-amber-200 bg-white p-3">
+                <summary className="cursor-pointer text-sm font-semibold">
+                  Xem và chỉnh {employeeAssignments.data?.meta.total ?? 0} phân
+                  công tại mọi địa điểm
+                </summary>
+                <ul className="mt-3 space-y-3">
+                  {employeeAssignments.data?.data.map((assignment) => (
+                    <EndAssignmentItem
+                      assignment={assignment}
+                      isUpdating={isUpdating}
+                      key={assignment.id}
+                      onEnd={onEndAssignment}
+                    />
+                  ))}
+                </ul>
+              </details>
             )}
           </div>
         ) : null}
@@ -440,7 +501,10 @@ export function AttendanceAssignmentPanel({
               className={fieldClass}
               disabled={!canAssign}
               id="attendance-assignment-effective-from"
-              onChange={(event) => setEffectiveFrom(event.target.value)}
+              onChange={(event) => {
+                setEffectiveFrom(event.target.value);
+                setTransferConfirmed(false);
+              }}
               type="date"
               value={effectiveFrom}
             />
@@ -456,11 +520,57 @@ export function AttendanceAssignmentPanel({
               disabled={!canAssign}
               id="attendance-assignment-effective-to"
               min={effectiveFrom || undefined}
-              onChange={(event) => setEffectiveTo(event.target.value)}
+              onChange={(event) => {
+                setEffectiveTo(event.target.value);
+                setTransferConfirmed(false);
+              }}
               type="date"
               value={effectiveTo}
             />
           </label>
+          {conflicts.length > 0 ? (
+            <div
+              role="status"
+              className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+            >
+              <p className="font-bold">
+                Phân công đang trùng với thời gian đã chọn
+              </p>
+              <ul className="mt-2 space-y-2">
+                {conflicts.map((row) => (
+                  <li key={row.id}>
+                    <strong>
+                      {row.worksiteCode} · {row.worksiteName}
+                    </strong>
+                    <br />
+                    {row.effectiveFrom} → {row.effectiveTo ?? "Chưa kết thúc"}
+                  </li>
+                ))}
+              </ul>
+              {transferable ? (
+                <label className="mt-3 flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1 size-5"
+                    checked={transferConfirmed}
+                    onChange={(event) =>
+                      setTransferConfirmed(event.target.checked)
+                    }
+                  />
+                  <span>
+                    Kết thúc phân công tại {conflicts[0].worksiteCode} ngày{" "}
+                    {previousEnd} và chuyển sang {selectedWorksite?.code} từ{" "}
+                    {effectiveFrom}. Giữ lịch sử chấm công.
+                  </span>
+                </label>
+              ) : (
+                <p className="mt-3">
+                  Chọn ngày bắt đầu sau ngày bắt đầu phân công cũ, hoặc điều
+                  chỉnh từng phân công trong danh sách ở trên.
+                </p>
+              )}
+            </div>
+          ) : null}
           <fieldset className="sm:col-span-2">
             <legend className="text-sm font-semibold text-neutral-800">
               Ngày làm việc hằng tuần
@@ -586,14 +696,32 @@ export function AttendanceAssignmentPanel({
               className="mt-0.5 size-4 shrink-0"
             />
             {formError}
+            {formError.includes("Tải lại danh sách") ? (
+              <button
+                className="font-bold underline"
+                onClick={onRetry}
+                type="button"
+              >
+                Tải lại phân công
+              </button>
+            ) : null}
           </p>
         ) : null}
         <button
           className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={isSaving || !canAssign}
+          disabled={
+            isSaving ||
+            !canAssign ||
+            (!!employeeId &&
+              (employeeAssignments.isPending || employeeAssignments.isError))
+          }
           type="submit"
         >
-          {isSaving ? "Đang lưu..." : "Lưu phân công"}
+          {isSaving
+            ? "Đang lưu..."
+            : transferConfirmed && transferable
+              ? "Xác nhận chuyển và lưu"
+              : "Lưu phân công"}
         </button>
       </form>
 
