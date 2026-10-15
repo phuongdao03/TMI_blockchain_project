@@ -89,10 +89,13 @@ test("heritage artwork fits without covering actions across mobile and tablet wi
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chrome");
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  const heroLocator = page.locator(".registry-hero");
+  await expect(heroLocator).toBeVisible();
 
   for (const width of [320, 390, 640, 736, 768]) {
     await page.setViewportSize({ width, height: 1024 });
-    const hero = await page.locator(".registry-hero").boundingBox();
+    await expect(heroLocator).toBeVisible();
+    const hero = await heroLocator.boundingBox();
     const figure = await page.locator(".registry-heritage").boundingBox();
     const drum = await page.locator(".registry-heritage__drum").boundingBox();
     const artwork = await page

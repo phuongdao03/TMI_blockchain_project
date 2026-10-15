@@ -132,6 +132,7 @@ test("super admin previews the populated attendance feed and circle worksite map
   await expect(
     page.getByRole("button", { name: /DEMO-SG.*Singapore/ }),
   ).toBeVisible();
+  await page.getByText("GPS · Cấu hình vùng chấm công").click();
   await page.getByRole("button", { name: "Sửa vị trí đã lưu" }).click();
   await expect(
     page.locator('[aria-label="Bản đồ cấu hình vùng chấm công"]'),
