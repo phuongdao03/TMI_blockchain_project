@@ -11,6 +11,7 @@ from app.db.base import Base
 from app.db.session import get_direct_database_url
 from app.modules.auth import models as auth_models  # noqa: F401
 from app.modules.blockchain import models as blockchain_models  # noqa: F401
+from app.modules.community import models as community_models  # noqa: F401
 from app.modules.council import models as council_models  # noqa: F401
 from app.modules.dossiers import models as dossier_models  # noqa: F401
 from app.modules.engagement import models as engagement_models  # noqa: F401

@@ -541,6 +541,30 @@ class Settings(BaseSettings):
         ge=1,
         le=3_600,
     )
+    community_write_rate_limit: int = Field(default=30, ge=1, le=1_000)
+    community_write_rate_window_seconds: int = Field(default=60, ge=1, le=3_600)
+    community_engagement_write_rate_limit: int = Field(
+        default=60,
+        ge=1,
+        le=2_000,
+    )
+    community_engagement_write_rate_window_seconds: int = Field(
+        default=60,
+        ge=1,
+        le=3_600,
+    )
+    community_report_write_rate_limit: int = Field(default=5, ge=1, le=100)
+    community_report_write_rate_window_seconds: int = Field(
+        default=3_600,
+        ge=60,
+        le=86_400,
+    )
+    community_post_image_max_bytes: int = Field(
+        default=5_242_880,
+        ge=1_048_576,
+        le=20_971_520,
+    )
+    community_post_image_max_count: int = Field(default=5, ge=1, le=10)
     engagement_view_dedupe_ttl_seconds: int = Field(
         default=86_400,
         ge=60,

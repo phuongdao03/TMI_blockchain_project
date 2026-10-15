@@ -48,6 +48,40 @@ class NotificationService:
             return existing
         return notification
 
+    async def consume_in_transaction(
+        self,
+        *,
+        event_id: UUID,
+        user_id: UUID,
+        event_type: str,
+        title: str,
+        body: str,
+        data: dict[str, object],
+    ) -> Notification:
+        """Insert an idempotent notification inside the caller's transaction."""
+        existing = await self._repository.by_event(user_id, event_id)
+        if existing is not None:
+            return existing
+        notification = Notification(
+            user_id=user_id,
+            source_event_id=event_id,
+            type=event_type,
+            title=title,
+            body=body,
+            data_json=data,
+            created_at=datetime.now(UTC),
+        )
+        try:
+            async with self._session.begin_nested():
+                self._repository.add(notification)
+                await self._session.flush()
+        except IntegrityError:
+            existing = await self._repository.by_event(user_id, event_id)
+            if existing is None:
+                raise
+            return existing
+        return notification
+
     async def unread_count(self, user_id: UUID) -> int:
         async with self._session.begin():
             return await self._repository.unread_count(user_id)

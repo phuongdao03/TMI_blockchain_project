@@ -73,6 +73,9 @@ describe("layout shells", () => {
     expect(
       screen.getAllByRole("link", { name: "Tra cứu bằng xác lập" }),
     ).toHaveLength(1);
+    expect(
+      screen.getByRole("link", { name: "Cộng đồng" }).getAttribute("href"),
+    ).toBe("/community");
     expect(screen.getAllByRole("link", { name: "Hướng dẫn" })).toHaveLength(1);
     expect(
       screen.queryByRole("complementary", {

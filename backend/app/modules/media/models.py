@@ -47,6 +47,12 @@ class MediaEncryptionStatus(StrEnum):
 class MediaAsset(UtcTimestampMixin, Base):
     __tablename__ = "media_assets"
     __table_args__ = (
+        CheckConstraint(
+            "purpose IS NULL OR purpose IN "
+            "('AVATAR', 'DOSSIER_EVIDENCE', 'PUBLIC_WORK', 'PUBLIC_COVER', "
+            "'COMMUNITY_POST')",
+            name="purpose_valid",
+        ),
         CheckConstraint("bytes >= 0", name="bytes_non_negative"),
         CheckConstraint(
             "cloudinary_version IS NULL OR cloudinary_version >= 0",
@@ -87,6 +93,12 @@ class MediaAsset(UtcTimestampMixin, Base):
             "status",
             "created_at",
         ),
+        Index(
+            "ix_media_assets_purpose_owner_status",
+            "purpose",
+            "owner_user_id",
+            "status",
+        ),
         UniqueConstraint(
             "storage_provider",
             "provider_asset_id",
@@ -100,6 +112,7 @@ class MediaAsset(UtcTimestampMixin, Base):
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
     )
+    purpose: Mapped[str | None] = mapped_column(String(32))
     cloudinary_public_id: Mapped[str] = mapped_column(
         Text,
         nullable=False,

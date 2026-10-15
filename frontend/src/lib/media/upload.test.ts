@@ -7,6 +7,7 @@ import type {
   MediaUploadCompletion,
 } from "@/lib/api/types";
 import {
+  communityPostImageLimits,
   mediaPolicies,
   MediaUploadValidationError,
   uploadMedia,
@@ -93,6 +94,34 @@ describe("media upload policy", () => {
   it("allows dossier video evidence up to 300 MB", () => {
     expect(mediaPolicies.DOSSIER_EVIDENCE.maxBytes).toBe(314_572_800);
     expect(mediaPolicies.DOSSIER_EVIDENCE.maxMegabytes).toBe(300);
+  });
+
+  it("restricts community post uploads to inspected web images at five megabytes", () => {
+    expect(mediaPolicies.COMMUNITY_POST.maxBytes).toBe(5_242_880);
+    expect(communityPostImageLimits.maxCount).toBe(5);
+    expect(communityPostImageLimits.maxBytes).toBe(5_242_880);
+    const acceptedFiles = [
+      ["community.jpg", "image/jpeg"],
+      ["community.png", "image/png"],
+      ["community.webp", "image/webp"],
+    ] as const;
+    for (const [name, mimeType] of acceptedFiles) {
+      expect(() =>
+        validateMediaFile(sizedFile(name, mimeType, 2_048), "COMMUNITY_POST"),
+      ).not.toThrow();
+    }
+    expect(() =>
+      validateMediaFile(
+        sizedFile("community.gif", "image/gif", 2_048),
+        "COMMUNITY_POST",
+      ),
+    ).toThrow(MediaUploadValidationError);
+    expect(() =>
+      validateMediaFile(
+        sizedFile("community.png", "image/png", 5_242_881),
+        "COMMUNITY_POST",
+      ),
+    ).toThrow(/5 MB/);
   });
 
   it("rejects disallowed MIME, excessive size and mismatched extension", () => {
@@ -227,6 +256,32 @@ describe("uploadMedia", () => {
       signature: "b".repeat(40),
     });
     expect(statusSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses the community post purpose and waits for ACTIVE inspection", async () => {
+    const signatureSpy = vi
+      .spyOn(mediaApi, "createUploadSignature")
+      .mockResolvedValue(authorization);
+    vi.spyOn(mediaApi, "completeUpload").mockResolvedValue(quarantinedAsset);
+    vi.spyOn(mediaApi, "getAsset")
+      .mockResolvedValueOnce(quarantinedAsset)
+      .mockResolvedValueOnce(activeAsset);
+
+    await expect(
+      uploadMedia(
+        sizedFile("community.png", "image/png", 2_048),
+        "COMMUNITY_POST",
+        { inspectionPollIntervalMs: 0 },
+      ),
+    ).resolves.toEqual(activeAsset);
+
+    expect(signatureSpy).toHaveBeenCalledWith({
+      confidentiality: "PRIVATE",
+      purpose: "COMMUNITY_POST",
+      filename: "community.png",
+      mimeType: "image/png",
+      size: 2_048,
+    });
   });
 
   it("uploads supported 50 MB video evidence in a single request", async () => {

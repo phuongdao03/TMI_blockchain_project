@@ -1,5 +1,6 @@
 import hashlib
 from typing import Protocol
+from uuid import UUID
 
 from cryptography.exceptions import InvalidTag
 
@@ -9,7 +10,22 @@ from app.modules.media.encryption import (
     EncryptedDocument,
 )
 from app.modules.media.errors import MediaInvalidStateError
-from app.modules.media.models import MediaAsset, MediaEncryptionStatus
+from app.modules.media.models import MediaEncryptionStatus
+
+
+class RetainedContentAsset(Protocol):
+    id: UUID
+    bytes: int
+    encryption_status: MediaEncryptionStatus
+    sha256: str | None
+    encryption_key_id: str | None
+    encryption_nonce: bytes | None
+    encryption_tag: bytes | None
+    encrypted_object_public_id: str | None
+    encrypted_bytes: int | None
+    mime_type: str
+    cloudinary_public_id: str
+    resource_type: str
 
 
 class RetainedDownloadGateway(Protocol):
@@ -19,7 +35,7 @@ class RetainedDownloadGateway(Protocol):
 
 
 async def read_retained_content(
-    asset: MediaAsset,
+    asset: RetainedContentAsset,
     gateway: RetainedDownloadGateway,
     keyring: DocumentEncryptionKeyring | None,
 ) -> bytes:

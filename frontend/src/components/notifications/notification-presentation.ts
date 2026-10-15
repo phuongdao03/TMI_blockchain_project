@@ -98,12 +98,62 @@ const EVENT_PRESENTATION: Record<
     groupLabel: "Chấm công",
     tone: "warning",
   },
+  COMMUNITY_COMMENT: {
+    actionLabel: "Xem bình luận",
+    groupLabel: "Cộng đồng",
+    tone: "action",
+  },
+  COMMUNITY_REPLY: {
+    actionLabel: "Xem phản hồi",
+    groupLabel: "Cộng đồng",
+    tone: "action",
+  },
+  COMMUNITY_MENTION: {
+    actionLabel: "Xem nội dung",
+    groupLabel: "Được nhắc đến",
+    tone: "action",
+  },
+  COMMUNITY_FOLLOW: {
+    actionLabel: "Xem thành viên",
+    groupLabel: "Cộng đồng",
+    tone: "info",
+  },
+  COMMUNITY_POST_LIKED: {
+    actionLabel: "Xem bài viết",
+    groupLabel: "Cộng đồng",
+    tone: "info",
+  },
+  COMMUNITY_POST_PUBLISHED: {
+    actionLabel: "Xem bài viết",
+    groupLabel: "Cộng đồng",
+    tone: "success",
+  },
+  COMMUNITY_POST_REJECTED: {
+    actionLabel: "Chỉnh sửa bài viết",
+    groupLabel: "Cộng đồng",
+    tone: "warning",
+  },
 };
+
+const INTERNAL_BASE = "https://app.invalid";
 
 function safeInternalPath(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  if (!value.startsWith("/") || value.startsWith("//")) return null;
-  return value;
+  if (
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("\\") ||
+    /[\u0000-\u001f\u007f]/.test(value)
+  ) return null;
+  try {
+    const parsed = new URL(value, INTERNAL_BASE);
+    if (parsed.origin !== INTERNAL_BASE || !parsed.pathname.startsWith("/")) {
+      return null;
+    }
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return null;
+  }
 }
 
 export function presentNotification(

@@ -29,6 +29,7 @@ import { type MediaFileConstraints, mediaPolicies } from "@/lib/media/upload";
 import { cn } from "@/lib/utils";
 
 interface FileUploaderProps {
+  cleanupCompletedOnRemove?: boolean;
   constraints?: MediaFileConstraints;
   disabled?: boolean;
   label: string;
@@ -97,6 +98,7 @@ function overallStatus(
 }
 
 export function FileUploader({
+  cleanupCompletedOnRemove = false,
   constraints,
   disabled = false,
   label,
@@ -129,6 +131,7 @@ export function FileUploader({
     stopWaiting,
     status,
   } = useMediaUploader({
+    cleanupCompletedOnRemove,
     constraints,
     disabled,
     maxFiles,
@@ -353,7 +356,7 @@ export function FileUploader({
                         <button
                           aria-label={`Xóa ${item.file.name}`}
                           className="grid size-9 shrink-0 place-items-center rounded-lg text-neutral-500 transition-colors hover:bg-error/10 hover:text-error focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-                          onClick={() => removeFile(item.id)}
+                          onClick={() => void removeFile(item.id)}
                           type="button"
                         >
                           <Trash2 aria-hidden="true" className="size-4" />

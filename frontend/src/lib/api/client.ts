@@ -39,6 +39,52 @@ import type {
   CmsPage,
   CmsPost,
   CmsPostInput,
+  CommunityCategory,
+  CommunityAdminComment,
+  CommunityAdminCommentResult,
+  CommunityAdminMember,
+  CommunityAdminPinResult,
+  CommunityAdminCommentsLockResult,
+  CommunityAdminPost,
+  CommunityAdminPostDeletionResult,
+  CommunityAdminCategory,
+  CommunityAdminCategoryCreateInput,
+  CommunityAdminCategoryUpdateInput,
+  CommunityAdminSettings,
+  CommunityAdminSettingsInput,
+  CommunityCommentCreateResult,
+  CommunityCommentInput,
+  CommunityCommentLikeResult,
+  CommunityCommentSort,
+  CommunityCommentThread,
+  CommunityCommentVisibility,
+  CommunityMemberCard,
+  CommunityMemberFollowResult,
+  CommunityMemberRestriction,
+  CommunityMemberRestrictionCreateInput,
+  CommunityOwnerPost,
+  CommunityOwnerPostStatus,
+  CommunityMemberProfile,
+  CommunityProfileUpdateInput,
+  CommunityModerationQueuePost,
+  CommunityModerationResult,
+  CommunityModerationEvent,
+  CommunityModerationTargetType,
+  CommunityPageResponse,
+  CommunityReport,
+  CommunityReportResolutionInput,
+  CommunityReportStatus,
+  CommunityReportSubmissionInput,
+  CommunityReportSubmissionResult,
+  CommunityPostBookmarkResult,
+  CommunityPostDetail,
+  CommunityPostInput,
+  CommunityPostFilters,
+  CommunityPostLikeResult,
+  CommunityPostStatus,
+  CommunityPostSummary,
+  CommunityPostWriteResult,
+  CommunityVisibilityResult,
   Certificate,
   CertificateContent,
   CertificateContentDraft,
@@ -272,6 +318,15 @@ async function requestPaginated<Data>(
 ): Promise<Omit<SuccessEnvelope<Data>, "meta"> & { meta: ListResponseMeta }> {
   return requestEnvelope<Data>(path) as Promise<
     Omit<SuccessEnvelope<Data>, "meta"> & { meta: ListResponseMeta }
+  >;
+}
+
+function requestCommunityPage<Data>(
+  path: string,
+  signal?: AbortSignal,
+): Promise<CommunityPageResponse<Data>> {
+  return requestEnvelope<Data>(path, { signal }) as unknown as Promise<
+    CommunityPageResponse<Data>
   >;
 }
 
@@ -764,6 +819,11 @@ export const mediaApi = {
   },
   getAsset(mediaId: string) {
     return request<MediaAsset>(`/media/${mediaId}`);
+  },
+  deleteAsset(mediaId: string) {
+    return request<{ status: "deleted" }>(`/media/${mediaId}`, {
+      method: "DELETE",
+    });
   },
   signedUrl(mediaId: string) {
     return request<SignedDelivery>(`/media/${mediaId}/signed-url`);
@@ -2323,6 +2383,461 @@ export const contentReportAdminApi = {
           reason,
         }),
       },
+    );
+  },
+};
+
+export const communityApi = {
+  categories(signal?: AbortSignal) {
+    return request<CommunityCategory[]>("/community/categories", { signal });
+  },
+  posts(
+    filters: CommunityPostFilters = {},
+    signal?: AbortSignal,
+  ) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(Math.max(1, Math.min(50, filters.pageSize ?? 20))),
+    });
+    if (filters.category) parameters.set("category", filters.category);
+    if (filters.tag) parameters.set("tag", filters.tag);
+    if (filters.relatedWorkId) parameters.set("relatedWorkId", filters.relatedWorkId);
+    if (filters.q?.trim()) parameters.set("q", filters.q.trim());
+    if (filters.sort) parameters.set("sort", filters.sort);
+    return requestEnvelope<CommunityPostSummary[]>(
+      `/community/posts?${parameters.toString()}`,
+      { signal },
+    ) as unknown as Promise<CommunityPageResponse<CommunityPostSummary[]>>;
+  },
+  post(slug: string, signal?: AbortSignal) {
+    return request<CommunityPostDetail>(
+      `/community/posts/${encodeURIComponent(slug)}`,
+      { signal },
+    );
+  },
+  comments(postId: string, page = 1, signal?: AbortSignal, sort: CommunityCommentSort = "oldest") {
+    const parameters = new URLSearchParams({
+      page: String(page),
+      pageSize: "20",
+    });
+    if (sort !== "oldest") parameters.set("sort", sort);
+    return requestCommunityPage<CommunityCommentThread[]>(
+      `/community/posts/${encodeURIComponent(postId)}/comments?${parameters.toString()}`,
+      signal,
+    );
+  },
+  createComment(postId: string, input: CommunityCommentInput) {
+    return request<CommunityCommentCreateResult>(
+      `/community/posts/${encodeURIComponent(postId)}/comments`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  updateComment(commentId: string, input: Pick<CommunityCommentInput, "content">) {
+    return request<CommunityCommentCreateResult>(
+      `/community/comments/${encodeURIComponent(commentId)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+  deleteComment(commentId: string) {
+    return request<void>(`/community/comments/${encodeURIComponent(commentId)}`, {
+      method: "DELETE",
+    });
+  },
+  likeComment(commentId: string) {
+    return request<CommunityCommentLikeResult>(
+      `/community/comments/${encodeURIComponent(commentId)}/like`,
+      { method: "PUT" },
+    );
+  },
+  unlikeComment(commentId: string) {
+    return request<CommunityCommentLikeResult>(
+      `/community/comments/${encodeURIComponent(commentId)}/like`,
+      { method: "DELETE" },
+    );
+  },
+  recordPostView(postId: string) {
+    return request<void>(`/community/posts/${encodeURIComponent(postId)}/views`, {
+      method: "POST",
+    });
+  },
+  likePost(postId: string) {
+    return request<CommunityPostLikeResult>(
+      `/community/posts/${encodeURIComponent(postId)}/like`,
+      { method: "PUT" },
+    );
+  },
+  unlikePost(postId: string) {
+    return request<CommunityPostLikeResult>(
+      `/community/posts/${encodeURIComponent(postId)}/like`,
+      { method: "DELETE" },
+    );
+  },
+  bookmarkPost(postId: string) {
+    return request<CommunityPostBookmarkResult>(
+      `/community/posts/${encodeURIComponent(postId)}/bookmark`,
+      { method: "PUT" },
+    );
+  },
+  unbookmarkPost(postId: string) {
+    return request<CommunityPostBookmarkResult>(
+      `/community/posts/${encodeURIComponent(postId)}/bookmark`,
+      { method: "DELETE" },
+    );
+  },
+  createPost(input: CommunityPostInput) {
+    return request<CommunityPostWriteResult>("/community/posts", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updatePost(postId: string, input: CommunityPostInput) {
+    return request<CommunityPostWriteResult>(
+      `/community/posts/${encodeURIComponent(postId)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+  deletePost(postId: string) {
+    return request<void>(`/community/posts/${encodeURIComponent(postId)}`, {
+      method: "DELETE",
+    });
+  },
+  submitPost(postId: string) {
+    return request<CommunityPostWriteResult>(
+      `/community/posts/${encodeURIComponent(postId)}/submit`,
+      { method: "POST" },
+    );
+  },
+};
+
+export const communityMemberApi = {
+  currentProfile(signal?: AbortSignal) {
+    return request<CommunityMemberProfile>("/members/me", { signal });
+  },
+  updateProfile(input: CommunityProfileUpdateInput) {
+    return request<CommunityMemberProfile>("/community/members/me", {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+  myPosts(
+    filters: {
+      status?: CommunityOwnerPostStatus;
+      page?: number;
+      pageSize?: number;
+    } = {},
+    signal?: AbortSignal,
+  ) {
+    const parameters = new URLSearchParams();
+    if (filters.status) parameters.set("status", filters.status);
+    parameters.set("page", String(filters.page ?? 1));
+    parameters.set(
+      "pageSize",
+      String(Math.max(1, Math.min(50, filters.pageSize ?? 20))),
+    );
+    return requestCommunityPage<CommunityOwnerPost[]>(
+      `/community/members/me/posts?${parameters.toString()}`,
+      signal,
+    );
+  },
+  myPost(postId: string, signal?: AbortSignal) {
+    return request<CommunityOwnerPost>(
+      `/community/members/me/posts/${encodeURIComponent(postId)}`,
+      { signal },
+    );
+  },
+  bookmarks(page = 1, signal?: AbortSignal) {
+    const parameters = new URLSearchParams({
+      page: String(page),
+      pageSize: "20",
+    });
+    return requestCommunityPage<CommunityPostSummary[]>(
+      `/members/me/bookmarks?${parameters.toString()}`,
+      signal,
+    );
+  },
+  profile(username: string, signal?: AbortSignal) {
+    return request<CommunityMemberProfile>(
+      `/members/${encodeURIComponent(username)}`,
+      { signal },
+    );
+  },
+  posts(username: string, page = 1, signal?: AbortSignal) {
+    const parameters = new URLSearchParams({
+      page: String(page),
+      pageSize: "20",
+    });
+    return requestCommunityPage<CommunityPostSummary[]>(
+      `/members/${encodeURIComponent(username)}/posts?${parameters.toString()}`,
+      signal,
+    );
+  },
+  followers(username: string, page = 1, signal?: AbortSignal) {
+    const parameters = new URLSearchParams({ page: String(page), pageSize: "20" });
+    return requestCommunityPage<CommunityMemberCard[]>(
+      `/community/members/${encodeURIComponent(username)}/followers?${parameters.toString()}`,
+      signal,
+    );
+  },
+  following(username: string, page = 1, signal?: AbortSignal) {
+    const parameters = new URLSearchParams({ page: String(page), pageSize: "20" });
+    return requestCommunityPage<CommunityMemberCard[]>(
+      `/community/members/${encodeURIComponent(username)}/following?${parameters.toString()}`,
+      signal,
+    );
+  },
+  follow(memberId: string) {
+    return request<CommunityMemberFollowResult>(
+      `/members/${encodeURIComponent(memberId)}/follow`,
+      { method: "PUT" },
+    );
+  },
+  unfollow(memberId: string) {
+    return request<CommunityMemberFollowResult>(
+      `/members/${encodeURIComponent(memberId)}/follow`,
+      { method: "DELETE" },
+    );
+  },
+};
+
+export const communityReportApi = {
+  reportPost(postId: string, input: CommunityReportSubmissionInput) {
+    return request<CommunityReportSubmissionResult>(
+      `/community/posts/${encodeURIComponent(postId)}/reports`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  reportComment(commentId: string, input: CommunityReportSubmissionInput) {
+    return request<CommunityReportSubmissionResult>(
+      `/community/comments/${encodeURIComponent(commentId)}/reports`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+};
+
+export const communityAdminApi = {
+  pendingPosts(page = 1, signal?: AbortSignal) {
+    const parameters = new URLSearchParams({
+      status: "PENDING",
+      page: String(page),
+      pageSize: "20",
+    });
+    return requestEnvelope<CommunityModerationQueuePost[]>(
+      `/admin/community/posts?${parameters.toString()}`,
+      { signal },
+    ) as unknown as Promise<
+      CommunityPageResponse<CommunityModerationQueuePost[]>
+    >;
+  },
+  publishPost(postId: string, input: { reason: string }) {
+    return request<CommunityModerationResult>(
+      `/admin/community/posts/${encodeURIComponent(postId)}/publish`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  rejectPost(postId: string, input: { reason: string }) {
+    return request<CommunityModerationResult>(
+      `/admin/community/posts/${encodeURIComponent(postId)}/reject`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  reports(
+    filters: { page?: number; pageSize?: number; status?: CommunityReportStatus } = {},
+    signal?: AbortSignal,
+  ) {
+    const parameters = new URLSearchParams({
+      status: filters.status ?? "OPEN",
+      page: String(filters.page ?? 1),
+      pageSize: String(filters.pageSize ?? 20),
+    });
+    return requestCommunityPage<CommunityReport[]>(
+      `/admin/community/reports?${parameters.toString()}`,
+      signal,
+    );
+  },
+  resolveReport(reportId: string, input: CommunityReportResolutionInput) {
+    return request<CommunityReport>(
+      `/admin/community/reports/${encodeURIComponent(reportId)}/resolve`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  hidePost(postId: string, input: { reason: string }) {
+    return request<CommunityVisibilityResult>(
+      `/admin/community/posts/${encodeURIComponent(postId)}/hide`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  restorePost(postId: string, input: { reason: string }) {
+    return request<CommunityVisibilityResult>(
+      `/admin/community/posts/${encodeURIComponent(postId)}/restore`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  hideComment(commentId: string, input: { reason: string }) {
+    return request<CommunityVisibilityResult>(
+      `/admin/community/comments/${encodeURIComponent(commentId)}/hide`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  restoreComment(commentId: string, input: { reason: string }) {
+    return request<CommunityVisibilityResult>(
+      `/admin/community/comments/${encodeURIComponent(commentId)}/restore`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  moderationHistory(
+    filters: {
+      targetType?: CommunityModerationTargetType;
+      targetId?: string;
+      page?: number;
+      pageSize?: number;
+    } = {},
+    signal?: AbortSignal,
+  ) {
+    const parameters = new URLSearchParams();
+    if (filters.targetType) parameters.set("targetType", filters.targetType);
+    if (filters.targetId) parameters.set("targetId", filters.targetId);
+    parameters.set("page", String(filters.page ?? 1));
+    parameters.set("pageSize", String(filters.pageSize ?? 20));
+    return requestCommunityPage<CommunityModerationEvent[]>(
+      `/admin/community/moderation-history?${parameters.toString()}`,
+      signal,
+    );
+  },
+  categories(signal?: AbortSignal) {
+    return request<CommunityAdminCategory[]>("/admin/community/categories", { signal });
+  },
+  createCategory(input: CommunityAdminCategoryCreateInput) {
+    return request<CommunityAdminCategory>("/admin/community/categories", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updateCategory(categoryId: string, input: CommunityAdminCategoryUpdateInput) {
+    return request<CommunityAdminCategory>(
+      `/admin/community/categories/${encodeURIComponent(categoryId)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+  settings(signal?: AbortSignal) {
+    return request<CommunityAdminSettings>("/admin/community/settings", { signal });
+  },
+  updateSettings(input: CommunityAdminSettingsInput) {
+    return request<CommunityAdminSettings>("/admin/community/settings", {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  },
+  workspacePosts(filters: {
+    q?: string;
+    status?: CommunityPostStatus;
+    page?: number;
+    pageSize?: number;
+  } = {}, signal?: AbortSignal) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(Math.max(1, Math.min(50, filters.pageSize ?? 20))),
+    });
+    if (filters.q?.trim()) parameters.set("q", filters.q.trim());
+    if (filters.status) parameters.set("status", filters.status);
+    return requestCommunityPage<CommunityAdminPost[]>(
+      `/admin/community/posts?${parameters.toString()}`,
+      signal,
+    );
+  },
+  pinPost(postId: string, input: { reason: string }) {
+    return request<CommunityAdminPinResult>(`/admin/community/posts/${encodeURIComponent(postId)}/pin`, {
+      method: "POST", body: JSON.stringify(input),
+    });
+  },
+  unpinPost(postId: string, input: { reason: string }) {
+    return request<CommunityAdminPinResult>(`/admin/community/posts/${encodeURIComponent(postId)}/unpin`, {
+      method: "POST", body: JSON.stringify(input),
+    });
+  },
+  lockPostComments(postId: string, input: { reason: string }) {
+    return request<CommunityAdminCommentsLockResult>(`/admin/community/posts/${encodeURIComponent(postId)}/comments/lock`, {
+      method: "POST", body: JSON.stringify(input),
+    });
+  },
+  unlockPostComments(postId: string, input: { reason: string }) {
+    return request<CommunityAdminCommentsLockResult>(`/admin/community/posts/${encodeURIComponent(postId)}/comments/unlock`, {
+      method: "POST", body: JSON.stringify(input),
+    });
+  },
+  deleteWorkspacePost(postId: string, input: { reason: string }) {
+    return request<CommunityAdminPostDeletionResult>(`/admin/community/posts/${encodeURIComponent(postId)}`, {
+      method: "DELETE", body: JSON.stringify(input),
+    });
+  },
+  restoreWorkspacePost(postId: string, input: { reason: string }) {
+    return request<CommunityAdminPostDeletionResult>(`/admin/community/posts/${encodeURIComponent(postId)}/restore`, {
+      method: "POST", body: JSON.stringify(input),
+    });
+  },
+  workspaceComments(filters: {
+    q?: string;
+    postId?: string;
+    authorUsername?: string;
+    visibility?: CommunityCommentVisibility | "ALL";
+    page?: number;
+    pageSize?: number;
+  } = {}, signal?: AbortSignal) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(Math.max(1, Math.min(50, filters.pageSize ?? 20))),
+    });
+    if (filters.q?.trim()) parameters.set("q", filters.q.trim());
+    if (filters.postId?.trim()) parameters.set("postId", filters.postId.trim());
+    if (filters.authorUsername?.trim()) parameters.set("authorUsername", filters.authorUsername.trim());
+    if (filters.visibility) parameters.set("visibility", filters.visibility);
+    return requestCommunityPage<CommunityAdminComment[]>(
+      `/admin/community/comments?${parameters.toString()}`,
+      signal,
+    );
+  },
+  hideWorkspaceComment(commentId: string, input: { reason: string }) {
+    return request<CommunityAdminCommentResult>(`/admin/community/comments/${encodeURIComponent(commentId)}/hide`, {
+      method: "POST", body: JSON.stringify(input),
+    });
+  },
+  restoreWorkspaceComment(commentId: string, input: { reason: string }) {
+    return request<CommunityAdminCommentResult>(`/admin/community/comments/${encodeURIComponent(commentId)}/restore`, {
+      method: "POST", body: JSON.stringify(input),
+    });
+  },
+  deleteWorkspaceComment(commentId: string, input: { reason: string }) {
+    return request<CommunityAdminCommentResult>(`/admin/community/comments/${encodeURIComponent(commentId)}/delete`, {
+      method: "POST", body: JSON.stringify(input),
+    });
+  },
+  members(filters: { q?: string; page?: number; pageSize?: number } = {}, signal?: AbortSignal) {
+    const parameters = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      pageSize: String(Math.max(1, Math.min(50, filters.pageSize ?? 20))),
+    });
+    if (filters.q?.trim()) parameters.set("q", filters.q.trim());
+    return requestCommunityPage<CommunityAdminMember[]>(
+      `/admin/community/members?${parameters.toString()}`,
+      signal,
+    );
+  },
+  memberRestrictions(memberId: string, page = 1, signal?: AbortSignal) {
+    const parameters = new URLSearchParams({ page: String(page), pageSize: "20" });
+    return requestCommunityPage<CommunityMemberRestriction[]>(
+      `/admin/community/members/${encodeURIComponent(memberId)}/restrictions?${parameters.toString()}`,
+      signal,
+    );
+  },
+  createMemberRestriction(memberId: string, input: CommunityMemberRestrictionCreateInput) {
+    return request<CommunityMemberRestriction>(
+      `/admin/community/members/${encodeURIComponent(memberId)}/restrictions`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  revokeMemberRestriction(memberId: string, restrictionId: string, input: { reason: string }) {
+    return request<CommunityMemberRestriction>(
+      `/admin/community/members/${encodeURIComponent(memberId)}/restrictions/${encodeURIComponent(restrictionId)}`,
+      { method: "DELETE", body: JSON.stringify(input) },
     );
   },
 };

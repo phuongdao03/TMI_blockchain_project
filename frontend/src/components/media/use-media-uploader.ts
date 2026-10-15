@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 
-import { ApiError } from "@/lib/api/client";
+import { ApiError, mediaApi } from "@/lib/api/client";
 import type {
   MediaAsset,
   MediaPurpose,
@@ -35,6 +35,7 @@ export interface UploadQueueItem {
 }
 
 interface UseMediaUploaderOptions {
+  cleanupCompletedOnRemove: boolean;
   constraints?: MediaFileConstraints;
   disabled: boolean;
   maxFiles?: number;
@@ -66,6 +67,7 @@ function uploadErrorMessage(error: unknown, canResume: boolean): string {
 }
 
 export function useMediaUploader({
+  cleanupCompletedOnRemove,
   constraints,
   disabled,
   maxFiles,
@@ -138,12 +140,21 @@ export function useMediaUploader({
   );
 
   const removeFile = useCallback(
-    (id: string) => {
+    async (id: string) => {
       if (isProcessing || disabled) return;
+      const item = items.find((candidate) => candidate.id === id);
+      if (cleanupCompletedOnRemove && item?.completion) {
+        try {
+          await mediaApi.deleteAsset(item.completion.mediaId);
+        } catch {
+          setSelectionError("Không thể xóa tệp đã tải lên. Hãy thử lại hoặc giữ tệp trong hàng đợi.");
+          return;
+        }
+      }
       setItems((current) => current.filter((item) => item.id !== id));
       setSelectionError(null);
     },
-    [disabled, isProcessing],
+    [cleanupCompletedOnRemove, disabled, isProcessing, items],
   );
 
   const startUpload = useCallback(async () => {

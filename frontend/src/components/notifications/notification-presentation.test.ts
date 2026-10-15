@@ -90,6 +90,38 @@ describe("notification presentation", () => {
       presentNotification({ ...base, data: { actionPath: "//evil.test" } })
         .actionPath,
     ).toBeNull();
+    expect(
+      presentNotification({ ...base, data: { actionPath: "/\\evil.test/path" } })
+        .actionPath,
+    ).toBeNull();
+    expect(
+      presentNotification({ ...base, data: { actionPath: "javascript:alert(1)" } })
+        .actionPath,
+    ).toBeNull();
+  });
+
+  it("labels community notifications and preserves their safe internal actions", () => {
+    expect(presentNotification({
+      ...base,
+      type: "COMMUNITY_REPLY",
+      data: { actionPath: "/community/posts/lang-nghe-xua" },
+    })).toMatchObject({
+      actionLabel: "Xem phản hồi",
+      groupLabel: "Cộng đồng",
+      actionPath: "/community/posts/lang-nghe-xua",
+    });
+  });
+
+  it("labels community mention notifications", () => {
+    expect(presentNotification({
+      ...base,
+      type: "COMMUNITY_MENTION",
+      data: { actionPath: "/community/posts/lang-nghe-xua" },
+    })).toMatchObject({
+      actionLabel: "Xem nội dung",
+      groupLabel: "Được nhắc đến",
+      actionPath: "/community/posts/lang-nghe-xua",
+    });
   });
 
   it("presents the payment-to-signing lifecycle with direct actions", () => {

@@ -18,6 +18,7 @@ import {
   Phone,
   Route,
   UserPlus,
+  UsersRound,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -40,6 +41,7 @@ import { DashboardNavigation } from "./dashboard-navigation";
 const publicPrimaryLinks = [
   { href: "/", label: "Trang chủ", icon: House },
   { href: "/works", label: "Danh sách đề cử", icon: BookOpen },
+  { href: "/community", label: "Cộng đồng", icon: UsersRound },
   { href: "/process", label: "Quy trình", icon: Route },
 ];
 const publicUtilityLinks = [

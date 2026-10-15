@@ -305,6 +305,51 @@ def test_signed_upload_completion_delivery_and_delete() -> None:
     asyncio.run(exercise())
 
 
+def test_community_post_image_upload_persists_purpose_and_bounds_intent() -> None:
+    async def exercise() -> None:
+        service, gateway, session_factory, engine, users = await _build_service()
+        owner = _principal(users["owner"])
+        issued = await service.create_upload_signature(
+            owner,
+            UploadIntent(
+                purpose=MediaPurpose.COMMUNITY_POST,
+                filename="post-image.webp",
+                mime_type="image/webp",
+                size=5_242_880,
+            ),
+        )
+        assert "/community-post/" in issued.public_id
+        assert issued.parameters["allowed_formats"] == "webp"
+        async with session_factory() as session:
+            asset = await session.get(MediaAsset, issued.media_id)
+            assert asset is not None
+            assert asset.purpose == MediaPurpose.COMMUNITY_POST.value
+            assert asset.status is MediaStatus.PENDING
+
+        for intent in (
+            UploadIntent(
+                purpose=MediaPurpose.COMMUNITY_POST,
+                filename="post-image.gif",
+                mime_type="image/gif",
+                size=2_048,
+            ),
+            UploadIntent(
+                purpose=MediaPurpose.COMMUNITY_POST,
+                filename="post-image.png",
+                mime_type="image/png",
+                size=5_242_881,
+            ),
+        ):
+            with pytest.raises(MediaValidationError):
+                await service.create_upload_signature(owner, intent)
+
+        assert len(gateway.inspection_jobs) == 0
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 @pytest.mark.parametrize("single_copy", [False, True])
 def test_private_delivery_decrypts_only_after_owner_authorization(
     single_copy: bool,

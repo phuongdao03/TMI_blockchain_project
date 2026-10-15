@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 
 import { AdaptiveVideo } from "@/components/public/adaptive-video";
 import { ImageLoadingStatus } from "@/components/media/image-loading-status";
+import { CommunityWorkDiscussions } from "@/components/community/community-work-discussions";
 import { WorkCoverPlaceholder } from "@/components/public/work-cover-placeholder";
 import { PublicWorkCard } from "@/components/public/public-work-card";
 import { PublicWorkShareControls } from "@/components/public/public-work-share-controls";
@@ -267,6 +268,13 @@ export function PublicWorkPresentation({
               ))}
             </div>
           </section>
+        ) : null}
+        {!preview ? (
+          <CommunityWorkDiscussions
+            workId={detail.id}
+            workSlug={detail.canonicalSlug}
+            workTitle={detail.title}
+          />
         ) : null}
       </div>
     </article>

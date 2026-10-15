@@ -35,6 +35,34 @@ const UPLOAD_CHUNK_BYTES = 20 * 1024 * 1024;
 // Keep polling for up to twenty minutes instead of reporting a false failure
 // while a large video is downloaded, scanned and encrypted.
 const MAX_INSPECTION_POLLS = 800;
+const COMMUNITY_IMAGE_MAX_BYTES_HARD_LIMIT = 20_971_520;
+const COMMUNITY_IMAGE_MAX_COUNT_HARD_LIMIT = 10;
+
+function publicLimit(
+  value: string | undefined,
+  fallback: number,
+  max: number,
+  min = 1,
+): number {
+  const configured = Number(value);
+  return Number.isSafeInteger(configured) && configured >= min && configured <= max
+    ? configured
+    : fallback;
+}
+
+export const communityPostImageLimits = {
+  maxBytes: publicLimit(
+    process.env.NEXT_PUBLIC_COMMUNITY_POST_IMAGE_MAX_BYTES,
+    5_242_880,
+    COMMUNITY_IMAGE_MAX_BYTES_HARD_LIMIT,
+    1_048_576,
+  ),
+  maxCount: publicLimit(
+    process.env.NEXT_PUBLIC_COMMUNITY_POST_IMAGE_MAX_COUNT,
+    5,
+    COMMUNITY_IMAGE_MAX_COUNT_HARD_LIMIT,
+  ),
+};
 
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
@@ -77,6 +105,16 @@ interface MediaPolicy {
 }
 
 export const mediaPolicies: Record<MediaPurpose, MediaPolicy> = {
+  COMMUNITY_POST: {
+    accept: "image/jpeg,image/png,image/webp",
+    maxBytes: communityPostImageLimits.maxBytes,
+    maxMegabytes: communityPostImageLimits.maxBytes / 1_048_576,
+    formats: {
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"],
+      "image/webp": [".webp"],
+    },
+  },
   PUBLIC_COVER: {
     accept: "image/jpeg,image/png,image/webp",
     maxBytes: 5_242_880,

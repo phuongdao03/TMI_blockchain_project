@@ -46,6 +46,7 @@ async def get_media_service(
         delivery_ttl_seconds=settings.media_delivery_ttl_seconds,
         avatar_max_bytes=settings.media_avatar_max_bytes,
         evidence_max_bytes=settings.media_evidence_max_bytes,
+        community_post_max_bytes=settings.community_post_image_max_bytes,
         enqueue_inspection=lambda media_id: celery_app.send_task(
             "app.workers.media_inspection_tasks.inspect_media_asset",
             args=[str(media_id)],

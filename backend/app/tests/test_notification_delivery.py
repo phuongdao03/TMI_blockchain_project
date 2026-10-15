@@ -160,6 +160,79 @@ def test_notification_event_is_idempotent_and_unread_count_changes(
     asyncio.run(exercise())
 
 
+def test_notification_consume_joins_transaction_and_rolls_back_with_domain_work(
+    tmp_path: Path,
+) -> None:
+    async def exercise() -> None:
+        engine = create_async_engine(
+            "sqlite+aiosqlite:///"
+            f"{(tmp_path / 'notifications-transaction.sqlite3').as_posix()}"
+        )
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        user_id = uuid4()
+        async with factory() as session:
+            session.add(
+                User(
+                    id=user_id,
+                    email="transaction-owner@example.test",
+                    password_hash="hash",
+                    status=UserStatus.ACTIVE,
+                )
+            )
+            await session.commit()
+            service = NotificationService(session)
+            committed_event_id = uuid4()
+            async with session.begin():
+                inserted = await service.consume_in_transaction(
+                    event_id=committed_event_id,
+                    user_id=user_id,
+                    event_type="community.test",
+                    title="Committed together",
+                    body="Event and notification share a transaction.",
+                    data={"actionPath": "/community"},
+                )
+                duplicate = await service.consume_in_transaction(
+                    event_id=committed_event_id,
+                    user_id=user_id,
+                    event_type="community.test",
+                    title="Duplicate",
+                    body="Ignored duplicate.",
+                    data={},
+                )
+                assert inserted.id == duplicate.id
+
+            rollback_event_id = uuid4()
+            with pytest.raises(RuntimeError, match="roll back domain event"):
+                async with session.begin():
+                    user = await session.get(User, user_id)
+                    assert user is not None
+                    user.status = UserStatus.SUSPENDED
+                    await session.flush()
+                    await service.consume_in_transaction(
+                        event_id=rollback_event_id,
+                        user_id=user_id,
+                        event_type="community.test",
+                        title="Must roll back",
+                        body="This notification cannot outlive its domain event.",
+                        data={},
+                    )
+                    raise RuntimeError("roll back domain event")
+
+            committed_rows, committed_total = await service.list(
+                user_id, page=1, page_size=20
+            )
+            assert committed_total == 1
+            assert committed_rows[0].source_event_id == committed_event_id
+            rolled_back_user = await session.get(User, user_id)
+            assert rolled_back_user is not None
+            assert rolled_back_user.status is UserStatus.ACTIVE
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 def test_email_delivery_retries_without_duplicate_delivery(tmp_path: Path) -> None:
     async def exercise() -> None:
         engine = create_async_engine(

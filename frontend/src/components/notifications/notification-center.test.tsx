@@ -70,4 +70,36 @@ describe("NotificationCenter reviewer invitation", () => {
       expect(api.invitation.accept).toHaveBeenCalledWith("invitation-1"),
     );
   });
+
+  it("renders community notifications as safe internal links only", async () => {
+    api.notification.list.mockResolvedValueOnce({
+      data: [
+        {
+          id: "community-safe",
+          type: "COMMUNITY_COMMENT",
+          title: "Có bình luận mới",
+          body: "Một thành viên đã bình luận về bài viết của bạn.",
+          data: { actionPath: "/community/posts/lang-nghe-xua" },
+          readAt: null,
+          createdAt: "2026-10-15T00:00:00Z",
+        },
+        {
+          id: "community-unsafe",
+          type: "COMMUNITY_REPLY",
+          title: "Có phản hồi mới",
+          body: "Một đường dẫn không hợp lệ.",
+          data: { actionPath: "/\\evil.test/path" },
+          readAt: null,
+          createdAt: "2026-10-15T00:00:00Z",
+        },
+      ],
+      meta: { page: 1, pageSize: 12, total: 2 },
+    });
+    renderCenter();
+
+    const safeLink = await screen.findByRole("link", { name: /Có bình luận mới/ });
+    expect(safeLink.getAttribute("href")).toBe("/community/posts/lang-nghe-xua");
+    expect(screen.queryByRole("link", { name: /Có phản hồi mới/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Có phản hồi mới/ })).toBeDefined();
+  });
 });

@@ -19,6 +19,11 @@ from app.api.v1.certificate_version_requests import (
 )
 from app.api.v1.certificates import router as certificates_router
 from app.api.v1.cms import router as cms_router
+from app.api.v1.community import moderation_router as community_moderation_router
+from app.api.v1.community import router as community_router
+from app.api.v1.community_admin import admin_router as community_admin_router
+from app.api.v1.community_admin import router as community_reports_router
+from app.api.v1.community_engagement import router as community_engagement_router
 from app.api.v1.content_reports import router as content_reports_router
 from app.api.v1.council import router as council_router
 from app.api.v1.dossiers import router as dossiers_router
@@ -262,6 +267,11 @@ def create_application(
     app.include_router(proof_registry_router)
     app.include_router(council_router)
     app.include_router(cms_router)
+    app.include_router(community_router)
+    app.include_router(community_engagement_router)
+    app.include_router(community_moderation_router)
+    app.include_router(community_reports_router)
+    app.include_router(community_admin_router)
     app.include_router(certificates_router)
     app.include_router(certificate_version_requests_router)
     app.include_router(certificate_revocations_router)

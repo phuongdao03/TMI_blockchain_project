@@ -6,12 +6,21 @@ import { FileUploader } from "@/components/media/file-uploader";
 import type { MediaAsset } from "@/lib/api/types";
 
 const uploadMediaMock = vi.hoisted(() => vi.fn());
+const deleteAssetMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/media/upload", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/media/upload")>();
   return {
     ...actual,
     uploadMedia: uploadMediaMock,
+  };
+});
+
+vi.mock("@/lib/api/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/client")>();
+  return {
+    ...actual,
+    mediaApi: { ...actual.mediaApi, deleteAsset: deleteAssetMock },
   };
 });
 
@@ -28,6 +37,7 @@ const activeAsset: MediaAsset = {
 describe("FileUploader", () => {
   beforeEach(() => {
     uploadMediaMock.mockReset();
+    deleteAssetMock.mockReset();
   });
 
   it("explains the upload policy before a file is selected", () => {
@@ -166,6 +176,42 @@ describe("FileUploader", () => {
     expect(uploadMediaMock.mock.calls[1]?.[2]?.resumeCompletion).toEqual(
       checkpoint,
     );
+  });
+
+  it("deletes a transferred community image when its canceled upload is removed", async () => {
+    const user = userEvent.setup();
+    const checkpoint = {
+      mediaId: activeAsset.id,
+      publicId: "uploads/community-image",
+      version: 17,
+      signature: "b".repeat(40),
+    };
+    deleteAssetMock.mockResolvedValue({ status: "deleted" });
+    uploadMediaMock.mockImplementationOnce(async (_file, _purpose, callbacks) => {
+      callbacks.onTransferred(checkpoint);
+      throw new Error("Việc kiểm tra hình ảnh bị gián đoạn.");
+    });
+    render(
+      <FileUploader
+        cleanupCompletedOnRemove
+        label="Ảnh bài viết"
+        onComplete={vi.fn()}
+        purpose="COMMUNITY_POST"
+      />,
+    );
+
+    await user.upload(
+      screen.getByLabelText("Chọn ảnh bài viết"),
+      new File(["image"], "community.png", { type: "image/png" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Tải lên 1 tệp" }));
+    expect(await screen.findByRole("alert")).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Xóa community.png" }));
+
+    await vi.waitFor(() =>
+      expect(deleteAssetMock).toHaveBeenCalledWith(activeAsset.id),
+    );
+    expect(screen.queryByText("community.png")).toBeNull();
   });
 
   it("allows stopping a long inspection and resuming without a second transfer", async () => {

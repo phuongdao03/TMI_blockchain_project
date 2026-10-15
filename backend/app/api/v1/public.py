@@ -30,12 +30,11 @@ from app.modules.blockchain.schemas import DocumentVerificationData
 from app.modules.blockchain.verification_dependencies import (
     DocumentVerificationServiceDependency,
 )
-from app.modules.engagement.errors import EngagementUnavailableError
 from app.modules.engagement.schemas import (
     ShareActionAcceptedData,
     ShareActionRequest,
 )
-from app.modules.engagement.visitor import EngagementVisitorContext
+from app.modules.engagement.visitor import get_or_issue_engagement_visitor
 from app.modules.public.catalog_query_service import PublicWorkSort
 from app.modules.public.dependencies import (
     EngagementServiceDependency,
@@ -139,29 +138,6 @@ PublicDossierCodePath = Annotated[
 ]
 
 
-def _engagement_visitor(request: Request, response: Response) -> str:
-    settings = request.app.state.settings
-    secret = settings.engagement_visitor_hmac_secret
-    if secret is None:
-        raise EngagementUnavailableError()
-    visitor_context = EngagementVisitorContext(secret=secret.get_secret_value())
-    cookie_visitor = request.cookies.get(settings.engagement_visitor_cookie_name)
-    if visitor_context.is_valid(cookie_visitor):
-        assert cookie_visitor is not None
-        return cookie_visitor
-    visitor = visitor_context.issue()
-    response.set_cookie(
-        key=settings.engagement_visitor_cookie_name,
-        value=visitor,
-        httponly=True,
-        secure=settings.app_env != "local",
-        samesite="lax",
-        max_age=settings.engagement_view_dedupe_ttl_seconds,
-        path="/",
-    )
-    return visitor
-
-
 @router.post(
     "/public/works/{slug}/engagement/views",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -181,7 +157,7 @@ async def record_public_work_view(
 ) -> Response:
     await service.record_view(
         slug=slug,
-        visitor=_engagement_visitor(request, response),
+        visitor=get_or_issue_engagement_visitor(request, response),
     )
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
@@ -208,7 +184,7 @@ async def record_public_work_share(
 ) -> SuccessEnvelope[ShareActionAcceptedData]:
     accepted = await service.record_share(
         slug=slug,
-        visitor=_engagement_visitor(request, response),
+        visitor=get_or_issue_engagement_visitor(request, response),
         channel=payload.channel.value,
         principal=principal,
     )

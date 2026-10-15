@@ -12,6 +12,16 @@ class MediaPurpose(StrEnum):
     DOSSIER_EVIDENCE = "DOSSIER_EVIDENCE"
     PUBLIC_WORK = "PUBLIC_WORK"
     PUBLIC_COVER = "PUBLIC_COVER"
+    COMMUNITY_POST = "COMMUNITY_POST"
+
+
+COMMUNITY_POST_IMAGE_MAX_BYTES = 5_242_880
+COMMUNITY_POST_IMAGE_MAX_COUNT = 5
+COMMUNITY_POST_IMAGE_MAX_COUNT_HARD_LIMIT = 10
+COMMUNITY_POST_IMAGE_MIME_TYPES = frozenset(
+    {"image/jpeg", "image/png", "image/webp"}
+)
+AVATAR_IMAGE_MIME_TYPES = frozenset({"image/jpeg", "image/png", "image/webp"})
 
 
 @dataclass(frozen=True, slots=True)

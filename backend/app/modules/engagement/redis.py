@@ -12,14 +12,16 @@ class RedisViewDeduplicator:
         *,
         visitor_context: EngagementVisitorContext,
         ttl_seconds: int,
+        scope: str = "engagement:view",
     ) -> None:
         self._client = client
         self._visitor_context = visitor_context
         self._ttl_seconds = ttl_seconds
+        self._scope = scope
 
     async def accept(self, *, visitor: str, public_work_id: str) -> bool:
         key = (
-            f"engagement:view:{public_work_id}:{self._visitor_context.digest(visitor)}"
+            f"{self._scope}:{public_work_id}:{self._visitor_context.digest(visitor)}"
         )
         try:
             return bool(

@@ -36,7 +36,11 @@ from app.modules.media.models import (
     MediaStatus,
 )
 from app.modules.media.repository import MediaAssetRepository
+from app.modules.media.retained_content import read_retained_content
 from app.modules.media.types import (
+    AVATAR_IMAGE_MIME_TYPES,
+    COMMUNITY_POST_IMAGE_MAX_BYTES,
+    COMMUNITY_POST_IMAGE_MIME_TYPES,
     MediaAssetView,
     MediaContentView,
     MediaPurpose,
@@ -60,6 +64,41 @@ class _FormatPolicy:
     file_format: str
     resource_type: str
     extensions: frozenset[str]
+
+
+@dataclass(frozen=True, slots=True)
+class _RetainedImageSnapshot:
+    id: UUID
+    bytes: int
+    encryption_status: MediaEncryptionStatus
+    sha256: str | None
+    encryption_key_id: str | None
+    encryption_nonce: bytes | None
+    encryption_tag: bytes | None
+    encrypted_object_public_id: str | None
+    encrypted_bytes: int | None
+    mime_type: str
+    cloudinary_public_id: str
+    resource_type: str
+
+
+def _retained_image_snapshot(asset: MediaAsset | None) -> _RetainedImageSnapshot:
+    if asset is None:
+        raise MediaNotFoundError()
+    return _RetainedImageSnapshot(
+        id=asset.id,
+        bytes=asset.bytes,
+        encryption_status=asset.encryption_status,
+        sha256=asset.sha256,
+        encryption_key_id=asset.encryption_key_id,
+        encryption_nonce=asset.encryption_nonce,
+        encryption_tag=asset.encryption_tag,
+        encrypted_object_public_id=asset.encrypted_object_public_id,
+        encrypted_bytes=asset.encrypted_bytes,
+        mime_type=asset.mime_type,
+        cloudinary_public_id=asset.cloudinary_public_id,
+        resource_type=asset.resource_type,
+    )
 
 
 _FORMATS = {
@@ -96,6 +135,7 @@ _EVIDENCE_ONLY_MIME_TYPES = frozenset(
 _PURPOSE_MIME_TYPES = {
     MediaPurpose.PUBLIC_COVER: frozenset({"image/jpeg", "image/png", "image/webp"}),
     MediaPurpose.AVATAR: frozenset({"image/jpeg", "image/png", "image/webp"}),
+    MediaPurpose.COMMUNITY_POST: COMMUNITY_POST_IMAGE_MIME_TYPES,
     MediaPurpose.DOSSIER_EVIDENCE: frozenset(_FORMATS),
 }
 _DANGEROUS_INNER_EXTENSIONS = frozenset(
@@ -127,6 +167,7 @@ class MediaService:
         delivery_ttl_seconds: int,
         avatar_max_bytes: int,
         evidence_max_bytes: int,
+        community_post_max_bytes: int = COMMUNITY_POST_IMAGE_MAX_BYTES,
         enqueue_inspection: Callable[[UUID], object] | None = None,
         delivery_access_policy: MediaDeliveryAccessPolicy | None = None,
         clock: Callable[[], datetime] | None = None,
@@ -144,6 +185,7 @@ class MediaService:
             MediaPurpose.PUBLIC_COVER: 5_242_880,
             MediaPurpose.AVATAR: avatar_max_bytes,
             MediaPurpose.DOSSIER_EVIDENCE: evidence_max_bytes,
+            MediaPurpose.COMMUNITY_POST: community_post_max_bytes,
         }
         self._delivery_access_policy = delivery_access_policy
         self._enqueue_inspection = enqueue_inspection or (lambda _media_id: None)
@@ -179,6 +221,7 @@ class MediaService:
         asset = MediaAsset(
             id=media_id,
             owner_user_id=principal.user_id,
+            purpose=intent.purpose.value,
             cloudinary_public_id=public_id,
             resource_type=policy.resource_type,
             access_mode="authenticated",
@@ -393,6 +436,72 @@ class MediaService:
             filename=filename,
         )
 
+    async def download_community_post_image(self, media_id: UUID) -> MediaContentView:
+        async with self._session.begin():
+            asset = await self._repository.get_by_id(media_id)
+            self._require_community_post_image(asset)
+            snapshot = _retained_image_snapshot(asset)
+        try:
+            content = await read_retained_content(
+                snapshot,
+                self._gateway,
+                self._encryption_keyring,
+            )
+        except MediaContentTooLargeError:
+            raise MediaInvalidStateError() from None
+        async with self._session.begin():
+            current = await self._repository.get_by_id(media_id)
+            self._require_community_post_image(current)
+            if (
+                current is None
+                or current.sha256 != snapshot.sha256
+                or current.mime_type != snapshot.mime_type
+            ):
+                raise MediaNotFoundError()
+        extension = {
+            "image/jpeg": "jpg",
+            "image/png": "png",
+            "image/webp": "webp",
+        }[snapshot.mime_type]
+        return MediaContentView(
+            content=content,
+            mime_type=snapshot.mime_type,
+            filename=f"community-image.{extension}",
+        )
+
+    async def download_community_avatar(self, media_id: UUID) -> MediaContentView:
+        async with self._session.begin():
+            asset = await self._repository.get_by_id(media_id)
+            self._require_community_avatar(asset)
+            snapshot = _retained_image_snapshot(asset)
+        try:
+            content = await read_retained_content(
+                snapshot,
+                self._gateway,
+                self._encryption_keyring,
+            )
+        except MediaContentTooLargeError:
+            raise MediaInvalidStateError() from None
+        async with self._session.begin():
+            current = await self._repository.get_by_id(media_id)
+            self._require_community_avatar(current)
+            if (
+                current is None
+                or current.sha256 != snapshot.sha256
+                or current.mime_type != snapshot.mime_type
+            ):
+                raise MediaNotFoundError()
+        extension = {
+            "image/jpeg": "jpg",
+            "image/png": "png",
+            "image/webp": "webp",
+        }[snapshot.mime_type]
+        return MediaContentView(
+            content=content,
+            mime_type=snapshot.mime_type,
+            filename=f"community-avatar.{extension}",
+        )
+
     async def get_asset(
         self,
         principal: AuthPrincipal,
@@ -469,6 +578,38 @@ class MediaService:
         if any(suffix in _DANGEROUS_INNER_EXTENSIONS for suffix in suffixes[:-1]):
             raise MediaValidationError("Filename is not allowed.")
         return policy
+
+    def _require_community_post_image(self, asset: MediaAsset | None) -> None:
+        if (
+            asset is None
+            or asset.purpose != MediaPurpose.COMMUNITY_POST.value
+            or asset.status is not MediaStatus.ACTIVE
+            or asset.deleted_at is not None
+            or asset.inspected_at is None
+            or asset.mime_type not in COMMUNITY_POST_IMAGE_MIME_TYPES
+            or asset.bytes <= 0
+            or asset.bytes > self._max_bytes[MediaPurpose.COMMUNITY_POST]
+            or asset.sha256 is None
+            or asset.access_mode != "authenticated"
+            or asset.confidentiality is not MediaConfidentiality.PRIVATE
+        ):
+            raise MediaNotFoundError()
+
+    def _require_community_avatar(self, asset: MediaAsset | None) -> None:
+        if (
+            asset is None
+            or asset.purpose != MediaPurpose.AVATAR.value
+            or asset.status is not MediaStatus.ACTIVE
+            or asset.deleted_at is not None
+            or asset.inspected_at is None
+            or asset.mime_type not in AVATAR_IMAGE_MIME_TYPES
+            or asset.bytes <= 0
+            or asset.bytes > self._max_bytes[MediaPurpose.AVATAR]
+            or asset.sha256 is None
+            or asset.access_mode != "authenticated"
+            or asset.confidentiality is not MediaConfidentiality.PRIVATE
+        ):
+            raise MediaNotFoundError()
 
     @staticmethod
     def _validate_provider_metadata(

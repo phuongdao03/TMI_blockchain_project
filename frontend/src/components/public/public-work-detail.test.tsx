@@ -35,6 +35,12 @@ vi.mock("@/lib/api/client", () => {
       verifyNumber: vi.fn(),
       work: vi.fn(),
     },
+    communityApi: {
+      posts: vi.fn().mockResolvedValue({
+        data: [],
+        meta: { requestId: "work-discussions", page: 1, pageSize: 5, total: 0 },
+      }),
+    },
   };
 });
 
