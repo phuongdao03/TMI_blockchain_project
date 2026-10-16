@@ -43,7 +43,7 @@ test("preview public home keeps submission closed and hides internal language", 
   }
 });
 
-test("discovery keeps an authenticated return path across public screens", async ({
+test("public discovery keeps account navigation available to signed in users", async ({
   context,
   page,
 }, testInfo) => {
@@ -76,16 +76,15 @@ test("discovery keeps an authenticated return path across public screens", async
     .getByRole("link", { name: "Thư viện đề cử" })
     .click();
   await expect(page).toHaveURL(/\/works$/, { timeout: 30_000 });
-  const returnNavigation = page.getByRole("navigation", {
-    name: "Quay lại khu vực làm việc",
+  const accountMenu = page.locator(".public-user-menu");
+  await accountMenu.locator("summary").click();
+  const accountNavigation = page.getByRole("navigation", {
+    name: "Menu tài khoản",
   });
-  await expect(returnNavigation).toBeVisible();
+  await expect(accountNavigation).toBeVisible();
   await expect(
-    returnNavigation.getByRole("link", {
-      name: "Quay lại hồ sơ của tôi",
-      exact: true,
-    }),
-  ).toHaveAttribute("href", "/dossiers");
+    accountNavigation.getByRole("link", { name: "Không gian cá nhân" }),
+  ).toHaveAttribute("href", "/workspace");
   await expect(
     page.getByRole("heading", { name: "Thư viện đề cử" }),
   ).toBeVisible();
