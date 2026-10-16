@@ -161,7 +161,7 @@ export function HrDashboardSummary() {
             <p className="text-3xl font-bold tracking-[-0.04em] text-[var(--theme-text)]">
               {card.value(summary.data)}
             </p>
-            <p className="mt-3 text-sm font-semibold text-[var(--theme-muted)] group-hover:text-primary-800">
+            <p className="mt-3 text-sm font-semibold text-[var(--theme-muted)] group-hover:text-[var(--theme-text)]">
               {card.label}
             </p>
           </Link>
