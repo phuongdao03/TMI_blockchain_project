@@ -1,9 +1,11 @@
 from datetime import datetime
+from hashlib import sha256
 from typing import Annotated, Any, Literal, cast
 from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
+from starlette.concurrency import run_in_threadpool
 
 from app.core.schemas import (
     ErrorEnvelope,
@@ -25,6 +27,10 @@ from app.modules.community.dependencies import (
 )
 from app.modules.community.errors import CommunityNotFoundError
 from app.modules.community.identity import public_user_identity
+from app.modules.community.image_rendition import (
+    community_image_etag,
+    community_image_rendition,
+)
 from app.modules.community.models import CommunityPostStatus
 from app.modules.community.rate_limit import enforce_community_content_write_rate_limit
 from app.modules.community.repository import CommunityPostRow
@@ -308,10 +314,22 @@ async def get_my_post(
     responses={404: {"description": "Community avatar was not found."}},
 )
 async def get_community_avatar(
+    request: Request,
     media_id: UUID,
     service: CommunityMediaDeliveryServiceDependency,
+    width: Annotated[int | None, Query(ge=32, le=256)] = None,
 ) -> Response:
+    incoming_etag = request.headers.get("if-none-match")
+    if incoming_etag and await service.matches_avatar_etag(
+        media_id=media_id, width=width, etag=incoming_etag
+    ):
+        return Response(
+            status_code=304,
+            headers={"Cache-Control": "private, no-cache", "ETag": incoming_etag},
+        )
     image = await service.deliver_avatar(media_id)
+    etag = community_image_etag(sha256(image.content).hexdigest(), width)
+    image = await run_in_threadpool(community_image_rendition, image, width)
     extension = {
         "image/jpeg": "jpg",
         "image/png": "png",
@@ -323,7 +341,8 @@ async def get_community_avatar(
         content=image.content,
         media_type=image.mime_type,
         headers={
-            "Cache-Control": "private, no-store",
+            "Cache-Control": "private, no-cache",
+            "ETag": etag,
             "Content-Disposition": f'inline; filename="community-avatar.{extension}"',
             "Content-Length": str(len(image.content)),
             "X-Content-Type-Options": "nosniff",
@@ -340,12 +359,15 @@ async def get_community_post_image(
     media_id: UUID,
     principal: OptionalCurrentPrincipalDependency,
     service: CommunityMediaDeliveryServiceDependency,
+    width: Annotated[int | None, Query(ge=160, le=1600)] = None,
 ) -> Response:
+    viewer_user_id = principal.user_id if principal is not None else None
     image = await service.deliver(
         slug=slug,
         media_id=media_id,
-        viewer_user_id=principal.user_id if principal is not None else None,
+        viewer_user_id=viewer_user_id,
     )
+    image = await run_in_threadpool(community_image_rendition, image, width)
     extension = {
         "image/jpeg": "jpg",
         "image/png": "png",

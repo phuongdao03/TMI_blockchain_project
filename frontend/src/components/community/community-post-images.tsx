@@ -6,10 +6,12 @@ export function CommunityPostImages({
   images,
   postSlug,
   postTitle,
+  priority = false,
 }: {
   images: readonly CommunityPostImage[];
   postSlug: string;
   postTitle: string;
+  priority?: boolean;
 }) {
   const safeImages = images.filter((image) =>
     isCommunityAttachmentUrl(image, postSlug),
@@ -30,9 +32,10 @@ export function CommunityPostImages({
             alt={`${postTitle} — ảnh đính kèm ${index + 1}`}
             className="object-cover"
             fill
-            loading="lazy"
+            loading={priority && index === 0 ? "eager" : "lazy"}
+            fetchPriority={priority && index === 0 ? "high" : "auto"}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 640px"
-            src={image.url}
+            src={`${image.url}?width=960`}
             unoptimized
           />
         </li>

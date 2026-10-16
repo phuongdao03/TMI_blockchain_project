@@ -626,15 +626,42 @@ export function CommunityPostEditor({
                 </>
               ) : (
                 <div
-                  aria-label="Bản xem trước nội dung"
-                  className="mt-2 min-h-64 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
+                  aria-label="Bản xem trước bài viết"
+                  className="mt-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-6 sm:px-8 sm:py-9"
                   role="region"
                 >
+                  <p className="text-xs font-bold tracking-[0.18em] text-[var(--theme-accent)] uppercase">
+                    {categories.data?.find((item) => item.id === categoryId)
+                      ?.name || "Chuyên mục"}
+                  </p>
+                  <h2 className="mt-3 text-2xl font-bold leading-tight tracking-[-0.035em] text-[var(--theme-text)] sm:text-4xl">
+                    {title.trim() || "Tiêu đề bài viết"}
+                  </h2>
+                  {draft?.status === "DRAFT" ? (
+                    <CommunityPostImages
+                      images={imageMediaIds.flatMap((id) => {
+                        const image = draft.images.find(
+                          (item) => item.id === id,
+                        );
+                        return image ? [image] : [];
+                      })}
+                      postSlug={draft.slug}
+                      postTitle={title || draft.title}
+                    />
+                  ) : null}
+                  {relatedWork ? (
+                    <p className="mt-5 text-sm text-[var(--theme-muted)]">
+                      Tác phẩm liên quan:{" "}
+                      <span className="font-semibold">{relatedWork.title}</span>
+                    </p>
+                  ) : null}
                   {content.trim() ? (
-                    <CommunityMarkdown content={content} />
+                    <div className="mt-6 text-base leading-8 sm:text-lg sm:leading-9">
+                      <CommunityMarkdown content={content} />
+                    </div>
                   ) : (
-                    <p className="text-sm text-[var(--theme-muted)]">
-                      Nội dung xem trước sẽ hiển thị tại đây.
+                    <p className="mt-6 text-sm text-[var(--theme-muted)]">
+                      Nội dung bài viết sẽ hiển thị tại đây.
                     </p>
                   )}
                 </div>
@@ -923,7 +950,7 @@ export function CommunityPostEditor({
                   ))}
                 </ol>
               ) : null}
-              {draft?.status === "DRAFT" ? (
+              {draft?.status === "DRAFT" && !previewMode ? (
                 <CommunityPostImages
                   images={imageMediaIds.flatMap((id) => {
                     const image = draft.images.find((item) => item.id === id);

@@ -17,6 +17,7 @@ from app.modules.auth.dependencies import (
 )
 from app.modules.community.admin_repository import (
     CommunityAdminCommentRow,
+    CommunityAdminMemberRow,
     CommunityModerationEventRow,
     CommunityReportRow,
     CommunityRestrictionRow,
@@ -226,13 +227,41 @@ def _admin_member_card(
     username: str | None,
     display_name: str | None,
     avatar_url: str | None,
+    email: str | None = None,
+    has_public_profile: bool = True,
 ) -> CommunityAdminMemberCard:
     return CommunityAdminMemberCard(
         id=member_id,
         username=username or f"member-{member_id.hex}",
         display_name=display_name or "Thành viên",
         avatar_url=avatar_url,
+        email=email,
+        has_public_profile=has_public_profile,
     )
+
+
+def _member_avatar_url(row: CommunityAdminMemberRow) -> str | None:
+    if row.user_profile is not None:
+        if row.user_profile.avatar_media_id is not None:
+            return f"/api/v1/community/avatars/{row.user_profile.avatar_media_id}"
+        return row.user_profile.avatar_url
+    if row.profile is not None:
+        if row.profile.avatar_media_id is not None:
+            return f"/api/v1/community/avatars/{row.profile.avatar_media_id}"
+        return row.profile.avatar_url
+    return None
+
+
+def _member_display_name(row: CommunityAdminMemberRow) -> str:
+    candidates = (
+        row.user_profile.display_name if row.user_profile else None,
+        row.user_profile.full_name if row.user_profile else None,
+        row.profile.display_name if row.profile else None,
+    )
+    for candidate in candidates:
+        if candidate and candidate.strip() and candidate.strip() != "Thành viên":
+            return candidate.strip()
+    return row.user.email
 
 
 def _restriction_data(row: CommunityRestrictionRow) -> CommunityMemberRestrictionData:
@@ -748,8 +777,10 @@ async def list_admin_members(
             member=_admin_member_card(
                 row.user.id,
                 row.profile.username if row.profile else None,
-                row.profile.display_name if row.profile else None,
-                row.profile.avatar_url if row.profile else None,
+                _member_display_name(row),
+                _member_avatar_url(row),
+                email=row.user.email,
+                has_public_profile=row.profile is not None,
             ),
             published_post_count=row.published_post_count,
             comment_count=row.comment_count,

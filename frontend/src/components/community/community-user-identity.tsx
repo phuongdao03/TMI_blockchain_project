@@ -42,9 +42,8 @@ export function getAuthenticatedCommunityIdentity({
   const isAdmin = roles.includes("SUPER_ADMIN");
   const isModerator = !isAdmin && roles.includes("MODERATOR");
   return {
-    displayName: isAdmin
-      ? "Quản trị viên THV"
-      : displayName?.trim() || "Thành viên",
+    displayName:
+      displayName?.trim() || (isAdmin ? "Quản trị viên THV" : "Thành viên"),
     isAdmin,
     roleLabel: isAdmin
       ? "Quản trị viên"

@@ -5,6 +5,7 @@ import { LoaderCircle, RotateCcw, Search } from "lucide-react";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { communityAdminApi } from "@/lib/api/client";
 import type {
   CommunityAdminComment,
@@ -228,11 +229,6 @@ function AdminPostRow({
             {post.category.name} · @{post.author.username} ·{" "}
             {post.author.displayName || "Thành viên"}
           </p>
-          {post.excerpt ? (
-            <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-[var(--theme-muted)]">
-              {post.excerpt}
-            </p>
-          ) : null}
           <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--theme-text)]">
             {post.content}
           </p>
@@ -793,8 +789,7 @@ export function CommunityAdminMembersWorkspace() {
           Quản lý thành viên
         </h2>
         <p className="mt-1 text-sm text-[var(--theme-muted)]">
-          Tra cứu danh tính cộng đồng và quản lý giới hạn đăng bài hoặc bình
-          luận. Không hiển thị dữ liệu tài khoản riêng tư.
+          Tra cứu tên, email và quản lý giới hạn đăng bài hoặc bình luận.
         </p>
       </header>
       <form
@@ -804,14 +799,14 @@ export function CommunityAdminMembersWorkspace() {
         role="search"
       >
         <label className="sr-only" htmlFor="admin-community-member-search">
-          Tên hiển thị hoặc tên người dùng
+          Tên hiển thị, tên người dùng hoặc email
         </label>
         <input
           className={`${inputClass} mt-0 flex-1`}
           id="admin-community-member-search"
           maxLength={120}
           onChange={(event) => setSearchDraft(event.target.value)}
-          placeholder="Tên hiển thị hoặc tên người dùng"
+          placeholder="Tên hiển thị, tên người dùng hoặc email"
           value={searchDraft}
         />
         <button className={primaryButtonClass} type="submit">
@@ -946,16 +941,33 @@ function AdminMemberRow({ member }: { member: CommunityAdminMember }) {
   return (
     <li className={cardClass}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <Link
-            className="break-words text-lg font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2"
-            href={`/community/members/${encodeURIComponent(identity.username)}`}
-          >
-            {identity.displayName || "Thành viên"}
-          </Link>
-          <p className="mt-1 text-sm text-[var(--theme-muted)]">
-            @{identity.username}
-          </p>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-3">
+            <UserAvatar
+              displayName={identity.displayName || identity.email}
+              size={44}
+              src={identity.avatarUrl}
+            />
+            <div className="min-w-0">
+              {identity.hasPublicProfile ? (
+                <Link
+                  className="break-words text-lg font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2"
+                  href={`/community/members/${encodeURIComponent(identity.username)}`}
+                >
+                  {identity.displayName || identity.email || "Thành viên"}
+                </Link>
+              ) : (
+                <span className="break-words text-lg font-bold text-[var(--theme-text)]">
+                  {identity.displayName || identity.email || "Thành viên"}
+                </span>
+              )}
+              {identity.email ? (
+                <p className="break-all text-sm text-[var(--theme-muted)]">
+                  {identity.email}
+                </p>
+              ) : null}
+            </div>
+          </div>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-[var(--theme-muted)] sm:grid-cols-4">
             <div>
               <dt>Bài đã đăng</dt>
@@ -989,7 +1001,7 @@ function AdminMemberRow({ member }: { member: CommunityAdminMember }) {
               : "Chưa có hoạt động"}
           </p>
           <ul
-            aria-label={`Hạn chế đang hiệu lực của ${identity.username}`}
+            aria-label={`Hạn chế đang hiệu lực của ${identity.displayName}`}
             className="mt-2 flex flex-wrap gap-2"
           >
             {member.activeRestrictions.map((restriction) => (
@@ -1078,7 +1090,7 @@ function AdminMemberRow({ member }: { member: CommunityAdminMember }) {
               </p>
             ) : null}
           </form>
-          <section aria-label={`Lịch sử hạn chế của ${identity.username}`}>
+          <section aria-label={`Lịch sử hạn chế của ${identity.displayName}`}>
             <h4 className="font-bold text-[var(--theme-text)]">
               Lịch sử hạn chế
             </h4>

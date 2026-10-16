@@ -25,6 +25,7 @@ from app.modules.community.models import (
     CommunityReport,
 )
 from app.modules.community.repository import CommunityPostRow, CommunityRepository
+from app.modules.users.models import UserProfile
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,6 +96,7 @@ class CommunityAdminCommentRow:
 class CommunityAdminMemberRow:
     user: User
     profile: CommunityProfile | None
+    user_profile: UserProfile | None
     published_post_count: int
     comment_count: int
     follower_count: int
@@ -283,6 +285,9 @@ class CommunityAdminRepository:
                 or_(
                     CommunityProfile.username.ilike(pattern, escape="\\"),
                     CommunityProfile.display_name.ilike(pattern, escape="\\"),
+                    UserProfile.display_name.ilike(pattern, escape="\\"),
+                    UserProfile.full_name.ilike(pattern, escape="\\"),
+                    User.email.ilike(pattern, escape="\\"),
                 )
             )
         published_count = (
@@ -337,6 +342,7 @@ class CommunityAdminRepository:
         count_result = await self._session.execute(
             select(func.count(User.id))
             .outerjoin(CommunityProfile, CommunityProfile.user_id == User.id)
+            .outerjoin(UserProfile, UserProfile.user_id == User.id)
             .where(*filters)
         )
         total = int(count_result.scalar_one() or 0)
@@ -344,6 +350,7 @@ class CommunityAdminRepository:
             select(
                 User,
                 CommunityProfile,
+                UserProfile,
                 published_count,
                 comment_count,
                 follower_count,
@@ -351,6 +358,7 @@ class CommunityAdminRepository:
                 activity_at,
             )
             .outerjoin(CommunityProfile, CommunityProfile.user_id == User.id)
+            .outerjoin(UserProfile, UserProfile.user_id == User.id)
             .where(*filters)
             .order_by(User.created_at.desc(), User.id.desc())
             .offset(offset)
@@ -379,11 +387,12 @@ class CommunityAdminRepository:
             CommunityAdminMemberRow(
                 user=row[0],
                 profile=row[1],
-                published_post_count=row[2],
-                comment_count=row[3],
-                follower_count=row[4],
-                following_count=row[5],
-                last_activity_at=row[6],
+                user_profile=row[2],
+                published_post_count=row[3],
+                comment_count=row[4],
+                follower_count=row[5],
+                following_count=row[6],
+                last_activity_at=row[7],
                 active_restrictions=tuple(active_by_user[row[0].id]),
             )
             for row in values

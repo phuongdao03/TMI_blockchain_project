@@ -18,6 +18,7 @@ export function UserAvatar({
   className?: string;
 }) {
   const [failedSource, setFailedSource] = useState<string | null>(null);
+  const [loadedSource, setLoadedSource] = useState<string | null>(null);
   const imageFailed = failedSource === src;
   const name = displayName?.trim() ?? "";
 
@@ -25,28 +26,33 @@ export function UserAvatar({
     <span
       aria-label={name ? `Ảnh đại diện của ${name}` : "Ảnh đại diện"}
       className={cn(
-        "inline-grid shrink-0 place-items-center overflow-hidden rounded-full border border-[var(--theme-border)] bg-[var(--theme-elevated)] font-semibold text-[var(--theme-text)]",
+        "relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full border border-[var(--theme-border)] bg-[var(--theme-elevated)] font-semibold text-[var(--theme-text)]",
         className,
       )}
       role="img"
       style={{ height: size, width: size, fontSize: Math.max(11, size * 0.34) }}
     >
-      {src && !imageFailed ? (
-        <Image
-          alt=""
-          className="size-full object-cover"
-          height={size}
-          onError={() => setFailedSource(src)}
-          sizes={`${size}px`}
-          src={src}
-          unoptimized
-          width={size}
-        />
-      ) : name ? (
+      {name ? (
         <span aria-hidden="true">{getInitials(name)}</span>
       ) : (
         <UserRound aria-hidden="true" className="size-1/2" />
       )}
+      {src && !imageFailed ? (
+        <Image
+          alt=""
+          className={cn(
+            "absolute inset-0 size-full object-cover",
+            loadedSource === src ? "opacity-100" : "opacity-0",
+          )}
+          height={size}
+          onError={() => setFailedSource(src)}
+          onLoad={() => setLoadedSource(src)}
+          sizes={`${size}px`}
+          src={communityAvatarRenditionUrl(src, size)}
+          unoptimized
+          width={size}
+        />
+      ) : null}
     </span>
   );
 }
@@ -58,4 +64,10 @@ function getInitials(name: string): string {
     .map((word) => Array.from(word)[0] ?? "")
     .join("")
     .toLocaleUpperCase("vi-VN");
+}
+
+function communityAvatarRenditionUrl(src: string, size: number): string {
+  return /^\/api\/v1\/community\/avatars\/[0-9a-f-]{36}$/i.test(src)
+    ? `${src}?width=${Math.min(256, Math.max(32, Math.ceil(size * 2)))}`
+    : src;
 }

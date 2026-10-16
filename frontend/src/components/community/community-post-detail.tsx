@@ -106,15 +106,11 @@ export function CommunityPostDetail({ slug }: { slug: string }) {
             </span>
           </div>
         </header>
-        {article.excerpt ? (
-          <p className="mt-7 border-l-2 border-[var(--theme-accent)] pl-4 text-lg leading-7 text-[var(--theme-muted)] sm:mt-9 sm:text-xl sm:leading-8">
-            {article.excerpt}
-          </p>
-        ) : null}
         <CommunityPostImages
           images={article.images ?? []}
           postSlug={article.slug}
           postTitle={article.title}
+          priority
         />
         <CommunityRelatedWorkLink work={article.relatedWork} />
         <div className="mt-7 text-base leading-8 sm:mt-9 sm:text-lg sm:leading-9">

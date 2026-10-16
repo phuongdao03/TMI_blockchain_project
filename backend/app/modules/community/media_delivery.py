@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.community.errors import CommunityNotFoundError
+from app.modules.community.image_rendition import community_image_etag
 from app.modules.community.repository import CommunityRepository
 from app.modules.media.errors import MediaInvalidStateError, MediaNotFoundError
 from app.modules.media.types import COMMUNITY_POST_IMAGE_MAX_BYTES, MediaContentView
@@ -34,6 +35,15 @@ class CommunityMediaDeliveryService:
             avatar_max_bytes=avatar_max_bytes,
         )
         self._media_reader = media_reader
+
+    async def matches_avatar_etag(
+        self, *, media_id: UUID, width: int | None, etag: str
+    ) -> bool:
+        async with self._session.begin():
+            asset = await self._repository.get_deliverable_community_avatar(media_id)
+            if asset is None:
+                raise CommunityNotFoundError()
+            return etag == community_image_etag(asset.sha256 or "", width)
 
     async def deliver(
         self,

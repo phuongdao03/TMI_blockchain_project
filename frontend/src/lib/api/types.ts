@@ -673,6 +673,8 @@ export interface CommunityAdminMemberIdentity {
   username: string;
   displayName: string;
   avatarUrl: string | null;
+  email?: string | null;
+  hasPublicProfile?: boolean;
 }
 
 export type CommunityRestrictionScope = "POSTS" | "COMMENTS";

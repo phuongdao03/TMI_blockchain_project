@@ -267,6 +267,8 @@ class CommunityAdminMemberCard(CommunitySchema):
     username: str
     display_name: str
     avatar_url: str | None
+    email: str | None = None
+    has_public_profile: bool = True
 
 
 class CommunityAdminActiveRestriction(CommunitySchema):
