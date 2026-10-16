@@ -8,6 +8,7 @@ export function HeritageSymbols() {
         aria-hidden="true"
         className="registry-heritage__drum"
         height={512}
+        loading="eager"
         sizes="(max-width: 48rem) 280px, 560px"
         src="/assets/brand/trong-dong.png"
         width={512}

@@ -30,7 +30,7 @@ test("invited staff verifies email and activates the account once", async ({
   );
 });
 
-test("reviewer signs in directly after Firebase authentication", async ({
+test("reviewer signs in to the workspace after Firebase authentication", async ({
   page,
 }) => {
   test.setTimeout(120_000);
@@ -43,5 +43,5 @@ test("reviewer signs in directly after Firebase authentication", async ({
     .fill("correct horse battery staple");
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
-  await expect(page).toHaveURL(/\/work-allocations$/, { timeout: 45_000 });
+  await expect(page).toHaveURL(/\/workspace$/, { timeout: 45_000 });
 });

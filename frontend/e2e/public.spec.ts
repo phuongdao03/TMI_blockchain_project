@@ -46,6 +46,7 @@ test("public portal is professional, responsive and verifiable", async ({
   });
 
   await page.goto("/works");
+  await expect(page.locator(".theme-toggle-option").first()).toBeEnabled();
   await expect(
     page.getByRole("heading", { name: /Thư viện đề cử/ }),
   ).toBeVisible();

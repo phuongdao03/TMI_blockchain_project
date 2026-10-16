@@ -53,10 +53,11 @@ async function setTheme(page: Page, workspace: boolean, theme: "sáng" | "tối"
   else if ((page.viewportSize()?.width ?? 1440) <= 608) {
     await page.getByRole("button", { name: "Mở menu" }).click();
     await page
-      .getByRole("navigation", { name: "Điều hướng di động" })
+      .getByRole("navigation", { name: "Menu công khai" })
+      .getByRole("group", { name: "Chọn giao diện" })
       .getByRole("button", { name: label })
       .click();
-    await page.getByRole("button", { name: "Đóng menu" }).first().click();
+    await page.getByRole("button", { name: "Đóng menu" }).click();
   } else {
     await page
       .locator(".public-header__actions")

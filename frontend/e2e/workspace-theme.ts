@@ -13,10 +13,14 @@ export async function selectWorkspaceTheme(
     return;
   }
 
+  const adminArea = new URL(page.url()).pathname.startsWith("/admin");
+  const navigationContext = adminArea ? "quản trị" : "workspace";
   const trigger = page.getByRole("button", {
-    name: "Mở điều hướng workspace",
+    name: `Mở điều hướng ${navigationContext}`,
   });
-  const drawer = page.getByRole("dialog", { name: "Điều hướng workspace" });
+  const drawer = page.getByRole("dialog", {
+    name: `Điều hướng ${navigationContext}`,
+  });
   await expect(async () => {
     if (!(await drawer.isVisible())) await trigger.click();
     await expect(drawer).toBeVisible({ timeout: 3_000 });

@@ -25,7 +25,8 @@ export function BrandMark({
         aria-hidden="true"
         className="brand-mark__official-logo"
         height={256}
-        priority
+        loading={!compact && !sealOnly ? "eager" : "lazy"}
+        priority={!compact && !sealOnly}
         sizes="(max-width: 38rem) 56px, 76px"
         src="/assets/brand/logo-tinh-hoa-viet.png"
         width={256}
@@ -36,7 +37,8 @@ export function BrandMark({
           aria-hidden="true"
           className="brand-mark__wordmark-image"
           height={768}
-          priority
+          loading={compact ? "lazy" : "eager"}
+          priority={!compact}
           sizes="(max-width: 38rem) 132px, 180px"
           src="/assets/brand/thv-wordmark-gold.png"
           width={2048}

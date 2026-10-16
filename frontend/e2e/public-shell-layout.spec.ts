@@ -231,16 +231,16 @@ test("compact public shell keeps the account entry in its drawer and uses a full
   await page.goto("/verify");
 
   const header = page.locator(".public-header");
-  const quickNavigation = page.getByRole("navigation", {
-    name: "Điều hướng nhanh",
+  const mobileNavigation = page.getByRole("navigation", {
+    name: "Điều hướng di động",
   });
   const menuButton = page.getByRole("button", { name: "Mở menu" });
 
   await expect(header).toBeVisible();
-  await expect(quickNavigation).toBeVisible();
+  await expect(mobileNavigation).toBeVisible();
   await expect(
-    quickNavigation.getByRole("link", { name: "Không gian của tôi" }),
-  ).toBeVisible();
+    mobileNavigation.getByRole("link", { name: "Cá nhân", exact: true }),
+  ).toHaveAttribute("href", "/workspace");
   await expect(menuButton).toBeVisible();
   await expect
     .poll(() =>
@@ -252,15 +252,15 @@ test("compact public shell keeps the account entry in its drawer and uses a full
 
   await menuButton.click();
   await expect(
-    page
-      .locator(".public-mobile-nav")
-      .getByRole("link", { name: "Không gian của tôi" }),
+    page.getByRole("navigation", { name: "Menu công khai" }).getByRole("link", {
+      name: "Không gian cá nhân",
+    }),
   ).toBeVisible();
 
   await expect(page.locator(".public-shell")).toHaveCSS("display", "flex");
 });
 
-test("signed-in mobile visitor keeps quick navigation across discovery pages", async ({
+test("signed-in mobile visitor keeps primary navigation across discovery pages", async ({
   context,
   page,
 }, testInfo) => {
@@ -291,21 +291,20 @@ test("signed-in mobile visitor keeps quick navigation across discovery pages", a
   ]);
 
   await page.goto("/dashboard");
-  await page
-    .getByRole("navigation", { name: "Điều hướng nhanh" })
-    .getByRole("link", { name: "Thư viện đề cử" })
-    .click();
-
-  const quickNavigation = page.getByRole("navigation", {
-    name: "Điều hướng nhanh",
+  const mobileNavigation = page.getByRole("navigation", {
+    name: "Điều hướng di động",
   });
+  await mobileNavigation
+    .getByRole("link", { name: "Đề cử", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/works$/);
+
   await expect(
-    quickNavigation.getByRole("link", { name: "Thư viện đề cử" }),
+    mobileNavigation.getByRole("link", { name: "Đề cử", exact: true }),
   ).toHaveAttribute("aria-current", "page");
-  await expect(page.locator(".public-workspace-return")).toBeHidden();
   await expect(
-    quickNavigation.getByRole("link", { name: "Không gian của tôi" }),
-  ).toBeVisible();
+    mobileNavigation.getByRole("link", { name: "Cá nhân", exact: true }),
+  ).toHaveAttribute("href", "/workspace");
 });
 
 test("medium desktop shell keeps direct navigation and workspace access", async ({
@@ -342,9 +341,16 @@ test("medium desktop shell keeps direct navigation and workspace access", async 
   await page.setViewportSize({ width: 1145, height: 800 });
   await page.goto("/verify");
 
-  await expect(page.locator(".public-header__workspace")).toBeVisible();
+  const accountMenu = page.locator(".public-user-menu");
+  await expect(accountMenu).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "Điều hướng chính" }),
   ).toBeVisible();
+  await accountMenu.locator("summary").click();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Menu tài khoản" })
+      .getByRole("link", { name: "Không gian cá nhân" }),
+  ).toHaveAttribute("href", "/workspace");
   await expect(page.locator(".public-header__menu")).toBeHidden();
 });
