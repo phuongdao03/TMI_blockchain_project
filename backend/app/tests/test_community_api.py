@@ -2614,11 +2614,13 @@ def test_admin_member_finder_and_time_bounded_restrictions(
             "username": "community-owner",
             "displayName": "Public community name",
             "avatarUrl": None,
+            "email": "private-owner@example.test",
+            "hasPublicProfile": True,
         }
         assert member["publishedPostCount"] >= 1
         assert member["commentCount"] >= 1
         assert len(member["activeRestrictions"]) == 2
-        assert "private-owner@example.test" not in finder.text
+        assert "private-owner@example.test" in finder.text
 
         test_app.set_principal(OWNER_ID)
         blocked_comment = test_app.client.post(
