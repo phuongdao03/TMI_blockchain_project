@@ -13,7 +13,7 @@ test("applicant signs in with Firebase email and securely signs out", async ({
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/workspace$/, { timeout: 30_000 });
   const cookies = await context.cookies();
   expect(cookies.find(({ name }) => name === "cns_access")?.httpOnly).toBe(
     true,
@@ -34,7 +34,7 @@ test("applicant signs in with Firebase email and securely signs out", async ({
     await page.getByRole("button", { name: "Mở điều hướng workspace" }).click();
   }
   await page.getByRole("button", { name: "Đăng xuất" }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/$/);
   expect(
     (await context.cookies()).filter(({ name }) => name.startsWith("cns_")),
   ).toHaveLength(0);
@@ -45,7 +45,7 @@ test("applicant signs in with Google through Firebase exchange", async ({
 }) => {
   await page.goto("/login?accountType=INDIVIDUAL_APPLICANT");
   await page.getByRole("button", { name: "Tiếp tục với Google" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/workspace$/);
 });
 
 test("a new applicant registers with Google on mobile", async ({
@@ -54,7 +54,7 @@ test("a new applicant registers with Google on mobile", async ({
   test.skip(testInfo.project.name !== "mobile-chrome");
   await page.goto("/register");
   await page.getByRole("button", { name: "Tiếp tục với Google" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/workspace$/);
 });
 
 test("a public account can choose an applicant profile without a false expired-session error", async ({
@@ -67,7 +67,7 @@ test("a public account can choose an applicant profile without a false expired-s
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/workspace$/);
   await page.getByRole("button", { name: "Gửi tác phẩm hoặc hồ sơ" }).click();
   await page.getByLabel("Cá nhân").check();
   await page.getByRole("button", { name: "Tiếp tục" }).click();

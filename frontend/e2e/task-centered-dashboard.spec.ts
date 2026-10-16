@@ -272,7 +272,7 @@ test("mobile workspace navigation stays compact, centered and touch friendly", a
   await authenticate(context, "e2e-access");
   await page.goto("/dashboard");
 
-  const navigation = page.locator(".dashboard-mobile-navigation");
+  const navigation = page.locator(".site-mobile-navigation");
   await expect(navigation).toBeVisible();
 
   const navigationBox = await navigation.boundingBox();
@@ -283,14 +283,20 @@ test("mobile workspace navigation stays compact, centered and touch friendly", a
     Math.abs(navigationBox!.x - (viewportWidth - navigationBox!.width) / 2),
   ).toBeLessThanOrEqual(1);
 
-  const controls = navigation.locator(".dashboard-mobile-navigation__link");
+  const controls = navigation.locator(".site-mobile-navigation__item");
   await expect(
-    navigation.getByRole("link", { name: "Thư viện đề cử", exact: true }),
+    navigation.getByRole("link", { name: "Đề cử", exact: true }),
   ).toBeVisible();
+  await expect(
+    navigation.getByRole("link", { name: "Cộng đồng", exact: true }),
+  ).toHaveAttribute("href", "/community");
+  await expect(
+    navigation.getByRole("link", { name: "Cá nhân", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
   for (const control of await controls.all()) {
     const box = await control.boundingBox();
     const iconBox = await control
-      .locator(".dashboard-mobile-navigation__icon")
+      .locator(".site-mobile-navigation__icon")
       .boundingBox();
     expect(box).not.toBeNull();
     expect(iconBox).not.toBeNull();
@@ -306,10 +312,10 @@ test("mobile workspace navigation stays compact, centered and touch friendly", a
     .locator("span")
     .last()
     .evaluate((element) => getComputedStyle(element).whiteSpace);
-  expect(labelWhiteSpace).toBe("normal");
+  expect(labelWhiteSpace).toBe("nowrap");
 
   const activeBackground = await navigation
-    .locator(".dashboard-mobile-navigation__link--active")
+    .locator('.site-mobile-navigation__item[aria-current="page"]')
     .evaluate((element) => getComputedStyle(element).backgroundColor);
   expect(activeBackground).not.toBe("rgb(68, 90, 54)");
   expect(
