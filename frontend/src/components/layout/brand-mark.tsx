@@ -37,7 +37,7 @@ export function BrandMark({
           aria-hidden="true"
           className="brand-mark__wordmark-image"
           height={768}
-          loading={compact ? "lazy" : "eager"}
+          loading="eager"
           priority={!compact}
           sizes="(max-width: 38rem) 132px, 180px"
           src="/assets/brand/thv-wordmark-gold.png"
