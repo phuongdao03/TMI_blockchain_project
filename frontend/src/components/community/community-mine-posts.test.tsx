@@ -88,7 +88,9 @@ describe("CommunityMinePosts", () => {
         .getByRole("link", { name: "Tiếp tục chỉnh sửa: Bài HIDDEN" })
         .getAttribute("href"),
     ).toBe("/community/new?postId=hidden-1");
-    expect(screen.getAllByText("Chờ xử lý (bài viết cũ)").length).toBeGreaterThan(1);
+    expect(
+      screen.getAllByText("Chờ xử lý (bài viết cũ)").length,
+    ).toBeGreaterThan(1);
     expect(
       screen.getByRole("link", { name: "Bản nháp" }).getAttribute("href"),
     ).toBe("/community/mine?status=DRAFT&page=1");

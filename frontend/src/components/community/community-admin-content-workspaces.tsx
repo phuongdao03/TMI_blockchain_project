@@ -92,8 +92,8 @@ export function CommunityAdminPostsWorkspace() {
           Quản lý bài viết
         </h2>
         <p className="mt-1 text-sm text-[var(--theme-muted)]">
-          Quản lý bài viết đã đăng và xem các bản nháp hoặc bài cũ còn chờ xử lý.
-          Mọi thay đổi cần có lý do lưu trong lịch sử.
+          Quản lý bài viết đã đăng và xem các bản nháp hoặc bài cũ còn chờ xử
+          lý. Mọi thay đổi cần có lý do lưu trong lịch sử.
         </p>
       </header>
       <form
@@ -368,7 +368,9 @@ function AdminPostRow({
                 <option value="Nội dung không phù hợp.">
                   Nội dung không phù hợp
                 </option>
-                <option value="Spam hoặc quảng cáo.">Spam hoặc quảng cáo</option>
+                <option value="Spam hoặc quảng cáo.">
+                  Spam hoặc quảng cáo
+                </option>
                 <option value="Ngôn từ thiếu văn minh.">
                   Ngôn từ thiếu văn minh
                 </option>

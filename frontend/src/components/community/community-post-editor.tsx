@@ -389,7 +389,8 @@ export function CommunityPostEditor({
             {postId ? "Chỉnh sửa bài viết" : "Viết bài mới"}
           </h1>
           <p className="mt-3 text-sm leading-6 text-[var(--theme-muted)] sm:text-base">
-            Bài viết xuất hiện ngay sau khi đăng. Bạn có thể chỉnh sửa bài đã đăng.
+            Bài viết xuất hiện ngay sau khi đăng. Bạn có thể chỉnh sửa bài đã
+            đăng.
           </p>
         </header>
 

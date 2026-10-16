@@ -16,7 +16,11 @@ vi.mock("@/lib/api/client", () => ({ communityApi: api }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 const auth = vi.hoisted(() => ({
   user: null as { id: string } | null,
-  status: "authenticated" as "authenticated" | "unauthenticated" | "loading" | "error",
+  status: "authenticated" as
+    | "authenticated"
+    | "unauthenticated"
+    | "loading"
+    | "error",
 }));
 vi.mock("@/lib/auth/user-context", () => ({
   useAuthUser: () => auth.user,
@@ -166,9 +170,9 @@ describe("CommunityFeed", () => {
         }) as HTMLInputElement
       ).value,
     ).toBe("tranh Đông Hồ");
-    expect(
-      (screen.getByLabelText("Sắp xếp") as HTMLSelectElement).value,
-    ).toBe("discussed");
+    expect((screen.getByLabelText("Sắp xếp") as HTMLSelectElement).value).toBe(
+      "discussed",
+    );
     expect(
       screen
         .getByRole("link", { name: "#Tranh dân gian" })

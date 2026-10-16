@@ -239,6 +239,8 @@ async def list_posts(
             total=result.total,
         ),
     )
+
+
 @router.get(
     "/members/me/posts",
     response_model=PaginatedSuccessEnvelope[list[CommunityPostWriteData]],
@@ -270,6 +272,8 @@ async def list_my_posts(
             total=result.total,
         ),
     )
+
+
 @router.get(
     "/members/me/posts/{post_id}",
     response_model=SuccessEnvelope[CommunityPostWriteData],

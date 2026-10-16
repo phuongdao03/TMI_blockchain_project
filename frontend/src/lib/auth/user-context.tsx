@@ -33,7 +33,9 @@ export function AuthUserProvider({
 }) {
   return (
     <AuthStatusContext.Provider value="authenticated">
-      <AuthUserContext.Provider value={user}>{children}</AuthUserContext.Provider>
+      <AuthUserContext.Provider value={user}>
+        {children}
+      </AuthUserContext.Provider>
     </AuthStatusContext.Provider>
   );
 }
@@ -97,7 +99,9 @@ export function PublicAuthProvider({
 
   return (
     <AuthStatusContext.Provider value={status}>
-      <AuthUserContext.Provider value={user}>{children}</AuthUserContext.Provider>
+      <AuthUserContext.Provider value={user}>
+        {children}
+      </AuthUserContext.Provider>
     </AuthStatusContext.Provider>
   );
 }

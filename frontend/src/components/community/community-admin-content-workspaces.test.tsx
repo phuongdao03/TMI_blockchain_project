@@ -81,8 +81,11 @@ describe("community admin content workspaces", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Gỡ bài viết" });
     expect(
-      (within(dialog).getByRole("button", { name: "Gỡ bài viết" }) as HTMLButtonElement)
-        .disabled,
+      (
+        within(dialog).getByRole("button", {
+          name: "Gỡ bài viết",
+        }) as HTMLButtonElement
+      ).disabled,
     ).toBe(true);
     await user.type(
       within(dialog).getByLabelText("Lý do gỡ bài"),

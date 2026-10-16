@@ -260,7 +260,11 @@ function sectionsFor(
       {
         label: "Điều hướng",
         items: [
-          { href: "/workspace", label: "Không gian cá nhân", icon: LayoutDashboard },
+          {
+            href: "/workspace",
+            label: "Không gian cá nhân",
+            icon: LayoutDashboard,
+          },
           ...(roles.includes("SUPER_ADMIN")
             ? [{ href: "/admin", label: "Tổng quan quản trị", icon: Gauge }]
             : []),
@@ -379,7 +383,8 @@ export function DashboardNavigation({
   const effectivePermissions = authUser?.permissions ?? [];
   const isEmployee = authUser?.isEmployee ?? false;
   const persona = resolveWorkspacePersona(effectiveRoles);
-  const navigationArea = area ?? (pathname.startsWith("/admin") ? "admin" : "workspace");
+  const navigationArea =
+    area ?? (pathname.startsWith("/admin") ? "admin" : "workspace");
   const preview = isPreviewRelease();
   const sections = [
     ...sectionsFor(

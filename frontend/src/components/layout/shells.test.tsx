@@ -100,7 +100,9 @@ describe("layout shells", () => {
     expect(
       screen
         .getByRole("navigation", { name: "Điều hướng di động" })
-        .querySelector('a[href="/login?next=%2Fworks%2Fpublished-work%3Fcategory%3Dhistory"]'),
+        .querySelector(
+          'a[href="/login?next=%2Fworks%2Fpublished-work%3Fcategory%3Dhistory"]',
+        ),
     ).not.toBeNull();
     expect(loginLink.classList.contains("public-header__auth-link")).toBe(true);
     expect(registerLink.classList.contains("public-header__auth-link")).toBe(
@@ -387,7 +389,9 @@ describe("layout shells", () => {
     });
     expect(within(mobileNavigation).getAllByRole("link")).toHaveLength(4);
     for (const href of ["/", "/works", "/community", "/workspace"]) {
-      expect(mobileNavigation.querySelector(`a[href="${href}"]`)).not.toBeNull();
+      expect(
+        mobileNavigation.querySelector(`a[href="${href}"]`),
+      ).not.toBeNull();
     }
     expect(mobileNavigation.querySelector('a[href="/dashboard"]')).toBeNull();
     expect(
@@ -469,8 +473,16 @@ describe("layout shells", () => {
       name: "Điều hướng di động",
     });
     expect(within(quickNavigation).getAllByRole("link")).toHaveLength(4);
-    expect(within(quickNavigation).getByRole("link", { name: "Cá nhân" }).getAttribute("href")).toBe("/workspace");
-    expect(within(quickNavigation).getByRole("link", { name: "Cộng đồng" }).getAttribute("href")).toBe("/community");
+    expect(
+      within(quickNavigation)
+        .getByRole("link", { name: "Cá nhân" })
+        .getAttribute("href"),
+    ).toBe("/workspace");
+    expect(
+      within(quickNavigation)
+        .getByRole("link", { name: "Cộng đồng" })
+        .getAttribute("href"),
+    ).toBe("/community");
 
     const moreButton = within(quickNavigation).getByRole("button", {
       name: "Mở thêm mục điều hướng",
@@ -511,13 +523,33 @@ describe("layout shells", () => {
       </AuthUserProvider>,
     );
 
-    expect(screen.queryByRole("navigation", { name: "Điều hướng di động" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Mở điều hướng quản trị" }));
+    expect(
+      screen.queryByRole("navigation", { name: "Điều hướng di động" }),
+    ).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Mở điều hướng quản trị" }),
+    );
     const drawer = screen.getByRole("dialog", { name: "Điều hướng quản trị" });
-    expect(within(drawer).getByRole("link", { name: "Không gian cá nhân" }).getAttribute("href")).toBe("/workspace");
-    expect(within(drawer).getByRole("link", { name: "Website" }).getAttribute("href")).toBe("/");
-    expect(within(drawer).getByRole("link", { name: "Cộng đồng" }).getAttribute("href")).toBe("/community");
-    expect(within(drawer).getByRole("link", { name: "Ký blockchain" }).getAttribute("href")).toBe("/blockchain");
+    expect(
+      within(drawer)
+        .getByRole("link", { name: "Không gian cá nhân" })
+        .getAttribute("href"),
+    ).toBe("/workspace");
+    expect(
+      within(drawer)
+        .getByRole("link", { name: "Website" })
+        .getAttribute("href"),
+    ).toBe("/");
+    expect(
+      within(drawer)
+        .getByRole("link", { name: "Cộng đồng" })
+        .getAttribute("href"),
+    ).toBe("/community");
+    expect(
+      within(drawer)
+        .getByRole("link", { name: "Ký blockchain" })
+        .getAttribute("href"),
+    ).toBe("/blockchain");
   });
 
   it("opens the internal guide from the super admin workspace", () => {
@@ -600,9 +632,19 @@ describe("layout shells", () => {
     expect(screen.queryByRole("link", { name: "Đăng nhập" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng ký" })).toBeNull();
     await user.click(screen.getByText("reviewer@cnsgroup.vn"));
-    const accountMenu = screen.getByRole("navigation", { name: "Menu tài khoản" });
-    expect(within(accountMenu).getByRole("link", { name: "Khu vực quản trị" }).getAttribute("href")).toBe("/admin/community");
-    expect(within(accountMenu).getByRole("link", { name: "Không gian cá nhân" }).getAttribute("href")).toBe("/workspace");
+    const accountMenu = screen.getByRole("navigation", {
+      name: "Menu tài khoản",
+    });
+    expect(
+      within(accountMenu)
+        .getByRole("link", { name: "Khu vực quản trị" })
+        .getAttribute("href"),
+    ).toBe("/admin/community");
+    expect(
+      within(accountMenu)
+        .getByRole("link", { name: "Không gian cá nhân" })
+        .getAttribute("href"),
+    ).toBe("/workspace");
   });
 
   it("does not advertise Super Admin council work to a moderator", () => {
@@ -700,9 +742,17 @@ describe("layout shells", () => {
       </AuthUserProvider>,
     );
 
-    expect(screen.getByRole("heading", { name: "Thư viện đề cử" })).toBeDefined();
-    expect(screen.queryByRole("navigation", { name: "Quay lại khu vực làm việc" })).toBeNull();
-    expect(screen.getByRole("navigation", { name: "Điều hướng di động" }).querySelector('a[href="/works"]')).not.toBeNull();
+    expect(
+      screen.getByRole("heading", { name: "Thư viện đề cử" }),
+    ).toBeDefined();
+    expect(
+      screen.queryByRole("navigation", { name: "Quay lại khu vực làm việc" }),
+    ).toBeNull();
+    expect(
+      screen
+        .getByRole("navigation", { name: "Điều hướng di động" })
+        .querySelector('a[href="/works"]'),
+    ).not.toBeNull();
   });
 
   it("offers the canonical workspace from the public account menu", async () => {
@@ -724,8 +774,14 @@ describe("layout shells", () => {
 
     await user.click(screen.getByText("reader@cnsgroup.vn"));
     const menu = screen.getByRole("navigation", { name: "Menu tài khoản" });
-    expect(within(menu).getByRole("link", { name: "Không gian cá nhân" }).getAttribute("href")).toBe("/workspace");
-    expect(within(menu).queryByRole("link", { name: "Khu vực quản trị" })).toBeNull();
+    expect(
+      within(menu)
+        .getByRole("link", { name: "Không gian cá nhân" })
+        .getAttribute("href"),
+    ).toBe("/workspace");
+    expect(
+      within(menu).queryByRole("link", { name: "Khu vực quản trị" }),
+    ).toBeNull();
   });
 
   it("uses the current role context instead of a generic workspace title", () => {

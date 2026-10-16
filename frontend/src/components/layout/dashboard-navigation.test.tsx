@@ -22,14 +22,18 @@ describe("DashboardNavigation work-allocation migration", () => {
           accountType: null,
         }}
       >
-        <DashboardNavigation area="admin" roles={["MODERATOR"]} showQuickNavigation={false} />
+        <DashboardNavigation
+          area="admin"
+          roles={["MODERATOR"]}
+          showQuickNavigation={false}
+        />
       </AuthUserProvider>,
     );
 
     expect(
-      screen.getByRole("link", { name: "Kiểm duyệt cộng đồng" }).getAttribute(
-        "href",
-      ),
+      screen
+        .getByRole("link", { name: "Kiểm duyệt cộng đồng" })
+        .getAttribute("href"),
     ).toBe("/admin/community");
   });
 
@@ -45,7 +49,11 @@ describe("DashboardNavigation work-allocation migration", () => {
           accountType: null,
         }}
       >
-        <DashboardNavigation area="admin" roles={["MODERATOR"]} showQuickNavigation={false} />
+        <DashboardNavigation
+          area="admin"
+          roles={["MODERATOR"]}
+          showQuickNavigation={false}
+        />
       </AuthUserProvider>,
     );
 
@@ -70,7 +78,9 @@ describe("DashboardNavigation work-allocation migration", () => {
       </AuthUserProvider>,
     );
 
-    expect(container.querySelector('a[href="/admin/community"]')).not.toBeNull();
+    expect(
+      container.querySelector('a[href="/admin/community"]'),
+    ).not.toBeNull();
   });
 
   it("keeps community in the mobile quick navigation for signed-in members", () => {

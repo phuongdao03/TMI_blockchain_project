@@ -13,10 +13,7 @@ export function PublicExperienceShell({
   hasSessionCookie?: boolean;
 }>) {
   return (
-    <PublicAuthProvider
-      initialUser={user}
-      hasSessionCookie={hasSessionCookie}
-    >
+    <PublicAuthProvider initialUser={user} hasSessionCookie={hasSessionCookie}>
       <PublicShell>{children}</PublicShell>
     </PublicAuthProvider>
   );

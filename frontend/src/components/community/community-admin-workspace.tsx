@@ -40,9 +40,7 @@ export function CommunityAdminWorkspace() {
           { id: "history" as const, label: "Lịch sử" },
         ]
       : []),
-    ...(canManage
-      ? [{ id: "categories" as const, label: "Danh mục" }]
-      : []),
+    ...(canManage ? [{ id: "categories" as const, label: "Danh mục" }] : []),
   ];
   const [selectedView, setSelectedView] = useState<WorkspaceView>(
     canModerate ? "posts" : "categories",

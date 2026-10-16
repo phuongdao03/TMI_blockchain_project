@@ -215,5 +215,4 @@ describe("community admin panels", () => {
       ),
     );
   });
-
 });

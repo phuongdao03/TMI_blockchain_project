@@ -2914,7 +2914,8 @@ summary {
     padding: 0.35rem 0.35rem max(0.35rem, env(safe-area-inset-bottom));
     border-top: 1px solid var(--theme-border);
     background: var(--theme-surface);
-    box-shadow: 0 -0.5rem 1.75rem color-mix(in srgb, var(--theme-text) 12%, transparent);
+    box-shadow: 0 -0.5rem 1.75rem
+      color-mix(in srgb, var(--theme-text) 12%, transparent);
   }
 
   .site-mobile-navigation__item {
@@ -2940,7 +2941,11 @@ summary {
   }
 
   .site-mobile-navigation__item[aria-current="page"] {
-    background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface));
+    background: color-mix(
+      in srgb,
+      var(--theme-accent) 10%,
+      var(--theme-surface)
+    );
     color: var(--theme-accent);
   }
 
@@ -12817,11 +12822,13 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
   );
 }
 
-.workspace-screen :where([class~="bg-neutral-50/80"], [class~="bg-neutral-100/80"]) {
+.workspace-screen
+  :where([class~="bg-neutral-50/80"], [class~="bg-neutral-100/80"]) {
   background-color: color-mix(in srgb, var(--theme-elevated) 88%, transparent);
 }
 
-.workspace-screen :where(
+.workspace-screen
+  :where(
     .border-neutral-100,
     .border-neutral-200,
     .border-neutral-300,
@@ -12830,15 +12837,13 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
   border-color: var(--theme-border);
 }
 
-.workspace-screen :where(
-    .text-neutral-950,
-    .text-neutral-900,
-    .text-neutral-800
-  ) {
+.workspace-screen
+  :where(.text-neutral-950, .text-neutral-900, .text-neutral-800) {
   color: var(--theme-text);
 }
 
-.workspace-screen :where(
+.workspace-screen
+  :where(
     .text-neutral-700,
     .text-neutral-600,
     .text-neutral-500,
@@ -12847,7 +12852,11 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
   color: var(--theme-muted);
 }
 
-.workspace-screen :where([class~="hover:bg-neutral-50"], [class~="hover:bg-neutral-100"]):hover {
+.workspace-screen
+  :where(
+    [class~="hover:bg-neutral-50"],
+    [class~="hover:bg-neutral-100"]
+  ):hover {
   background-color: var(--theme-elevated);
 }
 

@@ -495,9 +495,10 @@ def test_owner_draft_submit_publishes_immediately_and_can_be_edited(
         assert owner_edit.status_code == 200
         assert owner_edit.json()["data"]["status"] == "PUBLISHED"
         published_slug = owner_edit.json()["data"]["slug"]
-        assert test_app.client.get(
-            f"/api/v1/community/posts/{published_slug}"
-        ).status_code == 200
+        assert (
+            test_app.client.get(f"/api/v1/community/posts/{published_slug}").status_code
+            == 200
+        )
 
         test_app.set_principal(OWNER_ID)
         deleted = test_app.client.delete(f"/api/v1/community/posts/{post_id}")
@@ -555,17 +556,14 @@ def test_moderation_requires_explicit_permission_after_publication(
         assert hidden.status_code == 200, hidden.text
         assert hidden.json()["data"]["state"] == "HIDDEN"
         assert (
-            test_app.client.get("/api/v1/community/posts/review-me").status_code
-            == 404
+            test_app.client.get("/api/v1/community/posts/review-me").status_code == 404
         )
         history = test_app.client.get(
             "/api/v1/admin/community/moderation-history"
             f"?targetType=POST&targetId={post_id}"
         )
         assert history.status_code == 200, history.text
-        assert "POST_HIDDEN" in {
-            event["action"] for event in history.json()["data"]
-        }
+        assert "POST_HIDDEN" in {event["action"] for event in history.json()["data"]}
     finally:
         test_app.close()
 
@@ -591,7 +589,9 @@ def test_super_admin_can_remove_a_published_post(tmp_path: Path) -> None:
         assert response.status_code == 200
         assert response.json()["data"]["state"] == "HIDDEN"
         assert (
-            test_app.client.get("/api/v1/community/posts/super-admin-review").status_code
+            test_app.client.get(
+                "/api/v1/community/posts/super-admin-review"
+            ).status_code
             == 404
         )
     finally:
@@ -1154,9 +1154,7 @@ def test_related_work_link_requires_current_public_visibility_and_is_allowlisted
         )
         assert rejected_link.status_code == 404
 
-        submitted = test_app.client.post(
-            f"/api/v1/community/posts/{post_id}/submit"
-        )
+        submitted = test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
         assert submitted.status_code == 200, submitted.text
         assert submitted.json()["data"]["status"] == "PUBLISHED"
         public_detail = test_app.client.get(f"/api/v1/community/posts/{post_slug}")
@@ -1489,9 +1487,7 @@ def test_post_tags_are_persisted_projected_and_filter_the_public_feed(
         )
         assert too_many_tags.status_code == 422
 
-        submitted = test_app.client.post(
-            f"/api/v1/community/posts/{post_id}/submit"
-        )
+        submitted = test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
         assert submitted.status_code == 200, submitted.text
         assert submitted.json()["data"]["status"] == "PUBLISHED"
 
@@ -1674,9 +1670,7 @@ def test_owner_post_list_and_read_include_only_owned_manageable_statuses(
         assert [item["id"] for item in pending.json()["data"]] == [
             str(own_posts[CommunityPostStatus.PENDING])
         ]
-        hidden = test_app.client.get(
-            "/api/v1/community/members/me/posts?status=HIDDEN"
-        )
+        hidden = test_app.client.get("/api/v1/community/members/me/posts?status=HIDDEN")
         assert hidden.status_code == 200
         assert hidden.json()["meta"]["total"] == 1
 

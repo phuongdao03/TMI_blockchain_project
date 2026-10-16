@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  communityApi,
-  communityMemberApi,
-} from "@/lib/api/client";
+import { communityApi, communityMemberApi } from "@/lib/api/client";
 
 describe("community API client", () => {
   beforeEach(() => {
@@ -191,7 +188,6 @@ describe("community API client", () => {
       new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("X-CSRF-Token"),
     ).toBe("community-csrf");
   });
-
 });
 
 function response(payload: unknown) {

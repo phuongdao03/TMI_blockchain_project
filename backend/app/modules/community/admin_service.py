@@ -902,16 +902,16 @@ class CommunityAdminService:
         event_data: dict[str, object] | None = None,
     ) -> CommunityModerationEvent:
         event = CommunityModerationEvent(
-                id=uuid4(),
-                target_type=target_type,
-                target_id=target_id,
-                action=action.value,
-                actor_user_id=principal.user_id,
-                report_id=report_id,
-                reason=reason,
-                request_id=request_id,
-                event_data=event_data,
-            )
+            id=uuid4(),
+            target_type=target_type,
+            target_id=target_id,
+            action=action.value,
+            actor_user_id=principal.user_id,
+            report_id=report_id,
+            reason=reason,
+            request_id=request_id,
+            event_data=event_data,
+        )
         self._repository.add_moderation_event(event)
         return event
 
@@ -928,7 +928,7 @@ class CommunityAdminService:
             event_type="COMMUNITY_POST_REMOVED",
             title="Bài viết của bạn đã bị gỡ",
             body=(
-                f'Bài viết “{post.title}” đã bị gỡ. Lý do: {reason} '
+                f"Bài viết “{post.title}” đã bị gỡ. Lý do: {reason} "
                 "Bạn có thể chỉnh sửa nội dung hoặc liên hệ quản trị viên "
                 "nếu cần thêm thông tin."
             ),

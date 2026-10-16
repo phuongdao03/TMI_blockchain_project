@@ -215,7 +215,9 @@ export function PublicShell({ children }: PropsWithChildren) {
 
   return (
     <div
-      className={activeUser ? "public-shell public-shell--workspace" : "public-shell"}
+      className={
+        activeUser ? "public-shell public-shell--workspace" : "public-shell"
+      }
     >
       <a className="skip-link" href="#main-content">
         Chuyển đến nội dung chính
@@ -250,14 +252,21 @@ export function PublicShell({ children }: PropsWithChildren) {
                 <span aria-hidden="true" className="public-user-menu__avatar">
                   <UserRound focusable="false" />
                 </span>
-                <span className="public-user-menu__email">{activeUser.email}</span>
+                <span className="public-user-menu__email">
+                  {activeUser.email}
+                </span>
               </summary>
-              <nav aria-label="Menu tài khoản" className="public-user-menu__panel">
+              <nav
+                aria-label="Menu tài khoản"
+                className="public-user-menu__panel"
+              >
                 <Link href="/workspace">Không gian cá nhân</Link>
                 <Link href="/community/mine">Bài viết của tôi</Link>
                 <Link href="/notifications">Thông báo</Link>
                 {adminEntryPoint ? (
-                  <Link href={adminEntryPoint.href}>{adminEntryPoint.label}</Link>
+                  <Link href={adminEntryPoint.href}>
+                    {adminEntryPoint.label}
+                  </Link>
                 ) : null}
                 <Link href="/account">Tài khoản</Link>
                 <LogoutButton />
@@ -363,32 +372,82 @@ export function PublicShell({ children }: PropsWithChildren) {
             </div>
             {activeUser ? (
               <div className="public-mobile-nav__account-links">
-                <Link className="public-mobile-nav__link" href="/workspace" onClick={() => closeMenu(false)}>
-                  <UserRound aria-hidden="true" className="public-mobile-nav__icon" />
+                <Link
+                  className="public-mobile-nav__link"
+                  href="/workspace"
+                  onClick={() => closeMenu(false)}
+                >
+                  <UserRound
+                    aria-hidden="true"
+                    className="public-mobile-nav__icon"
+                  />
                   <span>Không gian cá nhân</span>
-                  <ChevronRight aria-hidden="true" className="public-mobile-nav__chevron" />
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="public-mobile-nav__chevron"
+                  />
                 </Link>
-                <Link className="public-mobile-nav__link" href="/community/mine" onClick={() => closeMenu(false)}>
-                  <UsersRound aria-hidden="true" className="public-mobile-nav__icon" />
+                <Link
+                  className="public-mobile-nav__link"
+                  href="/community/mine"
+                  onClick={() => closeMenu(false)}
+                >
+                  <UsersRound
+                    aria-hidden="true"
+                    className="public-mobile-nav__icon"
+                  />
                   <span>Bài viết của tôi</span>
-                  <ChevronRight aria-hidden="true" className="public-mobile-nav__chevron" />
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="public-mobile-nav__chevron"
+                  />
                 </Link>
-                <Link className="public-mobile-nav__link" href="/notifications" onClick={() => closeMenu(false)}>
-                  <Mail aria-hidden="true" className="public-mobile-nav__icon" />
+                <Link
+                  className="public-mobile-nav__link"
+                  href="/notifications"
+                  onClick={() => closeMenu(false)}
+                >
+                  <Mail
+                    aria-hidden="true"
+                    className="public-mobile-nav__icon"
+                  />
                   <span>Thông báo</span>
-                  <ChevronRight aria-hidden="true" className="public-mobile-nav__chevron" />
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="public-mobile-nav__chevron"
+                  />
                 </Link>
                 {adminEntryPoint ? (
-                  <Link className="public-mobile-nav__link" href={adminEntryPoint.href} onClick={() => closeMenu(false)}>
-                    <BadgeCheck aria-hidden="true" className="public-mobile-nav__icon" />
+                  <Link
+                    className="public-mobile-nav__link"
+                    href={adminEntryPoint.href}
+                    onClick={() => closeMenu(false)}
+                  >
+                    <BadgeCheck
+                      aria-hidden="true"
+                      className="public-mobile-nav__icon"
+                    />
                     <span>{adminEntryPoint.label}</span>
-                    <ChevronRight aria-hidden="true" className="public-mobile-nav__chevron" />
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="public-mobile-nav__chevron"
+                    />
                   </Link>
                 ) : null}
-                <Link className="public-mobile-nav__link" href="/account" onClick={() => closeMenu(false)}>
-                  <UserRound aria-hidden="true" className="public-mobile-nav__icon" />
+                <Link
+                  className="public-mobile-nav__link"
+                  href="/account"
+                  onClick={() => closeMenu(false)}
+                >
+                  <UserRound
+                    aria-hidden="true"
+                    className="public-mobile-nav__icon"
+                  />
                   <span>Tài khoản</span>
-                  <ChevronRight aria-hidden="true" className="public-mobile-nav__chevron" />
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="public-mobile-nav__chevron"
+                  />
                 </Link>
                 <LogoutButton />
               </div>
@@ -668,7 +727,9 @@ export function DashboardShell({ children }: PropsWithChildren) {
   return (
     <div
       className={
-        adminArea ? "dashboard-shell dashboard-shell--admin" : "dashboard-shell dashboard-shell--workspace"
+        adminArea
+          ? "dashboard-shell dashboard-shell--admin"
+          : "dashboard-shell dashboard-shell--workspace"
       }
     >
       <aside className="dashboard-sidebar">
@@ -715,7 +776,9 @@ export function DashboardShell({ children }: PropsWithChildren) {
             type="button"
           />
           <div
-            aria-label={adminArea ? "Điều hướng quản trị" : "Điều hướng workspace"}
+            aria-label={
+              adminArea ? "Điều hướng quản trị" : "Điều hướng workspace"
+            }
             aria-modal="true"
             className="dashboard-workspace-drawer__panel"
             id="dashboard-workspace-navigation"

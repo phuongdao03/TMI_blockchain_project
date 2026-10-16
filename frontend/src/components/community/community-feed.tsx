@@ -71,10 +71,7 @@ export function CommunityFeed({
 
   function handleFilterSubmit(event: FormEvent<HTMLFormElement>) {
     const data = new FormData(event.currentTarget);
-    if (
-      data.get("sort") === "following" &&
-      authStatus === "unauthenticated"
-    ) {
+    if (data.get("sort") === "following" && authStatus === "unauthenticated") {
       event.preventDefault();
       const href = communityFeedHref(
         {
@@ -102,7 +99,8 @@ export function CommunityFeed({
               Cộng đồng
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
-              Nơi chia sẻ, trao đổi và kết nối những người quan tâm đến giá trị Việt.
+              Nơi chia sẻ, trao đổi và kết nối những người quan tâm đến giá trị
+              Việt.
             </p>
           </div>
           {authStatus === "authenticated" ? (
@@ -130,7 +128,8 @@ export function CommunityFeed({
 
         {authStatus === "unauthenticated" ? (
           <p className="mt-3 border-l-2 border-[var(--theme-border)] pl-3 text-sm text-[var(--theme-muted)]">
-            Bạn đang ở chế độ chỉ đọc. Đăng nhập để đăng bài, bình luận và tương tác.
+            Bạn đang ở chế độ chỉ đọc. Đăng nhập để đăng bài, bình luận và tương
+            tác.
           </p>
         ) : null}
         {authStatus === "loading" ? (
@@ -140,7 +139,8 @@ export function CommunityFeed({
         ) : null}
         {authStatus === "error" ? (
           <p className="mt-3 text-sm text-[var(--theme-muted)]" role="alert">
-            Không thể xác minh phiên. Nội dung vẫn ở chế độ đọc cho đến khi xác minh thành công.
+            Không thể xác minh phiên. Nội dung vẫn ở chế độ đọc cho đến khi xác
+            minh thành công.
           </p>
         ) : null}
 

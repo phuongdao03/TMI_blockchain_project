@@ -250,9 +250,7 @@ describe("CommunityPostEditor", () => {
     );
     await user.clear(title);
     await user.type(title, "Bài đã cập nhật");
-    await user.click(
-      screen.getByRole("button", { name: "Cập nhật bài viết" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Cập nhật bài viết" }));
 
     await waitFor(() =>
       expect(api.updatePost).toHaveBeenCalledWith(

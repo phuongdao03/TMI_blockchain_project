@@ -45,7 +45,9 @@ describe("role workspaces", () => {
 
   it("exposes moderator administration only with its permission", () => {
     expect(resolveAdminEntryPoint(["MODERATOR"])).toBeNull();
-    expect(resolveAdminEntryPoint(["MODERATOR"], ["community.moderate"])).toEqual({
+    expect(
+      resolveAdminEntryPoint(["MODERATOR"], ["community.moderate"]),
+    ).toEqual({
       href: "/admin/community",
       label: "Khu vực quản trị",
     });
