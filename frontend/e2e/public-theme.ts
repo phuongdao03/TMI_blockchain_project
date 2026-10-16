@@ -7,7 +7,8 @@ export async function selectPublicTheme(
   if ((page.viewportSize()?.width ?? 1280) <= 608) {
     await page.getByRole("button", { name: "Mở menu" }).click();
     await page
-      .getByRole("navigation", { name: "Điều hướng di động" })
+      .getByRole("navigation", { name: "Menu công khai" })
+      .getByRole("group", { name: "Chọn giao diện" })
       .getByRole("button", { name: label })
       .click();
     await page.getByRole("button", { name: "Đóng menu" }).first().click();

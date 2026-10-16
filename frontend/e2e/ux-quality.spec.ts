@@ -101,7 +101,8 @@ test("public navigation and primary actions remain keyboard accessible", async (
     await page.keyboard.press("Enter");
     await expect(
       page
-        .getByRole("navigation", { name: "Điều hướng di động" })
+        .getByRole("navigation", { name: "Menu công khai" })
+        .getByRole("group", { name: "Chọn giao diện" })
         .getByRole("button", { name: "Theo thiết bị" }),
     ).toBeEnabled();
     await page.keyboard.press("Escape");
