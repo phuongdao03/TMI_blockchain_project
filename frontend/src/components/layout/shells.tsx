@@ -28,7 +28,10 @@ import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { LogoutButton } from "@/components/auth/logout-button";
-import { CommunityRoleBadge, getAuthenticatedCommunityIdentity } from "@/components/community/community-user-identity";
+import {
+  CommunityRoleBadge,
+  getAuthenticatedCommunityIdentity,
+} from "@/components/community/community-user-identity";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { profileApi } from "@/lib/api/client";
 import { resolveAdminEntryPoint } from "@/lib/auth/role-workspaces";

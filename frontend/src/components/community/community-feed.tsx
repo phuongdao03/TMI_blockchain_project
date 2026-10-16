@@ -49,10 +49,7 @@ export function CommunityFeed({
       { page, category, q, sort, relatedWorkId, viewerKey },
     ],
     queryFn: ({ signal }) =>
-      communityApi.posts(
-        { page, category, q, sort, relatedWorkId },
-        signal,
-      ),
+      communityApi.posts({ page, category, q, sort, relatedWorkId }, signal),
     staleTime: 30_000,
     enabled: !(sort === "following" && authStatus !== "authenticated"),
   });
@@ -304,10 +301,7 @@ export function CommunityFeed({
             <>
               <div className="divide-y divide-[var(--theme-border)]">
                 {posts.data.data.map((post) => (
-                  <CommunityPostCard
-                    key={post.id}
-                    post={post}
-                  />
+                  <CommunityPostCard key={post.id} post={post} />
                 ))}
               </div>
               {totalPages > 1 ? (

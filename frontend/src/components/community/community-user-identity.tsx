@@ -26,10 +26,7 @@ export function CommunityUserIdentity({
         >
           {user.displayName?.trim() || "Thành viên"}
         </Link>
-        <CommunityRoleBadge
-          isAdmin={user.isAdmin}
-          roleLabel={user.roleLabel}
-        />
+        <CommunityRoleBadge isAdmin={user.isAdmin} roleLabel={user.roleLabel} />
       </div>
     </div>
   );

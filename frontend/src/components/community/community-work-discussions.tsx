@@ -75,10 +75,7 @@ export function CommunityWorkDiscussions({
       {discussions.data?.data.length ? (
         <div className="mt-5 rounded-2xl border border-white/10 px-5 sm:px-7">
           {discussions.data.data.map((post) => (
-            <CommunityPostCard
-              key={post.id}
-              post={post}
-            />
+            <CommunityPostCard key={post.id} post={post} />
           ))}
         </div>
       ) : null}
