@@ -95,7 +95,7 @@ describe("CommunityPostDetail", () => {
       name: "Ký ức về ngôi làng — ảnh đính kèm 1",
     });
     expect(image.getAttribute("src")).toBe(
-      "/api/v1/community/posts/chuyen-di-lang-co/media/detail-image",
+      "/api/v1/community/posts/chuyen-di-lang-co/media/detail-image?width=960",
     );
     expect(
       await screen.findByRole("heading", { name: "Thảo luận" }),

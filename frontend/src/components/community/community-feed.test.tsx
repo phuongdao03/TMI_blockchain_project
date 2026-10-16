@@ -114,7 +114,7 @@ describe("CommunityFeed", () => {
       name: "Chuyện đi làng cổ <img src=x onerror=alert(1)> — ảnh đính kèm 1",
     });
     expect(image.getAttribute("src")).toBe(
-      "/api/v1/community/posts/chuyen-di-lang-co/media/image-1",
+      "/api/v1/community/posts/chuyen-di-lang-co/media/image-1?width=960",
     );
     expect(
       screen

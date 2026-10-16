@@ -490,7 +490,7 @@ describe("CommunityPostEditor", () => {
       name: "Ký ức làng cổ — ảnh đính kèm 1",
     });
     expect(preview.getAttribute("src")).toBe(
-      "/api/v1/community/posts/ky-uc-lang-co/media/image-1",
+      "/api/v1/community/posts/ky-uc-lang-co/media/image-1?width=960",
     );
   });
 
