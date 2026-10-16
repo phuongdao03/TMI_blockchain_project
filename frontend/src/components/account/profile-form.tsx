@@ -47,6 +47,7 @@ export function ProfileForm({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       fullName: profile.fullName ?? "",
+      displayName: profile.displayName ?? "",
       phone: profile.phone?.replace(/^\+84/, "0") ?? "",
       locale: profile.locale,
       timezone: profile.timezone,
@@ -57,6 +58,7 @@ export function ProfileForm({
     setSaved(false);
     await onSave({
       fullName: values.fullName || null,
+      displayName: values.displayName || null,
       phone: values.phone || null,
       locale: values.locale,
       timezone: values.timezone,
@@ -162,6 +164,14 @@ export function ProfileForm({
           label="Họ và tên"
           placeholder="Nguyễn Minh Anh"
           {...register("fullName")}
+        />
+        <FormField
+          autoComplete="nickname"
+          error={errors.displayName?.message}
+          hint="Tên này hiển thị trong bài viết và bình luận cộng đồng."
+          label="Tên hiển thị công khai"
+          placeholder="Minh Anh"
+          {...register("displayName")}
         />
         <FormField
           autoComplete="tel"

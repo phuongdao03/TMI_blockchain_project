@@ -21,12 +21,16 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { useQuery } from "@tanstack/react-query";
 import { usePathname, useSearchParams } from "next/navigation";
 import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { CommunityRoleBadge, getAuthenticatedCommunityIdentity } from "@/components/community/community-user-identity";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { profileApi } from "@/lib/api/client";
 import { resolveAdminEntryPoint } from "@/lib/auth/role-workspaces";
 import { safeLocalDestination } from "@/lib/auth/safe-destination";
 import { useAuthStatus, useAuthUser } from "@/lib/auth/user-context";
@@ -127,6 +131,19 @@ export function PublicShell({ children }: PropsWithChildren) {
   const contextUser = useAuthUser();
   const authStatus = useAuthStatus();
   const activeUser = authStatus === "authenticated" ? contextUser : null;
+  const profile = useQuery({
+    queryKey: ["profile"],
+    queryFn: profileApi.get,
+    enabled: Boolean(activeUser),
+    staleTime: 60_000,
+  });
+  const accountIdentity = getAuthenticatedCommunityIdentity({
+    displayName: profile.data?.displayName,
+    roles: activeUser?.roles,
+  });
+  const accountAvatarUrl = profile.data?.avatarMediaId
+    ? `/api/v1/community/avatars/${encodeURIComponent(profile.data.avatarMediaId)}`
+    : profile.data?.avatarUrl;
   const query = searchParams.toString();
   const currentDestination = safeLocalDestination(
     `${pathname}${query ? `?${query}` : ""}`,
@@ -249,12 +266,19 @@ export function PublicShell({ children }: PropsWithChildren) {
           {activeUser ? (
             <details className="public-user-menu">
               <summary aria-label="Mở menu tài khoản">
-                <span aria-hidden="true" className="public-user-menu__avatar">
-                  <UserRound focusable="false" />
+                <UserAvatar
+                  className="public-user-menu__avatar"
+                  displayName={accountIdentity.displayName}
+                  size={32}
+                  src={accountAvatarUrl}
+                />
+                <span className="public-user-menu__display-name">
+                  {accountIdentity.displayName}
                 </span>
-                <span className="public-user-menu__email">
-                  {activeUser.email}
-                </span>
+                <CommunityRoleBadge
+                  isAdmin={accountIdentity.isAdmin}
+                  roleLabel={accountIdentity.roleLabel}
+                />
               </summary>
               <nav
                 aria-label="Menu tài khoản"

@@ -67,14 +67,18 @@ def test_profile_defaults_then_persists_encrypted_phone() -> None:
             email=user.email,
             changes=ProfileChanges(
                 full_name="Nguyễn Minh Anh",
+                display_name="Minh Anh",
                 phone="+84901234567",
                 locale="vi",
                 timezone="Asia/Ho_Chi_Minh",
-                provided_fields=frozenset({"full_name", "phone", "locale", "timezone"}),
+                provided_fields=frozenset(
+                    {"full_name", "display_name", "phone", "locale", "timezone"}
+                ),
             ),
         )
 
         assert updated.full_name == "Nguyễn Minh Anh"
+        assert updated.display_name == "Minh Anh"
         assert updated.phone == "+84901234567"
         async with session_factory() as session:
             stored = await session.get(UserProfile, user.id)
@@ -84,6 +88,7 @@ def test_profile_defaults_then_persists_encrypted_phone() -> None:
 
         reread = await service.get_profile(user_id=user.id, email=user.email)
         assert reread.phone == "+84901234567"
+        assert reread.display_name == "Minh Anh"
         await service.close()
         await engine.dispose()
 

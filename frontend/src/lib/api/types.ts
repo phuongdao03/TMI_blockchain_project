@@ -443,6 +443,8 @@ export interface CommunityAuthor {
   username: string;
   displayName: string | null;
   avatarUrl: string | null;
+  roleLabel?: string | null;
+  isAdmin?: boolean;
 }
 
 export interface CommunityCommentAuthor {
@@ -450,6 +452,8 @@ export interface CommunityCommentAuthor {
   username: string;
   displayName: string | null;
   avatarUrl: string | null;
+  roleLabel?: string | null;
+  isAdmin?: boolean;
 }
 
 export interface CommunityCommentFields {
@@ -505,6 +509,8 @@ export interface CommunityMemberProfile {
   username: string;
   displayName: string;
   avatarUrl: string | null;
+  roleLabel?: string | null;
+  isAdmin?: boolean;
   bio: string | null;
   joinedAt: string;
   publishedPostCount: number;
@@ -524,6 +530,8 @@ export interface CommunityMemberCard {
   username: string;
   displayName: string;
   avatarUrl: string | null;
+  roleLabel?: string | null;
+  isAdmin?: boolean;
   viewerIsFollowing: boolean;
 }
 
@@ -568,7 +576,6 @@ export interface CommunityPostFilters {
   page?: number;
   pageSize?: number;
   category?: string;
-  tag?: string;
   relatedWorkId?: string;
   q?: string;
   sort?: CommunityPostSort;
@@ -608,7 +615,6 @@ export interface CommunityPostInput {
   title: string;
   content: string;
   categoryId: string;
-  tags?: string[];
   relatedWorkId?: string | null;
   imageMediaIds?: string[];
 }
@@ -1127,8 +1133,10 @@ export interface UserProfile {
   userId: string;
   email: string;
   fullName: string | null;
+  displayName?: string | null;
   phone: string | null;
   avatarMediaId: string | null;
+  avatarUrl?: string | null;
   locale: string;
   timezone: string;
   employment?: {
@@ -1142,6 +1150,7 @@ export interface UserProfile {
 
 export interface ProfileUpdate {
   fullName: string | null;
+  displayName?: string | null;
   phone: string | null;
   locale: string;
   timezone: string;

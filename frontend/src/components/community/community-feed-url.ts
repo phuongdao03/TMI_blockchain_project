@@ -6,7 +6,6 @@ export function communityFeedHref(
 ): string {
   const parameters = new URLSearchParams();
   if (filters.category) parameters.set("category", filters.category);
-  if (filters.tag) parameters.set("tag", filters.tag);
   if (filters.relatedWorkId)
     parameters.set("relatedWorkId", filters.relatedWorkId);
   if (filters.q?.trim()) parameters.set("q", filters.q.trim());

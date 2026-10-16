@@ -45,6 +45,7 @@ describe("ProfileForm", () => {
           userId: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
           email: "owner@cnsgroup.vn",
           fullName: "Nguyễn Minh Anh",
+          displayName: "Minh Anh",
           phone: "+84901234567",
           avatarMediaId: null,
           locale: "vi-VN",
@@ -55,10 +56,13 @@ describe("ProfileForm", () => {
 
     await user.clear(screen.getByLabelText("Họ và tên"));
     await user.type(screen.getByLabelText("Họ và tên"), "Nguyễn An");
+    await user.clear(screen.getByLabelText("Tên hiển thị công khai"));
+    await user.type(screen.getByLabelText("Tên hiển thị công khai"), "An");
     await user.click(screen.getByRole("button", { name: "Lưu hồ sơ" }));
 
     expect(onSave).toHaveBeenCalledWith({
       fullName: "Nguyễn An",
+      displayName: "An",
       phone: "+84901234567",
       locale: "vi-VN",
       timezone: "Asia/Ho_Chi_Minh",

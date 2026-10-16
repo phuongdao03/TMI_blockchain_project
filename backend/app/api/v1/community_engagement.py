@@ -41,6 +41,7 @@ from app.modules.community.engagement_service import (
     CommunityEngagementService,
     CommunityMemberView,
 )
+from app.modules.community.identity import public_user_identity
 from app.modules.community.rate_limit import (
     enforce_community_content_write_rate_limit,
     enforce_community_engagement_write_rate_limit,
@@ -74,13 +75,26 @@ def _author(
     username: str | None,
     display_name: str | None,
     avatar_url: str | None,
+    avatar_media_id: UUID | None,
     user_id: UUID,
+    *,
+    is_admin: bool,
+    is_moderator: bool,
 ) -> CommunityAuthorData:
+    identity = public_user_identity(
+        display_name=display_name,
+        avatar_url=avatar_url,
+        avatar_media_id=avatar_media_id,
+        is_admin=is_admin,
+        is_moderator=is_moderator,
+    )
     return CommunityAuthorData(
         id=user_id,
         username=username or f"member-{user_id.hex}",
-        display_name=display_name or "Thành viên",
-        avatar_url=avatar_url,
+        display_name=identity.display_name,
+        avatar_url=identity.avatar_url,
+        role_label=identity.role_label,
+        is_admin=identity.is_admin,
     )
 
 
@@ -95,7 +109,10 @@ def _post_data(row: CommunityPostRow) -> CommunityPostData:
             row.author_username,
             row.author_display_name,
             row.author_avatar_url,
+            row.author_avatar_media_id,
             row.post.author_user_id,
+            is_admin=row.author_is_admin,
+            is_moderator=row.author_is_moderator,
         ),
         published_at=cast(datetime, row.post.published_at),
         view_count=row.post.view_count,
@@ -126,7 +143,10 @@ def _comment_author(row: CommunityCommentRow) -> CommunityAuthorData:
         row.author_username,
         row.author_display_name,
         row.author_avatar_url,
+        row.author_avatar_media_id,
         row.comment.author_user_id,
+        is_admin=row.author_is_admin,
+        is_moderator=row.author_is_moderator,
     )
 
 
@@ -221,14 +241,36 @@ def _comment_thread_data(
 
 
 def _member_data(view: CommunityMemberView) -> CommunityMemberData:
-    profile = view.member.profile
+    record = view.member
+    profile = record.profile
+    identity = public_user_identity(
+        display_name=(
+            record.public_profile.display_name
+            if record.public_profile is not None
+            else profile.display_name
+        ),
+        avatar_url=(
+            record.public_profile.avatar_url
+            if record.public_profile is not None
+            else profile.avatar_url
+        ),
+        avatar_media_id=(
+            record.public_profile.avatar_media_id
+            if record.public_profile is not None
+            else profile.avatar_media_id
+        ),
+        is_admin=record.is_admin,
+        is_moderator=record.is_moderator,
+    )
     return CommunityMemberData(
-        id=view.member.user.id,
+        id=record.user.id,
         username=profile.username,
-        display_name=profile.display_name or "Thành viên",
-        avatar_url=profile.avatar_url,
+        display_name=identity.display_name,
+        avatar_url=identity.avatar_url,
+        role_label=identity.role_label,
+        is_admin=identity.is_admin,
         bio=profile.bio,
-        joined_at=view.member.user.created_at,
+        joined_at=record.user.created_at,
         published_post_count=view.published_post_count,
         follower_count=view.follower_count,
         following_count=view.following_count,
@@ -239,11 +281,32 @@ def _member_data(view: CommunityMemberView) -> CommunityMemberData:
 def _member_list_item(
     record: CommunityMemberListRecord,
 ) -> CommunityMemberListItemData:
+    identity = public_user_identity(
+        display_name=(
+            record.public_profile.display_name
+            if record.public_profile is not None
+            else record.profile.display_name
+        ),
+        avatar_url=(
+            record.public_profile.avatar_url
+            if record.public_profile is not None
+            else record.profile.avatar_url
+        ),
+        avatar_media_id=(
+            record.public_profile.avatar_media_id
+            if record.public_profile is not None
+            else record.profile.avatar_media_id
+        ),
+        is_admin=record.is_admin,
+        is_moderator=record.is_moderator,
+    )
     return CommunityMemberListItemData(
         id=record.user.id,
         username=record.profile.username,
-        display_name=record.profile.display_name or "Thành viên",
-        avatar_url=record.profile.avatar_url,
+        display_name=identity.display_name,
+        avatar_url=identity.avatar_url,
+        role_label=identity.role_label,
+        is_admin=identity.is_admin,
         viewer_is_following=record.viewer_is_following,
     )
 

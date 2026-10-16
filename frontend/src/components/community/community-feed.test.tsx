@@ -121,7 +121,8 @@ describe("CommunityFeed", () => {
         .getByRole("link", { name: "Tác phẩm liên quan: Gốm làng cổ" })
         .getAttribute("href"),
     ).toBe("/works/gom-lang-co");
-    expect(screen.getByText("Thành viên cộng đồng")).toBeDefined();
+    expect(screen.getByRole("link", { name: "Thành viên" })).toBeDefined();
+    expect(screen.queryByText("Tranh dân gian")).toBeNull();
     expect(
       (screen.getByLabelText("Chuyên mục") as HTMLSelectElement).value,
     ).toBe("heritage-culture");
@@ -137,12 +138,11 @@ describe("CommunityFeed", () => {
     );
   });
 
-  it("combines search, tag, work, category and sort filters in URL based controls", async () => {
+  it("keeps search, work, category and sort filters without tag UI", async () => {
     render(
       <CommunityFeed
         page={2}
         category="heritage-culture"
-        tag="tranh-dan-gian"
         q="tranh Đông Hồ"
         sort="discussed"
         relatedWorkId="work-1"
@@ -151,12 +151,13 @@ describe("CommunityFeed", () => {
     );
 
     await screen.findByRole("heading", { name: "Cộng đồng" });
-    await screen.findByRole("link", { name: /Tranh dân gian/ });
+    await screen.findByRole("heading", {
+      name: "Chuyện đi làng cổ <img src=x onerror=alert(1)>",
+    });
     expect(api.posts).toHaveBeenCalledWith(
       {
         page: 2,
         category: "heritage-culture",
-        tag: "tranh-dan-gian",
         q: "tranh Đông Hồ",
         sort: "discussed",
         relatedWorkId: "work-1",
@@ -173,14 +174,13 @@ describe("CommunityFeed", () => {
     expect((screen.getByLabelText("Sắp xếp") as HTMLSelectElement).value).toBe(
       "discussed",
     );
-    expect(
-      screen
-        .getByRole("link", { name: "#Tranh dân gian" })
-        .getAttribute("href"),
-    ).toContain("tag=tranh-dan-gian");
+    expect(screen.queryByText("Tranh dân gian")).toBeNull();
     expect(
       screen.getByRole("link", { name: "Trang sau" }).getAttribute("href"),
     ).toContain("relatedWorkId=work-1");
+    expect(
+      screen.getByRole("link", { name: "Trang sau" }).getAttribute("href"),
+    ).not.toContain("tag=");
   });
 
   it("shows a clear empty state when a selected category has no posts", async () => {
@@ -238,7 +238,7 @@ describe("CommunityFeed", () => {
     render(<CommunityFeed page={1} />, { wrapper });
 
     await screen.findByRole("heading", { name: "Bài viết công khai" });
-    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.queryByRole("img", { name: /ảnh đính kèm/ })).toBeNull();
   });
 
   it("exposes a retry action when the feed cannot load", async () => {

@@ -76,7 +76,6 @@ export function CommunityWorkDiscussions({
         <div className="mt-5 rounded-2xl border border-white/10 px-5 sm:px-7">
           {discussions.data.data.map((post) => (
             <CommunityPostCard
-              filters={{ relatedWorkId: workId }}
               key={post.id}
               post={post}
             />

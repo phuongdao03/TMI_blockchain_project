@@ -2,25 +2,20 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Bookmark, Heart, Share2 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
 import { CommunityPostImages } from "@/components/community/community-post-images";
 import { CommunityRelatedWorkLink } from "@/components/community/community-related-work-link";
-import { communityFeedHref } from "@/components/community/community-feed-url";
+import { CommunityUserIdentity } from "@/components/community/community-user-identity";
 import { communityApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
 import type {
   CommunityPageResponse,
-  CommunityPostFilters,
   CommunityPostSummary,
 } from "@/lib/api/types";
 
-export function CommunityPostCard(props: {
-  post: CommunityPostSummary;
-  filters?: CommunityPostFilters;
-}) {
+export function CommunityPostCard(props: { post: CommunityPostSummary }) {
   const user = useAuthUser();
   const viewerKey = user?.id ?? "anonymous";
   const interactionKey = `${props.post.id}:${viewerKey}:${props.post.likeCount}:${props.post.viewerHasLiked}:${props.post.viewerHasBookmarked}`;
@@ -36,12 +31,10 @@ export function CommunityPostCard(props: {
 
 function CommunityPostCardContent({
   post,
-  filters = {},
   authenticated,
   viewerKey,
 }: {
   post: CommunityPostSummary;
-  filters?: CommunityPostFilters;
   authenticated: boolean;
   viewerKey: string;
 }) {
@@ -103,61 +96,17 @@ function CommunityPostCardContent({
     setShareFallback(true);
   }
 
-  const avatar = safeAvatar(post.author.avatarUrl);
-  const authorName = post.author.displayName?.trim() || "Thành viên cộng đồng";
   const postHref = `/community/posts/${encodeURIComponent(post.slug)}`;
   return (
     <article className="border-b border-[var(--theme-border)] py-6 first:border-t sm:py-7">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs font-semibold text-[var(--theme-muted)]">
-        <div
-          className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full border border-[var(--theme-border)] bg-[var(--theme-elevated)] text-xs font-bold text-[var(--theme-accent)]"
-          aria-hidden={!avatar}
-        >
-          {avatar ? (
-            <Image
-              alt=""
-              className="size-full object-cover"
-              height={36}
-              src={avatar}
-              unoptimized
-              width={36}
-            />
-          ) : (
-            authorName.slice(0, 1).toLocaleUpperCase("vi-VN")
-          )}
-        </div>
-        {post.author.username ? (
-          <Link
-            className="text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-            href={`/community/members/${encodeURIComponent(post.author.username)}`}
-          >
-            {authorName}
-          </Link>
-        ) : (
-          <span>{authorName}</span>
-        )}
+        <CommunityUserIdentity size={36} user={post.author} />
         <span aria-hidden="true">·</span>
         <span className="text-[var(--theme-accent)]">{post.category.name}</span>
         <time dateTime={post.publishedAt}>
           {formatPublishedDate(post.publishedAt)}
         </time>
       </div>
-      {post.tags?.length ? (
-        <nav
-          aria-label={`Lọc theo nhãn của bài viết ${post.title}`}
-          className="mt-3 flex flex-wrap gap-x-3 gap-y-1"
-        >
-          {post.tags.map((tag) => (
-            <Link
-              className="text-xs font-semibold text-[var(--theme-accent)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-              href={communityFeedHref({ ...filters, tag: tag.slug }, 1)}
-              key={tag.id}
-            >
-              #{tag.name}
-            </Link>
-          ))}
-        </nav>
-      ) : null}
       <h2 className="mt-3 text-xl font-bold leading-snug tracking-tight text-[var(--theme-text)] sm:text-2xl">
         <Link
           className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--theme-accent)] hover:text-[var(--theme-accent)]"
@@ -309,16 +258,6 @@ function updatePostCaches(
           }
         : current,
   );
-}
-
-function safeAvatar(value: string | null): string | null {
-  if (!value) return null;
-  if (value.startsWith("/") && !value.startsWith("//")) return value;
-  try {
-    return new URL(value).protocol === "https:" ? value : null;
-  } catch {
-    return null;
-  }
 }
 
 function quickActionClass(active: boolean): string {

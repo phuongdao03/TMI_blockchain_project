@@ -2851,7 +2851,7 @@ summary {
   height: 1.1rem;
 }
 
-.public-user-menu__email {
+.public-user-menu__display-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

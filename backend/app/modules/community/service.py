@@ -2,9 +2,11 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Protocol
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.errors import UnauthenticatedError
@@ -28,11 +30,16 @@ from app.modules.community.models import (
 )
 from app.modules.community.repository import CommunityPostRow, CommunityRepository
 from app.modules.community.schemas import CommunityPostRequest
+from app.modules.media.errors import MediaInvalidStateError
 from app.modules.media.types import (
     COMMUNITY_POST_IMAGE_MAX_BYTES,
     COMMUNITY_POST_IMAGE_MAX_COUNT,
 )
 from app.modules.notifications.service import NotificationService
+
+
+class CommunityMediaAssetDeleter(Protocol):
+    async def delete_asset(self, principal: AuthPrincipal, media_id: UUID) -> None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -252,21 +259,78 @@ class CommunityService:
         post_id: UUID,
         *,
         request_id: str,
+        media_asset_deleter: CommunityMediaAssetDeleter,
     ) -> None:
+        media_ids: tuple[UUID, ...]
+        owner_deleted_event_id: UUID
         async with self._session.begin():
-            post = await self._owned_post(principal, post_id, for_update=True)
-            if post.status is CommunityPostStatus.DELETED:
-                raise CommunityConflictError()
+            post = await self._repository.get_post(post_id, for_update=True)
+            if post is None:
+                raise CommunityNotFoundError()
+            if post.admin_deleted:
+                raise CommunityNotFoundError()
+            if post.author_user_id != principal.user_id:
+                if post.status is CommunityPostStatus.DELETED:
+                    raise CommunityNotFoundError()
+                raise CommunityForbiddenError()
             now = datetime.now(UTC)
-            post.status = CommunityPostStatus.DELETED
-            post.deleted_at = now
-            post.updated_at = now
-            self._log(
-                post,
-                principal,
-                CommunityModerationAction.OWNER_DELETED,
-                reason=None,
-                request_id=request_id,
+            if post.status is not CommunityPostStatus.DELETED:
+                post.status = CommunityPostStatus.DELETED
+                post.deleted_at = now
+                post.updated_at = now
+
+            owner_deleted_event = await self._session.scalar(
+                select(CommunityModerationEvent)
+                .where(
+                    CommunityModerationEvent.target_type == "POST",
+                    CommunityModerationEvent.target_id == str(post_id),
+                    CommunityModerationEvent.action
+                    == CommunityModerationEventAction.OWNER_DELETED.value,
+                )
+                .order_by(CommunityModerationEvent.created_at)
+                .limit(1)
+                .with_for_update()
+            )
+            if owner_deleted_event is None:
+                owner_deleted_event_id = uuid4()
+                self._session.add(
+                    CommunityModerationEvent(
+                        id=owner_deleted_event_id,
+                        target_type="POST",
+                        target_id=str(post_id),
+                        action=CommunityModerationEventAction.OWNER_DELETED.value,
+                        actor_user_id=principal.user_id,
+                        reason=None,
+                        request_id=request_id,
+                        event_data=None,
+                    )
+                )
+            else:
+                owner_deleted_event_id = owner_deleted_event.id
+                owner_deleted_event.reason = None
+                owner_deleted_event.event_data = None
+
+            media_ids = await self._repository.list_owned_active_post_media(
+                post_id,
+                principal.user_id,
+            )
+
+        for media_id in media_ids:
+            try:
+                await media_asset_deleter.delete_asset(principal, media_id)
+            except MediaInvalidStateError:
+                # A concurrent retry may already have removed this provider asset.
+                continue
+
+        async with self._session.begin():
+            post = await self._repository.get_post(post_id, for_update=True)
+            if post is None:
+                return
+            if post.author_user_id != principal.user_id:
+                raise CommunityForbiddenError()
+            await self._repository.permanently_delete_post_content(
+                post_id,
+                owner_deleted_event_id=owner_deleted_event_id,
             )
 
     async def _active_category(self, category_id: UUID) -> CommunityCategory:

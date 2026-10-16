@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True, slots=True)
 class ProfileChanges:
     full_name: str | None = None
+    display_name: str | None = None
     phone: str | None = None
     avatar_media_id: UUID | None = None
     locale: str | None = None
@@ -40,8 +41,10 @@ class ProfileView:
     user_id: UUID
     email: str
     full_name: str | None
+    display_name: str | None
     phone: str | None
     avatar_media_id: UUID | None
+    avatar_url: str | None
     locale: str
     timezone: str
     employment: EmploymentView | None = None
@@ -100,6 +103,8 @@ class UserProfileService:
 
             if "full_name" in changes.provided_fields:
                 profile.full_name = changes.full_name
+            if "display_name" in changes.provided_fields:
+                profile.display_name = changes.display_name
             if "phone" in changes.provided_fields:
                 profile.phone_encrypted = (
                     self._cipher.encrypt(changes.phone)
@@ -108,6 +113,7 @@ class UserProfileService:
                 )
             if "avatar_media_id" in changes.provided_fields:
                 profile.avatar_media_id = changes.avatar_media_id
+                profile.avatar_url = None
             if "locale" in changes.provided_fields and changes.locale is not None:
                 profile.locale = changes.locale
             if "timezone" in changes.provided_fields and changes.timezone is not None:
@@ -164,8 +170,10 @@ class UserProfileService:
             user_id=user_id,
             email=email,
             full_name=full_name,
+            display_name=(profile.display_name if profile is not None else None),
             phone=phone,
             avatar_media_id=(profile.avatar_media_id if profile is not None else None),
+            avatar_url=(profile.avatar_url if profile is not None else None),
             locale=profile.locale if profile is not None else "vi",
             timezone=(profile.timezone if profile is not None else "Asia/Ho_Chi_Minh"),
             employment=employment,

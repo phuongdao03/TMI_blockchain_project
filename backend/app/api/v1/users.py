@@ -28,8 +28,10 @@ def _profile_data(view: ProfileView) -> UserProfileData:
         user_id=view.user_id,
         email=view.email,
         full_name=view.full_name,
+        display_name=view.display_name,
         phone=view.phone,
         avatar_media_id=view.avatar_media_id,
+        avatar_url=view.avatar_url,
         locale=view.locale,
         timezone=view.timezone,
         employment=(
@@ -84,6 +86,7 @@ async def patch_me(
         email=principal.email,
         changes=ProfileChanges(
             full_name=payload.full_name,
+            display_name=payload.display_name,
             phone=payload.phone,
             avatar_media_id=payload.avatar_media_id,
             locale=payload.locale,

@@ -7,28 +7,31 @@ from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import and_, delete, exists, func, literal, or_, select
+from sqlalchemy import and_, case, delete, exists, func, literal, or_, select, update
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.sql.selectable import Select
 
-from app.modules.auth.models import User, UserStatus
+from app.modules.auth.models import Role, User, UserRole, UserStatus
 from app.modules.community.errors import CommunityNotFoundError
 from app.modules.community.models import (
     CommunityBookmark,
     CommunityCategory,
     CommunityComment,
+    CommunityCommentLike,
     CommunityFollow,
     CommunityLike,
     CommunityMemberRestriction,
+    CommunityModerationEvent,
     CommunityModerationLog,
     CommunityPost,
     CommunityPostMedia,
     CommunityPostStatus,
     CommunityPostTag,
     CommunityProfile,
+    CommunityReport,
     CommunityTag,
 )
 from app.modules.media.models import MediaAsset, MediaConfidentiality, MediaStatus
@@ -39,11 +42,13 @@ from app.modules.media.types import (
     COMMUNITY_POST_IMAGE_MIME_TYPES,
     MediaPurpose,
 )
+from app.modules.notifications.models import Notification
 from app.modules.public.models import (
     PublicationStatus,
     PublicWork,
     PublicWorkVisibility,
 )
+from app.modules.users.models import UserProfile
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +58,9 @@ class CommunityPostRow:
     author_username: str | None
     author_display_name: str | None
     author_avatar_url: str | None
+    author_avatar_media_id: UUID | None
+    author_is_admin: bool
+    author_is_moderator: bool
     like_count: int
     comment_count: int
     viewer_has_liked: bool
@@ -69,6 +77,9 @@ CommunityPostTuple = tuple[
     str | None,
     str | None,
     str | None,
+    UUID | None,
+    bool,
+    bool,
     int,
     int,
     bool,
@@ -92,6 +103,15 @@ class CommunityRepository:
         self._image_max_count = image_max_count
         self._image_max_bytes = image_max_bytes
         self._avatar_max_bytes = avatar_max_bytes
+
+    @staticmethod
+    def _has_role(user_id: object, role_code: str) -> ColumnElement[bool]:
+        return (
+            select(UserRole.user_id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(UserRole.user_id == user_id, Role.code == role_code)
+            .exists()
+        )
 
     async def is_member_restricted(self, user_id: UUID, scope: str) -> bool:
         now = datetime.now(UTC)
@@ -368,6 +388,128 @@ class CommunityRepository:
             statement = statement.with_for_update()
         return cast(CommunityPost | None, await self._session.scalar(statement))
 
+    async def list_owned_active_post_media(
+        self,
+        post_id: UUID,
+        owner_user_id: UUID,
+    ) -> tuple[UUID, ...]:
+        rows = await self._session.scalars(
+            select(MediaAsset.id)
+            .join(
+                CommunityPostMedia,
+                CommunityPostMedia.media_asset_id == MediaAsset.id,
+            )
+            .where(
+                CommunityPostMedia.post_id == post_id,
+                MediaAsset.owner_user_id == owner_user_id,
+                MediaAsset.purpose == MediaPurpose.COMMUNITY_POST.value,
+                MediaAsset.status != MediaStatus.DELETED,
+            )
+            .order_by(CommunityPostMedia.sort_order)
+        )
+        return tuple(rows.all())
+
+    async def permanently_delete_post_content(
+        self,
+        post_id: UUID,
+        *,
+        owner_deleted_event_id: UUID,
+    ) -> None:
+        comment_rows = await self._session.scalars(
+            select(CommunityComment.id).where(CommunityComment.post_id == post_id)
+        )
+        comment_ids = tuple(comment_rows.all())
+
+        report_filter = CommunityReport.post_id == post_id
+        if comment_ids:
+            report_filter = or_(
+                report_filter,
+                CommunityReport.comment_id.in_(comment_ids),
+            )
+        report_rows = await self._session.scalars(
+            select(CommunityReport.id).where(report_filter)
+        )
+        report_ids = tuple(report_rows.all())
+
+        event_filter = and_(
+            CommunityModerationEvent.target_type == "POST",
+            CommunityModerationEvent.target_id == str(post_id),
+        )
+        if comment_ids:
+            event_filter = or_(
+                event_filter,
+                and_(
+                    CommunityModerationEvent.target_type == "COMMENT",
+                    CommunityModerationEvent.target_id.in_(
+                        [str(comment_id) for comment_id in comment_ids]
+                    ),
+                ),
+            )
+        if report_ids:
+            event_filter = or_(
+                event_filter,
+                CommunityModerationEvent.report_id.in_(report_ids),
+            )
+
+        related_event_rows = await self._session.scalars(
+            select(CommunityModerationEvent.id).where(
+                event_filter,
+                CommunityModerationEvent.id != owner_deleted_event_id,
+            )
+        )
+        related_event_ids = tuple(related_event_rows.all())
+        if related_event_ids:
+            await self._session.execute(
+                delete(Notification).where(
+                    Notification.source_event_id.in_(related_event_ids)
+                )
+            )
+            await self._session.execute(
+                delete(CommunityModerationEvent).where(
+                    CommunityModerationEvent.id.in_(related_event_ids)
+                )
+            )
+
+        if report_ids:
+            await self._session.execute(
+                delete(CommunityReport).where(CommunityReport.id.in_(report_ids))
+            )
+        if comment_ids:
+            await self._session.execute(
+                delete(CommunityCommentLike).where(
+                    CommunityCommentLike.comment_id.in_(comment_ids)
+                )
+            )
+            await self._session.execute(
+                update(CommunityComment)
+                .where(CommunityComment.parent_id.in_(comment_ids))
+                .values(parent_id=None)
+            )
+            await self._session.execute(
+                delete(CommunityComment).where(CommunityComment.post_id == post_id)
+            )
+
+        await self._session.execute(
+            delete(CommunityLike).where(CommunityLike.post_id == post_id)
+        )
+        await self._session.execute(
+            delete(CommunityBookmark).where(CommunityBookmark.post_id == post_id)
+        )
+        await self._session.execute(
+            delete(CommunityModerationLog).where(
+                CommunityModerationLog.post_id == post_id
+            )
+        )
+        await self._session.execute(
+            delete(CommunityPostMedia).where(CommunityPostMedia.post_id == post_id)
+        )
+        await self._session.execute(
+            delete(CommunityPostTag).where(CommunityPostTag.post_id == post_id)
+        )
+        await self._session.execute(
+            delete(CommunityPost).where(CommunityPost.id == post_id)
+        )
+
     async def get_post_row(
         self, post_id: UUID, *, viewer_user_id: UUID | None = None
     ) -> CommunityPostRow | None:
@@ -438,15 +580,16 @@ class CommunityRepository:
     ) -> MediaAsset | None:
         statement = (
             select(MediaAsset)
-            .join(
-                CommunityProfile,
-                CommunityProfile.avatar_media_id == MediaAsset.id,
-            )
-            .join(User, User.id == CommunityProfile.user_id)
+            .join(User, User.id == MediaAsset.owner_user_id)
+            .outerjoin(CommunityProfile, CommunityProfile.user_id == User.id)
+            .outerjoin(UserProfile, UserProfile.user_id == User.id)
             .where(
                 MediaAsset.id == media_id,
-                MediaAsset.owner_user_id == CommunityProfile.user_id,
                 User.status == UserStatus.ACTIVE,
+                or_(
+                    CommunityProfile.avatar_media_id == MediaAsset.id,
+                    UserProfile.avatar_media_id == MediaAsset.id,
+                ),
                 MediaAsset.purpose == MediaPurpose.AVATAR.value,
                 MediaAsset.status == MediaStatus.ACTIVE,
                 MediaAsset.deleted_at.is_(None),
@@ -614,13 +757,28 @@ class CommunityRepository:
             related_work.published_at.is_not(None),
             related_work.deleted_at.is_(None),
         )
+        display_name = case(
+            (UserProfile.user_id.is_(None), CommunityProfile.display_name),
+            else_=UserProfile.display_name,
+        )
+        legacy_avatar_url = case(
+            (UserProfile.user_id.is_(None), CommunityProfile.avatar_url),
+            else_=UserProfile.avatar_url,
+        )
         return (
             select(
                 CommunityPost,
                 CommunityCategory,
                 CommunityProfile.username,
-                CommunityProfile.display_name,
-                CommunityProfile.avatar_url,
+                display_name,
+                legacy_avatar_url,
+                UserProfile.avatar_media_id,
+                CommunityRepository._has_role(
+                    CommunityPost.author_user_id, "SUPER_ADMIN"
+                ),
+                CommunityRepository._has_role(
+                    CommunityPost.author_user_id, "MODERATOR"
+                ),
                 like_count,
                 comment_count,
                 viewer_has_liked,
@@ -634,6 +792,10 @@ class CommunityRepository:
             .outerjoin(
                 CommunityProfile,
                 CommunityProfile.user_id == CommunityPost.author_user_id,
+            )
+            .outerjoin(
+                UserProfile,
+                UserProfile.user_id == CommunityPost.author_user_id,
             )
             .outerjoin(related_work, related_work_is_public)
             .options(
@@ -657,6 +819,9 @@ class CommunityRepository:
                 username,
                 display_name,
                 avatar_url,
+                avatar_media_id,
+                bool(is_admin),
+                bool(is_moderator),
                 like_count,
                 comment_count,
                 viewer_has_liked,
@@ -677,6 +842,9 @@ class CommunityRepository:
                 username,
                 display_name,
                 avatar_url,
+                avatar_media_id,
+                is_admin,
+                is_moderator,
                 like_count,
                 comment_count,
                 viewer_has_liked,

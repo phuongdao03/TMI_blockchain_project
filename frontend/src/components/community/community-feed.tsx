@@ -23,14 +23,12 @@ const PAGE_SIZE = 20;
 export function CommunityFeed({
   page,
   category,
-  tag,
   q,
   sort = "recent",
   relatedWorkId,
 }: {
   page: number;
   category?: string;
-  tag?: string;
   q?: string;
   sort?: CommunityPostSort;
   relatedWorkId?: string;
@@ -48,11 +46,11 @@ export function CommunityFeed({
     queryKey: [
       "community",
       "posts",
-      { page, category, tag, q, sort, relatedWorkId, viewerKey },
+      { page, category, q, sort, relatedWorkId, viewerKey },
     ],
     queryFn: ({ signal }) =>
       communityApi.posts(
-        { page, category, tag, q, sort, relatedWorkId },
+        { page, category, q, sort, relatedWorkId },
         signal,
       ),
     staleTime: 30_000,
@@ -76,7 +74,6 @@ export function CommunityFeed({
       const href = communityFeedHref(
         {
           category: String(data.get("category") || "") || undefined,
-          tag,
           q: String(data.get("q") || "") || undefined,
           sort: "following",
           relatedWorkId,
@@ -217,7 +214,6 @@ export function CommunityFeed({
               </option>
             ))}
           </select>
-          {tag ? <input name="tag" type="hidden" value={tag} /> : null}
           {relatedWorkId ? (
             <input name="relatedWorkId" type="hidden" value={relatedWorkId} />
           ) : null}
@@ -247,7 +243,7 @@ export function CommunityFeed({
               </p>
               <Link
                 className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-[var(--theme-accent)] px-4 text-sm font-bold text-[var(--theme-accent-contrast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-                href={`/login?next=${encodeURIComponent(communityFeedHref({ category, tag, q, sort, relatedWorkId }, page))}`}
+                href={`/login?next=${encodeURIComponent(communityFeedHref({ category, q, sort, relatedWorkId }, page))}`}
               >
                 Đăng nhập
               </Link>
@@ -309,7 +305,6 @@ export function CommunityFeed({
               <div className="divide-y divide-[var(--theme-border)]">
                 {posts.data.data.map((post) => (
                   <CommunityPostCard
-                    filters={{ category, tag, q, sort, relatedWorkId }}
                     key={post.id}
                     post={post}
                   />
@@ -324,7 +319,7 @@ export function CommunityFeed({
                     <Link
                       className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
                       href={communityFeedHref(
-                        { category, tag, q, sort, relatedWorkId },
+                        { category, q, sort, relatedWorkId },
                         page - 1,
                       )}
                     >
@@ -344,7 +339,7 @@ export function CommunityFeed({
                     <Link
                       className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
                       href={communityFeedHref(
-                        { category, tag, q, sort, relatedWorkId },
+                        { category, q, sort, relatedWorkId },
                         page + 1,
                       )}
                     >

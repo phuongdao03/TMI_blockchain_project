@@ -15,7 +15,6 @@ export default async function CommunityPage({
 }: {
   searchParams: Promise<{
     category?: string | string[];
-    tag?: string | string[];
     relatedWorkId?: string | string[];
     q?: string | string[];
     sort?: string | string[];
@@ -24,7 +23,6 @@ export default async function CommunityPage({
 }) {
   const input = await searchParams;
   const category = normalizedFilter(input.category, 100);
-  const tag = normalizedFilter(input.tag, 100);
   const relatedWorkId = normalizedFilter(input.relatedWorkId, 100);
   const q = normalizedFilter(input.q, 120);
   const requestedSort = singleValue(input.sort);
@@ -39,7 +37,6 @@ export default async function CommunityPage({
   return (
     <CommunityFeed
       category={category}
-      tag={tag}
       relatedWorkId={relatedWorkId}
       q={q}
       sort={sort}

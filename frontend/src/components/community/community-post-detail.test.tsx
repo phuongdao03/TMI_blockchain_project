@@ -85,7 +85,7 @@ describe("CommunityPostDetail", () => {
       ),
     ).toBeDefined();
     expect(document.querySelector("script")).toBeNull();
-    expect(screen.getByText("Thành viên cộng đồng")).toBeDefined();
+    expect(screen.getByRole("link", { name: "Thành viên" })).toBeDefined();
     expect(
       screen
         .getByRole("link", { name: "Tác phẩm liên quan: Nghệ thuật khảm trai" })

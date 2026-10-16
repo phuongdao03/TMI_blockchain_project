@@ -35,6 +35,7 @@ export function AccountSettings() {
     mutationFn: (profile: ProfileUpdate) => profileApi.update(profile),
     onSuccess: (profile) => {
       queryClient.setQueryData(["profile"], profile);
+      void queryClient.invalidateQueries({ queryKey: ["community"] });
     },
   });
   const avatarMutation = useMutation({
@@ -42,6 +43,7 @@ export function AccountSettings() {
       profileApi.updateAvatar({ avatarMediaId: mediaId }),
     onSuccess: (profile) => {
       queryClient.setQueryData(["profile"], profile);
+      void queryClient.invalidateQueries({ queryKey: ["community"] });
     },
   });
 

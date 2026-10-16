@@ -56,8 +56,6 @@ export function CommunityPostEditor({
   });
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [relatedWorkSearch, setRelatedWorkSearch] = useState("");
   const [relatedWorkQuery, setRelatedWorkQuery] = useState("");
@@ -103,7 +101,6 @@ export function CommunityPostEditor({
       setTitle(loaded.title);
       setContent(loaded.content);
       setCategoryId(loaded.category.id);
-      setTags(loaded.tags.map((tag) => tag.name));
       setRelatedWork(loaded.relatedWork);
       setImageMediaIds(loaded.images.map((image) => image.id));
       setDraft(loaded);
@@ -113,7 +110,6 @@ export function CommunityPostEditor({
           title: loaded.title,
           content: loaded.content,
           categoryId: loaded.category.id,
-          tags: loaded.tags.map((tag) => tag.name),
           relatedWorkId: loaded.relatedWork?.id ?? null,
           imageMediaIds: loaded.images.map((image) => image.id),
         }),
@@ -139,11 +135,10 @@ export function CommunityPostEditor({
       title: title.trim(),
       content: content.trim(),
       categoryId,
-      ...(tags.length ? { tags } : {}),
       relatedWorkId: relatedWork?.id ?? null,
       imageMediaIds,
     }),
-    [categoryId, content, imageMediaIds, relatedWork?.id, tags, title],
+    [categoryId, content, imageMediaIds, relatedWork?.id, title],
   );
   const valid = Boolean(input.title && input.content && input.categoryId);
   const changedSinceSave = !sameInput(input, savedInput);
@@ -216,21 +211,6 @@ export function CommunityPostEditor({
         start + replacement.length,
       );
     });
-  }
-
-  function addTag() {
-    const tag = tagInput.trim().replace(/\s+/g, " ");
-    if (
-      !tag ||
-      tag.length > 40 ||
-      tags.some(
-        (existing) => existing.toLocaleLowerCase() === tag.toLocaleLowerCase(),
-      ) ||
-      tags.length >= 10
-    )
-      return;
-    setTags((current) => [...current, tag]);
-    setTagInput("");
   }
 
   async function persistDraft(): Promise<CommunityPostWriteResult> {
@@ -351,8 +331,6 @@ export function CommunityPostEditor({
   function startAnotherPost() {
     setTitle("");
     setContent("");
-    setTags([]);
-    setTagInput("");
     setCategoryId("");
     setRelatedWorkSearch("");
     setRelatedWorkQuery("");
@@ -668,82 +646,6 @@ export function CommunityPostEditor({
                 Có thể dùng cú pháp Markdown đơn giản. Thẻ HTML sẽ hiển thị như
                 văn bản.
               </span>
-            </div>
-            <div>
-              <label
-                className="block text-sm font-semibold text-[var(--theme-text)]"
-                htmlFor="community-post-tags"
-              >
-                Thẻ chủ đề{" "}
-                <span className="font-normal text-[var(--theme-muted)]">
-                  (tối đa 10)
-                </span>
-              </label>
-              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                <input
-                  autoComplete="off"
-                  className={searchControlClass}
-                  disabled={
-                    busy !== null ||
-                    submitted ||
-                    !canEditLoadedPost ||
-                    tags.length >= 10
-                  }
-                  id="community-post-tags"
-                  maxLength={40}
-                  onChange={(event) => setTagInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      addTag();
-                    }
-                  }}
-                  placeholder="Ví dụ: làng nghề"
-                  value={tagInput}
-                />
-                <button
-                  className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:opacity-50"
-                  disabled={
-                    !tagInput.trim() ||
-                    tags.length >= 10 ||
-                    busy !== null ||
-                    submitted ||
-                    !canEditLoadedPost
-                  }
-                  onClick={addTag}
-                  type="button"
-                >
-                  Thêm thẻ
-                </button>
-              </div>
-              <ul
-                aria-label="Thẻ đã chọn"
-                className="mt-3 flex flex-wrap gap-2"
-              >
-                {tags.map((tag) => (
-                  <li
-                    className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] pl-3 pr-1 text-sm text-[var(--theme-text)]"
-                    key={tag}
-                  >
-                    {tag}
-                    <button
-                      aria-label={`Xóa thẻ ${tag}`}
-                      className="grid size-8 place-items-center rounded-full text-[var(--theme-muted)] hover:bg-[var(--theme-elevated)] focus-visible:outline-2 focus-visible:outline-[var(--theme-accent)] disabled:opacity-50"
-                      disabled={
-                        busy !== null || submitted || !canEditLoadedPost
-                      }
-                      onClick={() =>
-                        setTags((current) =>
-                          current.filter((item) => item !== tag),
-                        )
-                      }
-                      type="button"
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
-              </ul>
             </div>
             <section
               aria-labelledby="community-related-work-heading"
@@ -1122,7 +1024,6 @@ function sameInput(
       current.content === saved.content &&
       current.categoryId === saved.categoryId &&
       current.relatedWorkId === saved.relatedWorkId &&
-      sameStringList(current.tags ?? [], saved.tags ?? []) &&
       sameStringList(current.imageMediaIds ?? [], saved.imageMediaIds ?? []),
   );
 }
@@ -1130,7 +1031,6 @@ function sameInput(
 function snapshotInput(input: CommunityPostInput): CommunityPostInput {
   return {
     ...input,
-    tags: [...(input.tags ?? [])],
     imageMediaIds: [...(input.imageMediaIds ?? [])],
   };
 }

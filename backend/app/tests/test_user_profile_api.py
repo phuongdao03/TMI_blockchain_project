@@ -32,20 +32,27 @@ class StubUserProfileService:
         changes: ProfileChanges,
     ) -> ProfileView:
         self.changes = changes
-        return self._view(full_name=changes.full_name, phone=changes.phone)
+        return self._view(
+            full_name=changes.full_name,
+            display_name=changes.display_name,
+            phone=changes.phone,
+        )
 
     def _view(
         self,
         *,
         full_name: str | None = None,
+        display_name: str | None = None,
         phone: str | None = None,
     ) -> ProfileView:
         return ProfileView(
             user_id=self.principal.user_id,
             email=self.principal.email,
             full_name=full_name,
+            display_name=display_name,
             phone=phone,
             avatar_media_id=None,
+            avatar_url=None,
             locale="vi",
             timezone="Asia/Ho_Chi_Minh",
         )
@@ -106,6 +113,7 @@ def test_profile_api_reads_and_patches_current_user() -> None:
             principal,
             json={
                 "fullName": "Nguyễn Minh Anh",
+                "displayName": "Minh Anh",
                 "phone": "+84901234567",
                 "locale": "vi",
                 "timezone": "Asia/Ho_Chi_Minh",
@@ -117,9 +125,11 @@ def test_profile_api_reads_and_patches_current_user() -> None:
     assert get_response.json()["data"]["email"] == "owner@cnsgroup.vn"
     assert patch_response.status_code == 200
     assert patch_response.json()["data"]["fullName"] == "Nguyễn Minh Anh"
+    assert patch_response.json()["data"]["displayName"] == "Minh Anh"
     assert service.changes is not None
     assert service.changes.provided_fields == {
         "full_name",
+        "display_name",
         "phone",
         "locale",
         "timezone",

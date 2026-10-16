@@ -156,6 +156,8 @@ class CommunityMemberData(CommunitySchema):
     username: str
     display_name: str
     avatar_url: str | None
+    role_label: str | None
+    is_admin: bool
     bio: str | None
     joined_at: datetime
     published_post_count: int
@@ -192,4 +194,6 @@ class CommunityMemberListItemData(CommunitySchema):
     username: str
     display_name: str
     avatar_url: str | None
+    role_label: str | None
+    is_admin: bool
     viewer_is_following: bool

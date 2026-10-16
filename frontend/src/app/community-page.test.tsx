@@ -9,7 +9,7 @@ vi.mock("@/components/community/community-feed", () => ({
 import CommunityPage from "@/app/(public)/community/page";
 
 describe("CommunityPage query state", () => {
-  it("passes bounded discovery filters to the feed", async () => {
+  it("ignores legacy tag filters while passing supported discovery filters", async () => {
     const page = await CommunityPage({
       searchParams: Promise.resolve({
         page: "4",
@@ -24,7 +24,6 @@ describe("CommunityPage query state", () => {
     expect(page.props).toEqual({
       category: "heritage-culture",
       page: 4,
-      tag: "dong-ho",
       q: "tranh Đông Hồ",
       sort: "discussed",
       relatedWorkId: "public-work-1",

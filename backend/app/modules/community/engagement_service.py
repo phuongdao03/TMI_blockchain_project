@@ -43,6 +43,7 @@ from app.modules.engagement.redis import RedisViewDeduplicator
 from app.modules.media.models import MediaAsset, MediaConfidentiality, MediaStatus
 from app.modules.media.types import AVATAR_IMAGE_MIME_TYPES, MediaPurpose
 from app.modules.notifications.service import NotificationService
+from app.modules.users.models import UserProfile
 
 _RelationT = TypeVar("_RelationT")
 
@@ -326,11 +327,10 @@ class CommunityEngagementService:
         viewer_user_id: UUID | None,
     ) -> CommunityMemberView:
         async with self._session.begin():
-            user = await self._repository.get_active_user(member_id)
-            if user is None:
+            await self._ensure_community_profile(member_id)
+            record = await self._repository.get_member_by_id(member_id)
+            if record is None:
                 raise CommunityNotFoundError()
-            profile = await self._ensure_community_profile(member_id)
-            record = CommunityMemberRecord(user, profile)
             return await self._member_view(record, viewer_user_id)
 
     async def member_profile_by_username(
@@ -386,6 +386,17 @@ class CommunityEngagementService:
                     or avatar.confidentiality is not MediaConfidentiality.PRIVATE
                 ):
                     raise CommunityValidationError()
+            public_profile = await self._session.get(
+                UserProfile,
+                principal.user_id,
+                with_for_update=True,
+            )
+            public_fields = {"display_name", "avatar_url", "avatar_media_id"}
+            if public_profile is None and public_fields.intersection(
+                payload.model_fields_set
+            ):
+                public_profile = UserProfile(user_id=principal.user_id)
+                self._session.add(public_profile)
             try:
                 async with self._session.begin_nested():
                     if "username" in payload.model_fields_set:
@@ -393,11 +404,18 @@ class CommunityEngagementService:
                             raise CommunityConflictError()
                         profile.username = username
                     if "display_name" in payload.model_fields_set:
-                        profile.display_name = payload.display_name
+                        assert public_profile is not None
+                        public_profile.display_name = payload.display_name
                     if "avatar_url" in payload.model_fields_set:
+                        assert public_profile is not None
                         profile.avatar_url = payload.avatar_url
                         profile.avatar_media_id = None
+                        public_profile.avatar_url = payload.avatar_url
+                        public_profile.avatar_media_id = None
                     if "avatar_media_id" in payload.model_fields_set:
+                        assert public_profile is not None
+                        public_profile.avatar_media_id = avatar_media_id
+                        public_profile.avatar_url = None
                         profile.avatar_media_id = avatar_media_id
                         profile.avatar_url = (
                             f"/api/v1/community/avatars/{avatar_media_id}"
@@ -409,11 +427,11 @@ class CommunityEngagementService:
                     await self._session.flush()
             except IntegrityError as exc:
                 raise CommunityConflictError() from exc
-            user = await self._repository.get_active_user(principal.user_id)
-            if user is None:
+            record = await self._repository.get_member_by_id(principal.user_id)
+            if record is None:
                 raise CommunityNotFoundError()
             return await self._member_view(
-                CommunityMemberRecord(user, profile),
+                record,
                 viewer_user_id=principal.user_id,
             )
 

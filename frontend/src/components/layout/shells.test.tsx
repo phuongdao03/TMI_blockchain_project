@@ -628,10 +628,12 @@ describe("layout shells", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Catalog" })).toBeDefined();
-    expect(screen.getByText("reviewer@cnsgroup.vn")).toBeDefined();
+    expect(screen.getByText("Thành viên")).toBeDefined();
+    expect(screen.getByText("Điều hành viên")).toBeDefined();
+    expect(screen.queryByText("reviewer@cnsgroup.vn")).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng nhập" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng ký" })).toBeNull();
-    await user.click(screen.getByText("reviewer@cnsgroup.vn"));
+    await user.click(screen.getByLabelText("Mở menu tài khoản"));
     const accountMenu = screen.getByRole("navigation", {
       name: "Menu tài khoản",
     });
@@ -772,7 +774,7 @@ describe("layout shells", () => {
       </AuthUserProvider>,
     );
 
-    await user.click(screen.getByText("reader@cnsgroup.vn"));
+    await user.click(screen.getByLabelText("Mở menu tài khoản"));
     const menu = screen.getByRole("navigation", { name: "Menu tài khoản" });
     expect(
       within(menu)
@@ -825,8 +827,11 @@ describe("layout shells", () => {
       screen.getByRole("navigation", { name: "Điều hướng chính" }),
     ).toBeDefined();
     expect(
-      within(screen.getByRole("banner")).getByText("reader@cnsgroup.vn"),
+      within(screen.getByRole("banner")).getByText("Thành viên"),
     ).toBeDefined();
+    expect(
+      within(screen.getByRole("banner")).queryByText("reader@cnsgroup.vn"),
+    ).toBeNull();
     const quickNavigation = screen.getByRole("navigation", {
       name: "Điều hướng di động",
     });

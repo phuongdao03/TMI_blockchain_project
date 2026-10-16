@@ -16,6 +16,7 @@ const optionalPhone = z
 
 export const profileSchema = z.object({
   fullName: z.string().trim().max(255, "Họ tên không được quá 255 ký tự."),
+  displayName: z.string().trim().max(120, "Tên hiển thị không được quá 120 ký tự."),
   phone: optionalPhone,
   locale: z.string().trim().min(2).max(16),
   timezone: z.string().trim().min(1).max(64),

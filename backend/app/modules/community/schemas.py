@@ -49,6 +49,8 @@ class CommunityAuthorData(CommunitySchema):
     username: str
     display_name: str
     avatar_url: str | None
+    role_label: str | None = None
+    is_admin: bool = False
 
 
 class CommunityRelatedWorkData(CommunitySchema):

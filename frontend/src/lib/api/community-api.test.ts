@@ -33,7 +33,7 @@ describe("community API client", () => {
     );
   });
 
-  it("serializes all discovery filters without losing pagination", async () => {
+  it("serializes supported discovery filters without tag state", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
       Promise.resolve(
         response({
@@ -53,18 +53,17 @@ describe("community API client", () => {
       page: 3,
       pageSize: 25,
       category: "heritage-culture",
-      tag: "dong-ho",
       relatedWorkId: "work-1",
       q: "  tranh Đông Hồ  ",
       sort: "discussed",
     });
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      "/api/v1/community/posts?page=3&pageSize=25&category=heritage-culture&tag=dong-ho&relatedWorkId=work-1&q=tranh+%C4%90%C3%B4ng+H%E1%BB%93&sort=discussed",
+      "/api/v1/community/posts?page=3&pageSize=25&category=heritage-culture&relatedWorkId=work-1&q=tranh+%C4%90%C3%B4ng+H%E1%BB%93&sort=discussed",
     );
   });
 
-  it("writes community tag labels and reads owner posts with optional status", async () => {
+  it("writes a post without tag data and reads owner posts with optional status", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
       Promise.resolve(
         response({
@@ -83,7 +82,6 @@ describe("community API client", () => {
       title: "Bài viết",
       content: "Nội dung",
       categoryId: "category-1",
-      tags: ["Di sản", "Tranh Đông Hồ"],
     };
 
     await communityApi.createPost(input);

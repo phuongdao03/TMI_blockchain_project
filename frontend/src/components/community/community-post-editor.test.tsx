@@ -133,7 +133,7 @@ beforeEach(() => {
 });
 
 describe("CommunityPostEditor", () => {
-  it("formats editor text, previews it safely, and saves tags with a preselected work", async () => {
+  it("formats and previews safely without exposing tags in the editor", async () => {
     const user = userEvent.setup();
     render(
       <CommunityPostEditor
@@ -157,12 +157,8 @@ describe("CommunityPostEditor", () => {
     expect(screen.getByText(/Đã liên kết:/).textContent).toContain(
       "Gốm làng cổ",
     );
+    expect(screen.queryByLabelText(/Thẻ chủ đề/)).toBeNull();
 
-    await user.type(
-      screen.getByLabelText("Thẻ chủ đề (tối đa 10)"),
-      "làng nghề",
-    );
-    await user.keyboard("{Enter}");
     await user.type(await screen.findByLabelText("Tiêu đề"), "Câu chuyện");
     await user.selectOptions(screen.getByLabelText("Chuyên mục"), "cat-1");
     await user.click(screen.getByRole("button", { name: "Lưu bản nháp" }));
@@ -172,11 +168,11 @@ describe("CommunityPostEditor", () => {
         expect.objectContaining({
           title: "Câu chuyện",
           content: "**Hello**",
-          tags: ["làng nghề"],
           relatedWorkId: "work-1",
         }),
       ),
     );
+    expect(api.createPost.mock.calls[0]?.[0]).not.toHaveProperty("tags");
   });
 
   it("loads and resumes an editable owned draft", async () => {
@@ -204,7 +200,7 @@ describe("CommunityPostEditor", () => {
     expect(
       (screen.getByLabelText("Nội dung") as HTMLTextAreaElement).value,
     ).toBe("Nội dung cũ.");
-    expect(screen.getByText("làng nghề")).toBeDefined();
+    expect(screen.queryByText("làng nghề")).toBeNull();
     await user.clear(title);
     await user.type(title, "Bản nháp đã sửa");
     await user.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
@@ -214,10 +210,10 @@ describe("CommunityPostEditor", () => {
         "draft-1",
         expect.objectContaining({
           title: "Bản nháp đã sửa",
-          tags: ["làng nghề"],
         }),
       ),
     );
+    expect(api.updatePost.mock.calls[0]?.[1]).not.toHaveProperty("tags");
   });
 
   it("lets the owner update a published post without sending it for review", async () => {

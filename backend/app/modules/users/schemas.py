@@ -26,6 +26,7 @@ class PatchUserProfileRequest(BaseModel):
     )
 
     full_name: Annotated[str | None, Field(min_length=1, max_length=255)] = None
+    display_name: Annotated[str | None, Field(max_length=120)] = None
     phone: Annotated[
         str | None,
         Field(pattern=r"^\+[1-9]\d{7,14}$"),
@@ -41,6 +42,20 @@ class PatchUserProfileRequest(BaseModel):
     @classmethod
     def strip_full_name(cls, value: str | None) -> str | None:
         return value.strip() if value is not None else None
+
+    @field_validator("display_name")
+    @classmethod
+    def normalize_display_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = "".join(
+            character
+            for character in value.replace("\r\n", "\n").replace("\r", "\n")
+            if character in "\n\t" or ord(character) >= 32
+        ).strip()
+        if "<" in normalized or ">" in normalized:
+            raise ValueError("Display name must not contain markup.")
+        return normalized or None
 
     @field_validator("phone", mode="before")
     @classmethod
@@ -103,8 +118,10 @@ class UserProfileData(BaseModel):
     user_id: UUID
     email: EmailStr
     full_name: str | None
+    display_name: str | None
     phone: str | None
     avatar_media_id: UUID | None
+    avatar_url: str | None
     locale: str
     timezone: str
     employment: EmploymentData | None = None

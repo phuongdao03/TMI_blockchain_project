@@ -23,19 +23,25 @@ from app.modules.auth.dependencies import (
     get_current_principal,
     get_optional_current_principal,
 )
-from app.modules.auth.models import User, UserStatus
+from app.modules.auth.models import Role, User, UserRole, UserStatus
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.community.errors import CommunityRateLimitedError
 from app.modules.community.models import (
+    CommunityBookmark,
     CommunityCategory,
     CommunityComment,
+    CommunityCommentLike,
     CommunityLike,
     CommunityMemberRestriction,
+    CommunityModerationAction,
+    CommunityModerationEvent,
+    CommunityModerationEventAction,
     CommunityModerationLog,
     CommunityPost,
     CommunityPostMedia,
     CommunityPostStatus,
     CommunityProfile,
+    CommunityReport,
 )
 from app.modules.community.rate_limit import (
     enforce_community_content_write_rate_limit,
@@ -46,6 +52,7 @@ from app.modules.dossiers.models import Category
 from app.modules.media.dependencies import get_media_service
 from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.media.types import MediaContentView
+from app.modules.notifications.models import Notification
 from app.modules.public.models import (
     PublicationStatus,
     PublicWork,
@@ -91,6 +98,7 @@ class CommunityTestApp:
                             user_id=OWNER_ID,
                             full_name="Private legal name",
                             phone_encrypted=b"private-phone",
+                            display_name="Public community name",
                         ),
                         CommunityProfile(
                             user_id=OWNER_ID,
@@ -148,6 +156,15 @@ class CommunityTestApp:
         self.client.close()
         self.app.dependency_overrides.clear()
         asyncio.run(self.engine.dispose())
+
+
+class _NoopMediaAssetDeleter:
+    async def delete_asset(
+        self,
+        _principal: AuthPrincipal,
+        _media_id: UUID,
+    ) -> None:
+        return None
 
 
 def _principal(
@@ -391,6 +408,8 @@ def test_public_categories_feed_and_detail_filter_status_and_private_fields(
             "username": "community-owner",
             "displayName": "Public community name",
             "avatarUrl": None,
+            "roleLabel": None,
+            "isAdmin": False,
         }
         serialized = str(page.json())
         assert "private-owner@example.test" not in serialized
@@ -435,6 +454,8 @@ def test_public_categories_feed_and_detail_filter_status_and_private_fields(
             "username": "community-owner",
             "displayName": "Public community name",
             "avatarUrl": None,
+            "roleLabel": None,
+            "isAdmin": False,
         }
 
         for status in (
@@ -454,6 +475,9 @@ def test_owner_draft_submit_publishes_immediately_and_can_be_edited(
     tmp_path: Path,
 ) -> None:
     test_app = CommunityTestApp(tmp_path)
+    test_app.app.dependency_overrides[get_media_service] = lambda: (
+        _NoopMediaAssetDeleter()
+    )
     try:
         payload = {
             "title": "A community story",
@@ -505,13 +529,25 @@ def test_owner_draft_submit_publishes_immediately_and_can_be_edited(
         assert deleted.status_code == 204
         assert test_app.client.get(f"/api/v1/community/posts/{slug}").status_code == 404
         logs = _moderation_logs(test_app, UUID(post_id))
-        assert {log.action.value for log in logs} == {
-            "PUBLISHED",
-            "OWNER_DELETED",
-        }
-        assert len(logs) == 2
-        assert all(log.request_id for log in logs)
-        assert all(log.request_id for log in logs)
+        assert logs == ()
+
+        async def read_delete_event() -> CommunityModerationEvent:
+            async with test_app.sessions() as session:
+                events = await session.scalars(
+                    select(CommunityModerationEvent).where(
+                        CommunityModerationEvent.target_type == "POST",
+                        CommunityModerationEvent.target_id == post_id,
+                    )
+                )
+                rows = events.all()
+                assert len(rows) == 1
+                return rows[0]
+
+        delete_event = asyncio.run(read_delete_event())
+        assert delete_event.action == CommunityModerationEventAction.OWNER_DELETED
+        assert delete_event.reason is None
+        assert delete_event.event_data is None
+        assert delete_event.request_id
     finally:
         test_app.close()
 
@@ -1107,6 +1143,73 @@ def test_likes_bookmarks_follows_and_member_reads_use_safe_profiles(
         assert unbookmark.json()["data"]["isBookmarked"] is False
         empty_bookmarks = test_app.client.get("/api/v1/community/members/me/bookmarks")
         assert empty_bookmarks.json()["meta"]["total"] == 0
+    finally:
+        test_app.close()
+
+
+def test_public_author_identity_uses_shared_profile_and_persisted_role(
+    tmp_path: Path,
+) -> None:
+    test_app = CommunityTestApp(tmp_path)
+    try:
+        post_id = _insert_post(
+            test_app,
+            slug="official-admin-identity",
+            status=CommunityPostStatus.PUBLISHED,
+            published_at=NOW,
+        )
+        avatar_id = _insert_community_image(
+            test_app,
+            purpose="AVATAR",
+            mime_type="image/png",
+        )
+
+        async def update_identity() -> None:
+            async with test_app.sessions() as session:
+                role = Role(id=uuid4(), code="SUPER_ADMIN")
+                session.add(role)
+                await session.flush()
+                session.add(UserRole(user_id=OWNER_ID, role_id=role.id))
+                profile = await session.get(UserProfile, OWNER_ID)
+                assert profile is not None
+                profile.display_name = "User supplied administrator name"
+                profile.avatar_media_id = avatar_id
+                session.add(
+                    CommunityComment(
+                        id=uuid4(),
+                        post_id=post_id,
+                        author_user_id=OWNER_ID,
+                        content="Administrator comment identity.",
+                        created_at=NOW,
+                    )
+                )
+                await session.commit()
+
+        asyncio.run(update_identity())
+        response = test_app.client.get(
+            "/api/v1/community/posts/official-admin-identity"
+        )
+
+        assert response.status_code == 200
+        author = response.json()["data"]["author"]
+        assert author == {
+            "id": str(OWNER_ID),
+            "username": "community-owner",
+            "displayName": "Quản trị viên THV",
+            "avatarUrl": f"/api/v1/community/avatars/{avatar_id}",
+            "roleLabel": "Quản trị viên",
+            "isAdmin": True,
+        }
+        assert "private-owner@example.test" not in str(author)
+
+        comments = test_app.client.get(f"/api/v1/community/posts/{post_id}/comments")
+        assert comments.status_code == 200, comments.text
+        assert comments.json()["data"][0]["author"] == author
+        member = test_app.client.get("/api/v1/community/members/community-owner")
+        assert member.status_code == 200, member.text
+        assert member.json()["data"]["displayName"] == "Quản trị viên THV"
+        assert member.json()["data"]["roleLabel"] == "Quản trị viên"
+        assert member.json()["data"]["isAdmin"] is True
     finally:
         test_app.close()
 
@@ -2020,6 +2123,8 @@ def test_member_profile_edit_and_public_follower_lists_are_safe(
                 "username": "other-member",
                 "displayName": "Other public name",
                 "avatarUrl": None,
+                "roleLabel": None,
+                "isAdmin": False,
                 "viewerIsFollowing": True,
             }
             assert "private-other@example.test" not in str(page)
@@ -2106,6 +2211,9 @@ def test_admin_post_workspace_and_reversible_moderation_states(
     tmp_path: Path,
 ) -> None:
     test_app = CommunityTestApp(tmp_path)
+    test_app.app.dependency_overrides[get_media_service] = lambda: (
+        _NoopMediaAssetDeleter()
+    )
     try:
         post_id = _insert_post(
             test_app,
@@ -2265,14 +2373,14 @@ def test_admin_post_workspace_and_reversible_moderation_states(
                 f"/api/v1/admin/community/posts/{owner_deleted_post}",
                 json={"reason": "Cannot convert an owner deletion."},
             ).status_code
-            == 409
+            == 404
         )
         assert (
             test_app.client.post(
                 f"/api/v1/admin/community/posts/{owner_deleted_post}/restore",
                 json={"reason": "Owner deletion cannot be reversed by admin."},
             ).status_code
-            == 409
+            == 404
         )
         history = test_app.client.get(
             "/api/v1/admin/community/moderation-history"
@@ -2400,6 +2508,9 @@ def test_admin_member_finder_and_time_bounded_restrictions(
     tmp_path: Path,
 ) -> None:
     test_app = CommunityTestApp(tmp_path)
+    test_app.app.dependency_overrides[get_media_service] = lambda: (
+        _NoopMediaAssetDeleter()
+    )
     try:
         draft_ids = [
             _insert_post(
@@ -2663,5 +2774,233 @@ def test_community_post_mentions_notify_on_immediate_publication(
         assert notifications[0]["data"]["actionPath"] == (
             f"/community/posts/{submitted.json()['data']['slug']}"
         )
+    finally:
+        test_app.close()
+
+
+def test_owner_delete_permanently_cleans_post_dependencies_and_keeps_audit(
+    tmp_path: Path,
+) -> None:
+    test_app = CommunityTestApp(tmp_path)
+    deleted_media: list[UUID] = []
+
+    class _AssetDeleter:
+        async def delete_asset(self, _principal: AuthPrincipal, media_id: UUID) -> None:
+            deleted_media.append(media_id)
+
+    try:
+        post_id = _insert_post(
+            test_app,
+            slug="permanent-delete-target",
+            status=CommunityPostStatus.PUBLISHED,
+            published_at=NOW,
+        )
+        other_post_id = _insert_post(
+            test_app,
+            slug="permanent-delete-unrelated",
+            status=CommunityPostStatus.PUBLISHED,
+            published_at=NOW,
+        )
+        media_id = _insert_community_image(test_app)
+        foreign_media_id = _insert_community_image(test_app, owner_id=OTHER_ID)
+        other_media_id = _insert_community_image(test_app)
+        parent_id, reply_id = uuid4(), uuid4()
+        post_report_id, comment_report_id = uuid4(), uuid4()
+        post_event_id, comment_event_id = uuid4(), uuid4()
+
+        async def add_dependents() -> None:
+            async with test_app.sessions() as session:
+                session.add_all(
+                    [
+                        CommunityPostMedia(
+                            post_id=post_id,
+                            media_asset_id=media_id,
+                            sort_order=0,
+                        ),
+                        CommunityPostMedia(
+                            post_id=post_id,
+                            media_asset_id=foreign_media_id,
+                            sort_order=1,
+                        ),
+                        CommunityPostMedia(
+                            post_id=other_post_id,
+                            media_asset_id=other_media_id,
+                            sort_order=0,
+                        ),
+                        CommunityComment(
+                            id=parent_id,
+                            post_id=post_id,
+                            author_user_id=OWNER_ID,
+                            content="Parent comment to delete.",
+                            created_at=NOW,
+                        ),
+                        CommunityComment(
+                            id=reply_id,
+                            post_id=post_id,
+                            author_user_id=OTHER_ID,
+                            parent_id=parent_id,
+                            content="Reply to delete.",
+                            created_at=NOW,
+                        ),
+                        CommunityLike(post_id=post_id, user_id=OWNER_ID),
+                        CommunityLike(post_id=post_id, user_id=OTHER_ID),
+                        CommunityBookmark(post_id=post_id, user_id=OTHER_ID),
+                        CommunityCommentLike(comment_id=reply_id, user_id=OWNER_ID),
+                        CommunityModerationLog(
+                            post_id=post_id,
+                            actor_user_id=OWNER_ID,
+                            action=CommunityModerationAction.PUBLISHED,
+                            request_id="publish-request",
+                        ),
+                        CommunityReport(
+                            id=post_report_id,
+                            reporter_user_id=OTHER_ID,
+                            post_id=post_id,
+                            reason="OTHER",
+                            request_id="post-report-request",
+                        ),
+                        CommunityReport(
+                            id=comment_report_id,
+                            reporter_user_id=OTHER_ID,
+                            comment_id=reply_id,
+                            reason="OTHER",
+                            request_id="comment-report-request",
+                        ),
+                    ]
+                )
+                await session.flush()
+                session.add_all(
+                    [
+                        CommunityModerationEvent(
+                            id=post_event_id,
+                            target_type="POST",
+                            target_id=str(post_id),
+                            action=CommunityModerationEventAction.PUBLISHED.value,
+                            actor_user_id=OWNER_ID,
+                            request_id="publish-request",
+                        ),
+                        CommunityModerationEvent(
+                            id=comment_event_id,
+                            target_type="COMMENT",
+                            target_id=str(reply_id),
+                            action=CommunityModerationEventAction.REPORT_DISMISSED.value,
+                            actor_user_id=OWNER_ID,
+                            report_id=comment_report_id,
+                            request_id="comment-report-request",
+                        ),
+                        Notification(
+                            user_id=OTHER_ID,
+                            source_event_id=post_event_id,
+                            type="COMMUNITY_MENTION",
+                            title="Community post",
+                            body="A notification referencing this post.",
+                            data_json={
+                                "actionPath": "/community/posts/permanent-delete-target"
+                            },
+                            created_at=NOW,
+                        ),
+                    ]
+                )
+                await session.commit()
+
+        asyncio.run(add_dependents())
+        test_app.app.dependency_overrides[get_media_service] = lambda: _AssetDeleter()
+
+        response = test_app.client.delete(f"/api/v1/community/posts/{post_id}")
+
+        assert response.status_code == 204, response.text
+        assert deleted_media == [media_id]
+        assert (
+            test_app.client.get(
+                "/api/v1/community/posts/permanent-delete-target"
+            ).status_code
+            == 404
+        )
+
+        async def assert_database_cleanup() -> None:
+            async with test_app.sessions() as session:
+                assert await session.get(CommunityPost, post_id) is None
+                assert await session.get(CommunityPost, other_post_id) is not None
+                foreign_media = await session.get(MediaAsset, foreign_media_id)
+                other_media = await session.get(MediaAsset, other_media_id)
+                assert foreign_media is not None
+                assert foreign_media.status is MediaStatus.ACTIVE
+                assert other_media is not None
+                assert other_media.status is MediaStatus.ACTIVE
+                assert (
+                    await session.scalar(
+                        select(CommunityPostMedia).where(
+                            CommunityPostMedia.post_id == other_post_id,
+                            CommunityPostMedia.media_asset_id == other_media_id,
+                        )
+                    )
+                ) is not None
+                assert (
+                    await session.scalars(
+                        select(CommunityComment).where(
+                            CommunityComment.post_id == post_id
+                        )
+                    )
+                ).all() == []
+                assert (
+                    await session.scalars(
+                        select(CommunityLike).where(CommunityLike.post_id == post_id)
+                    )
+                ).all() == []
+                assert (
+                    await session.scalars(
+                        select(CommunityBookmark).where(
+                            CommunityBookmark.post_id == post_id
+                        )
+                    )
+                ).all() == []
+                assert (
+                    await session.scalars(
+                        select(CommunityCommentLike).where(
+                            CommunityCommentLike.comment_id.in_((parent_id, reply_id))
+                        )
+                    )
+                ).all() == []
+                assert (
+                    await session.scalars(
+                        select(CommunityPostMedia).where(
+                            CommunityPostMedia.post_id == post_id
+                        )
+                    )
+                ).all() == []
+                assert (
+                    await session.scalars(
+                        select(CommunityReport).where(
+                            (CommunityReport.post_id == post_id)
+                            | (CommunityReport.comment_id.in_((parent_id, reply_id)))
+                        )
+                    )
+                ).all() == []
+                assert (
+                    await session.scalars(
+                        select(Notification).where(
+                            Notification.source_event_id == post_event_id
+                        )
+                    )
+                ).all() == []
+                assert (
+                    await session.scalars(
+                        select(CommunityModerationLog).where(
+                            CommunityModerationLog.post_id == post_id
+                        )
+                    )
+                ).all() == []
+                owner_delete_events = (
+                    await session.scalars(
+                        select(CommunityModerationEvent).where(
+                            CommunityModerationEvent.target_type == "POST",
+                            CommunityModerationEvent.target_id == str(post_id),
+                        )
+                    )
+                ).all()
+                assert len(owner_delete_events) == 1
+                assert owner_delete_events[0].action == "OWNER_DELETED"
+
+        asyncio.run(assert_database_cleanup())
     finally:
         test_app.close()

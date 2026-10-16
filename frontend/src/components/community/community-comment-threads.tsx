@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { CommunityReportAction } from "@/components/community/community-report-action";
+import { CommunityRoleBadge } from "@/components/community/community-user-identity";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { communityApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
 import type {
@@ -559,14 +561,25 @@ function CommentBody({
 
   return (
     <div>
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         {author ? (
-          <Link
-            className="font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-            href={`/community/members/${encodeURIComponent(author.username)}`}
-          >
-            {name}
-          </Link>
+          <>
+            <UserAvatar
+              displayName={author.displayName}
+              size={32}
+              src={author.avatarUrl}
+            />
+            <Link
+              className="font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+              href={`/community/members/${encodeURIComponent(author.username)}`}
+            >
+              {name}
+            </Link>
+            <CommunityRoleBadge
+              isAdmin={author.isAdmin}
+              roleLabel={author.roleLabel}
+            />
+          </>
         ) : (
           <span className="font-semibold text-[var(--theme-muted)]">
             Thành viên

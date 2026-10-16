@@ -24,6 +24,7 @@ from app.modules.community.dependencies import (
     CommunityServiceDependency,
 )
 from app.modules.community.errors import CommunityNotFoundError
+from app.modules.community.identity import public_user_identity
 from app.modules.community.models import CommunityPostStatus
 from app.modules.community.rate_limit import enforce_community_content_write_rate_limit
 from app.modules.community.repository import CommunityPostRow
@@ -38,6 +39,7 @@ from app.modules.community.schemas import (
     CommunityRelatedWorkData,
     CommunityTagData,
 )
+from app.modules.media.dependencies import MediaServiceDependency
 from app.modules.media.models import MediaConfidentiality, MediaStatus
 from app.modules.media.types import (
     COMMUNITY_POST_IMAGE_MAX_BYTES,
@@ -61,11 +63,20 @@ PRIVATE_RESPONSES: dict[int | str, dict[str, Any]] = {
 
 
 def _author(row: CommunityPostRow) -> CommunityAuthorData:
+    identity = public_user_identity(
+        display_name=row.author_display_name,
+        avatar_url=row.author_avatar_url,
+        avatar_media_id=row.author_avatar_media_id,
+        is_admin=row.author_is_admin,
+        is_moderator=row.author_is_moderator,
+    )
     return CommunityAuthorData(
         id=row.post.author_user_id,
         username=row.author_username or f"member-{row.post.author_user_id.hex}",
-        display_name=row.author_display_name or "Th\u00e0nh vi\u00ean",
-        avatar_url=row.author_avatar_url,
+        display_name=identity.display_name,
+        avatar_url=identity.avatar_url,
+        role_label=identity.role_label,
+        is_admin=identity.is_admin,
     )
 
 
@@ -457,11 +468,13 @@ async def delete_post(
     request: Request,
     principal: CsrfProtectedPrincipalDependency,
     service: CommunityServiceDependency,
+    media_service: MediaServiceDependency,
 ) -> Response:
     await service.delete_post(
         principal,
         post_id,
         request_id=request.state.request_id,
+        media_asset_deleter=media_service,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

@@ -9,6 +9,7 @@ import { CommunityPostEngagement } from "@/components/community/community-post-e
 import { CommunityPostImages } from "@/components/community/community-post-images";
 import { CommunityMarkdown } from "@/components/community/community-markdown";
 import { CommunityRelatedWorkLink } from "@/components/community/community-related-work-link";
+import { CommunityUserIdentity } from "@/components/community/community-user-identity";
 import { communityApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
 
@@ -95,9 +96,7 @@ export function CommunityPostDetail({ slug }: { slug: string }) {
             {article.title}
           </h1>
           <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--theme-muted)]">
-            <span>
-              {article.author.displayName?.trim() || "Thành viên cộng đồng"}
-            </span>
+            <CommunityUserIdentity size={40} user={article.author} />
             <span aria-hidden="true">·</span>
             <time dateTime={article.publishedAt}>
               {formatPublishedDate(article.publishedAt)}

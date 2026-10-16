@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 
 import { CommunityPostCard } from "@/components/community/community-post-card";
+import { CommunityRoleBadge } from "@/components/community/community-user-identity";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { communityMemberApi, mediaApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
 import { mediaPolicies, uploadMedia } from "@/lib/media/upload";
@@ -122,6 +124,12 @@ export function CommunityMemberProfile({
       setAvatarPreviewUrl(null);
       setAvatarUpload({ busy: false, progress: 0, stage: "", error: "" });
       queryClient.setQueryData(profileKey, result);
+      void queryClient.invalidateQueries({ queryKey: ["profile"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["community"],
+        predicate: (query) =>
+          query.queryKey[1] !== "member" || query.queryKey[2] !== username,
+      });
       if (result.username !== username)
         router.replace(
           `/community/members/${encodeURIComponent(result.username)}`,
@@ -296,23 +304,12 @@ export function CommunityMemberProfile({
         >
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-start gap-4 sm:gap-5">
-              <div
-                className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full border border-[var(--theme-border)] bg-[var(--theme-elevated)] text-lg font-bold text-[var(--theme-accent)] sm:size-20"
-                aria-hidden={!safeAvatarUrl}
-              >
-                {safeAvatarUrl ? (
-                  <Image
-                    alt=""
-                    className="size-full object-cover"
-                    height={80}
-                    src={safeAvatarUrl}
-                    unoptimized
-                    width={80}
-                  />
-                ) : (
-                  getInitials(member.displayName)
-                )}
-              </div>
+              <UserAvatar
+                className="size-16 sm:size-20"
+                displayName={member.displayName}
+                size={80}
+                src={member.avatarUrl}
+              />
               <div className="min-w-0">
                 <p className="text-xs font-bold tracking-[0.18em] text-[var(--theme-accent)] uppercase">
                   Thành viên cộng đồng
@@ -323,6 +320,10 @@ export function CommunityMemberProfile({
                 >
                   {member.displayName || "Thành viên"}
                 </h1>
+                <CommunityRoleBadge
+                  isAdmin={member.isAdmin}
+                  roleLabel={member.roleLabel}
+                />
                 <p className="mt-1 text-sm text-[var(--theme-muted)]">
                   @{member.username}
                 </p>
@@ -780,33 +781,27 @@ function StatLink({
 }
 
 function MemberRow({ member }: { member: CommunityMemberCard }) {
-  const avatar = getSafeAvatarUrl(member.avatarUrl);
   return (
     <li className="flex min-w-0 items-center gap-3 py-4">
-      <div
-        aria-hidden={!avatar}
-        className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border border-[var(--theme-border)] bg-[var(--theme-elevated)] text-sm font-bold text-[var(--theme-accent)]"
-      >
-        {avatar ? (
-          <Image
-            alt=""
-            className="size-full object-cover"
-            height={44}
-            src={avatar}
-            unoptimized
-            width={44}
-          />
-        ) : (
-          getInitials(member.displayName || member.username)
-        )}
-      </div>
+      <UserAvatar
+        className="size-11"
+        displayName={member.displayName || member.username}
+        size={44}
+        src={member.avatarUrl}
+      />
       <div className="min-w-0 flex-1">
-        <Link
-          className="block truncate font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-          href={`/community/members/${encodeURIComponent(member.username)}`}
-        >
-          {member.displayName || "Thành viên"}
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            className="truncate font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+            href={`/community/members/${encodeURIComponent(member.username)}`}
+          >
+            {member.displayName || "Thành viên"}
+          </Link>
+          <CommunityRoleBadge
+            isAdmin={member.isAdmin}
+            roleLabel={member.roleLabel}
+          />
+        </div>
         <p className="truncate text-sm text-[var(--theme-muted)]">
           @{member.username}
         </p>

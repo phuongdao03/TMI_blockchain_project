@@ -1,13 +1,20 @@
 "use client";
 
 import { Menu } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import type { RefObject } from "react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
+import {
+  CommunityRoleBadge,
+  getAuthenticatedCommunityIdentity,
+} from "@/components/community/community-user-identity";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { profileApi } from "@/lib/api/client";
 import type { AuthUser } from "@/lib/api/types";
 
 const pageTitles: Record<string, string> = {
@@ -59,6 +66,19 @@ export function DashboardContextHeader({
 }) {
   const pathname = usePathname();
   const title = resolveTitle(pathname);
+  const profile = useQuery({
+    queryKey: ["profile"],
+    queryFn: profileApi.get,
+    enabled: Boolean(user),
+    staleTime: 60_000,
+  });
+  const identity = getAuthenticatedCommunityIdentity({
+    displayName: profile.data?.displayName,
+    roles: user?.roles,
+  });
+  const avatarUrl = profile.data?.avatarMediaId
+    ? `/api/v1/community/avatars/${encodeURIComponent(profile.data.avatarMediaId)}`
+    : profile.data?.avatarUrl;
   const navigationContext = pathname.startsWith("/admin")
     ? "quản trị"
     : "workspace";
@@ -94,10 +114,21 @@ export function DashboardContextHeader({
           />
         </button>
         <PwaInstallButton className="dashboard-context-header__install" />
-        {user?.email ? (
-          <span className="hidden max-w-52 truncate text-sm text-[var(--theme-muted)] md:block">
-            {user.email}
-          </span>
+        {user ? (
+          <div className="hidden max-w-64 items-center gap-2 md:flex">
+            <UserAvatar
+              displayName={identity.displayName}
+              size={28}
+              src={avatarUrl}
+            />
+            <span className="max-w-40 truncate text-sm text-[var(--theme-muted)]">
+              {identity.displayName}
+            </span>
+            <CommunityRoleBadge
+              isAdmin={identity.isAdmin}
+              roleLabel={identity.roleLabel}
+            />
+          </div>
         ) : null}
         {user ? <NotificationBell /> : null}
         <div className="dashboard-context-header__desktop-account">

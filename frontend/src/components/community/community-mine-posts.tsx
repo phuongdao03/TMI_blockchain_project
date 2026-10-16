@@ -171,21 +171,6 @@ export function CommunityMinePosts({
                           {post.moderationReason}
                         </p>
                       ) : null}
-                      {post.tags.length ? (
-                        <ul
-                          aria-label="Thẻ bài viết"
-                          className="mt-3 flex flex-wrap gap-2"
-                        >
-                          {post.tags.map((tag) => (
-                            <li
-                              className="rounded-full bg-[var(--theme-elevated)] px-3 py-1 text-xs font-semibold text-[var(--theme-muted)]"
-                              key={tag.id}
-                            >
-                              {tag.name}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
                     </div>
                     <div className="flex shrink-0 flex-wrap gap-2">
                       {editable ? (

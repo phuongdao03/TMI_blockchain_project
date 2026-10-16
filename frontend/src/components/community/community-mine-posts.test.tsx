@@ -32,7 +32,10 @@ const post = (
   status,
   moderationReason: status === "REJECTED" ? "Bổ sung nguồn" : null,
   category: { id: "cat-1", name: "Di sản", slug: "di-san" },
-  tags: [],
+  tags:
+    status === "DRAFT"
+      ? [{ id: "legacy-tag", name: "Legacy post tag", slug: "legacy-post-tag" }]
+      : [],
   relatedWork: null,
   images: [],
   createdAt: "2026-10-13T09:00:00Z",
@@ -72,6 +75,7 @@ describe("CommunityMinePosts", () => {
         .getAttribute("href"),
     ).toBe("/community/new?postId=rejected-1");
     expect(screen.getByText("Bổ sung nguồn")).toBeDefined();
+    expect(screen.queryByText("Legacy post tag")).toBeNull();
     expect(
       screen
         .getByRole("link", { name: "Xem bài đã đăng: Bài PUBLISHED" })
