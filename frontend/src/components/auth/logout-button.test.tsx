@@ -37,7 +37,7 @@ describe("LogoutButton", () => {
     document.cookie = "cns_csrf=e2e-csrf; Path=/";
   });
 
-  it("revokes the backend session, signs out Firebase and returns to login", async () => {
+  it("revokes the backend session, signs out Firebase and returns to the public site", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(null, {
         status: 204,
@@ -49,7 +49,7 @@ describe("LogoutButton", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
 
-    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/login"));
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/"));
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/v1/auth/logout",
       expect.objectContaining({

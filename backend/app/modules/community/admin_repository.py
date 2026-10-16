@@ -23,7 +23,6 @@ from app.modules.community.models import (
     CommunityPostStatus,
     CommunityProfile,
     CommunityReport,
-    CommunitySettings,
 )
 from app.modules.community.repository import CommunityPostRow, CommunityRepository
 
@@ -752,15 +751,6 @@ class CommunityAdminRepository:
 
     def add_category(self, category: CommunityCategory) -> None:
         self._session.add(category)
-
-    async def get_settings(self) -> CommunitySettings | None:
-        return cast(
-            CommunitySettings | None,
-            await self._session.get(CommunitySettings, 1),
-        )
-
-    def add_settings(self, settings: CommunitySettings) -> None:
-        self._session.add(settings)
 
     def add_moderation_event(self, event: CommunityModerationEvent) -> None:
         self._session.add(event)

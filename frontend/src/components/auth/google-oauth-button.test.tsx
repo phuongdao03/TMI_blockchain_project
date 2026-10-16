@@ -94,7 +94,7 @@ describe("GoogleOAuthButton", () => {
       // A redirect reloads the page, so mount a fresh button for the return trip.
       render(<GoogleOAuthButton accountType="PUBLIC_USER" />);
       await waitFor(() =>
-        expect(mocks.replace).toHaveBeenCalledWith("/dashboard"),
+        expect(mocks.replace).toHaveBeenCalledWith("/workspace"),
       );
       expect(
         sessionStorage.getItem("cns.google-oauth.redirect-pending"),
@@ -165,7 +165,7 @@ describe("GoogleOAuthButton", () => {
           expect.objectContaining({ email: "mobile@cns.vn" }),
         ),
       );
-      expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
+      expect(mocks.replace).toHaveBeenCalledWith("/workspace");
       expect(screen.getByRole("status").textContent).toContain(
         "Đang mở không gian làm việc",
       );
@@ -203,7 +203,7 @@ describe("GoogleOAuthButton", () => {
         expect.objectContaining({ email: "recovered@cns.vn" }),
       ),
     );
-    expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
+    expect(mocks.replace).toHaveBeenCalledWith("/workspace");
   });
 
   it("finishes an earlier redirect if the user returns during deployment", async () => {
@@ -221,7 +221,7 @@ describe("GoogleOAuthButton", () => {
         expect.objectContaining({ email: "returning@cns.vn" }),
       ),
     );
-    expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
+    expect(mocks.replace).toHaveBeenCalledWith("/workspace");
     expect(
       sessionStorage.getItem("cns.google-oauth.redirect-pending"),
     ).toBeNull();
@@ -243,7 +243,7 @@ describe("GoogleOAuthButton", () => {
     expect(mocks.signInWithRedirect).not.toHaveBeenCalled();
   });
 
-  it("keeps staff routing after Google authentication", async () => {
+  it("defaults staff accounts to the personal workspace after Google authentication", async () => {
     mocks.signInWithPopup.mockResolvedValue({
       user: { getIdToken: vi.fn(async () => "firebase-token") },
     });
@@ -260,6 +260,6 @@ describe("GoogleOAuthButton", () => {
         expect.objectContaining({ email: "staff@cns.vn" }),
       ),
     );
-    expect(mocks.replace).toHaveBeenCalledWith("/work-allocations");
+    expect(mocks.replace).toHaveBeenCalledWith("/workspace");
   });
 });

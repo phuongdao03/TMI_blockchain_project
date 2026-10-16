@@ -7,7 +7,6 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.errors import UnauthenticatedError
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.community.errors import (
@@ -26,7 +25,6 @@ from app.modules.community.models import (
     CommunityPost,
     CommunityPostStatus,
     CommunityProfile,
-    CommunitySettings,
 )
 from app.modules.community.repository import CommunityPostRow, CommunityRepository
 from app.modules.community.schemas import CommunityPostRequest
@@ -35,8 +33,6 @@ from app.modules.media.types import (
     COMMUNITY_POST_IMAGE_MAX_COUNT,
 )
 from app.modules.notifications.service import NotificationService
-
-MODERATE_COMMUNITY = PolicyRequirement(permission="community.moderate")
 
 
 @dataclass(frozen=True, slots=True)
@@ -180,38 +176,24 @@ class CommunityService:
             if post.status is not CommunityPostStatus.DRAFT:
                 raise CommunityConflictError()
             await self._ensure_not_restricted(principal.user_id, "POSTS")
-            settings = await self._session.get(CommunitySettings, 1)
-            pre_moderation = (
-                settings.pre_moderation_enabled if settings is not None else True
-            )
             category = await self._repository.get_category(post.category_id)
             if category is None or not category.is_active:
                 raise CommunityNotFoundError()
             now = datetime.now(UTC)
-            post.status = (
-                CommunityPostStatus.PENDING
-                if pre_moderation
-                else CommunityPostStatus.PUBLISHED
-            )
+            post.status = CommunityPostStatus.PUBLISHED
             post.submitted_at = now
-            if not pre_moderation:
-                post.published_at = now
+            post.published_at = now
             post.updated_at = now
             post.moderation_reason = None
             event_id = self._log(
                 post,
                 principal,
-                (
-                    CommunityModerationAction.SUBMITTED
-                    if pre_moderation
-                    else CommunityModerationAction.PUBLISHED
-                ),
+                CommunityModerationAction.PUBLISHED,
                 reason=None,
                 request_id=request_id,
             )
             await self._session.flush()
-            if not pre_moderation:
-                await self._notify_post_mentions(post, event_id=event_id)
+            await self._notify_post_mentions(post, event_id=event_id)
             row = await self._repository.get_post_row(post.id)
             if row is None:
                 raise CommunityNotFoundError()
@@ -229,6 +211,8 @@ class CommunityService:
             if post.status not in {
                 CommunityPostStatus.DRAFT,
                 CommunityPostStatus.REJECTED,
+                CommunityPostStatus.PUBLISHED,
+                CommunityPostStatus.HIDDEN,
             }:
                 raise CommunityConflictError()
             await self._ensure_not_restricted(principal.user_id, "POSTS")
@@ -284,104 +268,6 @@ class CommunityService:
                 reason=None,
                 request_id=request_id,
             )
-
-    async def moderation_queue(
-        self,
-        principal: AuthPrincipal,
-        *,
-        page: int,
-        page_size: int,
-    ) -> CommunityPostPage:
-        self._require_moderator(principal)
-        async with self._session.begin():
-            items, total = await self._repository.list_moderation_queue(
-                offset=(page - 1) * page_size,
-                limit=page_size,
-            )
-        return CommunityPostPage(items=items, total=total)
-
-    async def publish(
-        self,
-        principal: AuthPrincipal,
-        post_id: UUID,
-        *,
-        reason: str,
-        request_id: str,
-    ) -> CommunityPostRow:
-        return await self._moderate(
-            principal,
-            post_id,
-            status=CommunityPostStatus.PUBLISHED,
-            action=CommunityModerationAction.PUBLISHED,
-            reason=reason,
-            request_id=request_id,
-        )
-
-    async def reject(
-        self,
-        principal: AuthPrincipal,
-        post_id: UUID,
-        *,
-        reason: str,
-        request_id: str,
-    ) -> CommunityPostRow:
-        return await self._moderate(
-            principal,
-            post_id,
-            status=CommunityPostStatus.REJECTED,
-            action=CommunityModerationAction.REJECTED,
-            reason=reason,
-            request_id=request_id,
-        )
-
-    async def _moderate(
-        self,
-        principal: AuthPrincipal,
-        post_id: UUID,
-        *,
-        status: CommunityPostStatus,
-        action: CommunityModerationAction,
-        reason: str,
-        request_id: str,
-    ) -> CommunityPostRow:
-        self._require_moderator(principal)
-        async with self._session.begin():
-            post = await self._repository.get_post(post_id, for_update=True)
-            if post is None or post.status is CommunityPostStatus.DELETED:
-                raise CommunityNotFoundError()
-            if post.status is not CommunityPostStatus.PENDING:
-                raise CommunityConflictError()
-            category = await self._repository.get_category(post.category_id)
-            if category is None:
-                raise CommunityNotFoundError()
-            if status is CommunityPostStatus.PUBLISHED and not category.is_active:
-                raise CommunityConflictError()
-            post.status = status
-            post.moderation_reason = reason
-            now = datetime.now(UTC)
-            post.updated_at = now
-            if status is CommunityPostStatus.PUBLISHED:
-                post.published_at = now
-            event_id = self._log(
-                post,
-                principal,
-                action,
-                reason=reason,
-                request_id=request_id,
-            )
-            await self._session.flush()
-            await self._notify_post_author(
-                post,
-                principal,
-                event_id=event_id,
-                published=status is CommunityPostStatus.PUBLISHED,
-            )
-            if status is CommunityPostStatus.PUBLISHED:
-                await self._notify_post_mentions(post, event_id=event_id)
-            row = await self._repository.get_post_row(post.id)
-            if row is None:
-                raise CommunityNotFoundError()
-            return row
 
     async def _active_category(self, category_id: UUID) -> CommunityCategory:
         category = await self._repository.get_category(category_id, active_only=True)
@@ -479,39 +365,6 @@ class CommunityService:
         )
         return event_id
 
-    async def _notify_post_author(
-        self,
-        post: CommunityPost,
-        actor: AuthPrincipal,
-        *,
-        event_id: UUID,
-        published: bool,
-    ) -> None:
-        if post.author_user_id == actor.user_id:
-            return
-        event_type = (
-            "COMMUNITY_POST_PUBLISHED" if published else "COMMUNITY_POST_REJECTED"
-        )
-        title = "Bài viết đã được duyệt" if published else "Bài viết chưa được duyệt"
-        body = (
-            f"Bài viết “{post.title}” đã được duyệt."
-            if published
-            else f"Bài viết “{post.title}” chưa được duyệt."
-        )
-        action_path = (
-            f"/community/posts/{quote(post.slug, safe='-._~')}"
-            if published
-            else "/community/new"
-        )
-        await NotificationService(self._session).consume_in_transaction(
-            event_id=event_id,
-            user_id=post.author_user_id,
-            event_type=event_type,
-            title=title,
-            body=body,
-            data={"actionPath": action_path},
-        )
-
     async def _notify_post_mentions(
         self,
         post: CommunityPost,
@@ -534,14 +387,6 @@ class CommunityService:
                     "actionPath": (f"/community/posts/{quote(post.slug, safe='-._~')}")
                 },
             )
-
-    @staticmethod
-    def _require_moderator(principal: AuthPrincipal) -> None:
-        AuthorizationPolicy.require_capability(
-            principal,
-            MODERATE_COMMUNITY,
-            CommunityForbiddenError,
-        )
 
 
 def _slug(title: str, post_id: UUID) -> str:

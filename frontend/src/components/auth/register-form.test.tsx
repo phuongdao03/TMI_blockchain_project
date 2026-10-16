@@ -42,6 +42,17 @@ vi.mock("firebase/auth", () => ({
 }));
 
 describe("RegisterForm", () => {
+  it("preserves the intended local destination when returning to login", async () => {
+    render(<RegisterForm next="/community/new?category=heritage" />);
+
+    expect(
+      screen.getByRole("link", { name: "Đăng nhập" }).getAttribute("href"),
+    ).toBe("/login?next=%2Fcommunity%2Fnew%3Fcategory%3Dheritage");
+    expect(
+      await screen.findByRole("button", { name: "Tiếp tục với Google" }),
+    ).toBeDefined();
+  });
+
   it("places Google registration below the email registration button", async () => {
     render(<RegisterForm />);
 

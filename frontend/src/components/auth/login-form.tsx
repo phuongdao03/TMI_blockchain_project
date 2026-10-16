@@ -16,12 +16,9 @@ import { Button } from "@/components/ui/button";
 import { ApiError, authApi } from "@/lib/api/client";
 import type { AccountType } from "@/lib/api/types";
 import { loginSchema, type LoginValues } from "@/lib/auth/schemas";
-import { resolveDefaultWorkspace } from "@/lib/auth/role-workspaces";
+import { safeLocalDestination } from "@/lib/auth/safe-destination";
+import { broadcastAuthSessionChange } from "@/lib/auth/session-sync";
 import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
-
-function safeDestination(value: string | undefined, fallback: string): string {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
-}
 
 export function LoginForm({
   next,
@@ -45,19 +42,16 @@ export function LoginForm({
 
   async function finishSignIn(user: User) {
     const idToken = await user.getIdToken(true);
+    const destination = safeLocalDestination(next, "/workspace");
     const result = await authApi.exchangeFirebaseToken(
       idToken,
       accountType,
-      next,
+      destination,
     );
     queryClient.setQueryData(["auth", "me"], result.user);
+    broadcastAuthSessionChange();
     setNavigating(true);
-    router.replace(
-      safeDestination(
-        next,
-        resolveDefaultWorkspace(result.user.roles, result.user.permissions),
-      ),
-    );
+    router.replace(destination);
     router.refresh();
   }
 
@@ -156,7 +150,16 @@ export function LoginForm({
       description="Truy cập không gian hồ sơ để theo dõi tiến trình, phản hồi và bằng xác lập của bạn."
       footer={
         <>
-          Chưa có tài khoản? <AuthLink href="/register">Tạo tài khoản</AuthLink>
+          Chưa có tài khoản?{" "}
+          <AuthLink
+            href={
+              next
+                ? `/register?next=${encodeURIComponent(safeLocalDestination(next, "/workspace"))}`
+                : "/register"
+            }
+          >
+            Tạo tài khoản
+          </AuthLink>
         </>
       }
       title="Đăng nhập"

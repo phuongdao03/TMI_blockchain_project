@@ -24,7 +24,6 @@ from app.modules.community.admin_schemas import (
     CommunityMemberRestrictionRevokeRequest,
     CommunityReportRequest,
     CommunityReportResolutionRequest,
-    CommunitySettingsRequest,
 )
 from app.modules.community.errors import (
     CommunityConflictError,
@@ -36,13 +35,14 @@ from app.modules.community.models import (
     CommunityMemberRestriction,
     CommunityModerationEvent,
     CommunityModerationEventAction,
+    CommunityPost,
     CommunityPostStatus,
     CommunityReport,
     CommunityReportResolution,
     CommunityReportStatus,
-    CommunitySettings,
 )
 from app.modules.community.repository import CommunityPostRow
+from app.modules.notifications.service import NotificationService
 
 _MODERATE = PolicyRequirement(permission="community.moderate")
 _MANAGE = PolicyRequirement(permission="community.manage")
@@ -196,6 +196,8 @@ class CommunityAdminService:
             if report.status != CommunityReportStatus.OPEN.value:
                 raise CommunityConflictError()
             now = datetime.now(UTC)
+            removed_post: CommunityPost | None = None
+            removal_event: CommunityModerationEvent | None = None
             if payload.action == CommunityReportResolution.HIDE.value:
                 if report.post_id is not None:
                     post = await self._repository.get_post(
@@ -207,7 +209,8 @@ class CommunityAdminService:
                     post.status = CommunityPostStatus.HIDDEN
                     post.moderation_reason = payload.reason
                     post.updated_at = now
-                    self._event(
+                    removed_post = post
+                    removal_event = self._event(
                         principal,
                         target_type="POST",
                         target_id=str(post.id),
@@ -256,6 +259,12 @@ class CommunityAdminService:
             report.resolved_by_user_id = principal.user_id
             report.resolved_request_id = request_id
             await self._session.flush()
+            if removed_post is not None and removal_event is not None:
+                await self._notify_post_removed(
+                    removed_post,
+                    event_id=removal_event.id,
+                    reason=payload.reason,
+                )
             row = await self._repository.get_report_row(report.id)
             if row is None:
                 raise CommunityNotFoundError()
@@ -293,7 +302,7 @@ class CommunityAdminService:
                 state = "HIDDEN"
                 post.moderation_reason = reason
             post.updated_at = datetime.now(UTC)
-            self._event(
+            event = self._event(
                 principal,
                 target_type="POST",
                 target_id=str(post.id),
@@ -302,6 +311,12 @@ class CommunityAdminService:
                 request_id=request_id,
             )
             await self._session.flush()
+            if not visible:
+                await self._notify_post_removed(
+                    post,
+                    event_id=event.id,
+                    reason=reason,
+                )
             return state
 
     async def list_admin_posts(
@@ -440,7 +455,7 @@ class CommunityAdminService:
             post.status = CommunityPostStatus.DELETED
             post.deleted_at = now
             post.updated_at = now
-            self._event(
+            event = self._event(
                 principal,
                 target_type="POST",
                 target_id=str(post.id),
@@ -450,6 +465,11 @@ class CommunityAdminService:
                 event_data={"restoredStatus": post.pre_delete_status},
             )
             await self._session.flush()
+            await self._notify_post_removed(
+                post,
+                event_id=event.id,
+                reason=reason,
+            )
             return now
 
     async def admin_restore_post(
@@ -851,42 +871,6 @@ class CommunityAdminService:
             await self._session.flush()
             return category
 
-    async def get_settings(self, principal: AuthPrincipal) -> CommunitySettings:
-        self._require(principal, _MANAGE)
-        async with self._session.begin():
-            return await self._ensure_settings()
-
-    async def update_settings(
-        self,
-        principal: AuthPrincipal,
-        payload: CommunitySettingsRequest,
-        *,
-        request_id: str,
-    ) -> CommunitySettings:
-        self._require(principal, _MANAGE)
-        async with self._session.begin():
-            settings = await self._ensure_settings()
-            before = settings.pre_moderation_enabled
-            settings.pre_moderation_enabled = payload.pre_moderation_enabled
-            settings.updated_by_user_id = principal.user_id
-            settings.updated_at = datetime.now(UTC)
-            self._event(
-                principal,
-                target_type="SETTINGS",
-                target_id="1",
-                action=CommunityModerationEventAction.SETTINGS_UPDATED,
-                reason=payload.reason,
-                request_id=request_id,
-                event_data={
-                    "preModerationEnabled": {
-                        "before": before,
-                        "after": settings.pre_moderation_enabled,
-                    }
-                },
-            )
-            await self._session.flush()
-            return settings
-
     async def list_moderation_events(
         self,
         principal: AuthPrincipal,
@@ -905,14 +889,6 @@ class CommunityAdminService:
                 limit=page_size,
             )
 
-    async def _ensure_settings(self) -> CommunitySettings:
-        settings = await self._repository.get_settings()
-        if settings is None:
-            settings = CommunitySettings(singleton_id=1, pre_moderation_enabled=True)
-            self._repository.add_settings(settings)
-            await self._session.flush()
-        return settings
-
     def _event(
         self,
         principal: AuthPrincipal,
@@ -924,9 +900,9 @@ class CommunityAdminService:
         request_id: str,
         report_id: UUID | None = None,
         event_data: dict[str, object] | None = None,
-    ) -> None:
-        self._repository.add_moderation_event(
-            CommunityModerationEvent(
+    ) -> CommunityModerationEvent:
+        event = CommunityModerationEvent(
+                id=uuid4(),
                 target_type=target_type,
                 target_id=target_id,
                 action=action.value,
@@ -936,6 +912,29 @@ class CommunityAdminService:
                 request_id=request_id,
                 event_data=event_data,
             )
+        self._repository.add_moderation_event(event)
+        return event
+
+    async def _notify_post_removed(
+        self,
+        post: CommunityPost,
+        *,
+        event_id: UUID,
+        reason: str,
+    ) -> None:
+        await NotificationService(self._session).consume_in_transaction(
+            event_id=event_id,
+            user_id=post.author_user_id,
+            event_type="COMMUNITY_POST_REMOVED",
+            title="Bài viết của bạn đã bị gỡ",
+            body=(
+                f'Bài viết “{post.title}” đã bị gỡ. Lý do: {reason} '
+                "Bạn có thể chỉnh sửa nội dung hoặc liên hệ quản trị viên "
+                "nếu cần thêm thông tin."
+            ),
+            data={
+                "actionPath": "/community/mine",
+            },
         )
 
     @staticmethod

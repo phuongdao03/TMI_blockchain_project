@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  communityAdminApi,
   communityApi,
   communityMemberApi,
 } from "@/lib/api/client";
@@ -141,12 +140,12 @@ describe("community API client", () => {
     ).toBe("community-csrf");
   });
 
-  it("updates and submits drafts through the authenticated mutation contract", async () => {
+  it("updates and publishes drafts through the authenticated mutation contract", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
       Promise.resolve(
         response({
           success: true,
-          data: { id: "post/2", status: "PENDING" },
+          data: { id: "post/2", status: "PUBLISHED" },
           meta: { requestId: "community-submit" },
         }),
       ),
@@ -193,44 +192,6 @@ describe("community API client", () => {
     ).toBe("community-csrf");
   });
 
-  it("loads the pending queue and requires reasons for publish and reject", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
-      Promise.resolve(
-        response({
-          success: true,
-          data: [],
-          meta: {
-            requestId: "community-queue",
-            page: 1,
-            pageSize: 20,
-            total: 0,
-          },
-        }),
-      ),
-    );
-
-    await communityAdminApi.pendingPosts(3);
-    await communityAdminApi.publishPost("post/3", { reason: "Đúng tiêu chí" });
-    await communityAdminApi.rejectPost("post-4", { reason: "Thiếu nguồn" });
-
-    expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      "/api/v1/admin/community/posts?status=PENDING&page=3&pageSize=20",
-    );
-    expect(fetchMock.mock.calls[1]?.[0]).toBe(
-      "/api/v1/admin/community/posts/post%2F3/publish",
-    );
-    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
-      method: "POST",
-      body: JSON.stringify({ reason: "Đúng tiêu chí" }),
-    });
-    expect(fetchMock.mock.calls[2]?.[0]).toBe(
-      "/api/v1/admin/community/posts/post-4/reject",
-    );
-    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({
-      method: "POST",
-      body: JSON.stringify({ reason: "Thiếu nguồn" }),
-    });
-  });
 });
 
 function response(payload: unknown) {

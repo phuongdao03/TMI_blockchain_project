@@ -9,10 +9,11 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const navigationState = vi.hoisted(() => ({ pathname: "/" }));
+const navigationState = vi.hoisted(() => ({ pathname: "/", search: "" }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => navigationState.pathname,
+  useSearchParams: () => new URLSearchParams(navigationState.search),
 }));
 
 vi.mock("@/components/auth/logout-button", () => ({
@@ -26,6 +27,7 @@ import {
 } from "@/components/layout/shells";
 import { PublicExperienceShell } from "@/components/layout/public-experience-shell";
 import { AuthUserProvider } from "@/lib/auth/user-context";
+import { useAuthUser } from "@/lib/auth/user-context";
 
 function render(ui: ReactElement) {
   const queryClient = new QueryClient({
@@ -41,6 +43,7 @@ describe("layout shells", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     navigationState.pathname = "/";
+    navigationState.search = "";
   });
 
   it("keeps preview-only journeys out of the primary public header", () => {
@@ -60,6 +63,7 @@ describe("layout shells", () => {
 
   it("renders public navigation with auth entry points", () => {
     navigationState.pathname = "/works/published-work";
+    navigationState.search = "category=history";
     render(
       <PublicShell>
         <h1>Nền tảng bằng xác lập tài sản số</h1>
@@ -69,12 +73,14 @@ describe("layout shells", () => {
     expect(
       screen.getByRole("navigation", { name: "Điều hướng chính" }),
     ).toBeDefined();
-    expect(screen.getAllByRole("link", { name: "Trang chủ" })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Trang chủ" })).toHaveLength(2);
     expect(
       screen.getAllByRole("link", { name: "Tra cứu bằng xác lập" }),
     ).toHaveLength(1);
     expect(
-      screen.getByRole("link", { name: "Cộng đồng" }).getAttribute("href"),
+      within(screen.getByRole("banner"))
+        .getByRole("link", { name: "Cộng đồng" })
+        .getAttribute("href"),
     ).toBe("/community");
     expect(screen.getAllByRole("link", { name: "Hướng dẫn" })).toHaveLength(1);
     expect(
@@ -85,6 +91,17 @@ describe("layout shells", () => {
     const header = screen.getByRole("banner");
     const loginLink = within(header).getByRole("link", { name: "Đăng nhập" });
     const registerLink = within(header).getByRole("link", { name: "Đăng ký" });
+    expect(loginLink.getAttribute("href")).toBe(
+      "/login?next=%2Fworks%2Fpublished-work%3Fcategory%3Dhistory",
+    );
+    expect(registerLink.getAttribute("href")).toBe(
+      "/register?next=%2Fworks%2Fpublished-work%3Fcategory%3Dhistory",
+    );
+    expect(
+      screen
+        .getByRole("navigation", { name: "Điều hướng di động" })
+        .querySelector('a[href="/login?next=%2Fworks%2Fpublished-work%3Fcategory%3Dhistory"]'),
+    ).not.toBeNull();
     expect(loginLink.classList.contains("public-header__auth-link")).toBe(true);
     expect(registerLink.classList.contains("public-header__auth-link")).toBe(
       true,
@@ -104,6 +121,30 @@ describe("layout shells", () => {
         .getByRole("link", { name: "Danh sách đề cử" })
         .getAttribute("aria-current"),
     ).toBe("page");
+  });
+
+  it("shares the verified server user with public community content", () => {
+    function AuthProbe() {
+      const user = useAuthUser();
+      return <p>{user?.id ?? "anonymous"}</p>;
+    }
+
+    render(
+      <PublicExperienceShell
+        user={{
+          id: "community-user",
+          email: "member@example.com",
+          roles: ["USER"],
+          permissions: [],
+          isEmployee: false,
+          accountType: "PUBLIC_USER",
+        }}
+      >
+        <AuthProbe />
+      </PublicExperienceShell>,
+    );
+
+    expect(screen.getByText("community-user")).toBeDefined();
   });
 
   it("shows the complete brand beside the supplied seal in the public header", () => {
@@ -270,7 +311,7 @@ describe("layout shells", () => {
 
     await user.click(screen.getByRole("button", { name: "Mở menu" }));
     const navigation = screen.getByRole("navigation", {
-      name: "Điều hướng di động",
+      name: "Menu công khai",
     });
     const links = within(navigation).getAllByRole("link");
 
@@ -319,7 +360,7 @@ describe("layout shells", () => {
     ).toBeDefined();
   });
 
-  it("renders applicant navigation on desktop and mobile", () => {
+  it("renders personal navigation with the shared mobile destinations", () => {
     render(
       <AuthUserProvider
         user={{
@@ -339,13 +380,16 @@ describe("layout shells", () => {
     ).toBeDefined();
     expect(screen.queryByText("Mở điều hướng")).toBeNull();
     expect(screen.getByText("Khám phá")).toBeDefined();
-    expect(screen.getAllByRole("link", { name: "Tổng quan" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Tổng quan" })).toHaveLength(1);
     expect(screen.queryByText("Việc cần làm")).toBeNull();
-    expect(
-      screen
-        .getAllByRole("link")
-        .filter((link) => link.getAttribute("href") === "/dashboard"),
-    ).toHaveLength(2);
+    const mobileNavigation = screen.getByRole("navigation", {
+      name: "Điều hướng di động",
+    });
+    expect(within(mobileNavigation).getAllByRole("link")).toHaveLength(4);
+    for (const href of ["/", "/works", "/community", "/workspace"]) {
+      expect(mobileNavigation.querySelector(`a[href="${href}"]`)).not.toBeNull();
+    }
+    expect(mobileNavigation.querySelector('a[href="/dashboard"]')).toBeNull();
     expect(
       screen.queryByRole("link", { name: "Quản trị nội dung" }),
     ).toBeNull();
@@ -404,7 +448,7 @@ describe("layout shells", () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
-  it("opens the complete workspace navigation from the mobile quick menu", async () => {
+  it("opens the workspace drawer from the shared mobile More destination", async () => {
     const user = userEvent.setup();
     render(
       <AuthUserProvider
@@ -422,35 +466,14 @@ describe("layout shells", () => {
     );
 
     const quickNavigation = screen.getByRole("navigation", {
-      name: "Điều hướng nhanh",
+      name: "Điều hướng di động",
     });
-    for (const item of Array.from(quickNavigation.children)) {
-      expect(
-        item.querySelector(".dashboard-mobile-navigation__icon"),
-      ).not.toBeNull();
-      expect(
-        item.querySelector(".dashboard-mobile-navigation__label"),
-      ).not.toBeNull();
-    }
     expect(within(quickNavigation).getAllByRole("link")).toHaveLength(4);
-    expect(
-      within(quickNavigation)
-        .getAllByRole("link")
-        .some((link) => link.getAttribute("href") === "/dossiers"),
-    ).toBe(true);
-    expect(
-      within(quickNavigation)
-        .getAllByRole("link")
-        .some((link) => link.getAttribute("href") === "/works"),
-    ).toBe(true);
-    expect(
-      within(quickNavigation)
-        .getAllByRole("link")
-        .some((link) => link.getAttribute("href") === "/notifications"),
-    ).toBe(false);
+    expect(within(quickNavigation).getByRole("link", { name: "Cá nhân" }).getAttribute("href")).toBe("/workspace");
+    expect(within(quickNavigation).getByRole("link", { name: "Cộng đồng" }).getAttribute("href")).toBe("/community");
 
     const moreButton = within(quickNavigation).getByRole("button", {
-      name: "Mở tất cả chức năng",
+      name: "Mở thêm mục điều hướng",
     });
     await user.click(moreButton);
 
@@ -470,7 +493,9 @@ describe("layout shells", () => {
     await waitFor(() => expect(document.activeElement).toBe(moreButton));
   });
 
-  it("keeps blockchain signing directly visible to a super admin on mobile", () => {
+  it("keeps admin modules out of the mobile bar and in the admin drawer", async () => {
+    navigationState.pathname = "/admin";
+    const user = userEvent.setup();
     render(
       <AuthUserProvider
         user={{
@@ -486,18 +511,17 @@ describe("layout shells", () => {
       </AuthUserProvider>,
     );
 
-    const quickNavigation = screen.getByRole("navigation", {
-      name: "Điều hướng nhanh",
-    });
-    expect(within(quickNavigation).getAllByRole("link")).toHaveLength(4);
-    expect(
-      within(quickNavigation)
-        .getAllByRole("link")
-        .some((link) => link.getAttribute("href") === "/blockchain"),
-    ).toBe(true);
+    expect(screen.queryByRole("navigation", { name: "Điều hướng di động" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Mở điều hướng quản trị" }));
+    const drawer = screen.getByRole("dialog", { name: "Điều hướng quản trị" });
+    expect(within(drawer).getByRole("link", { name: "Không gian cá nhân" }).getAttribute("href")).toBe("/workspace");
+    expect(within(drawer).getByRole("link", { name: "Website" }).getAttribute("href")).toBe("/");
+    expect(within(drawer).getByRole("link", { name: "Cộng đồng" }).getAttribute("href")).toBe("/community");
+    expect(within(drawer).getByRole("link", { name: "Ký blockchain" }).getAttribute("href")).toBe("/blockchain");
   });
 
   it("opens the internal guide from the super admin workspace", () => {
+    navigationState.pathname = "/admin";
     render(
       <AuthUserProvider
         user={{
@@ -540,7 +564,7 @@ describe("layout shells", () => {
     );
 
     const links = screen.getAllByRole("link");
-    for (const href of ["/dashboard", "/works"]) {
+    for (const href of ["/workspace", "/works"]) {
       expect(links.some((link) => link.getAttribute("href") === href)).toBe(
         true,
       );
@@ -553,28 +577,32 @@ describe("layout shells", () => {
     ).toBe(false);
   });
 
-  it("shows one compact workspace action instead of email and auth CTAs", () => {
+  it("keeps the public page and exposes permission backed admin access in the account menu", async () => {
+    const user = userEvent.setup();
     render(
-      <PublicShell
+      <AuthUserProvider
         user={{
           id: "user-3",
           email: "reviewer@cnsgroup.vn",
           roles: ["MODERATOR"],
+          permissions: ["community.moderate"],
           accountType: "PUBLIC_USER",
         }}
       >
-        <h1>Catalog</h1>
-      </PublicShell>,
+        <PublicShell>
+          <h1>Catalog</h1>
+        </PublicShell>
+      </AuthUserProvider>,
     );
 
-    expect(
-      within(screen.getByRole("banner"))
-        .getByRole("link", { name: "Công việc được giao" })
-        .getAttribute("href"),
-    ).toBe("/work-allocations");
-    expect(screen.queryByText("reviewer@cnsgroup.vn")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Catalog" })).toBeDefined();
+    expect(screen.getByText("reviewer@cnsgroup.vn")).toBeDefined();
     expect(screen.queryByRole("link", { name: "Đăng nhập" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng ký" })).toBeNull();
+    await user.click(screen.getByText("reviewer@cnsgroup.vn"));
+    const accountMenu = screen.getByRole("navigation", { name: "Menu tài khoản" });
+    expect(within(accountMenu).getByRole("link", { name: "Khu vực quản trị" }).getAttribute("href")).toBe("/admin/community");
+    expect(within(accountMenu).getByRole("link", { name: "Không gian cá nhân" }).getAttribute("href")).toBe("/workspace");
   });
 
   it("does not advertise Super Admin council work to a moderator", () => {
@@ -602,7 +630,8 @@ describe("layout shells", () => {
     ).toBeNull();
   });
 
-  it("shows only permission-backed operations to scoped staff", () => {
+  it("shows only permission-backed operations in a scoped admin area", () => {
+    navigationState.pathname = "/admin/payments";
     render(
       <AuthUserProvider
         user={{
@@ -629,7 +658,8 @@ describe("layout shells", () => {
     expect(screen.queryByRole("link", { name: "Ký blockchain" })).toBeNull();
   });
 
-  it("shows the unified work allocation workspace to a super admin", () => {
+  it("shows admin work allocation links in the admin area", () => {
+    navigationState.pathname = "/admin";
     render(
       <AuthUserProvider
         user={{
@@ -653,10 +683,10 @@ describe("layout shells", () => {
     ).toBeNull();
   });
 
-  it("gives a reviewer a visible return path from the public library", () => {
+  it("keeps signed in reviewers on the public page without changing context", () => {
     navigationState.pathname = "/works";
     render(
-      <PublicShell
+      <AuthUserProvider
         user={{
           id: "reviewer-library",
           email: "reviewer@cnsgroup.vn",
@@ -664,22 +694,21 @@ describe("layout shells", () => {
           accountType: null,
         }}
       >
-        <h1>Thư viện đề cử</h1>
-      </PublicShell>,
+        <PublicShell>
+          <h1>Thư viện đề cử</h1>
+        </PublicShell>
+      </AuthUserProvider>,
     );
 
-    const returnLink = screen.getByRole("link", {
-      name: "Quay lại công việc được giao",
-    });
-    expect(returnLink.getAttribute("href")).toBe("/work-allocations");
-    expect(returnLink.classList.contains("public-workspace-return__link")).toBe(
-      true,
-    );
+    expect(screen.getByRole("heading", { name: "Thư viện đề cử" })).toBeDefined();
+    expect(screen.queryByRole("navigation", { name: "Quay lại khu vực làm việc" })).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Điều hướng di động" }).querySelector('a[href="/works"]')).not.toBeNull();
   });
 
-  it("keeps a regular user in their personal dashboard instead of advertising internal workspaces", () => {
+  it("offers the canonical workspace from the public account menu", async () => {
+    const user = userEvent.setup();
     render(
-      <PublicShell
+      <AuthUserProvider
         user={{
           id: "user-public",
           email: "reader@cnsgroup.vn",
@@ -687,18 +716,16 @@ describe("layout shells", () => {
           accountType: "PUBLIC_USER",
         }}
       >
-        <h1>Catalog</h1>
-      </PublicShell>,
+        <PublicShell>
+          <h1>Catalog</h1>
+        </PublicShell>
+      </AuthUserProvider>,
     );
 
-    const workspaceLink = within(screen.getByRole("banner")).getByRole("link", {
-      name: "Không gian của tôi",
-    });
-    expect(workspaceLink.getAttribute("href")).toBe("/dashboard");
-    expect(
-      workspaceLink.querySelector(".public-header__workspace-icon"),
-    ).not.toBeNull();
-    expect(screen.queryByRole("link", { name: /Quản trị nội bộ/i })).toBeNull();
+    await user.click(screen.getByText("reader@cnsgroup.vn"));
+    const menu = screen.getByRole("navigation", { name: "Menu tài khoản" });
+    expect(within(menu).getByRole("link", { name: "Không gian cá nhân" }).getAttribute("href")).toBe("/workspace");
+    expect(within(menu).queryByRole("link", { name: "Khu vực quản trị" })).toBeNull();
   });
 
   it("uses the current role context instead of a generic workspace title", () => {
@@ -723,7 +750,7 @@ describe("layout shells", () => {
     ).toBeDefined();
   });
 
-  it("keeps signed-in discovery pages inside the public shell", () => {
+  it("keeps signed-in discovery pages inside the public shell", async () => {
     navigationState.pathname = "/works";
     render(
       <PublicExperienceShell
@@ -742,30 +769,28 @@ describe("layout shells", () => {
       screen.getByRole("navigation", { name: "Điều hướng chính" }),
     ).toBeDefined();
     expect(
-      within(screen.getByRole("banner"))
-        .getByRole("link", { name: "Không gian của tôi" })
-        .getAttribute("href"),
-    ).toBe("/dashboard");
+      within(screen.getByRole("banner")).getByText("reader@cnsgroup.vn"),
+    ).toBeDefined();
     const quickNavigation = screen.getByRole("navigation", {
-      name: "Điều hướng nhanh",
+      name: "Điều hướng di động",
     });
     expect(
       within(quickNavigation)
-        .getByRole("link", { name: "Thư viện đề cử" })
+        .getByRole("link", { name: "Đề cử" })
         .getAttribute("aria-current"),
     ).toBe("page");
     expect(
       within(quickNavigation)
-        .getByRole("link", { name: "Thư viện đề cử" })
+        .getByRole("link", { name: "Đề cử" })
         .getAttribute("href"),
     ).toBe("/works");
   });
 
-  it("marks the library in signed-in quick navigation and restores menu focus", async () => {
+  it("marks public mobile destinations and restores focus after More", async () => {
     const user = userEvent.setup();
     navigationState.pathname = "/works";
     render(
-      <PublicShell
+      <AuthUserProvider
         user={{
           id: "reader-library",
           email: "reader@cnsgroup.vn",
@@ -773,22 +798,24 @@ describe("layout shells", () => {
           accountType: null,
         }}
       >
-        <h1>Thư viện đề cử</h1>
-      </PublicShell>,
+        <PublicShell>
+          <h1>Thư viện đề cử</h1>
+        </PublicShell>
+      </AuthUserProvider>,
     );
     const quickNavigation = screen.getByRole("navigation", {
-      name: "Điều hướng nhanh",
+      name: "Điều hướng di động",
     });
     expect(
       within(quickNavigation)
-        .getByRole("link", { name: "Thư viện đề cử" })
+        .getByRole("link", { name: "Đề cử" })
         .getAttribute("aria-current"),
     ).toBe("page");
     expect(
       within(quickNavigation)
-        .getByRole("link", { name: "Hồ sơ của tôi" })
+        .getByRole("link", { name: "Cá nhân" })
         .getAttribute("href"),
-    ).toBe("/dossiers");
+    ).toBe("/workspace");
     const moreButton = within(quickNavigation).getByRole("button", {
       name: "Mở thêm mục điều hướng",
     });

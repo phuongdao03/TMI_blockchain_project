@@ -10,11 +10,9 @@ import type {
   CommunityAdminCategory,
   CommunityAdminCategoryCreateInput,
   CommunityAdminCategoryUpdateInput,
-  CommunityAdminSettings,
   CommunityModerationTargetType,
   CommunityReport,
   CommunityReportReason,
-  CommunityTargetType,
 } from "@/lib/api/types";
 
 const PAGE_SIZE = 20;
@@ -48,6 +46,7 @@ export function CommunityReportQueue() {
         queryClient.invalidateQueries({
           queryKey: ["community", "admin", "moderation-history"],
         }),
+        queryClient.invalidateQueries({ queryKey: ["community"] }),
       ]);
     },
   });
@@ -175,6 +174,7 @@ function ReportCard({
   onReasonChange: (reason: string) => void;
   onResolve: (action: "HIDE" | "DISMISS") => void;
 }) {
+  const [hideDialogOpen, setHideDialogOpen] = useState(false);
   const preview = report.targetPreview;
   const targetHref =
     preview.type === "POST"
@@ -242,7 +242,7 @@ function ReportCard({
         className="mt-4 border-t border-[var(--theme-border)] pt-4"
         onSubmit={(event) => {
           event.preventDefault();
-          onResolve("HIDE");
+          setHideDialogOpen(true);
         }}
       >
         <label
@@ -277,108 +277,52 @@ function ReportCard({
           </button>
         </div>
       </form>
-    </article>
-  );
-}
-
-export function CommunityVisibilityPanel() {
-  const [targetType, setTargetType] = useState<CommunityTargetType>("POST");
-  const [action, setAction] = useState<"hide" | "restore">("hide");
-  const [targetId, setTargetId] = useState("");
-  const [reason, setReason] = useState("");
-  const [notice, setNotice] = useState("");
-  const visibility = useMutation({
-    mutationFn: async () => {
-      const input = { reason: reason.trim() };
-      if (targetType === "POST") {
-        return action === "hide"
-          ? communityAdminApi.hidePost(targetId.trim(), input)
-          : communityAdminApi.restorePost(targetId.trim(), input);
-      }
-      return action === "hide"
-        ? communityAdminApi.hideComment(targetId.trim(), input)
-        : communityAdminApi.restoreComment(targetId.trim(), input);
-    },
-    onSuccess: (result) => {
-      setNotice(
-        result.state === "HIDDEN"
-          ? "Nội dung đã được ẩn."
-          : "Nội dung đã được khôi phục.",
-      );
-      setReason("");
-    },
-  });
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!targetId.trim() || !reason.trim() || visibility.isPending) return;
-    setNotice("");
-    visibility.mutate();
-  }
-
-  return (
-    <section aria-labelledby="community-visibility-title" className="max-w-3xl">
-      <h2
-        className="text-2xl font-bold text-[var(--theme-text)]"
-        id="community-visibility-title"
-      >
-        Ẩn hoặc khôi phục nội dung
-      </h2>
-      <p className="mt-2 text-sm leading-6 text-[var(--theme-muted)]">
-        Chỉ thao tác với nội dung đã xác minh. Mỗi thay đổi cần có lý do lưu
-        trong lịch sử kiểm duyệt.
-      </p>
-      <form
-        className="mt-5 space-y-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
-        onSubmit={submit}
-      >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FieldSelect
-            label="Loại nội dung"
-            onChange={(value) => setTargetType(value as CommunityTargetType)}
-            value={targetType}
+      {hideDialogOpen ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 p-4">
+          <section
+            aria-labelledby={`community-report-hide-title-${report.id}`}
+            aria-modal="true"
+            className="w-full max-w-lg rounded-2xl bg-[var(--theme-surface)] p-5 text-[var(--theme-text)] shadow-2xl sm:p-6"
+            role="dialog"
           >
-            <option value="POST">Bài viết</option>
-            <option value="COMMENT">Bình luận</option>
-          </FieldSelect>
-          <FieldSelect
-            label="Thao tác"
-            onChange={(value) => setAction(value as "hide" | "restore")}
-            value={action}
-          >
-            <option value="hide">Ẩn</option>
-            <option value="restore">Khôi phục</option>
-          </FieldSelect>
+            <h3
+              className="text-xl font-bold"
+              id={`community-report-hide-title-${report.id}`}
+            >
+              {preview.type === "POST" ? "Gỡ bài viết" : "Ẩn bình luận"}
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-[var(--theme-muted)]">
+              Nội dung sẽ không còn hiển thị công khai. Tác giả sẽ nhận được
+              thông báo kèm lý do.
+            </p>
+            <p className="mt-4 rounded-lg bg-[var(--theme-elevated)] p-3 text-sm leading-6">
+              <span className="font-bold">Lý do:</span> {reason.trim()}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                className={secondaryClass}
+                disabled={pending}
+                onClick={() => setHideDialogOpen(false)}
+                type="button"
+              >
+                Hủy
+              </button>
+              <button
+                className={primaryClass}
+                disabled={!reason.trim() || pending}
+                onClick={() => {
+                  onResolve("HIDE");
+                  setHideDialogOpen(false);
+                }}
+                type="button"
+              >
+                Xác nhận gỡ nội dung
+              </button>
+            </div>
+          </section>
         </div>
-        <FieldInput
-          label="Mã nội dung"
-          onChange={setTargetId}
-          value={targetId}
-        />
-        <FieldTextarea label="Lý do" onChange={setReason} value={reason} />
-        {visibility.isError ? (
-          <p className="text-sm font-semibold text-red-700" role="alert">
-            Không thể cập nhật trạng thái nội dung. Có thể nội dung không còn ở
-            trạng thái phù hợp.
-          </p>
-        ) : null}
-        {notice ? (
-          <p
-            className="text-sm font-semibold text-[var(--theme-accent)]"
-            role="status"
-          >
-            {notice}
-          </p>
-        ) : null}
-        <button
-          className={primaryClass}
-          disabled={!targetId.trim() || !reason.trim() || visibility.isPending}
-          type="submit"
-        >
-          {action === "hide" ? "Ẩn nội dung" : "Khôi phục nội dung"}
-        </button>
-      </form>
-    </section>
+      ) : null}
+    </article>
   );
 }
 
@@ -924,127 +868,6 @@ interface CategoryDraft {
   reason: string;
 }
 
-export function CommunitySettingsPanel() {
-  const queryClient = useQueryClient();
-  const settings = useQuery({
-    queryKey: ["community", "admin", "settings"],
-    queryFn: ({ signal }) => communityAdminApi.settings(signal),
-  });
-  const [enabled, setEnabled] = useState<boolean | null>(null);
-  const [reason, setReason] = useState("");
-  const [notice, setNotice] = useState("");
-  const update = useMutation({
-    mutationFn: () =>
-      communityAdminApi.updateSettings({
-        preModerationEnabled:
-          enabled ?? settings.data?.preModerationEnabled ?? true,
-        reason: reason.trim(),
-      }),
-    onSuccess: async (result) => {
-      queryClient.setQueryData<CommunityAdminSettings>(
-        ["community", "admin", "settings"],
-        result,
-      );
-      setEnabled(result.preModerationEnabled);
-      setReason("");
-      setNotice("Cài đặt đã được lưu.");
-      await queryClient.invalidateQueries({
-        queryKey: ["community", "admin", "moderation-history"],
-      });
-    },
-  });
-  const currentValue = enabled ?? settings.data?.preModerationEnabled ?? false;
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!reason.trim() || update.isPending) return;
-    setNotice("");
-    update.mutate();
-  }
-
-  return (
-    <section aria-labelledby="community-settings-title" className="max-w-3xl">
-      <header className="mb-5 border-b border-[var(--theme-border)] pb-4">
-        <p className="text-xs font-bold tracking-[0.16em] text-[var(--theme-accent)] uppercase">
-          Quy trình xuất bản
-        </p>
-        <h2
-          className="mt-2 text-2xl font-bold text-[var(--theme-text)]"
-          id="community-settings-title"
-        >
-          Cài đặt cộng đồng
-        </h2>
-      </header>
-      {settings.isPending ? (
-        <PanelLoading label="Đang tải cài đặt cộng đồng" />
-      ) : null}
-      {settings.isError ? (
-        <PanelError
-          message="Chưa thể tải cài đặt cộng đồng."
-          onRetry={() => void settings.refetch()}
-        />
-      ) : null}
-      {settings.data ? (
-        <form
-          className="space-y-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
-          onSubmit={submit}
-        >
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--theme-border)] p-4">
-            <input
-              aria-label="Bật duyệt trước khi đăng"
-              checked={currentValue}
-              className="mt-1 size-4 accent-[var(--theme-accent)]"
-              onChange={(event) => setEnabled(event.target.checked)}
-              type="checkbox"
-            />
-            <span>
-              <span className="block font-bold text-[var(--theme-text)]">
-                Bật duyệt trước khi đăng
-              </span>
-              <span className="mt-1 block text-sm leading-6 text-[var(--theme-muted)]">
-                Bài viết gửi lên sẽ chờ người có quyền kiểm duyệt. Khi tắt, bài
-                gửi từ bản nháp được đăng ngay.
-              </span>
-            </span>
-          </label>
-          <FieldTextarea
-            label="Lý do thay đổi"
-            onChange={setReason}
-            required
-            value={reason}
-          />
-          <p className="text-xs text-[var(--theme-muted)]">
-            Cập nhật gần nhất: {formatDate(settings.data.updatedAt)}
-            {settings.data.updatedBy
-              ? ` · Tài khoản ${settings.data.updatedBy}`
-              : ""}
-          </p>
-          {update.isError ? (
-            <p className="text-sm font-semibold text-red-700" role="alert">
-              Không thể lưu cài đặt. Vui lòng thử lại.
-            </p>
-          ) : null}
-          {notice ? (
-            <p
-              className="text-sm font-semibold text-[var(--theme-accent)]"
-              role="status"
-            >
-              {notice}
-            </p>
-          ) : null}
-          <button
-            className={primaryClass}
-            disabled={!reason.trim() || update.isPending}
-            type="submit"
-          >
-            Lưu cài đặt
-          </button>
-        </form>
-      ) : null}
-    </section>
-  );
-}
-
 function FieldInput({
   label,
   onChange,
@@ -1074,36 +897,6 @@ function FieldInput({
         onChange={(event) => onChange(event.target.value)}
         required={required}
         type={type}
-        value={value}
-      />
-    </label>
-  );
-}
-
-function FieldTextarea({
-  label,
-  onChange,
-  required = false,
-  value,
-}: {
-  label: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-  value: string;
-}) {
-  const id = `community-field-${slugId(label)}`;
-  return (
-    <label
-      className="block text-sm font-semibold text-[var(--theme-text)]"
-      htmlFor={id}
-    >
-      {label}
-      <textarea
-        className={textareaClass}
-        id={id}
-        maxLength={2000}
-        onChange={(event) => onChange(event.target.value)}
-        required={required}
         value={value}
       />
     </label>

@@ -123,16 +123,6 @@ class CommunityCategoryPatchRequest(CommunitySchema):
         return self
 
 
-class CommunitySettingsRequest(CommunitySchema):
-    pre_moderation_enabled: bool
-    reason: Annotated[str, Field(min_length=1, max_length=2_000)]
-
-    @field_validator("reason")
-    @classmethod
-    def normalize_reason(cls, value: str) -> str:
-        return _plain_text(value, max_length=2_000)
-
-
 class CommunityActionRequest(CommunitySchema):
     reason: Annotated[str, Field(min_length=1, max_length=2_000)]
 
@@ -185,12 +175,6 @@ class CommunityAdminCategoryData(CommunitySchema):
     icon: str | None
     sort_order: int
     is_active: bool
-
-
-class CommunityAdminSettingsData(CommunitySchema):
-    pre_moderation_enabled: bool
-    updated_at: datetime
-    updated_by: UUID | None
 
 
 class CommunityModerationStateData(CommunitySchema):

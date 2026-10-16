@@ -11,6 +11,7 @@ import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import type { AuthUser } from "@/lib/api/types";
 
 const pageTitles: Record<string, string> = {
+  "/workspace": "Không gian cá nhân",
   "/dashboard": "Tổng quan",
   "/account": "Tài khoản",
   "/activity": "Hoạt động gần đây",
@@ -58,6 +59,9 @@ export function DashboardContextHeader({
 }) {
   const pathname = usePathname();
   const title = resolveTitle(pathname);
+  const navigationContext = pathname.startsWith("/admin")
+    ? "quản trị"
+    : "workspace";
 
   return (
     <header className="dashboard-context-header sticky top-0 z-30 flex min-h-16 items-center justify-between gap-4 border-b border-[var(--theme-line)] bg-[color:var(--theme-surface)] px-5 py-3 lg:px-8">
@@ -76,7 +80,7 @@ export function DashboardContextHeader({
             navigationOpen ? "dashboard-workspace-navigation" : undefined
           }
           aria-expanded={navigationOpen}
-          aria-label="Mở điều hướng workspace"
+          aria-label={`Mở điều hướng ${navigationContext}`}
           className="dashboard-context-header__menu"
           onClick={onOpenNavigation}
           ref={navigationButtonRef}

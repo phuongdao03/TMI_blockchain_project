@@ -3,39 +3,51 @@ import { describe, expect, it } from "vitest";
 import {
   hasAnyRole,
   resolveDefaultWorkspace,
-  resolvePublicHeaderAction,
+  resolveAdminEntryPoint,
   resolveWorkspacePersona,
 } from "@/lib/auth/role-workspaces";
 
 describe("role workspaces", () => {
-  it("routes the four product roles to their focused workspaces", () => {
-    expect(resolveDefaultWorkspace(["VIEWER"])).toBe("/dashboard");
-    expect(resolveDefaultWorkspace(["USER"])).toBe("/dashboard");
-    expect(resolveDefaultWorkspace(["MODERATOR"])).toBe("/work-allocations");
-    expect(resolveDefaultWorkspace(["SUPER_ADMIN"])).toBe("/admin");
+  it("opens every role in the personal workspace by default", () => {
+    for (const roles of [
+      ["VIEWER"],
+      ["USER"],
+      ["MODERATOR"],
+      ["SUPER_ADMIN"],
+      ["USER", "SUPER_ADMIN"],
+    ]) {
+      expect(resolveDefaultWorkspace(roles)).toBe("/workspace");
+    }
     expect(resolveDefaultWorkspace(["USER"], ["payments.read"])).toBe(
-      "/admin/payments",
+      "/workspace",
     );
     expect(resolveDefaultWorkspace(["USER"], ["users.read"])).toBe(
-      "/admin/users",
-    );
-    expect(resolveDefaultWorkspace(["MODERATOR"], ["review.assign"])).toBe(
-      "/work-allocations",
+      "/workspace",
     );
   });
 
-  it("returns scoped staff from public pages to their assigned operation", () => {
-    const action = resolvePublicHeaderAction(["USER"], ["payments.read"]);
-
-    expect(action.href).toBe("/admin/payments");
-    expect(action.label).toBe("Khu vực làm việc");
-    expect(action.label).not.toMatch(/^Quay lại/i);
+  it("exposes an explicit permitted admin entry point", () => {
+    expect(resolveAdminEntryPoint(["USER"], ["payments.read"])).toEqual({
+      href: "/admin/payments",
+      label: "Khu vực quản trị",
+    });
+    expect(resolveAdminEntryPoint(["SUPER_ADMIN"])).toEqual({
+      href: "/admin",
+      label: "Khu vực quản trị",
+    });
+    expect(resolveAdminEntryPoint(["USER"], [])).toBeNull();
+    expect(resolveAdminEntryPoint(["USER"], ["review.assign"])).toBeNull();
+    expect(
+      resolveAdminEntryPoint(["USER"], ["hr.attendance.worksites.manage"])
+        ?.href,
+    ).toBe("/admin/attendance/worksites");
   });
 
-  it("returns Moderators to their allocated work from public pages", () => {
-    expect(resolvePublicHeaderAction(["MODERATOR"])).toEqual({
-      href: "/work-allocations",
-      label: "Công việc được giao",
+  it("exposes moderator administration only with its permission", () => {
+    expect(resolveAdminEntryPoint(["MODERATOR"])).toBeNull();
+    expect(resolveAdminEntryPoint(["MODERATOR"], ["community.moderate"])).toEqual({
+      href: "/admin/community",
+      label: "Khu vực quản trị",
     });
   });
 

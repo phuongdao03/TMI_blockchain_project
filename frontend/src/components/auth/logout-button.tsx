@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { authApi } from "@/lib/api/client";
-export function LogoutButton() {
+import { broadcastAuthSessionChange } from "@/lib/auth/session-sync";
+export function LogoutButton({ redirectTo = "/" }: { redirectTo?: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [pending, setPending] = useState(false);
@@ -17,6 +18,7 @@ export function LogoutButton() {
     setError(undefined);
     try {
       await authApi.logout();
+      broadcastAuthSessionChange();
       try {
         const [{ signOut }, { getFirebaseAuth }] = await Promise.all([
           import("firebase/auth"),
@@ -27,7 +29,7 @@ export function LogoutButton() {
         // The authoritative backend session is already revoked.
       }
       queryClient.clear();
-      router.replace("/login");
+      router.replace(redirectTo);
       router.refresh();
     } catch {
       setError("Không thể đăng xuất lúc này. Vui lòng thử lại.");

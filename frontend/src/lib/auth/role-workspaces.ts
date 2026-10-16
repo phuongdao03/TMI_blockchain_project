@@ -9,29 +9,40 @@ export function hasAnyRole(
   return allowed.some((role) => roles.includes(role));
 }
 
-const OPERATIONAL_WORKSPACES: ReadonlyArray<readonly [string, string]> = [
-  ["review.assign", "/admin/reviews"],
+type AdminEntryPoint = readonly [
+  permission: string,
+  href: string,
+  allowedRoles?: readonly string[],
+];
+
+const ADMIN_ENTRY_POINTS: readonly AdminEntryPoint[] = [
+  ["review.assign", "/admin/reviews", ["SUPER_ADMIN"]],
+  ["work.allocations.manage", "/admin/work-allocations", ["SUPER_ADMIN"]],
+  ["hr.overtime.read", "/admin/overtime"],
+  ["hr.leave.read", "/admin/leave"],
+  ["hr.attendance.worksites.manage", "/admin/attendance/worksites"],
+  ["hr.attendance.read", "/admin/attendance"],
+  ["hr.payroll.read", "/admin/payroll"],
+  ["hr.employees.read", "/admin/employees"],
+  ["hr.departments.manage", "/admin/departments"],
   ["payments.read", "/admin/payments"],
   ["dashboard.read", "/admin/dashboard"],
   ["users.read", "/admin/users"],
   ["staff.read", "/admin/staff"],
   ["audit.read", "/admin/audit"],
   ["reports.read", "/admin/reports"],
-  ["submissions.approve", "/reviews"],
-  ["blockchain.sign", "/blockchain"],
+  ["public_content.manage", "/admin/content"],
+  ["community.moderate", "/admin/community"],
+  ["community.manage", "/admin/community"],
 ];
 
 export function resolveDefaultWorkspace(
-  roles: readonly string[],
-  permissions: readonly string[] = [],
+  _roles: readonly string[],
+  _permissions: readonly string[] = [],
 ): string {
-  if (roles.includes("SUPER_ADMIN")) return "/admin";
-  if (roles.includes("MODERATOR")) return "/work-allocations";
-  const assignedWorkspace = OPERATIONAL_WORKSPACES.find(([permission]) =>
-    permissions.includes(permission),
-  );
-  if (assignedWorkspace) return assignedWorkspace[1];
-  return "/dashboard";
+  void _roles;
+  void _permissions;
+  return "/workspace";
 }
 
 export function resolveWorkspacePersona(
@@ -43,22 +54,23 @@ export function resolveWorkspacePersona(
   return "VIEWER";
 }
 
-export function resolvePublicHeaderAction(
+export function resolveAdminEntryPoint(
   roles: readonly string[],
   permissions: readonly string[] = [],
-): {
-  href: string;
-  label: string;
-} {
-  const persona = resolveWorkspacePersona(roles);
-  if (persona === "VIEWER")
-    return { href: "/dashboard", label: "Không gian của tôi" };
-  if (persona === "USER" && permissions.length === 0)
-    return { href: "/dossiers", label: "Hồ sơ của tôi" };
-  if (persona === "MODERATOR")
-    return { href: "/work-allocations", label: "Công việc được giao" };
+): { href: string; label: string } | null {
+  if (roles.includes("SUPER_ADMIN")) {
+    return { href: "/admin", label: "Khu vực quản trị" };
+  }
+
+  const entryPoint = ADMIN_ENTRY_POINTS.find(
+    ([permission, , allowedRoles]) =>
+      permissions.includes(permission) &&
+      (!allowedRoles || allowedRoles.some((role) => roles.includes(role))),
+  );
+  if (!entryPoint) return null;
+
   return {
-    href: resolveDefaultWorkspace(roles, permissions),
-    label: "Khu vực làm việc",
+    href: entryPoint[1],
+    label: "Khu vực quản trị",
   };
 }

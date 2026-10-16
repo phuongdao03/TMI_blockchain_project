@@ -5,8 +5,15 @@ import { PageLoading } from "@/components/ui/page-loading";
 import { getServerAuthState } from "@/lib/auth/server-session";
 
 async function PublicLayoutContent({ children }: { children: ReactNode }) {
-  const { user } = await getServerAuthState();
-  return <PublicExperienceShell user={user}>{children}</PublicExperienceShell>;
+  const authState = await getServerAuthState();
+  return (
+    <PublicExperienceShell
+      hasSessionCookie={authState.hasSessionCookie}
+      user={authState.user}
+    >
+      {children}
+    </PublicExperienceShell>
+  );
 }
 
 export default function PublicLayout({ children }: { children: ReactNode }) {

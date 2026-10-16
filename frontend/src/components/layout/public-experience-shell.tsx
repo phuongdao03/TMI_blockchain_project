@@ -2,10 +2,22 @@ import type { PropsWithChildren } from "react";
 
 import { PublicShell } from "@/components/layout/shells";
 import type { AuthUser } from "@/lib/api/types";
+import { PublicAuthProvider } from "@/lib/auth/user-context";
 
 export function PublicExperienceShell({
   children,
   user,
-}: PropsWithChildren<{ user: AuthUser | null }>) {
-  return <PublicShell user={user}>{children}</PublicShell>;
+  hasSessionCookie = Boolean(user),
+}: PropsWithChildren<{
+  user: AuthUser | null;
+  hasSessionCookie?: boolean;
+}>) {
+  return (
+    <PublicAuthProvider
+      initialUser={user}
+      hasSessionCookie={hasSessionCookie}
+    >
+      <PublicShell>{children}</PublicShell>
+    </PublicAuthProvider>
+  );
 }

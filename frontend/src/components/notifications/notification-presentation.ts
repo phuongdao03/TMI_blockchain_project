@@ -133,6 +133,11 @@ const EVENT_PRESENTATION: Record<
     groupLabel: "Cộng đồng",
     tone: "warning",
   },
+  COMMUNITY_POST_REMOVED: {
+    actionLabel: "Xem bài viết của tôi",
+    groupLabel: "Cộng đồng",
+    tone: "warning",
+  },
 };
 
 const INTERNAL_BASE = "https://app.invalid";

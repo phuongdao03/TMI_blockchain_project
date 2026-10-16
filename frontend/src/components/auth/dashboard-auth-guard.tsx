@@ -2,10 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
 
 import { authApi } from "@/lib/api/client";
+import { safeLocalDestination } from "@/lib/auth/safe-destination";
 import type { AuthUser } from "@/lib/api/types";
 import { AuthUserProvider } from "@/lib/auth/user-context";
 
@@ -18,6 +19,8 @@ export function DashboardAuthGuard({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
   const { data: user, isPending } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: authApi.currentUser,
@@ -29,11 +32,13 @@ export function DashboardAuthGuard({
 
   useEffect(() => {
     if (!isPending && !effectiveUser) {
-      const next =
-        pathname && pathname.startsWith("/") ? pathname : "/dashboard";
+      const next = safeLocalDestination(
+        `${pathname || "/workspace"}${query ? `?${query}` : ""}`,
+        "/workspace",
+      );
       router.replace(`/login?next=${encodeURIComponent(next)}`);
     }
-  }, [effectiveUser, isPending, pathname, router]);
+  }, [effectiveUser, isPending, pathname, query, router]);
 
   if (isPending || !effectiveUser) {
     return (

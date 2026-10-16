@@ -63,6 +63,7 @@ export function CommunityAdminPostsWorkspace() {
       await queryClient.invalidateQueries({
         queryKey: ["admin", "community", "posts"],
       });
+      await queryClient.invalidateQueries({ queryKey: ["community"] });
     },
   });
   const totalPages = Math.max(
@@ -91,8 +92,8 @@ export function CommunityAdminPostsWorkspace() {
           Quản lý bài viết
         </h2>
         <p className="mt-1 text-sm text-[var(--theme-muted)]">
-          Tìm và xử lý bài viết theo trạng thái. Mọi thay đổi cần có lý do kiểm
-          duyệt.
+          Quản lý bài viết đã đăng và xem các bản nháp hoặc bài cũ còn chờ xử lý.
+          Mọi thay đổi cần có lý do lưu trong lịch sử.
         </p>
       </header>
       <form
@@ -156,11 +157,11 @@ export function CommunityAdminPostsWorkspace() {
               onReasonChange={(value) =>
                 setReasons((current) => ({ ...current, [post.id]: value }))
               }
-              onAction={(type) =>
+              onAction={(type, reason) =>
                 action.mutate({
                   post,
                   type,
-                  reason: (reasons[post.id] ?? "").trim(),
+                  reason: (reason ?? reasons[post.id] ?? "").trim(),
                 })
               }
               pending={
@@ -194,10 +195,12 @@ function AdminPostRow({
   post: CommunityAdminPost;
   reason: string;
   onReasonChange: (value: string) => void;
-  onAction: (action: PostAction) => void;
+  onAction: (action: PostAction, reason?: string) => void;
   pending: boolean;
   error: boolean;
 }) {
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [removalReason, setRemovalReason] = useState("");
   const deleted = post.status === "DELETED" || Boolean(post.deletedAt);
   const ownerDeleted =
     post.status === "DELETED" && post.preDeleteStatus === null;
@@ -268,10 +271,10 @@ function AdminPostRow({
             </ActionButton>
           ) : !deleted ? (
             <ActionButton
-              disabled={pending || !reason.trim()}
-              onClick={() => onAction("hide")}
+              disabled={pending}
+              onClick={() => setRemoveDialogOpen(true)}
             >
-              Ẩn bài viết
+              Gỡ bài viết
             </ActionButton>
           ) : null}
           {canPin ? (
@@ -312,7 +315,7 @@ function AdminPostRow({
       </div>
       <div className="mt-4 border-t border-[var(--theme-border)] pt-3">
         <label className="block text-sm font-semibold text-[var(--theme-text)]">
-          Lý do kiểm duyệt
+          Lý do thao tác
           <textarea
             className={textareaClass}
             maxLength={2000}
@@ -334,6 +337,86 @@ function AdminPostRow({
           </p>
         ) : null}
       </div>
+      {removeDialogOpen ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 p-4">
+          <section
+            aria-labelledby={`remove-post-title-${post.id}`}
+            aria-modal="true"
+            className="w-full max-w-lg rounded-2xl bg-[var(--theme-surface)] p-5 text-[var(--theme-text)] shadow-2xl sm:p-6"
+            role="dialog"
+          >
+            <h3
+              className="text-xl font-bold"
+              id={`remove-post-title-${post.id}`}
+            >
+              Gỡ bài viết
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-[var(--theme-muted)]">
+              Bài viết sẽ không còn hiển thị công khai. Tác giả sẽ nhận được
+              thông báo về lý do gỡ bài.
+            </p>
+            <label className="mt-4 block text-sm font-semibold">
+              Gợi ý lý do
+              <select
+                className={inputClass}
+                onChange={(event) => {
+                  if (event.target.value) setRemovalReason(event.target.value);
+                }}
+                value=""
+              >
+                <option value="">Chọn lý do gợi ý</option>
+                <option value="Nội dung không phù hợp.">
+                  Nội dung không phù hợp
+                </option>
+                <option value="Spam hoặc quảng cáo.">Spam hoặc quảng cáo</option>
+                <option value="Ngôn từ thiếu văn minh.">
+                  Ngôn từ thiếu văn minh
+                </option>
+                <option value="Vi phạm quy định cộng đồng.">
+                  Vi phạm quy định cộng đồng
+                </option>
+                <option value="Nội dung sai lệch hoặc gây hiểu nhầm.">
+                  Nội dung sai lệch hoặc gây hiểu nhầm
+                </option>
+              </select>
+            </label>
+            <label
+              className="mt-3 block text-sm font-semibold"
+              htmlFor={`remove-post-reason-${post.id}`}
+            >
+              Lý do gỡ bài
+              <textarea
+                className={textareaClass}
+                id={`remove-post-reason-${post.id}`}
+                maxLength={2000}
+                onChange={(event) => setRemovalReason(event.target.value)}
+                required
+                rows={4}
+                value={removalReason}
+              />
+            </label>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <ActionButton
+                disabled={pending}
+                onClick={() => setRemoveDialogOpen(false)}
+              >
+                Hủy
+              </ActionButton>
+              <ActionButton
+                danger
+                disabled={pending || !removalReason.trim()}
+                onClick={() => {
+                  onAction("hide", removalReason.trim());
+                  setRemoveDialogOpen(false);
+                  setRemovalReason("");
+                }}
+              >
+                Gỡ bài viết
+              </ActionButton>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </li>
   );
 }
@@ -1252,7 +1335,7 @@ function EmptyState({ message }: { message: string }) {
 function postStatusLabel(status: CommunityPostStatus): string {
   const labels: Record<CommunityPostStatus, string> = {
     DRAFT: "Bản nháp",
-    PENDING: "Chờ duyệt",
+    PENDING: "Chờ xử lý (bài cũ)",
     PUBLISHED: "Đã đăng",
     REJECTED: "Cần chỉnh sửa",
     HIDDEN: "Đã ẩn",

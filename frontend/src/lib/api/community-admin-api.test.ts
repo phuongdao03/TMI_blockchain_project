@@ -90,7 +90,7 @@ describe("community reports and administration API", () => {
     }
   });
 
-  it("filters moderation history and manages categories and pre-moderation settings", async () => {
+  it("filters moderation history and manages categories", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation(() =>
@@ -115,12 +115,6 @@ describe("community reports and administration API", () => {
       isActive: false,
       reason: "Tạm ngừng chuyên mục.",
     });
-    await communityAdminApi.settings();
-    await communityAdminApi.updateSettings({
-      preModerationEnabled: false,
-      reason: "Đã hoàn tất giai đoạn kiểm duyệt thử nghiệm.",
-    });
-
     expect(
       fetchMock.mock.calls.map(([url, init]) => [url, init?.method]),
     ).toEqual([
@@ -131,8 +125,6 @@ describe("community reports and administration API", () => {
       ["/api/v1/admin/community/categories", undefined],
       ["/api/v1/admin/community/categories", "POST"],
       ["/api/v1/admin/community/categories/category%2F1", "PATCH"],
-      ["/api/v1/admin/community/settings", undefined],
-      ["/api/v1/admin/community/settings", "PUT"],
     ]);
     for (const [, init] of fetchMock.mock.calls.filter(
       ([, init]) => init?.method,

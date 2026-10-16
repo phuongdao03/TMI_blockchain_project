@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,23 +8,15 @@ import {
   CommunityCategoryManagement,
   CommunityModerationHistoryPanel,
   CommunityReportQueue,
-  CommunitySettingsPanel,
-  CommunityVisibilityPanel,
 } from "@/components/community/community-admin-panels";
 
 const api = vi.hoisted(() => ({
   reports: vi.fn(),
   resolveReport: vi.fn(),
   moderationHistory: vi.fn(),
-  hidePost: vi.fn(),
-  restorePost: vi.fn(),
-  hideComment: vi.fn(),
-  restoreComment: vi.fn(),
   categories: vi.fn(),
   createCategory: vi.fn(),
   updateCategory: vi.fn(),
-  settings: vi.fn(),
-  updateSettings: vi.fn(),
 }));
 
 vi.mock("@/lib/api/client", () => ({ communityAdminApi: api }));
@@ -107,39 +99,9 @@ beforeEach(() => {
     ],
     meta: { requestId: "history-1", page: 1, pageSize: 20, total: 1 },
   });
-  api.hidePost.mockResolvedValue({
-    targetType: "POST",
-    targetId: "post-1",
-    state: "HIDDEN",
-  });
-  api.restorePost.mockResolvedValue({
-    targetType: "POST",
-    targetId: "post-1",
-    state: "VISIBLE",
-  });
-  api.hideComment.mockResolvedValue({
-    targetType: "COMMENT",
-    targetId: "comment-1",
-    state: "HIDDEN",
-  });
-  api.restoreComment.mockResolvedValue({
-    targetType: "COMMENT",
-    targetId: "comment-1",
-    state: "VISIBLE",
-  });
   api.categories.mockResolvedValue([category]);
   api.createCategory.mockResolvedValue({ ...category, id: "category-2" });
   api.updateCategory.mockResolvedValue({ ...category, isActive: false });
-  api.settings.mockResolvedValue({
-    preModerationEnabled: true,
-    updatedAt: "2026-10-14T09:00:00Z",
-    updatedBy: "admin-1",
-  });
-  api.updateSettings.mockResolvedValue({
-    preModerationEnabled: false,
-    updatedAt: "2026-10-14T11:00:00Z",
-    updatedBy: "admin-1",
-  });
 });
 
 describe("community admin panels", () => {
@@ -178,6 +140,11 @@ describe("community admin panels", () => {
     await user.click(
       screen.getByRole("button", { name: "Ẩn nội dung và xử lý" }),
     );
+    const dialog = await screen.findByRole("dialog", { name: "Gỡ bài viết" });
+    expect(dialog.textContent).toContain("Lý do: Ẩn nội dung quảng cáo.");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Xác nhận gỡ nội dung" }),
+    );
 
     await waitFor(() =>
       expect(api.resolveReport).toHaveBeenCalledWith("report-1", {
@@ -200,39 +167,6 @@ describe("community admin panels", () => {
         expect.objectContaining({ targetId: "post-1", page: 1, pageSize: 20 }),
         expect.any(AbortSignal),
       ),
-    );
-  });
-
-  it("hides or restores the selected post/comment with an audit reason", async () => {
-    const user = userEvent.setup();
-    render(<CommunityVisibilityPanel />, { wrapper });
-
-    await user.selectOptions(screen.getByLabelText("Loại nội dung"), "COMMENT");
-    await user.selectOptions(screen.getByLabelText("Thao tác"), "hide");
-    await user.type(screen.getByLabelText("Mã nội dung"), "comment-1");
-    await user.type(
-      screen.getByLabelText("Lý do"),
-      "Nội dung cần được xem xét.",
-    );
-    await user.click(screen.getByRole("button", { name: "Ẩn nội dung" }));
-    await waitFor(() =>
-      expect(api.hideComment).toHaveBeenCalledWith("comment-1", {
-        reason: "Nội dung cần được xem xét.",
-      }),
-    );
-
-    await user.selectOptions(screen.getByLabelText("Thao tác"), "restore");
-    await user.type(
-      screen.getAllByRole("textbox").at(-1)!,
-      "Nội dung đã được rà soát.",
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Khôi phục nội dung" }),
-    );
-    await waitFor(() =>
-      expect(api.restoreComment).toHaveBeenCalledWith("comment-1", {
-        reason: "Nội dung đã được rà soát.",
-      }),
     );
   });
 
@@ -282,26 +216,4 @@ describe("community admin panels", () => {
     );
   });
 
-  it("updates the pre-moderation setting with a required audit reason", async () => {
-    const user = userEvent.setup();
-    render(<CommunitySettingsPanel />, { wrapper });
-
-    const enabled = await screen.findByRole("checkbox", {
-      name: "Bật duyệt trước khi đăng",
-    });
-    expect((enabled as HTMLInputElement).checked).toBe(true);
-    await user.click(enabled);
-    await user.type(
-      screen.getByLabelText("Lý do thay đổi"),
-      "Đã hoàn tất giai đoạn thử nghiệm.",
-    );
-    await user.click(screen.getByRole("button", { name: "Lưu cài đặt" }));
-
-    await waitFor(() =>
-      expect(api.updateSettings).toHaveBeenCalledWith({
-        preModerationEnabled: false,
-        reason: "Đã hoàn tất giai đoạn thử nghiệm.",
-      }),
-    );
-  });
 });

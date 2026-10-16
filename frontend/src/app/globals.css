@@ -2810,6 +2810,174 @@ summary {
   }
 }
 
+.public-user-menu {
+  position: relative;
+}
+
+.public-user-menu > summary {
+  display: flex;
+  min-height: 2.75rem;
+  max-width: 15rem;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.35rem;
+  border: 1px solid var(--theme-border);
+  border-radius: 999px;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 650;
+  list-style: none;
+}
+
+.public-user-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.public-user-menu__avatar {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface));
+  color: var(--theme-accent);
+}
+
+.public-user-menu__avatar svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.public-user-menu__email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-user-menu__panel {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  display: grid;
+  min-width: 13rem;
+  gap: 0.2rem;
+  padding: 0.5rem;
+  border: 1px solid var(--theme-border);
+  border-radius: 0.9rem;
+  background: var(--theme-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.public-user-menu__panel > a {
+  display: flex;
+  min-height: 2.7rem;
+  align-items: center;
+  padding-inline: 0.75rem;
+  border-radius: 0.6rem;
+  color: var(--theme-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.public-user-menu__panel > a:hover,
+.public-user-menu__panel > a:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface));
+}
+
+.site-mobile-navigation {
+  display: none;
+}
+
+@media (max-width: 63.99rem) {
+  .public-user-menu {
+    display: none;
+  }
+
+  .public-mobile-drawer {
+    z-index: 50;
+  }
+
+  .site-mobile-navigation {
+    position: fixed;
+    z-index: 35;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.125rem;
+    padding: 0.35rem 0.35rem max(0.35rem, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--theme-border);
+    background: var(--theme-surface);
+    box-shadow: 0 -0.5rem 1.75rem color-mix(in srgb, var(--theme-text) 12%, transparent);
+  }
+
+  .site-mobile-navigation__item {
+    display: flex;
+    min-width: 0;
+    min-height: 3.5rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    padding: 0.25rem 0.125rem;
+    border: 0;
+    border-radius: 0.65rem;
+    background: transparent;
+    color: var(--theme-muted);
+    font: inherit;
+    font-size: 0.62rem;
+    font-weight: 650;
+    line-height: 1.1;
+    text-align: center;
+    text-decoration: none;
+    touch-action: manipulation;
+  }
+
+  .site-mobile-navigation__item[aria-current="page"] {
+    background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface));
+    color: var(--theme-accent);
+  }
+
+  .site-mobile-navigation__item:focus-visible {
+    outline: 2px solid var(--theme-accent);
+    outline-offset: 1px;
+  }
+
+  .site-mobile-navigation__icon {
+    width: 1.2rem;
+    height: 1.2rem;
+    flex: 0 0 auto;
+    stroke-width: 1.8;
+  }
+
+  .site-mobile-navigation__item > span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .public-shell {
+    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom));
+  }
+
+  .dashboard-shell--workspace .dashboard-main {
+    padding-bottom: calc(7.25rem + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(7.25rem + env(safe-area-inset-bottom));
+  }
+
+  .dashboard-shell--admin .dashboard-main {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  }
+}
+
 /* Mobile stability pass --------------------------------------------------
    Preserve the THV burgundy-and-gold identity while avoiding expensive
    staged/blur motion on constrained devices. */
@@ -11322,6 +11490,23 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
   padding-top: 0.75rem;
 }
 
+.public-mobile-nav__account-links {
+  display: grid;
+  gap: 0.125rem;
+  margin-top: 0.35rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--theme-border);
+}
+
+.public-mobile-nav__account-links > div {
+  padding: 0.4rem 0.6rem 0;
+}
+
+.public-mobile-nav__account-links > div > button {
+  width: 100%;
+  justify-content: center;
+}
+
 .public-mobile-nav .public-mobile-nav__account a {
   min-height: 2.875rem;
   border-radius: 0.7rem;
@@ -12609,4 +12794,63 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
   .dashboard-page-stage :where(.dashboard-overview__hero) {
     padding: 1.5rem;
   }
+}
+
+/* Theme bridge for management screens still using neutral Tailwind utilities. */
+.workspace-screen {
+  color: var(--theme-text);
+}
+
+.workspace-screen :where(.bg-white) {
+  background-color: var(--theme-surface);
+}
+
+.workspace-screen :where(.bg-neutral-50) {
+  background-color: var(--theme-elevated);
+}
+
+.workspace-screen :where(.bg-neutral-100) {
+  background-color: color-mix(
+    in srgb,
+    var(--theme-elevated) 68%,
+    var(--theme-border)
+  );
+}
+
+.workspace-screen :where([class~="bg-neutral-50/80"], [class~="bg-neutral-100/80"]) {
+  background-color: color-mix(in srgb, var(--theme-elevated) 88%, transparent);
+}
+
+.workspace-screen :where(
+    .border-neutral-100,
+    .border-neutral-200,
+    .border-neutral-300,
+    .border-neutral-800
+  ) {
+  border-color: var(--theme-border);
+}
+
+.workspace-screen :where(
+    .text-neutral-950,
+    .text-neutral-900,
+    .text-neutral-800
+  ) {
+  color: var(--theme-text);
+}
+
+.workspace-screen :where(
+    .text-neutral-700,
+    .text-neutral-600,
+    .text-neutral-500,
+    .text-neutral-400
+  ) {
+  color: var(--theme-muted);
+}
+
+.workspace-screen :where([class~="hover:bg-neutral-50"], [class~="hover:bg-neutral-100"]):hover {
+  background-color: var(--theme-elevated);
+}
+
+.workspace-screen :where(.rounded-2xl, .rounded-3xl) {
+  border-radius: var(--radius-surface, 0.75rem);
 }

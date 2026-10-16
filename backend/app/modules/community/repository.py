@@ -257,6 +257,7 @@ class CommunityRepository:
             CommunityPostStatus.PENDING,
             CommunityPostStatus.PUBLISHED,
             CommunityPostStatus.REJECTED,
+            CommunityPostStatus.HIDDEN,
         )
         filters: list[ColumnElement[bool]] = [
             CommunityPost.author_user_id == user_id,
@@ -286,6 +287,7 @@ class CommunityRepository:
             CommunityPostStatus.PENDING,
             CommunityPostStatus.PUBLISHED,
             CommunityPostStatus.REJECTED,
+            CommunityPostStatus.HIDDEN,
         )
         result = await self._session.execute(
             self._post_rows_statement(viewer_user_id=user_id)
@@ -358,25 +360,6 @@ class CommunityRepository:
         rows = self._rows(result.all())
         return rows[0] if rows else None
 
-    async def list_moderation_queue(
-        self, *, offset: int, limit: int
-    ) -> tuple[tuple[CommunityPostRow, ...], int]:
-        filters = (CommunityPost.status == CommunityPostStatus.PENDING,)
-        total = int(
-            await self._session.scalar(
-                select(func.count(CommunityPost.id)).where(*filters)
-            )
-            or 0
-        )
-        result = await self._session.execute(
-            self._post_rows_statement()
-            .where(*filters)
-            .order_by(CommunityPost.submitted_at, CommunityPost.id)
-            .offset(offset)
-            .limit(limit)
-        )
-        return self._rows(result.all()), total
-
     async def get_post(
         self, post_id: UUID, *, for_update: bool = False
     ) -> CommunityPost | None:
@@ -410,6 +393,7 @@ class CommunityRepository:
                     CommunityPostStatus.DRAFT,
                     CommunityPostStatus.PENDING,
                     CommunityPostStatus.REJECTED,
+                    CommunityPostStatus.HIDDEN,
                 )
             ),
             CommunityPost.deleted_at.is_(None),

@@ -12,6 +12,7 @@ import {
   FileText,
   Gauge,
   CircleHelp,
+  House,
   History,
   LayoutDashboard,
   Menu,
@@ -28,6 +29,7 @@ import { usePathname } from "next/navigation";
 import { useAuthUser } from "@/lib/auth/user-context";
 import {
   resolveWorkspacePersona,
+  resolveAdminEntryPoint,
   type WorkspacePersona,
 } from "@/lib/auth/role-workspaces";
 import { cn } from "@/lib/utils";
@@ -39,6 +41,7 @@ type NavigationItem = {
   label: string;
   icon: typeof Gauge;
   permission?: string;
+  permissions?: readonly string[];
   allowedRoles?: readonly string[];
 };
 
@@ -48,8 +51,10 @@ type NavigationSection = {
 };
 
 const discoveryItems: NavigationItem[] = [
-  { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
+  { href: "/workspace", label: "Tổng quan", icon: LayoutDashboard },
+  { href: "/", label: "Website", icon: House },
   { href: "/works", label: "Thư viện đề cử", icon: BookOpen },
+  { href: "/community", label: "Cộng đồng", icon: UsersRound },
   { href: "/verify", label: "Tra cứu bằng xác lập", icon: ShieldCheck },
 ];
 
@@ -195,6 +200,12 @@ const adminItems: NavigationItem[] = [
     icon: FileCheck2,
     permission: "reports.read",
   },
+  {
+    href: "/admin/community",
+    label: "Kiểm duyệt cộng đồng",
+    icon: UsersRound,
+    permissions: ["community.moderate", "community.manage"],
+  },
 ];
 
 const blockchainSignerItems: NavigationItem[] = [
@@ -216,7 +227,10 @@ function canAccess(
       item.allowedRoles.some((role) => roles.includes(role))) &&
     (!item.permission ||
       roles.includes("SUPER_ADMIN") ||
-      permissions.includes(item.permission))
+      permissions.includes(item.permission)) &&
+    (!item.permissions ||
+      roles.includes("SUPER_ADMIN") ||
+      item.permissions.some((permission) => permissions.includes(permission)))
   );
 }
 
@@ -225,60 +239,79 @@ function sectionsFor(
   roles: readonly string[],
   permissions: readonly string[],
   isEmployee: boolean,
+  area: "workspace" | "admin",
 ): NavigationSection[] {
   const operationalItems = adminItems.filter((item) =>
     canAccess(item, roles, permissions),
   );
-  if (persona === "SUPER_ADMIN") {
-    const dossierHrefs = new Set([
-      "/admin/reviews",
-      "/admin/work-allocations",
-      "/admin/dashboard",
-      "/admin/payments",
-      "/admin/certificates",
-      "/admin/content",
-    ]);
+  const adminEntryPoint = resolveAdminEntryPoint(roles, permissions);
+  const adminEntryItems: NavigationItem[] = adminEntryPoint
+    ? [
+        {
+          href: adminEntryPoint.href,
+          label: adminEntryPoint.label,
+          icon: ShieldCheck,
+        },
+      ]
+    : [];
+
+  if (area === "admin") {
     return [
       {
-        label: "Hồ sơ và phát hành",
-        items: adminItems.filter((item) => dossierHrefs.has(item.href)),
+        label: "Điều hướng",
+        items: [
+          { href: "/workspace", label: "Không gian cá nhân", icon: LayoutDashboard },
+          ...(roles.includes("SUPER_ADMIN")
+            ? [{ href: "/admin", label: "Tổng quan quản trị", icon: Gauge }]
+            : []),
+          { href: "/", label: "Website", icon: House },
+          { href: "/community", label: "Cộng đồng", icon: UsersRound },
+        ],
       },
-      {
-        label: "Quản trị hệ thống",
-        items: adminItems.filter((item) => !dossierHrefs.has(item.href)),
-      },
-      { label: "Tra cứu", items: discoveryItems.slice(1) },
-      { label: "Cá nhân", items: personalItems.slice(0, 2) },
+      ...(operationalItems.length
+        ? [{ label: "Quản trị", items: operationalItems }]
+        : []),
+      ...(canAccess(blockchainSignerItems[0]!, roles, permissions)
+        ? [{ label: "Blockchain", items: blockchainSignerItems }]
+        : []),
+      { label: "Hỗ trợ", items: [adminSupportItem] },
     ];
   }
 
   if (persona === "MODERATOR") {
     return [
-      ...(operationalItems.length
-        ? [{ label: "Vận hành", items: operationalItems }]
-        : []),
       { label: "Thẩm định", items: reviewerItems.slice(0, 2) },
       { label: "Nhân sự", items: employeeItems },
-      { label: "Tra cứu", items: discoveryItems.slice(1) },
+      { label: "Khám phá", items: discoveryItems },
       { label: "Cá nhân", items: personalItems.slice(0, 2) },
+      ...(adminEntryItems.length
+        ? [{ label: "Quản trị", items: adminEntryItems }]
+        : []),
+      { label: "Hỗ trợ", items: [publicSupportItem] },
     ];
   }
 
   return [
-    ...(operationalItems.length
-      ? [{ label: "Vận hành", items: operationalItems }]
-      : []),
     { label: "Khám phá", items: discoveryItems },
     ...(persona === "USER" ? [{ label: "Hồ sơ", items: userItems }] : []),
     ...(persona === "USER" && isEmployee
       ? [{ label: "Nhân sự", items: employeeItems }]
       : []),
     { label: "Cá nhân", items: personalItems },
+    ...(adminEntryItems.length
+      ? [{ label: "Quản trị", items: adminEntryItems }]
+      : []),
+    ...(canAccess(blockchainSignerItems[0]!, roles, permissions)
+      ? [{ label: "Blockchain", items: blockchainSignerItems }]
+      : []),
+    { label: "Hỗ trợ", items: [publicSupportItem] },
   ];
 }
 
 function isActive(pathname: string, href: string) {
-  if (href === "/dashboard") return pathname === href;
+  if (href === "/workspace")
+    return pathname === href || pathname === "/dashboard";
+  if (href === "/") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -290,25 +323,20 @@ function mobileItemsFor(
     (item) => item.href.startsWith("/admin/") || item.href === "/blockchain",
   );
   const priorities: Record<WorkspacePersona, string[]> = {
-    VIEWER: ["/dashboard", "/works"],
-    USER: ["/dashboard", "/dossiers", "/attendance", "/leave"],
-    MODERATOR: ["/reviews", "/work-allocations", "/attendance", "/leave"],
-    SUPER_ADMIN: [
-      "/admin/reviews",
-      "/admin/dashboard",
-      "/admin/work-allocations",
-      "/blockchain",
-      "/admin/payroll",
-      "/admin/payments",
-      "/admin/leave",
-      "/admin/overtime",
+    VIEWER: ["/workspace", "/works", "/community"],
+    USER: ["/workspace", "/dossiers", "/works", "/community"],
+    MODERATOR: [
+      "/reviews",
+      "/community",
+      "/work-allocations",
       "/notifications",
     ],
+    SUPER_ADMIN: ["/workspace", "/community", "/works"],
   };
   const byHref = new globalThis.Map(items.map((item) => [item.href, item]));
   const prioritized = [
     ...priorities[persona].map((href) => byHref.get(href)),
-    ...operational,
+    ...operational.filter((item) => !item.href.startsWith("/admin/")),
   ].filter((item): item is NavigationItem => item !== undefined);
   const uniquePrioritized = prioritized.filter(
     (item, index) =>
@@ -324,6 +352,7 @@ function mobileItemsFor(
 
 export function DashboardNavigation({
   roles,
+  area,
   className,
   showPrimaryNavigation = true,
   showQuickNavigation = true,
@@ -333,6 +362,7 @@ export function DashboardNavigation({
   onOpenMenu,
 }: {
   roles?: readonly string[];
+  area?: "workspace" | "admin";
   className?: string;
   tone?: "light" | "dark";
   showPrimaryNavigation?: boolean;
@@ -349,15 +379,16 @@ export function DashboardNavigation({
   const effectivePermissions = authUser?.permissions ?? [];
   const isEmployee = authUser?.isEmployee ?? false;
   const persona = resolveWorkspacePersona(effectiveRoles);
+  const navigationArea = area ?? (pathname.startsWith("/admin") ? "admin" : "workspace");
   const preview = isPreviewRelease();
-  const supportItem =
-    persona === "SUPER_ADMIN" ? adminSupportItem : publicSupportItem;
   const sections = [
-    ...sectionsFor(persona, effectiveRoles, effectivePermissions, isEmployee),
-    { label: "Hỗ trợ", items: [supportItem] },
-    ...(effectiveRoles.includes("SUPER_ADMIN")
-      ? [{ label: "Blockchain", items: blockchainSignerItems }]
-      : []),
+    ...sectionsFor(
+      persona,
+      effectiveRoles,
+      effectivePermissions,
+      isEmployee,
+      navigationArea,
+    ),
   ].map((section) => ({
     ...section,
     items: section.items.filter(
@@ -371,7 +402,10 @@ export function DashboardNavigation({
   const activeHref = allNavigationItems
     .filter((item) => isActive(activePathname, item.href))
     .sort((left, right) => right.href.length - left.href.length)[0]?.href;
-  const mobileItems = mobileItemsFor(persona, allNavigationItems);
+  const mobileItems =
+    navigationArea === "admin"
+      ? []
+      : mobileItemsFor(persona, allNavigationItems);
   const mobileHrefs = new Set(mobileItems.map((item) => item.href));
   const mobileMenuContainsActiveItem = allNavigationItems
     .filter((item) => !mobileHrefs.has(item.href))
@@ -431,7 +465,7 @@ export function DashboardNavigation({
         </nav>
       ) : null}
 
-      {showQuickNavigation ? (
+      {showQuickNavigation && navigationArea !== "admin" ? (
         <nav
           className="dashboard-mobile-navigation"
           aria-label="Điều hướng nhanh"

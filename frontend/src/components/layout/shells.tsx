@@ -1,15 +1,12 @@
 "use client";
 
 import {
-  ArrowLeft,
   BadgeCheck,
   BookOpen,
   ChevronRight,
   CircleHelp,
   Download,
-  FileText,
   House,
-  LayoutDashboard,
   LogIn,
   Menu,
   Mail,
@@ -18,21 +15,21 @@ import {
   Phone,
   Route,
   UserPlus,
+  UserRound,
   UsersRound,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { LogoutButton } from "@/components/auth/logout-button";
-import { IconFrame } from "@/components/ui/icon-frame";
-import { resolvePublicHeaderAction } from "@/lib/auth/role-workspaces";
-import { useAuthUser } from "@/lib/auth/user-context";
-import type { AuthUser } from "@/lib/api/types";
+import { resolveAdminEntryPoint } from "@/lib/auth/role-workspaces";
+import { safeLocalDestination } from "@/lib/auth/safe-destination";
+import { useAuthStatus, useAuthUser } from "@/lib/auth/user-context";
 
 import { BrandMark } from "./brand-mark";
 import { DashboardContextHeader } from "./dashboard-context-header";
@@ -50,35 +47,96 @@ const publicUtilityLinks = [
 ];
 const publicLinks = [...publicPrimaryLinks, ...publicUtilityLinks];
 
-export function PublicShell({
-  children,
-  user,
-}: PropsWithChildren<{ user?: AuthUser | null }>) {
+function isWorkspacePath(pathname: string) {
+  return [
+    "/workspace",
+    "/dashboard",
+    "/account",
+    "/activity",
+    "/attendance",
+    "/blockchain",
+    "/certificates",
+    "/dossiers",
+    "/help",
+    "/leave",
+    "/notifications",
+    "/overtime",
+    "/payments",
+    "/reviews",
+    "/work-allocations",
+    "/admin",
+  ].some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
+function SiteMobileNavigation({
+  pathname,
+  personalHref,
+  onMore,
+  moreExpanded = false,
+}: {
+  pathname: string;
+  personalHref: string;
+  onMore: (trigger: HTMLButtonElement) => void;
+  moreExpanded?: boolean;
+}) {
+  const items = [
+    { href: "/", label: "Trang chủ", icon: House },
+    { href: "/works", label: "Đề cử", icon: BookOpen },
+    { href: "/community", label: "Cộng đồng", icon: UsersRound },
+    { href: personalHref, label: "Cá nhân", icon: UserRound },
+  ];
+
+  return (
+    <nav aria-label="Điều hướng di động" className="site-mobile-navigation">
+      {items.map(({ href, label, icon: Icon }) => {
+        const active =
+          label === "Trang chủ"
+            ? pathname === "/"
+            : label === "Cá nhân"
+              ? isWorkspacePath(pathname)
+              : pathname === href || pathname.startsWith(`${href}/`);
+        return (
+          <Link
+            aria-current={active ? "page" : undefined}
+            className="site-mobile-navigation__item"
+            href={href}
+            key={label}
+          >
+            <Icon aria-hidden="true" className="site-mobile-navigation__icon" />
+            <span>{label}</span>
+          </Link>
+        );
+      })}
+      <button
+        aria-expanded={moreExpanded}
+        aria-label="Mở thêm mục điều hướng"
+        className="site-mobile-navigation__item"
+        onClick={(event) => onMore(event.currentTarget)}
+        type="button"
+      >
+        <Menu aria-hidden="true" className="site-mobile-navigation__icon" />
+        <span>Thêm</span>
+      </button>
+    </nav>
+  );
+}
+
+export function PublicShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const contextUser = useAuthUser();
-  const activeUser = user ?? contextUser;
-  const publicHeaderAction = activeUser
-    ? resolvePublicHeaderAction(activeUser.roles, activeUser.permissions ?? [])
+  const authStatus = useAuthStatus();
+  const activeUser = authStatus === "authenticated" ? contextUser : null;
+  const query = searchParams.toString();
+  const currentDestination = safeLocalDestination(
+    `${pathname}${query ? `?${query}` : ""}`,
+    "/",
+  );
+  const loginHref = `/login?next=${encodeURIComponent(currentDestination)}`;
+  const registerHref = `/register?next=${encodeURIComponent(currentDestination)}`;
+  const adminEntryPoint = activeUser
+    ? resolveAdminEntryPoint(activeUser.roles, activeUser.permissions ?? [])
     : null;
-  const quickLinks = publicHeaderAction
-    ? [
-        ...(publicHeaderAction.href === "/dossiers"
-          ? [{ href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard }]
-          : []),
-        {
-          href: publicHeaderAction.href,
-          label:
-            publicHeaderAction.href === "/dossiers"
-              ? "Hồ sơ của tôi"
-              : publicHeaderAction.label,
-          icon:
-            publicHeaderAction.href === "/dossiers"
-              ? FileText
-              : LayoutDashboard,
-        },
-        { href: "/works", label: "Thư viện đề cử", icon: BookOpen },
-      ]
-    : [];
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const menuReturnFocusRef = useRef<HTMLButtonElement | null>(null);
@@ -157,11 +215,7 @@ export function PublicShell({
 
   return (
     <div
-      className={
-        publicHeaderAction
-          ? "public-shell public-shell--workspace"
-          : "public-shell"
-      }
+      className={activeUser ? "public-shell public-shell--workspace" : "public-shell"}
     >
       <a className="skip-link" href="#main-content">
         Chuyển đến nội dung chính
@@ -190,41 +244,48 @@ export function PublicShell({
         <div className="public-header__actions">
           <PwaInstallButton />
           <ThemeToggle />
-          {publicHeaderAction ? (
-            <Link
-              aria-label={
-                publicHeaderAction.label === "Khu vực làm việc"
-                  ? "Quay lại khu vực làm việc"
-                  : undefined
-              }
-              className="button button--secondary public-header__workspace"
-              href={publicHeaderAction.href}
-            >
-              <LayoutDashboard
-                aria-hidden="true"
-                className="public-header__workspace-icon"
-                focusable="false"
-                strokeWidth={1.75}
-              />
-              <span>{publicHeaderAction.label}</span>
-            </Link>
-          ) : (
+          {activeUser ? (
+            <details className="public-user-menu">
+              <summary aria-label="Mở menu tài khoản">
+                <span aria-hidden="true" className="public-user-menu__avatar">
+                  <UserRound focusable="false" />
+                </span>
+                <span className="public-user-menu__email">{activeUser.email}</span>
+              </summary>
+              <nav aria-label="Menu tài khoản" className="public-user-menu__panel">
+                <Link href="/workspace">Không gian cá nhân</Link>
+                <Link href="/community/mine">Bài viết của tôi</Link>
+                <Link href="/notifications">Thông báo</Link>
+                {adminEntryPoint ? (
+                  <Link href={adminEntryPoint.href}>{adminEntryPoint.label}</Link>
+                ) : null}
+                <Link href="/account">Tài khoản</Link>
+                <LogoutButton />
+              </nav>
+            </details>
+          ) : authStatus === "unauthenticated" ? (
             <>
               <Link
                 className="public-header__auth-link public-header__login"
-                href="/login"
+                href={loginHref}
               >
                 <LogIn aria-hidden="true" />
                 <span>Đăng nhập</span>
               </Link>
               <Link
                 className="public-header__auth-link public-header__register"
-                href="/register"
+                href={registerHref}
               >
                 <UserPlus aria-hidden="true" />
                 <span>Đăng ký</span>
               </Link>
             </>
+          ) : (
+            <span className="public-header__session-status" role="status">
+              {authStatus === "loading"
+                ? "Đang xác minh tài khoản"
+                : "Không thể xác minh phiên"}
+            </span>
           )}
           <button
             ref={menuButtonRef}
@@ -249,30 +310,6 @@ export function PublicShell({
           </button>
         </div>
       </header>
-      {publicHeaderAction ? (
-        <div
-          aria-label="Quay lại khu vực làm việc"
-          className="public-workspace-return"
-          role="navigation"
-        >
-          <Link
-            className="public-workspace-return__link"
-            href={publicHeaderAction.href}
-          >
-            <ArrowLeft
-              aria-hidden="true"
-              focusable="false"
-              strokeWidth={1.75}
-            />
-            <span>
-              Quay lại {publicHeaderAction.label.toLocaleLowerCase("vi")}
-            </span>
-          </Link>
-          <span className="public-workspace-return__context">
-            Bạn đang xem nội dung công khai
-          </span>
-        </div>
-      ) : null}
       {menuOpen ? (
         <div className="public-mobile-drawer">
           <button
@@ -286,7 +323,7 @@ export function PublicShell({
             ref={mobileNavigationRef}
             id="public-mobile-navigation"
             className="public-mobile-nav"
-            aria-label="Điều hướng di động"
+            aria-label="Menu công khai"
           >
             <div
               aria-label="Khám phá"
@@ -324,23 +361,38 @@ export function PublicShell({
               <span>Giao diện</span>
               <ThemeToggle />
             </div>
-            {publicHeaderAction ? (
-              <Link
-                className="public-mobile-nav__link public-mobile-nav__workspace"
-                href={publicHeaderAction.href}
-                onClick={() => closeMenu(false)}
-              >
-                <LayoutDashboard
-                  aria-hidden="true"
-                  className="public-mobile-nav__icon"
-                />
-                <span>{publicHeaderAction.label}</span>
-                <ChevronRight
-                  aria-hidden="true"
-                  className="public-mobile-nav__chevron"
-                />
-              </Link>
-            ) : (
+            {activeUser ? (
+              <div className="public-mobile-nav__account-links">
+                <Link className="public-mobile-nav__link" href="/workspace" onClick={() => closeMenu(false)}>
+                  <UserRound aria-hidden="true" className="public-mobile-nav__icon" />
+                  <span>Không gian cá nhân</span>
+                  <ChevronRight aria-hidden="true" className="public-mobile-nav__chevron" />
+                </Link>
+                <Link className="public-mobile-nav__link" href="/community/mine" onClick={() => closeMenu(false)}>
+                  <UsersRound aria-hidden="true" className="public-mobile-nav__icon" />
+                  <span>Bài viết của tôi</span>
+                  <ChevronRight aria-hidden="true" className="public-mobile-nav__chevron" />
+                </Link>
+                <Link className="public-mobile-nav__link" href="/notifications" onClick={() => closeMenu(false)}>
+                  <Mail aria-hidden="true" className="public-mobile-nav__icon" />
+                  <span>Thông báo</span>
+                  <ChevronRight aria-hidden="true" className="public-mobile-nav__chevron" />
+                </Link>
+                {adminEntryPoint ? (
+                  <Link className="public-mobile-nav__link" href={adminEntryPoint.href} onClick={() => closeMenu(false)}>
+                    <BadgeCheck aria-hidden="true" className="public-mobile-nav__icon" />
+                    <span>{adminEntryPoint.label}</span>
+                    <ChevronRight aria-hidden="true" className="public-mobile-nav__chevron" />
+                  </Link>
+                ) : null}
+                <Link className="public-mobile-nav__link" href="/account" onClick={() => closeMenu(false)}>
+                  <UserRound aria-hidden="true" className="public-mobile-nav__icon" />
+                  <span>Tài khoản</span>
+                  <ChevronRight aria-hidden="true" className="public-mobile-nav__chevron" />
+                </Link>
+                <LogoutButton />
+              </div>
+            ) : authStatus === "unauthenticated" ? (
               <div
                 aria-label="Tài khoản"
                 className="public-mobile-nav__account"
@@ -348,7 +400,7 @@ export function PublicShell({
               >
                 <Link
                   className="public-mobile-nav__login"
-                  href="/login"
+                  href={loginHref}
                   onClick={() => closeMenu(false)}
                 >
                   <LogIn aria-hidden="true" />
@@ -356,67 +408,33 @@ export function PublicShell({
                 </Link>
                 <Link
                   className="public-mobile-nav__register"
-                  href="/register"
+                  href={registerHref}
                   onClick={() => closeMenu(false)}
                 >
                   <UserPlus aria-hidden="true" />
                   <span>Đăng ký</span>
                 </Link>
               </div>
+            ) : (
+              <p className="public-mobile-nav__session-status" role="status">
+                {authStatus === "loading"
+                  ? "Đang xác minh tài khoản"
+                  : "Không thể xác minh phiên"}
+              </p>
             )}
           </nav>
         </div>
       ) : null}
       <main id="main-content">{children}</main>
-      {publicHeaderAction ? (
-        <nav
-          aria-label="Điều hướng nhanh"
-          className={`dashboard-mobile-navigation public-workspace-navigation${quickLinks.length === 3 ? " public-workspace-navigation--compact" : ""}`}
-        >
-          {quickLinks.map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <Link
-                aria-current={active ? "page" : undefined}
-                className={`dashboard-mobile-navigation__link${
-                  active ? " dashboard-mobile-navigation__link--active" : ""
-                }`}
-                href={item.href}
-                key={item.href}
-              >
-                <IconFrame
-                  className="dashboard-mobile-navigation__icon"
-                  icon={item.icon}
-                  size="sm"
-                  tone={active ? "brand" : "neutral"}
-                />
-                <span className="dashboard-mobile-navigation__label">
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-          <button
-            aria-expanded={menuOpen}
-            aria-label="Mở thêm mục điều hướng"
-            className="dashboard-mobile-navigation__link dashboard-mobile-navigation__more"
-            onClick={(event) => {
-              menuReturnFocusRef.current = event.currentTarget;
-              setMenuOpen(true);
-            }}
-            type="button"
-          >
-            <IconFrame
-              className="dashboard-mobile-navigation__icon"
-              icon={Menu}
-              size="sm"
-              tone="neutral"
-            />
-            <span className="dashboard-mobile-navigation__label">Thêm</span>
-          </button>
-        </nav>
-      ) : null}
+      <SiteMobileNavigation
+        pathname={pathname}
+        personalHref={activeUser ? "/workspace" : loginHref}
+        moreExpanded={menuOpen}
+        onMore={(trigger) => {
+          menuReturnFocusRef.current = trigger;
+          setMenuOpen(true);
+        }}
+      />
       <footer className="public-footer public-footer--legal">
         <div className="public-footer__inner">
           <div className="public-footer__identity">
@@ -587,6 +605,7 @@ function DeveloperCredit({ showPrefix = true }: { showPrefix?: boolean }) {
 
 export function DashboardShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
+  const adminArea = pathname.startsWith("/admin");
   const user = useAuthUser();
   const roles = user?.roles ?? [];
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -647,10 +666,18 @@ export function DashboardShell({ children }: PropsWithChildren) {
   }, [navigationOpen]);
 
   return (
-    <div className="dashboard-shell">
+    <div
+      className={
+        adminArea ? "dashboard-shell dashboard-shell--admin" : "dashboard-shell dashboard-shell--workspace"
+      }
+    >
       <aside className="dashboard-sidebar">
         <BrandMark compact />
-        <DashboardNavigation roles={roles} showQuickNavigation={false} />
+        <DashboardNavigation
+          area={adminArea ? "admin" : "workspace"}
+          roles={roles}
+          showQuickNavigation={false}
+        />
       </aside>
       <div className="dashboard-shell__content">
         <DashboardContextHeader
@@ -669,17 +696,26 @@ export function DashboardShell({ children }: PropsWithChildren) {
         onOpenMenu={(trigger) => openNavigation(trigger)}
         roles={roles}
         showPrimaryNavigation={false}
+        showQuickNavigation={false}
       />
+      {!adminArea ? (
+        <SiteMobileNavigation
+          pathname={pathname}
+          personalHref="/workspace"
+          onMore={(trigger) => openNavigation(trigger)}
+          moreExpanded={navigationOpen}
+        />
+      ) : null}
       {navigationOpen ? (
         <div className="dashboard-workspace-drawer">
           <button
-            aria-label="Đóng điều hướng workspace"
+            aria-label={`Đóng điều hướng ${adminArea ? "quản trị" : "workspace"}`}
             className="dashboard-workspace-drawer__backdrop"
             onClick={() => closeNavigation()}
             type="button"
           />
           <div
-            aria-label="Điều hướng workspace"
+            aria-label={adminArea ? "Điều hướng quản trị" : "Điều hướng workspace"}
             aria-modal="true"
             className="dashboard-workspace-drawer__panel"
             id="dashboard-workspace-navigation"
@@ -689,10 +725,10 @@ export function DashboardShell({ children }: PropsWithChildren) {
             <div className="dashboard-workspace-drawer__header">
               <div>
                 <p>Đề cử Tinh Hoa Việt</p>
-                <h2>Không gian của bạn</h2>
+                <h2>{adminArea ? "Khu vực quản trị" : "Không gian cá nhân"}</h2>
               </div>
               <button
-                aria-label="Đóng điều hướng workspace"
+                aria-label={`Đóng điều hướng ${adminArea ? "quản trị" : "workspace"}`}
                 onClick={() => closeNavigation()}
                 type="button"
               >
@@ -705,6 +741,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
               </button>
             </div>
             <DashboardNavigation
+              area={adminArea ? "admin" : "workspace"}
               onNavigate={() => closeNavigation({ restoreFocus: false })}
               roles={roles}
               showQuickNavigation={false}

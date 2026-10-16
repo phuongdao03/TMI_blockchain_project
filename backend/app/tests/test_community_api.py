@@ -450,7 +450,9 @@ def test_public_categories_feed_and_detail_filter_status_and_private_fields(
         test_app.close()
 
 
-def test_owner_draft_submit_edit_delete_flow_is_pre_moderated(tmp_path: Path) -> None:
+def test_owner_draft_submit_publishes_immediately_and_can_be_edited(
+    tmp_path: Path,
+) -> None:
     test_app = CommunityTestApp(tmp_path)
     try:
         payload = {
@@ -473,8 +475,8 @@ def test_owner_draft_submit_edit_delete_flow_is_pre_moderated(tmp_path: Path) ->
 
         submitted = test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
         assert submitted.status_code == 200
-        assert submitted.json()["data"]["status"] == "PENDING"
-        assert test_app.client.get(f"/api/v1/community/posts/{slug}").status_code == 404
+        assert submitted.json()["data"]["status"] == "PUBLISHED"
+        assert test_app.client.get(f"/api/v1/community/posts/{slug}").status_code == 200
 
         test_app.set_principal(OTHER_ID)
         denied = test_app.client.patch(
@@ -486,20 +488,16 @@ def test_owner_draft_submit_edit_delete_flow_is_pre_moderated(tmp_path: Path) ->
         assert denied_delete.status_code == 403
 
         test_app.set_principal(OWNER_ID)
-        pending_edit = test_app.client.patch(
+        owner_edit = test_app.client.patch(
             f"/api/v1/community/posts/{post_id}",
-            json={**payload, "title": "Edit while pending"},
+            json={**payload, "title": "Owner edit after publishing"},
         )
-        assert pending_edit.status_code == 409
-
-        test_app.set_principal(OWNER_ID, permissions=("community.moderate",))
-        published = test_app.client.post(
-            f"/api/v1/admin/community/posts/{post_id}/publish",
-            json={"reason": "Meets community guidelines."},
-        )
-        assert published.status_code == 200
-        assert published.json()["data"]["status"] == "PUBLISHED"
-        assert test_app.client.get(f"/api/v1/community/posts/{slug}").status_code == 200
+        assert owner_edit.status_code == 200
+        assert owner_edit.json()["data"]["status"] == "PUBLISHED"
+        published_slug = owner_edit.json()["data"]["slug"]
+        assert test_app.client.get(
+            f"/api/v1/community/posts/{published_slug}"
+        ).status_code == 200
 
         test_app.set_principal(OWNER_ID)
         deleted = test_app.client.delete(f"/api/v1/community/posts/{post_id}")
@@ -507,18 +505,17 @@ def test_owner_draft_submit_edit_delete_flow_is_pre_moderated(tmp_path: Path) ->
         assert test_app.client.get(f"/api/v1/community/posts/{slug}").status_code == 404
         logs = _moderation_logs(test_app, UUID(post_id))
         assert {log.action.value for log in logs} == {
-            "SUBMITTED",
             "PUBLISHED",
             "OWNER_DELETED",
         }
-        assert len(logs) == 3
+        assert len(logs) == 2
         assert all(log.request_id for log in logs)
         assert all(log.request_id for log in logs)
     finally:
         test_app.close()
 
 
-def test_moderation_requires_explicit_permission_and_rejection_is_editable(
+def test_moderation_requires_explicit_permission_after_publication(
     tmp_path: Path,
 ) -> None:
     test_app = CommunityTestApp(tmp_path)
@@ -537,52 +534,43 @@ def test_moderation_requires_explicit_permission_and_rejection_is_editable(
         test_app.set_principal(OTHER_ID, roles=("MODERATOR",))
         forbidden = test_app.client.get("/api/v1/admin/community/posts")
         assert forbidden.status_code == 403
-        forbidden_publish = test_app.client.post(
-            f"/api/v1/admin/community/posts/{post_id}/publish",
-            json={"reason": "Approved."},
+        forbidden_hide = test_app.client.post(
+            f"/api/v1/admin/community/posts/{post_id}/hide",
+            json={"reason": "Confirmed abuse."},
         )
-        assert forbidden_publish.status_code == 403
+        assert forbidden_hide.status_code == 403
 
         test_app.set_principal(OTHER_ID, permissions=("community.moderate",))
-        queue = test_app.client.get("/api/v1/admin/community/posts?status=PENDING")
-        assert queue.status_code == 200
-        assert queue.json()["meta"]["total"] == 1
-        assert queue.json()["data"][0]["id"] == post_id
-
-        rejected = test_app.client.post(
-            f"/api/v1/admin/community/posts/{post_id}/reject",
-            json={"reason": "Please add a reliable source."},
+        workspace = test_app.client.get(
+            "/api/v1/admin/community/posts?status=PUBLISHED"
         )
-        assert rejected.status_code == 200
-        assert rejected.json()["data"]["status"] == "REJECTED"
-        assert rejected.json()["data"]["moderationReason"] == (
-            "Please add a reliable source."
-        )
+        assert workspace.status_code == 200, workspace.text
+        assert workspace.json()["meta"]["total"] == 1
+        assert workspace.json()["data"][0]["id"] == post_id
 
-        test_app.set_principal(OWNER_ID)
-        edit = test_app.client.patch(
-            f"/api/v1/community/posts/{post_id}",
-            json={
-                "title": "Review me with a source",
-                "content": "Updated post with a source.",
-                "categoryId": str(CATEGORY_ID),
-            },
+        hidden = test_app.client.post(
+            f"/api/v1/admin/community/posts/{post_id}/hide",
+            json={"reason": "Confirmed abuse."},
         )
-        assert edit.status_code == 200
-        assert edit.json()["data"]["status"] == "DRAFT"
-        assert edit.json()["data"]["moderationReason"] is None
-
-        resubmitted = test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
-        assert resubmitted.status_code == 200
-        assert resubmitted.json()["data"]["status"] == "PENDING"
-        logs = _moderation_logs(test_app, UUID(post_id))
-        assert {log.action.value for log in logs} == {"SUBMITTED", "REJECTED"}
-        assert len(logs) == 3
+        assert hidden.status_code == 200, hidden.text
+        assert hidden.json()["data"]["state"] == "HIDDEN"
+        assert (
+            test_app.client.get("/api/v1/community/posts/review-me").status_code
+            == 404
+        )
+        history = test_app.client.get(
+            "/api/v1/admin/community/moderation-history"
+            f"?targetType=POST&targetId={post_id}"
+        )
+        assert history.status_code == 200, history.text
+        assert "POST_HIDDEN" in {
+            event["action"] for event in history.json()["data"]
+        }
     finally:
         test_app.close()
 
 
-def test_admin_can_moderate_with_super_admin_role(tmp_path: Path) -> None:
+def test_super_admin_can_remove_a_published_post(tmp_path: Path) -> None:
     test_app = CommunityTestApp(tmp_path)
     try:
         created = test_app.client.post(
@@ -597,11 +585,15 @@ def test_admin_can_moderate_with_super_admin_role(tmp_path: Path) -> None:
         test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
         test_app.set_principal(OTHER_ID, roles=("SUPER_ADMIN",))
         response = test_app.client.post(
-            f"/api/v1/admin/community/posts/{post_id}/publish",
-            json={"reason": "Approved by super admin."},
+            f"/api/v1/admin/community/posts/{post_id}/hide",
+            json={"reason": "Policy violation confirmed."},
         )
         assert response.status_code == 200
-        assert response.json()["data"]["status"] == "PUBLISHED"
+        assert response.json()["data"]["state"] == "HIDDEN"
+        assert (
+            test_app.client.get("/api/v1/community/posts/super-admin-review").status_code
+            == 404
+        )
     finally:
         test_app.close()
 
@@ -674,6 +666,18 @@ def test_reports_deduplicate_and_moderator_hide_restore_is_audited(
             test_app.client.get("/api/v1/community/posts/reportable-post").status_code
             == 404
         )
+        test_app.set_principal(OWNER_ID)
+        author_notifications = test_app.client.get(
+            "/api/v1/notifications?page=1&pageSize=20"
+        ).json()["data"]
+        removed_notification = next(
+            item
+            for item in author_notifications
+            if item["type"] == "COMMUNITY_POST_REMOVED"
+        )
+        assert "Confirmed abuse." in removed_notification["body"]
+        assert removed_notification["data"] == {"actionPath": "/community/mine"}
+        test_app.set_principal(OWNER_ID, permissions=("community.moderate",))
         repeated_resolution = test_app.client.post(
             f"/api/v1/admin/community/reports/{first.json()['data']['id']}/resolve",
             json={"action": "DISMISS", "reason": "Already handled."},
@@ -775,7 +779,7 @@ def test_reported_comment_uses_tombstone_and_can_be_restored(
         test_app.close()
 
 
-def test_community_admin_categories_and_settings_use_manage_permission(
+def test_community_admin_categories_use_manage_permission_and_submissions_publish(
     tmp_path: Path,
 ) -> None:
     test_app = CommunityTestApp(tmp_path)
@@ -785,14 +789,19 @@ def test_community_admin_categories_and_settings_use_manage_permission(
         assert forbidden.status_code == 403
 
         test_app.set_principal(OWNER_ID, permissions=("community.moderate",))
-        forbidden_manage = test_app.client.get("/api/v1/admin/community/settings")
+        forbidden_manage = test_app.client.post(
+            "/api/v1/admin/community/categories",
+            json={
+                "name": "No permission",
+                "slug": "no-permission",
+                "description": "This request must be forbidden.",
+                "sortOrder": 1,
+                "reason": "Check the manage permission.",
+            },
+        )
         assert forbidden_manage.status_code == 403
 
         test_app.set_principal(OWNER_ID, permissions=("community.manage",))
-        settings = test_app.client.get("/api/v1/admin/community/settings")
-        assert settings.status_code == 200, settings.text
-        assert settings.json()["data"]["preModerationEnabled"] is True
-
         invalid_order = test_app.client.post(
             "/api/v1/admin/community/categories",
             json={
@@ -830,19 +839,10 @@ def test_community_admin_categories_and_settings_use_manage_permission(
         assert deactivated.status_code == 200
         assert deactivated.json()["data"]["isActive"] is False
 
-        updated_settings = test_app.client.put(
-            "/api/v1/admin/community/settings",
-            json={
-                "preModerationEnabled": False,
-                "reason": "Trusted publishing pilot.",
-            },
-        )
-        assert updated_settings.status_code == 200
-        assert updated_settings.json()["data"]["preModerationEnabled"] is False
         created_post = test_app.client.post(
             "/api/v1/community/posts",
             json={
-                "title": "Auto-publish with premoderation off",
+                "title": "Auto-publish community post",
                 "content": "This post should be public after submit.",
                 "categoryId": str(CATEGORY_ID),
             },
@@ -1154,13 +1154,11 @@ def test_related_work_link_requires_current_public_visibility_and_is_allowlisted
         )
         assert rejected_link.status_code == 404
 
-        test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
-        test_app.set_principal(OWNER_ID, permissions=("community.moderate",))
-        published = test_app.client.post(
-            f"/api/v1/admin/community/posts/{post_id}/publish",
-            json={"reason": "Approved public work link."},
+        submitted = test_app.client.post(
+            f"/api/v1/community/posts/{post_id}/submit"
         )
-        assert published.status_code == 200, published.text
+        assert submitted.status_code == 200, submitted.text
+        assert submitted.json()["data"]["status"] == "PUBLISHED"
         public_detail = test_app.client.get(f"/api/v1/community/posts/{post_slug}")
         assert public_detail.status_code == 200, public_detail.text
         assert public_detail.json()["data"]["relatedWork"]["id"] == str(public_work_id)
@@ -1262,52 +1260,6 @@ def test_community_notifications_cover_events_without_self_or_duplicate_alerts(
         assert "private-other@example.test" not in str(owner_notifications)
         assert "private-phone" not in str(owner_notifications)
 
-        test_app.set_principal(OTHER_ID)
-        publish_draft = test_app.client.post(
-            "/api/v1/community/posts",
-            json={
-                "title": "Approved community draft",
-                "content": "Will be approved.",
-                "categoryId": str(CATEGORY_ID),
-            },
-        )
-        reject_draft = test_app.client.post(
-            "/api/v1/community/posts",
-            json={
-                "title": "Rejected community draft",
-                "content": "Will be rejected.",
-                "categoryId": str(CATEGORY_ID),
-            },
-        )
-        publish_id = publish_draft.json()["data"]["id"]
-        reject_id = reject_draft.json()["data"]["id"]
-        test_app.client.post(f"/api/v1/community/posts/{publish_id}/submit")
-        test_app.client.post(f"/api/v1/community/posts/{reject_id}/submit")
-
-        test_app.set_principal(OWNER_ID, permissions=("community.moderate",))
-        test_app.client.post(
-            f"/api/v1/admin/community/posts/{publish_id}/publish",
-            json={"reason": "Approved."},
-        )
-        test_app.client.post(
-            f"/api/v1/admin/community/posts/{reject_id}/reject",
-            json={"reason": "Does not meet community rules."},
-        )
-        test_app.set_principal(OTHER_ID)
-        author_notifications = test_app.client.get(
-            "/api/v1/notifications?page=1&pageSize=50"
-        ).json()["data"]
-        assert {item["type"] for item in author_notifications} >= {
-            "COMMUNITY_POST_PUBLISHED",
-            "COMMUNITY_POST_REJECTED",
-        }
-        rejected_notification = next(
-            item
-            for item in author_notifications
-            if item["type"] == "COMMUNITY_POST_REJECTED"
-        )
-        assert rejected_notification["data"] == {"actionPath": "/community/new"}
-        assert "Does not meet community rules" not in str(author_notifications)
     finally:
         test_app.close()
 
@@ -1436,12 +1388,7 @@ def test_community_image_delivery_checks_public_association_and_owner_preview(
 
         submitted = test_app.client.post(f"/api/v1/community/posts/{post['id']}/submit")
         assert submitted.status_code == 200
-        test_app.set_principal(OTHER_ID, permissions=("community.moderate",))
-        published = test_app.client.post(
-            f"/api/v1/admin/community/posts/{post['id']}/publish",
-            json={"reason": "Image verified."},
-        )
-        assert published.status_code == 200
+        assert submitted.json()["data"]["status"] == "PUBLISHED"
         test_app.viewer_principal = None
         public_image = test_app.client.get(image_path)
         assert public_image.status_code == 200
@@ -1542,13 +1489,11 @@ def test_post_tags_are_persisted_projected_and_filter_the_public_feed(
         )
         assert too_many_tags.status_code == 422
 
-        test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
-        test_app.set_principal(OWNER_ID, permissions=("community.moderate",))
-        published = test_app.client.post(
-            f"/api/v1/admin/community/posts/{post_id}/publish",
-            json={"reason": "Approved."},
+        submitted = test_app.client.post(
+            f"/api/v1/community/posts/{post_id}/submit"
         )
-        assert published.status_code == 200, published.text
+        assert submitted.status_code == 200, submitted.text
+        assert submitted.json()["data"]["status"] == "PUBLISHED"
 
         feed = test_app.client.get("/api/v1/community/posts?tag=community-design")
         assert feed.status_code == 200, feed.text
@@ -1719,27 +1664,28 @@ def test_owner_post_list_and_read_include_only_owned_manageable_statuses(
                 CommunityPostStatus.PENDING,
                 CommunityPostStatus.REJECTED,
                 CommunityPostStatus.PUBLISHED,
+                CommunityPostStatus.HIDDEN,
             )
         }
-        assert listing.json()["meta"]["total"] == 4
+        assert listing.json()["meta"]["total"] == 5
         pending = test_app.client.get(
             "/api/v1/community/members/me/posts?status=PENDING"
         )
         assert [item["id"] for item in pending.json()["data"]] == [
             str(own_posts[CommunityPostStatus.PENDING])
         ]
-        assert (
-            test_app.client.get(
-                "/api/v1/community/members/me/posts?status=HIDDEN"
-            ).status_code
-            == 422
+        hidden = test_app.client.get(
+            "/api/v1/community/members/me/posts?status=HIDDEN"
         )
+        assert hidden.status_code == 200
+        assert hidden.json()["meta"]["total"] == 1
 
         for status in (
             CommunityPostStatus.DRAFT,
             CommunityPostStatus.PENDING,
             CommunityPostStatus.REJECTED,
             CommunityPostStatus.PUBLISHED,
+            CommunityPostStatus.HIDDEN,
         ):
             response = test_app.client.get(
                 f"/api/v1/community/members/me/posts/{own_posts[status]}"
@@ -1755,13 +1701,18 @@ def test_owner_post_list_and_read_include_only_owned_manageable_statuses(
         )
         assert private_read.status_code == 404
         test_app.set_principal(OWNER_ID)
-        for status in (CommunityPostStatus.HIDDEN, CommunityPostStatus.DELETED):
-            assert (
-                test_app.client.get(
-                    f"/api/v1/community/members/me/posts/{own_posts[status]}"
-                ).status_code
-                == 404
-            )
+        assert (
+            test_app.client.get(
+                f"/api/v1/community/members/me/posts/{own_posts[CommunityPostStatus.HIDDEN]}"
+            ).status_code
+            == 200
+        )
+        assert (
+            test_app.client.get(
+                f"/api/v1/community/members/me/posts/{own_posts[CommunityPostStatus.DELETED]}"
+            ).status_code
+            == 404
+        )
     finally:
         test_app.close()
 
@@ -1819,7 +1770,7 @@ def test_public_feed_related_work_filter_rechecks_public_visibility(
         test_app.close()
 
 
-def test_owner_can_preview_private_post_images_until_rejected_is_resumed(
+def test_post_images_publish_immediately_and_hide_removes_public_access(
     tmp_path: Path,
 ) -> None:
     test_app = CommunityTestApp(tmp_path)
@@ -1853,25 +1804,29 @@ def test_owner_can_preview_private_post_images_until_rejected_is_resumed(
 
         submitted = test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
         assert submitted.status_code == 200
+        assert submitted.json()["data"]["status"] == "PUBLISHED"
         assert test_app.client.get(image_url).status_code == 200
         test_app.viewer_principal = None
-        assert test_app.client.get(image_url).status_code == 404
+        assert test_app.client.get(image_url).status_code == 200
         test_app.viewer_principal = _principal(OTHER_ID)
-        assert test_app.client.get(image_url).status_code == 404
+        assert test_app.client.get(image_url).status_code == 200
         test_app.viewer_principal = _principal(OWNER_ID)
 
         test_app.set_principal(OTHER_ID, permissions=("community.moderate",))
-        rejected = test_app.client.post(
-            f"/api/v1/admin/community/posts/{post_id}/reject",
+        hidden = test_app.client.post(
+            f"/api/v1/admin/community/posts/{post_id}/hide",
             json={"reason": "Please revise the image caption."},
         )
-        assert rejected.status_code == 200
+        assert hidden.status_code == 200
+        test_app.viewer_principal = None
+        assert test_app.client.get(image_url).status_code == 404
         test_app.set_principal(OWNER_ID)
+        test_app.viewer_principal = _principal(OWNER_ID)
         owner_detail = test_app.client.get(
             f"/api/v1/community/members/me/posts/{post_id}"
         )
         assert owner_detail.status_code == 200
-        assert owner_detail.json()["data"]["status"] == "REJECTED"
+        assert owner_detail.json()["data"]["status"] == "HIDDEN"
         assert test_app.client.get(image_url).status_code == 200
         assert test_app.client.get(f"/api/v1/community/posts/{slug}").status_code == 404
     finally:
@@ -2686,7 +2641,7 @@ def test_community_comment_mentions_create_safe_deduplicated_notifications(
         test_app.close()
 
 
-def test_community_post_mentions_notify_only_after_publication(
+def test_community_post_mentions_notify_on_immediate_publication(
     tmp_path: Path,
 ) -> None:
     test_app = CommunityTestApp(tmp_path)
@@ -2704,29 +2659,15 @@ def test_community_post_mentions_notify_only_after_publication(
         post_id = created.json()["data"]["id"]
         submitted = test_app.client.post(f"/api/v1/community/posts/{post_id}/submit")
         assert submitted.status_code == 200, submitted.text
+        assert submitted.json()["data"]["status"] == "PUBLISHED"
 
         test_app.set_principal(OWNER_ID)
-        before_publication = test_app.client.get(
-            "/api/v1/notifications?page=1&pageSize=50"
-        ).json()["data"]
-        assert before_publication == []
-
-        test_app.set_principal(
-            OWNER_ID,
-            permissions=("community.moderate",),
-        )
-        published = test_app.client.post(
-            f"/api/v1/admin/community/posts/{post_id}/publish",
-            json={"reason": "Community mention was reviewed."},
-        )
-        assert published.status_code == 200, published.text
-
         notifications = test_app.client.get(
             "/api/v1/notifications?page=1&pageSize=50"
         ).json()["data"]
         assert [item["type"] for item in notifications] == ["COMMUNITY_MENTION"]
         assert notifications[0]["data"]["actionPath"] == (
-            f"/community/posts/{published.json()['data']['slug']}"
+            f"/community/posts/{submitted.json()['data']['slug']}"
         )
     finally:
         test_app.close()

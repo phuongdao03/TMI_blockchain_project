@@ -10,9 +10,96 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("DashboardNavigation work-allocation migration", () => {
+  it("shows community moderation only to users with its explicit capability", () => {
+    render(
+      <AuthUserProvider
+        user={{
+          id: "community-moderator",
+          email: "moderator@example.com",
+          roles: ["MODERATOR"],
+          permissions: ["community.moderate"],
+          isEmployee: false,
+          accountType: null,
+        }}
+      >
+        <DashboardNavigation area="admin" roles={["MODERATOR"]} showQuickNavigation={false} />
+      </AuthUserProvider>,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Kiểm duyệt cộng đồng" }).getAttribute(
+        "href",
+      ),
+    ).toBe("/admin/community");
+  });
+
+  it("does not show community moderation to a moderator without the capability", () => {
+    render(
+      <AuthUserProvider
+        user={{
+          id: "regular-moderator",
+          email: "moderator@example.com",
+          roles: ["MODERATOR"],
+          permissions: [],
+          isEmployee: false,
+          accountType: null,
+        }}
+      >
+        <DashboardNavigation area="admin" roles={["MODERATOR"]} showQuickNavigation={false} />
+      </AuthUserProvider>,
+    );
+
+    expect(
+      screen.queryByRole("link", { name: "Kiểm duyệt cộng đồng" }),
+    ).toBeNull();
+  });
+
+  it("shows community administration to users with the management capability", () => {
+    const { container } = render(
+      <AuthUserProvider
+        user={{
+          id: "community-manager",
+          email: "manager@example.com",
+          roles: [],
+          permissions: ["community.manage"],
+          isEmployee: false,
+          accountType: null,
+        }}
+      >
+        <DashboardNavigation area="admin" showQuickNavigation={false} />
+      </AuthUserProvider>,
+    );
+
+    expect(container.querySelector('a[href="/admin/community"]')).not.toBeNull();
+  });
+
+  it("keeps community in the mobile quick navigation for signed-in members", () => {
+    render(
+      <AuthUserProvider
+        user={{
+          id: "member-with-community",
+          email: "member@example.com",
+          roles: ["USER"],
+          permissions: [],
+          isEmployee: false,
+          accountType: "PUBLIC_USER",
+        }}
+      >
+        <DashboardNavigation roles={["USER"]} showPrimaryNavigation={false} />
+      </AuthUserProvider>,
+    );
+
+    expect(
+      screen
+        .getByRole("navigation", { name: "Điều hướng nhanh" })
+        .querySelector('a[href="/community"]'),
+    ).not.toBeNull();
+  });
+
   it("gives Super Admin one unified work-allocation destination", () => {
     render(
       <DashboardNavigation
+        area="admin"
         roles={["SUPER_ADMIN"]}
         showQuickNavigation={false}
       />,
@@ -51,6 +138,7 @@ describe("DashboardNavigation work-allocation migration", () => {
   it("exposes the admin dossier intake queue beside other work", () => {
     render(
       <DashboardNavigation
+        area="admin"
         roles={["SUPER_ADMIN"]}
         showQuickNavigation={false}
       />,

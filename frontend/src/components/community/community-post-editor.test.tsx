@@ -119,7 +119,11 @@ beforeEach(() => {
     createdAt: "2026-10-13T09:00:00Z",
     updatedAt: "2026-10-13T09:10:00Z",
   });
-  api.submitPost.mockResolvedValue({ id: "post-1", status: "PENDING" });
+  api.submitPost.mockResolvedValue({
+    id: "post-1",
+    slug: "ky-uc-lang-co",
+    status: "PUBLISHED",
+  });
   api.myPost.mockResolvedValue(null);
   api.works.mockResolvedValue({
     success: true,
@@ -203,7 +207,7 @@ describe("CommunityPostEditor", () => {
     expect(screen.getByText("làng nghề")).toBeDefined();
     await user.clear(title);
     await user.type(title, "Bản nháp đã sửa");
-    await user.click(screen.getByRole("button", { name: "Lưu bản nháp" }));
+    await user.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
 
     await waitFor(() =>
       expect(api.updatePost).toHaveBeenCalledWith(
@@ -216,7 +220,51 @@ describe("CommunityPostEditor", () => {
     );
   });
 
-  it("saves a draft, updates its edited source, then submits it for review", async () => {
+  it("lets the owner update a published post without sending it for review", async () => {
+    const user = userEvent.setup();
+    api.myPost.mockResolvedValue({
+      id: "published-1",
+      slug: "bai-da-dang",
+      title: "Bài đã đăng",
+      content: "Nội dung đã đăng.",
+      status: "PUBLISHED",
+      category: { id: "cat-1", name: "Di sản", slug: "di-san" },
+      tags: [],
+      relatedWork: null,
+      images: [],
+      moderationReason: null,
+      createdAt: "2026-10-13T09:00:00Z",
+      updatedAt: "2026-10-14T09:00:00Z",
+    });
+    api.updatePost.mockResolvedValue({
+      id: "published-1",
+      slug: "bai-da-dang",
+      status: "PUBLISHED",
+      images: [],
+    });
+    render(<CommunityPostEditor postId="published-1" />, { wrapper });
+
+    const title = await screen.findByLabelText("Tiêu đề");
+    await waitFor(() =>
+      expect((title as HTMLInputElement).value).toBe("Bài đã đăng"),
+    );
+    await user.clear(title);
+    await user.type(title, "Bài đã cập nhật");
+    await user.click(
+      screen.getByRole("button", { name: "Cập nhật bài viết" }),
+    );
+
+    await waitFor(() =>
+      expect(api.updatePost).toHaveBeenCalledWith(
+        "published-1",
+        expect.objectContaining({ title: "Bài đã cập nhật" }),
+      ),
+    );
+    expect(api.submitPost).not.toHaveBeenCalled();
+    expect(router.push).toHaveBeenCalledWith("/community/posts/bai-da-dang");
+  });
+
+  it("saves and edits a draft, then publishes it and opens its public page", async () => {
     const user = userEvent.setup();
     render(<CommunityPostEditor />, { wrapper });
 
@@ -239,7 +287,7 @@ describe("CommunityPostEditor", () => {
     const content = screen.getByLabelText("Nội dung");
     await user.clear(content);
     await user.type(content, "Nội dung đã chỉnh sửa.");
-    await user.click(screen.getByRole("button", { name: "Gửi duyệt" }));
+    await user.click(screen.getByRole("button", { name: "Đăng bài" }));
 
     await waitFor(() =>
       expect(api.updatePost).toHaveBeenCalledWith("post-1", {
@@ -251,22 +299,25 @@ describe("CommunityPostEditor", () => {
       }),
     );
     expect(api.submitPost).toHaveBeenCalledWith("post-1");
-    expect(
-      await screen.findByText("Bài viết đã được gửi để kiểm duyệt."),
-    ).toBeDefined();
+    await waitFor(() =>
+      expect(router.push).toHaveBeenCalledWith(
+        "/community/posts/ky-uc-lang-co",
+      ),
+    );
   });
 
-  it("creates the draft before submitting when the user skips saving", async () => {
+  it("creates the draft before publishing when the user skips saving", async () => {
     const user = userEvent.setup();
     render(<CommunityPostEditor />, { wrapper });
 
     await user.type(await screen.findByLabelText("Tiêu đề"), "Chia sẻ mới");
     await user.type(screen.getByLabelText("Nội dung"), "Một trải nghiệm.");
     await user.selectOptions(screen.getByLabelText("Chuyên mục"), "cat-1");
-    await user.click(screen.getByRole("button", { name: "Gửi duyệt" }));
+    await user.click(screen.getByRole("button", { name: "Đăng bài" }));
 
     await waitFor(() => expect(api.createPost).toHaveBeenCalledTimes(1));
     expect(api.submitPost).toHaveBeenCalledWith("post-1");
+    expect(router.push).toHaveBeenCalledWith("/community/posts/ky-uc-lang-co");
   });
 
   it("searches public works and attaches a selected work id to a saved draft", async () => {

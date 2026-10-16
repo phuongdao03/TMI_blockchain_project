@@ -13,9 +13,10 @@ const PAGE_SIZE = 20;
 const statusFilters: { value?: CommunityOwnerPostStatus; label: string }[] = [
   { label: "Tất cả" },
   { value: "DRAFT", label: "Bản nháp" },
-  { value: "PENDING", label: "Đang kiểm duyệt" },
+  { value: "PENDING", label: "Chờ xử lý (bài viết cũ)" },
   { value: "REJECTED", label: "Cần chỉnh sửa" },
   { value: "PUBLISHED", label: "Đã đăng" },
+  { value: "HIDDEN", label: "Đã gỡ" },
 ];
 
 export function CommunityMinePosts({
@@ -70,7 +71,7 @@ export function CommunityMinePosts({
               Bài viết của tôi
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
-              Theo dõi bản nháp, bài chờ duyệt và nội dung đã đăng.
+              Theo dõi bản nháp, bài cũ còn chờ xử lý và nội dung đã đăng.
             </p>
           </div>
           <Link
@@ -142,7 +143,10 @@ export function CommunityMinePosts({
           <ol className="mt-5 space-y-3">
             {posts.data.data.map((post) => {
               const editable =
-                post.status === "DRAFT" || post.status === "REJECTED";
+                post.status === "DRAFT" ||
+                post.status === "REJECTED" ||
+                post.status === "PUBLISHED" ||
+                post.status === "HIDDEN";
               const href = `/community/new?postId=${encodeURIComponent(post.id)}`;
               return (
                 <li
@@ -288,11 +292,13 @@ function statusLabel(status: CommunityOwnerPostStatus): string {
     case "DRAFT":
       return "Bản nháp";
     case "PENDING":
-      return "Đang chờ kiểm duyệt";
+      return "Chờ xử lý (bài viết cũ)";
     case "REJECTED":
       return "Cần chỉnh sửa";
     case "PUBLISHED":
-      return "Đã đăng · Chỉ xem";
+      return "Đã đăng";
+    case "HIDDEN":
+      return "Đã gỡ bởi quản trị viên";
   }
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Bold,
@@ -19,6 +19,7 @@ import {
   Pencil,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   startTransition,
   useEffect,
@@ -46,6 +47,8 @@ export function CommunityPostEditor({
   postId?: string;
   relatedWork?: CommunityRelatedWork | null;
 }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const categories = useQuery({
     queryKey: ["community", "categories"],
     queryFn: ({ signal }) => communityApi.categories(signal),
@@ -92,7 +95,10 @@ export function CommunityPostEditor({
     startTransition(() => {
       const loaded = ownerPost.data!;
       setCanEditLoadedPost(
-        loaded.status === "DRAFT" || loaded.status === "REJECTED",
+        loaded.status === "DRAFT" ||
+          loaded.status === "REJECTED" ||
+          loaded.status === "PUBLISHED" ||
+          loaded.status === "HIDDEN",
       );
       setTitle(loaded.title);
       setContent(loaded.content);
@@ -317,12 +323,24 @@ export function CommunityPostEditor({
     try {
       const saved = await persistDraft();
       if (action === "save") {
-        setNotice("Bản nháp đã được lưu.");
+        setNotice(
+          saved.status === "PUBLISHED" || saved.status === "HIDDEN"
+            ? "Bài viết đã được cập nhật."
+            : "Bản nháp đã được lưu.",
+        );
         return;
       }
-      await communityApi.submitPost(saved.id);
-      setDraft({ ...saved, status: "PENDING" });
-      setNotice("Bài viết đã được gửi để kiểm duyệt.");
+      const published =
+        saved.status === "PUBLISHED" || saved.status === "HIDDEN"
+          ? saved
+          : await communityApi.submitPost(saved.id);
+      setDraft(published);
+      await queryClient.invalidateQueries({ queryKey: ["community"] });
+      router.push(
+        published.status === "PUBLISHED"
+          ? `/community/posts/${encodeURIComponent(published.slug)}`
+          : "/community/mine?status=HIDDEN",
+      );
     } catch (actionError) {
       setError(getErrorMessage(actionError));
     } finally {
@@ -371,8 +389,7 @@ export function CommunityPostEditor({
             {postId ? "Chỉnh sửa bài viết" : "Viết bài mới"}
           </h1>
           <p className="mt-3 text-sm leading-6 text-[var(--theme-muted)] sm:text-base">
-            Bài viết được lưu nháp trước và chỉ xuất hiện sau khi được kiểm
-            duyệt.
+            Bài viết xuất hiện ngay sau khi đăng. Bạn có thể chỉnh sửa bài đã đăng.
           </p>
         </header>
 
@@ -437,8 +454,7 @@ export function CommunityPostEditor({
             className="mt-7 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-sm leading-6 text-[var(--theme-muted)]"
             role="status"
           >
-            Bài viết này đang chờ kiểm duyệt hoặc đã xuất bản nên chỉ có thể
-            xem.{" "}
+            Bài viết cũ này đang chờ xử lý hoặc không thể chỉnh sửa.{" "}
             <Link
               className="font-bold text-[var(--theme-accent)] underline"
               href="/community/mine"
@@ -1055,7 +1071,7 @@ export function CommunityPostEditor({
                 ) : (
                   <Save aria-hidden="true" className="size-4" />
                 )}
-                Lưu bản nháp
+                {postId ? "Lưu thay đổi" : "Lưu bản nháp"}
               </button>
               <button
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--theme-accent)] px-5 text-sm font-bold text-[var(--theme-accent-contrast)] transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:cursor-not-allowed disabled:opacity-50"
@@ -1077,7 +1093,7 @@ export function CommunityPostEditor({
                 ) : (
                   <Send aria-hidden="true" className="size-4" />
                 )}
-                Gửi duyệt
+                {postId ? "Cập nhật bài viết" : "Đăng bài"}
               </button>
             </div>
           </form>

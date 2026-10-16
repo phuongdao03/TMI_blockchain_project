@@ -23,7 +23,7 @@ function wrapper({ children }: { children: ReactNode }) {
 
 const post = (
   id: string,
-  status: "DRAFT" | "PENDING" | "REJECTED" | "PUBLISHED",
+  status: "DRAFT" | "PENDING" | "REJECTED" | "PUBLISHED" | "HIDDEN",
 ) => ({
   id,
   slug: `slug-${id}`,
@@ -47,14 +47,15 @@ beforeEach(() => {
       post("pending-1", "PENDING"),
       post("rejected-1", "REJECTED"),
       post("published-1", "PUBLISHED"),
+      post("hidden-1", "HIDDEN"),
     ],
-    meta: { requestId: "owner-posts", page: 1, pageSize: 20, total: 4 },
+    meta: { requestId: "owner-posts", page: 1, pageSize: 20, total: 5 },
   });
   api.deletePost.mockResolvedValue(undefined);
 });
 
 describe("CommunityMinePosts", () => {
-  it("shows status filters, resumes draft/rejected posts, and opens published posts read-only", async () => {
+  it("shows status filters and lets owners continue editing published or removed posts", async () => {
     render(<CommunityMinePosts page={1} />, { wrapper });
 
     expect(
@@ -76,7 +77,18 @@ describe("CommunityMinePosts", () => {
         .getByRole("link", { name: "Xem bài đã đăng: Bài PUBLISHED" })
         .getAttribute("href"),
     ).toBe("/community/posts/slug-published-1");
-    expect(screen.getByText("Đang chờ kiểm duyệt")).toBeDefined();
+    expect(
+      screen
+        .getByRole("link", { name: "Tiếp tục chỉnh sửa: Bài PUBLISHED" })
+        .getAttribute("href"),
+    ).toBe("/community/new?postId=published-1");
+    expect(screen.getByText("Đã gỡ bởi quản trị viên")).toBeDefined();
+    expect(
+      screen
+        .getByRole("link", { name: "Tiếp tục chỉnh sửa: Bài HIDDEN" })
+        .getAttribute("href"),
+    ).toBe("/community/new?postId=hidden-1");
+    expect(screen.getAllByText("Chờ xử lý (bài viết cũ)").length).toBeGreaterThan(1);
     expect(
       screen.getByRole("link", { name: "Bản nháp" }).getAttribute("href"),
     ).toBe("/community/mine?status=DRAFT&page=1");

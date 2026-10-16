@@ -30,8 +30,6 @@ from app.modules.community.repository import CommunityPostRow
 from app.modules.community.schemas import (
     CommunityAuthorData,
     CommunityCategoryData,
-    CommunityModerationQueueData,
-    CommunityModerationRequest,
     CommunityPostData,
     CommunityPostDetailData,
     CommunityPostImageData,
@@ -186,16 +184,6 @@ def _admin_post_data(row: CommunityPostRow) -> CommunityAdminPostWorkspaceData:
     )
 
 
-def _queue_data(row: CommunityPostRow) -> CommunityModerationQueueData:
-    data = _write_data(row).model_dump()
-    data["images"] = []
-    return CommunityModerationQueueData(
-        **data,
-        author=_author(row),
-        submitted_at=row.post.submitted_at,
-    )
-
-
 @router.get(
     "/categories",
     response_model=SuccessEnvelope[list[CommunityCategoryData]],
@@ -251,8 +239,6 @@ async def list_posts(
             total=result.total,
         ),
     )
-
-
 @router.get(
     "/members/me/posts",
     response_model=PaginatedSuccessEnvelope[list[CommunityPostWriteData]],
@@ -265,7 +251,7 @@ async def list_my_posts(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=50)] = 20,
     post_status: Annotated[
-        Literal["DRAFT", "PENDING", "PUBLISHED", "REJECTED"] | None,
+        Literal["DRAFT", "PENDING", "PUBLISHED", "REJECTED", "HIDDEN"] | None,
         Query(alias="status"),
     ] = None,
 ) -> PaginatedSuccessEnvelope[list[CommunityPostWriteData]]:
@@ -284,8 +270,6 @@ async def list_my_posts(
             total=result.total,
         ),
     )
-
-
 @router.get(
     "/members/me/posts/{post_id}",
     response_model=SuccessEnvelope[CommunityPostWriteData],
@@ -507,54 +491,4 @@ async def moderation_queue(
             page_size=page_size,
             total=result.total,
         ),
-    )
-
-
-@moderation_router.post(
-    "/posts/{post_id}/publish",
-    dependencies=[Depends(enforce_community_content_write_rate_limit)],
-    response_model=SuccessEnvelope[CommunityPostWriteData],
-    responses=PRIVATE_RESPONSES,
-)
-async def publish_post(
-    post_id: UUID,
-    payload: CommunityModerationRequest,
-    request: Request,
-    principal: CsrfProtectedPrincipalDependency,
-    service: CommunityServiceDependency,
-) -> SuccessEnvelope[CommunityPostWriteData]:
-    row = await service.publish(
-        principal,
-        post_id,
-        reason=payload.reason,
-        request_id=request.state.request_id,
-    )
-    return SuccessEnvelope(
-        data=_write_data(row),
-        meta=ResponseMeta(request_id=request.state.request_id),
-    )
-
-
-@moderation_router.post(
-    "/posts/{post_id}/reject",
-    dependencies=[Depends(enforce_community_content_write_rate_limit)],
-    response_model=SuccessEnvelope[CommunityPostWriteData],
-    responses=PRIVATE_RESPONSES,
-)
-async def reject_post(
-    post_id: UUID,
-    payload: CommunityModerationRequest,
-    request: Request,
-    principal: CsrfProtectedPrincipalDependency,
-    service: CommunityServiceDependency,
-) -> SuccessEnvelope[CommunityPostWriteData]:
-    row = await service.reject(
-        principal,
-        post_id,
-        reason=payload.reason,
-        request_id=request.state.request_id,
-    )
-    return SuccessEnvelope(
-        data=_write_data(row),
-        meta=ResponseMeta(request_id=request.state.request_id),
     )

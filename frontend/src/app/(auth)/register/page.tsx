@@ -8,6 +8,11 @@ export const metadata: Metadata = {
     "Tạo tài khoản Đề cử Tinh Hoa Việt để sử dụng các tiện ích cá nhân.",
 };
 
-export default function RegisterPage() {
-  return <RegisterForm />;
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+  return <RegisterForm next={next} />;
 }

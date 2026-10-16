@@ -13,7 +13,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError, authApi } from "@/lib/api/client";
-import { resolveDefaultWorkspace } from "@/lib/auth/role-workspaces";
+import { safeLocalDestination } from "@/lib/auth/safe-destination";
+import { broadcastAuthSessionChange } from "@/lib/auth/session-sync";
 import {
   getFirebaseAuth,
   firebaseConfigured,
@@ -48,10 +49,6 @@ function setPendingRedirect(pending: boolean): void {
   } catch {
     // Redirect authentication can still complete when storage is unavailable.
   }
-}
-
-function safeDestination(value: string | undefined, fallback: string): string {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
 }
 
 function oauthErrorMessage(error: unknown): string {
@@ -104,19 +101,16 @@ export function GoogleOAuthButton({
   const finishSignIn = useCallback(
     async (user: User) => {
       const idToken = await user.getIdToken(true);
+      const destination = safeLocalDestination(next, "/workspace");
       const result = await authApi.exchangeFirebaseToken(
         idToken,
         accountType,
-        next,
+        destination,
       );
       queryClient.setQueryData(["auth", "me"], result.user);
+      broadcastAuthSessionChange();
       setNavigating(true);
-      router.replace(
-        safeDestination(
-          next,
-          resolveDefaultWorkspace(result.user.roles, result.user.permissions),
-        ),
-      );
+      router.replace(destination);
       router.refresh();
     },
     [accountType, next, queryClient, router],

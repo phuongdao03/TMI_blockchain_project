@@ -11,10 +11,15 @@ import { FormField } from "@/components/auth/form-field";
 import { GoogleOAuthButton } from "@/components/auth/google-oauth-button";
 import { Button } from "@/components/ui/button";
 import { authApi } from "@/lib/api/client";
+import { safeLocalDestination } from "@/lib/auth/safe-destination";
 import { registerSchema, type RegisterValues } from "@/lib/auth/schemas";
 import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
 
-export function RegisterForm() {
+export function RegisterForm({ next }: { next?: string }) {
+  const safeNext = next ? safeLocalDestination(next, "/workspace") : undefined;
+  const loginHref = safeNext
+    ? `/login?next=${encodeURIComponent(safeNext)}`
+    : "/login";
   const [submitError, setSubmitError] = useState<string>();
   const [acceptedEmail, setAcceptedEmail] = useState<string>();
   const [submitPhase, setSubmitPhase] = useState<"creating" | "sending">();
@@ -75,7 +80,7 @@ export function RegisterForm() {
       description="Tạo tài khoản để gửi hồ sơ, lưu bản nháp và theo dõi quá trình xử lý."
       footer={
         <>
-          Đã có tài khoản? <AuthLink href="/login">Đăng nhập</AuthLink>
+          Đã có tài khoản? <AuthLink href={loginHref}>Đăng nhập</AuthLink>
         </>
       }
       title="Tạo tài khoản"
@@ -90,6 +95,9 @@ export function RegisterForm() {
             Chúng tôi đã gửi liên kết xác minh tới{" "}
             <strong>{acceptedEmail}</strong>. Hãy mở Hộp thư đến hoặc thư rác,
             chọn “Xác minh email”, rồi quay lại đăng nhập.
+          </p>
+          <p className="mt-3">
+            <AuthLink href={loginHref}>Đăng nhập để tiếp tục</AuthLink>
           </p>
         </div>
       ) : (
@@ -162,7 +170,7 @@ export function RegisterForm() {
             </span>
             <span className="h-px flex-1 bg-white/10" />
           </div>
-          <GoogleOAuthButton accountType="PUBLIC_USER" />
+          <GoogleOAuthButton accountType="PUBLIC_USER" next={safeNext} />
         </div>
       )}
     </AuthCard>

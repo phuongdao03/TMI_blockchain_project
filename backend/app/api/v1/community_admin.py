@@ -33,7 +33,6 @@ from app.modules.community.admin_schemas import (
     CommunityAdminPostDeletionData,
     CommunityAdminPostLockData,
     CommunityAdminPostPinData,
-    CommunityAdminSettingsData,
     CommunityCategoryCreateRequest,
     CommunityCategoryPatchRequest,
     CommunityMemberRestrictionCreateRequest,
@@ -46,7 +45,6 @@ from app.modules.community.admin_schemas import (
     CommunityReportPostPreview,
     CommunityReportRequest,
     CommunityReportResolutionRequest,
-    CommunitySettingsRequest,
 )
 from app.modules.community.dependencies import CommunityAdminServiceDependency
 from app.modules.community.models import CommunityReportReason
@@ -925,54 +923,6 @@ async def update_category(
     )
     return SuccessEnvelope(
         data=CommunityAdminCategoryData.model_validate(category),
-        meta=ResponseMeta(request_id=request.state.request_id),
-    )
-
-
-@admin_router.get(
-    "/settings",
-    response_model=SuccessEnvelope[CommunityAdminSettingsData],
-    responses=PRIVATE_RESPONSES,
-)
-async def get_settings(
-    request: Request,
-    principal: CurrentPrincipalDependency,
-    service: CommunityAdminServiceDependency,
-) -> SuccessEnvelope[CommunityAdminSettingsData]:
-    settings = await service.get_settings(principal)
-    return SuccessEnvelope(
-        data=CommunityAdminSettingsData(
-            pre_moderation_enabled=settings.pre_moderation_enabled,
-            updated_at=settings.updated_at,
-            updated_by=settings.updated_by_user_id,
-        ),
-        meta=ResponseMeta(request_id=request.state.request_id),
-    )
-
-
-@admin_router.put(
-    "/settings",
-    dependencies=[Depends(enforce_community_content_write_rate_limit)],
-    response_model=SuccessEnvelope[CommunityAdminSettingsData],
-    responses=PRIVATE_RESPONSES,
-)
-async def update_settings(
-    payload: CommunitySettingsRequest,
-    request: Request,
-    principal: CsrfProtectedPrincipalDependency,
-    service: CommunityAdminServiceDependency,
-) -> SuccessEnvelope[CommunityAdminSettingsData]:
-    settings = await service.update_settings(
-        principal,
-        payload,
-        request_id=request.state.request_id,
-    )
-    return SuccessEnvelope(
-        data=CommunityAdminSettingsData(
-            pre_moderation_enabled=settings.pre_moderation_enabled,
-            updated_at=settings.updated_at,
-            updated_by=settings.updated_by_user_id,
-        ),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 

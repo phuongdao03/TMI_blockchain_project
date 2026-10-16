@@ -631,7 +631,8 @@ export type CommunityOwnerPostStatus =
   | "DRAFT"
   | "PENDING"
   | "PUBLISHED"
-  | "REJECTED";
+  | "REJECTED"
+  | "HIDDEN";
 
 export interface CommunityOwnerPost
   extends Omit<CommunityPostWriteResult, "status"> {
@@ -725,11 +726,6 @@ export interface CommunityAdminPostDeletionResult {
 export interface CommunityAdminCommentResult {
   commentId: string;
   visibility: CommunityCommentVisibility;
-}
-
-export interface CommunityModerationQueuePost extends CommunityPostWriteResult {
-  author: CommunityAuthor;
-  submittedAt: string;
 }
 
 export type CommunityTargetType = "POST" | "COMMENT";
@@ -831,17 +827,6 @@ export interface CommunityAdminCategoryUpdateInput {
   reason: string;
 }
 
-export interface CommunityAdminSettings {
-  preModerationEnabled: boolean;
-  updatedAt: string;
-  updatedBy: string | null;
-}
-
-export interface CommunityAdminSettingsInput {
-  preModerationEnabled: boolean;
-  reason: string;
-}
-
 export type CommunityModerationTargetType =
   | CommunityTargetType
   | "CATEGORY"
@@ -872,12 +857,6 @@ export type CommunityPageResponse<Data> = Omit<
 > & {
   meta: CommunityFeedMeta;
 };
-
-export interface CommunityModerationResult {
-  id: string;
-  status: "PUBLISHED" | "REJECTED";
-  reason?: string;
-}
 
 export interface ErrorEnvelope {
   success: false;

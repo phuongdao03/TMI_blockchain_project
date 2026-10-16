@@ -10,11 +10,17 @@ const api = vi.hoisted(() => ({
   categories: vi.fn(),
   posts: vi.fn(),
 }));
+const router = vi.hoisted(() => ({ push: vi.fn() }));
 
 vi.mock("@/lib/api/client", () => ({ communityApi: api }));
-const auth = vi.hoisted(() => ({ user: { id: "viewer-7" } }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+const auth = vi.hoisted(() => ({
+  user: null as { id: string } | null,
+  status: "authenticated" as "authenticated" | "unauthenticated" | "loading" | "error",
+}));
 vi.mock("@/lib/auth/user-context", () => ({
   useAuthUser: () => auth.user,
+  useAuthStatus: () => auth.status,
 }));
 
 let queryClient: QueryClient;
@@ -50,6 +56,7 @@ beforeEach(() => {
   });
   vi.clearAllMocks();
   auth.user = { id: "viewer-7" };
+  auth.status = "authenticated";
   api.categories.mockResolvedValue(categories);
   api.posts.mockResolvedValue({
     success: true,
@@ -112,10 +119,8 @@ describe("CommunityFeed", () => {
     ).toBe("/works/gom-lang-co");
     expect(screen.getByText("Thành viên cộng đồng")).toBeDefined();
     expect(
-      screen
-        .getByRole("link", { name: "Di sản và văn hóa" })
-        .getAttribute("href"),
-    ).toBe("/community?category=heritage-culture&page=1");
+      (screen.getByLabelText("Chuyên mục") as HTMLSelectElement).value,
+    ).toBe("heritage-culture");
     expect(
       screen.getByRole("link", { name: "Trang trước" }).getAttribute("href"),
     ).toBe("/community?category=heritage-culture&page=1");
@@ -162,10 +167,8 @@ describe("CommunityFeed", () => {
       ).value,
     ).toBe("tranh Đông Hồ");
     expect(
-      screen
-        .getByRole("link", { name: "Thảo luận nhiều" })
-        .getAttribute("href"),
-    ).toContain("sort=discussed");
+      (screen.getByLabelText("Sắp xếp") as HTMLSelectElement).value,
+    ).toBe("discussed");
     expect(
       screen
         .getByRole("link", { name: "#Tranh dân gian" })
@@ -192,6 +195,16 @@ describe("CommunityFeed", () => {
     expect(
       screen.getByRole("link", { name: "Viết bài đầu tiên" }),
     ).toBeDefined();
+  });
+
+  it("does not mistake an unresolved session for a guest in the followed feed", async () => {
+    auth.user = null;
+    auth.status = "loading";
+    render(<CommunityFeed page={1} sort="following" />, { wrapper });
+
+    expect(await screen.findByText("Đang xác minh tài khoản…")).toBeDefined();
+    expect(screen.queryByText("Bạn đang ở chế độ chỉ đọc.")).toBeNull();
+    expect(api.posts).not.toHaveBeenCalled();
   });
 
   it("does not render an image URL unless it matches the backend community delivery path", async () => {

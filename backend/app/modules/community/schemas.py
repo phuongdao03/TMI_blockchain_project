@@ -119,18 +119,6 @@ class CommunityPostRequest(CommunitySchema):
         return normalized
 
 
-class CommunityModerationRequest(CommunitySchema):
-    reason: Annotated[str, Field(min_length=1, max_length=2_000)]
-
-    @field_validator("reason")
-    @classmethod
-    def normalize_reason(cls, value: str) -> str:
-        normalized = _clean_text(value)
-        if not normalized:
-            raise ValueError("A moderation reason is required.")
-        return normalized
-
-
 class CommunityPostData(CommunitySchema):
     id: UUID
     slug: str
@@ -168,8 +156,3 @@ class CommunityPostWriteData(CommunitySchema):
     view_count: int
     images: list[CommunityPostImageData] = Field(default_factory=list)
     tags: list[CommunityTagData] = Field(default_factory=list)
-
-
-class CommunityModerationQueueData(CommunityPostWriteData):
-    author: CommunityAuthorData
-    submitted_at: datetime | None

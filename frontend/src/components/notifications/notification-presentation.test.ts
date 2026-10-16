@@ -118,6 +118,24 @@ describe("notification presentation", () => {
     });
   });
 
+  it("routes removed-post notifications to the owner's post list", () => {
+    expect(
+      presentNotification({
+        ...base,
+        type: "COMMUNITY_POST_REMOVED",
+        data: {
+          postId: "post-1",
+          actionPath: "/community/mine",
+        },
+      }),
+    ).toMatchObject({
+      actionLabel: "Xem bài viết của tôi",
+      groupLabel: "Cộng đồng",
+      actionPath: "/community/mine",
+      tone: "warning",
+    });
+  });
+
   it("labels community mention notifications", () => {
     expect(
       presentNotification({

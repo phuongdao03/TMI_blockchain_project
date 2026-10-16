@@ -50,8 +50,6 @@ import type {
   CommunityAdminCategory,
   CommunityAdminCategoryCreateInput,
   CommunityAdminCategoryUpdateInput,
-  CommunityAdminSettings,
-  CommunityAdminSettingsInput,
   CommunityCommentCreateResult,
   CommunityCommentInput,
   CommunityCommentLikeResult,
@@ -66,8 +64,6 @@ import type {
   CommunityOwnerPostStatus,
   CommunityMemberProfile,
   CommunityProfileUpdateInput,
-  CommunityModerationQueuePost,
-  CommunityModerationResult,
   CommunityModerationEvent,
   CommunityModerationTargetType,
   CommunityPageResponse,
@@ -2633,31 +2629,6 @@ export const communityReportApi = {
 };
 
 export const communityAdminApi = {
-  pendingPosts(page = 1, signal?: AbortSignal) {
-    const parameters = new URLSearchParams({
-      status: "PENDING",
-      page: String(page),
-      pageSize: "20",
-    });
-    return requestEnvelope<CommunityModerationQueuePost[]>(
-      `/admin/community/posts?${parameters.toString()}`,
-      { signal },
-    ) as unknown as Promise<
-      CommunityPageResponse<CommunityModerationQueuePost[]>
-    >;
-  },
-  publishPost(postId: string, input: { reason: string }) {
-    return request<CommunityModerationResult>(
-      `/admin/community/posts/${encodeURIComponent(postId)}/publish`,
-      { method: "POST", body: JSON.stringify(input) },
-    );
-  },
-  rejectPost(postId: string, input: { reason: string }) {
-    return request<CommunityModerationResult>(
-      `/admin/community/posts/${encodeURIComponent(postId)}/reject`,
-      { method: "POST", body: JSON.stringify(input) },
-    );
-  },
   reports(
     filters: {
       page?: number;
@@ -2741,17 +2712,6 @@ export const communityAdminApi = {
       `/admin/community/categories/${encodeURIComponent(categoryId)}`,
       { method: "PATCH", body: JSON.stringify(input) },
     );
-  },
-  settings(signal?: AbortSignal) {
-    return request<CommunityAdminSettings>("/admin/community/settings", {
-      signal,
-    });
-  },
-  updateSettings(input: CommunityAdminSettingsInput) {
-    return request<CommunityAdminSettings>("/admin/community/settings", {
-      method: "PUT",
-      body: JSON.stringify(input),
-    });
   },
   workspacePosts(
     filters: {

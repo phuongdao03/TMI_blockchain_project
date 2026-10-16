@@ -52,6 +52,7 @@ function isOwnerStatus(
     value === "DRAFT" ||
     value === "PENDING" ||
     value === "PUBLISHED" ||
-    value === "REJECTED"
+    value === "REJECTED" ||
+    value === "HIDDEN"
   );
 }

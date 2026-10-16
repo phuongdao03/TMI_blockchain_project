@@ -9,15 +9,10 @@ const auth = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/auth/user-context", () => ({ useAuthUser: () => auth.user }));
-vi.mock("@/components/community/community-moderation-queue", () => ({
-  CommunityModerationQueue: () => <div>Hàng chờ duyệt hiện có</div>,
-}));
 vi.mock("@/components/community/community-admin-panels", () => ({
   CommunityCategoryManagement: () => <div>Quản lý danh mục</div>,
   CommunityModerationHistoryPanel: () => <div>Lịch sử kiểm duyệt</div>,
   CommunityReportQueue: () => <div>Hàng báo cáo</div>,
-  CommunitySettingsPanel: () => <div>Cài đặt cộng đồng</div>,
-  CommunityVisibilityPanel: () => <div>Ẩn và khôi phục</div>,
 }));
 vi.mock("@/components/community/community-admin-content-workspaces", () => ({
   CommunityAdminPostsWorkspace: () => <div>Quản lý bài viết cộng đồng</div>,
@@ -30,10 +25,10 @@ describe("CommunityAdminWorkspace", () => {
     auth.user = { roles: [], permissions: ["community.moderate"] };
     render(<CommunityAdminWorkspace />);
 
-    expect(screen.getByRole("button", { name: "Bài chờ duyệt" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Báo cáo" })).toBeDefined();
     expect(screen.queryByRole("button", { name: "Danh mục" })).toBeNull();
-    expect(screen.getByText("Hàng chờ duyệt hiện có")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Bài chờ duyệt" })).toBeNull();
+    expect(screen.getByText("Quản lý bài viết cộng đồng")).toBeDefined();
     expect(screen.getByRole("button", { name: "Bài viết" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Bình luận" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Thành viên" })).toBeDefined();
@@ -52,12 +47,12 @@ describe("CommunityAdminWorkspace", () => {
     expect(screen.getByText("Quản lý thành viên cộng đồng")).toBeDefined();
   });
 
-  it("gives community.manage category and settings tools without moderation access", () => {
+  it("gives community.manage category tools without moderation access", () => {
     auth.user = { roles: [], permissions: ["community.manage"] };
     render(<CommunityAdminWorkspace />);
 
     expect(screen.getByRole("button", { name: "Danh mục" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Cài đặt" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Cài đặt" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Báo cáo" })).toBeNull();
     expect(screen.queryByText("Hàng chờ duyệt hiện có")).toBeNull();
     expect(screen.getByText("Quản lý danh mục")).toBeDefined();

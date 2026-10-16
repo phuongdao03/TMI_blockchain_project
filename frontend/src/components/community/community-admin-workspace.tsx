@@ -2,13 +2,10 @@
 
 import { useState } from "react";
 
-import { CommunityModerationQueue } from "@/components/community/community-moderation-queue";
 import {
   CommunityCategoryManagement,
   CommunityModerationHistoryPanel,
   CommunityReportQueue,
-  CommunitySettingsPanel,
-  CommunityVisibilityPanel,
 } from "@/components/community/community-admin-panels";
 import {
   CommunityAdminCommentsWorkspace,
@@ -18,15 +15,12 @@ import {
 import { useAuthUser } from "@/lib/auth/user-context";
 
 type WorkspaceView =
-  | "pending"
   | "posts"
   | "comments"
   | "members"
   | "reports"
-  | "visibility"
   | "history"
-  | "categories"
-  | "settings";
+  | "categories";
 
 export function CommunityAdminWorkspace() {
   const user = useAuthUser();
@@ -39,24 +33,19 @@ export function CommunityAdminWorkspace() {
   const views: { id: WorkspaceView; label: string }[] = [
     ...(canModerate
       ? [
-          { id: "pending" as const, label: "Bài chờ duyệt" },
           { id: "posts" as const, label: "Bài viết" },
           { id: "comments" as const, label: "Bình luận" },
           { id: "members" as const, label: "Thành viên" },
           { id: "reports" as const, label: "Báo cáo" },
-          { id: "visibility" as const, label: "Ẩn / khôi phục" },
           { id: "history" as const, label: "Lịch sử" },
         ]
       : []),
     ...(canManage
-      ? [
-          { id: "categories" as const, label: "Danh mục" },
-          { id: "settings" as const, label: "Cài đặt" },
-        ]
+      ? [{ id: "categories" as const, label: "Danh mục" }]
       : []),
   ];
   const [selectedView, setSelectedView] = useState<WorkspaceView>(
-    canModerate ? "pending" : "categories",
+    canModerate ? "posts" : "categories",
   );
 
   if (views.length === 0) return null;
@@ -95,9 +84,6 @@ export function CommunityAdminWorkspace() {
       </div>
 
       <div aria-live="polite" className="min-w-0">
-        {selectedView === "pending" && canModerate ? (
-          <CommunityModerationQueue />
-        ) : null}
         {selectedView === "posts" && canModerate ? (
           <CommunityAdminPostsWorkspace />
         ) : null}
@@ -110,17 +96,11 @@ export function CommunityAdminWorkspace() {
         {selectedView === "reports" && canModerate ? (
           <CommunityReportQueue />
         ) : null}
-        {selectedView === "visibility" && canModerate ? (
-          <CommunityVisibilityPanel />
-        ) : null}
         {selectedView === "history" && canModerate ? (
           <CommunityModerationHistoryPanel />
         ) : null}
         {selectedView === "categories" && canManage ? (
           <CommunityCategoryManagement />
-        ) : null}
-        {selectedView === "settings" && canManage ? (
-          <CommunitySettingsPanel />
         ) : null}
       </div>
     </main>

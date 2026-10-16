@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,6 +12,7 @@ import {
 const api = vi.hoisted(() => ({
   workspacePosts: vi.fn(),
   pinPost: vi.fn(),
+  hidePost: vi.fn(),
   workspaceComments: vi.fn(),
   hideWorkspaceComment: vi.fn(),
   members: vi.fn(),
@@ -54,13 +55,46 @@ describe("community admin content workspaces", () => {
     );
 
     await user.type(
-      screen.getByLabelText("Lý do kiểm duyệt"),
+      screen.getByLabelText("Lý do thao tác"),
       "Nội dung đã được đối chiếu.",
     );
     await user.click(screen.getByRole("button", { name: "Ghim bài viết" }));
     await waitFor(() =>
       expect(api.pinPost).toHaveBeenCalledWith(post.id, {
         reason: "Nội dung đã được đối chiếu.",
+      }),
+    );
+  });
+
+  it("requires a reason in the removal dialog before hiding a post", async () => {
+    const user = userEvent.setup();
+    api.workspacePosts.mockResolvedValue(page([post]));
+    api.hidePost.mockResolvedValue({
+      targetType: "POST",
+      targetId: post.id,
+      state: "HIDDEN",
+    });
+
+    renderWithQuery(<CommunityAdminPostsWorkspace />);
+    await screen.findByRole("heading", { name: post.title });
+    await user.click(screen.getByRole("button", { name: "Gỡ bài viết" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Gỡ bài viết" });
+    expect(
+      (within(dialog).getByRole("button", { name: "Gỡ bài viết" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    await user.type(
+      within(dialog).getByLabelText("Lý do gỡ bài"),
+      "Vi phạm quy định cộng đồng.",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Gỡ bài viết" }),
+    );
+
+    await waitFor(() =>
+      expect(api.hidePost).toHaveBeenCalledWith(post.id, {
+        reason: "Vi phạm quy định cộng đồng.",
       }),
     );
   });

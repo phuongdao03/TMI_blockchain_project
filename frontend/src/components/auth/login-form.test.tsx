@@ -146,6 +146,32 @@ describe("LoginForm", () => {
     );
   });
 
+  it("defaults a direct login to the personal workspace", async () => {
+    signInWithEmailAndPassword.mockResolvedValue({
+      user: {
+        emailVerified: true,
+        getIdToken: vi.fn(async () => "firebase-email-token"),
+      },
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: { user: { id: "admin-user", email: "admin@example.com", roles: ["SUPER_ADMIN"] } },
+          meta: { request_id: "request-direct-login" },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    render(<LoginForm />, { wrapper: Wrapper });
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Email" }), "admin@example.com");
+    await userEvent.type(screen.getByLabelText("Mật khẩu"), "correct horse battery staple");
+    await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/workspace"));
+  });
+
   it("sends a verification email instead of exchanging an unverified Firebase identity", async () => {
     const firebaseUser = {
       emailVerified: false,

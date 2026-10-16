@@ -513,8 +513,8 @@ class CommunitySettings(Base):
     singleton_id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     pre_moderation_enabled: Mapped[bool] = mapped_column(
         nullable=False,
-        default=True,
-        server_default=text("true"),
+        default=False,
+        server_default=text("false"),
     )
     updated_by_user_id: Mapped[UUID | None] = mapped_column(
         Uuid,

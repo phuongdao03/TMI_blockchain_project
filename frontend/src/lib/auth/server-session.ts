@@ -7,13 +7,16 @@ import { resolveServerApiBaseUrl } from "@/lib/api/server-base-url";
 export interface ServerAuthState {
   user: AuthUser | null;
   hasRefreshCookie: boolean;
+  hasSessionCookie: boolean;
 }
 
 export const getServerAuthState = cache(async (): Promise<ServerAuthState> => {
   const cookieStore = await cookies();
   const hasRefreshCookie = Boolean(cookieStore.get("cns_refresh"));
+  const hasSessionCookie =
+    hasRefreshCookie || Boolean(cookieStore.get("cns_access"));
   if (!cookieStore.get("cns_access")) {
-    return { user: null, hasRefreshCookie };
+    return { user: null, hasRefreshCookie, hasSessionCookie };
   }
   const cookieHeader = cookieStore
     .getAll()
@@ -27,11 +30,11 @@ export const getServerAuthState = cache(async (): Promise<ServerAuthState> => {
       cache: "no-store",
     });
     if (!response.ok) {
-      return { user: null, hasRefreshCookie };
+      return { user: null, hasRefreshCookie, hasSessionCookie };
     }
     const payload = (await response.json()) as SuccessEnvelope<AuthUser>;
-    return { user: payload.data, hasRefreshCookie };
+    return { user: payload.data, hasRefreshCookie, hasSessionCookie };
   } catch {
-    return { user: null, hasRefreshCookie };
+    return { user: null, hasRefreshCookie, hasSessionCookie };
   }
 });

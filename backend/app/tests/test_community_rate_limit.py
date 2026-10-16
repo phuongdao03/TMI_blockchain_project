@@ -190,9 +190,6 @@ def test_all_community_mutation_routes_have_the_expected_rate_bucket() -> None:
         ("/api/v1/admin/community/comments/{comment_id}/restore", "POST"),
         ("/api/v1/admin/community/categories", "POST"),
         ("/api/v1/admin/community/categories/{category_id}", "PATCH"),
-        ("/api/v1/admin/community/settings", "PUT"),
-        ("/api/v1/admin/community/posts/{post_id}/publish", "POST"),
-        ("/api/v1/admin/community/posts/{post_id}/reject", "POST"),
     }
     expected_engagement = {
         ("/api/v1/community/posts/{post_id}/like", "PUT"),
