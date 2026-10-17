@@ -49,17 +49,52 @@ test("public experience passes visual and accessibility gates at all supported w
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+  });
 
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        }),
+    );
 
     const bodyText = await page.locator("body").innerText();
     expect(bodyText).not.toMatch(forbiddenPublicTerms);
+    const layout = await page.evaluate(() => {
+      const viewportWidth = window.innerWidth;
+      const overflowingElements = Array.from(
+        document.body.querySelectorAll<HTMLElement>("*"),
+      )
+        .map((element) => {
+          const bounds = element.getBoundingClientRect();
+          const className =
+            typeof element.className === "string"
+              ? element.className.trim().replace(/\s+/g, ".")
+              : "";
+          const selector = `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ""}${className ? `.${className}` : ""}`;
+
+          return {
+            selector,
+            left: Math.round(bounds.left),
+            right: Math.round(bounds.right),
+          };
+        })
+        .filter(({ left, right }) => left < -1 || right > viewportWidth + 1)
+        .slice(0, 8);
+
+      return {
+        documentWidth: document.documentElement.scrollWidth,
+        overflowingElements,
+      };
+    });
     expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= window.innerWidth + 1,
-      ),
-    ).toBe(true);
+      layout.documentWidth,
+      `${viewport.width}px viewport scrolls to ${layout.documentWidth}px; overflowing elements: ${JSON.stringify(layout.overflowingElements)}`,
+    ).toBeLessThanOrEqual(viewport.width + 1);
 
     const accessibility = await new AxeBuilder({ page }).analyze();
     expect(accessibility.violations).toEqual([]);

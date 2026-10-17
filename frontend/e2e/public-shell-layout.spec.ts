@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("mobile home shows imagery and account actions without opening the menu", async ({
+test("mobile home shows the brand logo and account actions without opening the menu", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile-chrome");
@@ -8,63 +8,20 @@ test("mobile home shows imagery and account actions without opening the menu", a
 
   const story = page.locator(".registry-heritage");
   await expect(story).toBeVisible();
-  await expect(story.locator("img")).toHaveCount(3);
   const logo = story.locator(".registry-heritage__logo");
-  const bird = story.locator(".registry-heritage__bird");
+  await expect(story.locator("img")).toHaveCount(1);
+  await expect(logo).toBeVisible();
+  await expect(
+    story.locator(
+      ".registry-heritage__bird, .registry-heritage__drum, .registry-heritage__seal",
+    ),
+  ).toHaveCount(0);
   await expect(story).toHaveCSS("border-top-width", "0px");
   await expect(story).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(story).toHaveCSS("overflow", "visible");
-  expect((await bird.boundingBox())!.width).toBeLessThan(
-    (await logo.boundingBox())!.width * 0.38,
-  );
-  const seal = story.locator(".registry-heritage__seal");
-  await expect(seal).toHaveCSS("animation-name", "none");
-  await expect(bird).toHaveCSS("animation-name", "none");
-  const glint = seal.locator(".registry-heritage__glint");
-  await expect(glint).toHaveCSS("overflow", "hidden");
-  await expect(glint).toHaveCSS("border-radius", "50%");
-  const shine = await glint.evaluate((element) => {
-    const style = getComputedStyle(element, "::before");
-    return {
-      animationName: style.animationName,
-      iterationCount: style.animationIterationCount,
-      duration: style.animationDuration,
-      willChange: style.willChange,
-    };
-  });
-  expect(shine).toEqual({
-    animationName: "heritage-seal-glint",
-    iterationCount: "infinite",
-    duration: "3.6s",
-    willChange: "transform",
-  });
-  const sweep = await glint.evaluate((element) => {
-    const animation = element
-      .getAnimations({ subtree: true })
-      .find(
-        (item) =>
-          (item as CSSAnimation).animationName === "heritage-seal-glint",
-      );
-    if (!animation) return null;
-    animation.pause();
-    const positions = [0, 900, 1800, 4500].map((time) => {
-      animation.currentTime = time;
-      return getComputedStyle(element, "::before").transform;
-    });
-    animation.play();
-    return positions;
-  });
-  expect(sweep).not.toBeNull();
-  expect(sweep![0]).not.toBe(sweep![1]);
-  expect(sweep![1]).not.toBe(sweep![2]);
-  expect(sweep![1]).toBe(sweep![3]);
   await expect
     .poll(() =>
-      story
-        .locator("img")
-        .evaluateAll((images) =>
-          images.every((image) => (image as HTMLImageElement).naturalWidth > 0),
-        ),
+      logo.evaluate((image) => (image as HTMLImageElement).naturalWidth > 0),
     )
     .toBe(true);
 
@@ -84,7 +41,7 @@ test("mobile home shows imagery and account actions without opening the menu", a
   });
 });
 
-test("heritage artwork fits without covering actions across mobile and tablet widths", async ({
+test("heritage logo fits without covering actions across mobile and tablet widths", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chrome");
@@ -97,44 +54,40 @@ test("heritage artwork fits without covering actions across mobile and tablet wi
     await expect(heroLocator).toBeVisible();
     const hero = await heroLocator.boundingBox();
     const figure = await page.locator(".registry-heritage").boundingBox();
-    const drum = await page.locator(".registry-heritage__drum").boundingBox();
-    const artwork = await page
-      .locator(".registry-heritage__seal")
-      .boundingBox();
+    const logo = await page.locator(".registry-heritage__logo").boundingBox();
     const actions = await page.locator(".registry-hero__actions").boundingBox();
     expect(hero).not.toBeNull();
     expect(figure).not.toBeNull();
-    expect(drum).not.toBeNull();
-    expect(artwork).not.toBeNull();
+    expect(logo, `${width}px logo is visible`).not.toBeNull();
     expect(actions).not.toBeNull();
 
     expect(
-      drum!.x,
-      `${width}px drum is cut on the left`,
+      logo!.x,
+      `${width}px logo is cut on the left`,
     ).toBeGreaterThanOrEqual(figure!.x - 1);
     expect(
-      drum!.x + drum!.width,
-      `${width}px drum is cut on the right`,
+      logo!.x + logo!.width,
+      `${width}px logo is cut on the right`,
     ).toBeLessThanOrEqual(figure!.x + figure!.width + 1);
-    expect(drum!.y, `${width}px drum is cut at the top`).toBeGreaterThanOrEqual(
+    expect(logo!.y, `${width}px logo is cut at the top`).toBeGreaterThanOrEqual(
       figure!.y - 1,
     );
     expect(
-      drum!.y + drum!.height,
-      `${width}px drum is cut at the bottom`,
+      logo!.y + logo!.height,
+      `${width}px logo is cut at the bottom`,
     ).toBeLessThanOrEqual(figure!.y + figure!.height + 1);
 
     const overlapsActions =
-      artwork!.x < actions!.x + actions!.width &&
-      artwork!.x + artwork!.width > actions!.x &&
-      artwork!.y < actions!.y + actions!.height &&
-      artwork!.y + artwork!.height > actions!.y;
-    expect(overlapsActions, `${width}px artwork overlaps account actions`).toBe(
+      logo!.x < actions!.x + actions!.width &&
+      logo!.x + logo!.width > actions!.x &&
+      logo!.y < actions!.y + actions!.height &&
+      logo!.y + logo!.height > actions!.y;
+    expect(overlapsActions, `${width}px logo overlaps account actions`).toBe(
       false,
     );
     expect(
-      artwork!.y + artwork!.height,
-      `${width}px artwork escapes the introduction`,
+      logo!.y + logo!.height,
+      `${width}px logo escapes the introduction`,
     ).toBeLessThanOrEqual(hero!.y + hero!.height);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
@@ -170,7 +123,11 @@ test("public header keeps a stable desktop navigation when viewport width change
   const header = page.locator(".public-header");
   const artwork = page.locator(".registry-heritage");
   await expect(artwork).toBeVisible();
-  await expect(artwork.locator("img")).toHaveCount(3);
+  await expect(artwork.locator("img")).toHaveCount(1);
+  await expect(artwork.locator(".registry-heritage__logo")).toBeVisible();
+  await expect(
+    artwork.locator(".registry-heritage__bird, .registry-heritage__drum"),
+  ).toHaveCount(0);
   const navigation = page.getByRole("navigation", { name: "Điều hướng chính" });
   const brand = header.locator(".brand-mark");
 
