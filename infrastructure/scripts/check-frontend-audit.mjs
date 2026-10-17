@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const ADVISORY = "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm";
-const EXPIRES_AT = "2026-10-17T00:00:00Z";
+const EXPIRES_AT = "2026-10-24T04:18:54Z";
 const ALLOWED_VIA = new Map([
   ["braces", ADVISORY],
   ["micromatch", "braces"],

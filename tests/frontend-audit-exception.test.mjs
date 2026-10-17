@@ -46,7 +46,7 @@ test("passes a clean audit after the exception expires", () => {
   report.vulnerabilities = {};
   report.metadata.vulnerabilities.high = 0;
   assert.equal(
-    checkFrontendAudit(report, lockfile, 0, new Date("2026-10-18T00:00:00Z")),
+    checkFrontendAudit(report, lockfile, 0, new Date("2026-10-25T00:00:00Z")),
     false,
   );
 });
@@ -63,7 +63,7 @@ test("rejects another advisory, production dependency, and expired exception", (
 
   lockfile.packages["node_modules/braces"].dev = true;
   assert.throws(() =>
-    checkFrontendAudit(report, lockfile, 1, new Date("2026-10-17T00:00:00Z")),
+    checkFrontendAudit(report, lockfile, 1, new Date("2026-10-24T04:18:54Z")),
   );
 });
 
