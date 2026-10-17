@@ -95,15 +95,16 @@ export function CommunityPostDetail({ slug }: { slug: string }) {
           <h1 className="mt-3 text-3xl font-bold leading-tight tracking-[-0.035em] text-[var(--theme-text)] sm:text-5xl">
             {article.title}
           </h1>
-          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--theme-muted)]">
+          <div className="mt-5 flex flex-col items-start gap-3 text-sm text-[var(--theme-muted)] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
             <CommunityUserIdentity size={40} user={article.author} />
-            <span aria-hidden="true">·</span>
-            <time dateTime={article.publishedAt}>
-              {formatPublishedDate(article.publishedAt)}
-            </time>
-            <span aria-label={`${article.viewCount} lượt xem`}>
-              {article.viewCount} lượt xem
-            </span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <time dateTime={article.publishedAt}>
+                {formatPublishedDate(article.publishedAt)}
+              </time>
+              <span aria-label={`${article.viewCount} lượt xem`}>
+                {article.viewCount} lượt xem
+              </span>
+            </div>
           </div>
         </header>
         <CommunityPostImages

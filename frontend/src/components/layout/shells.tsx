@@ -276,13 +276,15 @@ export function PublicShell({ children }: PropsWithChildren) {
                   size={32}
                   src={accountAvatarUrl}
                 />
-                <span className="public-user-menu__display-name">
-                  {accountIdentity.displayName}
+                <span className="public-user-menu__identity">
+                  <span className="public-user-menu__display-name">
+                    {accountIdentity.displayName}
+                  </span>
+                  <CommunityRoleBadge
+                    isAdmin={accountIdentity.isAdmin}
+                    roleLabel={accountIdentity.roleLabel}
+                  />
                 </span>
-                <CommunityRoleBadge
-                  isAdmin={accountIdentity.isAdmin}
-                  roleLabel={accountIdentity.roleLabel}
-                />
               </summary>
               <nav
                 aria-label="Menu tài khoản"

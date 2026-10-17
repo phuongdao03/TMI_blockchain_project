@@ -99,13 +99,17 @@ function CommunityPostCardContent({
   const postHref = `/community/posts/${encodeURIComponent(post.slug)}`;
   return (
     <article className="border-b border-[var(--theme-border)] py-5 first:border-t sm:py-7">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-xs font-semibold text-[var(--theme-muted)] sm:gap-x-3">
+      <div className="flex flex-col items-start gap-2 text-xs font-semibold text-[var(--theme-muted)] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
         <CommunityUserIdentity size={36} user={post.author} />
-        <span aria-hidden="true">·</span>
-        <span className="text-[var(--theme-accent)]">{post.category.name}</span>
-        <time dateTime={post.publishedAt}>
-          {formatPublishedDate(post.publishedAt)}
-        </time>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-[var(--theme-accent)]">
+            {post.category.name}
+          </span>
+          <span aria-hidden="true">·</span>
+          <time dateTime={post.publishedAt}>
+            {formatPublishedDate(post.publishedAt)}
+          </time>
+        </div>
       </div>
       <h2 className="mt-3 text-lg font-bold leading-snug tracking-tight text-[var(--theme-text)] sm:text-2xl">
         <Link

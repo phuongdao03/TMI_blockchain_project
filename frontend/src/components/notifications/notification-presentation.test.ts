@@ -109,12 +109,14 @@ describe("notification presentation", () => {
       presentNotification({
         ...base,
         type: "COMMUNITY_REPLY",
-        data: { actionPath: "/community/posts/lang-nghe-xua" },
+        data: {
+          actionPath: "/community/posts/lang-nghe-xua#community-comments-title",
+        },
       }),
     ).toMatchObject({
       actionLabel: "Xem phản hồi",
       groupLabel: "Cộng đồng",
-      actionPath: "/community/posts/lang-nghe-xua",
+      actionPath: "/community/posts/lang-nghe-xua#community-comments-title",
     });
   });
 

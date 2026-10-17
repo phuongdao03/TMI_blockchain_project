@@ -132,17 +132,16 @@ class CommunityEngagementService:
                 and recipient_id not in mentioned_user_ids
             ):
                 is_reply = payload.parent_id is not None
+                action_path = f"/community/posts/{quote(post.post.slug, safe='-._~')}"
+                if is_reply:
+                    action_path += "#community-comments-title"
                 await NotificationService(self._session).consume_in_transaction(
                     event_id=comment.id,
                     user_id=recipient_id,
                     event_type=("COMMUNITY_REPLY" if is_reply else "COMMUNITY_COMMENT"),
                     title="Có phản hồi mới" if is_reply else "Có bình luận mới",
                     body=f"Có hoạt động mới trong bài viết “{post.post.title}”.",
-                    data={
-                        "actionPath": (
-                            f"/community/posts/{quote(post.post.slug, safe='-._~')}"
-                        )
-                    },
+                    data={"actionPath": action_path},
                 )
             for mentioned_user_id in mentioned_user_ids:
                 if mentioned_user_id == principal.user_id:

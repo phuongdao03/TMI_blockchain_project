@@ -43,7 +43,7 @@ describe("HomePage", () => {
         "mission-section__invitation",
       ),
     ).toBe(true);
-    expect(hero?.querySelectorAll(".registry-heritage img")).toHaveLength(3);
+    expect(hero?.querySelectorAll(".registry-heritage img")).toHaveLength(1);
     expect(
       hero?.querySelector(".registry-heritage__logo")?.getAttribute("src"),
     ).toContain("logo-tinh-hoa-viet.png");

@@ -254,7 +254,7 @@ export function CommunityCommentThreads({
         </p>
       ) : null}
       {threads.length > 0 ? (
-        <div className="mt-4 divide-y divide-[var(--theme-border)] sm:mt-5">
+        <div className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">
           {threads.map((thread) => (
             <CommentThread
               key={thread.id}
@@ -355,7 +355,8 @@ function CommentThread({
   return (
     <article
       aria-label={`Bình luận của ${authorName}`}
-      className="py-3 first:pt-0 sm:py-5"
+      className="scroll-mt-28 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3.5 sm:p-5"
+      id={`comment-${thread.id}`}
     >
       <CommentBody
         author={thread.author}
@@ -372,7 +373,7 @@ function CommentThread({
         likeCount={thread.likeCount}
       />
       {thread.replies.length ? (
-        <div className="ml-2 mt-3 space-y-3 border-l-2 border-[var(--theme-border)] pl-3 sm:ml-6 sm:mt-4 sm:space-y-4 sm:pl-5">
+        <div className="ml-2 mt-3 space-y-3 border-l border-[var(--theme-border)] pl-3 sm:ml-6 sm:mt-4 sm:pl-4">
           {thread.replies.map((reply) => {
             const parent =
               reply.parentId === thread.id
@@ -385,7 +386,11 @@ function CommentThread({
             const replyAuthorName =
               reply.author?.displayName?.trim() || "thành viên";
             return (
-              <div key={reply.id}>
+              <div
+                className="scroll-mt-28 rounded-xl bg-[var(--theme-elevated)] p-3 sm:p-4"
+                id={`comment-${reply.id}`}
+                key={reply.id}
+              >
                 {reply.parentId !== thread.id ? (
                   <p className="mb-1 text-xs text-[var(--theme-muted)]">
                     Trả lời {replyTargetName}
@@ -408,7 +413,7 @@ function CommentThread({
                 {canReply ? (
                   <button
                     aria-label={`Trả lời ${replyAuthorName}`}
-                    className="mt-1 inline-flex min-h-9 items-center rounded-md px-2 text-sm font-semibold text-[var(--theme-accent)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                    className="mt-2 inline-flex min-h-9 items-center rounded-lg px-3 text-sm font-semibold text-[var(--theme-accent)] hover:bg-[var(--theme-surface)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
                     onClick={() => onReply(reply.id)}
                     type="button"
                   >
@@ -433,7 +438,7 @@ function CommentThread({
       {canReply ? (
         <button
           aria-label={`Trả lời ${authorName}`}
-          className="mt-1 inline-flex min-h-9 items-center rounded-md px-2 text-sm font-semibold text-[var(--theme-accent)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+          className="mt-2 inline-flex min-h-9 items-center rounded-lg px-3 text-sm font-semibold text-[var(--theme-accent)] hover:bg-[var(--theme-elevated)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
           onClick={() => onReply(thread.id)}
           type="button"
         >
@@ -471,7 +476,7 @@ function ReplyComposer({
 }) {
   return (
     <form
-      className="ml-2 mt-2 rounded-xl border border-[var(--theme-border)] p-3 sm:ml-6 sm:mt-3 sm:p-4"
+      className="ml-2 mt-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:ml-6 sm:p-4"
       onSubmit={onSubmit}
     >
       <p className="mb-2 text-xs text-[var(--theme-muted)]">
@@ -560,32 +565,35 @@ function CommentBody({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+      <div className="flex min-w-0 items-center gap-2.5">
         {author ? (
           <>
             <UserAvatar
+              className="shrink-0 border border-[var(--theme-border)]"
               displayName={author.displayName}
-              size={32}
+              size={36}
               src={author.avatarUrl}
             />
-            <Link
-              className="font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-              href={`/community/members/${encodeURIComponent(author.username)}`}
-            >
-              {name}
-            </Link>
+            <div className="min-w-0">
+              <Link
+                className="block max-w-full truncate text-sm font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                href={`/community/members/${encodeURIComponent(author.username)}`}
+              >
+                {name}
+              </Link>
+              <time
+                className="mt-0.5 block text-xs text-[var(--theme-muted)]"
+                dateTime={createdAt}
+              >
+                {formatDate(createdAt)}
+              </time>
+            </div>
           </>
         ) : (
-          <span className="font-semibold text-[var(--theme-muted)]">
-            Thành viên
+          <span className="text-sm font-semibold text-[var(--theme-muted)]">
+            {isDeleted ? "Bình luận đã xóa" : "Thành viên"}
           </span>
         )}
-        <time
-          className="text-xs text-[var(--theme-muted)]"
-          dateTime={createdAt}
-        >
-          {formatDate(createdAt)}
-        </time>
       </div>
       {editing ? (
         <form
@@ -626,7 +634,7 @@ function CommentBody({
           </div>
         </form>
       ) : (
-        <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--theme-text)]">
+        <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--theme-text)] sm:text-[0.9375rem] sm:leading-7">
           {content}
         </p>
       )}
@@ -654,7 +662,7 @@ function CommentBody({
         </div>
       ) : null}
       {!isDeleted ? (
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-[var(--theme-border)] pt-2">
           {userId ? (
             <button
               aria-pressed={viewerHasLiked}

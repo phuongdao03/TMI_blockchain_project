@@ -629,7 +629,7 @@ describe("layout shells", () => {
 
     expect(screen.getByRole("heading", { name: "Catalog" })).toBeDefined();
     expect(screen.getByText("Thành viên")).toBeDefined();
-    expect(screen.getByText("Điều hành viên")).toBeDefined();
+    expect(screen.getByText("Thẩm định viên")).toBeDefined();
     expect(screen.queryByText("reviewer@cnsgroup.vn")).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng nhập" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng ký" })).toBeNull();

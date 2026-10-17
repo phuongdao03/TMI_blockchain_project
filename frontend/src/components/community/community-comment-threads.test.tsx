@@ -44,6 +44,7 @@ beforeEach(() => {
           username: "lan-anh",
           displayName: "Lan Anh",
           avatarUrl: null,
+          roleLabel: "Thẩm định viên",
         },
         replies: [],
       },
@@ -70,6 +71,8 @@ describe("CommunityCommentThreads", () => {
     });
 
     await screen.findByText("Góc nhìn hay");
+    expect(screen.queryByText("Thẩm định viên")).toBeNull();
+    expect(document.getElementById("community-comments-title")).not.toBeNull();
     await user.selectOptions(
       screen.getByRole("combobox", { name: "Sắp xếp bình luận" }),
       "newest",

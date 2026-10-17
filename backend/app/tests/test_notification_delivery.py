@@ -44,7 +44,7 @@ class FailingOnceGateway:
 def test_notification_data_redaction_keeps_only_safe_navigation_metadata() -> None:
     redacted = redact_notification_data(
         {
-            "actionPath": "/admin/reviews/dossier-1",
+            "actionPath": "/community/posts/a-story#community-comments-title",
             "dossierId": "dossier-1",
             "attendanceId": "attendance-1",
             "status": "PENDING",
@@ -57,11 +57,22 @@ def test_notification_data_redaction_keeps_only_safe_navigation_metadata() -> No
     )
 
     assert redacted == {
-        "actionPath": "/admin/reviews/dossier-1",
+        "actionPath": "/community/posts/a-story#community-comments-title",
         "dossierId": "dossier-1",
         "attendanceId": "attendance-1",
         "status": "PENDING",
     }
+
+
+def test_notification_redaction_rejects_unapproved_action_fragments() -> None:
+    assert (
+        redact_notification_data(
+            {
+                "actionPath": "/community/posts/a-story#unexpected-target",
+            }
+        )
+        == {}
+    )
 
 
 def test_notification_api_data_redacts_legacy_sensitive_metadata() -> None:

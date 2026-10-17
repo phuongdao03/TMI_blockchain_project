@@ -27,11 +27,14 @@ def redact_notification_data(data: Mapping[str, object]) -> dict[str, object]:
         if key not in SAFE_NOTIFICATION_DATA_KEYS:
             continue
         if key == "actionPath":
-            if not isinstance(value, str) or (
+            if not isinstance(value, str):
+                continue
+            _, separator, fragment = value.partition("#")
+            if (
                 not value.startswith("/")
                 or value.startswith("//")
                 or "?" in value
-                or "#" in value
+                or (separator and fragment != "community-comments-title")
             ):
                 continue
         elif not isinstance(value, (str, int, bool)):

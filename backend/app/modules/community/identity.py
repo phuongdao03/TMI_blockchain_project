@@ -31,7 +31,7 @@ def public_user_identity(
     return PublicUserIdentity(
         display_name=display_name or _MEMBER_DISPLAY_NAME,
         avatar_url=_avatar_url(avatar_media_id, avatar_url),
-        role_label="Điều hành viên" if is_moderator else None,
+        role_label="Thẩm định viên" if is_moderator else None,
         is_admin=False,
     )
 

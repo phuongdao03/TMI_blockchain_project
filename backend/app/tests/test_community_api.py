@@ -1162,6 +1162,13 @@ def test_public_author_identity_uses_shared_profile_and_persisted_role(
             status=CommunityPostStatus.PUBLISHED,
             published_at=NOW,
         )
+        _insert_post(
+            test_app,
+            slug="official-moderator-identity",
+            status=CommunityPostStatus.PUBLISHED,
+            published_at=NOW,
+            author_id=OTHER_ID,
+        )
         avatar_id = _insert_community_image(
             test_app,
             purpose="AVATAR",
@@ -1171,9 +1178,12 @@ def test_public_author_identity_uses_shared_profile_and_persisted_role(
         async def update_identity() -> None:
             async with test_app.sessions() as session:
                 role = Role(id=uuid4(), code="SUPER_ADMIN")
+                moderator_role = Role(id=uuid4(), code="MODERATOR")
                 session.add(role)
+                session.add(moderator_role)
                 await session.flush()
                 session.add(UserRole(user_id=OWNER_ID, role_id=role.id))
+                session.add(UserRole(user_id=OTHER_ID, role_id=moderator_role.id))
                 profile = await session.get(UserProfile, OWNER_ID)
                 assert profile is not None
                 profile.display_name = "User supplied administrator name"
@@ -1214,6 +1224,14 @@ def test_public_author_identity_uses_shared_profile_and_persisted_role(
         assert member.json()["data"]["displayName"] == "Quản trị viên THV"
         assert member.json()["data"]["roleLabel"] == "Quản trị viên"
         assert member.json()["data"]["isAdmin"] is True
+
+        moderator_post = test_app.client.get(
+            "/api/v1/community/posts/official-moderator-identity"
+        )
+        assert moderator_post.status_code == 200, moderator_post.text
+        assert moderator_post.json()["data"]["author"]["roleLabel"] == (
+            "Thẩm định viên"
+        )
     finally:
         test_app.close()
 
@@ -1329,9 +1347,10 @@ def test_community_notifications_cover_events_without_self_or_duplicate_alerts(
             "/api/v1/notifications?page=1&pageSize=50"
         ).json()["data"]
         assert [item["type"] for item in author_notifications] == ["COMMUNITY_REPLY"]
-        assert author_notifications[0]["data"] == {
-            "actionPath": "/community/posts/community-notification-post"
-        }
+        reply_action_path = (
+            "/community/posts/community-notification-post#community-comments-title"
+        )
+        assert author_notifications[0]["data"] == {"actionPath": reply_action_path}
 
         liked = test_app.client.put(f"/api/v1/community/posts/{post_id}/like")
         assert liked.status_code == 200
