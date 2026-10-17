@@ -3,7 +3,7 @@ import Image from "next/image";
 export function HeritageSymbols() {
   return (
     <figure className="registry-heritage" id="dau-an-van-hoa">
-      <span className="registry-heritage__seal">
+      <span className="registry-heritage__logo-frame">
         <Image
           alt="Biểu trưng Trung tâm Xác lập Tinh Hoa Việt"
           className="registry-heritage__logo"
