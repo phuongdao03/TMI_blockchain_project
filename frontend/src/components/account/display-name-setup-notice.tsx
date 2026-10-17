@@ -19,7 +19,7 @@ export function DisplayNameSetupNotice() {
   if (!user || !profile.data || profile.data.displayName?.trim()) return null;
 
   return (
-    <aside
+    <div
       className="border-b border-[var(--theme-border)] bg-[var(--theme-accent)]/5 px-4 py-3"
       role="status"
     >
@@ -43,6 +43,6 @@ export function DisplayNameSetupNotice() {
           Cài đặt tên
         </Link>
       </div>
-    </aside>
+    </div>
   );
 }

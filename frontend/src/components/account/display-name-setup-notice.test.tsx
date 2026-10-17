@@ -27,7 +27,8 @@ describe("DisplayNameSetupNotice", () => {
     api.get.mockResolvedValue({ displayName: null });
     render(<DisplayNameSetupNotice />, { wrapper });
 
-    expect(await screen.findByRole("status")).toBeDefined();
+    const status = await screen.findByRole("status");
+    expect(status.tagName).toBe("DIV");
     expect(
       screen.getByRole("link", { name: "Cài đặt tên" }).getAttribute("href"),
     ).toBe("/account");
