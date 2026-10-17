@@ -76,7 +76,7 @@ class CommunityMediaRetentionService:
                             )
                         )
                         await self._session.flush()
-                        removed = result.rowcount or 0
+                        removed = int(getattr(result, "rowcount", 0) or 0)
                 deleted += removed
             except IntegrityError:
                 # Keep metadata when another feature still references the asset.

@@ -4,7 +4,7 @@ import logging
 import re
 import secrets
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Protocol
 from urllib.parse import quote, urlencode
@@ -770,9 +770,9 @@ class CloudinaryMediaGateway:
         method: str,
         url: str,
         *,
-        data: Mapping[str, str] | Sequence[tuple[str, str]] | None = None,
+        data: Mapping[str, str] | None = None,
         files: Mapping[str, tuple[str, bytes, str]] | None = None,
-        params: Mapping[str, str] | Sequence[tuple[str, str]] | None = None,
+        params: Mapping[str, str] | None = None,
         content: bytes | None = None,
         headers: Mapping[str, str] | None = None,
         allow_not_found: bool = False,
