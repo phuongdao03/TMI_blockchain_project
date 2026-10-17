@@ -28,6 +28,7 @@ import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { DisplayNameSetupNotice } from "@/components/account/display-name-setup-notice";
 import {
   CommunityRoleBadge,
   getAuthenticatedCommunityIdentity,
@@ -511,6 +512,7 @@ export function PublicShell({ children }: PropsWithChildren) {
           </nav>
         </div>
       ) : null}
+      <DisplayNameSetupNotice />
       <main id="main-content">{children}</main>
       <SiteMobileNavigation
         pathname={pathname}
@@ -774,6 +776,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
           onOpenNavigation={() => openNavigation(navigationButtonRef.current)}
           user={user}
         />
+        <DisplayNameSetupNotice />
         <main className="dashboard-main" id="main-content">
           <div className="dashboard-page-stage" key={pathname}>
             {children}

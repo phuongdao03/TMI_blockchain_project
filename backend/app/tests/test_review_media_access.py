@@ -101,6 +101,8 @@ class ReviewDeliveryGateway:
         *,
         public_id: str,
         resource_type: str,
+        provider_asset_id: str | None = None,
+        purge_backups: bool = False,
     ) -> None:
         raise AssertionError("Delete is outside this delivery test.")
 

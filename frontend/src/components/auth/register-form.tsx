@@ -96,6 +96,10 @@ export function RegisterForm({ next }: { next?: string }) {
             <strong>{acceptedEmail}</strong>. Hãy mở Hộp thư đến hoặc thư rác,
             chọn “Xác minh email”, rồi quay lại đăng nhập.
           </p>
+          <p className="mt-2">
+            Sau khi đăng nhập, hãy cài đặt tên hiển thị để mọi người nhận ra bạn
+            trong cộng đồng.
+          </p>
           <p className="mt-3">
             <AuthLink href={loginHref}>Đăng nhập để tiếp tục</AuthLink>
           </p>

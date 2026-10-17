@@ -23,6 +23,7 @@ celery_app = Celery(
         "app.workers.engagement_tasks",
         "app.workers.engagement_velocity_tasks",
         "app.workers.attendance_location_tasks",
+        "app.workers.community_retention_tasks",
     ],
 )
 celery_app.conf.update(
@@ -75,6 +76,12 @@ celery_app.conf.update(
                 "purge_expired_attendance_locations"
             ),
             "schedule": 86400.0,
+        },
+        "purge-deleted-community-media": {
+            "task": (
+                "app.workers.community_retention_tasks.purge_deleted_community_media"
+            ),
+            "schedule": 300.0,
         },
         "materialize-hourly-search-discovery": {
             "task": (

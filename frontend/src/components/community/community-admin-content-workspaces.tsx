@@ -26,8 +26,7 @@ type PostAction =
   | "unpin"
   | "lock"
   | "unlock"
-  | "delete"
-  | "restore-deleted";
+  | "delete";
 
 export function CommunityAdminPostsWorkspace() {
   const queryClient = useQueryClient();
@@ -201,6 +200,8 @@ function AdminPostRow({
   error: boolean;
 }) {
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [permanentDeleteDialogOpen, setPermanentDeleteDialogOpen] =
+    useState(false);
   const [removalReason, setRemovalReason] = useState("");
   const deleted = post.status === "DELETED" || Boolean(post.deletedAt);
   const ownerDeleted =
@@ -213,7 +214,7 @@ function AdminPostRow({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className={statusBadgeClass}>
-              {deleted ? "Đã xóa mềm" : postStatusLabel(post.status)}
+              {deleted ? "Đã xóa" : postStatusLabel(post.status)}
             </span>
             {post.isPinned ? (
               <span className={softBadgeClass}>Đã ghim</span>
@@ -289,24 +290,15 @@ function AdminPostRow({
               {post.commentsLocked ? "Mở khóa bình luận" : "Khóa bình luận"}
             </ActionButton>
           ) : null}
-          {deleted ? (
-            post.preDeleteStatus !== null ? (
-              <ActionButton
-                disabled={pending || !reason.trim()}
-                onClick={() => onAction("restore-deleted")}
-              >
-                Khôi phục bài viết
-              </ActionButton>
-            ) : null
-          ) : (
+          {!deleted ? (
             <ActionButton
               danger
               disabled={pending || !reason.trim()}
-              onClick={() => onAction("delete")}
+              onClick={() => setPermanentDeleteDialogOpen(true)}
             >
-              Xóa mềm
+              Xóa vĩnh viễn
             </ActionButton>
-          )}
+          ) : null}
         </div>
       </div>
       <div className="mt-4 border-t border-[var(--theme-border)] pt-3">
@@ -415,6 +407,45 @@ function AdminPostRow({
           </section>
         </div>
       ) : null}
+      {permanentDeleteDialogOpen ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 p-4">
+          <section
+            aria-labelledby={`permanent-delete-post-title-${post.id}`}
+            aria-modal="true"
+            className="w-full max-w-lg rounded-2xl bg-[var(--theme-surface)] p-5 text-[var(--theme-text)] shadow-2xl sm:p-6"
+            role="dialog"
+          >
+            <h3
+              className="text-xl font-bold"
+              id={`permanent-delete-post-title-${post.id}`}
+            >
+              Xóa vĩnh viễn bài viết?
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-[var(--theme-muted)]">
+              Bài viết, bình luận, báo cáo, lượt thích và ảnh đính kèm sẽ bị xóa
+              vĩnh viễn. Bạn không thể khôi phục dữ liệu này.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <ActionButton
+                disabled={pending}
+                onClick={() => setPermanentDeleteDialogOpen(false)}
+              >
+                Hủy
+              </ActionButton>
+              <ActionButton
+                danger
+                disabled={pending || !reason.trim()}
+                onClick={() => {
+                  onAction("delete", reason.trim());
+                  setPermanentDeleteDialogOpen(false);
+                }}
+              >
+                Xóa vĩnh viễn
+              </ActionButton>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </li>
   );
 }
@@ -440,8 +471,6 @@ async function runPostAction(
       return communityAdminApi.unlockPostComments(post.id, input);
     case "delete":
       return communityAdminApi.deleteWorkspacePost(post.id, input);
-    case "restore-deleted":
-      return communityAdminApi.restoreWorkspacePost(post.id, input);
   }
 }
 
@@ -940,9 +969,9 @@ function AdminMemberRow({ member }: { member: CommunityAdminMember }) {
 
   return (
     <li className={cardClass}>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <UserAvatar
               displayName={identity.displayName || identity.email}
               size={44}
@@ -951,18 +980,18 @@ function AdminMemberRow({ member }: { member: CommunityAdminMember }) {
             <div className="min-w-0">
               {identity.hasPublicProfile ? (
                 <Link
-                  className="break-words text-lg font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2"
+                  className="break-words text-sm font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 sm:text-lg"
                   href={`/community/members/${encodeURIComponent(identity.username)}`}
                 >
                   {identity.displayName || identity.email || "Thành viên"}
                 </Link>
               ) : (
-                <span className="break-words text-lg font-bold text-[var(--theme-text)]">
+                <span className="break-words text-sm font-bold text-[var(--theme-text)] sm:text-lg">
                   {identity.displayName || identity.email || "Thành viên"}
                 </span>
               )}
               {identity.email ? (
-                <p className="break-all text-sm text-[var(--theme-muted)]">
+                <p className="break-all text-xs text-[var(--theme-muted)] sm:text-sm">
                   {identity.email}
                 </p>
               ) : null}
@@ -1013,12 +1042,16 @@ function AdminMemberRow({ member }: { member: CommunityAdminMember }) {
           </ul>
         </div>
         <button
+          aria-label={expanded ? "Thu gọn" : "Lịch sử và hạn chế"}
           aria-expanded={expanded}
-          className={secondaryButtonClass}
+          className={`${secondaryButtonClass} shrink-0 px-2 text-xs sm:px-3 sm:text-sm`}
           onClick={() => setExpanded((value) => !value)}
           type="button"
         >
-          {expanded ? "Thu gọn" : "Lịch sử và hạn chế"}
+          <span className="sm:hidden">{expanded ? "Thu gọn" : "Quản lý"}</span>
+          <span className="hidden sm:inline">
+            {expanded ? "Thu gọn" : "Lịch sử và hạn chế"}
+          </span>
         </button>
       </div>
       {expanded ? (

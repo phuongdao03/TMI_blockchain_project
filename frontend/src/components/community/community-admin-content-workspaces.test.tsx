@@ -11,6 +11,7 @@ import {
 
 const api = vi.hoisted(() => ({
   workspacePosts: vi.fn(),
+  deleteWorkspacePost: vi.fn(),
   pinPost: vi.fn(),
   hidePost: vi.fn(),
   workspaceComments: vi.fn(),
@@ -98,6 +99,38 @@ describe("community admin content workspaces", () => {
     await waitFor(() =>
       expect(api.hidePost).toHaveBeenCalledWith(post.id, {
         reason: "Vi phạm quy định cộng đồng.",
+      }),
+    );
+  });
+
+  it("confirms permanent deletion before removing a post", async () => {
+    const user = userEvent.setup();
+    api.workspacePosts.mockResolvedValue(page([post]));
+    api.deleteWorkspacePost.mockResolvedValue({
+      postId: post.id,
+      isDeleted: true,
+    });
+
+    renderWithQuery(<CommunityAdminPostsWorkspace />);
+    await screen.findByRole("heading", { name: post.title });
+    await user.type(
+      screen.getByLabelText("Lý do thao tác"),
+      "Vi phạm quy định.",
+    );
+    await user.click(screen.getByRole("button", { name: "Xóa vĩnh viễn" }));
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Xóa vĩnh viễn bài viết?",
+    });
+    expect(within(dialog).getByText(/không thể khôi phục/i)).toBeDefined();
+    expect(api.deleteWorkspacePost).not.toHaveBeenCalled();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Xóa vĩnh viễn" }),
+    );
+
+    await waitFor(() =>
+      expect(api.deleteWorkspacePost).toHaveBeenCalledWith(post.id, {
+        reason: "Vi phạm quy định.",
       }),
     );
   });

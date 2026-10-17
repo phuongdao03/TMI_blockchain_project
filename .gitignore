@@ -63,6 +63,9 @@ Thumbs.db
 plan_tasks_detailed/
 docs/plans/
 docs/handoffs/
+!docs/handoffs/
+docs/handoffs/*
+!docs/handoffs/community-mobile-identity-and-deletion.md
 docs/decisions/
 docs/release/
 docs/security/

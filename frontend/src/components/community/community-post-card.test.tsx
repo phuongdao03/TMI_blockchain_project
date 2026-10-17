@@ -77,6 +77,9 @@ describe("CommunityPostCard", () => {
     expect(screen.getByText("15 lượt xem")).toBeDefined();
     expect(screen.getByText("4 bình luận")).toBeDefined();
     expect(
+      screen.getByRole("link", { name: "Xem thêm" }).getAttribute("href"),
+    ).toBe("/community/posts/chuyen-lang");
+    expect(
       screen.getByRole("button", { name: "Chia sẻ bài viết" }),
     ).toBeDefined();
     await user.click(

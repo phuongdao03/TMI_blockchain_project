@@ -98,8 +98,8 @@ function CommunityPostCardContent({
 
   const postHref = `/community/posts/${encodeURIComponent(post.slug)}`;
   return (
-    <article className="border-b border-[var(--theme-border)] py-6 first:border-t sm:py-7">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs font-semibold text-[var(--theme-muted)]">
+    <article className="border-b border-[var(--theme-border)] py-5 first:border-t sm:py-7">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-xs font-semibold text-[var(--theme-muted)] sm:gap-x-3">
         <CommunityUserIdentity size={36} user={post.author} />
         <span aria-hidden="true">·</span>
         <span className="text-[var(--theme-accent)]">{post.category.name}</span>
@@ -107,7 +107,7 @@ function CommunityPostCardContent({
           {formatPublishedDate(post.publishedAt)}
         </time>
       </div>
-      <h2 className="mt-3 text-xl font-bold leading-snug tracking-tight text-[var(--theme-text)] sm:text-2xl">
+      <h2 className="mt-3 text-lg font-bold leading-snug tracking-tight text-[var(--theme-text)] sm:text-2xl">
         <Link
           className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--theme-accent)] hover:text-[var(--theme-accent)]"
           href={postHref}
@@ -116,10 +116,19 @@ function CommunityPostCardContent({
         </Link>
       </h2>
       {post.excerpt ? (
-        <p className="mt-2 max-w-3xl whitespace-pre-wrap text-sm leading-6 text-[var(--theme-muted)] sm:text-base sm:leading-7">
+        <p className="mt-2 line-clamp-3 max-w-3xl whitespace-pre-wrap break-words text-sm leading-6 text-[var(--theme-muted)] sm:line-clamp-4 sm:text-base sm:leading-7">
           {post.excerpt}
         </p>
       ) : null}
+      <Link
+        className="mt-1 inline-flex min-h-10 items-center text-sm font-bold text-[var(--theme-accent)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--theme-accent)]"
+        href={postHref}
+      >
+        Xem thêm{" "}
+        <span aria-hidden="true" className="ml-1">
+          →
+        </span>
+      </Link>
       <CommunityPostImages
         images={post.images ?? []}
         postSlug={post.slug}
@@ -128,7 +137,7 @@ function CommunityPostCardContent({
       <CommunityRelatedWorkLink work={post.relatedWork} />
       <div
         aria-label="Tương tác bài viết"
-        className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--theme-border)] pt-3"
+        className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--theme-border)] pt-3 sm:mt-4 sm:gap-2"
       >
         {authenticated ? (
           <>
@@ -215,15 +224,6 @@ function CommunityPostCardContent({
           </span>
         ) : null}
       </div>
-      <Link
-        className="mt-3 inline-flex min-h-10 items-center text-sm font-bold text-[var(--theme-accent)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--theme-accent)]"
-        href={postHref}
-      >
-        Đọc bài viết{" "}
-        <span aria-hidden="true" className="ml-1">
-          →
-        </span>
-      </Link>
     </article>
   );
 }

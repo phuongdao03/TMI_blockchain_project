@@ -388,7 +388,7 @@ class CommunityRepository:
             statement = statement.with_for_update()
         return cast(CommunityPost | None, await self._session.scalar(statement))
 
-    async def list_owned_active_post_media(
+    async def list_owned_post_media(
         self,
         post_id: UUID,
         owner_user_id: UUID,
@@ -403,7 +403,6 @@ class CommunityRepository:
                 CommunityPostMedia.post_id == post_id,
                 MediaAsset.owner_user_id == owner_user_id,
                 MediaAsset.purpose == MediaPurpose.COMMUNITY_POST.value,
-                MediaAsset.status != MediaStatus.DELETED,
             )
             .order_by(CommunityPostMedia.sort_order)
         )
@@ -413,7 +412,9 @@ class CommunityRepository:
         self,
         post_id: UUID,
         *,
-        owner_deleted_event_id: UUID,
+        deletion_event_id: UUID,
+        media_asset_ids: tuple[UUID, ...],
+        media_asset_owner_id: UUID,
     ) -> None:
         comment_rows = await self._session.scalars(
             select(CommunityComment.id).where(CommunityComment.post_id == post_id)
@@ -454,16 +455,17 @@ class CommunityRepository:
         related_event_rows = await self._session.scalars(
             select(CommunityModerationEvent.id).where(
                 event_filter,
-                CommunityModerationEvent.id != owner_deleted_event_id,
+                CommunityModerationEvent.id != deletion_event_id,
             )
         )
         related_event_ids = tuple(related_event_rows.all())
-        if related_event_ids:
-            await self._session.execute(
-                delete(Notification).where(
-                    Notification.source_event_id.in_(related_event_ids)
-                )
+        notification_event_ids = (*related_event_ids, deletion_event_id)
+        await self._session.execute(
+            delete(Notification).where(
+                Notification.source_event_id.in_(notification_event_ids)
             )
+        )
+        if related_event_ids:
             await self._session.execute(
                 delete(CommunityModerationEvent).where(
                     CommunityModerationEvent.id.in_(related_event_ids)
@@ -503,6 +505,14 @@ class CommunityRepository:
         await self._session.execute(
             delete(CommunityPostMedia).where(CommunityPostMedia.post_id == post_id)
         )
+        if media_asset_ids:
+            await self._session.execute(
+                delete(MediaAsset).where(
+                    MediaAsset.id.in_(media_asset_ids),
+                    MediaAsset.owner_user_id == media_asset_owner_id,
+                    MediaAsset.purpose == MediaPurpose.COMMUNITY_POST.value,
+                )
+            )
         await self._session.execute(
             delete(CommunityPostTag).where(CommunityPostTag.post_id == post_id)
         )

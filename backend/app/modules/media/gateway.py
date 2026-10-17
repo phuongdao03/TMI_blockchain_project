@@ -4,7 +4,7 @@ import logging
 import re
 import secrets
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 from urllib.parse import quote, urlencode
@@ -129,6 +129,8 @@ class MediaGateway(Protocol):
         *,
         public_id: str,
         resource_type: str,
+        provider_asset_id: str | None = None,
+        purge_backups: bool = False,
     ) -> None: ...
 
     async def close(self) -> None: ...
@@ -531,7 +533,11 @@ class CloudinaryMediaGateway:
         *,
         public_id: str,
         resource_type: str,
+        provider_asset_id: str | None = None,
+        purge_backups: bool = False,
     ) -> None:
+        if purge_backups and provider_asset_id is not None:
+            await self._delete_backed_up_versions(provider_asset_id)
         if resource_type == "raw":
             try:
                 manifest = await self._download_single_asset(
@@ -556,6 +562,47 @@ class CloudinaryMediaGateway:
         await self._delete_single_asset(
             public_id=public_id,
             resource_type=resource_type,
+        )
+
+    async def _delete_backed_up_versions(self, asset_id: str) -> None:
+        resource_url = (
+            f"https://api.cloudinary.com/v1_1/"
+            f"{quote(self._cloud_name, safe='')}/resources/"
+            f"{quote(asset_id, safe='')}"
+        )
+        resource = await self._request_json(
+            "GET",
+            resource_url,
+            params={"versions": "true"},
+            allow_not_found=True,
+        )
+        if not resource:
+            return
+        if resource.get("asset_id") != asset_id:
+            raise MediaProviderUnavailableError()
+        versions = resource.get("versions", [])
+        if not isinstance(versions, list):
+            raise MediaProviderUnavailableError()
+        version_ids: list[str] = []
+        for version in versions:
+            if not isinstance(version, dict):
+                raise MediaProviderUnavailableError()
+            version_ids.append(self._required_str(version, "version_id"))
+        if not version_ids:
+            return
+
+        backup_url = (
+            f"https://api.cloudinary.com/v1_1/"
+            f"{quote(self._cloud_name, safe='')}/resources/backup/"
+            f"{quote(asset_id, safe='')}"
+        )
+        await self._request_json(
+            "DELETE",
+            backup_url,
+            content=urlencode(
+                [("version_ids[]", version_id) for version_id in version_ids]
+            ).encode(),
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
 
     async def _delete_single_asset(
@@ -723,8 +770,12 @@ class CloudinaryMediaGateway:
         method: str,
         url: str,
         *,
-        data: Mapping[str, str] | None = None,
+        data: Mapping[str, str] | Sequence[tuple[str, str]] | None = None,
         files: Mapping[str, tuple[str, bytes, str]] | None = None,
+        params: Mapping[str, str] | Sequence[tuple[str, str]] | None = None,
+        content: bytes | None = None,
+        headers: Mapping[str, str] | None = None,
+        allow_not_found: bool = False,
         timeout: httpx.Timeout | None = None,
         sensitive_values: tuple[str, ...] = (),
     ) -> dict[str, object]:
@@ -734,9 +785,14 @@ class CloudinaryMediaGateway:
                 url,
                 data=data,
                 files=files,
+                params=params,
+                content=content,
+                headers=headers,
                 auth=(self._api_key, self._api_secret),
                 timeout=timeout if timeout is not None else self._client.timeout,
             )
+            if allow_not_found and response.status_code == 404:
+                return {}
             response.raise_for_status()
             payload = response.json()
         except (httpx.HTTPError, ValueError) as exc:

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,7 +42,9 @@ from app.modules.community.models import (
     CommunityReportResolution,
     CommunityReportStatus,
 )
-from app.modules.community.repository import CommunityPostRow
+from app.modules.community.repository import CommunityPostRow, CommunityRepository
+from app.modules.community.service import CommunityMediaAssetDeleter, CommunityService
+from app.modules.media.errors import MediaInvalidStateError
 from app.modules.notifications.service import NotificationService
 
 _MODERATE = PolicyRequirement(permission="community.moderate")
@@ -437,40 +440,159 @@ class CommunityAdminService:
         *,
         reason: str,
         request_id: str,
+        media_asset_deleter: CommunityMediaAssetDeleter,
     ) -> datetime:
         self._require(principal, _MODERATE)
+        media_ids: tuple[UUID, ...]
         async with self._session.begin():
             post = await self._repository.get_post(post_id, for_update=True)
             if post is None:
                 raise CommunityNotFoundError()
-            if (
+            if post.admin_deleted:
+                event = await self._session.scalar(
+                    select(CommunityModerationEvent)
+                    .where(
+                        CommunityModerationEvent.target_type == "POST",
+                        CommunityModerationEvent.target_id == str(post_id),
+                        CommunityModerationEvent.action
+                        == CommunityModerationEventAction.POST_ADMIN_DELETED.value,
+                    )
+                    .order_by(CommunityModerationEvent.created_at.desc())
+                    .limit(1)
+                    .with_for_update()
+                )
+                if event is None:
+                    raise CommunityConflictError()
+                event.reason = None
+                event.event_data = None
+                event.report_id = None
+                now = post.deleted_at or datetime.now(UTC)
+            elif (
                 post.status is CommunityPostStatus.DELETED
                 or post.deleted_at is not None
-                or post.admin_deleted
             ):
                 raise CommunityConflictError()
-            now = datetime.now(UTC)
-            post.pre_delete_status = post.status.value
-            post.admin_deleted = True
-            post.status = CommunityPostStatus.DELETED
-            post.deleted_at = now
-            post.updated_at = now
-            event = self._event(
-                principal,
-                target_type="POST",
-                target_id=str(post.id),
-                action=CommunityModerationEventAction.POST_ADMIN_DELETED,
-                reason=reason,
-                request_id=request_id,
-                event_data={"restoredStatus": post.pre_delete_status},
+            else:
+                now = datetime.now(UTC)
+                post.admin_deleted = True
+                post.status = CommunityPostStatus.DELETED
+                post.deleted_at = now
+                post.updated_at = now
+                event = self._event(
+                    principal,
+                    target_type="POST",
+                    target_id=str(post.id),
+                    action=CommunityModerationEventAction.POST_ADMIN_DELETED,
+                    reason=None,
+                    request_id=request_id,
+                )
+            owner_user_id = post.author_user_id
+            deletion_event_id = event.id
+            media_ids = await CommunityRepository(self._session).list_owned_post_media(
+                post.id, owner_user_id
             )
             await self._session.flush()
-            await self._notify_post_removed(
-                post,
-                event_id=event.id,
-                reason=reason,
+
+        for media_id in media_ids:
+            try:
+                await media_asset_deleter.delete_community_post_asset(
+                    principal,
+                    media_id,
+                    owner_user_id=owner_user_id,
+                )
+            except MediaInvalidStateError:
+                continue
+
+        async with self._session.begin():
+            post = await self._repository.get_post(post_id, for_update=True)
+            if post is None:
+                return now
+            await CommunityRepository(self._session).permanently_delete_post_content(
+                post_id,
+                deletion_event_id=deletion_event_id,
+                media_asset_ids=media_ids,
+                media_asset_owner_id=owner_user_id,
             )
-            return now
+        return now
+
+    async def purge_legacy_deleted_posts(
+        self,
+        media_asset_deleter: CommunityMediaAssetDeleter,
+        *,
+        limit: int = 100,
+    ) -> int:
+        async with self._session.begin():
+            rows = await self._session.execute(
+                select(
+                    CommunityPost.id,
+                    CommunityPost.author_user_id,
+                    CommunityPost.admin_deleted,
+                )
+                .where(
+                    CommunityPost.status == CommunityPostStatus.DELETED,
+                    CommunityPost.deleted_at.is_not(None),
+                )
+                .order_by(CommunityPost.deleted_at, CommunityPost.id)
+                .limit(limit)
+            )
+            candidates = tuple(rows.all())
+
+        purged = 0
+        for post_id, owner_user_id, admin_deleted in candidates:
+            expected_action = (
+                CommunityModerationEventAction.POST_ADMIN_DELETED.value
+                if admin_deleted
+                else CommunityModerationEventAction.OWNER_DELETED.value
+            )
+            async with self._session.begin():
+                event_row = await self._session.execute(
+                    select(
+                        CommunityModerationEvent.actor_user_id,
+                        CommunityModerationEvent.request_id,
+                    )
+                    .where(
+                        CommunityModerationEvent.target_type == "POST",
+                        CommunityModerationEvent.target_id == str(post_id),
+                        CommunityModerationEvent.action == expected_action,
+                    )
+                    .order_by(CommunityModerationEvent.created_at.desc())
+                    .limit(1)
+                )
+                event_data = event_row.first()
+            if event_data is None:
+                continue
+            event_actor_id, event_request_id = event_data
+
+            if admin_deleted:
+                actor = AuthPrincipal(
+                    user_id=event_actor_id,
+                    session_id=uuid4(),
+                    email="community-retention@system.invalid",
+                    roles=(),
+                    permissions=("community.moderate",),
+                )
+                await self.admin_delete_post(
+                    actor,
+                    post_id,
+                    reason="",
+                    request_id=event_request_id,
+                    media_asset_deleter=media_asset_deleter,
+                )
+            else:
+                owner = AuthPrincipal(
+                    user_id=owner_user_id,
+                    session_id=uuid4(),
+                    email="community-retention@system.invalid",
+                    roles=(),
+                )
+                await CommunityService(self._session).delete_post(
+                    owner,
+                    post_id,
+                    request_id=event_request_id,
+                    media_asset_deleter=media_asset_deleter,
+                )
+            purged += 1
+        return purged
 
     async def admin_restore_post(
         self,
@@ -515,34 +637,14 @@ class CommunityAdminService:
         reason: str,
         request_id: str,
     ) -> tuple[bool, str]:
-        """Restore an admin deletion, or retain the hidden-post restore route."""
+        """Restore post visibility after a moderation hide."""
         self._require(principal, _MODERATE)
         async with self._session.begin():
             post = await self._repository.get_post(post_id, for_update=True)
             if post is None:
                 raise CommunityNotFoundError()
             if post.admin_deleted:
-                if post.pre_delete_status is None:
-                    raise CommunityConflictError()
-                restored = CommunityPostStatus(post.pre_delete_status)
-                if restored is CommunityPostStatus.DELETED:
-                    raise CommunityConflictError()
-                post.status = restored
-                post.deleted_at = None
-                post.admin_deleted = False
-                post.pre_delete_status = None
-                post.updated_at = datetime.now(UTC)
-                self._event(
-                    principal,
-                    target_type="POST",
-                    target_id=str(post.id),
-                    action=CommunityModerationEventAction.POST_ADMIN_RESTORED,
-                    reason=reason,
-                    request_id=request_id,
-                    event_data={"restoredStatus": restored.value},
-                )
-                await self._session.flush()
-                return True, restored.value
+                raise CommunityConflictError()
             if (
                 post.deleted_at is not None
                 or post.status is not CommunityPostStatus.HIDDEN

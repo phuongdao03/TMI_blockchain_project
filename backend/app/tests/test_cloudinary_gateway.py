@@ -129,6 +129,63 @@ def test_cloudinary_metadata_and_delete_contract() -> None:
     asyncio.run(exercise())
 
 
+def test_cloudinary_delete_can_purge_backups_for_a_targeted_asset() -> None:
+    async def exercise() -> None:
+        requests: list[httpx.Request] = []
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            if request.method == "GET":
+                assert request.url.path.endswith(
+                    "/resources/cloudinary-community-asset"
+                )
+                assert request.url.params["versions"] == "true"
+                return httpx.Response(
+                    200,
+                    json={
+                        "asset_id": "cloudinary-community-asset",
+                        "versions": [
+                            {"version_id": "backup-version-one"},
+                            {"version_id": "backup-version-two"},
+                        ],
+                    },
+                )
+            if request.method == "DELETE":
+                assert request.url.path.endswith(
+                    "/resources/backup/cloudinary-community-asset"
+                )
+                assert request.headers["content-type"] == (
+                    "application/x-www-form-urlencoded"
+                )
+                return httpx.Response(200, json={"deleted": ["backup-version-one"]})
+            return httpx.Response(200, json={"result": "ok"})
+
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        gateway = CloudinaryMediaGateway(
+            cloud_name="demo",
+            api_key="api-key",
+            api_secret="abcd",
+            client=client,
+        )
+
+        await gateway.delete_asset(
+            public_id="cns/prod/owners/user/uploads/community-post/image",
+            resource_type="image",
+            provider_asset_id="cloudinary-community-asset",
+            purge_backups=True,
+        )
+
+        assert [request.method for request in requests] == ["GET", "DELETE", "POST"]
+        assert parse_qs(requests[1].content.decode()) == {
+            "version_ids[]": ["backup-version-one", "backup-version-two"]
+        }
+        assert requests[2].url.path.endswith("/image/destroy")
+        await gateway.close()
+        await client.aclose()
+
+    asyncio.run(exercise())
+
+
 @pytest.mark.parametrize("source_content", [None, b"decrypted retained content"])
 def test_cloudinary_creates_isolated_public_derivative(
     source_content: bytes | None,

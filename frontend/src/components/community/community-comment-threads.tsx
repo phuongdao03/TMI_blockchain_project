@@ -142,12 +142,12 @@ export function CommunityCommentThreads({
     <section
       aria-busy={comments.isPending}
       aria-labelledby="community-comments-title"
-      className="mt-10 border-t border-[var(--theme-border)] pt-7 sm:mt-12 sm:pt-9"
+      className="mt-7 border-t border-[var(--theme-border)] pt-5 sm:mt-12 sm:pt-9"
     >
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h2
           id="community-comments-title"
-          className="text-2xl font-bold text-[var(--theme-text)]"
+          className="text-xl font-bold text-[var(--theme-text)] sm:text-2xl"
         >
           Thảo luận
         </h2>
@@ -172,7 +172,7 @@ export function CommunityCommentThreads({
 
       {user ? (
         <form
-          className="mt-5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5"
+          className="mt-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:mt-5 sm:p-5"
           onSubmit={submitComment}
         >
           <label
@@ -254,7 +254,7 @@ export function CommunityCommentThreads({
         </p>
       ) : null}
       {threads.length > 0 ? (
-        <div className="mt-5 divide-y divide-[var(--theme-border)]">
+        <div className="mt-4 divide-y divide-[var(--theme-border)] sm:mt-5">
           {threads.map((thread) => (
             <CommentThread
               key={thread.id}
@@ -355,7 +355,7 @@ function CommentThread({
   return (
     <article
       aria-label={`Bình luận của ${authorName}`}
-      className="py-5 first:pt-0"
+      className="py-3 first:pt-0 sm:py-5"
     >
       <CommentBody
         author={thread.author}
@@ -372,7 +372,7 @@ function CommentThread({
         likeCount={thread.likeCount}
       />
       {thread.replies.length ? (
-        <div className="ml-3 mt-4 space-y-4 border-l-2 border-[var(--theme-border)] pl-4 sm:ml-6 sm:pl-5">
+        <div className="ml-2 mt-3 space-y-3 border-l-2 border-[var(--theme-border)] pl-3 sm:ml-6 sm:mt-4 sm:space-y-4 sm:pl-5">
           {thread.replies.map((reply) => {
             const parent =
               reply.parentId === thread.id
@@ -408,7 +408,7 @@ function CommentThread({
                 {canReply ? (
                   <button
                     aria-label={`Trả lời ${replyAuthorName}`}
-                    className="mt-2 inline-flex min-h-9 items-center rounded-md px-2 text-sm font-semibold text-[var(--theme-accent)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                    className="mt-1 inline-flex min-h-9 items-center rounded-md px-2 text-sm font-semibold text-[var(--theme-accent)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
                     onClick={() => onReply(reply.id)}
                     type="button"
                   >
@@ -433,7 +433,7 @@ function CommentThread({
       {canReply ? (
         <button
           aria-label={`Trả lời ${authorName}`}
-          className="mt-3 inline-flex min-h-9 items-center rounded-md px-2 text-sm font-semibold text-[var(--theme-accent)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+          className="mt-1 inline-flex min-h-9 items-center rounded-md px-2 text-sm font-semibold text-[var(--theme-accent)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
           onClick={() => onReply(thread.id)}
           type="button"
         >
@@ -471,7 +471,7 @@ function ReplyComposer({
 }) {
   return (
     <form
-      className="ml-3 mt-3 rounded-xl border border-[var(--theme-border)] p-3 sm:ml-6 sm:p-4"
+      className="ml-2 mt-2 rounded-xl border border-[var(--theme-border)] p-3 sm:ml-6 sm:mt-3 sm:p-4"
       onSubmit={onSubmit}
     >
       <p className="mb-2 text-xs text-[var(--theme-muted)]">
@@ -631,7 +631,7 @@ function CommentBody({
         </p>
       )}
       {ownsComment ? (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-1 flex flex-wrap gap-1.5 sm:gap-2">
           <button
             aria-label="Chỉnh sửa bình luận"
             className={commentActionClass}
@@ -654,7 +654,7 @@ function CommentBody({
         </div>
       ) : null}
       {!isDeleted ? (
-        <div className="mt-2">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
           {userId ? (
             <button
               aria-pressed={viewerHasLiked}

@@ -39,7 +39,13 @@ from app.modules.notifications.service import NotificationService
 
 
 class CommunityMediaAssetDeleter(Protocol):
-    async def delete_asset(self, principal: AuthPrincipal, media_id: UUID) -> None: ...
+    async def delete_community_post_asset(
+        self,
+        principal: AuthPrincipal,
+        media_id: UUID,
+        *,
+        owner_user_id: UUID,
+    ) -> None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -310,14 +316,18 @@ class CommunityService:
                 owner_deleted_event.reason = None
                 owner_deleted_event.event_data = None
 
-            media_ids = await self._repository.list_owned_active_post_media(
+            media_ids = await self._repository.list_owned_post_media(
                 post_id,
                 principal.user_id,
             )
 
         for media_id in media_ids:
             try:
-                await media_asset_deleter.delete_asset(principal, media_id)
+                await media_asset_deleter.delete_community_post_asset(
+                    principal,
+                    media_id,
+                    owner_user_id=principal.user_id,
+                )
             except MediaInvalidStateError:
                 # A concurrent retry may already have removed this provider asset.
                 continue
@@ -330,7 +340,9 @@ class CommunityService:
                 raise CommunityForbiddenError()
             await self._repository.permanently_delete_post_content(
                 post_id,
-                owner_deleted_event_id=owner_deleted_event_id,
+                deletion_event_id=owner_deleted_event_id,
+                media_asset_ids=media_ids,
+                media_asset_owner_id=principal.user_id,
             )
 
     async def _active_category(self, category_id: UUID) -> CommunityCategory:

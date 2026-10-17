@@ -546,6 +546,71 @@ class MediaService:
                 status=asset.status,
             )
 
+    async def delete_community_post_asset(
+        self,
+        principal: AuthPrincipal,
+        media_id: UUID,
+        *,
+        owner_user_id: UUID,
+    ) -> None:
+        if principal.user_id != owner_user_id and not (
+            "community.moderate" in principal.permissions
+            or "MODERATOR" in principal.roles
+            or "SUPER_ADMIN" in principal.roles
+        ):
+            raise MediaForbiddenError()
+
+        async with self._session.begin():
+            asset = await self._repository.get_by_id(media_id, for_update=True)
+            if (
+                asset is None
+                or asset.owner_user_id != owner_user_id
+                or asset.purpose != MediaPurpose.COMMUNITY_POST.value
+            ):
+                raise MediaNotFoundError()
+            public_id = asset.cloudinary_public_id
+            resource_type = asset.resource_type
+            provider_asset_id = asset.provider_asset_id
+            already_deleted = asset.status is MediaStatus.DELETED
+            if (
+                asset.encryption_status is MediaEncryptionStatus.ENCRYPTED
+                and asset.encrypted_object_public_id is not None
+            ):
+                public_id = asset.encrypted_object_public_id
+                resource_type = "raw"
+
+        if provider_asset_id is None and not already_deleted:
+            metadata = await self._gateway.get_asset_metadata(
+                public_id=public_id,
+                resource_type=resource_type,
+            )
+            provider_asset_id = metadata.provider_asset_id
+
+        await self._gateway.delete_asset(
+            public_id=public_id,
+            resource_type=resource_type,
+            provider_asset_id=provider_asset_id,
+            purge_backups=True,
+        )
+
+        async with self._session.begin():
+            asset = await self._repository.get_by_id(media_id, for_update=True)
+            if (
+                asset is None
+                or asset.owner_user_id != owner_user_id
+                or asset.purpose != MediaPurpose.COMMUNITY_POST.value
+            ):
+                raise MediaNotFoundError()
+            if asset.status is not MediaStatus.DELETED:
+                asset.status = MediaStatus.DELETED
+                asset.deleted_at = self._clock()
+                self._audit(
+                    "media.deleted",
+                    principal.user_id,
+                    media_id,
+                    status=asset.status,
+                )
+
     def _validate_intent(self, intent: UploadIntent) -> _FormatPolicy:
         if intent.purpose is MediaPurpose.PUBLIC_WORK:
             raise MediaValidationError(

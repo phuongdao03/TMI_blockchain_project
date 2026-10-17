@@ -50,6 +50,7 @@ class RecordingMediaGateway:
         self.signature_valid = True
         self.metadata: ProviderAssetMetadata | None = None
         self.deleted: list[tuple[str, str]] = []
+        self.delete_options: list[tuple[str | None, bool]] = []
         self.inspection_jobs: list[str] = []
         self.download_content: bytes | None = None
 
@@ -134,8 +135,11 @@ class RecordingMediaGateway:
         *,
         public_id: str,
         resource_type: str,
+        provider_asset_id: str | None = None,
+        purge_backups: bool = False,
     ) -> None:
         self.deleted.append((public_id, resource_type))
+        self.delete_options.append((provider_asset_id, purge_backups))
 
     async def close(self) -> None:
         return None
@@ -344,6 +348,41 @@ def test_community_post_image_upload_persists_purpose_and_bounds_intent() -> Non
                 await service.create_upload_signature(owner, intent)
 
         assert len(gateway.inspection_jobs) == 0
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_deleted_community_image_retries_provider_and_backup_purge() -> None:
+    async def exercise() -> None:
+        service, gateway, session_factory, engine, users = await _build_service()
+        owner = _principal(users["owner"])
+        issued = await service.create_upload_signature(
+            owner,
+            UploadIntent(
+                purpose=MediaPurpose.COMMUNITY_POST,
+                filename="post-image.webp",
+                mime_type="image/webp",
+                size=2_048,
+            ),
+        )
+        async with session_factory() as session:
+            asset = await session.get(MediaAsset, issued.media_id)
+            assert asset is not None
+            asset.status = MediaStatus.DELETED
+            asset.deleted_at = NOW
+            asset.provider_asset_id = "cloudinary-community-asset"
+            await session.commit()
+
+        await service.delete_community_post_asset(
+            owner,
+            issued.media_id,
+            owner_user_id=owner.user_id,
+        )
+
+        assert gateway.deleted == [(issued.public_id, "image")]
+        assert gateway.delete_options == [("cloudinary-community-asset", True)]
         await service.close()
         await engine.dispose()
 

@@ -54,6 +54,7 @@ from app.modules.community.rate_limit import (
     enforce_community_report_write_rate_limit,
 )
 from app.modules.community.schemas import CommunityAuthorData
+from app.modules.media.dependencies import MediaServiceDependency
 
 router = APIRouter(prefix="/api/v1/community", tags=["community-reports"])
 admin_router = APIRouter(prefix="/api/v1/admin/community", tags=["community-admin"])
@@ -667,12 +668,14 @@ async def admin_delete_post(
     request: Request,
     principal: CsrfProtectedPrincipalDependency,
     service: CommunityAdminServiceDependency,
+    media_service: MediaServiceDependency,
 ) -> SuccessEnvelope[CommunityAdminPostDeletionData]:
     deleted_at = await service.admin_delete_post(
         principal,
         post_id,
         reason=payload.reason,
         request_id=request.state.request_id,
+        media_asset_deleter=media_service,
     )
     return SuccessEnvelope(
         data=CommunityAdminPostDeletionData(

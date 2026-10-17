@@ -25,6 +25,7 @@ from app.modules.auth.dependencies import (
 )
 from app.modules.auth.models import Role, User, UserRole, UserStatus
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.community.admin_service import CommunityAdminService
 from app.modules.community.errors import CommunityRateLimitedError
 from app.modules.community.models import (
     CommunityBookmark,
@@ -48,6 +49,7 @@ from app.modules.community.rate_limit import (
     enforce_community_engagement_write_rate_limit,
     enforce_community_report_write_rate_limit,
 )
+from app.modules.community.retention import CommunityMediaRetentionService
 from app.modules.dossiers.models import Category
 from app.modules.media.dependencies import get_media_service
 from app.modules.media.models import MediaAsset, MediaStatus
@@ -159,10 +161,12 @@ class CommunityTestApp:
 
 
 class _NoopMediaAssetDeleter:
-    async def delete_asset(
+    async def delete_community_post_asset(
         self,
         _principal: AuthPrincipal,
         _media_id: UUID,
+        *,
+        owner_user_id: UUID,
     ) -> None:
         return None
 
@@ -2308,12 +2312,44 @@ def test_admin_post_workspace_and_reversible_moderation_states(
             json={"reason": "Review is complete."},
         )
         assert unlocked.json()["data"]["commentsLocked"] is False
+
+        admin_media_id = _insert_community_image(test_app)
+
+        async def attach_admin_media() -> None:
+            async with test_app.sessions() as session:
+                session.add(
+                    CommunityPostMedia(
+                        post_id=post_id,
+                        media_asset_id=admin_media_id,
+                        sort_order=0,
+                    )
+                )
+                await session.commit()
+
+        asyncio.run(attach_admin_media())
+        deleted_admin_media: list[UUID] = []
+
+        class _AdminAssetDeleter:
+            async def delete_community_post_asset(
+                self,
+                _principal: AuthPrincipal,
+                media_id: UUID,
+                *,
+                owner_user_id: UUID,
+            ) -> None:
+                assert owner_user_id == OWNER_ID
+                deleted_admin_media.append(media_id)
+
+        test_app.app.dependency_overrides[get_media_service] = lambda: (
+            _AdminAssetDeleter()
+        )
         deleted = test_app.client.request(
             "DELETE",
             f"/api/v1/admin/community/posts/{post_id}",
             json={"reason": "Remove policy-violating material."},
         )
         assert deleted.status_code == 200, deleted.text
+        assert deleted_admin_media == [admin_media_id]
         assert deleted.json()["data"] == {
             "postId": str(post_id),
             "isDeleted": True,
@@ -2326,34 +2362,48 @@ def test_admin_post_workspace_and_reversible_moderation_states(
             ).status_code
             == 404
         )
-        restored = test_app.client.post(
-            f"/api/v1/admin/community/posts/{post_id}/restore",
-            json={"reason": "The policy issue was resolved."},
-        )
-        assert restored.status_code == 200, restored.text
-        assert restored.json()["data"]["restoredStatus"] == "PUBLISHED"
 
+        async def assert_admin_content_purged() -> None:
+            async with test_app.sessions() as session:
+                assert await session.get(CommunityPost, post_id) is None
+                assert await session.get(MediaAsset, admin_media_id) is None
+
+        asyncio.run(assert_admin_content_purged())
+        assert (
+            test_app.client.post(
+                f"/api/v1/admin/community/posts/{post_id}/restore",
+                json={"reason": "A deleted post cannot be restored."},
+            ).status_code
+            == 404
+        )
+
+        hidden_post_id = _insert_post(
+            test_app,
+            slug="admin-hidden-post",
+            status=CommunityPostStatus.PUBLISHED,
+            published_at=NOW,
+        )
         hidden = test_app.client.post(
-            f"/api/v1/admin/community/posts/{post_id}/hide",
+            f"/api/v1/admin/community/posts/{hidden_post_id}/hide",
             json={"reason": "Keep this post hidden pending review."},
         )
         assert hidden.status_code == 200
         hidden_pin = test_app.client.post(
-            f"/api/v1/admin/community/posts/{post_id}/pin",
+            f"/api/v1/admin/community/posts/{hidden_post_id}/pin",
             json={"reason": "Must reject pinning hidden content."},
         )
         assert hidden_pin.status_code == 409
         admin_delete_hidden = test_app.client.request(
             "DELETE",
-            f"/api/v1/admin/community/posts/{post_id}",
+            f"/api/v1/admin/community/posts/{hidden_post_id}",
             json={"reason": "Remove while keeping hidden status."},
         )
         assert admin_delete_hidden.status_code == 200
         hidden_restore = test_app.client.post(
-            f"/api/v1/admin/community/posts/{post_id}/restore",
+            f"/api/v1/admin/community/posts/{hidden_post_id}/restore",
             json={"reason": "Restore to its prior hidden state."},
         )
-        assert hidden_restore.json()["data"]["restoredStatus"] == "HIDDEN"
+        assert hidden_restore.status_code == 404
 
         owner_deleted_post = _insert_post(
             test_app,
@@ -2387,14 +2437,9 @@ def test_admin_post_workspace_and_reversible_moderation_states(
             f"?targetType=POST&targetId={post_id}"
         )
         assert history.status_code == 200
-        assert {item["action"] for item in history.json()["data"]} >= {
-            "POST_PINNED",
-            "POST_UNPINNED",
-            "COMMENTS_LOCKED",
-            "COMMENTS_UNLOCKED",
-            "POST_ADMIN_DELETED",
-            "POST_ADMIN_RESTORED",
-        }
+        assert [item["action"] for item in history.json()["data"]] == [
+            "POST_ADMIN_DELETED"
+        ]
     finally:
         test_app.close()
 
@@ -2787,7 +2832,14 @@ def test_owner_delete_permanently_cleans_post_dependencies_and_keeps_audit(
     deleted_media: list[UUID] = []
 
     class _AssetDeleter:
-        async def delete_asset(self, _principal: AuthPrincipal, media_id: UUID) -> None:
+        async def delete_community_post_asset(
+            self,
+            _principal: AuthPrincipal,
+            media_id: UUID,
+            *,
+            owner_user_id: UUID,
+        ) -> None:
+            assert owner_user_id == OWNER_ID
             deleted_media.append(media_id)
 
     try:
@@ -2922,6 +2974,7 @@ def test_owner_delete_permanently_cleans_post_dependencies_and_keeps_audit(
         async def assert_database_cleanup() -> None:
             async with test_app.sessions() as session:
                 assert await session.get(CommunityPost, post_id) is None
+                assert await session.get(MediaAsset, media_id) is None
                 assert await session.get(CommunityPost, other_post_id) is not None
                 foreign_media = await session.get(MediaAsset, foreign_media_id)
                 other_media = await session.get(MediaAsset, other_media_id)
@@ -3004,5 +3057,139 @@ def test_owner_delete_permanently_cleans_post_dependencies_and_keeps_audit(
                 assert owner_delete_events[0].action == "OWNER_DELETED"
 
         asyncio.run(assert_database_cleanup())
+
+        legacy_deleted_media_id = _insert_community_image(test_app)
+        deleted_assets: list[UUID] = []
+
+        class _DeletedAssetProvider:
+            async def delete_community_post_asset(
+                self,
+                principal: AuthPrincipal,
+                media_id: UUID,
+                *,
+                owner_user_id: UUID,
+            ) -> None:
+                assert principal.user_id == owner_user_id == OWNER_ID
+                deleted_assets.append(media_id)
+
+        async def purge_legacy_deleted_media() -> None:
+            async with test_app.sessions() as session:
+                legacy_asset = await session.get(MediaAsset, legacy_deleted_media_id)
+                assert legacy_asset is not None
+                legacy_asset.status = MediaStatus.DELETED
+                legacy_asset.deleted_at = NOW
+                await session.commit()
+
+            async with test_app.sessions() as session:
+                assert (
+                    await CommunityMediaRetentionService(session).purge_deleted_assets(
+                        _DeletedAssetProvider()
+                    )
+                ) == 1
+                assert await session.get(MediaAsset, legacy_deleted_media_id) is None
+
+        asyncio.run(purge_legacy_deleted_media())
+        assert deleted_assets == [legacy_deleted_media_id]
+    finally:
+        test_app.close()
+
+
+def test_retention_purges_legacy_admin_deleted_posts_and_images(
+    tmp_path: Path,
+) -> None:
+    test_app = CommunityTestApp(tmp_path)
+    deleted_media: list[UUID] = []
+
+    class _AssetDeleter:
+        async def delete_community_post_asset(
+            self,
+            principal: AuthPrincipal,
+            media_id: UUID,
+            *,
+            owner_user_id: UUID,
+        ) -> None:
+            assert principal.user_id == OTHER_ID
+            assert owner_user_id == OWNER_ID
+            deleted_media.append(media_id)
+
+    try:
+        post_id = _insert_post(
+            test_app,
+            slug="legacy-admin-deleted-post",
+            status=CommunityPostStatus.DELETED,
+            published_at=NOW,
+        )
+        media_id = _insert_community_image(test_app)
+        event_id = uuid4()
+
+        async def add_legacy_deleted_content() -> None:
+            async with test_app.sessions() as session:
+                post = await session.get(CommunityPost, post_id)
+                assert post is not None
+                post.admin_deleted = True
+                post.pre_delete_status = CommunityPostStatus.PUBLISHED.value
+                post.deleted_at = NOW
+                session.add(
+                    CommunityPostMedia(
+                        post_id=post_id,
+                        media_asset_id=media_id,
+                        sort_order=0,
+                    )
+                )
+                session.add(
+                    CommunityModerationEvent(
+                        id=event_id,
+                        target_type="POST",
+                        target_id=str(post_id),
+                        action="POST_ADMIN_DELETED",
+                        actor_user_id=OTHER_ID,
+                        reason="Old moderation reason.",
+                        request_id="legacy-delete-request",
+                        event_data={"restoredStatus": "PUBLISHED"},
+                    )
+                )
+                await session.flush()
+                session.add(
+                    Notification(
+                        user_id=OWNER_ID,
+                        source_event_id=event_id,
+                        type="COMMUNITY_POST_REMOVED",
+                        title="Bài viết đã bị gỡ",
+                        body="Lý do gỡ bài cũ.",
+                        data_json={
+                            "actionPath": "/community/posts/legacy-admin-deleted-post"
+                        },
+                        created_at=NOW,
+                    )
+                )
+                await session.commit()
+
+        asyncio.run(add_legacy_deleted_content())
+
+        async def purge_legacy_content() -> None:
+            async with test_app.sessions() as session:
+                assert (
+                    await CommunityAdminService(session).purge_legacy_deleted_posts(
+                        _AssetDeleter()
+                    )
+                ) == 1
+            async with test_app.sessions() as session:
+                assert await session.get(CommunityPost, post_id) is None
+                assert await session.get(MediaAsset, media_id) is None
+                tombstone = await session.get(CommunityModerationEvent, event_id)
+                assert tombstone is not None
+                assert tombstone.action == "POST_ADMIN_DELETED"
+                assert tombstone.reason is None
+                assert tombstone.event_data is None
+                assert (
+                    await session.scalars(
+                        select(Notification).where(
+                            Notification.source_event_id == event_id
+                        )
+                    )
+                ).all() == []
+
+        asyncio.run(purge_legacy_content())
+        assert deleted_media == [media_id]
     finally:
         test_app.close()
