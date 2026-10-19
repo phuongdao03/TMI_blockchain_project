@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import type { BrowserContext, Page } from "@playwright/test";
+import { expectDocumentToFit } from "./responsive-layout";
 
 const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
 
@@ -75,37 +76,11 @@ async function authenticateViewer(context: BrowserContext) {
 }
 
 async function expectResponsivePage(page: Page) {
-  await expect
-    .poll(
-      () =>
-        page.evaluate(() => {
-          const viewport = window.innerWidth;
-          const documentWidth = document.documentElement.scrollWidth;
-          const offenders = Array.from(document.body.querySelectorAll("*"))
-            .map((element) => {
-              const rect = element.getBoundingClientRect();
-              return {
-                tag: element.tagName.toLowerCase(),
-                className:
-                  typeof element.className === "string"
-                    ? element.className.slice(0, 100)
-                    : "",
-                right: Math.round(rect.right),
-                width: Math.round(rect.width),
-              };
-            })
-            .filter((item) => item.width > 0 && item.right > viewport + 1)
-            .slice(0, 8);
-          return {
-            fits: documentWidth <= viewport + 1,
-            viewport,
-            documentWidth,
-            offenders,
-          };
-        }),
-      { message: "Dashboard should settle within the viewport" },
-    )
-    .toMatchObject({ fits: true });
+  await expectDocumentToFit(
+    page,
+    "Dashboard should settle within the viewport",
+    1,
+  );
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations).toEqual([]);
 }

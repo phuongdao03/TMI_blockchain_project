@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { expectDocumentToFit } from "./responsive-layout";
 
 const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
 
@@ -36,37 +37,10 @@ test("super admin reviews and safely replays failed background work", async ({
     await expect(
       page.getByRole("heading", { name: "Công việc nền gần đây" }),
     ).toBeVisible();
-    await expect
-      .poll(
-        () =>
-          page.evaluate(() => {
-            const viewport = window.innerWidth;
-            const documentWidth = document.documentElement.scrollWidth;
-            const offenders = Array.from(document.body.querySelectorAll("*"))
-              .map((element) => {
-                const rect = element.getBoundingClientRect();
-                return {
-                  tag: element.tagName.toLowerCase(),
-                  className:
-                    typeof element.className === "string"
-                      ? element.className.slice(0, 100)
-                      : "",
-                  right: Math.round(rect.right),
-                  width: Math.round(rect.width),
-                };
-              })
-              .filter((item) => item.width > 0 && item.right > viewport + 1)
-              .slice(0, 8);
-            return {
-              fits: documentWidth <= viewport,
-              viewport,
-              documentWidth,
-              offenders,
-            };
-          }),
-        { message: "Background work page should fit at each viewport" },
-      )
-      .toMatchObject({ fits: true });
+    await expectDocumentToFit(
+      page,
+      "Background work page should fit at each viewport",
+    );
   }
   await expect(page.getByText("Phát hành bằng xác lập")).toBeVisible();
   await expect(page.getByText("blockchain.broadcast")).toHaveCount(0);

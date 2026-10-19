@@ -292,7 +292,7 @@ export function OperationsDashboard({
 
       {showHeader ? (
         <>
-          <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
             <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
               <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
                 Tiến độ hồ sơ
