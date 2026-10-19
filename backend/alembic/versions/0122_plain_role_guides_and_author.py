@@ -1,6 +1,6 @@
 """Keep applicant guides task focused and shorten the initiative author label.
 
-Revision ID: 0122_plain_role_guides_and_author
+Revision ID: 0122_plain_guides_author
 Revises: 0121_guide_plain_terms
 """
 
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0122_plain_role_guides_and_author"
+revision: str = "0122_plain_guides_author"
 down_revision: str | None = "0121_guide_plain_terms"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

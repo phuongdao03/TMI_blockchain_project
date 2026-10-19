@@ -1,7 +1,7 @@
 """Use the Thu phí label in existing administration guides.
 
 Revision ID: 0123_rename_fee_guides
-Revises: 0122_plain_role_guides_and_author
+Revises: 0122_plain_guides_author
 """
 
 from collections.abc import Sequence
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0123_rename_fee_guides"
-down_revision: str | None = "0122_plain_role_guides_and_author"
+down_revision: str | None = "0122_plain_guides_author"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
