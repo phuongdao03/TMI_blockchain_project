@@ -57,7 +57,14 @@ test("mobile applicant journey is compact without page overflow", async ({
 
   const journey = page.locator(".dossier-journey");
   await expect(journey).toBeVisible();
-  await expect(journey).toHaveCSS("overflow-x", "auto");
+  await expect(journey).toHaveCSS("display", "grid");
+  await expect(journey).toHaveClass(/dossier-journey--three/);
+  expect(
+    await journey.evaluate(
+      (element) =>
+        getComputedStyle(element).gridTemplateColumns.split(" ").length,
+    ),
+  ).toBe(3);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
