@@ -269,7 +269,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
               aria-hidden="true"
               className="size-4 text-[var(--theme-accent)]"
             />
-            Mở phiếu thẩm định
+            Tiếp tục báo cáo
           </a>
           {detail.assignment.status === "IN_PROGRESS" ? (
             <a

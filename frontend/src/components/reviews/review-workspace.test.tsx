@@ -56,7 +56,7 @@ describe("ReviewWorkspace", () => {
     ).toBe("#review-evidence");
     expect(
       screen
-        .getByRole("link", { name: "Mở phiếu thẩm định" })
+        .getByRole("link", { name: "Tiếp tục báo cáo" })
         .getAttribute("href"),
     ).toBe("#review-scorecard");
     expect(document.getElementById("review-evidence")).toBeDefined();

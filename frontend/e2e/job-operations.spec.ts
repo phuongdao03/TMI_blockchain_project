@@ -39,12 +39,34 @@ test("super admin reviews and safely replays failed background work", async ({
     await expect
       .poll(
         () =>
-          page.evaluate(
-            () => document.documentElement.scrollWidth <= window.innerWidth,
-          ),
+          page.evaluate(() => {
+            const viewport = window.innerWidth;
+            const documentWidth = document.documentElement.scrollWidth;
+            const offenders = Array.from(document.body.querySelectorAll("*"))
+              .map((element) => {
+                const rect = element.getBoundingClientRect();
+                return {
+                  tag: element.tagName.toLowerCase(),
+                  className:
+                    typeof element.className === "string"
+                      ? element.className.slice(0, 100)
+                      : "",
+                  right: Math.round(rect.right),
+                  width: Math.round(rect.width),
+                };
+              })
+              .filter((item) => item.width > 0 && item.right > viewport + 1)
+              .slice(0, 8);
+            return {
+              fits: documentWidth <= viewport,
+              viewport,
+              documentWidth,
+              offenders,
+            };
+          }),
         { message: "Background work page should fit at each viewport" },
       )
-      .toBe(true);
+      .toMatchObject({ fits: true });
   }
   await expect(page.getByText("Phát hành bằng xác lập")).toBeVisible();
   await expect(page.getByText("blockchain.broadcast")).toHaveCount(0);

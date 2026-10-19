@@ -81,11 +81,31 @@ async function expectResponsivePage(page: Page) {
         page.evaluate(() => {
           const viewport = window.innerWidth;
           const documentWidth = document.documentElement.scrollWidth;
-          return documentWidth <= viewport + 1;
+          const offenders = Array.from(document.body.querySelectorAll("*"))
+            .map((element) => {
+              const rect = element.getBoundingClientRect();
+              return {
+                tag: element.tagName.toLowerCase(),
+                className:
+                  typeof element.className === "string"
+                    ? element.className.slice(0, 100)
+                    : "",
+                right: Math.round(rect.right),
+                width: Math.round(rect.width),
+              };
+            })
+            .filter((item) => item.width > 0 && item.right > viewport + 1)
+            .slice(0, 8);
+          return {
+            fits: documentWidth <= viewport + 1,
+            viewport,
+            documentWidth,
+            offenders,
+          };
         }),
       { message: "Dashboard should settle within the viewport" },
     )
-    .toBe(true);
+    .toMatchObject({ fits: true });
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations).toEqual([]);
 }

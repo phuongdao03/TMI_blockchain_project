@@ -45,17 +45,17 @@ test("admin issues exact fee, applicant pays, blockchain issuance is queued", as
   await page.goto("/admin/payments");
   const dossierField = page.getByLabel("Hồ sơ đã phê duyệt");
   const amountField = page.getByLabel("Số phí cần thu (VND)");
-  const issueButton = page.getByRole("button", {
-    name: "Gửi yêu cầu thanh toán",
-  });
   await expect(dossierField).toBeVisible();
   await dossierField.selectOption(dossierId);
   await amountField.fill("1500000");
   await expect(dossierField).toHaveValue(dossierId);
   await expect(amountField).toHaveValue("1500000");
-  await expect(issueButton).toBeEnabled();
-  await issueButton.click();
-  await expect(page.getByText("Đã gửi yêu cầu cho người nộp")).toBeVisible();
+  const issueFeeButton = page.getByRole("button", {
+    name: "Gửi thông báo thu phí",
+  });
+  await expect(issueFeeButton).toBeEnabled();
+  await issueFeeButton.click();
+  await expect(page.getByText("Đã gửi thông báo cho người nộp")).toBeVisible();
   await expect(page.getByText(/1\.500\.000 VND/)).toBeVisible();
 
   await context.clearCookies();
@@ -78,10 +78,11 @@ test("admin issues exact fee, applicant pays, blockchain issuance is queued", as
   ]);
   await page.goto(`/dossiers/${dossierId}`);
   await expect(page.getByText(/1\.500\.000 VND/)).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Tiếp tục thanh toán" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Tiếp tục thanh toán" }).click();
+  const continuePaymentLink = page.getByRole("link", {
+    name: "Xem khoản phí và thanh toán",
+  });
+  await expect(continuePaymentLink).toBeVisible();
+  await continuePaymentLink.click();
   await expect(page).toHaveURL(/\/payments\/[a-f0-9-]+$/);
   await expect(
     page.getByRole("link", { name: "Mở trang thanh toán bảo mật" }),

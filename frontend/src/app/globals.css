@@ -12837,6 +12837,10 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
   border-radius: var(--radius-surface, 0.75rem);
 }
 
+.workspace-screen .leave-request-form {
+  border-radius: var(--radius-surface, 0.75rem);
+}
+
 @media (max-width: 47.99rem) {
   .dashboard-main {
     padding-inline: 1.25rem;

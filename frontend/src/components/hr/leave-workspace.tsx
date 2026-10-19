@@ -149,7 +149,7 @@ export function LeaveWorkspace() {
 
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <form
-          className="rounded-xl border border-neutral-200 bg-white p-5 sm:p-6"
+          className="leave-request-form rounded-xl border border-neutral-200 bg-white p-5 sm:p-6"
           onSubmit={submitRequest}
         >
           <div className="flex items-start gap-3">
