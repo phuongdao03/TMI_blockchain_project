@@ -6054,7 +6054,7 @@ html[data-theme="dark"]
   accent-color: var(--theme-accent);
 }
 
-@media (max-width: 54rem) {
+@media (max-width: 68rem) {
   .dashboard-shell {
     display: block;
   }
