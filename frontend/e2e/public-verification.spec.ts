@@ -20,7 +20,7 @@ test("certificate issuer stays readable without mobile overflow", async ({
   }
 });
 
-test("public verification explains provenance without document comparison", async ({
+test("public verification explains provenance without exposing internals", async ({
   page,
 }) => {
   await page.goto("/verify/demo-token");
@@ -39,16 +39,13 @@ test("public verification explains provenance without document comparison", asyn
       .filter({ hasText: "Phiên bản 1" })
       .getByText("Phiên bản 1"),
   ).toBeVisible();
-  const advancedDetails = page.locator("details").filter({
-    has: page.getByText("Chi tiết nâng cao", { exact: true }),
-  });
-  await expect(advancedDetails.getByText("Mạng ghi nhận")).not.toBeVisible();
-
+  await expect(
+    page.getByText(
+      /blockchain|Polygon|PayOS|SHA-256|Mạng ghi nhận|Chi tiết nâng cao|Mã toàn vẹn|0x[0-9a-f]{8}/i,
+    ),
+  ).toHaveCount(0);
   await expect(page.getByText("Đối chiếu tài liệu")).toHaveCount(0);
   await expect(page.getByLabel("Chọn tài liệu để đối chiếu")).toHaveCount(0);
-
-  await advancedDetails.getByText("Chi tiết nâng cao", { exact: true }).click();
-  await expect(advancedDetails.getByText("Mạng ghi nhận")).toBeVisible();
 });
 
 test("certificate work action remains readable in light and dark themes", async ({

@@ -102,7 +102,10 @@ test("Admin module icons stay compact within a rounded section", async ({
   ).not.toBe("rgba(0, 0, 0, 0)");
 });
 
-test("leave workspace keeps its surfaces restrained", async ({ context, page }) => {
+test("leave workspace keeps its surfaces restrained", async ({
+  context,
+  page,
+}) => {
   await signInAs(context, "reviewer");
   await page.goto("/leave", { waitUntil: "domcontentloaded" });
 
