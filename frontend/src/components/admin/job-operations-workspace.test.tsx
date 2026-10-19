@@ -52,6 +52,7 @@ describe("JobOperationsWorkspace", () => {
 
     expect(await screen.findByText("Phát hành bằng xác lập")).toBeDefined();
     expect(screen.getByText("Cần xử lý")).toBeDefined();
+    expect(screen.queryByText("blockchain.broadcast")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
     expect(screen.getByRole("dialog")).toBeDefined();
 
@@ -68,11 +69,6 @@ describe("JobOperationsWorkspace", () => {
         reason: "Nhà cung cấp đã hoạt động ổn định",
       }),
     );
-    expect(
-      screen
-        .getByText("blockchain.broadcast")
-        .closest("details")
-        ?.hasAttribute("open"),
-    ).toBe(false);
+    expect(screen.queryByText("blockchain.broadcast")).toBeNull();
   });
 });

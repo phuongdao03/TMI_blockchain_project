@@ -102,7 +102,7 @@ test("Admin module icons stay compact within a rounded section", async ({
   ).not.toBe("rgba(0, 0, 0, 0)");
 });
 
-test("leave form and hero keep rounded corners", async ({ context, page }) => {
+test("leave workspace keeps its surfaces restrained", async ({ context, page }) => {
   await signInAs(context, "reviewer");
   await page.goto("/leave", { waitUntil: "domcontentloaded" });
 
@@ -117,8 +117,8 @@ test("leave form and hero keep rounded corners", async ({ context, page }) => {
     ),
     overflow: document.documentElement.scrollWidth > innerWidth + 1,
   }));
-  expect(radii.hero).toBeGreaterThanOrEqual(20);
-  expect(radii.form).toBeGreaterThanOrEqual(16);
+  expect(radii.hero).toBeLessThanOrEqual(12);
+  expect(radii.form).toBeLessThanOrEqual(12);
   expect(radii.overflow).toBe(false);
 });
 

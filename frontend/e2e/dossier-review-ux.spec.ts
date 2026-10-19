@@ -84,7 +84,9 @@ test("reviewer sees live progress and the next blocking action", async ({
   await page.goto("/reviews", { waitUntil: "domcontentloaded" });
   await page.getByRole("link", { name: "Tiếp tục thẩm định" }).click();
   await expect(page.getByText("Đã quá hạn xử lý")).toBeVisible();
-  await expect(page.getByText("1 tài liệu đã khóa")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Tài liệu kiểm chứng (1)" }),
+  ).toBeVisible();
   await expect(page.getByText("Tóm tắt của người nộp")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Tiếp tục báo cáo" }),

@@ -27,7 +27,7 @@ test("public verification explains provenance without document comparison", asyn
 
   await expect(
     page.getByText(
-      "Bằng xác lập có hiệu lực; hồ sơ đã được xác nhận trên blockchain.",
+      "Đối chiếu tên tác phẩm, chủ thể và thời điểm xác nhận với thông tin bạn được cung cấp.",
     ),
   ).toBeVisible();
   await expect(

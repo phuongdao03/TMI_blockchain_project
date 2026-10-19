@@ -164,7 +164,7 @@ export function GuideCenter({ scope }: { scope: "public" | "account" }) {
             />
           </label>
           <button
-            className="min-h-12 rounded-lg bg-[var(--theme-accent)] px-4 text-sm font-semibold text-white transition hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent)] focus:ring-offset-2"
+            className="min-h-12 rounded-lg bg-[var(--theme-accent)] px-4 text-sm font-semibold text-[var(--theme-accent-contrast)] transition hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent)] focus:ring-offset-2"
             type="submit"
           >
             Tìm

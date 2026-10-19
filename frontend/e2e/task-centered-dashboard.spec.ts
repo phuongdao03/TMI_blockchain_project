@@ -75,11 +75,17 @@ async function authenticateViewer(context: BrowserContext) {
 }
 
 async function expectResponsivePage(page: Page) {
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
-    ),
-  ).toBe(true);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const viewport = window.innerWidth;
+          const documentWidth = document.documentElement.scrollWidth;
+          return documentWidth <= viewport + 1;
+        }),
+      { message: "Dashboard should settle within the viewport" },
+    )
+    .toBe(true);
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations).toEqual([]);
 }

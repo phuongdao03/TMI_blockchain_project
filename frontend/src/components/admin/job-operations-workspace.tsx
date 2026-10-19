@@ -54,7 +54,7 @@ export function JobOperationsWorkspace() {
 
   return (
     <section
-      className="border-t border-neutral-200 pt-7"
+      className="min-w-0 border-t border-neutral-200 pt-7"
       aria-labelledby="job-queue-title"
     >
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -92,7 +92,7 @@ export function JobOperationsWorkspace() {
           Chưa có công việc nền nào được ghi nhận.
         </p>
       ) : (
-        <div className="mt-6 overflow-x-auto border-y border-neutral-200">
+        <div className="mt-6 w-full min-w-0 max-w-full overflow-x-auto border-y border-neutral-200">
           <table className="workspace-record-table w-full min-w-[760px] text-left text-sm">
             <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
               <tr>
@@ -111,14 +111,6 @@ export function JobOperationsWorkspace() {
                     className="px-4 py-4 font-semibold"
                   >
                     {taskLabels[job.taskName] ?? "Tác vụ vận hành"}
-                    <details className="mt-1 font-normal text-neutral-500">
-                      <summary className="cursor-pointer text-xs">
-                        Xem chi tiết
-                      </summary>
-                      <span className="mt-1 block font-mono text-[11px]">
-                        {job.taskName}
-                      </span>
-                    </details>
                   </td>
                   <td data-label="Trạng thái" className="px-4 py-4">
                     {statusLabels[job.status]}

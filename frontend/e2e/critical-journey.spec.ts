@@ -77,7 +77,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     await expect(page).toHaveURL(/\/dossiers\/9155dbf5-/, {
       timeout: 30_000,
     });
-    await page.getByRole("button", { name: /Bằng chứng/ }).click();
+    await page.getByRole("button", { name: /Tài liệu/ }).click();
     await page.getByText("Đặt tên hiển thị cho tài liệu (tùy chọn)").click();
     await page.getByLabel("Tên tài liệu").fill("Bản gốc nhận diện");
     await page.getByLabel("Chọn bằng chứng hồ sơ").setInputFiles({
@@ -171,7 +171,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     await page.getByRole("button", { name: "Kiểm tra" }).click();
     await expect(
       page.getByText(
-        "Bằng xác lập có hiệu lực; hồ sơ đã được xác nhận trên blockchain.",
+        "Đối chiếu tên tác phẩm, chủ thể và thời điểm xác nhận với thông tin bạn được cung cấp.",
       ),
     ).toBeVisible();
   });

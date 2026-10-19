@@ -154,7 +154,7 @@ export function OperationsDashboard({
     ...Object.values(metrics.data.dossierFunnel),
   );
   return (
-    <div className="mx-auto max-w-7xl space-y-8 text-[var(--theme-text)]">
+    <div className="mx-auto min-w-0 max-w-7xl space-y-8 text-[var(--theme-text)]">
       {!hasOperationalData ? (
         <p
           className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 text-sm text-[var(--theme-muted)]"

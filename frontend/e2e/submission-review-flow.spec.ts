@@ -71,7 +71,9 @@ test("applicant preparation and submission read as one sequence", async ({
   await expect(page).toHaveURL(
     /\/dossiers\/9155dbf5-bb3e-449d-8bf0-9572cc642cac/,
   );
-  await expect(page.locator(".dossier-state-summary")).toBeVisible();
+  await expect(page.locator(".dossier-created-note")).toContainText(
+    "Đã lưu bản nháp. Thêm tài liệu cần thiết rồi kiểm tra trước khi gửi.",
+  );
   await page.getByRole("button", { name: /Kiểm tra & nộp/ }).click();
   await expect(
     page.getByRole("heading", { name: "Kiểm tra & nộp" }),

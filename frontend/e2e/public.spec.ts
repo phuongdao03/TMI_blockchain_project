@@ -178,7 +178,7 @@ test("public portal is professional, responsive and verifiable", async ({
   await page.getByRole("button", { name: "Kiểm tra" }).click();
   await expect(
     page.getByText(
-      "Bằng xác lập có hiệu lực; hồ sơ đã được xác nhận trên blockchain.",
+      "Đối chiếu tên tác phẩm, chủ thể và thời điểm xác nhận với thông tin bạn được cung cấp.",
     ),
   ).toBeVisible();
   const certificateHeading = page.locator(".digital-certificate h2");

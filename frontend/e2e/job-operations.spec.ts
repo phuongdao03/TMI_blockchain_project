@@ -1,12 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
+
 test("super admin reviews and safely replays failed background work", async ({
   context,
   page,
   request,
 }) => {
   test.setTimeout(60_000);
-  await request.post("http://127.0.0.1:4010/api/e2e/reset-operations-job");
+  await request.post(`${mockApiUrl}/api/e2e/reset-operations-job`);
   await context.addCookies([
     {
       name: "cns_access",
@@ -34,17 +36,18 @@ test("super admin reviews and safely replays failed background work", async ({
     await expect(
       page.getByRole("heading", { name: "Công việc nền gần đây" }),
     ).toBeVisible();
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= window.innerWidth,
-      ),
-    ).toBe(true);
+    await expect
+      .poll(
+        () =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth <= window.innerWidth,
+          ),
+        { message: "Background work page should fit at each viewport" },
+      )
+      .toBe(true);
   }
   await expect(page.getByText("Phát hành bằng xác lập")).toBeVisible();
-  await expect(page.getByText("blockchain.broadcast")).toBeHidden();
-
-  await page.getByText("Xem chi tiết").click();
-  await expect(page.getByText("blockchain.broadcast")).toBeVisible();
+  await expect(page.getByText("blockchain.broadcast")).toHaveCount(0);
   await page.getByRole("button", { name: "Thử lại" }).click();
 
   const confirm = page.getByRole("button", { name: "Xác nhận thử lại" });

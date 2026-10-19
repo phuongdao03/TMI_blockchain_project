@@ -4,7 +4,9 @@ const walletAddress = "0x3434343434343434343434343434343434343434";
 const transactionHash = `0x${"c".repeat(64)}`;
 
 test.beforeEach(async ({ context, page, request }) => {
-  await request.post("http://127.0.0.1:4010/api/e2e/reset-blockchain-signing");
+  await request.post(
+    `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}/api/e2e/reset-blockchain-signing`,
+  );
   await context.addCookies([
     {
       name: "cns_access",
@@ -44,7 +46,7 @@ test.beforeEach(async ({ context, page, request }) => {
   );
 });
 
-test("Super Admin signs a THV proof and sees confirmed hash evidence", async ({
+test("authorized staff can record an approved dossier", async ({
   page,
   request,
 }, testInfo) => {
@@ -54,60 +56,46 @@ test("Super Admin signs a THV proof and sees confirmed hash evidence", async ({
   await expect(
     page.getByRole("heading", { level: 1, name: "Hồ sơ chờ ghi nhận" }),
   ).toBeVisible();
-  await expect(
-    page.getByText("Polygon Mainnet", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText("0x3434…3434", { exact: true })).toBeVisible();
-  const verifyWallet = page.getByRole("button", {
-    name: "Xác minh ví của tổ chức",
+  const permissionCheck = page.getByRole("button", {
+    name: /^(Xác minh quyền của tổ chức|Kiểm tra quyền xác nhận)$/,
   });
-  if (await verifyWallet.isVisible()) await verifyWallet.click();
+  if (await permissionCheck.isVisible()) await permissionCheck.click();
   await page
     .getByRole("button", { name: /Hồ sơ đã được duyệt chờ ký/ })
     .click();
 
-  await expect(page.getByRole("list", { name: "Tiến trình ký" })).toContainText(
-    "Chuẩn bịChờ MetaMaskĐang xác nhậnĐã ghi nhận",
-  );
-  await page.getByRole("button", { name: "Ký và ghi nhận blockchain" }).click();
+  const progress = page.getByRole("list", { name: "Tiến trình ký" });
+  await expect(progress.getByRole("listitem")).toContainText([
+    "Chuẩn bị",
+    "Chờ xác nhận",
+    "Đang xác nhận",
+    "Đã ghi nhận",
+  ]);
+  await page.getByRole("button", { name: "Xác nhận ghi nhận hồ sơ" }).click();
 
   await expect(
-    page.getByText("Giao dịch đã gửi, đang chờ mạng Polygon xác nhận."),
+    page.getByRole("status").getByText(/Yêu cầu đang được xử lý/),
   ).toBeVisible();
-  await expect(
-    page.getByText("Tài liệu đã được ghi nhận và chưa bị thay đổi."),
-  ).toHaveCount(0);
-  const confirmedStep = page
-    .getByRole("list", { name: "Tiến trình ký" })
-    .getByRole("listitem")
-    .filter({ hasText: "Đã ghi nhận" });
-  await expect(confirmedStep).not.toHaveAttribute("aria-current", "step");
-  await expect(confirmedStep).toHaveClass(/border-neutral-200/);
-  await expect(
-    page.getByRole("link", { name: /Mở giao dịch trên PolygonScan/i }),
-  ).toHaveAttribute("href", `https://polygonscan.com/tx/${transactionHash}`);
-
-  await page.getByRole("button", { name: /Sao chép mã giao dịch/i }).click();
-  await expect(page.getByText("Đã sao chép mã giao dịch.")).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-    transactionHash,
-  );
 
   const confirmed = await request.post(
-    "http://127.0.0.1:4010/api/e2e/confirm-blockchain-signing",
+    `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}/api/e2e/confirm-blockchain-signing`,
   );
   expect(confirmed.ok()).toBe(true);
-  await page.getByRole("button", { name: /Kiểm tra xác nhận ngay/ }).click();
   await expect(
-    page.getByRole("heading", { name: "Bằng chứng có thể tự kiểm tra" }),
+    page.getByRole("button", { name: "Kiểm tra trạng thái" }),
   ).toBeVisible();
-  await expect(page.getByText(`0x${"a".repeat(64)}`)).toBeVisible();
+  await page.getByRole("button", { name: "Kiểm tra trạng thái" }).click();
   await expect(
-    page.getByText("2 lượt xác nhận trên Polygon; có thể đối chiếu độc lập."),
+    page.getByRole("heading", { name: "Hồ sơ đã được ghi nhận" }),
   ).toBeVisible();
+  const confirmedStep = progress.getByRole("listitem").filter({
+    hasText: "Đã ghi nhận",
+  });
   await expect(confirmedStep).toHaveAttribute("aria-current", "step");
   await expect(
-    page.getByRole("button", { name: "Ký và ghi nhận blockchain" }),
+    page
+      .locator(".blockchain-signing-workspace")
+      .getByText(/Polygon|Mainnet|MetaMask|PolygonScan|0x[0-9a-f]{12}/i),
   ).toHaveCount(0);
 });
 

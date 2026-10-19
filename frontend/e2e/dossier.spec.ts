@@ -70,7 +70,7 @@ test("applicant creates, uploads evidence and submits an immutable dossier", asy
     }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: /Bằng chứng/ }).click();
+  await page.getByRole("button", { name: /Tài liệu/ }).click();
   await page.getByText("Đặt tên hiển thị cho tài liệu (tùy chọn)").click();
   await page.getByLabel("Tên tài liệu").fill("Bản gốc nhận diện");
   await page.getByLabel("Chọn bằng chứng hồ sơ").setInputFiles({

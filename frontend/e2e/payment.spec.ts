@@ -44,7 +44,7 @@ test("admin issues exact fee, applicant pays, blockchain issuance is queued", as
   ]);
   await page.goto("/admin/payments");
   const dossierField = page.getByLabel("Hồ sơ đã phê duyệt");
-  const amountField = page.getByLabel("Số tiền cần thanh toán (VND)");
+  const amountField = page.getByLabel("Số phí cần thu (VND)");
   const issueButton = page.getByRole("button", {
     name: "Gửi yêu cầu thanh toán",
   });
@@ -78,8 +78,16 @@ test("admin issues exact fee, applicant pays, blockchain issuance is queued", as
   ]);
   await page.goto(`/dossiers/${dossierId}`);
   await expect(page.getByText(/1\.500\.000 VND/)).toBeVisible();
-  await page.getByRole("link", { name: "Xem và thanh toán qua PayOS" }).click();
+  await expect(
+    page.getByRole("button", { name: "Tiếp tục thanh toán" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Tiếp tục thanh toán" }).click();
+  await expect(page).toHaveURL(/\/payments\/[a-f0-9-]+$/);
+  await expect(
+    page.getByRole("link", { name: "Mở trang thanh toán bảo mật" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Thanh toán thành công" }),
-  ).toBeVisible({ timeout: 10_000 });
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(".payment-workspace")).not.toContainText(/PayOS/i);
 });
