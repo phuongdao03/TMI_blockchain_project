@@ -34,7 +34,7 @@ const nextActions: Record<DossierStatus, string> = {
   REJECTED: "Xem kết quả thẩm định",
   PAYMENT_PENDING: "Cần thanh toán để tiếp tục",
   PAID: "Đã thanh toán · Chờ ký số",
-  ANCHOR_PENDING: "Đang ký lên blockchain",
+  ANCHOR_PENDING: "Đang chuẩn bị bằng xác lập",
   ANCHORED: "Đang chuẩn bị bằng xác lập",
   CERTIFICATE_ISSUED: "Bằng xác lập đã sẵn sàng",
   PUBLISHED: "Đã công bố",

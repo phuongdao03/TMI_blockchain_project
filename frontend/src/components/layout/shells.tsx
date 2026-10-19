@@ -389,7 +389,7 @@ export function PublicShell({ children }: PropsWithChildren) {
                   aria-hidden="true"
                   className="public-mobile-nav__icon"
                 />
-                <span>Tải ứng dụng</span>
+                <span>Cài ứng dụng</span>
                 <ChevronRight
                   aria-hidden="true"
                   className="public-mobile-nav__chevron"
@@ -612,7 +612,16 @@ export function PublicShell({ children }: PropsWithChildren) {
         </div>
         <div className="public-footer__developer">
           <h2>Đơn vị phát triển</h2>
-          <DeveloperCredit showPrefix={false} />
+          <div className="developer-credit">
+            <Image
+              alt="Biểu trưng Trung tâm An ninh Công nghệ số"
+              className="developer-credit__logo"
+              height={40}
+              src="/assets/institution/logo-cns.png"
+              width={40}
+            />
+            <strong>Trung tâm An ninh Công nghệ số - CNS</strong>
+          </div>
         </div>
         <div className="public-footer__bottom">
           <p>TINH HOA VIỆT · SUY TÔN TRÍ TUỆ – LƯU TRUYỀN DI SẢN</p>
@@ -664,31 +673,14 @@ export function AuthShell({ children }: PropsWithChildren) {
         {children}
       </main>
       <footer className="auth-footer">
-        <DeveloperCredit />
         <nav aria-label="Liên kết cuối trang">
           <Link href="/policies">Điều khoản sử dụng</Link>
           <Link href="/policies#privacy">Chính sách quyền riêng tư</Link>
         </nav>
+        <span className="developer-credit">
+          Đơn vị phát triển · Trung tâm An ninh Công nghệ số - CNS
+        </span>
       </footer>
-    </div>
-  );
-}
-
-function DeveloperCredit({ showPrefix = true }: { showPrefix?: boolean }) {
-  return (
-    <div className="developer-credit">
-      <Image
-        alt=""
-        className="developer-credit__logo"
-        height={48}
-        sizes="48px"
-        src="/assets/institution/logo-cns.png"
-        width={48}
-      />
-      <span>
-        {showPrefix ? "Phát triển bởi " : null}
-        Trung tâm An ninh Công nghệ số
-      </span>
     </div>
   );
 }

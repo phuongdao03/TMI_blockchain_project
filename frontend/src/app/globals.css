@@ -6351,15 +6351,18 @@ html[data-theme="dark"]
 
 @media (max-width: 39.999rem) {
   .dossier-journey {
-    display: flex;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-    padding-bottom: 0.5rem;
-    scroll-snap-type: inline mandatory;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.25rem;
   }
   .dossier-journey > li {
-    min-width: min(14rem, calc(100vw - 3.5rem));
-    scroll-snap-align: start;
+    min-width: 0;
+  }
+  .dossier-journey--three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .dossier-journey__number {
+    display: none;
   }
 }
 
@@ -10002,6 +10005,10 @@ html[data-theme="dark"] .review-workspace__error {
     display: none;
   }
 
+  .dashboard-context-header__install:is(button) {
+    display: none;
+  }
+
   .dashboard-workspace-drawer__account {
     display: flex;
     align-items: center;
@@ -11775,6 +11782,13 @@ html[data-theme="light"]
 }
 
 /* Brand signature: a quiet serif wordmark and a compact provenance seal. */
+@media (max-width: 38rem) {
+  .public-shell .public-header .pwa-install-button,
+  .public-shell .public-header__session-status {
+    display: none;
+  }
+}
+
 .public-shell .public-header .brand-mark__official-name {
   font-family: var(--font-serif);
   font-optical-sizing: auto;
@@ -12821,4 +12835,98 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
 
 .workspace-screen :where(.rounded-2xl, .rounded-3xl) {
   border-radius: var(--radius-surface, 0.75rem);
+}
+
+@media (max-width: 47.99rem) {
+  .dashboard-main {
+    padding-inline: 1.25rem;
+  }
+
+  .dashboard-page-stage h1 {
+    font-family: var(--font-sans);
+    font-size: clamp(1.75rem, 7vw, 2.2rem);
+    line-height: 1.18;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+
+  .dashboard-page-stage h2 {
+    font-size: clamp(1.2rem, 5vw, 1.5rem);
+    line-height: 1.3;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  .dashboard-page-stage :where(p, li) {
+    line-height: 1.55;
+  }
+
+  .dashboard-page-stage :where(section, form)[class*="p-6"] {
+    padding-inline: 1.25rem;
+  }
+
+  .dashboard-context-header__actions {
+    justify-content: flex-end;
+    gap: 0.5rem !important;
+  }
+
+  .dashboard-context-header__menu {
+    margin-right: auto;
+  }
+
+  .dashboard-context-header__install {
+    display: none;
+  }
+
+  .dossier-workspace {
+    gap: 1.25rem;
+  }
+
+  .dossier-workspace > :first-child {
+    gap: 0.75rem;
+  }
+
+  .dossier-workspace > :first-child h1 {
+    margin-top: 0.5rem;
+  }
+
+  .dossier-workspace > :first-child > p {
+    padding: 0;
+    border: 0;
+    font-weight: 500;
+  }
+
+  .dossier-evidence-step > div:first-child p {
+    max-width: 34ch;
+  }
+
+  .dossier-evidence-step details {
+    border-bottom: 0;
+  }
+
+  .dashboard-overview__hero {
+    padding: 1.25rem 0 !important;
+    border: 0 !important;
+    border-top: 1px solid var(--theme-border) !important;
+    border-radius: 0;
+    background: transparent;
+    color: var(--theme-text);
+  }
+
+  .dashboard-overview__hero :where(.text-slate-300, .text-slate-400) {
+    color: var(--theme-muted);
+  }
+
+  .dashboard-overview__hero .text-gold-300 {
+    color: var(--theme-accent);
+  }
+
+  .dashboard-overview__hero > div > span:first-child {
+    display: none;
+  }
+
+  .workspace-shortcut-list {
+    border-inline: 0;
+    border-radius: 0;
+  }
 }

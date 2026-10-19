@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -56,6 +56,7 @@ from app.modules.hr.schemas import (
     CreateOvertimeRequest,
     CreatePayrollPeriodRequest,
     DepartmentData,
+    DepartmentOverviewData,
     EmployeeData,
     HrDashboardSummaryData,
     LeaveDecisionRequest,
@@ -1068,6 +1069,28 @@ async def list_departments(
             page_size=page_size,
             total=total,
         ),
+    )
+
+
+@router.get(
+    "/departments/{department_id}/overview",
+    response_model=SuccessEnvelope[DepartmentOverviewData],
+)
+async def get_department_overview(
+    department_id: UUID,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    session: SessionDependency,
+    start_date: Annotated[date | None, Query(alias="startDate")] = None,
+    end_date: Annotated[date | None, Query(alias="endDate")] = None,
+) -> SuccessEnvelope[DepartmentOverviewData]:
+    end = end_date or date.today()
+    start = start_date or (end - timedelta(days=29))
+    data = await HrService(session).department_overview(
+        principal, department_id, start_date=start, end_date=end
+    )
+    return SuccessEnvelope(
+        data=data, meta=ResponseMeta(request_id=request.state.request_id)
     )
 
 

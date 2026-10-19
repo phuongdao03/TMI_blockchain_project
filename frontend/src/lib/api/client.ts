@@ -36,6 +36,13 @@ import type {
   AuthUser,
   CmsBanner,
   CmsCategory,
+  CmsGuideAdminFilters,
+  CmsGuideArticle,
+  CmsGuideArticleInput,
+  CmsGuideFeedback,
+  CmsGuideAudience,
+  CmsGuideListFilters,
+  CmsGuideStatus,
   CmsPage,
   CmsPost,
   CmsPostInput,
@@ -104,6 +111,7 @@ import type {
   DossierTimelineItem,
   DossierVersion,
   Department,
+  DepartmentOverview,
   Employee,
   EmploymentStatus,
   DurableJobSummary,
@@ -123,6 +131,7 @@ import type {
   WorkTaskPriority,
   WorkTaskStatus,
   WorkAllocation,
+  WorkAllocationHandoff,
   MyWorkAllocation,
   WorkAllocationCreateInput,
   WorkAllocationDetail,
@@ -545,6 +554,88 @@ export const cmsApi = {
     return request<CmsCategory>("/admin/cms/categories", {
       method: "POST",
       body: JSON.stringify(input),
+    });
+  },
+};
+
+function guideQuery(
+  filters: CmsGuideListFilters & {
+    status?: CmsGuideStatus;
+    audience?: CmsGuideAudience;
+  } = {},
+): string {
+  const query = new URLSearchParams();
+  if (filters.page) query.set("page", String(filters.page));
+  if (filters.pageSize) query.set("pageSize", String(filters.pageSize));
+  if (filters.query?.trim()) query.set("q", filters.query.trim());
+  if (filters.category) query.set("category", filters.category);
+  if (filters.status) query.set("status", filters.status);
+  if (filters.audience) query.set("audience", filters.audience);
+  const value = query.toString();
+  return value ? `?${value}` : "";
+}
+
+export const guideApi = {
+  publicList(filters: CmsGuideListFilters = {}) {
+    return requestPaginated<CmsGuideArticle[]>(
+      `/public/guide/articles${guideQuery(filters)}`,
+    );
+  },
+  publicArticle(slug: string) {
+    return request<CmsGuideArticle>(
+      `/public/guide/articles/${encodeURIComponent(slug)}`,
+    );
+  },
+  accessibleList(filters: CmsGuideListFilters = {}) {
+    return requestPaginated<CmsGuideArticle[]>(
+      `/guide/articles${guideQuery(filters)}`,
+    );
+  },
+  accessibleArticle(slug: string) {
+    return request<CmsGuideArticle>(
+      `/guide/articles/${encodeURIComponent(slug)}`,
+    );
+  },
+  submitFeedback(
+    slug: string,
+    input: { helpful: boolean; comment?: string | null; clientToken: string },
+  ) {
+    return request<{ accepted: boolean }>(
+      `/public/guide/articles/${encodeURIComponent(slug)}/feedback`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  adminList(filters: CmsGuideAdminFilters = {}) {
+    return requestPaginated<CmsGuideArticle[]>(
+      `/admin/cms/guide-articles${guideQuery(filters)}`,
+    );
+  },
+  adminFeedback(articleId: string, page = 1) {
+    return requestPaginated<CmsGuideFeedback[]>(
+      `/admin/cms/guide-articles/${encodeURIComponent(articleId)}/feedback?page=${page}&pageSize=20`,
+    );
+  },
+  create(input: CmsGuideArticleInput) {
+    return request<CmsGuideArticle>("/admin/cms/guide-articles", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  update(id: string, input: CmsGuideArticleInput) {
+    return request<CmsGuideArticle>(`/admin/cms/guide-articles/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  },
+  setStatus(id: string, status: CmsGuideStatus) {
+    return request<CmsGuideArticle>(`/admin/cms/guide-articles/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  },
+  delete(id: string) {
+    return request<boolean>(`/admin/cms/guide-articles/${id}`, {
+      method: "DELETE",
     });
   },
 };
@@ -1508,13 +1599,29 @@ export const hrDepartmentApi = {
       `/admin/hr/departments?${parameters.toString()}`,
     );
   },
+  overview(
+    departmentId: string,
+    period: { startDate: string; endDate: string },
+  ) {
+    const parameters = new URLSearchParams(period);
+    return request<DepartmentOverview>(
+      `/admin/hr/departments/${encodeURIComponent(departmentId)}/overview?${parameters.toString()}`,
+    );
+  },
   create(input: { code: string; name: string; description?: string | null }) {
     return request<Department>("/admin/hr/departments", {
       method: "POST",
       body: JSON.stringify(input),
     });
   },
-  update(id: string, input: { name: string; description: string | null }) {
+  update(
+    id: string,
+    input: {
+      name: string;
+      description: string | null;
+      managerEmployeeId: string | null;
+    },
+  ) {
     return request<Department>(
       `/admin/hr/departments/${encodeURIComponent(id)}`,
       {
@@ -2167,6 +2274,7 @@ export const taskAdminApi = {
       page?: number;
       pageSize?: number;
       search?: string;
+      assigneeEmployeeId?: string;
       status?: WorkTaskStatus;
       priority?: WorkTaskPriority;
       sortBy?: "createdAt" | "dueAt";
@@ -2180,6 +2288,8 @@ export const taskAdminApi = {
       sortDirection: filters.sortDirection ?? "desc",
     });
     if (filters.search) parameters.set("search", filters.search);
+    if (filters.assigneeEmployeeId)
+      parameters.set("assigneeEmployeeId", filters.assigneeEmployeeId);
     if (filters.status) parameters.set("status", filters.status);
     if (filters.priority) parameters.set("priority", filters.priority);
     return requestPaginated<WorkTask[]>(
@@ -2202,6 +2312,7 @@ export const taskAdminApi = {
       title: string;
       description: string | null;
       dueAt: string | null;
+      assigneeEmployeeId: string | null;
       status: WorkTaskStatus;
       priority: WorkTaskPriority;
     }>,
@@ -2209,6 +2320,25 @@ export const taskAdminApi = {
     return request<WorkTask>(`/admin/tasks/${encodeURIComponent(taskId)}`, {
       method: "PATCH",
       body: JSON.stringify(input),
+    });
+  },
+};
+
+export const myTaskApi = {
+  list(page = 1, pageSize = 50) {
+    const parameters = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+    return requestPaginated<WorkTask[]>(`/me/tasks?${parameters.toString()}`);
+  },
+  update(
+    taskId: string,
+    status: Extract<WorkTaskStatus, "IN_PROGRESS" | "DONE">,
+  ) {
+    return request<WorkTask>(`/me/tasks/${encodeURIComponent(taskId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
     });
   },
 };
@@ -2228,6 +2358,25 @@ export const workAllocationAdminApi = {
     if (filters.state) parameters.set("state", filters.state);
     return requestPaginated<WorkAllocation[]>(
       `/admin/work-allocations?${parameters.toString()}`,
+    );
+  },
+  handoffs(userId: string, page = 1, pageSize = 100) {
+    const parameters = new URLSearchParams({
+      userId,
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+    return requestPaginated<WorkAllocationHandoff[]>(
+      `/admin/work-allocations/handoffs?${parameters.toString()}`,
+    );
+  },
+  handoff(
+    allocationId: string,
+    input: { fromUserId: string; toUserId: string },
+  ) {
+    return request<WorkAllocation>(
+      `/admin/work-allocations/${encodeURIComponent(allocationId)}/handoffs`,
+      { method: "POST", body: JSON.stringify(input) },
     );
   },
   get(allocationId: string) {

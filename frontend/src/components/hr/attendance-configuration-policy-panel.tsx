@@ -222,16 +222,16 @@ export function AttendancePolicyPanel({
       aria-labelledby="attendance-policy-title"
       className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-6"
     >
-      <div className="flex flex-wrap items-start gap-3">
-        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700">
+      <div className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-3 gap-y-3 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto] sm:items-start sm:gap-4">
+        <span className="row-span-1 inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700">
           <MapPinned aria-hidden="true" className="size-5" />
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
+        <div className="min-w-0">
+          <p className="break-words text-[0.65rem] font-bold uppercase tracking-[0.06em] text-primary-700 sm:text-xs sm:tracking-[0.16em]">
             02 · Vùng chấm công
           </p>
           <h2
-            className="mt-1 text-xl font-bold text-neutral-950"
+            className="mt-1 break-words text-lg font-bold leading-snug text-neutral-950 sm:text-xl"
             id="attendance-policy-title"
           >
             Thiết lập vùng chấm công
@@ -244,7 +244,7 @@ export function AttendancePolicyPanel({
         </div>
         {latestPolicy && canConfigure ? (
           <button
-            className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)]"
+            className="col-span-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)] sm:col-span-1 sm:row-start-1 sm:w-auto"
             onClick={() => {
               setCreatingVersion((current) => !current);
               setCorrecting(false);
@@ -258,7 +258,7 @@ export function AttendancePolicyPanel({
         ) : null}
         {correctablePolicy && canConfigure ? (
           <button
-            className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)]"
+            className="col-span-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)] sm:col-span-1 sm:row-start-2 sm:col-start-3 sm:w-auto"
             onClick={() => {
               setCorrecting((current) => !current);
               setCreatingVersion(false);

@@ -164,7 +164,7 @@ export function GenericAllocationForm({
         </legend>
         {staff.length === 0 ? (
           <p className="mt-3 rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-600 dark:bg-neutral-950 dark:text-neutral-300">
-            Chưa có Moderator đang hoạt động để thêm vào công việc.
+            Chưa có nhân sự đang hoạt động để thêm vào công việc.
           </p>
         ) : (
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -180,7 +180,14 @@ export function GenericAllocationForm({
                   onChange={() => toggleMember(person.id)}
                   type="checkbox"
                 />
-                <span className="min-w-0 truncate">{person.email}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{person.email}</span>
+                  {person.openTaskCount !== undefined ? (
+                    <span className="block text-xs text-neutral-500 dark:text-neutral-400">
+                      {person.openTaskCount} việc đang mở
+                    </span>
+                  ) : null}
+                </span>
               </label>
             ))}
           </div>

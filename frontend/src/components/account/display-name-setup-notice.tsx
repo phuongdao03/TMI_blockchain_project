@@ -20,27 +20,26 @@ export function DisplayNameSetupNotice() {
 
   return (
     <div
-      className="border-b border-[var(--theme-border)] bg-[var(--theme-accent)]/5 px-4 py-3"
+      className="border-b border-[var(--theme-border)] bg-[var(--theme-accent)]/5 px-5 py-2.5"
       role="status"
     >
-      <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-start gap-2.5 text-sm text-[var(--theme-text)]">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5 text-sm text-[var(--theme-text)]">
           <UserRound
             aria-hidden="true"
-            className="mt-0.5 size-4 shrink-0 text-[var(--theme-accent)]"
+            className="size-4 shrink-0 text-[var(--theme-accent)]"
           />
           <p>
-            <span className="font-bold">Cài đặt tên hiển thị của bạn</span>
-            <span className="block text-[var(--theme-muted)]">
-              Tên này sẽ xuất hiện cạnh bài viết và bình luận của bạn.
+            <span className="font-medium">
+              Thêm tên hiển thị để tham gia cộng đồng.
             </span>
           </p>
         </div>
         <Link
-          className="inline-flex min-h-10 items-center justify-center self-start rounded-lg bg-[var(--theme-accent)] px-4 text-sm font-bold text-[var(--theme-accent-contrast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] sm:self-auto"
+          className="inline-flex min-h-10 shrink-0 items-center text-sm font-semibold text-[var(--theme-accent)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
           href="/account"
         >
-          Cài đặt tên
+          Thiết lập
         </Link>
       </div>
     </div>

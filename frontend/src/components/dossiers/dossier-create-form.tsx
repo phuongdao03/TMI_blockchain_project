@@ -59,6 +59,10 @@ function displayFieldValue(value: unknown): string {
   return "Chưa điền";
 }
 
+function displayFieldLabel(label: string | undefined, key: string): string {
+  return label === "Tác giả sáng kiến" ? "Tác giả" : label || key;
+}
+
 function normalizeSearchText(value: string): string {
   return value
     .toLocaleLowerCase("vi")
@@ -192,13 +196,13 @@ export function DossierCreateForm() {
 
   return (
     <form
-      className="dossier-create-form space-y-6"
+      className="dossier-create-form space-y-5 sm:space-y-6"
       onSubmit={submit}
       ref={formRef}
     >
       <nav aria-label="Các bước chuẩn bị hồ sơ nháp">
         <ol
-          className={`dossier-journey grid grid-cols-2 gap-2 ${hasTypeSpecificFields ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
+          className={`dossier-journey grid grid-cols-2 gap-2 ${hasTypeSpecificFields ? "sm:grid-cols-4" : "dossier-journey--three sm:grid-cols-3"}`}
         >
           {(
             [
@@ -217,7 +221,7 @@ export function DossierCreateForm() {
           ).map(([step, number, label, note]) => (
             <li
               aria-current={step === prepareStep ? "step" : undefined}
-              className={`dossier-journey__step rounded-xl border p-3 ${
+              className={`dossier-journey__step rounded-xl border p-2 text-center sm:p-3 sm:text-left ${
                 step === prepareStep
                   ? "dossier-journey__step--active"
                   : "border-[var(--theme-border)] bg-[var(--theme-surface)]"
@@ -227,7 +231,7 @@ export function DossierCreateForm() {
               <span className="dossier-journey__number font-mono text-xs font-bold">
                 {number}
               </span>
-              <strong className="ml-2 text-sm text-[var(--theme-text)]">
+              <strong className="text-xs text-[var(--theme-text)] sm:ml-2 sm:text-sm">
                 {label}
               </strong>
               <span className="mt-1 hidden pl-7 text-xs text-[var(--theme-muted)] sm:block">
@@ -237,11 +241,11 @@ export function DossierCreateForm() {
           ))}
         </ol>
       </nav>
-      <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6">
-        <div className="flex items-start gap-3 border-b border-[var(--theme-border)] pb-4">
+      <section className="space-y-5 bg-white py-3 sm:rounded-2xl sm:border sm:border-neutral-200 sm:p-6">
+        <div className="flex items-start gap-3 sm:border-b sm:border-[var(--theme-border)] sm:pb-4">
           <ShieldCheck
             aria-hidden="true"
-            className="mt-0.5 size-5 shrink-0 text-primary-700"
+            className="mt-0.5 hidden size-5 shrink-0 text-primary-700 sm:block"
           />
           <div>
             <h2 className="font-bold text-neutral-950">
@@ -512,7 +516,11 @@ export function DossierCreateForm() {
                   </legend>
                   <div className="mt-2 grid gap-3 sm:grid-cols-3">
                     {[
-                      ["PRIVATE", "Riêng tư", "Chỉ chủ hồ sơ và người xử lý"],
+                      [
+                        "PRIVATE",
+                        "Riêng tư",
+                        "Chỉ bạn và người được cấp quyền xem",
+                      ],
                       ["UNLISTED", "Không niêm yết", "Chỉ người có liên kết"],
                       [
                         "PUBLIC",
@@ -539,22 +547,17 @@ export function DossierCreateForm() {
             ) : null}
             {prepareStep === 2 ? (
               <>
-                <div className="rounded-xl border border-primary-200 bg-primary-50 p-4 text-sm text-primary-950">
-                  <h2 className="font-bold">
-                    Thông tin riêng cho loại hồ sơ này
-                  </h2>
-                  <p className="mt-1 leading-6">
-                    Điền các mục được đánh dấu bắt buộc. Bạn có thể quay lại
-                    bước trước mà không mất nội dung đã nhập.
-                  </p>
-                </div>
+                <p className="text-sm leading-6 text-[var(--theme-muted)]">
+                  Điền các mục có dấu *. Nội dung đã nhập được giữ khi bạn đổi
+                  bước.
+                </p>
                 {dossierType?.currentVersion.schema.fields.map((field) => (
                   <div key={field.key}>
                     <label
                       className="text-sm font-bold text-neutral-900"
                       htmlFor={`field-${field.key}`}
                     >
-                      {field.label || field.key}
+                      {displayFieldLabel(field.label, field.key)}
                       {field.required ? " *" : ""}
                     </label>
                     {field.helpText ? (
@@ -638,7 +641,7 @@ export function DossierCreateForm() {
                     ) : field.type === "radio" ? (
                       <fieldset className="mt-2 grid gap-2 sm:grid-cols-2">
                         <legend className="sr-only">
-                          {field.label || field.key}
+                          {displayFieldLabel(field.label, field.key)}
                         </legend>
                         {(field.options ?? []).map((option) => {
                           const value =
@@ -776,7 +779,7 @@ export function DossierCreateForm() {
                 {dossierType?.currentVersion.schema.fields.map((field) => (
                   <div key={field.key}>
                     <dt className="text-[var(--theme-muted)]">
-                      {field.label || field.key}
+                      {displayFieldLabel(field.label, field.key)}
                     </dt>
                     <dd className="mt-1 whitespace-pre-wrap break-words font-medium">
                       {displayFieldValue(formData[field.key])}

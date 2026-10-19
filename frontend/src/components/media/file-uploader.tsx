@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 
 interface FileUploaderProps {
   cleanupCompletedOnRemove?: boolean;
+  compact?: boolean;
   constraints?: MediaFileConstraints;
   disabled?: boolean;
   label: string;
@@ -99,6 +100,7 @@ function overallStatus(
 
 export function FileUploader({
   cleanupCompletedOnRemove = false,
+  compact = false,
   constraints,
   disabled = false,
   label,
@@ -179,12 +181,12 @@ export function FileUploader({
   return (
     <section
       aria-labelledby={`${inputId}-label`}
-      className="media-uploader border-y border-[var(--theme-border)] bg-[var(--theme-surface)]"
+      className="media-uploader bg-[var(--theme-surface)] sm:border-y sm:border-[var(--theme-border)]"
     >
-      <div className="flex flex-col gap-3 border-b border-[var(--theme-border)] py-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3 sm:border-b sm:border-[var(--theme-border)] sm:py-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-success/10 text-success">
+            <span className="hidden size-8 shrink-0 place-items-center rounded-lg bg-success/10 text-success sm:grid">
               <ShieldCheck aria-hidden="true" className="size-4" />
             </span>
             <h3
@@ -203,13 +205,13 @@ export function FileUploader({
           </p>
         </div>
         {maxFiles !== undefined ? (
-          <span className="w-fit shrink-0 rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-700">
+          <span className="w-fit shrink-0 text-xs font-bold text-neutral-700 sm:rounded-full sm:bg-neutral-100 sm:px-3 sm:py-1">
             Còn {Math.max(0, maxFiles - items.length)} tệp
           </span>
         ) : null}
       </div>
 
-      <div className="space-y-4 py-4">
+      <div className="space-y-4 py-2 sm:py-4">
         <input
           accept={allowedMimeTypes.join(",") || policy.accept}
           aria-describedby={descriptionId}
@@ -227,10 +229,10 @@ export function FileUploader({
         <div
           aria-label={`Vùng tải ${label.toLocaleLowerCase("vi")}`}
           className={cn(
-            "media-uploader__dropzone rounded-xl border border-dashed p-4 sm:p-5",
+            "media-uploader__dropzone rounded-xl p-0 sm:border sm:border-dashed sm:p-5",
             isDragging
               ? "border-primary-600 bg-primary-50"
-              : "border-[var(--theme-border)] bg-[var(--theme-elevated)]",
+              : "sm:border-[var(--theme-border)] sm:bg-[var(--theme-elevated)]",
             disabled && "opacity-60",
           )}
           onDragEnter={(event) => {
@@ -243,24 +245,28 @@ export function FileUploader({
           role="group"
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-700 ring-1 ring-primary-100">
+            <span className="hidden size-11 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-700 ring-1 ring-primary-100 sm:grid">
               <Upload aria-hidden="true" className="size-5" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="font-bold text-neutral-950">
-                {items.length
-                  ? "Bạn có thể tiếp tục thêm tệp"
-                  : multiple
-                    ? "Chọn một hoặc nhiều tệp"
-                    : "Chọn tệp từ thiết bị"}
-              </p>
-              <p className="mt-1 text-xs leading-5 text-neutral-500">
-                Bấm Thêm tệp để chọn từ thiết bị.
-                <span className="hidden sm:block">
-                  Bạn cũng có thể kéo thả tệp vào đây.
-                </span>
-              </p>
-              <details className="mt-1 text-xs text-neutral-500">
+              {!compact && (
+                <>
+                  <p className="font-bold text-neutral-950">
+                    {items.length
+                      ? "Bạn có thể tiếp tục thêm tệp"
+                      : multiple
+                        ? "Chọn một hoặc nhiều tệp"
+                        : "Chọn tệp từ thiết bị"}
+                  </p>
+                  <p className="mt-1 hidden text-xs leading-5 text-neutral-500 sm:block">
+                    Bấm Thêm tệp để chọn từ thiết bị.
+                    <span className="hidden sm:block">
+                      Bạn cũng có thể kéo thả tệp vào đây.
+                    </span>
+                  </p>
+                </>
+              )}
+              <details className="mt-1 text-xs text-neutral-500 sm:mt-2">
                 <summary className="w-fit cursor-pointer underline underline-offset-2">
                   Xem định dạng được hỗ trợ
                 </summary>

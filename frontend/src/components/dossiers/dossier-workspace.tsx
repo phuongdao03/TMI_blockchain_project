@@ -31,7 +31,6 @@ import { FileUploader } from "@/components/media/file-uploader";
 import { DossierPaymentAction } from "@/components/payments/dossier-payment-action";
 import { PrivateDocumentVerification } from "@/components/documents/private-document-verification";
 import { Button } from "@/components/ui/button";
-import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
 import { dossierApi } from "@/lib/api/client";
 import { displayCnsDossierCode } from "@/lib/brand/identifiers";
 import type {
@@ -67,7 +66,7 @@ const steps: Array<{
   },
   {
     id: "evidence",
-    label: "Bằng chứng",
+    label: "Tài liệu",
     description: "Tài liệu đã tải lên",
     icon: UploadCloud,
   },
@@ -527,7 +526,7 @@ export function DossierWorkspace({
       ? "evidence"
       : "review";
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="dossier-workspace mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div className="min-w-0">
           <Link
@@ -543,7 +542,7 @@ export function DossierWorkspace({
               {displayCnsDossierCode(dossier.code)}
             </span>
           </div>
-          <h1 className="mt-3 break-words text-3xl font-bold tracking-[-0.03em] text-neutral-950 sm:text-4xl">
+          <h1 className="mt-3 break-words text-2xl font-semibold tracking-[-0.025em] text-neutral-950 sm:text-4xl">
             {dossier.title}
           </h1>
         </div>
@@ -553,13 +552,12 @@ export function DossierWorkspace({
       </div>
 
       {justCreated && dossier.status === "DRAFT" ? (
-        <WorkflowNextStep
-          action={{ href: "#dossier-steps", label: "Thêm tài liệu" }}
-          description="Thông tin ban đầu đã được lưu. Tải lên tài liệu bắt buộc, kiểm tra lại nội dung rồi nộp hồ sơ để bắt đầu kiểm duyệt."
-          title="Đã tạo hồ sơ nháp"
-          tone="success"
-          variant="inline"
-        />
+        <p
+          className="dossier-created-note text-sm text-[var(--theme-muted)]"
+          role="status"
+        >
+          Đã lưu bản nháp. Thêm tài liệu cần thiết rồi kiểm tra trước khi gửi.
+        </p>
       ) : null}
 
       {submissionComplete && submit.data ? (
@@ -633,54 +631,61 @@ export function DossierWorkspace({
         </section>
       ) : null}
 
-      <section className="dossier-state-card">
-        <div className="grid gap-5 py-5 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
-              Việc cần làm tiếp theo
-            </p>
-            <p className="mt-2 text-lg font-bold leading-7 text-neutral-950">
-              {dossierGuidance[dossier.status].next}
-            </p>
-            {dossier.status === "NEEDS_SUPPLEMENT" ? (
-              <p className="mt-3 whitespace-pre-wrap rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-950">
-                {supplementRequest
-                  ? `Nội dung cần bổ sung: ${supplementRequest}`
-                  : "Chưa có nội dung yêu cầu cụ thể trong lịch sử hồ sơ. Vui lòng kiểm tra thông báo hoặc liên hệ hỗ trợ."}
+      {!(justCreated && dossier.status === "DRAFT") && (
+        <section className="dossier-state-card">
+          <div className="grid gap-5 py-5 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
+                Việc cần làm tiếp theo
               </p>
-            ) : null}
-            {dossier.canEdit && !submissionComplete ? (
-              <Button
-                className="mt-4"
-                disabled={
-                  (queueLocked && nextPreparationStep !== "evidence") ||
-                  (step === "information" &&
-                    informationUnsaved &&
-                    nextPreparationStep !== "information")
-                }
-                onClick={() => setStep(nextPreparationStep)}
-                type="button"
-              >
-                Tiếp tục hoàn thiện
-                <ArrowRight aria-hidden="true" className="size-4" />
-              </Button>
-            ) : null}
-          </div>
-          <div className="dossier-state-summary border-t border-[var(--theme-border)] pt-4 text-sm text-[var(--theme-text)] lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
-            <p className="font-bold text-neutral-950">
-              {dossierStatusLabel(dossier.status)}
-            </p>
-            <p className="mt-1 leading-6 text-neutral-600">
-              {dossierGuidance[dossier.status].outcome}
-            </p>
-            {dossier.canEdit ? (
-              <p className="mt-3 border-t border-primary-100 pt-3 text-xs font-semibold text-primary-800">
-                Đã xong {completedPreparationSteps}/2 phần chuẩn bị
+              <p className="mt-2 text-lg font-bold leading-7 text-neutral-950">
+                {dossierGuidance[dossier.status].next}
               </p>
-            ) : null}
+              {dossier.status === "NEEDS_SUPPLEMENT" ? (
+                <p className="mt-3 whitespace-pre-wrap rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-950">
+                  {supplementRequest
+                    ? `Nội dung cần bổ sung: ${supplementRequest}`
+                    : "Chưa có nội dung yêu cầu cụ thể trong lịch sử hồ sơ. Vui lòng kiểm tra thông báo hoặc liên hệ hỗ trợ."}
+                </p>
+              ) : null}
+              {dossier.canEdit && !submissionComplete ? (
+                <Button
+                  className="mt-4"
+                  disabled={
+                    (queueLocked && nextPreparationStep !== "evidence") ||
+                    (step === "information" &&
+                      informationUnsaved &&
+                      nextPreparationStep !== "information")
+                  }
+                  onClick={() => setStep(nextPreparationStep)}
+                  type="button"
+                >
+                  Tiếp tục hoàn thiện
+                  <ArrowRight aria-hidden="true" className="size-4" />
+                </Button>
+              ) : null}
+            </div>
+            <div
+              className={cn(
+                "dossier-state-summary border-t border-[var(--theme-border)] pt-4 text-sm text-[var(--theme-text)] lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0",
+                dossier.canEdit && "hidden lg:block",
+              )}
+            >
+              <p className="font-bold text-neutral-950">
+                {dossierStatusLabel(dossier.status)}
+              </p>
+              <p className="mt-1 leading-6 text-neutral-600">
+                {dossierGuidance[dossier.status].outcome}
+              </p>
+              {dossier.canEdit ? (
+                <p className="mt-3 border-t border-primary-100 pt-3 text-xs font-semibold text-primary-800">
+                  Đã xong {completedPreparationSteps}/2 phần chuẩn bị
+                </p>
+              ) : null}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {!dossier.canEdit ? (
         <section className="dossier-readonly-notice flex items-start gap-3 rounded-2xl p-4 text-sm">
@@ -719,7 +724,7 @@ export function DossierWorkspace({
                     item.id !== "information")
                 }
                 className={cn(
-                  "flex min-h-16 min-w-0 w-full flex-col justify-center gap-1 border-b-2 px-1 py-3 text-center transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-row sm:gap-3 sm:px-3 sm:text-left",
+                  "flex min-h-12 min-w-0 w-full flex-col justify-center gap-1 border-b-2 px-1 py-2 text-center transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-16 sm:flex-row sm:gap-3 sm:px-3 sm:py-3 sm:text-left",
                   active
                     ? "border-primary-600 text-primary-800"
                     : "border-transparent text-[var(--theme-muted)] hover:bg-[var(--theme-elevated)]",
@@ -730,7 +735,7 @@ export function DossierWorkspace({
               >
                 <span
                   className={cn(
-                    "grid size-9 shrink-0 place-items-center rounded-full",
+                    "hidden size-9 shrink-0 place-items-center rounded-full sm:grid",
                     active
                       ? "bg-primary-600 text-white"
                       : "bg-[var(--theme-elevated)] text-[var(--theme-muted)]",
@@ -760,24 +765,43 @@ export function DossierWorkspace({
           ) : null}
 
           {step === "evidence" ? (
-            <section className="space-y-6">
+            <section className="dossier-evidence-step space-y-6">
               <div>
                 <h2 className="text-xl font-bold tracking-tight">
                   Tài liệu cho hồ sơ của bạn
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-neutral-500">
-                  Chọn loại tài liệu, thêm tệp rồi bấm Tải lên. Bạn có thể chọn
-                  nhiều tệp cùng loại.
+                  Chọn loại tài liệu và tệp cần gửi. Tệp đã thêm sẽ hiện bên
+                  dưới.
                 </p>
               </div>
               {dossier.canEdit && !submissionComplete ? (
-                <div className="space-y-5 border-t border-[var(--theme-border)] pt-5">
+                <div className="space-y-5 sm:border-t sm:border-[var(--theme-border)] sm:pt-5">
                   {documentRules.length > 0 ? (
                     <fieldset className="space-y-3">
                       <legend className="text-sm font-bold">
-                        1. Chọn loại tài liệu
+                        Loại tài liệu
                       </legend>
-                      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                      <select
+                        aria-label="Loại tài liệu cần thêm"
+                        className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm font-semibold text-[var(--theme-text)] sm:hidden"
+                        disabled={queueLocked || attach.isPending}
+                        onChange={(event) => {
+                          setEvidenceType(event.target.value);
+                          setEvidenceTitle("");
+                        }}
+                        value={selectedRule?.key ?? evidenceType}
+                      >
+                        {documentRules.map((rule) => (
+                          <option key={rule.key} value={rule.key}>
+                            {rule.label} ·{" "}
+                            {rule.required ? "Bắt buộc" : "Tùy chọn"} ·{" "}
+                            {ruleProgress(rule, dossier.evidences)}/
+                            {rule.maxCount} tệp
+                          </option>
+                        ))}
+                      </select>
+                      <div className="hidden gap-2 sm:grid sm:grid-cols-2 xl:grid-cols-3">
                         {documentRules.map((rule) => {
                           const count = ruleProgress(rule, dossier.evidences);
                           const selected = selectedRule?.key === rule.key;
@@ -819,7 +843,7 @@ export function DossierWorkspace({
                         className="text-sm font-bold"
                         htmlFor="evidence-type"
                       >
-                        1. Chọn loại tài liệu
+                        Loại tài liệu
                       </label>
                       <select
                         className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm font-semibold text-[var(--theme-text)]"
@@ -850,14 +874,14 @@ export function DossierWorkspace({
                     </p>
                   ) : null}
                   {selectedRule ? (
-                    <p className="border-l-2 border-primary-500 py-1 pl-4 text-xs leading-5 text-[var(--theme-muted)]">
+                    <p className="text-xs leading-5 text-[var(--theme-muted)] sm:border-l-2 sm:border-primary-500 sm:py-1 sm:pl-4">
                       {selectedRule.required
                         ? "Cần có để nộp hồ sơ"
                         : "Không bắt buộc"}{" "}
                       · {evidenceScopeLabel(selectedRule.defaultVisibility)}.
                     </p>
                   ) : null}
-                  <details className="border-y border-[var(--theme-border)] py-3">
+                  <details className="border-y border-[var(--theme-border)] py-3 sm:py-4">
                     <summary className="cursor-pointer text-sm font-semibold">
                       Đặt tên hiển thị cho tài liệu (tùy chọn)
                     </summary>
@@ -886,8 +910,8 @@ export function DossierWorkspace({
                     </div>
                   </details>
                   <div>
-                    <p className="mb-3 text-sm font-bold">2. Chọn và tải tệp</p>
                     <FileUploader
+                      compact
                       key={selectedRule?.key ?? evidenceType}
                       constraints={
                         selectedRule
@@ -956,9 +980,7 @@ export function DossierWorkspace({
                       <FileCheck2 aria-hidden="true" className="size-4" />
                     </span>
                     <div>
-                      <p className="text-sm font-bold">
-                        Chưa có tệp đã xác minh
-                      </p>
+                      <p className="text-sm font-bold">Chưa có tài liệu</p>
                       <p className="mt-1 text-xs leading-5 text-neutral-500">
                         Chọn tệp ở phía trên; tệp hợp lệ sẽ xuất hiện tại đây.
                       </p>
@@ -1177,10 +1199,12 @@ export function DossierWorkspace({
         </div>
       </div>
 
-      <DossierWorkflowTimeline
-        history={timeline.data ?? []}
-        status={dossier.status}
-      />
+      {dossier.status !== "DRAFT" && (
+        <DossierWorkflowTimeline
+          history={timeline.data ?? []}
+          status={dossier.status}
+        />
+      )}
     </div>
   );
 }

@@ -67,6 +67,17 @@ class AllocationMemberInput(WorkAllocationSchema):
     responsibility: AllocationResponsibility
 
 
+class HandoffWorkAllocationRequest(WorkAllocationSchema):
+    from_user_id: UUID
+    to_user_id: UUID
+
+    @model_validator(mode="after")
+    def require_different_people(self) -> "HandoffWorkAllocationRequest":
+        if self.from_user_id == self.to_user_id:
+            raise ValueError("A work allocation must be handed to another person.")
+        return self
+
+
 class WorkScopeCoverageInput(WorkAllocationSchema):
     scope_id: UUID
     review_assignment_ids: Annotated[list[UUID], Field(min_length=1, max_length=20)]
@@ -179,6 +190,13 @@ class AllocationMemberData(WorkAllocationSchema):
     completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class WorkAllocationHandoffData(WorkAllocationSchema):
+    allocation_id: UUID
+    objective: str
+    due_at: datetime | None
+    responsibility: AllocationResponsibility
 
 
 class WorkScopeCoverageData(WorkAllocationSchema):

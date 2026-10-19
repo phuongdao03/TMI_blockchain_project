@@ -10,6 +10,7 @@ import { PayrollPeriodList } from "@/components/hr/payroll-period-list";
 import { HrReportDownload } from "@/components/hr/hr-report-download";
 import { payrollApiMessage } from "@/components/hr/payroll-format";
 import { hrAttendanceConfigurationApi, hrPayrollApi } from "@/lib/api/client";
+import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
 
 type EntryAdjustment = {
   allowance: string;
@@ -123,35 +124,24 @@ export function PayrollWorkspace() {
   return (
     <section
       aria-labelledby="payroll-title"
-      className="mx-auto max-w-7xl space-y-6 pb-12"
+      className="workspace-screen mx-auto max-w-7xl space-y-6 pb-12"
     >
-      <header className="border-b border-neutral-200 pb-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="flex items-center gap-2 text-sm font-bold text-primary-800">
-              <Banknote aria-hidden="true" className="size-4" />
-              Quản trị tài chính
-            </p>
-            <h1
-              className="mt-2 text-3xl font-bold tracking-tight text-neutral-950 sm:text-4xl"
-              id="payroll-title"
-            >
-              Bảng lương
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
-              Quản lý kỳ lương theo địa điểm làm việc, với VND, đầu vào có kiểm
-              soát và trạng thái không thể đảo ngược.
-            </p>
-          </div>
-          <p className="flex max-w-sm items-start gap-2 rounded-xl bg-neutral-100 px-3 py-2 text-sm leading-5 text-neutral-700">
+      <WorkspacePageHeader
+        action={
+          <p className="flex max-w-sm items-start gap-2 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-3 py-2 text-sm leading-5 text-[var(--theme-muted)]">
             <ShieldCheck
               aria-hidden="true"
               className="mt-0.5 size-4 shrink-0 text-emerald-700"
             />
             Chỉ Super Admin được xem và thao tác dữ liệu lương.
           </p>
-        </div>
-      </header>
+        }
+        description="Quản lý kỳ lương theo địa điểm làm việc, với VND, đầu vào có kiểm soát và trạng thái không thể đảo ngược."
+        icon={Banknote}
+        id="payroll-title"
+        section="Quản trị tài chính"
+        title="Bảng lương"
+      />
       {notice ? (
         <p
           className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900"

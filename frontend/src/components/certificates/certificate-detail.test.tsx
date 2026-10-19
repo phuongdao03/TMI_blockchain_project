@@ -103,7 +103,7 @@ describe("CertificateDetail", () => {
     expect(screen.getByLabelText("Bằng xác lập PDF")).toBeDefined();
     expect(screen.getByText("THV-2026-0001.pdf")).toBeDefined();
     expect(screen.getByAltText("Mã QR kiểm tra bằng xác lập")).toBeDefined();
-    expect(screen.getByText("Mạng blockchain Polygon")).toBeDefined();
+    expect(screen.queryByText(/blockchain|Polygon/i)).toBeNull();
     expect(screen.queryByTitle("Bằng xác lập THV-2026-0001")).toBeNull();
     expect(screen.queryByText(/Có thể cuộn và phóng to/)).toBeNull();
     expect(screen.queryByText("polygon")).toBeNull();

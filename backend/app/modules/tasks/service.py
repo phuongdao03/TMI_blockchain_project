@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -12,6 +12,7 @@ from app.modules.auth.session_service import AuthPrincipal
 from app.modules.hr.models import Employee, EmploymentStatus
 from app.modules.media.models import MediaAsset, MediaConfidentiality
 from app.modules.media.provenance import has_current_trusted_provenance
+from app.modules.notifications.models import Notification
 from app.modules.tasks.models import (
     Task,
     TaskActivity,
@@ -31,6 +32,7 @@ from app.modules.tasks.schemas import (
     TaskChecklistItemData,
     TaskCommentData,
     TaskData,
+    UpdateMyTaskStatusRequest,
     UpdateTaskChecklistItemRequest,
     UpdateTaskRequest,
 )
@@ -187,6 +189,7 @@ class TaskService:
         page: int,
         page_size: int,
         search: str | None,
+        assignee_employee_id: UUID | None = None,
         task_status: TaskStatus | None = None,
         priority: TaskPriority | None = None,
         sort_by: str = "createdAt",
@@ -196,6 +199,8 @@ class TaskService:
         criteria: list[ColumnElement[bool]] = []
         if search:
             criteria.append(Task.title.ilike(f"%{search.strip()}%"))
+        if assignee_employee_id is not None:
+            criteria.append(Task.assignee_employee_id == assignee_employee_id)
         if task_status is not None:
             criteria.append(Task.status == task_status)
         if priority is not None:
@@ -224,6 +229,109 @@ class TaskService:
             ).all()
         )
         return tuple(self._task_data(task) for task in rows), total
+
+    async def list_my_tasks(
+        self,
+        principal: AuthPrincipal,
+        *,
+        page: int,
+        page_size: int,
+    ) -> tuple[tuple[TaskData, ...], int]:
+        employee_id = await self._session.scalar(
+            select(Employee.id).where(
+                Employee.user_id == principal.user_id,
+                Employee.employment_status == EmploymentStatus.ACTIVE,
+            )
+        )
+        if employee_id is None:
+            return (), 0
+        criteria = (Task.assignee_employee_id == employee_id,)
+        total = int(
+            await self._session.scalar(
+                select(func.count()).select_from(Task).where(*criteria)
+            )
+            or 0
+        )
+        rows = tuple(
+            (
+                await self._session.scalars(
+                    select(Task)
+                    .where(*criteria)
+                    .order_by(
+                        case(
+                            (Task.status == TaskStatus.IN_PROGRESS, 0),
+                            (Task.status == TaskStatus.TODO, 1),
+                            (Task.status == TaskStatus.DONE, 2),
+                            else_=3,
+                        ),
+                        Task.due_at.asc().nulls_last(),
+                        Task.created_at.desc(),
+                        Task.id,
+                    )
+                    .offset((page - 1) * page_size)
+                    .limit(page_size)
+                )
+            ).all()
+        )
+        return tuple(self._task_data(task) for task in rows), total
+
+    async def update_my_task_status(
+        self,
+        principal: AuthPrincipal,
+        task_id: UUID,
+        payload: UpdateMyTaskStatusRequest,
+        *,
+        audit: AuditService,
+        request_id: str | None,
+        user_agent: str | None,
+    ) -> TaskData:
+        employee_id = await self._session.scalar(
+            select(Employee.id).where(
+                Employee.user_id == principal.user_id,
+                Employee.employment_status == EmploymentStatus.ACTIVE,
+            )
+        )
+        task = await self._locked_task(task_id)
+        if employee_id is None or task.assignee_employee_id != employee_id:
+            raise DomainError(
+                code="WORK_TASK_NOT_FOUND",
+                message="Task not found.",
+                status_code=404,
+            )
+        next_status = payload.status
+        if next_status == task.status:
+            return self._task_data(task)
+        if next_status not in self._STATUS_TRANSITIONS[task.status]:
+            raise DomainError(
+                code="WORK_TASK_STATUS_TRANSITION_INVALID",
+                message="Task status transition is not allowed.",
+                status_code=409,
+            )
+        before = self._audit_snapshot(task)
+        previous_status = task.status
+        task.status = next_status
+        task.completed_at = self._now() if next_status is TaskStatus.DONE else None
+        await self._session.flush()
+        self._record_activity(
+            task_id=task.id,
+            actor_user_id=principal.user_id,
+            event_type="task.status.changed",
+            payload={"from": previous_status.value, "to": next_status.value},
+        )
+        audit.record(
+            actor_user_id=principal.user_id,
+            action="work.task.status.changed",
+            resource_type="task",
+            resource_id=str(task.id),
+            before=before,
+            after=self._audit_snapshot(task),
+            request_id=request_id,
+            user_agent=user_agent,
+        )
+        await self._session.refresh(task)
+        data = self._task_data(task)
+        await self._session.commit()
+        return data
 
     async def get_task(self, principal: AuthPrincipal, task_id: UUID) -> TaskData:
         self._require(principal, "work.tasks.read")
@@ -299,24 +407,28 @@ class TaskService:
                 message="Task status transition is not allowed.",
                 status_code=409,
             )
+        assigned_employee = None
         if (
             "assignee_employee_id" in payload.model_fields_set
             and payload.assignee_employee_id is not None
         ):
-            employee = await self._session.get(Employee, payload.assignee_employee_id)
-            if employee is None:
+            assigned_employee = await self._session.get(
+                Employee, payload.assignee_employee_id
+            )
+            if assigned_employee is None:
                 raise DomainError(
                     code="WORK_TASK_ASSIGNEE_NOT_FOUND",
                     message="Assigned employee not found.",
                     status_code=422,
                 )
-            if employee.employment_status != EmploymentStatus.ACTIVE:
+            if assigned_employee.employment_status != EmploymentStatus.ACTIVE:
                 raise DomainError(
                     code="WORK_TASK_ASSIGNEE_UNAVAILABLE",
                     message="Assigned employee is not active.",
                     status_code=422,
                 )
         before = self._audit_snapshot(task)
+        previous_assignee_id = task.assignee_employee_id
         if "title" in payload.model_fields_set:
             task.title = payload.title or task.title
         if "description" in payload.model_fields_set:
@@ -325,6 +437,22 @@ class TaskService:
             task.due_at = payload.due_at
         if "assignee_employee_id" in payload.model_fields_set:
             task.assignee_employee_id = payload.assignee_employee_id
+            if (
+                assigned_employee is not None
+                and assigned_employee.id != previous_assignee_id
+                and assigned_employee.user_id is not None
+            ):
+                self._session.add(
+                    Notification(
+                        user_id=assigned_employee.user_id,
+                        source_event_id=uuid4(),
+                        type="WORK_TASK_ASSIGNED",
+                        title="Bạn được giao công việc",
+                        body=f"Bạn có công việc mới: {task.title}",
+                        data_json={"actionPath": "/tasks"},
+                        created_at=self._now(),
+                    )
+                )
         if "priority" in payload.model_fields_set and payload.priority is not None:
             task.priority = payload.priority
         if next_status is not None and next_status != task.status:

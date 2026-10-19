@@ -320,7 +320,8 @@ describe("LoginForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
 
     expect((await screen.findByRole("alert")).textContent).toContain(
-      "Không thể xác minh phiên đăng nhập Firebase",
+      "Không thể xác minh phiên đăng nhập",
     );
+    expect(screen.getByRole("alert").textContent).not.toContain("Firebase");
   });
 });

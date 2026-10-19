@@ -40,7 +40,7 @@ describe("PaymentRequestWorkspace", () => {
   it("uses business language instead of payment provider implementation terms", () => {
     renderWorkspace();
 
-    expect(screen.getByText("Quyết định phí hồ sơ")).toBeDefined();
+    expect(screen.getByText("Thu phí hồ sơ")).toBeDefined();
     expect(screen.getByLabelText("Hồ sơ đã phê duyệt")).toBeDefined();
     expect(
       screen.queryByText(/PayOS|webhook|UUID|payments\.issue/i),
@@ -58,13 +58,13 @@ describe("PaymentRequestWorkspace", () => {
   it("does not submit an unknown dossier from the URL", async () => {
     renderWorkspace("unknown-dossier");
     await screen.findByRole("option", { name: /CNS-2026-C53E911EDDDA/ });
-    fireEvent.change(screen.getByLabelText("Số tiền cần thanh toán (VND)"), {
+    fireEvent.change(screen.getByLabelText("Số phí cần thu (VND)"), {
       target: { value: "1500000" },
     });
     expect(
       (
         screen.getByRole("button", {
-          name: "Gửi yêu cầu thanh toán",
+          name: "Gửi thông báo thu phí",
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
@@ -83,20 +83,20 @@ describe("PaymentRequestWorkspace", () => {
     fireEvent.change(await screen.findByLabelText("Hồ sơ đã phê duyệt"), {
       target: { value: "9155dbf5-bb3e-449d-8bf0-9572cc642cac" },
     });
-    fireEvent.change(screen.getByLabelText("Số tiền cần thanh toán (VND)"), {
+    fireEvent.change(screen.getByLabelText("Số phí cần thu (VND)"), {
       target: { value: "1500000" },
     });
     await waitFor(() =>
       expect(
         (
           screen.getByRole("button", {
-            name: "Gửi yêu cầu thanh toán",
+            name: "Gửi thông báo thu phí",
           }) as HTMLButtonElement
         ).disabled,
       ).toBe(false),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: "Gửi yêu cầu thanh toán" }),
+      screen.getByRole("button", { name: "Gửi thông báo thu phí" }),
     );
 
     await waitFor(() => expect(issueMock).toHaveBeenCalledOnce());
@@ -106,7 +106,7 @@ describe("PaymentRequestWorkspace", () => {
       description: "Phí xác lập và phát hành bằng xác lập",
     });
     expect(
-      await screen.findByText("Đã gửi yêu cầu cho người nộp"),
+      await screen.findByText("Đã gửi thông báo cho người nộp"),
     ).toBeTruthy();
   });
 
@@ -136,7 +136,9 @@ describe("PaymentRequestWorkspace", () => {
 
     await waitFor(() => expect(waiveMock).toHaveBeenCalledOnce());
     expect(issueMock).not.toHaveBeenCalled();
-    expect(await screen.findByText("Hồ sơ đã sẵn sàng để ký")).toBeTruthy();
+    expect(
+      await screen.findByText("Hồ sơ đã sẵn sàng để ghi nhận"),
+    ).toBeTruthy();
   });
 
   it("rotates the idempotency key when the operator starts another decision", async () => {
@@ -156,20 +158,20 @@ describe("PaymentRequestWorkspace", () => {
     fireEvent.change(await screen.findByLabelText("Hồ sơ đã phê duyệt"), {
       target: { value: "9155dbf5-bb3e-449d-8bf0-9572cc642cac" },
     });
-    fireEvent.change(screen.getByLabelText("Số tiền cần thanh toán (VND)"), {
+    fireEvent.change(screen.getByLabelText("Số phí cần thu (VND)"), {
       target: { value: "1500000" },
     });
     await waitFor(() =>
       expect(
         (
           screen.getByRole("button", {
-            name: "Gửi yêu cầu thanh toán",
+            name: "Gửi thông báo thu phí",
           }) as HTMLButtonElement
         ).disabled,
       ).toBe(false),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: "Gửi yêu cầu thanh toán" }),
+      screen.getByRole("button", { name: "Gửi thông báo thu phí" }),
     );
     await waitFor(() => expect(issueMock).toHaveBeenCalledOnce());
 

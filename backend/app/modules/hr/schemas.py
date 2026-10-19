@@ -56,6 +56,7 @@ class CreateDepartmentRequest(HrSchema):
 class UpdateDepartmentRequest(HrSchema):
     name: Annotated[str, Field(min_length=2, max_length=160)]
     description: Annotated[str | None, Field(max_length=2000)] = None
+    manager_employee_id: UUID | None = None
 
     @field_validator("name")
     @classmethod
@@ -68,9 +69,39 @@ class DepartmentData(HrSchema):
     code: str
     name: str
     description: str | None
+    manager_employee_id: UUID | None
     status: DepartmentStatus
     created_at: datetime
     updated_at: datetime
+
+
+class DepartmentMemberWorkloadData(HrSchema):
+    employee_id: UUID
+    user_id: UUID | None
+    full_name: str
+    position: str
+    employment_status: EmploymentStatus
+    open_task_count: int
+    overdue_task_count: int
+    completed_task_count: int
+    open_review_count: int
+    overdue_review_count: int
+
+
+class DepartmentOverviewData(HrSchema):
+    department_id: UUID
+    member_count: int
+    active_member_count: int
+    on_leave_member_count: int
+    open_task_count: int
+    overdue_task_count: int
+    overdue_review_count: int
+    completed_task_count: int
+    average_task_completion_hours: float | None
+    pending_leave_count: int
+    pending_overtime_count: int
+    pending_attendance_count: int
+    members: list[DepartmentMemberWorkloadData]
 
 
 class CreateEmployeeRequest(HrSchema):

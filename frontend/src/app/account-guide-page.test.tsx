@@ -1,70 +1,52 @@
+﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: routerPush }) }));
 
 import AccountGuidePage from "@/app/(dashboard)/help/page";
+import { guideApi } from "@/lib/api/client";
 import { AuthUserProvider } from "@/lib/auth/user-context";
 
 function renderFor(roles: string[], isEmployee = false) {
-  render(
-    <AuthUserProvider
-      user={{
-        id: "account-1",
-        email: "test@example.vn",
-        roles,
-        isEmployee,
-        accountType: null,
-      }}
-    >
-      <AccountGuidePage />
-    </AuthUserProvider>,
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  vi.spyOn(guideApi, "accessibleList").mockResolvedValue({
+    success: true,
+    data: [],
+    meta: { page: 1, pageSize: 24, total: 0 },
+  });
+  return render(
+    <QueryClientProvider client={client}>
+      <AuthUserProvider
+        user={{
+          id: "account-1",
+          email: "test@example.vn",
+          roles,
+          isEmployee,
+          accountType: null,
+        }}
+      >
+        <AccountGuidePage />
+      </AuthUserProvider>
+    </QueryClientProvider>,
   );
 }
 
-describe("account guides", () => {
-  it("explains role acceptance, review assignments and employee linkage to a moderator", () => {
-    renderFor(["MODERATOR"]);
+describe("account help page", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("requests guides for the current role and linked employee status", async () => {
+    renderFor(["USER"], true);
     expect(
-      screen.getByRole("heading", {
-        name: "Hướng dẫn dành cho nhân viên kiểm duyệt",
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Hướng dẫn sử dụng",
       }),
     ).toBeDefined();
-    expect(
-      screen.getByRole("heading", { name: "Nhận quyền kiểm duyệt" }),
-    ).toBeDefined();
-    expect(
-      screen.getByRole("heading", { name: "Xử lý hồ sơ được phân công" }),
-    ).toBeDefined();
-    expect(
-      screen.getByText(/quyền kiểm duyệt không tự tạo hồ sơ lao động/),
-    ).toBeDefined();
-  });
-
-  it("shows account tasks for applicants without changing the public guide", () => {
-    renderFor(["USER"]);
-    expect(
-      screen.getByRole("heading", { name: "Hướng dẫn tài khoản gửi hồ sơ" }),
-    ).toBeDefined();
-    expect(
-      screen
-        .getByRole("link", { name: "Mở hồ sơ của tôi" })
-        .getAttribute("href"),
-    ).toBe("/dossiers");
-    expect(
-      screen
-        .getByRole("link", { name: "trang hướng dẫn công khai" })
-        .getAttribute("href"),
-    ).toBe("/guide");
-  });
-
-  it("shows search and verification tasks to a lookup account", () => {
-    renderFor(["PUBLIC_USER"]);
-    expect(
-      screen.getByRole("heading", { name: "Hướng dẫn tài khoản tra cứu" }),
-    ).toBeDefined();
-    expect(
-      screen
-        .getAllByRole("link", { name: "Tra cứu bằng xác lập" })
-        .some((link) => link.getAttribute("href") === "/verify"),
-    ).toBe(true);
+    expect(screen.queryByText(/Vai trò:/)).toBeNull();
+    expect(guideApi.accessibleList).toHaveBeenCalled();
   });
 });

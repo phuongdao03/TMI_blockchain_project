@@ -135,7 +135,14 @@ export function DossierAllocationDetails({
                 onChange={() => onToggleReviewer(person.id)}
                 type="checkbox"
               />
-              <span className="min-w-0 truncate">{person.email}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">{person.email}</span>
+                {person.openReviewCount !== undefined ? (
+                  <span className="block text-xs text-neutral-500 dark:text-neutral-400">
+                    {person.openReviewCount} hồ sơ đang xử lý
+                  </span>
+                ) : null}
+              </span>
             </label>
           ))}
         </div>

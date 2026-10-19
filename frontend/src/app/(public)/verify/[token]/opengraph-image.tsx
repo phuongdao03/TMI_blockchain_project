@@ -73,7 +73,7 @@ export default async function CertificateOpenGraphImage({
               fontSize: 22,
             }}
           >
-            <span>Kiểm tra độc lập trên Polygon</span>
+            <span>Tra cứu hiệu lực bằng xác lập</span>
             <span>decu.tinhhoaviet.org.vn</span>
           </div>
         </div>

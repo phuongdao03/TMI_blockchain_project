@@ -14,6 +14,7 @@ import { type FormEvent, useState } from "react";
 import { ApiError, hrAdminLeaveApi, hrDepartmentApi } from "@/lib/api/client";
 import type { AdminLeaveRequest, LeaveRequestStatus } from "@/lib/api/types";
 import { HrReportDownload } from "@/components/hr/hr-report-download";
+import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
 
 const fieldClass =
   "mt-2 min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm text-neutral-950 outline-none transition focus:border-primary-600 focus:ring-2 focus:ring-primary-100";
@@ -143,36 +144,24 @@ export function AdminLeaveWorkspace() {
   return (
     <section
       aria-labelledby="admin-leave-title"
-      className="mx-auto max-w-7xl space-y-6 pb-12"
+      className="workspace-screen mx-auto max-w-7xl space-y-6 pb-12"
     >
-      <header className="relative overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-950 px-6 py-7 text-white sm:px-8">
-        <div className="absolute inset-y-0 right-0 w-2/5 bg-[radial-gradient(circle_at_center,rgba(34,197,94,0.18),transparent_68%)]" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">
-              <UsersRound aria-hidden="true" className="size-4" /> Điều hành
-              nhân sự
-            </p>
-            <h1
-              className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl"
-              id="admin-leave-title"
-            >
-              Duyệt nghỉ phép
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
-              Xem toàn bộ đơn, xử lý từng yêu cầu rõ ràng và gửi thông báo kết
-              quả trực tiếp đến nhân viên. Chưa có cơ chế tự trừ số dư.
-            </p>
-          </div>
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-neutral-100">
+      <WorkspacePageHeader
+        action={
+          <p className="inline-flex items-center gap-2 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-3 py-2 text-sm font-semibold text-[var(--theme-text)]">
             <ClipboardCheck
               aria-hidden="true"
-              className="size-4 text-emerald-300"
+              className="size-4 text-[var(--theme-accent)]"
             />
             Duyệt có audit
           </p>
-        </div>
-      </header>
+        }
+        description="Xem toàn bộ đơn, xử lý từng yêu cầu rõ ràng và gửi thông báo kết quả trực tiếp đến nhân viên. Chưa có cơ chế tự trừ số dư."
+        icon={UsersRound}
+        id="admin-leave-title"
+        section="Điều hành nhân sự"
+        title="Duyệt nghỉ phép"
+      />
 
       <form
         className="grid gap-3 rounded-2xl border border-neutral-200 bg-white p-4 md:grid-cols-2 xl:grid-cols-[1.3fr_13rem_11rem_10rem_10rem_auto]"

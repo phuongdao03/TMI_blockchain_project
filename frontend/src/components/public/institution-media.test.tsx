@@ -2,10 +2,21 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HeritageGallery } from "./heritage-gallery";
+import { InstitutionContent } from "./institution-content";
 import { WelcomeMusic } from "./welcome-music";
 
 describe("institution media", () => {
   afterEach(() => vi.restoreAllMocks());
+
+  it("keeps the decision preview link name aligned with its visible label", () => {
+    render(<InstitutionContent />);
+
+    expect(
+      screen.getByRole("link", {
+        name: "Quyết định thành lập PDF · 2 trang, mở văn bản gốc trong tab mới",
+      }),
+    ).toBeDefined();
+  });
 
   it("plays the welcome music only after an explicit click", async () => {
     const play = vi

@@ -21,6 +21,7 @@ import {
 } from "@/lib/geolocation";
 import type { Attendance, AttendanceStatus } from "@/lib/api/types";
 import { PersonalAttendanceLocationEvidence } from "@/components/hr/personal-attendance-location-evidence";
+import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
 
 const statusPresentation: Record<
   AttendanceStatus,
@@ -146,31 +147,14 @@ export function AttendanceWorkspace() {
   return (
     <section
       aria-labelledby="attendance-title"
-      className="mx-auto max-w-6xl space-y-6 pb-12"
+      className="workspace-screen mx-auto max-w-6xl space-y-6 pb-12"
     >
-      <header className="relative overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-950 px-6 py-7 text-white sm:px-8">
-        <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_center,rgba(34,197,94,0.2),transparent_65%)]" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">
-              <Clock3 aria-hidden="true" className="size-4" /> Thời gian làm
-              việc
-            </p>
-            <h1
-              className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl"
-              id="attendance-title"
-            >
-              Chấm công cá nhân
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
-              Ghi nhận giờ vào và ra bằng thời gian máy chủ. Ca làm, ngày lễ và
-              quy tắc đi muộn sẽ được áp dụng sau khi được cấu hình.
-            </p>
-          </div>
-          <p className="inline-flex items-center gap-2 self-start rounded-full border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-neutral-100 sm:self-auto">
+      <WorkspacePageHeader
+        action={
+          <p className="inline-flex items-center gap-2 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-3 py-2 text-sm font-semibold text-[var(--theme-text)]">
             <CalendarDays
               aria-hidden="true"
-              className="size-4 text-emerald-300"
+              className="size-4 text-[var(--theme-accent)]"
             />
             {workday?.workDate
               ? formatWorkdayDate(workday.workDate)
@@ -178,8 +162,13 @@ export function AttendanceWorkspace() {
                 ? "Đang xác định ngày công"
                 : "Chưa có ngày công được cấu hình"}
           </p>
-        </div>
-      </header>
+        }
+        description="Ghi nhận giờ vào và ra bằng thời gian máy chủ. Ca làm, ngày lễ và quy tắc đi muộn sẽ được áp dụng sau khi được cấu hình."
+        icon={Clock3}
+        id="attendance-title"
+        section="Thời gian làm việc"
+        title="Chấm công cá nhân"
+      />
 
       <details className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 text-sm text-[var(--theme-text)] sm:px-5">
         <summary className="cursor-pointer font-semibold">

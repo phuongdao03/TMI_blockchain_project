@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
     Enum,
     ForeignKey,
@@ -11,7 +12,9 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     Uuid,
+    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -106,6 +109,83 @@ class CmsBanner(UtcTimestampMixin, Base):
     )
     updated_by: Mapped[UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="RESTRICT")
+    )
+
+
+GUIDE_AUDIENCES = frozenset(
+    {"PUBLIC", "VIEWER", "USER", "MODERATOR", "SUPER_ADMIN", "EMPLOYEE"}
+)
+
+
+class CmsGuideArticle(UtcTimestampMixin, Base):
+    __tablename__ = "cms_guide_articles"
+    __table_args__ = (
+        Index("ix_cms_guide_articles_status_order", "status", "sort_order", "slug"),
+        Index("ix_cms_guide_articles_search_text", "search_text"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    slug: Mapped[str] = mapped_column(String(180), nullable=False, unique=True)
+    summary: Mapped[str] = mapped_column(String(500), nullable=False)
+    category: Mapped[str] = mapped_column(String(80), nullable=False)
+    audiences: Mapped[list[str]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=lambda: ["PUBLIC"],
+        server_default='["PUBLIC"]',
+    )
+    body_html: Mapped[str] = mapped_column(Text, nullable=False)
+    search_text: Mapped[str] = mapped_column(
+        Text, nullable=False, default="", server_default=""
+    )
+    search_title: Mapped[str] = mapped_column(
+        Text, nullable=False, default="", server_default=""
+    )
+    search_summary: Mapped[str] = mapped_column(
+        Text, nullable=False, default="", server_default=""
+    )
+    sort_order: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    status: Mapped[CmsContentStatus] = mapped_column(
+        CMS_STATUS_TYPE,
+        nullable=False,
+        default=CmsContentStatus.DRAFT,
+        server_default="DRAFT",
+    )
+    version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT")
+    )
+    updated_by: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT")
+    )
+
+
+class CmsGuideFeedback(Base):
+    __tablename__ = "cms_guide_feedback"
+    __table_args__ = (
+        UniqueConstraint(
+            "article_id",
+            "client_token_hash",
+            name="uq_cms_guide_feedback_article_client",
+        ),
+        Index("ix_cms_guide_feedback_article_created", "article_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    article_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("cms_guide_articles.id", ondelete="CASCADE"), nullable=False
+    )
+    helpful: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    comment: Mapped[str | None] = mapped_column(String(500))
+    client_token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
 

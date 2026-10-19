@@ -213,7 +213,7 @@ const screens: Record<string, PreviewScreen> = {
     ],
   },
   "/admin/payments": {
-    title: "Tài chính",
+    title: "Thu phí",
     eyebrow: "Điều hành",
     description: "Theo dõi yêu cầu thanh toán và chứng từ liên quan.",
     columns: ["Yêu cầu", "Số tiền", "Trạng thái"],

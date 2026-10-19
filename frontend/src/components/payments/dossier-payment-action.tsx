@@ -51,7 +51,7 @@ export function DossierPaymentAction({
         <div>
           <h2 className="font-bold">Thanh toán đã được xác nhận</h2>
           <p className="mt-1 text-sm leading-6">
-            Hồ sơ đang ở hàng đợi ký blockchain và phát hành bằng xác lập.
+            Hồ sơ đang được chuẩn bị để phát hành bằng xác lập.
           </p>
         </div>
       </section>
@@ -80,7 +80,7 @@ export function DossierPaymentAction({
                 className="dossier-payment-notice__link mt-3 inline-flex min-h-11 items-center text-sm font-bold underline decoration-2 underline-offset-4"
                 href={`/payments/${activeOrder.data.id}`}
               >
-                Xem và thanh toán qua PayOS
+                Xem khoản phí và thanh toán
               </Link>
             </>
           ) : obligation.data ? (
@@ -100,8 +100,8 @@ export function DossierPaymentAction({
                   dateStyle: "medium",
                   timeStyle: "short",
                 }).format(new Date(obligation.data.dueAt))}
-                . Phiên QR PayOS được tạo khi bạn bắt đầu thanh toán và có thể
-                cấp lại an toàn nếu hết hạn.
+                . Thông tin thanh toán sẽ hiển thị khi bạn tiếp tục và có thể
+                được làm mới nếu hết hạn.
               </p>
               <button
                 className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-700 px-5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
@@ -117,7 +117,9 @@ export function DossierPaymentAction({
                 ) : (
                   <BadgeDollarSign aria-hidden="true" className="size-4" />
                 )}
-                {checkout.isPending ? "Đang mở PayOS…" : "Thanh toán qua PayOS"}
+                {checkout.isPending
+                  ? "Đang mở trang thanh toán…"
+                  : "Tiếp tục thanh toán"}
               </button>
               {checkout.isError ? (
                 <p
@@ -161,7 +163,7 @@ export function DossierPaymentAction({
           <h2 className="font-bold">Hồ sơ đã được phê duyệt</h2>
           <p className="mt-1 text-sm leading-6">
             Bộ phận quản trị đang xác định mức phí. Khi yêu cầu được phát hành,
-            bạn sẽ nhận thông báo kèm số tiền và liên kết PayOS.
+            bạn sẽ nhận thông báo kèm số tiền và đường dẫn thanh toán.
           </p>
         </div>
       </div>

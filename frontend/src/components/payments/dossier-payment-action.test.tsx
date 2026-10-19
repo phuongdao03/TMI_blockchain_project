@@ -48,7 +48,7 @@ describe("DossierPaymentAction", () => {
     expect(await screen.findByText(/1\.500\.000 VND/)).toBeTruthy();
     expect(
       screen
-        .getByRole("link", { name: "Xem và thanh toán qua PayOS" })
+        .getByRole("link", { name: "Xem khoản phí và thanh toán" })
         .getAttribute("href"),
     ).toBe("/payments/payment-active");
   });
@@ -68,7 +68,7 @@ describe("DossierPaymentAction", () => {
     renderAction("PAYMENT_PENDING");
 
     const button = await screen.findByRole("button", {
-      name: "Thanh toán qua PayOS",
+      name: "Tiếp tục thanh toán",
     });
     expect(screen.getByText(/1\.750\.000/)).toBeTruthy();
     await user.click(button);

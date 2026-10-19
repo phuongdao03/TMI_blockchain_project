@@ -144,7 +144,9 @@ describe("BlockchainSigningWorkspace", () => {
 
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
 
-    expect(await screen.findByText("0x3434…3434")).toBeDefined();
+    expect(
+      await screen.findByText("Ứng dụng xác nhận đã kết nối"),
+    ).toBeDefined();
     expect(currentBrowserWallet).toHaveBeenCalledOnce();
   });
 
@@ -160,9 +162,11 @@ describe("BlockchainSigningWorkspace", () => {
     currentBrowserWallet.mockResolvedValue({ address, chainId: 137 });
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
 
-    await userEvent
-      .setup()
-      .click(await screen.findByRole("button", { name: "Kiểm tra ví ký" }));
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: "Kiểm tra quyền xác nhận",
+      }),
+    );
 
     await waitFor(() =>
       expect(verifyWalletLink).toHaveBeenCalledWith({
@@ -177,7 +181,7 @@ describe("BlockchainSigningWorkspace", () => {
       address,
     );
     expect(
-      await screen.findByText(/Đã kiểm tra ví ký thành công/),
+      await screen.findByText(/Đã kiểm tra quyền xác nhận thành công/),
     ).toBeDefined();
     expect(prepareIntent).not.toHaveBeenCalled();
     expect(sendBrowserTransaction).not.toHaveBeenCalled();
@@ -198,14 +202,16 @@ describe("BlockchainSigningWorkspace", () => {
     );
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
 
-    await userEvent
-      .setup()
-      .click(await screen.findByRole("button", { name: "Kiểm tra ví ký" }));
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: "Kiểm tra quyền xác nhận",
+      }),
+    );
 
     expect(
       (
         await screen.findByText(
-          "Ví không còn quyền ký trên hợp đồng Polygon. Hãy kiểm tra quyền ví với quản trị hệ thống.",
+          "Ứng dụng xác nhận chưa được cấp quyền cho thao tác này. Hãy liên hệ quản trị viên.",
         )
       ).closest('[role="alert"]'),
     ).not.toBeNull();
@@ -217,10 +223,14 @@ describe("BlockchainSigningWorkspace", () => {
       Object.assign(new Error("User rejected the request"), { code: 4001 }),
     );
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
-    await userEvent
-      .setup()
-      .click(await screen.findByRole("button", { name: "Kết nối ví" }));
-    expect(await screen.findByText(/Bạn đã từ chối kết nối ví/)).toBeDefined();
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: "Kết nối ứng dụng xác nhận",
+      }),
+    );
+    expect(
+      await screen.findByText(/Bạn chưa chấp thuận kết nối/),
+    ).toBeDefined();
 
     currentBrowserWallet.mockResolvedValue({
       address: "0x3434343434343434343434343434343434",
@@ -228,8 +238,8 @@ describe("BlockchainSigningWorkspace", () => {
     });
     act(() => window.dispatchEvent(new Event("focus")));
     await waitFor(() => {
-      expect(screen.queryByText(/Bạn đã từ chối kết nối ví/)).toBeNull();
-      expect(screen.getByText("0x3434…3434")).toBeDefined();
+      expect(screen.queryByText(/Bạn chưa chấp thuận kết nối/)).toBeNull();
+      expect(screen.getByText("Ứng dụng xác nhận đã kết nối")).toBeDefined();
     });
   });
 
@@ -247,8 +257,10 @@ describe("BlockchainSigningWorkspace", () => {
       .setup()
       .click(await screen.findByRole("button", { name: "Làm mới kết nối" }));
 
-    expect(await screen.findByText("Ví đã kết nối")).toBeDefined();
-    expect(screen.queryByText(/Chưa thể kết nối ví/)).toBeNull();
+    expect(
+      await screen.findByText("Ứng dụng xác nhận đã kết nối"),
+    ).toBeDefined();
+    expect(screen.queryByText(/Chưa thể kết nối ứng dụng xác nhận/)).toBeNull();
   });
 
   it("accepts checksum casing differences for the authorized wallet", async () => {
@@ -285,10 +297,10 @@ describe("BlockchainSigningWorkspace", () => {
       await screen.findByRole("button", { name: /Tác phẩm chờ ký/ }),
     );
 
-    expect(screen.queryByText("Sai tài khoản ví")).toBeNull();
+    expect(screen.queryByText(/ví|blockchain|Polygon/i)).toBeNull();
     expect(
       screen
-        .getByRole("button", { name: "Ký và ghi nhận blockchain" })
+        .getByRole("button", { name: "Xác nhận ghi nhận hồ sơ" })
         .hasAttribute("disabled"),
     ).toBe(false);
   });
@@ -353,11 +365,11 @@ describe("BlockchainSigningWorkspace", () => {
 
     expect(
       screen.getByText(
-        "MetaMask chưa trả về mã giao dịch. Bạn có thể mở lại ví để tiếp tục ký.",
+        "Chưa nhận được xác nhận. Bạn có thể mở lại ứng dụng để tiếp tục.",
       ),
     ).toBeDefined();
     const retryButton = screen.getByRole("button", {
-      name: "Mở lại MetaMask để ký",
+      name: "Mở lại ứng dụng để tiếp tục",
     });
     expect(retryButton.hasAttribute("disabled")).toBe(false);
 
@@ -421,16 +433,16 @@ describe("BlockchainSigningWorkspace", () => {
         name: /Proof awaiting wallet recovery/,
       }),
     );
-    await user.click(screen.getByRole("button", { name: /MetaMask/ }));
+    await user.click(
+      screen.getByRole("button", { name: "Mở lại ứng dụng để tiếp tục" }),
+    );
 
-    expect(
-      await screen.findByRole("link", { name: /PolygonScan/ }),
-    ).toBeDefined();
-    expect(screen.getByText(transactionHash)).toBeDefined();
+    expect(await screen.findByText("Hồ sơ đã được ghi nhận")).toBeDefined();
+    expect(screen.queryByText(transactionHash)).toBeNull();
     expect(sendBrowserTransaction).not.toHaveBeenCalled();
   });
 
-  it("shows Polygon confirmation immediately after MetaMask returns a transaction hash", async () => {
+  it("shows a pending status after the user confirms a record", async () => {
     const user = userEvent.setup();
     const walletAddress = "0x3434343434343434343434343434343434343434";
     const transactionHash = `0x${"cd".repeat(32)}`;
@@ -495,19 +507,19 @@ describe("BlockchainSigningWorkspace", () => {
       await screen.findByRole("button", { name: /Hồ sơ sẵn sàng ký/ }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Ký và ghi nhận blockchain" }),
+      screen.getByRole("button", { name: "Xác nhận ghi nhận hồ sơ" }),
     );
 
     expect(
       await screen.findByText(
-        "Giao dịch đã gửi, đang chờ mạng Polygon xác nhận.",
+        "Yêu cầu đã được gửi. Hệ thống đang cập nhật trạng thái.",
       ),
     ).toBeDefined();
-    expect(screen.getByText(transactionHash)).toBeDefined();
-    expect(screen.getByText("Đang chờ Polygon xác nhận")).toBeDefined();
-    expect(screen.queryByText("Đang chờ xác nhận ví")).toBeNull();
+    expect(screen.queryByText(transactionHash)).toBeNull();
+    expect(screen.getByText("Đang xử lý")).toBeDefined();
+    expect(screen.queryByText(/Polygon|MetaMask|blockchain/i)).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Mở lại MetaMask để ký" }),
+      screen.queryByRole("button", { name: "Mở lại ứng dụng để tiếp tục" }),
     ).toBeNull();
     expect(submitTransaction).toHaveBeenCalledWith({
       transactionId: "transaction-ready",
@@ -553,7 +565,7 @@ describe("BlockchainSigningWorkspace", () => {
       await screen.findByRole("button", { name: /Hồ sơ ký nhanh/ }),
     );
     const button = screen.getByRole("button", {
-      name: "Ký và ghi nhận blockchain",
+      name: "Xác nhận ghi nhận hồ sơ",
     });
     act(() => {
       button.click();
@@ -623,20 +635,18 @@ describe("BlockchainSigningWorkspace", () => {
       await screen.findByRole("button", { name: /Hồ sơ cần đồng bộ/ }),
     );
 
-    expect(screen.getByText(transactionHash)).toBeDefined();
+    expect(screen.queryByText(transactionHash)).toBeNull();
     await waitFor(() => expect(submitTransaction).toHaveBeenCalledOnce());
     expect(
       await screen.findByText(
-        "Chưa thể đồng bộ mã giao dịch. Giao dịch đã được gửi từ ví; hãy thử lại khi có kết nối.",
+        "Chưa thể cập nhật trạng thái. Yêu cầu đã được gửi; hãy thử lại khi có kết nối.",
       ),
     ).toBeDefined();
     expect(window.localStorage.length).toBe(1);
-    await user.click(
-      screen.getByRole("button", { name: "Tiếp tục đồng bộ giao dịch" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Tiếp tục kiểm tra" }));
     expect(
       await screen.findByText(
-        "Đã đồng bộ mã giao dịch từ ví. Hệ thống đang chờ mạng Polygon xác nhận.",
+        "Đã nhận yêu cầu xác nhận. Hệ thống đang cập nhật trạng thái.",
       ),
     ).toBeDefined();
     expect(submitTransaction).toHaveBeenCalledWith({
@@ -653,7 +663,9 @@ describe("BlockchainSigningWorkspace", () => {
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
 
     expect(
-      await screen.findByText("Kết nối và xác minh ví để mở hàng đợi ký."),
+      await screen.findByText(
+        "Kết nối ứng dụng xác nhận để xem hồ sơ đủ điều kiện.",
+      ),
     ).toBeDefined();
     expect(proofQueue).not.toHaveBeenCalled();
     expect(screen.queryByText("Kiểm soát an toàn")).toBeNull();
@@ -706,7 +718,7 @@ describe("BlockchainSigningWorkspace", () => {
     expect(proofQueue).toHaveBeenCalledOnce();
   });
 
-  it("explains the Polygon proof flow and exposes a four-step signing journey", async () => {
+  it("explains the confirmation flow and exposes a four-step journey", async () => {
     const user = userEvent.setup();
     currentWallet.mockResolvedValue({
       id: "wallet-link",
@@ -734,20 +746,20 @@ describe("BlockchainSigningWorkspace", () => {
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
     await user.click(await screen.findByRole("button", { name: /Tác phẩm/ }));
 
-    expect(screen.getAllByText("Polygon Mainnet").length).toBeGreaterThan(0);
-    expect(screen.getByText("Dấu vân tay số của hồ sơ")).toBeDefined();
+    expect(screen.getByText("Quyền xác nhận của tổ chức")).toBeDefined();
+    expect(screen.queryByText(/Polygon|blockchain|dấu vân tay số/i)).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Ký và ghi nhận blockchain" }),
+      screen.getByRole("button", { name: "Xác nhận ghi nhận hồ sơ" }),
     ).toBeDefined();
     const stepper = screen.getByRole("list", { name: "Tiến trình ký" });
     expect(within(stepper).getAllByRole("listitem")).toHaveLength(4);
     expect(within(stepper).getByText("Chuẩn bị")).toBeDefined();
-    expect(within(stepper).getByText("Chờ MetaMask")).toBeDefined();
+    expect(within(stepper).getByText("Chờ xác nhận")).toBeDefined();
     expect(within(stepper).getByText("Đang xác nhận")).toBeDefined();
     expect(within(stepper).getByText("Đã ghi nhận")).toBeDefined();
   });
 
-  it("shows confirmed language only for backend CONFIRMED and supports transaction actions", async () => {
+  it("shows the completed state only after confirmation", async () => {
     const user = userEvent.setup();
     const transactionHash = `0x${"cd".repeat(32)}`;
     currentWallet.mockResolvedValue({
@@ -781,23 +793,14 @@ describe("BlockchainSigningWorkspace", () => {
     expect(
       screen.getByText("Tài liệu đã được ghi nhận và chưa bị thay đổi."),
     ).toBeDefined();
-    expect(screen.getByText("Bằng chứng có thể tự kiểm tra")).toBeDefined();
-    expect(screen.getByText("Dấu vân tay nội dung")).toBeDefined();
-    expect(screen.getByText("Chữ ký của tổ chức")).toBeDefined();
-    expect(screen.getByText("Xác nhận công khai")).toBeDefined();
-    expect(screen.getByText(/không đưa tệp gốc lên blockchain/i)).toBeDefined();
-    const explorerLink = screen.getByRole("link", {
-      name: "Mở giao dịch trên PolygonScan",
-    });
-    expect(explorerLink.getAttribute("href")).toBe(
-      `https://polygonscan.com/tx/${transactionHash}`,
-    );
-
-    await user.click(
-      screen.getByRole("button", { name: "Sao chép mã giao dịch" }),
-    );
-    expect(await navigator.clipboard.readText()).toBe(transactionHash);
-    expect(screen.getByText("Đã sao chép mã giao dịch.")).toBeDefined();
+    expect(screen.getByText("Hồ sơ đã được ghi nhận")).toBeDefined();
+    expect(
+      screen.getByText(/Bản ghi giúp đối chiếu mã hồ sơ và phiên bản/i),
+    ).toBeDefined();
+    expect(screen.queryByText(transactionHash)).toBeNull();
+    expect(
+      screen.queryByText(/Polygon|blockchain|dấu vân tay|chữ ký/i),
+    ).toBeNull();
   });
 
   it("keeps a broadcast transaction in the pending state", async () => {
@@ -831,7 +834,9 @@ describe("BlockchainSigningWorkspace", () => {
     );
 
     expect(
-      screen.getByText("Giao dịch đã gửi, đang chờ mạng Polygon xác nhận."),
+      screen.getByText(
+        "Yêu cầu đang được xử lý. Trạng thái sẽ cập nhật sau khi hoàn tất.",
+      ),
     ).toBeDefined();
     expect(
       screen.queryByText("Tài liệu đã được ghi nhận và chưa bị thay đổi."),
@@ -877,13 +882,11 @@ describe("BlockchainSigningWorkspace", () => {
       await screen.findByRole("button", { name: /Tác phẩm cần đối chiếu/ }),
     );
 
-    expect(
-      await screen.findByText("Bằng chứng có thể tự kiểm tra"),
-    ).toBeDefined();
+    expect(await screen.findByText("Hồ sơ đã được ghi nhận")).toBeDefined();
     expect(transactionStatus).toHaveBeenCalledWith("transaction-recoverable");
   });
 
-  it("keeps the transaction visible and offers a retry when Polygon status is unavailable", async () => {
+  it("offers a retry when the status cannot be updated", async () => {
     const user = userEvent.setup();
     const transactionHash = `0x${"ef".repeat(32)}`;
     currentWallet.mockResolvedValue({
@@ -923,10 +926,10 @@ describe("BlockchainSigningWorkspace", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Polygon tạm thời chưa phản hồi",
+        name: "Chưa nhận được kết quả xác nhận",
       }),
     ).toBeDefined();
-    expect(screen.getByText(transactionHash)).toBeDefined();
+    expect(screen.queryByText(transactionHash)).toBeNull();
     expect(
       screen.getByRole("button", { name: "Thử kiểm tra lại" }),
     ).toBeDefined();
@@ -972,17 +975,15 @@ describe("BlockchainSigningWorkspace", () => {
     );
 
     expect(
-      (await screen.findAllByText("Cần kiểm tra giao dịch")).length,
+      (await screen.findAllByText("Cần kiểm tra trạng thái")).length,
     ).toBeGreaterThan(0);
     expect(screen.queryByText("Đang đối chiếu giao dịch")).toBeNull();
     const stepper = screen.getByRole("list", { name: "Tiến trình ký" });
     expect(stepper.querySelector(".auth-activity-spinner")).toBeNull();
     expect(within(stepper).getByText("Cần kiểm tra")).toBeDefined();
+    expect(screen.getByText(/Hồ sơ đang được kiểm tra/i)).toBeDefined();
     expect(
-      screen.getByText(/chưa xác thực được bằng chứng của hồ sơ/i),
-    ).toBeDefined();
-    expect(
-      screen.getByRole("button", { name: "Kiểm tra xác nhận ngay" }),
+      screen.getByRole("button", { name: "Kiểm tra trạng thái" }),
     ).toBeDefined();
   });
 
@@ -993,11 +994,15 @@ describe("BlockchainSigningWorkspace", () => {
     );
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
 
-    await user.click(await screen.findByRole("button", { name: "Kết nối ví" }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Kết nối ứng dụng xác nhận",
+      }),
+    );
 
     expect(
       await screen.findByText(
-        "Bạn đã từ chối kết nối ví. Hãy chọn Kết nối ví để thử lại.",
+        "Bạn chưa chấp thuận kết nối. Hãy chọn Kết nối để thử lại.",
       ),
     ).toBeDefined();
   });
@@ -1010,13 +1015,15 @@ describe("BlockchainSigningWorkspace", () => {
     injectedMetaMaskMock.mockReturnValue(true);
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
 
-    await userEvent
-      .setup()
-      .click(await screen.findByRole("button", { name: "Kết nối ví" }));
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: "Kết nối ứng dụng xác nhận",
+      }),
+    );
 
     await waitFor(() => expect(connectBrowserWallet).toHaveBeenCalledOnce());
     expect(
-      screen.queryByRole("dialog", { name: "Chọn ví để kết nối" }),
+      screen.queryByRole("dialog", { name: "Chọn ứng dụng xác nhận" }),
     ).toBeNull();
   });
 
@@ -1024,12 +1031,12 @@ describe("BlockchainSigningWorkspace", () => {
     {
       address: "0x3434343434343434343434343434343434343434",
       chainId: 1,
-      expected: "Sai mạng blockchain",
+      expected: "Ứng dụng xác nhận chưa sẵn sàng",
     },
     {
       address: "0x5656565656565656565656565656565656565656",
       chainId: 137,
-      expected: "Sai tài khoản ví",
+      expected: "Ứng dụng xác nhận chưa sẵn sàng",
     },
   ])(
     "blocks signing when MetaMask reports $expected",
@@ -1046,7 +1053,9 @@ describe("BlockchainSigningWorkspace", () => {
       render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
 
       await user.click(
-        await screen.findByRole("button", { name: "Kết nối ví" }),
+        await screen.findByRole("button", {
+          name: "Kết nối ứng dụng xác nhận",
+        }),
       );
 
       expect(await screen.findByText(browserWallet.expected)).toBeDefined();
@@ -1100,17 +1109,21 @@ describe("BlockchainSigningWorkspace", () => {
     );
     render(<BlockchainSigningWorkspace />, { wrapper: Wrapper });
 
-    await user.click(await screen.findByRole("button", { name: "Kết nối ví" }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Kết nối ứng dụng xác nhận",
+      }),
+    );
     await user.click(
       await screen.findByRole("button", { name: /Hồ sơ cần gas/ }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Ký và ghi nhận blockchain" }),
+      screen.getByRole("button", { name: "Xác nhận ghi nhận hồ sơ" }),
     );
 
     expect(
       await screen.findByText(
-        "Ví không đủ POL để trả phí gas. Hãy nạp thêm POL rồi thử lại.",
+        "Chưa thể hoàn tất xác nhận. Hãy liên hệ bộ phận hỗ trợ để được kiểm tra.",
       ),
     ).toBeDefined();
     expect(sendBrowserTransaction).toHaveBeenCalledWith(

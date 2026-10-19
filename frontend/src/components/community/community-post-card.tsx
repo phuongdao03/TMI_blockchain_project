@@ -98,8 +98,8 @@ function CommunityPostCardContent({
 
   const postHref = `/community/posts/${encodeURIComponent(post.slug)}`;
   return (
-    <article className="border-b border-[var(--theme-border)] py-5 first:border-t sm:py-7">
-      <div className="flex flex-col items-start gap-2 text-xs font-semibold text-[var(--theme-muted)] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
+    <article className="py-5 sm:py-7">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs font-semibold text-[var(--theme-muted)]">
         <CommunityUserIdentity size={36} user={post.author} />
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="text-[var(--theme-accent)]">
@@ -111,7 +111,7 @@ function CommunityPostCardContent({
           </time>
         </div>
       </div>
-      <h2 className="mt-3 text-lg font-bold leading-snug tracking-tight text-[var(--theme-text)] sm:text-2xl">
+      <h2 className="mt-3 text-lg font-semibold leading-snug tracking-tight text-[var(--theme-text)] sm:text-2xl">
         <Link
           className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--theme-accent)] hover:text-[var(--theme-accent)]"
           href={postHref}
@@ -120,7 +120,7 @@ function CommunityPostCardContent({
         </Link>
       </h2>
       {post.excerpt ? (
-        <p className="mt-2 line-clamp-3 max-w-3xl whitespace-pre-wrap break-words text-sm leading-6 text-[var(--theme-muted)] sm:line-clamp-4 sm:text-base sm:leading-7">
+        <p className="mt-2 line-clamp-2 max-w-3xl whitespace-pre-wrap break-words text-sm leading-6 text-[var(--theme-muted)] sm:line-clamp-4 sm:text-base sm:leading-7">
           {post.excerpt}
         </p>
       ) : null}
@@ -141,11 +141,12 @@ function CommunityPostCardContent({
       <CommunityRelatedWorkLink work={post.relatedWork} />
       <div
         aria-label="Tương tác bài viết"
-        className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--theme-border)] pt-3 sm:mt-4 sm:gap-2"
+        className="mt-3 flex flex-wrap items-center gap-1.5 sm:mt-4 sm:gap-2 sm:border-t sm:border-[var(--theme-border)] sm:pt-3"
       >
         {authenticated ? (
           <>
             <button
+              aria-label={`${liked ? "Bỏ thích" : "Thích"} bài viết (${likeCount})`}
               aria-pressed={liked}
               className={quickActionClass(liked)}
               disabled={like.isPending || bookmark.isPending}
@@ -156,9 +157,13 @@ function CommunityPostCardContent({
                 aria-hidden="true"
                 className={liked ? "size-4 fill-current" : "size-4"}
               />
-              {liked ? "Bỏ thích" : "Thích"} bài viết ({likeCount})
+              <span className="sm:hidden">{likeCount} thích</span>
+              <span className="hidden sm:inline">
+                {liked ? "Bỏ thích" : "Thích"} bài viết ({likeCount})
+              </span>
             </button>
             <button
+              aria-label={bookmarked ? "Đã lưu" : "Lưu bài viết"}
               aria-pressed={bookmarked}
               className={quickActionClass(bookmarked)}
               disabled={like.isPending || bookmark.isPending}
@@ -169,7 +174,10 @@ function CommunityPostCardContent({
                 aria-hidden="true"
                 className={bookmarked ? "size-4 fill-current" : "size-4"}
               />
-              {bookmarked ? "Đã lưu" : "Lưu bài viết"}
+              <span className="sm:hidden">Lưu</span>
+              <span className="hidden sm:inline">
+                {bookmarked ? "Đã lưu" : "Lưu bài viết"}
+              </span>
             </button>
           </>
         ) : (
@@ -181,12 +189,13 @@ function CommunityPostCardContent({
           </Link>
         )}
         <Link
+          aria-label={`${post.commentCount} bình luận`}
           className={quickActionClass(false)}
           href={`${postHref}#community-comments-title`}
         >
           {post.commentCount} bình luận
         </Link>
-        <span className="px-2 text-xs text-[var(--theme-muted)]">
+        <span className="hidden px-2 text-xs text-[var(--theme-muted)] sm:inline">
           {post.viewCount} lượt xem
         </span>
         <button
@@ -196,7 +205,7 @@ function CommunityPostCardContent({
           type="button"
         >
           <Share2 aria-hidden="true" className="size-4" />
-          Chia sẻ
+          <span className="sr-only sm:not-sr-only">Chia sẻ</span>
         </button>
         {shareMessage ? (
           <span className="text-xs text-[var(--theme-muted)]" role="status">
@@ -265,7 +274,7 @@ function updatePostCaches(
 }
 
 function quickActionClass(active: boolean): string {
-  return `inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:opacity-60 ${active ? "border-[var(--theme-accent)] bg-[var(--theme-accent)]/10 text-[var(--theme-accent)]" : "border-[var(--theme-border)] text-[var(--theme-muted)] hover:border-[var(--theme-accent)] hover:text-[var(--theme-text)]"}`;
+  return `inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:opacity-60 sm:min-h-9 sm:border sm:px-2.5 ${active ? "text-[var(--theme-accent)] sm:border-[var(--theme-accent)] sm:bg-[var(--theme-accent)]/10" : "text-[var(--theme-muted)] hover:text-[var(--theme-text)] sm:border-[var(--theme-border)] sm:hover:border-[var(--theme-accent)]"}`;
 }
 
 function formatPublishedDate(value: string): string {

@@ -48,6 +48,16 @@ const EVENT_PRESENTATION: Record<
     groupLabel: "Thẩm định",
     tone: "info",
   },
+  WORK_TASK_ASSIGNED: {
+    actionLabel: "Mở công việc",
+    groupLabel: "Công việc",
+    tone: "action",
+  },
+  WORK_ALLOCATION_ASSIGNED: {
+    actionLabel: "Mở công việc",
+    groupLabel: "Công việc",
+    tone: "action",
+  },
   "certificate.issued": {
     actionLabel: "Xem bằng xác lập",
     groupLabel: "Bằng xác lập",

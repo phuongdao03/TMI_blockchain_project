@@ -65,11 +65,13 @@ it("guides the reviewer before and after submitting a report", async () => {
   );
 
   expect(
-    await screen.findByText("Việc cần làm · Hoàn tất báo cáo thẩm định"),
+    await screen.findByText(
+      "Đối chiếu tài liệu và hoàn thành phiếu thẩm định.",
+    ),
   ).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Gửi kết quả" }));
 
-  expect(await screen.findByText("Đã gửi báo cáo cho Admin")).toBeTruthy();
+  expect(await screen.findByText("Đã gửi báo cáo thẩm định")).toBeTruthy();
   expect(
     screen.getByRole("link", { name: "Về hàng đợi" }).getAttribute("href"),
   ).toBe("/reviews");
@@ -86,7 +88,7 @@ it("shows the same next step when a submitted report is reopened", async () => {
     </QueryClientProvider>,
   );
 
-  expect(await screen.findByText("Đã gửi báo cáo cho Admin")).toBeTruthy();
+  expect(await screen.findByText("Đã gửi báo cáo thẩm định")).toBeTruthy();
 });
 
 it("lets an assigned reviewer confirm no conflict and continue to the report", async () => {
@@ -117,7 +119,9 @@ it("lets an assigned reviewer confirm no conflict and continue to the report", a
     hasConflict: false,
   });
   expect(
-    await screen.findByText("Việc cần làm · Hoàn tất báo cáo thẩm định"),
+    await screen.findByText(
+      "Đối chiếu tài liệu và hoàn thành phiếu thẩm định.",
+    ),
   ).toBeTruthy();
 });
 

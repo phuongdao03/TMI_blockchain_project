@@ -17,13 +17,14 @@ export default function CreateDossierPage() {
               <ArrowLeft aria-hidden="true" className="size-4" />
               Danh sách hồ sơ
             </Link>
-            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
+            <p className="hidden items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700 sm:inline-flex">
               <FilePlus2 aria-hidden="true" className="size-4" />
               Hồ sơ mới
             </p>
           </div>
           <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] sm:text-4xl">
-            Khởi tạo hồ sơ xác lập
+            <span className="sm:hidden">Tạo hồ sơ mới</span>
+            <span className="hidden sm:inline">Khởi tạo hồ sơ xác lập</span>
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
             Bắt đầu với thông tin cốt lõi. Bạn có thể tiếp tục bổ sung bằng

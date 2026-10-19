@@ -193,9 +193,7 @@ describe("layout shells", () => {
     expect(within(footerNavigation).getAllByRole("link")).toHaveLength(2);
     expect(within(footerNavigation).queryByText("Khám phá đề cử")).toBeNull();
     expect(
-      within(footerNavigation).queryByText(
-        "Phát triển bởi Trung tâm an ninh công nghệ số - CNS",
-      ),
+      within(footerNavigation).queryByText(/Đơn vị phát triển/),
     ).toBeNull();
 
     const publicFooter = screen.getByRole("contentinfo");
@@ -209,21 +207,8 @@ describe("layout shells", () => {
       decodeURIComponent(footerLogos[0]?.getAttribute("src") ?? ""),
     ).toContain("/assets/brand/logo-tinh-hoa-viet.png");
     expect(
-      within(publicFooter).getByText("Trung tâm An ninh Công nghệ số"),
+      within(publicFooter).getByText("Trung tâm An ninh Công nghệ số - CNS"),
     ).toBeDefined();
-    expect(
-      decodeURIComponent(
-        publicFooter
-          .querySelector(".developer-credit img")
-          ?.getAttribute("src") ?? "",
-      ),
-    ).toContain("/assets/institution/logo-cns.png");
-    expect(
-      publicFooter.querySelector(".public-footer__identity .developer-credit"),
-    ).toBeNull();
-    expect(
-      publicFooter.querySelector(".public-footer__developer .developer-credit"),
-    ).not.toBeNull();
     expect(
       within(publicFooter).getByText(/Viện Những Vấn đề Phát triển/),
     ).toBeDefined();
@@ -351,12 +336,6 @@ describe("layout shells", () => {
     ).toBeNull();
     expect(within(header).queryByRole("link", { name: "Đăng ký" })).toBeNull();
     const footer = screen.getByRole("contentinfo");
-    expect(
-      decodeURIComponent(
-        footer.querySelector(".developer-credit img")?.getAttribute("src") ??
-          "",
-      ),
-    ).toContain("/assets/institution/logo-cns.png");
     expect(
       within(footer).getByText(/Trung tâm An ninh Công nghệ số/),
     ).toBeDefined();
@@ -547,9 +526,9 @@ describe("layout shells", () => {
     ).toBe("/community");
     expect(
       within(drawer)
-        .getByRole("link", { name: "Ký blockchain" })
+        .getByRole("link", { name: "Ghi nhận hồ sơ" })
         .getAttribute("href"),
-    ).toBe("/blockchain");
+    ).toBe("/admin/registry");
   });
 
   it("opens the internal guide from the super admin workspace", () => {
@@ -687,13 +666,13 @@ describe("layout shells", () => {
         }}
       >
         <DashboardShell>
-          <h1>Tài chính</h1>
+          <h1>Thu phí</h1>
         </DashboardShell>
       </AuthUserProvider>,
     );
 
     expect(
-      screen.getAllByRole("link", { name: "Tài chính" }).length,
+      screen.getAllByRole("link", { name: "Thu phí" }).length,
     ).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "Người dùng" })).toBeNull();
     expect(

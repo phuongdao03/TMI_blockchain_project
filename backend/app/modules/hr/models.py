@@ -111,6 +111,9 @@ class Department(UtcTimestampMixin, Base):
     code: Mapped[str] = mapped_column(String(32), nullable=False, unique=True)
     name: Mapped[str] = mapped_column(String(160), nullable=False, unique=True)
     description: Mapped[str | None] = mapped_column(Text)
+    manager_employee_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("employees.id", ondelete="SET NULL")
+    )
     status: Mapped[DepartmentStatus] = mapped_column(
         _enum(DepartmentStatus, "department_status"),
         nullable=False,

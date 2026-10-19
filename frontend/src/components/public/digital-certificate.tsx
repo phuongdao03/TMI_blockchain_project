@@ -129,14 +129,6 @@ export function DigitalCertificate({ data }: { data: Verification }) {
                 label="Phiên bản"
                 value={data.version ? `Phiên bản ${data.version}` : null}
               />
-              <CertificateFact
-                label="Mạng ghi nhận"
-                value={
-                  data.network?.toLowerCase() === "polygon"
-                    ? "Mạng blockchain Polygon"
-                    : "Mạng blockchain"
-                }
-              />
             </dl>
           </section>
 
@@ -168,16 +160,8 @@ export function DigitalCertificate({ data }: { data: Verification }) {
           </section>
         </div>
 
-        <footer className="grid gap-6 border-t border-[#d8c798] pt-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div className="min-w-0">
-            <p className="text-[0.65rem] font-black tracking-[0.16em] text-[#765c27] uppercase">
-              Dấu vân tay số SHA-256
-            </p>
-            <p className="mt-2 break-all font-mono text-[0.68rem] leading-5 text-[#503d32] sm:text-xs">
-              {data.metadataHash ?? "Đang cập nhật"}
-            </p>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-end">
+        <footer className="flex flex-wrap justify-end gap-2 border-t border-[#d8c798] pt-6">
+          <div className="grid gap-2 sm:grid-cols-2">
             <button
               className="inline-flex min-h-11 items-center justify-center gap-2 border border-[#b78e4b] bg-transparent px-4 text-sm font-bold text-[#82141d] transition hover:bg-[#f7ecd0] active:translate-y-px"
               onClick={() => void share()}
@@ -189,16 +173,11 @@ export function DigitalCertificate({ data }: { data: Verification }) {
               <a className="digital-certificate__verify" href={workPath}>
                 Xem tác phẩm <ExternalLink className="size-4" />
               </a>
-            ) : data.explorerUrl ? (
-              <a
-                className="digital-certificate__verify"
-                href={data.explorerUrl}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                Kiểm tra trên blockchain <ExternalLink className="size-4" />
+            ) : (
+              <a className="digital-certificate__verify" href={verifyPath}>
+                Mở trang tra cứu <ExternalLink className="size-4" />
               </a>
-            ) : null}
+            )}
           </div>
         </footer>
       </div>

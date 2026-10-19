@@ -13,7 +13,7 @@ describe("InstallPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Cài đặt trong vài bước" }),
     ).toBeDefined();
-    expect(screen.getByText("iPhone hoặc iPad")).toBeDefined();
+    expect(screen.getByText("Điện thoại iOS")).toBeDefined();
     expect(screen.getByText("Điện thoại Android")).toBeDefined();
     expect(screen.getByRole("button", { name: "Tải ứng dụng" })).toBeDefined();
   });

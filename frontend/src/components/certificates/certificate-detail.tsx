@@ -241,10 +241,6 @@ export function CertificateDetail({ id }: { id: string }) {
     );
   }
   const certificate = detail.data.certificate;
-  const networkLabel =
-    certificate.network?.toLowerCase() === "polygon"
-      ? "Mạng blockchain Polygon"
-      : "Mạng blockchain";
 
   async function downloadPdf() {
     try {
@@ -463,32 +459,6 @@ export function CertificateDetail({ id }: { id: string }) {
           </section>
         </div>
       </div>
-
-      <details className="rounded-2xl border border-neutral-200 bg-white px-5 py-4">
-        <summary className="cursor-pointer font-bold text-neutral-800">
-          Xem thông tin đối chiếu nâng cao
-        </summary>
-        <dl className="mt-5 grid gap-4 text-sm md:grid-cols-2">
-          {[
-            [
-              "Mạng xác nhận",
-              certificate.network ? networkLabel : "Đang cập nhật",
-            ],
-            ["Mã giao dịch", certificate.transactionHash ?? "Chưa có"],
-            ["Mã toàn vẹn", detail.data.metadataHash],
-            ["Số lượt xác nhận", String(certificate.confirmations)],
-          ].map(([label, value]) => (
-            <div className="rounded-xl bg-neutral-50 p-4" key={label}>
-              <dt className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                {label}
-              </dt>
-              <dd className="mt-2 break-all font-mono text-neutral-800">
-                {value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </details>
     </div>
   );
 }

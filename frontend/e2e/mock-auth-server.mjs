@@ -2,6 +2,18 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 
 const mockPort = Number(process.env.E2E_MOCK_PORT ?? 4010);
+const guidePreviewArticles = process.env.GUIDE_PREVIEW_DATA_PATH
+  ? JSON.parse(readFileSync(process.env.GUIDE_PREVIEW_DATA_PATH, "utf8"))
+  : null;
+const guidePreviewFeedback = [];
+
+function previewSearchText(value) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, "d")
+    .toLowerCase();
+}
 
 const user = {
   id: "c57912cc-714c-4ab5-9fd9-1c5b38cd902b",
@@ -508,6 +520,19 @@ const demoAttendanceEmployee = {
   createdAt: "2026-08-01T00:00:00Z",
   updatedAt: "2026-09-01T00:00:00Z",
 };
+let demoAssignedTask = {
+  id: "a4838150-9ba2-4e53-975f-a11ab5b89a01",
+  title: "Chuẩn bị biên bản bàn giao hồ sơ",
+  description: "Kiểm tra danh sách tài liệu và bổ sung ghi chú còn thiếu.",
+  status: "IN_PROGRESS",
+  priority: "MEDIUM",
+  assigneeEmployeeId: demoAttendanceEmployee.id,
+  createdByUserId: superAdminUser.id,
+  dueAt: "2026-10-23T17:00:00Z",
+  completedAt: null,
+  createdAt: "2026-10-18T09:00:00Z",
+  updatedAt: "2026-10-19T09:00:00Z",
+};
 const demoPersonalAttendance = {
   id: attendanceRecordId,
   employeeId: attendanceEmployeeId,
@@ -648,6 +673,138 @@ const server = createServer(async (request, response) => {
   const csrfProtected =
     authenticated && request.headers["x-csrf-token"] === "e2e-csrf";
   if (
+    guidePreviewArticles &&
+    request.method === "POST" &&
+    /^\/api\/v1\/public\/guide\/articles\/[^/]+\/feedback$/.test(path)
+  ) {
+    const slug = decodeURIComponent(path.split("/")[6]);
+    const article = guidePreviewArticles.find(
+      (item) =>
+        item.slug === slug &&
+        item.status === "PUBLISHED" &&
+        item.audiences.includes("PUBLIC"),
+    );
+    if (!article) {
+      send(response, 404, error(404, "NOT_FOUND", "Guide not found").body);
+      return;
+    }
+    const payload = await readJson(request);
+    guidePreviewFeedback.push({
+      id: `preview-feedback-${guidePreviewFeedback.length + 1}`,
+      articleId: article.id,
+      helpful: Boolean(payload.helpful),
+      comment: payload.comment ?? null,
+      createdAt: new Date().toISOString(),
+    });
+    send(response, 200, envelope({ accepted: true }));
+    return;
+  }
+  if (guidePreviewArticles && request.method === "GET") {
+    const isPublic = path.startsWith("/api/v1/public/guide/articles");
+    const isAccount = path.startsWith("/api/v1/guide/articles");
+    const isAdmin = path.startsWith("/api/v1/admin/cms/guide-articles");
+    if (isPublic || isAccount || isAdmin) {
+      if ((isAccount || isAdmin) && !authenticated) {
+        send(
+          response,
+          401,
+          error(401, "UNAUTHORIZED", "Sign in required").body,
+        );
+        return;
+      }
+      if (isAdmin && !superAdminAuthenticated) {
+        send(response, 403, error(403, "FORBIDDEN", "Access denied").body);
+        return;
+      }
+      const prefix = isPublic
+        ? "/api/v1/public/guide/articles"
+        : isAdmin
+          ? "/api/v1/admin/cms/guide-articles"
+          : "/api/v1/guide/articles";
+      const slug = path.slice(prefix.length).replace(/^\//, "");
+      if (isAdmin && slug.endsWith("/feedback")) {
+        const articleId = slug.slice(0, -"/feedback".length);
+        const query = new URL(request.url ?? "/", "http://127.0.0.1")
+          .searchParams;
+        const page = Math.max(1, Number(query.get("page") ?? 1));
+        const pageSize = Math.max(1, Number(query.get("pageSize") ?? 20));
+        const rows = guidePreviewFeedback
+          .filter((item) => item.articleId === articleId)
+          .reverse();
+        send(
+          response,
+          200,
+          JSON.stringify({
+            success: true,
+            data: rows.slice((page - 1) * pageSize, page * pageSize),
+            meta: {
+              requestId: "guide-preview",
+              page,
+              pageSize,
+              total: rows.length,
+            },
+          }),
+        );
+        return;
+      }
+      const audiences = isPublic
+        ? ["PUBLIC"]
+        : sessionPersona === "reviewer"
+          ? ["PUBLIC", "MODERATOR"]
+          : sessionPersona === "super-admin"
+            ? ["PUBLIC", "SUPER_ADMIN"]
+            : sessionPersona === "public"
+              ? ["PUBLIC", "VIEWER"]
+              : ["PUBLIC", "USER"];
+      const visible = guidePreviewArticles.filter(
+        (article) =>
+          (isAdmin || article.status === "PUBLISHED") &&
+          (isAdmin ||
+            article.audiences.some((item) => audiences.includes(item))),
+      );
+      if (slug) {
+        const article = visible.find(
+          (item) => item.slug === decodeURIComponent(slug),
+        );
+        if (!article) {
+          send(response, 404, error(404, "NOT_FOUND", "Guide not found").body);
+          return;
+        }
+        send(response, 200, envelope(article));
+        return;
+      }
+      const query = new URL(request.url ?? "/", "http://127.0.0.1")
+        .searchParams;
+      const term = previewSearchText(query.get("q")?.trim() ?? "");
+      const filtered = visible.filter(
+        (article) =>
+          (!query.get("category") ||
+            article.category === query.get("category")) &&
+          (!term ||
+            previewSearchText(
+              `${article.title} ${article.summary} ${article.bodyHtml.replace(/<[^>]+>/g, " ")}`,
+            ).includes(term)),
+      );
+      const page = Math.max(1, Number(query.get("page") ?? 1));
+      const pageSize = Math.max(1, Number(query.get("pageSize") ?? 20));
+      send(
+        response,
+        200,
+        JSON.stringify({
+          success: true,
+          data: filtered.slice((page - 1) * pageSize, page * pageSize),
+          meta: {
+            requestId: "guide-preview",
+            page,
+            pageSize,
+            total: filtered.length,
+          },
+        }),
+      );
+      return;
+    }
+  }
+  if (
     request.method === "GET" &&
     path === "/api/v1/me/work-allocations" &&
     authenticated &&
@@ -737,6 +894,39 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
+    path === "/api/v1/me/tasks" &&
+    authenticated
+  ) {
+    send(
+      response,
+      200,
+      paginatedEnvelope(
+        sessionPersona === "reviewer" ? [demoAssignedTask] : [],
+      ),
+    );
+    return;
+  }
+  if (
+    request.method === "PATCH" &&
+    path === `/api/v1/me/tasks/${demoAssignedTask.id}` &&
+    authenticated &&
+    csrfProtected
+  ) {
+    const payload = await readJson(request);
+    if (payload.status === "IN_PROGRESS" || payload.status === "DONE") {
+      demoAssignedTask = {
+        ...demoAssignedTask,
+        status: payload.status,
+        completedAt:
+          payload.status === "DONE" ? new Date().toISOString() : null,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    send(response, 200, envelope(demoAssignedTask));
+    return;
+  }
+  if (
+    request.method === "GET" &&
     path === "/api/v1/me/hr/attendance/workday-context" &&
     authenticated &&
     sessionPersona === "reviewer"
@@ -772,11 +962,52 @@ const server = createServer(async (request, response) => {
           code: "GLOBAL-OPS",
           name: demoAttendanceEmployee.departmentName,
           description: "Dữ liệu xem trước cục bộ",
+          managerEmployeeId: demoAttendanceEmployee.id,
           status: "ACTIVE",
           createdAt: "2026-08-01T00:00:00Z",
           updatedAt: "2026-08-01T00:00:00Z",
         },
       ]),
+    );
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path ===
+      `/api/v1/admin/hr/departments/${demoAttendanceEmployee.departmentId}/overview` &&
+    superAdminAuthenticated
+  ) {
+    send(
+      response,
+      200,
+      envelope({
+        departmentId: demoAttendanceEmployee.departmentId,
+        memberCount: 1,
+        activeMemberCount: 1,
+        onLeaveMemberCount: 0,
+        openTaskCount: 3,
+        overdueTaskCount: 1,
+        overdueReviewCount: 1,
+        completedTaskCount: 8,
+        averageTaskCompletionHours: 18.5,
+        pendingLeaveCount: 1,
+        pendingOvertimeCount: 0,
+        pendingAttendanceCount: 1,
+        members: [
+          {
+            employeeId: demoAttendanceEmployee.id,
+            userId: demoAttendanceEmployee.userId,
+            fullName: demoAttendanceEmployee.fullName,
+            position: demoAttendanceEmployee.position,
+            employmentStatus: "ACTIVE",
+            openTaskCount: 3,
+            overdueTaskCount: 1,
+            completedTaskCount: 8,
+            openReviewCount: 2,
+            overdueReviewCount: 1,
+          },
+        ],
+      }),
     );
     return;
   }
@@ -797,6 +1028,7 @@ const server = createServer(async (request, response) => {
         code: "GLOBAL-OPS",
         name: payload.name,
         description: payload.description ?? null,
+        managerEmployeeId: demoAttendanceEmployee.id,
         status: "ACTIVE",
         createdAt: "2026-08-01T00:00:00Z",
         updatedAt: "2026-09-24T00:00:00Z",
@@ -810,6 +1042,27 @@ const server = createServer(async (request, response) => {
     superAdminAuthenticated
   ) {
     send(response, 200, paginatedEnvelope([demoAttendanceEmployee]));
+    return;
+  }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/admin/staff-accounts" &&
+    superAdminAuthenticated
+  ) {
+    send(
+      response,
+      200,
+      paginatedEnvelope([
+        {
+          id: reviewerUser.id,
+          email: reviewerUser.email,
+          role: "MODERATOR",
+          status: "ACTIVE",
+          createdAt: "2026-08-01T00:00:00Z",
+          lastLoginAt: "2026-10-18T09:00:00Z",
+        },
+      ]),
+    );
     return;
   }
   if (

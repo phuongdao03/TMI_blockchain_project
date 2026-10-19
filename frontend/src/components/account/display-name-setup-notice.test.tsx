@@ -30,7 +30,7 @@ describe("DisplayNameSetupNotice", () => {
     const status = await screen.findByRole("status");
     expect(status.tagName).toBe("DIV");
     expect(
-      screen.getByRole("link", { name: "Cài đặt tên" }).getAttribute("href"),
+      screen.getByRole("link", { name: "Thiết lập" }).getAttribute("href"),
     ).toBe("/account");
   });
 

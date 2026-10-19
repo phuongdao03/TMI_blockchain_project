@@ -1,5 +1,7 @@
 import { PublicWorkEditor } from "@/components/admin/public-work-editor";
 import { RoleGate } from "@/components/auth/role-gate";
+import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
+import { BookOpenText } from "lucide-react";
 
 type AdminPublicationPageProps = {
   params: Promise<{ id: string }>;
@@ -12,15 +14,13 @@ export default async function AdminPublicationPage({
 
   return (
     <RoleGate allowed={["SUPER_ADMIN"]}>
-      <div className="mx-auto max-w-7xl space-y-6">
-        <header>
-          <p className="text-sm font-bold tracking-[0.16em] text-primary-700 uppercase">
-            Nội dung công bố
-          </p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">
-            Biên tập tác phẩm
-          </h1>
-        </header>
+      <div className="workspace-screen mx-auto max-w-7xl space-y-6">
+        <WorkspacePageHeader
+          description="Kiểm tra nội dung, hồ sơ và điều kiện công bố của tác phẩm được chọn."
+          icon={BookOpenText}
+          section="Nội dung công bố"
+          title="Biên tập tác phẩm"
+        />
         <PublicWorkEditor initialSelectedId={id} />
       </div>
     </RoleGate>

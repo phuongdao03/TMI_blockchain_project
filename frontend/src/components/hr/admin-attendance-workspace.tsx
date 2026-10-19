@@ -20,6 +20,7 @@ import type { AdminAttendance, AttendanceStatus } from "@/lib/api/types";
 import { AttendanceLocationExceptionPanel } from "@/components/hr/attendance-location-exception-panel";
 import { AdminAttendanceLocationEvidence } from "@/components/hr/admin-attendance-location-evidence";
 import { HrReportDownload } from "@/components/hr/hr-report-download";
+import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
 
 const fieldClass =
   "min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm text-neutral-950 outline-none transition focus:border-primary-600 focus:ring-2 focus:ring-primary-100";
@@ -223,38 +224,25 @@ export function AdminAttendanceWorkspace() {
 
   return (
     <section
-      className="mx-auto max-w-7xl space-y-6 pb-12"
+      className="workspace-screen mx-auto max-w-7xl space-y-6 pb-12"
       aria-labelledby="admin-attendance-title"
     >
-      <header className="relative overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-950 px-6 py-7 text-white sm:px-8">
-        <div className="absolute inset-y-0 right-0 w-2/5 bg-[radial-gradient(circle_at_center,rgba(34,197,94,0.18),transparent_68%)]" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">
-              <UsersRound aria-hidden="true" className="size-4" /> Điều hành
-              nhân sự
-            </p>
-            <h1
-              className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl"
-              id="admin-attendance-title"
-            >
-              Chấm công toàn đội
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
-              Theo dõi dữ liệu thực tế, lọc nhanh theo phòng ban và điều chỉnh
-              có kiểm soát. Không có quy tắc chấm công tự động nào được suy diễn
-              ở đây.
-            </p>
-          </div>
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-neutral-100">
+      <WorkspacePageHeader
+        action={
+          <p className="inline-flex items-center gap-2 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-3 py-2 text-sm font-semibold text-[var(--theme-text)]">
             <ClipboardPenLine
               aria-hidden="true"
-              className="size-4 text-emerald-300"
+              className="size-4 text-[var(--theme-accent)]"
             />{" "}
             Mọi điều chỉnh đều có audit
           </p>
-        </div>
-      </header>
+        }
+        description="Theo dõi dữ liệu thực tế, lọc nhanh theo phòng ban và điều chỉnh có kiểm soát. Không có quy tắc chấm công tự động nào được suy diễn ở đây."
+        icon={UsersRound}
+        id="admin-attendance-title"
+        section="Điều hành nhân sự"
+        title="Chấm công toàn đội"
+      />
 
       <AttendanceLocationExceptionPanel />
 

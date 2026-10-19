@@ -98,7 +98,7 @@ export function LoginForm({
       return "Tài khoản chưa được liên kết hoàn tất. Vui lòng liên hệ quản trị hệ thống.";
     }
     if (error instanceof ApiError && error.code === "OAUTH_IDENTITY_INVALID") {
-      return "Không thể xác minh phiên đăng nhập Firebase. Hãy đăng xuất, đăng nhập lại; nếu lỗi vẫn tiếp diễn, vui lòng liên hệ quản trị hệ thống.";
+      return "Không thể xác minh phiên đăng nhập. Hãy đăng xuất, đăng nhập lại; nếu lỗi vẫn tiếp diễn, vui lòng liên hệ quản trị hệ thống.";
     }
     if (error instanceof ApiError && error.code === "ACCOUNT_INACTIVE") {
       return "Tài khoản chưa hoạt động hoặc quyền truy cập không còn hiệu lực. Vui lòng liên hệ quản trị hệ thống.";

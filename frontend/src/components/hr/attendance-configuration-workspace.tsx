@@ -14,6 +14,7 @@ import type {
   WorksiteInput,
 } from "./attendance-configuration-types";
 import { AttendanceWorksitePanel } from "./attendance-configuration-worksite-panel";
+import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
 
 const pageSize = 100;
 
@@ -202,27 +203,15 @@ export function AttendanceConfigurationWorkspace() {
   return (
     <section
       aria-labelledby="attendance-configuration-title"
-      className="w-full space-y-5 pb-12"
+      className="workspace-screen w-full space-y-5 pb-12"
     >
-      <header className="relative overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-950 px-5 py-7 text-white shadow-sm sm:px-8 sm:py-9">
-        <div className="absolute -right-10 -top-12 size-48 rounded-full bg-primary-500/15 blur-3xl" />
-        <div className="relative max-w-3xl">
-          <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-primary-200">
-            <Globe2 aria-hidden="true" className="size-4" />
-            Thiết lập chấm công
-          </span>
-          <h1
-            className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl"
-            id="attendance-configuration-title"
-          >
-            Chấm công theo địa điểm
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-neutral-300 sm:text-base">
-            Chọn văn phòng để xem nhân viên, thêm người hoặc chuyển nơi làm
-            việc. Mở cấu hình GPS khi cần thay đổi vùng chấm công.
-          </p>
-        </div>
-      </header>
+      <WorkspacePageHeader
+        description="Chọn văn phòng để xem nhân viên, thêm người hoặc chuyển nơi làm việc. Mở cấu hình GPS khi cần thay đổi vùng chấm công."
+        icon={Globe2}
+        id="attendance-configuration-title"
+        section="Thiết lập chấm công"
+        title="Chấm công theo địa điểm"
+      />
 
       <aside className="flex gap-3 rounded-2xl border border-primary-100 bg-primary-50/70 p-4 text-sm leading-6 text-primary-950">
         <ShieldCheck

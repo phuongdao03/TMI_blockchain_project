@@ -19,8 +19,8 @@ describe("AdminGuidePage", () => {
       "Bắt đầu ca làm việc",
       "Quản lý hồ sơ và người dùng",
       "Tổ chức thẩm định hồ sơ",
-      "Tạo yêu cầu thanh toán",
-      "Ghi nhận hồ sơ trên blockchain",
+      "Gửi thông báo thu phí",
+      "Ghi nhận hồ sơ đã được duyệt",
       "Công bố nội dung",
       "Quản lý tài khoản nhân sự",
       "Quản lý nhân viên và tính lương",
@@ -30,13 +30,18 @@ describe("AdminGuidePage", () => {
       expect(screen.getByRole("heading", { name: heading })).toBeDefined();
     }
 
-    expect(screen.getByText(/chỉ công bố dấu vân tay số/i)).toBeDefined();
-    expect(
-      screen.getByText(/không đưa tài liệu gốc lên blockchain/i),
-    ).toBeDefined();
+    expect(screen.getByText(/Bản ghi giúp đối chiếu mã hồ sơ/i)).toBeDefined();
+    expect(container.textContent).not.toMatch(
+      /blockchain|PayOS|MetaMask|Polygon|Firebase|wallet|webhook/i,
+    );
     expect(screen.getByText(/chỉ tạo khoản phí sau khi hồ sơ/i)).toBeDefined();
     expect(screen.getByText(/quản trị viên Tinh Hoa Việt/i)).toBeDefined();
     expect(screen.queryByText(/CNS/i)).toBeNull();
+    expect(
+      screen
+        .getByRole("link", { name: "Xem hướng dẫn theo chủ đề" })
+        .getAttribute("href"),
+    ).toBe("/help");
     expect(
       screen
         .getByRole("link", { name: "Mở hàng đợi thẩm định" })

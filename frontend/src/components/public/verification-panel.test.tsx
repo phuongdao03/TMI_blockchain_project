@@ -78,7 +78,7 @@ describe("VerificationPanel", () => {
     certificateVersions.mockResolvedValue([]);
     renderPanel();
 
-    await screen.findByText(/Bằng xác lập có hiệu lực/);
+    await screen.findByText(/Bằng xác lập đang có hiệu lực/);
     expect(
       screen
         .getByAltText("Mã QR kiểm tra bằng xác lập THV-2026-0001")
@@ -156,19 +156,13 @@ describe("VerificationPanel", () => {
     renderPanel();
 
     expect(
-      await screen.findByText(
-        "Bằng xác lập có hiệu lực; hồ sơ đã được xác nhận trên blockchain.",
-      ),
+      await screen.findByText("Bằng xác lập đang có hiệu lực"),
     ).toBeDefined();
     expect(await screen.findByText("Lịch sử xác nhận")).toBeDefined();
     expect(
       screen.getAllByText("Video chào mừng thương hiệu Đề cử Tinh Hoa Việt"),
     ).toHaveLength(2);
-    expect(screen.getAllByText("Mạng blockchain Polygon")).toHaveLength(2);
-    expect(screen.getByText("32 lượt xác nhận từ mạng")).toBeDefined();
     expect(screen.queryByText(/database|role|schema|endpoint/i)).toBeNull();
-    expect(screen.getByText("Blockchain là gì?")).toBeDefined();
-    expect(screen.getByText("Chi tiết nâng cao")).toBeDefined();
     expect(
       screen.getByRole("img", {
         name: "Biểu trưng Tinh Hoa Việt",
@@ -185,11 +179,7 @@ describe("VerificationPanel", () => {
       "/works/video-chao-mung-tinh-hoa-viet",
     );
     expect(publicRecord.getAttribute("target")).toBeNull();
-    expect(screen.getByText("Dấu vân tay số của hồ sơ")).toBeDefined();
-    expect(screen.getByText("Mã giao dịch trên blockchain")).toBeDefined();
-    expect(screen.getByText("Số lượt mạng đã xác nhận")).toBeDefined();
-    expect(screen.getByText("Số khối ghi nhận")).toBeDefined();
-    expect(screen.getByText("Địa chỉ sổ đăng ký công khai")).toBeDefined();
+    expect(screen.queryByText(/blockchain|Polygon|SHA-256|0xabcd/i)).toBeNull();
     expect(
       screen.queryByText(
         /Nó không tự chứng minh tính xác thực vật lý, quyền sở hữu hoặc tính hợp pháp/,

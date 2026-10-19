@@ -63,10 +63,12 @@ export function PwaInstallButton({ className }: { className?: string }) {
   const [installed, setInstalled] = useState(false);
   const [promptReady, setPromptReady] = useState(false);
   const [working, setWorking] = useState(false);
+  const [appleMobile, setAppleMobile] = useState(false);
 
   useEffect(() => {
     const standaloneCheck = window.setTimeout(() => {
       if (isStandalone()) setInstalled(true);
+      setAppleMobile(isAppleMobile());
     }, 0);
     const refresh = () => setPromptReady(Boolean(storedInstallPrompt()));
     const markInstalled = () => {
@@ -87,6 +89,11 @@ export function PwaInstallButton({ className }: { className?: string }) {
   }, []);
 
   if (installed) return null;
+  const actionLabel = appleMobile
+    ? "Thêm vào Màn hình chính"
+    : promptReady
+      ? "Cài ứng dụng"
+      : "Cách cài ứng dụng";
   const actionClass = cn(
     "pwa-install-button group inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm font-bold text-[var(--theme-text)] transition hover:border-primary-500 hover:bg-[var(--theme-surface-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 sm:px-4",
     className,
@@ -98,14 +105,14 @@ export function PwaInstallButton({ className }: { className?: string }) {
         className="size-4 transition-transform group-hover:translate-y-0.5 motion-reduce:transition-none"
       />
       <span className="pwa-install-button__label hidden whitespace-nowrap lg:inline">
-        {working ? "Đang mở cài đặt…" : "Tải ứng dụng"}
+        {working ? "Đang mở cài đặt…" : actionLabel}
       </span>
     </>
   );
-  if (promptReady) {
+  if (promptReady && !appleMobile) {
     return (
       <button
-        aria-label="Tải ứng dụng"
+        aria-label={actionLabel}
         className={actionClass}
         disabled={working}
         onClick={async () => {
@@ -126,7 +133,7 @@ export function PwaInstallButton({ className }: { className?: string }) {
     );
   }
   return (
-    <Link aria-label="Tải ứng dụng" className={actionClass} href="/install">
+    <Link aria-label={actionLabel} className={actionClass} href="/install">
       {content}
     </Link>
   );
@@ -136,9 +143,9 @@ export function PwaInstallAction() {
   const [state, setState] = useState<
     "idle" | "working" | "accepted" | "installed"
   >("idle");
-  const [platform, setPlatform] = useState<"unknown" | "ios" | "other">(
-    "unknown",
-  );
+  const [platform, setPlatform] = useState<
+    "unknown" | "ios" | "android" | "desktop"
+  >("unknown");
   const [promptReady, setPromptReady] = useState(false);
   const [manualNeeded, setManualNeeded] = useState(false);
 
@@ -149,7 +156,13 @@ export function PwaInstallAction() {
       if (ready) setManualNeeded(false);
     };
     const detect = window.setTimeout(() => {
-      setPlatform(isAppleMobile() ? "ios" : "other");
+      setPlatform(
+        isAppleMobile()
+          ? "ios"
+          : /Android/i.test(navigator.userAgent)
+            ? "android"
+            : "desktop",
+      );
       refresh();
       if (isStandalone()) setState("installed");
     }, 0);
@@ -228,6 +241,27 @@ export function PwaInstallAction() {
       </div>
     );
   }
+  if (!promptReady) {
+    return (
+      <div className="space-y-3">
+        <p
+          className="text-sm leading-6 text-[var(--theme-muted)]"
+          role="status"
+        >
+          {manualNeeded
+            ? "Trình duyệt chưa mở được cửa sổ cài đặt. Bạn vẫn có thể cài từ menu trình duyệt."
+            : platform === "android"
+              ? "Chrome trên Android chưa hiển thị lời mời cài đặt. Mở menu ⋮ rồi chọn Cài đặt ứng dụng hoặc Thêm vào Màn hình chính."
+              : "Chrome hoặc Edge trên máy tính chưa hiển thị lời mời cài đặt. Mở menu trình duyệt rồi chọn Cài đặt ứng dụng."}
+        </p>
+        <a className="install-guide__manual-link" href="#install-device-steps">
+          {platform === "android"
+            ? "Xem các bước trên Android"
+            : "Xem các bước trên máy tính"}
+        </a>
+      </div>
+    );
+  }
   return (
     <div className="space-y-4">
       <button
@@ -237,20 +271,18 @@ export function PwaInstallAction() {
         type="button"
       >
         <Download aria-hidden="true" className="size-5" />
-        {state === "working" ? "Đang mở cài đặt…" : "Tải ứng dụng"}
+        {state === "working" ? "Đang mở cài đặt…" : "Cài ứng dụng"}
       </button>
       <p
         className="text-sm leading-6 text-[var(--theme-muted)]"
         role={manualNeeded ? "status" : undefined}
       >
-        {manualNeeded
-          ? "Trình duyệt chưa mở được hộp thoại cài đặt. Hãy cài từ menu Chrome hoặc Edge theo hướng dẫn bên dưới."
-          : promptReady
-            ? "Nhấn nút để mở hộp thoại cài ứng dụng trên thiết bị này."
-            : "Nếu trình duyệt chưa mở hộp thoại cài đặt, hãy dùng menu Chrome hoặc Edge theo các bước bên dưới."}
+        Nhấn nút để mở cửa sổ cài đặt của trình duyệt trên thiết bị này.
       </p>
       <a className="install-guide__manual-link" href="#install-device-steps">
-        Xem cách cài trên thiết bị
+        {platform === "android"
+          ? "Xem các bước trên Android"
+          : "Xem các bước trên máy tính"}
       </a>
     </div>
   );

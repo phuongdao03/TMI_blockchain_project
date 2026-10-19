@@ -1,68 +1,41 @@
+﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: routerPush }) }));
 
 import UserGuidePage from "@/app/(public)/guide/page";
+import { guideApi } from "@/lib/api/client";
 
-describe("UserGuidePage", () => {
-  it("documents the current public and applicant journeys in plain language", () => {
-    render(<UserGuidePage />);
+function renderPage() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  vi.spyOn(guideApi, "publicList").mockResolvedValue({
+    success: true,
+    data: [],
+    meta: { page: 1, pageSize: 24, total: 0 },
+  });
+  return render(
+    <QueryClientProvider client={client}>
+      <UserGuidePage />
+    </QueryClientProvider>,
+  );
+}
+
+describe("public guide page", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("provides public documentation browsing and an empty state", async () => {
+    renderPage();
     expect(
-      screen.getByRole("heading", {
+      await screen.findByRole("heading", {
         level: 1,
-        name: "Hướng dẫn sử dụng Đề cử Tinh Hoa Việt",
+        name: "Hướng dẫn sử dụng",
       }),
     ).toBeDefined();
-    for (const heading of [
-      "Chọn việc bạn cần làm",
-      "Khám phá đề cử",
-      "Tạo tài khoản và đăng nhập",
-      "Tạo và gửi hồ sơ đề cử",
-      "Theo dõi hồ sơ, bổ sung và lệ phí",
-      "Tra cứu và kiểm tra bằng xác lập",
-      "Cài ứng dụng trên thiết bị",
-      "Bảo vệ tài khoản và nhận hỗ trợ",
-    ])
-      expect(screen.getByRole("heading", { name: heading })).toBeDefined();
-
-    expect(
-      screen.getByText(/không lưu.*tệp gốc.*tài liệu cá nhân/i),
-    ).toBeDefined();
-    expect(
-      screen.getByText(/Tinh Hoa Việt là tổ chức tiếp nhận/i),
-    ).toBeDefined();
-    expect(screen.getByText(/Tinh Hoa Việt là tổ chức/i)).toBeDefined();
-    expect(screen.queryByText(/CNS/i)).toBeNull();
-    expect(screen.queryByText(/là dự án/i)).toBeNull();
-    expect(screen.getByText(/Kết quả: hồ sơ xuất hiện/i)).toBeDefined();
-    expect(
-      screen.getByText(/Tài liệu thẩm định, thông tin liên hệ/i),
-    ).toBeDefined();
-    expect(screen.getByText(/không thanh toán lần hai/i)).toBeDefined();
-    expect(
-      screen.queryByText(/PayOS|Chrome|Edge|Safari|Google Play|App Store/i),
-    ).toBeNull();
-    expect(
-      screen.queryByText(/VERIFIER_ROLE|window\.ethereum|checksum|webhook/i),
-    ).toBeNull();
-    expect(
-      screen
-        .getByRole("link", { name: "Mở thư viện đề cử" })
-        .getAttribute("href"),
-    ).toBe("/works");
-    expect(
-      screen
-        .getByRole("link", { name: "Mở Hồ sơ của tôi" })
-        .getAttribute("href"),
-    ).toBe("/dossiers");
-    expect(
-      screen
-        .getByRole("link", { name: "Tra cứu bằng xác lập" })
-        .getAttribute("href"),
-    ).toBe("/verify");
-    expect(
-      screen
-        .getByRole("link", { name: "Xem hướng dẫn cài đặt" })
-        .getAttribute("href"),
-    ).toBe("/install");
+    expect(screen.getByLabelText("Tìm trong hướng dẫn")).toBeDefined();
+    expect(await screen.findByText("Không tìm thấy hướng dẫn")).toBeDefined();
   });
 });

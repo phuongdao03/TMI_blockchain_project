@@ -154,7 +154,7 @@ const adminItems: NavigationItem[] = [
   },
   {
     href: "/admin/payments",
-    label: "Tài chính",
+    label: "Thu phí",
     icon: BadgeDollarSign,
     permission: "payments.read",
   },
@@ -210,8 +210,8 @@ const adminItems: NavigationItem[] = [
 
 const blockchainSignerItems: NavigationItem[] = [
   {
-    href: "/blockchain",
-    label: "Ký blockchain",
+    href: "/admin/registry",
+    label: "Ghi nhận hồ sơ",
     icon: Signature,
     permission: "blockchain.sign",
   },
@@ -276,7 +276,7 @@ function sectionsFor(
         ? [{ label: "Quản trị", items: operationalItems }]
         : []),
       ...(canAccess(blockchainSignerItems[0]!, roles, permissions)
-        ? [{ label: "Blockchain", items: blockchainSignerItems }]
+        ? [{ label: "Xác lập", items: blockchainSignerItems }]
         : []),
       { label: "Hỗ trợ", items: [adminSupportItem] },
     ];
@@ -285,7 +285,7 @@ function sectionsFor(
   if (persona === "MODERATOR") {
     return [
       { label: "Thẩm định", items: reviewerItems.slice(0, 2) },
-      { label: "Nhân sự", items: employeeItems },
+      ...(isEmployee ? [{ label: "Nhân sự", items: employeeItems }] : []),
       { label: "Khám phá", items: discoveryItems },
       { label: "Cá nhân", items: personalItems.slice(0, 2) },
       ...(adminEntryItems.length
@@ -306,7 +306,7 @@ function sectionsFor(
       ? [{ label: "Quản trị", items: adminEntryItems }]
       : []),
     ...(canAccess(blockchainSignerItems[0]!, roles, permissions)
-      ? [{ label: "Blockchain", items: blockchainSignerItems }]
+      ? [{ label: "Xác lập", items: blockchainSignerItems }]
       : []),
     { label: "Hỗ trợ", items: [publicSupportItem] },
   ];
@@ -323,9 +323,7 @@ function mobileItemsFor(
   persona: WorkspacePersona,
   items: NavigationItem[],
 ): NavigationItem[] {
-  const operational = items.filter(
-    (item) => item.href.startsWith("/admin/") || item.href === "/blockchain",
-  );
+  const operational = items.filter((item) => item.href.startsWith("/admin/"));
   const priorities: Record<WorkspacePersona, string[]> = {
     VIEWER: ["/workspace", "/works", "/community"],
     USER: ["/workspace", "/dossiers", "/works", "/community"],

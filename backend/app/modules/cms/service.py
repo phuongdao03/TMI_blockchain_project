@@ -1,5 +1,8 @@
+import unicodedata
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from hashlib import sha256
+from html.parser import HTMLParser
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
@@ -10,13 +13,19 @@ from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequiremen
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.cms.errors import (
     CmsForbiddenError,
+    CmsGuideArticleDeleteConflictError,
+    CmsGuideArticleInvalidError,
+    CmsGuideFeedbackConflictError,
     CmsNotFoundError,
     CmsSlugConflictError,
 )
 from app.modules.cms.models import (
+    GUIDE_AUDIENCES,
     CmsBanner,
     CmsCategory,
     CmsContentStatus,
+    CmsGuideArticle,
+    CmsGuideFeedback,
     CmsPage,
     CmsPost,
     CmsVersion,
@@ -56,6 +65,39 @@ class CmsCategoryInput:
     name: str
     slug: str
     description: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class CmsGuideArticleInput:
+    title: str
+    slug: str
+    summary: str
+    category: str
+    audiences: tuple[str, ...]
+    body_html: str
+    sort_order: int
+
+
+class _GuideTextParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+
+    def handle_data(self, data: str) -> None:
+        self.parts.append(data)
+
+
+def normalize_guide_text(value: str) -> str:
+    parser = _GuideTextParser()
+    parser.feed(value)
+    parser.close()
+    decomposed = unicodedata.normalize("NFKD", " ".join(parser.parts))
+    without_marks = "".join(
+        character for character in decomposed if not unicodedata.combining(character)
+    )
+    return " ".join(
+        without_marks.replace("đ", "d").replace("Đ", "d").casefold().split()
+    )
 
 
 class CmsService:
@@ -222,6 +264,357 @@ class CmsService:
                 request_id=request_id,
             )
         return post
+
+    async def create_guide_article(
+        self,
+        principal: AuthPrincipal,
+        data: CmsGuideArticleInput,
+        *,
+        request_id: str,
+    ) -> CmsGuideArticle:
+        self._require_admin(principal)
+        body_html = sanitize_rich_text(data.body_html)
+        audiences = self._validate_guide_audiences(data.audiences)
+        if not normalize_guide_text(body_html) or not data.summary.strip():
+            raise CmsGuideArticleInvalidError()
+        slug = data.slug.strip().lower()
+        try:
+            async with self._session.begin():
+                if await self._repository.guide_slug_exists(slug):
+                    raise CmsSlugConflictError()
+                article = CmsGuideArticle(
+                    title=data.title.strip(),
+                    slug=slug,
+                    summary=data.summary.strip(),
+                    category=data.category.strip().lower(),
+                    audiences=list(audiences),
+                    body_html=body_html,
+                    search_text=normalize_guide_text(
+                        f"{data.title} {data.summary} {data.category} {body_html}"
+                    ),
+                    search_title=normalize_guide_text(data.title),
+                    search_summary=normalize_guide_text(data.summary),
+                    sort_order=data.sort_order,
+                    status=CmsContentStatus.DRAFT,
+                    version=1,
+                    created_by=principal.user_id,
+                    updated_by=principal.user_id,
+                )
+                self._repository.add_guide_article(article)
+                await self._session.flush()
+                self._add_snapshot(
+                    "guide_article",
+                    article.id,
+                    article.version,
+                    self._serialize_guide_article(article),
+                    principal.user_id,
+                )
+                self._audit.record(
+                    actor_user_id=principal.user_id,
+                    action="cms.guide_article.created",
+                    resource_type="cms_guide_article",
+                    resource_id=str(article.id),
+                    after=self._serialize_guide_article(article),
+                    request_id=request_id,
+                )
+            return article
+        except IntegrityError as exc:
+            await self._session.rollback()
+            raise CmsSlugConflictError() from exc
+
+    async def update_guide_article(
+        self,
+        principal: AuthPrincipal,
+        article_id: UUID,
+        data: CmsGuideArticleInput,
+        *,
+        request_id: str,
+    ) -> CmsGuideArticle:
+        self._require_admin(principal)
+        body_html = sanitize_rich_text(data.body_html)
+        audiences = self._validate_guide_audiences(data.audiences)
+        if not normalize_guide_text(body_html) or not data.summary.strip():
+            raise CmsGuideArticleInvalidError()
+        slug = data.slug.strip().lower()
+        try:
+            async with self._session.begin():
+                article = await self._repository.get_guide_article(
+                    article_id, for_update=True
+                )
+                if article is None:
+                    raise CmsNotFoundError()
+                if slug != article.slug and await self._repository.guide_slug_exists(
+                    slug
+                ):
+                    raise CmsSlugConflictError()
+                before = self._serialize_guide_article(article)
+                article.title = data.title.strip()
+                article.slug = slug
+                article.summary = data.summary.strip()
+                article.category = data.category.strip().lower()
+                article.audiences = list(audiences)
+                article.body_html = body_html
+                article.search_text = normalize_guide_text(
+                    f"{article.title} {article.summary} {article.category} {body_html}"
+                )
+                article.search_title = normalize_guide_text(article.title)
+                article.search_summary = normalize_guide_text(article.summary)
+                article.sort_order = data.sort_order
+                article.version += 1
+                article.updated_by = principal.user_id
+                await self._session.flush()
+                after = self._serialize_guide_article(article)
+                self._add_snapshot(
+                    "guide_article",
+                    article.id,
+                    article.version,
+                    after,
+                    principal.user_id,
+                )
+                self._audit.record(
+                    actor_user_id=principal.user_id,
+                    action="cms.guide_article.updated",
+                    resource_type="cms_guide_article",
+                    resource_id=str(article.id),
+                    before=before,
+                    after=after,
+                    request_id=request_id,
+                )
+            return article
+        except IntegrityError as exc:
+            await self._session.rollback()
+            raise CmsSlugConflictError() from exc
+
+    async def set_guide_article_status(
+        self,
+        principal: AuthPrincipal,
+        article_id: UUID,
+        new_status: CmsContentStatus,
+        *,
+        request_id: str,
+    ) -> CmsGuideArticle:
+        self._require_admin(principal)
+        async with self._session.begin():
+            article = await self._repository.get_guide_article(
+                article_id, for_update=True
+            )
+            if article is None:
+                raise CmsNotFoundError()
+            before = self._serialize_guide_article(article)
+            article.status = new_status
+            article.published_at = (
+                datetime.now(UTC) if new_status is CmsContentStatus.PUBLISHED else None
+            )
+            article.version += 1
+            article.updated_by = principal.user_id
+            await self._session.flush()
+            after = self._serialize_guide_article(article)
+            self._add_snapshot(
+                "guide_article",
+                article.id,
+                article.version,
+                after,
+                principal.user_id,
+            )
+            self._audit.record(
+                actor_user_id=principal.user_id,
+                action=f"cms.guide_article.{new_status.value.lower()}",
+                resource_type="cms_guide_article",
+                resource_id=str(article.id),
+                before=before,
+                after=after,
+                request_id=request_id,
+            )
+        return article
+
+    async def delete_guide_article(
+        self, principal: AuthPrincipal, article_id: UUID, *, request_id: str
+    ) -> None:
+        self._require_admin(principal)
+        async with self._session.begin():
+            article = await self._repository.get_guide_article(
+                article_id, for_update=True
+            )
+            if article is None:
+                raise CmsNotFoundError()
+            if article.status is CmsContentStatus.PUBLISHED:
+                raise CmsGuideArticleDeleteConflictError()
+            before = {
+                "title": article.title,
+                "slug": article.slug,
+                "status": article.status.value,
+                "version": article.version,
+            }
+            await self._repository.delete_guide_versions(article.id)
+            await self._repository.delete_guide_article(article)
+            self._audit.record(
+                actor_user_id=principal.user_id,
+                action="cms.guide_article.deleted",
+                resource_type="cms_guide_article",
+                resource_id=str(article.id),
+                before=before,
+                request_id=request_id,
+            )
+
+    async def list_admin_guide_articles(
+        self,
+        principal: AuthPrincipal,
+        *,
+        page: int,
+        page_size: int,
+        status: CmsContentStatus | None = None,
+        audience: str | None = None,
+        category: str | None = None,
+        query: str | None = None,
+    ) -> tuple[tuple[CmsGuideArticle, ...], int]:
+        self._require_admin(principal)
+        normalized_query = normalize_guide_text(query) if query else None
+        async with self._session.begin():
+            return await self._repository.list_guide_articles(
+                page=page,
+                page_size=page_size,
+                status=status,
+                audiences=(audience,) if audience else None,
+                category=category.strip().lower() if category else None,
+                query=normalized_query,
+            )
+
+    async def list_admin_guide_feedback(
+        self, principal: AuthPrincipal, article_id: UUID, *, page: int, page_size: int
+    ) -> tuple[tuple[CmsGuideFeedback, ...], int]:
+        self._require_admin(principal)
+        async with self._session.begin():
+            article = await self._repository.get_guide_article(article_id)
+            if article is None:
+                raise CmsNotFoundError()
+            return await self._repository.list_guide_feedback(
+                article_id, page=page, page_size=page_size
+            )
+
+    async def list_public_guide_articles(
+        self,
+        *,
+        page: int,
+        page_size: int,
+        query: str | None = None,
+        category: str | None = None,
+    ) -> tuple[tuple[CmsGuideArticle, ...], int]:
+        normalized_query = normalize_guide_text(query) if query else None
+        async with self._session.begin():
+            return await self._repository.list_guide_articles(
+                page=page,
+                page_size=page_size,
+                status=CmsContentStatus.PUBLISHED,
+                audiences=("PUBLIC",),
+                category=category.strip().lower() if category else None,
+                query=normalized_query,
+            )
+
+    async def list_accessible_guide_articles(
+        self,
+        principal: AuthPrincipal,
+        *,
+        is_employee: bool,
+        page: int,
+        page_size: int,
+        query: str | None = None,
+        category: str | None = None,
+    ) -> tuple[tuple[CmsGuideArticle, ...], int]:
+        audience_tags = {"PUBLIC", *principal.roles}
+        if is_employee:
+            audience_tags.add("EMPLOYEE")
+        normalized_query = normalize_guide_text(query) if query else None
+        async with self._session.begin():
+            return await self._repository.list_guide_articles(
+                page=page,
+                page_size=page_size,
+                status=CmsContentStatus.PUBLISHED,
+                audiences=tuple(sorted(audience_tags)),
+                category=category.strip().lower() if category else None,
+                query=normalized_query,
+            )
+
+    async def get_public_guide_article(self, slug: str) -> CmsGuideArticle:
+        async with self._session.begin():
+            article = await self._repository.get_public_guide_article_by_slug(slug)
+            if article is None:
+                raise CmsNotFoundError()
+            return article
+
+    async def get_accessible_guide_article(
+        self, principal: AuthPrincipal, slug: str, *, is_employee: bool
+    ) -> CmsGuideArticle:
+        audience_tags = {"PUBLIC", *principal.roles}
+        if is_employee:
+            audience_tags.add("EMPLOYEE")
+        async with self._session.begin():
+            article = await self._repository.get_accessible_guide_article_by_slug(
+                slug, tuple(sorted(audience_tags))
+            )
+            if article is None:
+                raise CmsNotFoundError()
+            return article
+
+    async def record_guide_feedback(
+        self,
+        slug: str,
+        *,
+        helpful: bool,
+        comment: str | None,
+        client_token: str,
+    ) -> None:
+        token_hash = sha256(client_token.encode("utf-8")).hexdigest()
+        normalized_comment = comment.strip()[:500] if comment else None
+        try:
+            async with self._session.begin():
+                article = await self._repository.get_public_guide_article_by_slug(slug)
+                if article is None:
+                    raise CmsNotFoundError()
+                if await self._repository.get_guide_feedback(article.id, token_hash):
+                    raise CmsGuideFeedbackConflictError()
+                self._repository.add_guide_feedback(
+                    CmsGuideFeedback(
+                        article_id=article.id,
+                        helpful=helpful,
+                        comment=normalized_comment or None,
+                        client_token_hash=token_hash,
+                    )
+                )
+                await self._session.flush()
+        except IntegrityError as exc:
+            await self._session.rollback()
+            raise CmsGuideFeedbackConflictError() from exc
+
+    @staticmethod
+    def _validate_guide_audiences(audiences: tuple[str, ...]) -> tuple[str, ...]:
+        normalized = tuple(
+            dict.fromkeys(audience.strip().upper() for audience in audiences)
+        )
+        if (
+            not normalized
+            or any(audience not in GUIDE_AUDIENCES for audience in normalized)
+            or ("PUBLIC" in normalized and len(normalized) != 1)
+        ):
+            raise CmsGuideArticleInvalidError()
+        return normalized
+
+    @staticmethod
+    def _serialize_guide_article(article: CmsGuideArticle) -> dict[str, object]:
+        return {
+            "id": str(article.id),
+            "title": article.title,
+            "slug": article.slug,
+            "summary": article.summary,
+            "category": article.category,
+            "audiences": article.audiences,
+            "body_html": article.body_html,
+            "sort_order": article.sort_order,
+            "status": article.status.value,
+            "version": article.version,
+            "published_at": article.published_at.isoformat()
+            if article.published_at
+            else None,
+        }
 
     async def create_page(
         self, principal: AuthPrincipal, data: CmsPageInput, *, request_id: str

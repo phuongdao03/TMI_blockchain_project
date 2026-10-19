@@ -83,30 +83,30 @@ export function CommunityFeed({
 
   return (
     <div className="public-theme-surface min-h-[calc(100dvh-5rem)]">
-      <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-        <header className="flex flex-col gap-4 border-b border-[var(--theme-border)] pb-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto max-w-6xl px-5 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+        <header className="flex flex-col gap-4 pb-5 sm:flex-row sm:items-center sm:justify-between sm:border-b sm:border-[var(--theme-border)]">
           <div className="min-w-0">
-            <p className="text-[0.68rem] font-bold tracking-[0.16em] text-[var(--theme-accent)] uppercase">
+            <p className="hidden text-[0.68rem] font-bold tracking-[0.16em] text-[var(--theme-accent)] uppercase sm:block">
               Tinh Hoa Việt · Kết nối và sẻ chia
             </p>
-            <h1 className="mt-1 text-3xl font-bold tracking-[-0.035em] text-[var(--theme-text)] sm:text-4xl">
+            <h1 className="text-2xl font-semibold tracking-[-0.025em] text-[var(--theme-text)] sm:mt-1 sm:text-4xl">
               Cộng đồng
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--theme-muted)] sm:mt-2">
               Nơi chia sẻ, trao đổi và kết nối những người quan tâm đến giá trị
               Việt.
             </p>
           </div>
           {authStatus === "authenticated" ? (
             <Link
-              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-[var(--theme-accent)] px-5 text-sm font-bold text-[var(--theme-accent-contrast)] transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+              className="inline-flex min-h-11 w-fit shrink-0 items-center justify-center rounded-lg bg-[var(--theme-accent)] px-5 text-sm font-semibold text-[var(--theme-accent-contrast)] transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
               href="/community/new"
             >
               + Viết bài
             </Link>
           ) : authStatus === "unauthenticated" ? (
             <Link
-              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-[var(--theme-accent)] px-5 text-sm font-bold text-[var(--theme-accent-contrast)] transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+              className="inline-flex min-h-11 w-fit shrink-0 items-center justify-center rounded-lg bg-[var(--theme-accent)] px-5 text-sm font-semibold text-[var(--theme-accent-contrast)] transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
               href={`/login?next=${encodeURIComponent("/community/new")}`}
             >
               Đăng nhập để viết bài
@@ -124,11 +124,6 @@ export function CommunityFeed({
           <p className="mt-3 border-l-2 border-[var(--theme-border)] pl-3 text-sm text-[var(--theme-muted)]">
             Bạn đang ở chế độ chỉ đọc. Đăng nhập để đăng bài, bình luận và tương
             tác.
-          </p>
-        ) : null}
-        {authStatus === "loading" ? (
-          <p className="mt-3 text-sm text-[var(--theme-muted)]" role="status">
-            Đang xác định tài khoản…
           </p>
         ) : null}
         {authStatus === "error" ? (
@@ -156,18 +151,18 @@ export function CommunityFeed({
         <form
           action="/community"
           aria-label="Tìm kiếm và lọc bài viết"
-          className="my-4 grid gap-2 border-b border-[var(--theme-border)] pb-4 sm:grid-cols-[minmax(12rem,1fr)_minmax(10rem,15rem)_minmax(9rem,12rem)]"
+          className="mb-3 grid grid-cols-2 gap-2 sm:my-4 sm:grid-cols-[minmax(12rem,1fr)_minmax(10rem,15rem)_minmax(9rem,12rem)] sm:border-b sm:border-[var(--theme-border)] sm:pb-4"
           onSubmit={handleFilterSubmit}
           role="search"
         >
-          <label className="relative flex min-w-0 items-center">
+          <label className="relative col-span-2 flex min-w-0 items-center sm:col-span-1">
             <span className="sr-only">Tìm kiếm bài viết</span>
             <input
               className="min-h-11 min-w-0 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] py-2 pr-12 pl-3 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
               defaultValue={q ?? ""}
               maxLength={120}
               name="q"
-              placeholder="Tìm trong tiêu đề và nội dung"
+              placeholder="Tìm bài viết"
               type="search"
             />
             <button
@@ -182,13 +177,14 @@ export function CommunityFeed({
             Chuyên mục
           </label>
           <select
-            className="min-h-11 min-w-0 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
+            className="min-h-11 min-w-0 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-2 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20 sm:px-3"
             key={`${category ?? ""}:${sort}:${categories.data ? "ready" : "loading"}`}
             id="community-category-filter"
             name="category"
             defaultValue={category ?? ""}
+            onChange={(event) => event.currentTarget.form?.requestSubmit()}
           >
-            <option value="">Tất cả chuyên mục</option>
+            <option value="">Mọi chuyên mục</option>
             {categories.data?.map((item) => (
               <option key={item.id} value={item.slug}>
                 {item.name}
@@ -199,15 +195,16 @@ export function CommunityFeed({
             Sắp xếp
           </label>
           <select
-            className="min-h-11 min-w-0 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
+            className="min-h-11 min-w-0 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-2 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20 sm:px-3"
             key={`${category ?? ""}:${sort}`}
             id="community-sort-filter"
             name="sort"
             defaultValue={sort}
+            onChange={(event) => event.currentTarget.form?.requestSubmit()}
           >
             {sortOptions.map((option) => (
               <option key={option.value} value={option.value}>
-                Sắp xếp: {option.label}
+                {option.label}
               </option>
             ))}
           </select>

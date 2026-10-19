@@ -20,8 +20,8 @@ const sections = [
   { href: "#employees", label: "Nhân viên và tính lương" },
   { href: "#records", label: "Hồ sơ và người dùng" },
   { href: "#review", label: "Thẩm định hồ sơ" },
-  { href: "#payment", label: "Thanh toán" },
-  { href: "#blockchain", label: "Ghi nhận blockchain" },
+  { href: "#payment", label: "Thu phí" },
+  { href: "#registry", label: "Ghi nhận hồ sơ" },
   { href: "#publication", label: "Công bố nội dung" },
   { href: "#staff", label: "Tài khoản nhân sự" },
   { href: "#audit", label: "Lịch sử và báo cáo" },
@@ -102,6 +102,18 @@ export default function AdminGuidePage() {
             làm theo thứ tự và kiểm tra kết quả trên hồ sơ trước khi chuyển sang
             bước tiếp theo.
           </p>
+          <Link
+            className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-primary-700 px-4 text-sm font-bold text-white hover:bg-primary-800"
+            href="/help"
+          >
+            Xem hướng dẫn theo chủ đề
+          </Link>
+          <Link
+            className="ml-3 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--theme-text)] underline underline-offset-4"
+            href="/admin/guide/articles"
+          >
+            Quản lý bài viết hướng dẫn
+          </Link>
         </header>
 
         <div className="grid items-start gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
@@ -302,7 +314,7 @@ export default function AdminGuidePage() {
             <GuideSection
               id="payment"
               icon={BadgeDollarSign}
-              title="Tạo yêu cầu thanh toán"
+              title="Gửi thông báo thu phí"
             >
               <p>
                 Chỉ tạo khoản phí sau khi hồ sơ đến giai đoạn được phép thu.
@@ -312,54 +324,55 @@ export default function AdminGuidePage() {
                 <li>Chọn hồ sơ đủ điều kiện và kiểm tra mã hồ sơ.</li>
                 <li>
                   Nhập số tiền theo biểu phí hiện hành, nội dung khoản phí và
-                  hạn thanh toán.
+                  hạn nộp phí.
                 </li>
                 <li>
-                  Xem lại thông tin, gửi yêu cầu và theo dõi trạng thái thanh
-                  toán trong hệ thống.
+                  Xem lại thông tin, gửi thông báo và theo dõi trạng thái khoản
+                  thu.
                 </li>
                 <li>
                   Nếu người nộp báo đã chuyển tiền mà trạng thái chưa cập nhật,
-                  đối chiếu giao dịch trước khi xử lý; không tạo khoản thu
-                  trùng.
+                  đối chiếu thông tin chuyển tiền trước khi xử lý; không tạo
+                  khoản thu trùng.
                 </li>
               </Steps>
               <p>
-                Kết quả cần thấy: yêu cầu thanh toán xuất hiện trên đúng hồ sơ
-                với số tiền và hạn thanh toán đã kiểm tra.
+                Kết quả cần thấy: thông báo thu phí xuất hiện trên đúng hồ sơ
+                với số tiền và hạn nộp phí đã kiểm tra.
               </p>
               <WorkspaceLink href="/admin/payments">
-                Mở quản lý tài chính
+                Mở mục Thu phí
               </WorkspaceLink>
             </GuideSection>
 
             <GuideSection
-              id="blockchain"
+              id="registry"
               icon={Signature}
-              title="Ghi nhận hồ sơ trên blockchain"
+              title="Ghi nhận hồ sơ đã được duyệt"
             >
               <p>
-                Thực hiện sau khi hồ sơ hoàn tất xét duyệt và các điều kiện
-                thanh toán. Hệ thống chỉ công bố dấu vân tay số; không đưa tài
-                liệu gốc lên blockchain.
+                Thực hiện sau khi hồ sơ hoàn tất thẩm định và đã có quyết định
+                thu phí hoặc miễn phí. Bản ghi giúp đối chiếu mã hồ sơ và phiên
+                bản; không thay cho kết luận pháp lý hay giấy tờ sở hữu, và
+                không lưu tệp gốc hoặc tài liệu cá nhân.
               </p>
               <Steps>
                 <li>Kiểm tra hồ sơ đã đủ điều kiện ghi nhận.</li>
-                <li>Kết nối ví được cấp quyền và chọn mạng Polygon.</li>
-                <li>Đối chiếu mã hồ sơ, phiên bản và dấu vân tay số.</li>
+                <li>Chọn xác nhận ghi nhận hồ sơ.</li>
+                <li>Đối chiếu mã hồ sơ và phiên bản trước khi xác nhận.</li>
                 <li>
-                  Xác nhận trong ví và theo dõi trạng thái đến khi hiển thị
-                  <strong> Đã ghi nhận</strong>. Nếu đang chờ, kiểm tra giao
-                  dịch trước khi thử lại.
+                  Làm theo hướng dẫn xác nhận và chờ trạng thái
+                  <strong> Đã ghi nhận</strong>. Nếu đang xử lý, kiểm tra lại
+                  trạng thái trước khi thao tác tiếp.
                 </li>
               </Steps>
               <p>
-                Kết quả cần thấy: trạng thái <strong>Đã ghi nhận</strong> và mã
-                giao dịch tương ứng. Nếu ví hoặc mạng không đúng, dừng thao tác
-                và chọn lại trước khi ký.
+                Kết quả cần thấy: trạng thái <strong>Đã ghi nhận</strong> trên
+                đúng hồ sơ. Nếu thông tin chưa khớp, dừng thao tác và kiểm tra
+                lại hồ sơ trước khi xác nhận.
               </p>
-              <WorkspaceLink href="/blockchain">
-                Mở khu vực ghi nhận
+              <WorkspaceLink href="/admin/registry">
+                Mở danh sách hồ sơ chờ ghi nhận
               </WorkspaceLink>
             </GuideSection>
 
@@ -505,22 +518,22 @@ export default function AdminGuidePage() {
                 </details>
                 <details className="p-4">
                   <summary className="cursor-pointer font-semibold text-[var(--theme-text)]">
-                    Thanh toán chưa cập nhật
+                    Khoản thu chưa cập nhật
                   </summary>
                   <p className="mt-2">
-                    Tra mã hồ sơ và mã giao dịch, kiểm tra trạng thái tại khu
-                    vực thanh toán. Chỉ xử lý tiếp sau khi đã đối chiếu kết quả;
-                    tránh tạo khoản thu thứ hai.
+                    Tra mã hồ sơ và mã tham chiếu, kiểm tra trạng thái tại mục
+                    Thu phí. Chỉ xử lý tiếp sau khi đã đối chiếu kết quả; tránh
+                    tạo khoản thu thứ hai.
                   </p>
                 </details>
                 <details className="p-4">
                   <summary className="cursor-pointer font-semibold text-[var(--theme-text)]">
-                    Ví không kết nối hoặc ký không thành công
+                    Không thể xác nhận hồ sơ
                   </summary>
                   <p className="mt-2">
-                    Mở khóa ví, chọn tài khoản được cấp quyền và mạng Polygon.
-                    Nếu đã xác nhận giao dịch trong ví, kiểm tra trạng thái trên
-                    hệ thống trước khi thao tác lại.
+                    Kiểm tra kết nối và quyền truy cập rồi thử lại. Nếu đã xác
+                    nhận trước đó, hãy làm mới trạng thái trước khi thao tác
+                    tiếp.
                   </p>
                 </details>
                 <details className="p-4">

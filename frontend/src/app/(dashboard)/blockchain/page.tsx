@@ -1,10 +1,5 @@
-import { RoleGate } from "@/components/auth/role-gate";
-import { BlockchainSigningWorkspace } from "@/components/blockchain/blockchain-signing-workspace";
+import { redirect } from "next/navigation";
 
 export default function BlockchainSigningPage() {
-  return (
-    <RoleGate allowed={["SUPER_ADMIN"]}>
-      <BlockchainSigningWorkspace />
-    </RoleGate>
-  );
+  redirect("/admin/registry");
 }

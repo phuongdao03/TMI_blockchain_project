@@ -101,6 +101,7 @@ describe("HR report downloads", () => {
       expect(updateDepartment).toHaveBeenCalledWith("department-1", {
         name: "Phòng Kỹ thuật",
         description: null,
+        managerEmployeeId: null,
       }),
     );
   });

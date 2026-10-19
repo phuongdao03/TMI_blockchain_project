@@ -58,7 +58,7 @@ export function InstitutionContent() {
             <WelcomeMusic />
           </div>
           <a
-            aria-label="Mở toàn bộ Quyết định thành lập Trung tâm Xác lập Tinh Hoa Việt"
+            aria-label="Quyết định thành lập PDF · 2 trang, mở văn bản gốc trong tab mới"
             className="institution-decision__preview"
             href={decision}
             rel="noopener"

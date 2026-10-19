@@ -88,10 +88,11 @@ describe("DossierWorkspace", () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText("Đã tạo hồ sơ nháp")).toBeTruthy();
     expect(
-      screen.getByRole("link", { name: "Thêm tài liệu" }).getAttribute("href"),
-    ).toBe("#dossier-steps");
+      await screen.findByText(
+        "Đã lưu bản nháp. Thêm tài liệu cần thiết rồi kiểm tra trước khi gửi.",
+      ),
+    ).toBeTruthy();
     expect(screen.getByText("Tài liệu cho hồ sơ của bạn")).toBeTruthy();
   });
 
@@ -391,9 +392,7 @@ describe("DossierWorkspace", () => {
       screen.getByText("Chưa đáp ứng các tài liệu bắt buộc"),
     ).toBeDefined();
     await user.click(screen.getByRole("button", { name: "Bổ sung tài liệu" }));
-    expect(
-      screen.getByText(/Chọn loại tài liệu, thêm tệp rồi bấm Tải lên/),
-    ).toBeDefined();
+    expect(screen.getByText(/Chọn loại tài liệu và tệp cần gửi/)).toBeDefined();
     await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
     expect(screen.getByText("Tài liệu quyền sở hữu")).toBeDefined();
     expect(screen.getByRole("button", { name: "Nộp hồ sơ" })).toHaveProperty(
@@ -429,16 +428,22 @@ describe("DossierWorkspace", () => {
     const steps = await screen.findByRole("navigation", {
       name: "Các bước hoàn thiện hồ sơ",
     });
-    await user.click(within(steps).getByRole("button", { name: /Bằng chứng/ }));
+    await user.click(within(steps).getByRole("button", { name: /Tài liệu/ }));
     expect(screen.queryByLabelText("1. Chọn loại tài liệu")).toBeNull();
+    const mobileRuleSelect = screen.getByRole("combobox", {
+      name: "Loại tài liệu cần thêm",
+    });
+    expect(mobileRuleSelect).toHaveProperty("value", "OWNERSHIP_DOCUMENT");
     const other = screen.getByRole("button", { name: /Tài liệu khác/ });
     await user.upload(
       screen.getByLabelText("Chọn tài liệu quyền sở hữu"),
       new File(["proof"], "proof.pdf", { type: "application/pdf" }),
     );
     expect(other.hasAttribute("disabled")).toBe(true);
+    expect(mobileRuleSelect.hasAttribute("disabled")).toBe(true);
     await user.click(screen.getByRole("button", { name: "Xóa proof.pdf" }));
     expect(other.hasAttribute("disabled")).toBe(false);
+    expect(mobileRuleSelect.hasAttribute("disabled")).toBe(false);
   });
 
   it("uses neutral document labels when the dossier type has no document rules", async () => {
@@ -455,7 +460,7 @@ describe("DossierWorkspace", () => {
     const steps = await screen.findByRole("navigation", {
       name: "Các bước hoàn thiện hồ sơ",
     });
-    await user.click(within(steps).getByRole("button", { name: /Bằng chứng/ }));
+    await user.click(within(steps).getByRole("button", { name: /Tài liệu/ }));
 
     expect(
       screen.getByRole("option", {

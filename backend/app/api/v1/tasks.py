@@ -1,7 +1,7 @@
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request, status
+from fastapi import APIRouter, Query, Request, Response, status
 
 from app.core.schemas import (
     ListResponseMeta,
@@ -26,12 +26,64 @@ from app.modules.tasks.schemas import (
     TaskChecklistItemData,
     TaskCommentData,
     TaskData,
+    UpdateMyTaskStatusRequest,
     UpdateTaskChecklistItemRequest,
     UpdateTaskRequest,
 )
 from app.modules.tasks.service import TaskService
 
 router = APIRouter(prefix="/api/v1/admin/tasks", tags=["tasks"])
+my_router = APIRouter(prefix="/api/v1/me/tasks", tags=["my tasks"])
+
+
+@my_router.get("", response_model=PaginatedSuccessEnvelope[list[TaskData]])
+async def list_my_tasks(
+    request: Request,
+    response: Response,
+    principal: CurrentPrincipalDependency,
+    session: SessionDependency,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
+) -> PaginatedSuccessEnvelope[list[TaskData]]:
+    rows, total = await TaskService(session).list_my_tasks(
+        principal,
+        page=page,
+        page_size=page_size,
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return PaginatedSuccessEnvelope(
+        data=list(rows),
+        meta=ListResponseMeta(
+            request_id=request.state.request_id,
+            page=page,
+            page_size=page_size,
+            total=total,
+        ),
+    )
+
+
+@my_router.patch("/{task_id}", response_model=SuccessEnvelope[TaskData])
+async def update_my_task_status(
+    task_id: UUID,
+    payload: UpdateMyTaskStatusRequest,
+    request: Request,
+    response: Response,
+    principal: CsrfProtectedPrincipalDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[TaskData]:
+    data = await TaskService(session).update_my_task_status(
+        principal,
+        task_id,
+        payload,
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return SuccessEnvelope(
+        data=data,
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
 
 
 @router.get("", response_model=PaginatedSuccessEnvelope[list[TaskData]])
@@ -42,6 +94,9 @@ async def list_tasks(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
     search: Annotated[str | None, Query(max_length=240)] = None,
+    assignee_employee_id: Annotated[
+        UUID | None, Query(alias="assigneeEmployeeId")
+    ] = None,
     task_status: Annotated[TaskStatus | None, Query(alias="status")] = None,
     priority: TaskPriority | None = None,
     sort_by: Annotated[Literal["createdAt", "dueAt"], Query(alias="sortBy")] = (
@@ -56,6 +111,7 @@ async def list_tasks(
         page=page,
         page_size=page_size,
         search=search,
+        assignee_employee_id=assignee_employee_id,
         task_status=task_status,
         priority=priority,
         sort_by=sort_by,

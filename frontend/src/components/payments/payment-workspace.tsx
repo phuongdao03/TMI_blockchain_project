@@ -282,7 +282,7 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
       <ConfirmationDialog
         confirmLabel="Xác nhận hủy"
         confirmDisabled={cancelReason.trim().length < 5}
-        description="Lệnh chưa thanh toán sẽ được hủy tại payOS. Hồ sơ quay lại trạng thái đã duyệt để bạn có thể kiểm tra và tạo lần thanh toán mới."
+        description="Lần thanh toán chưa hoàn tất sẽ được hủy. Hồ sơ quay lại trạng thái đã duyệt để bạn kiểm tra trước khi thanh toán lại."
         isPending={cancel.isPending}
         onCancel={() => setCancelOpen(false)}
         onConfirm={() => cancel.mutate()}

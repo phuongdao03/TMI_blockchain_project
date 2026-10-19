@@ -45,3 +45,26 @@ it("loads an employee's editable profile without waiting for organizations", asy
   fireEvent.click(screen.getByRole("tab", { name: "Tổ chức" }));
   await waitFor(() => expect(listOrganizations).toHaveBeenCalledTimes(1));
 });
+
+it("moves focus and selection across settings tabs with arrow keys", async () => {
+  getProfile.mockClear();
+  listOrganizations.mockClear();
+  getProfile.mockReturnValue(new Promise(() => undefined));
+  listOrganizations.mockResolvedValue({ data: [] });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <AccountSettings />
+    </QueryClientProvider>,
+  );
+
+  const profileTab = screen.getByRole("tab", { name: "Hồ sơ cá nhân" });
+  fireEvent.keyDown(profileTab, { key: "ArrowRight" });
+
+  const organizationTab = screen.getByRole("tab", { name: "Tổ chức" });
+  expect(organizationTab.getAttribute("aria-selected")).toBe("true");
+  expect(document.activeElement).toBe(organizationTab);
+  await waitFor(() => expect(listOrganizations).toHaveBeenCalledOnce());
+});

@@ -9,7 +9,7 @@ const asset = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/api/client", () => ({ publicApi: { asset } }));
 
 describe("AssetDetail", () => {
-  it("presents blockchain evidence in plain Vietnamese and keeps technical data advanced", async () => {
+  it("shows the public verification path without internal details", async () => {
     asset.mockResolvedValue({
       asset: {
         slug: "tac-pham",
@@ -37,16 +37,13 @@ describe("AssetDetail", () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText("Xác minh blockchain")).toBeDefined();
+    expect(await screen.findByText("Kiểm tra bằng xác lập")).toBeDefined();
+    expect(screen.getAllByText("THV-2026-001")).toHaveLength(2);
     expect(
-      screen.getByText(
-        "Bản ghi blockchain đã được công bố. Hãy tra cứu bằng xác lập để kiểm tra trạng thái mới nhất.",
-      ),
-    ).toBeDefined();
-    expect(screen.getByText("Mã giao dịch trên blockchain")).toBeDefined();
-    expect(screen.getByText("Số lượt mạng đã xác nhận")).toBeDefined();
-    expect(screen.getByText("Địa chỉ sổ đăng ký công khai")).toBeDefined();
-    expect(screen.getByText("Blockchain là gì?")).toBeDefined();
-    expect(screen.getByText("Chi tiết nâng cao")).toBeDefined();
+      screen
+        .getByRole("link", { name: /Tra cứu bằng xác lập/ })
+        .getAttribute("href"),
+    ).toBe("/verify/THV-2026-001");
+    expect(screen.queryByText(/blockchain|polygon|0xabcd|0x4B7f/i)).toBeNull();
   });
 });

@@ -28,7 +28,8 @@ export function StaffInvitationForm({
     setIsSubmitting(true);
     setError(undefined);
     try {
-      if (!firebaseConfigured()) throw new Error("Firebase is not configured");
+      if (!firebaseConfigured())
+        throw new Error("Dịch vụ xác minh tài khoản chưa sẵn sàng");
       const credential = await signInWithPopup(
         getFirebaseAuth(),
         new GoogleAuthProvider(),

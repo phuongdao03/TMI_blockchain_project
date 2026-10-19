@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   CheckCircle2,
-  ExternalLink,
   History,
   LoaderCircle,
   Search,
@@ -23,14 +22,14 @@ const resultCopy: Record<
   { title: string; detail: string; tone: string; icon: typeof CheckCircle2 }
 > = {
   VALID: {
-    title: "Bằng xác lập có hiệu lực; hồ sơ đã được xác nhận trên blockchain.",
+    title: "Bằng xác lập đang có hiệu lực",
     detail:
-      "Mã bằng đang có hiệu lực trong hệ thống. Bằng chứng hồ sơ đã được ghi nhận trên Polygon; bạn có thể đối chiếu nội dung, thời điểm và mã giao dịch bên cạnh.",
+      "Đối chiếu tên tác phẩm, chủ thể và thời điểm xác nhận với thông tin bạn được cung cấp.",
     tone: "text-success",
     icon: CheckCircle2,
   },
   MISMATCH: {
-    title: "Tài liệu hiện tại không trùng với dấu vân tay đã công bố.",
+    title: "Thông tin tài liệu không khớp với bản đã ghi nhận.",
     detail: "Hãy kiểm tra lại tài liệu hoặc liên hệ đơn vị phát hành.",
     tone: "text-error",
     icon: AlertTriangle,
@@ -49,7 +48,7 @@ const resultCopy: Record<
   },
   PENDING: {
     title: "Đang chờ xác nhận",
-    detail: "Giao dịch đã gửi, đang chờ mạng Polygon xác nhận.",
+    detail: "Thông tin đang được xác nhận. Vui lòng kiểm tra lại sau.",
     tone: "text-warning",
     icon: LoaderCircle,
   },
@@ -67,13 +66,6 @@ function formatDate(value: string | null) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
-}
-
-function networkLabel(value: string | null | undefined): string | null {
-  if (!value) return null;
-  return value.toLowerCase() === "polygon"
-    ? "Mạng blockchain Polygon"
-    : "Mạng blockchain";
 }
 
 export function VerificationPanel({
@@ -144,7 +136,7 @@ export function VerificationPanel({
             value={mode}
           >
             <option value="number">Số bằng xác lập</option>
-            <option value="transaction">Mã giao dịch</option>
+            <option value="transaction">Mã đối chiếu</option>
           </SelectControl>
           <label className="sr-only" htmlFor="verification-value">
             Thông tin cần tra cứu
@@ -154,7 +146,9 @@ export function VerificationPanel({
             id="verification-value"
             name="lookup"
             onChange={(event) => setValue(event.target.value)}
-            placeholder={mode === "number" ? "Ví dụ: THV-2026-…" : "Ví dụ: 0x…"}
+            placeholder={
+              mode === "number" ? "Ví dụ: THV-2026-…" : "Nhập mã được cung cấp"
+            }
             required
             value={value}
           />
@@ -258,7 +252,7 @@ export function VerificationPanel({
               embedded ? "min-h-32 py-8" : "min-h-64"
             }`}
           >
-            Nhập mã bằng xác lập hoặc mã giao dịch để bắt đầu.
+            Nhập số bằng xác lập hoặc mã đối chiếu để bắt đầu.
           </div>
         )}
       </section>
@@ -276,7 +270,7 @@ function VerificationResult({
       ? {
           title: "Chưa thể đối chiếu trực tiếp",
           detail:
-            "Thông tin bằng đã công bố vẫn hiển thị. Kết nối với Polygon chưa khả dụng trong lần tra cứu này; vui lòng kiểm tra lại sau.",
+            "Thông tin bằng đã công bố vẫn hiển thị. Trạng thái mới nhất chưa thể kiểm tra trong lần tra cứu này; vui lòng thử lại sau.",
           tone: "text-warning",
           icon: ShieldQuestion,
         }
@@ -323,105 +317,18 @@ function VerificationResult({
             label="Thời điểm xác nhận"
             value={formatDate(data.confirmedAt)}
           />
-          <Fact
-            label="Nơi ghi nhận công khai"
-            value={networkLabel(data.network)}
-          />
-          <Fact
-            label="Mức xác nhận"
-            value={
-              data.confirmations !== undefined
-                ? `${data.confirmations} lượt xác nhận từ mạng`
-                : null
-            }
-          />
         </dl>
-        <details className="mt-6 border-t border-white/10 pt-4 text-sm">
-          <summary className="cursor-pointer font-bold text-slate-200">
-            Chi tiết nâng cao
-          </summary>
-          <dl className="mt-4 space-y-3 text-xs">
-            <Fact label="Mạng ghi nhận" value={data.network} technical />
-            <Fact
-              label="Số lượt mạng đã xác nhận"
-              value={String(data.confirmations)}
-              technical
-            />
-            <Fact
-              label="Số khối ghi nhận"
-              value={data.blockNumber ? String(data.blockNumber) : null}
-              technical
-            />
-            <Fact
-              label="Dấu vân tay số của hồ sơ"
-              value={data.metadataHash}
-              technical
-            />
-            <Fact
-              label="Mã giao dịch trên blockchain"
-              value={data.transactionHash}
-              technical
-            />
-            <Fact
-              label="Địa chỉ sổ đăng ký công khai"
-              value={data.contractAddress}
-              technical
-            />
-            <Fact
-              label="Ví tổ chức đã ký"
-              value={data.signerWalletAddress}
-              technical
-            />
-            <Fact
-              label="Sự kiện ghi nhận"
-              value={data.eventName ?? "ProofRecorded"}
-              technical
-            />
-          </dl>
-          {data.explorerUrl ? (
-            <a
-              className="mt-4 inline-flex items-center gap-2 text-gold-300"
-              href={data.explorerUrl}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              Xem bản ghi công khai <ExternalLink className="size-4" />
-            </a>
-          ) : null}
-        </details>
-        <details className="mt-4 border-t border-white/10 pt-4 text-sm">
-          <summary className="cursor-pointer font-bold text-slate-200">
-            Blockchain là gì?
-          </summary>
-          <p className="mt-3 leading-6 text-slate-400">
-            Blockchain là sổ ghi nhận công khai. Hệ thống không đưa tài liệu gốc
-            lên mạng; chỉ ghi lại dấu vân tay số để kiểm tra tài liệu có bị thay
-            đổi hay không.
-          </p>
-        </details>
       </div>
     </section>
   );
 }
 
-function Fact({
-  label,
-  value,
-  technical = false,
-}: {
-  label: string;
-  value?: string | null;
-  technical?: boolean;
-}) {
+function Fact({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
     <div>
       <dt className="text-slate-400">{label}</dt>
-      <dd
-        className={`mt-1 break-all text-slate-200 ${technical ? "font-mono" : "font-bold"}`}
-      >
-        {value}
-      </dd>
+      <dd className="mt-1 break-all font-bold text-slate-200">{value}</dd>
     </div>
   );
 }

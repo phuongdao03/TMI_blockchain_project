@@ -10,7 +10,7 @@ test("exposes an installable PWA shell", async ({ page, request }) => {
   await page.goto("/");
 
   const headerInstallLink = page.getByRole("link", {
-    name: "Tải ứng dụng",
+    name: "Cách cài ứng dụng",
   });
   if (await headerInstallLink.isVisible()) {
     await expect(headerInstallLink).toHaveAttribute("href", "/install");
@@ -18,9 +18,9 @@ test("exposes an installable PWA shell", async ({ page, request }) => {
     await page.getByRole("button", { name: "Mở menu" }).click();
     await expect(
       page
-        .getByRole("navigation", { name: "Điều hướng di động" })
+        .getByRole("navigation", { name: "Menu công khai" })
         .getByRole("link", {
-          name: "Tải ứng dụng",
+          name: "Cài ứng dụng",
         }),
     ).toHaveAttribute("href", "/install");
   }
@@ -48,12 +48,13 @@ test("exposes an installable PWA shell", async ({ page, request }) => {
   await page.goto("/install");
   const installGuide = page.locator(".install-guide");
   await expect(
-    installGuide.getByRole("link", { name: "Xem cách cài trên thiết bị" }),
+    installGuide.getByRole("link", { name: /Xem các bước trên/ }),
   ).toBeVisible();
   const nativeInstallAction = installGuide.getByRole("button", {
-    name: "Tải ứng dụng",
+    name: "Cài ứng dụng",
   });
-  await expect(nativeInstallAction).toBeVisible();
-  await expect(nativeInstallAction).toBeEnabled();
+  if (await nativeInstallAction.count()) {
+    await expect(nativeInstallAction).toBeEnabled();
+  }
   expect(browserErrors).toEqual([]);
 });

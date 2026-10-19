@@ -108,7 +108,17 @@
     ".next-role-ui-preview/types/**/*.ts",
     ".next-role-ui-preview/dev/types/**/*.ts",
     ".next-attendance-preview/types/**/*.ts",
-    ".next-attendance-preview/dev/types/**/*.ts"
+    ".next-attendance-preview/dev/types/**/*.ts",
+    ".next-e2e-codex-ad0be3b/types/**/*.ts",
+    ".next-e2e-codex-ad0be3b/dev/types/**/*.ts",
+    ".next-e2e-lcp-ad0be3b/types/**/*.ts",
+    ".next-e2e-lcp-ad0be3b/dev/types/**/*.ts",
+    ".next-e2e-login-ad0be3b/types/**/*.ts",
+    ".next-e2e-login-ad0be3b/dev/types/**/*.ts",
+    ".next-e2e-public-theme-fix/types/**/*.ts",
+    ".next-e2e-public-theme-fix/dev/types/**/*.ts",
+    ".next-guide-live/types/**/*.ts",
+    ".next-guide-live/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules", ".next-*", "playwright-report", "test-results"]
 }

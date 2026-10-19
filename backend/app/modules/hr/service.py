@@ -1,10 +1,10 @@
 from calendar import monthrange
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from uuid import NAMESPACE_URL, UUID, uuid5
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -63,6 +63,8 @@ from app.modules.hr.schemas import (
     CreateLeaveRequest,
     CreateOvertimeRequest,
     DepartmentData,
+    DepartmentMemberWorkloadData,
+    DepartmentOverviewData,
     EmployeeData,
     LeaveDecisionRequest,
     LeaveRequestData,
@@ -75,7 +77,15 @@ from app.modules.hr.schemas import (
     UpdateEmployeeRequest,
 )
 from app.modules.notifications.models import Notification
+from app.modules.reviews.models import ReviewAssignment, ReviewAssignmentStatus
+from app.modules.tasks.models import Task, TaskStatus
 from app.modules.users.models import UserProfile
+from app.modules.work_allocations.models import (
+    AllocationMember,
+    WorkAllocation,
+    WorkAllocationKind,
+    WorkAllocationStatus,
+)
 
 ATTENDANCE_LOCATION_RETENTION_MONTHS = 24
 STANDARD_WORKDAY_MINUTES = 8 * 60
@@ -184,6 +194,303 @@ class HrService:
         )
         return tuple(DepartmentData.model_validate(row) for row in rows), total
 
+    async def department_overview(
+        self,
+        principal: AuthPrincipal,
+        department_id: UUID,
+        *,
+        start_date: date,
+        end_date: date,
+    ) -> DepartmentOverviewData:
+        self._require(principal, "hr.departments.manage")
+        if end_date < start_date or (end_date - start_date).days > 365:
+            raise DomainError(
+                code="HR_DEPARTMENT_DATE_RANGE_INVALID",
+                message="Department report period must be within 366 days.",
+                status_code=422,
+            )
+        department = await self._session.get(Department, department_id)
+        if department is None:
+            raise DomainError(
+                code="HR_DEPARTMENT_NOT_FOUND",
+                message="Department not found.",
+                status_code=404,
+            )
+        employees = tuple(
+            (
+                await self._session.scalars(
+                    select(Employee)
+                    .where(Employee.department_id == department_id)
+                    .order_by(Employee.full_name, Employee.id)
+                )
+            ).all()
+        )
+        employee_ids = {employee.id for employee in employees}
+        user_ids = {employee.user_id for employee in employees if employee.user_id}
+        start_at = datetime.combine(start_date, time.min, tzinfo=UTC)
+        end_at = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=UTC)
+        now = datetime.now(UTC)
+
+        task_rows = tuple(
+            (
+                await self._session.execute(
+                    select(
+                        Task.assignee_employee_id,
+                        Task.status,
+                        Task.due_at,
+                        Task.created_at,
+                        Task.completed_at,
+                    )
+                    .join(Employee, Employee.id == Task.assignee_employee_id)
+                    .where(
+                        Employee.department_id == department_id,
+                        or_(
+                            Task.status.in_([TaskStatus.TODO, TaskStatus.IN_PROGRESS]),
+                            (
+                                (Task.status == TaskStatus.DONE)
+                                & (Task.completed_at >= start_at)
+                                & (Task.completed_at < end_at)
+                            ),
+                        ),
+                    )
+                )
+            ).tuples()
+        )
+        workload: dict[UUID, dict[str, int]] = {
+            employee_id: {
+                "open_task_count": 0,
+                "overdue_task_count": 0,
+                "completed_task_count": 0,
+                "open_review_count": 0,
+                "overdue_review_count": 0,
+            }
+            for employee_id in employee_ids
+        }
+        completion_hours: list[float] = []
+        employee_by_user = {
+            employee.user_id: employee.id
+            for employee in employees
+            if employee.user_id is not None
+        }
+        for employee_id, status, due_at, created_at, completed_at in task_rows:
+            if employee_id not in workload:
+                continue
+            metrics = workload[employee_id]
+            if status in {TaskStatus.TODO, TaskStatus.IN_PROGRESS}:
+                metrics["open_task_count"] += 1
+                if due_at is not None and due_at < now:
+                    metrics["overdue_task_count"] += 1
+            elif status is TaskStatus.DONE and completed_at is not None:
+                metrics["completed_task_count"] += 1
+                if created_at is not None:
+                    created = (
+                        created_at
+                        if created_at.tzinfo
+                        else created_at.replace(tzinfo=UTC)
+                    )
+                    completed = (
+                        completed_at
+                        if completed_at.tzinfo
+                        else completed_at.replace(tzinfo=UTC)
+                    )
+                    completion_hours.append(
+                        max(0.0, (completed - created).total_seconds() / 3600)
+                    )
+
+        if user_ids:
+            allocation_rows = tuple(
+                (
+                    await self._session.execute(
+                        select(
+                            AllocationMember.user_id,
+                            WorkAllocation.due_at,
+                            WorkAllocation.created_at,
+                            AllocationMember.completed_at,
+                        )
+                        .join(
+                            WorkAllocation,
+                            WorkAllocation.id == AllocationMember.allocation_id,
+                        )
+                        .where(
+                            AllocationMember.user_id.in_(user_ids),
+                            AllocationMember.is_active.is_(True),
+                            WorkAllocation.kind == WorkAllocationKind.GENERIC,
+                            or_(
+                                and_(
+                                    WorkAllocation.status
+                                    == WorkAllocationStatus.ACTIVE,
+                                    AllocationMember.completed_at.is_(None),
+                                ),
+                                and_(
+                                    WorkAllocation.status.in_(
+                                        [
+                                            WorkAllocationStatus.ACTIVE,
+                                            WorkAllocationStatus.COMPLETED,
+                                        ]
+                                    ),
+                                    AllocationMember.completed_at >= start_at,
+                                    AllocationMember.completed_at < end_at,
+                                ),
+                            ),
+                        )
+                    )
+                ).tuples()
+            )
+            for user_id, due_at, created_at, completed_at in allocation_rows:
+                employee_id = employee_by_user.get(user_id)
+                if employee_id is None:
+                    continue
+                if completed_at is None:
+                    workload[employee_id]["open_task_count"] += 1
+                    if due_at is not None:
+                        due = due_at if due_at.tzinfo else due_at.replace(tzinfo=UTC)
+                        if due < now:
+                            workload[employee_id]["overdue_task_count"] += 1
+                else:
+                    workload[employee_id]["completed_task_count"] += 1
+                    if created_at is not None:
+                        created = (
+                            created_at
+                            if created_at.tzinfo
+                            else created_at.replace(tzinfo=UTC)
+                        )
+                        completed = (
+                            completed_at
+                            if completed_at.tzinfo
+                            else completed_at.replace(tzinfo=UTC)
+                        )
+                        completion_hours.append(
+                            max(0.0, (completed - created).total_seconds() / 3600)
+                        )
+            review_rows = tuple(
+                (
+                    await self._session.execute(
+                        select(
+                            ReviewAssignment.reviewer_user_id,
+                            ReviewAssignment.dossier_id,
+                            ReviewAssignment.due_at,
+                        ).where(
+                            ReviewAssignment.reviewer_user_id.in_(user_ids),
+                            ReviewAssignment.status.in_(
+                                [
+                                    ReviewAssignmentStatus.ASSIGNED,
+                                    ReviewAssignmentStatus.IN_PROGRESS,
+                                ]
+                            ),
+                        )
+                    )
+                ).tuples()
+            )
+            open_review_dossiers: dict[UUID, set[UUID]] = {
+                employee_id: set() for employee_id in employee_ids
+            }
+            overdue_review_dossiers: dict[UUID, set[UUID]] = {
+                employee_id: set() for employee_id in employee_ids
+            }
+            for user_id, dossier_id, due_at in review_rows:
+                employee_id = employee_by_user.get(user_id)
+                if employee_id is None:
+                    continue
+                open_review_dossiers[employee_id].add(dossier_id)
+                if due_at is not None:
+                    due = due_at if due_at.tzinfo else due_at.replace(tzinfo=UTC)
+                    if due < now:
+                        overdue_review_dossiers[employee_id].add(dossier_id)
+            for employee_id in employee_ids:
+                workload[employee_id]["open_review_count"] = len(
+                    open_review_dossiers[employee_id]
+                )
+                workload[employee_id]["overdue_review_count"] = len(
+                    overdue_review_dossiers[employee_id]
+                )
+
+        pending_leave = int(
+            await self._session.scalar(
+                select(func.count())
+                .select_from(LeaveRequest)
+                .join(Employee, Employee.id == LeaveRequest.employee_id)
+                .where(
+                    Employee.department_id == department_id,
+                    LeaveRequest.status == LeaveRequestStatus.PENDING,
+                )
+            )
+            or 0
+        )
+        pending_overtime = int(
+            await self._session.scalar(
+                select(func.count())
+                .select_from(OvertimeRequest)
+                .join(Employee, Employee.id == OvertimeRequest.employee_id)
+                .where(
+                    Employee.department_id == department_id,
+                    OvertimeRequest.status == OvertimeRequestStatus.PENDING,
+                )
+            )
+            or 0
+        )
+        pending_attendance = int(
+            await self._session.scalar(
+                select(func.count())
+                .select_from(Attendance)
+                .join(Employee, Employee.id == Attendance.employee_id)
+                .where(
+                    Employee.department_id == department_id,
+                    Attendance.status == AttendanceStatus.PENDING,
+                    Attendance.work_date >= start_date,
+                    Attendance.work_date <= end_date,
+                )
+            )
+            or 0
+        )
+        members = [
+            DepartmentMemberWorkloadData.model_validate(
+                {
+                    "employee_id": employee.id,
+                    "user_id": employee.user_id,
+                    "full_name": employee.full_name,
+                    "position": employee.position,
+                    "employment_status": employee.employment_status,
+                    **workload[employee.id],
+                }
+            )
+            for employee in employees
+        ]
+        return DepartmentOverviewData.model_validate(
+            {
+                "department_id": department_id,
+                "member_count": len(employees),
+                "active_member_count": sum(
+                    employee.employment_status is EmploymentStatus.ACTIVE
+                    for employee in employees
+                ),
+                "on_leave_member_count": sum(
+                    employee.employment_status is EmploymentStatus.ON_LEAVE
+                    for employee in employees
+                ),
+                "open_task_count": sum(
+                    item["open_task_count"] for item in workload.values()
+                ),
+                "overdue_task_count": sum(
+                    item["overdue_task_count"] for item in workload.values()
+                ),
+                "overdue_review_count": sum(
+                    item["overdue_review_count"] for item in workload.values()
+                ),
+                "completed_task_count": sum(
+                    item["completed_task_count"] for item in workload.values()
+                ),
+                "average_task_completion_hours": (
+                    sum(completion_hours) / len(completion_hours)
+                    if completion_hours
+                    else None
+                ),
+                "pending_leave_count": pending_leave,
+                "pending_overtime_count": pending_overtime,
+                "pending_attendance_count": pending_attendance,
+                "members": members,
+            }
+        )
+
     async def create_department(
         self,
         principal: AuthPrincipal,
@@ -257,9 +564,35 @@ class HrService:
         before: dict[str, object] = {
             "name": department.name,
             "description": department.description,
+            "manager_employee_id": (
+                str(department.manager_employee_id)
+                if department.manager_employee_id
+                else None
+            ),
         }
+        if (
+            "manager_employee_id" in payload.model_fields_set
+            and payload.manager_employee_id is not None
+        ):
+            manager = await self._session.get(Employee, payload.manager_employee_id)
+            if manager is None or manager.department_id != department_id:
+                raise DomainError(
+                    code="HR_DEPARTMENT_MANAGER_INVALID",
+                    message=(
+                        "Department manager must be an employee in this department."
+                    ),
+                    status_code=422,
+                )
+            if manager.employment_status is not EmploymentStatus.ACTIVE:
+                raise DomainError(
+                    code="HR_DEPARTMENT_MANAGER_INACTIVE",
+                    message="Department manager must be an active employee.",
+                    status_code=422,
+                )
         department.name = payload.name
         department.description = payload.description
+        if "manager_employee_id" in payload.model_fields_set:
+            department.manager_employee_id = payload.manager_employee_id
         await self._session.flush()
         await self._session.refresh(department)
         audit.record(
@@ -268,7 +601,15 @@ class HrService:
             resource_type="department",
             resource_id=str(department.id),
             before=before,
-            after={"name": department.name, "description": department.description},
+            after={
+                "name": department.name,
+                "description": department.description,
+                "manager_employee_id": (
+                    str(department.manager_employee_id)
+                    if department.manager_employee_id
+                    else None
+                ),
+            },
             request_id=request_id,
             user_agent=user_agent,
         )
@@ -517,6 +858,31 @@ class HrService:
                     code="HR_DEPARTMENT_NOT_FOUND",
                     message="Department not found.",
                     status_code=404,
+                )
+        next_department_id = changes.get("department_id", employee.department_id)
+        next_employment_status = changes.get(
+            "employment_status", employee.employment_status
+        )
+        if (
+            next_department_id != employee.department_id
+            or next_employment_status is not EmploymentStatus.ACTIVE
+        ):
+            managed_department = await self._session.scalar(
+                select(Department)
+                .where(Department.manager_employee_id == employee_id)
+                .with_for_update()
+            )
+            if managed_department is not None:
+                managed_department.manager_employee_id = None
+                audit.record(
+                    actor_user_id=principal.user_id,
+                    action="hr.department.manager_unassigned",
+                    resource_type="department",
+                    resource_id=str(managed_department.id),
+                    before={"manager_employee_id": str(employee_id)},
+                    after={"manager_employee_id": None},
+                    request_id=request_id,
+                    user_agent=user_agent,
                 )
         before: dict[str, object] = {
             "department_id": str(employee.department_id),

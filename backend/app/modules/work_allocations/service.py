@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from typing import Literal
-from uuid import NAMESPACE_URL, UUID, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -13,6 +13,7 @@ from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequiremen
 from app.modules.auth.models import Role, User, UserRole, UserStatus
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.dossiers.models import DossierEvidence, DossierVersion
+from app.modules.hr.models import Employee, EmploymentStatus
 from app.modules.notifications.models import Notification
 from app.modules.reviews.models import ReviewAssignment, ReviewAssignmentStatus
 from app.modules.work_allocations.models import (
@@ -28,9 +29,11 @@ from app.modules.work_allocations.schemas import (
     ActivateWorkAllocationRequest,
     AllocationMemberData,
     CreateWorkAllocationRequest,
+    HandoffWorkAllocationRequest,
     MyWorkAllocationData,
     WorkAllocationData,
     WorkAllocationDetailData,
+    WorkAllocationHandoffData,
     WorkScopeCoverageData,
     WorkScopeData,
 )
@@ -371,6 +374,199 @@ class WorkAllocationService:
             ).all()
         )
         return tuple(self._data(row) for row in rows), total
+
+    async def list_handoffable_allocations(
+        self,
+        principal: AuthPrincipal,
+        user_id: UUID,
+        *,
+        page: int,
+        page_size: int,
+    ) -> tuple[tuple[WorkAllocationHandoffData, ...], int]:
+        self._require_admin(principal)
+        criteria = (
+            AllocationMember.user_id == user_id,
+            AllocationMember.is_active.is_(True),
+            AllocationMember.completed_at.is_(None),
+            WorkAllocation.kind == WorkAllocationKind.GENERIC,
+            WorkAllocation.status == WorkAllocationStatus.ACTIVE,
+        )
+        total = int(
+            await self._session.scalar(
+                select(func.count())
+                .select_from(AllocationMember)
+                .join(
+                    WorkAllocation, WorkAllocation.id == AllocationMember.allocation_id
+                )
+                .where(*criteria)
+            )
+            or 0
+        )
+        rows = tuple(
+            (
+                await self._session.execute(
+                    select(
+                        WorkAllocation.id,
+                        WorkAllocation.objective,
+                        WorkAllocation.due_at,
+                        AllocationMember.responsibility,
+                    )
+                    .join(
+                        AllocationMember,
+                        AllocationMember.allocation_id == WorkAllocation.id,
+                    )
+                    .where(*criteria)
+                    .order_by(
+                        WorkAllocation.due_at.is_(None),
+                        WorkAllocation.due_at,
+                        WorkAllocation.created_at,
+                    )
+                    .offset((page - 1) * page_size)
+                    .limit(page_size)
+                )
+            ).tuples()
+        )
+        return (
+            tuple(
+                WorkAllocationHandoffData(
+                    allocation_id=allocation_id,
+                    objective=objective,
+                    due_at=self._as_utc(due_at),
+                    responsibility=responsibility,
+                )
+                for allocation_id, objective, due_at, responsibility in rows
+            ),
+            total,
+        )
+
+    async def handoff_allocation(
+        self,
+        principal: AuthPrincipal,
+        allocation_id: UUID,
+        payload: HandoffWorkAllocationRequest,
+        *,
+        audit: AuditService,
+        request_id: str | None,
+        user_agent: str | None,
+    ) -> WorkAllocationData:
+        self._require_admin(principal)
+        allocation = await self._session.scalar(
+            select(WorkAllocation)
+            .where(WorkAllocation.id == allocation_id)
+            .with_for_update()
+        )
+        if allocation is None:
+            raise DomainError(
+                code="WORK_ALLOCATION_NOT_FOUND",
+                message="Work allocation was not found.",
+                status_code=404,
+            )
+        if (
+            allocation.kind is not WorkAllocationKind.GENERIC
+            or allocation.status is not WorkAllocationStatus.ACTIVE
+        ):
+            raise DomainError(
+                code="WORK_ALLOCATION_HANDOFF_UNAVAILABLE",
+                message="Only open general work can be handed to another person.",
+                status_code=409,
+            )
+        source_member = await self._session.scalar(
+            select(AllocationMember)
+            .where(
+                AllocationMember.allocation_id == allocation_id,
+                AllocationMember.user_id == payload.from_user_id,
+                AllocationMember.is_active.is_(True),
+                AllocationMember.completed_at.is_(None),
+            )
+            .with_for_update()
+        )
+        if source_member is None:
+            raise DomainError(
+                code="WORK_ALLOCATION_HANDOFF_SOURCE_NOT_FOUND",
+                message="The person handing off this work is no longer assigned.",
+                status_code=409,
+            )
+        await self._validate_member_ids({payload.to_user_id})
+        employees = tuple(
+            (
+                await self._session.scalars(
+                    select(Employee).where(
+                        Employee.user_id.in_([payload.from_user_id, payload.to_user_id])
+                    )
+                )
+            ).all()
+        )
+        employee_by_user = {
+            employee.user_id: employee for employee in employees if employee.user_id
+        }
+        source_employee = employee_by_user.get(payload.from_user_id)
+        target_employee = employee_by_user.get(payload.to_user_id)
+        if (
+            source_employee is None
+            or target_employee is None
+            or source_employee.department_id != target_employee.department_id
+            or target_employee.employment_status is not EmploymentStatus.ACTIVE
+        ):
+            raise DomainError(
+                code="WORK_ALLOCATION_HANDOFF_TARGET_INVALID",
+                message="Choose an active employee in the same department.",
+                status_code=422,
+            )
+        target_member = await self._session.scalar(
+            select(AllocationMember)
+            .where(
+                AllocationMember.allocation_id == allocation_id,
+                AllocationMember.user_id == payload.to_user_id,
+            )
+            .with_for_update()
+        )
+        if target_member is not None and target_member.is_active:
+            raise DomainError(
+                code="WORK_ALLOCATION_HANDOFF_TARGET_ALREADY_ASSIGNED",
+                message="The selected person already has this work.",
+                status_code=409,
+            )
+        now = datetime.now(UTC)
+        source_member.is_active = False
+        source_member.deactivated_at = now
+        if target_member is None:
+            target_member = AllocationMember(
+                allocation_id=allocation.id,
+                user_id=payload.to_user_id,
+                responsibility=source_member.responsibility,
+                assigned_by_user_id=principal.user_id,
+            )
+            self._session.add(target_member)
+        else:
+            target_member.is_active = True
+            target_member.deactivated_at = None
+            target_member.completed_at = None
+            target_member.responsibility = source_member.responsibility
+            target_member.assigned_by_user_id = principal.user_id
+        self._session.add(
+            Notification(
+                user_id=payload.to_user_id,
+                source_event_id=uuid4(),
+                type="WORK_ALLOCATION_ASSIGNED",
+                title="Bạn nhận bàn giao công việc",
+                body=f"Bạn được giao công việc: {allocation.objective}",
+                data_json={"actionPath": "/work-allocations"},
+                created_at=now,
+            )
+        )
+        audit.record(
+            actor_user_id=principal.user_id,
+            action="work.allocation.member.handed_off",
+            resource_type="work_allocation",
+            resource_id=str(allocation.id),
+            before={"user_id": str(payload.from_user_id)},
+            after={"user_id": str(payload.to_user_id)},
+            request_id=request_id,
+            user_agent=user_agent,
+        )
+        await self._session.commit()
+        await self._session.refresh(allocation)
+        return self._data(allocation)
 
     async def close_allocation(
         self,

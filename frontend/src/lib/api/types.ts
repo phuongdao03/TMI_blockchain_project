@@ -9,9 +9,39 @@ export interface Department {
   code: string;
   name: string;
   description: string | null;
+  managerEmployeeId?: string | null;
   status: DepartmentStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface DepartmentMemberWorkload {
+  employeeId: string;
+  userId: string | null;
+  fullName: string;
+  position: string;
+  employmentStatus: EmploymentStatus;
+  openTaskCount: number;
+  overdueTaskCount: number;
+  completedTaskCount: number;
+  openReviewCount: number;
+  overdueReviewCount: number;
+}
+
+export interface DepartmentOverview {
+  departmentId: string;
+  memberCount: number;
+  activeMemberCount: number;
+  onLeaveMemberCount: number;
+  openTaskCount: number;
+  overdueTaskCount: number;
+  overdueReviewCount: number;
+  completedTaskCount: number;
+  averageTaskCompletionHours: number | null;
+  pendingLeaveCount: number;
+  pendingOvertimeCount: number;
+  pendingAttendanceCount: number;
+  members: DepartmentMemberWorkload[];
 }
 
 export type EmploymentStatus =
@@ -331,6 +361,13 @@ export interface WorkAllocation {
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WorkAllocationHandoff {
+  allocationId: string;
+  objective: string;
+  dueAt: string | null;
+  responsibility: AllocationResponsibility;
 }
 
 export interface MyWorkAllocation extends WorkAllocation {
@@ -925,6 +962,8 @@ export interface StaffAccount {
   status: StaffAccountStatus;
   createdAt: string | null;
   lastLoginAt: string | null;
+  openReviewCount?: number;
+  openTaskCount?: number;
 }
 
 export interface PrivilegedAction {
@@ -981,6 +1020,63 @@ export interface CmsPostInput {
   excerpt?: string | null;
   bodyHtml: string;
   categoryId?: string | null;
+}
+
+export type CmsGuideAudience =
+  | "PUBLIC"
+  | "VIEWER"
+  | "USER"
+  | "MODERATOR"
+  | "SUPER_ADMIN"
+  | "EMPLOYEE";
+
+export type CmsGuideStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+
+export interface CmsGuideArticle {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  category: string;
+  audiences: CmsGuideAudience[];
+  bodyHtml: string;
+  status: CmsGuideStatus;
+  sortOrder: number;
+  version: number;
+  readingMinutes: number;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CmsGuideArticleInput {
+  title: string;
+  slug: string;
+  summary: string;
+  category: string;
+  audiences: CmsGuideAudience[];
+  bodyHtml: string;
+  sortOrder: number;
+}
+
+export interface CmsGuideFeedback {
+  id: string;
+  articleId: string;
+  helpful: boolean;
+  comment: string | null;
+  createdAt: string;
+}
+
+export interface CmsGuideListFilters {
+  page?: number;
+  pageSize?: number;
+  query?: string;
+  category?: string;
+}
+
+export interface CmsGuideAdminFilters extends CmsGuideListFilters {
+  status?: CmsGuideStatus;
+  audience?: CmsGuideAudience;
 }
 
 export interface CmsPage {

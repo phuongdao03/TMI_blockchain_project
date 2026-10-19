@@ -7,12 +7,12 @@ import {
   Clock3,
   Gift,
   Loader2,
-  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
 import { paymentApi } from "@/lib/api/client";
 
 type FeeMode = "PAID" | "FREE";
@@ -107,52 +107,33 @@ export function PaymentRequestWorkspace({
   };
 
   return (
-    <main className="payment-request-workspace mx-auto max-w-6xl space-y-6 pb-12">
-      <header className="overflow-hidden rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)]">
-        <div className="grid gap-6 p-6 sm:p-9 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div>
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-primary-700">
-              Sau phê duyệt · trước blockchain
-            </p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-              Quyết định phí hồ sơ
-            </h1>
-            <p className="mt-4 max-w-2xl leading-7 text-[var(--theme-muted)]">
-              Chọn hồ sơ đã phê duyệt, gửi yêu cầu thanh toán hoặc xác nhận miễn
-              phí. Chỉ hồ sơ đã hoàn tất bước này mới xuất hiện trong hàng đợi
-              ký.
-            </p>
-          </div>
-          <div className="flex items-center gap-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-4 py-3 text-sm">
-            <ShieldCheck
-              className="size-5 text-emerald-600"
-              aria-hidden="true"
-            />
-            <span>
-              <strong>Kiểm soát 2 bước</strong>
-              <br />
-              Phí → ký blockchain
+    <main className="payment-request-workspace workspace-screen mx-auto max-w-6xl space-y-6 pb-12">
+      <WorkspacePageHeader
+        description="Chọn hồ sơ đã được duyệt, sau đó xác nhận mức phí hoặc miễn phí."
+        icon={BadgeDollarSign}
+        section="Thu phí"
+        title="Thu phí hồ sơ"
+      />
+      <ol
+        aria-label="Các bước quyết định phí"
+        className="grid border-y border-[var(--theme-border)] sm:grid-cols-3"
+      >
+        {[
+          ["01", "Chọn hồ sơ"],
+          ["02", "Quyết định phí"],
+          ["03", "Chờ nộp phí / ghi nhận"],
+        ].map(([number, label]) => (
+          <li
+            className="flex items-center gap-3 py-3 sm:px-4 sm:not-last:border-r"
+            key={number}
+          >
+            <span className="font-mono text-xs font-bold text-[var(--theme-accent)]">
+              {number}
             </span>
-          </div>
-        </div>
-        <div className="grid border-t border-[var(--theme-border)] sm:grid-cols-3">
-          {[
-            ["01", "Chọn hồ sơ"],
-            ["02", "Quyết định phí"],
-            ["03", "Chờ thanh toán / ký"],
-          ].map(([number, label]) => (
-            <div
-              className="flex items-center gap-3 border-[var(--theme-border)] px-6 py-4 sm:not-last:border-r"
-              key={number}
-            >
-              <span className="font-mono text-xs font-bold text-primary-700">
-                {number}
-              </span>
-              <span className="text-sm font-semibold">{label}</span>
-            </div>
-          ))}
-        </div>
-      </header>
+            <span className="text-sm font-semibold">{label}</span>
+          </li>
+        ))}
+      </ol>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <form
@@ -206,15 +187,10 @@ export function PaymentRequestWorkspace({
                 [
                   "PAID",
                   "Có thu phí",
-                  "Gửi số tiền và đường dẫn thanh toán",
+                  "Gửi thông báo thu phí",
                   BadgeDollarSign,
                 ],
-                [
-                  "FREE",
-                  "Miễn phí",
-                  "Bỏ qua thanh toán và chuyển sang chờ ký",
-                  Gift,
-                ],
+                ["FREE", "Miễn phí", "Miễn phí và chuyển sang ghi nhận", Gift],
               ] as const
             ).map(([value, title, detail, Icon]) => (
               <label
@@ -251,7 +227,7 @@ export function PaymentRequestWorkspace({
           {mode === "PAID" ? (
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-bold">
-                Số tiền cần thanh toán (VND)
+                Số phí cần thu (VND)
                 <input
                   className={`${controlClass} text-lg font-bold tabular-nums`}
                   inputMode="numeric"
@@ -272,7 +248,7 @@ export function PaymentRequestWorkspace({
                 ) : null}
               </label>
               <label className="grid gap-2 text-sm font-bold">
-                Hạn thanh toán (không bắt buộc)
+                Hạn nộp phí (không bắt buộc)
                 <input
                   className={`${controlClass} font-normal`}
                   onChange={(event) => setDueAt(event.target.value)}
@@ -326,7 +302,7 @@ export function PaymentRequestWorkspace({
             {pending
               ? "Đang ghi nhận…"
               : mode === "PAID"
-                ? "Gửi yêu cầu thanh toán"
+                ? "Gửi thông báo thu phí"
                 : "Xác nhận miễn phí"}
           </Button>
           {error ? (
@@ -345,8 +321,8 @@ export function PaymentRequestWorkspace({
           <h2 className="text-lg font-bold">Trạng thái tiếp theo</h2>
           <p className="text-sm leading-6 text-[var(--theme-muted)]">
             {mode === "PAID"
-              ? "Người nộp nhận thông báo và thanh toán. Khi giao dịch được xác nhận, admin nhận thông báo để chuyển sang ký."
-              : "Người nộp nhận thông báo miễn phí. Hồ sơ chuyển thẳng sang hàng đợi ký blockchain."}
+              ? "Người nộp nhận thông báo và thanh toán. Khi khoản phí được xác nhận, hồ sơ chuyển sang bước ghi nhận."
+              : "Người nộp nhận thông báo miễn phí. Hồ sơ chuyển sang bước ghi nhận."}
           </p>
           {selected ? (
             <div className="border-t border-[var(--theme-border)] pt-4">
@@ -373,13 +349,13 @@ export function PaymentRequestWorkspace({
             <div>
               <h2 className="font-bold">
                 {mode === "PAID"
-                  ? "Đã gửi yêu cầu cho người nộp"
-                  : "Hồ sơ đã sẵn sàng để ký"}
+                  ? "Đã gửi thông báo cho người nộp"
+                  : "Hồ sơ đã sẵn sàng để ghi nhận"}
               </h2>
               <p className="mt-1 text-sm">
                 {mode === "PAID" && "amountMinor" in success
                   ? `${new Intl.NumberFormat("vi-VN").format(success.amountMinor)} VND · đang chờ thanh toán`
-                  : "Đã ghi nhận miễn phí và chuyển hồ sơ vào hàng đợi blockchain."}
+                  : "Đã ghi nhận miễn phí và chuyển hồ sơ sang bước ghi nhận."}
               </p>
             </div>
           </div>
@@ -391,8 +367,8 @@ export function PaymentRequestWorkspace({
               Xem yêu cầu
             </Link>
           ) : (
-            <Link className="font-bold underline" href="/blockchain">
-              Mở hàng đợi ký
+            <Link className="font-bold underline" href="/admin/registry">
+              Mở danh sách hồ sơ chờ ghi nhận
             </Link>
           )}
         </section>

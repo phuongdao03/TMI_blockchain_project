@@ -11,6 +11,7 @@ import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
 import {
   adminReviewApi,
   ApiError,
+  hrDepartmentApi,
   staffAccountsApi,
   workAllocationAdminApi,
 } from "@/lib/api/client";
@@ -36,6 +37,7 @@ export function WorkAllocationWorkspace() {
   >(null);
   const [selectedDossier, setSelectedDossier] =
     useState<AdminReviewDossierSummary | null>(null);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
   const [completedKind, setCompletedKind] = useState<
     "GENERIC" | "DOSSIER_REVIEW" | "ACTIVATED" | null
   >(null);
@@ -61,6 +63,63 @@ export function WorkAllocationWorkspace() {
         pageSize: 100,
       }),
   });
+  const departments = useQuery({
+    queryKey: ["hr", "departments", "review-assignment"],
+    queryFn: () => hrDepartmentApi.list({ pageSize: 100 }),
+    enabled: isCreating,
+  });
+  const departmentOverview = useQuery({
+    queryKey: [
+      "hr",
+      "department-overview",
+      selectedDepartmentId,
+      "current-month",
+    ],
+    queryFn: () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const finalDay = String(
+        new Date(year, now.getMonth() + 1, 0).getDate(),
+      ).padStart(2, "0");
+      return hrDepartmentApi.overview(selectedDepartmentId, {
+        startDate: `${year}-${month}-01`,
+        endDate: `${year}-${month}-${finalDay}`,
+      });
+    },
+    enabled: isCreating && Boolean(selectedDepartmentId),
+  });
+  const departmentReviewers = (() => {
+    const accounts = staff.data?.data ?? [];
+    if (!selectedDepartmentId) return accounts;
+    if (!departmentOverview.data) {
+      return departmentOverview.isError ? accounts : [];
+    }
+    const membersByUserId = new Map(
+      departmentOverview.data.members
+        .filter((member) => member.userId)
+        .map((member) => [
+          member.userId!,
+          {
+            openReviewCount: member.openReviewCount,
+            openTaskCount: member.openTaskCount,
+          },
+        ]),
+    );
+    return accounts
+      .filter((account) => membersByUserId.has(account.id))
+      .map((account) => ({
+        ...account,
+        ...membersByUserId.get(account.id),
+      }))
+      .sort(
+        (left, right) =>
+          (left.openReviewCount ?? 0) - (right.openReviewCount ?? 0),
+      );
+  })();
+  const departmentTaskMembers = [...departmentReviewers].sort(
+    (left, right) => (left.openTaskCount ?? 0) - (right.openTaskCount ?? 0),
+  );
   const allocationDetail = useQuery({
     queryKey: ["work-allocation", selectedAllocationId],
     queryFn: () => workAllocationAdminApi.get(selectedAllocationId ?? ""),
@@ -295,16 +354,76 @@ export function WorkAllocationWorkspace() {
               Công việc chung
             </button>
           </div>
+          <section
+            className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900 sm:p-5"
+            aria-label="Gợi ý người nhận việc"
+          >
+            <label className="block text-sm font-bold text-neutral-900 dark:text-white">
+              Phòng ban
+              <select
+                className="mt-2 min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm font-normal text-neutral-950 outline-none focus:border-primary-600 sm:max-w-md dark:border-neutral-700 dark:bg-neutral-950 dark:text-white"
+                onChange={(event) =>
+                  setSelectedDepartmentId(event.target.value)
+                }
+                value={selectedDepartmentId}
+              >
+                <option value="">Tất cả người thực hiện</option>
+                {(departments.data?.data ?? []).map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="mt-2 text-sm leading-5 text-neutral-600 dark:text-neutral-300">
+              {creationKind === "DOSSIER_REVIEW"
+                ? "Người trong phòng ban được xếp theo số hồ sơ đang xử lý. Bạn xác nhận người nhận trước khi giao."
+                : "Người trong phòng ban được xếp theo số việc đang mở. Bạn chọn nhóm và người phụ trách chính."}
+            </p>
+            {selectedDepartmentId && departmentOverview.isPending ? (
+              <p className="mt-2 text-xs text-neutral-500">
+                Đang tính khối lượng…
+              </p>
+            ) : null}
+            {selectedDepartmentId && departmentOverview.isError ? (
+              <p className="mt-2 text-xs text-amber-700">
+                Chưa tải được khối lượng phòng ban. Danh sách toàn bộ vẫn dùng
+                được.
+              </p>
+            ) : null}
+            {departments.isError ? (
+              <p className="mt-2 text-xs text-amber-700">
+                Chưa tải được danh sách phòng ban. Bạn vẫn có thể giao cho tất
+                cả người thực hiện.
+              </p>
+            ) : null}
+            {selectedDepartmentId &&
+            departmentOverview.data &&
+            departmentReviewers.length === 0 ? (
+              <p className="mt-2 text-xs text-amber-700">
+                Phòng ban chưa có người thực hiện được cấp tài khoản.
+              </p>
+            ) : null}
+          </section>
           {creationKind === "GENERIC" ? (
             <GenericAllocationForm
-              staff={staff.data?.data ?? []}
+              key={`${creationKind}-${selectedDepartmentId}`}
+              staff={
+                selectedDepartmentId
+                  ? departmentTaskMembers
+                  : (staff.data?.data ?? [])
+              }
               onSaved={() => completeAssignment("GENERIC")}
             />
           ) : (
             <DossierAllocationForm
-              key={selectedDossier?.dossierId ?? "manual"}
+              key={`${selectedDossier?.dossierId ?? "manual"}-${selectedDepartmentId}`}
               initialDossier={selectedDossier ?? undefined}
-              staff={staff.data?.data ?? []}
+              staff={
+                selectedDepartmentId
+                  ? departmentReviewers
+                  : (staff.data?.data ?? [])
+              }
               onSaved={() => completeAssignment("DOSSIER_REVIEW")}
             />
           )}

@@ -14,6 +14,7 @@ import type {
   OvertimeRequestStatus,
 } from "@/lib/api/types";
 import { HrReportDownload } from "@/components/hr/hr-report-download";
+import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
 
 const fieldClass =
   "mt-2 min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm text-neutral-950 outline-none transition focus:border-primary-600 focus:ring-2 focus:ring-primary-100";
@@ -99,23 +100,15 @@ export function AdminOvertimeWorkspace() {
   return (
     <section
       aria-labelledby="admin-overtime-title"
-      className="mx-auto max-w-7xl space-y-6 pb-12"
+      className="workspace-screen mx-auto max-w-7xl space-y-6 pb-12"
     >
-      <header className="rounded-3xl border border-neutral-800 bg-neutral-950 px-6 py-7 text-white sm:px-8">
-        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">
-          <UsersRound className="size-4" /> Điều hành nhân sự
-        </p>
-        <h1
-          className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl"
-          id="admin-overtime-title"
-        >
-          Duyệt tăng ca
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
-          Rà soát yêu cầu theo thời gian thực tế. Mọi quyết định có audit và
-          thông báo trong ứng dụng; chưa tự suy diễn rate hoặc compensation.
-        </p>
-      </header>
+      <WorkspacePageHeader
+        description="Rà soát yêu cầu theo thời gian thực tế. Mọi quyết định có audit và thông báo trong ứng dụng; chưa tự suy diễn rate hoặc compensation."
+        icon={UsersRound}
+        id="admin-overtime-title"
+        section="Điều hành nhân sự"
+        title="Duyệt tăng ca"
+      />
       <form
         className="grid gap-3 rounded-2xl border border-neutral-200 bg-white p-4 md:grid-cols-3 xl:grid-cols-[1.3fr_13rem_11rem_auto]"
         onSubmit={submitFilters}

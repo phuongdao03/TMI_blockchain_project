@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -78,6 +78,10 @@ class UpdateTaskRequest(TaskSchema):
             if field in self.model_fields_set and getattr(self, field) is None:
                 raise ValueError(f"Task {field} cannot be null.")
         return self
+
+
+class UpdateMyTaskStatusRequest(TaskSchema):
+    status: Literal[TaskStatus.IN_PROGRESS, TaskStatus.DONE]
 
 
 class TaskData(TaskSchema):

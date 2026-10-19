@@ -15,6 +15,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { PublicWorkEditor } from "@/components/admin/public-work-editor";
+import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
 import { cmsApi } from "@/lib/api/client";
 
 type CmsSection = "publicWorks" | "posts" | "pages" | "banners" | "categories";
@@ -34,39 +35,33 @@ export function CmsWorkspace() {
   const [section, setSection] = useState<CmsSection>("publicWorks");
 
   return (
-    <div className="cms-workspace mx-auto max-w-7xl space-y-6 pb-8">
-      <header className="flex flex-col gap-5 border-b border-neutral-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary-700">
-            <BookOpenText className="size-4" /> Quản trị công bố
-          </p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-neutral-950 sm:text-3xl">
-            Nội dung công bố
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
-            Kiểm tra bản nháp, quản lý nội dung đang hiển thị và lưu trữ bản thử
-            nghiệm kèm lý do để giữ lịch sử minh bạch.
-          </p>
-        </div>
-        <Link
-          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-bold text-neutral-800 hover:bg-neutral-50"
-          href="/admin/certificates"
-        >
-          <BadgeCheck className="size-4" aria-hidden="true" /> Quản lý bằng xác
-          lập
-        </Link>
-      </header>
+    <div className="cms-workspace workspace-screen mx-auto max-w-7xl space-y-6 pb-8">
+      <WorkspacePageHeader
+        action={
+          <Link
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-semibold text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-elevated)]"
+            href="/admin/certificates"
+          >
+            <BadgeCheck className="size-4" aria-hidden="true" /> Quản lý bằng
+            xác lập
+          </Link>
+        }
+        description="Kiểm tra bản nháp, quản lý nội dung đang hiển thị và lưu trữ bản thử nghiệm kèm lý do để giữ lịch sử minh bạch."
+        icon={BookOpenText}
+        section="Quản trị công bố"
+        title="Nội dung công bố"
+      />
 
       <nav
         aria-label="Nhóm nội dung"
-        className="flex gap-2 overflow-x-auto rounded-2xl border border-neutral-200 bg-white p-2"
+        className="flex gap-5 overflow-x-auto border-b border-[var(--theme-border)]"
       >
         {sections.map((item) => {
           const Icon = item.icon;
           return (
             <button
               aria-current={section === item.id ? "page" : undefined}
-              className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-bold transition ${section === item.id ? "bg-neutral-950 text-white" : "text-neutral-600 hover:bg-neutral-100"}`}
+              className={`inline-flex min-h-12 shrink-0 items-center gap-2 border-b-2 px-1 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] ${section === item.id ? "border-[var(--theme-accent)] text-[var(--theme-accent)]" : "border-transparent text-[var(--theme-muted)] hover:text-[var(--theme-text)]"}`}
               key={item.id}
               onClick={() => setSection(item.id)}
               type="button"

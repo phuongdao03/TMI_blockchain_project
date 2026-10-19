@@ -131,7 +131,20 @@ describe("DashboardNavigation work-allocation migration", () => {
 
   it("gives Moderator the personal allocation workspace", () => {
     render(
-      <DashboardNavigation roles={["MODERATOR"]} showQuickNavigation={false} />,
+      <AuthUserProvider
+        user={{
+          id: "regular-moderator",
+          email: "moderator@example.com",
+          roles: ["MODERATOR"],
+          isEmployee: false,
+          accountType: null,
+        }}
+      >
+        <DashboardNavigation
+          roles={["MODERATOR"]}
+          showQuickNavigation={false}
+        />
+      </AuthUserProvider>,
     );
 
     expect(
@@ -143,6 +156,38 @@ describe("DashboardNavigation work-allocation migration", () => {
     expect(
       screen.getByRole("link", { name: "Việc thẩm định" }).getAttribute("href"),
     ).toBe("/reviews");
+    expect(screen.queryByRole("link", { name: "Chấm công" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Nghỉ phép" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Tăng ca" })).toBeNull();
+  });
+
+  it("shows Moderator HR self-service only with a linked employee profile", () => {
+    render(
+      <AuthUserProvider
+        user={{
+          id: "employee-moderator",
+          email: "moderator@example.com",
+          roles: ["MODERATOR"],
+          isEmployee: true,
+          accountType: null,
+        }}
+      >
+        <DashboardNavigation
+          roles={["MODERATOR"]}
+          showQuickNavigation={false}
+        />
+      </AuthUserProvider>,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Chấm công" }).getAttribute("href"),
+    ).toBe("/attendance");
+    expect(
+      screen.getByRole("link", { name: "Nghỉ phép" }).getAttribute("href"),
+    ).toBe("/leave");
+    expect(
+      screen.getByRole("link", { name: "Tăng ca" }).getAttribute("href"),
+    ).toBe("/overtime");
   });
 
   it("exposes the admin dossier intake queue beside other work", () => {

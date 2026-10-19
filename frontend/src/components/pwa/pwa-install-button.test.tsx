@@ -27,10 +27,12 @@ describe("PWA installation", () => {
     });
   });
 
-  it("keeps the download CTA linked to installation when a native prompt is unavailable", () => {
+  it("links to instructions when a native install prompt is unavailable", () => {
     render(<PwaInstallButton />);
     expect(
-      screen.getByRole("link", { name: "Tải ứng dụng" }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: "Cách cài ứng dụng" })
+        .getAttribute("href"),
     ).toBe("/install");
   });
 
@@ -41,7 +43,7 @@ describe("PWA installation", () => {
 
     fireEvent(window, event);
     await user.click(
-      await screen.findByRole("button", { name: "Tải ứng dụng" }),
+      await screen.findByRole("button", { name: "Cài ứng dụng" }),
     );
 
     expect(prompt).toHaveBeenCalledOnce();
@@ -55,7 +57,7 @@ describe("PWA installation", () => {
 
     await userEvent
       .setup()
-      .click(await screen.findByRole("button", { name: "Tải ứng dụng" }));
+      .click(await screen.findByRole("button", { name: "Cài ứng dụng" }));
     expect(prompt).toHaveBeenCalledOnce();
   });
 
@@ -67,11 +69,11 @@ describe("PWA installation", () => {
 
     fireEvent(window, event);
     await user.click(
-      await screen.findByRole("button", { name: "Tải ứng dụng" }),
+      await screen.findByRole("button", { name: "Cài ứng dụng" }),
     );
 
     expect(
-      await screen.findByRole("link", { name: "Tải ứng dụng" }),
+      await screen.findByRole("link", { name: "Cách cài ứng dụng" }),
     ).toBeDefined();
   });
 
@@ -82,7 +84,7 @@ describe("PWA installation", () => {
     fireEvent(window, event);
     expect(prompt).not.toHaveBeenCalled();
     await user.click(
-      await screen.findByRole("button", { name: "Tải ứng dụng" }),
+      await screen.findByRole("button", { name: "Cài ứng dụng" }),
     );
     expect(prompt).toHaveBeenCalledOnce();
     await waitFor(() =>
@@ -92,22 +94,19 @@ describe("PWA installation", () => {
     );
   });
 
-  it("keeps the install action available while waiting for the browser prompt", async () => {
-    render(<PwaInstallAction />);
-    expect(
-      await screen.findByText(/Nếu trình duyệt chưa mở hộp thoại cài đặt/),
-    ).toBeDefined();
-    const installButton = screen.getByRole("button", { name: "Tải ứng dụng" });
-    await userEvent.setup().click(installButton);
-    expect(screen.getByRole("status").textContent).toContain(
-      "Trình duyệt chưa mở được hộp thoại cài đặt",
+  it("shows Android manual steps without a button that cannot install", async () => {
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/125 Mobile",
     );
-    expect((installButton as HTMLButtonElement).disabled).toBe(false);
+    render(<PwaInstallAction />);
+    expect(await screen.findByText(/Chrome trên Android/)).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Cài ứng dụng" })).toBeNull();
     expect(
       screen
-        .getByRole("link", { name: "Xem cách cài trên thiết bị" })
+        .getByRole("link", { name: "Xem các bước trên Android" })
         .getAttribute("href"),
     ).toBe("#install-device-steps");
+    vi.restoreAllMocks();
   });
 
   it("shows iPhone steps immediately without promising an automatic prompt", async () => {
@@ -117,12 +116,28 @@ describe("PWA installation", () => {
     try {
       render(<PwaInstallAction />);
       expect(await screen.findByText(/Safari.*Chia sẻ/)).toBeDefined();
-      expect(screen.queryByRole("button", { name: "Tải ứng dụng" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Cài ứng dụng" })).toBeNull();
       expect(
         screen
           .getByRole("link", { name: /Xem các bước trên iPhone/ })
           .getAttribute("href"),
       ).toBe("#install-device-steps");
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("labels the iPhone header action as adding to the Home Screen", async () => {
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1",
+    );
+    try {
+      render(<PwaInstallButton />);
+      expect(
+        (
+          await screen.findByRole("link", { name: "Thêm vào Màn hình chính" })
+        ).getAttribute("href"),
+      ).toBe("/install");
     } finally {
       vi.restoreAllMocks();
     }
@@ -135,7 +150,9 @@ describe("PWA installation", () => {
     });
     render(<PwaInstallButton />);
     await waitFor(() =>
-      expect(screen.queryByRole("link", { name: "Tải ứng dụng" })).toBeNull(),
+      expect(
+        screen.queryByRole("link", { name: "Cách cài ứng dụng" }),
+      ).toBeNull(),
     );
   });
 });

@@ -6,6 +6,7 @@ import { type FormEvent, useState } from "react";
 
 import { ApiError, hrSelfApi } from "@/lib/api/client";
 import type { OvertimeRequest, OvertimeRequestStatus } from "@/lib/api/types";
+import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
 
 const fieldClass =
   "mt-2 min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm text-neutral-950 outline-none transition focus:border-primary-600 focus:ring-2 focus:ring-primary-100";
@@ -90,23 +91,15 @@ export function OvertimeWorkspace() {
   return (
     <section
       aria-labelledby="overtime-title"
-      className="mx-auto max-w-6xl space-y-6 pb-12"
+      className="workspace-screen mx-auto max-w-6xl space-y-6 pb-12"
     >
-      <header className="rounded-3xl border border-neutral-800 bg-neutral-950 px-6 py-7 text-white sm:px-8">
-        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">
-          <Clock3 className="size-4" /> Nhân sự cá nhân
-        </p>
-        <h1
-          className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl"
-          id="overtime-title"
-        >
-          Đăng ký tăng ca
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
-          Gửi khoảng thời gian dự kiến để được duyệt. Hệ thống chưa tự làm tròn
-          giờ hoặc tính mức chi trả.
-        </p>
-      </header>
+      <WorkspacePageHeader
+        description="Gửi khoảng thời gian dự kiến để được duyệt. Hệ thống chưa tự làm tròn giờ hoặc tính mức chi trả."
+        icon={Clock3}
+        id="overtime-title"
+        section="Nhân sự cá nhân"
+        title="Đăng ký tăng ca"
+      />
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <form
           className="rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6"

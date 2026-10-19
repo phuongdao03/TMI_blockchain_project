@@ -18,9 +18,11 @@ from app.modules.auth.dependencies import (
 from app.modules.work_allocations.schemas import (
     ActivateWorkAllocationRequest,
     CreateWorkAllocationRequest,
+    HandoffWorkAllocationRequest,
     MyWorkAllocationData,
     WorkAllocationData,
     WorkAllocationDetailData,
+    WorkAllocationHandoffData,
 )
 from app.modules.work_allocations.service import WorkAllocationService
 
@@ -133,6 +135,64 @@ async def cancel_work_allocation(
     _private_response(response)
     return SuccessEnvelope(
         data=data, meta=ResponseMeta(request_id=request.state.request_id)
+    )
+
+
+@router.get(
+    "/handoffs",
+    response_model=PaginatedSuccessEnvelope[list[WorkAllocationHandoffData]],
+)
+async def list_handoffable_work(
+    request: Request,
+    response: Response,
+    principal: CurrentPrincipalDependency,
+    session: SessionDependency,
+    user_id: Annotated[UUID, Query(alias="userId")],
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 50,
+) -> PaginatedSuccessEnvelope[list[WorkAllocationHandoffData]]:
+    rows, total = await WorkAllocationService(session).list_handoffable_allocations(
+        principal,
+        user_id,
+        page=page,
+        page_size=page_size,
+    )
+    _private_response(response)
+    return PaginatedSuccessEnvelope(
+        data=list(rows),
+        meta=ListResponseMeta(
+            request_id=request.state.request_id,
+            page=page,
+            page_size=page_size,
+            total=total,
+        ),
+    )
+
+
+@router.post(
+    "/{allocation_id}/handoffs",
+    response_model=SuccessEnvelope[WorkAllocationData],
+)
+async def handoff_work_allocation(
+    allocation_id: UUID,
+    payload: HandoffWorkAllocationRequest,
+    request: Request,
+    response: Response,
+    principal: CsrfProtectedPrincipalDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[WorkAllocationData]:
+    data = await WorkAllocationService(session).handoff_allocation(
+        principal,
+        allocation_id,
+        payload,
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    _private_response(response)
+    return SuccessEnvelope(
+        data=data,
+        meta=ResponseMeta(request_id=request.state.request_id),
     )
 
 
