@@ -7,6 +7,7 @@ from alembic.script import ScriptDirectory
 
 from alembic import command
 from app.core.config import get_settings
+from app.db.alembic_compat import ALEMBIC_VERSION_COLUMN_LENGTH
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_CATEGORY_SLUGS = {
@@ -25,7 +26,7 @@ def test_alembic_revision_ids_fit_version_column() -> None:
     oversized_revision_ids = [
         revision.revision
         for revision in script.walk_revisions()
-        if len(revision.revision) > 32
+        if len(revision.revision) > ALEMBIC_VERSION_COLUMN_LENGTH
     ]
 
     assert oversized_revision_ids == []

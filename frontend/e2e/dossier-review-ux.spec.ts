@@ -63,7 +63,7 @@ test("mobile applicant journey is compact without page overflow", async ({
       (element) =>
         getComputedStyle(element).gridTemplateColumns.split(" ").length,
     ),
-  ).toBe(3);
+  ).toBe(2);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

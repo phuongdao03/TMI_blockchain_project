@@ -24,14 +24,14 @@ test.beforeEach(async ({ context, request }) => {
   await request.post(`${mockApi}/api/e2e/reset-payment-pending`);
 });
 
-test("applicant safely cancels a pending payOS checkout on mobile", async ({
+test("applicant safely cancels a pending payment on mobile", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile-chrome");
   await page.goto(`/payments/${paymentOrderId}`);
 
   await expect(
-    page.getByRole("link", { name: "Mở trang thanh toán bảo mật" }),
+    page.getByRole("heading", { name: "Đang chờ xác nhận" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Hủy lần thanh toán" }).click();
   await page

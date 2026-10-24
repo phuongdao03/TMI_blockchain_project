@@ -12,6 +12,29 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2]
 REVISION = "0132_membership_catalog_content"
 
 
+def test_seeded_plan_benefits_allow_safe_downgrade(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = tmp_path / "membership-plan-benefits-downgrade.sqlite3"
+    monkeypatch.setenv(
+        "DATABASE_DIRECT_URL", f"sqlite+aiosqlite:///{database.as_posix()}"
+    )
+    get_settings.cache_clear()
+    config = Config(BACKEND_ROOT / "alembic.ini")
+    try:
+        command.upgrade(config, "0131_membership_plan_benefits")
+        command.downgrade(config, "0130_community_events")
+
+        with sqlite3.connect(database) as connection:
+            columns = {
+                row[1]
+                for row in connection.execute("PRAGMA table_info(membership_plans)")
+            }
+        assert not {"description", "benefits", "conditions"} & columns
+    finally:
+        get_settings.cache_clear()
+
+
 def test_plan_benefits_are_seeded_and_downgrade_preserves_catalog_copy(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

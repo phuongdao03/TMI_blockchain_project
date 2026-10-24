@@ -19,13 +19,57 @@ async function seedSession(context: BrowserContext, refreshOnly = false) {
 }
 
 async function expectAccount(page: Page) {
-  await expect(page.getByLabel("Mở menu tài khoản")).toBeVisible();
+  const accountMenu = page.getByLabel("Mở menu tài khoản");
+  if (await accountMenu.isVisible()) {
+    await expect(accountMenu).toBeVisible();
+  } else {
+    const mobileMenu = page.getByRole("navigation", { name: "Menu công khai" });
+    if (!(await mobileMenu.isVisible())) {
+      await page.getByRole("button", { name: "Mở menu", exact: true }).click();
+    }
+    await expect(
+      mobileMenu.getByRole("link", { name: "Không gian cá nhân" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Đóng menu", exact: true }).click();
+  }
   await expect(
     page.getByRole("link", { name: "Đăng nhập", exact: true }),
   ).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: "Đăng ký", exact: true }),
   ).toHaveCount(0);
+}
+
+async function logout(page: Page) {
+  const accountMenu = page.getByLabel("Mở menu tài khoản");
+  if (await accountMenu.isVisible()) {
+    await accountMenu.click();
+  } else {
+    const mobileMenu = page.getByRole("navigation", { name: "Menu công khai" });
+    if (!(await mobileMenu.isVisible())) {
+      await page.getByRole("button", { name: "Mở menu", exact: true }).click();
+    }
+  }
+  await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
+}
+
+async function expectGuestAfterLogout(page: Page) {
+  const loginLink = page
+    .getByRole("banner")
+    .getByRole("link", { name: "Đăng nhập", exact: true });
+  if (await loginLink.isVisible()) {
+    await expect(loginLink).toBeVisible();
+  } else {
+    const mobileMenu = page.getByRole("navigation", { name: "Menu công khai" });
+    if (!(await mobileMenu.isVisible())) {
+      await page.getByRole("button", { name: "Mở menu", exact: true }).click();
+    }
+    await expect(
+      mobileMenu.getByRole("link", { name: "Đăng nhập", exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Đóng menu", exact: true }).click();
+  }
+  await expect(page.getByLabel("Mở menu tài khoản")).toHaveCount(0);
 }
 
 test("guest account actions resolve at every requested viewport", async ({
@@ -58,13 +102,8 @@ test("public account survives reload and returns to guest after logout", async (
   await expectAccount(page);
   await page.reload();
   await expectAccount(page);
-  await page.getByLabel("Mở menu tài khoản").click();
-  await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
-  const actions = page.getByRole("banner");
-  await expect(
-    actions.getByRole("link", { name: "Đăng nhập", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByLabel("Mở menu tài khoản")).toHaveCount(0);
+  await logout(page);
+  await expectGuestAfterLogout(page);
 });
 
 test("public home recovers a refresh-only session", async ({
@@ -87,9 +126,8 @@ test("logout updates another already-open public tab", async ({
   try {
     await other.goto("/");
     await expectAccount(other);
-    await other.getByLabel("Mở menu tài khoản").click();
-    await other.getByRole("button", { name: "Đăng xuất", exact: true }).click();
-    await expect(page.getByLabel("Mở menu tài khoản")).toHaveCount(0);
+    await logout(other);
+    await expectGuestAfterLogout(page);
     await expect(page.getByRole("banner")).toBeVisible();
   } finally {
     await other.close();
