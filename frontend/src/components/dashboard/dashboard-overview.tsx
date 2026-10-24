@@ -111,6 +111,8 @@ export function DashboardOverview() {
     visibleDossiers.find(({ status }) => attentionStatuses.has(status)) ??
     visibleDossiers[0];
   const primaryAction = primaryDossier ? nextAction(primaryDossier) : null;
+  const canCreateFirstDossier =
+    !dossiers.isPending && !dossiers.isError && visibleDossiers.length === 0;
 
   return (
     <div className="dashboard-overview mx-auto max-w-7xl space-y-8">
@@ -151,29 +153,66 @@ export function DashboardOverview() {
             )}
           </span>
           <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-gold-300">
-            {primaryDossier ? "Ưu tiên tiếp theo" : "Bắt đầu hồ sơ đầu tiên"}
+            {primaryDossier
+              ? "Ưu tiên tiếp theo"
+              : dossiers.isPending
+                ? "Đang kiểm tra hồ sơ"
+                : dossiers.isError
+                  ? "Chưa tải được hồ sơ"
+                  : "Bắt đầu hồ sơ đầu tiên"}
           </p>
           <h2 className="mt-3 text-2xl font-bold tracking-[-0.03em] sm:text-3xl lg:text-4xl">
             {primaryDossier
               ? primaryAction?.label
-              : "Chuẩn bị thông tin tài sản của bạn"}
+              : dossiers.isPending
+                ? "Đang tải hồ sơ của bạn"
+                : dossiers.isError
+                  ? "Chưa thể xác minh hồ sơ"
+                  : "Chuẩn bị thông tin tài sản của bạn"}
           </h2>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
             {primaryDossier
               ? `${primaryDossier.title} · Cập nhật ${new Date(primaryDossier.updatedAt).toLocaleDateString("vi-VN")}`
-              : "Bạn có thể lưu bản nháp và quay lại hoàn thiện bất cứ lúc nào."}
+              : dossiers.isPending
+                ? "Hãy chờ hệ thống kiểm tra các hồ sơ hiện có trước khi bắt đầu hồ sơ khác."
+                : dossiers.isError
+                  ? "Tải lại danh sách để tránh tạo trùng hồ sơ đang có."
+                  : "Bạn có thể lưu bản nháp và quay lại hoàn thiện bất cứ lúc nào."}
           </p>
         </div>
-        <Link
-          className="relative z-10 mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-primary-600 px-5 text-sm font-bold text-white shadow-lg shadow-black/20 hover:bg-primary-500 lg:mt-0"
-          href={primaryAction?.href ?? "/dossiers/new"}
-        >
-          {!primaryAction ? (
-            <FilePlus2 aria-hidden="true" className="size-4" />
-          ) : null}
-          {primaryAction?.label ?? "Tạo hồ sơ mới"}
-          <ArrowRight aria-hidden="true" className="size-4" />
-        </Link>
+        {primaryAction || canCreateFirstDossier ? (
+          <Link
+            className="relative z-10 mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-primary-600 px-5 text-sm font-bold text-white shadow-lg shadow-black/20 hover:bg-primary-500 lg:mt-0"
+            href={primaryAction?.href ?? "/dossiers/new"}
+          >
+            {!primaryAction ? (
+              <FilePlus2 aria-hidden="true" className="size-4" />
+            ) : null}
+            {primaryAction?.label ?? "Tạo hồ sơ mới"}
+            <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
+        ) : (
+          <div
+            aria-busy={dossiers.isPending}
+            className="relative z-10 mt-8 max-w-sm rounded-lg border border-white/15 bg-white/5 p-4 text-sm text-slate-200 lg:mt-0"
+            role={dossiers.isError ? "alert" : "status"}
+          >
+            <p>
+              {dossiers.isError
+                ? "Chưa xác minh được hồ sơ. Tải lại trước khi tạo hồ sơ mới."
+                : "Đang tải hồ sơ của bạn…"}
+            </p>
+            {dossiers.isError ? (
+              <button
+                className="mt-2 min-h-11 font-bold underline underline-offset-4"
+                onClick={() => void dossiers.refetch()}
+                type="button"
+              >
+                Tải lại danh sách
+              </button>
+            ) : null}
+          </div>
+        )}
       </section>
 
       {!dossiers.isPending &&
@@ -232,22 +271,24 @@ export function DashboardOverview() {
             >
               Theo dõi hồ sơ
             </Link>
-            <Link
-              className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
-              href={
-                primaryDossier &&
+            {primaryDossier || canCreateFirstDossier ? (
+              <Link
+                className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
+                href={
+                  primaryDossier &&
+                  (primaryDossier.status === "DRAFT" ||
+                    primaryDossier.status === "NEEDS_SUPPLEMENT")
+                    ? `/dossiers/${primaryDossier.id}`
+                    : "/dossiers/new"
+                }
+              >
+                {primaryDossier &&
                 (primaryDossier.status === "DRAFT" ||
                   primaryDossier.status === "NEEDS_SUPPLEMENT")
-                  ? `/dossiers/${primaryDossier.id}`
-                  : "/dossiers/new"
-              }
-            >
-              {primaryDossier &&
-              (primaryDossier.status === "DRAFT" ||
-                primaryDossier.status === "NEEDS_SUPPLEMENT")
-                ? "Tải thêm tài liệu"
-                : "Gửi đề cử mới"}
-            </Link>
+                  ? "Tải thêm tài liệu"
+                  : "Gửi đề cử mới"}
+              </Link>
+            ) : null}
             <Link
               className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
               href="/certificates"
@@ -282,19 +323,28 @@ export function DashboardOverview() {
             {[
               {
                 label: "Việc cần làm",
-                value: dossiers.isPending ? "—" : String(attentionCount),
+                value:
+                  dossiers.isPending || dossiers.isError
+                    ? "—"
+                    : String(attentionCount),
                 detail: "Hồ sơ cần bạn hoàn thiện, bổ sung hoặc thanh toán",
                 icon: FolderKanban,
               },
               {
                 label: "Đang xử lý",
-                value: dossiers.isPending ? "—" : String(processingCount),
+                value:
+                  dossiers.isPending || dossiers.isError
+                    ? "—"
+                    : String(processingCount),
                 detail: "Hồ sơ đã gửi và đang được Tinh Hoa Việt xem xét",
                 icon: Clock3,
               },
               {
                 label: "Bằng xác lập sẵn sàng",
-                value: dossiers.isPending ? "—" : String(certificateCount),
+                value:
+                  dossiers.isPending || dossiers.isError
+                    ? "—"
+                    : String(certificateCount),
                 detail: "Bằng xác lập đã phát hành và có thể tải xuống",
                 icon: BadgeCheck,
               },

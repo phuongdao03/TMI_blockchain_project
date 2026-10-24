@@ -125,6 +125,33 @@ describe("layout shells", () => {
     ).toBe("page");
   });
 
+  it("shows a dedicated membership tab in the public navigation", async () => {
+    navigationState.pathname = "/cong-dong/hoi-vien";
+    render(
+      <PublicShell>
+        <h1>Hội viên</h1>
+      </PublicShell>,
+    );
+
+    const primaryNavigation = screen.getByRole("navigation", {
+      name: "Điều hướng chính",
+    });
+    const membershipLink = within(primaryNavigation).getByRole("link", {
+      name: "Hội viên",
+    });
+
+    expect(membershipLink.getAttribute("href")).toBe("/cong-dong/hoi-vien");
+    expect(membershipLink.getAttribute("aria-current")).toBe("page");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Mở menu" }));
+    expect(
+      within(
+        screen.getByRole("navigation", { name: "Menu công khai" }),
+      ).getByRole("link", { name: "Hội viên" }).getAttribute("href"),
+    ).toBe("/cong-dong/hoi-vien");
+  });
+
   it("shares the verified server user with public community content", () => {
     function AuthProbe() {
       const user = useAuthUser();

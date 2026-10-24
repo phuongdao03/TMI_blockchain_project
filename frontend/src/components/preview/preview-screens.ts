@@ -319,6 +319,7 @@ const permittedPaths: Record<WorkspacePersona, readonly string[]> = {
   VIEWER: ["/dashboard", ...common, "/activity", "/help", "/guide"],
   USER: [
     "/dashboard",
+    "/wallet",
     ...common,
     "/activity",
     "/guide",

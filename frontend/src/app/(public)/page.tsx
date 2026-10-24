@@ -5,12 +5,16 @@ import {
   Landmark,
   Search,
   BadgeCheck,
-  ShieldCheck,
   Sparkles,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
 
+import {
+  HomeClosingAccountCta,
+  HomeHeroAccountActions,
+  HomeHeroAccountMessage,
+} from "@/components/public/home-account-experience";
 import { FeaturedAssets } from "@/components/public/featured-assets";
 import { InstitutionContent } from "@/components/public/institution-content";
 import { HeritageSymbols } from "@/components/public/heritage-symbols";
@@ -87,9 +91,7 @@ export default function HomePage() {
               Suy tôn trí tuệ.{" "}
               <span className="text-gold-300">Lưu truyền di sản.</span>
             </h1>
-            <p className="registry-hero__copy--compact mt-5 max-w-[41rem] text-[0.95rem] leading-7 text-slate-300 sm:mt-8 sm:text-lg sm:leading-8">
-              Tạo tài khoản để gửi hồ sơ và theo dõi hành trình xác lập.
-            </p>
+            <HomeHeroAccountMessage />
             <p className="registry-hero__copy--desktop mt-5 max-w-[41rem] text-[0.95rem] leading-7 text-slate-300 sm:mt-8 sm:text-lg sm:leading-8">
               Tinh Hoa Việt giới thiệu những giá trị tiêu biểu của con người, tổ
               chức, tri thức, văn hóa và sáng tạo Việt Nam qua hồ sơ có căn cứ.
@@ -102,23 +104,7 @@ export default function HomePage() {
           </div>
           <div className="registry-hero__actions relative z-10 max-w-[44rem] lg:pb-8">
             <div className="registry-hero__action-row">
-              <nav
-                aria-label="Truy cập tài khoản"
-                className="registry-hero__buttons mt-9 flex flex-col gap-3 sm:flex-row"
-              >
-                <Link
-                  className="registry-button registry-button-primary"
-                  href="/register"
-                >
-                  Đăng ký
-                </Link>
-                <Link
-                  className="registry-button registry-button-auth-secondary"
-                  href="/login"
-                >
-                  Đăng nhập
-                </Link>
-              </nav>
+              <HomeHeroAccountActions />
               <Link
                 className="registry-hero__discover registry-button registry-button-primary"
                 href="/works"
@@ -314,32 +300,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="home-cta border-t">
-        <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-16 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <div className="max-w-2xl">
-            <ShieldCheck
-              aria-hidden="true"
-              className="home-cta__icon size-6 text-primary-700"
-            />
-            <h2 className="mt-5 text-3xl font-semibold tracking-tight">
-              {preview
-                ? "Muốn theo dõi hành trình Tinh Hoa Việt?"
-                : "Tiếp tục khám phá Tinh Hoa Việt"}
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-400">
-              {preview
-                ? "Tạo tài khoản để lưu nội dung quan tâm và theo dõi các cập nhật chính thức của chương trình."
-                : "Tạo tài khoản để gửi hồ sơ, nhận phản hồi và quản lý thông tin của bạn."}
-            </p>
-          </div>
-          <Link
-            className="registry-button registry-button-primary"
-            href="/register"
-          >
-            Tạo tài khoản <UserRound aria-hidden="true" className="size-4" />
-          </Link>
-        </div>
-      </section>
+      <HomeClosingAccountCta preview={preview} />
     </div>
   );
 }

@@ -34,6 +34,9 @@ const AUDIENCE_LABELS: Record<CmsGuideAudience, string> = {
   MODERATOR: "Người kiểm duyệt",
   SUPER_ADMIN: "Quản trị viên",
   EMPLOYEE: "Nhân viên đã liên kết hồ sơ",
+  MEMBERSHIP_SILVER: "Hội viên Bạc trở lên",
+  MEMBERSHIP_COMPANION: "Hội viên Vàng trở lên",
+  MEMBERSHIP_PRESTIGE: "Hội viên Kim cương",
 };
 
 export function guideCategoryLabel(category: string): string {

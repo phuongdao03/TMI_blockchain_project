@@ -6,6 +6,7 @@ import {
   ChevronRight,
   CircleHelp,
   Download,
+  Gem,
   House,
   LogIn,
   Menu,
@@ -47,6 +48,7 @@ const publicPrimaryLinks = [
   { href: "/", label: "Trang chủ", icon: House },
   { href: "/works", label: "Danh sách đề cử", icon: BookOpen },
   { href: "/community", label: "Cộng đồng", icon: UsersRound },
+  { href: "/cong-dong/hoi-vien", label: "Hội viên", icon: Gem },
   { href: "/process", label: "Quy trình", icon: Route },
 ];
 const publicUtilityLinks = [
@@ -70,6 +72,9 @@ function isWorkspacePath(pathname: string) {
     "/notifications",
     "/overtime",
     "/payments",
+    "/wallet",
+    "/membership",
+    "/advertising",
     "/reviews",
     "/work-allocations",
     "/admin",
@@ -299,6 +304,8 @@ export function PublicShell({ children }: PropsWithChildren) {
                   </Link>
                 ) : null}
                 <Link href="/account">Tài khoản</Link>
+                <Link href="/membership">Thẻ thành viên</Link>
+                <Link href="/wallet">Ví của tôi</Link>
                 <LogoutButton />
               </nav>
             </details>

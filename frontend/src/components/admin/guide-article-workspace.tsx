@@ -24,6 +24,9 @@ const AUDIENCES: CmsGuideAudience[] = [
   "MODERATOR",
   "SUPER_ADMIN",
   "EMPLOYEE",
+  "MEMBERSHIP_SILVER",
+  "MEMBERSHIP_COMPANION",
+  "MEMBERSHIP_PRESTIGE",
 ];
 const EMPTY_ARTICLES: CmsGuideArticle[] = [];
 

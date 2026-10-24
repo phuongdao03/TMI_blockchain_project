@@ -42,9 +42,11 @@ describe("DashboardOverview", () => {
 
     const { container } = renderDashboard();
 
-    expect(screen.getByRole("status").textContent).toContain("Đang tải hồ sơ");
+    expect(screen.getByText("Đang tải hồ sơ của bạn…")).toBeDefined();
     expect(container.querySelectorAll(".dashboard-skeleton")).toHaveLength(3);
     expect(container.querySelector(".thv-loading-spinner")).not.toBeNull();
+    expect(screen.queryByRole("link", { name: /Tạo hồ sơ mới/ })).toBeNull();
+    expect(container.querySelector('a[href="/dossiers/new"]')).toBeNull();
   });
 
   it("shows a task-focused empty state with one primary action", async () => {
@@ -90,5 +92,19 @@ describe("DashboardOverview", () => {
     expect(
       screen.getByText("Số liệu dưới đây chỉ tính trên 1 hồ sơ vừa tải."),
     ).toBeDefined();
+  });
+
+  it("keeps the create action disabled when loading dossiers fails", async () => {
+    listDossiers.mockRejectedValue(new Error("network unavailable"));
+
+    renderDashboard();
+
+    expect(await screen.findByRole("alert")).toBeDefined();
+    expect(screen.queryByRole("link", { name: /Tạo hồ sơ mới/ })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Tải lại danh sách" }),
+    ).toBeDefined();
+    expect(screen.queryByRole("link", { name: "Gửi đề cử mới" })).toBeNull();
+    expect(document.querySelector('a[href="/dossiers/new"]')).toBeNull();
   });
 });

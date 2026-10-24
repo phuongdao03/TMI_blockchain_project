@@ -15,7 +15,8 @@ import Link from "next/link";
 import { BrandMark } from "@/components/layout/brand-mark";
 import { DashboardNavigation } from "@/components/layout/dashboard-navigation";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import type { AuthUser } from "@/lib/api/types";
+import { WalletWorkspace } from "@/components/wallet/wallet-workspace";
+import type { AuthUser, WalletSummary } from "@/lib/api/types";
 import type { WorkspacePersona } from "@/lib/auth/role-workspaces";
 import { AuthUserProvider } from "@/lib/auth/user-context";
 import AdminGuidePage from "@/app/(dashboard)/admin/guide/page";
@@ -37,6 +38,52 @@ const roleTitles: Record<WorkspacePersona, string> = {
   USER: "Không gian người dùng",
   MODERATOR: "Không gian kiểm duyệt",
   SUPER_ADMIN: "Không gian quản trị",
+};
+
+const previewWalletData: WalletSummary = {
+  balanceMinor: 1_250_000,
+  currency: "VND",
+  provider: "mock",
+  transactions: [
+    {
+      id: "preview-wallet-transaction-1",
+      walletDelta: 1_490_000,
+      balanceAfter: 1_490_000,
+      kind: "TOPUP",
+      description: "Nạp tiền vào ví",
+      createdAt: "2026-10-21T09:30:00.000Z",
+    },
+    {
+      id: "preview-wallet-transaction-2",
+      walletDelta: -240_000,
+      balanceAfter: 1_250_000,
+      kind: "PAYMENT",
+      description: "Thanh toán chương trình Tinh Hoa Talk",
+      createdAt: "2026-10-22T14:15:00.000Z",
+    },
+  ],
+  topups: [
+    {
+      id: "preview-wallet-topup-1",
+      orderCode: "THV-DEMO-260023",
+      amountMinor: 500_000,
+      status: "PENDING",
+      checkoutUrl: null,
+      createdAt: "2026-10-23T08:00:00.000Z",
+      expiresAt: "2026-10-23T09:00:00.000Z",
+      paidAt: null,
+    },
+    {
+      id: "preview-wallet-topup-2",
+      orderCode: "THV-DEMO-260021",
+      amountMinor: 1_490_000,
+      status: "PAID",
+      checkoutUrl: null,
+      createdAt: "2026-10-21T09:30:00.000Z",
+      expiresAt: "2026-10-21T10:30:00.000Z",
+      paidAt: "2026-10-21T09:35:00.000Z",
+    },
+  ],
 };
 
 function previewHref(role: WorkspacePersona, path: string) {
@@ -417,10 +464,11 @@ export function RoleUiPreview({
     roles: [role],
     accountType: null,
   };
+  const isWalletPreview = role === "USER" && path === "/wallet";
   const defaultPath =
     roleOptions.find((option) => option.role === role)?.home ?? "/dashboard";
-  const screen = previewScreenFor(role, path);
-  const activePath = screen ? path : defaultPath;
+  const screen = isWalletPreview ? null : previewScreenFor(role, path);
+  const activePath = isWalletPreview ? path : screen ? path : defaultPath;
 
   return (
     <AuthUserProvider user={user}>
@@ -483,18 +531,22 @@ export function RoleUiPreview({
                 </p>
                 <p className="mt-1 text-lg font-semibold text-[var(--theme-ink)]">
                   {screen?.title ??
-                    (role === "VIEWER" || role === "USER"
-                      ? "Tổng quan"
-                      : role === "MODERATOR"
-                        ? "Công việc được giao"
-                        : "Quản trị hệ thống")}
+                    (isWalletPreview
+                      ? "Ví của tôi"
+                      : role === "VIEWER" || role === "USER"
+                        ? "Tổng quan"
+                        : role === "MODERATOR"
+                          ? "Công việc được giao"
+                          : "Quản trị hệ thống")}
                 </p>
               </div>
               <span className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-1.5 text-xs font-medium text-[var(--theme-text)]">
                 Xem thử · {role}
               </span>
             </div>
-            {role === "SUPER_ADMIN" && path === "/admin/guide" ? (
+            {isWalletPreview ? (
+              <WalletWorkspace previewData={previewWalletData} />
+            ) : role === "SUPER_ADMIN" && path === "/admin/guide" ? (
               <AdminGuidePage />
             ) : screen ? (
               <ScreenPreview screen={screen} />

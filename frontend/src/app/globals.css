@@ -6352,14 +6352,14 @@ html[data-theme="dark"]
 @media (max-width: 39.999rem) {
   .dossier-journey {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.25rem;
   }
   .dossier-journey > li {
     min-width: 0;
   }
   .dossier-journey--three {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .dossier-journey__number {
     display: none;

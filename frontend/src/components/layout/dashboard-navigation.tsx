@@ -22,6 +22,9 @@ import {
   UsersRound,
   Building2,
   MapPinned,
+  Wallet,
+  CreditCard,
+  Megaphone,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -55,13 +58,17 @@ const discoveryItems: NavigationItem[] = [
   { href: "/", label: "Website", icon: House },
   { href: "/works", label: "Thư viện đề cử", icon: BookOpen },
   { href: "/community", label: "Cộng đồng", icon: UsersRound },
+  { href: "/events", label: "Sự kiện", icon: CalendarDays },
   { href: "/verify", label: "Tra cứu bằng xác lập", icon: ShieldCheck },
 ];
 
 const personalItems: NavigationItem[] = [
+  { href: "/advertising", label: "Quảng cáo của tôi", icon: Megaphone, allowedRoles: ["USER", "SUPER_ADMIN"] },
   { href: "/notifications", label: "Thông báo", icon: Bell },
   { href: "/account", label: "Tài khoản", icon: Settings },
   { href: "/activity", label: "Hoạt động gần đây", icon: History },
+  { href: "/membership", label: "Thẻ thành viên", icon: CreditCard },
+  { href: "/wallet", label: "Ví của tôi", icon: Wallet },
 ];
 
 const publicSupportItem: NavigationItem = {
@@ -96,6 +103,24 @@ const reviewerItems: NavigationItem[] = [
 const employeeItems: NavigationItem[] = reviewerItems.slice(2);
 
 const adminItems: NavigationItem[] = [
+  {
+    href: "/admin/advertising",
+    label: "Quản trị quảng cáo",
+    icon: Megaphone,
+    allowedRoles: ["SUPER_ADMIN"],
+  },
+  {
+    href: "/admin/memberships",
+    label: "Gói thành viên",
+    icon: CreditCard,
+    permissions: ["memberships.manage"],
+  },
+  {
+    href: "/admin/events",
+    label: "Sự kiện cộng đồng",
+    icon: CalendarDays,
+    permissions: ["memberships.manage"],
+  },
   {
     href: "/admin/reviews",
     label: "Tiếp nhận hồ sơ",
@@ -159,6 +184,12 @@ const adminItems: NavigationItem[] = [
     permission: "payments.read",
   },
   {
+    href: "/admin/payments/history",
+    label: "Lịch sử thanh toán",
+    icon: History,
+    permission: "payments.read",
+  },
+  {
     href: "/admin/dashboard",
     label: "Tổng quan vận hành",
     icon: Gauge,
@@ -217,6 +248,52 @@ const blockchainSignerItems: NavigationItem[] = [
   },
 ];
 
+const adminNavigationGroups = [
+  {
+    label: "Hồ sơ & thẩm định",
+    hrefs: ["/admin/reviews", "/admin/work-allocations", "/admin/certificates"],
+  },
+  {
+    label: "Cộng đồng & chương trình",
+    hrefs: [
+      "/admin/advertising",
+      "/admin/memberships",
+      "/admin/events",
+      "/admin/community",
+    ],
+  },
+  {
+    label: "Tài chính & vận hành",
+    hrefs: [
+      "/admin/dashboard",
+      "/admin/payments",
+      "/admin/payments/history",
+      "/admin/reports",
+    ],
+  },
+  {
+    label: "Nhân sự",
+    hrefs: [
+      "/admin/overtime",
+      "/admin/leave",
+      "/admin/attendance",
+      "/admin/attendance/worksites",
+      "/admin/payroll",
+      "/admin/employees",
+      "/admin/departments",
+    ],
+  },
+  {
+    label: "Nội dung & hệ thống",
+    hrefs: [
+      "/admin/users",
+      "/admin/notifications",
+      "/admin/content",
+      "/admin/audit",
+    ],
+  },
+] satisfies Array<{ label: string; hrefs: string[] }>;
+
 function canAccess(
   item: NavigationItem,
   roles: readonly string[],
@@ -244,6 +321,12 @@ function sectionsFor(
   const operationalItems = adminItems.filter((item) =>
     canAccess(item, roles, permissions),
   );
+  const operationalSections = adminNavigationGroups
+    .map((group) => ({
+      label: group.label,
+      items: operationalItems.filter((item) => group.hrefs.includes(item.href)),
+    }))
+    .filter((section) => section.items.length > 0);
   const adminEntryPoint = resolveAdminEntryPoint(roles, permissions);
   const adminEntryItems: NavigationItem[] = adminEntryPoint
     ? [
@@ -272,9 +355,7 @@ function sectionsFor(
           { href: "/community", label: "Cộng đồng", icon: UsersRound },
         ],
       },
-      ...(operationalItems.length
-        ? [{ label: "Quản trị", items: operationalItems }]
-        : []),
+      ...operationalSections,
       ...(canAccess(blockchainSignerItems[0]!, roles, permissions)
         ? [{ label: "Xác lập", items: blockchainSignerItems }]
         : []),
@@ -326,7 +407,7 @@ function mobileItemsFor(
   const operational = items.filter((item) => item.href.startsWith("/admin/"));
   const priorities: Record<WorkspacePersona, string[]> = {
     VIEWER: ["/workspace", "/works", "/community"],
-    USER: ["/workspace", "/dossiers", "/works", "/community"],
+    USER: ["/workspace", "/dossiers", "/community", "/wallet"],
     MODERATOR: [
       "/reviews",
       "/community",

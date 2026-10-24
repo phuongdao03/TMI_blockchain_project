@@ -26,6 +26,7 @@ const ADMIN_ENTRY_POINTS: readonly AdminEntryPoint[] = [
   ["hr.employees.read", "/admin/employees"],
   ["hr.departments.manage", "/admin/departments"],
   ["payments.read", "/admin/payments"],
+  ["memberships.manage", "/admin/memberships"],
   ["dashboard.read", "/admin/dashboard"],
   ["users.read", "/admin/users"],
   ["staff.read", "/admin/staff"],

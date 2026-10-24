@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import HomePage from "@/app/(public)/page";
+import { AuthUserProvider } from "@/lib/auth/user-context";
 
 vi.mock("@/components/public/featured-assets", () => ({
   FeaturedAssets: () => <div>Tài sản tiêu biểu</div>,
@@ -91,6 +92,34 @@ describe("HomePage", () => {
         "Tạo tài khoản để gửi hồ sơ, nhận phản hồi và quản lý thông tin của bạn.",
       ),
     ).toBeDefined();
+  });
+
+  it("shows workspace actions instead of registration links for signed-in users", () => {
+    render(
+      <AuthUserProvider
+        user={{
+          id: "signed-in-user",
+          email: "member@example.com",
+          roles: ["USER"],
+          accountType: "INDIVIDUAL_APPLICANT",
+        }}
+      >
+        <HomePage />
+      </AuthUserProvider>,
+    );
+
+    const hero = document.querySelector(".registry-hero");
+    expect(hero?.querySelector('a[href="/register"]')).toBeNull();
+    expect(hero?.querySelector('a[href="/login"]')).toBeNull();
+    expect(hero?.querySelector('a[href="/workspace"]')?.textContent).toContain(
+      "Không gian cá nhân",
+    );
+    expect(screen.queryByRole("link", { name: "Tạo tài khoản" })).toBeNull();
+    expect(
+      screen.queryByText(
+        "Tạo tài khoản để gửi hồ sơ, nhận phản hồi và quản lý thông tin của bạn.",
+      ),
+    ).toBeNull();
   });
 
   it("explains the public journey with three concrete verification steps", () => {

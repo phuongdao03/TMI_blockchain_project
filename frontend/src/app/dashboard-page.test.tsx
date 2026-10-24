@@ -97,7 +97,9 @@ describe("dashboard overview", () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByRole("link", { name: "Tạo hồ sơ mới" })).toBeDefined();
+    expect(
+      await screen.findByRole("link", { name: "Tạo hồ sơ mới" }),
+    ).toBeDefined();
     expect(
       await screen.findByRole("heading", { name: "Bắt đầu hồ sơ đầu tiên" }),
     ).toBeDefined();
@@ -134,7 +136,9 @@ describe("dashboard overview", () => {
         name: "Việc cần làm",
       }),
     ).toBeDefined();
-    expect(screen.getByRole("link", { name: "Tạo hồ sơ mới" })).toBeDefined();
+    expect(
+      await screen.findByRole("link", { name: "Tạo hồ sơ mới" }),
+    ).toBeDefined();
     expect(
       await screen.findByRole("heading", { name: "Bắt đầu hồ sơ đầu tiên" }),
     ).toBeDefined();
