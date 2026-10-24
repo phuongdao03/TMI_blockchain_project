@@ -30,35 +30,52 @@ export function ReviewEvidenceAssessments({
   onChange: (value: Record<string, EvidenceAssessment>) => void;
   readOnly?: boolean;
 }) {
+  const reviewedCount = evidences.filter(
+    (evidence) =>
+      assessments[evidence.mediaAssetId]?.status &&
+      assessments[evidence.mediaAssetId]?.status !== "UNREVIEWED",
+  ).length;
+
   const update = (mediaId: string, value: EvidenceAssessment) => {
     onChange({ ...assessments, [mediaId]: value });
   };
 
   return (
-    <section aria-labelledby="evidence-assessment-title" className="pb-2">
-      <div>
-        <h3
-          className="flex items-center gap-2 font-bold"
-          id="evidence-assessment-title"
-        >
-          <FileCheck2
-            aria-hidden="true"
-            className="size-5 text-[var(--theme-accent)]"
-          />
-          Kết quả kiểm tra từng tệp
-        </h3>
-        <p className="mt-1 text-sm text-[var(--theme-muted)]">
-          Ghi nhận tệp phù hợp, cần làm rõ hoặc không liên quan.
-        </p>
+    <section
+      aria-labelledby="evidence-assessment-title"
+      className="rounded-xl bg-[var(--theme-elevated)] p-4 sm:p-5"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3
+            className="flex items-center gap-2 font-bold"
+            id="evidence-assessment-title"
+          >
+            <FileCheck2
+              aria-hidden="true"
+              className="size-5 text-[var(--theme-accent)]"
+            />
+            Kết quả kiểm tra từng tệp
+          </h3>
+          <p className="mt-1 text-sm text-[var(--theme-muted)]">
+            Ghi nhận tệp phù hợp, cần làm rõ hoặc không liên quan.
+          </p>
+        </div>
+        <span className="rounded-full bg-[var(--theme-surface)] px-3 py-1 text-xs font-bold text-[var(--theme-text)]">
+          {reviewedCount}/{evidences.length} đã kiểm tra
+        </span>
       </div>
-      <div className="mt-4 space-y-3">
+      <div className="mt-4 grid gap-3">
         {evidences.map((evidence) => {
           const assessment = assessments[evidence.mediaAssetId] ?? {
             status: "UNREVIEWED" as const,
             note: "",
           };
           return (
-            <article className="grid gap-3 py-2" key={evidence.id}>
+            <article
+              className="grid gap-3 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:grid-cols-[minmax(0,1fr)_13rem] sm:items-center"
+              key={evidence.id}
+            >
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_13rem] sm:items-center">
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{evidence.title}</p>
@@ -110,6 +127,11 @@ export function ReviewEvidenceAssessments({
             </article>
           );
         })}
+        {evidences.length === 0 ? (
+          <p className="rounded-lg bg-[var(--theme-surface)] p-3 text-sm text-[var(--theme-muted)]">
+            Hồ sơ chưa có tài liệu đính kèm.
+          </p>
+        ) : null}
       </div>
     </section>
   );

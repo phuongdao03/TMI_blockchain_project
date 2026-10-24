@@ -32,7 +32,9 @@ describe("FiveTScorecard", () => {
     );
 
     expect(screen.getByText("Kết luận theo tiêu chí")).toBeDefined();
-    expect(screen.getByLabelText("Kết luận Thông tin chủ thể")).toBeDefined();
+    expect(
+      screen.getByRole("radio", { name: "Thông tin chủ thể: Đáp ứng" }),
+    ).toBeDefined();
     expect(screen.queryByText("Tổng điểm tạm tính")).toBeNull();
   });
 
@@ -63,9 +65,8 @@ describe("FiveTScorecard", () => {
       />,
     );
 
-    await user.selectOptions(
-      screen.getByLabelText("Kết luận Thông tin chủ thể"),
-      "MEETS",
+    await user.click(
+      screen.getByRole("radio", { name: "Thông tin chủ thể: Đáp ứng" }),
     );
     await user.type(
       screen.getByLabelText("Nhận định Thông tin chủ thể"),
@@ -159,9 +160,8 @@ describe("FiveTScorecard", () => {
       screen.getByLabelText("Kết quả kiểm tra Tài liệu giới thiệu"),
       "VALID",
     );
-    await user.selectOptions(
-      screen.getByLabelText("Kết luận Tài liệu chứng minh"),
-      "NEEDS_CLARIFICATION",
+    await user.click(
+      screen.getByRole("radio", { name: "Tài liệu chứng minh: Cần bổ sung" }),
     );
     await user.type(
       screen.getByLabelText("Nhận định Tài liệu chứng minh"),
@@ -173,7 +173,9 @@ describe("FiveTScorecard", () => {
       "Vui lòng bổ sung ngày phát hành của tài liệu.",
     );
 
-    expect(screen.getByText("Yêu cầu bổ sung")).toBeDefined();
+    expect(
+      screen.getByText("Kết quả từ các tiêu chí").parentElement?.textContent,
+    ).toContain("Yêu cầu bổ sung");
     await user.click(
       screen.getByRole("button", { name: "Gửi kết quả thẩm định" }),
     );

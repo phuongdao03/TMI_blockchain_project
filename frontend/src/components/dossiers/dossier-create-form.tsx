@@ -5,9 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   Check,
-  FileCheck2,
   FilePlus2,
-  Files,
   ListChecks,
   RefreshCw,
   ShieldCheck,
@@ -83,11 +81,6 @@ const mimeLabels: Record<string, string> = {
   "audio/mpeg": "MP3",
 };
 
-function formatFileLimit(bytes: number): string {
-  const megabytes = bytes / 1024 / 1024;
-  return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(megabytes)} MB`;
-}
-
 export function DossierCreateForm() {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -123,6 +116,7 @@ export function DossierCreateForm() {
   );
   const dossierTypeDescription = dossierType?.currentVersion.schema.description;
   const documentRules = dossierType?.currentVersion.schema.documentRules ?? [];
+  const reviewRubric = dossierType?.currentVersion.schema.reviewRubric;
   const requiredFieldCount =
     dossierType?.currentVersion.schema.fields.filter((field) => field.required)
       .length ?? 0;
@@ -130,6 +124,17 @@ export function DossierCreateForm() {
     dossierType?.currentVersion.schema.fields.filter(
       (field) => field.required,
     ) ?? [];
+  const requiredDocumentRules = documentRules.filter((rule) => rule.required);
+  const primaryDocumentRule = documentRules.find(
+    (rule) => rule.key === "PRIMARY",
+  );
+  const primaryFormats = Array.from(
+    new Set(
+      (primaryDocumentRule?.allowedMimeTypes ?? []).map(
+        (mime) => mimeLabels[mime] ?? mime,
+      ),
+    ),
+  );
   const hasTypeSpecificFields = Boolean(
     dossierType?.currentVersion.schema.fields.length,
   );
@@ -221,20 +226,20 @@ export function DossierCreateForm() {
           ).map(([step, number, label, note]) => (
             <li
               aria-current={step === prepareStep ? "step" : undefined}
-              className={`dossier-journey__step rounded-xl border p-2 text-center sm:p-3 sm:text-left ${
+              className={`dossier-journey__item flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${
                 step === prepareStep
-                  ? "dossier-journey__step--active"
-                  : "border-[var(--theme-border)] bg-[var(--theme-surface)]"
+                  ? "dossier-journey__item--active bg-[var(--theme-elevated)] font-bold text-[var(--theme-text)]"
+                  : "text-[var(--theme-muted)]"
               }`}
               key={number}
             >
-              <span className="dossier-journey__number font-mono text-xs font-bold">
+              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[var(--theme-surface)] text-[11px] font-bold text-[var(--theme-accent)]">
                 {number}
               </span>
-              <strong className="text-xs text-[var(--theme-text)] sm:ml-2 sm:text-sm">
+              <strong className="text-xs sm:text-sm">
                 {label}
               </strong>
-              <span className="mt-1 hidden pl-7 text-xs text-[var(--theme-muted)] sm:block">
+              <span className="sr-only">
                 {note}
               </span>
             </li>
@@ -242,7 +247,7 @@ export function DossierCreateForm() {
         </ol>
       </nav>
       <section className="space-y-5 bg-white py-3 sm:rounded-2xl sm:border sm:border-neutral-200 sm:p-6">
-        <div className="flex items-start gap-3 sm:border-b sm:border-[var(--theme-border)] sm:pb-4">
+        <div className="flex items-start gap-3">
           <ShieldCheck
             aria-hidden="true"
             className="mt-0.5 hidden size-5 shrink-0 text-primary-700 sm:block"
@@ -307,7 +312,7 @@ export function DossierCreateForm() {
             {dossierType && prepareStep === 0 ? (
               <section
                 aria-labelledby="document-preflight-title"
-                className="dossier-preflight border-y border-[var(--theme-border)] py-4"
+                className="dossier-preflight rounded-xl bg-[var(--theme-elevated)] p-4 sm:p-5"
                 ref={preflightRef}
               >
                 <div className="flex items-start gap-3">
@@ -316,65 +321,98 @@ export function DossierCreateForm() {
                   </span>
                   <div>
                     <h2 className="font-bold" id="document-preflight-title">
-                      Tài liệu cần chuẩn bị
+                      Khác biệt của loại hồ sơ này
                     </h2>
                     <p className="mt-1 text-sm leading-6 text-neutral-600">
-                      {requiredFieldCount} trường thông tin bắt buộc ·{" "}
-                      {documentRules.length
-                        ? `${documentRules.length} nhóm tài liệu`
-                        : "Không có nhóm tài liệu bắt buộc riêng"}
-                      . Tệp được tải lên sau khi bản nháp được tạo.
+                      {reviewRubric?.criteria.length
+                        ? "Biểu mẫu và trọng tâm thẩm định hiển thị theo loại hồ sơ này."
+                        : "Biểu mẫu của loại này xác định các thông tin cần khai; bằng chứng được bổ sung sau khi tạo bản nháp."}
                     </p>
                   </div>
                 </div>
 
-                {documentRules.length ? (
-                  <ul
-                    className="mt-3 divide-y divide-[var(--theme-border)]"
-                    role="list"
-                  >
-                    {documentRules.map((rule) => (
-                      <li className="py-3" key={rule.key}>
-                        <div className="flex items-start gap-3">
-                          <FileCheck2
-                            aria-hidden="true"
-                            className="mt-0.5 size-5 shrink-0 text-primary-700"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold">
-                              {rule.label ?? rule.documentType}
-                              {rule.required ? (
-                                <span className="ml-2 text-xs text-primary-700">
-                                  Bắt buộc
-                                </span>
-                              ) : null}
-                            </p>
-                            <p className="mt-1 text-xs leading-5 text-neutral-600">
-                              {rule.allowedMimeTypes
-                                .map((mime) => mimeLabels[mime] ?? mime)
-                                .join(", ")}{" "}
-                              · tối đa {formatFileLimit(rule.maxBytes)} ·{" "}
-                              {rule.maxCount ?? 1} tệp
-                            </p>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="mt-3 flex items-start gap-3 text-sm text-neutral-600">
-                    <Files aria-hidden="true" className="size-5 shrink-0" />
-                    Loại hồ sơ này chưa yêu cầu nhóm tệp riêng. Bạn vẫn có thể
-                    bổ sung bằng chứng trong bản nháp.
-                  </div>
-                )}
+                <div
+                  className={`mt-4 grid gap-3 ${reviewRubric?.criteria.length ? "sm:grid-cols-2" : ""}`}
+                >
+                  <section className="min-w-0 rounded-lg bg-[var(--theme-surface)] p-3">
+                    <h3 className="text-sm font-bold">Thông tin cần khai</h3>
+                    <p className="mt-1 text-xs text-neutral-600">
+                      {requiredFieldCount} trường bắt buộc
+                    </p>
+                    {requiredFields.length ? (
+                      <ul className="mt-2 space-y-1.5 text-sm" role="list">
+                        {requiredFields.map((field) => (
+                          <li className="flex items-start gap-2" key={field.key}>
+                            <Check
+                              aria-hidden="true"
+                              className="mt-0.5 size-4 shrink-0 text-primary-700"
+                            />
+                            <span>{field.label ?? field.key}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-sm text-neutral-600">
+                        Không có trường riêng bắt buộc.
+                      </p>
+                    )}
+                  </section>
+
+                  {reviewRubric?.criteria.length ? (
+                    <section className="min-w-0 rounded-lg bg-[var(--theme-surface)] p-3">
+                      <h3 className="text-sm font-bold">Trọng tâm thẩm định</h3>
+                      <ul className="mt-2 space-y-1.5 text-sm" role="list">
+                        {reviewRubric.criteria.map((criterion) => (
+                          <li className="flex items-start gap-2" key={criterion.key}>
+                            <ShieldCheck
+                              aria-hidden="true"
+                              className="mt-0.5 size-4 shrink-0 text-primary-700"
+                            />
+                            <span>{criterion.label}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ) : null}
+                </div>
+
+                <div className="mt-3 flex flex-col gap-1 border-t border-[var(--theme-border)] pt-3 text-xs leading-5 text-neutral-600 sm:flex-row sm:justify-between sm:gap-4">
+                  <p>
+                    <strong className="text-[var(--theme-text)]">
+                      Giấy tờ bắt buộc:
+                    </strong>{" "}
+                    {requiredDocumentRules.length
+                      ? requiredDocumentRules
+                          .map((rule) => rule.label ?? rule.documentType)
+                          .join(", ")
+                      : "Không bắt buộc theo nhóm giấy tờ."}
+                  </p>
+                  {primaryFormats.length ? (
+                    <p>
+                      <strong className="text-[var(--theme-text)]">
+                        Tệp nội dung chính:
+                      </strong>{" "}
+                      {primaryFormats.join(", ")}
+                    </p>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-xs leading-5 text-neutral-600">
+                  Có thể tải bằng chứng ở bước tiếp theo; khi nộp hồ sơ cần ít
+                  nhất một tệp đã xác minh.
+                </p>
               </section>
             ) : null}
-            <div className="mt-3 grid gap-2.5 sm:max-h-[23rem] sm:grid-cols-2 sm:gap-3 sm:overflow-y-auto sm:pr-1">
+            <div className="mt-3 grid gap-2.5 sm:grid-cols-2 sm:gap-3">
               {visibleDossierTypes?.map((item) => {
                 const selected =
                   item.currentVersion.id === dossierTypeVersionId;
                 const description = item.currentVersion.schema.description;
+                const itemRequiredCount =
+                  item.currentVersion.schema.fields.filter(
+                    (field) => field.required,
+                  ).length;
+                const itemCriterionCount =
+                  item.currentVersion.schema.reviewRubric?.criteria.length ?? 0;
                 return (
                   <label
                     className="dossier-type-option"
@@ -417,6 +455,12 @@ export function DossierCreateForm() {
                       <span className="mt-1 block text-xs leading-5 text-neutral-500">
                         {description ??
                           `Biểu mẫu phiên bản ${item.currentVersion.versionNo}`}
+                      </span>
+                      <span className="mt-2 block text-[0.6875rem] font-semibold text-[var(--theme-accent)]">
+                        {itemRequiredCount} thông tin bắt buộc
+                        {itemCriterionCount
+                          ? ` · ${itemCriterionCount} tiêu chí thẩm định`
+                          : ""}
                       </span>
                     </span>
                   </label>

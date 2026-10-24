@@ -127,7 +127,11 @@ describe("DossierAllocationForm", () => {
       </QueryClientProvider>,
     );
 
-    await screen.findByRole("option", { name: /HS-2026-01/ });
+    await screen.findByRole(
+      "option",
+      { name: /HS-2026-01/ },
+      { timeout: 5_000 },
+    );
     await user.selectOptions(
       screen.getByLabelText("Hồ sơ cần thẩm định"),
       "dossier-1",

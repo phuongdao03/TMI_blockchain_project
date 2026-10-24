@@ -134,30 +134,83 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
     detail.assignment.status,
   );
   return (
-    <div className="review-workspace mx-auto max-w-[92rem] space-y-4 sm:space-y-6">
-      <Link
-        className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[var(--theme-muted)] hover:text-[var(--theme-accent)]"
-        href="/reviews"
-      >
-        <ArrowLeft aria-hidden="true" className="size-4" />
-        Trở lại hàng đợi
-      </Link>
-      <header className="border-b border-[var(--theme-border)] pb-4 text-[var(--theme-text)]">
-        <div className="flex flex-col justify-between gap-2 lg:flex-row lg:items-center">
-          <div>
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent)]">
-              <ClipboardCheck className="size-4" />
-              {detail.dossierCode} · Phiên bản {detail.versionNo}
+    <div className="review-workspace mx-auto max-w-[92rem] space-y-4 sm:space-y-5">
+      <section className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-[var(--theme-text)] sm:p-5">
+        <Link
+          className="inline-flex min-h-8 items-center gap-2 text-sm font-semibold text-[var(--theme-muted)] hover:text-[var(--theme-accent)]"
+          href="/reviews"
+        >
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          Hàng đợi
+        </Link>
+        <header className="mt-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+          <div className="min-w-0">
+            <p className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-[var(--theme-accent)]">
+              <ClipboardCheck aria-hidden="true" className="size-4" />
+              <span>{detail.dossierCode}</span>
+              <span aria-hidden="true">·</span>
+              <span>Phiên bản {detail.versionNo}</span>
             </p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-[-0.02em] sm:text-3xl">
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.02em] sm:text-3xl">
               {detail.dossierTitle}
             </h1>
           </div>
-          <span className="w-fit rounded-full border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-3 py-1.5 text-xs font-bold text-[var(--theme-accent)]">
+          <span className="w-fit shrink-0 rounded-md border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-2.5 py-1.5 text-xs font-bold text-[var(--theme-accent)]">
             {statusLabels[detail.assignment.status]}
           </span>
-        </div>
-      </header>
+        </header>
+
+        {["IN_PROGRESS", "SUBMITTED"].includes(detail.assignment.status) &&
+        detail.snapshotJson ? (
+          <div className="mt-4 flex flex-col gap-3 border-t border-[var(--theme-border)] pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--theme-muted)]">
+              <span
+                className={
+                  deadline.status === "OVERDUE"
+                    ? "font-bold text-error"
+                    : "font-semibold text-[var(--theme-text)]"
+                }
+              >
+                <Clock3 aria-hidden="true" className="mr-1 inline size-3.5" />
+                {deadline.label}
+              </span>
+              <span>{deadline.detail}</span>
+              <span aria-hidden="true">·</span>
+              <span>
+                <Files aria-hidden="true" className="mr-1 inline size-3.5" />
+                {evidenceCount} tài liệu
+              </span>
+            </div>
+            <nav
+              aria-label="Đi tới nội dung thẩm định"
+              className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"
+            >
+              <a
+                className="inline-flex min-h-10 items-center gap-2 font-semibold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                href="#review-evidence"
+              >
+                <Files aria-hidden="true" className="size-4 text-[var(--theme-accent)]" />
+                Tài liệu
+              </a>
+              <a
+                className="inline-flex min-h-10 items-center gap-2 font-bold text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                href="#review-scorecard"
+              >
+                <ClipboardCheck aria-hidden="true" className="size-4" />
+                Phiếu thẩm định
+              </a>
+              {detail.assignment.status === "IN_PROGRESS" ? (
+                <a
+                  className="inline-flex min-h-10 items-center font-semibold text-[var(--theme-muted)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                  href="#review-assistance"
+                >
+                  Yêu cầu hỗ trợ
+                </a>
+              ) : null}
+            </nav>
+          </div>
+        ) : null}
+      </section>
 
       {detail.assignment.status === "SUBMITTED" ? (
         <WorkflowNextStep
@@ -167,11 +220,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           tone="success"
           variant="inline"
         />
-      ) : detail.assignment.status === "IN_PROGRESS" ? (
-        <p className="text-sm text-[var(--theme-muted)]">
-          Đối chiếu tài liệu và hoàn thành phiếu thẩm định.
-        </p>
-      ) : detail.assignment.status === "ASSIGNED" ? (
+      ) : detail.assignment.status === "IN_PROGRESS" ? null : detail.assignment.status === "ASSIGNED" ? (
         <div className="space-y-4">
           <WorkflowNextStep
             description="Xác nhận trước khi mở tài liệu và lập báo cáo."
@@ -244,54 +293,6 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           variant="inline"
         />
       ) : null}
-
-      {["IN_PROGRESS", "SUBMITTED"].includes(detail.assignment.status) &&
-      detail.snapshotJson ? (
-        <nav
-          aria-label="Đi tới nội dung thẩm định"
-          className="flex flex-wrap gap-x-5 gap-y-1 border-b border-[var(--theme-border)] pb-2"
-        >
-          <a
-            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-            href="#review-evidence"
-          >
-            <Files
-              aria-hidden="true"
-              className="size-4 text-[var(--theme-accent)]"
-            />
-            Xem tài liệu
-          </a>
-          <a
-            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-            href="#review-scorecard"
-          >
-            <ClipboardCheck
-              aria-hidden="true"
-              className="size-4 text-[var(--theme-accent)]"
-            />
-            Tiếp tục báo cáo
-          </a>
-          {detail.assignment.status === "IN_PROGRESS" ? (
-            <a
-              className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-              href="#review-assistance"
-            >
-              Yêu cầu hỗ trợ
-            </a>
-          ) : null}
-        </nav>
-      ) : null}
-
-      <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-[var(--theme-muted)]">
-        <span>
-          <Clock3 aria-hidden="true" className="mr-1 inline size-3.5" />
-          {deadline.label} · {deadline.detail}
-        </span>
-        <span>
-          <Files aria-hidden="true" className="mr-1 inline size-3.5" />
-          {evidenceCount} tài liệu
-        </span>
-      </div>
 
       {save.error || submit.error ? (
         <p

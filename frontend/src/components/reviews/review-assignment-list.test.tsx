@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ReviewAssignmentList } from "@/components/reviews/review-assignment-list";
 
@@ -13,6 +13,49 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 describe("ReviewAssignmentList", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("marks a deadline overdue as time passes without refetching", async () => {
+    const now = vi
+      .spyOn(Date, "now")
+      .mockReturnValue(Date.parse("2026-08-08T07:59:45Z"));
+    listMock.mockResolvedValue({
+      data: [
+        {
+          assignment: {
+            id: "due-soon",
+            status: "IN_PROGRESS",
+            dueAt: "2026-08-08T08:00:00Z",
+          },
+          dossierCode: "CNS-3",
+          dossierTitle: "Hồ sơ sắp đến hạn",
+          versionNo: 1,
+        },
+      ],
+      meta: { page: 1, pageSize: 10, total: 1 },
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const view = render(
+      <QueryClientProvider client={client}>
+        <ReviewAssignmentList page={1} pageSize={10} />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByText("Hồ sơ sắp đến hạn");
+    expect(screen.queryByText("Trễ hạn")).toBeNull();
+    now.mockReturnValue(Date.parse("2026-08-08T08:00:15Z"));
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(screen.getByText("Trễ hạn")).toBeDefined();
+    expect(listMock).toHaveBeenCalledTimes(1);
+    view.unmount();
+  });
+
   it("renders the reviewer queue and assignment action", async () => {
     listMock.mockResolvedValue({
       success: true,

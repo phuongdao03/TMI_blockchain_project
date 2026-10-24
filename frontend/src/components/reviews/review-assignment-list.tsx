@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -60,12 +61,21 @@ export function ReviewAssignmentList({
   pageSize: number;
   status?: ReviewAssignmentStatus;
 }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const updateNow = () => setNow(Date.now());
+    const timer = window.setInterval(updateNow, 30_000);
+    window.addEventListener("focus", updateNow);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", updateNow);
+    };
+  }, []);
   const filters: ReviewListFilters = { page, pageSize, status };
-  const { data, dataUpdatedAt, error, isPending, isFetching, refetch } =
-    useQuery({
-      queryKey: reviewKeys.list(filters),
-      queryFn: () => reviewApi.list(filters),
-    });
+  const { data, error, isPending, isFetching, refetch } = useQuery({
+    queryKey: reviewKeys.list(filters),
+    queryFn: () => reviewApi.list(filters),
+  });
 
   if (isPending) {
     return (
@@ -114,9 +124,7 @@ export function ReviewAssignmentList({
 
   const totalPages = Math.max(1, Math.ceil(data.meta.total / pageSize));
   const isOverdue = (status: ReviewAssignmentStatus, dueAt: string | null) =>
-    isActive(status) &&
-    dueAt !== null &&
-    new Date(dueAt).getTime() < dataUpdatedAt;
+    isActive(status) && dueAt !== null && new Date(dueAt).getTime() < now;
   const orderedAssignments = [...data.data].sort((left, right) => {
     const priority = (status: ReviewAssignmentStatus, dueAt: string | null) =>
       isOverdue(status, dueAt) ? 0 : isActive(status) ? 1 : 2;

@@ -33,11 +33,42 @@ type LocalVerdict = Omit<CriterionVerdict, "outcome"> & {
 const outcomeOptions: Array<{
   value: CriterionVerdictOutcome;
   label: string;
+  note: string;
+  selectedClass: string;
+  markerClass: string;
 }> = [
-  { value: "MEETS", label: "Đáp ứng" },
-  { value: "NEEDS_CLARIFICATION", label: "Cần làm rõ hoặc bổ sung" },
-  { value: "DOES_NOT_MEET", label: "Không đáp ứng" },
-  { value: "NOT_APPLICABLE", label: "Không áp dụng" },
+  {
+    value: "MEETS",
+    label: "Đáp ứng",
+    note: "Có căn cứ phù hợp",
+    selectedClass:
+      "border-emerald-600 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100",
+    markerClass: "bg-emerald-600",
+  },
+  {
+    value: "NEEDS_CLARIFICATION",
+    label: "Cần bổ sung",
+    note: "Chưa đủ căn cứ để kết luận",
+    selectedClass:
+      "border-amber-600 bg-amber-50 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100",
+    markerClass: "bg-amber-600",
+  },
+  {
+    value: "DOES_NOT_MEET",
+    label: "Không đáp ứng",
+    note: "Có điểm chưa phù hợp",
+    selectedClass:
+      "border-red-600 bg-red-50 text-red-950 dark:bg-red-950/40 dark:text-red-100",
+    markerClass: "bg-red-600",
+  },
+  {
+    value: "NOT_APPLICABLE",
+    label: "Không áp dụng",
+    note: "Tiêu chí không phù hợp hồ sơ",
+    selectedClass:
+      "border-slate-500 bg-slate-100 text-slate-950 dark:bg-slate-800 dark:text-slate-100",
+    markerClass: "bg-slate-500",
+  },
 ];
 
 function recommendationFor(
@@ -284,46 +315,56 @@ export function VerdictReviewForm({
 
   return (
     <>
-      <section className="pt-6 text-[var(--theme-text)]">
-        <header className="pb-6">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent)]">
-            Kết luận theo tiêu chí
-          </p>
-          <h2 className="mt-2 text-2xl font-bold">Phiếu thẩm định hồ sơ</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
-            Kiểm tra tệp, chọn kết luận cho từng tiêu chí rồi gửi kết quả. Bản
-            nháp được lưu trong khi bạn làm việc.
-          </p>
-          <div
-            aria-label="Tiến độ thẩm định"
-            className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold"
-          >
-            <span>
-              Tệp đã kiểm tra {reviewedFiles}/{evidences.length}
-            </span>
-            <span>
-              Tiêu chí hoàn thành {completedCriteria}/{rubric.criteria.length}
-            </span>
-            <span
-              className={
-                complete ? "text-emerald-700" : "text-[var(--theme-muted)]"
-              }
-            >
-              {complete
-                ? "Sẵn sàng gửi"
-                : `${validationIssues.length} mục cần hoàn tất`}
-            </span>
+      <section className="border-t border-[var(--theme-border)] pt-5 text-[var(--theme-text)] sm:pt-6">
+        <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--theme-accent)]">
+              Phiếu thẩm định
+            </p>
+            <h2 className="mt-1 text-xl font-bold sm:text-2xl">
+              Kết luận theo tiêu chí
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
+              Kiểm tra tài liệu, ghi căn cứ cho từng tiêu chí rồi gửi kết quả.
+              Bản nháp được lưu tự động.
+            </p>
           </div>
+          <span
+            className={
+              complete
+                ? "w-fit rounded-md bg-emerald-100 px-3 py-2 text-sm font-bold text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100"
+                : "w-fit rounded-md bg-amber-100 px-3 py-2 text-sm font-bold text-amber-950 dark:bg-amber-950/50 dark:text-amber-100"
+            }
+          >
+            {complete ? "Sẵn sàng gửi" : `${validationIssues.length} mục còn lại`}
+          </span>
+        </header>
+        <div
+          aria-label="Tiến độ thẩm định"
+          className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm"
+        >
+          <span className="text-[var(--theme-muted)]">
+            <strong className="tabular-nums text-[var(--theme-text)]">
+              {reviewedFiles}/{evidences.length}
+            </strong>{" "}
+            tài liệu đã kiểm tra
+          </span>
+          <span className="text-[var(--theme-muted)]">
+            <strong className="tabular-nums text-[var(--theme-text)]">
+              {completedCriteria}/{rubric.criteria.length}
+            </strong>{" "}
+            tiêu chí hoàn tất
+          </span>
           {!complete ? (
             <p
-              className="mt-2 text-xs leading-5 text-[var(--theme-muted)]"
+              className="min-w-0 basis-full border-l-2 border-[var(--theme-accent)] pl-3 text-sm font-semibold leading-5"
               role="status"
             >
-              Cần làm tiếp: {validationIssues[0]}
+              Tiếp theo: {validationIssues[0]}
             </p>
           ) : null}
-        </header>
-        <form className="space-y-9">
+        </div>
+        <form className="mt-4 space-y-5">
           <ReviewEvidenceAssessments
             assessments={assessments}
             evidences={evidences}
@@ -336,7 +377,7 @@ export function VerdictReviewForm({
               <h3 className="text-lg font-bold" id="review-conditions">
                 Điều kiện tiếp nhận
               </h3>
-              <div className="space-y-8">
+              <div className="space-y-3">
                 {rubric.gates.map((gate) => {
                   const answer = gates[gate.key] ?? {
                     outcome: "PASS" as const,
@@ -345,7 +386,7 @@ export function VerdictReviewForm({
                   };
                   return (
                     <fieldset
-                      className="min-w-0 border-0 px-0 py-0"
+                      className="min-w-0 rounded-xl bg-[var(--theme-elevated)] p-4 sm:p-5"
                       disabled={readOnly}
                       key={gate.key}
                     >
@@ -353,7 +394,7 @@ export function VerdictReviewForm({
                       <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
                         {gate.description}
                       </p>
-                      <div className="mt-4 grid gap-4 md:grid-cols-[minmax(12rem,0.35fr)_minmax(0,1fr)]">
+                      <div className="mt-3 grid gap-3 md:grid-cols-[minmax(12rem,0.35fr)_minmax(0,1fr)]">
                         <select
                           aria-label={`Kết quả ${gate.label}`}
                           className="min-h-11 self-start rounded-lg border bg-[var(--theme-surface)] px-3"
@@ -426,7 +467,39 @@ export function VerdictReviewForm({
                 Đánh giá dựa trên tài liệu thực tế của hồ sơ.
               </p>
             </div>
-            <div className="space-y-10">
+            <nav
+              aria-label="Tiến độ từng tiêu chí"
+              className="flex flex-wrap gap-2"
+            >
+              {rubric.criteria.map((criterion, index) => {
+                const answer = verdicts[criterion.key];
+                const isComplete = Boolean(
+                  answer?.outcome &&
+                    answer.rationale.trim().length >= 20 &&
+                    (answer.outcome === "NOT_APPLICABLE" ||
+                      answer.evidenceMediaIds.length > 0),
+                );
+                return (
+                  <a
+                    className={[
+                      "inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]",
+                      isComplete
+                        ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100"
+                        : "bg-[var(--theme-elevated)] text-[var(--theme-text)] hover:bg-[var(--theme-border)]",
+                    ].join(" ")}
+                    href={`#review-criterion-${criterion.key}`}
+                    key={criterion.key}
+                  >
+                    <span className="font-mono text-xs">{index + 1}</span>
+                    <span>{criterion.label}</span>
+                    <span className="text-xs opacity-75">
+                      {isComplete ? "Đã xong" : "Cần làm"}
+                    </span>
+                  </a>
+                );
+              })}
+            </nav>
+            <div className="space-y-3">
               {rubric.criteria.map((criterion, index) => {
                 const answer = verdicts[criterion.key] ?? {
                   outcome: "",
@@ -435,12 +508,13 @@ export function VerdictReviewForm({
                 };
                 return (
                   <fieldset
-                    className="min-w-0 border-0 px-0 py-0"
+                    className="min-w-0 scroll-mt-28 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5"
                     disabled={readOnly}
+                    id={`review-criterion-${criterion.key}`}
                     key={criterion.key}
                   >
-                    <legend className="px-1 font-bold">
-                      <span className="mr-2 text-[var(--theme-accent)]">
+                    <legend className="max-w-full px-0 font-bold">
+                      <span className="mr-2 inline-grid size-7 place-items-center rounded-full bg-[var(--theme-elevated)] text-xs text-[var(--theme-accent)]">
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       {criterion.label}
@@ -448,54 +522,98 @@ export function VerdictReviewForm({
                     <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
                       {criterion.description}
                     </p>
-                    <div className="mt-4 grid gap-4 md:grid-cols-[minmax(12rem,0.35fr)_minmax(0,1fr)]">
-                      <select
-                        aria-label={`Kết luận ${criterion.label}`}
-                        className="min-h-11 self-start rounded-lg border bg-[var(--theme-surface)] px-3"
-                        id={`verdict-outcome-${criterion.key}`}
+                    <fieldset className="mt-4" disabled={readOnly}>
+                      <legend className="text-sm font-bold">
+                        Chọn kết luận
+                      </legend>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                        {outcomeOptions.map((option, optionIndex) => {
+                          const selected = answer.outcome === option.value;
+                          return (
+                            <label
+                              className={[
+                                "flex min-h-14 items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--theme-accent)]",
+                                selected
+                                  ? option.selectedClass
+                                  : "border-[var(--theme-border)] bg-[var(--theme-elevated)] hover:border-[var(--theme-accent)]",
+                                readOnly ? "cursor-default" : "cursor-pointer",
+                              ].join(" ")}
+                              key={option.value}
+                            >
+                              <input
+                                aria-label={`${criterion.label}: ${option.label}`}
+                                checked={selected}
+                                className="sr-only"
+                                disabled={readOnly}
+                                id={
+                                  optionIndex === 0
+                                    ? `verdict-outcome-${criterion.key}`
+                                    : undefined
+                                }
+                                name={`verdict-outcome-${criterion.key}`}
+                                onChange={() =>
+                                  setVerdicts((current) => ({
+                                    ...current,
+                                    [criterion.key]: {
+                                      ...answer,
+                                      outcome: option.value,
+                                    },
+                                  }))
+                                }
+                                type="radio"
+                                value={option.value}
+                              />
+                              <span
+                                aria-hidden="true"
+                                className={[
+                                  "mt-1.5 size-2 shrink-0 rounded-full",
+                                  selected
+                                    ? option.markerClass
+                                    : "bg-[var(--theme-muted)]",
+                                ].join(" ")}
+                              />
+                              <span>
+                                <span className="block text-sm font-bold">
+                                  {option.label}
+                                </span>
+                                <span className="mt-0.5 block text-xs leading-4 opacity-75">
+                                  {option.note}
+                                </span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+                    <div className="mt-4">
+                      <label
+                        className="text-sm font-bold"
+                        htmlFor={`verdict-rationale-${criterion.key}`}
+                      >
+                        Nhận định và căn cứ
+                      </label>
+                      <textarea
+                        aria-label={`Nhận định ${criterion.label}`}
+                        className="mt-2 min-h-24 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-3 text-sm leading-6"
+                        id={`verdict-rationale-${criterion.key}`}
+                        maxLength={2_000}
                         onChange={(event) =>
                           setVerdicts((current) => ({
                             ...current,
                             [criterion.key]: {
                               ...answer,
-                              outcome: event.target
-                                .value as LocalVerdict["outcome"],
+                              rationale: event.target.value,
                             },
                           }))
                         }
-                        value={answer.outcome}
-                      >
-                        <option value="">Chọn kết luận</option>
-                        {outcomeOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <div>
-                        <textarea
-                          aria-label={`Nhận định ${criterion.label}`}
-                          className="min-h-24 w-full rounded-lg border bg-[var(--theme-surface)] p-3"
-                          id={`verdict-rationale-${criterion.key}`}
-                          maxLength={2_000}
-                          onChange={(event) =>
-                            setVerdicts((current) => ({
-                              ...current,
-                              [criterion.key]: {
-                                ...answer,
-                                rationale: event.target.value,
-                              },
-                            }))
-                          }
-                          placeholder="Nêu điều đã kiểm tra và căn cứ kết luận (tối thiểu 20 ký tự)"
-                          value={answer.rationale}
-                        />
-                        <p className="mt-1 text-right text-xs text-[var(--theme-muted)]">
-                          {answer.rationale.trim().length >= 20
-                            ? "Đủ độ dài căn cứ"
-                            : `Cần thêm ${20 - answer.rationale.trim().length} ký tự`}
-                        </p>
-                      </div>
+                        placeholder="Ghi rõ nội dung đã đối chiếu trong hồ sơ (tối thiểu 20 ký tự)"
+                        value={answer.rationale}
+                      />
+                      <p className="mt-1 text-right text-xs text-[var(--theme-muted)]">
+                        {answer.rationale.trim().length >= 20
+                          ? "Đã đủ độ dài căn cứ"
+                          : `Cần thêm ${20 - answer.rationale.trim().length} ký tự`}
+                      </p>
                     </div>
                     <ReviewEvidenceSelect
                       disabled={readOnly || answer.outcome === "NOT_APPLICABLE"}
@@ -516,7 +634,7 @@ export function VerdictReviewForm({
           </section>
 
           <section
-            className="grid scroll-mt-24 gap-4 border-t border-[var(--theme-border)] pt-6 md:grid-cols-2"
+            className="grid scroll-mt-24 gap-4 rounded-xl bg-[var(--theme-elevated)] p-4 sm:grid-cols-2 sm:p-5"
             id="review-final-result"
           >
             <div
@@ -543,21 +661,30 @@ export function VerdictReviewForm({
                 value={applicantFeedback}
               />
             </div>
-            <div className="md:col-span-2">
+            <details
+              className="rounded-lg bg-[var(--theme-surface)] p-3 sm:col-span-2"
+              open={Boolean(privateNote)}
+            >
+              <summary className="cursor-pointer text-sm font-bold">
+                Ghi chú nội bộ
+                <span className="ml-2 text-xs font-normal text-[var(--theme-muted)]">
+                  Chỉ kiểm duyệt viên xem
+                </span>
+              </summary>
               <label
-                className="text-sm font-bold"
+                className="mt-3 block text-sm font-semibold"
                 htmlFor="verdict-private-note"
               >
-                Ghi chú nội bộ
+                Ghi chú cho nhóm xử lý
               </label>
               <textarea
-                className="mt-2 min-h-20 w-full rounded-xl border bg-[var(--theme-surface)] p-3"
+                className="mt-2 min-h-20 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-3 text-sm"
                 disabled={readOnly}
                 id="verdict-private-note"
                 onChange={(event) => setPrivateNote(event.target.value)}
                 value={privateNote}
               />
-            </div>
+            </details>
           </section>
 
           {error ? (
@@ -565,35 +692,42 @@ export function VerdictReviewForm({
               {error}
             </p>
           ) : null}
-          <div className="flex flex-col justify-between gap-4 pt-2 sm:flex-row sm:items-center">
-            <p
-              aria-live="polite"
-              className="flex items-center gap-2 text-xs font-semibold text-[var(--theme-muted)]"
-              data-testid="review-save-status"
-              role={saveError ? "alert" : "status"}
-            >
-              {readOnly ? (
-                <>
-                  <CheckCircle2 className="size-4" />
-                  Kết quả đã gửi.
-                </>
-              ) : saveError ? (
-                <>
-                  <AlertCircle className="size-4 text-red-700" />
-                  Chưa lưu được bản nháp.
-                </>
-              ) : isSaving ? (
-                <>
-                  <LoaderCircle className="size-4 animate-spin" />
-                  Đang lưu thay đổi…
-                </>
-              ) : (
-                <>
-                  <Save className="size-4" />
-                  Đã lưu bản nháp.
-                </>
-              )}
-            </p>
+          <div className="sticky bottom-0 z-20 -mx-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-t-xl bg-[var(--theme-surface)]/95 px-4 py-2 shadow-[0_-8px_24px_rgb(15_23_42_/_10%)] backdrop-blur sm:-mx-5 sm:px-5">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+              <p
+                aria-live="polite"
+                className="flex items-center gap-2 text-xs font-semibold text-[var(--theme-muted)]"
+                data-testid="review-save-status"
+                role={saveError ? "alert" : "status"}
+              >
+                {readOnly ? (
+                  <>
+                    <CheckCircle2 className="size-4" />
+                    Kết quả đã gửi.
+                  </>
+                ) : saveError ? (
+                  <>
+                    <AlertCircle className="size-4 text-red-700" />
+                    Chưa lưu được bản nháp.
+                  </>
+                ) : isSaving ? (
+                  <>
+                    <LoaderCircle className="size-4 animate-spin" />
+                    Đang lưu thay đổi…
+                  </>
+                ) : (
+                  <>
+                    <Save className="size-4" />
+                    Đã lưu bản nháp.
+                  </>
+                )}
+              </p>
+              <p className="text-sm font-bold text-[var(--theme-text)]">
+                {complete
+                  ? resultLabel(recommendation)
+                  : `${validationIssues.length} mục còn lại trước khi gửi`}
+              </p>
+            </div>
             {!readOnly ? (
               <Button
                 disabled={isSaving || isSubmitting}

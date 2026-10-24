@@ -65,10 +65,11 @@ it("guides the reviewer before and after submitting a report", async () => {
   );
 
   expect(
-    await screen.findByText(
-      "Đối chiếu tài liệu và hoàn thành phiếu thẩm định.",
-    ),
-  ).toBeTruthy();
+    await screen.findByRole("link", { name: "Tài liệu" }),
+  ).toHaveProperty("href", expect.stringContaining("#review-evidence"));
+  expect(
+    screen.getByRole("link", { name: "Phiếu thẩm định" }),
+  ).toHaveProperty("href", expect.stringContaining("#review-scorecard"));
   await user.click(screen.getByRole("button", { name: "Gửi kết quả" }));
 
   expect(await screen.findByText("Đã gửi báo cáo thẩm định")).toBeTruthy();
@@ -119,10 +120,8 @@ it("lets an assigned reviewer confirm no conflict and continue to the report", a
     hasConflict: false,
   });
   expect(
-    await screen.findByText(
-      "Đối chiếu tài liệu và hoàn thành phiếu thẩm định.",
-    ),
-  ).toBeTruthy();
+    await screen.findByRole("link", { name: "Phiếu thẩm định" }),
+  ).toHaveProperty("href", expect.stringContaining("#review-scorecard"));
 });
 
 it("requires a reason before declaring a conflict", async () => {

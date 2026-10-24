@@ -181,9 +181,18 @@ export function FileUploader({
   return (
     <section
       aria-labelledby={`${inputId}-label`}
-      className="media-uploader bg-[var(--theme-surface)] sm:border-y sm:border-[var(--theme-border)]"
+      className={cn(
+        "media-uploader",
+        !compact &&
+          "bg-[var(--theme-surface)] sm:border-y sm:border-[var(--theme-border)]",
+      )}
     >
-      <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3 sm:border-b sm:border-[var(--theme-border)] sm:py-4">
+      <div
+        className={cn(
+          "flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3",
+          compact ? "sm:py-2" : "sm:border-b sm:border-[var(--theme-border)] sm:py-4",
+        )}
+      >
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="hidden size-8 shrink-0 place-items-center rounded-lg bg-success/10 text-success sm:grid">
@@ -211,7 +220,7 @@ export function FileUploader({
         ) : null}
       </div>
 
-      <div className="space-y-4 py-2 sm:py-4">
+      <div className={cn("space-y-4 py-2", compact ? "sm:py-2" : "sm:py-4")}>
         <input
           accept={allowedMimeTypes.join(",") || policy.accept}
           aria-describedby={descriptionId}
@@ -295,7 +304,13 @@ export function FileUploader({
                 Có thể thêm nhiều lần trước khi tải
               </p>
             </div>
-            <ul className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]">
+            <ul
+              className={cn(
+                compact
+                  ? "grid gap-2"
+                  : "divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]",
+              )}
+            >
               {items.map((item) => {
                 const hasError = item.status === "failed";
                 const isItemBusy = [
@@ -307,7 +322,10 @@ export function FileUploader({
                 return (
                   <li
                     className={cn(
-                      "media-uploader__item py-3",
+                      "media-uploader__item",
+                      compact
+                        ? "rounded-lg p-3"
+                        : "py-3",
                       hasError ? "bg-error/5" : "bg-[var(--theme-surface)]",
                     )}
                     key={item.id}

@@ -34,23 +34,23 @@ export function ReviewEvidenceSelect({
   return (
     <div
       aria-label={`Bằng chứng căn cứ cho ${label}`}
-      className="mt-4"
+      className="mt-3 rounded-xl bg-[var(--theme-elevated)] p-3 sm:p-4"
       role="group"
     >
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <p className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
-          Tài liệu làm căn cứ
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-bold text-[var(--theme-text)]">
+          Tài liệu dẫn chiếu
         </p>
         <p className="text-xs leading-5 text-[var(--theme-muted)]">
-          Chọn ít nhất một tệp đã khóa.
+          Chọn tệp làm căn cứ cho tiêu chí này
         </p>
       </div>
-      <div className="mt-2 grid gap-x-6 gap-y-1 md:grid-cols-2">
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
         {evidences.map((evidence) => {
           const checked = value.includes(evidence.mediaAssetId);
           return (
             <label
-              className="grid min-h-12 cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-lg py-1.5 text-sm transition-colors hover:text-[var(--theme-accent)] has-[:checked]:text-[var(--theme-accent)]"
+              className="grid min-h-11 cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-lg border border-transparent bg-[var(--theme-surface)] px-3 py-2 text-sm transition-colors hover:border-[var(--theme-border)] has-[:checked]:border-[var(--theme-accent)] has-[:checked]:text-[var(--theme-accent)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--theme-accent)]"
               key={evidence.mediaAssetId}
             >
               <input

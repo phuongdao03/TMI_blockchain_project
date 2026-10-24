@@ -52,11 +52,11 @@ describe("ReviewWorkspace", () => {
 
     expect(await screen.findByText("Tác phẩm văn hóa")).toBeDefined();
     expect(
-      screen.getByRole("link", { name: "Xem tài liệu" }).getAttribute("href"),
+      screen.getByRole("link", { name: "Tài liệu" }).getAttribute("href"),
     ).toBe("#review-evidence");
     expect(
       screen
-        .getByRole("link", { name: "Tiếp tục báo cáo" })
+        .getByRole("link", { name: "Phiếu thẩm định" })
         .getAttribute("href"),
     ).toBe("#review-scorecard");
     expect(document.getElementById("review-evidence")).toBeDefined();

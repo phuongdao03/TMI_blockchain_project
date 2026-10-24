@@ -35,7 +35,7 @@ describe("DossierCreateForm", () => {
 
     const activeStep = screen.getByText("Chọn loại").closest("li");
     expect(activeStep?.getAttribute("aria-current")).toBe("step");
-    expect(activeStep?.className).toContain("dossier-journey__step--active");
+    expect(activeStep?.className).toContain("dossier-journey__item--active");
     expect(activeStep?.className).not.toContain("bg-primary-50");
   });
 
@@ -128,10 +128,10 @@ describe("DossierCreateForm", () => {
       await screen.findByRole("radio", { name: /Tác phẩm văn hóa/ }),
     );
     expect(
-      screen.getByRole("heading", { name: "Tài liệu cần chuẩn bị" }),
+      screen.getByRole("heading", { name: "Khác biệt của loại hồ sơ này" }),
     ).toBeDefined();
     const preflight = screen.getByRole("region", {
-      name: "Tài liệu cần chuẩn bị",
+      name: "Khác biệt của loại hồ sơ này",
     });
     const selectedType = screen
       .getByRole("radio", { name: /Tác phẩm văn hóa/ })
@@ -144,9 +144,7 @@ describe("DossierCreateForm", () => {
       document.querySelectorAll(".dossier-create-form > section"),
     ).toHaveLength(1);
     expect(screen.getByText("Tài liệu chứng minh nguồn gốc")).toBeDefined();
-    expect(screen.getByText(/PDF, PNG/)).toBeDefined();
-    expect(screen.getByText(/tối đa 10 MB · 3 tệp/)).toBeDefined();
-    expect(screen.getByText(/1 trường thông tin bắt buộc/)).toBeDefined();
+    expect(screen.getByText(/1 trường bắt buộc/)).toBeDefined();
     expect(screen.queryByLabelText("Tên tài sản hoặc tác phẩm")).toBeNull();
     await user.click(
       screen.getByRole("button", { name: "Tiếp tục nhập thông tin" }),

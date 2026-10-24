@@ -189,7 +189,7 @@ function EvidenceItem({
   onRemove: (id: string) => void;
 }) {
   return (
-    <article className="grid gap-4 border-b border-[var(--theme-border)] py-4 last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
+    <article className="grid gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
       <span className="grid size-10 place-items-center rounded-full bg-emerald-50 text-emerald-700">
         <FileCheck2 aria-hidden="true" className="size-5" />
       </span>
@@ -593,21 +593,21 @@ export function DossierWorkspace({
           </p>
           <ol
             aria-label="Các bước sau khi nộp"
-            className="mt-4 grid gap-4 border-y border-emerald-200 py-4 text-sm sm:grid-cols-3"
+            className="mt-4 grid gap-3 text-sm sm:grid-cols-3"
           >
-            <li>
+            <li className="rounded-xl bg-white/60 p-3">
               <strong className="block">1. Đã tiếp nhận</strong>
               <span className="mt-1 block">
                 Hồ sơ đã có mã để bạn theo dõi.
               </span>
             </li>
-            <li>
+            <li className="rounded-xl bg-white/60 p-3">
               <strong className="block">2. Kiểm duyệt hồ sơ</strong>
               <span className="mt-1 block">
                 Tinh Hoa Việt đối chiếu thông tin và tài liệu.
               </span>
             </li>
-            <li>
+            <li className="rounded-xl bg-white/60 p-3">
               <strong className="block">3. Thông báo kết quả</strong>
               <span className="mt-1 block">
                 Xem yêu cầu bổ sung hoặc kết quả khi trạng thái đổi.
@@ -708,7 +708,7 @@ export function DossierWorkspace({
       <div className="space-y-4">
         <nav
           aria-label="Các bước hoàn thiện hồ sơ"
-          className="grid grid-cols-3 border-b border-[var(--theme-border)] bg-[var(--theme-surface)]"
+          className="grid gap-2 sm:grid-cols-3"
           id="dossier-steps"
         >
           {steps.map((item, index) => {
@@ -724,10 +724,10 @@ export function DossierWorkspace({
                     item.id !== "information")
                 }
                 className={cn(
-                  "flex min-h-12 min-w-0 w-full flex-col justify-center gap-1 border-b-2 px-1 py-2 text-center transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-16 sm:flex-row sm:gap-3 sm:px-3 sm:py-3 sm:text-left",
+                  "flex min-h-12 min-w-0 w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-16 sm:gap-3 sm:px-4 sm:py-3",
                   active
-                    ? "border-primary-600 text-primary-800"
-                    : "border-transparent text-[var(--theme-muted)] hover:bg-[var(--theme-elevated)]",
+                    ? "border-primary-600 bg-primary-50 text-primary-900 dark:bg-primary-950/40 dark:text-primary-100"
+                    : "border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:bg-[var(--theme-elevated)]",
                 )}
                 key={item.id}
                 onClick={() => setStep(item.id)}
@@ -735,7 +735,7 @@ export function DossierWorkspace({
               >
                 <span
                   className={cn(
-                    "hidden size-9 shrink-0 place-items-center rounded-full sm:grid",
+                    "grid size-8 shrink-0 place-items-center rounded-full",
                     active
                       ? "bg-primary-600 text-white"
                       : "bg-[var(--theme-elevated)] text-[var(--theme-muted)]",
@@ -756,7 +756,7 @@ export function DossierWorkspace({
           })}
         </nav>
 
-        <div className="min-w-0 bg-[var(--theme-surface)] px-1 py-5 text-[var(--theme-text)] sm:px-3 sm:py-7 lg:px-5 lg:py-8">
+        <div className="min-w-0 bg-[var(--theme-surface)] px-1 py-4 text-[var(--theme-text)] sm:px-3 sm:py-5 lg:px-5 lg:py-6">
           {step === "information" ? (
             <InformationStep
               dossier={dossier}
@@ -776,7 +776,7 @@ export function DossierWorkspace({
                 </p>
               </div>
               {dossier.canEdit && !submissionComplete ? (
-                <div className="space-y-5 sm:border-t sm:border-[var(--theme-border)] sm:pt-5">
+                <div className="space-y-5 rounded-2xl bg-[var(--theme-elevated)] p-4 sm:p-5">
                   {documentRules.length > 0 ? (
                     <fieldset className="space-y-3">
                       <legend className="text-sm font-bold">
@@ -874,14 +874,14 @@ export function DossierWorkspace({
                     </p>
                   ) : null}
                   {selectedRule ? (
-                    <p className="text-xs leading-5 text-[var(--theme-muted)] sm:border-l-2 sm:border-primary-500 sm:py-1 sm:pl-4">
+                    <p className="rounded-lg bg-[var(--theme-surface)] px-3 py-2 text-xs leading-5 text-[var(--theme-muted)]">
                       {selectedRule.required
                         ? "Cần có để nộp hồ sơ"
                         : "Không bắt buộc"}{" "}
                       · {evidenceScopeLabel(selectedRule.defaultVisibility)}.
                     </p>
                   ) : null}
-                  <details className="border-y border-[var(--theme-border)] py-3 sm:py-4">
+                  <details className="rounded-xl bg-[var(--theme-surface)] p-3 sm:p-4">
                     <summary className="cursor-pointer text-sm font-semibold">
                       Đặt tên hiển thị cho tài liệu (tùy chọn)
                     </summary>
@@ -960,7 +960,7 @@ export function DossierWorkspace({
               ) : null}
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="font-bold text-neutral-950">Tệp đã thêm</h3>
+                  <h3 className="font-bold text-[var(--theme-text)]">Tệp đã thêm</h3>
                   <span className="text-xs font-semibold text-neutral-500">
                     {dossier.evidences.length} tệp
                   </span>
@@ -975,7 +975,7 @@ export function DossierWorkspace({
                     />
                   ))
                 ) : (
-                  <div className="flex items-start gap-3 border-y border-[var(--theme-border)] py-4">
+                  <div className="flex items-start gap-3 rounded-xl border border-dashed border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4">
                     <span className="grid size-9 shrink-0 place-items-center text-[var(--theme-muted)]">
                       <FileCheck2 aria-hidden="true" className="size-4" />
                     </span>
@@ -988,7 +988,7 @@ export function DossierWorkspace({
                   </div>
                 )}
               </div>
-              <div className="flex flex-wrap justify-between gap-3 border-t border-[var(--theme-border)] pt-5">
+              <div className="flex flex-wrap justify-between gap-3 pt-2">
                 <Button
                   variant="outline"
                   disabled={queueLocked}
@@ -1036,9 +1036,9 @@ export function DossierWorkspace({
               ) : null}
               <div
                 aria-label="Kiểm tra trước khi nộp"
-                className="divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]"
+                className="grid gap-3 sm:grid-cols-2"
               >
-                <div className="flex items-start gap-3 py-4">
+                <div className="flex items-start gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4">
                   <CheckCircle2
                     aria-hidden="true"
                     className="mt-0.5 size-5 text-emerald-600"
@@ -1060,7 +1060,7 @@ export function DossierWorkspace({
                     </Button>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 py-4">
+                <div className="flex items-start gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4">
                   {isComplete ? (
                     <CheckCircle2
                       aria-hidden="true"
@@ -1144,11 +1144,11 @@ export function DossierWorkspace({
               <div className="grid min-w-0 gap-5 lg:grid-cols-2">
                 <div className="min-w-0">
                   <h3 className="font-bold">Phiên bản</h3>
-                  <div className="mt-3 divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]">
+                  <div className="mt-3 space-y-2">
                     {versions.data?.length ? (
                       versions.data.map((version) => (
                         <div
-                          className="min-w-0 overflow-hidden py-3"
+                          className="min-w-0 overflow-hidden rounded-lg bg-[var(--theme-elevated)] p-3"
                           key={version.id}
                         >
                           <p className="text-sm font-bold">
@@ -1171,10 +1171,10 @@ export function DossierWorkspace({
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-bold">Dòng thời gian</h3>
-                  <div className="mt-3 divide-y divide-[var(--theme-border)] border-y border-[var(--theme-border)]">
+                  <div className="mt-3 space-y-2">
                     {timeline.data?.length ? (
                       timeline.data.map((item) => (
-                        <div className="flex gap-3 py-3" key={item.id}>
+                        <div className="flex gap-3 rounded-lg bg-[var(--theme-elevated)] p-3" key={item.id}>
                           <span className="mt-1 size-2 rounded-full bg-primary-600" />
                           <div>
                             <p className="text-sm font-bold">
