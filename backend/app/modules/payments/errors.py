@@ -28,6 +28,15 @@ class PaymentConflictError(DomainError):
         )
 
 
+class PaymentHistoryFilterError(DomainError):
+    def __init__(self, message: str) -> None:
+        super().__init__(
+            code="PAYMENT_HISTORY_FILTER_INVALID",
+            message=message,
+            status_code=422,
+        )
+
+
 class PaymentAmountMismatchError(DomainError):
     def __init__(self) -> None:
         super().__init__(

@@ -1,6 +1,7 @@
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID, uuid4, uuid5
 
 from sqlalchemy import select
@@ -21,6 +22,7 @@ from app.modules.payments.errors import (
     PaymentAmountMismatchError,
     PaymentConflictError,
     PaymentForbiddenError,
+    PaymentHistoryFilterError,
     PaymentInvalidWebhookError,
     PaymentNotFoundError,
     PaymentProviderError,
@@ -31,13 +33,25 @@ from app.modules.payments.gateway import (
     PaymentGatewayError,
     ProviderOrder,
 )
-from app.modules.payments.models import PaymentEvent, PaymentOrder, PaymentStatus
+from app.modules.payments.models import (
+    PaymentEvent,
+    PaymentOrder,
+    PaymentStatus,
+    PaymentStatusHistory,
+)
 from app.modules.payments.repository import PaymentRepository
 from app.modules.payments.types import (
+    AdminPaymentHistoryDetailView,
+    AdminPaymentHistoryPageView,
+    AdminPaymentHistoryRowView,
+    AdminPaymentHistorySummaryView,
+    AdminPaymentOrderView,
     PaymentCandidateView,
     PaymentOrderView,
+    PaymentStatusHistoryView,
     PaymentWaiverView,
 )
+from app.modules.wallet.service import WalletLedger, WalletService, valid_key
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +59,14 @@ PAYMENT_ROLES = frozenset({"USER"})
 FINANCE_ROLES = frozenset({"SUPER_ADMIN"})
 RECONCILIATION_REQUIREMENT = PolicyRequirement(
     permission="payments.reconcile",
+    compatible_roles=FINANCE_ROLES,
+)
+PAYMENT_HISTORY_READ_REQUIREMENT = PolicyRequirement(
+    permission="payments.read",
+    compatible_roles=FINANCE_ROLES,
+)
+PAYMENT_HISTORY_EXPORT_REQUIREMENT = PolicyRequirement(
+    permission="payments.export",
     compatible_roles=FINANCE_ROLES,
 )
 ISSUE_PAYMENT_REQUIREMENT = PolicyRequirement(permission="payments.issue")
@@ -98,17 +120,104 @@ class PaymentService:
     def provider_name(self) -> str:
         return self._provider_name
 
+    def wallet_service(self) -> WalletService:
+        return WalletService(
+            session=self._session,
+            gateway=self._gateway,
+            provider=self._provider_name,
+            ttl_seconds=int(self._order_ttl.total_seconds()),
+        )
+
+    async def pay_with_wallet(
+        self, principal: AuthPrincipal, order_id: UUID, *, idempotency_key: str
+    ) -> PaymentOrderView:
+        key = valid_key(idempotency_key)
+        self._require_role(principal, PAYMENT_ROLES)
+        newly_paid = False
+        async with self._session.begin():
+            order = await self._required_order(order_id, for_update=True)
+            dossier = await self._required_dossier(order.dossier_id, for_update=True)
+            # Wallet spending is always by the owner, never staff on their behalf.
+            if dossier.owner_user_id != principal.user_id:
+                raise PaymentForbiddenError()
+            if order.status is PaymentStatus.PAID:
+                if (
+                    order.provider != "wallet"
+                    or order.metadata_json.get("wallet_key") != key
+                ):
+                    raise PaymentConflictError("Khoản thu đã được thanh toán.")
+                return self._view(order)
+            if order.status is not PaymentStatus.PENDING or order.currency != "VND":
+                raise PaymentConflictError("Khoản thu chưa thể thanh toán bằng ví.")
+            if order.provider_order_id is not None:
+                raise PaymentConflictError(
+                    "Khoản thu đã mở cổng thanh toán. "
+                    "Vui lòng hoàn tất hoặc hủy giao dịch đó trước."
+                )
+            if self._utc(order.expires_at) <= self._clock():
+                raise PaymentConflictError("Yêu cầu thanh toán đã hết hạn.")
+            await WalletLedger(self._session).post(
+                user_id=principal.user_id,
+                delta=-order.amount_minor,
+                kind="PAYMENT",
+                key=key,
+                reference=f"payment:{order.id}",
+                description=str(
+                    order.metadata_json.get("description") or "Phí xác lập hồ sơ"
+                ),
+            )
+            self._workflow.transition(
+                dossier,
+                target=DossierStatus.PAID,
+                actor_user_id=principal.user_id,
+                allowed_sources={DossierStatus.PAYMENT_PENDING},
+                reason_code="WALLET_PAYMENT_CONFIRMED",
+            )
+            order.provider = "wallet"
+            order.metadata_json = {**order.metadata_json, "wallet_key": key}
+            order.paid_at = self._clock()
+            self._transition_status(
+                order, PaymentStatus.PAID, source="WALLET", actor=principal.user_id
+            )
+            await self._settle_fee_obligation(order)
+            await self._add_paid_notification(
+                dossier, order, source_event_id=uuid5(order.id, "wallet-paid")
+            )
+            self._audit(
+                "payment.wallet.confirmed",
+                order.id,
+                user_id=principal.user_id,
+                status=order.status,
+            )
+            await self._session.flush()
+            await self._session.refresh(order)
+            result = self._view(order)
+            newly_paid = True
+        if newly_paid and self._enqueue_certificate_issue is not None:
+            self._enqueue_certificate_issue(result.dossier_id)
+        return result
+
     async def _ensure_checkout(
         self, order_id: UUID, *, newly_reserved: bool = False
     ) -> PaymentOrderView:
         """Resolve a durable reservation using the same provider order code."""
         async with self._session.begin():
-            order = await self._required_order(order_id)
+            order = await self._required_order(order_id, for_update=True)
             if (
                 order.provider_order_id is not None
                 or order.status is PaymentStatus.PAID
             ):
                 return self._view(order)
+            if order.status not in {PaymentStatus.PENDING, PaymentStatus.PROCESSING}:
+                raise PaymentConflictError("This payment request is no longer active.")
+            if order.status is PaymentStatus.PENDING:
+                self._transition_status(
+                    order, PaymentStatus.PROCESSING, source="CHECKOUT_RESERVED"
+                )
+                order.metadata_json = {
+                    **order.metadata_json,
+                    "checkout_requested_at": self._clock().isoformat(),
+                }
             order_code = order.order_code
             amount_minor = order.amount_minor
             currency = order.currency
@@ -138,15 +247,27 @@ class PaymentService:
             raise PaymentAmountMismatchError()
         async with self._session.begin():
             order = await self._required_order(order_id, for_update=True)
+            if order.provider == "wallet" or order.status in {
+                PaymentStatus.CANCELLED,
+                PaymentStatus.EXPIRED,
+                PaymentStatus.REFUNDED,
+            }:
+                raise PaymentConflictError("Payment state changed during checkout.")
             if order.provider_order_id not in {None, provider_order.provider_order_id}:
                 raise PaymentConflictError("Provider order changed during checkout.")
             order.provider_order_id = provider_order.provider_order_id
             if order.status is PaymentStatus.PROCESSING:
-                order.status = PaymentStatus.PENDING
+                self._transition_status(
+                    order, PaymentStatus.PENDING, source="CHECKOUT_READY"
+                )
             order.metadata_json = {
                 **order.metadata_json,
                 "checkout_url": provider_order.checkout_url,
                 "qr_payload": provider_order.qr_payload,
+                "bank_bin": provider_order.bank_bin,
+                "bank_account_number": provider_order.bank_account_number,
+                "bank_account_name": provider_order.bank_account_name,
+                "transfer_description": provider_order.transfer_description,
             }
             await self._session.flush()
             await self._session.refresh(order)
@@ -190,6 +311,7 @@ class PaymentService:
                     id=order_id,
                     order_code=order_code,
                     dossier_id=dossier.id,
+                    initiated_by_user_id=principal.user_id,
                     provider=self._provider_name,
                     amount_minor=self._amount_minor,
                     currency=self._currency,
@@ -199,6 +321,9 @@ class PaymentService:
                     metadata_json={},
                 )
                 self._payments.add_order(order)
+                self._record_initial_status(
+                    order, source="ORDER_CREATED", actor=principal.user_id
+                )
                 self._workflow.transition(
                     dossier,
                     target=DossierStatus.PAYMENT_PENDING,
@@ -303,6 +428,7 @@ class PaymentService:
                     id=order_id,
                     order_code=order_code,
                     dossier_id=dossier.id,
+                    initiated_by_user_id=principal.user_id,
                     fee_obligation_id=obligation.id,
                     provider=self._provider_name,
                     amount_minor=obligation.amount_minor,
@@ -316,6 +442,9 @@ class PaymentService:
                     },
                 )
                 self._payments.add_order(order)
+                self._record_initial_status(
+                    order, source="CHECKOUT_CREATED", actor=principal.user_id
+                )
                 created_reservation = True
                 self._audit(
                     "payment.checkout.created",
@@ -385,7 +514,8 @@ class PaymentService:
                     raise PaymentConflictError("Idempotency key is already in use.")
                 replay_id = replay.id
         if replay_id is not None:
-            return await self._ensure_checkout(replay_id)
+            async with self._session.begin():
+                return self._view(await self._required_order(replay_id))
         async with self._session.begin():
             dossier = await self._required_dossier(dossier_id, for_update=True)
             if dossier.status is not DossierStatus.APPROVED:
@@ -398,21 +528,17 @@ class PaymentService:
                 )
             order_id = self._uuid_factory()
             order_code = str((order_id.int % 2_147_483_646) + 1)
-            provider_expires_at = now + self._order_ttl
-            expires_at = (
-                min(provider_expires_at, normalized_due_at)
-                if normalized_due_at
-                else provider_expires_at
-            )
+            request_expires_at = normalized_due_at or now + timedelta(days=30)
             order = PaymentOrder(
                 id=order_id,
                 order_code=order_code,
                 dossier_id=dossier.id,
+                initiated_by_user_id=principal.user_id,
                 provider=self._provider_name,
                 amount_minor=amount_minor,
                 currency=normalized_currency,
-                status=PaymentStatus.PROCESSING,
-                expires_at=expires_at,
+                status=PaymentStatus.PENDING,
+                expires_at=request_expires_at,
                 idempotency_key=normalized_key,
                 metadata_json={
                     "description": normalized_description,
@@ -424,6 +550,9 @@ class PaymentService:
                 },
             )
             self._payments.add_order(order)
+            self._record_initial_status(
+                order, source="REQUEST_ISSUED", actor=principal.user_id
+            )
             self._workflow.transition(
                 dossier,
                 target=DossierStatus.PAYMENT_PENDING,
@@ -451,11 +580,77 @@ class PaymentService:
                 "payment.request.issued",
                 order_id,
                 user_id=principal.user_id,
-                status=PaymentStatus.PENDING,
+                status=order.status,
                 reason=normalized_description,
             )
             await self._session.flush()
-        return await self._ensure_checkout(order_id, newly_reserved=True)
+            result = self._view(order)
+        return result
+
+    async def start_order_checkout(
+        self,
+        principal: AuthPrincipal,
+        order_id: UUID,
+    ) -> PaymentOrderView:
+        """Create the provider checkout only after the dossier owner starts payment."""
+        self._require_role(principal, PAYMENT_ROLES)
+        newly_started = False
+        expired = False
+        result: PaymentOrderView | None = None
+        async with self._session.begin():
+            order = await self._required_order(order_id, for_update=True)
+            dossier = await self._required_dossier(order.dossier_id)
+            await self._require_access(principal, dossier)
+            self._expire_if_needed(order)
+            if order.status is PaymentStatus.EXPIRED:
+                expired = True
+            elif (
+                order.provider_order_id is not None
+                or order.status is PaymentStatus.PAID
+            ):
+                result = self._view(order)
+            elif order.status not in {
+                PaymentStatus.PENDING,
+                PaymentStatus.PROCESSING,
+            }:
+                raise PaymentConflictError("This payment request is no longer active.")
+            else:
+                if order.status is PaymentStatus.PENDING:
+                    due_at = self._metadata_datetime(order.metadata_json.get("due_at"))
+                    if due_at is not None:
+                        due_at = self._utc(due_at)
+                    provider_expires_at = self._clock() + self._order_ttl
+                    order.expires_at = (
+                        min(provider_expires_at, due_at)
+                        if due_at is not None
+                        else provider_expires_at
+                    )
+                    self._transition_status(
+                        order,
+                        PaymentStatus.PROCESSING,
+                        source="CHECKOUT_REQUESTED",
+                        actor=principal.user_id,
+                    )
+                    order.metadata_json = {
+                        **order.metadata_json,
+                        "checkout_requested_at": self._clock().isoformat(),
+                    }
+                    self._audit(
+                        "payment.checkout.started",
+                        order.id,
+                        user_id=principal.user_id,
+                        status=order.status,
+                    )
+                    newly_started = True
+                await self._session.flush()
+        if expired:
+            raise PaymentConflictError("This payment request has expired.")
+        if result is not None:
+            return result
+        return await self._ensure_checkout(
+            order_id,
+            newly_reserved=newly_started,
+        )
 
     async def list_payment_candidates(
         self,
@@ -489,6 +684,160 @@ class PaymentService:
                 )
                 for dossier in dossiers
             )
+
+    async def list_admin_orders(
+        self,
+        principal: AuthPrincipal,
+        *,
+        status: PaymentStatus | None,
+        limit: int = 50,
+    ) -> tuple[AdminPaymentOrderView, ...]:
+        AuthorizationPolicy.require_capability(
+            principal, PAYMENT_HISTORY_READ_REQUIREMENT, PaymentForbiddenError
+        )
+        if not 1 <= limit <= 100:
+            raise ValueError("Payment order list limit is invalid.")
+        async with self._session.begin():
+            rows = await self._payments.list_for_admin(status=status, limit=limit)
+        return tuple(
+            AdminPaymentOrderView(
+                order=self._view(order),
+                dossier_code=dossier_code,
+                dossier_title=dossier_title,
+            )
+            for order, dossier_code, dossier_title in rows
+        )
+
+    async def list_admin_history(
+        self,
+        principal: AuthPrincipal,
+        *,
+        status: PaymentStatus | None,
+        created_from: datetime | None,
+        created_to: datetime | None,
+        query: str | None,
+        page: int,
+        page_size: int,
+    ) -> tuple[AdminPaymentHistoryPageView, int]:
+        AuthorizationPolicy.require_capability(
+            principal, PAYMENT_HISTORY_READ_REQUIREMENT, PaymentForbiddenError
+        )
+        if page < 1 or not 1 <= page_size <= 100:
+            raise ValueError("Payment history pagination is invalid.")
+        created_from, created_to, normalized_query = self._normalize_history_filters(
+            created_from, created_to, query
+        )
+        async with self._session.begin():
+            (
+                rows,
+                total,
+                counts,
+                total_amount,
+                paid_amount,
+            ) = await self._payments.list_history_for_admin(
+                status=status,
+                created_from=created_from,
+                created_to=created_to,
+                query=normalized_query,
+                offset=(page - 1) * page_size,
+                limit=page_size,
+            )
+        return (
+            AdminPaymentHistoryPageView(
+                rows=tuple(self._history_row(row) for row in rows),
+                summary=AdminPaymentHistorySummaryView(
+                    total=total,
+                    status_counts=counts,
+                    total_amount_minor=total_amount,
+                    paid_amount_minor=paid_amount,
+                ),
+            ),
+            total,
+        )
+
+    async def get_admin_history_detail(
+        self, principal: AuthPrincipal, order_id: UUID
+    ) -> AdminPaymentHistoryDetailView:
+        AuthorizationPolicy.require_capability(
+            principal, PAYMENT_HISTORY_READ_REQUIREMENT, PaymentForbiddenError
+        )
+        async with self._session.begin():
+            row, history = await self._payments.get_history_detail_for_admin(order_id)
+        if row is None:
+            raise PaymentNotFoundError()
+        return AdminPaymentHistoryDetailView(
+            row=self._history_row(row),
+            status_history=tuple(
+                PaymentStatusHistoryView(
+                    id=item.id,
+                    from_status=item.from_status,
+                    to_status=item.to_status,
+                    source=item.source,
+                    actor_user_id=item.actor_user_id,
+                    actor_email=actor_email,
+                    changed_at=self._utc(item.changed_at),
+                )
+                for item, actor_email in history
+            ),
+        )
+
+    async def export_admin_history(
+        self,
+        principal: AuthPrincipal,
+        *,
+        status: PaymentStatus | None,
+        created_from: datetime | None,
+        created_to: datetime | None,
+        query: str | None,
+    ) -> tuple[AdminPaymentHistoryRowView, ...]:
+        AuthorizationPolicy.require_capability(
+            principal, PAYMENT_HISTORY_EXPORT_REQUIREMENT, PaymentForbiddenError
+        )
+        created_from, created_to, normalized_query = self._normalize_history_filters(
+            created_from, created_to, query
+        )
+        async with self._session.begin():
+            rows, _, _, _, _ = await self._payments.list_history_for_admin(
+                status=status,
+                created_from=created_from,
+                created_to=created_to,
+                query=normalized_query,
+                limit=None,
+            )
+        return tuple(self._history_row(row) for row in rows)
+
+    @staticmethod
+    def _history_row(row: tuple[Any, ...]) -> AdminPaymentHistoryRowView:
+        order, code, title, applicant_id, applicant_email, initiator_email = row
+        return AdminPaymentHistoryRowView(
+            order=PaymentService._view(order),
+            dossier_code=code,
+            dossier_title=title,
+            applicant_user_id=applicant_id,
+            applicant_email=applicant_email,
+            initiated_by_email=initiator_email,
+        )
+
+    @staticmethod
+    def _normalize_history_filters(
+        created_from: datetime | None,
+        created_to: datetime | None,
+        query: str | None,
+    ) -> tuple[datetime | None, datetime | None, str | None]:
+        if created_from is not None:
+            created_from = PaymentService._utc(created_from)
+        if created_to is not None:
+            created_to = PaymentService._utc(created_to)
+        if (
+            created_from is not None
+            and created_to is not None
+            and created_from > created_to
+        ):
+            raise PaymentHistoryFilterError("Payment history date range is invalid.")
+        normalized = query.strip() if query else None
+        if normalized is not None and len(normalized) > 120:
+            raise PaymentHistoryFilterError("Payment history search is too long.")
+        return created_from, created_to, normalized or None
 
     async def waive_payment(
         self,
@@ -660,7 +1009,43 @@ class PaymentService:
                     "Only an unpaid payment order can be cancelled."
                 )
             if order.provider_order_id is None:
-                raise PaymentConflictError("Provider order is not initialized.")
+                if order.status is PaymentStatus.PROCESSING:
+                    raise PaymentConflictError(
+                        "Checkout session is still being initialized."
+                    )
+                dossier = await self._required_dossier(
+                    order.dossier_id,
+                    for_update=True,
+                )
+                self._workflow.transition(
+                    dossier,
+                    target=DossierStatus.APPROVED,
+                    actor_user_id=principal.user_id,
+                    allowed_sources={DossierStatus.PAYMENT_PENDING},
+                    reason_code="PAYMENT_ORDER_CANCELLED",
+                    note=normalized_reason,
+                )
+                self._transition_status(
+                    order,
+                    PaymentStatus.CANCELLED,
+                    source="CANCELLED_BY_USER",
+                    actor=principal.user_id,
+                )
+                order.metadata_json = {
+                    **order.metadata_json,
+                    "cancellation_reason": normalized_reason,
+                }
+                await self._session.flush()
+                await self._session.refresh(order)
+                result = self._view(order)
+                self._audit(
+                    "payment.order.cancelled",
+                    result.id,
+                    user_id=principal.user_id,
+                    status=result.status,
+                    reason=normalized_reason,
+                )
+                return result
             provider_order_id = order.provider_order_id
         try:
             provider_order = await self._gateway.cancel_order(
@@ -691,7 +1076,12 @@ class PaymentService:
                 reason_code="PAYMENT_ORDER_CANCELLED",
                 note=normalized_reason,
             )
-            order.status = PaymentStatus.CANCELLED
+            self._transition_status(
+                order,
+                PaymentStatus.CANCELLED,
+                source="CANCELLED_BY_USER",
+                actor=principal.user_id,
+            )
             order.metadata_json = {
                 **order.metadata_json,
                 "cancellation_reason": normalized_reason,
@@ -741,7 +1131,7 @@ class PaymentService:
         raw_body: bytes,
         signature: str,
         timestamp: int,
-    ) -> PaymentOrderView:
+    ) -> PaymentOrderView | None:
         try:
             event = self._gateway.verify_webhook(
                 raw_body=raw_body,
@@ -772,6 +1162,8 @@ class PaymentService:
                 if reserved is not None and reserved.provider_order_id is None:
                     order = reserved
             if order is None:
+                if await self.wallet_service().settle_event(event):
+                    return None
                 raise PaymentNotFoundError()
             payment_event = PaymentEvent(
                 id=self._uuid_factory(),
@@ -814,7 +1206,7 @@ class PaymentService:
                         allowed_sources={DossierStatus.PAYMENT_PENDING},
                         reason_code="PAYMENT_WEBHOOK_CONFIRMED",
                     )
-                    order.status = PaymentStatus.PAID
+                    self._transition_status(order, PaymentStatus.PAID, source="WEBHOOK")
                     order.paid_at = self._clock()
                     await self._settle_fee_obligation(order)
                     newly_paid = True
@@ -829,14 +1221,18 @@ class PaymentService:
                     PaymentStatus.PENDING,
                     PaymentStatus.PROCESSING,
                 }:
-                    order.status = PaymentStatus.FAILED
+                    self._transition_status(
+                        order, PaymentStatus.FAILED, source="WEBHOOK"
+                    )
                 payment_event.processed_at = self._clock()
             else:
                 if order.status in {
                     PaymentStatus.PENDING,
                     PaymentStatus.PROCESSING,
                 }:
-                    order.status = PaymentStatus.PROCESSING
+                    self._transition_status(
+                        order, PaymentStatus.PROCESSING, source="WEBHOOK"
+                    )
                 payment_event.processed_at = self._clock()
             await self._session.flush()
             await self._session.refresh(order)
@@ -912,7 +1308,9 @@ class PaymentService:
             if should_issue and self._enqueue_certificate_issue is not None:
                 self._enqueue_certificate_issue(result.dossier_id)
             reconciled += 1
-        return reconciled
+        return reconciled + await self.wallet_service().reconcile_pending(
+            limit - reconciled
+        )
 
     async def _reconcile_provider_order(
         self,
@@ -994,7 +1392,12 @@ class PaymentService:
                         allowed_sources={DossierStatus.PAYMENT_PENDING},
                         reason_code="PAYMENT_RECONCILIATION_CONFIRMED",
                     )
-                    order.status = PaymentStatus.PAID
+                    self._transition_status(
+                        order,
+                        PaymentStatus.PAID,
+                        source="RECONCILIATION",
+                        actor=user_id,
+                    )
                     order.paid_at = self._clock()
                     await self._settle_fee_obligation(order)
                     should_issue = True
@@ -1015,13 +1418,33 @@ class PaymentService:
                     allowed_sources={DossierStatus.PAYMENT_PENDING},
                     reason_code="PAYMENT_RECONCILIATION_CANCELLED",
                 )
-                order.status = PaymentStatus.CANCELLED
+                self._transition_status(
+                    order,
+                    PaymentStatus.CANCELLED,
+                    source="RECONCILIATION",
+                    actor=user_id,
+                )
             elif provider_order.status == PaymentStatus.PROCESSING.value:
-                order.status = PaymentStatus.PROCESSING
+                self._transition_status(
+                    order,
+                    PaymentStatus.PROCESSING,
+                    source="RECONCILIATION",
+                    actor=user_id,
+                )
             elif provider_order.status == PaymentStatus.PENDING.value:
-                order.status = PaymentStatus.PENDING
+                self._transition_status(
+                    order,
+                    PaymentStatus.PENDING,
+                    source="RECONCILIATION",
+                    actor=user_id,
+                )
             elif provider_order.status == PaymentStatus.FAILED.value:
-                order.status = PaymentStatus.FAILED
+                self._transition_status(
+                    order,
+                    PaymentStatus.FAILED,
+                    source="RECONCILIATION",
+                    actor=user_id,
+                )
             self._expire_if_needed(order)
             await self._session.flush()
             await self._session.refresh(order)
@@ -1070,7 +1493,12 @@ class PaymentService:
                 reason_code="PAYMENT_MANUAL_CONFIRMATION",
                 note=normalized_note[:2_000],
             )
-            order.status = PaymentStatus.PAID
+            self._transition_status(
+                order,
+                PaymentStatus.PAID,
+                source="MANUAL_CONFIRMATION",
+                actor=principal.user_id,
+            )
             order.paid_at = self._clock()
             await self._settle_fee_obligation(order)
             order.metadata_json = {
@@ -1151,7 +1579,65 @@ class PaymentService:
             order.status in {PaymentStatus.PENDING, PaymentStatus.PROCESSING}
             and expires_at <= self._clock()
         ):
-            order.status = PaymentStatus.EXPIRED
+            self._transition_status(order, PaymentStatus.EXPIRED, source="EXPIRY")
+
+    def _record_initial_status(
+        self,
+        order: PaymentOrder,
+        *,
+        source: str,
+        actor: UUID | None,
+    ) -> None:
+        changed_at = self._next_status_history_time(order)
+        self._payments.add_status_history(
+            PaymentStatusHistory(
+                payment_order_id=order.id,
+                from_status=None,
+                to_status=order.status.value,
+                source=source,
+                actor_user_id=actor,
+                changed_at=changed_at,
+            )
+        )
+
+    def _transition_status(
+        self,
+        order: PaymentOrder,
+        target: PaymentStatus,
+        *,
+        source: str,
+        actor: UUID | None = None,
+    ) -> None:
+        previous = order.status
+        if previous is target:
+            return
+        order.status = target
+        changed_at = self._next_status_history_time(order)
+        self._payments.add_status_history(
+            PaymentStatusHistory(
+                payment_order_id=order.id,
+                from_status=previous.value,
+                to_status=target.value,
+                source=source,
+                actor_user_id=actor,
+                changed_at=changed_at,
+            )
+        )
+
+    def _next_status_history_time(self, order: PaymentOrder) -> datetime:
+        changed_at = self._utc(self._clock())
+        previous = self._metadata_datetime(
+            order.metadata_json.get("status_history_changed_at")
+        )
+        if previous is not None:
+            previous = self._utc(previous)
+            if changed_at <= previous:
+                changed_at = previous + timedelta(microseconds=1)
+        order.metadata_json = {
+            **order.metadata_json,
+            "status_history_changed_at": changed_at.isoformat(),
+        }
+        return changed_at
 
     @staticmethod
     def _validate_provider_order(
@@ -1183,6 +1669,10 @@ class PaymentService:
             order.metadata_json.get("issued_at")
         )
         issued_by = order.metadata_json.get("issued_by_user_id")
+        bank_bin = order.metadata_json.get("bank_bin")
+        bank_account_number = order.metadata_json.get("bank_account_number")
+        bank_account_name = order.metadata_json.get("bank_account_name")
+        transfer_description = order.metadata_json.get("transfer_description")
         return PaymentOrderView(
             id=order.id,
             order_code=order.order_code,
@@ -1203,6 +1693,16 @@ class PaymentService:
             due_at=due_at,
             issued_by_user_id=UUID(issued_by) if isinstance(issued_by, str) else None,
             issued_at=issued_at,
+            bank_bin=bank_bin if isinstance(bank_bin, str) else None,
+            bank_account_number=(
+                bank_account_number if isinstance(bank_account_number, str) else None
+            ),
+            bank_account_name=(
+                bank_account_name if isinstance(bank_account_name, str) else None
+            ),
+            transfer_description=(
+                transfer_description if isinstance(transfer_description, str) else None
+            ),
         )
 
     @staticmethod

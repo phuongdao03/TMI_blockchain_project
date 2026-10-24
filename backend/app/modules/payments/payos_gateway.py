@@ -81,7 +81,7 @@ class PayOSGateway:
         currency: str,
         expires_at: datetime,
     ) -> ProviderOrder:
-        if not order_code.isdigit() or not 0 < int(order_code) <= 2_147_483_647:
+        if not order_code.isdigit() or not 0 < int(order_code) <= 2**53 - 1:
             raise PaymentGatewayError("Payment order code is invalid.")
         if amount_minor <= 0 or currency.upper() != "VND":
             raise PaymentGatewayError("Payment amount or currency is invalid.")
@@ -297,6 +297,10 @@ class PayOSGateway:
             raise PaymentGatewayError("payOS returned an invalid payment amount.")
         checkout_url = data.get("checkoutUrl")
         qr_payload = data.get("qrCode")
+        bank_bin = self._optional_string(data, "bin", maximum=16)
+        bank_account_number = self._optional_string(data, "accountNumber", maximum=64)
+        bank_account_name = self._optional_string(data, "accountName", maximum=128)
+        transfer_description = self._optional_string(data, "description", maximum=255)
         if not expect_checkout and checkout_url is None and status == "PENDING":
             self._validate_identifier(provider_id)
             checkout_url = f"https://{_PAYOS_CHECKOUT_HOST}/web/{provider_id}"
@@ -308,6 +312,11 @@ class PayOSGateway:
                 raise PaymentGatewayError("payOS returned an invalid checkout URL.")
             if not isinstance(qr_payload, str) or not qr_payload:
                 raise PaymentGatewayError("payOS returned an invalid QR payload.")
+        # GET /v2/payment-requests/{id} omits currency. This adapter only
+        # creates VND orders; validate any explicit currency before normalizing.
+        currency = data.get("currency", "VND")
+        if not isinstance(currency, str) or currency.upper() != "VND":
+            raise PaymentGatewayError("payOS returned an invalid currency.")
         return ProviderOrder(
             provider_order_id=provider_id,
             checkout_url=checkout_url if isinstance(checkout_url, str) else None,
@@ -315,12 +324,23 @@ class PayOSGateway:
             status=status,
             order_code=str(order_code),
             amount_minor=amount,
-            currency=(
-                currency.upper()
-                if isinstance((currency := data.get("currency")), str)
-                else None
-            ),
+            currency=currency.upper(),
+            bank_bin=bank_bin,
+            bank_account_number=bank_account_number,
+            bank_account_name=bank_account_name,
+            transfer_description=transfer_description,
         )
+
+    @staticmethod
+    def _optional_string(
+        data: Mapping[str, object], field: str, *, maximum: int
+    ) -> str | None:
+        value = data.get(field)
+        if value is None:
+            return None
+        if not isinstance(value, str) or not value.strip() or len(value) > maximum:
+            raise PaymentGatewayError(f"payOS returned an invalid {field}.")
+        return value.strip()
 
     def _sign(self, data: Mapping[str, object]) -> str:
         return hmac.new(

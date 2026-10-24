@@ -34,7 +34,12 @@ from app.modules.payments.gateway import (
     PaymentGatewayError,
     ProviderOrder,
 )
-from app.modules.payments.models import PaymentEvent, PaymentOrder, PaymentStatus
+from app.modules.payments.models import (
+    PaymentEvent,
+    PaymentOrder,
+    PaymentStatus,
+    PaymentStatusHistory,
+)
 from app.modules.payments.service import PaymentService
 
 NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
@@ -252,6 +257,10 @@ def test_admin_issues_exact_payment_amount_and_notifies_owner() -> None:
         assert order.amount_minor == 1_500_000
         assert order.description == "Phí xác lập và phát hành chứng thư"
         assert order.issued_by_user_id == operator.user_id
+        assert order.status is PaymentStatus.PENDING
+        assert order.provider_order_id is None
+        assert order.qr_payload is None
+        assert gateway.create_called is False
         replay = await service.issue_order(
             operator,
             DOSSIER_ID,
@@ -262,6 +271,7 @@ def test_admin_issues_exact_payment_amount_and_notifies_owner() -> None:
             due_at=NOW.replace(day=7, month=8),
         )
         assert replay.id == order.id
+        assert gateway.create_called is False
         with pytest.raises(PaymentConflictError):
             await service.issue_order(
                 operator,
@@ -393,6 +403,72 @@ def test_create_order_is_idempotent_and_transitions_dossier() -> None:
             audits = tuple((await session.scalars(select(AuditLog))).all())
             assert [row.action for row in audits] == ["payment.order.created"]
             assert audits[0].actor_user_id == principal.user_id
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_payment_history_records_initiator_and_allows_read_permission() -> None:
+    async def exercise() -> None:
+        service, sessions, engine, applicant = await _service()
+        order = await service.create_order(
+            applicant,
+            DOSSIER_ID,
+            idempotency_key="history-payment-1",
+        )
+        reader = AuthPrincipal(
+            user_id=applicant.user_id,
+            session_id=uuid4(),
+            email=applicant.email,
+            roles=("USER",),
+            permissions=("payments.read", "payments.export"),
+        )
+
+        async with sessions() as session:
+            persisted = await session.get(PaymentOrder, order.id)
+            history = tuple(
+                (
+                    await session.scalars(
+                        select(PaymentStatusHistory).where(
+                            PaymentStatusHistory.payment_order_id == order.id
+                        )
+                    )
+                ).all()
+            )
+            assert persisted is not None
+            assert persisted.initiated_by_user_id == applicant.user_id
+        assert {(item.from_status, item.to_status) for item in history} == {
+            (None, "PROCESSING"),
+            ("PROCESSING", "PENDING"),
+        }
+
+        page, total = await service.list_admin_history(
+            reader,
+            status=None,
+            created_from=None,
+            created_to=None,
+            query="owner@cnsgroup.vn",
+            page=1,
+            page_size=10,
+        )
+        assert total == 1
+        assert page.rows[0].applicant_email == "owner@cnsgroup.vn"
+        assert page.rows[0].initiated_by_email == "owner@cnsgroup.vn"
+        assert page.summary.status_counts == {"PENDING": 1}
+        detail = await service.get_admin_history_detail(reader, order.id)
+        assert [
+            (item.from_status, item.to_status)
+            for item in detail.status_history
+        ] == [(None, "PROCESSING"), ("PROCESSING", "PENDING")]
+        exported = await service.export_admin_history(
+            reader,
+            status=None,
+            created_from=None,
+            created_to=None,
+            query=None,
+        )
+        assert len(exported) == 1
         await service.close()
         await engine.dispose()
 
@@ -893,6 +969,47 @@ def test_reconciliation_accepts_granular_permission_without_privileged_role() ->
         reconciled = await service.reconcile_order(operator, order.id)
 
         assert reconciled.id == order.id
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_admin_payment_list_includes_status_and_dossier_context() -> None:
+    async def exercise() -> None:
+        service, _, engine, applicant = await _service()
+        order = await service.create_order(
+            applicant,
+            DOSSIER_ID,
+            idempotency_key="create-payment-admin-list",
+        )
+        finance = AuthPrincipal(
+            user_id=applicant.user_id,
+            session_id=applicant.session_id,
+            email=applicant.email,
+            roles=("SUPER_ADMIN",),
+        )
+
+        rows = await service.list_admin_orders(finance, status=None, limit=50)
+
+        assert len(rows) == 1
+        assert rows[0].order.id == order.id
+        assert rows[0].order.status is PaymentStatus.PENDING
+        assert rows[0].dossier_code == "DOS-PAYABLE"
+        assert rows[0].dossier_title == "Approved dossier"
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_admin_payment_list_requires_reconciliation_permission() -> None:
+    async def exercise() -> None:
+        service, _, engine, applicant = await _service()
+
+        with pytest.raises(PaymentForbiddenError):
+            await service.list_admin_orders(applicant, status=None, limit=50)
+
         await service.close()
         await engine.dispose()
 

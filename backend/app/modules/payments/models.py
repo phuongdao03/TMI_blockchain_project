@@ -46,6 +46,7 @@ class PaymentOrder(UtcTimestampMixin, Base):
             "provider_order_id",
             unique=True,
         ),
+    Index("ix_payment_orders_initiated_by_user_id", "initiated_by_user_id"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
@@ -58,6 +59,10 @@ class PaymentOrder(UtcTimestampMixin, Base):
         Uuid,
         ForeignKey("dossiers.id", ondelete="RESTRICT"),
         nullable=False,
+    )
+    initiated_by_user_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="SET NULL"),
     )
     fee_obligation_id: Mapped[UUID | None] = mapped_column(
         Uuid,
@@ -126,3 +131,34 @@ class PaymentEvent(Base):
         server_default=func.now(),
     )
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PaymentStatusHistory(Base):
+    __tablename__ = "payment_status_history"
+    __table_args__ = (
+        Index(
+            "ix_payment_status_history_order_changed",
+            "payment_order_id",
+            "changed_at",
+            "id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    payment_order_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("payment_orders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    from_status: Mapped[str | None] = mapped_column(String(16))
+    to_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    source: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor_user_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="SET NULL"),
+    )
+    changed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )

@@ -30,6 +30,10 @@ class ProviderOrder:
     order_code: str | None = None
     amount_minor: int | None = None
     currency: str | None = None
+    bank_bin: str | None = None
+    bank_account_number: str | None = None
+    bank_account_name: str | None = None
+    transfer_description: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

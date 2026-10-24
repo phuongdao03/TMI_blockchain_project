@@ -56,6 +56,29 @@ def test_payment_migration_upgrades_and_downgrades(
             "processed_at",
         }
 
+    command.upgrade(config, "0126_payment_initiator_status_history")
+    with sqlite3.connect(database_path) as connection:
+        assert "initiated_by_user_id" in _columns(connection, "payment_orders")
+        assert _columns(connection, "payment_status_history") == {
+            "id",
+            "payment_order_id",
+            "from_status",
+            "to_status",
+            "source",
+            "actor_user_id",
+            "changed_at",
+        }
+
+    command.downgrade(config, "0125_neutral_payment_guides")
+    with sqlite3.connect(database_path) as connection:
+        assert "initiated_by_user_id" not in _columns(connection, "payment_orders")
+        assert "payment_status_history" not in {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
+
     command.downgrade(config, "0010_council")
     with sqlite3.connect(database_path) as connection:
         tables = {

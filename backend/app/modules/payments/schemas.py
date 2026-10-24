@@ -44,6 +44,52 @@ class PaymentOrderData(PaymentSchema):
     due_at: datetime | None = None
     issued_by_user_id: UUID | None = None
     issued_at: datetime | None = None
+    bank_bin: str | None = None
+    bank_account_number: str | None = None
+    bank_account_name: str | None = None
+    transfer_description: str | None = None
+
+
+class AdminPaymentOrderData(PaymentSchema):
+    order: PaymentOrderData
+    dossier_code: str
+    dossier_title: str
+
+
+class AdminPaymentHistoryRowData(PaymentSchema):
+    order: PaymentOrderData
+    dossier_code: str
+    dossier_title: str
+    applicant_user_id: UUID
+    applicant_email: str
+    initiated_by_email: str | None
+
+
+class PaymentStatusHistoryData(PaymentSchema):
+    id: UUID
+    from_status: str | None
+    to_status: str
+    source: str
+    actor_user_id: UUID | None
+    actor_email: str | None
+    changed_at: datetime
+
+
+class AdminPaymentHistorySummaryData(PaymentSchema):
+    total: int
+    status_counts: dict[str, int]
+    total_amount_minor: int
+    paid_amount_minor: int
+
+
+class AdminPaymentHistoryPageData(PaymentSchema):
+    rows: list[AdminPaymentHistoryRowData]
+    summary: AdminPaymentHistorySummaryData
+
+
+class AdminPaymentHistoryDetailData(PaymentSchema):
+    row: AdminPaymentHistoryRowData
+    status_history: list[PaymentStatusHistoryData]
 
 
 class FeeObligationData(PaymentSchema):

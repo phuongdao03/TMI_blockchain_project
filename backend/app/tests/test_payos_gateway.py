@@ -60,6 +60,52 @@ def _gateway(handler: httpx.MockTransport) -> PayOSGateway:
     )
 
 
+def test_payos_topup_codes_and_currency_in_signed_lookup_response() -> None:
+    async def exercise() -> None:
+        code = 2_147_483_650
+        identifier = "124c33293c934a85be5b7f8761a27a07"
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST":
+                assert json.loads(request.content)["orderCode"] == code
+                return _response(
+                    {
+                        "paymentLinkId": identifier,
+                        "orderCode": code,
+                        "amount": 5000,
+                        "currency": "VND",
+                        "status": "PENDING",
+                        "checkoutUrl": f"https://pay.payos.vn/web/{identifier}",
+                        "qrCode": "verified-qr-payload",
+                    }
+                )
+            # The documented GET response has no currency field.
+            return _response(
+                {
+                    "id": identifier,
+                    "orderCode": code,
+                    "amount": 5000,
+                    "amountPaid": 5000,
+                    "amountRemaining": 0,
+                    "status": "PAID",
+                }
+            )
+
+        gateway = _gateway(httpx.MockTransport(handler))
+        try:
+            created = await gateway.create_order(
+                order_code=str(code), amount_minor=5000, currency="VND", expires_at=NOW
+            )
+            assert created.order_code == str(code)
+            confirmed = await gateway.get_order(identifier)
+            assert confirmed.currency == "VND"
+            assert confirmed.amount_minor == 5000
+        finally:
+            await gateway.close()
+
+    asyncio.run(exercise())
+
+
 def test_payos_create_order_signs_and_validates_response() -> None:
     async def exercise() -> None:
         def handler(request: httpx.Request) -> httpx.Response:
@@ -86,6 +132,10 @@ def test_payos_create_order_signs_and_validates_response() -> None:
                     "status": "PENDING",
                     "checkoutUrl": "https://pay.payos.vn/web/payos-link-1",
                     "qrCode": "vietqr-payload",
+                    "bin": "970422",
+                    "accountNumber": "0123456789",
+                    "accountName": "TINH HOA VIET",
+                    "description": "CNS 123456",
                 }
             )
 
@@ -100,6 +150,10 @@ def test_payos_create_order_signs_and_validates_response() -> None:
         assert order.provider_order_id == "payos-link-1"
         assert order.checkout_url == "https://pay.payos.vn/web/payos-link-1"
         assert order.qr_payload == "vietqr-payload"
+        assert order.bank_bin == "970422"
+        assert order.bank_account_number == "0123456789"
+        assert order.bank_account_name == "TINH HOA VIET"
+        assert order.transfer_description == "CNS 123456"
         await gateway.close()
 
     asyncio.run(exercise())

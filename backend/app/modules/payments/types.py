@@ -42,3 +42,55 @@ class PaymentOrderView:
     issued_by_user_id: UUID | None = None
     issued_at: datetime | None = None
     fee_obligation_id: UUID | None = None
+    bank_bin: str | None = None
+    bank_account_number: str | None = None
+    bank_account_name: str | None = None
+    transfer_description: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AdminPaymentOrderView:
+    order: PaymentOrderView
+    dossier_code: str
+    dossier_title: str
+
+
+@dataclass(frozen=True, slots=True)
+class AdminPaymentHistoryRowView:
+    order: PaymentOrderView
+    dossier_code: str
+    dossier_title: str
+    applicant_user_id: UUID
+    applicant_email: str
+    initiated_by_email: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class PaymentStatusHistoryView:
+    id: UUID
+    from_status: str | None
+    to_status: str
+    source: str
+    actor_user_id: UUID | None
+    actor_email: str | None
+    changed_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class AdminPaymentHistorySummaryView:
+    total: int
+    status_counts: dict[str, int]
+    total_amount_minor: int
+    paid_amount_minor: int
+
+
+@dataclass(frozen=True, slots=True)
+class AdminPaymentHistoryPageView:
+    rows: tuple[AdminPaymentHistoryRowView, ...]
+    summary: AdminPaymentHistorySummaryView
+
+
+@dataclass(frozen=True, slots=True)
+class AdminPaymentHistoryDetailView:
+    row: AdminPaymentHistoryRowView
+    status_history: tuple[PaymentStatusHistoryView, ...]
