@@ -6,7 +6,10 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { CommunityReportAction } from "@/components/community/community-report-action";
-import { UserAvatar } from "@/components/ui/user-avatar";
+import {
+  CommunityMembershipBadge,
+} from "@/components/community/community-user-identity";
+import { MembershipAvatar } from "@/components/ui/membership-avatar";
 import { communityApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
 import type {
@@ -568,19 +571,25 @@ function CommentBody({
       <div className="flex min-w-0 items-center gap-2.5">
         {author ? (
           <>
-            <UserAvatar
-              className="shrink-0 border border-[var(--theme-border)]"
+            <MembershipAvatar
+              className="shrink-0"
               displayName={author.displayName}
               size={36}
               src={author.avatarUrl}
+              tier={author.membershipTier ?? "MEMBER"}
             />
             <div className="min-w-0">
-              <Link
-                className="block max-w-full truncate text-sm font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-                href={`/community/members/${encodeURIComponent(author.username)}`}
-              >
-                {name}
-              </Link>
+              <div className="flex max-w-full flex-wrap items-center gap-1.5">
+                <Link
+                  className="max-w-full truncate text-sm font-bold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                  href={`/community/members/${encodeURIComponent(author.username)}`}
+                >
+                  {name}
+                </Link>
+                <CommunityMembershipBadge
+                  tier={author.membershipTier ?? "MEMBER"}
+                />
+              </div>
               <time
                 className="mt-0.5 block text-xs text-[var(--theme-muted)]"
                 dateTime={createdAt}

@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 
 import { CommunityPostCard } from "@/components/community/community-post-card";
 import { communityFeedHref } from "@/components/community/community-feed-url";
+import { CommunityVipRooms } from "@/components/community/community-vip-rooms";
 import { communityApi } from "@/lib/api/client";
 import { useAuthStatus, useAuthUser } from "@/lib/auth/user-context";
 import type { CommunityPostSort } from "@/lib/api/types";
@@ -212,6 +213,8 @@ export function CommunityFeed({
             <input name="relatedWorkId" type="hidden" value={relatedWorkId} />
           ) : null}
         </form>
+
+        <CommunityVipRooms />
 
         <section
           aria-label="Bài viết cộng đồng"

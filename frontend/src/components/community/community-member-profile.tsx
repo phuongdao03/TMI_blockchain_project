@@ -9,7 +9,7 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 
 import { CommunityPostCard } from "@/components/community/community-post-card";
 import { CommunityRoleBadge } from "@/components/community/community-user-identity";
-import { UserAvatar } from "@/components/ui/user-avatar";
+import { MembershipAvatar } from "@/components/ui/membership-avatar";
 import { communityMemberApi, mediaApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
 import { mediaPolicies, uploadMedia } from "@/lib/media/upload";
@@ -19,6 +19,12 @@ import type {
 } from "@/lib/api/types";
 
 const PAGE_SIZE = 20;
+const profileTierRank = {
+  MEMBER: 0,
+  SILVER: 1,
+  COMPANION: 2,
+  PRESTIGE: 3,
+} as const;
 
 export function CommunityMemberProfile({
   username,
@@ -49,6 +55,10 @@ export function CommunityMemberProfile({
     username: "",
     displayName: "",
     bio: "",
+    professionalTitle: "",
+    organization: "",
+    activityFields: "",
+    professionalLinks: "",
   });
   useEffect(
     () => () => {
@@ -116,6 +126,17 @@ export function CommunityMemberProfile({
         displayName: draft.displayName.trim() || null,
         ...(avatarMediaId !== undefined ? { avatarMediaId } : {}),
         bio: draft.bio.trim() || null,
+        ...(profileTierRank[profile.data?.membershipTier ?? "MEMBER"] >= 1
+          ? {
+              professionalTitle: draft.professionalTitle.trim() || null,
+              organization: draft.organization.trim() || null,
+              activityFields: draft.activityFields.trim() || null,
+              professionalLinks: draft.professionalLinks
+                .split(/\r?\n/)
+                .map((link) => link.trim())
+                .filter(Boolean),
+            }
+          : {}),
       }),
     onSuccess: (result) => {
       setProfileError(false);
@@ -204,6 +225,10 @@ export function CommunityMemberProfile({
       username: member.username,
       displayName: member.displayName || "",
       bio: member.bio || "",
+      professionalTitle: member.professionalTitle || "",
+      organization: member.organization || "",
+      activityFields: member.activityFields || "",
+      professionalLinks: member.professionalLinks?.join("\n") || "",
     });
     setAvatarMediaId(undefined);
     setAvatarPreviewUrl(null);
@@ -304,11 +329,11 @@ export function CommunityMemberProfile({
         >
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-start gap-4 sm:gap-5">
-              <UserAvatar
-                className="size-16 sm:size-20"
+              <MembershipAvatar
                 displayName={member.displayName}
                 size={80}
                 src={member.avatarUrl}
+                tier={member.membershipTier ?? "MEMBER"}
               />
               <div className="min-w-0">
                 <p className="text-xs font-bold tracking-[0.18em] text-[var(--theme-accent)] uppercase">
@@ -331,6 +356,35 @@ export function CommunityMemberProfile({
                   <p className="mt-4 max-w-2xl whitespace-pre-wrap break-words text-sm leading-6 text-[var(--theme-text)] sm:text-base">
                     {member.bio}
                   </p>
+                ) : null}
+                {member.professionalTitle ||
+                member.organization ||
+                member.activityFields ? (
+                  <div className="mt-3 space-y-1 text-sm text-[var(--theme-muted)]">
+                    {member.professionalTitle ? (
+                      <p>{member.professionalTitle}</p>
+                    ) : null}
+                    {member.organization ? <p>{member.organization}</p> : null}
+                    {member.activityFields ? (
+                      <p>Lĩnh vực: {member.activityFields}</p>
+                    ) : null}
+                  </div>
+                ) : null}
+                {member.professionalLinks?.length ? (
+                  <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                    {member.professionalLinks.map((link) => (
+                      <li key={link}>
+                        <a
+                          className="inline-flex min-h-10 items-center font-semibold text-[var(--theme-accent)] underline underline-offset-4"
+                          href={link}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          {new URL(link).hostname}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
                 ) : null}
               </div>
             </div>
@@ -493,6 +547,61 @@ export function CommunityMemberProfile({
                   value={draft.bio}
                 />
               </label>
+              {profileTierRank[member.membershipTier ?? "MEMBER"] >= 1 ? (
+                <div className="grid gap-4 border-t border-[var(--theme-border)] pt-4 sm:col-span-2 sm:grid-cols-2">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[var(--theme-accent)] sm:col-span-2">
+                    Hồ sơ chuyên môn · quyền lợi hạng Bạc trở lên
+                  </p>
+                  <label className="text-sm font-semibold text-[var(--theme-text)]">
+                    Chức danh chuyên môn
+                    <input
+                      className={profileInputClass}
+                      maxLength={120}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          professionalTitle: event.target.value,
+                        })
+                      }
+                      value={draft.professionalTitle}
+                    />
+                  </label>
+                  <label className="text-sm font-semibold text-[var(--theme-text)]">
+                    Tổ chức
+                    <input
+                      className={profileInputClass}
+                      maxLength={160}
+                      onChange={(event) =>
+                        setDraft({ ...draft, organization: event.target.value })
+                      }
+                      value={draft.organization}
+                    />
+                  </label>
+                  <label className="text-sm font-semibold text-[var(--theme-text)] sm:col-span-2">
+                    Lĩnh vực hoạt động
+                    <input
+                      className={profileInputClass}
+                      maxLength={300}
+                      onChange={(event) =>
+                        setDraft({ ...draft, activityFields: event.target.value })
+                      }
+                      value={draft.activityFields}
+                    />
+                  </label>
+                  <label className="text-sm font-semibold text-[var(--theme-text)] sm:col-span-2">
+                    Liên kết chuyên môn (mỗi dòng một địa chỉ HTTPS, tối đa 5)
+                    <textarea
+                      className={profileInputClass}
+                      maxLength={2500}
+                      onChange={(event) =>
+                        setDraft({ ...draft, professionalLinks: event.target.value })
+                      }
+                      rows={3}
+                      value={draft.professionalLinks}
+                    />
+                  </label>
+                </div>
+              ) : null}
               {profileError ? (
                 <p
                   className="text-sm font-semibold text-red-700 sm:col-span-2"
@@ -783,11 +892,11 @@ function StatLink({
 function MemberRow({ member }: { member: CommunityMemberCard }) {
   return (
     <li className="flex min-w-0 items-center gap-3 py-4">
-      <UserAvatar
-        className="size-11"
+      <MembershipAvatar
         displayName={member.displayName || member.username}
         size={44}
         src={member.avatarUrl}
+        tier={member.membershipTier ?? "MEMBER"}
       />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">

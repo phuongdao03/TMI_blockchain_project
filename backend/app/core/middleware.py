@@ -111,7 +111,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Permissions-Policy"] = (
             "camera=(), geolocation=(self), microphone=()"
         )
-        if request.url.path.startswith("/api/v1/public/"):
+        if request.url.path.startswith(
+            (
+                "/api/v1/public/",
+                "/api/v1/wallet",
+                "/api/v1/memberships/",
+                "/api/v1/community/chat/",
+            )
+        ):
             response.headers["Cache-Control"] = "no-store"
         if self._production:
             response.headers["Strict-Transport-Security"] = (
