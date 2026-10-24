@@ -57,7 +57,10 @@ async function expectGuestAfterLogout(page: Page) {
   const loginLink = page
     .getByRole("banner")
     .getByRole("link", { name: "Đăng nhập", exact: true });
-  if (await loginLink.isVisible()) {
+  const isDesktopHeader = await page.evaluate(
+    () => window.matchMedia("(min-width: 64rem)").matches,
+  );
+  if (isDesktopHeader) {
     await expect(loginLink).toBeVisible();
   } else {
     const mobileMenu = page.getByRole("navigation", { name: "Menu công khai" });

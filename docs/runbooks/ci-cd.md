@@ -4,12 +4,10 @@ Pull requests run formatting, lint, strict type checks, backend/frontend tests,
 critical browser E2E, production build, dependency audit, Foundry tests and a
 reversible PostgreSQL migration gate.
 
-Until 2026-10-17 UTC, the frontend audit accepts only
-`GHSA-vfj7-8cjw-p6xm` in the five development-only packages in the
-`braces → micromatch → fast-glob → @next/eslint-plugin-next → eslint-config-next`
-chain. `infrastructure/scripts/check-frontend-audit.mjs` fails for any new high
-finding, a production dependency, an incomplete audit response, or an expired
-exception. Remove the exception when a patched dependency is available.
+The frontend audit blocks every high or critical vulnerability.
+`GHSA-vfj7-8cjw-p6xm` was withdrawn by its publisher, so its temporary exception
+has been removed. The checker also fails on incomplete audit responses or an
+inconsistent npm audit exit status.
 
 The `document-proof-production-gate` job also runs the integrated encrypted
 document qualification with `npm run gate:document-proof`. It uploads a redacted

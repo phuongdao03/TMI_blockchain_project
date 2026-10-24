@@ -1,22 +1,7 @@
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-const ADVISORY = "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm";
-const EXPIRES_AT = "2026-10-24T04:18:54Z";
-const ALLOWED_VIA = new Map([
-  ["braces", ADVISORY],
-  ["micromatch", "braces"],
-  ["fast-glob", "micromatch"],
-  ["@next/eslint-plugin-next", "fast-glob"],
-  ["eslint-config-next", "@next/eslint-plugin-next"],
-]);
-
-export function checkFrontendAudit(
-  report,
-  lockfile,
-  exitCode,
-  now = new Date(),
-) {
+export function checkFrontendAudit(report, exitCode) {
   if (exitCode !== 0 && exitCode !== 1) {
     throw new Error(`npm audit failed with exit code ${exitCode}`);
   }
@@ -24,8 +9,7 @@ export function checkFrontendAudit(
     !report ||
     report.error ||
     !report.vulnerabilities ||
-    !report.metadata?.vulnerabilities ||
-    !lockfile?.packages
+    !report.metadata?.vulnerabilities
   ) {
     throw new Error("npm audit returned an incomplete report");
   }
@@ -44,34 +28,11 @@ export function checkFrontendAudit(
   }
   if (exitCode !== 1)
     throw new Error("npm audit reported high findings but exited successfully");
-  if (now >= new Date(EXPIRES_AT)) {
-    throw new Error(`temporary ${ADVISORY} exception expired on ${EXPIRES_AT}`);
-  }
-
-  for (const [name, finding] of findings) {
-    const expectedVia = ALLOWED_VIA.get(name);
-    if (
-      !expectedVia ||
-      finding.severity !== "high" ||
-      !Array.isArray(finding.via) ||
-      finding.via.length !== 1 ||
-      (typeof finding.via[0] === "string"
-        ? finding.via[0] !== expectedVia
-        : finding.via[0]?.url !== expectedVia ||
-          finding.via[0]?.name !== name) ||
-      !Array.isArray(finding.nodes) ||
-      finding.nodes.length === 0 ||
-      finding.nodes.some((node) => lockfile.packages[node]?.dev !== true)
-    ) {
-      throw new Error(`unapproved frontend audit finding: ${name}`);
-    }
-  }
-  if (findings.length !== ALLOWED_VIA.size) {
-    throw new Error(
-      "frontend audit findings differ from the approved dependency chain",
-    );
-  }
-  return true;
+  throw new Error(
+    `frontend audit found high or critical vulnerabilities: ${findings
+      .map(([name]) => name)
+      .join(", ")}`,
+  );
 }
 
 if (
@@ -81,15 +42,7 @@ if (
   try {
     const [, , reportPath, exitCode] = process.argv;
     const report = JSON.parse(readFileSync(reportPath, "utf8"));
-    const lockfile = JSON.parse(
-      readFileSync("frontend/package-lock.json", "utf8"),
-    );
-    const excepted = checkFrontendAudit(report, lockfile, Number(exitCode));
-    if (excepted) {
-      console.warn(
-        `::warning title=Temporary audit exception::${ADVISORY} is allowed for frontend lint dependencies until ${EXPIRES_AT}`,
-      );
-    }
+    checkFrontendAudit(report, Number(exitCode));
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;
