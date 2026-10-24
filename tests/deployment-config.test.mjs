@@ -285,7 +285,7 @@ test("CI has quality, migration, image, staging and manual production gates", as
   assert.match(workflow, /--build-arg NEXT_PUBLIC_APP_BASE_URL/);
   assert.match(
     workflow,
-    /check-image-size\.sh "\$REGISTRY\/cns-certificate-frontend:\$TAG" 285/,
+    /check-image-size\.sh "\$REGISTRY\/cns-certificate-frontend:\$TAG" 310/,
     "frontend image budget must accommodate the measured proposal assets without removing the size gate",
   );
   assert.match(
