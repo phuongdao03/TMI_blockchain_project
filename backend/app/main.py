@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 
 from app.api.v1.admin_notifications import router as admin_notifications_router
 from app.api.v1.admin_users import router as admin_users_router
+from app.api.v1.advertising import router as advertising_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.blockchain import router as blockchain_router
@@ -28,10 +29,13 @@ from app.api.v1.content_reports import router as content_reports_router
 from app.api.v1.council import router as council_router
 from app.api.v1.dossiers import router as dossiers_router
 from app.api.v1.engagement import router as engagement_router
+from app.api.v1.events import admin_router as events_admin_router
+from app.api.v1.events import router as events_router
 from app.api.v1.health import router as health_router
 from app.api.v1.hr import router as hr_router
 from app.api.v1.hr import self_router as my_hr_router
 from app.api.v1.media import router as media_router
+from app.api.v1.memberships import router as memberships_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.operations import router as operations_router
 from app.api.v1.organizations import router as organizations_router
@@ -50,6 +54,7 @@ from app.api.v1.staff_invitations import router as staff_invitations_router
 from app.api.v1.tasks import my_router as my_tasks_router
 from app.api.v1.tasks import router as tasks_router
 from app.api.v1.users import router as users_router
+from app.api.v1.wallet import router as wallet_router
 from app.api.v1.work_allocations import router as work_allocations_router
 from app.api.v1.work_allocations import self_router as my_work_allocations_router
 from app.core.config import Settings, get_settings
@@ -279,13 +284,18 @@ def create_application(
     app.include_router(certificate_revocations_router)
     app.include_router(content_reports_router)
     app.include_router(dossiers_router)
+    app.include_router(advertising_router)
     app.include_router(engagement_router)
+    app.include_router(events_router)
+    app.include_router(events_admin_router)
     app.include_router(media_router)
     app.include_router(organizations_router)
     app.include_router(notifications_router)
     app.include_router(admin_notifications_router)
     app.include_router(operations_router)
     app.include_router(payments_router)
+    app.include_router(wallet_router)
+    app.include_router(memberships_router)
     app.include_router(public_router)
     app.include_router(public_works_admin_router)
     app.include_router(reviews_router)

@@ -24,6 +24,7 @@ celery_app = Celery(
         "app.workers.engagement_velocity_tasks",
         "app.workers.attendance_location_tasks",
         "app.workers.community_retention_tasks",
+        "app.workers.advertising_tasks",
     ],
 )
 celery_app.conf.update(
@@ -48,6 +49,20 @@ celery_app.conf.update(
         },
         "reconcile-pending-payments": {
             "task": "app.workers.payment_tasks.reconcile_pending_payments",
+            "schedule": 60.0,
+        },
+        "expire-advertising-reservations": {
+            "task": "app.workers.advertising_tasks.expire_advertising_reservations",
+            "schedule": 60.0,
+        },
+        "advance-advertising-campaigns": {
+            "task": "app.workers.advertising_tasks.advance_advertising_campaigns",
+            "schedule": 60.0,
+        },
+        "notify-available-advertising-waitlists": {
+            "task": (
+                "app.workers.advertising_tasks.notify_available_advertising_waitlists"
+            ),
             "schedule": 60.0,
         },
         "backfill-media-provenance": {

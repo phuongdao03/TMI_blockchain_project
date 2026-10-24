@@ -83,6 +83,10 @@ const nextConfig: NextConfig = {
         pathname: "/assets/institution/**",
         search: "",
       },
+      {
+        pathname: "/assets/membership/**",
+        search: "",
+      },
     ],
   },
   turbopack: {

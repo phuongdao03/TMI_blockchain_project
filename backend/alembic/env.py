@@ -9,6 +9,7 @@ from app.core.config import get_settings
 from app.db import outbox as outbox_models  # noqa: F401
 from app.db.base import Base
 from app.db.session import get_direct_database_url
+from app.modules.advertising import models as advertising_models  # noqa: F401
 from app.modules.auth import models as auth_models  # noqa: F401
 from app.modules.blockchain import models as blockchain_models  # noqa: F401
 from app.modules.community import models as community_models  # noqa: F401
@@ -17,6 +18,7 @@ from app.modules.dossiers import models as dossier_models  # noqa: F401
 from app.modules.engagement import models as engagement_models  # noqa: F401
 from app.modules.hr import models as hr_models  # noqa: F401
 from app.modules.media import models as media_models  # noqa: F401
+from app.modules.memberships import models as membership_models  # noqa: F401
 from app.modules.operations import job_models as operations_job_models  # noqa: F401
 from app.modules.organizations import models as organization_models  # noqa: F401
 from app.modules.payments import models as payment_models  # noqa: F401
@@ -29,6 +31,7 @@ from app.modules.search import history_models as search_history_models  # noqa: 
 from app.modules.tasks import models as task_models  # noqa: F401
 from app.modules.users import models as user_models  # noqa: F401
 from app.modules.voting import models as voting_models  # noqa: F401
+from app.modules.wallet import models as wallet_models  # noqa: F401
 
 target_metadata = Base.metadata
 
