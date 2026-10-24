@@ -36,6 +36,8 @@ def test_certificate_and_public_routes_match_the_planned_contract() -> None:
 
     assert "/api/v1/public/map" not in paths
     assert "/api/v1/certificates/{certificate_id}/download" not in paths
+    assert "/api/v1/advertising/campaigns" in paths
+    assert "/api/v1/admin/advertising/campaigns" in paths
     for retired_path in (
         "/api/v1/public/campaigns",
         "/api/v1/campaigns/{campaign_id}/eligibility",
@@ -43,7 +45,6 @@ def test_certificate_and_public_routes_match_the_planned_contract() -> None:
         "/api/v1/admin/voting/campaigns",
     ):
         assert retired_path not in paths
-    assert not any("/campaigns" in path for path in paths)
 
     certificate_paths = [path for path in paths if "certificate" in path]
     assert all("chung-thu" not in path for path in certificate_paths)
