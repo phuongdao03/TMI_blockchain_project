@@ -15,7 +15,10 @@ const api = vi.hoisted(() => ({
   reviewBenefitRequest: vi.fn(),
 }));
 
-vi.mock("@/lib/api/client", () => ({ membershipApi: api, ApiError: class extends Error {} }));
+vi.mock("@/lib/api/client", () => ({
+  membershipApi: api,
+  ApiError: class extends Error {},
+}));
 vi.mock("@/lib/auth/user-context", () => ({
   useAuthUser: () => ({ roles: ["SUPER_ADMIN"], permissions: [] }),
 }));
@@ -23,7 +26,9 @@ vi.mock("@/lib/auth/user-context", () => ({
 function mount() {
   return render(
     <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
     >
       <MembershipAdminWorkspace />
     </QueryClientProvider>,
@@ -84,7 +89,10 @@ describe("membership administration", () => {
     api.reviewDiamondApplication.mockResolvedValue({ status: "APPROVED" });
     mount();
 
-    await user.type(screen.getByLabelText("Ghi chú quyết định"), "Đủ điều kiện.");
+    await user.type(
+      screen.getByLabelText("Ghi chú quyết định"),
+      "Đủ điều kiện.",
+    );
     await user.click(screen.getByRole("button", { name: "Duyệt" }));
 
     await waitFor(() =>

@@ -201,9 +201,7 @@ def test_upgrade_quote_prorates_credit_and_confirms_amount() -> None:
                 assert quote["credit_minor"] == (
                     490_000 * quote["remaining_days"] // 365
                 )
-                assert quote["amount_due_minor"] == (
-                    1_490_000 - quote["credit_minor"]
-                )
+                assert quote["amount_due_minor"] == (1_490_000 - quote["credit_minor"])
                 with pytest.raises(PaymentConflictError):
                     await membership.purchase(
                         owner.user_id,
@@ -446,7 +444,9 @@ def test_diamond_payment_requires_admin_approval() -> None:
             )
             async with sessions() as session:
                 diamond = MembershipPlan(
-                    name="Tinh hoa", tier="PRESTIGE", amount_minor=3_990_000,
+                    name="Tinh hoa",
+                    tier="PRESTIGE",
+                    amount_minor=3_990_000,
                     duration_days=365,
                 )
                 async with session.begin():

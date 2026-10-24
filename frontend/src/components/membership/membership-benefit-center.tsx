@@ -6,10 +6,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { ApiError, communityMemberApi, membershipApi } from "@/lib/api/client";
-import type {
-  MembershipBenefitCode,
-  MembershipTier,
-} from "@/lib/api/types";
+import type { MembershipBenefitCode, MembershipTier } from "@/lib/api/types";
 
 const tierRank: Record<MembershipTier, number> = {
   MEMBER: 0,
@@ -75,23 +72,25 @@ export function MembershipBenefitCenter({ tier }: { tier: MembershipTier }) {
     queryFn: membershipApi.collaborationNeeds,
     enabled,
   });
-  const [benefit, setBenefit] = useState<MembershipBenefitCode>(
-    "COLLABORATION_NEED",
-  );
+  const [benefit, setBenefit] =
+    useState<MembershipBenefitCode>("COLLABORATION_NEED");
   const [statement, setStatement] = useState("");
   const [directoryDraft, setDirectoryDraft] = useState("");
   const [directorySearch, setDirectorySearch] = useState("");
   const canSearchMembers = tierRank[tier] >= tierRank.COMPANION;
   const directory = useQuery({
     queryKey: ["membership-member-directory", directorySearch],
-    queryFn: ({ signal }) => communityMemberApi.directory(directorySearch, signal),
+    queryFn: ({ signal }) =>
+      communityMemberApi.directory(directorySearch, signal),
     enabled: canSearchMembers && directorySearch.length >= 2,
   });
   const submit = useMutation({
     mutationFn: () => membershipApi.submitBenefitRequest(benefit, statement),
     onSuccess: async () => {
       setStatement("");
-      await client.invalidateQueries({ queryKey: ["membership-benefit-requests"] });
+      await client.invalidateQueries({
+        queryKey: ["membership-benefit-requests"],
+      });
     },
   });
 
@@ -99,7 +98,8 @@ export function MembershipBenefitCenter({ tier }: { tier: MembershipTier }) {
   const options = benefitOptions.filter(
     (option) => !option.diamondOnly || tier === "PRESTIGE",
   );
-  const selected = options.find((option) => option.value === benefit) ?? options[0];
+  const selected =
+    options.find((option) => option.value === benefit) ?? options[0];
 
   return (
     <section
@@ -165,7 +165,8 @@ export function MembershipBenefitCenter({ tier }: { tier: MembershipTier }) {
           </span>
           {benefit === "COLLABORATION_NEED" ? (
             <span className="mt-2 block text-xs font-normal leading-5 text-[var(--theme-muted)]">
-              Nội dung sau khi được duyệt sẽ hiển thị với hội viên Vàng và Kim cương. Không nhập email, số điện thoại hoặc thông tin riêng tư.
+              Nội dung sau khi được duyệt sẽ hiển thị với hội viên Vàng và Kim
+              cương. Không nhập email, số điện thoại hoặc thông tin riêng tư.
             </span>
           ) : null}
         </label>
@@ -269,7 +270,10 @@ export function MembershipBenefitCenter({ tier }: { tier: MembershipTier }) {
       </div>
 
       {canSearchMembers ? (
-        <section aria-labelledby="member-directory-heading" className="space-y-4">
+        <section
+          aria-labelledby="member-directory-heading"
+          className="space-y-4"
+        >
           <div>
             <h3 className="font-bold" id="member-directory-heading">
               Tìm hội viên theo lĩnh vực
@@ -337,7 +341,9 @@ export function MembershipBenefitCenter({ tier }: { tier: MembershipTier }) {
                         {member.displayName.slice(0, 1)}
                       </span>
                       <span className="min-w-0">
-                        <strong className="block truncate">{member.displayName}</strong>
+                        <strong className="block truncate">
+                          {member.displayName}
+                        </strong>
                         <span className="block truncate text-xs text-[var(--theme-muted)]">
                           @{member.username}
                         </span>

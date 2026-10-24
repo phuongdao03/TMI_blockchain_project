@@ -458,8 +458,7 @@ def test_payment_history_records_initiator_and_allows_read_permission() -> None:
         assert page.summary.status_counts == {"PENDING": 1}
         detail = await service.get_admin_history_detail(reader, order.id)
         assert [
-            (item.from_status, item.to_status)
-            for item in detail.status_history
+            (item.from_status, item.to_status) for item in detail.status_history
         ] == [(None, "PROCESSING"), ("PROCESSING", "PENDING")]
         exported = await service.export_admin_history(
             reader,

@@ -30,18 +30,17 @@ test("applicant sees a server-driven preparation journey", async ({ page }) => {
   await expect(
     page.getByRole("navigation", { name: "Các bước chuẩn bị hồ sơ nháp" }),
   ).toBeVisible();
+  const preparation = page.locator(".dossier-preflight");
   await expect(
-    page.getByRole("heading", { name: "Tài liệu cần chuẩn bị" }),
+    preparation.getByRole("heading", {
+      name: "Khác biệt của loại hồ sơ này",
+    }),
   ).toBeVisible();
   await expect(
-    page.getByText(/tệp được tải lên sau khi bản nháp/i),
+    preparation.getByRole("heading", { name: "Thông tin cần khai" }),
   ).toBeVisible();
+  await expect(preparation.getByText("Giấy tờ bắt buộc:")).toBeVisible();
   await selectWorkspaceTheme(page, "Giao diện tối");
-  const preparation = page
-    .getByRole("heading", {
-      name: "Tài liệu cần chuẩn bị",
-    })
-    .locator("..", { hasText: "Tệp được tải lên" });
   await expect(preparation).not.toHaveCSS(
     "background-color",
     "rgb(255, 255, 255)",
@@ -96,8 +95,11 @@ test("reviewer sees live progress and the next blocking action", async ({
   ).toBeVisible();
   await expect(page.getByText("Tóm tắt của người nộp")).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Tiếp tục báo cáo" }),
+    page.getByRole("link", { name: "Phiếu thẩm định" }),
   ).toHaveAttribute("href", "#review-scorecard");
+  await expect(
+    page.getByRole("status").filter({ hasText: "Tiếp theo:" }),
+  ).toBeVisible();
   const reviewLayout = await page
     .locator("#review-form")
     .evaluate((element) => {
@@ -129,7 +131,7 @@ test("reviewer sees live progress and the next blocking action", async ({
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Phiếu thẩm định hồ sơ" }),
+    page.getByRole("heading", { name: "Kết luận theo tiêu chí" }),
   ).toBeVisible();
   await expect(page.getByText("Kết luận từng tiêu chí")).toBeVisible();
   await expect(page.getByText("0/5 tiêu chí hoàn tất")).toHaveCount(0);

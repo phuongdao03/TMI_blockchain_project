@@ -1,7 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, BookOpenText, Check, MessageCircle, Wallet } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpenText,
+  Check,
+  MessageCircle,
+  Wallet,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -176,11 +182,15 @@ export function MembershipWorkspace({
         <section className="flex flex-col gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-bold">
-              <BookOpenText aria-hidden="true" className="size-5 text-emerald-700" />
+              <BookOpenText
+                aria-hidden="true"
+                className="size-5 text-emerald-700"
+              />
               Thư viện nội dung hội viên
             </h2>
             <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
-              Mở các bài viết và tài liệu được cấp quyền theo hạng hội viên của bạn.
+              Mở các bài viết và tài liệu được cấp quyền theo hạng hội viên của
+              bạn.
             </p>
           </div>
           <Link
@@ -281,7 +291,8 @@ export function MembershipWorkspace({
                             crypto.randomUUID();
                           attemptKeys.current.set(plan.id, key);
                           const renewalOptIn =
-                            current.status === "ACTIVE" && current.tier === tier;
+                            current.status === "ACTIVE" &&
+                            current.tier === tier;
                           setSelection({ plan, key, renewalOptIn });
                         }}
                       >
@@ -337,7 +348,8 @@ export function MembershipWorkspace({
         confirmLabel="Thanh toán bằng ví"
         onCancel={() => setSelection(null)}
         onConfirm={() => {
-          if (selection && quote.data) buy.mutate({ ...selection, quote: quote.data });
+          if (selection && quote.data)
+            buy.mutate({ ...selection, quote: quote.data });
         }}
         confirmDisabled={
           !wallet.data ||
@@ -364,11 +376,13 @@ export function MembershipWorkspace({
             </p>
             {quote.data.creditMinor > 0 ? (
               <p>
-                Tín dụng ngày còn lại: <strong>−{formatVnd(quote.data.creditMinor)}</strong>
+                Tín dụng ngày còn lại:{" "}
+                <strong>−{formatVnd(quote.data.creditMinor)}</strong>
               </p>
             ) : null}
             <p>
-              Cần thanh toán: <strong>{formatVnd(quote.data.amountDueMinor)}</strong>
+              Cần thanh toán:{" "}
+              <strong>{formatVnd(quote.data.amountDueMinor)}</strong>
             </p>
             <p>
               Thời hạn mới: {quote.data.durationDays} ngày, đến{" "}
@@ -377,7 +391,11 @@ export function MembershipWorkspace({
             {quote.data.approvalRequired ? (
               <p className="font-semibold text-amber-900">
                 Kim cương cần được xét duyệt trước khi thanh toán. Gửi yêu cầu
-                tại phần <a className="underline" href="#diamond-application">xét duyệt Kim cương</a>.
+                tại phần{" "}
+                <a className="underline" href="#diamond-application">
+                  xét duyệt Kim cương
+                </a>
+                .
               </p>
             ) : null}
           </div>
@@ -386,7 +404,8 @@ export function MembershipWorkspace({
           <p className="mb-3">
             Số dư ví: <strong>{formatVnd(wallet.data.balanceMinor)}</strong>
             {selection &&
-              quote.data && wallet.data.balanceMinor < quote.data.amountDueMinor && (
+              quote.data &&
+              wallet.data.balanceMinor < quote.data.amountDueMinor && (
                 <>
                   {" "}
                   · Còn thiếu{" "}
@@ -473,20 +492,30 @@ function DiamondApplicationPanel({
         Xét duyệt hội viên Kim cương
       </h2>
       <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--theme-muted)]">
-        Kim cương là cấp hội viên cộng đồng, không phải chứng nhận Tinh Hoa Việt.
-        Gửi thông tin để Ban quản trị xem xét trước khi thanh toán.
+        Kim cương là cấp hội viên cộng đồng, không phải chứng nhận Tinh Hoa
+        Việt. Gửi thông tin để Ban quản trị xem xét trước khi thanh toán.
       </p>
-      {isLoading ? <p role="status" className="mt-4">Đang tải trạng thái xét duyệt…</p> : null}
+      {isLoading ? (
+        <p role="status" className="mt-4">
+          Đang tải trạng thái xét duyệt…
+        </p>
+      ) : null}
       {application ? (
         <div className="mt-4 rounded-lg bg-[var(--theme-elevated)] p-4 text-sm">
-          <p className="font-semibold">Trạng thái: {applicationStatus(application.status)}</p>
-          {application.decisionNote ? <p className="mt-2">Ghi chú: {application.decisionNote}</p> : null}
+          <p className="font-semibold">
+            Trạng thái: {applicationStatus(application.status)}
+          </p>
+          {application.decisionNote ? (
+            <p className="mt-2">Ghi chú: {application.decisionNote}</p>
+          ) : null}
           <p className="mt-2 text-xs text-[var(--theme-muted)]">
-            Gửi ngày {new Date(application.createdAt).toLocaleDateString("vi-VN")}
+            Gửi ngày{" "}
+            {new Date(application.createdAt).toLocaleDateString("vi-VN")}
           </p>
         </div>
       ) : null}
-      {!approved && (!application || needsResponse || application.status === "REJECTED") ? (
+      {!approved &&
+      (!application || needsResponse || application.status === "REJECTED") ? (
         <form
           className="mt-4 space-y-3"
           onSubmit={(event) => {
@@ -494,8 +523,13 @@ function DiamondApplicationPanel({
             onSubmit();
           }}
         >
-          <label className="block text-sm font-semibold" htmlFor="diamond-application-statement">
-            {needsResponse ? "Thông tin bổ sung" : "Giới thiệu lý do đăng ký Kim cương"}
+          <label
+            className="block text-sm font-semibold"
+            htmlFor="diamond-application-statement"
+          >
+            {needsResponse
+              ? "Thông tin bổ sung"
+              : "Giới thiệu lý do đăng ký Kim cương"}
           </label>
           <textarea
             id="diamond-application-statement"
@@ -507,9 +541,17 @@ function DiamondApplicationPanel({
             onChange={(event) => onStatementChange(event.target.value)}
           />
           <Button disabled={!statement.trim() || isSubmitting} type="submit">
-            {isSubmitting ? "Đang gửi…" : needsResponse ? "Gửi thông tin bổ sung" : "Gửi yêu cầu xét duyệt"}
+            {isSubmitting
+              ? "Đang gửi…"
+              : needsResponse
+                ? "Gửi thông tin bổ sung"
+                : "Gửi yêu cầu xét duyệt"}
           </Button>
-          {error ? <p role="alert" className="text-sm text-red-700">Chưa gửi được yêu cầu. Vui lòng thử lại.</p> : null}
+          {error ? (
+            <p role="alert" className="text-sm text-red-700">
+              Chưa gửi được yêu cầu. Vui lòng thử lại.
+            </p>
+          ) : null}
         </form>
       ) : null}
     </section>

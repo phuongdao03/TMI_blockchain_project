@@ -61,7 +61,9 @@ export function PaymentRequestWorkspace({
   const finishDecision = () => {
     idempotencyKey.current = requestKey();
     void refreshCandidates();
-    void queryClient.invalidateQueries({ queryKey: ["admin", "payment-orders"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["admin", "payment-orders"],
+    });
   };
   const issue = useMutation({
     mutationFn: () =>

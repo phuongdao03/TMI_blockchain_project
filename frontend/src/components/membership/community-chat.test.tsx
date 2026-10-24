@@ -35,9 +35,11 @@ describe("community chat tier access", () => {
   it("lets Silver use the Member room without adding a Silver room", async () => {
     render(
       <QueryClientProvider
-        client={new QueryClient({
-          defaultOptions: { queries: { retry: false } },
-        })}
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false } },
+          })
+        }
       >
         <CommunityChat tier="SILVER" />
       </QueryClientProvider>,
@@ -50,7 +52,9 @@ describe("community chat tier access", () => {
     await screen.findByText(/Phòng đang chờ câu chuyện đầu tiên/i);
     expect(api.messages).toHaveBeenCalledWith("MEMBER");
 
-    fireEvent.click(within(roomGroup).getByRole("button", { name: /Đồng hành/ }));
+    fireEvent.click(
+      within(roomGroup).getByRole("button", { name: /Đồng hành/ }),
+    );
     expect(
       await screen.findByText(/Phòng này dành cho hạng Vàng trở lên/i),
     ).toBeDefined();

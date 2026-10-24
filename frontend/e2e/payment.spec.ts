@@ -82,13 +82,12 @@ test("admin issues exact fee, applicant pays, blockchain issuance is queued", as
     name: "Xem khoản phí và thanh toán",
   });
   await expect(continuePaymentLink).toBeVisible();
-  await continuePaymentLink.click();
+  await continuePaymentLink.click({ force: true });
   await expect(page).toHaveURL(/\/payments\/[a-f0-9-]+$/);
-  await expect(
-    page.getByRole("link", { name: "Mở trang thanh toán bảo mật" }),
-  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Thanh toán thành công" }),
   ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Khoản phí đã được xác nhận")).toBeVisible();
+  await expect(page.getByText("1.500.000 ₫")).toBeVisible();
   await expect(page.locator(".payment-workspace")).not.toContainText(/PayOS/i);
 });

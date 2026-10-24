@@ -162,10 +162,7 @@ def test_postgres_serializes_simultaneous_final_slot_reservations() -> None:
                 reserve(0), reserve(1), return_exceptions=True
             )
             assert (
-                sum(
-                    isinstance(result, AdvertisingReservation)
-                    for result in results
-                )
+                sum(isinstance(result, AdvertisingReservation) for result in results)
                 == 1
             )
             conflicts = [

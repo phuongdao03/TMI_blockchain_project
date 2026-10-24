@@ -64,12 +64,14 @@ it("guides the reviewer before and after submitting a report", async () => {
     </QueryClientProvider>,
   );
 
-  expect(
-    await screen.findByRole("link", { name: "Tài liệu" }),
-  ).toHaveProperty("href", expect.stringContaining("#review-evidence"));
-  expect(
-    screen.getByRole("link", { name: "Phiếu thẩm định" }),
-  ).toHaveProperty("href", expect.stringContaining("#review-scorecard"));
+  expect(await screen.findByRole("link", { name: "Tài liệu" })).toHaveProperty(
+    "href",
+    expect.stringContaining("#review-evidence"),
+  );
+  expect(screen.getByRole("link", { name: "Phiếu thẩm định" })).toHaveProperty(
+    "href",
+    expect.stringContaining("#review-scorecard"),
+  );
   await user.click(screen.getByRole("button", { name: "Gửi kết quả" }));
 
   expect(await screen.findByText("Đã gửi báo cáo thẩm định")).toBeTruthy();

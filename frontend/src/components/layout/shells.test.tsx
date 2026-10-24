@@ -146,9 +146,9 @@ describe("layout shells", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Mở menu" }));
     expect(
-      within(
-        screen.getByRole("navigation", { name: "Menu công khai" }),
-      ).getByRole("link", { name: "Hội viên" }).getAttribute("href"),
+      within(screen.getByRole("navigation", { name: "Menu công khai" }))
+        .getByRole("link", { name: "Hội viên" })
+        .getAttribute("href"),
     ).toBe("/cong-dong/hoi-vien");
   });
 

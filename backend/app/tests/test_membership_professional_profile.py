@@ -69,9 +69,7 @@ def test_professional_profile_fields_require_silver_and_are_public() -> None:
 
 def test_professional_profile_rejects_non_https_links() -> None:
     with pytest.raises(ValueError, match="HTTPS URLs"):
-        CommunityMemberProfileEditRequest(
-            professional_links=["javascript:alert(1)"]
-        )
+        CommunityMemberProfileEditRequest(professional_links=["javascript:alert(1)"])
 
 
 def test_member_directory_requires_gold_and_matches_public_activity_fields() -> None:

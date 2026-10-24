@@ -44,17 +44,37 @@ describe("AdvertisingCreativeEditPanel", () => {
     api.updateCreative.mockResolvedValue({ id: "creative-2" });
     api.submitCampaign.mockResolvedValue({ status: "PENDING_REVIEW" });
     render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <AdvertisingCreativeEditPanel campaign={campaign} onClose={vi.fn()} onDone={onDone} />
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <AdvertisingCreativeEditPanel
+          campaign={campaign}
+          onClose={vi.fn()}
+          onDone={onDone}
+        />
       </QueryClientProvider>,
     );
 
     expect(screen.getByText("Bổ sung thông tin nguồn gốc.")).toBeDefined();
     await user.clear(screen.getByLabelText("Mô tả nội dung"));
-    await user.type(screen.getByLabelText("Mô tả nội dung"), "Thông tin xuất xứ đã được bổ sung.");
-    await user.click(screen.getByRole("button", { name: "Lưu nội dung và gửi duyệt" }));
+    await user.type(
+      screen.getByLabelText("Mô tả nội dung"),
+      "Thông tin xuất xứ đã được bổ sung.",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Lưu nội dung và gửi duyệt" }),
+    );
 
-    await waitFor(() => expect(api.updateCreative).toHaveBeenCalledWith("campaign-1", expect.objectContaining({ description: "Thông tin xuất xứ đã được bổ sung." })));
+    await waitFor(() =>
+      expect(api.updateCreative).toHaveBeenCalledWith(
+        "campaign-1",
+        expect.objectContaining({
+          description: "Thông tin xuất xứ đã được bổ sung.",
+        }),
+      ),
+    );
     expect(api.submitCampaign).toHaveBeenCalledWith("campaign-1");
     expect(onDone).toHaveBeenCalledOnce();
   });

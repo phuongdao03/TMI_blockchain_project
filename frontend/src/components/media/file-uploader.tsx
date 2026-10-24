@@ -190,7 +190,9 @@ export function FileUploader({
       <div
         className={cn(
           "flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3",
-          compact ? "sm:py-2" : "sm:border-b sm:border-[var(--theme-border)] sm:py-4",
+          compact
+            ? "sm:py-2"
+            : "sm:border-b sm:border-[var(--theme-border)] sm:py-4",
         )}
       >
         <div className="min-w-0">
@@ -323,9 +325,7 @@ export function FileUploader({
                   <li
                     className={cn(
                       "media-uploader__item",
-                      compact
-                        ? "rounded-lg p-3"
-                        : "py-3",
+                      compact ? "rounded-lg p-3" : "py-3",
                       hasError ? "bg-error/5" : "bg-[var(--theme-surface)]",
                     )}
                     key={item.id}

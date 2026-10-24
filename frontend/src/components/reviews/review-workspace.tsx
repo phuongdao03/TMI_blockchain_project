@@ -189,7 +189,10 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
                 className="inline-flex min-h-10 items-center gap-2 font-semibold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
                 href="#review-evidence"
               >
-                <Files aria-hidden="true" className="size-4 text-[var(--theme-accent)]" />
+                <Files
+                  aria-hidden="true"
+                  className="size-4 text-[var(--theme-accent)]"
+                />
                 Tài liệu
               </a>
               <a
@@ -220,7 +223,8 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           tone="success"
           variant="inline"
         />
-      ) : detail.assignment.status === "IN_PROGRESS" ? null : detail.assignment.status === "ASSIGNED" ? (
+      ) : detail.assignment.status === "IN_PROGRESS" ? null : detail.assignment
+          .status === "ASSIGNED" ? (
         <div className="space-y-4">
           <WorkflowNextStep
             description="Xác nhận trước khi mở tài liệu và lập báo cáo."

@@ -25,7 +25,9 @@ vi.mock("@/components/wallet/wallet-workspace", () => ({
 }));
 
 function mount() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
     <QueryClientProvider client={client}>
       <AdvertisingAdminWorkspace />
@@ -75,7 +77,11 @@ describe("AdvertisingAdminWorkspace", () => {
     await user.click(screen.getByRole("button", { name: "Duyệt chiến dịch" }));
 
     await waitFor(() =>
-      expect(api.reviewCampaign).toHaveBeenCalledWith("campaign-1", "APPROVE", undefined),
+      expect(api.reviewCampaign).toHaveBeenCalledWith(
+        "campaign-1",
+        "APPROVE",
+        undefined,
+      ),
     );
   });
 });

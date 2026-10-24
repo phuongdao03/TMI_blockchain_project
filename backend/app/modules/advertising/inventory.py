@@ -425,14 +425,10 @@ class AdvertisingInventoryService:
             raise AdvertisingConflictError(
                 "Only active or completed campaigns can be renewed."
             )
-        stored_package = await self.session.get(
-            AdvertisingPackage, campaign.package_id
-        )
+        stored_package = await self.session.get(AdvertisingPackage, campaign.package_id)
         if stored_package is None:
             raise AdvertisingNotFoundError()
-        placement, package = await self._catalog_entry_by_package(
-            stored_package.code
-        )
+        placement, package = await self._catalog_entry_by_package(stored_package.code)
         availability = await self.availability(
             placement_code=placement.code,
             package_code=package.code,

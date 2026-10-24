@@ -38,9 +38,12 @@ def test_membership_catalog_migration_adds_silver_and_seeds_paid_plans(
             ("COMPANION", "Đồng hành", 1_490_000, 365),
             ("PRESTIGE", "Tinh hoa", 3_990_000, 365),
         ]
-        assert connection.execute(
-            "SELECT count(*) FROM membership_diamond_applications"
-        ).fetchone()[0] == 0
+        assert (
+            connection.execute(
+                "SELECT count(*) FROM membership_diamond_applications"
+            ).fetchone()[0]
+            == 0
+        )
 
     command.downgrade(config, "0128_community_membership")
     with sqlite3.connect(database_path) as connection:

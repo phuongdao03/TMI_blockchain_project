@@ -1405,11 +1405,14 @@ export const advertisingApi = {
     );
   },
   reserve(campaignId: string, startAt: string, idempotencyKey: string) {
-    return request<AdvertisingReservationCheckout>("/advertising/reservations", {
-      method: "POST",
-      headers: { "Idempotency-Key": idempotencyKey },
-      body: JSON.stringify({ campaignId, startAt }),
-    });
+    return request<AdvertisingReservationCheckout>(
+      "/advertising/reservations",
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ campaignId, startAt }),
+      },
+    );
   },
   reschedule(campaignId: string, startAt: string) {
     return request<AdvertisingCampaignSummary>(
@@ -3253,7 +3256,11 @@ export const communityMemberApi = {
     );
   },
   directory(query: string, signal?: AbortSignal) {
-    const parameters = new URLSearchParams({ q: query, page: "1", pageSize: "20" });
+    const parameters = new URLSearchParams({
+      q: query,
+      page: "1",
+      pageSize: "20",
+    });
     return request<CommunityMemberDirectoryPage>(
       `/community/members/directory?${parameters.toString()}`,
       { signal, cache: "no-store" },

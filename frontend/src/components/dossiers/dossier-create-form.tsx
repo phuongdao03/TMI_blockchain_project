@@ -236,12 +236,8 @@ export function DossierCreateForm() {
               <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[var(--theme-surface)] text-[11px] font-bold text-[var(--theme-accent)]">
                 {number}
               </span>
-              <strong className="text-xs sm:text-sm">
-                {label}
-              </strong>
-              <span className="sr-only">
-                {note}
-              </span>
+              <strong className="text-xs sm:text-sm">{label}</strong>
+              <span className="sr-only">{note}</span>
             </li>
           ))}
         </ol>
@@ -342,7 +338,10 @@ export function DossierCreateForm() {
                     {requiredFields.length ? (
                       <ul className="mt-2 space-y-1.5 text-sm" role="list">
                         {requiredFields.map((field) => (
-                          <li className="flex items-start gap-2" key={field.key}>
+                          <li
+                            className="flex items-start gap-2"
+                            key={field.key}
+                          >
                             <Check
                               aria-hidden="true"
                               className="mt-0.5 size-4 shrink-0 text-primary-700"
@@ -363,7 +362,10 @@ export function DossierCreateForm() {
                       <h3 className="text-sm font-bold">Trọng tâm thẩm định</h3>
                       <ul className="mt-2 space-y-1.5 text-sm" role="list">
                         {reviewRubric.criteria.map((criterion) => (
-                          <li className="flex items-start gap-2" key={criterion.key}>
+                          <li
+                            className="flex items-start gap-2"
+                            key={criterion.key}
+                          >
                             <ShieldCheck
                               aria-hidden="true"
                               className="mt-0.5 size-4 shrink-0 text-primary-700"

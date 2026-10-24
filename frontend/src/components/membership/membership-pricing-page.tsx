@@ -84,10 +84,7 @@ export function MembershipPricingPage() {
   const benefitsByTier: Record<MembershipTier, string[]> = {
     MEMBER: [...new Set(ownBenefitsByTier.MEMBER)],
     SILVER: [
-      ...new Set([
-        ...ownBenefitsByTier.MEMBER,
-        ...ownBenefitsByTier.SILVER,
-      ]),
+      ...new Set([...ownBenefitsByTier.MEMBER, ...ownBenefitsByTier.SILVER]),
     ],
     COMPANION: [
       ...new Set([
@@ -152,7 +149,10 @@ export function MembershipPricingPage() {
         </div>
 
         {catalog.isPending ? (
-          <p className="mt-6 rounded-xl border border-[var(--theme-border)] p-5 text-[var(--theme-muted)]" role="status">
+          <p
+            className="mt-6 rounded-xl border border-[var(--theme-border)] p-5 text-[var(--theme-muted)]"
+            role="status"
+          >
             Đang tải bảng giá hội viên…
           </p>
         ) : null}
@@ -183,7 +183,9 @@ export function MembershipPricingPage() {
               plan={
                 tier.code === "MEMBER" ? undefined : planByTier.get(tier.code)
               }
-              freeTier={tier.code === "MEMBER" ? catalog.data?.member : undefined}
+              freeTier={
+                tier.code === "MEMBER" ? catalog.data?.member : undefined
+              }
               loadError={catalog.isError}
               tier={tier}
             />
@@ -222,7 +224,7 @@ function PricingCard({
   const packageName = loadError
     ? "Chưa tải được thông tin gói"
     : isFree
-      ? freeTier?.name ?? "Đang tải gói"
+      ? (freeTier?.name ?? "Đang tải gói")
       : loading
         ? "Đang tải gói"
         : plan?.active
@@ -244,9 +246,7 @@ function PricingCard({
       : plan
         ? `/${plan.durationDays} ngày`
         : "";
-  const benefits = isFree
-    ? (freeTier?.benefits ?? [])
-    : (plan?.benefits ?? []);
+  const benefits = isFree ? (freeTier?.benefits ?? []) : (plan?.benefits ?? []);
   const visibleBenefits = benefits.slice(0, 3);
   const description = loadError
     ? "Thông tin giới thiệu và quyền lợi tạm thời chưa tải được."
@@ -262,7 +262,7 @@ function PricingCard({
   return (
     <article
       aria-labelledby={`${tier.code}-tier-title ${tier.code}-plan-name`}
-        className={`flex h-full flex-col rounded-2xl border bg-[var(--theme-surface)] p-4 sm:p-5 ${tier.code === "COMPANION" ? "border-amber-600/60 ring-1 ring-amber-600/25" : "border-[var(--theme-border)]"}`}
+      className={`flex h-full flex-col rounded-2xl border bg-[var(--theme-surface)] p-4 sm:p-5 ${tier.code === "COMPANION" ? "border-amber-600/60 ring-1 ring-amber-600/25" : "border-[var(--theme-border)]"}`}
     >
       <div className="flex min-h-7 items-center justify-between gap-2">
         <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--theme-muted)]">
@@ -319,10 +319,7 @@ function PricingCard({
           <ul className="mt-3 space-y-3">
             {visibleBenefits.map((benefit) => (
               <li className="flex gap-2 text-sm leading-6" key={benefit}>
-                <span
-                  aria-hidden="true"
-                  className="mt-0.5 text-emerald-600"
-                >
+                <span aria-hidden="true" className="mt-0.5 text-emerald-600">
                   <Check aria-hidden="true" className="size-4 stroke-[2.5]" />
                 </span>
                 <span>{benefit}</span>
@@ -338,31 +335,31 @@ function PricingCard({
         )}
       </div>
 
-        {benefits.length > visibleBenefits.length || conditions ? (
-          <details className="mt-4 rounded-lg border border-[var(--theme-border)] px-3 py-2">
-            <summary className="min-h-10 cursor-pointer py-2 text-sm font-semibold text-[var(--theme-text)] focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]">
-              Xem đủ {benefits.length} quyền lợi và điều kiện
-            </summary>
-            {benefits.length > visibleBenefits.length ? (
-              <ul className="space-y-3 pb-3 pt-1">
-                {benefits.slice(visibleBenefits.length).map((benefit) => (
-                  <li className="flex gap-2 text-sm leading-6" key={benefit}>
-                    <Check
-                      aria-hidden="true"
-                      className="mt-1 size-4 shrink-0 text-emerald-600"
-                    />
-                    <span>{benefit}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {conditions ? (
-              <p className="border-t border-[var(--theme-border)] py-3 text-xs leading-5 text-[var(--theme-muted)]">
-                {conditions}
-              </p>
-            ) : null}
-          </details>
-        ) : null}
+      {benefits.length > visibleBenefits.length || conditions ? (
+        <details className="mt-4 rounded-lg border border-[var(--theme-border)] px-3 py-2">
+          <summary className="min-h-10 cursor-pointer py-2 text-sm font-semibold text-[var(--theme-text)] focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]">
+            Xem đủ {benefits.length} quyền lợi và điều kiện
+          </summary>
+          {benefits.length > visibleBenefits.length ? (
+            <ul className="space-y-3 pb-3 pt-1">
+              {benefits.slice(visibleBenefits.length).map((benefit) => (
+                <li className="flex gap-2 text-sm leading-6" key={benefit}>
+                  <Check
+                    aria-hidden="true"
+                    className="mt-1 size-4 shrink-0 text-emerald-600"
+                  />
+                  <span>{benefit}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {conditions ? (
+            <p className="border-t border-[var(--theme-border)] py-3 text-xs leading-5 text-[var(--theme-muted)]">
+              {conditions}
+            </p>
+          ) : null}
+        </details>
+      ) : null}
       {isAvailable ? (
         <Link
           className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-[var(--theme-accent)] px-4 py-2 text-center text-sm font-semibold text-[var(--theme-accent)] transition hover:bg-[var(--theme-accent)] hover:text-[var(--theme-accent-contrast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
@@ -376,9 +373,7 @@ function PricingCard({
         </Link>
       ) : (
         <p className="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg border border-[var(--theme-border)] px-4 py-2 text-center text-sm font-semibold text-[var(--theme-muted)]">
-          {loadError
-            ? "Chưa xác định trạng thái gói"
-            : "Gói chưa mở bán"}
+          {loadError ? "Chưa xác định trạng thái gói" : "Gói chưa mở bán"}
         </p>
       )}
     </article>
@@ -392,7 +387,10 @@ function ComparisonSection({
 }) {
   const comparisonRows = [...new Set(Object.values(benefitsByTier).flat())];
   return (
-    <section aria-labelledby="membership-comparison-heading" className="mt-12 sm:mt-16">
+    <section
+      aria-labelledby="membership-comparison-heading"
+      className="mt-12 sm:mt-16"
+    >
       <h2
         className="text-2xl font-bold tracking-tight text-[var(--theme-text)] sm:text-3xl"
         id="membership-comparison-heading"
@@ -452,7 +450,11 @@ function ComparisonSection({
                     Quyền lợi
                   </th>
                   {tiers.map((tier) => (
-                    <th className="p-4 font-semibold" key={tier.code} scope="col">
+                    <th
+                      className="p-4 font-semibold"
+                      key={tier.code}
+                      scope="col"
+                    >
                       {tier.label}
                     </th>
                   ))}
@@ -467,7 +469,10 @@ function ComparisonSection({
                     {tiers.map((tier) => {
                       const value = benefitsByTier[tier.code].includes(row);
                       return (
-                        <td className="p-4 text-[var(--theme-muted)]" key={tier.code}>
+                        <td
+                          className="p-4 text-[var(--theme-muted)]"
+                          key={tier.code}
+                        >
                           <BenefitStatus available={value} />
                         </td>
                       );
@@ -498,7 +503,10 @@ function BenefitStatus({ available }: { available: boolean }) {
 
 function FaqSection() {
   return (
-    <section aria-labelledby="membership-faq-heading" className="mt-12 sm:mt-16">
+    <section
+      aria-labelledby="membership-faq-heading"
+      className="mt-12 sm:mt-16"
+    >
       <h2
         className="text-2xl font-bold tracking-tight text-[var(--theme-text)] sm:text-3xl"
         id="membership-faq-heading"

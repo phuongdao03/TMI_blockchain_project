@@ -104,7 +104,7 @@ class StubPaymentService:
         return AdminPaymentHistoryRowView(
             order=self.view(),
             dossier_code="CNS-2026-TEST",
-            dossier_title="=HYPERLINK(\"https://example.invalid\")",
+            dossier_title='=HYPERLINK("https://example.invalid")',
             applicant_user_id=uuid4(),
             applicant_email="owner@example.vn",
             initiated_by_email="staff@example.vn",

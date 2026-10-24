@@ -1,4 +1,9 @@
-import { ArrowRight, CalendarDays, ChartNoAxesCombined, Megaphone } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarDays,
+  ChartNoAxesCombined,
+  Megaphone,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type {
@@ -108,7 +113,7 @@ export function AdvertisingCampaignList({
               ? "Chọn lịch thay thế"
               : campaign.status === "PENDING_PAYMENT"
                 ? "Hoàn tất thanh toán"
-              : "Chọn lịch quảng cáo";
+                : "Chọn lịch quảng cáo";
           const scheduledAt =
             campaign.bookingStartAt ??
             campaign.actualStartAt ??
@@ -179,7 +184,8 @@ export function AdvertisingCampaignList({
                 ) : null}
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {canSchedule && (!hasBooking || campaign.status === "PENDING_PAYMENT") ? (
+                  {canSchedule &&
+                  (!hasBooking || campaign.status === "PENDING_PAYMENT") ? (
                     <Button
                       onClick={() => onScheduleCampaign(campaign.id)}
                       variant="outline"
@@ -193,12 +199,17 @@ export function AdvertisingCampaignList({
                       onClick={() => onShowMetrics(campaign.id)}
                       variant="outline"
                     >
-                      Xem hiệu quả <ArrowRight aria-hidden="true" className="size-4" />
+                      Xem hiệu quả{" "}
+                      <ArrowRight aria-hidden="true" className="size-4" />
                     </Button>
                   ) : null}
                   {campaign.status === "REJECTED" && onEditCreative ? (
-                    <Button onClick={() => onEditCreative(campaign.id)} variant="outline">
-                      Sửa nội dung và gửi lại <ArrowRight aria-hidden="true" className="size-4" />
+                    <Button
+                      onClick={() => onEditCreative(campaign.id)}
+                      variant="outline"
+                    >
+                      Sửa nội dung và gửi lại{" "}
+                      <ArrowRight aria-hidden="true" className="size-4" />
                     </Button>
                   ) : null}
                 </div>

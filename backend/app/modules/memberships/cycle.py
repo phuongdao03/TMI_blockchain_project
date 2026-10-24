@@ -46,6 +46,4 @@ async def active_membership_cycle(
 
     plan = await session.get(MembershipPlan, membership.plan_id)
     duration_days = plan.duration_days if plan is not None else 365
-    return membership.tier, _utc(membership.expires_at) - timedelta(
-        days=duration_days
-    )
+    return membership.tier, _utc(membership.expires_at) - timedelta(days=duration_days)

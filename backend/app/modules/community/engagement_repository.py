@@ -761,9 +761,7 @@ class CommunityEngagementRepository:
                 CommunityRepository._has_role(
                     CommunityComment.author_user_id, "MODERATOR"
                 ),
-                CommunityRepository._membership_tier(
-                    CommunityComment.author_user_id
-                ),
+                CommunityRepository._membership_tier(CommunityComment.author_user_id),
                 like_count,
                 viewer_has_liked,
             )

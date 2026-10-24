@@ -21,7 +21,9 @@ import { MembershipBenefitCenter } from "./membership-benefit-center";
 function mount() {
   return render(
     <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
     >
       <MembershipBenefitCenter tier="COMPANION" />
     </QueryClientProvider>,
@@ -100,8 +102,12 @@ describe("membership benefit center", () => {
 
     expect(await screen.findByText("Lân Nguyễn")).toBeDefined();
     expect(screen.getByText("Thiết kế thủ công")).toBeDefined();
-    expect(screen.getByRole("link", { name: /Lân Nguyễn/ }).getAttribute("href"))
-      .toBe("/community/members/lan-design");
-    expect(communityApi.directory).toHaveBeenCalledWith("thiết kế", expect.anything());
+    expect(
+      screen.getByRole("link", { name: /Lân Nguyễn/ }).getAttribute("href"),
+    ).toBe("/community/members/lan-design");
+    expect(communityApi.directory).toHaveBeenCalledWith(
+      "thiết kế",
+      expect.anything(),
+    );
   });
 });

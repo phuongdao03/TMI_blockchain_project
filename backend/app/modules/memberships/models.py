@@ -164,9 +164,7 @@ class MembershipChatRoomAccess(Base):
         CheckConstraint(
             "room IN ('MEMBER', 'COMPANION', 'PRESTIGE')", name="valid_room"
         ),
-        CheckConstraint(
-            "length(trim(reason)) BETWEEN 3 AND 240", name="valid_reason"
-        ),
+        CheckConstraint("length(trim(reason)) BETWEEN 3 AND 240", name="valid_reason"),
         Index("ix_membership_chat_room_access_room", "room"),
     )
     user_id: Mapped[UUID] = mapped_column(

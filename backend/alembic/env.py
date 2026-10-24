@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from alembic import context
 from app.core.config import get_settings
 from app.db import outbox as outbox_models  # noqa: F401
+from app.db.alembic_compat import ensure_alembic_version_capacity
 from app.db.base import Base
 from app.db.session import get_direct_database_url
 from app.modules.advertising import models as advertising_models  # noqa: F401
@@ -71,6 +72,9 @@ async def run_async_migrations(
     )
 
     try:
+        async with connectable.begin() as connection:
+            await connection.run_sync(ensure_alembic_version_capacity)
+
         async with connectable.connect() as connection:
             await connection.run_sync(do_run_migrations)
     finally:

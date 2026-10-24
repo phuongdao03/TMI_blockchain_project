@@ -11,10 +11,14 @@ const frameByTier: Record<MembershipTier, string> = {
   PRESTIGE: "diamond",
 };
 const compactFrameClass: Record<MembershipTier, string> = {
-  MEMBER: "ring-2 ring-amber-700/70 ring-offset-1 ring-offset-[var(--theme-surface)]",
-  SILVER: "ring-2 ring-slate-400 ring-offset-1 ring-offset-[var(--theme-surface)]",
-  COMPANION: "ring-2 ring-amber-500 ring-offset-1 ring-offset-[var(--theme-surface)]",
-  PRESTIGE: "ring-2 ring-sky-600 ring-offset-1 ring-offset-[var(--theme-surface)]",
+  MEMBER:
+    "ring-2 ring-amber-700/70 ring-offset-1 ring-offset-[var(--theme-surface)]",
+  SILVER:
+    "ring-2 ring-slate-400 ring-offset-1 ring-offset-[var(--theme-surface)]",
+  COMPANION:
+    "ring-2 ring-amber-500 ring-offset-1 ring-offset-[var(--theme-surface)]",
+  PRESTIGE:
+    "ring-2 ring-sky-600 ring-offset-1 ring-offset-[var(--theme-surface)]",
 };
 
 export function MembershipAvatar({
@@ -44,11 +48,7 @@ export function MembershipAvatar({
       )}
       style={{ height: size, width: size }}
     >
-      <UserAvatar
-        {...avatarProps}
-        className="border-0"
-        size={avatarSize}
-      />
+      <UserAvatar {...avatarProps} className="border-0" size={avatarSize} />
       {showFrame && !compact ? (
         <Image
           alt=""

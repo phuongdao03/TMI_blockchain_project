@@ -57,7 +57,12 @@ export interface AdvertisingCampaignSummary {
   creativeDescription?: string | null;
   imageUrl: string | null;
   destinationUrl?: string | null;
-  creativeReviewStatus: "PENDING" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED" | null;
+  creativeReviewStatus:
+    | "PENDING"
+    | "APPROVED"
+    | "REJECTED"
+    | "CHANGES_REQUESTED"
+    | null;
   creativeReviewNote: string | null;
   paymentStatus: "PENDING" | "PAID" | "EXPIRED" | "FAILED" | null;
   deliveryCount: number;
@@ -205,7 +210,8 @@ export interface AdvertisingAdminInventoryItem {
   expiresAt: string | null;
 }
 
-export interface AdvertisingAdminPlacementInventory extends AdvertisingPlacement {
+export interface AdvertisingAdminPlacementInventory
+  extends AdvertisingPlacement {
   bookings: AdvertisingAdminInventoryItem[];
   reservations: AdvertisingAdminInventoryItem[];
 }
@@ -1193,11 +1199,7 @@ export interface WalletTopup {
   paidAt: string | null;
 }
 
-export type MembershipTier =
-  | "MEMBER"
-  | "SILVER"
-  | "COMPANION"
-  | "PRESTIGE";
+export type MembershipTier = "MEMBER" | "SILVER" | "COMPANION" | "PRESTIGE";
 
 export type CommunityChatRoom = "MEMBER" | "COMPANION" | "PRESTIGE";
 

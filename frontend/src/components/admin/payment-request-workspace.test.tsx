@@ -77,11 +77,19 @@ describe("PaymentRequestWorkspace", () => {
     renderWorkspace();
 
     expect(
-      await screen.findByRole("heading", { name: "Theo d\u00F5i thu ph\u00ED" }),
+      await screen.findByRole("heading", {
+        name: "Theo d\u00F5i thu ph\u00ED",
+      }),
     ).toBeTruthy();
     expect(await screen.findByText(/PAY-PAID-001/)).toBeTruthy();
-    expect(screen.getByText("THV-2026-0001 \u00B7 H\u1ED3 s\u01A1 th\u01B0\u01A1ng hi\u1EC7u")).toBeTruthy();
-    expect(screen.getByText(/\u0110\u00E3 ghi nh\u1EADn l\u00FAc/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        "THV-2026-0001 \u00B7 H\u1ED3 s\u01A1 th\u01B0\u01A1ng hi\u1EC7u",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/\u0110\u00E3 ghi nh\u1EADn l\u00FAc/),
+    ).toBeTruthy();
   });
 
   it("uses business language instead of payment provider implementation terms", () => {

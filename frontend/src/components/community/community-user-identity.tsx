@@ -20,9 +20,12 @@ const membershipStyles: Record<MembershipTier, string> = {
 
 const avatarStyles: Record<MembershipTier, string> = {
   MEMBER: "",
-  SILVER: "ring-2 ring-gray-400/80 ring-offset-1 ring-offset-[var(--theme-surface)]",
-  COMPANION: "ring-2 ring-amber-500/70 ring-offset-1 ring-offset-[var(--theme-surface)]",
-  PRESTIGE: "ring-2 ring-sky-600/70 ring-offset-1 ring-offset-[var(--theme-surface)]",
+  SILVER:
+    "ring-2 ring-gray-400/80 ring-offset-1 ring-offset-[var(--theme-surface)]",
+  COMPANION:
+    "ring-2 ring-amber-500/70 ring-offset-1 ring-offset-[var(--theme-surface)]",
+  PRESTIGE:
+    "ring-2 ring-sky-600/70 ring-offset-1 ring-offset-[var(--theme-surface)]",
 };
 
 export function CommunityUserIdentity({

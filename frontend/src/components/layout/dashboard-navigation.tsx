@@ -63,7 +63,12 @@ const discoveryItems: NavigationItem[] = [
 ];
 
 const personalItems: NavigationItem[] = [
-  { href: "/advertising", label: "Quảng cáo của tôi", icon: Megaphone, allowedRoles: ["USER", "SUPER_ADMIN"] },
+  {
+    href: "/advertising",
+    label: "Quảng cáo của tôi",
+    icon: Megaphone,
+    allowedRoles: ["USER", "SUPER_ADMIN"],
+  },
   { href: "/notifications", label: "Thông báo", icon: Bell },
   { href: "/account", label: "Tài khoản", icon: Settings },
   { href: "/activity", label: "Hoạt động gần đây", icon: History },

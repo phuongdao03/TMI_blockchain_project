@@ -46,7 +46,7 @@ class PaymentOrder(UtcTimestampMixin, Base):
             "provider_order_id",
             unique=True,
         ),
-    Index("ix_payment_orders_initiated_by_user_id", "initiated_by_user_id"),
+        Index("ix_payment_orders_initiated_by_user_id", "initiated_by_user_id"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)

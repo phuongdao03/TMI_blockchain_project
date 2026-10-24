@@ -336,7 +336,9 @@ export function VerdictReviewForm({
                 : "w-fit rounded-md bg-amber-100 px-3 py-2 text-sm font-bold text-amber-950 dark:bg-amber-950/50 dark:text-amber-100"
             }
           >
-            {complete ? "Sẵn sàng gửi" : `${validationIssues.length} mục còn lại`}
+            {complete
+              ? "Sẵn sàng gửi"
+              : `${validationIssues.length} mục còn lại`}
           </span>
         </header>
         <div

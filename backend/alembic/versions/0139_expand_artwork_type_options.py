@@ -65,22 +65,26 @@ def upgrade() -> None:
         .group_by(versions.c.dossier_type_id)
         .subquery()
     )
-    row = connection.execute(
-        sa.select(
-            dossier_types.c.id.label("dossier_type_id"),
-            versions.c.version_no,
-            versions.c.schema_json,
+    row = (
+        connection.execute(
+            sa.select(
+                dossier_types.c.id.label("dossier_type_id"),
+                versions.c.version_no,
+                versions.c.schema_json,
+            )
+            .join(dossier_types, dossier_types.c.id == versions.c.dossier_type_id)
+            .join(
+                latest_versions,
+                sa.and_(
+                    latest_versions.c.dossier_type_id == versions.c.dossier_type_id,
+                    latest_versions.c.version_no == versions.c.version_no,
+                ),
+            )
+            .where(dossier_types.c.code == "ARTWORK")
         )
-        .join(dossier_types, dossier_types.c.id == versions.c.dossier_type_id)
-        .join(
-            latest_versions,
-            sa.and_(
-                latest_versions.c.dossier_type_id == versions.c.dossier_type_id,
-                latest_versions.c.version_no == versions.c.version_no,
-            ),
-        )
-        .where(dossier_types.c.code == "ARTWORK")
-    ).mappings().first()
+        .mappings()
+        .first()
+    )
     if row is None:
         return
 
@@ -124,6 +128,4 @@ def downgrade() -> None:
         "dossier_type_versions",
         sa.column("id", sa.Uuid()),
     )
-    op.get_bind().execute(
-        versions.delete().where(versions.c.id == ARTWORK_VERSION_ID)
-    )
+    op.get_bind().execute(versions.delete().where(versions.c.id == ARTWORK_VERSION_ID))

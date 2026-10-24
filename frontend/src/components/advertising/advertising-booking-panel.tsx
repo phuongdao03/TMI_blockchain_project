@@ -1,18 +1,21 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CalendarDays, CircleAlert, Clock3, LoaderCircle, Wallet } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  CircleAlert,
+  Clock3,
+  LoaderCircle,
+  Wallet,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, type ChangeEvent } from "react";
 
 import { formatVnd, walletKey } from "@/components/wallet/wallet-workspace";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import {
-  advertisingApi,
-  ApiError,
-  walletApi,
-} from "@/lib/api/client";
+import { advertisingApi, ApiError, walletApi } from "@/lib/api/client";
 import type {
   AdvertisingAvailability,
   AdvertisingCampaignSummary,
@@ -85,15 +88,24 @@ function AvailabilityCard({
 }) {
   if (isPending) {
     return (
-      <p className="flex items-center gap-2 rounded-xl bg-[var(--theme-elevated)] p-3 text-sm text-[var(--theme-muted)]" role="status">
-        <LoaderCircle aria-hidden="true" className="thv-loading-spinner size-4" />
+      <p
+        className="flex items-center gap-2 rounded-xl bg-[var(--theme-elevated)] p-3 text-sm text-[var(--theme-muted)]"
+        role="status"
+      >
+        <LoaderCircle
+          aria-hidden="true"
+          className="thv-loading-spinner size-4"
+        />
         Đang kiểm tra sức chứa cho toàn bộ thời lượng…
       </p>
     );
   }
   if (error) {
     return (
-      <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900" role="alert">
+      <p
+        className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900"
+        role="alert"
+      >
         Không thể kiểm tra lịch. Vui lòng đổi ngày hoặc thử lại.
       </p>
     );
@@ -101,15 +113,25 @@ function AvailabilityCard({
   if (!availability || !selectedAt) return null;
   if (availability.available) {
     return (
-      <p className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm leading-6 text-emerald-950" role="status">
+      <p
+        className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm leading-6 text-emerald-950"
+        role="status"
+      >
         <CalendarDays aria-hidden="true" className="mt-1 size-4 shrink-0" />
-        Còn {availability.remainingSlots} suất từ {formatDateTime(availability.startAt)} đến {formatDateTime(availability.endAt)}.
+        Còn {availability.remainingSlots} suất từ{" "}
+        {formatDateTime(availability.startAt)} đến{" "}
+        {formatDateTime(availability.endAt)}.
       </p>
     );
   }
   return (
-    <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950" role="status">
-      <p className="font-semibold">Ngày này đã kín chỗ trong toàn bộ thời lượng gói.</p>
+    <div
+      className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+      role="status"
+    >
+      <p className="font-semibold">
+        Ngày này đã kín chỗ trong toàn bộ thời lượng gói.
+      </p>
       {availability.alternatives.length ? (
         <div className="flex flex-wrap gap-2">
           {availability.alternatives.map((alternative) => (
@@ -149,7 +171,8 @@ export function AdvertisingBookingPanel({
   const replacement = campaign.status === "NEEDS_RESCHEDULE";
   const storageKey = `advertising.checkout.${campaign.id}`;
   const [startLocal, setStartLocal] = useState(defaultStartValue);
-  const [checkout, setCheckout] = useState<AdvertisingReservationCheckout | null>(null);
+  const [checkout, setCheckout] =
+    useState<AdvertisingReservationCheckout | null>(null);
   const [confirmPayment, setConfirmPayment] = useState(false);
   const [feedback, setFeedback] = useState("");
   const startAt = isoValue(startLocal);
@@ -165,7 +188,12 @@ export function AdvertisingBookingPanel({
     retry: false,
   });
   const availability = useQuery({
-    queryKey: ["advertising-availability", campaign.id, packageData.code, startAt],
+    queryKey: [
+      "advertising-availability",
+      campaign.id,
+      packageData.code,
+      startAt,
+    ],
     queryFn: () =>
       advertisingApi.availability({
         placementCode: campaign.placementCode,
@@ -179,18 +207,27 @@ export function AdvertisingBookingPanel({
   useEffect(() => {
     let active = true;
     const savedId = window.sessionStorage.getItem(storageKey);
-    if (!savedId) return () => { active = false; };
+    if (!savedId)
+      return () => {
+        active = false;
+      };
     void advertisingApi
       .getReservation(savedId)
       .then((saved) => {
-        if (active && saved.reservation.status === "HELD" && saved.order.paymentStatus === "PENDING") {
+        if (
+          active &&
+          saved.reservation.status === "HELD" &&
+          saved.order.paymentStatus === "PENDING"
+        ) {
           setCheckout(saved);
         } else {
           window.sessionStorage.removeItem(storageKey);
         }
       })
       .catch(() => window.sessionStorage.removeItem(storageKey));
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [storageKey]);
 
   const reserve = useMutation({
@@ -215,8 +252,12 @@ export function AdvertisingBookingPanel({
       return advertisingApi.joinWaitlist(campaign.id, startAt);
     },
     onSuccess: async () => {
-      setFeedback("Đã thêm vào danh sách chờ. Chúng tôi sẽ báo khi lịch có chỗ.");
-      await queryClient.invalidateQueries({ queryKey: ["advertising-waitlist"] });
+      setFeedback(
+        "Đã thêm vào danh sách chờ. Chúng tôi sẽ báo khi lịch có chỗ.",
+      );
+      await queryClient.invalidateQueries({
+        queryKey: ["advertising-waitlist"],
+      });
     },
     onError: (error) => setFeedback(errorMessage(error)),
   });
@@ -227,7 +268,9 @@ export function AdvertisingBookingPanel({
     },
     onSuccess: async () => {
       setFeedback("Đã cập nhật lịch chạy. Không phát sinh thanh toán mới.");
-      await queryClient.invalidateQueries({ queryKey: ["advertising-campaigns"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["advertising-campaigns"],
+      });
       onPaid();
     },
     onError: (error) => {
@@ -259,7 +302,9 @@ export function AdvertisingBookingPanel({
       if (error instanceof ApiError && error.code.includes("EXPIRED")) {
         window.sessionStorage.removeItem(storageKey);
         setCheckout(null);
-        setFeedback("Lượt giữ chỗ đã hết hạn. Kiểm tra lại sức chứa để giữ lịch mới.");
+        setFeedback(
+          "Lượt giữ chỗ đã hết hạn. Kiểm tra lại sức chứa để giữ lịch mới.",
+        );
         void availability.refetch();
         return;
       }
@@ -273,7 +318,10 @@ export function AdvertisingBookingPanel({
   };
   const available = availability.data?.available === true;
   const missingBalance = wallet.data
-    ? Math.max(0, (checkout?.order.payableAmountVnd ?? 0) - wallet.data.balanceMinor)
+    ? Math.max(
+        0,
+        (checkout?.order.payableAmountVnd ?? 0) - wallet.data.balanceMinor,
+      )
     : 0;
 
   return (
@@ -285,7 +333,9 @@ export function AdvertisingBookingPanel({
           </span>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--theme-muted)]">
-              {replacement ? "Điều chỉnh lịch đã thanh toán" : "Chọn ngày bắt đầu"}
+              {replacement
+                ? "Điều chỉnh lịch đã thanh toán"
+                : "Chọn ngày bắt đầu"}
             </p>
             <h2 className="mt-1 text-lg font-bold">{campaign.creativeTitle}</h2>
             <p className="mt-1 text-sm text-[var(--theme-muted)]">
@@ -325,22 +375,31 @@ export function AdvertisingBookingPanel({
               className="flex gap-2 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-3 text-sm leading-6"
               role="status"
             >
-              <CircleAlert aria-hidden="true" className="mt-1 size-4 shrink-0" />
+              <CircleAlert
+                aria-hidden="true"
+                className="mt-1 size-4 shrink-0"
+              />
               {feedback}
             </p>
           ) : null}
           {checkout ? (
             <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
               <p className="flex items-center gap-2 font-semibold">
-                <Clock3 aria-hidden="true" className="size-4" /> Giữ chỗ đến {formatDateTime(checkout.reservation.expiresAt)}
+                <Clock3 aria-hidden="true" className="size-4" /> Giữ chỗ đến{" "}
+                {formatDateTime(checkout.reservation.expiresAt)}
               </p>
               <p>
-                Số tiền cần thanh toán: <strong>{formatVnd(checkout.order.payableAmountVnd)}</strong>
+                Số tiền cần thanh toán:{" "}
+                <strong>{formatVnd(checkout.order.payableAmountVnd)}</strong>
               </p>
-              <p className="leading-6">Thanh toán trước thời hạn để xác nhận lịch. Tiền chỉ bị trừ sau khi bạn xác nhận ở bước tiếp theo.</p>
+              <p className="leading-6">
+                Thanh toán trước thời hạn để xác nhận lịch. Tiền chỉ bị trừ sau
+                khi bạn xác nhận ở bước tiếp theo.
+              </p>
               {wallet.data ? (
                 <p>
-                  Số dư ví: <strong>{formatVnd(wallet.data.balanceMinor)}</strong>
+                  Số dư ví:{" "}
+                  <strong>{formatVnd(wallet.data.balanceMinor)}</strong>
                 </p>
               ) : wallet.isPending ? (
                 <p className="text-sm">Đang tải số dư ví…</p>
@@ -352,7 +411,8 @@ export function AdvertisingBookingPanel({
               ) : null}
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => setConfirmPayment(true)}>
-                  <Wallet aria-hidden="true" className="size-4" /> Thanh toán bằng ví
+                  <Wallet aria-hidden="true" className="size-4" /> Thanh toán
+                  bằng ví
                 </Button>
                 {missingBalance > 0 ? (
                   <Link
@@ -370,10 +430,15 @@ export function AdvertisingBookingPanel({
                 disabled={reschedule.isPending}
                 onClick={() => reschedule.mutate()}
               >
-                {reschedule.isPending ? "Đang cập nhật…" : "Xác nhận lịch thay thế"}
+                {reschedule.isPending
+                  ? "Đang cập nhật…"
+                  : "Xác nhận lịch thay thế"}
               </Button>
             ) : (
-              <Button disabled={reserve.isPending} onClick={() => reserve.mutate()}>
+              <Button
+                disabled={reserve.isPending}
+                onClick={() => reserve.mutate()}
+              >
                 {reserve.isPending ? "Đang giữ chỗ…" : "Giữ lịch 15 phút"}
               </Button>
             )
@@ -400,7 +465,8 @@ export function AdvertisingBookingPanel({
           ) : null}
           {replacement ? (
             <p className="mt-4 border-t border-[var(--theme-border)] pt-4 text-sm leading-6 text-[var(--theme-muted)]">
-              Chiến dịch đã thanh toán. Thay đổi lịch này không tạo khoản thu mới.
+              Chiến dịch đã thanh toán. Thay đổi lịch này không tạo khoản thu
+              mới.
             </p>
           ) : null}
         </aside>
@@ -416,7 +482,8 @@ export function AdvertisingBookingPanel({
         title="Xác nhận thanh toán quảng cáo"
       >
         <p className="mt-3 text-sm text-[var(--theme-muted)]">
-          Lịch giữ chỗ hết hạn lúc {checkout ? formatDateTime(checkout.reservation.expiresAt) : "—"}.
+          Lịch giữ chỗ hết hạn lúc{" "}
+          {checkout ? formatDateTime(checkout.reservation.expiresAt) : "—"}.
         </p>
       </ConfirmationDialog>
     </section>

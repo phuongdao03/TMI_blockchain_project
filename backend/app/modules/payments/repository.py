@@ -173,8 +173,9 @@ class PaymentRepository:
         if status is not None:
             statement = statement.where(PaymentOrder.status == status)
         rows = await self._session.execute(
-            statement.order_by(PaymentOrder.created_at.desc(), PaymentOrder.id.desc())
-            .limit(limit)
+            statement.order_by(
+                PaymentOrder.created_at.desc(), PaymentOrder.id.desc()
+            ).limit(limit)
         )
         return tuple((row[0], row[1], row[2]) for row in rows.all())
 

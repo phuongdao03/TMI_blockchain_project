@@ -394,8 +394,7 @@ class AdvertisingDeliveryService:
                         .join(
                             AdvertisingOrder,
                             and_(
-                                AdvertisingOrder.campaign_id
-                                == AdvertisingCampaign.id,
+                                AdvertisingOrder.campaign_id == AdvertisingCampaign.id,
                                 AdvertisingOrder.payment_status == "PAID",
                             ),
                         )
@@ -466,9 +465,7 @@ class AdvertisingDeliveryService:
                     if creative is None:
                         continue
 
-                    actual_end = now + timedelta(
-                        hours=self._paid_duration_hours(order)
-                    )
+                    actual_end = now + timedelta(hours=self._paid_duration_hours(order))
                     fits, _ = await self._capacity_for_campaign(
                         placement,
                         campaign.id,

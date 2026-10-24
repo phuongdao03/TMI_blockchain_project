@@ -51,7 +51,7 @@ test("applicant preparation and submission read as one sequence", async ({
     .filter({ hasText: "Tác phẩm văn hóa" })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Tài liệu cần chuẩn bị" }),
+    page.getByRole("heading", { name: "Khác biệt của loại hồ sơ này" }),
   ).toBeVisible();
   expect(await page.locator(".dossier-create-form > section").count()).toBe(1);
 
@@ -101,7 +101,7 @@ test("reviewer sees evidence and verdict before optional assistance", async ({
     waitUntil: "domcontentloaded",
   });
   await expect(
-    page.getByRole("heading", { name: "Phiếu thẩm định hồ sơ" }),
+    page.getByRole("heading", { name: "Kết luận theo tiêu chí" }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", {

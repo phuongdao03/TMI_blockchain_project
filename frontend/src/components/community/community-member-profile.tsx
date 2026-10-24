@@ -583,7 +583,10 @@ export function CommunityMemberProfile({
                       className={profileInputClass}
                       maxLength={300}
                       onChange={(event) =>
-                        setDraft({ ...draft, activityFields: event.target.value })
+                        setDraft({
+                          ...draft,
+                          activityFields: event.target.value,
+                        })
                       }
                       value={draft.activityFields}
                     />
@@ -594,7 +597,10 @@ export function CommunityMemberProfile({
                       className={profileInputClass}
                       maxLength={2500}
                       onChange={(event) =>
-                        setDraft({ ...draft, professionalLinks: event.target.value })
+                        setDraft({
+                          ...draft,
+                          professionalLinks: event.target.value,
+                        })
                       }
                       rows={3}
                       value={draft.professionalLinks}

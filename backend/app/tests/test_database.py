@@ -11,6 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from alembic import command
 from app.core.config import Settings, get_settings
+from app.db.alembic_compat import ALEMBIC_VERSION_COLUMN_LENGTH
 from app.db.base import Base, UtcTimestampMixin
 from app.db.session import (
     DatabaseConfigurationError,
@@ -119,7 +120,9 @@ def test_revision_ids_fit_alembic_version_column() -> None:
     revisions = ScriptDirectory.from_config(config).walk_revisions()
 
     oversized = [
-        revision.revision for revision in revisions if len(revision.revision) > 32
+        revision.revision
+        for revision in revisions
+        if len(revision.revision) > ALEMBIC_VERSION_COLUMN_LENGTH
     ]
 
     assert oversized == []

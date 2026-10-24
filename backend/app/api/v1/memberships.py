@@ -141,9 +141,7 @@ class QuoteData(PaymentSchema):
 
 
 class PurchaseRequest(PaymentSchema):
-    expected_amount_minor: Annotated[
-        int, Field(strict=True, ge=0, le=1_000_000_000)
-    ]
+    expected_amount_minor: Annotated[int, Field(strict=True, ge=0, le=1_000_000_000)]
     renewal_opt_in: bool = False
 
 
@@ -192,9 +190,7 @@ class BenefitRequestData(PaymentSchema):
     ]
     cycle_started_at: datetime
     statement: str
-    status: Literal[
-        "PENDING", "INFO_REQUESTED", "APPROVED", "COMPLETED", "REJECTED"
-    ]
+    status: Literal["PENDING", "INFO_REQUESTED", "APPROVED", "COMPLETED", "REJECTED"]
     decision_note: str | None
     reviewed_by_user_id: UUID | None
     reviewed_at: datetime | None
@@ -473,9 +469,7 @@ async def list_benefit_requests(
     request: Request,
     principal: CurrentPrincipalDependency,
     session: SessionDependency,
-    status: Literal[
-        "PENDING", "INFO_REQUESTED", "APPROVED", "COMPLETED", "REJECTED"
-    ]
+    status: Literal["PENDING", "INFO_REQUESTED", "APPROVED", "COMPLETED", "REJECTED"]
     | None = None,
     limit: Annotated[int, Field(ge=1, le=200)] = 100,
 ) -> SuccessEnvelope[BenefitRequestListData]:

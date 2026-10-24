@@ -501,9 +501,7 @@ class CommunityEventService:
             now = datetime.now(UTC)
             registration_opens_at = event.registration_opens_at
             priority_opens_at = event.priority_opens_at
-            if registration_opens_at is not None and now < _utc(
-                registration_opens_at
-            ):
+            if registration_opens_at is not None and now < _utc(registration_opens_at):
                 has_priority_access = (
                     event.priority_tier is not None
                     and priority_opens_at is not None
@@ -717,8 +715,7 @@ class CommunityEventService:
             eligible = [
                 membership
                 for membership in eligible
-                if membership.tier != "PRESTIGE"
-                or membership.user_id in approved_ids
+                if membership.tier != "PRESTIGE" or membership.user_id in approved_ids
             ]
         self.session.add_all(
             Notification(

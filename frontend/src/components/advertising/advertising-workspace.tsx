@@ -27,9 +27,15 @@ export function AdvertisingWorkspace({
 }) {
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(Boolean(initialDossierId));
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
-  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
-  const [metricsCampaignId, setMetricsCampaignId] = useState<string | null>(null);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
+    null,
+  );
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(
+    null,
+  );
+  const [metricsCampaignId, setMetricsCampaignId] = useState<string | null>(
+    null,
+  );
   const campaigns = useQuery({
     queryKey: ["advertising-campaigns"],
     queryFn: advertisingApi.campaigns,
@@ -60,13 +66,17 @@ export function AdvertisingWorkspace({
   const cancelWaitlist = useMutation({
     mutationFn: advertisingApi.cancelWaitlist,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["advertising-waitlist"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["advertising-waitlist"],
+      });
     },
   });
 
   const closeBooking = () => setSelectedCampaignId(null);
   const refreshCampaigns = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["advertising-campaigns"] });
+    await queryClient.invalidateQueries({
+      queryKey: ["advertising-campaigns"],
+    });
   };
 
   return (
@@ -76,7 +86,13 @@ export function AdvertisingWorkspace({
         icon={Megaphone}
         section="Truyền thông hồ sơ"
         title="Quảng cáo của tôi"
-        action={!creating ? <Button onClick={() => setCreating(true)}><Megaphone aria-hidden="true" className="size-4" /> Tạo chiến dịch</Button> : undefined}
+        action={
+          !creating ? (
+            <Button onClick={() => setCreating(true)}>
+              <Megaphone aria-hidden="true" className="size-4" /> Tạo chiến dịch
+            </Button>
+          ) : undefined
+        }
       />
 
       {selectedCampaign ? (
@@ -88,13 +104,22 @@ export function AdvertisingWorkspace({
             packageData={selectedPackage}
           />
         ) : packages.isPending ? (
-          <p className="rounded-xl bg-[var(--theme-surface)] p-5 text-sm text-[var(--theme-muted)]" role="status">
+          <p
+            className="rounded-xl bg-[var(--theme-surface)] p-5 text-sm text-[var(--theme-muted)]"
+            role="status"
+          >
             Đang tải thông tin gói quảng cáo…
           </p>
         ) : (
-          <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950" role="alert">
-            Không tìm thấy gói của chiến dịch này. Vui lòng tải lại hoặc liên hệ quản trị viên.
-            <Button className="ml-3" onClick={closeBooking} variant="outline">Đóng</Button>
+          <section
+            className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950"
+            role="alert"
+          >
+            Không tìm thấy gói của chiến dịch này. Vui lòng tải lại hoặc liên hệ
+            quản trị viên.
+            <Button className="ml-3" onClick={closeBooking} variant="outline">
+              Đóng
+            </Button>
           </section>
         )
       ) : null}
@@ -103,10 +128,14 @@ export function AdvertisingWorkspace({
         <section className="space-y-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--theme-accent)]">Bước 1 · Nội dung</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--theme-accent)]">
+                Bước 1 · Nội dung
+              </p>
               <h2 className="mt-1 text-xl font-bold">Tạo chiến dịch</h2>
             </div>
-            <Button onClick={() => setCreating(false)} variant="ghost">Đóng</Button>
+            <Button onClick={() => setCreating(false)} variant="ghost">
+              Đóng
+            </Button>
           </div>
           <AdvertisingSetupPanel
             initialDossierId={initialDossierId}
@@ -131,13 +160,23 @@ export function AdvertisingWorkspace({
       ) : null}
 
       {campaigns.isPending ? (
-        <p className="rounded-xl bg-[var(--theme-surface)] p-5 text-sm text-[var(--theme-muted)]" role="status">
+        <p
+          className="rounded-xl bg-[var(--theme-surface)] p-5 text-sm text-[var(--theme-muted)]"
+          role="status"
+        >
           Đang tải chiến dịch…
         </p>
       ) : campaigns.isError ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900" role="alert">
+        <div
+          className="rounded-xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900"
+          role="alert"
+        >
           Không tải được chiến dịch. Kiểm tra kết nối rồi thử lại.
-          <Button className="ml-3" onClick={() => void campaigns.refetch()} variant="outline">
+          <Button
+            className="ml-3"
+            onClick={() => void campaigns.refetch()}
+            variant="outline"
+          >
             <RotateCw aria-hidden="true" className="size-4" /> Thử lại
           </Button>
         </div>
@@ -156,13 +195,33 @@ export function AdvertisingWorkspace({
           <h2 className="font-bold">Lịch đang chờ chỗ</h2>
           <ul className="mt-3 divide-y divide-[var(--theme-border)]">
             {waitlist.data.map((entry) => (
-              <li className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm" key={entry.id}>
+              <li
+                className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
+                key={entry.id}
+              >
                 <div>
-                  <p className="font-semibold">{dateLabel(entry.startAt)} · {entry.status === "WAITING" ? "Đang chờ" : entry.status === "NOTIFIED" ? "Đã có chỗ" : entry.status === "FULFILLED" ? "Đã đặt lịch" : "Đã hủy"}</p>
-                  <p className="text-xs text-[var(--theme-muted)]">Thời lượng yêu cầu đến {dateLabel(entry.endAt)}</p>
+                  <p className="font-semibold">
+                    {dateLabel(entry.startAt)} ·{" "}
+                    {entry.status === "WAITING"
+                      ? "Đang chờ"
+                      : entry.status === "NOTIFIED"
+                        ? "Đã có chỗ"
+                        : entry.status === "FULFILLED"
+                          ? "Đã đặt lịch"
+                          : "Đã hủy"}
+                  </p>
+                  <p className="text-xs text-[var(--theme-muted)]">
+                    Thời lượng yêu cầu đến {dateLabel(entry.endAt)}
+                  </p>
                 </div>
                 {entry.status === "WAITING" || entry.status === "NOTIFIED" ? (
-                  <Button disabled={cancelWaitlist.isPending} onClick={() => cancelWaitlist.mutate(entry.id)} variant="outline">Hủy yêu cầu</Button>
+                  <Button
+                    disabled={cancelWaitlist.isPending}
+                    onClick={() => cancelWaitlist.mutate(entry.id)}
+                    variant="outline"
+                  >
+                    Hủy yêu cầu
+                  </Button>
                 ) : null}
               </li>
             ))}
@@ -171,28 +230,61 @@ export function AdvertisingWorkspace({
       ) : null}
 
       {metricsCampaignId ? (
-        <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5" aria-live="polite">
+        <section
+          className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5"
+          aria-live="polite"
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <ChartNoAxesCombined aria-hidden="true" className="size-5 text-[var(--theme-accent)]" />
+              <ChartNoAxesCombined
+                aria-hidden="true"
+                className="size-5 text-[var(--theme-accent)]"
+              />
               <div>
                 <h2 className="font-bold">Hiệu quả chiến dịch</h2>
-                <p className="text-xs text-[var(--theme-muted)]">Bắt đầu {dateLabel(selectedCampaign?.actualStartAt ?? null)}</p>
+                <p className="text-xs text-[var(--theme-muted)]">
+                  Bắt đầu {dateLabel(selectedCampaign?.actualStartAt ?? null)}
+                </p>
               </div>
             </div>
-            <Button onClick={() => setMetricsCampaignId(null)} variant="ghost">Đóng</Button>
+            <Button onClick={() => setMetricsCampaignId(null)} variant="ghost">
+              Đóng
+            </Button>
           </div>
-          {metrics.isPending ? <p className="mt-4 text-sm text-[var(--theme-muted)]">Đang tổng hợp…</p> : null}
-          {metrics.isError ? <p className="mt-4 text-sm text-rose-800" role="alert">Chưa tải được báo cáo.</p> : null}
+          {metrics.isPending ? (
+            <p className="mt-4 text-sm text-[var(--theme-muted)]">
+              Đang tổng hợp…
+            </p>
+          ) : null}
+          {metrics.isError ? (
+            <p className="mt-4 text-sm text-rose-800" role="alert">
+              Chưa tải được báo cáo.
+            </p>
+          ) : null}
           {metrics.data ? (
             <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
-                ["Lượt phân phối", metrics.data.deliveryCount.toLocaleString("vi-VN")],
-                ["Lượt hiển thị hợp lệ", metrics.data.validImpressions.toLocaleString("vi-VN")],
-                ["Lượt nhấp hợp lệ", metrics.data.validClicks.toLocaleString("vi-VN")],
-                ["Tỷ lệ nhấp", `${(metrics.data.ctrBasisPoints / 100).toFixed(2)}%`],
+                [
+                  "Lượt phân phối",
+                  metrics.data.deliveryCount.toLocaleString("vi-VN"),
+                ],
+                [
+                  "Lượt hiển thị hợp lệ",
+                  metrics.data.validImpressions.toLocaleString("vi-VN"),
+                ],
+                [
+                  "Lượt nhấp hợp lệ",
+                  metrics.data.validClicks.toLocaleString("vi-VN"),
+                ],
+                [
+                  "Tỷ lệ nhấp",
+                  `${(metrics.data.ctrBasisPoints / 100).toFixed(2)}%`,
+                ],
               ].map(([label, value]) => (
-                <div className="rounded-xl bg-[var(--theme-elevated)] p-4" key={label}>
+                <div
+                  className="rounded-xl bg-[var(--theme-elevated)] p-4"
+                  key={label}
+                >
                   <dt className="text-xs text-[var(--theme-muted)]">{label}</dt>
                   <dd className="mt-1 text-xl font-bold">{value}</dd>
                 </div>

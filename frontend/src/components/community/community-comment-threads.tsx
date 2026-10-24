@@ -6,9 +6,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { CommunityReportAction } from "@/components/community/community-report-action";
-import {
-  CommunityMembershipBadge,
-} from "@/components/community/community-user-identity";
+import { CommunityMembershipBadge } from "@/components/community/community-user-identity";
 import { MembershipAvatar } from "@/components/ui/membership-avatar";
 import { communityApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";

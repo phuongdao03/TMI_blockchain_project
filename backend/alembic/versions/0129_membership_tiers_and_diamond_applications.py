@@ -189,6 +189,4 @@ def downgrade() -> None:
     )
     with op.batch_alter_table("membership_plans") as batch:
         batch.drop_constraint("valid_tier", type_="check")
-        batch.create_check_constraint(
-            "valid_tier", "tier IN ('COMPANION', 'PRESTIGE')"
-        )
+        batch.create_check_constraint("valid_tier", "tier IN ('COMPANION', 'PRESTIGE')")

@@ -105,7 +105,12 @@ test("reviewer reviews each document and submits a criteria verdict", async ({
     "Đủ căn cứ xác minh",
   ];
   for (const criterion of criteria) {
-    await page.getByLabel(`Kết luận ${criterion}`).selectOption("MEETS");
+    const meetsCriterion = page.getByRole("radio", {
+      name: `${criterion}: Đáp ứng`,
+    });
+    await meetsCriterion.focus();
+    await meetsCriterion.press("Space");
+    await expect(meetsCriterion).toBeChecked();
     await page
       .getByLabel(`Nhận định ${criterion}`)
       .fill(`Đã đối chiếu tài liệu và xác nhận ${criterion.toLowerCase()}.`);
@@ -115,7 +120,9 @@ test("reviewer reviews each document and submits a criteria verdict", async ({
   for (let index = 0; index < criteria.length; index += 1) {
     await checklist.nth(index).check();
   }
-  await expect(page.getByText("Đề nghị phê duyệt")).toBeVisible();
+  await expect(
+    page.locator("#review-final-result").getByText("Đề nghị phê duyệt"),
+  ).toBeVisible();
   await expect(page.getByText("0/100")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Gửi kết quả thẩm định" }).click();
@@ -188,7 +195,7 @@ test("reviewer form fits tablet width", async ({ page }, testInfo) => {
     waitUntil: "domcontentloaded",
   });
   await expect(
-    page.getByRole("heading", { name: "Phiếu thẩm định hồ sơ" }),
+    page.getByRole("heading", { name: "Kết luận theo tiêu chí" }),
   ).toBeVisible();
   const overflow = await page.evaluate(
     () =>
@@ -212,20 +219,21 @@ test("reviewer assessment remains legible in dark mode", async ({
   await selectWorkspaceTheme(page, "Giao diện tối");
 
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  const reviewHeader = page.locator(".review-workspace > header");
+  const reviewHeader = page.locator(".review-workspace > section > header");
   await expect(reviewHeader).toHaveCSS("color", "rgb(255, 249, 243)");
   await expect(
-    page.getByRole("heading", { name: "Phiếu thẩm định hồ sơ" }),
+    page.getByRole("heading", { name: "Kết luận theo tiêu chí" }),
   ).toBeVisible();
   const firstCriterion = page
     .locator("fieldset")
     .filter({ hasText: "01" })
     .first();
   await expect(firstCriterion).toBeVisible();
-  await expect(firstCriterion).toHaveCSS(
+  await expect(firstCriterion).not.toHaveCSS(
     "background-color",
-    "rgba(0, 0, 0, 0)",
+    "rgb(255, 255, 255)",
   );
+  await expect(firstCriterion).toHaveCSS("color", "rgb(255, 249, 243)");
   await page.screenshot({
     fullPage: true,
     path: testInfo.outputPath("review-form-dark.png"),

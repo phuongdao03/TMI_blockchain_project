@@ -561,9 +561,7 @@ class CmsService:
         if is_employee:
             audience_tags.add("EMPLOYEE")
 
-        tier, _ = await active_membership_cycle(
-            self._session, principal.user_id
-        )
+        tier, _ = await active_membership_cycle(self._session, principal.user_id)
         if tier == "PRESTIGE":
             approved = await self._session.scalar(
                 select(MembershipDiamondApplication.id)

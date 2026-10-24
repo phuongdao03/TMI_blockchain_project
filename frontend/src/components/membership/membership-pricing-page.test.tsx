@@ -11,7 +11,9 @@ import { MembershipPricingPage } from "./membership-pricing-page";
 function mount() {
   return render(
     <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
     >
       <MembershipPricingPage />
     </QueryClientProvider>,
@@ -101,9 +103,7 @@ describe("public membership pricing page", () => {
     expect(
       screen.getByRole("img", { name: "Huy hiệu cấp Đồng" }),
     ).toBeDefined();
-    expect(
-      screen.getByRole("img", { name: "Huy hiệu cấp Bạc" }),
-    ).toBeDefined();
+    expect(screen.getByRole("img", { name: "Huy hiệu cấp Bạc" })).toBeDefined();
     expect(
       screen.getByRole("img", { name: "Huy hiệu cấp Vàng" }),
     ).toBeDefined();
@@ -142,7 +142,9 @@ describe("public membership pricing page", () => {
       "Có quyền lợi",
     ]);
     expect(screen.queryByText("Bao gồm", { exact: true })).toBeNull();
-    expect(screen.getAllByText(/xem đủ \d+ quyền lợi và điều kiện/i).length).toBe(4);
+    expect(
+      screen.getAllByText(/xem đủ \d+ quyền lợi và điều kiện/i).length,
+    ).toBe(4);
   });
 
   it("explains when the catalog is unavailable instead of implying paid plans are closed", async () => {

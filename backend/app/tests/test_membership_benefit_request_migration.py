@@ -56,19 +56,25 @@ def test_membership_benefit_request_migration_round_trips(
             } <= profile_columns
         command.downgrade(config, "0132_membership_catalog_content")
         with sqlite3.connect(database) as connection:
-            assert connection.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' "
-                "AND name='membership_benefit_requests'"
-            ).fetchone() is None
+            assert (
+                connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' "
+                    "AND name='membership_benefit_requests'"
+                ).fetchone()
+                is None
+            )
             profile_columns = {
                 row[1]
                 for row in connection.execute("PRAGMA table_info(community_profiles)")
             }
-            assert not {
-                "professional_title",
-                "organization",
-                "activity_fields",
-                "professional_links",
-            } & profile_columns
+            assert (
+                not {
+                    "professional_title",
+                    "organization",
+                    "activity_fields",
+                    "professional_links",
+                }
+                & profile_columns
+            )
     finally:
         get_settings.cache_clear()

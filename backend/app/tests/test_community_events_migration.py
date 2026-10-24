@@ -104,10 +104,13 @@ def test_event_priority_window_migration_round_trip(
                 row[1]
                 for row in connection.execute("PRAGMA table_info(community_events)")
             }
-        assert not {
-            "registration_opens_at",
-            "priority_tier",
-            "priority_opens_at",
-        } & event_columns
+        assert (
+            not {
+                "registration_opens_at",
+                "priority_tier",
+                "priority_opens_at",
+            }
+            & event_columns
+        )
     finally:
         get_settings.cache_clear()

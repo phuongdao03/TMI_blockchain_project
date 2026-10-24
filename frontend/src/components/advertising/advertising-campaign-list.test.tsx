@@ -85,12 +85,21 @@ describe("AdvertisingCampaignList", () => {
   it("lets an advertiser return to a held booking and finish payment", () => {
     render(
       <AdvertisingCampaignList
-        campaigns={[{ ...campaign, status: "PENDING_PAYMENT", bookingStartAt: "2026-10-25T03:00:00Z", paymentStatus: "PENDING" }]}
+        campaigns={[
+          {
+            ...campaign,
+            status: "PENDING_PAYMENT",
+            bookingStartAt: "2026-10-25T03:00:00Z",
+            paymentStatus: "PENDING",
+          },
+        ]}
         onCreateCampaign={vi.fn()}
         onScheduleCampaign={vi.fn()}
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Hoàn tất thanh toán" })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Hoàn tất thanh toán" }),
+    ).toBeDefined();
   });
 });

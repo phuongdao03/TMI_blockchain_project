@@ -960,7 +960,9 @@ export function DossierWorkspace({
               ) : null}
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="font-bold text-[var(--theme-text)]">Tệp đã thêm</h3>
+                  <h3 className="font-bold text-[var(--theme-text)]">
+                    Tệp đã thêm
+                  </h3>
                   <span className="text-xs font-semibold text-neutral-500">
                     {dossier.evidences.length} tệp
                   </span>
@@ -1174,7 +1176,10 @@ export function DossierWorkspace({
                   <div className="mt-3 space-y-2">
                     {timeline.data?.length ? (
                       timeline.data.map((item) => (
-                        <div className="flex gap-3 rounded-lg bg-[var(--theme-elevated)] p-3" key={item.id}>
+                        <div
+                          className="flex gap-3 rounded-lg bg-[var(--theme-elevated)] p-3"
+                          key={item.id}
+                        >
                           <span className="mt-1 size-2 rounded-full bg-primary-600" />
                           <div>
                             <p className="text-sm font-bold">

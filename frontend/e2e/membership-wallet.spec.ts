@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-const tiers = {
-  MEMBER: "Thành viên",
-  COMPANION: "Đồng hành",
-  PRESTIGE: "Tinh hoa",
-} as const;
+const tiers = [
+  { tier: "MEMBER", label: "Thành viên", cardLabel: "Đồng" },
+  { tier: "COMPANION", label: "Đồng hành", cardLabel: "Vàng" },
+  { tier: "PRESTIGE", label: "Tinh hoa", cardLabel: "Kim cương" },
+] as const;
 
-for (const [tier, label] of Object.entries(tiers)) {
+for (const { tier, label, cardLabel } of tiers) {
   test(`${label} card fits requested viewports and enforces room access`, async ({
     page,
     context,
@@ -48,6 +48,15 @@ for (const [tier, label] of Object.entries(tiers)) {
     await page.route("**/api/v1/community/chat/*/messages", (route) =>
       route.fulfill({ json: envelope([]) }),
     );
+    await page.route("**/api/v1/community/chat/*/access", (route) =>
+      route.fulfill({
+        json: envelope({
+          room: "PRESTIGE",
+          allowed: tier === "PRESTIGE",
+          source: tier === "PRESTIGE" ? "TIER" : "NONE",
+        }),
+      }),
+    );
     await page.route("**/api/v1/wallet", (route) =>
       route.fulfill({
         json: envelope({
@@ -61,7 +70,7 @@ for (const [tier, label] of Object.entries(tiers)) {
     );
     await page.goto("/membership");
     const card = page.getByRole("article", {
-      name: new RegExp(`Thẻ ${label} của`),
+      name: new RegExp(`Thẻ ${cardLabel} của`),
     });
     await expect(card).toBeVisible();
     await expect(card).toContainText("THV-123456789ABC");
@@ -89,13 +98,15 @@ for (const [tier, label] of Object.entries(tiers)) {
     await page.getByRole("button", { name: "Phòng Tinh hoa" }).click();
     if (tier !== "PRESTIGE") {
       await expect(
-        page.getByText(/Phòng này dành cho hạng Tinh hoa/),
+        page.getByText(/Phòng này dành cho hạng Kim cương trở lên/),
       ).toBeVisible();
       await expect(
         page.getByRole("button", { name: "Gửi tin nhắn" }),
       ).toHaveCount(0);
     } else {
-      await expect(page.getByLabel("Tin nhắn", { exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("textbox", { name: /Tin nhắn/ }),
+      ).toBeVisible();
     }
     await page.goto("/wallet?returnTo=%2Fmembership");
     await expect(

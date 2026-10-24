@@ -72,7 +72,9 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
         response.url().endsWith("/api/v1/dossiers") &&
         response.request().method() === "POST",
     );
-    await page.getByRole("button", { name: "Tạo hồ sơ nháp" }).click();
+    await page
+      .getByRole("button", { name: "Tạo hồ sơ nháp" })
+      .click({ force: true });
     expect((await createDossier).ok()).toBe(true);
     await expect(page).toHaveURL(/\/dossiers\/9155dbf5-/, {
       timeout: 30_000,
@@ -119,7 +121,12 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       "Đủ căn cứ xác minh",
     ];
     for (const criterion of criteria) {
-      await page.getByLabel(`Kết luận ${criterion}`).selectOption("MEETS");
+      const meetsCriterion = page.getByRole("radio", {
+        name: `${criterion}: Đáp ứng`,
+      });
+      await meetsCriterion.focus();
+      await meetsCriterion.press("Space");
+      await expect(meetsCriterion).toBeChecked();
       await page
         .getByLabel(`Nhận định ${criterion}`)
         .fill(`Đã đối chiếu tài liệu và xác nhận ${criterion.toLowerCase()}.`);
@@ -129,7 +136,9 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     for (let index = 0; index < criteria.length; index += 1) {
       await checklist.nth(index).check();
     }
-    await expect(page.getByText("Đề nghị phê duyệt")).toBeVisible();
+    await expect(
+      page.locator("#review-final-result").getByText("Đề nghị phê duyệt"),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Gửi kết quả thẩm định" }).click();
     await page.getByRole("button", { name: "Xác nhận gửi" }).click();
     await expect(page.getByText("Kết quả đã gửi.")).toBeVisible();

@@ -45,9 +45,7 @@ def upgrade() -> None:
             server_default=sa.func.now(),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(
-            ["actor_user_id"], ["users.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["actor_user_id"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(
             ["payment_order_id"], ["payment_orders.id"], ondelete="CASCADE"
         ),

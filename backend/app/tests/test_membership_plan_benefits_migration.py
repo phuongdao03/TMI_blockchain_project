@@ -44,8 +44,15 @@ def test_plan_benefits_are_seeded_and_downgrade_preserves_catalog_copy(
                     json.loads(benefits),
                     conditions,
                 )
-                for tier, name, amount, duration, description, benefits, conditions
-                in rows
+                for (
+                    tier,
+                    name,
+                    amount,
+                    duration,
+                    description,
+                    benefits,
+                    conditions,
+                ) in rows
             }
             assert set(catalog) == {"SILVER", "COMPANION", "PRESTIGE"}
             assert catalog["SILVER"][3] == "Mô tả do quản trị viên cập nhật."

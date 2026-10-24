@@ -140,8 +140,7 @@ class MembershipService:
             or len(conditions.strip()) > 1000
             or len(benefits or []) > 20
             or any(
-                not item.strip() or len(item.strip()) > 240
-                for item in benefits or []
+                not item.strip() or len(item.strip()) > 240 for item in benefits or []
             )
         ):
             raise PaymentConflictError("Thông tin gói thành viên không hợp lệ.")
@@ -181,9 +180,7 @@ class MembershipService:
         renewal_opt_in: bool = False,
     ) -> dict[str, object]:
         async with self.session.begin():
-            return await self._quote(
-                user_id, plan_id, renewal_opt_in=renewal_opt_in
-            )
+            return await self._quote(user_id, plan_id, renewal_opt_in=renewal_opt_in)
 
     async def _quote(
         self,
@@ -301,17 +298,11 @@ class MembershipService:
                 duration_days,
                 max(
                     0,
-                    ceil(
-                        (cycle_end - max(now, cycle_start)).total_seconds() / 86400
-                    ),
+                    ceil((cycle_end - max(now, cycle_start)).total_seconds() / 86400),
                 ),
             )
             total_remaining_days += cycle_remaining
-            total_credit += (
-                purchase.list_price_minor
-                * cycle_remaining
-                // duration_days
-            )
+            total_credit += purchase.list_price_minor * cycle_remaining // duration_days
             current_cycle = cycles.get(cycle_start)
         return total_credit, total_remaining_days
 
@@ -354,9 +345,7 @@ class MembershipService:
                 .where(MembershipPlan.id == plan_id)
                 .with_for_update()
             )
-            quote = await self._quote(
-                user_id, plan_id, renewal_opt_in=renewal_opt_in
-            )
+            quote = await self._quote(user_id, plan_id, renewal_opt_in=renewal_opt_in)
             if quote["approval_required"]:
                 raise PaymentForbiddenError()
             if expected_amount_minor != quote["amount_due_minor"]:
@@ -426,9 +415,7 @@ class MembershipService:
             raise PaymentConflictError("Nội dung đăng ký cần từ 1 đến 5.000 ký tự.")
         async with self.session.begin():
             await self.session.scalar(
-                select(User.id)
-                .where(User.id == principal.user_id)
-                .with_for_update()
+                select(User.id).where(User.id == principal.user_id).with_for_update()
             )
             application = await self.session.scalar(
                 select(MembershipDiamondApplication)
@@ -444,9 +431,7 @@ class MembershipService:
                 if application.status != "INFO_REQUESTED":
                     if application.statement == statement:
                         return application
-                    raise PaymentConflictError(
-                        "Đã có đơn Kim cương đang chờ xử lý."
-                    )
+                    raise PaymentConflictError("Đã có đơn Kim cương đang chờ xử lý.")
                 before: dict[str, object] | None = {"status": application.status}
                 application.statement = statement
                 application.status = "PENDING"
@@ -589,9 +574,7 @@ class MembershipService:
 
         async with self.session.begin():
             await self.session.scalar(
-                select(User.id)
-                .where(User.id == principal.user_id)
-                .with_for_update()
+                select(User.id).where(User.id == principal.user_id).with_for_update()
             )
             tier, cycle_started_at = await active_membership_cycle(
                 self.session, principal.user_id
@@ -878,9 +861,7 @@ class MembershipService:
                     CommunityProfile.avatar_url,
                     UserProfile.avatar_url,
                     UserProfile.avatar_media_id,
-                    CommunityRepository._membership_tier(
-                        CommunityChatMessage.user_id
-                    ),
+                    CommunityRepository._membership_tier(CommunityChatMessage.user_id),
                     CommunityRepository._has_role(
                         CommunityChatMessage.user_id, "SUPER_ADMIN"
                     ),
@@ -907,8 +888,7 @@ class MembershipService:
                 .limit(50)
             )
             return [
-                self._chat_message_data(principal, row)
-                for row in reversed(rows.all())
+                self._chat_message_data(principal, row) for row in reversed(rows.all())
             ]
 
     async def chat_access(
@@ -1007,9 +987,7 @@ class MembershipService:
             )
             if user is None:
                 raise PaymentNotFoundError()
-            grant = await self.session.get(
-                MembershipChatRoomAccess, (user_id, room)
-            )
+            grant = await self.session.get(MembershipChatRoomAccess, (user_id, room))
             if grant is not None and grant.revoked_at is None:
                 raise PaymentConflictError("Tài khoản đã có quyền vào phòng này.")
             before: dict[str, object] | None = (

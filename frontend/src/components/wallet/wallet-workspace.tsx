@@ -109,7 +109,8 @@ export function WalletWorkspace({
           role="status"
           className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 text-sm"
         >
-          Bản xem giao diện dùng số liệu minh họa; các thao tác giao dịch đã tắt.
+          Bản xem giao diện dùng số liệu minh họa; các thao tác giao dịch đã
+          tắt.
         </p>
       )}
       <section aria-labelledby="topup-title">

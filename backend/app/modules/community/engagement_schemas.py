@@ -92,10 +92,13 @@ class CommunityMemberProfileEditRequest(CommunitySchema):
     professional_title: Annotated[str | None, Field(max_length=120)] = None
     organization: Annotated[str | None, Field(max_length=160)] = None
     activity_fields: Annotated[str | None, Field(max_length=300)] = None
-    professional_links: Annotated[
-        list[Annotated[str, Field(min_length=8, max_length=500)]],
-        Field(max_length=5),
-    ] | None = None
+    professional_links: (
+        Annotated[
+            list[Annotated[str, Field(min_length=8, max_length=500)]],
+            Field(max_length=5),
+        ]
+        | None
+    ) = None
 
     @field_validator("username", mode="before")
     @classmethod
@@ -159,9 +162,7 @@ class CommunityMemberProfileEditRequest(CommunitySchema):
 
     @field_validator("professional_links")
     @classmethod
-    def validate_professional_links(
-        cls, value: list[str] | None
-    ) -> list[str] | None:
+    def validate_professional_links(cls, value: list[str] | None) -> list[str] | None:
         if value is None:
             return None
         normalized_links: list[str] = []
@@ -192,9 +193,7 @@ class CommunityMemberData(CommunitySchema):
     avatar_url: str | None
     role_label: str | None
     is_admin: bool
-    membership_tier: Literal[
-        "MEMBER", "SILVER", "COMPANION", "PRESTIGE"
-    ] = "MEMBER"
+    membership_tier: Literal["MEMBER", "SILVER", "COMPANION", "PRESTIGE"] = "MEMBER"
     bio: str | None
     professional_title: str | None = None
     organization: str | None = None
@@ -212,9 +211,7 @@ class CommunityMemberDirectoryItemData(CommunitySchema):
     username: str
     display_name: str
     avatar_url: str | None
-    membership_tier: Literal[
-        "MEMBER", "SILVER", "COMPANION", "PRESTIGE"
-    ] = "MEMBER"
+    membership_tier: Literal["MEMBER", "SILVER", "COMPANION", "PRESTIGE"] = "MEMBER"
     professional_title: str | None
     organization: str | None
     activity_fields: str | None
@@ -256,7 +253,5 @@ class CommunityMemberListItemData(CommunitySchema):
     avatar_url: str | None
     role_label: str | None
     is_admin: bool
-    membership_tier: Literal[
-        "MEMBER", "SILVER", "COMPANION", "PRESTIGE"
-    ] = "MEMBER"
+    membership_tier: Literal["MEMBER", "SILVER", "COMPANION", "PRESTIGE"] = "MEMBER"
     viewer_is_following: bool

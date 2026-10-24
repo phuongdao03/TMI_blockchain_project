@@ -25,7 +25,9 @@ export function MembershipAdminWorkspace() {
     enabled: allowed,
   });
   const [name, setName] = useState("");
-  const [tier, setTier] = useState<"SILVER" | "COMPANION" | "PRESTIGE">("SILVER");
+  const [tier, setTier] = useState<"SILVER" | "COMPANION" | "PRESTIGE">(
+    "SILVER",
+  );
   const [amount, setAmount] = useState("");
   const [days, setDays] = useState("");
   const [description, setDescription] = useState("");
@@ -75,13 +77,20 @@ export function MembershipAdminWorkspace() {
     mutationFn: (input: {
       id: string;
       action: "approve" | "reject" | "request-info";
-    }) => membershipApi.reviewDiamondApplication(input.id, input.action, reviewNote),
+    }) =>
+      membershipApi.reviewDiamondApplication(
+        input.id,
+        input.action,
+        reviewNote,
+      ),
     onSuccess: async () => {
       setReviewNote("");
       await client.invalidateQueries({
         queryKey: ["membership-diamond-applications-admin", user?.id],
       });
-      await client.invalidateQueries({ queryKey: ["membership-diamond-applications"] });
+      await client.invalidateQueries({
+        queryKey: ["membership-diamond-applications"],
+      });
     },
   });
   const reviewBenefit = useMutation({
@@ -99,8 +108,12 @@ export function MembershipAdminWorkspace() {
       await client.invalidateQueries({
         queryKey: ["membership-benefit-requests-admin", user?.id],
       });
-      await client.invalidateQueries({ queryKey: ["membership-benefit-requests"] });
-      await client.invalidateQueries({ queryKey: ["membership-collaboration-needs"] });
+      await client.invalidateQueries({
+        queryKey: ["membership-benefit-requests"],
+      });
+      await client.invalidateQueries({
+        queryKey: ["membership-collaboration-needs"],
+      });
     },
   });
   if (!allowed)
@@ -291,7 +304,10 @@ export function MembershipAdminWorkspace() {
         <p className="mt-2 text-sm leading-6 text-[var(--theme-muted)]">
           Duyệt hội viên cộng đồng độc lập với quy trình thẩm định hồ sơ đề cử.
         </p>
-        <label className="mt-4 block text-sm font-semibold" htmlFor="diamond-review-note">
+        <label
+          className="mt-4 block text-sm font-semibold"
+          htmlFor="diamond-review-note"
+        >
           Ghi chú quyết định
         </label>
         <textarea
@@ -303,9 +319,13 @@ export function MembershipAdminWorkspace() {
           onChange={(event) => setReviewNote(event.target.value)}
         />
         {diamondApplications.isPending ? (
-          <p role="status" className="mt-3">Đang tải yêu cầu…</p>
+          <p role="status" className="mt-3">
+            Đang tải yêu cầu…
+          </p>
         ) : diamondApplications.isError ? (
-          <p role="alert" className="mt-3 text-red-700">Chưa thể tải yêu cầu xét duyệt.</p>
+          <p role="alert" className="mt-3 text-red-700">
+            Chưa thể tải yêu cầu xét duyệt.
+          </p>
         ) : diamondApplications.data?.applications.length ? (
           <ul className="mt-4 divide-y divide-[var(--theme-border)]">
             {diamondApplications.data.applications.map((application) => (
@@ -314,33 +334,67 @@ export function MembershipAdminWorkspace() {
                   <strong>{application.userId}</strong>
                   <span>{diamondApplicationStatus(application.status)}</span>
                 </div>
-                <p className="whitespace-pre-wrap text-sm leading-6">{application.statement}</p>
+                <p className="whitespace-pre-wrap text-sm leading-6">
+                  {application.statement}
+                </p>
                 {application.decisionNote ? (
-                  <p className="text-sm text-[var(--theme-muted)]">Ghi chú trước đó: {application.decisionNote}</p>
+                  <p className="text-sm text-[var(--theme-muted)]">
+                    Ghi chú trước đó: {application.decisionNote}
+                  </p>
                 ) : null}
-                {application.status === "PENDING" || application.status === "INFO_REQUESTED" ? (
+                {application.status === "PENDING" ||
+                application.status === "INFO_REQUESTED" ? (
                   <div className="flex flex-wrap gap-2">
                     <Button
-                      disabled={reviewApplication.isPending || !reviewNote.trim()}
-                      onClick={() => reviewApplication.mutate({ id: application.id, action: "approve" })}
-                    >Duyệt</Button>
+                      disabled={
+                        reviewApplication.isPending || !reviewNote.trim()
+                      }
+                      onClick={() =>
+                        reviewApplication.mutate({
+                          id: application.id,
+                          action: "approve",
+                        })
+                      }
+                    >
+                      Duyệt
+                    </Button>
                     <Button
                       variant="outline"
-                      disabled={reviewApplication.isPending || !reviewNote.trim()}
-                      onClick={() => reviewApplication.mutate({ id: application.id, action: "request-info" })}
-                    >Yêu cầu bổ sung</Button>
+                      disabled={
+                        reviewApplication.isPending || !reviewNote.trim()
+                      }
+                      onClick={() =>
+                        reviewApplication.mutate({
+                          id: application.id,
+                          action: "request-info",
+                        })
+                      }
+                    >
+                      Yêu cầu bổ sung
+                    </Button>
                     <Button
                       variant="outline"
-                      disabled={reviewApplication.isPending || !reviewNote.trim()}
-                      onClick={() => reviewApplication.mutate({ id: application.id, action: "reject" })}
-                    >Từ chối</Button>
+                      disabled={
+                        reviewApplication.isPending || !reviewNote.trim()
+                      }
+                      onClick={() =>
+                        reviewApplication.mutate({
+                          id: application.id,
+                          action: "reject",
+                        })
+                      }
+                    >
+                      Từ chối
+                    </Button>
                   </div>
                 ) : null}
               </li>
             ))}
           </ul>
         ) : (
-          <p className="mt-3 text-sm text-[var(--theme-muted)]">Chưa có yêu cầu Kim cương.</p>
+          <p className="mt-3 text-sm text-[var(--theme-muted)]">
+            Chưa có yêu cầu Kim cương.
+          </p>
         )}
         {reviewApplication.isError ? (
           <p role="alert" className="mt-3 text-red-700">
@@ -358,7 +412,10 @@ export function MembershipAdminWorkspace() {
           Duyệt nhu cầu hợp tác để công bố cho hội viên đủ hạng; tiếp nhận các
           yêu cầu tư vấn, kết nối và câu chuyện để đội ngũ xử lý.
         </p>
-        <label className="mt-4 block text-sm font-semibold" htmlFor="benefit-review-note">
+        <label
+          className="mt-4 block text-sm font-semibold"
+          htmlFor="benefit-review-note"
+        >
           Ghi chú xử lý
         </label>
         <textarea
@@ -397,33 +454,53 @@ export function MembershipAdminWorkspace() {
                     Ghi chú trước đó: {item.decisionNote}
                   </p>
                 ) : null}
-                {item.status === "PENDING" || item.status === "INFO_REQUESTED" ? (
+                {item.status === "PENDING" ||
+                item.status === "INFO_REQUESTED" ? (
                   <div className="flex flex-wrap gap-2">
                     <Button
-                      disabled={reviewBenefit.isPending || !benefitReviewNote.trim()}
-                      onClick={() => reviewBenefit.mutate({ id: item.id, action: "approve" })}
+                      disabled={
+                        reviewBenefit.isPending || !benefitReviewNote.trim()
+                      }
+                      onClick={() =>
+                        reviewBenefit.mutate({ id: item.id, action: "approve" })
+                      }
                     >
                       Tiếp nhận
                     </Button>
                     <Button
                       variant="outline"
-                      disabled={reviewBenefit.isPending || !benefitReviewNote.trim()}
-                      onClick={() => reviewBenefit.mutate({ id: item.id, action: "request-info" })}
+                      disabled={
+                        reviewBenefit.isPending || !benefitReviewNote.trim()
+                      }
+                      onClick={() =>
+                        reviewBenefit.mutate({
+                          id: item.id,
+                          action: "request-info",
+                        })
+                      }
                     >
                       Yêu cầu bổ sung
                     </Button>
                     <Button
                       variant="outline"
-                      disabled={reviewBenefit.isPending || !benefitReviewNote.trim()}
-                      onClick={() => reviewBenefit.mutate({ id: item.id, action: "reject" })}
+                      disabled={
+                        reviewBenefit.isPending || !benefitReviewNote.trim()
+                      }
+                      onClick={() =>
+                        reviewBenefit.mutate({ id: item.id, action: "reject" })
+                      }
                     >
                       Từ chối
                     </Button>
                   </div>
                 ) : item.status === "APPROVED" ? (
                   <Button
-                    disabled={reviewBenefit.isPending || !benefitReviewNote.trim()}
-                    onClick={() => reviewBenefit.mutate({ id: item.id, action: "complete" })}
+                    disabled={
+                      reviewBenefit.isPending || !benefitReviewNote.trim()
+                    }
+                    onClick={() =>
+                      reviewBenefit.mutate({ id: item.id, action: "complete" })
+                    }
                   >
                     Đánh dấu hoàn tất
                   </Button>
@@ -449,15 +526,19 @@ export function MembershipAdminWorkspace() {
 }
 
 function diamondApplicationStatus(status: string): string {
-  return {
-    PENDING: "Chờ xét duyệt",
-    INFO_REQUESTED: "Chờ bổ sung thông tin",
-    APPROVED: "Đã duyệt",
-    REJECTED: "Từ chối",
-  }[status] ?? status;
+  return (
+    {
+      PENDING: "Chờ xét duyệt",
+      INFO_REQUESTED: "Chờ bổ sung thông tin",
+      APPROVED: "Đã duyệt",
+      REJECTED: "Từ chối",
+    }[status] ?? status
+  );
 }
 
-function membershipBenefitStatus(status: MembershipBenefitRequest["status"]): string {
+function membershipBenefitStatus(
+  status: MembershipBenefitRequest["status"],
+): string {
   return {
     PENDING: "Chờ xử lý",
     INFO_REQUESTED: "Chờ hội viên bổ sung",

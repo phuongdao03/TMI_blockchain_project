@@ -25,7 +25,10 @@ vi.mock("@/lib/api/client", () => ({
   advertisingApi: api,
   walletApi: { summary: api.walletSummary },
   ApiError: class extends Error {
-    constructor(message: string, readonly code = "REQUEST_FAILED") {
+    constructor(
+      message: string,
+      readonly code = "REQUEST_FAILED",
+    ) {
       super(message);
     }
   },
@@ -156,7 +159,10 @@ describe("AdvertisingBookingPanel", () => {
     });
     api.reserve.mockResolvedValue(checkout);
     api.getReservation.mockResolvedValue(checkout);
-    api.payOrder.mockResolvedValue({ ...checkout.order, paymentStatus: "PAID" });
+    api.payOrder.mockResolvedValue({
+      ...checkout.order,
+      paymentStatus: "PAID",
+    });
     api.walletSummary.mockResolvedValue({ balanceMinor: 5_000_000 });
   });
 
@@ -171,11 +177,13 @@ describe("AdvertisingBookingPanel", () => {
     expect(await screen.findByText(/Giữ chỗ đến/)).toBeDefined();
     expect(api.payOrder).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Thanh toán bằng ví" }));
     await user.click(
-      screen.getByRole("button", { name: "Xác nhận trừ ví" }),
+      screen.getByRole("button", { name: "Thanh toán bằng ví" }),
     );
-    await waitFor(() => expect(api.payOrder).toHaveBeenCalledWith("order-1", expect.any(String)));
+    await user.click(screen.getByRole("button", { name: "Xác nhận trừ ví" }));
+    await waitFor(() =>
+      expect(api.payOrder).toHaveBeenCalledWith("order-1", expect.any(String)),
+    );
     await waitFor(() => expect(onPaid).toHaveBeenCalledOnce());
   });
 

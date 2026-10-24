@@ -1,7 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, BadgeCheck, CircleAlert, LoaderCircle, Megaphone } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  CircleAlert,
+  LoaderCircle,
+  Megaphone,
+} from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
 
@@ -51,25 +57,32 @@ export function AdvertisingSetupPanel({
     queryFn: advertisingApi.placements,
   });
   const eligibleDossiers = useMemo(
-    () => dossiers.data?.data.filter(
-      (dossier) => !blockedDossierStatuses.has(dossier.status),
-    ) ?? [],
+    () =>
+      dossiers.data?.data.filter(
+        (dossier) => !blockedDossierStatuses.has(dossier.status),
+      ) ?? [],
     [dossiers.data?.data],
   );
   const [dossierId, setDossierId] = useState(initialDossierId ?? "");
   const [placementCode, setPlacementCode] = useState("");
-  const selectedDossierId = eligibleDossiers.some((item) => item.id === dossierId)
+  const selectedDossierId = eligibleDossiers.some(
+    (item) => item.id === dossierId,
+  )
     ? dossierId
-    : eligibleDossiers.find((item) => item.id === initialDossierId)?.id ?? eligibleDossiers[0]?.id ?? "";
-  const selectedPlacementCode = placementCode || placements.data?.[0]?.code || "";
+    : (eligibleDossiers.find((item) => item.id === initialDossierId)?.id ??
+      eligibleDossiers[0]?.id ??
+      "");
+  const selectedPlacementCode =
+    placementCode || placements.data?.[0]?.code || "";
   const packages = useQuery({
     queryKey: ["advertising-packages", selectedPlacementCode],
     queryFn: () => advertisingApi.packages(selectedPlacementCode),
     enabled: Boolean(selectedPlacementCode),
   });
   const [packageCode, setPackageCode] = useState("");
-  const selectedPackage = packages.data?.find((item) => item.code === packageCode)
-    ?? packages.data?.[0];
+  const selectedPackage =
+    packages.data?.find((item) => item.code === packageCode) ??
+    packages.data?.[0];
   const selectedPackageCode = selectedPackage?.code ?? "";
   const quote = useQuery({
     queryKey: ["advertising-quote", selectedPackageCode],
@@ -109,7 +122,9 @@ export function AdvertisingSetupPanel({
       }
     },
     onSuccess: async (result) => {
-      await queryClient.invalidateQueries({ queryKey: ["advertising-campaigns"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["advertising-campaigns"],
+      });
       if (result.submitted) {
         setSavedDraft(null);
         setTitle("");
@@ -127,10 +142,13 @@ export function AdvertisingSetupPanel({
   });
 
   const retrySubmit = useMutation({
-    mutationFn: (campaignId: string) => advertisingApi.submitCampaign(campaignId),
+    mutationFn: (campaignId: string) =>
+      advertisingApi.submitCampaign(campaignId),
     onSuccess: async () => {
       setSavedDraft(null);
-      await queryClient.invalidateQueries({ queryKey: ["advertising-campaigns"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["advertising-campaigns"],
+      });
       onCreated();
     },
   });
@@ -156,7 +174,10 @@ export function AdvertisingSetupPanel({
         role="status"
       >
         <span className="flex items-center gap-3 text-sm font-semibold text-[var(--theme-muted)]">
-          <LoaderCircle aria-hidden="true" className="thv-loading-spinner size-5" />
+          <LoaderCircle
+            aria-hidden="true"
+            className="thv-loading-spinner size-5"
+          />
           Đang tải hồ sơ và vị trí quảng cáo…
         </span>
       </div>
@@ -169,7 +190,8 @@ export function AdvertisingSetupPanel({
         className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900"
         role="alert"
       >
-        Không thể tải dữ liệu quảng cáo. Vui lòng tải lại trang hoặc thử lại sau.
+        Không thể tải dữ liệu quảng cáo. Vui lòng tải lại trang hoặc thử lại
+        sau.
       </div>
     );
   }
@@ -239,8 +261,8 @@ export function AdvertisingSetupPanel({
             ))}
           </select>
           <span className="block text-xs font-normal text-[var(--theme-muted)]">
-            Hồ sơ chưa công bố có thể chuẩn bị chiến dịch; quảng cáo chỉ phân phối
-            sau khi hồ sơ được công khai.
+            Hồ sơ chưa công bố có thể chuẩn bị chiến dịch; quảng cáo chỉ phân
+            phối sau khi hồ sơ được công khai.
           </span>
         </label>
 
@@ -341,18 +363,29 @@ export function AdvertisingSetupPanel({
             className="flex gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900"
             role="alert"
           >
-            <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            <CircleAlert
+              aria-hidden="true"
+              className="mt-0.5 size-4 shrink-0"
+            />
             Không thể tính báo giá. Vui lòng chọn lại gói hoặc thử lại.
           </div>
         ) : null}
         {createCampaign.error ? (
-          <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900" role="alert">
+          <p
+            className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900"
+            role="alert"
+          >
             {errorMessage(createCampaign.error)}
           </p>
         ) : null}
         {savedDraft ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950" role="status">
-            <p className="font-semibold">Đã lưu chiến dịch nhưng chưa gửi được để duyệt.</p>
+          <div
+            className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+            role="status"
+          >
+            <p className="font-semibold">
+              Đã lưu chiến dịch nhưng chưa gửi được để duyệt.
+            </p>
             <p className="mt-1 leading-6">{savedDraft.message}</p>
             <Button
               className="mt-3"
@@ -367,15 +400,17 @@ export function AdvertisingSetupPanel({
 
         <div className="flex flex-col-reverse gap-3 border-t border-[var(--theme-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs leading-5 text-[var(--theme-muted)]">
-            Chưa trừ tiền ở bước này. Bạn sẽ chọn lịch và xác nhận thanh toán sau
-            khi được duyệt.
+            Chưa trừ tiền ở bước này. Bạn sẽ chọn lịch và xác nhận thanh toán
+            sau khi được duyệt.
           </p>
           <Button
             className="shrink-0"
             disabled={!canSubmit || createCampaign.isPending}
             type="submit"
           >
-            {createCampaign.isPending ? "Đang gửi…" : "Tạo chiến dịch và gửi duyệt"}
+            {createCampaign.isPending
+              ? "Đang gửi…"
+              : "Tạo chiến dịch và gửi duyệt"}
             <ArrowRight aria-hidden="true" className="size-4" />
           </Button>
         </div>
@@ -400,7 +435,9 @@ export function AdvertisingSetupPanel({
             <dl className="mt-5 space-y-3 border-t border-[var(--theme-border)] pt-4 text-sm">
               <div className="flex justify-between gap-4">
                 <dt className="text-[var(--theme-muted)]">Giá gói</dt>
-                <dd className="font-semibold">{formatVnd(quote.data.baseAmountVnd)}</dd>
+                <dd className="font-semibold">
+                  {formatVnd(quote.data.baseAmountVnd)}
+                </dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-[var(--theme-muted)]">
@@ -432,15 +469,21 @@ export function AdvertisingSetupPanel({
           <h3 className="font-bold">Quy trình từ đây</h3>
           <ol className="mt-4 space-y-3 text-sm">
             <li className="flex gap-3">
-              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-50 text-xs font-bold text-primary-800">1</span>
+              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-50 text-xs font-bold text-primary-800">
+                1
+              </span>
               <span>Nội dung được quản trị viên xét duyệt.</span>
             </li>
             <li className="flex gap-3">
-              <span className="grid size-6 shrink-0 place-items-center rounded-full border border-[var(--theme-border)] text-xs font-bold">2</span>
+              <span className="grid size-6 shrink-0 place-items-center rounded-full border border-[var(--theme-border)] text-xs font-bold">
+                2
+              </span>
               <span>Chọn ngày bắt đầu và kiểm tra chỗ trống.</span>
             </li>
             <li className="flex gap-3">
-              <span className="grid size-6 shrink-0 place-items-center rounded-full border border-[var(--theme-border)] text-xs font-bold">3</span>
+              <span className="grid size-6 shrink-0 place-items-center rounded-full border border-[var(--theme-border)] text-xs font-bold">
+                3
+              </span>
               <span>Xác nhận trừ ví để kích hoạt lịch đã giữ.</span>
             </li>
           </ol>
