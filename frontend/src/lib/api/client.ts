@@ -11,6 +11,20 @@ import type {
   AnnouncementSendInput,
   AnnouncementReceipt,
   ActivityPage,
+  AdvertisingAdminPlacementInventory,
+  AdvertisingAvailability,
+  AdvertisingCampaignCreated,
+  AdvertisingCreative,
+  AdvertisingCampaignMetrics,
+  AdvertisingCampaignSummary,
+  AdvertisingOrder,
+  AdvertisingPackage,
+  AdvertisingPlacement,
+  AdvertisingPlacementReport,
+  AdvertisingQuote,
+  AdvertisingReservationCheckout,
+  AdvertisingReviewQueueItem,
+  AdvertisingWaitlistEntry,
   AdminAttendance,
   AdminAttendanceLocationException,
   AdminLeaveRequest,
@@ -64,6 +78,7 @@ import type {
   CommunityCommentThread,
   CommunityCommentVisibility,
   CommunityMemberCard,
+  CommunityMemberDirectoryPage,
   CommunityMemberFollowResult,
   CommunityMemberRestriction,
   CommunityMemberRestrictionCreateInput,
@@ -147,6 +162,10 @@ import type {
   OrganizationMember,
   NotificationItem,
   OperationsMetrics,
+  AdminPaymentOrder,
+  AdminPaymentHistoryDetail,
+  AdminPaymentHistoryPage,
+  PaymentHistoryFilters,
   PaymentOrder,
   PaymentCandidate,
   PaymentWaiver,
@@ -423,6 +442,280 @@ export const authApi = {
       }
       throw error;
     }
+  },
+};
+
+export const membershipApi = {
+  plans() {
+    return request<import("./types").MembershipPlanCatalog>(
+      "/memberships/plans",
+      { cache: "no-store" },
+    );
+  },
+  removeMessage(id: string) {
+    return request<{ status: string }>(
+      `/community/chat/messages/${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    );
+  },
+  publishPlan(plan: Omit<import("./types").MembershipPlan, "id" | "active">) {
+    return request<import("./types").MembershipPlan>(
+      "/admin/membership-plans",
+      { method: "POST", body: JSON.stringify(plan) },
+    );
+  },
+  retirePlan(id: string) {
+    return request<{ status: string }>(
+      `/admin/membership-plans/${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    );
+  },
+  overview() {
+    return request<import("./types").MembershipOverview>("/memberships/me", {
+      cache: "no-store",
+    });
+  },
+  quote(planId: string, renewalOptIn = false) {
+    return request<import("./types").MembershipQuote>(
+      `/memberships/plans/${encodeURIComponent(planId)}/quote`,
+      {
+        method: "POST",
+        body: JSON.stringify({ renewalOptIn }),
+      },
+    );
+  },
+  purchase(
+    planId: string,
+    key: string,
+    input: { expectedAmountMinor: number; renewalOptIn: boolean },
+  ) {
+    return request<import("./types").MembershipState>(
+      `/memberships/plans/${encodeURIComponent(planId)}/purchases`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": key },
+        body: JSON.stringify(input),
+      },
+    );
+  },
+  submitDiamondApplication(statement: string) {
+    return request<import("./types").DiamondApplication>(
+      "/memberships/diamond-applications",
+      { method: "POST", body: JSON.stringify({ statement }) },
+    );
+  },
+  myDiamondApplications() {
+    return request<import("./types").DiamondApplicationList>(
+      "/memberships/diamond-applications/me",
+      { cache: "no-store" },
+    );
+  },
+  diamondApplications(status?: import("./types").DiamondApplicationStatus) {
+    const query = status ? `?status=${encodeURIComponent(status)}` : "";
+    return request<import("./types").DiamondApplicationList>(
+      `/admin/memberships/diamond-applications${query}`,
+      { cache: "no-store" },
+    );
+  },
+  reviewDiamondApplication(
+    id: string,
+    action: "approve" | "reject" | "request-info",
+    note: string,
+  ) {
+    return request<import("./types").DiamondApplication>(
+      `/admin/memberships/diamond-applications/${encodeURIComponent(id)}/${action}`,
+      { method: "POST", body: JSON.stringify({ note }) },
+    );
+  },
+  myBenefitRequests() {
+    return request<import("./types").MembershipBenefitRequestList>(
+      "/memberships/benefit-requests/me",
+      { cache: "no-store" },
+    );
+  },
+  submitBenefitRequest(
+    benefit: import("./types").MembershipBenefitCode,
+    statement: string,
+  ) {
+    return request<import("./types").MembershipBenefitRequest>(
+      "/memberships/benefit-requests",
+      { method: "POST", body: JSON.stringify({ benefit, statement }) },
+    );
+  },
+  collaborationNeeds() {
+    return request<import("./types").MembershipCollaborationNeedList>(
+      "/memberships/collaboration-needs",
+      { cache: "no-store" },
+    );
+  },
+  benefitRequests(status?: import("./types").MembershipBenefitRequestStatus) {
+    const query = status ? `?status=${encodeURIComponent(status)}` : "";
+    return request<import("./types").MembershipBenefitRequestList>(
+      `/admin/memberships/benefit-requests${query}`,
+      { cache: "no-store" },
+    );
+  },
+  reviewBenefitRequest(
+    id: string,
+    action: "approve" | "reject" | "request-info" | "complete",
+    note: string,
+  ) {
+    return request<import("./types").MembershipBenefitRequest>(
+      `/admin/memberships/benefit-requests/${encodeURIComponent(id)}/${action}`,
+      { method: "POST", body: JSON.stringify({ note }) },
+    );
+  },
+  chatAccess(room: import("./types").CommunityChatRoom) {
+    return request<import("./types").CommunityChatRoomAccess>(
+      `/community/chat/${room}/access`,
+      { cache: "no-store" },
+    );
+  },
+  chatAccessUsers(query: string, signal?: AbortSignal) {
+    return request<import("./types").CommunityChatRoomUserCandidate[]>(
+      `/admin/memberships/chat-access/users?q=${encodeURIComponent(query)}`,
+      { signal, cache: "no-store" },
+    );
+  },
+  chatAccessGrants(room?: import("./types").CommunityChatRoom) {
+    const query = room ? `?room=${encodeURIComponent(room)}` : "";
+    return request<import("./types").CommunityChatRoomGrant[]>(
+      `/admin/memberships/chat-access${query}`,
+      { cache: "no-store" },
+    );
+  },
+  grantChatAccess(input: {
+    userId: string;
+    room: import("./types").CommunityChatRoom;
+    reason: string;
+  }) {
+    return request<import("./types").CommunityChatRoomGrant>(
+      "/admin/memberships/chat-access",
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  revokeChatAccess(
+    userId: string,
+    room: import("./types").CommunityChatRoom,
+    reason: string,
+  ) {
+    return request<import("./types").CommunityChatRoomGrant>(
+      `/admin/memberships/chat-access/${encodeURIComponent(room)}/${encodeURIComponent(userId)}`,
+      { method: "DELETE", body: JSON.stringify({ reason }) },
+    );
+  },
+  messages(room: import("./types").CommunityChatRoom) {
+    return request<import("./types").CommunityChatMessage[]>(
+      `/community/chat/${room}/messages`,
+    );
+  },
+  send(room: import("./types").CommunityChatRoom, body: string) {
+    return request<import("./types").CommunityChatMessage[]>(
+      `/community/chat/${room}/messages`,
+      { method: "POST", body: JSON.stringify({ body }) },
+    );
+  },
+};
+
+export const communityEventsApi = {
+  list(page = 1) {
+    return requestPaginated<{ events: import("./types").CommunityEvent[] }>(
+      `/events?page=${page}&pageSize=20`,
+    );
+  },
+  async myRegistrations() {
+    const pageSize = 100;
+    const first = await requestPaginated<{
+      registrations: import("./types").MyCommunityEventRegistration[];
+    }>(`/events/me/registrations?page=1&pageSize=${pageSize}`);
+    const pageCount = Math.ceil(first.meta.total / pageSize);
+    const rest = await Promise.all(
+      Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
+        requestPaginated<{
+          registrations: import("./types").MyCommunityEventRegistration[];
+        }>(`/events/me/registrations?page=${index + 2}&pageSize=${pageSize}`),
+      ),
+    );
+    return {
+      registrations: [
+        ...first.data.registrations,
+        ...rest.flatMap((page) => page.data.registrations),
+      ],
+    };
+  },
+  register(eventId: string) {
+    return request<import("./types").CommunityEventRegistration>(
+      `/events/${encodeURIComponent(eventId)}/registrations`,
+      { method: "POST" },
+    );
+  },
+  cancelRegistration(eventId: string) {
+    return request<import("./types").CommunityEventRegistration>(
+      `/events/${encodeURIComponent(eventId)}/registrations/me`,
+      { method: "DELETE" },
+    );
+  },
+  adminList(page = 1) {
+    return requestPaginated<{ events: import("./types").CommunityEvent[] }>(
+      `/admin/events?page=${page}&pageSize=20`,
+    );
+  },
+  create(input: import("./types").CommunityEventInput) {
+    return request<import("./types").CommunityEvent>("/admin/events", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  update(id: string, input: Partial<import("./types").CommunityEventInput>) {
+    return request<import("./types").CommunityEvent>(
+      `/admin/events/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+  publish(id: string) {
+    return request<import("./types").CommunityEvent>(
+      `/admin/events/${encodeURIComponent(id)}/publish`,
+      { method: "POST" },
+    );
+  },
+  cancel(id: string) {
+    return request<import("./types").CommunityEvent>(
+      `/admin/events/${encodeURIComponent(id)}/cancel`,
+      { method: "POST" },
+    );
+  },
+};
+
+export const walletApi = {
+  resume(id: string) {
+    return request<import("./types").WalletTopup>(
+      `/wallet/topups/${encodeURIComponent(id)}/checkout`,
+      { method: "POST" },
+    );
+  },
+  summary() {
+    return request<import("./types").WalletSummary>("/wallet", {
+      cache: "no-store",
+    });
+  },
+  topup(amountMinor: number, key: string) {
+    return request<import("./types").WalletTopup>("/wallet/topups", {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify({ amountMinor }),
+    });
+  },
+  reconcile(id: string) {
+    return request<import("./types").WalletTopup>(
+      `/wallet/topups/${encodeURIComponent(id)}/reconcile`,
+      { method: "POST" },
+    );
+  },
+  pay(orderId: string, key: string) {
+    return request<PaymentOrder>(
+      `/payment-orders/${encodeURIComponent(orderId)}/wallet-payment`,
+      { method: "POST", headers: { "Idempotency-Key": key } },
+    );
   },
 };
 
@@ -1043,7 +1336,232 @@ export const dossierApi = {
   },
 };
 
+export const advertisingApi = {
+  placements() {
+    return request<AdvertisingPlacement[]>("/advertising/placements");
+  },
+  packages(placementCode?: string) {
+    const query = placementCode
+      ? `?placementCode=${encodeURIComponent(placementCode)}`
+      : "";
+    return request<AdvertisingPackage[]>(`/advertising/packages${query}`);
+  },
+  campaigns() {
+    return request<AdvertisingCampaignSummary[]>("/advertising/campaigns");
+  },
+  availability(input: {
+    placementCode: string;
+    packageCode: string;
+    startAt: string;
+    searchDays?: number;
+  }) {
+    const query = new URLSearchParams({
+      placementCode: input.placementCode,
+      packageCode: input.packageCode,
+      startAt: input.startAt,
+      searchDays: String(input.searchDays ?? 30),
+    });
+    return request<AdvertisingAvailability>(
+      `/advertising/availability?${query.toString()}`,
+    );
+  },
+  quote(packageCode: string) {
+    return request<AdvertisingQuote>("/advertising/quotes", {
+      method: "POST",
+      body: JSON.stringify({ packageCode }),
+    });
+  },
+  createCampaign(input: {
+    dossierId: string;
+    packageCode: string;
+    title: string;
+    description: string;
+    imageUrl: string | null;
+    destinationUrl: string;
+  }) {
+    return request<AdvertisingCampaignCreated>("/advertising/campaigns", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updateCreative(
+    campaignId: string,
+    input: {
+      title: string;
+      description: string;
+      imageUrl: string | null;
+      destinationUrl: string;
+    },
+  ) {
+    return request<AdvertisingCreative>(
+      `/advertising/campaigns/${encodeURIComponent(campaignId)}/creative`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+  submitCampaign(campaignId: string) {
+    return request<unknown>(
+      `/advertising/campaigns/${encodeURIComponent(campaignId)}/submit-review`,
+      { method: "POST" },
+    );
+  },
+  reserve(campaignId: string, startAt: string, idempotencyKey: string) {
+    return request<AdvertisingReservationCheckout>("/advertising/reservations", {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify({ campaignId, startAt }),
+    });
+  },
+  reschedule(campaignId: string, startAt: string) {
+    return request<AdvertisingCampaignSummary>(
+      `/advertising/campaigns/${encodeURIComponent(campaignId)}/reschedule`,
+      { method: "POST", body: JSON.stringify({ startAt }) },
+    );
+  },
+  getReservation(reservationId: string) {
+    return request<AdvertisingReservationCheckout>(
+      `/advertising/reservations/${encodeURIComponent(reservationId)}`,
+    );
+  },
+  listWaitlist() {
+    return request<AdvertisingWaitlistEntry[]>("/advertising/waitlist");
+  },
+  joinWaitlist(campaignId: string, startAt: string) {
+    return request<AdvertisingWaitlistEntry>("/advertising/waitlist", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, startAt }),
+    });
+  },
+  cancelWaitlist(entryId: string) {
+    return request<AdvertisingWaitlistEntry>(
+      `/advertising/waitlist/${encodeURIComponent(entryId)}`,
+      { method: "DELETE" },
+    );
+  },
+  payOrder(orderId: string, idempotencyKey: string) {
+    return request<AdvertisingOrder>(
+      `/advertising/orders/${encodeURIComponent(orderId)}/pay`,
+      { method: "POST", headers: { "Idempotency-Key": idempotencyKey } },
+    );
+  },
+  metrics(campaignId: string) {
+    return request<AdvertisingCampaignMetrics>(
+      `/advertising/campaigns/${encodeURIComponent(campaignId)}/metrics`,
+    );
+  },
+  reviewQueue() {
+    return request<AdvertisingReviewQueueItem[]>(
+      "/admin/advertising/campaigns",
+    );
+  },
+  reviewCampaign(
+    campaignId: string,
+    decision: "APPROVE" | "REJECT" | "CHANGES_REQUESTED",
+    reason?: string,
+  ) {
+    return request<unknown>(
+      `/admin/advertising/campaigns/${encodeURIComponent(campaignId)}/review`,
+      { method: "POST", body: JSON.stringify({ decision, reason }) },
+    );
+  },
+  pauseCampaign(campaignId: string, reason: string) {
+    return request<unknown>(
+      `/admin/advertising/campaigns/${encodeURIComponent(campaignId)}/pause`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+  },
+  adminInventory(startAt: string, endAt: string) {
+    const query = new URLSearchParams({ startAt, endAt });
+    return request<AdvertisingAdminPlacementInventory[]>(
+      `/admin/advertising/inventory?${query.toString()}`,
+    );
+  },
+  reports() {
+    return request<AdvertisingPlacementReport[]>("/admin/advertising/reports");
+  },
+  createPlacement(input: {
+    code: string;
+    name: string;
+    pageLocation: string;
+    deliveryMode: AdvertisingPlacement["deliveryMode"];
+    capacity: number;
+    timezone?: string;
+  }) {
+    return request<AdvertisingPlacement>("/admin/advertising/placements", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updatePlacement(
+    placementId: string,
+    input: Partial<
+      Pick<
+        AdvertisingPlacement,
+        "name" | "pageLocation" | "deliveryMode" | "capacity" | "enabled"
+      >
+    >,
+  ) {
+    return request<AdvertisingPlacement>(
+      `/admin/advertising/placements/${encodeURIComponent(placementId)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+  createPackage(input: {
+    code: string;
+    name: string;
+    placementId: string;
+    durationHours: number;
+    rotationWeight: number;
+    basePriceVnd: number;
+    active?: boolean;
+    terms?: string;
+  }) {
+    return request<AdvertisingPackage>("/admin/advertising/packages", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updatePackage(
+    packageId: string,
+    input: Partial<
+      Pick<
+        AdvertisingPackage,
+        | "name"
+        | "durationHours"
+        | "rotationWeight"
+        | "basePriceVnd"
+        | "active"
+        | "terms"
+      >
+    >,
+  ) {
+    return request<AdvertisingPackage>(
+      `/admin/advertising/packages/${encodeURIComponent(packageId)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+};
+
 export const paymentApi = {
+  listAdminOrders() {
+    return request<AdminPaymentOrder[]>("/admin/payment-orders?limit=50");
+  },
+  listHistory(filters: PaymentHistoryFilters = {}) {
+    const query = paymentHistoryQuery(filters);
+    return requestPaginated<AdminPaymentHistoryPage>(
+      `/admin/payment-history${query ? `?${query}` : ""}`,
+    );
+  },
+  getAdminHistoryDetail(orderId: string) {
+    return request<AdminPaymentHistoryDetail>(
+      `/admin/payment-history/${encodeURIComponent(orderId)}`,
+    );
+  },
+  exportHistory(filters: PaymentHistoryFilters = {}) {
+    const query = paymentHistoryQuery(filters, false);
+    return requestBlob(
+      `/admin/payment-history/export${query ? `?${query}` : ""}`,
+    );
+  },
   listCandidates() {
     return request<PaymentCandidate[]>("/admin/payment-candidates");
   },
@@ -1112,6 +1630,23 @@ export const paymentApi = {
     });
   },
 };
+
+function paymentHistoryQuery(
+  filters: PaymentHistoryFilters,
+  includePagination = true,
+) {
+  const query = new URLSearchParams();
+  if (filters.status) query.set("status", filters.status);
+  if (filters.createdFrom) query.set("createdFrom", filters.createdFrom);
+  if (filters.createdTo) query.set("createdTo", filters.createdTo);
+  if (filters.query?.trim()) query.set("query", filters.query.trim());
+  if (includePagination && filters.page)
+    query.set("page", String(filters.page));
+  if (includePagination && filters.pageSize) {
+    query.set("pageSize", String(filters.pageSize));
+  }
+  return query.toString();
+}
 
 export const reviewApi = {
   list(filters: ReviewListFilters = {}) {
@@ -2715,6 +3250,13 @@ export const communityMemberApi = {
     return request<CommunityMemberProfile>(
       `/members/${encodeURIComponent(username)}`,
       { signal },
+    );
+  },
+  directory(query: string, signal?: AbortSignal) {
+    const parameters = new URLSearchParams({ q: query, page: "1", pageSize: "20" });
+    return request<CommunityMemberDirectoryPage>(
+      `/community/members/directory?${parameters.toString()}`,
+      { signal, cache: "no-store" },
     );
   },
   posts(username: string, page = 1, signal?: AbortSignal) {

@@ -2,6 +2,237 @@ export interface ResponseMeta {
   request_id: string;
 }
 
+export type AdvertisingCampaignStatus =
+  | "DRAFT"
+  | "PENDING_REVIEW"
+  | "APPROVED"
+  | "PENDING_PAYMENT"
+  | "SCHEDULED"
+  | "NEEDS_RESCHEDULE"
+  | "ACTIVE"
+  | "PAUSED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "REJECTED";
+
+export interface AdvertisingPlacement {
+  id: string;
+  code: string;
+  name: string;
+  pageLocation: string;
+  deliveryMode: "EQUAL_ROTATION" | "WEIGHTED_ROTATION" | "EXCLUSIVE";
+  capacity: number;
+  enabled: boolean;
+  timezone: string;
+}
+
+export interface AdvertisingPackage {
+  id: string;
+  code: string;
+  name: string;
+  placementId: string;
+  durationHours: number;
+  rotationWeight: number;
+  basePriceVnd: number;
+  priceVersion: number;
+  active: boolean;
+  terms: string;
+}
+
+export interface AdvertisingCampaignSummary {
+  id: string;
+  dossierId: string;
+  packageId: string;
+  placementId: string;
+  placementCode: string;
+  placementName: string;
+  purchaseContext: "BEFORE_PUBLICATION" | "AFTER_PUBLICATION";
+  status: AdvertisingCampaignStatus;
+  desiredStartAt: string | null;
+  actualStartAt: string | null;
+  actualEndAt: string | null;
+  bookingStartAt: string | null;
+  bookingEndAt: string | null;
+  creativeTitle: string | null;
+  creativeDescription?: string | null;
+  imageUrl: string | null;
+  destinationUrl?: string | null;
+  creativeReviewStatus: "PENDING" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED" | null;
+  creativeReviewNote: string | null;
+  paymentStatus: "PENDING" | "PAID" | "EXPIRED" | "FAILED" | null;
+  deliveryCount: number;
+  createdAt: string;
+}
+
+export interface AdvertisingCampaignCreated {
+  campaign: {
+    id: string;
+    dossierId: string;
+    packageId: string;
+    placementId: string;
+    purchaseContext: "BEFORE_PUBLICATION" | "AFTER_PUBLICATION";
+    status: AdvertisingCampaignStatus;
+    desiredStartAt: string | null;
+    actualStartAt: string | null;
+    actualEndAt: string | null;
+    deliveryCount: number;
+    createdAt: string;
+  };
+  creativeId: string;
+}
+
+export interface AdvertisingCreative {
+  id: string;
+  campaignId: string;
+  version: number;
+  title: string;
+  description: string;
+  imageUrl: string | null;
+  destinationUrl: string;
+  reviewStatus: string;
+  reviewNote: string | null;
+}
+
+export interface AdvertisingAvailability {
+  placement: AdvertisingPlacement;
+  package: AdvertisingPackage;
+  startAt: string;
+  endAt: string;
+  available: boolean;
+  remainingSlots: number;
+  alternatives: string[];
+}
+
+export interface AdvertisingQuote {
+  placementCode: string;
+  placementName: string;
+  packageCode: string;
+  packageName: string;
+  durationHours: number;
+  priceVersion: number;
+  membershipTier: string;
+  membershipCycleStart: string | null;
+  discountPolicyVersion: number;
+  discountRateBasisPoints: number;
+  remainingDiscountAllowanceVnd: number;
+  baseAmountVnd: number;
+  discountAmountVnd: number;
+  payableAmountVnd: number;
+}
+
+export interface AdvertisingReservation {
+  id: string;
+  campaignId: string;
+  placementId: string;
+  startAt: string;
+  endAt: string;
+  expiresAt: string;
+  status: "HELD" | "CONFIRMED" | "EXPIRED" | "CANCELLED";
+}
+
+export interface AdvertisingOrder {
+  id: string;
+  reservationId: string;
+  campaignId: string;
+  membershipTier: string;
+  membershipCycleStart: string | null;
+  priceVersion: number;
+  discountPolicyVersion: number;
+  baseAmountVnd: number;
+  discountAmountVnd: number;
+  payableAmountVnd: number;
+  paymentStatus: "PENDING" | "PAID" | "EXPIRED" | "FAILED";
+  allowanceExpiresAt: string;
+  walletTransactionId: string | null;
+  pricingSnapshot: Record<string, unknown>;
+  paidAt: string | null;
+}
+
+export interface AdvertisingReservationCheckout {
+  reservation: AdvertisingReservation;
+  order: AdvertisingOrder;
+}
+
+export interface AdvertisingWaitlistEntry {
+  id: string;
+  campaignId: string;
+  placementId: string;
+  startAt: string;
+  endAt: string;
+  status: "WAITING" | "NOTIFIED" | "CANCELLED" | "FULFILLED";
+  createdAt: string;
+}
+
+export interface AdvertisingCampaignMetrics {
+  campaignId: string;
+  deliveryCount: number;
+  validImpressions: number;
+  validClicks: number;
+  ctrBasisPoints: number;
+  actualShareBasisPoints: number;
+  targetShareBasisPoints: number;
+  activeSeconds: number;
+}
+
+export interface AdvertisingReviewQueueItem {
+  campaignId: string;
+  ownerEmail: string;
+  dossierId: string;
+  dossierCode: string;
+  dossierTitle: string;
+  placementCode: string;
+  packageName: string;
+  campaignStatus: AdvertisingCampaignStatus;
+  creativeId: string;
+  creativeVersion: number;
+  title: string;
+  description: string;
+  imageUrl: string | null;
+  destinationUrl: string;
+  reviewStatus: string;
+}
+
+export interface AdvertisingAdminInventoryItem {
+  id: string;
+  campaignId: string;
+  ownerEmail: string;
+  dossierCode: string;
+  dossierTitle: string;
+  status: string;
+  paymentStatus: string | null;
+  startAt: string;
+  endAt: string;
+  expiresAt: string | null;
+}
+
+export interface AdvertisingAdminPlacementInventory extends AdvertisingPlacement {
+  bookings: AdvertisingAdminInventoryItem[];
+  reservations: AdvertisingAdminInventoryItem[];
+}
+
+export interface AdvertisingCampaignDistribution {
+  campaignId: string;
+  title: string | null;
+  deliveryCount: number;
+  validImpressions: number;
+  validClicks: number;
+  targetShareBasisPoints: number;
+  actualShareBasisPoints: number;
+}
+
+export interface AdvertisingPlacementReport {
+  placementId: string;
+  placementCode: string;
+  placementName: string;
+  paidOrders: number;
+  paidRevenueVnd: number;
+  deliveryCount: number;
+  validImpressions: number;
+  validClicks: number;
+  ctrBasisPoints: number;
+  campaigns: AdvertisingCampaignDistribution[];
+}
+
 export type DepartmentStatus = "ACTIVE" | "INACTIVE";
 
 export interface Department {
@@ -482,6 +713,7 @@ export interface CommunityAuthor {
   avatarUrl: string | null;
   roleLabel?: string | null;
   isAdmin?: boolean;
+  membershipTier?: MembershipTier;
 }
 
 export interface CommunityCommentAuthor {
@@ -491,6 +723,7 @@ export interface CommunityCommentAuthor {
   avatarUrl: string | null;
   roleLabel?: string | null;
   isAdmin?: boolean;
+  membershipTier?: MembershipTier;
 }
 
 export interface CommunityCommentFields {
@@ -548,12 +781,34 @@ export interface CommunityMemberProfile {
   avatarUrl: string | null;
   roleLabel?: string | null;
   isAdmin?: boolean;
+  membershipTier?: MembershipTier;
   bio: string | null;
+  professionalTitle?: string | null;
+  organization?: string | null;
+  activityFields?: string | null;
+  professionalLinks?: string[];
   joinedAt: string;
   publishedPostCount: number;
   followerCount: number;
   followingCount: number;
   viewerIsFollowing: boolean;
+}
+
+export interface CommunityMemberDirectoryItem {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  membershipTier: MembershipTier;
+  professionalTitle: string | null;
+  organization: string | null;
+  activityFields: string | null;
+  professionalLinks: string[];
+}
+
+export interface CommunityMemberDirectoryPage {
+  members: CommunityMemberDirectoryItem[];
+  total: number;
 }
 
 export interface CommunityMemberFollowResult {
@@ -569,6 +824,7 @@ export interface CommunityMemberCard {
   avatarUrl: string | null;
   roleLabel?: string | null;
   isAdmin?: boolean;
+  membershipTier?: MembershipTier;
   viewerIsFollowing: boolean;
 }
 
@@ -578,6 +834,10 @@ export interface CommunityProfileUpdateInput {
   avatarUrl?: string | null;
   avatarMediaId?: string | null;
   bio?: string | null;
+  professionalTitle?: string | null;
+  organization?: string | null;
+  activityFields?: string | null;
+  professionalLinks?: string[] | null;
 }
 
 export interface CommunityPostCategory {
@@ -922,6 +1182,247 @@ export interface AuthUser {
   isEmployee?: boolean;
 }
 
+export interface WalletTopup {
+  id: string;
+  orderCode: string;
+  amountMinor: number;
+  status: string;
+  checkoutUrl: string | null;
+  createdAt: string;
+  expiresAt: string;
+  paidAt: string | null;
+}
+
+export type MembershipTier =
+  | "MEMBER"
+  | "SILVER"
+  | "COMPANION"
+  | "PRESTIGE";
+
+export type CommunityChatRoom = "MEMBER" | "COMPANION" | "PRESTIGE";
+
+export interface CommunityChatRoomAccess {
+  room: CommunityChatRoom;
+  allowed: boolean;
+  source: "TIER" | "MANUAL" | "ADMIN" | "NONE";
+}
+
+export interface CommunityChatRoomUserCandidate {
+  userId: string;
+  email: string;
+  displayName: string;
+}
+
+export interface CommunityChatRoomGrant extends CommunityChatRoomUserCandidate {
+  room: CommunityChatRoom;
+  reason: string;
+  grantedAt: string;
+  grantedByUserId: string;
+}
+
+export interface MembershipPlan {
+  id: string;
+  name: string;
+  tier: Exclude<MembershipTier, "MEMBER">;
+  amountMinor: number;
+  durationDays: number;
+  description: string;
+  benefits: string[];
+  conditions: string;
+  active: boolean;
+}
+export interface MembershipPlanCatalog {
+  plans: MembershipPlan[];
+  member: {
+    name: string;
+    description: string;
+    benefits: string[];
+    conditions: string;
+  };
+}
+export interface MembershipQuote {
+  planId: string;
+  name: string;
+  tier: Exclude<MembershipTier, "MEMBER">;
+  kind: "NEW" | "UPGRADE" | "RENEWAL";
+  fromTier: MembershipTier;
+  listPriceMinor: number;
+  creditMinor: number;
+  amountDueMinor: number;
+  durationDays: number;
+  remainingDays: number;
+  expiresAt: string;
+  approvalRequired: boolean;
+}
+export type DiamondApplicationStatus =
+  | "PENDING"
+  | "INFO_REQUESTED"
+  | "APPROVED"
+  | "REJECTED";
+export interface DiamondApplication {
+  id: string;
+  userId: string;
+  statement: string;
+  status: DiamondApplicationStatus;
+  decisionNote: string | null;
+  reviewedByUserId: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+export type MembershipBenefitCode =
+  | "COLLABORATION_NEED"
+  | "ADVISORY_SESSION"
+  | "FACILITATED_INTRODUCTION"
+  | "MEMBER_STORY";
+export type MembershipBenefitRequestStatus =
+  | "PENDING"
+  | "INFO_REQUESTED"
+  | "APPROVED"
+  | "COMPLETED"
+  | "REJECTED";
+export interface MembershipBenefitRequest {
+  id: string;
+  userId: string;
+  benefit: MembershipBenefitCode;
+  cycleStartedAt: string;
+  statement: string;
+  status: MembershipBenefitRequestStatus;
+  decisionNote: string | null;
+  reviewedByUserId: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface MembershipBenefitRequestList {
+  requests: MembershipBenefitRequest[];
+}
+export interface MembershipCollaborationNeed {
+  id: string;
+  displayName: string;
+  username: string | null;
+  statement: string;
+  createdAt: string;
+}
+export interface MembershipCollaborationNeedList {
+  requests: MembershipCollaborationNeed[];
+}
+export interface DiamondApplicationList {
+  applications: DiamondApplication[];
+}
+export interface MembershipState {
+  tier: MembershipTier;
+  memberNumber: string;
+  status: "ACTIVE" | "FREE";
+  expiresAt: string | null;
+}
+export interface MembershipOverview extends MembershipState {
+  plans: MembershipPlan[];
+  purchases: {
+    id: string;
+    planId: string;
+    tier: string;
+    amountMinor: number;
+    expiresAt: string;
+    createdAt: string;
+  }[];
+}
+
+export type CommunityEventEntitlement = "TALK" | "CONNECT" | "CIRCLE";
+export type CommunityEventStatus = "DRAFT" | "PUBLISHED" | "CANCELLED";
+export type CommunityEventRegistrationStatus =
+  | "CONFIRMED"
+  | "WAITLISTED"
+  | "CANCELLED"
+  | "CANCELLED_LATE"
+  | "CANCELLED_BY_EVENT"
+  | "INELIGIBLE"
+  | "PAYMENT_REQUIRED";
+
+export interface CommunityEvent {
+  id: string;
+  title: string;
+  description: string;
+  startsAt: string;
+  endsAt: string;
+  registrationOpensAt: string | null;
+  priorityTier: "COMPANION" | "PRESTIGE" | null;
+  priorityOpensAt: string | null;
+  location: string;
+  requiredTier: MembershipTier;
+  capacity: number;
+  confirmedCount: number;
+  ticketPriceMinor: number;
+  cancellationCutoffAt: string | null;
+  includedEntitlement: CommunityEventEntitlement | null;
+  entitlementQuota: number | null;
+  requiresDiamondApproval: boolean;
+  status: CommunityEventStatus;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommunityEventRegistration {
+  id: string;
+  eventId: string;
+  userId: string;
+  status: CommunityEventRegistrationStatus;
+  entitlementUnits: number;
+  entitlementSnapshot: CommunityEventEntitlement | null;
+  entitlementCycleStartedAt: string | null;
+  membershipTierSnapshot: Exclude<MembershipTier, "MEMBER"> | null;
+  registeredAt: string;
+  cancelledAt: string | null;
+}
+
+export interface MyCommunityEventRegistration {
+  registration: CommunityEventRegistration;
+  event: CommunityEvent;
+}
+
+export interface CommunityEventInput {
+  title: string;
+  description: string;
+  startsAt: string;
+  endsAt: string;
+  registrationOpensAt?: string | null;
+  priorityTier?: "COMPANION" | "PRESTIGE" | null;
+  priorityOpensAt?: string | null;
+  location: string;
+  requiredTier: MembershipTier;
+  capacity: number;
+  ticketPriceMinor: number;
+  cancellationCutoffAt?: string | null;
+  includedEntitlement?: CommunityEventEntitlement | null;
+  entitlementQuota?: number | null;
+  requiresDiamondApproval?: boolean;
+}
+export interface CommunityChatMessage {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  body: string;
+  tier: MembershipTier;
+  createdAt: string;
+  canRemove: boolean;
+}
+
+export interface WalletSummary {
+  balanceMinor: number;
+  currency: "VND";
+  provider: string;
+  transactions: {
+    id: string;
+    walletDelta: number;
+    balanceAfter: number;
+    kind: string;
+    description: string;
+    createdAt: string;
+  }[];
+  topups: WalletTopup[];
+}
+
 export type AdminUserStatus = "PENDING" | "ACTIVE" | "SUSPENDED" | "DELETED";
 export type AdminUserProvider = "GOOGLE" | "FIREBASE";
 
@@ -1028,7 +1529,10 @@ export type CmsGuideAudience =
   | "USER"
   | "MODERATOR"
   | "SUPER_ADMIN"
-  | "EMPLOYEE";
+  | "EMPLOYEE"
+  | "MEMBERSHIP_SILVER"
+  | "MEMBERSHIP_COMPANION"
+  | "MEMBERSHIP_PRESTIGE";
 
 export type CmsGuideStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
@@ -1485,6 +1989,7 @@ export interface DossierTypeField {
 export interface DossierTypeDefinition {
   description?: string;
   fields: DossierTypeField[];
+  reviewRubric?: ReviewRubric;
   documentRules?: Array<{
     key: string;
     label?: string;
@@ -1597,6 +2102,61 @@ export interface PaymentOrder {
   dueAt?: string | null;
   issuedByUserId?: string | null;
   issuedAt?: string | null;
+  bankBin?: string | null;
+  bankAccountNumber?: string | null;
+  bankAccountName?: string | null;
+  transferDescription?: string | null;
+}
+
+export interface AdminPaymentOrder {
+  order: PaymentOrder;
+  dossierCode: string;
+  dossierTitle: string;
+}
+
+export interface PaymentHistoryFilters {
+  status?: PaymentStatus;
+  createdFrom?: string;
+  createdTo?: string;
+  query?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AdminPaymentHistoryRow {
+  order: PaymentOrder;
+  dossierCode: string;
+  dossierTitle: string;
+  applicantUserId: string;
+  applicantEmail: string;
+  initiatedByEmail: string | null;
+}
+
+export interface PaymentStatusHistoryItem {
+  id: string;
+  fromStatus: string | null;
+  toStatus: string;
+  source: string;
+  actorUserId: string | null;
+  actorEmail: string | null;
+  changedAt: string;
+}
+
+export interface AdminPaymentHistorySummary {
+  total: number;
+  statusCounts: Partial<Record<PaymentStatus, number>>;
+  totalAmountMinor: number;
+  paidAmountMinor: number;
+}
+
+export interface AdminPaymentHistoryPage {
+  rows: AdminPaymentHistoryRow[];
+  summary: AdminPaymentHistorySummary;
+}
+
+export interface AdminPaymentHistoryDetail {
+  row: AdminPaymentHistoryRow;
+  statusHistory: PaymentStatusHistoryItem[];
 }
 
 export type FeeObligationStatus =
