@@ -4,16 +4,26 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PaymentRequestWorkspace } from "@/components/admin/payment-request-workspace";
 
-const { candidateListMock, issueMock, waiveMock } = vi.hoisted(() => ({
+const {
+  candidateListMock,
+  issueMock,
+  listAdminOrdersMock,
+  reconcileMock,
+  waiveMock,
+} = vi.hoisted(() => ({
   candidateListMock: vi.fn(),
   issueMock: vi.fn(),
+  listAdminOrdersMock: vi.fn(),
+  reconcileMock: vi.fn(),
   waiveMock: vi.fn(),
 }));
 
 vi.mock("@/lib/api/client", () => ({
   paymentApi: {
     issue: issueMock,
+    listAdminOrders: listAdminOrdersMock,
     listCandidates: candidateListMock,
+    reconcile: reconcileMock,
     waive: waiveMock,
   },
 }));
@@ -35,7 +45,44 @@ function renderWorkspace(initialDossierId?: string) {
 }
 
 describe("PaymentRequestWorkspace", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    listAdminOrdersMock.mockResolvedValue([]);
+  });
+
+  it("shows paid requests and confirmation time for administrative reconciliation", async () => {
+    listAdminOrdersMock.mockResolvedValue([
+      {
+        order: {
+          id: "paid-order",
+          orderCode: "PAY-PAID-001",
+          dossierId: "dossier-1",
+          provider: "payos",
+          providerOrderId: "provider-order",
+          amountMinor: 2_000_000,
+          currency: "VND",
+          status: "PAID",
+          expiresAt: "2026-10-20T08:00:00Z",
+          paidAt: "2026-10-20T07:30:00Z",
+          checkoutUrl: null,
+          qrPayload: null,
+          createdAt: "2026-10-20T07:00:00Z",
+          updatedAt: "2026-10-20T07:30:00Z",
+        },
+        dossierCode: "THV-2026-0001",
+        dossierTitle: "Hồ sơ thương hiệu",
+      },
+    ]);
+
+    renderWorkspace();
+
+    expect(
+      await screen.findByRole("heading", { name: "Theo d\u00F5i thu ph\u00ED" }),
+    ).toBeTruthy();
+    expect(await screen.findByText(/PAY-PAID-001/)).toBeTruthy();
+    expect(screen.getByText("THV-2026-0001 \u00B7 H\u1ED3 s\u01A1 th\u01B0\u01A1ng hi\u1EC7u")).toBeTruthy();
+    expect(screen.getByText(/\u0110\u00E3 ghi nh\u1EADn l\u00FAc/)).toBeTruthy();
+  });
 
   it("uses business language instead of payment provider implementation terms", () => {
     renderWorkspace();

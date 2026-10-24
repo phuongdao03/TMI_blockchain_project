@@ -14,6 +14,7 @@ import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
 import { paymentApi } from "@/lib/api/client";
+import { PaymentOrderReconciliation } from "@/components/admin/payment-order-reconciliation";
 
 type FeeMode = "PAID" | "FREE";
 
@@ -60,6 +61,7 @@ export function PaymentRequestWorkspace({
   const finishDecision = () => {
     idempotencyKey.current = requestKey();
     void refreshCandidates();
+    void queryClient.invalidateQueries({ queryKey: ["admin", "payment-orders"] });
   };
   const issue = useMutation({
     mutationFn: () =>
@@ -334,6 +336,8 @@ export function PaymentRequestWorkspace({
           ) : null}
         </aside>
       </section>
+
+      <PaymentOrderReconciliation />
 
       {success ? (
         <section

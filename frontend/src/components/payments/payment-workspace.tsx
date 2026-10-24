@@ -1,12 +1,16 @@
 "use client";
 
+import { WalletPayment } from "@/components/wallet/wallet-payment";
+import Image from "next/image";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  Building2,
   CheckCircle2,
   CircleAlert,
   Clock3,
-  ExternalLink,
+  Copy,
   LoaderCircle,
   QrCode,
   ReceiptText,
@@ -15,7 +19,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { paymentApi } from "@/lib/api/client";
 import type { PaymentOrder } from "@/lib/api/types";
@@ -48,10 +52,17 @@ function formatTime(value: string) {
 }
 
 export function PaymentWorkspace({ orderId }: { orderId: string }) {
+  return <PaymentWorkspaceContent key={orderId} orderId={orderId} />;
+}
+
+function PaymentWorkspaceContent({ orderId }: { orderId: string }) {
   const queryClient = useQueryClient();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [qrImageFailed, setQrImageFailed] = useState(false);
+  const [copiedDescription, setCopiedDescription] = useState(false);
   const [pollStartedAt] = useState(() => Date.now());
+
   const order = useQuery({
     queryKey: paymentKeys.detail(orderId),
     queryFn: () => paymentApi.get(orderId),
@@ -140,6 +151,10 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
 
         <div className="payment-workspace__layout grid gap-8 p-5 sm:p-8 lg:grid-cols-[1fr_20rem]">
           <div className="space-y-6">
+            {!paid &&
+              !stopped &&
+              !payment.providerOrderId &&
+              payment.status === "PENDING" && <WalletPayment order={payment} />}
             <div>
               <p className="text-sm font-medium text-neutral-500">
                 Số tiền cần thanh toán
@@ -224,17 +239,6 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
 
             {!paid && !stopped ? (
               <div className="grid gap-3 sm:flex sm:flex-wrap">
-                {payment.checkoutUrl ? (
-                  <a
-                    className={buttonVariants()}
-                    href={payment.checkoutUrl}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    Mở trang thanh toán bảo mật
-                    <ExternalLink aria-hidden="true" className="size-4" />
-                  </a>
-                ) : null}
                 <Button onClick={() => setCancelOpen(true)} variant="outline">
                   Hủy lần thanh toán
                 </Button>
@@ -244,7 +248,7 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
 
           <aside className="payment-workspace__aside space-y-4">
             <div className="payment-workspace__info rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
-              {payment.qrPayload && !paid ? (
+              {payment.qrPayload && !paid && !stopped && !qrImageFailed ? (
                 <>
                   <QrCode
                     aria-hidden="true"
@@ -252,7 +256,22 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                   />
                   <h2 className="mt-4 font-bold">Thanh toán bằng VietQR</h2>
                   <p className="mt-2 text-sm leading-6 text-neutral-500">
-                    Mở trang thanh toán để quét mã hoặc chọn ứng dụng ngân hàng.
+                    Quét mã bằng ứng dụng ngân hàng để thanh toán ngay trên
+                    trang này.
+                  </p>
+                  <div className="mt-4 flex justify-center rounded-xl bg-white p-4">
+                    <Image
+                      unoptimized
+                      alt="Mã QR thanh toán"
+                      className="h-56 w-56 max-w-full object-contain"
+                      height={224}
+                      onError={() => setQrImageFailed(true)}
+                      src={`/api/v1/payment-orders/${encodeURIComponent(orderId)}/qr`}
+                      width={224}
+                    />
+                  </div>
+                  <p className="mt-3 text-center text-xs text-neutral-500">
+                    Kiểm tra đúng số tiền và đơn vị nhận trước khi xác nhận.
                   </p>
                 </>
               ) : (
@@ -265,8 +284,72 @@ export function PaymentWorkspace({ orderId }: { orderId: string }) {
                   <p className="mt-2 text-sm leading-6 text-neutral-500">
                     Mã tham chiếu: {payment.orderCode}
                   </p>
+                  {!paid && !stopped ? (
+                    <p
+                      className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"
+                      role="alert"
+                    >
+                      Không tải được mã QR. Hãy làm mới trạng thái hoặc liên hệ
+                      hỗ trợ trước khi chuyển khoản.
+                    </p>
+                  ) : null}
                 </>
               )}
+              {!paid &&
+              !stopped &&
+              (payment.bankAccountNumber || payment.bankAccountName) ? (
+                <div className="mt-4 space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm">
+                  <div className="flex items-center gap-2 font-bold text-neutral-900">
+                    <Building2 aria-hidden="true" className="size-4" />
+                    Thông tin nhận tiền
+                  </div>
+                  {payment.bankAccountName ? (
+                    <p className="text-neutral-700">
+                      {payment.bankAccountName}
+                    </p>
+                  ) : null}
+                  {payment.bankAccountNumber ? (
+                    <p className="break-all font-mono font-semibold text-neutral-900">
+                      {payment.bankAccountNumber}
+                    </p>
+                  ) : null}
+                  {payment.bankBin ? (
+                    <p className="text-neutral-600">
+                      Mã ngân hàng: {payment.bankBin}
+                    </p>
+                  ) : null}
+                  {payment.transferDescription ? (
+                    <div>
+                      <p className="text-xs text-neutral-500">
+                        Nội dung chuyển khoản
+                      </p>
+                      <p className="break-words font-mono font-semibold text-neutral-900">
+                        {payment.transferDescription}
+                      </p>
+                      <button
+                        className="mt-2 inline-flex min-h-11 items-center gap-2 font-semibold text-primary-700 underline underline-offset-4"
+                        onClick={async () => {
+                          setCopiedDescription(false);
+                          try {
+                            await navigator.clipboard.writeText(
+                              payment.transferDescription ?? "",
+                            );
+                            setCopiedDescription(true);
+                          } catch {
+                            setCopiedDescription(false);
+                          }
+                        }}
+                        type="button"
+                      >
+                        <Copy aria-hidden="true" className="size-4" />
+                        {copiedDescription
+                          ? "Đã sao chép"
+                          : "Sao chép nội dung"}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
             <div className="flex gap-3 rounded-2xl border border-neutral-200 p-4 text-sm text-neutral-600">
               <ShieldCheck
