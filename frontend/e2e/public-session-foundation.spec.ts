@@ -123,8 +123,13 @@ test("logout updates another already-open public tab", async ({
   context,
 }) => {
   await seedSession(context);
+  const initialTabProfile = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === "/api/v1/users/me";
+  });
   await page.goto("/");
   await expectAccount(page);
+  expect((await initialTabProfile).ok()).toBe(true);
   const other = await context.newPage();
   try {
     await other.goto("/");
