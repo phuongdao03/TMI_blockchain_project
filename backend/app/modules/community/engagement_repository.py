@@ -35,6 +35,7 @@ class CommunityCommentRow:
     author_avatar_media_id: UUID | None
     author_is_admin: bool
     author_is_moderator: bool
+    author_membership_tier: str
     like_count: int
     viewer_has_liked: bool
 
@@ -47,6 +48,7 @@ CommunityCommentTuple = tuple[
     UUID | None,
     bool,
     bool,
+    str,
     int,
     bool,
 ]
@@ -71,6 +73,7 @@ class CommunityMemberRecord:
     public_profile: UserProfile | None
     is_admin: bool
     is_moderator: bool
+    membership_tier: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,6 +84,15 @@ class CommunityMemberListRecord:
     is_admin: bool
     is_moderator: bool
     viewer_is_following: bool
+    membership_tier: str
+
+
+@dataclass(frozen=True, slots=True)
+class CommunityMemberDirectoryRecord:
+    user: User
+    profile: CommunityProfile
+    public_profile: UserProfile | None
+    membership_tier: str
 
 
 class CommunityEngagementRepository:
@@ -175,6 +187,7 @@ class CommunityEngagementRepository:
                 UserProfile,
                 self._posts._has_role(User.id, "SUPER_ADMIN"),
                 self._posts._has_role(User.id, "MODERATOR"),
+                self._posts._membership_tier(User.id),
             )
             .join(CommunityProfile, CommunityProfile.user_id == User.id)
             .outerjoin(UserProfile, UserProfile.user_id == User.id)
@@ -187,13 +200,14 @@ class CommunityEngagementRepository:
         row = result.first()
         if row is None:
             return None
-        user, profile, public_profile, is_admin, is_moderator = row
+        user, profile, public_profile, is_admin, is_moderator, membership_tier = row
         return CommunityMemberRecord(
             user,
             profile,
             public_profile,
             bool(is_admin),
             bool(is_moderator),
+            membership_tier,
         )
 
     async def get_member_by_id(self, user_id: UUID) -> CommunityMemberRecord | None:
@@ -204,6 +218,7 @@ class CommunityEngagementRepository:
                 UserProfile,
                 self._posts._has_role(User.id, "SUPER_ADMIN"),
                 self._posts._has_role(User.id, "MODERATOR"),
+                self._posts._membership_tier(User.id),
             )
             .join(CommunityProfile, CommunityProfile.user_id == User.id)
             .outerjoin(UserProfile, UserProfile.user_id == User.id)
@@ -213,13 +228,70 @@ class CommunityEngagementRepository:
         row = result.first()
         if row is None:
             return None
-        user, profile, public_profile, is_admin, is_moderator = row
+        user, profile, public_profile, is_admin, is_moderator, membership_tier = row
         return CommunityMemberRecord(
             user,
             profile,
             public_profile,
             bool(is_admin),
             bool(is_moderator),
+            membership_tier,
+        )
+
+    async def search_member_directory(
+        self, query: str, *, offset: int, limit: int
+    ) -> tuple[tuple[CommunityMemberDirectoryRecord, ...], int]:
+        escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        pattern = f"%{escaped}%"
+        matches = or_(
+            CommunityProfile.display_name.ilike(pattern, escape="\\"),
+            CommunityProfile.username.ilike(pattern, escape="\\"),
+            CommunityProfile.professional_title.ilike(pattern, escape="\\"),
+            CommunityProfile.organization.ilike(pattern, escape="\\"),
+            CommunityProfile.activity_fields.ilike(pattern, escape="\\"),
+        )
+        filters = (
+            User.status == UserStatus.ACTIVE,
+            CommunityProfile.activity_fields.is_not(None),
+            matches,
+        )
+        total = int(
+            await self._session.scalar(
+                select(func.count(User.id))
+                .join(CommunityProfile, CommunityProfile.user_id == User.id)
+                .where(*filters)
+            )
+            or 0
+        )
+        rows = await self._session.execute(
+            select(
+                User,
+                CommunityProfile,
+                UserProfile,
+                self._posts._membership_tier(User.id),
+            )
+            .join(CommunityProfile, CommunityProfile.user_id == User.id)
+            .outerjoin(UserProfile, UserProfile.user_id == User.id)
+            .where(*filters)
+            .order_by(
+                CommunityProfile.display_name,
+                CommunityProfile.username,
+                User.id,
+            )
+            .offset(offset)
+            .limit(limit)
+        )
+        return (
+            tuple(
+                CommunityMemberDirectoryRecord(
+                    user=row[0],
+                    profile=row[1],
+                    public_profile=row[2],
+                    membership_tier=row[3],
+                )
+                for row in rows.all()
+            ),
+            total,
         )
 
     async def username_taken(self, username: str, *, except_user_id: UUID) -> bool:
@@ -276,6 +348,7 @@ class CommunityEngagementRepository:
                 UserProfile,
                 self._posts._has_role(User.id, "SUPER_ADMIN"),
                 self._posts._has_role(User.id, "MODERATOR"),
+                self._posts._membership_tier(User.id),
                 viewer_is_following,
             )
             .join(User, User.id == listed_user_id)
@@ -295,6 +368,7 @@ class CommunityEngagementRepository:
                     bool(is_admin),
                     bool(is_moderator),
                     bool(is_following),
+                    membership_tier,
                 )
                 for (
                     _relation,
@@ -303,6 +377,7 @@ class CommunityEngagementRepository:
                     public_profile,
                     is_admin,
                     is_moderator,
+                    membership_tier,
                     is_following,
                 ) in result.all()
             ),
@@ -474,8 +549,9 @@ class CommunityEngagementRepository:
                 bool(row[6]),
                 row[7],
                 row[8],
+                row[9],
             )
-            replies_by_parent[cast(UUID, row[9])].append(reply)
+            replies_by_parent[cast(UUID, row[10])].append(reply)
         return CommunityCommentPage(
             items=tuple(
                 CommunityCommentThread(
@@ -685,6 +761,9 @@ class CommunityEngagementRepository:
                 CommunityRepository._has_role(
                     CommunityComment.author_user_id, "MODERATOR"
                 ),
+                CommunityRepository._membership_tier(
+                    CommunityComment.author_user_id
+                ),
                 like_count,
                 viewer_has_liked,
             )
@@ -712,6 +791,7 @@ class CommunityEngagementRepository:
                 avatar_media_id,
                 bool(is_admin),
                 bool(is_moderator),
+                membership_tier,
                 like_count,
                 viewer_has_liked,
             )
@@ -723,6 +803,7 @@ class CommunityEngagementRepository:
                 avatar_media_id,
                 is_admin,
                 is_moderator,
+                membership_tier,
                 like_count,
                 viewer_has_liked,
             ) in rows

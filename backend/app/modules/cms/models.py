@@ -113,7 +113,17 @@ class CmsBanner(UtcTimestampMixin, Base):
 
 
 GUIDE_AUDIENCES = frozenset(
-    {"PUBLIC", "VIEWER", "USER", "MODERATOR", "SUPER_ADMIN", "EMPLOYEE"}
+    {
+        "PUBLIC",
+        "VIEWER",
+        "USER",
+        "MODERATOR",
+        "SUPER_ADMIN",
+        "EMPLOYEE",
+        "MEMBERSHIP_SILVER",
+        "MEMBERSHIP_COMPANION",
+        "MEMBERSHIP_PRESTIGE",
+    }
 )
 
 

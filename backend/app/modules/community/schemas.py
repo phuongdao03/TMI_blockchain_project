@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -51,6 +51,7 @@ class CommunityAuthorData(CommunitySchema):
     avatar_url: str | None
     role_label: str | None = None
     is_admin: bool = False
+    membership_tier: Literal["MEMBER", "SILVER", "COMPANION", "PRESTIGE"] = "MEMBER"
 
 
 class CommunityRelatedWorkData(CommunitySchema):

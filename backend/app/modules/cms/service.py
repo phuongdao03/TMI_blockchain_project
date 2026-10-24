@@ -5,6 +5,7 @@ from hashlib import sha256
 from html.parser import HTMLParser
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +33,8 @@ from app.modules.cms.models import (
 )
 from app.modules.cms.repository import CmsRepository
 from app.modules.cms.sanitizer import sanitize_rich_text
+from app.modules.memberships.cycle import active_membership_cycle
+from app.modules.memberships.models import MembershipDiamondApplication
 
 CMS_ROLES = frozenset({"SUPER_ADMIN"})
 
@@ -520,11 +523,9 @@ class CmsService:
         query: str | None = None,
         category: str | None = None,
     ) -> tuple[tuple[CmsGuideArticle, ...], int]:
-        audience_tags = {"PUBLIC", *principal.roles}
-        if is_employee:
-            audience_tags.add("EMPLOYEE")
         normalized_query = normalize_guide_text(query) if query else None
         async with self._session.begin():
+            audience_tags = await self._guide_audiences(principal, is_employee)
             return await self._repository.list_guide_articles(
                 page=page,
                 page_size=page_size,
@@ -544,16 +545,49 @@ class CmsService:
     async def get_accessible_guide_article(
         self, principal: AuthPrincipal, slug: str, *, is_employee: bool
     ) -> CmsGuideArticle:
-        audience_tags = {"PUBLIC", *principal.roles}
-        if is_employee:
-            audience_tags.add("EMPLOYEE")
         async with self._session.begin():
+            audience_tags = await self._guide_audiences(principal, is_employee)
             article = await self._repository.get_accessible_guide_article_by_slug(
                 slug, tuple(sorted(audience_tags))
             )
             if article is None:
                 raise CmsNotFoundError()
             return article
+
+    async def _guide_audiences(
+        self, principal: AuthPrincipal, is_employee: bool
+    ) -> tuple[str, ...]:
+        audience_tags = {"PUBLIC", *principal.roles}
+        if is_employee:
+            audience_tags.add("EMPLOYEE")
+
+        tier, _ = await active_membership_cycle(
+            self._session, principal.user_id
+        )
+        if tier == "PRESTIGE":
+            approved = await self._session.scalar(
+                select(MembershipDiamondApplication.id)
+                .where(
+                    MembershipDiamondApplication.user_id == principal.user_id,
+                    MembershipDiamondApplication.status == "APPROVED",
+                )
+                .limit(1)
+            )
+            if approved is None:
+                tier = "COMPANION"
+
+        tier_audiences = {
+            "MEMBER": (),
+            "SILVER": ("MEMBERSHIP_SILVER",),
+            "COMPANION": ("MEMBERSHIP_SILVER", "MEMBERSHIP_COMPANION"),
+            "PRESTIGE": (
+                "MEMBERSHIP_SILVER",
+                "MEMBERSHIP_COMPANION",
+                "MEMBERSHIP_PRESTIGE",
+            ),
+        }
+        audience_tags.update(tier_audiences[tier])
+        return tuple(sorted(audience_tags))
 
     async def record_guide_feedback(
         self,

@@ -14,6 +14,7 @@ from app.modules.community.engagement_repository import (
     CommunityCommentPage,
     CommunityCommentRow,
     CommunityEngagementRepository,
+    CommunityMemberDirectoryRecord,
     CommunityMemberListRecord,
     CommunityMemberRecord,
 )
@@ -42,6 +43,7 @@ from app.modules.engagement.errors import EngagementUnavailableError
 from app.modules.engagement.redis import RedisViewDeduplicator
 from app.modules.media.models import MediaAsset, MediaConfidentiality, MediaStatus
 from app.modules.media.types import AVATAR_IMAGE_MIME_TYPES, MediaPurpose
+from app.modules.memberships.cycle import active_membership_cycle
 from app.modules.notifications.service import NotificationService
 from app.modules.users.models import UserProfile
 
@@ -344,12 +346,51 @@ class CommunityEngagementService:
                 raise CommunityNotFoundError()
             return await self._member_view(record, viewer_user_id)
 
+    async def member_directory(
+        self,
+        principal: AuthPrincipal,
+        *,
+        query: str,
+        page: int,
+        page_size: int,
+    ) -> tuple[tuple[CommunityMemberDirectoryRecord, ...], int]:
+        normalized = query.strip()
+        if len(normalized) < 2 or len(normalized) > 120:
+            raise CommunityValidationError()
+        if page < 1 or not 1 <= page_size <= 50:
+            raise CommunityValidationError()
+        async with self._session.begin():
+            tier, _ = await active_membership_cycle(self._session, principal.user_id)
+            if {"MEMBER": 0, "SILVER": 1, "COMPANION": 2, "PRESTIGE": 3}.get(
+                tier, -1
+            ) < 2:
+                raise CommunityForbiddenError()
+            return await self._repository.search_member_directory(
+                normalized,
+                offset=(page - 1) * page_size,
+                limit=page_size,
+            )
+
     async def update_member_profile(
         self,
         principal: AuthPrincipal,
         payload: CommunityMemberProfileEditRequest,
     ) -> CommunityMemberView:
         async with self._session.begin():
+            professional_fields = {
+                "professional_title",
+                "organization",
+                "activity_fields",
+                "professional_links",
+            }
+            if professional_fields.intersection(payload.model_fields_set):
+                tier, _ = await active_membership_cycle(
+                    self._session, principal.user_id
+                )
+                if {"MEMBER": 0, "SILVER": 1, "COMPANION": 2, "PRESTIGE": 3}.get(
+                    tier, -1
+                ) < 1:
+                    raise CommunityForbiddenError()
             profile = await self._ensure_community_profile(principal.user_id)
             username = payload.username
             if (
@@ -423,6 +464,14 @@ class CommunityEngagementService:
                         )
                     if "bio" in payload.model_fields_set:
                         profile.bio = payload.bio
+                    if "professional_title" in payload.model_fields_set:
+                        profile.professional_title = payload.professional_title
+                    if "organization" in payload.model_fields_set:
+                        profile.organization = payload.organization
+                    if "activity_fields" in payload.model_fields_set:
+                        profile.activity_fields = payload.activity_fields
+                    if "professional_links" in payload.model_fields_set:
+                        profile.professional_links = payload.professional_links or []
                     await self._session.flush()
             except IntegrityError as exc:
                 raise CommunityConflictError() from exc

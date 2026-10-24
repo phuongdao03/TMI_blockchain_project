@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
@@ -89,6 +89,13 @@ class CommunityMemberProfileEditRequest(CommunitySchema):
     avatar_url: Annotated[str | None, Field(max_length=500)] = None
     avatar_media_id: UUID | None = None
     bio: Annotated[str | None, Field(max_length=500)] = None
+    professional_title: Annotated[str | None, Field(max_length=120)] = None
+    organization: Annotated[str | None, Field(max_length=160)] = None
+    activity_fields: Annotated[str | None, Field(max_length=300)] = None
+    professional_links: Annotated[
+        list[Annotated[str, Field(min_length=8, max_length=500)]],
+        Field(max_length=5),
+    ] | None = None
 
     @field_validator("username", mode="before")
     @classmethod
@@ -114,7 +121,13 @@ class CommunityMemberProfileEditRequest(CommunitySchema):
             raise ValueError("This username is reserved.")
         return normalized
 
-    @field_validator("display_name", "bio")
+    @field_validator(
+        "display_name",
+        "bio",
+        "professional_title",
+        "organization",
+        "activity_fields",
+    )
     @classmethod
     def normalize_profile_text(cls, value: str | None) -> str | None:
         if value is None:
@@ -144,6 +157,27 @@ class CommunityMemberProfileEditRequest(CommunitySchema):
             raise ValueError("Avatar URL must be an HTTPS URL.")
         return normalized
 
+    @field_validator("professional_links")
+    @classmethod
+    def validate_professional_links(
+        cls, value: list[str] | None
+    ) -> list[str] | None:
+        if value is None:
+            return None
+        normalized_links: list[str] = []
+        for link in value:
+            normalized = link.strip()
+            parts = urlsplit(normalized)
+            if (
+                parts.scheme != "https"
+                or not parts.hostname
+                or parts.username is not None
+                or parts.password is not None
+            ):
+                raise ValueError("Professional links must be HTTPS URLs.")
+            normalized_links.append(normalized)
+        return normalized_links
+
     @model_validator(mode="after")
     def require_update_field(self) -> "CommunityMemberProfileEditRequest":
         if not self.model_fields_set:
@@ -158,12 +192,38 @@ class CommunityMemberData(CommunitySchema):
     avatar_url: str | None
     role_label: str | None
     is_admin: bool
+    membership_tier: Literal[
+        "MEMBER", "SILVER", "COMPANION", "PRESTIGE"
+    ] = "MEMBER"
     bio: str | None
+    professional_title: str | None = None
+    organization: str | None = None
+    activity_fields: str | None = None
+    professional_links: list[str] = Field(default_factory=list)
     joined_at: datetime
     published_post_count: int
     follower_count: int
     following_count: int
     viewer_is_following: bool
+
+
+class CommunityMemberDirectoryItemData(CommunitySchema):
+    id: UUID
+    username: str
+    display_name: str
+    avatar_url: str | None
+    membership_tier: Literal[
+        "MEMBER", "SILVER", "COMPANION", "PRESTIGE"
+    ] = "MEMBER"
+    professional_title: str | None
+    organization: str | None
+    activity_fields: str | None
+    professional_links: list[str]
+
+
+class CommunityMemberDirectoryPageData(CommunitySchema):
+    members: list[CommunityMemberDirectoryItemData]
+    total: int
 
 
 class CommunityLikeStateData(CommunitySchema):
@@ -196,4 +256,7 @@ class CommunityMemberListItemData(CommunitySchema):
     avatar_url: str | None
     role_label: str | None
     is_admin: bool
+    membership_tier: Literal[
+        "MEMBER", "SILVER", "COMPANION", "PRESTIGE"
+    ] = "MEMBER"
     viewer_is_following: bool

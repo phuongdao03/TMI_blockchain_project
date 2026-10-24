@@ -111,6 +111,9 @@ class CmsGuideAudience(StrEnum):
     MODERATOR = "MODERATOR"
     SUPER_ADMIN = "SUPER_ADMIN"
     EMPLOYEE = "EMPLOYEE"
+    MEMBERSHIP_SILVER = "MEMBERSHIP_SILVER"
+    MEMBERSHIP_COMPANION = "MEMBERSHIP_COMPANION"
+    MEMBERSHIP_PRESTIGE = "MEMBERSHIP_PRESTIGE"
 
 
 class CmsGuideArticleRequest(BaseModel):
@@ -121,7 +124,7 @@ class CmsGuideArticleRequest(BaseModel):
     category: Annotated[
         str, Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", max_length=80)
     ]
-    audiences: Annotated[list[CmsGuideAudience], Field(min_length=1, max_length=6)]
+    audiences: Annotated[list[CmsGuideAudience], Field(min_length=1, max_length=9)]
     body_html: Annotated[str, Field(alias="bodyHtml", min_length=1, max_length=100_000)]
     sort_order: Annotated[int, Field(alias="sortOrder", ge=0, le=100_000)] = 0
 

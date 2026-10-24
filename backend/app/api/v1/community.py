@@ -83,6 +83,10 @@ def _author(row: CommunityPostRow) -> CommunityAuthorData:
         avatar_url=identity.avatar_url,
         role_label=identity.role_label,
         is_admin=identity.is_admin,
+        membership_tier=cast(
+            Literal["MEMBER", "SILVER", "COMPANION", "PRESTIGE"],
+            row.author_membership_tier,
+        ),
     )
 
 

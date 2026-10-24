@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -18,6 +19,7 @@ from app.modules.cms.errors import (
 )
 from app.modules.cms.models import CmsContentStatus, CmsGuideFeedback
 from app.modules.cms.service import CmsGuideArticleInput, CmsService
+from app.modules.memberships.models import MembershipPlan, UserMembership
 
 
 def _principal(*roles: str) -> AuthPrincipal:
@@ -108,10 +110,29 @@ def test_private_guides_are_filtered_by_role_and_employee_access(
         async with factory() as session:
             service = CmsService(session=session, audit=AuditService(session))
             admin = _principal("SUPER_ADMIN")
+            silver_member = _principal("USER")
+            async with session.begin():
+                plan = MembershipPlan(
+                    name="Silver",
+                    tier="SILVER",
+                    amount_minor=490_000,
+                    duration_days=365,
+                )
+                session.add(plan)
+                await session.flush()
+                session.add(
+                    UserMembership(
+                        user_id=silver_member.user_id,
+                        plan_id=plan.id,
+                        tier="SILVER",
+                        expires_at=datetime.now(UTC) + timedelta(days=365),
+                    )
+                )
             for slug, audiences in (
                 ("review-work", ("MODERATOR",)),
                 ("employee-time", ("EMPLOYEE",)),
                 ("admin-work", ("SUPER_ADMIN",)),
+                ("member-library", ("MEMBERSHIP_SILVER",)),
             ):
                 row = await service.create_guide_article(
                     admin,
@@ -150,6 +171,17 @@ def test_private_guides_are_filtered_by_role_and_employee_access(
             )
             assert employee_total == 1
             assert [row.slug for row in employee_rows] == ["employee-time"]
+
+            silver_rows, silver_total = await service.list_accessible_guide_articles(
+                silver_member, is_employee=False, page=1, page_size=20
+            )
+            assert silver_total == 1
+            assert [row.slug for row in silver_rows] == ["member-library"]
+
+            with pytest.raises(CmsNotFoundError):
+                await service.get_accessible_guide_article(
+                    _principal("USER"), "member-library", is_employee=False
+                )
 
             admin_rows, admin_total = await service.list_accessible_guide_articles(
                 admin, is_employee=False, page=1, page_size=20

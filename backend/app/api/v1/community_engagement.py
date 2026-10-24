@@ -21,6 +21,7 @@ from app.modules.community.dependencies import CommunityEngagementServiceDepende
 from app.modules.community.engagement_repository import (
     CommunityCommentRow,
     CommunityCommentThread,
+    CommunityMemberDirectoryRecord,
     CommunityMemberListRecord,
 )
 from app.modules.community.engagement_schemas import (
@@ -34,6 +35,8 @@ from app.modules.community.engagement_schemas import (
     CommunityFollowStateData,
     CommunityLikeStateData,
     CommunityMemberData,
+    CommunityMemberDirectoryItemData,
+    CommunityMemberDirectoryPageData,
     CommunityMemberListItemData,
     CommunityMemberProfileEditRequest,
 )
@@ -80,6 +83,7 @@ def _author(
     *,
     is_admin: bool,
     is_moderator: bool,
+    membership_tier: str = "MEMBER",
 ) -> CommunityAuthorData:
     identity = public_user_identity(
         display_name=display_name,
@@ -95,6 +99,9 @@ def _author(
         avatar_url=identity.avatar_url,
         role_label=identity.role_label,
         is_admin=identity.is_admin,
+        membership_tier=cast(
+            Literal["MEMBER", "SILVER", "COMPANION", "PRESTIGE"], membership_tier
+        ),
     )
 
 
@@ -113,6 +120,7 @@ def _post_data(row: CommunityPostRow) -> CommunityPostData:
             row.post.author_user_id,
             is_admin=row.author_is_admin,
             is_moderator=row.author_is_moderator,
+            membership_tier=row.author_membership_tier,
         ),
         published_at=cast(datetime, row.post.published_at),
         view_count=row.post.view_count,
@@ -147,6 +155,7 @@ def _comment_author(row: CommunityCommentRow) -> CommunityAuthorData:
         row.comment.author_user_id,
         is_admin=row.author_is_admin,
         is_moderator=row.author_is_moderator,
+        membership_tier=row.author_membership_tier,
     )
 
 
@@ -269,12 +278,58 @@ def _member_data(view: CommunityMemberView) -> CommunityMemberData:
         avatar_url=identity.avatar_url,
         role_label=identity.role_label,
         is_admin=identity.is_admin,
+        membership_tier=cast(
+            Literal["MEMBER", "SILVER", "COMPANION", "PRESTIGE"],
+            record.membership_tier,
+        ),
         bio=profile.bio,
+        professional_title=profile.professional_title,
+        organization=profile.organization,
+        activity_fields=profile.activity_fields,
+        professional_links=profile.professional_links,
         joined_at=record.user.created_at,
         published_post_count=view.published_post_count,
         follower_count=view.follower_count,
         following_count=view.following_count,
         viewer_is_following=view.viewer_is_following,
+    )
+
+
+def _member_directory_item(
+    record: CommunityMemberDirectoryRecord,
+) -> CommunityMemberDirectoryItemData:
+    identity = public_user_identity(
+        display_name=(
+            record.public_profile.display_name
+            if record.public_profile is not None
+            else None
+        ),
+        avatar_url=(
+            record.public_profile.avatar_url
+            if record.public_profile is not None
+            else None
+        ),
+        avatar_media_id=(
+            record.public_profile.avatar_media_id
+            if record.public_profile is not None
+            else None
+        ),
+        is_admin=False,
+        is_moderator=False,
+    )
+    return CommunityMemberDirectoryItemData(
+        id=record.user.id,
+        username=record.profile.username,
+        display_name=identity.display_name,
+        avatar_url=identity.avatar_url,
+        membership_tier=cast(
+            Literal["MEMBER", "SILVER", "COMPANION", "PRESTIGE"],
+            record.membership_tier,
+        ),
+        professional_title=record.profile.professional_title,
+        organization=record.profile.organization,
+        activity_fields=record.profile.activity_fields,
+        professional_links=record.profile.professional_links,
     )
 
 
@@ -743,6 +798,30 @@ async def list_member_posts(
         page_size=page_size,
     )
     return _paginated_posts(request, page, page_size, result)
+
+
+@router.get(
+    "/members/directory",
+    response_model=SuccessEnvelope[CommunityMemberDirectoryPageData],
+)
+async def search_member_directory(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: CommunityEngagementServiceDependency,
+    q: Annotated[str, Query(min_length=2, max_length=120)],
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=50)] = 20,
+) -> SuccessEnvelope[CommunityMemberDirectoryPageData]:
+    members, total = await service.member_directory(
+        principal, query=q, page=page, page_size=page_size
+    )
+    return SuccessEnvelope(
+        data=CommunityMemberDirectoryPageData(
+            members=[_member_directory_item(member) for member in members],
+            total=total,
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
 
 
 @router.get(

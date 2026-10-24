@@ -414,6 +414,7 @@ def test_public_categories_feed_and_detail_filter_status_and_private_fields(
             "avatarUrl": None,
             "roleLabel": None,
             "isAdmin": False,
+            "membershipTier": "MEMBER",
         }
         serialized = str(page.json())
         assert "private-owner@example.test" not in serialized
@@ -460,6 +461,7 @@ def test_public_categories_feed_and_detail_filter_status_and_private_fields(
             "avatarUrl": None,
             "roleLabel": None,
             "isAdmin": False,
+            "membershipTier": "MEMBER",
         }
 
         for status in (
@@ -1213,6 +1215,7 @@ def test_public_author_identity_uses_shared_profile_and_persisted_role(
             "avatarUrl": f"/api/v1/community/avatars/{avatar_id}",
             "roleLabel": "Quản trị viên",
             "isAdmin": True,
+            "membershipTier": "MEMBER",
         }
         assert "private-owner@example.test" not in str(author)
 
@@ -1224,6 +1227,7 @@ def test_public_author_identity_uses_shared_profile_and_persisted_role(
         assert member.json()["data"]["displayName"] == "Quản trị viên THV"
         assert member.json()["data"]["roleLabel"] == "Quản trị viên"
         assert member.json()["data"]["isAdmin"] is True
+        assert member.json()["data"]["membershipTier"] == "MEMBER"
 
         moderator_post = test_app.client.get(
             "/api/v1/community/posts/official-moderator-identity"
@@ -2148,6 +2152,7 @@ def test_member_profile_edit_and_public_follower_lists_are_safe(
                 "avatarUrl": None,
                 "roleLabel": None,
                 "isAdmin": False,
+                "membershipTier": "MEMBER",
                 "viewerIsFollowing": True,
             }
             assert "private-other@example.test" not in str(page)

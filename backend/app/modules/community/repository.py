@@ -42,6 +42,7 @@ from app.modules.media.types import (
     COMMUNITY_POST_IMAGE_MIME_TYPES,
     MediaPurpose,
 )
+from app.modules.memberships.models import UserMembership
 from app.modules.notifications.models import Notification
 from app.modules.public.models import (
     PublicationStatus,
@@ -61,6 +62,7 @@ class CommunityPostRow:
     author_avatar_media_id: UUID | None
     author_is_admin: bool
     author_is_moderator: bool
+    author_membership_tier: str
     like_count: int
     comment_count: int
     viewer_has_liked: bool
@@ -80,6 +82,7 @@ CommunityPostTuple = tuple[
     UUID | None,
     bool,
     bool,
+    str,
     int,
     int,
     bool,
@@ -112,6 +115,18 @@ class CommunityRepository:
             .where(UserRole.user_id == user_id, Role.code == role_code)
             .exists()
         )
+
+    @staticmethod
+    def _membership_tier(user_id: object) -> ColumnElement[str]:
+        active_tier = (
+            select(UserMembership.tier)
+            .where(
+                UserMembership.user_id == user_id,
+                UserMembership.expires_at > func.now(),
+            )
+            .scalar_subquery()
+        )
+        return func.coalesce(active_tier, literal("MEMBER"))
 
     async def is_member_restricted(self, user_id: UUID, scope: str) -> bool:
         now = datetime.now(UTC)
@@ -789,6 +804,7 @@ class CommunityRepository:
                 CommunityRepository._has_role(
                     CommunityPost.author_user_id, "MODERATOR"
                 ),
+                CommunityRepository._membership_tier(CommunityPost.author_user_id),
                 like_count,
                 comment_count,
                 viewer_has_liked,
@@ -832,6 +848,7 @@ class CommunityRepository:
                 avatar_media_id,
                 bool(is_admin),
                 bool(is_moderator),
+                membership_tier,
                 like_count,
                 comment_count,
                 viewer_has_liked,
@@ -855,6 +872,7 @@ class CommunityRepository:
                 avatar_media_id,
                 is_admin,
                 is_moderator,
+                membership_tier,
                 like_count,
                 comment_count,
                 viewer_has_liked,

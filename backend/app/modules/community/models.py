@@ -115,6 +115,12 @@ class CommunityProfile(UtcTimestampMixin, Base):
         ForeignKey("media_assets.id", ondelete="SET NULL"),
     )
     bio: Mapped[str | None] = mapped_column(String(500))
+    professional_title: Mapped[str | None] = mapped_column(String(120))
+    organization: Mapped[str | None] = mapped_column(String(160))
+    activity_fields: Mapped[str | None] = mapped_column(String(300))
+    professional_links: Mapped[list[str]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
 
 
 class CommunityCategory(UtcTimestampMixin, Base):
