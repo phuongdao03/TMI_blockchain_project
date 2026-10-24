@@ -1,0 +1,48 @@
+.card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  border: 1px solid #d7d4cd;
+  border-radius: 1.5rem;
+  background: linear-gradient(120deg, #faf9f5, #e4e2dd 65%, #f5f4ef);
+  color: #343b3e;
+  min-height: 270px;
+}
+.card[data-tier="COMPANION"] {
+  border-color: #cbb273;
+  background: linear-gradient(120deg, #fcf5dc, #e8d7a6 65%, #f8ebc4);
+  color: #51401e;
+}
+.card[data-tier="SILVER"] {
+  border-color: #a8b2b9;
+  background: linear-gradient(120deg, #f8fafb, #dce2e6 65%, #f0f3f5);
+  color: #37434b;
+}
+.card[data-tier="PRESTIGE"] {
+  border-color: #8db3c4;
+  background: linear-gradient(120deg, #f6fbfd, #d5e8ef 65%, #edf7fa);
+  color: #243b47;
+}
+.motif {
+  position: absolute;
+  width: 370px;
+  height: 370px;
+  right: -110px;
+  top: -60px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.12;
+  z-index: -1;
+  box-shadow:
+    0 0 0 22px transparent,
+    0 0 0 23px currentColor,
+    0 0 0 48px transparent,
+    0 0 0 49px currentColor,
+    0 0 0 78px transparent,
+    0 0 0 79px currentColor;
+}
+.rule {
+  border-top: 1px solid currentColor;
+  opacity: 0.2;
+}
