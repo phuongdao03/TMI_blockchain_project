@@ -1,4 +1,5 @@
 export const AUTH_SESSION_CHANGE_KEY = "cns.auth-session-change";
+const AUTH_SESSION_CHANGE_EVENT = "cns:auth-session-change";
 
 export function broadcastAuthSessionChange(): void {
   try {
@@ -9,6 +10,7 @@ export function broadcastAuthSessionChange(): void {
   } catch {
     // Cookie-backed auth remains usable when browser storage is unavailable.
   }
+  window.dispatchEvent(new Event(AUTH_SESSION_CHANGE_EVENT));
 }
 
 export function subscribeToAuthSessionChanges(
@@ -18,5 +20,9 @@ export function subscribeToAuthSessionChanges(
     if (event.key === AUTH_SESSION_CHANGE_KEY) listener();
   };
   window.addEventListener("storage", handleStorage);
-  return () => window.removeEventListener("storage", handleStorage);
+  window.addEventListener(AUTH_SESSION_CHANGE_EVENT, listener);
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(AUTH_SESSION_CHANGE_EVENT, listener);
+  };
 }

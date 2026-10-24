@@ -7,6 +7,7 @@ const restrictedPrefixes = [
   "/dossiers",
   "/notifications",
   "/payments",
+  "/wallet",
   "/reviews",
 ] as const;
 

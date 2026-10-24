@@ -6,6 +6,7 @@ import {
   type ReactNode,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -50,10 +51,29 @@ export function PublicAuthProvider({
   hasSessionCookie: boolean;
 }) {
   const queryClient = useQueryClient();
-  const [verifySession, setVerifySession] = useState(
-    !initialUser && hasSessionCookie,
-  );
+  const [sessionCheckRequested, setVerifySession] = useState(false);
+  const verifySession =
+    sessionCheckRequested || (!initialUser && hasSessionCookie);
   const [sessionSyncPending, setSessionSyncPending] = useState(false);
+  const serverState = useRef({ initialUser, hasSessionCookie });
+
+  useEffect(() => {
+    const previous = serverState.current;
+    if (
+      previous.initialUser === initialUser &&
+      previous.hasSessionCookie === hasSessionCookie
+    )
+      return;
+    serverState.current = { initialUser, hasSessionCookie };
+    // A router refresh is authoritative over a previously recovered identity.
+    // Cancel its in-flight lookup so an old response cannot restore that user.
+    void queryClient.cancelQueries({ queryKey: AUTH_ME_QUERY_KEY });
+    if (initialUser || !hasSessionCookie) {
+      queryClient.setQueryData(AUTH_ME_QUERY_KEY, initialUser);
+    } else {
+      void queryClient.invalidateQueries({ queryKey: AUTH_ME_QUERY_KEY });
+    }
+  }, [hasSessionCookie, initialUser, queryClient]);
 
   useEffect(() => {
     const verify = () => {
@@ -89,7 +109,8 @@ export function PublicAuthProvider({
     ? "error"
     : sessionSyncPending && session.isFetching
       ? "loading"
-      : session.isPending || (session.isFetching && !session.data)
+      : verifySession &&
+          (session.isPending || (session.isFetching && !session.data))
         ? "loading"
         : user
           ? "authenticated"

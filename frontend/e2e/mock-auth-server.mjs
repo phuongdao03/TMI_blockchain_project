@@ -141,7 +141,7 @@ const defaultDossierTypes = [
     "20000000-0000-4000-8000-000000000003",
     "ARTWORK",
     "Tác phẩm nghệ thuật",
-    "Dành cho mỹ thuật, nhiếp ảnh, âm nhạc, sân khấu và các tác phẩm sáng tạo.",
+    "Dành cho mỹ thuật, nhiếp ảnh, âm nhạc, sân khấu, múa, văn học, điện ảnh, kiến trúc, thiết kế, thủ công và tác phẩm đa phương tiện.",
     [
       {
         key: "creator",
@@ -158,6 +158,15 @@ const defaultDossierTypes = [
           { value: "VISUAL_ART", label: "Mỹ thuật" },
           { value: "PHOTOGRAPHY", label: "Nhiếp ảnh" },
           { value: "MUSIC", label: "Âm nhạc" },
+          { value: "THEATRE", label: "Sân khấu" },
+          { value: "DANCE", label: "Múa" },
+          { value: "LITERATURE", label: "Văn học" },
+          { value: "FILM", label: "Điện ảnh" },
+          { value: "ARCHITECTURE", label: "Kiến trúc" },
+          { value: "DESIGN", label: "Thiết kế" },
+          { value: "CRAFT", label: "Thủ công mỹ nghệ" },
+          { value: "MULTIMEDIA", label: "Tác phẩm đa phương tiện" },
+          { value: "OTHER", label: "Loại hình khác" },
         ],
       },
     ],
@@ -3612,6 +3621,28 @@ const server = createServer(async (request, response) => {
     request.headers.cookie?.includes("cns_access=e2e-access")
   ) {
     send(response, 200, envelope([organization]));
+    return;
+  }
+  const advertisingCollections = [
+    "/api/v1/advertising/campaigns",
+    "/api/v1/advertising/waitlist",
+    "/api/v1/advertising/placements",
+    "/api/v1/advertising/packages",
+    "/api/v1/admin/advertising/campaigns",
+    "/api/v1/admin/advertising/placements",
+    "/api/v1/admin/advertising/inventory",
+    "/api/v1/admin/advertising/reports",
+  ];
+  if (
+    request.method === "GET" &&
+    advertisingCollections.includes(path) &&
+    authenticated
+  ) {
+    if (path.startsWith("/api/v1/admin/") && !superAdminAuthenticated) {
+      send(response, 403, error(403, "FORBIDDEN", "Access denied").body);
+      return;
+    }
+    send(response, 200, envelope([]));
     return;
   }
   if (
