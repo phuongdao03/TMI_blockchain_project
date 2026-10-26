@@ -136,6 +136,10 @@ describe("community chat tier access", () => {
     );
 
     await screen.findByText("Latest message");
+    const newestArticle = screen
+      .getByText("Latest message")
+      .closest<HTMLElement>("article");
+    if (!newestArticle) throw new Error("Expected newest chat message article");
     const adminArticle = screen
       .getByText("Admin announcement")
       .closest<HTMLElement>("article");
@@ -169,7 +173,9 @@ describe("community chat tier access", () => {
     expect(screen.getByText("Older history")).toBeDefined();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Sửa tin nhắn của Member" }),
+      within(newestArticle).getByRole("button", {
+        name: "Sửa tin nhắn của Member",
+      }),
     );
     fireEvent.change(screen.getByLabelText("Sửa nội dung tin nhắn"), {
       target: { value: "Edited message" },
@@ -183,7 +189,9 @@ describe("community chat tier access", () => {
     expect(screen.getByText("Đã chỉnh sửa")).toBeDefined();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Gỡ tin nhắn của Member" }),
+      within(newestArticle).getByRole("button", {
+        name: "Gỡ tin nhắn của Member",
+      }),
     );
     await screen.findByText("Older history");
     expect(screen.queryByText("Edited message")).toBeNull();

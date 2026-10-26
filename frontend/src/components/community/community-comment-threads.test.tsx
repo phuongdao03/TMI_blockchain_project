@@ -109,7 +109,7 @@ describe("CommunityCommentThreads", () => {
     });
 
     await screen.findByText("Góc nhìn hay");
-    expect(screen.queryByText("Thẩm định viên")).toBeNull();
+    expect(await screen.findByText("Thẩm định viên")).toBeDefined();
     expect(document.getElementById("community-comments-title")).not.toBeNull();
     await user.selectOptions(
       screen.getByRole("combobox", { name: "Sắp xếp bình luận" }),

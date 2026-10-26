@@ -8,6 +8,11 @@ import {
 } from "./community-user-identity";
 import { membershipTierPalette } from "@/components/membership/membership-tier-palette";
 
+function cssColor(color: string) {
+  const hex = color.slice(1);
+  return `rgb(${[0, 2, 4].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16)).join(", ")})`;
+}
+
 describe("community membership identity", () => {
   it("uses the Silver frame and label for Silver community members", () => {
     const { container } = render(
@@ -24,11 +29,13 @@ describe("community membership identity", () => {
     );
     const badge = screen.getByLabelText("Hạng thẻ Bạc") as HTMLElement;
     expect(badge).toBeDefined();
-    expect(badge.style.borderColor).toBe(membershipTierPalette.SILVER.border);
-    expect(badge.style.backgroundColor).toBe(
-      membershipTierPalette.SILVER.surface,
+    expect(badge.style.borderColor).toBe(
+      cssColor(membershipTierPalette.SILVER.border),
     );
-    expect(badge.style.color).toBe(membershipTierPalette.SILVER.ink);
+    expect(badge.style.backgroundColor).toBe(
+      cssColor(membershipTierPalette.SILVER.surface),
+    );
+    expect(badge.style.color).toBe(cssColor(membershipTierPalette.SILVER.ink));
     const frame = container.querySelector<HTMLImageElement>('img[alt=""]');
     expect(frame).not.toBeNull();
     expect(decodeURIComponent(frame?.getAttribute("src") ?? "")).toContain(
@@ -68,11 +75,13 @@ describe("community membership identity", () => {
   it("uses the shared tier palette and never assigns a rank badge to an admin", () => {
     const { container } = render(<CommunityMembershipBadge tier="MEMBER" />);
     const badge = container.firstElementChild as HTMLElement;
-    expect(badge.style.borderColor).toBe(membershipTierPalette.MEMBER.border);
-    expect(badge.style.backgroundColor).toBe(
-      membershipTierPalette.MEMBER.surface,
+    expect(badge.style.borderColor).toBe(
+      cssColor(membershipTierPalette.MEMBER.border),
     );
-    expect(badge.style.color).toBe(membershipTierPalette.MEMBER.ink);
+    expect(badge.style.backgroundColor).toBe(
+      cssColor(membershipTierPalette.MEMBER.surface),
+    );
+    expect(badge.style.color).toBe(cssColor(membershipTierPalette.MEMBER.ink));
 
     const { container: adminContainer } = render(
       <CommunityMembershipBadge tier="MEMBER" isMembershipStaff />,
@@ -95,7 +104,10 @@ describe("community membership identity", () => {
       />,
     );
 
-    expect(screen.getByText("Quản lý hội viên")).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Quản lý hội viên" }),
+    ).toBeDefined();
+    expect(screen.getAllByText("Quản lý hội viên")).toHaveLength(2);
     expect(screen.queryByLabelText(/Hạng thẻ/)).toBeNull();
     expect(container.querySelector('img[src*="avatar-frames"]')).toBeNull();
   });

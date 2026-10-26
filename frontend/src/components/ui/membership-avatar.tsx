@@ -33,7 +33,7 @@ export function MembershipAvatar({
         width: size,
         boxShadow:
           showFrame && compact
-            ? `0 0 0 2px ${membershipTierPalette[tier].accent}, 0 0 0 3px var(--theme-surface)`
+            ? `0 0 0 2px ${membershipTierPalette[tier].accent}`
             : undefined,
       }}
     >
