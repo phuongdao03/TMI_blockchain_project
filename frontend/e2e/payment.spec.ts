@@ -59,6 +59,7 @@ test("admin charges a funded wallet and applicant sees fee confirmation", async 
   await expect(page.getByText("Đã trừ phí từ ví người nộp")).toBeVisible();
   await expect(page.getByText(/1\.500\.000 VND/)).toBeVisible();
 
+  await page.close();
   await context.clearCookies();
   await context.addCookies([
     {
@@ -76,17 +77,37 @@ test("admin charges a funded wallet and applicant sees fee confirmation", async 
       path: "/",
       sameSite: "Lax",
     },
+    {
+      name: "cns_refresh",
+      value: "e2e-refresh",
+      domain: "127.0.0.1",
+      path: "/",
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+    {
+      name: "cns_csrf",
+      value: "e2e-csrf",
+      domain: "127.0.0.1",
+      path: "/",
+      sameSite: "Lax",
+    },
   ]);
-  await page.goto(`/dossiers/${dossierId}`);
-  await expect(page.getByText("Thanh toán đã được xác nhận")).toBeVisible();
-
-  await page.goto(`/payments/${paymentOrderId}`);
+  const applicantPage = await context.newPage();
+  await applicantPage.goto(`/dossiers/${dossierId}`);
   await expect(
-    page.getByRole("heading", { name: "Thanh toán thành công" }),
+    applicantPage.getByText("Thanh toán đã được xác nhận"),
+  ).toBeVisible();
+
+  await applicantPage.goto(`/payments/${paymentOrderId}`);
+  await expect(
+    applicantPage.getByRole("heading", { name: "Thanh toán thành công" }),
   ).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText("Khoản phí đã được xác nhận")).toBeVisible();
-  await expect(page.getByText("1.500.000 ₫")).toBeVisible();
-  await expect(page.locator(".payment-workspace")).not.toContainText(
+  await expect(
+    applicantPage.getByText("Khoản phí đã được xác nhận"),
+  ).toBeVisible();
+  await expect(applicantPage.getByText("1.500.000 ₫")).toBeVisible();
+  await expect(applicantPage.locator(".payment-workspace")).not.toContainText(
     /PayOS|QR/i,
   );
 });

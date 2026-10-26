@@ -3159,6 +3159,33 @@ const server = createServer(async (request, response) => {
     send(response, 200, envelope(timeline));
     return;
   }
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/memberships/me" &&
+    authenticated
+  ) {
+    send(
+      response,
+      200,
+      envelope({
+        tier: "MEMBER",
+        memberNumber: "THV-E2E",
+        status: "FREE",
+        expiresAt: null,
+        plans: [],
+        purchases: [],
+      }),
+    );
+    return;
+  }
+  if (
+    request.method === "POST" &&
+    path === "/api/v1/auth/activity" &&
+    authenticated
+  ) {
+    send(response, 200, envelope({ status: "active" }));
+    return;
+  }
   if (request.method === "GET" && path === "/api/v1/auth/me" && authenticated) {
     send(
       response,
