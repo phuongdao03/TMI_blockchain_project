@@ -235,7 +235,20 @@ class WalletService:
                 )
             )
             if details is not None:
-                return WalletCheckoutDetails(**details.payload_redacted)
+
+                def optional_text(key: str) -> str | None:
+                    value = details.payload_redacted.get(key)
+                    if value is not None and not isinstance(value, str):
+                        raise PaymentProviderError()
+                    return value
+
+                return WalletCheckoutDetails(
+                    qr_payload=optional_text("qr_payload"),
+                    bank_bin=optional_text("bank_bin"),
+                    bank_account_number=optional_text("bank_account_number"),
+                    bank_account_name=optional_text("bank_account_name"),
+                    transfer_description=optional_text("transfer_description"),
+                )
         try:
             provider_order = await self.gateway.get_order(provider_order_id)
         except PaymentGatewayError as exc:

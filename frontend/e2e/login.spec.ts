@@ -144,8 +144,11 @@ test("dashboard rotates a refresh-only session before rendering", async ({
   ]);
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/dashboard$/);
-  expect(
-    (await context.cookies()).find(({ name }) => name === "cns_access")
-      ?.httpOnly,
-  ).toBe(true);
+  await expect
+    .poll(
+      async () =>
+        (await context.cookies()).find(({ name }) => name === "cns_access")
+          ?.httpOnly,
+    )
+    .toBe(true);
 });
