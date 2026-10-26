@@ -140,4 +140,88 @@ describe("AdvertisingSetupPanel", () => {
     expect(api.submitCampaign).toHaveBeenCalledWith("campaign-1");
     await waitFor(() => expect(onCreated).toHaveBeenCalledOnce());
   });
+
+  it("updates the illustrative page preview and highlighted slot when placement changes", async () => {
+    const user = userEvent.setup();
+    api.placements.mockResolvedValueOnce([
+      {
+        id: "placement-1",
+        code: "FEATURED_DOSSIER",
+        name: "Hồ sơ nổi bật",
+        pageLocation: "Trang hồ sơ",
+        deliveryMode: "WEIGHTED_ROTATION",
+        capacity: 3,
+        enabled: true,
+        timezone: "Asia/Bangkok",
+      },
+      {
+        id: "placement-2",
+        code: "COMMUNITY_BANNER",
+        name: "Banner cộng đồng",
+        pageLocation: "Cộng đồng",
+        deliveryMode: "EQUAL_ROTATION",
+        capacity: 5,
+        enabled: true,
+        timezone: "Asia/Bangkok",
+      },
+    ]);
+
+    mount();
+
+    const preview = await screen.findByRole("region", {
+      name: "Bản xem trước vị trí quảng cáo",
+    });
+    expect(preview.getAttribute("data-placement-layout")).toBe(
+      "featured-dossier",
+    );
+    expect(preview.textContent).toContain("Mô phỏng minh họa");
+    expect(
+      screen.getByRole("group", {
+        name: "Vị trí quảng cáo đã chọn: Hồ sơ nổi bật",
+      }).textContent,
+    ).toContain("Trang hồ sơ");
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Vị trí hiển thị" }),
+      "COMMUNITY_BANNER",
+    );
+
+    expect(
+      await screen.findByRole("group", {
+        name: "Vị trí quảng cáo đã chọn: Banner cộng đồng",
+      }),
+    ).toBeTruthy();
+    expect(preview.getAttribute("data-placement-layout")).toBe(
+      "community-banner",
+    );
+    expect(preview.textContent).toContain("Cộng đồng");
+  });
+
+  it("shows a labeled generic preview for unrecognized placement codes", async () => {
+    api.placements.mockResolvedValueOnce([
+      {
+        id: "placement-custom",
+        code: "PARTNER_CUSTOM_SLOT",
+        name: "Vị trí đối tác",
+        pageLocation: "Trang đối tác",
+        deliveryMode: "EQUAL_ROTATION",
+        capacity: 2,
+        enabled: true,
+        timezone: "Asia/Bangkok",
+      },
+    ]);
+
+    mount();
+
+    const preview = await screen.findByRole("region", {
+      name: "Bản xem trước vị trí quảng cáo",
+    });
+    expect(preview.getAttribute("data-placement-layout")).toBe("generic");
+    expect(preview.textContent).toContain("Mô phỏng tổng quát");
+    expect(
+      screen.getByRole("group", {
+        name: "Vị trí quảng cáo đã chọn: Vị trí đối tác",
+      }).textContent,
+    ).toContain("Trang đối tác");
+  });
 });

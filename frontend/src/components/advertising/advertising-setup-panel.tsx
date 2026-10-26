@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
 
+import { AdvertisingPlacementPreview } from "@/components/advertising/advertising-placement-preview";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/components/wallet/wallet-workspace";
 import { advertisingApi, ApiError, dossierApi } from "@/lib/api/client";
@@ -300,6 +301,10 @@ export function AdvertisingSetupPanel({
             </select>
           </label>
         </div>
+
+        {selectedPlacement ? (
+          <AdvertisingPlacementPreview placement={selectedPlacement} />
+        ) : null}
 
         {selectedPlacement && !packages.isPending && !packages.data?.length ? (
           <p
