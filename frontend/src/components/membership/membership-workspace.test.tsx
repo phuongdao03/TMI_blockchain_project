@@ -117,13 +117,14 @@ describe("membership purchase", () => {
     });
   });
 
-  it.each([
+  const administratorCases: Array<[string, string[], string[]]> = [
     ["SUPER_ADMIN", ["SUPER_ADMIN"], []],
     ["membership manager", ["MODERATOR"], ["memberships.manage"]],
-  ])(
+  ];
+
+  it.each(administratorCases)(
     "hides personal membership actions from %s and keeps room access",
     async (_label, roles, permissions) => {
-      const isSuperAdmin = roles.includes("SUPER_ADMIN");
       session.user = {
         id: "admin-1",
         email: "admin@example.vn",

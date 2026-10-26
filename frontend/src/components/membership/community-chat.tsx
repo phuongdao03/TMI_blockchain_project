@@ -18,7 +18,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { MembershipAvatar } from "@/components/ui/membership-avatar";
@@ -132,7 +132,10 @@ export function CommunityChat({
   );
   const user = useAuthUser();
   const client = useQueryClient();
-  const historyKey = ["membership-chat-history", user?.id, room];
+  const historyKey = useMemo(
+    () => ["membership-chat-history", user?.id, room],
+    [room, user?.id],
+  );
   const latestKey = [...historyKey, "latest"];
   const access = useQuery({
     queryKey: ["membership-chat-access", user?.id, room],
