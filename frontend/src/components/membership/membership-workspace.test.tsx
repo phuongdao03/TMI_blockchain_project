@@ -26,7 +26,7 @@ const session = vi.hoisted(() => ({
     id: "member-1",
     email: "member@example.vn",
     roles: ["USER"],
-    permissions: [],
+    permissions: [] as string[],
     accountType: "PUBLIC_USER",
   },
 }));

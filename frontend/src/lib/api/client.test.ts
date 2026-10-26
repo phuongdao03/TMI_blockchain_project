@@ -131,7 +131,7 @@ describe("membership chat API client", () => {
   it("requests opaque cursor pages and exposes chat mutations", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(
+      .mockImplementation(async () =>
         response({ success: true, data: {}, meta: { requestId: "chat" } }),
       );
 
