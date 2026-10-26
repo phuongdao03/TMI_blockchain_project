@@ -386,6 +386,11 @@ async function requestBlob(path: string, allowRefresh = true): Promise<Blob> {
 }
 
 export const authApi = {
+  recordActivity() {
+    return request<{ status: "active" }>("/auth/activity", {
+      method: "POST",
+    });
+  },
   sendFirebaseVerificationEmail(idToken: string) {
     return request<{ message: string }>("/auth/firebase/verification-email", {
       method: "POST",
@@ -604,15 +609,28 @@ export const membershipApi = {
       { method: "DELETE", body: JSON.stringify({ reason }) },
     );
   },
-  messages(room: import("./types").CommunityChatRoom) {
-    return request<import("./types").CommunityChatMessage[]>(
-      `/community/chat/${room}/messages`,
+  messages(
+    room: import("./types").CommunityChatRoom,
+    options: { cursor?: string | null; limit?: number } = {},
+  ) {
+    const query = new URLSearchParams();
+    if (options.limit !== undefined) query.set("limit", String(options.limit));
+    if (options.cursor) query.set("cursor", options.cursor);
+    const suffix = query.size ? `?${query.toString()}` : "";
+    return request<import("./types").CommunityChatPage>(
+      `/community/chat/${room}/messages${suffix}`,
     );
   },
   send(room: import("./types").CommunityChatRoom, body: string) {
-    return request<import("./types").CommunityChatMessage[]>(
+    return request<import("./types").CommunityChatMessage>(
       `/community/chat/${room}/messages`,
       { method: "POST", body: JSON.stringify({ body }) },
+    );
+  },
+  editMessage(id: string, body: string) {
+    return request<import("./types").CommunityChatMessage>(
+      `/community/chat/messages/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify({ body }) },
     );
   },
 };

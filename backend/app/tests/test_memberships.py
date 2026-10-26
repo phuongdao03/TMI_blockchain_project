@@ -54,7 +54,7 @@ def test_membership_purchase_is_atomic_idempotent_and_expiry_revokes_chat() -> N
                 )
                 plan_id = plan.id
                 with pytest.raises(PaymentForbiddenError):
-                    await membership.chat(owner, "COMPANION")
+                    await membership.chat_history(owner, "COMPANION")
                 async with session.begin():
                     await WalletLedger(session).post(
                         user_id=owner.user_id,
@@ -79,11 +79,11 @@ def test_membership_purchase_is_atomic_idempotent_and_expiry_revokes_chat() -> N
                     expected_amount_minor=quote["amount_due_minor"],
                 )
                 assert replay["expires_at"] == purchased["expires_at"]
-                messages = await membership.chat(
+                message = await membership.send_chat(
                     owner, "COMPANION", "Cùng gìn giữ giá trị Việt"
                 )
-                assert messages[0]["tier"] == "COMPANION"
-                assert messages[0]["body"] == "Cùng gìn giữ giá trị Việt"
+                assert message["tier"] == "COMPANION"
+                assert message["body"] == "Cùng gìn giữ giá trị Việt"
                 async with session.begin():
                     assert await session.scalar(select(Wallet.balance_minor)) == 150_000
                     assert len(list(await session.scalars(select(WalletJournal)))) == 2
@@ -91,7 +91,7 @@ def test_membership_purchase_is_atomic_idempotent_and_expiry_revokes_chat() -> N
                     assert row is not None
                     row.expires_at = datetime.now(UTC) - timedelta(seconds=1)
                 with pytest.raises(PaymentForbiddenError):
-                    await membership.chat(owner, "COMPANION")
+                    await membership.chat_history(owner, "COMPANION")
                 assert (await membership.overview(owner.user_id))["tier"] == "MEMBER"
         finally:
             await payment.close()
@@ -373,10 +373,10 @@ def test_silver_is_a_supported_community_identity_and_enters_general_chat() -> N
                         )
                     )
                 membership = MembershipService(session)
-                messages = await membership.chat(owner, "MEMBER", "Hello")
-                assert messages[0]["tier"] == "SILVER"
+                message = await membership.send_chat(owner, "MEMBER", "Hello")
+                assert message["tier"] == "SILVER"
                 with pytest.raises(PaymentForbiddenError):
-                    await membership.chat(owner, "COMPANION")
+                    await membership.chat_history(owner, "COMPANION")
         finally:
             await payment.close()
             await engine.dispose()

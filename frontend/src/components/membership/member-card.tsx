@@ -4,25 +4,29 @@ import Image from "next/image";
 import { MembershipAvatar } from "@/components/ui/membership-avatar";
 import type { MembershipState, MembershipTier } from "@/lib/api/types";
 import styles from "./member-card.module.css";
+import {
+  membershipTierPalette,
+  membershipTierStyle,
+} from "./membership-tier-palette";
 
 export const membershipTiers = {
   MEMBER: {
-    name: "Đồng",
+    name: membershipTierPalette.MEMBER.name,
     icon: Sprout,
     room: "Sảnh cộng đồng",
   },
   SILVER: {
-    name: "Bạc",
+    name: membershipTierPalette.SILVER.name,
     icon: Award,
     room: "Sảnh cộng đồng",
   },
   COMPANION: {
-    name: "Vàng",
+    name: membershipTierPalette.COMPANION.name,
     icon: HeartHandshake,
     room: "Phòng Đồng hành",
   },
   PRESTIGE: {
-    name: "Kim cương",
+    name: membershipTierPalette.PRESTIGE.name,
     icon: Gem,
     room: "Phòng Tinh hoa",
   },
@@ -51,6 +55,7 @@ export function MemberCard({
       className={styles.card}
       data-tier={membership.tier}
       aria-label={`Thẻ ${tier.name} của ${name}`}
+      style={membershipTierStyle(membership.tier)}
     >
       <span className={styles.motif} aria-hidden="true" />
       <div className="flex items-center justify-between gap-4">

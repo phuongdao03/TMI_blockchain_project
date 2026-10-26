@@ -28,6 +28,7 @@ import type {
 } from "@/lib/api/types";
 import { useAuthUser } from "@/lib/auth/user-context";
 import { CommunityChat, type CommunityChatRoom } from "./community-chat";
+import { canUsePersonalMembership } from "./membership-access";
 import { MembershipBenefitCenter } from "./membership-benefit-center";
 import { MemberCard, membershipTiers } from "./member-card";
 
@@ -37,32 +38,40 @@ export function MembershipWorkspace({
   initialChatRoom?: CommunityChatRoom;
 }) {
   const user = useAuthUser();
+  const canManagePersonalMembership = canUsePersonalMembership(user);
   const client = useQueryClient();
   const queryKey = ["membership", user?.id];
   const membership = useQuery({
     queryKey,
     queryFn: membershipApi.overview,
+    enabled: canManagePersonalMembership,
     staleTime: 0,
     refetchInterval: 30_000,
   });
   const membershipLoaded = membership.data !== undefined;
   useEffect(() => {
-    if (initialChatRoom === "MEMBER" || !membershipLoaded) return;
+    if (
+      initialChatRoom === "MEMBER" ||
+      (!membershipLoaded && canManagePersonalMembership)
+    )
+      return;
     const frame = requestAnimationFrame(() => {
       document
         .getElementById("community-chat")
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
     return () => cancelAnimationFrame(frame);
-  }, [initialChatRoom, membershipLoaded]);
+  }, [canManagePersonalMembership, initialChatRoom, membershipLoaded]);
   const catalog = useQuery({
     queryKey: ["membership-plan-catalog"],
     queryFn: membershipApi.plans,
+    enabled: canManagePersonalMembership,
     staleTime: 60_000,
   });
   const profile = useQuery({
     queryKey: ["profile", user?.id],
     queryFn: profileApi.get,
+    enabled: canManagePersonalMembership,
   });
   const [selection, setSelection] = useState<{
     plan: MembershipPlan;
@@ -80,12 +89,13 @@ export function MembershipWorkspace({
     ],
     queryFn: () =>
       membershipApi.quote(selection!.plan.id, selection!.renewalOptIn),
-    enabled: selection !== null,
+    enabled: selection !== null && canManagePersonalMembership,
     retry: false,
   });
   const diamondApplications = useQuery({
     queryKey: ["membership-diamond-applications", user?.id],
     queryFn: membershipApi.myDiamondApplications,
+    enabled: canManagePersonalMembership,
   });
   const submitDiamondApplication = useMutation({
     mutationFn: () =>
@@ -101,7 +111,7 @@ export function MembershipWorkspace({
   const wallet = useQuery({
     queryKey: walletKey(user?.id),
     queryFn: walletApi.summary,
-    enabled: selection !== null,
+    enabled: selection !== null && canManagePersonalMembership,
     staleTime: 0,
   });
   const buy = useMutation({
@@ -123,6 +133,25 @@ export function MembershipWorkspace({
       setSelection(null);
     },
   });
+  if (!canManagePersonalMembership) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-6 pb-8">
+        <header>
+          <p className="text-xs font-bold tracking-[0.18em] text-[var(--theme-accent)] uppercase">
+            Quyền quản trị hội viên
+          </p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+            Không gian hội viên
+          </h1>
+          <p className="mt-3 max-w-2xl leading-7 text-[var(--theme-muted)]">
+            Tài khoản quản trị không có hạng hội viên cá nhân. Quyền vào phòng
+            được kiểm tra riêng theo vai trò quản trị.
+          </p>
+        </header>
+        <CommunityChat tier="MEMBER" initialRoom={initialChatRoom} />
+      </div>
+    );
+  }
   if (membership.isPending)
     return <p role="status">Đang chuẩn bị thẻ thành viên…</p>;
   if (!membership.data)

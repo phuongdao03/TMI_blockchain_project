@@ -16,6 +16,7 @@ import {
   hrModeratorDashboardApi,
   hrPayrollApi,
   mediaApi,
+  membershipApi,
   organizationApi,
   profileApi,
   publicApi,
@@ -120,6 +121,51 @@ function response(data: unknown, status = 200) {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+describe("membership chat API client", () => {
+  beforeEach(() => {
+    document.cookie = "cns_csrf=csrf-value";
+    vi.restoreAllMocks();
+  });
+
+  it("requests opaque cursor pages and exposes chat mutations", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        response({ success: true, data: {}, meta: { requestId: "chat" } }),
+      );
+
+    await membershipApi.messages("MEMBER", {
+      cursor: "room+cursor/",
+      limit: 100,
+    });
+    await membershipApi.send("MEMBER", "Hello");
+    await membershipApi.editMessage("message-1", "Updated");
+    await membershipApi.removeMessage("message-1");
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/community/chat/MEMBER/messages?limit=100&cursor=room%2Bcursor%2F",
+      "/api/v1/community/chat/MEMBER/messages",
+      "/api/v1/community/chat/messages/message-1",
+      "/api/v1/community/chat/messages/message-1",
+    ]);
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      method: "POST",
+      body: JSON.stringify({ body: "Hello" }),
+    });
+    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({
+      method: "PATCH",
+      body: JSON.stringify({ body: "Updated" }),
+    });
+    for (const index of [1, 2, 3]) {
+      expect(
+        new Headers(fetchMock.mock.calls[index]?.[1]?.headers).get(
+          "X-CSRF-Token",
+        ),
+      ).toBe("csrf-value");
+    }
+  });
+});
 
 describe("auth API client", () => {
   beforeEach(() => {

@@ -6,7 +6,11 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { CommunityReportAction } from "@/components/community/community-report-action";
-import { CommunityMembershipBadge } from "@/components/community/community-user-identity";
+import {
+  CommunityMembershipBadge,
+  CommunityRoleBadge,
+  isMembershipStaffIdentity,
+} from "@/components/community/community-user-identity";
 import { MembershipAvatar } from "@/components/ui/membership-avatar";
 import { communityApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
@@ -541,6 +545,7 @@ function CommentBody({
   const [actionError, setActionError] = useState(false);
   const ownsComment = Boolean(userId && author?.id === userId && !isDeleted);
   const name = author?.displayName?.trim() || "Thành viên";
+  const isMembershipStaff = author ? isMembershipStaffIdentity(author) : false;
 
   async function saveEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -572,6 +577,7 @@ function CommentBody({
             <MembershipAvatar
               className="shrink-0"
               displayName={author.displayName}
+              showFrame={!isMembershipStaff}
               size={36}
               src={author.avatarUrl}
               tier={author.membershipTier ?? "MEMBER"}
@@ -585,7 +591,12 @@ function CommentBody({
                   {name}
                 </Link>
                 <CommunityMembershipBadge
+                  isMembershipStaff={isMembershipStaff}
                   tier={author.membershipTier ?? "MEMBER"}
+                />
+                <CommunityRoleBadge
+                  isAdmin={author.isAdmin}
+                  roleLabel={author.roleLabel}
                 />
               </div>
               <time

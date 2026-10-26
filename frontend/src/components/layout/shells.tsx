@@ -34,7 +34,7 @@ import {
   CommunityRoleBadge,
   getAuthenticatedCommunityIdentity,
 } from "@/components/community/community-user-identity";
-import { UserAvatar } from "@/components/ui/user-avatar";
+import { MembershipAccountAvatar } from "@/components/membership/membership-account-avatar";
 import { profileApi } from "@/lib/api/client";
 import { resolveAdminEntryPoint } from "@/lib/auth/role-workspaces";
 import { safeLocalDestination } from "@/lib/auth/safe-destination";
@@ -149,6 +149,7 @@ export function PublicShell({ children }: PropsWithChildren) {
   const accountIdentity = getAuthenticatedCommunityIdentity({
     displayName: profile.data?.displayName,
     roles: activeUser?.roles,
+    permissions: activeUser?.permissions,
   });
   const accountAvatarUrl = profile.data?.avatarMediaId
     ? `/api/v1/community/avatars/${encodeURIComponent(profile.data.avatarMediaId)}`
@@ -275,11 +276,12 @@ export function PublicShell({ children }: PropsWithChildren) {
           {activeUser ? (
             <details className="public-user-menu">
               <summary aria-label="Mở menu tài khoản">
-                <UserAvatar
+                <MembershipAccountAvatar
                   className="public-user-menu__avatar"
                   displayName={accountIdentity.displayName}
                   size={32}
                   src={accountAvatarUrl}
+                  user={activeUser}
                 />
                 <span className="public-user-menu__identity">
                   <span className="public-user-menu__display-name">

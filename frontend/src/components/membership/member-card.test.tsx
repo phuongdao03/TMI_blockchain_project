@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { MemberCard } from "./member-card";
+import { membershipTierPalette } from "./membership-tier-palette";
 
 describe("membership cards", () => {
   it.each([
@@ -23,11 +24,13 @@ describe("membership cards", () => {
           }}
         />,
       );
+      const card = screen.getByRole("article", {
+        name: `Thẻ ${label} của Đào Nguyễn Phương`,
+      });
+      expect(card).toBeDefined();
       expect(
-        screen.getByRole("article", {
-          name: `Thẻ ${label} của Đào Nguyễn Phương`,
-        }),
-      ).toBeDefined();
+        (card as HTMLElement).style.getPropertyValue("--membership-accent"),
+      ).toBe(membershipTierPalette[tier].accent);
       expect(screen.getByRole("heading", { name: label })).toBeDefined();
       expect(screen.getByText("THV-123456789ABC")).toBeDefined();
       expect(

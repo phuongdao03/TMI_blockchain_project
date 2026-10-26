@@ -64,6 +64,44 @@ beforeEach(() => {
 });
 
 describe("CommunityCommentThreads", () => {
+  it("shows admin identity without a personal rank badge or frame", async () => {
+    api.comments.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: "comment-admin",
+          parentId: null,
+          content: "Thông báo quản trị",
+          isDeleted: false,
+          createdAt: "2026-10-14T10:00:00Z",
+          likeCount: 0,
+          viewerHasLiked: false,
+          author: {
+            id: "admin-1",
+            username: "admin",
+            displayName: "Quản trị viên THV",
+            avatarUrl: null,
+            roleLabel: "Quản trị viên",
+            isAdmin: true,
+            membershipTier: "COMPANION",
+          },
+          replies: [],
+        },
+      ],
+      meta: { requestId: "comments", page: 1, pageSize: 20, total: 1 },
+    });
+
+    const { container } = render(
+      <CommunityCommentThreads postId="post-1" commentCount={1} />,
+      { wrapper },
+    );
+
+    await screen.findByText("Thông báo quản trị");
+    expect(screen.getByText("Quản trị viên")).toBeDefined();
+    expect(screen.queryByLabelText(/Hạng thẻ/)).toBeNull();
+    expect(container.querySelector('img[src*="avatar-frames"]')).toBeNull();
+  });
+
   it("loads and toggles oldest/newest order while retaining page", async () => {
     const user = userEvent.setup();
     render(<CommunityCommentThreads postId="post-1" commentCount={1} />, {

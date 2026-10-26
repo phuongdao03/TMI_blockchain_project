@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MembershipWorkspace } from "./membership-workspace";
 
 const api = vi.hoisted(() => ({
+  chatAccess: vi.fn(),
   overview: vi.fn(),
   plans: vi.fn(),
   quote: vi.fn(),
@@ -20,11 +21,23 @@ const api = vi.hoisted(() => ({
   removeMessage: vi.fn(),
   summary: vi.fn(),
 }));
+const session = vi.hoisted(() => ({
+  user: {
+    id: "member-1",
+    email: "member@example.vn",
+    roles: ["USER"],
+    permissions: [],
+    accountType: "PUBLIC_USER",
+  },
+}));
 vi.mock("@/lib/api/client", () => ({
   membershipApi: api,
   profileApi: { get: async () => ({ displayName: "Nguyễn Phương" }) },
   walletApi: { summary: api.summary },
   ApiError: class extends Error {},
+}));
+vi.mock("@/lib/auth/user-context", () => ({
+  useAuthUser: () => session.user,
 }));
 
 function mount() {
@@ -42,6 +55,18 @@ function mount() {
 describe("membership purchase", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    session.user = {
+      id: "member-1",
+      email: "member@example.vn",
+      roles: ["USER"],
+      permissions: [],
+      accountType: "PUBLIC_USER",
+    };
+    api.chatAccess.mockResolvedValue({
+      room: "MEMBER",
+      allowed: true,
+      source: "ADMIN",
+    });
     api.overview.mockResolvedValue({
       tier: "MEMBER",
       memberNumber: "THV-MEMBER",
@@ -85,8 +110,53 @@ describe("membership purchase", () => {
     api.myDiamondApplications.mockResolvedValue({ applications: [] });
     api.myBenefitRequests.mockResolvedValue({ requests: [] });
     api.collaborationNeeds.mockResolvedValue({ requests: [] });
-    api.messages.mockResolvedValue([]);
+    api.messages.mockResolvedValue({
+      items: [],
+      hasMore: false,
+      nextCursor: null,
+    });
   });
+
+  it.each([
+    ["SUPER_ADMIN", ["SUPER_ADMIN"], []],
+    ["membership manager", ["MODERATOR"], ["memberships.manage"]],
+  ])(
+    "hides personal membership actions from %s and keeps room access",
+    async (_label, roles, permissions) => {
+      const isSuperAdmin = roles.includes("SUPER_ADMIN");
+      session.user = {
+        id: "admin-1",
+        email: "admin@example.vn",
+        roles,
+        permissions,
+        accountType: "PUBLIC_USER",
+      };
+      api.chatAccess.mockResolvedValue({
+        room: "MEMBER",
+        allowed: true,
+        source: "ADMIN",
+      });
+      mount();
+
+      expect(
+        await screen.findByRole("heading", { name: "Không gian hội viên" }),
+      ).toBeDefined();
+      expect(
+        await screen.findByText("Quyền quản trị · mọi phòng"),
+      ).toBeDefined();
+      expect(
+        screen.queryByRole("button", {
+          name: /Đăng ký bằng ví|Gia hạn bằng ví/,
+        }),
+      ).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: "Gửi yêu cầu xét duyệt" }),
+      ).toBeNull();
+      expect(api.overview).not.toHaveBeenCalled();
+      expect(api.plans).not.toHaveBeenCalled();
+      expect(api.myDiamondApplications).not.toHaveBeenCalled();
+    },
+  );
 
   it("keeps the purchase idempotency key after an uncertain result and dialog reopen", async () => {
     const user = userEvent.setup();

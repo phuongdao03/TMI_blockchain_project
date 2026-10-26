@@ -10,10 +10,10 @@ import {
   CommunityRoleBadge,
   getAuthenticatedCommunityIdentity,
 } from "@/components/community/community-user-identity";
+import { MembershipAccountAvatar } from "@/components/membership/membership-account-avatar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
-import { UserAvatar } from "@/components/ui/user-avatar";
 import { profileApi } from "@/lib/api/client";
 import type { AuthUser } from "@/lib/api/types";
 
@@ -78,6 +78,7 @@ export function DashboardContextHeader({
   const identity = getAuthenticatedCommunityIdentity({
     displayName: profile.data?.displayName,
     roles: user?.roles,
+    permissions: user?.permissions,
   });
   const avatarUrl = profile.data?.avatarMediaId
     ? `/api/v1/community/avatars/${encodeURIComponent(profile.data.avatarMediaId)}`
@@ -119,10 +120,11 @@ export function DashboardContextHeader({
         <PwaInstallButton className="dashboard-context-header__install" />
         {user ? (
           <div className="hidden max-w-64 items-center gap-2 md:flex">
-            <UserAvatar
+            <MembershipAccountAvatar
               displayName={identity.displayName}
               size={28}
               src={avatarUrl}
+              user={user}
             />
             <span className="max-w-40 truncate text-sm text-[var(--theme-muted)]">
               {identity.displayName}

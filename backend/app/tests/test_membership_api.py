@@ -119,6 +119,24 @@ def test_public_plans_and_admin_diamond_application_workflow() -> None:
                     email="admin@example.vn",
                     roles=("SUPER_ADMIN",),
                 )
+                admin_membership = await client.get("/api/v1/memberships/me")
+                assert admin_membership.status_code == 403
+                admin_quote = await client.post(
+                    f"/api/v1/memberships/plans/{silver_id}/quote",
+                    json={"renewalOptIn": False},
+                )
+                assert admin_quote.status_code == 403
+                admin_purchase = await client.post(
+                    purchase_url,
+                    json={"expectedAmountMinor": expected_amount},
+                    headers={"Idempotency-Key": "admin-membership-purchase"},
+                )
+                assert admin_purchase.status_code == 403
+                admin_application = await client.post(
+                    "/api/v1/memberships/diamond-applications",
+                    json={"statement": "Admin account application attempt."},
+                )
+                assert admin_application.status_code == 403
                 listed = await client.get(
                     "/api/v1/admin/memberships/diamond-applications"
                 )

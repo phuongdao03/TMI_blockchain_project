@@ -15,6 +15,9 @@ from app.modules.auth.session_service import AuthPrincipal
 from app.modules.community.identity import public_user_identity
 from app.modules.community.models import CommunityMemberRestriction, CommunityProfile
 from app.modules.community.repository import CommunityRepository
+from app.modules.memberships.chat_cursor import (
+    MembershipChatCursorCodec,
+)
 from app.modules.memberships.cycle import active_membership_cycle
 from app.modules.memberships.models import (
     CommunityChatMessage,
@@ -46,10 +49,23 @@ class MembershipService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
+    @classmethod
+    def require_personal_membership(cls, principal: AuthPrincipal) -> None:
+        if cls._is_membership_manager(principal):
+            raise DomainError(
+                code="MEMBERSHIP_ADMIN_NOT_ELIGIBLE",
+                message="Administrator accounts cannot hold personal membership.",
+                status_code=403,
+            )
+
     async def remove_message(self, principal: AuthPrincipal, identifier: UUID) -> None:
         async with self.session.begin():
-            message = await self.session.get(CommunityChatMessage, identifier)
-            if message is None:
+            message = await self.session.scalar(
+                select(CommunityChatMessage)
+                .where(CommunityChatMessage.id == identifier)
+                .with_for_update()
+            )
+            if message is None or message.deleted_at is not None:
                 raise PaymentNotFoundError()
             if message.user_id != principal.user_id:
                 AuthorizationPolicy.require_capability(
@@ -63,7 +79,48 @@ class MembershipService:
                 action="community.chat.removed",
                 resource_type="community_chat_message",
                 resource_id=str(identifier),
+                after={"room": message.room},
             )
+
+    async def edit_chat_message(
+        self, principal: AuthPrincipal, identifier: UUID, body: str
+    ) -> dict[str, object]:
+        normalized_body = self._validated_chat_body(body)
+        async with self.session.begin():
+            message = await self.session.scalar(
+                select(CommunityChatMessage)
+                .where(CommunityChatMessage.id == identifier)
+                .with_for_update()
+            )
+            if message is None or message.deleted_at is not None:
+                raise PaymentNotFoundError()
+            if message.user_id != principal.user_id:
+                raise PaymentForbiddenError()
+
+            current = await self.current(principal.user_id)
+            if (
+                await self._chat_access_source(principal, message.room, current)
+                == "NONE"
+            ):
+                raise PaymentForbiddenError()
+            await self._ensure_chat_posting_allowed(principal)
+
+            before_hash = sha256(message.body.encode()).hexdigest()
+            message.body = normalized_body
+            message.edited_at = datetime.now(UTC)
+            await self.session.flush()
+            AuditService(self.session).record(
+                actor_user_id=principal.user_id,
+                action="community.chat.edited",
+                resource_type="community_chat_message",
+                resource_id=str(identifier),
+                before={"body_sha256": before_hash},
+                after={"body_sha256": sha256(normalized_body.encode()).hexdigest()},
+            )
+            row = await self.session.execute(
+                self._chat_message_select().where(CommunityChatMessage.id == identifier)
+            )
+            return self._chat_message_data(principal, row.one())
 
     async def retire_plan(self, principal: AuthPrincipal, identifier: UUID) -> None:
         AuthorizationPolicy.require_capability(
@@ -804,92 +861,162 @@ class MembershipService:
                 for request, display_name, username in rows.all()
             ]
 
-    async def chat(
-        self, principal: AuthPrincipal, room: str, body: str | None = None
-    ) -> list[dict[str, object]]:
+    async def chat_history(
+        self,
+        principal: AuthPrincipal,
+        room: str,
+        *,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, object]:
+        if not 1 <= limit <= 100:
+            raise DomainError(
+                code="MEMBERSHIP_CHAT_LIMIT_INVALID",
+                message="Chat page size must be between 1 and 100.",
+                status_code=422,
+            )
         async with self.session.begin():
             current = await self.current(principal.user_id)
             access_source = await self._chat_access_source(principal, room, current)
             if access_source == "NONE":
                 raise PaymentForbiddenError()
-            if body is not None:
-                if not 1 <= len(body.strip()) <= 2000:
-                    raise PaymentConflictError("Tin nhắn cần có từ 1 đến 2.000 ký tự.")
-                await self.session.scalar(
-                    select(User.id)
-                    .where(User.id == principal.user_id)
-                    .with_for_update()
-                )
-                now = datetime.now(UTC)
-                restriction = await self.session.scalar(
-                    select(CommunityMemberRestriction.id).where(
-                        CommunityMemberRestriction.member_user_id == principal.user_id,
-                        CommunityMemberRestriction.scope == "COMMENTS",
-                        CommunityMemberRestriction.starts_at <= now,
-                        CommunityMemberRestriction.expires_at > now,
-                        CommunityMemberRestriction.revoked_at.is_(None),
+
+            cursor_codec = MembershipChatCursorCodec()
+            decoded_cursor = (
+                cursor_codec.decode(cursor, expected_room=room) if cursor else None
+            )
+            statement = self._chat_message_select().where(
+                CommunityChatMessage.room == room,
+                CommunityChatMessage.deleted_at.is_(None),
+            )
+            if decoded_cursor is not None:
+                statement = statement.where(
+                    (CommunityChatMessage.created_at < decoded_cursor.created_at)
+                    | (
+                        (CommunityChatMessage.created_at == decoded_cursor.created_at)
+                        & (CommunityChatMessage.id < decoded_cursor.message_id)
                     )
                 )
-                if restriction is not None:
-                    raise PaymentForbiddenError()
-                latest = await self.session.scalar(
-                    select(CommunityChatMessage.created_at)
-                    .where(CommunityChatMessage.user_id == principal.user_id)
-                    .order_by(CommunityChatMessage.created_at.desc())
-                    .limit(1)
-                )
-                if latest is not None and now - utc(latest) < timedelta(seconds=2):
-                    raise DomainError(
-                        code="CHAT_RATE_LIMITED",
-                        message="Vui lòng chờ một chút trước khi gửi tiếp.",
-                        status_code=429,
-                    )
-                self.session.add(
-                    CommunityChatMessage(
-                        user_id=principal.user_id,
-                        room=room,
-                        body=body.strip(),
-                        tier_snapshot=str(current["tier"]),
-                    )
-                )
-                await self.session.flush()
             rows = await self.session.execute(
-                select(
-                    CommunityChatMessage,
-                    CommunityProfile.display_name,
-                    UserProfile.display_name,
-                    CommunityProfile.avatar_url,
-                    UserProfile.avatar_url,
-                    UserProfile.avatar_media_id,
-                    CommunityRepository._membership_tier(CommunityChatMessage.user_id),
-                    CommunityRepository._has_role(
-                        CommunityChatMessage.user_id, "SUPER_ADMIN"
-                    ),
-                    CommunityRepository._has_role(
-                        CommunityChatMessage.user_id, "MODERATOR"
-                    ),
-                )
-                .outerjoin(
-                    CommunityProfile,
-                    CommunityProfile.user_id == CommunityChatMessage.user_id,
-                )
-                .outerjoin(
-                    UserProfile,
-                    UserProfile.user_id == CommunityChatMessage.user_id,
-                )
-                .where(
-                    CommunityChatMessage.room == room,
-                    CommunityChatMessage.deleted_at.is_(None),
-                )
-                .order_by(
+                statement.order_by(
                     CommunityChatMessage.created_at.desc(),
                     CommunityChatMessage.id.desc(),
-                )
-                .limit(50)
+                ).limit(limit + 1)
             )
-            return [
-                self._chat_message_data(principal, row) for row in reversed(rows.all())
-            ]
+            descending_rows = rows.all()
+            has_more = len(descending_rows) > limit
+            page_rows = descending_rows[:limit]
+            next_cursor = (
+                cursor_codec.encode(
+                    room=room,
+                    created_at=page_rows[-1][0].created_at,
+                    message_id=page_rows[-1][0].id,
+                )
+                if has_more
+                else None
+            )
+            return {
+                "items": [
+                    self._chat_message_data(principal, row)
+                    for row in reversed(page_rows)
+                ],
+                "has_more": has_more,
+                "next_cursor": next_cursor,
+            }
+
+    async def send_chat(
+        self, principal: AuthPrincipal, room: str, body: str
+    ) -> dict[str, object]:
+        normalized_body = self._validated_chat_body(body)
+        async with self.session.begin():
+            current = await self.current(principal.user_id)
+            access_source = await self._chat_access_source(principal, room, current)
+            if access_source == "NONE":
+                raise PaymentForbiddenError()
+
+            now = datetime.now(UTC)
+            await self._ensure_chat_posting_allowed(principal, now=now)
+            await self.session.scalar(
+                select(User.id).where(User.id == principal.user_id).with_for_update()
+            )
+            latest = await self.session.scalar(
+                select(CommunityChatMessage.created_at)
+                .where(CommunityChatMessage.user_id == principal.user_id)
+                .order_by(CommunityChatMessage.created_at.desc())
+                .limit(1)
+            )
+            if latest is not None and now - utc(latest) < timedelta(seconds=2):
+                raise DomainError(
+                    code="CHAT_RATE_LIMITED",
+                    message="Please wait before sending another message.",
+                    status_code=429,
+                )
+
+            message = CommunityChatMessage(
+                user_id=principal.user_id,
+                room=room,
+                body=normalized_body,
+                tier_snapshot=str(current["tier"]),
+            )
+            self.session.add(message)
+            await self.session.flush()
+            row = await self.session.execute(
+                self._chat_message_select().where(CommunityChatMessage.id == message.id)
+            )
+            return self._chat_message_data(principal, row.one())
+
+    @staticmethod
+    def _validated_chat_body(body: str) -> str:
+        normalized = body.strip()
+        if not 1 <= len(normalized) <= 2000:
+            raise PaymentConflictError(
+                "Chat messages must contain between 1 and 2,000 characters."
+            )
+        return normalized
+
+    async def _ensure_chat_posting_allowed(
+        self, principal: AuthPrincipal, *, now: datetime | None = None
+    ) -> None:
+        current_time = now or datetime.now(UTC)
+        restriction = await self.session.scalar(
+            select(CommunityMemberRestriction.id).where(
+                CommunityMemberRestriction.member_user_id == principal.user_id,
+                CommunityMemberRestriction.scope == "COMMENTS",
+                CommunityMemberRestriction.starts_at <= current_time,
+                CommunityMemberRestriction.expires_at > current_time,
+                CommunityMemberRestriction.revoked_at.is_(None),
+            )
+        )
+        if restriction is not None:
+            raise PaymentForbiddenError()
+
+    @staticmethod
+    def _chat_message_select():
+        return (
+            select(
+                CommunityChatMessage,
+                CommunityProfile.display_name,
+                UserProfile.display_name,
+                CommunityProfile.avatar_url,
+                UserProfile.avatar_url,
+                UserProfile.avatar_media_id,
+                CommunityRepository._membership_tier(CommunityChatMessage.user_id),
+                CommunityRepository._has_role(
+                    CommunityChatMessage.user_id, "SUPER_ADMIN"
+                ),
+                CommunityRepository._has_role(
+                    CommunityChatMessage.user_id, "MODERATOR"
+                ),
+            )
+            .outerjoin(
+                CommunityProfile,
+                CommunityProfile.user_id == CommunityChatMessage.user_id,
+            )
+            .outerjoin(
+                UserProfile,
+                UserProfile.user_id == CommunityChatMessage.user_id,
+            )
+        )
 
     async def chat_access(
         self, principal: AuthPrincipal, room: str
@@ -1160,6 +1287,9 @@ class MembershipService:
             "body": item.body,
             "tier": current_tier,
             "created_at": item.created_at,
+            "edited_at": item.edited_at,
+            "is_admin": bool(is_admin),
+            "can_edit": item.user_id == principal.user_id,
             "can_remove": item.user_id == principal.user_id
             or AuthorizationPolicy.allows_capability(
                 principal, PolicyRequirement("community.moderate")

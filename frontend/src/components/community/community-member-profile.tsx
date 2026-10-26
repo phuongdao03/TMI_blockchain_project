@@ -8,7 +8,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 
 import { CommunityPostCard } from "@/components/community/community-post-card";
-import { CommunityRoleBadge } from "@/components/community/community-user-identity";
+import {
+  CommunityRoleBadge,
+  isMembershipStaffIdentity,
+} from "@/components/community/community-user-identity";
 import { MembershipAvatar } from "@/components/ui/membership-avatar";
 import { communityMemberApi, mediaApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
@@ -216,6 +219,7 @@ export function CommunityMemberProfile({
   }
 
   const member = profile.data;
+  const isMembershipStaff = isMembershipStaffIdentity(member);
   const isSelf = user?.id === member.id;
   const safeAvatarUrl = getSafeAvatarUrl(member.avatarUrl);
   const total = posts.data?.meta.total ?? member.publishedPostCount;
@@ -332,6 +336,7 @@ export function CommunityMemberProfile({
               <MembershipAvatar
                 displayName={member.displayName}
                 size={80}
+                showFrame={!isMembershipStaff}
                 src={member.avatarUrl}
                 tier={member.membershipTier ?? "MEMBER"}
               />
@@ -547,7 +552,8 @@ export function CommunityMemberProfile({
                   value={draft.bio}
                 />
               </label>
-              {profileTierRank[member.membershipTier ?? "MEMBER"] >= 1 ? (
+              {!isMembershipStaff &&
+              profileTierRank[member.membershipTier ?? "MEMBER"] >= 1 ? (
                 <div className="grid gap-4 border-t border-[var(--theme-border)] pt-4 sm:col-span-2 sm:grid-cols-2">
                   <p className="text-xs font-bold uppercase tracking-wide text-[var(--theme-accent)] sm:col-span-2">
                     Hồ sơ chuyên môn · quyền lợi hạng Bạc trở lên
@@ -901,6 +907,7 @@ function MemberRow({ member }: { member: CommunityMemberCard }) {
       <MembershipAvatar
         displayName={member.displayName || member.username}
         size={44}
+        showFrame={!isMembershipStaffIdentity(member)}
         src={member.avatarUrl}
         tier={member.membershipTier ?? "MEMBER"}
       />

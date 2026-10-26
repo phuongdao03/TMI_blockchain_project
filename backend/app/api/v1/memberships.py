@@ -118,7 +118,16 @@ class ChatMessageData(PaymentSchema):
     body: str
     tier: str
     created_at: datetime
+    edited_at: datetime | None
+    is_admin: bool
+    can_edit: bool
     can_remove: bool
+
+
+class ChatMessagePageData(PaymentSchema):
+    items: list[ChatMessageData]
+    has_more: bool
+    next_cursor: str | None
 
 
 class QuoteRequest(PaymentSchema):
@@ -261,10 +270,31 @@ async def remove_chat_message(
     )
 
 
+@router.patch(
+    "/community/chat/messages/{message_id}",
+    response_model=SuccessEnvelope[ChatMessageData],
+)
+async def edit_chat_message(
+    message_id: UUID,
+    payload: ChatRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[ChatMessageData]:
+    result = await MembershipService(session).edit_chat_message(
+        principal, message_id, payload.body
+    )
+    return SuccessEnvelope(
+        data=ChatMessageData.model_validate(result),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
 @router.get("/memberships/me", response_model=SuccessEnvelope[MembershipOverview])
 async def get_membership(
     request: Request, principal: CurrentPrincipalDependency, session: SessionDependency
 ) -> SuccessEnvelope[MembershipOverview]:
+    MembershipService.require_personal_membership(principal)
     result = await MembershipService(session).overview(principal.user_id)
     return SuccessEnvelope(
         data=MembershipOverview.model_validate(result),
@@ -286,6 +316,7 @@ async def buy_membership(
         str, Header(alias="Idempotency-Key", min_length=1, max_length=128)
     ],
 ) -> SuccessEnvelope[MembershipData]:
+    MembershipService.require_personal_membership(principal)
     result = await MembershipService(session).purchase(
         principal.user_id,
         plan_id,
@@ -310,6 +341,7 @@ async def quote_membership(
     principal: CurrentPrincipalDependency,
     session: SessionDependency,
 ) -> SuccessEnvelope[QuoteData]:
+    MembershipService.require_personal_membership(principal)
     result = await MembershipService(session).quote(
         principal.user_id,
         plan_id,
@@ -331,6 +363,7 @@ async def submit_diamond_application(
     principal: CsrfProtectedPrincipalDependency,
     session: SessionDependency,
 ) -> SuccessEnvelope[DiamondApplicationData]:
+    MembershipService.require_personal_membership(principal)
     result = await MembershipService(session).submit_diamond_application(
         principal, payload.statement
     )
@@ -349,6 +382,7 @@ async def my_diamond_applications(
     principal: CurrentPrincipalDependency,
     session: SessionDependency,
 ) -> SuccessEnvelope[DiamondApplicationListData]:
+    MembershipService.require_personal_membership(principal)
     rows = await MembershipService(session).my_diamond_applications(principal.user_id)
     return SuccessEnvelope(
         data=DiamondApplicationListData(
@@ -415,6 +449,7 @@ async def my_benefit_requests(
     principal: CurrentPrincipalDependency,
     session: SessionDependency,
 ) -> SuccessEnvelope[BenefitRequestListData]:
+    MembershipService.require_personal_membership(principal)
     rows = await MembershipService(session).my_benefit_requests(principal.user_id)
     return SuccessEnvelope(
         data=BenefitRequestListData(
@@ -434,6 +469,7 @@ async def submit_benefit_request(
     principal: CsrfProtectedPrincipalDependency,
     session: SessionDependency,
 ) -> SuccessEnvelope[BenefitRequestData]:
+    MembershipService.require_personal_membership(principal)
     result = await MembershipService(session).submit_benefit_request(
         principal, benefit=payload.benefit, statement=payload.statement
     )
@@ -452,6 +488,7 @@ async def collaboration_needs(
     principal: CurrentPrincipalDependency,
     session: SessionDependency,
 ) -> SuccessEnvelope[CollaborationNeedListData]:
+    MembershipService.require_personal_membership(principal)
     rows = await MembershipService(session).collaboration_needs(principal)
     return SuccessEnvelope(
         data=CollaborationNeedListData(
@@ -618,24 +655,28 @@ async def get_chat_access(
 
 @router.get(
     "/community/chat/{room}/messages",
-    response_model=SuccessEnvelope[list[ChatMessageData]],
+    response_model=SuccessEnvelope[ChatMessagePageData],
 )
 async def get_chat(
     room: Literal["MEMBER", "COMPANION", "PRESTIGE"],
     request: Request,
     principal: CurrentPrincipalDependency,
     session: SessionDependency,
-) -> SuccessEnvelope[list[ChatMessageData]]:
-    result = await MembershipService(session).chat(principal, room)
+    cursor: Annotated[str | None, Query(min_length=1, max_length=512)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> SuccessEnvelope[ChatMessagePageData]:
+    result = await MembershipService(session).chat_history(
+        principal, room, cursor=cursor, limit=limit
+    )
     return SuccessEnvelope(
-        data=[ChatMessageData.model_validate(item) for item in result],
+        data=ChatMessagePageData.model_validate(result),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 
 
 @router.post(
     "/community/chat/{room}/messages",
-    response_model=SuccessEnvelope[list[ChatMessageData]],
+    response_model=SuccessEnvelope[ChatMessageData],
 )
 async def send_chat(
     room: Literal["MEMBER", "COMPANION", "PRESTIGE"],
@@ -643,9 +684,9 @@ async def send_chat(
     request: Request,
     principal: CsrfProtectedPrincipalDependency,
     session: SessionDependency,
-) -> SuccessEnvelope[list[ChatMessageData]]:
-    result = await MembershipService(session).chat(principal, room, payload.body)
+) -> SuccessEnvelope[ChatMessageData]:
+    result = await MembershipService(session).send_chat(principal, room, payload.body)
     return SuccessEnvelope(
-        data=[ChatMessageData.model_validate(item) for item in result],
+        data=ChatMessageData.model_validate(result),
         meta=ResponseMeta(request_id=request.state.request_id),
     )

@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MembershipAdminWorkspace } from "./membership-admin-workspace";
 
 const api = vi.hoisted(() => ({
+  plans: vi.fn(),
   overview: vi.fn(),
   publishPlan: vi.fn(),
   retirePlan: vi.fn(),
@@ -38,7 +39,15 @@ function mount() {
 describe("membership administration", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    api.overview.mockResolvedValue({ plans: [] });
+    api.plans.mockResolvedValue({
+      plans: [],
+      member: {
+        name: "Member",
+        description: "Basic tier",
+        benefits: [],
+        conditions: "",
+      },
+    });
     api.diamondApplications.mockResolvedValue({
       applications: [
         {
@@ -52,6 +61,36 @@ describe("membership administration", () => {
       ],
     });
     api.benefitRequests.mockResolvedValue({ requests: [] });
+  });
+
+  it("loads the plan catalog without loading a personal membership", async () => {
+    api.plans.mockResolvedValue({
+      plans: [
+        {
+          id: "silver-plan",
+          name: "Existing Silver",
+          tier: "SILVER",
+          amountMinor: 490_000,
+          durationDays: 365,
+          description: "Membership package",
+          benefits: ["Community talks"],
+          conditions: "",
+          active: true,
+        },
+      ],
+      member: {
+        name: "Member",
+        description: "Basic tier",
+        benefits: [],
+        conditions: "",
+      },
+    });
+
+    mount();
+
+    expect(await screen.findByText("Existing Silver")).toBeDefined();
+    expect(api.plans).toHaveBeenCalledOnce();
+    expect(api.overview).not.toHaveBeenCalled();
   });
 
   it("allows admins to configure a Silver plan from backend-owned copy", async () => {

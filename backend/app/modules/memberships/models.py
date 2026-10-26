@@ -140,6 +140,12 @@ class MembershipDiamondApplication(Base):
 class CommunityChatMessage(Base):
     __tablename__ = "community_chat_messages"
     __table_args__ = (
+        Index(
+            "ix_community_chat_messages_room_created_id",
+            "room",
+            "created_at",
+            "id",
+        ),
         CheckConstraint(
             "room IN ('MEMBER', 'COMPANION', 'PRESTIGE')", name="valid_room"
         ),
@@ -149,10 +155,11 @@ class CommunityChatMessage(Base):
     user_id: Mapped[UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
-    room: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    room: Mapped[str] = mapped_column(String(16), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     tier_snapshot: Mapped[str] = mapped_column(String(16), nullable=False)
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

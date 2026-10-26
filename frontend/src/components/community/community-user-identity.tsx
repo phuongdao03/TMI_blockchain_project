@@ -1,32 +1,9 @@
 import { BadgeCheck } from "lucide-react";
 import Link from "next/link";
 
+import { membershipTierPalette } from "@/components/membership/membership-tier-palette";
 import { MembershipAvatar } from "@/components/ui/membership-avatar";
 import type { CommunityAuthor, MembershipTier } from "@/lib/api/types";
-
-const membershipLabels: Record<MembershipTier, string> = {
-  MEMBER: "Đồng",
-  SILVER: "Bạc",
-  COMPANION: "Vàng",
-  PRESTIGE: "Kim cương",
-};
-
-const membershipStyles: Record<MembershipTier, string> = {
-  MEMBER: "border-slate-300 bg-slate-100 text-slate-700",
-  SILVER: "border-gray-400/60 bg-gray-200 text-gray-800",
-  COMPANION: "border-amber-600/40 bg-amber-100 text-amber-950",
-  PRESTIGE: "border-sky-700/40 bg-sky-100 text-sky-950",
-};
-
-const avatarStyles: Record<MembershipTier, string> = {
-  MEMBER: "",
-  SILVER:
-    "ring-2 ring-gray-400/80 ring-offset-1 ring-offset-[var(--theme-surface)]",
-  COMPANION:
-    "ring-2 ring-amber-500/70 ring-offset-1 ring-offset-[var(--theme-surface)]",
-  PRESTIGE:
-    "ring-2 ring-sky-600/70 ring-offset-1 ring-offset-[var(--theme-surface)]",
-};
 
 export function CommunityUserIdentity({
   user,
@@ -35,11 +12,13 @@ export function CommunityUserIdentity({
   user: CommunityAuthor;
   size?: number;
 }) {
+  const isMembershipStaff = isMembershipStaffIdentity(user);
   return (
     <div className="flex min-w-0 items-center gap-2.5">
       <MembershipAvatar
         displayName={user.displayName}
         size={size}
+        showFrame={!isMembershipStaff}
         src={user.avatarUrl}
         tier={user.membershipTier ?? "MEMBER"}
       />
@@ -51,7 +30,10 @@ export function CommunityUserIdentity({
           >
             {user.displayName?.trim() || "Thành viên"}
           </Link>
-          <CommunityMembershipBadge tier={user.membershipTier ?? "MEMBER"} />
+          <CommunityMembershipBadge
+            isMembershipStaff={isMembershipStaff}
+            tier={user.membershipTier ?? "MEMBER"}
+          />
         </div>
         <CommunityRoleBadge isAdmin={user.isAdmin} roleLabel={user.roleLabel} />
       </div>
@@ -59,40 +41,65 @@ export function CommunityUserIdentity({
   );
 }
 
-export function CommunityMembershipBadge({ tier }: { tier: MembershipTier }) {
+export function CommunityMembershipBadge({
+  tier,
+  isMembershipStaff = false,
+}: {
+  tier: MembershipTier;
+  isMembershipStaff?: boolean;
+}) {
+  if (isMembershipStaff) return null;
+  const palette = membershipTierPalette[tier];
   return (
     <span
-      aria-label={`Hạng thẻ ${membershipLabels[tier]}`}
-      className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold leading-4 ${membershipStyles[tier]}`}
+      aria-label={`Hạng thẻ ${palette.name}`}
+      className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold leading-4"
+      style={{
+        borderColor: palette.border,
+        backgroundColor: palette.surface,
+        color: palette.ink,
+      }}
     >
       <span aria-hidden="true">✦</span>
-      {membershipLabels[tier]}
+      {palette.name}
     </span>
   );
 }
 
-export function communityAvatarTierClass(tier?: MembershipTier): string {
-  return avatarStyles[tier ?? "MEMBER"];
+export function isMembershipStaffIdentity(
+  user: Pick<CommunityAuthor, "isAdmin" | "roleLabel">,
+): boolean {
+  return (
+    user.isAdmin === true ||
+    user.roleLabel === "Quản trị viên" ||
+    user.roleLabel === "Quản lý hội viên"
+  );
 }
 
 export function getAuthenticatedCommunityIdentity({
   displayName,
   roles = [],
+  permissions = [],
 }: {
   displayName?: string | null;
   roles?: readonly string[];
+  permissions?: readonly string[];
 }) {
   const isAdmin = roles.includes("SUPER_ADMIN");
   const isModerator = !isAdmin && roles.includes("MODERATOR");
+  const isMembershipManager = permissions.includes("memberships.manage");
+  const roleLabel = isAdmin
+    ? "Quản trị viên"
+    : isMembershipManager
+      ? "Quản lý hội viên"
+      : isModerator
+        ? "Thẩm định viên"
+        : null;
   return {
     displayName:
       displayName?.trim() || (isAdmin ? "Quản trị viên THV" : "Thành viên"),
     isAdmin,
-    roleLabel: isAdmin
-      ? "Quản trị viên"
-      : isModerator
-        ? "Thẩm định viên"
-        : null,
+    roleLabel,
   };
 }
 

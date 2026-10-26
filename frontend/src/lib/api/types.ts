@@ -1407,7 +1407,16 @@ export interface CommunityChatMessage {
   body: string;
   tier: MembershipTier;
   createdAt: string;
+  editedAt: string | null;
+  isAdmin: boolean;
+  canEdit: boolean;
   canRemove: boolean;
+}
+
+export interface CommunityChatPage {
+  items: CommunityChatMessage[];
+  hasMore: boolean;
+  nextCursor: string | null;
 }
 
 export interface WalletSummary {

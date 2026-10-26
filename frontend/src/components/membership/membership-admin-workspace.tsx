@@ -20,8 +20,8 @@ export function MembershipAdminWorkspace() {
   );
   const client = useQueryClient();
   const plans = useQuery({
-    queryKey: ["membership", user?.id],
-    queryFn: membershipApi.overview,
+    queryKey: ["membership-plan-catalog"],
+    queryFn: membershipApi.plans,
     enabled: allowed,
   });
   const [name, setName] = useState("");
@@ -66,12 +66,16 @@ export function MembershipAdminWorkspace() {
       setDescription("");
       setBenefitsText("");
       setConditions("");
+      await client.invalidateQueries({
+        queryKey: ["membership-plan-catalog"],
+      });
       await client.invalidateQueries({ queryKey: ["membership"] });
     },
   });
   const retire = useMutation({
     mutationFn: membershipApi.retirePlan,
-    onSuccess: () => client.invalidateQueries({ queryKey: ["membership"] }),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: ["membership-plan-catalog"] }),
   });
   const reviewApplication = useMutation({
     mutationFn: (input: {
