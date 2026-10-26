@@ -1,7 +1,4 @@
 import asyncio
-import hashlib
-import hmac
-import json
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
@@ -13,34 +10,12 @@ from app.modules.auth.session_service import AuthPrincipal
 from app.modules.billing.models import FeeObligation, FeeObligationStatus
 from app.modules.dossiers.models import Category, Dossier, DossierStatus
 from app.modules.media.models import MediaAsset  # noqa: F401
-from app.modules.payments.gateway import MockPaymentGateway, ProviderOrder
+from app.modules.payments.gateway import MockPaymentGateway
 from app.modules.payments.models import PaymentStatus
 from app.modules.payments.service import PaymentService
+from app.modules.wallet.models import Wallet
 
 NOW = datetime(2026, 8, 30, 10, 0, tzinfo=UTC)
-
-
-class ProviderRecheckGateway(MockPaymentGateway):
-    paid = False
-    create_count = 0
-
-    async def create_order(self, **kwargs: object) -> ProviderOrder:
-        self.create_count += 1
-        return await super().create_order(**kwargs)  # type: ignore[arg-type]
-
-    async def get_order(self, provider_order_id: str) -> ProviderOrder:
-        order = await super().get_order(provider_order_id)
-        if not self.paid:
-            return order
-        return ProviderOrder(
-            provider_order_id=order.provider_order_id,
-            checkout_url=order.checkout_url,
-            qr_payload=order.qr_payload,
-            status="PAID",
-            order_code=order.order_code,
-            amount_minor=1_750_000,
-            currency="VND",
-        )
 
 
 def test_owner_checkout_uses_locked_obligation_amount_and_replays() -> None:
@@ -80,7 +55,15 @@ def test_owner_checkout_uses_locked_obligation_amount_and_replays() -> None:
             price_snapshot_json={"amountMinor": 1_750_000},
         )
         async with sessions() as session:
-            session.add_all([owner, category, dossier, obligation])
+            session.add_all(
+                [
+                    owner,
+                    category,
+                    dossier,
+                    obligation,
+                    Wallet(user_id=owner.id, balance_minor=2_000_000),
+                ]
+            )
             await session.commit()
 
         ids = iter(
@@ -130,27 +113,13 @@ def test_owner_checkout_uses_locked_obligation_amount_and_replays() -> None:
         assert first.fee_obligation_id == obligation.id
         assert first.amount_minor == 1_750_000
         assert first.status is PaymentStatus.PENDING
-        assert first.expires_at == NOW + timedelta(minutes=30)
-        timestamp = int(NOW.timestamp())
-        body = json.dumps(
-            {
-                "event_id": "billing-paid-1",
-                "event_type": "payment.paid",
-                "provider_order_id": "mock-billing-checkout",
-                "amount_minor": 1_750_000,
-                "currency": "VND",
-            },
-            separators=(",", ":"),
-        ).encode()
-        signature = hmac.new(
-            b"payment-secret",
-            str(timestamp).encode() + b"." + body,
-            hashlib.sha256,
-        ).hexdigest()
-        paid = await service.process_webhook(
-            raw_body=body,
-            signature=signature,
-            timestamp=timestamp,
+        assert first.provider == "wallet"
+        assert first.provider_order_id is None
+        assert first.expires_at == NOW + timedelta(days=7)
+        paid = await service.pay_with_wallet(
+            principal,
+            first.id,
+            idempotency_key="obligation-wallet-payment",
         )
         async with sessions() as session:
             settled = await session.get(FeeObligation, obligation.id)
@@ -165,7 +134,7 @@ def test_owner_checkout_uses_locked_obligation_amount_and_replays() -> None:
     asyncio.run(exercise())
 
 
-def test_expired_checkout_rechecks_provider_before_replacement() -> None:
+def test_wallet_obligation_request_never_creates_external_checkout() -> None:
     async def exercise() -> None:
         engine = create_async_engine("sqlite+aiosqlite://")
         sessions = async_sessionmaker(engine, expire_on_commit=False)
@@ -204,7 +173,7 @@ def test_expired_checkout_rechecks_provider_before_replacement() -> None:
         async with sessions() as session:
             session.add_all([owner, category, dossier, obligation])
             await session.commit()
-        gateway = ProviderRecheckGateway(
+        gateway = MockPaymentGateway(
             webhook_secret="payment-secret", uuid_factory=lambda: "recheck"
         )
         current = [NOW]
@@ -228,22 +197,21 @@ def test_expired_checkout_rechecks_provider_before_replacement() -> None:
             principal, obligation.id, idempotency_key="recheck-first"
         )
         current[0] = NOW + timedelta(seconds=61)
-        gateway.paid = True
-
         resolved = await service.create_checkout_for_obligation(
             principal, obligation.id, idempotency_key="recheck-second"
         )
 
         assert resolved.id == first.id
-        assert resolved.status is PaymentStatus.PAID
-        assert gateway.create_count == 1
+        assert resolved.status is PaymentStatus.PENDING
+        assert resolved.provider == "wallet"
+        assert resolved.provider_order_id is None
         async with sessions() as session:
             settled = await session.get(FeeObligation, obligation.id)
             stored_dossier = await session.get(Dossier, dossier.id)
         assert settled is not None
-        assert settled.status is FeeObligationStatus.PAID
+        assert settled.status is FeeObligationStatus.OPEN
         assert stored_dossier is not None
-        assert stored_dossier.status is DossierStatus.PAID
+        assert stored_dossier.status is DossierStatus.PAYMENT_PENDING
         await service.close()
         await engine.dispose()
 

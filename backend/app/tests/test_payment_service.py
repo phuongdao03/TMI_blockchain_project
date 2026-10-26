@@ -41,6 +41,7 @@ from app.modules.payments.models import (
     PaymentStatusHistory,
 )
 from app.modules.payments.service import PaymentService
+from app.modules.wallet.models import Wallet, WalletJournal
 
 NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
 DOSSIER_ID = UUID("1d561c46-c710-494b-9b11-402af341acbd")
@@ -291,6 +292,81 @@ def test_admin_issues_exact_payment_amount_and_notifies_owner() -> None:
             dossier = await session.get(Dossier, DOSSIER_ID)
             assert dossier is not None
             assert dossier.status is DossierStatus.PAYMENT_PENDING
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_admin_fee_notice_debits_owner_wallet_once_when_funded() -> None:
+    async def exercise() -> None:
+        issue_queue: list[UUID] = []
+        gateway = TrackingGateway(
+            webhook_secret="payment-secret",
+            uuid_factory=lambda: "provider-order",
+        )
+        service, sessions, engine, applicant = await _service(
+            issue_queue=issue_queue, gateway=gateway
+        )
+        operator = AuthPrincipal(
+            user_id=ADMIN_ID,
+            session_id=uuid4(),
+            email="finance@cnsgroup.vn",
+            roles=("SUPER_ADMIN",),
+            permissions=("payments.issue",),
+        )
+        async with sessions() as session:
+            session.add(Wallet(user_id=applicant.user_id, balance_minor=2_000_000))
+            await session.commit()
+
+        order = await service.issue_order(
+            operator,
+            DOSSIER_ID,
+            idempotency_key="funded-admin-fee-1",
+            amount_minor=1_500_000,
+            currency="VND",
+            description="Phí xác lập hồ sơ",
+            due_at=NOW.replace(day=7, month=8),
+        )
+        replay = await service.issue_order(
+            operator,
+            DOSSIER_ID,
+            idempotency_key="funded-admin-fee-1",
+            amount_minor=1_500_000,
+            currency="VND",
+            description="Phí xác lập hồ sơ",
+            due_at=NOW.replace(day=7, month=8),
+        )
+
+        assert order.id == replay.id
+        assert order.status is PaymentStatus.PAID
+        assert order.provider == "wallet"
+        assert order.paid_at == NOW
+        assert gateway.create_called is False
+        assert issue_queue == [DOSSIER_ID]
+        async with sessions() as session:
+            wallet = await session.get(Wallet, applicant.user_id)
+            dossier = await session.get(Dossier, DOSSIER_ID)
+            journal_rows = list(
+                await session.scalars(
+                    select(WalletJournal).where(
+                        WalletJournal.user_id == applicant.user_id
+                    )
+                )
+            )
+            notifications = list(
+                await session.scalars(
+                    select(Notification).where(
+                        Notification.user_id == applicant.user_id
+                    )
+                )
+            )
+        assert wallet is not None and wallet.balance_minor == 500_000
+        assert dossier is not None and dossier.status is DossierStatus.PAID
+        assert len(journal_rows) == 1
+        assert journal_rows[0].wallet_delta == -1_500_000
+        assert [item.type for item in notifications] == ["PAYMENT_CONFIRMED"]
+
         await service.close()
         await engine.dispose()
 

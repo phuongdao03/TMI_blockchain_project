@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
@@ -33,6 +34,15 @@ def valid_key(key: str) -> str:
     if not key or len(key) > 128:
         raise PaymentConflictError("Khóa xác nhận giao dịch không hợp lệ.")
     return key
+
+
+@dataclass(frozen=True, slots=True)
+class WalletCheckoutDetails:
+    qr_payload: str | None
+    bank_bin: str | None
+    bank_account_number: str | None
+    bank_account_name: str | None
+    transfer_description: str | None
 
 
 async def read_wallet(
@@ -207,6 +217,29 @@ class WalletService:
 
     async def summary(self, user_id: UUID) -> dict[str, object]:
         return await read_wallet(self.session, user_id, self.provider)
+
+    async def checkout_details(
+        self, user_id: UUID, identifier: UUID
+    ) -> WalletCheckoutDetails | None:
+        async with self.session.begin():
+            order = await self._required(identifier, user_id)
+            if order.provider_order_id is None or order.status == "PAID":
+                return None
+            provider_order_id = order.provider_order_id
+            order_code = order.order_code
+            amount = order.amount_minor
+        try:
+            provider_order = await self.gateway.get_order(provider_order_id)
+        except PaymentGatewayError as exc:
+            raise PaymentProviderError() from exc
+        self._validate(provider_order, order_code, amount)
+        return WalletCheckoutDetails(
+            qr_payload=provider_order.qr_payload,
+            bank_bin=provider_order.bank_bin,
+            bank_account_number=provider_order.bank_account_number,
+            bank_account_name=provider_order.bank_account_name,
+            transfer_description=provider_order.transfer_description,
+        )
 
     async def topup(self, user_id: UUID, amount: int, key: str) -> WalletTopup:
         key = valid_key(key)

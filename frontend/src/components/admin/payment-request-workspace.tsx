@@ -355,12 +355,14 @@ export function PaymentRequestWorkspace({
             <div>
               <h2 className="font-bold">
                 {mode === "PAID"
-                  ? "Đã gửi thông báo cho người nộp"
+                  ? issue.data?.status === "PAID"
+                    ? "Đã trừ phí từ ví người nộp"
+                    : "Đã gửi yêu cầu thanh toán cho người nộp"
                   : "Hồ sơ đã sẵn sàng để ghi nhận"}
               </h2>
               <p className="mt-1 text-sm">
                 {mode === "PAID" && "amountMinor" in success
-                  ? `${new Intl.NumberFormat("vi-VN").format(success.amountMinor)} VND · đang chờ thanh toán`
+                  ? `${new Intl.NumberFormat("vi-VN").format(success.amountMinor)} VND · ${issue.data?.status === "PAID" ? "đã thanh toán bằng ví" : "đang chờ người nộp thanh toán bằng ví"}`
                   : "Đã ghi nhận miễn phí và chuyển hồ sơ sang bước ghi nhận."}
               </p>
             </div>

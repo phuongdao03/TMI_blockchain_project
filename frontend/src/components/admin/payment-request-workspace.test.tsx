@@ -131,6 +131,7 @@ describe("PaymentRequestWorkspace", () => {
       id: "payment-1",
       orderCode: "123456",
       amountMinor: 1_500_000,
+      status: "PENDING",
     });
     renderWorkspace();
 
@@ -161,8 +162,29 @@ describe("PaymentRequestWorkspace", () => {
       description: "Phí xác lập và phát hành bằng xác lập",
     });
     expect(
-      await screen.findByText("Đã gửi thông báo cho người nộp"),
+      await screen.findByText("Đã gửi yêu cầu thanh toán cho người nộp"),
     ).toBeTruthy();
+  });
+
+  it("reports that an adequately funded wallet was charged immediately", async () => {
+    issueMock.mockResolvedValue({
+      id: "payment-paid",
+      orderCode: "123457",
+      amountMinor: 1_500_000,
+      status: "PAID",
+    });
+    renderWorkspace("9155dbf5-bb3e-449d-8bf0-9572cc642cac");
+
+    await screen.findByText(/CNS-2026-C53E911EDDDA/);
+    fireEvent.change(screen.getByLabelText("Số phí cần thu (VND)"), {
+      target: { value: "1500000" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Gửi thông báo thu phí" }),
+    );
+
+    expect(await screen.findByText("Đã trừ phí từ ví người nộp")).toBeTruthy();
+    expect(screen.getByText(/đã thanh toán bằng ví/)).toBeTruthy();
   });
 
   it("can waive the fee without creating a payment order", async () => {

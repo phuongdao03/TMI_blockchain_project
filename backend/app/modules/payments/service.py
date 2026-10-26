@@ -7,6 +7,7 @@ from uuid import UUID, uuid4, uuid5
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import DomainError
 from app.modules.audit.service import AuditService
 from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.repositories import AuthRepository
@@ -354,7 +355,6 @@ class PaymentService:
         if not normalized_key or len(normalized_key) > 128:
             raise PaymentConflictError("Idempotency key is invalid.")
         result: PaymentOrderView | None = None
-        created_reservation = False
         replay_id: UUID | None = None
         async with self._session.begin():
             replay = await self._payments.get_by_idempotency(normalized_key)
@@ -365,7 +365,8 @@ class PaymentService:
                 await self._require_access(principal, dossier)
                 replay_id = replay.id
         if replay_id is not None:
-            return await self._ensure_checkout(replay_id)
+            async with self._session.begin():
+                return self._view(await self._required_order(replay_id))
         expired_order_id: UUID | None = None
         async with self._session.begin():
             obligation = await self._billing.obligation_by_id(obligation_id)
@@ -379,13 +380,11 @@ class PaymentService:
             if active is not None and self._utc(active.expires_at) <= self._clock():
                 expired_order_id = active.id
         if expired_order_id is not None:
-            reconciled, should_issue = await self._reconcile_provider_order(
-                expired_order_id
-            )
-            if should_issue and self._enqueue_certificate_issue is not None:
-                self._enqueue_certificate_issue(reconciled.dossier_id)
-            if reconciled.status is PaymentStatus.PAID:
-                return reconciled
+            async with self._session.begin():
+                expired_order = await self._required_order(
+                    expired_order_id, for_update=True
+                )
+                self._expire_if_needed(expired_order)
         async with self._session.begin():
             obligation = await self._billing.obligation_by_id(
                 obligation_id, for_update=True
@@ -423,17 +422,17 @@ class PaymentService:
                 due_at = obligation.due_at
                 if due_at.tzinfo is None:
                     due_at = due_at.replace(tzinfo=UTC)
-                expires_at = min(self._clock() + self._order_ttl, due_at)
+                expires_at = max(self._clock() + self._order_ttl, due_at)
                 order = PaymentOrder(
                     id=order_id,
                     order_code=order_code,
                     dossier_id=dossier.id,
                     initiated_by_user_id=principal.user_id,
                     fee_obligation_id=obligation.id,
-                    provider=self._provider_name,
+                    provider="wallet",
                     amount_minor=obligation.amount_minor,
                     currency=obligation.currency,
-                    status=PaymentStatus.PROCESSING,
+                    status=PaymentStatus.PENDING,
                     expires_at=expires_at,
                     idempotency_key=normalized_key,
                     metadata_json={
@@ -443,24 +442,19 @@ class PaymentService:
                 )
                 self._payments.add_order(order)
                 self._record_initial_status(
-                    order, source="CHECKOUT_CREATED", actor=principal.user_id
+                    order, source="WALLET_PAYMENT_REQUESTED", actor=principal.user_id
                 )
-                created_reservation = True
                 self._audit(
-                    "payment.checkout.created",
+                    "payment.wallet.requested",
                     order.id,
                     user_id=principal.user_id,
-                    status=PaymentStatus.PROCESSING,
+                    status=PaymentStatus.PENDING,
                 )
                 await self._session.flush()
                 result = self._view(order)
             await self._session.flush()
         if result is None:
             raise RuntimeError("Payment checkout did not produce a result.")
-        if result.provider_order_id is None:
-            return await self._ensure_checkout(
-                result.id, newly_reserved=created_reservation
-            )
         return result
 
     async def issue_order(
@@ -499,6 +493,7 @@ class PaymentService:
             normalized_due_at = None
 
         replay_id: UUID | None = None
+        newly_paid = False
         async with self._session.begin():
             replay = await self._payments.get_by_idempotency(normalized_key)
             if replay is not None:
@@ -534,7 +529,7 @@ class PaymentService:
                 order_code=order_code,
                 dossier_id=dossier.id,
                 initiated_by_user_id=principal.user_id,
-                provider=self._provider_name,
+                provider="wallet",
                 amount_minor=amount_minor,
                 currency=normalized_currency,
                 status=PaymentStatus.PENDING,
@@ -561,21 +556,65 @@ class PaymentService:
                 reason_code="PAYMENT_REQUEST_ISSUED",
                 note=normalized_description,
             )
-            self._session.add(
-                Notification(
+            wallet_key = f"admin-fee:{order_id}"
+            try:
+                await WalletLedger(self._session).post(
                     user_id=dossier.owner_user_id,
-                    source_event_id=order_id,
-                    type="PAYMENT_REQUEST_ISSUED",
-                    title="Hồ sơ có yêu cầu thanh toán",
-                    body=f"Số tiền cần thanh toán: {amount_minor:,} VND.",
-                    data_json={
-                        "dossierId": str(dossier.id),
-                        "paymentOrderId": str(order_id),
-                        "actionPath": f"/payments/{order_id}",
-                    },
-                    created_at=now,
+                    delta=-amount_minor,
+                    kind="PAYMENT",
+                    key=wallet_key,
+                    reference=f"payment:{order_id}",
+                    description=normalized_description,
                 )
-            )
+            except DomainError as exc:
+                if exc.code != "WALLET_INSUFFICIENT_FUNDS":
+                    raise
+                self._session.add(
+                    Notification(
+                        user_id=dossier.owner_user_id,
+                        source_event_id=order_id,
+                        type="PAYMENT_REQUEST_ISSUED",
+                        title="Hồ sơ có yêu cầu thanh toán",
+                        body=(
+                            f"Số tiền cần thanh toán: {amount_minor:,} VND. "
+                            "Số dư ví chưa đủ; vui lòng nạp thêm để hoàn tất."
+                        ),
+                        data_json={
+                            "dossierId": str(dossier.id),
+                            "paymentOrderId": str(order_id),
+                            "actionPath": f"/payments/{order_id}",
+                        },
+                        created_at=now,
+                    )
+                )
+            else:
+                self._workflow.transition(
+                    dossier,
+                    target=DossierStatus.PAID,
+                    actor_user_id=principal.user_id,
+                    allowed_sources={DossierStatus.PAYMENT_PENDING},
+                    reason_code="ADMIN_FEE_WALLET_PAYMENT",
+                    note=normalized_description,
+                )
+                order.metadata_json = {**order.metadata_json, "wallet_key": wallet_key}
+                order.paid_at = now
+                self._transition_status(
+                    order,
+                    PaymentStatus.PAID,
+                    source="WALLET",
+                    actor=principal.user_id,
+                )
+                await self._settle_fee_obligation(order)
+                await self._add_paid_notification(
+                    dossier, order, source_event_id=uuid5(order.id, "wallet-paid")
+                )
+                self._audit(
+                    "payment.wallet.confirmed",
+                    order.id,
+                    user_id=principal.user_id,
+                    status=order.status,
+                )
+                newly_paid = True
             self._audit(
                 "payment.request.issued",
                 order_id,
@@ -584,7 +623,10 @@ class PaymentService:
                 reason=normalized_description,
             )
             await self._session.flush()
+            await self._session.refresh(order)
             result = self._view(order)
+        if newly_paid and self._enqueue_certificate_issue is not None:
+            self._enqueue_certificate_issue(result.dossier_id)
         return result
 
     async def start_order_checkout(
@@ -601,6 +643,10 @@ class PaymentService:
             order = await self._required_order(order_id, for_update=True)
             dossier = await self._required_dossier(order.dossier_id)
             await self._require_access(principal, dossier)
+            if order.provider == "wallet":
+                raise PaymentConflictError(
+                    "This payment request uses the personal wallet."
+                )
             self._expire_if_needed(order)
             if order.status is PaymentStatus.EXPIRED:
                 expired = True

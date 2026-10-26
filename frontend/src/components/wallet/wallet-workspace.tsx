@@ -1,13 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpRight, RefreshCw, Wallet } from "lucide-react";
+import { RefreshCw, Wallet } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { walletApi } from "@/lib/api/client";
-import type { WalletSummary } from "@/lib/api/types";
+import type { WalletSummary, WalletTopup } from "@/lib/api/types";
 import { useAuthUser } from "@/lib/auth/user-context";
 import { safeLocalDestination } from "@/lib/auth/safe-destination";
 
@@ -39,17 +40,29 @@ export function WalletWorkspace({
   });
   const [amount, setAmount] = useState("");
   const [key, setKey] = useState(() => crypto.randomUUID());
+  const [activeTopup, setActiveTopup] = useState<WalletTopup | null>(null);
   const topup = useMutation({
     mutationFn: () => walletApi.topup(Number(amount), key),
-    onSuccess: () => client.invalidateQueries({ queryKey }),
+    onSuccess: (result) => {
+      setActiveTopup(result.status === "PAID" ? null : result);
+      void client.invalidateQueries({ queryKey });
+    },
   });
   const reconcile = useMutation({
     mutationFn: walletApi.reconcile,
-    onSuccess: () => client.invalidateQueries({ queryKey }),
+    onSuccess: (result) => {
+      if (result.status === "PAID" && activeTopup?.id === result.id) {
+        setActiveTopup(null);
+      }
+      void client.invalidateQueries({ queryKey });
+    },
   });
   const resume = useMutation({
     mutationFn: walletApi.resume,
-    onSuccess: () => client.invalidateQueries({ queryKey }),
+    onSuccess: (result) => {
+      setActiveTopup(result.status === "PAID" ? null : result);
+      void client.invalidateQueries({ queryKey });
+    },
   });
   if (wallet.isPending) return <p role="status">Đang tải ví của bạn…</p>;
   if (!wallet.data)
@@ -64,6 +77,10 @@ export function WalletWorkspace({
     /^\d+$/.test(amount) &&
     Number(amount) >= 1000 &&
     Number(amount) <= 1_000_000_000;
+  const isAdmin = user?.roles.includes("SUPER_ADMIN") ?? false;
+  const activeTopupPaid = data.topups.some(
+    (item) => item.id === activeTopup?.id && item.status === "PAID",
+  );
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-8">
       <header>
@@ -113,67 +130,162 @@ export function WalletWorkspace({
           tắt.
         </p>
       )}
-      <section aria-labelledby="topup-title">
-        <h2 id="topup-title" className="text-xl font-bold">
-          Nạp tiền vào ví
-        </h2>
-        <form
-          className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (validAmount && !topup.isPending && !previewData) topup.mutate();
-          }}
+      {isAdmin ? (
+        <section
+          aria-label="Nạp tiền vào ví"
+          className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-5"
         >
-          <label
-            className="flex-1 text-sm font-semibold"
-            htmlFor="wallet-topup"
-          >
-            Số tiền (VNĐ)
-            <input
-              id="wallet-topup"
-              disabled={Boolean(previewData) || topup.isPending}
-              inputMode="numeric"
-              pattern="[0-9]+"
-              required
-              autoComplete="off"
-              className="mt-2 min-h-12 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-base"
-              value={amount}
-              onChange={(event) => {
-                setAmount(event.target.value);
-                setKey(crypto.randomUUID());
-                topup.reset();
-              }}
-              aria-describedby="topup-help"
-            />
-          </label>
-          <Button
-            type="submit"
-            disabled={Boolean(previewData) || !validAmount || topup.isPending}
-          >
-            {topup.isPending ? "Đang tạo giao dịch…" : "Nạp tiền"}
-          </Button>
-        </form>
-        <p id="topup-help" className="mt-2 text-sm text-[var(--theme-muted)]">
-          Nhập số nguyên từ 1.000đ đến 1.000.000.000đ. Số dư chỉ tăng sau khi
-          thanh toán được xác minh.
-        </p>
-        {topup.isError && (
-          <p role="alert" className="mt-3 text-red-700">
-            Chưa thể tạo giao dịch. Thử lại sẽ tiếp tục cùng yêu cầu nạp tiền.
+          <h2 className="text-xl font-bold">Ví quản trị</h2>
+          <p className="mt-2 text-[var(--theme-muted)]">
+            Tài khoản quản trị không thể tạo giao dịch nạp tiền vào ví.
           </p>
-        )}
-        {topup.data?.checkoutUrl && (
-          <a
-            className="mt-4 inline-flex min-h-11 items-center gap-2 font-semibold text-primary-700 underline"
-            href={topup.data.checkoutUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+        </section>
+      ) : (
+        <section aria-labelledby="topup-title">
+          <h2 id="topup-title" className="text-xl font-bold">
+            Nạp tiền vào ví
+          </h2>
+          <form
+            className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (validAmount && !topup.isPending && !previewData)
+                topup.mutate();
+            }}
           >
-            Mở cổng thanh toán{" "}
-            <ArrowUpRight aria-hidden="true" className="size-4" />
-          </a>
-        )}
-      </section>
+            <label
+              className="flex-1 text-sm font-semibold"
+              htmlFor="wallet-topup"
+            >
+              Số tiền (VNĐ)
+              <input
+                id="wallet-topup"
+                disabled={Boolean(previewData) || topup.isPending}
+                inputMode="numeric"
+                pattern="[0-9]+"
+                required
+                autoComplete="off"
+                className="mt-2 min-h-12 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-base"
+                value={amount}
+                onChange={(event) => {
+                  setAmount(event.target.value);
+                  setKey(crypto.randomUUID());
+                  topup.reset();
+                }}
+                aria-describedby="topup-help"
+              />
+            </label>
+            <Button
+              type="submit"
+              disabled={Boolean(previewData) || !validAmount || topup.isPending}
+            >
+              {topup.isPending ? "Đang tạo giao dịch…" : "Nạp tiền"}
+            </Button>
+          </form>
+          <p id="topup-help" className="mt-2 text-sm text-[var(--theme-muted)]">
+            Nhập số nguyên từ 1.000đ đến 1.000.000.000đ. Số dư chỉ tăng sau khi
+            thanh toán được xác minh.
+          </p>
+          {topup.isError && (
+            <p role="alert" className="mt-3 text-red-700">
+              Chưa thể tạo giao dịch. Thử lại sẽ tiếp tục cùng yêu cầu nạp tiền.
+            </p>
+          )}
+        </section>
+      )}
+      {activeTopup && !activeTopupPaid && !isAdmin && (
+        <section
+          aria-labelledby="topup-payment-title"
+          className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-7"
+          aria-live="polite"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary-800">
+                Thanh toán an toàn trong trang
+              </p>
+              <h2 id="topup-payment-title" className="mt-1 text-xl font-bold">
+                Quét mã để nạp {formatVnd(activeTopup.amountMinor)}
+              </h2>
+              <p className="mt-1 text-sm text-[var(--theme-muted)]">
+                Mã giao dịch {activeTopup.orderCode} · Hạn đến{" "}
+                {new Date(activeTopup.expiresAt).toLocaleString("vi-VN")}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setActiveTopup(null)}
+              type="button"
+            >
+              Ẩn hướng dẫn
+            </Button>
+          </div>
+          <div className="mt-6 grid gap-6 sm:grid-cols-[15rem_minmax(0,1fr)] sm:items-center">
+            {activeTopup.qrPayload ? (
+              <Image
+                alt={`Mã QR thanh toán ${formatVnd(activeTopup.amountMinor)}`}
+                className="mx-auto rounded-xl border border-[var(--theme-border)] bg-white p-2"
+                height={240}
+                src={`/api/v1/wallet/topups/${encodeURIComponent(activeTopup.id)}/qr`}
+                unoptimized
+                width={240}
+              />
+            ) : (
+              <p className="rounded-xl bg-[var(--theme-elevated)] p-4 text-sm text-[var(--theme-muted)]">
+                Mã QR chưa sẵn sàng. Vui lòng dùng thông tin chuyển khoản hoặc
+                thử khôi phục giao dịch.
+              </p>
+            )}
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              {activeTopup.bankAccountName && (
+                <div>
+                  <dt className="text-[var(--theme-muted)]">Chủ tài khoản</dt>
+                  <dd className="mt-1 font-semibold">
+                    {activeTopup.bankAccountName}
+                  </dd>
+                </div>
+              )}
+              {activeTopup.bankBin && (
+                <div>
+                  <dt className="text-[var(--theme-muted)]">Mã ngân hàng</dt>
+                  <dd className="mt-1 font-semibold">{activeTopup.bankBin}</dd>
+                </div>
+              )}
+              {activeTopup.bankAccountNumber && (
+                <div>
+                  <dt className="text-[var(--theme-muted)]">Số tài khoản</dt>
+                  <dd className="mt-1 font-semibold">
+                    {activeTopup.bankAccountNumber}
+                  </dd>
+                </div>
+              )}
+              <div>
+                <dt className="text-[var(--theme-muted)]">Số tiền chuyển</dt>
+                <dd className="mt-1 font-semibold">
+                  {formatVnd(activeTopup.amountMinor)}
+                </dd>
+              </div>
+              {activeTopup.transferDescription && (
+                <div className="sm:col-span-2">
+                  <dt className="text-[var(--theme-muted)]">
+                    Nội dung chuyển khoản
+                  </dt>
+                  <dd className="mt-1 break-all rounded-lg bg-[var(--theme-elevated)] p-3 font-mono font-semibold">
+                    {activeTopup.transferDescription}
+                  </dd>
+                </div>
+              )}
+              <div className="sm:col-span-2">
+                <dt className="text-[var(--theme-muted)]">Trạng thái</dt>
+                <dd className="mt-1 font-semibold">
+                  Đang chờ xác minh. Số dư ví chỉ tăng sau khi nhận được xác
+                  nhận thanh toán.
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+      )}
       <section aria-labelledby="pending-title">
         <h2 id="pending-title" className="text-xl font-bold">
           Các lần nạp gần đây
@@ -206,26 +318,17 @@ export function WalletWorkspace({
                 </div>
                 {item.status !== "PAID" && (
                   <div className="flex flex-wrap gap-2">
-                    {item.checkoutUrl && (
-                      <a
-                        className="inline-flex min-h-11 items-center px-3 text-sm font-semibold underline"
-                        href={item.checkoutUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    {["PENDING", "PROCESSING"].includes(item.status) && (
+                      <Button
+                        variant="outline"
+                        disabled={Boolean(previewData) || resume.isPending}
+                        onClick={() => resume.mutate(item.id)}
                       >
-                        Tiếp tục nạp
-                      </a>
+                        {resume.isPending && resume.variables === item.id
+                          ? "Đang tải…"
+                          : "Hiện mã QR"}
+                      </Button>
                     )}
-                    {!item.checkoutUrl &&
-                      ["PENDING", "PROCESSING"].includes(item.status) && (
-                        <Button
-                          variant="outline"
-                          disabled={Boolean(previewData) || resume.isPending}
-                          onClick={() => resume.mutate(item.id)}
-                        >
-                          Khôi phục lần nạp
-                        </Button>
-                      )}
                     <Button
                       variant="outline"
                       disabled={Boolean(previewData) || reconcile.isPending}

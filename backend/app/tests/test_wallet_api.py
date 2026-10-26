@@ -52,6 +52,23 @@ def test_wallet_http_contract_csrf_verified_funding_and_ownership() -> None:
                         headers={"Idempotency-Key": "fund"},
                     )
                 ).status_code == 403
+                principal[0] = AuthPrincipal(
+                    user_id=owner.user_id,
+                    session_id=owner.session_id,
+                    email=owner.email,
+                    roles=("SUPER_ADMIN",),
+                )
+                assert (
+                    await client.post(
+                        "/api/v1/wallet/topups",
+                        json={"amountMinor": 10_000},
+                        headers={
+                            "Idempotency-Key": "admin-fund",
+                            "X-CSRF-Token": csrf,
+                        },
+                    )
+                ).status_code == 403
+                principal[0] = owner
                 headers = {"Idempotency-Key": "fund", "X-CSRF-Token": csrf}
                 assert (
                     await client.post(
@@ -67,6 +84,30 @@ def test_wallet_http_contract_csrf_verified_funding_and_ownership() -> None:
                 )
                 assert created.status_code == 200
                 topup = created.json()["data"]
+                assert topup["qrPayload"]
+                qr = await client.get(f"/api/v1/wallet/topups/{topup['id']}/qr")
+                assert qr.status_code == 200
+                assert qr.headers["content-type"] == "image/png"
+                assert qr.content.startswith(b"\x89PNG\r\n\x1a\n")
+                principal[0] = AuthPrincipal(
+                    user_id=owner.user_id,
+                    session_id=owner.session_id,
+                    email=owner.email,
+                    roles=("SUPER_ADMIN",),
+                )
+                assert (
+                    await client.post(
+                        f"/api/v1/wallet/topups/{topup['id']}/reconcile",
+                        headers=headers,
+                    )
+                ).status_code == 403
+                assert (
+                    await client.post(
+                        f"/api/v1/wallet/topups/{topup['id']}/checkout",
+                        headers=headers,
+                    )
+                ).status_code == 403
+                principal[0] = owner
                 body, signature, stamp = _webhook(
                     amount_minor=10_000, order_code=topup["orderCode"]
                 )
@@ -99,6 +140,9 @@ def test_wallet_http_contract_csrf_verified_funding_and_ownership() -> None:
                         f"/api/v1/wallet/topups/{topup['id']}/reconcile",
                         headers=headers,
                     )
+                ).status_code == 404
+                assert (
+                    await client.get(f"/api/v1/wallet/topups/{topup['id']}/qr")
                 ).status_code == 404
         finally:
             await payment.close()

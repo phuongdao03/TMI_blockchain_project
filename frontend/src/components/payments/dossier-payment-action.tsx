@@ -100,8 +100,7 @@ export function DossierPaymentAction({
                   dateStyle: "medium",
                   timeStyle: "short",
                 }).format(new Date(obligation.data.dueAt))}
-                . Thông tin thanh toán sẽ hiển thị khi bạn tiếp tục và có thể
-                được làm mới nếu hết hạn.
+                . Tiếp tục để xem số dư và xác nhận thanh toán bằng ví cá nhân.
               </p>
               <button
                 className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-700 px-5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
@@ -118,16 +117,16 @@ export function DossierPaymentAction({
                   <BadgeDollarSign aria-hidden="true" className="size-4" />
                 )}
                 {checkout.isPending
-                  ? "Đang mở trang thanh toán…"
-                  : "Tiếp tục thanh toán"}
+                  ? "Đang chuẩn bị thanh toán…"
+                  : "Tiếp tục bằng ví"}
               </button>
               {checkout.isError ? (
                 <p
                   className="mt-2 text-sm font-semibold text-red-700"
                   role="alert"
                 >
-                  Chưa thể tạo phiên thanh toán. Vui lòng thử lại; hệ thống sẽ
-                  không tạo trùng giao dịch.
+                  Chưa thể tải khoản thanh toán bằng ví. Vui lòng thử lại; hệ
+                  thống sẽ không tạo trùng giao dịch.
                 </p>
               ) : null}
             </>

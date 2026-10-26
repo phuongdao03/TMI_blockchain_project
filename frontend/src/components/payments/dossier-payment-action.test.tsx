@@ -37,7 +37,7 @@ describe("DossierPaymentAction", () => {
     expect(getActiveMock).not.toHaveBeenCalled();
   });
 
-  it("shows the exact admin-issued amount and opens PayOS status", async () => {
+  it("shows the exact admin-issued amount and opens the in-app payment", async () => {
     getActiveMock.mockResolvedValue({
       id: "payment-active",
       amountMinor: 1_500_000,
@@ -53,7 +53,7 @@ describe("DossierPaymentAction", () => {
     ).toBe("/payments/payment-active");
   });
 
-  it("creates a short-lived PayOS checkout from the locked listed price", async () => {
+  it("creates an in-app wallet payment from the locked listed price", async () => {
     const user = userEvent.setup();
     getActiveMock.mockRejectedValueOnce(new Error("No active checkout"));
     getFeeObligationMock.mockResolvedValueOnce({
@@ -68,7 +68,7 @@ describe("DossierPaymentAction", () => {
     renderAction("PAYMENT_PENDING");
 
     const button = await screen.findByRole("button", {
-      name: "Tiếp tục thanh toán",
+      name: "Tiếp tục bằng ví",
     });
     expect(screen.getByText(/1\.750\.000/)).toBeTruthy();
     await user.click(button);

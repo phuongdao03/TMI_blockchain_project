@@ -1194,6 +1194,11 @@ export interface WalletTopup {
   amountMinor: number;
   status: string;
   checkoutUrl: string | null;
+  qrPayload?: string | null;
+  bankBin?: string | null;
+  bankAccountNumber?: string | null;
+  bankAccountName?: string | null;
+  transferDescription?: string | null;
   createdAt: string;
   expiresAt: string;
   paidAt: string | null;

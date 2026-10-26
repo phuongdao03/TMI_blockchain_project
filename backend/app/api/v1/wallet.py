@@ -1,8 +1,10 @@
 from datetime import datetime
+from io import BytesIO
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Header, Request
+import qrcode
+from fastapi import APIRouter, Header, Request, Response
 from pydantic import Field
 
 from app.core.schemas import ResponseMeta, SuccessEnvelope
@@ -12,8 +14,12 @@ from app.modules.auth.dependencies import (
     SessionDependency,
     SettingsDependency,
 )
+from app.modules.auth.session_service import AuthPrincipal
 from app.modules.payments.dependencies import PaymentServiceDependency
+from app.modules.payments.errors import PaymentForbiddenError, PaymentNotFoundError
 from app.modules.payments.schemas import PaymentOrderData, PaymentSchema
+from app.modules.payments.service import PaymentService
+from app.modules.wallet.models import WalletTopup
 from app.modules.wallet.service import read_wallet
 
 router = APIRouter(prefix="/api/v1", tags=["wallet"])
@@ -32,6 +38,32 @@ class TopupData(PaymentSchema):
     created_at: datetime
     expires_at: datetime
     paid_at: datetime | None
+    qr_payload: str | None = None
+    bank_bin: str | None = None
+    bank_account_number: str | None = None
+    bank_account_name: str | None = None
+    transfer_description: str | None = None
+
+
+def _require_non_admin_wallet(principal: AuthPrincipal) -> None:
+    if "SUPER_ADMIN" in principal.roles:
+        raise PaymentForbiddenError()
+
+
+async def _topup_data(service: PaymentService, topup: WalletTopup) -> TopupData:
+    result = TopupData.model_validate(topup)
+    details = await service.wallet_service().checkout_details(topup.user_id, topup.id)
+    if details is None:
+        return result
+    return result.model_copy(
+        update={
+            "qr_payload": details.qr_payload,
+            "bank_bin": details.bank_bin,
+            "bank_account_number": details.bank_account_number,
+            "bank_account_name": details.bank_account_name,
+            "transfer_description": details.transfer_description,
+        }
+    )
 
 
 class JournalData(PaymentSchema):
@@ -75,11 +107,12 @@ async def create_topup(
         str, Header(alias="Idempotency-Key", min_length=1, max_length=128)
     ],
 ) -> SuccessEnvelope[TopupData]:
+    _require_non_admin_wallet(principal)
     result = await service.wallet_service().topup(
         principal.user_id, payload.amount_minor, idempotency_key
     )
     return SuccessEnvelope(
-        data=TopupData.model_validate(result),
+        data=await _topup_data(service, result),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 
@@ -93,6 +126,7 @@ async def reconcile_topup(
     principal: CsrfProtectedPrincipalDependency,
     service: PaymentServiceDependency,
 ) -> SuccessEnvelope[TopupData]:
+    _require_non_admin_wallet(principal)
     result = await service.wallet_service().reconcile(principal.user_id, topup_id)
     return SuccessEnvelope(
         data=TopupData.model_validate(result),
@@ -109,10 +143,35 @@ async def resume_topup(
     principal: CsrfProtectedPrincipalDependency,
     service: PaymentServiceDependency,
 ) -> SuccessEnvelope[TopupData]:
+    _require_non_admin_wallet(principal)
     result = await service.wallet_service().resume(principal.user_id, topup_id)
     return SuccessEnvelope(
-        data=TopupData.model_validate(result),
+        data=await _topup_data(service, result),
         meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get("/wallet/topups/{topup_id}/qr")
+async def get_topup_qr(
+    topup_id: UUID,
+    principal: CurrentPrincipalDependency,
+    service: PaymentServiceDependency,
+) -> Response:
+    details = await service.wallet_service().checkout_details(
+        principal.user_id, topup_id
+    )
+    if details is None or not details.qr_payload:
+        raise PaymentNotFoundError("Payment QR code is unavailable.")
+    image = qrcode.make(details.qr_payload)
+    output = BytesIO()
+    image.save(output)
+    return Response(
+        content=output.getvalue(),
+        media_type="image/png",
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 
