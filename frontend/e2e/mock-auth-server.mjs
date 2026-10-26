@@ -2345,20 +2345,20 @@ const server = createServer(async (request, response) => {
     path === `/api/v1/admin/dossiers/${dossierId}/payment-orders`
   ) {
     const payload = await readJson(request);
-    dossier = { ...dossier, status: "PAYMENT_PENDING" };
+    dossier = { ...dossier, status: "PAID" };
     paymentOrder = {
       id: paymentOrderId,
       orderCode: "PAY-2026-E2E00001",
       dossierId,
-      provider: "mock",
-      providerOrderId: "mock-provider-order",
+      provider: "wallet",
+      providerOrderId: null,
       amountMinor: payload.amountMinor,
       currency: "VND",
-      status: "PENDING",
+      status: "PAID",
       expiresAt: "2026-08-01T08:15:00Z",
-      paidAt: null,
-      checkoutUrl: "http://127.0.0.1:4010/mock-checkout",
-      qrPayload: "THV|PAY-2026-E2E00001",
+      paidAt: "2026-08-01T08:03:00Z",
+      checkoutUrl: null,
+      qrPayload: null,
       createdAt: "2026-08-01T08:00:00Z",
       updatedAt: "2026-08-01T08:00:00Z",
       description: payload.description,

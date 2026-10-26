@@ -1,12 +1,13 @@
 import { expect, test } from "@playwright/test";
 
 const dossierId = "9155dbf5-bb3e-449d-8bf0-9572cc642cac";
+const paymentOrderId = "a255dbf5-bb3e-449d-8bf0-9572cc642cac";
 
 test.beforeEach(async ({ request }) => {
   await request.post("http://127.0.0.1:4010/api/e2e/reset-payment");
 });
 
-test("admin issues exact fee, applicant pays, blockchain issuance is queued", async ({
+test("admin charges a funded wallet and applicant sees fee confirmation", async ({
   context,
   page,
 }) => {
@@ -55,7 +56,7 @@ test("admin issues exact fee, applicant pays, blockchain issuance is queued", as
   });
   await expect(issueFeeButton).toBeEnabled();
   await issueFeeButton.click();
-  await expect(page.getByText("Đã gửi thông báo cho người nộp")).toBeVisible();
+  await expect(page.getByText("Đã trừ phí từ ví người nộp")).toBeVisible();
   await expect(page.getByText(/1\.500\.000 VND/)).toBeVisible();
 
   await context.clearCookies();
@@ -77,17 +78,15 @@ test("admin issues exact fee, applicant pays, blockchain issuance is queued", as
     },
   ]);
   await page.goto(`/dossiers/${dossierId}`);
-  await expect(page.getByText(/1\.500\.000 VND/)).toBeVisible();
-  const continuePaymentLink = page.getByRole("link", {
-    name: "Xem khoản phí và thanh toán",
-  });
-  await expect(continuePaymentLink).toBeVisible();
-  await continuePaymentLink.click({ force: true });
-  await expect(page).toHaveURL(/\/payments\/[a-f0-9-]+$/);
+  await expect(page.getByText("Thanh toán đã được xác nhận")).toBeVisible();
+
+  await page.goto(`/payments/${paymentOrderId}`);
   await expect(
     page.getByRole("heading", { name: "Thanh toán thành công" }),
   ).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Khoản phí đã được xác nhận")).toBeVisible();
   await expect(page.getByText("1.500.000 ₫")).toBeVisible();
-  await expect(page.locator(".payment-workspace")).not.toContainText(/PayOS/i);
+  await expect(page.locator(".payment-workspace")).not.toContainText(
+    /PayOS|QR/i,
+  );
 });

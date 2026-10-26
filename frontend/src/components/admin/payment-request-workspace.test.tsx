@@ -135,7 +135,7 @@ describe("PaymentRequestWorkspace", () => {
     });
     renderWorkspace();
 
-    await screen.findByText(/CNS-2026-C53E911EDDDA/);
+    await screen.findByRole("option", { name: /CNS-2026-C53E911EDDDA/ });
     fireEvent.change(await screen.findByLabelText("Hồ sơ đã phê duyệt"), {
       target: { value: "9155dbf5-bb3e-449d-8bf0-9572cc642cac" },
     });
@@ -175,7 +175,7 @@ describe("PaymentRequestWorkspace", () => {
     });
     renderWorkspace("9155dbf5-bb3e-449d-8bf0-9572cc642cac");
 
-    await screen.findByText(/CNS-2026-C53E911EDDDA/);
+    await screen.findByRole("option", { name: /CNS-2026-C53E911EDDDA/ });
     fireEvent.change(screen.getByLabelText("Số phí cần thu (VND)"), {
       target: { value: "1500000" },
     });
