@@ -225,7 +225,7 @@ class FirebaseVerificationEmailRequest(BaseModel):
 class AuthStatusData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: Literal["refreshed", "logged_out", "revoked"]
+    status: Literal["active", "refreshed", "logged_out", "revoked"]
 
 
 class AuthSessionData(BaseModel):

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import UUID, uuid4
 
@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     Text,
     Uuid,
+    func,
     text,
 )
 from sqlalchemy.dialects.postgresql import CITEXT
@@ -375,6 +376,12 @@ class AuthSession(UtcTimestampMixin, Base):
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
+    )
+    last_activity_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        server_default=func.now(),
     )
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     rotated_from_id: Mapped[UUID | None] = mapped_column(

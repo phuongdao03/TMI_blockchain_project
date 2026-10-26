@@ -12,6 +12,7 @@ import {
 
 import { authApi } from "@/lib/api/client";
 import type { AuthUser } from "@/lib/api/types";
+import { SessionActivityMonitor } from "@/components/auth/session-activity-monitor";
 import { subscribeToAuthSessionChanges } from "@/lib/auth/session-sync";
 
 const AuthUserContext = createContext<AuthUser | null>(null);
@@ -121,6 +122,7 @@ export function PublicAuthProvider({
   return (
     <AuthStatusContext.Provider value={status}>
       <AuthUserContext.Provider value={user}>
+        <SessionActivityMonitor enabled={Boolean(user)} />
         {children}
       </AuthUserContext.Provider>
     </AuthStatusContext.Provider>

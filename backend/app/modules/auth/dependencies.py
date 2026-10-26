@@ -144,6 +144,7 @@ async def get_session_service(
             window_seconds=settings.auth_login_rate_window_seconds,
         ),
         refresh_ttl=timedelta(seconds=settings.auth_refresh_ttl_seconds),
+        idle_timeout=timedelta(seconds=settings.auth_idle_timeout_seconds),
     )
     try:
         yield service

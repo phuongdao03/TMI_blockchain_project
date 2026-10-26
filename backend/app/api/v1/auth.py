@@ -2,6 +2,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Header, Request, Response, status
+from fastapi.responses import JSONResponse
 
 from app.core.config import Settings
 from app.core.schemas import ErrorEnvelope, ResponseMeta, SuccessEnvelope
@@ -20,6 +21,7 @@ from app.modules.auth.dependencies import (
     SettingsDependency,
     StaffInvitationServiceDependency,
 )
+from app.modules.auth.errors import UnauthenticatedError
 from app.modules.auth.oauth import create_oauth_attempt
 from app.modules.auth.schemas import (
     ApplicantUpgradeRequest,
@@ -460,21 +462,58 @@ async def refresh(
     service: SessionServiceDependency,
     settings: SettingsDependency,
     csrf_header: str | None = Header(default=None, alias="X-CSRF-Token"),
-) -> SuccessEnvelope[AuthStatusData]:
+) -> SuccessEnvelope[AuthStatusData] | JSONResponse:
     refresh_token = request.cookies.get(settings.auth_refresh_cookie_name)
     if refresh_token is None:
-        from app.modules.auth.errors import UnauthenticatedError
-
         raise UnauthenticatedError()
-    issued = await service.refresh(
-        refresh_token=refresh_token,
-        csrf_cookie=request.cookies.get(settings.auth_csrf_cookie_name),
-        csrf_header=csrf_header,
-        metadata=_client_metadata(request, None),
-    )
+    try:
+        issued = await service.refresh(
+            refresh_token=refresh_token,
+            csrf_cookie=request.cookies.get(settings.auth_csrf_cookie_name),
+            csrf_header=csrf_header,
+            metadata=_client_metadata(request, None),
+        )
+    except UnauthenticatedError as exc:
+        expired_response = JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "success": False,
+                "error": {
+                    "code": exc.code,
+                    "message": exc.message,
+                    "details": exc.details,
+                    "request_id": request.state.request_id,
+                },
+            },
+        )
+        _clear_auth_cookies(expired_response, settings)
+        return expired_response
     _set_auth_cookies(response, issued, settings)
     return SuccessEnvelope(
         data=AuthStatusData(status="refreshed"),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/activity",
+    response_model=SuccessEnvelope[AuthStatusData],
+    responses=AUTH_ERROR_RESPONSES,
+)
+async def record_activity(
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: SessionServiceDependency,
+    settings: SettingsDependency,
+    csrf_header: str | None = Header(default=None, alias="X-CSRF-Token"),
+) -> SuccessEnvelope[AuthStatusData]:
+    await service.record_activity(
+        principal=principal,
+        csrf_cookie=request.cookies.get(settings.auth_csrf_cookie_name),
+        csrf_header=csrf_header,
+    )
+    return SuccessEnvelope(
+        data=AuthStatusData(status="active"),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 

@@ -44,6 +44,7 @@ class RecordingLoginRateLimiter:
 async def _build_session_service(
     tmp_path: Path,
     clock: Callable[[], datetime],
+    access_ttl: timedelta = timedelta(minutes=15),
 ) -> tuple[
     SessionService,
     async_sessionmaker[AsyncSession],
@@ -77,7 +78,7 @@ async def _build_session_service(
             secret="a" * 64,
             issuer="cns-platform",
             audience="cns-web",
-            ttl=timedelta(minutes=15),
+            ttl=access_ttl,
             clock=clock,
         ),
         csrf_tokens=CsrfTokenManager(secret="b" * 64),
@@ -241,6 +242,119 @@ def test_refresh_rotates_token_and_reuse_revokes_every_session(
         ]
         with pytest.raises(UnauthenticatedError):
             await service.authenticate_access(second.access_token)
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_session_idle_timeout_uses_user_activity_not_refresh_rotation(
+    tmp_path: Path,
+) -> None:
+    async def exercise() -> None:
+        clock = MutableClock(
+            datetime.now(UTC).replace(microsecond=0) - timedelta(minutes=14)
+        )
+        service, session_factory, _, engine = await _build_session_service(
+            tmp_path,
+            clock,
+        )
+        metadata = ClientMetadata(
+            client_ip="203.0.113.10",
+            user_agent="CNS test browser",
+            device_name="Work laptop",
+        )
+        first = await service.login(
+            email="owner@cnsgroup.vn",
+            password="correct horse battery staple",
+            metadata=metadata,
+        )
+
+        clock.current += timedelta(minutes=14)
+        second = await service.refresh(
+            refresh_token=first.refresh_token,
+            csrf_cookie=first.csrf_token,
+            csrf_header=first.csrf_token,
+            metadata=metadata,
+        )
+        principal = await service.authenticate_access(second.access_token)
+        await service.record_activity(
+            principal=principal,
+            csrf_cookie=second.csrf_token,
+            csrf_header=second.csrf_token,
+        )
+
+        clock.current += timedelta(minutes=29)
+        third = await service.refresh(
+            refresh_token=second.refresh_token,
+            csrf_cookie=second.csrf_token,
+            csrf_header=second.csrf_token,
+            metadata=metadata,
+        )
+        clock.current += timedelta(minutes=1)
+
+        with pytest.raises(UnauthenticatedError):
+            await service.refresh(
+                refresh_token=third.refresh_token,
+                csrf_cookie=third.csrf_token,
+                csrf_header=third.csrf_token,
+                metadata=metadata,
+            )
+
+        async with session_factory() as session:
+            current_session = await session.scalar(
+                select(AuthSession).where(
+                    AuthSession.revoked_at.is_(None),
+                )
+            )
+            expired_session = await session.scalar(
+                select(AuthSession).where(
+                    AuthSession.rotated_from_id == principal.session_id,
+                )
+            )
+        assert current_session is None
+        assert expired_session is not None
+        assert expired_session.revoked_at is not None
+        assert expired_session.revoked_at.replace(tzinfo=UTC) == clock.current
+
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_access_token_is_rejected_after_idle_timeout_even_when_still_valid(
+    tmp_path: Path,
+) -> None:
+    async def exercise() -> None:
+        clock = MutableClock(
+            datetime.now(UTC).replace(microsecond=0) - timedelta(minutes=14)
+        )
+        service, session_factory, _, engine = await _build_session_service(
+            tmp_path,
+            clock,
+            access_ttl=timedelta(hours=1),
+        )
+        issued = await service.login(
+            email="owner@cnsgroup.vn",
+            password="correct horse battery staple",
+            metadata=ClientMetadata(
+                client_ip="203.0.113.10",
+                user_agent="CNS test browser",
+                device_name="Work laptop",
+            ),
+        )
+        clock.current += timedelta(minutes=31)
+
+        with pytest.raises(UnauthenticatedError):
+            await service.authenticate_access(issued.access_token)
+
+        async with session_factory() as session:
+            auth_session = await session.scalar(select(AuthSession))
+        assert auth_session is not None
+        assert auth_session.revoked_at is not None
+        assert auth_session.revoked_at.replace(tzinfo=UTC) == clock.current
 
         await service.close()
         await engine.dispose()

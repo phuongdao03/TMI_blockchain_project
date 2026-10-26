@@ -14,6 +14,7 @@ from app.modules.auth.dependencies import (
     get_employee_profile_link_status,
     get_session_service,
 )
+from app.modules.auth.errors import UnauthenticatedError
 from app.modules.auth.models import AccountType
 from app.modules.auth.onboarding import ApplicantUpgradeResult
 from app.modules.auth.session_service import (
@@ -37,6 +38,8 @@ class StubSessionService:
         self.login_metadata: ClientMetadata | None = None
         self.refreshed = False
         self.logged_out = False
+        self.refresh_rejected = False
+        self.activity_recorded = False
         self.revoked_session_id: UUID | None = None
 
     async def login(
@@ -61,7 +64,18 @@ class StubSessionService:
         metadata: ClientMetadata,
     ) -> IssuedSession:
         self.refreshed = True
+        if self.refresh_rejected:
+            raise UnauthenticatedError()
         return self._issued()
+
+    async def record_activity(
+        self,
+        *,
+        principal: AuthPrincipal,
+        csrf_cookie: str | None,
+        csrf_header: str | None,
+    ) -> None:
+        self.activity_recorded = True
 
     async def logout(
         self,
@@ -267,6 +281,41 @@ def test_refresh_logout_and_revoke_session_use_cookie_csrf_contract() -> None:
     assert service.revoked_session_id == service.session_id
     assert service.logged_out is True
     assert "Max-Age=0" in logout_response.headers["set-cookie"]
+
+
+def test_activity_endpoint_records_user_activity() -> None:
+    service = StubSessionService()
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/api/v1/auth/activity",
+            service,
+            cookies={"cns_access": "access-token", "cns_csrf": "csrf-token"},
+            headers={"X-CSRF-Token": "csrf-token"},
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["status"] == "active"
+    assert service.activity_recorded is True
+
+
+def test_expired_refresh_clears_auth_cookies() -> None:
+    service = StubSessionService()
+    service.refresh_rejected = True
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/api/v1/auth/refresh",
+            service,
+            cookies={"cns_refresh": "refresh-token", "cns_csrf": "csrf-token"},
+            headers={"X-CSRF-Token": "csrf-token"},
+        )
+    )
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "UNAUTHENTICATED"
+    assert len(response.headers.get_list("set-cookie")) == 3
 
 
 def test_applicant_upgrade_api_returns_updated_account_scope() -> None:

@@ -76,6 +76,7 @@ class SessionService:
         csrf_tokens: CsrfTokenManager,
         rate_limiter: RegistrationRateLimiter,
         refresh_ttl: timedelta,
+        idle_timeout: timedelta = timedelta(minutes=30),
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._session = session
@@ -86,6 +87,7 @@ class SessionService:
         self._csrf_tokens = csrf_tokens
         self._rate_limiter = rate_limiter
         self._refresh_ttl = refresh_ttl
+        self._idle_timeout = idle_timeout
         self._clock = clock or (lambda: datetime.now(UTC))
 
     async def login(
@@ -140,6 +142,7 @@ class SessionService:
                     ip_hash=hash_ip_address(metadata.client_ip),
                     user_agent=self._limited(metadata.user_agent, 1024),
                     expires_at=now + self._refresh_ttl,
+                    last_activity_at=now,
                 )
                 self._repository.add_auth_session(auth_session)
                 user.last_login_at = now
@@ -205,6 +208,7 @@ class SessionService:
     ) -> IssuedSession:
         now = self._clock()
         reuse_detected = False
+        idle_expired = False
         issued: IssuedSession | None = None
 
         async with self._session.begin():
@@ -236,6 +240,15 @@ class SessionService:
                 reuse_detected = True
             elif self._as_utc(previous.expires_at) <= now:
                 raise UnauthenticatedError()
+            elif self._is_idle_expired(previous, now):
+                previous.revoked_at = now
+                self._audit(
+                    "auth.session.idle_expired",
+                    str(previous.id),
+                    actor_service="auth-session-service",
+                    outcome="revoked",
+                )
+                idle_expired = True
             else:
                 previous.revoked_at = now
                 issued = await self._create_session(
@@ -243,6 +256,7 @@ class SessionService:
                     metadata=metadata,
                     rotated_from_id=previous.id,
                     now=now,
+                    last_activity_at=previous.last_activity_at,
                 )
                 self._audit(
                     "auth.refresh.rotated",
@@ -251,7 +265,7 @@ class SessionService:
                     outcome="rotated",
                 )
 
-        if reuse_detected:
+        if reuse_detected or idle_expired:
             raise UnauthenticatedError()
         if issued is None:
             raise RuntimeError("Refresh rotation did not issue a session.")
@@ -350,6 +364,9 @@ class SessionService:
         except InvalidAccessTokenError as exc:
             raise UnauthenticatedError() from exc
 
+        idle_expired = False
+        roles: tuple[str, ...] = ()
+        permissions: tuple[str, ...] = ()
         async with self._session.begin():
             user = await self._repository.get_user_by_id(identity.user_id)
             auth_session = await self._repository.get_auth_session(identity.session_id)
@@ -364,8 +381,21 @@ class SessionService:
                 or self._as_utc(auth_session.expires_at) <= now
             ):
                 raise UnauthenticatedError()
-            roles = await self._repository.get_role_codes(user.id)
-            permissions = await self._repository.get_permission_codes(user.id)
+            if self._is_idle_expired(auth_session, now):
+                auth_session.revoked_at = now
+                self._audit(
+                    "auth.session.idle_expired",
+                    str(auth_session.id),
+                    actor_service="auth-session-service",
+                    outcome="revoked",
+                )
+                idle_expired = True
+            else:
+                roles = await self._repository.get_role_codes(user.id)
+                permissions = await self._repository.get_permission_codes(user.id)
+
+        if idle_expired:
+            raise UnauthenticatedError()
 
         return AuthPrincipal(
             user_id=user.id,
@@ -376,6 +406,47 @@ class SessionService:
             permissions=permissions,
         )
 
+    async def record_activity(
+        self,
+        *,
+        principal: AuthPrincipal,
+        csrf_cookie: str | None,
+        csrf_header: str | None,
+    ) -> None:
+        now = self._clock()
+        idle_expired = False
+        async with self._session.begin():
+            auth_session = await self._repository.get_auth_session(
+                principal.session_id,
+                for_update=True,
+            )
+            if (
+                auth_session is None
+                or auth_session.user_id != principal.user_id
+                or auth_session.revoked_at is not None
+                or self._as_utc(auth_session.expires_at) <= now
+            ):
+                raise UnauthenticatedError()
+            self._require_csrf(
+                session_id=auth_session.id,
+                csrf_cookie=csrf_cookie,
+                csrf_header=csrf_header,
+            )
+            if self._is_idle_expired(auth_session, now):
+                auth_session.revoked_at = now
+                self._audit(
+                    "auth.session.idle_expired",
+                    str(auth_session.id),
+                    actor_service="auth-session-service",
+                    outcome="revoked",
+                )
+                idle_expired = True
+            else:
+                auth_session.last_activity_at = now
+
+        if idle_expired:
+            raise UnauthenticatedError()
+
     async def _create_session(
         self,
         *,
@@ -383,6 +454,7 @@ class SessionService:
         metadata: ClientMetadata,
         rotated_from_id: UUID | None,
         now: datetime,
+        last_activity_at: datetime | None = None,
     ) -> IssuedSession:
         refresh_token = new_opaque_token()
         auth_session = AuthSession(
@@ -392,6 +464,7 @@ class SessionService:
             ip_hash=hash_ip_address(metadata.client_ip),
             user_agent=self._limited(metadata.user_agent, 1024),
             expires_at=now + self._refresh_ttl,
+            last_activity_at=last_activity_at or now,
             rotated_from_id=rotated_from_id,
         )
         self._repository.add_auth_session(auth_session)
@@ -429,6 +502,9 @@ class SessionService:
         if value.tzinfo is None:
             return value.replace(tzinfo=UTC)
         return value.astimezone(UTC)
+
+    def _is_idle_expired(self, auth_session: AuthSession, now: datetime) -> bool:
+        return self._as_utc(auth_session.last_activity_at) + self._idle_timeout <= now
 
     def _audit(
         self,

@@ -63,6 +63,7 @@ def test_auth_models_match_required_tables_and_security_columns() -> None:
     }
 
     assert "refresh_token_hash" in AuthSession.__table__.c
+    assert "last_activity_at" in AuthSession.__table__.c
     assert "refresh_token" not in AuthSession.__table__.c
     assert "token_hash" in VerificationToken.__table__.c
     assert "token" not in VerificationToken.__table__.c

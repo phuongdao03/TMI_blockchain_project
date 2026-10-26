@@ -10,6 +10,7 @@ import { authApi } from "@/lib/api/client";
 import { safeLocalDestination } from "@/lib/auth/safe-destination";
 import type { AuthUser } from "@/lib/api/types";
 import { AuthUserProvider } from "@/lib/auth/user-context";
+import { SessionActivityMonitor } from "@/components/auth/session-activity-monitor";
 
 export function DashboardAuthGuard({
   children,
@@ -73,5 +74,10 @@ export function DashboardAuthGuard({
       </div>
     );
   }
-  return <AuthUserProvider user={effectiveUser}>{children}</AuthUserProvider>;
+  return (
+    <AuthUserProvider user={effectiveUser}>
+      <SessionActivityMonitor />
+      {children}
+    </AuthUserProvider>
+  );
 }

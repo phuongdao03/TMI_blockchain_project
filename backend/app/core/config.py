@@ -79,6 +79,7 @@ class Settings(BaseSettings):
         ge=3_600,
         le=7_776_000,
     )
+    auth_idle_timeout_seconds: int = Field(default=1_800, ge=60, le=86_400)
     auth_access_cookie_name: str = Field(
         default="cns_access",
         min_length=1,
