@@ -1,10 +1,14 @@
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.operations.job_models import JobAttempt, JobExecution
+from app.modules.operations.job_models import (
+    JobAttempt,
+    JobExecution,
+    JobExecutionStatus,
+)
 
 
 class DurableJobRepository:
@@ -73,6 +77,13 @@ class DurableJobRepository:
             filters.append(JobExecution.status == status)
         if task_name is not None:
             filters.append(JobExecution.task_name == task_name)
+        else:
+            filters.append(
+                or_(
+                    JobExecution.task_name != "payment.reconcile_pending",
+                    JobExecution.status != JobExecutionStatus.SUCCEEDED,
+                )
+            )
         total = await self._session.scalar(
             select(func.count()).select_from(JobExecution).where(*filters)
         )

@@ -99,3 +99,14 @@ def reconcile_pending_payments(
             durable_job_id=UUID(durable_job_id) if durable_job_id else None,
         )
     )
+
+
+@celery_app.task(  # type: ignore[untyped-decorator]
+    autoretry_for=(ConnectionError,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_jitter=True,
+)
+def reconcile_pending_payments_scheduled() -> int:
+    """Poll pending payments without recording each routine tick as an operator job."""
+    return asyncio.run(_reconcile_pending_payments())

@@ -48,7 +48,7 @@ celery_app.conf.update(
             "schedule": 5.0,
         },
         "reconcile-pending-payments": {
-            "task": "app.workers.payment_tasks.reconcile_pending_payments",
+            "task": "app.workers.payment_tasks.reconcile_pending_payments_scheduled",
             "schedule": 60.0,
         },
         "expire-advertising-reservations": {
