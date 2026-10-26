@@ -3,7 +3,7 @@ from hashlib import sha256
 from math import ceil
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -991,7 +991,19 @@ class MembershipService:
             raise PaymentForbiddenError()
 
     @staticmethod
-    def _chat_message_select():
+    def _chat_message_select() -> Select[
+        tuple[
+            CommunityChatMessage,
+            str | None,
+            str | None,
+            str | None,
+            str | None,
+            UUID | None,
+            str,
+            bool,
+            bool,
+        ]
+    ]:
         return (
             select(
                 CommunityChatMessage,
