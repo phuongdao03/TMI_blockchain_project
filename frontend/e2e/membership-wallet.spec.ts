@@ -94,6 +94,20 @@ for (const { tier, label, cardLabel } of tiers) {
           path: info.outputPath(`membership-${tier}-${width}.png`),
           fullPage: true,
         });
+      if (width === 390) {
+        const roomNavigation = page.getByRole("navigation", {
+          name: "Các phòng hội viên",
+        });
+        await roomNavigation.scrollIntoViewIfNeeded();
+        for (const button of await roomNavigation.getByRole("button").all()) {
+          const bounds = await button.boundingBox();
+          expect(bounds?.width).toBeGreaterThan(250);
+          expect(bounds?.height).toBeLessThan(100);
+        }
+        await roomNavigation.screenshot({
+          path: info.outputPath(`rooms-${tier}-390.png`),
+        });
+      }
     }
     await page.getByRole("button", { name: "Phòng Tinh hoa" }).click();
     if (tier !== "PRESTIGE") {

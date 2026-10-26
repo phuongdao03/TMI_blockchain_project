@@ -5,6 +5,23 @@ import { describe, expect, it, vi } from "vitest";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 describe("ConfirmationDialog", () => {
+  it("renders outside the page and restores scrolling after closing", () => {
+    const { container, unmount } = render(
+      <ConfirmationDialog
+        confirmLabel="Xác nhận"
+        description="Kiểm tra thanh toán."
+        isPending={false}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        open
+        title="Thanh toán"
+      />,
+    );
+    expect(container.contains(screen.getByRole("dialog"))).toBe(false);
+    expect(document.body.style.overflow).toBe("hidden");
+    unmount();
+    expect(document.body.style.overflow).toBe("");
+  });
   it("moves focus to the primary action and closes with Escape", async () => {
     const user = userEvent.setup();
     const cancel = vi.fn();

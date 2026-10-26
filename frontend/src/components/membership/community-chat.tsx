@@ -273,22 +273,21 @@ export function CommunityChat({
       />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 items-start gap-4">
-          <span className="grid size-12 shrink-0 place-items-center rounded-2xl border border-amber-700/20 bg-amber-500/10 text-amber-700 shadow-sm sm:size-14">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-amber-500/10 text-amber-700 sm:size-14">
             <Crown aria-hidden="true" className="size-6 sm:size-7" />
           </span>
           <div className="min-w-0">
-            <p className="text-[0.68rem] font-bold uppercase tracking-[0.2em] text-amber-700">
+            <p className="hidden text-[0.68rem] font-bold uppercase tracking-[0.2em] text-amber-700 sm:block">
               Không gian dành cho hội viên
             </p>
             <h2
               id="chat-heading"
-              className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl"
+              className="text-xl font-bold tracking-tight sm:mt-1 sm:text-3xl"
             >
               {membershipTiers[room].room}
             </h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
-              Chia sẻ câu chuyện, kết nối cùng cộng đồng trong một không gian
-              riêng tư theo hạng hội viên.
+              Trò chuyện và kết nối cùng hội viên.
             </p>
           </div>
         </div>
@@ -309,7 +308,7 @@ export function CommunityChat({
       </header>
       <nav
         aria-label="Các phòng hội viên"
-        className="mt-5 flex gap-1 overflow-x-auto border-b border-[var(--theme-border)] pb-2"
+        className="mt-4 grid grid-cols-1 gap-1 border-b border-[var(--theme-border)] pb-3 sm:grid-cols-3"
       >
         {rooms.map((item) => {
           const Icon = item.icon;
@@ -334,13 +333,15 @@ export function CommunityChat({
                 edit.reset();
                 remove.reset();
               }}
-              className={`flex min-h-14 flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 ${selected ? "bg-amber-500/10 text-amber-800 dark:text-amber-200" : "text-[var(--theme-muted)] hover:bg-amber-500/5"}`}
+              className={`flex min-h-14 min-w-0 w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 ${selected ? "bg-amber-500/10 text-amber-800 dark:text-amber-200" : "text-[var(--theme-muted)] hover:bg-amber-500/5"}`}
             >
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--theme-elevated)] text-amber-700">
                 <Icon aria-hidden="true" className="size-5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold">{item.label}</span>
+                <span className="block truncate text-sm font-semibold">
+                  {item.label}
+                </span>
                 <span className="mt-0.5 block text-xs text-[var(--theme-muted)]">
                   {item.audience}
                 </span>
@@ -413,7 +414,7 @@ export function CommunityChat({
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
               <p className="text-sm font-semibold">Cuộc trò chuyện</p>
               <p className="text-xs text-[var(--theme-muted)]">
-                {renderedMessages.length} tin đã tải · tự làm mới mỗi 10 giây
+                {renderedMessages.length} tin nhắn
               </p>
             </div>
             <div
