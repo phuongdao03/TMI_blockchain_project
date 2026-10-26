@@ -27,11 +27,13 @@ export function FileUploaderActions({
     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
       {canChoose ? (
         <Button
-          className="w-full sm:w-auto"
+          className={
+            pendingCount > 0 ? "w-full sm:w-auto text-sm" : "w-full sm:w-auto"
+          }
           disabled={disabled || isBusy}
           onClick={onChoose}
           type="button"
-          variant={pendingCount > 0 ? "outline" : "default"}
+          variant={pendingCount > 0 ? "ghost" : "default"}
         >
           <Plus aria-hidden="true" className="size-4" />
           Thêm tệp
@@ -40,7 +42,7 @@ export function FileUploaderActions({
       {pendingCount > 0 || isBusy ? (
         <Button
           aria-busy={isBusy}
-          className="w-full sm:w-auto"
+          className="min-h-12 w-full px-6 font-bold shadow-sm sm:w-auto"
           disabled={disabled || isBusy}
           onClick={onUpload}
           type="button"

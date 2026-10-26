@@ -11,6 +11,33 @@ from app.modules.wallet.service import WalletLedger
 from app.tests.test_payment_service import DOSSIER_ID, _service, _webhook
 
 
+def test_topup_preserves_qr_when_provider_status_omits_checkout_details() -> None:
+    from dataclasses import replace
+
+    from app.modules.payments.gateway import MockPaymentGateway
+
+    class StatusOnlyGateway(MockPaymentGateway):
+        async def get_order(self, provider_order_id):
+            order = await super().get_order(provider_order_id)
+            return replace(order, qr_payload=None)
+
+    async def exercise() -> None:
+        gateway = StatusOnlyGateway(webhook_secret="payment-secret")
+        service, sessions, engine, owner = await _service(gateway=gateway)
+        try:
+            wallet = service.wallet_service()
+            topup = await wallet.topup(owner.user_id, 50_000, "qr-retention")
+            details = await wallet.checkout_details(owner.user_id, topup.id)
+            assert details is not None
+            assert details.qr_payload
+            assert (await gateway.get_order(topup.provider_order_id)).qr_payload is None
+        finally:
+            await service.close()
+            await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 def test_gateway_reservation_blocks_a_wallet_payment_during_checkout() -> None:
     from app.modules.auth.session_service import AuthPrincipal
     from app.modules.payments.gateway import MockPaymentGateway

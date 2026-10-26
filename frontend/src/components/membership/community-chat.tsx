@@ -265,7 +265,7 @@ export function CommunityChat({
     <section
       id="community-chat"
       aria-labelledby="chat-heading"
-      className="relative isolate scroll-mt-6 overflow-hidden rounded-[1.75rem] border border-amber-700/20 bg-gradient-to-br from-[var(--theme-surface)] via-[var(--theme-elevated)] to-[var(--theme-surface)] p-4 shadow-sm sm:p-7"
+      className="relative isolate scroll-mt-6 overflow-hidden rounded-[1.75rem] border border-amber-700/20 bg-[var(--theme-surface)] p-4 sm:p-6"
     >
       <div
         aria-hidden="true"
@@ -309,7 +309,7 @@ export function CommunityChat({
       </header>
       <nav
         aria-label="Các phòng hội viên"
-        className="mt-6 grid gap-2 sm:grid-cols-3"
+        className="mt-5 flex gap-1 overflow-x-auto border-b border-[var(--theme-border)] pb-2"
       >
         {rooms.map((item) => {
           const Icon = item.icon;
@@ -334,7 +334,7 @@ export function CommunityChat({
                 edit.reset();
                 remove.reset();
               }}
-              className={`flex min-h-[4.5rem] items-center gap-3 rounded-2xl border px-3 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 ${selected ? "border-amber-600/50 bg-amber-500/10 shadow-sm" : "border-[var(--theme-border)] bg-[var(--theme-surface)] hover:border-amber-700/30 hover:bg-amber-500/5"}`}
+              className={`flex min-h-14 flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 ${selected ? "bg-amber-500/10 text-amber-800 dark:text-amber-200" : "text-[var(--theme-muted)] hover:bg-amber-500/5"}`}
             >
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--theme-elevated)] text-amber-700">
                 <Icon aria-hidden="true" className="size-5" />
@@ -355,7 +355,7 @@ export function CommunityChat({
           );
         })}
       </nav>
-      <div className="mt-5 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)]/80 p-3 sm:p-4">
+      <div className="mt-4">
         {!user?.id ? (
           <div
             role="status"
@@ -470,7 +470,7 @@ export function CommunityChat({
                 renderedMessages.map((message) => (
                   <article
                     key={message.id}
-                    className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 shadow-sm sm:p-4"
+                    className="border-b border-[var(--theme-border)]/50 px-1 py-4 last:border-0"
                   >
                     <div className="flex flex-wrap items-center gap-2 text-sm">
                       <MembershipAvatar
@@ -611,7 +611,7 @@ export function CommunityChat({
               )}
             </div>
             <form
-              className="mt-4 flex flex-col gap-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:flex-row sm:items-end sm:p-4"
+              className="mt-3 flex flex-col gap-3 border-t border-[var(--theme-border)] pt-4 sm:flex-row sm:items-end"
               onSubmit={(event) => {
                 event.preventDefault();
                 if (body.trim() && !send.isPending) send.mutate();
@@ -648,7 +648,9 @@ export function CommunityChat({
             {send.isError && (
               <p role="alert" className="mt-3 text-red-700">
                 {send.error instanceof ApiError
-                  ? send.error.message
+                  ? send.error.status === 429
+                    ? "Bạn gửi tin quá nhanh. Vui lòng chờ một chút rồi thử lại."
+                    : send.error.message
                   : "Chưa gửi được tin nhắn. Nội dung của bạn vẫn được giữ lại."}
               </p>
             )}

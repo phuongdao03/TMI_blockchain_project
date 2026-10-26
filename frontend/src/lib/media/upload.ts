@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { mediaApi } from "@/lib/api/client";
+import { ApiError, mediaApi } from "@/lib/api/client";
 import type {
   MediaAsset,
   MediaPurpose,
@@ -407,7 +407,16 @@ export async function uploadMedia(
       );
     }
   }
-  const asset = await mediaApi.completeUpload(completion);
+  let asset: MediaAsset;
+  try {
+    asset = await mediaApi.completeUpload(completion);
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 503) throw error;
+    await wait(1500);
+    callbacks.signal?.throwIfAborted();
+    // Retry confirmation only; the file is already stored by the provider.
+    asset = await mediaApi.completeUpload(completion);
+  }
   if (asset.status === "ACTIVE") {
     return asset;
   }

@@ -228,6 +228,14 @@ class WalletService:
             provider_order_id = order.provider_order_id
             order_code = order.order_code
             amount = order.amount_minor
+            details = await self.session.scalar(
+                select(WalletTopupEvent).where(
+                    WalletTopupEvent.topup_id == identifier,
+                    WalletTopupEvent.event_type == "checkout.details",
+                )
+            )
+            if details is not None:
+                return WalletCheckoutDetails(**details.payload_redacted)
         try:
             provider_order = await self.gateway.get_order(provider_order_id)
         except PaymentGatewayError as exc:
@@ -294,6 +302,33 @@ class WalletService:
                 raise PaymentConflictError("Mã giao dịch của nhà cung cấp không khớp.")
             saved.provider_order_id = provider_order.provider_order_id
             saved.checkout_url = provider_order.checkout_url
+            if provider_order.qr_payload:
+                existing_details = await self.session.scalar(
+                    select(WalletTopupEvent).where(
+                        WalletTopupEvent.topup_id == order_id,
+                        WalletTopupEvent.event_type == "checkout.details",
+                    )
+                )
+                if existing_details is None:
+                    self.session.add(
+                        WalletTopupEvent(
+                            topup_id=order_id,
+                            provider=self.provider,
+                            provider_event_id=f"checkout:{order_id}",
+                            event_type="checkout.details",
+                            payload_redacted={
+                                "qr_payload": provider_order.qr_payload,
+                                "bank_bin": provider_order.bank_bin,
+                                "bank_account_number": (
+                                    provider_order.bank_account_number
+                                ),
+                                "bank_account_name": provider_order.bank_account_name,
+                                "transfer_description": (
+                                    provider_order.transfer_description
+                                ),
+                            },
+                        )
+                    )
             if saved.status == "PROCESSING":
                 saved.status = "PENDING"
             await self.session.flush()

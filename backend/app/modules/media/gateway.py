@@ -254,7 +254,31 @@ class CloudinaryMediaGateway:
             f"{quote(self._cloud_name, safe='')}/resources/{resource_type}/"
             f"{self._DELIVERY_TYPE}/{quote(public_id, safe='')}"
         )
-        payload = await self._request_json("GET", url)
+        try:
+            payload = await self._request_json("GET", url)
+        except MediaProviderUnavailableError as exc:
+            cause = exc.__cause__
+            if not isinstance(
+                cause, httpx.HTTPStatusError
+            ) or cause.response.status_code not in {420, 429}:
+                raise
+            # Admin API limits must not block verification of an uploaded asset.
+            # Explicit returns authoritative metadata without transformations.
+            parameters = {
+                "public_id": public_id,
+                "type": self._DELIVERY_TYPE,
+                "timestamp": str(int(self._clock())),
+            }
+            payload = await self._request_json(
+                "POST",
+                "https://api.cloudinary.com/v1_1/"
+                f"{quote(self._cloud_name, safe='')}/{resource_type}/explicit",
+                data={
+                    **parameters,
+                    "api_key": self._api_key,
+                    "signature": self.sign_parameters(parameters),
+                },
+            )
         duration = self._optional_number(payload, "duration")
         sha256 = payload.get("sha256")
         if sha256 is not None and (

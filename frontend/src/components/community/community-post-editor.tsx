@@ -841,6 +841,7 @@ export function CommunityPostEditor({
               </p>
               <div className="mt-4">
                 <FileUploader
+                  compact
                   cleanupCompletedOnRemove
                   constraints={{
                     allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],

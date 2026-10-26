@@ -57,6 +57,10 @@ export function AdvertisingSetupPanel({
     queryKey: ["advertising-placements"],
     queryFn: advertisingApi.placements,
   });
+  const catalog = useQuery({
+    queryKey: ["advertising-package-catalog"],
+    queryFn: () => advertisingApi.packages(),
+  });
   const eligibleDossiers = useMemo(
     () =>
       dossiers.data?.data.filter(
@@ -74,7 +78,12 @@ export function AdvertisingSetupPanel({
       eligibleDossiers[0]?.id ??
       "");
   const selectedPlacementCode =
-    placementCode || placements.data?.[0]?.code || "";
+    placementCode ||
+    placements.data?.find((placement) =>
+      catalog.data?.some((plan) => plan.placementId === placement.id),
+    )?.code ||
+    placements.data?.[0]?.code ||
+    "";
   const packages = useQuery({
     queryKey: ["advertising-packages", selectedPlacementCode],
     queryFn: () => advertisingApi.packages(selectedPlacementCode),
@@ -154,7 +163,8 @@ export function AdvertisingSetupPanel({
     },
   });
 
-  const isLoading = dossiers.isPending || placements.isPending;
+  const isLoading =
+    dossiers.isPending || placements.isPending || catalog.isPending;
   const loadError = dossiers.error ?? placements.error;
   const selectedPlacement = placements.data?.find(
     (placement) => placement.code === selectedPlacementCode,
@@ -234,10 +244,7 @@ export function AdvertisingSetupPanel({
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
-      <form
-        className="space-y-5 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
-        onSubmit={handleSubmit}
-      >
+      <form className="space-y-5 py-2 xl:pr-6" onSubmit={handleSubmit}>
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--theme-accent)]">
             Thiết lập chiến dịch
@@ -293,6 +300,15 @@ export function AdvertisingSetupPanel({
               onChange={(event) => setPackageCode(event.target.value)}
               value={selectedPackageCode}
             >
+              {!packages.data?.length ? (
+                <option value="">
+                  {packages.isPending
+                    ? "Đang tải thời lượng…"
+                    : packages.isError
+                      ? "Không tải được gói thời lượng"
+                      : "Chưa có gói cho vị trí này"}
+                </option>
+              ) : null}
               {packages.data?.map((item: AdvertisingPackage) => (
                 <option key={item.id} value={item.code}>
                   {item.name} · {durationLabel(item.durationHours)}
@@ -303,7 +319,14 @@ export function AdvertisingSetupPanel({
         </div>
 
         {selectedPlacement ? (
-          <AdvertisingPlacementPreview placement={selectedPlacement} />
+          <details className="border-y border-[var(--theme-border)] py-3">
+            <summary className="cursor-pointer text-sm font-semibold">
+              Xem vị trí quảng cáo trên trang · {selectedPlacement.name}
+            </summary>
+            <div className="mt-3">
+              <AdvertisingPlacementPreview placement={selectedPlacement} />
+            </div>
+          </details>
         ) : null}
 
         {selectedPlacement && !packages.isPending && !packages.data?.length ? (

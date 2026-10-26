@@ -73,6 +73,45 @@ def test_cloudinary_signatures_and_expiring_private_url() -> None:
     asyncio.run(exercise())
 
 
+def test_metadata_uses_explicit_when_admin_api_is_rate_limited() -> None:
+    async def exercise() -> None:
+        requests = []
+
+        def handler(request):
+            requests.append(request)
+            if request.method == "GET":
+                return httpx.Response(420, json={"error": {"message": "Rate limited"}})
+            assert request.url.path.endswith("/image/explicit")
+            form = parse_qs(request.content.decode())
+            assert form["public_id"] == ["folder/asset"]
+            assert form["type"] == ["authenticated"]
+            assert form["signature"]
+            assert "eager" not in form
+            return httpx.Response(
+                200,
+                json={
+                    "public_id": "folder/asset",
+                    "version": 17,
+                    "resource_type": "image",
+                    "type": "authenticated",
+                    "format": "png",
+                    "bytes": 2048,
+                },
+            )
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            gateway = CloudinaryMediaGateway(
+                cloud_name="demo", api_key="key", api_secret="secret", client=client
+            )
+            asset = await gateway.get_asset_metadata(
+                public_id="folder/asset", resource_type="image"
+            )
+            assert asset.bytes == 2048
+            assert len(requests) == 2
+
+    asyncio.run(exercise())
+
+
 def test_cloudinary_metadata_and_delete_contract() -> None:
     async def exercise() -> None:
         requests: list[httpx.Request] = []
