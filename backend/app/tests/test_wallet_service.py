@@ -49,6 +49,12 @@ def test_gateway_reservation_blocks_a_wallet_payment_during_checkout() -> None:
                 due_at=None,
             )
             async with sessions() as session, session.begin():
+                # Exercise a legacy gateway order: newly issued fees now use wallets.
+                from app.modules.payments.models import PaymentOrder
+
+                saved = await session.get(PaymentOrder, order.id)
+                assert saved is not None
+                saved.provider = "mock"
                 await WalletLedger(session).post(
                     user_id=owner.user_id,
                     delta=100_000,
