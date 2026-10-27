@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 
 const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
 
-test.beforeEach(async ({ context }) => {
+test.beforeEach(async ({ context, request }) => {
+  await request.post(`${mockApiUrl}/api/e2e/reset-preparation`);
   await context.addCookies([
     {
       name: "cns_access",
@@ -67,14 +68,14 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       .fill("Trung tâm an ninh công nghệ số - THV");
     await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
     await page.getByRole("button", { name: "Kiểm tra thông tin" }).click();
+    const createButton = page.getByRole("button", { name: "Tạo hồ sơ nháp" });
+    await expect(createButton).toBeEnabled();
     const createDossier = page.waitForResponse(
       (response) =>
         response.url().endsWith("/api/v1/dossiers") &&
         response.request().method() === "POST",
     );
-    await page
-      .getByRole("button", { name: "Tạo hồ sơ nháp" })
-      .click({ force: true });
+    await createButton.click();
     expect((await createDossier).ok()).toBe(true);
     await expect(page).toHaveURL(/\/dossiers\/9155dbf5-/, {
       timeout: 30_000,

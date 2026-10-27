@@ -99,7 +99,9 @@ test("applicant dashboard keeps one clear next action at every breakpoint", asyn
     page.getByRole("heading", { level: 1, name: "Việc cần làm" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Bổ sung tài liệu được yêu cầu" }),
+    page
+      .getByRole("region", { name: "Cần bạn xử lý" })
+      .getByRole("link", { name: "Bổ sung tài liệu được yêu cầu" }),
   ).toHaveCount(1);
 
   for (const viewport of viewports) {

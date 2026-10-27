@@ -57,3 +57,11 @@
   explicit GPS action column, direct reviewer attendance and shorter process CTA.
   Compact room entry and desktop-rail/mobile-selector chat preserve backend gates.
   Browser screenshots and send/access regressions passed; no production changes.
+- Delivery #388 CI regression repair: restore compact server-confirmed admin
+  chat access label; wait for acknowledged preparation before draft creation;
+  reset preparation between critical-journey attempts; update dashboard theme
+  checks to real account surfaces and scope priority-action checks to their
+  region. No save/access guard was weakened and no timeout increased.
+- Repair validation: all 945 frontend tests / 228 files passed; 11 focused
+  desktop/mobile E2E cases passed with five intentional viewport skips;
+  focused ESLint, typecheck and whitespace checks passed.

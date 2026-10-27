@@ -269,7 +269,9 @@ export function CommunityChat({
       <header className="member-chat__header">
         <div>
           <p className="text-sm text-[var(--theme-muted)]">
-            Trò chuyện hội viên
+            {allowed && access.data?.source === "ADMIN"
+              ? "Quyền quản trị · mọi phòng"
+              : "Trò chuyện hội viên"}
           </p>
           <h2 id="chat-heading" className="mt-1 text-xl font-bold">
             {membershipTiers[room].room}
