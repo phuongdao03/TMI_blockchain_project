@@ -65,3 +65,9 @@
 - Repair validation: all 945 frontend tests / 228 files passed; 11 focused
   desktop/mobile E2E cases passed with five intentional viewport skips;
   focused ESLint, typecheck and whitespace checks passed.
+- Delivery #389: quality and desktop E2E passed; the mobile hero test still
+  expected retired login/register hero controls. It now checks nomination and
+  discovery destinations, 44px touch height and above-fold visibility. Existing
+  public session/menu coverage remains unchanged. Complete shell/session files
+  passed on desktop/mobile: 15 cases, seven intentional viewport skips; lint
+  and formatting passed. No application UI or timeout was changed for this fix.

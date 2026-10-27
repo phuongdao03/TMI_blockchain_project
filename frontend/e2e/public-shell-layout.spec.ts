@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("mobile home shows the brand logo and account actions without opening the menu", async ({
+test("mobile home shows the brand logo and primary actions without opening the menu", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile-chrome");
@@ -25,12 +25,14 @@ test("mobile home shows the brand logo and account actions without opening the m
     )
     .toBe(true);
 
-  const actions = page.getByRole("navigation", { name: "Truy cập tài khoản" });
-  const login = actions.getByRole("link", { name: "Đăng nhập" });
-  const register = actions.getByRole("link", { name: "Đăng ký" });
-  await expect(login).toBeVisible();
-  await expect(register).toBeVisible();
-  for (const action of [login, register]) {
+  const actions = page.locator(".registry-hero__actions");
+  const nominate = actions.getByRole("link", { name: "Gửi hồ sơ đề cử" });
+  const discover = actions.getByRole("link", { name: "Khám phá đề cử" });
+  await expect(nominate).toBeVisible();
+  await expect(discover).toBeVisible();
+  await expect(nominate).toHaveAttribute("href", "/dossiers/new");
+  await expect(discover).toHaveAttribute("href", "/works");
+  for (const action of [nominate, discover]) {
     const box = await action.boundingBox();
     expect(box).not.toBeNull();
     expect(box!.height).toBeGreaterThanOrEqual(44);
