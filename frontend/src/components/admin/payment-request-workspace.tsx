@@ -111,7 +111,7 @@ export function PaymentRequestWorkspace({
   };
 
   return (
-    <main className="payment-request-workspace workspace-screen mx-auto max-w-6xl space-y-6 pb-12">
+    <div className="payment-request-workspace workspace-screen mx-auto max-w-6xl space-y-6 pb-12">
       <WorkspacePageHeader
         description="Chọn hồ sơ đã được duyệt, sau đó xác nhận mức phí hoặc miễn phí."
         icon={BadgeDollarSign}
@@ -381,6 +381,6 @@ export function PaymentRequestWorkspace({
           )}
         </section>
       ) : null}
-    </main>
+    </div>
   );
 }

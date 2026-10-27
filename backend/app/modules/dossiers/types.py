@@ -21,6 +21,7 @@ class CreateDossier:
     visibility: DossierVisibility = DossierVisibility.PRIVATE
     dossier_type_version_id: UUID | None = None
     form_data: dict[str, Any] | None = None
+    preparation_revision: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,6 +55,8 @@ class DossierView:
     created_at: datetime
     updated_at: datetime
     can_edit: bool
+    submission_fee_required: bool = False
+    submission_fee_paid_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)

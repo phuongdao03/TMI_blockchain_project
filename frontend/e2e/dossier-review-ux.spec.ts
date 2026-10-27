@@ -10,7 +10,10 @@ const baseCookies = [
   ["cns_csrf", "e2e-csrf", false],
 ] as const;
 
-test.beforeEach(async ({ context }) => {
+test.beforeEach(async ({ context, request }) => {
+  await request.post(
+    `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}/api/e2e/reset-preparation`,
+  );
   await context.addCookies(
     baseCookies.map(([name, value, httpOnly]) => ({
       name,

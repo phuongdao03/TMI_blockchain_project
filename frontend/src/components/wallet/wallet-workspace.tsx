@@ -12,13 +12,8 @@ import type { WalletSummary, WalletTopup } from "@/lib/api/types";
 import { useAuthUser } from "@/lib/auth/user-context";
 import { safeLocalDestination } from "@/lib/auth/safe-destination";
 
-export const formatVnd = (value: number) =>
-  new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0,
-  }).format(value);
-export const walletKey = (userId?: string) => ["wallet", userId] as const;
+import { formatVnd, walletKey } from "@/lib/wallet/summary";
+export { formatVnd, walletKey } from "@/lib/wallet/summary";
 
 export function WalletWorkspace({
   returnTo,

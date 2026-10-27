@@ -32,6 +32,51 @@ NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
 
 
 class StubDossierService:
+    async def get_preparation(self, principal: AuthPrincipal) -> dict[str, object]:
+        self._require_access()
+        return {
+            "ownerUserId": principal.user_id,
+            "revision": 0,
+            "payload": None,
+            "updatedAt": None,
+        }
+
+    async def save_preparation(
+        self,
+        principal: AuthPrincipal,
+        *,
+        owner_user_id: UUID,
+        expected_revision: int,
+        payload: dict[str, object],
+    ) -> dict[str, object]:
+        self._require_access()
+        if owner_user_id != principal.user_id:
+            raise DossierForbiddenError()
+        return {
+            "ownerUserId": principal.user_id,
+            "revision": expected_revision + 1,
+            "payload": payload,
+            "updatedAt": NOW,
+        }
+
+    async def submission_fee_quote(
+        self, principal: AuthPrincipal, dossier_id: UUID
+    ) -> dict[str, object]:
+        self._require_access()
+        return {
+            "amountMinor": 5_000_000,
+            "currency": "VND",
+            "description": "Phí nộp hồ sơ",
+            "entryId": "internal",
+        }
+
+    async def retry_submission_payment(
+        self, principal: AuthPrincipal, dossier_id: UUID, *, key: str
+    ) -> UUID:
+        self._require_access()
+        assert key == "submission-retry"
+        return self.dossier_id
+
     def __init__(self, principal: AuthPrincipal) -> None:
         self.principal = principal
         self.dossier_id = uuid4()
@@ -149,6 +194,7 @@ async def _request(
     principal: AuthPrincipal,
     *,
     json: dict[str, object] | None = None,
+    headers: dict[str, str] | None = None,
 ) -> httpx.Response:
     app = create_application(
         settings=Settings.model_validate({"app_env": "local"}),
@@ -163,7 +209,7 @@ async def _request(
             transport=transport,
             base_url="http://testserver",
         ) as client:
-            return await client.request(method, path, json=json)
+            return await client.request(method, path, json=json, headers=headers)
 
 
 def _principal() -> AuthPrincipal:
@@ -172,6 +218,75 @@ def _principal() -> AuthPrincipal:
         session_id=uuid4(),
         email="owner@cnsgroup.vn",
         roles=("APPLICANT",),
+    )
+
+
+def test_preparation_contract_is_owner_scoped_and_validates_input() -> None:
+    principal = _principal()
+    service = StubDossierService(principal)
+    path = "/api/v1/dossiers/preparation"
+    initial = asyncio.run(_request("GET", path, service, principal))
+    assert initial.status_code == 200
+    assert initial.json()["data"]["ownerUserId"] == str(principal.user_id)
+    assert initial.json()["data"]["payload"] is None
+    body: dict[str, object] = {
+        "ownerUserId": str(principal.user_id),
+        "expectedRevision": 0,
+        "payload": {
+            "dossierTypeVersionId": None,
+            "step": 1,
+            "values": {"title": "Incomplete input", "summary": ""},
+            "formData": {"custom": "kept"},
+        },
+    }
+    saved = asyncio.run(_request("PUT", path, service, principal, json=body))
+    assert saved.status_code == 200
+    assert saved.json()["data"]["revision"] == 1
+    assert saved.json()["data"]["payload"]["formData"] == {"custom": "kept"}
+    body["ownerUserId"] = str(uuid4())
+    assert (
+        asyncio.run(_request("PUT", path, service, principal, json=body)).status_code
+        == 403
+    )
+    body["expectedRevision"] = -1
+    assert (
+        asyncio.run(_request("PUT", path, service, principal, json=body)).status_code
+        == 422
+    )
+
+
+def test_submission_fee_quote_and_retry_contract() -> None:
+    principal = _principal()
+    service = StubDossierService(principal)
+    base = f"/api/v1/dossiers/{service.dossier_id}"
+    quote = asyncio.run(_request("GET", f"{base}/submission-fee", service, principal))
+    assert quote.status_code == 200
+    assert quote.json()["data"] == {
+        "amountMinor": 5_000_000,
+        "currency": "VND",
+        "description": "Phí nộp hồ sơ",
+    }
+    missing_key = asyncio.run(
+        _request("POST", f"{base}/submission-payment", service, principal)
+    )
+    assert missing_key.status_code == 422
+    retry = asyncio.run(
+        _request(
+            "POST",
+            f"{base}/submission-payment",
+            service,
+            principal,
+            headers={"Idempotency-Key": "submission-retry"},
+        )
+    )
+    assert retry.status_code == 200
+    assert retry.json()["data"]["paymentOrderId"] == str(service.dossier_id)
+    service.forbidden = True
+    assert (
+        asyncio.run(
+            _request("GET", f"{base}/submission-fee", service, principal)
+        ).status_code
+        == 403
     )
 
 

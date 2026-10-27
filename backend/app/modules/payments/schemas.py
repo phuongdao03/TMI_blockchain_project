@@ -29,6 +29,7 @@ class PaymentOrderData(PaymentSchema):
     order_code: str
     dossier_id: UUID
     fee_obligation_id: UUID | None = None
+    purpose: str | None = None
     provider: str
     provider_order_id: str | None
     amount_minor: int

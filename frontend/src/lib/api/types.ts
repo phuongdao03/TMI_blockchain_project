@@ -1911,6 +1911,8 @@ export type EvidenceAccessScope =
   | "PUBLIC";
 
 export interface Dossier {
+  submissionFeeRequired?: boolean;
+  submissionFeePaidAt?: string | null;
   id: string;
   code: string;
   ownerUserId: string;
@@ -1966,6 +1968,7 @@ export interface DossierDetail extends Dossier {
 }
 
 export interface DossierInput {
+  preparationRevision?: number;
   categoryId: string;
   organizationId?: string | null;
   title: string;
@@ -1974,6 +1977,20 @@ export interface DossierInput {
   visibility: DossierVisibility;
   dossierTypeVersionId?: string | null;
   formData?: Record<string, unknown> | null;
+}
+
+export interface DossierPreparationPayload {
+  dossierTypeVersionId: string | null;
+  step: 0 | 1 | 2 | 3;
+  values: { title: string; summary: string; visibility: DossierVisibility };
+  formData: Record<string, unknown>;
+}
+
+export interface DossierPreparationState {
+  ownerUserId: string;
+  revision: number;
+  payload: DossierPreparationPayload | null;
+  updatedAt: string | null;
 }
 
 export interface DossierTypeField {
@@ -2100,6 +2117,7 @@ export type PaymentStatus =
   | "REFUNDED";
 
 export interface PaymentOrder {
+  purpose?: string | null;
   id: string;
   orderCode: string;
   dossierId: string;

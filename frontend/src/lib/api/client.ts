@@ -1288,6 +1288,41 @@ export const organizationApi = {
 };
 
 export const dossierApi = {
+  getPreparation() {
+    return request<import("./types").DossierPreparationState>(
+      "/dossiers/preparation",
+      { cache: "no-store" },
+    );
+  },
+  savePreparation(
+    ownerUserId: string,
+    expectedRevision: number,
+    payload: import("./types").DossierPreparationPayload,
+  ) {
+    return request<import("./types").DossierPreparationState>(
+      "/dossiers/preparation",
+      {
+        method: "PUT",
+        body: JSON.stringify({ ownerUserId, expectedRevision, payload }),
+      },
+    );
+  },
+  submissionFee(dossierId: string) {
+    return request<{
+      amountMinor: number;
+      currency: string;
+      description: string;
+    }>(`/dossiers/${encodeURIComponent(dossierId)}/submission-fee`);
+  },
+  retrySubmissionPayment(dossierId: string, key: string) {
+    return request<{ paymentOrderId: string }>(
+      `/dossiers/${encodeURIComponent(dossierId)}/submission-payment`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": key },
+      },
+    );
+  },
   list(filters: DossierListFilters = {}) {
     const parameters = new URLSearchParams({
       page: String(filters.page ?? 1),

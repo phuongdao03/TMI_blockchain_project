@@ -326,9 +326,11 @@ function VerificationResult({
 function Fact({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="text-slate-400">{label}</dt>
-      <dd className="mt-1 break-all font-bold text-slate-200">{value}</dd>
+      <dd className="mt-1 whitespace-normal break-normal font-bold text-slate-200 [overflow-wrap:break-word]">
+        {value}
+      </dd>
     </div>
   );
 }

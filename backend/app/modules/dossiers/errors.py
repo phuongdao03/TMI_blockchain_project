@@ -37,6 +37,12 @@ class DossierInvalidStateError(DomainError):
         )
 
 
+class DossierPreparationConflictError(DossierInvalidStateError):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.code = "DOSSIER_PREPARATION_CONFLICT"
+
+
 class DossierDuplicateContentError(DomainError):
     def __init__(self) -> None:
         super().__init__(

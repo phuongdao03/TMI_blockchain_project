@@ -66,6 +66,7 @@ docs/handoffs/
 !docs/handoffs/
 docs/handoffs/*
 !docs/handoffs/community-mobile-identity-and-deletion.md
+!docs/handoffs/ux-task-first-2026-10-27.md
 docs/decisions/
 docs/release/
 docs/security/

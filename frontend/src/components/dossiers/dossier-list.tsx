@@ -109,7 +109,7 @@ export function DossierList({
         <h2 className="mt-5 text-xl font-bold">
           {status ? "Không có hồ sơ ở trạng thái này" : "Bạn chưa có hồ sơ nào"}
         </h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-neutral-500">
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--theme-muted)]">
           {status
             ? "Thử xem tất cả trạng thái để tìm hồ sơ cần theo dõi."
             : "Tạo hồ sơ đầu tiên để chuẩn bị dữ liệu và bằng chứng xác lập."}
@@ -138,14 +138,14 @@ export function DossierList({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2.5">
                   <DossierStatusBadge status={dossier.status} />
-                  <span className="font-mono text-xs font-semibold tracking-wide text-neutral-500">
+                  <span className="font-mono text-xs font-semibold tracking-wide text-[var(--theme-muted)]">
                     {displayCnsDossierCode(dossier.code)}
                   </span>
                 </div>
                 <h2 className="mt-3 truncate text-lg font-bold tracking-tight text-neutral-950">
                   {dossier.title}
                 </h2>
-                <p className="mt-1 line-clamp-2 text-sm leading-6 text-neutral-500">
+                <p className="mt-1 line-clamp-2 text-sm leading-6 text-[var(--theme-muted)]">
                   {dossier.summary ?? "Chưa có mô tả hồ sơ."}
                 </p>
                 <p className="mt-3 text-xs font-medium text-neutral-400">
@@ -174,7 +174,7 @@ export function DossierList({
         </div>
       </div>
       <div className="flex items-center justify-between gap-4 text-sm">
-        <p className="text-neutral-500">
+        <p className="text-[var(--theme-muted)]">
           {data.meta.total} hồ sơ · Trang {page}/{totalPages}
         </p>
         <div className="flex gap-2">

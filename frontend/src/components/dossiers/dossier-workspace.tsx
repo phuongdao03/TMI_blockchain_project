@@ -42,6 +42,8 @@ import type {
 } from "@/lib/api/types";
 import { dossierKeys } from "@/lib/dossiers/query-keys";
 import { cn } from "@/lib/utils";
+import { useAuthUser } from "@/lib/auth/user-context";
+import { DossierPromotionOptions } from "./dossier-promotion-options";
 
 const infoSchema = z.object({
   title: z.string().trim().min(3).max(255),
@@ -397,6 +399,7 @@ export function DossierWorkspace({
   dossierId: string;
   justCreated?: boolean;
 }) {
+  const user = useAuthUser();
   const [step, setStep] = useState<Step>(
     justCreated ? "evidence" : "information",
   );
@@ -418,6 +421,14 @@ export function DossierWorkspace({
     queryFn: () => dossierApi.timeline(dossierId),
   });
   const documentRules = detail.data?.documentRules ?? [];
+  const submissionFee = useQuery({
+    queryKey: ["submission-fee", dossierId],
+    queryFn: () => dossierApi.submissionFee(dossierId),
+    enabled: Boolean(
+      detail.data?.submissionFeeRequired && !detail.data?.submissionFeePaidAt,
+    ),
+    retry: false,
+  });
   const selectedRule =
     documentRules.find((rule) => rule.key === evidenceType) ??
     documentRules.at(0);
@@ -589,7 +600,9 @@ export function DossierWorkspace({
             </div>
           </dl>
           <p className="mt-4 text-sm font-medium">
-            Bước tiếp theo: Tinh Hoa Việt kiểm tra hồ sơ của bạn.
+            {submit.data.dossier.status === "PAYMENT_PENDING"
+              ? "Bước tiếp theo: thanh toán phí nộp để hồ sơ được tiếp nhận thẩm định."
+              : "Bước tiếp theo: Tinh Hoa Việt kiểm tra hồ sơ của bạn."}
           </p>
           <ol
             aria-label="Các bước sau khi nộp"
@@ -602,9 +615,15 @@ export function DossierWorkspace({
               </span>
             </li>
             <li className="rounded-xl bg-white/60 p-3">
-              <strong className="block">2. Kiểm duyệt hồ sơ</strong>
+              <strong className="block">
+                {submit.data.dossier.status === "PAYMENT_PENDING"
+                  ? "2. Thanh toán phí nộp"
+                  : "2. Kiểm duyệt hồ sơ"}
+              </strong>
               <span className="mt-1 block">
-                Tinh Hoa Việt đối chiếu thông tin và tài liệu.
+                {submit.data.dossier.status === "PAYMENT_PENDING"
+                  ? "Xem khoản phí bên dưới và xác nhận thanh toán bằng ví."
+                  : "Tinh Hoa Việt đối chiếu thông tin và tài liệu."}
               </span>
             </li>
             <li className="rounded-xl bg-white/60 p-3">
@@ -703,6 +722,8 @@ export function DossierWorkspace({
       <DossierPaymentAction
         dossierId={dossier.id}
         dossierStatus={dossier.status}
+        submissionFeeRequired={dossier.submissionFeeRequired}
+        submissionFeePaidAt={dossier.submissionFeePaidAt}
       />
 
       <div className="space-y-4">
@@ -1121,7 +1142,14 @@ export function DossierWorkspace({
                   <Button
                     className="mt-5 w-full sm:w-auto"
                     disabled={
-                      !isComplete || submit.isPending || submissionComplete
+                      !isComplete ||
+                      submit.isPending ||
+                      submissionComplete ||
+                      Boolean(
+                        dossier.submissionFeeRequired &&
+                          !dossier.submissionFeePaidAt &&
+                          !submissionFee.data,
+                      )
                     }
                     onClick={() => submit.mutate()}
                   >
@@ -1132,6 +1160,45 @@ export function DossierWorkspace({
                         ? "Nộp lại hồ sơ"
                         : "Nộp hồ sơ"}
                   </Button>
+                  {dossier.submissionFeeRequired &&
+                  !dossier.submissionFeePaidAt ? (
+                    <div
+                      className="mt-4 border-t border-[var(--theme-border)] pt-4 text-sm"
+                      role="status"
+                    >
+                      {submissionFee.data ? (
+                        <>
+                          <p className="font-bold">
+                            Phí nộp hồ sơ:{" "}
+                            {new Intl.NumberFormat("vi-VN").format(
+                              submissionFee.data.amountMinor,
+                            )}{" "}
+                            {submissionFee.data.currency}
+                          </p>
+                          <p className="mt-2">
+                            Thanh toán bằng ví sau khi nộp, trước khi thẩm định.
+                            Bổ sung hoặc phê duyệt không thu lại khoản phí này.
+                            Việc nộp phí không bảo đảm hồ sơ được phê duyệt.
+                          </p>
+                        </>
+                      ) : submissionFee.isError ? (
+                        <>
+                          <p>
+                            Chưa tải được phí nộp. Dữ liệu hồ sơ vẫn được giữ.
+                          </p>
+                          <button
+                            type="button"
+                            className="min-h-11 font-bold underline"
+                            onClick={() => void submissionFee.refetch()}
+                          >
+                            Tải lại phí nộp
+                          </button>
+                        </>
+                      ) : (
+                        "Đang tải phí nộp hồ sơ…"
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
               {submit.error ? (
@@ -1204,11 +1271,20 @@ export function DossierWorkspace({
         </div>
       </div>
 
-      {dossier.status !== "DRAFT" && (
-        <DossierWorkflowTimeline
-          history={timeline.data ?? []}
+      {user?.id === dossier.ownerUserId && user.roles.includes("USER") ? (
+        <DossierPromotionOptions
+          dossierId={dossier.id}
           status={dossier.status}
         />
+      ) : null}
+      {dossier.status !== "DRAFT" && (
+        <div id="dossier-publication-progress" tabIndex={-1}>
+          <DossierWorkflowTimeline
+            history={timeline.data ?? []}
+            status={dossier.status}
+            submissionFeeRequired={dossier.submissionFeeRequired}
+          />
+        </div>
       )}
     </div>
   );

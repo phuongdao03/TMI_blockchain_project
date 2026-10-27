@@ -81,13 +81,25 @@ test("guest account actions resolve at every requested viewport", async ({
   await page.goto("/");
   for (const width of [360, 375, 390, 430, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    const actions = page;
+    const menuButton = page.getByRole("button", {
+      name: "Mở menu",
+      exact: true,
+    });
+    const useMenu = await menuButton.isVisible();
+    if (useMenu) await menuButton.click();
+    const actions = useMenu
+      ? page.getByRole("navigation", { name: "Menu công khai" })
+      : page.getByRole("banner");
     await expect(
       actions.getByRole("link", { name: "Đăng nhập", exact: true }).first(),
     ).toBeVisible();
     await expect(
       actions.getByRole("link", { name: "Đăng ký", exact: true }).first(),
     ).toBeVisible();
+    if (useMenu)
+      await page
+        .getByRole("button", { name: "Đóng menu", exact: true })
+        .click();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

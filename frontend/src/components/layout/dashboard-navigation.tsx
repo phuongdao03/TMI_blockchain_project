@@ -370,8 +370,10 @@ function sectionsFor(
 
   if (persona === "MODERATOR") {
     return [
-      { label: "Thẩm định", items: reviewerItems.slice(0, 2) },
-      ...(isEmployee ? [{ label: "Nhân sự", items: employeeItems }] : []),
+      { label: "Thẩm định", items: reviewerItems.slice(0, 3) },
+      ...(isEmployee
+        ? [{ label: "Nhân sự", items: employeeItems.slice(1) }]
+        : []),
       { label: "Khám phá", items: discoveryItems },
       { label: "Cá nhân", items: personalItems.slice(0, 2) },
       ...(adminEntryItems.length
@@ -413,12 +415,7 @@ function mobileItemsFor(
   const priorities: Record<WorkspacePersona, string[]> = {
     VIEWER: ["/workspace", "/works", "/community"],
     USER: ["/workspace", "/dossiers", "/community", "/wallet"],
-    MODERATOR: [
-      "/reviews",
-      "/community",
-      "/work-allocations",
-      "/notifications",
-    ],
+    MODERATOR: ["/reviews", "/attendance", "/community", "/work-allocations"],
     SUPER_ADMIN: ["/workspace", "/community", "/works"],
   };
   const byHref = new globalThis.Map(items.map((item) => [item.href, item]));

@@ -2,7 +2,14 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    field_validator,
+    model_validator,
+)
 
 from app.modules.dossiers.models import (
     DocumentHashAdjudicationAction,
@@ -27,7 +34,34 @@ class DossierSchema(BaseModel):
     )
 
 
+class PreparationValuesData(DossierSchema):
+    title: Annotated[str, Field(max_length=255)] = ""
+    summary: Annotated[str, Field(max_length=10_000)] = ""
+    visibility: DossierVisibility = DossierVisibility.PRIVATE
+
+
+class PreparationPayloadData(DossierSchema):
+    dossier_type_version_id: UUID | None = None
+    step: Annotated[int, Field(ge=0, le=3)] = 0
+    values: PreparationValuesData
+    form_data: dict[str, JsonValue] = Field(default_factory=dict, max_length=128)
+
+
+class PreparationWriteData(DossierSchema):
+    owner_user_id: UUID
+    expected_revision: Annotated[int, Field(ge=0)]
+    payload: PreparationPayloadData
+
+
+class PreparationStateData(DossierSchema):
+    owner_user_id: UUID
+    revision: int
+    payload: PreparationPayloadData | None
+    updated_at: datetime | None
+
+
 class CreateDossierRequest(DossierSchema):
+    preparation_revision: Annotated[int | None, Field(ge=1)] = None
     category_id: UUID
     organization_id: UUID | None = None
     title: Annotated[str, Field(min_length=1, max_length=255)]
@@ -94,6 +128,14 @@ class DossierData(DossierSchema):
     created_at: datetime
     updated_at: datetime
     can_edit: bool
+    submission_fee_required: bool = False
+    submission_fee_paid_at: datetime | None = None
+
+
+class SubmissionFeeQuoteData(DossierSchema):
+    amount_minor: int
+    currency: str
+    description: str
 
 
 class DossierTypeVersionData(DossierSchema):

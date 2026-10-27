@@ -18,7 +18,7 @@ describe("platform guidance", () => {
     expect(screen.getAllByText("Bạn thực hiện")).toHaveLength(4);
     expect(screen.getAllByText("Kết quả bạn nhận")).toHaveLength(4);
     expect(screen.getByText("Tạo và hoàn thiện hồ sơ")).toBeDefined();
-    expect(screen.getByText("Nộp để kiểm tra")).toBeDefined();
+    expect(screen.getByText("Nộp và thanh toán phí")).toBeDefined();
     expect(screen.getByText("Thẩm định & phản hồi")).toBeDefined();
     expect(screen.getByText("Xác lập và công bố")).toBeDefined();
     expect(container.textContent).not.toMatch(forbiddenPublicTerms);

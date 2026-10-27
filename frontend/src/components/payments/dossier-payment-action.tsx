@@ -11,22 +11,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { startNavigationFeedback } from "@/components/ui/navigation-loading";
-import { paymentApi } from "@/lib/api/client";
+import { dossierApi, paymentApi } from "@/lib/api/client";
 import type { DossierStatus } from "@/lib/api/types";
 
 export function DossierPaymentAction({
   dossierId,
   dossierStatus,
+  submissionFeeRequired = false,
+  submissionFeePaidAt,
 }: {
   dossierId: string;
   dossierStatus: DossierStatus;
+  submissionFeeRequired?: boolean;
+  submissionFeePaidAt?: string | null;
 }) {
   const router = useRouter();
   const shouldLoadPayment = dossierStatus === "PAYMENT_PENDING";
   const obligation = useQuery({
     queryKey: ["fee-obligation", dossierId],
     queryFn: () => paymentApi.getFeeObligation(dossierId),
-    enabled: shouldLoadPayment,
+    enabled: shouldLoadPayment && !submissionFeeRequired,
     retry: false,
   });
   const activeOrder = useQuery({
@@ -43,6 +47,35 @@ export function DossierPaymentAction({
       router.push(`/payments/${order.id}`);
     },
   });
+  const retrySubmission = useMutation({
+    mutationFn: () =>
+      dossierApi.retrySubmissionPayment(dossierId, crypto.randomUUID()),
+    onSuccess: (result) => {
+      startNavigationFeedback();
+      router.push(`/payments/${result.paymentOrderId}`);
+    },
+  });
+
+  if (
+    submissionFeeRequired &&
+    submissionFeePaidAt &&
+    ![
+      "PAID",
+      "ANCHOR_PENDING",
+      "ANCHORED",
+      "CERTIFICATE_ISSUED",
+      "PUBLISHED",
+    ].includes(dossierStatus)
+  )
+    return (
+      <section className="dossier-payment-notice dossier-payment-notice--success rounded-2xl p-5">
+        <h2 className="font-bold">Đã thanh toán phí nộp hồ sơ</h2>
+        <p className="mt-1 text-sm">
+          Khoản phí đã được ghi nhận. Bạn không cần nộp lại phí khi bổ sung hoặc
+          khi hồ sơ được phê duyệt.
+        </p>
+      </section>
+    );
 
   if (dossierStatus === "PAID") {
     return (
@@ -63,8 +96,14 @@ export function DossierPaymentAction({
       <section className="dossier-payment-notice dossier-payment-notice--pending flex items-start gap-3 rounded-2xl p-5">
         <Clock3 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
         <div className="min-w-0">
-          <h2 className="font-bold">Yêu cầu thanh toán đã được gửi</h2>
-          {activeOrder.data ? (
+          <h2 className="font-bold">
+            {submissionFeeRequired
+              ? "Thanh toán phí nộp để bắt đầu thẩm định"
+              : "Yêu cầu thanh toán đã được gửi"}
+          </h2>
+          {activeOrder.data &&
+          (!submissionFeeRequired ||
+            ["PENDING", "PROCESSING"].includes(activeOrder.data.status)) ? (
             <>
               <p className="mt-1 text-sm leading-6">
                 Số tiền:{" "}
@@ -83,6 +122,29 @@ export function DossierPaymentAction({
                 Xem khoản phí và thanh toán
               </Link>
             </>
+          ) : submissionFeeRequired && !activeOrder.isPending ? (
+            <div>
+              <p className="mt-2 text-sm">
+                Mở lại thanh toán với mức phí đã chốt khi nộp. Hồ sơ của bạn
+                được giữ nguyên.
+              </p>
+              <button
+                type="button"
+                className="mt-3 min-h-11 font-bold underline"
+                disabled={retrySubmission.isPending}
+                onClick={() => retrySubmission.mutate()}
+              >
+                {retrySubmission.isPending
+                  ? "Đang mở thanh toán…"
+                  : "Tiếp tục thanh toán phí nộp"}
+              </button>
+              {retrySubmission.isError ? (
+                <p className="mt-2 text-sm" role="alert">
+                  Chưa mở được thanh toán. Vui lòng thử lại; thao tác này chưa
+                  trừ tiền.
+                </p>
+              ) : null}
+            </div>
           ) : obligation.data ? (
             <>
               <p className="mt-1 text-sm leading-6">

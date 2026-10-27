@@ -169,7 +169,7 @@ class PaymentService:
             )
             self._workflow.transition(
                 dossier,
-                target=DossierStatus.PAID,
+                target=self._confirmed_dossier_status(dossier),
                 actor_user_id=principal.user_id,
                 allowed_sources={DossierStatus.PAYMENT_PENDING},
                 reason_code="WALLET_PAYMENT_CONFIRMED",
@@ -193,7 +193,7 @@ class PaymentService:
             await self._session.flush()
             await self._session.refresh(order)
             result = self._view(order)
-            newly_paid = True
+            newly_paid = not dossier.submission_fee_required
         if newly_paid and self._enqueue_certificate_issue is not None:
             self._enqueue_certificate_issue(result.dossier_id)
         return result
@@ -204,6 +204,8 @@ class PaymentService:
         """Resolve a durable reservation using the same provider order code."""
         async with self._session.begin():
             order = await self._required_order(order_id, for_update=True)
+            if order.provider == "wallet":
+                return self._view(order)
             if (
                 order.provider_order_id is not None
                 or order.status is PaymentStatus.PAID
@@ -297,7 +299,10 @@ class PaymentService:
             else:
                 dossier = await self._required_dossier(dossier_id, for_update=True)
                 await self._require_access(principal, dossier)
-                if dossier.status is not DossierStatus.APPROVED:
+                if (
+                    dossier.submission_fee_required
+                    or dossier.status is not DossierStatus.APPROVED
+                ):
                     raise PaymentConflictError(
                         "Only an approved dossier can create a payment order."
                     )
@@ -513,7 +518,10 @@ class PaymentService:
                 return self._view(await self._required_order(replay_id))
         async with self._session.begin():
             dossier = await self._required_dossier(dossier_id, for_update=True)
-            if dossier.status is not DossierStatus.APPROVED:
+            if (
+                dossier.submission_fee_required
+                or dossier.status is not DossierStatus.APPROVED
+            ):
                 raise PaymentConflictError(
                     "Only an approved dossier can receive a payment request."
                 )
@@ -590,7 +598,7 @@ class PaymentService:
             else:
                 self._workflow.transition(
                     dossier,
-                    target=DossierStatus.PAID,
+                    target=self._confirmed_dossier_status(dossier),
                     actor_user_id=principal.user_id,
                     allowed_sources={DossierStatus.PAYMENT_PENDING},
                     reason_code="ADMIN_FEE_WALLET_PAYMENT",
@@ -614,7 +622,7 @@ class PaymentService:
                     user_id=principal.user_id,
                     status=order.status,
                 )
-                newly_paid = True
+                newly_paid = not dossier.submission_fee_required
             self._audit(
                 "payment.request.issued",
                 order_id,
@@ -926,7 +934,10 @@ class PaymentService:
                     status=dossier.status,
                     reason=prior_waiver.note or normalized_reason,
                 )
-            if dossier.status is not DossierStatus.APPROVED:
+            if (
+                dossier.submission_fee_required
+                or dossier.status is not DossierStatus.APPROVED
+            ):
                 raise PaymentConflictError(
                     "Only an approved dossier can have its payment waived."
                 )
@@ -937,7 +948,7 @@ class PaymentService:
 
             self._workflow.transition(
                 dossier,
-                target=DossierStatus.PAID,
+                target=self._confirmed_dossier_status(dossier),
                 actor_user_id=principal.user_id,
                 allowed_sources={DossierStatus.APPROVED},
                 reason_code="PAYMENT_WAIVED",
@@ -978,7 +989,7 @@ class PaymentService:
                 status=dossier.status,
                 reason=normalized_reason,
             )
-            should_issue = True
+            should_issue = not dossier.submission_fee_required
         if should_issue and self._enqueue_certificate_issue is not None:
             self._enqueue_certificate_issue(dossier_id)
         return result
@@ -1065,7 +1076,11 @@ class PaymentService:
                 )
                 self._workflow.transition(
                     dossier,
-                    target=DossierStatus.APPROVED,
+                    target=(
+                        DossierStatus.PAYMENT_PENDING
+                        if dossier.submission_fee_required
+                        else DossierStatus.APPROVED
+                    ),
                     actor_user_id=principal.user_id,
                     allowed_sources={DossierStatus.PAYMENT_PENDING},
                     reason_code="PAYMENT_ORDER_CANCELLED",
@@ -1116,7 +1131,11 @@ class PaymentService:
             dossier = await self._required_dossier(order.dossier_id, for_update=True)
             self._workflow.transition(
                 dossier,
-                target=DossierStatus.APPROVED,
+                target=(
+                    DossierStatus.PAYMENT_PENDING
+                    if dossier.submission_fee_required
+                    else DossierStatus.APPROVED
+                ),
                 actor_user_id=principal.user_id,
                 allowed_sources={DossierStatus.PAYMENT_PENDING},
                 reason_code="PAYMENT_ORDER_CANCELLED",
@@ -1205,7 +1224,11 @@ class PaymentService:
                 reserved = await self._payments.get_by_order_code(
                     event.order_code, for_update=True
                 )
-                if reserved is not None and reserved.provider_order_id is None:
+                if (
+                    reserved is not None
+                    and reserved.provider_order_id is None
+                    and reserved.provider == self._provider_name
+                ):
                     order = reserved
             if order is None:
                 if await self.wallet_service().settle_event(event):
@@ -1247,7 +1270,7 @@ class PaymentService:
                     )
                     self._workflow.transition(
                         dossier,
-                        target=DossierStatus.PAID,
+                        target=self._confirmed_dossier_status(dossier),
                         actor_user_id=dossier.owner_user_id,
                         allowed_sources={DossierStatus.PAYMENT_PENDING},
                         reason_code="PAYMENT_WEBHOOK_CONFIRMED",
@@ -1255,7 +1278,7 @@ class PaymentService:
                     self._transition_status(order, PaymentStatus.PAID, source="WEBHOOK")
                     order.paid_at = self._clock()
                     await self._settle_fee_obligation(order)
-                    newly_paid = True
+                    newly_paid = not dossier.submission_fee_required
                     await self._add_paid_notification(
                         dossier,
                         order,
@@ -1368,7 +1391,7 @@ class PaymentService:
         should_issue = False
         async with self._session.begin():
             order = await self._required_order(order_id)
-            if order.status is PaymentStatus.PAID:
+            if order.status is PaymentStatus.PAID or order.provider == "wallet":
                 return self._view(order), False
             provider_order_id = order.provider_order_id or order.order_code
         try:
@@ -1433,7 +1456,7 @@ class PaymentService:
                     )
                     self._workflow.transition(
                         dossier,
-                        target=DossierStatus.PAID,
+                        target=self._confirmed_dossier_status(dossier),
                         actor_user_id=dossier.owner_user_id,
                         allowed_sources={DossierStatus.PAYMENT_PENDING},
                         reason_code="PAYMENT_RECONCILIATION_CONFIRMED",
@@ -1446,7 +1469,7 @@ class PaymentService:
                     )
                     order.paid_at = self._clock()
                     await self._settle_fee_obligation(order)
-                    should_issue = True
+                    should_issue = not dossier.submission_fee_required
                     await self._add_paid_notification(
                         dossier,
                         order,
@@ -1459,7 +1482,11 @@ class PaymentService:
                 )
                 self._workflow.transition(
                     dossier,
-                    target=DossierStatus.APPROVED,
+                    target=(
+                        DossierStatus.PAYMENT_PENDING
+                        if dossier.submission_fee_required
+                        else DossierStatus.APPROVED
+                    ),
                     actor_user_id=dossier.owner_user_id,
                     allowed_sources={DossierStatus.PAYMENT_PENDING},
                     reason_code="PAYMENT_RECONCILIATION_CANCELLED",
@@ -1533,7 +1560,7 @@ class PaymentService:
             )
             self._workflow.transition(
                 dossier,
-                target=DossierStatus.PAID,
+                target=self._confirmed_dossier_status(dossier),
                 actor_user_id=principal.user_id,
                 allowed_sources={DossierStatus.PAYMENT_PENDING},
                 reason_code="PAYMENT_MANUAL_CONFIRMATION",
@@ -1565,7 +1592,10 @@ class PaymentService:
                 user_id=principal.user_id,
                 status=result.status,
             )
-        if self._enqueue_certificate_issue is not None:
+        if (
+            not dossier.submission_fee_required
+            and self._enqueue_certificate_issue is not None
+        ):
             self._enqueue_certificate_issue(result.dossier_id)
         return result
 
@@ -1724,6 +1754,9 @@ class PaymentService:
             order_code=order.order_code,
             dossier_id=order.dossier_id,
             fee_obligation_id=order.fee_obligation_id,
+            purpose=str(order.metadata_json["purpose"])
+            if order.metadata_json.get("purpose")
+            else None,
             provider=order.provider,
             provider_order_id=order.provider_order_id,
             amount_minor=order.amount_minor,
@@ -1764,6 +1797,12 @@ class PaymentService:
     def _utc(value: datetime) -> datetime:
         return value.replace(tzinfo=UTC) if value.tzinfo is None else value
 
+    def _confirmed_dossier_status(self, dossier: Dossier) -> DossierStatus:
+        if dossier.submission_fee_required:
+            dossier.submission_fee_paid_at = self._clock()
+            return DossierStatus.SUBMITTED
+        return DossierStatus.PAID
+
     async def _add_paid_notification(
         self,
         dossier: Dossier,
@@ -1771,6 +1810,26 @@ class PaymentService:
         *,
         source_event_id: UUID,
     ) -> None:
+        if dossier.submission_fee_required:
+            self._session.add(
+                Notification(
+                    user_id=dossier.owner_user_id,
+                    source_event_id=source_event_id,
+                    type="PAYMENT_CONFIRMED",
+                    title="Đã thanh toán phí nộp hồ sơ",
+                    body=(
+                        "Hồ sơ đã được tiếp nhận và chờ kiểm tra, thẩm định. "
+                        "Không cần nộp lại phí khi bổ sung hồ sơ."
+                    ),
+                    data_json={
+                        "dossierId": str(dossier.id),
+                        "paymentOrderId": str(order.id),
+                        "actionPath": f"/dossiers/{dossier.id}",
+                    },
+                    created_at=self._clock(),
+                )
+            )
+            return
         self._session.add(
             Notification(
                 user_id=dossier.owner_user_id,

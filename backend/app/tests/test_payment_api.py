@@ -413,6 +413,7 @@ def test_admin_payment_order_list_exposes_reconciliation_fields() -> None:
             "orderCode": "PAY-000001",
             "dossierId": str(service.dossier_id),
             "feeObligationId": None,
+            "purpose": None,
             "provider": "mock",
             "providerOrderId": "mock-order",
             "amountMinor": 1_000_000,

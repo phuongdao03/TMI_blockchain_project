@@ -11,10 +11,11 @@ const workflowSteps = [
   },
   {
     number: "02",
-    title: "Nộp để kiểm tra",
-    action: "Gửi hồ sơ khi thông tin và tài liệu đã sẵn sàng.",
+    title: "Nộp và thanh toán phí",
+    action:
+      "Gửi hồ sơ khi thông tin và tài liệu đã sẵn sàng, rồi xác nhận phí nộp bằng ví trước khi thẩm định.",
     outcome:
-      "Nhận mã theo dõi và trạng thái rõ ràng cho từng lần nộp hoặc bổ sung.",
+      "Mức phí được hiển thị từ cấu hình khi kiểm tra hồ sơ và trước khi xác nhận thanh toán. Hồ sơ mới không thu lại khoản phí này khi bổ sung hoặc phê duyệt; hồ sơ cũ giữ chính sách đã áp dụng.",
   },
   {
     number: "03",

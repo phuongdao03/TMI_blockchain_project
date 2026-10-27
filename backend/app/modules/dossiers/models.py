@@ -159,6 +159,24 @@ class DossierTypeVersion(Base):
     )
 
 
+class DossierPreparation(UtcTimestampMixin, Base):
+    __tablename__ = "dossier_preparations"
+    __table_args__ = (CheckConstraint("revision > 0", name="revision_positive"),)
+
+    owner_user_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    payload_json: Mapped[dict[str, object] | None] = mapped_column(
+        JSONB(none_as_null=True).with_variant(JSON(none_as_null=True), "sqlite")
+    )
+    consumed_revision: Mapped[int | None] = mapped_column(Integer)
+    created_dossier_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("dossiers.id", ondelete="SET NULL")
+    )
+    creation_fingerprint: Mapped[str | None] = mapped_column(String(64))
+
+
 class Dossier(UtcTimestampMixin, Base):
     __tablename__ = "dossiers"
     __table_args__ = (
@@ -232,6 +250,15 @@ class Dossier(UtcTimestampMixin, Base):
         server_default="0",
     )
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    submission_fee_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
+    submission_fee_snapshot: Mapped[dict[str, object] | None] = mapped_column(
+        JSONB().with_variant(JSON(), "sqlite")
+    )
+    submission_fee_paid_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

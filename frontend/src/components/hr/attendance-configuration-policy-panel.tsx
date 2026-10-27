@@ -244,7 +244,7 @@ export function AttendancePolicyPanel({
         </div>
         {latestPolicy && canConfigure ? (
           <button
-            className="col-span-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)] sm:col-span-1 sm:row-start-1 sm:w-auto"
+            className="col-span-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)] sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:w-auto whitespace-nowrap"
             onClick={() => {
               setCreatingVersion((current) => !current);
               setCorrecting(false);
@@ -258,7 +258,7 @@ export function AttendancePolicyPanel({
         ) : null}
         {correctablePolicy && canConfigure ? (
           <button
-            className="col-span-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)] sm:col-span-1 sm:row-start-2 sm:col-start-3 sm:w-auto"
+            className="col-span-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)] sm:col-span-1 sm:row-start-2 sm:col-start-3 sm:w-auto whitespace-nowrap"
             onClick={() => {
               setCorrecting((current) => !current);
               setCreatingVersion(false);

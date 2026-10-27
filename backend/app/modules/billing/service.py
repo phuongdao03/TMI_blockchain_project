@@ -114,7 +114,10 @@ class BillingService:
             dossier = await self._dossiers.get_by_id(dossier_id, for_update=True)
             if dossier is None:
                 raise PriceCatalogConflictError("Dossier was not found.")
-            if dossier.status is not DossierStatus.APPROVED:
+            if (
+                dossier.submission_fee_required
+                or dossier.status is not DossierStatus.APPROVED
+            ):
                 raise PriceCatalogConflictError(
                     "Only an approved dossier can receive a fee obligation."
                 )

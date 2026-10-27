@@ -71,7 +71,7 @@ export default async function DossiersPage({
           <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] sm:text-4xl">
             Hồ sơ xác lập
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
             Chuẩn bị thông tin, quản lý bằng chứng và theo dõi từng phiên bản
             trong một quy trình minh bạch.
           </p>
@@ -88,7 +88,7 @@ export default async function DossiersPage({
       <form className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 sm:flex-row sm:items-end">
         <div className="flex-1">
           <label
-            className="text-xs font-bold uppercase tracking-wider text-neutral-500"
+            className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]"
             htmlFor="status-filter"
           >
             Trạng thái

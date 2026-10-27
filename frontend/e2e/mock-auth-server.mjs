@@ -418,6 +418,7 @@ const members = [
   },
 ];
 let dossier = null;
+const dossierPreparations = new Map();
 let evidences = [];
 let versions = [];
 let timeline = [];
@@ -681,6 +682,72 @@ const server = createServer(async (request, response) => {
     ?.split("=")[1];
   const csrfProtected =
     authenticated && request.headers["x-csrf-token"] === "e2e-csrf";
+  const preparationOwner =
+    sessionPersona === "applicant" ? applicantUser.id : user.id;
+  if (request.method === "POST" && path === "/api/e2e/reset-preparation") {
+    dossierPreparations.clear();
+    send(response, 200, envelope({ status: "reset" }));
+    return;
+  }
+  if (path === "/api/v1/dossiers/preparation" && authenticated) {
+    const current = dossierPreparations.get(preparationOwner) ?? {
+      revision: 0,
+      payload: null,
+      updatedAt: null,
+    };
+    if (request.method === "GET") {
+      send(
+        response,
+        200,
+        envelope({
+          ownerUserId: preparationOwner,
+          revision: current.revision,
+          payload: current.payload,
+          updatedAt: current.updatedAt,
+        }),
+      );
+      return;
+    }
+    if (request.method === "PUT" && csrfProtected) {
+      const input = await readJson(request);
+      if (input.ownerUserId !== preparationOwner) {
+        const failure = error(
+          403,
+          "DOSSIER_FORBIDDEN",
+          "Preparation belongs to another account.",
+        );
+        send(response, failure.status, failure.body);
+        return;
+      }
+      if (input.expectedRevision !== current.revision) {
+        const failure = error(
+          409,
+          "DOSSIER_PREPARATION_CONFLICT",
+          "Preparation changed on another device.",
+        );
+        send(response, failure.status, failure.body);
+        return;
+      }
+      const next = {
+        ...current,
+        revision: current.revision + 1,
+        payload: input.payload,
+        updatedAt: new Date().toISOString(),
+      };
+      dossierPreparations.set(preparationOwner, next);
+      send(
+        response,
+        200,
+        envelope({
+          ownerUserId: preparationOwner,
+          revision: next.revision,
+          payload: next.payload,
+          updatedAt: next.updatedAt,
+        }),
+      );
+      return;
+    }
+  }
   if (
     guidePreviewArticles &&
     request.method === "POST" &&
@@ -3014,6 +3081,29 @@ const server = createServer(async (request, response) => {
     const dossierType = dossierTypes.find(
       (item) => item.currentVersion.id === input.dossierTypeVersionId,
     );
+    const preparation = dossierPreparations.get(preparationOwner);
+    if (input.preparationRevision !== undefined) {
+      if (
+        preparation?.consumedRevision === input.preparationRevision &&
+        preparation.createdDossier
+      ) {
+        send(response, 201, envelope(preparation.createdDossier));
+        return;
+      }
+      if (
+        !preparation ||
+        preparation.revision !== input.preparationRevision ||
+        !preparation.payload
+      ) {
+        const failure = error(
+          409,
+          "DOSSIER_PREPARATION_CONFLICT",
+          "Preparation changed before draft creation.",
+        );
+        send(response, failure.status, failure.body);
+        return;
+      }
+    }
     if (!dossierType || dossierType.categoryId !== input.categoryId) {
       const failure = error(
         422,
@@ -3045,6 +3135,15 @@ const server = createServer(async (request, response) => {
     evidences = [];
     versions = [];
     timeline = [];
+    if (input.preparationRevision !== undefined && preparation) {
+      dossierPreparations.set(preparationOwner, {
+        ...preparation,
+        revision: preparation.revision + 1,
+        payload: null,
+        consumedRevision: input.preparationRevision,
+        createdDossier: { ...dossier },
+      });
+    }
     send(response, 201, envelope(dossier));
     return;
   }

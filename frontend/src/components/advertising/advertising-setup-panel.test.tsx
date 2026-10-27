@@ -13,11 +13,12 @@ const api = vi.hoisted(() => ({
   createCampaign: vi.fn(),
   submitCampaign: vi.fn(),
   listDossiers: vi.fn(),
+  getDossier: vi.fn(),
 }));
 
 vi.mock("@/lib/api/client", () => ({
   advertisingApi: api,
-  dossierApi: { list: api.listDossiers },
+  dossierApi: { list: api.listDossiers, get: api.getDossier },
 }));
 
 const dossier = {
@@ -41,19 +42,33 @@ const dossier = {
   canEdit: false,
 };
 
-function mount(onCreated = vi.fn()) {
+function mount(onCreated = vi.fn(), initialDossierId?: string) {
   return render(
     <QueryClientProvider
       client={
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <AdvertisingSetupPanel onCreated={onCreated} />
+      <AdvertisingSetupPanel
+        onCreated={onCreated}
+        initialDossierId={initialDossierId}
+      />
     </QueryClientProvider>,
   );
 }
 
 describe("AdvertisingSetupPanel", () => {
+  it("loads the requested older dossier rather than silently choosing the first page", async () => {
+    api.getDossier.mockResolvedValue({
+      ...dossier,
+      id: "older-dossier",
+      title: "Hồ sơ cũ được chọn",
+    });
+    mount(vi.fn(), "older-dossier");
+    await screen.findByRole("option", { name: /Hồ sơ cũ được chọn/ });
+    expect(api.getDossier).toHaveBeenCalledWith("older-dossier");
+  });
+
   beforeEach(() => {
     vi.resetAllMocks();
     api.listDossiers.mockResolvedValue({ data: [dossier] });

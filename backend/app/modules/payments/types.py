@@ -42,6 +42,7 @@ class PaymentOrderView:
     issued_by_user_id: UUID | None = None
     issued_at: datetime | None = None
     fee_obligation_id: UUID | None = None
+    purpose: str | None = None
     bank_bin: str | None = None
     bank_account_number: str | None = None
     bank_account_name: str | None = None

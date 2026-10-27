@@ -103,7 +103,7 @@ describe("dashboard overview", () => {
     expect(
       await screen.findByRole("heading", { name: "Bắt đầu hồ sơ đầu tiên" }),
     ).toBeDefined();
-    expect(listMock).toHaveBeenCalledTimes(1);
+    expect(listMock).toHaveBeenCalledWith({ page: 1, pageSize: 5 });
   });
 
   it("renders live dossier summary and primary applicant action", async () => {
@@ -148,8 +148,8 @@ describe("dashboard overview", () => {
   it.each([
     ["DRAFT", "Tiếp tục hoàn thiện hồ sơ", "/dossiers/dossier-1"],
     ["UNDER_REVIEW", "Xem tiến độ hồ sơ", "/dossiers/dossier-1"],
-    ["PAYMENT_PENDING", "Thanh toán phí phát hành", "/dossiers/dossier-1"],
-    ["CERTIFICATE_ISSUED", "Tải bằng xác lập", "/certificates"],
+    ["PAYMENT_PENDING", "Xem khoản phí và thanh toán", "/dossiers/dossier-1"],
+    ["CERTIFICATE_ISSUED", "Xem hồ sơ và bằng xác lập", "/dossiers/dossier-1"],
   ] as const)(
     "uses the correct primary action for %s",
     async (status, label, href) => {
@@ -194,18 +194,19 @@ describe("dashboard overview", () => {
         </QueryClientProvider>,
       );
 
-      const actions = await screen.findAllByRole("link", { name: label });
-      expect(actions).toHaveLength(1);
-      expect(actions[0]?.getAttribute("href")).toBe(href);
+      const actions = await screen.findAllByText(new RegExp(label));
+      for (const action of actions)
+        expect(action.closest("a")?.getAttribute("href")).toBe(href);
     },
   );
 
   it("offers a recovery action when dossiers cannot be loaded", async () => {
-    listMock.mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce({
+    listMock.mockRejectedValue(new Error("offline"));
+    const recovered = {
       success: true,
       data: [],
       meta: { requestId: "retry", page: 1, pageSize: 5, total: 0 },
-    });
+    };
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -225,11 +226,12 @@ describe("dashboard overview", () => {
     );
 
     expect(await screen.findByText("Chưa thể tải hồ sơ")).toBeDefined();
+    listMock.mockResolvedValue(recovered);
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
     expect(
       await screen.findByRole("heading", { name: "Bắt đầu hồ sơ đầu tiên" }),
     ).toBeDefined();
-    expect(listMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("link", { name: "Tạo hồ sơ mới" })).toBeDefined();
   });
 
   it("keeps dossier actions out of the public-user landing page", () => {

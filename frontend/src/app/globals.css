@@ -2321,7 +2321,7 @@ body {
 }
 .notification-panel__header p,
 .notification-center__eyebrow {
-  color: var(--thv-red);
+  color: var(--theme-accent);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.15em;
@@ -11837,9 +11837,12 @@ html[data-theme="light"] .public-home .registry-hero__provenance-label {
 }
 
 .public-home .registry-hero__copy--desktop,
-.public-home .registry-hero__discover,
 .public-home .registry-hero__desktop-search {
   display: none;
+}
+
+.public-home .registry-hero__discover {
+  display: inline-flex;
 }
 
 .public-home .registry-hero__buttons .registry-button-auth-secondary {
@@ -11944,8 +11947,8 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "intro"
-      "story"
-      "actions";
+      "actions"
+      "story";
     align-items: start;
     row-gap: 0;
     padding-block: 1.5rem 1.75rem;
@@ -11999,6 +12002,15 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
 
   .public-home .registry-hero__actions {
     margin-top: 1.25rem;
+  }
+
+  .public-home .registry-hero__action-row {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .public-home .registry-hero__action-row .registry-hero__document-link {
+    margin-top: 0;
   }
 
   .public-home .registry-hero__buttons {
@@ -12151,7 +12163,8 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
   }
 
   .public-home .registry-hero__buttons {
-    display: none;
+    display: flex;
+    margin-top: 0;
   }
 
   .public-home .registry-hero__action-row {

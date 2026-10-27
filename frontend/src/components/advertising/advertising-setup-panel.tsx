@@ -50,8 +50,17 @@ export function AdvertisingSetupPanel({
 }) {
   const queryClient = useQueryClient();
   const dossiers = useQuery({
-    queryKey: ["advertising-eligible-dossiers"],
-    queryFn: () => dossierApi.list({ page: 1, pageSize: 100 }),
+    queryKey: ["advertising-eligible-dossiers", initialDossierId],
+    queryFn: async () => {
+      const page = await dossierApi.list({ page: 1, pageSize: 100 });
+      if (
+        !initialDossierId ||
+        page.data.some((item) => item.id === initialDossierId)
+      )
+        return page;
+      const requested = await dossierApi.get(initialDossierId);
+      return { ...page, data: [requested, ...page.data] };
+    },
   });
   const placements = useQuery({
     queryKey: ["advertising-placements"],
@@ -74,9 +83,9 @@ export function AdvertisingSetupPanel({
     (item) => item.id === dossierId,
   )
     ? dossierId
-    : (eligibleDossiers.find((item) => item.id === initialDossierId)?.id ??
-      eligibleDossiers[0]?.id ??
-      "");
+    : dossierId
+      ? ""
+      : (eligibleDossiers[0]?.id ?? "");
   const selectedPlacementCode =
     placementCode ||
     placements.data?.find((placement) =>
@@ -262,6 +271,9 @@ export function AdvertisingSetupPanel({
             onChange={(event) => setDossierId(event.target.value)}
             value={selectedDossierId}
           >
+            <option value="" disabled>
+              Chọn hồ sơ đủ điều kiện
+            </option>
             {eligibleDossiers.map((dossier: Dossier) => (
               <option key={dossier.id} value={dossier.id}>
                 {dossier.title} · {dossier.code}

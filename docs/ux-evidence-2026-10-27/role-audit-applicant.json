@@ -1,0 +1,206 @@
+{
+  "widths": [
+    360,
+    375,
+    390,
+    430,
+    768,
+    1024,
+    1440
+  ],
+  "checks": [
+    {
+      "route": "/dashboard",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/dashboard",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/dashboard",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/dashboard",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/dossiers",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/dossiers",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/dossiers",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/dossiers",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/dossiers/new",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/dossiers/new",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/dossiers/new",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/dossiers/new",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/wallet",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/wallet",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/wallet",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/wallet",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/membership",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/membership",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/membership",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/membership",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/advertising",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/advertising",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/advertising",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/advertising",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/notifications",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/notifications",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/notifications",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/notifications",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/account",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/account",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/account",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/account",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    }
+  ],
+  "pageErrors": []
+}

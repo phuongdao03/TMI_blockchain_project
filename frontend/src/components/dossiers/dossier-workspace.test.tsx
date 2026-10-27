@@ -14,6 +14,7 @@ const api = vi.hoisted(() => ({
   resubmit: vi.fn(),
   versions: vi.fn(),
   timeline: vi.fn(),
+  submissionFee: vi.fn(),
 }));
 
 vi.mock("@/lib/api/client", () => ({ dossierApi: api }));
@@ -74,6 +75,47 @@ const dossier = {
 };
 
 describe("DossierWorkspace", () => {
+  it("blocks submission while fee lookup fails and preserves the draft for retry", async () => {
+    const user = userEvent.setup();
+    api.get.mockResolvedValue({ ...dossier, submissionFeeRequired: true });
+    api.versions.mockResolvedValue([]);
+    api.timeline.mockResolvedValue([]);
+    api.submissionFee.mockRejectedValue(new Error("pricing offline"));
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <DossierWorkspace dossierId={dossier.id} />
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("heading", { level: 1, name: dossier.title });
+    await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
+    expect(
+      await screen.findByText(
+        "Chưa tải được phí nộp. Dữ liệu hồ sơ vẫn được giữ.",
+      ),
+    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "Nộp hồ sơ" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    api.submissionFee.mockResolvedValue({
+      amountMinor: 5_000_000,
+      currency: "VND",
+      description: "Phí nộp hồ sơ",
+    });
+    await user.click(screen.getByRole("button", { name: "Tải lại phí nộp" }));
+    expect(
+      await screen.findByText(/Phí nộp hồ sơ: 5.000.000 VND/),
+    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "Nộp hồ sơ" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+    expect(screen.getByText("Bằng chứng về quyền sử dụng")).toBeDefined();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });

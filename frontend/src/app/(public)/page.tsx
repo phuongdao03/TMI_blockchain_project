@@ -104,12 +104,16 @@ export default function HomePage() {
           </div>
           <div className="registry-hero__actions relative z-10 max-w-[44rem] lg:pb-8">
             <div className="registry-hero__action-row">
-              <HomeHeroAccountActions />
+              <HomeHeroAccountActions preview={preview} />
               <Link
-                className="registry-hero__discover registry-button registry-button-primary"
+                className="registry-hero__discover registry-button registry-button-secondary"
                 href="/works"
               >
                 Khám phá đề cử
+                <ArrowRight aria-hidden="true" className="size-4" />
+              </Link>
+              <Link className="registry-hero__document-link" href="/process">
+                Xem quy trình
                 <ArrowRight aria-hidden="true" className="size-4" />
               </Link>
               <Link

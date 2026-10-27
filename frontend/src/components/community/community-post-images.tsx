@@ -84,11 +84,16 @@ export function CommunityPostImages({
           if (event.target === event.currentTarget) dialog.current?.close();
         }}
       >
-        <form method="dialog" className="mb-3 flex justify-end">
-          <button className="min-h-11 rounded-lg border px-4" autoFocus>
+        <div className="mb-3 flex justify-end">
+          <button
+            className="min-h-11 rounded-lg border px-4"
+            autoFocus
+            type="button"
+            onClick={() => dialog.current?.close()}
+          >
             Đóng ảnh
           </button>
-        </form>
+        </div>
         <Image
           alt={`${postTitle} — ảnh ${selected + 1}`}
           src={`${expandedImage.url}?width=1600`}

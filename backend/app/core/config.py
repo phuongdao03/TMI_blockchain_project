@@ -166,6 +166,7 @@ class Settings(BaseSettings):
     media_upload_signature_rate_window_seconds: int = Field(default=60, ge=1, le=3_600)
     payment_provider: str = Field(default="mock", min_length=1, max_length=32)
     payment_amount_minor: int = Field(default=1_000_000, gt=0)
+    submission_fee_amount_minor: int = Field(default=5_000_000, gt=0)
     payment_currency: str = Field(
         default="VND",
         min_length=3,

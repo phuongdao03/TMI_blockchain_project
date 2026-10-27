@@ -32,7 +32,7 @@ export default async function ReviewQueuePage({
         <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] sm:text-4xl">
           Công việc kiểm duyệt
         </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
           Làm việc trên các hồ sơ được Admin phân công, đối chiếu bằng chứng và
           gửi báo cáo độc lập để Admin ra quyết định cuối.
         </p>
@@ -44,7 +44,7 @@ export default async function ReviewQueuePage({
         <form className="grid gap-3 border-t border-[var(--theme-border)] p-3 sm:grid-cols-[minmax(0,20rem)_auto] sm:items-end sm:justify-start">
           <div>
             <label
-              className="text-xs font-bold uppercase tracking-wider text-neutral-500"
+              className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]"
               htmlFor="review-status"
             >
               Trạng thái phân công

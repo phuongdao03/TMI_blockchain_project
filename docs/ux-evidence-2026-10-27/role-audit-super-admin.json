@@ -1,0 +1,182 @@
+{
+  "widths": [
+    360,
+    375,
+    390,
+    430,
+    768,
+    1024,
+    1440
+  ],
+  "checks": [
+    {
+      "route": "/admin",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/admin",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/admin/reviews",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin/reviews",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/admin/reviews",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin/reviews",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/admin/users",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin/users",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/admin/users",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin/users",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/admin/payments",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin/payments",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/admin/payments",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin/payments",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/admin/content",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin/content",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/admin/content",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin/content",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/admin/memberships",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin/memberships",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/admin/memberships",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin/memberships",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/admin/advertising",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin/advertising",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/admin/advertising",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/admin/advertising",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    }
+  ],
+  "pageErrors": []
+}

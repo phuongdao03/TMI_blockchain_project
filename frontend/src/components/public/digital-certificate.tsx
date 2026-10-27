@@ -9,6 +9,12 @@ import { displayCnsDossierCode } from "@/lib/brand/identifiers";
 
 export function DigitalCertificate({ data }: { data: Verification }) {
   const [failedQr, setFailedQr] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<{
+    certificateNumber: string;
+    message: string;
+    manualUrl?: string;
+  } | null>(null);
   if (!data.certificateNumber) return null;
   const verifyPath = `/verify/${encodeURIComponent(data.certificateNumber)}`;
   const workPath = data.publicWorkSlug
@@ -26,16 +32,40 @@ export function DigitalCertificate({ data }: { data: Verification }) {
   }[data.status];
 
   async function share() {
+    if (sharing || !data.certificateNumber) return;
+    const certificateNumber = data.certificateNumber;
     const url = new URL(verifyPath, window.location.origin).toString();
-    if (navigator.share) {
-      await navigator.share({
-        title: `Bằng xác lập ${data.certificateNumber}`,
-        text: data.assetTitle ?? "Bằng xác lập Tinh Hoa Việt",
-        url,
-      });
-      return;
+    setSharing(true);
+    setShareFeedback(null);
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Bằng xác lập ${certificateNumber}`,
+          text: data.assetTitle ?? "Bằng xác lập Tinh Hoa Việt",
+          url,
+        });
+        setShareFeedback({
+          certificateNumber,
+          message: "Đã mở chia sẻ liên kết tra cứu.",
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareFeedback({
+          certificateNumber,
+          message: "Đã sao chép liên kết tra cứu.",
+        });
+      }
+    } catch (error) {
+      if (!(error instanceof Error && error.name === "AbortError"))
+        setShareFeedback({
+          certificateNumber,
+          message:
+            "Chưa thể chia sẻ tự động. Bạn có thể sao chép liên kết bên dưới.",
+          manualUrl: url,
+        });
+    } finally {
+      setSharing(false);
     }
-    await navigator.clipboard.writeText(url);
   }
 
   return (
@@ -56,7 +86,7 @@ export function DigitalCertificate({ data }: { data: Verification }) {
 
       <div className="border border-[#b89543] p-4 sm:p-8 lg:p-12">
         <header className="flex flex-col items-center border-b-2 border-[#ad8231] pb-6 text-center sm:pb-8">
-          <p className="text-xs font-semibold tracking-[0.16em] text-[#9b7427] uppercase sm:text-sm">
+          <p className="text-xs font-semibold tracking-[0.16em] text-[#76530c] uppercase sm:text-sm">
             Đề cử Tinh Hoa Việt
           </p>
           <h2 className="digital-certificate__heading mt-2 text-balance text-3xl font-bold uppercase text-[#2b1714] sm:text-5xl">
@@ -75,7 +105,7 @@ export function DigitalCertificate({ data }: { data: Verification }) {
         </header>
 
         <div className="mt-5 px-1 sm:px-2">
-          <p className="text-xs font-semibold tracking-[0.08em] text-[#9b7427] uppercase">
+          <p className="text-xs font-semibold tracking-[0.08em] text-[#76530c] uppercase">
             Số bằng xác lập
           </p>
           <p className="mt-1 break-all font-mono text-base font-semibold text-[#82141d] sm:text-lg">
@@ -94,7 +124,7 @@ export function DigitalCertificate({ data }: { data: Verification }) {
         <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,1fr)_11rem] lg:items-center lg:gap-12">
           <section className="min-w-0">
             <div className="digital-certificate__work-panel">
-              <p className="text-xs font-semibold tracking-[0.08em] text-[#9b7427] uppercase sm:text-sm">
+              <p className="text-xs font-semibold tracking-[0.08em] text-[#76530c] uppercase sm:text-sm">
                 Tác phẩm được ghi nhận
               </p>
               <h3 className="digital-certificate__work-title mt-5 text-pretty text-[#2b1714]">
@@ -165,9 +195,11 @@ export function DigitalCertificate({ data }: { data: Verification }) {
             <button
               className="inline-flex min-h-11 items-center justify-center gap-2 border border-[#b78e4b] bg-transparent px-4 text-sm font-bold text-[#82141d] transition hover:bg-[#f7ecd0] active:translate-y-px"
               onClick={() => void share()}
+              disabled={sharing}
               type="button"
             >
-              <Share2 className="size-4" /> Chia sẻ
+              <Share2 className="size-4" />{" "}
+              {sharing ? "Đang mở chia sẻ…" : "Chia sẻ"}
             </button>
             {workPath ? (
               <a className="digital-certificate__verify" href={workPath}>
@@ -179,6 +211,22 @@ export function DigitalCertificate({ data }: { data: Verification }) {
               </a>
             )}
           </div>
+          {shareFeedback?.certificateNumber === data.certificateNumber ? (
+            <div className="w-full min-w-0 text-sm text-[#503d32]">
+              <p role="status">{shareFeedback.message}</p>
+              {shareFeedback.manualUrl ? (
+                <label className="mt-2 block font-bold">
+                  Liên kết tra cứu để sao chép
+                  <input
+                    className="mt-2 min-h-11 w-full min-w-0 rounded border border-[#b78e4b] bg-white px-3 text-sm text-[#2b1714]"
+                    readOnly
+                    value={shareFeedback.manualUrl}
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                </label>
+              ) : null}
+            </div>
+          ) : null}
         </footer>
       </div>
     </article>

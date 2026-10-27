@@ -1,4 +1,59 @@
 import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+
+test("certificate sharing recovers when the browser denies clipboard access", async ({
+  page,
+}, info) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: () =>
+          Promise.reject(
+            new DOMException("Permission denied", "NotAllowedError"),
+          ),
+      },
+    });
+  });
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/verify/demo-token");
+  await page.getByRole("button", { name: "Chia sẻ", exact: true }).click();
+  const link = page.getByLabel("Liên kết tra cứu để sao chép");
+  await expect(link).toHaveValue(/\/verify\//);
+  await link.focus();
+  expect(
+    await link.evaluate(
+      (input: HTMLInputElement) =>
+        input.selectionEnd === input.value.length && input.selectionStart === 0,
+    ),
+  ).toBe(true);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  expect(
+    accessibility.violations.map(({ id, nodes }) => ({
+      id,
+      targets: nodes.map((node) => node.target),
+    })),
+  ).toEqual([]);
+  await page.screenshot({
+    path: `../docs/ux-evidence-2026-10-27/share-recovery-${info.project.name}.png`,
+    fullPage: true,
+    scale: "css",
+  });
+  expect(errors).toEqual([]);
+});
 
 test("certificate issuer stays readable without mobile overflow", async ({
   page,

@@ -89,7 +89,7 @@ export default function ProcessPage() {
           </div>
           <div className="public-page-header__action">
             <p>Sẵn sàng bắt đầu?</p>
-            <Link href="/register">Tạo hồ sơ mới</Link>
+            <Link href="/dossiers/new">Tạo hồ sơ mới</Link>
           </div>
         </div>
       </header>

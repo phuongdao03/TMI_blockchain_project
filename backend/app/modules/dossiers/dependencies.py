@@ -16,6 +16,7 @@ async def get_dossier_service(
     secret = settings.auth_outbox_encryption_key
     yield DossierService(
         session=session,
+        submission_fee_amount_minor=settings.submission_fee_amount_minor,
         payload_cipher=OutboxPayloadCipher.from_base64(
             encoded_key=secret.get_secret_value() if secret is not None else "",
             key_id=settings.auth_outbox_key_id,

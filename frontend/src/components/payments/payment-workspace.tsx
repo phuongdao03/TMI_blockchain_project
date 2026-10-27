@@ -119,7 +119,7 @@ function PaymentWorkspaceContent({ orderId }: { orderId: string }) {
   );
 
   return (
-    <main className="payment-workspace mx-auto max-w-5xl space-y-6">
+    <div className="payment-workspace mx-auto max-w-5xl space-y-6">
       <Link
         className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-neutral-500 hover:text-primary-700"
         href={`/dossiers/${payment.dossierId}`}
@@ -186,8 +186,9 @@ function PaymentWorkspaceContent({ orderId }: { orderId: string }) {
                   <p className="mt-1 text-sm leading-6 text-emerald-800">
                     Thanh toán được ghi nhận
                     {payment.paidAt ? ` lúc ${formatTime(payment.paidAt)}` : ""}
-                    . Tinh Hoa Việt đang chuẩn bị và phát hành bằng xác lập cho
-                    hồ sơ của bạn.
+                    {payment.purpose === "SUBMISSION_FEE"
+                      ? ". Hồ sơ đã được tiếp nhận để kiểm tra và thẩm định. Bạn không cần nộp lại phí khi bổ sung hồ sơ."
+                      : ". Tinh Hoa Việt đang chuẩn bị và phát hành bằng xác lập cho hồ sơ của bạn."}
                   </p>
                 </div>
               </div>
@@ -392,6 +393,6 @@ function PaymentWorkspaceContent({ orderId }: { orderId: string }) {
           </p>
         ) : null}
       </ConfirmationDialog>
-    </main>
+    </div>
   );
 }

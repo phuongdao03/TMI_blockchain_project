@@ -1,18 +1,14 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowRight,
-  BadgeCheck,
-  CircleAlert,
-  Clock3,
-  FilePlus2,
-  FolderKanban,
-  LoaderCircle,
-} from "lucide-react";
+import { FilePlus2, FolderKanban, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import {
+  ApplicantTasks,
+  dossierNextAction,
+} from "@/components/dashboard/applicant-tasks";
 import { DossierStatusBadge } from "@/components/dossiers/dossier-status";
 import { ModeratorHrDashboardSummary } from "@/components/hr/moderator-hr-dashboard-summary";
 import { RoleDashboardOverview } from "@/components/dashboard/role-dashboard-overview";
@@ -20,48 +16,7 @@ import { dossierApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
 import { resolveWorkspacePersona } from "@/lib/auth/role-workspaces";
 import { dossierKeys } from "@/lib/dossiers/query-keys";
-import type { Dossier, DossierStatus } from "@/lib/api/types";
-
-const attentionStatuses = new Set<DossierStatus>([
-  "DRAFT",
-  "NEEDS_SUPPLEMENT",
-  "PAYMENT_PENDING",
-]);
-const completedStatuses = new Set<DossierStatus>([
-  "CERTIFICATE_ISSUED",
-  "PUBLISHED",
-]);
-const closedStatuses = new Set<DossierStatus>([
-  ...completedStatuses,
-  "REJECTED",
-  "REVOKED",
-  "CANCELLED",
-]);
-
-function nextAction(dossier: Dossier) {
-  if (dossier.status === "DRAFT") {
-    return {
-      label: "Tiếp tục hoàn thiện hồ sơ",
-      href: `/dossiers/${dossier.id}`,
-    };
-  }
-  if (dossier.status === "NEEDS_SUPPLEMENT") {
-    return {
-      label: "Bổ sung tài liệu được yêu cầu",
-      href: `/dossiers/${dossier.id}`,
-    };
-  }
-  if (dossier.status === "PAYMENT_PENDING") {
-    return {
-      label: "Thanh toán phí phát hành",
-      href: `/dossiers/${dossier.id}`,
-    };
-  }
-  if (completedStatuses.has(dossier.status)) {
-    return { label: "Tải bằng xác lập", href: "/certificates" };
-  }
-  return { label: "Xem tiến độ hồ sơ", href: `/dossiers/${dossier.id}` };
-}
+import { ApplicantAccountSummary } from "./applicant-account-summary";
 
 export function DashboardOverview() {
   const user = useAuthUser();
@@ -98,25 +53,12 @@ export function DashboardOverview() {
     return roleDashboard;
   }
   const visibleDossiers = dossiers.data?.data ?? [];
-  const processingCount = visibleDossiers.filter(
-    ({ status }) => status !== "DRAFT" && !closedStatuses.has(status),
-  ).length;
-  const attentionCount = visibleDossiers.filter(({ status }) =>
-    attentionStatuses.has(status),
-  ).length;
-  const certificateCount = visibleDossiers.filter(({ status }) =>
-    completedStatuses.has(status),
-  ).length;
-  const primaryDossier =
-    visibleDossiers.find(({ status }) => attentionStatuses.has(status)) ??
-    visibleDossiers[0];
-  const primaryAction = primaryDossier ? nextAction(primaryDossier) : null;
   const canCreateFirstDossier =
     !dossiers.isPending && !dossiers.isError && visibleDossiers.length === 0;
 
   return (
     <div className="dashboard-overview mx-auto max-w-7xl space-y-8">
-      <header>
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-primary-700">
             Trung tâm hồ sơ
@@ -129,6 +71,17 @@ export function DashboardOverview() {
             lập khi hoàn tất.
           </p>
         </div>
+        {!dossiers.isPending &&
+        !dossiers.isError &&
+        visibleDossiers.length > 0 ? (
+          <Link
+            className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary-600 px-5 text-sm font-bold text-white"
+            href="/dossiers/new"
+          >
+            <FilePlus2 aria-hidden="true" className="size-4" />
+            Tạo hồ sơ mới
+          </Link>
+        ) : null}
       </header>
 
       {upgradeCompleted ? (
@@ -143,77 +96,35 @@ export function DashboardOverview() {
         </div>
       ) : null}
 
-      <section className="dashboard-overview__hero hero-grid-surface relative overflow-hidden rounded-2xl border border-white/8 bg-neutral-950 px-6 py-8 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:min-h-72 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-12 lg:px-10 lg:py-10">
-        <div className="relative z-10 max-w-3xl">
-          <span className="mb-7 grid size-11 place-items-center rounded-lg border border-gold-300/30 bg-gold-300/10 text-gold-300">
-            {primaryDossier && attentionStatuses.has(primaryDossier.status) ? (
-              <CircleAlert aria-hidden="true" className="size-6" />
-            ) : (
-              <Clock3 aria-hidden="true" className="size-6" />
-            )}
-          </span>
-          <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-gold-300">
-            {primaryDossier
-              ? "Ưu tiên tiếp theo"
-              : dossiers.isPending
-                ? "Đang kiểm tra hồ sơ"
-                : dossiers.isError
-                  ? "Chưa tải được hồ sơ"
-                  : "Bắt đầu hồ sơ đầu tiên"}
-          </p>
-          <h2 className="mt-3 text-2xl font-bold tracking-[-0.03em] sm:text-3xl lg:text-4xl">
-            {primaryDossier
-              ? primaryAction?.label
-              : dossiers.isPending
-                ? "Đang tải hồ sơ của bạn"
-                : dossiers.isError
-                  ? "Chưa thể xác minh hồ sơ"
-                  : "Chuẩn bị thông tin tài sản của bạn"}
-          </h2>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
-            {primaryDossier
-              ? `${primaryDossier.title} · Cập nhật ${new Date(primaryDossier.updatedAt).toLocaleDateString("vi-VN")}`
-              : dossiers.isPending
-                ? "Hãy chờ hệ thống kiểm tra các hồ sơ hiện có trước khi bắt đầu hồ sơ khác."
-                : dossiers.isError
-                  ? "Tải lại danh sách để tránh tạo trùng hồ sơ đang có."
-                  : "Bạn có thể lưu bản nháp và quay lại hoàn thiện bất cứ lúc nào."}
-          </p>
+      <ApplicantTasks />
+      {user?.id ? <ApplicantAccountSummary userId={user.id} /> : null}
+      {canCreateFirstDossier ? (
+        <Link
+          className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary-600 px-5 text-sm font-bold text-white"
+          href="/dossiers/new"
+        >
+          <FilePlus2 aria-hidden="true" className="size-4" />
+          Tạo hồ sơ mới
+        </Link>
+      ) : dossiers.isError ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-[var(--theme-border)] p-4"
+        >
+          <p>Chưa thể tải hồ sơ của bạn. Vui lòng thử lại.</p>
+          <button
+            className="mt-2 min-h-11 font-bold underline"
+            onClick={() => void dossiers.refetch()}
+            type="button"
+          >
+            Tải lại danh sách
+          </button>
         </div>
-        {primaryAction || canCreateFirstDossier ? (
-          <Link
-            className="relative z-10 mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-primary-600 px-5 text-sm font-bold text-white shadow-lg shadow-black/20 hover:bg-primary-500 lg:mt-0"
-            href={primaryAction?.href ?? "/dossiers/new"}
-          >
-            {!primaryAction ? (
-              <FilePlus2 aria-hidden="true" className="size-4" />
-            ) : null}
-            {primaryAction?.label ?? "Tạo hồ sơ mới"}
-            <ArrowRight aria-hidden="true" className="size-4" />
-          </Link>
-        ) : (
-          <div
-            aria-busy={dossiers.isPending}
-            className="relative z-10 mt-8 max-w-sm rounded-lg border border-white/15 bg-white/5 p-4 text-sm text-slate-200 lg:mt-0"
-            role={dossiers.isError ? "alert" : "status"}
-          >
-            <p>
-              {dossiers.isError
-                ? "Chưa xác minh được hồ sơ. Tải lại trước khi tạo hồ sơ mới."
-                : "Đang tải hồ sơ của bạn…"}
-            </p>
-            {dossiers.isError ? (
-              <button
-                className="mt-2 min-h-11 font-bold underline underline-offset-4"
-                onClick={() => void dossiers.refetch()}
-                type="button"
-              >
-                Tải lại danh sách
-              </button>
-            ) : null}
-          </div>
-        )}
-      </section>
+      ) : dossiers.isPending ? (
+        <p role="status" className="text-sm text-[var(--theme-muted)]">
+          Đang tải hồ sơ của bạn…
+        </p>
+      ) : null}
 
       {!dossiers.isPending &&
       !dossiers.isError &&
@@ -261,121 +172,6 @@ export function DashboardOverview() {
         </section>
       ) : (
         <>
-          <nav
-            aria-label="Lối tắt hồ sơ"
-            className="workspace-shortcut-list grid gap-2 sm:grid-cols-3"
-          >
-            <Link
-              className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
-              href="/dossiers"
-            >
-              Theo dõi hồ sơ
-            </Link>
-            {primaryDossier || canCreateFirstDossier ? (
-              <Link
-                className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
-                href={
-                  primaryDossier &&
-                  (primaryDossier.status === "DRAFT" ||
-                    primaryDossier.status === "NEEDS_SUPPLEMENT")
-                    ? `/dossiers/${primaryDossier.id}`
-                    : "/dossiers/new"
-                }
-              >
-                {primaryDossier &&
-                (primaryDossier.status === "DRAFT" ||
-                  primaryDossier.status === "NEEDS_SUPPLEMENT")
-                  ? "Tải thêm tài liệu"
-                  : "Gửi đề cử mới"}
-              </Link>
-            ) : null}
-            <Link
-              className="flex min-h-12 items-center justify-center rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
-              href="/certificates"
-            >
-              Bằng xác lập của tôi
-            </Link>
-          </nav>
-
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h2 className="text-lg font-bold">
-                Trạng thái của hồ sơ gần đây
-              </h2>
-              <p className="mt-1 text-sm text-neutral-500">
-                Số liệu dưới đây chỉ tính trên {visibleDossiers.length} hồ sơ
-                vừa tải.
-              </p>
-            </div>
-            {dossiers.data ? (
-              <Link
-                className="text-sm font-bold text-primary-700 hover:text-primary-800"
-                href="/dossiers"
-              >
-                Tổng cộng {dossiers.data.meta.total} hồ sơ
-              </Link>
-            ) : null}
-          </div>
-          <section
-            aria-label="Trạng thái của hồ sơ gần đây"
-            className="dashboard-overview__metrics dashboard-surface grid overflow-hidden rounded-xl border md:grid-cols-3"
-          >
-            {[
-              {
-                label: "Việc cần làm",
-                value:
-                  dossiers.isPending || dossiers.isError
-                    ? "—"
-                    : String(attentionCount),
-                detail: "Hồ sơ cần bạn hoàn thiện, bổ sung hoặc thanh toán",
-                icon: FolderKanban,
-              },
-              {
-                label: "Đang xử lý",
-                value:
-                  dossiers.isPending || dossiers.isError
-                    ? "—"
-                    : String(processingCount),
-                detail: "Hồ sơ đã gửi và đang được Tinh Hoa Việt xem xét",
-                icon: Clock3,
-              },
-              {
-                label: "Bằng xác lập sẵn sàng",
-                value:
-                  dossiers.isPending || dossiers.isError
-                    ? "—"
-                    : String(certificateCount),
-                detail: "Bằng xác lập đã phát hành và có thể tải xuống",
-                icon: BadgeCheck,
-              },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <article
-                  className="relative border-b border-black/8 p-6 last:border-b-0 md:border-r md:border-b-0 md:last:border-r-0"
-                  key={item.label}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
-                        {item.label}
-                      </p>
-                      <p className="mt-3 text-4xl font-bold tracking-[-0.04em]">
-                        {item.value}
-                      </p>
-                    </div>
-                    <span className="grid size-9 place-items-center rounded-lg border border-primary-100 bg-primary-50 text-primary-700">
-                      <Icon aria-hidden="true" className="size-5" />
-                    </span>
-                  </div>
-                  <p className="mt-5 max-w-xs text-sm leading-6 text-neutral-600">
-                    {item.detail}
-                  </p>
-                </article>
-              );
-            })}
-          </section>
-
           <section className="grid gap-5 xl:grid-cols-[1.45fr_0.55fr]">
             <section className="dashboard-surface overflow-hidden rounded-xl border">
               <header className="flex items-center justify-between border-b border-black/8 px-6 py-5">
@@ -384,6 +180,11 @@ export function DashboardOverview() {
                   <p className="mt-1 text-sm text-neutral-500">
                     Tiếp tục đúng nơi bạn đang dở.
                   </p>
+                  {dossiers.data ? (
+                    <p className="mt-1 text-sm text-[var(--theme-muted)]">
+                      Tổng cộng {dossiers.data.meta.total} hồ sơ
+                    </p>
+                  ) : null}
                 </div>
                 <Link
                   className="text-sm font-bold text-primary-700 hover:text-primary-800"
@@ -436,11 +237,17 @@ export function DashboardOverview() {
                         key={dossier.id}
                       >
                         <div className="min-w-0 max-w-full">
-                          <p className="truncate text-sm font-bold">
+                          <p className="break-words text-base font-bold">
                             {dossier.title}
                           </p>
-                          <p className="mt-1 font-mono text-[0.68rem] text-neutral-400">
-                            {dossier.code}
+                          <p className="mt-1 text-sm text-[var(--theme-muted)]">
+                            {dossier.code} · Cập nhật{" "}
+                            {new Date(dossier.updatedAt).toLocaleDateString(
+                              "vi-VN",
+                            )}
+                          </p>
+                          <p className="mt-2 text-sm font-semibold text-[var(--theme-accent)]">
+                            {dossierNextAction(dossier.status)} →
                           </p>
                         </div>
                         <DossierStatusBadge
@@ -465,36 +272,30 @@ export function DashboardOverview() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-white/10 bg-neutral-950 p-6 text-white">
-              <div>
-                <BadgeCheck
-                  aria-hidden="true"
-                  className="size-6 text-gold-300"
-                />
-                <h2 className="mt-6 text-lg font-bold">Cập nhật gần nhất</h2>
-                <p className="text-sm leading-6 text-slate-300">
-                  Theo dõi những thay đổi quan trọng của hồ sơ.
-                </p>
-              </div>
-              <div className="mt-6 space-y-3 border-t border-white/10 pt-5">
+            <nav
+              aria-label="Dịch vụ và tài khoản"
+              className="border-t border-[var(--theme-border)] py-5 xl:border-t-0 xl:border-l xl:px-6"
+            >
+              <h2 className="text-lg font-bold">Truy cập nhanh</h2>
+              <div className="mt-3 divide-y divide-[var(--theme-border)]">
                 {[
-                  "Trạng thái dễ hiểu",
-                  "Thông báo khi cần bổ sung",
-                  "Bằng xác lập sẵn sàng để tải",
-                ].map((label) => (
-                  <p
-                    className="flex items-center gap-2 text-sm font-semibold text-slate-300"
-                    key={label}
+                  { href: "/wallet", label: "Ví và lịch sử giao dịch" },
+                  { href: "/notifications", label: "Thông báo của tôi" },
+                  { href: "/advertising", label: "Quảng bá hồ sơ" },
+                  { href: "/membership", label: "Hội viên và quyền lợi" },
+                  { href: "/community", label: "Khám phá cộng đồng" },
+                ].map((item) => (
+                  <Link
+                    className="flex min-h-12 items-center justify-between gap-3 py-3 text-sm font-semibold"
+                    href={item.href}
+                    key={item.href}
                   >
-                    <BadgeCheck
-                      aria-hidden="true"
-                      className="size-4 text-gold-300"
-                    />
-                    {label}
-                  </p>
+                    {item.label}
+                    <span aria-hidden="true">→</span>
+                  </Link>
                 ))}
               </div>
-            </section>
+            </nav>
           </section>
         </>
       )}

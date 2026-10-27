@@ -30,6 +30,31 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 describe("PaymentWorkspace", () => {
+  it("describes review intake rather than issuance after submission payment", async () => {
+    getMock.mockResolvedValue({
+      id: "submission-payment",
+      dossierId: "new-dossier",
+      orderCode: "123",
+      status: "PAID",
+      purpose: "SUBMISSION_FEE",
+      amountMinor: 5_000_000,
+      currency: "VND",
+      provider: "wallet",
+      paidAt: "2026-10-27T08:00:00Z",
+      expiresAt: "2026-11-03T08:00:00Z",
+    });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PaymentWorkspace orderId="submission-payment" />
+      </QueryClientProvider>,
+    );
+    expect(
+      await screen.findByText(
+        /Hồ sơ đã được tiếp nhận để kiểm tra và thẩm định/,
+      ),
+    ).toBeDefined();
+    expect(screen.queryByText(/đang chuẩn bị và phát hành bằng/)).toBeNull();
+  });
   beforeEach(() => {
     getMock.mockReset();
     cancelMock.mockReset();

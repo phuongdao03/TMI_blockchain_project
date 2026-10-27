@@ -68,8 +68,12 @@ describe("HomePage", () => {
       }),
     ).toBeDefined();
     const hero = document.querySelector(".registry-hero");
-    expect(hero?.querySelector('a[href="/register"]')).not.toBeNull();
-    expect(hero?.querySelector('a[href="/login"]')).not.toBeNull();
+    expect(
+      hero?.querySelector('a[href="/dossiers/new"]')?.textContent,
+    ).toContain("Gửi hồ sơ đề cử");
+    expect(hero?.querySelector('a[href="/process"]')?.textContent).toContain(
+      "Xem quy trình",
+    );
     expect(
       screen
         .getByRole("link", { name: "Xem văn bản thành lập" })

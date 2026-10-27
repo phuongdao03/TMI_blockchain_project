@@ -1,0 +1,38 @@
+{
+  "widths": [
+    360,
+    375,
+    390,
+    430,
+    768,
+    1024,
+    1440
+  ],
+  "checks": [
+    {
+      "route": "/reviews",
+      "theme": "Giao diện sáng",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/reviews",
+      "theme": "Giao diện sáng",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "route": "/reviews",
+      "theme": "Giao diện tối",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "route": "/reviews",
+      "theme": "Giao diện tối",
+      "width": 1440,
+      "violations": []
+    }
+  ],
+  "pageErrors": []
+}

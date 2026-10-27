@@ -9,10 +9,12 @@ const getActiveMock = vi.hoisted(() => vi.fn());
 const getFeeObligationMock = vi.hoisted(() => vi.fn());
 const createCheckoutMock = vi.hoisted(() => vi.fn());
 const pushMock = vi.hoisted(() => vi.fn());
+const retrySubmissionMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: pushMock }) }));
 
 vi.mock("@/lib/api/client", () => ({
+  dossierApi: { retrySubmissionPayment: retrySubmissionMock },
   paymentApi: {
     createCheckout: createCheckoutMock,
     getActive: getActiveMock,
@@ -29,6 +31,36 @@ function renderAction(status: "APPROVED" | "PAYMENT_PENDING") {
 }
 
 describe("DossierPaymentAction", () => {
+  it("recovers an expired submission checkout without creating a legacy fee", async () => {
+    const user = userEvent.setup();
+    getActiveMock.mockResolvedValue({ id: "expired", status: "EXPIRED" });
+    retrySubmissionMock.mockResolvedValue({ paymentOrderId: "renewed" });
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <DossierPaymentAction
+          dossierId="new-dossier"
+          dossierStatus="PAYMENT_PENDING"
+          submissionFeeRequired
+        />
+      </QueryClientProvider>,
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Tiếp tục thanh toán phí nộp",
+      }),
+    );
+    expect(retrySubmissionMock).toHaveBeenCalledWith(
+      "new-dossier",
+      expect.any(String),
+    );
+    expect(pushMock).toHaveBeenCalledWith("/payments/renewed");
+    getActiveMock.mockReset();
+    pushMock.mockReset();
+  });
   it("does not let an applicant choose or create a payment amount", () => {
     renderAction("APPROVED");
 

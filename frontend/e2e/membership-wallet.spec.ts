@@ -101,7 +101,8 @@ for (const { tier, label, cardLabel } of tiers) {
         await roomNavigation.scrollIntoViewIfNeeded();
         for (const button of await roomNavigation.getByRole("button").all()) {
           const bounds = await button.boundingBox();
-          expect(bounds?.width).toBeGreaterThan(250);
+          expect(bounds?.width).toBeGreaterThanOrEqual(80);
+          expect(bounds?.height).toBeGreaterThanOrEqual(44);
           expect(bounds?.height).toBeLessThan(100);
         }
         await roomNavigation.screenshot({

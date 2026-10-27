@@ -208,6 +208,13 @@ class ReviewService:
                 if dossier is None:
                     raise ReviewNotFoundError("Dossier was not found.")
                 if (
+                    dossier.submission_fee_required
+                    and dossier.submission_fee_paid_at is None
+                ):
+                    raise ReviewConflictError(
+                        "The submission fee must be paid before reviewer assignment."
+                    )
+                if (
                     dossier.status is not DossierStatus.UNDER_REVIEW
                     or dossier.current_version_no <= 0
                 ):

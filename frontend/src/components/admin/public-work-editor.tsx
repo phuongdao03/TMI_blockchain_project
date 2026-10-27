@@ -428,7 +428,7 @@ export function PublicWorkEditor({
 
   return (
     <section className="cms-workspace overflow-visible rounded-2xl border border-neutral-200 bg-white shadow-sm">
-      <div className="grid min-h-[32rem] xl:grid-cols-[21rem_minmax(0,1fr)]">
+      <div className="grid min-h-[32rem] grid-cols-1 xl:grid-cols-[21rem_minmax(0,1fr)]">
         <aside className="cms-list-pane border-b border-neutral-200 bg-neutral-50/80 xl:border-r xl:border-b-0">
           <div className="border-b border-neutral-200 p-4">
             <div className="mb-4">
@@ -665,7 +665,7 @@ export function PublicWorkEditor({
               />
             ) : (
               <form
-                className="grid gap-6 p-5 xl:grid-cols-[minmax(0,1fr)_19rem]"
+                className="grid grid-cols-1 gap-6 p-5 xl:grid-cols-[minmax(0,1fr)_19rem]"
                 onSubmit={handleSubmit((values) => save.mutate(values))}
               >
                 <div className="space-y-5">
@@ -750,8 +750,8 @@ export function PublicWorkEditor({
                     workId={selectedId}
                   />
                   <input type="hidden" {...register("slug")} />
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="min-w-0">
                       <p className="mb-2 text-sm font-bold text-neutral-800">
                         Đường dẫn công khai
                       </p>
@@ -789,7 +789,7 @@ export function PublicWorkEditor({
                       {...register("fullDescription")}
                     />
                   </EditorField>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <EditorField
                       error={errors.categoryId?.message}
                       label="Danh mục"

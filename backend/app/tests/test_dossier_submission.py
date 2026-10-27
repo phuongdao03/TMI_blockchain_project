@@ -56,6 +56,7 @@ NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
 async def _build_service(
     enqueue_similarity_detection: Callable[[UUID], None] | None = None,
     payload_cipher: OutboxPayloadCipher | None = None,
+    submission_fee_amount_minor: int | None = None,
 ) -> tuple[
     DossierService,
     async_sessionmaker[AsyncSession],
@@ -124,6 +125,7 @@ async def _build_service(
         uuid_factory=lambda: next(generated_ids),
         enqueue_similarity_detection=enqueue_similarity_detection,
         payload_cipher=payload_cipher,
+        submission_fee_amount_minor=submission_fee_amount_minor,
     )
     return service, session_factory, engine, user, media
 

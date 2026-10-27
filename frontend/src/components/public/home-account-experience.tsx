@@ -23,7 +23,11 @@ export function HomeHeroAccountMessage() {
   );
 }
 
-export function HomeHeroAccountActions() {
+export function HomeHeroAccountActions({
+  preview = false,
+}: {
+  preview?: boolean;
+}) {
   const authStatus = useAuthStatus();
   const user = useAuthUser();
 
@@ -33,8 +37,21 @@ export function HomeHeroAccountActions() {
         aria-label="Không gian cá nhân"
         className="registry-hero__buttons mt-9 flex flex-col gap-3 sm:flex-row"
       >
+        {!preview && user.roles.includes("USER") ? (
+          <Link
+            className="registry-button registry-button-primary"
+            href="/dossiers/new"
+          >
+            Gửi hồ sơ đề cử
+            <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
+        ) : null}
         <Link
-          className="registry-button registry-button-primary"
+          className={
+            !preview && user.roles.includes("USER")
+              ? "registry-button registry-button-auth-secondary"
+              : "registry-button registry-button-primary"
+          }
           href={resolveDefaultWorkspace(user.roles, user.permissions ?? [])}
         >
           Không gian cá nhân
@@ -45,6 +62,22 @@ export function HomeHeroAccountActions() {
   }
 
   if (authStatus !== "unauthenticated") return null;
+
+  if (!preview)
+    return (
+      <nav
+        aria-label="Bắt đầu đề cử"
+        className="registry-hero__buttons mt-9 flex flex-col gap-3 sm:flex-row"
+      >
+        <Link
+          className="registry-button registry-button-primary"
+          href="/dossiers/new"
+        >
+          Gửi hồ sơ đề cử
+          <ArrowRight aria-hidden="true" className="size-4" />
+        </Link>
+      </nav>
+    );
 
   return (
     <nav

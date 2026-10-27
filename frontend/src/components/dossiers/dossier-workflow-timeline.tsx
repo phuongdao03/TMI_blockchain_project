@@ -18,7 +18,8 @@ const workflowStages: Array<{
     statuses: ["PAID", "ANCHOR_PENDING", "ANCHORED"],
     label: "Chuẩn bị bằng xác lập",
   },
-  { statuses: ["CERTIFICATE_ISSUED", "PUBLISHED"], label: "Nhận bằng xác lập" },
+  { statuses: ["CERTIFICATE_ISSUED"], label: "Nhận bằng xác lập" },
+  { statuses: ["PUBLISHED"], label: "Công bố" },
 ];
 
 const exceptionStatuses = new Set<DossierStatus>([
@@ -31,11 +32,27 @@ const exceptionStatuses = new Set<DossierStatus>([
 export function DossierWorkflowTimeline({
   status,
   history,
+  submissionFeeRequired = false,
 }: {
   status: DossierStatus;
   history: readonly DossierTimelineItem[];
+  submissionFeeRequired?: boolean;
 }) {
-  const currentIndex = workflowStages.findIndex((stage) =>
+  const stages: typeof workflowStages = submissionFeeRequired
+    ? [
+        workflowStages[0]!,
+        { statuses: ["PAYMENT_PENDING"], label: "Thanh toán phí nộp" },
+        workflowStages[1]!,
+        workflowStages[2]!,
+        {
+          statuses: ["APPROVED", "PAID", "ANCHOR_PENDING", "ANCHORED"],
+          label: "Chuẩn bị bằng xác lập",
+        },
+        workflowStages[5]!,
+        workflowStages[6]!,
+      ]
+    : workflowStages;
+  const currentIndex = stages.findIndex((stage) =>
     stage.statuses.includes(status),
   );
   const completedStatuses = new Set(history.map((item) => item.toStatus));
@@ -55,7 +72,7 @@ export function DossierWorkflowTimeline({
             className="mt-1 text-xl font-bold tracking-tight text-neutral-950"
             id="dossier-workflow-heading"
           >
-            Từ chuẩn bị đến nhận bằng xác lập
+            Từ chuẩn bị đến công bố
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-500">
             Theo dõi chặng đang xử lý và phần việc sắp tới của hồ sơ.
@@ -75,13 +92,18 @@ export function DossierWorkflowTimeline({
         ) : null}
       </div>
 
-      <ol className="dossier-workflow__track mt-6 grid gap-px overflow-hidden sm:grid-cols-2 lg:grid-cols-6">
-        {workflowStages.map((stage, index) => {
-          const isCurrent = stage.statuses.includes(status);
+      <ol className="dossier-workflow__track mt-6 grid gap-px overflow-hidden sm:grid-cols-2 lg:grid-cols-7">
+        {stages.map((stage, index) => {
+          const isCurrent =
+            status !== "PUBLISHED" && stage.statuses.includes(status);
           const isComplete =
-            stage.statuses.some((stageStatus) =>
+            status === "PUBLISHED" ||
+            (stage.statuses.some((stageStatus) =>
               completedStatuses.has(stageStatus),
-            ) ||
+            ) &&
+              (!submissionFeeRequired ||
+                currentIndex < 0 ||
+                index < currentIndex)) ||
             (currentIndex > index && currentIndex >= 0);
           return (
             <li

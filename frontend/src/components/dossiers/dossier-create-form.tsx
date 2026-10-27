@@ -19,6 +19,9 @@ import { Button } from "@/components/ui/button";
 import { startNavigationFeedback } from "@/components/ui/navigation-loading";
 import { ApiError, dossierApi } from "@/lib/api/client";
 import { dossierKeys } from "@/lib/dossiers/query-keys";
+import { useAuthUser } from "@/lib/auth/user-context";
+import { useDossierPreparation } from "./use-dossier-preparation";
+import { PreparationRecoveryNotice } from "./preparation-recovery-notice";
 
 const schema = z.object({
   title: z.string().trim().min(3, "Tên hồ sơ cần ít nhất 3 ký tự.").max(255),
@@ -83,6 +86,7 @@ const mimeLabels: Record<string, string> = {
 
 export function DossierCreateForm() {
   const router = useRouter();
+  const user = useAuthUser();
   const formRef = useRef<HTMLFormElement>(null);
   const preflightRef = useRef<HTMLElement>(null);
   const queryClient = useQueryClient();
@@ -103,7 +107,27 @@ export function DossierCreateForm() {
     queryKey: dossierKeys.types(),
     queryFn: dossierApi.listTypes,
   });
-  const title = useWatch({ control: form.control, name: "title" });
+  const values = useWatch({ control: form.control });
+  const title = values.title ?? "";
+  const recovery = useDossierPreparation({
+    userId: user?.id,
+    value: {
+      dossierTypeVersionId: dossierTypeVersionId || null,
+      step: prepareStep,
+      values: {
+        title,
+        summary: values.summary ?? "",
+        visibility: values.visibility ?? "PRIVATE",
+      },
+      formData,
+    },
+    onRestore: (payload) => {
+      form.reset(payload.values);
+      setDossierTypeVersionId(payload.dossierTypeVersionId ?? "");
+      setFormData(payload.formData);
+      setPrepareStep(payload.step);
+    },
+  });
   const dossierType = dossierTypes.data?.find(
     (item) => item.currentVersion.id === dossierTypeVersionId,
   );
@@ -145,7 +169,15 @@ export function DossierCreateForm() {
       .length;
   const create = useMutation({
     mutationFn: dossierApi.create,
+    onError: (failure) => {
+      if (
+        failure instanceof ApiError &&
+        failure.code === "DOSSIER_PREPARATION_CONFLICT"
+      )
+        void recovery.checkConflict();
+    },
     onSuccess: async (dossier) => {
+      recovery.finish();
       await queryClient.invalidateQueries({ queryKey: dossierKeys.lists() });
       startNavigationFeedback();
       router.push(`/dossiers/${dossier.id}?created=1`);
@@ -156,7 +188,10 @@ export function DossierCreateForm() {
     if (
       !dossierType ||
       prepareStep !== 3 ||
-      informationComplete !== informationTotal
+      informationComplete !== informationTotal ||
+      recovery.dirty ||
+      recovery.saving ||
+      recovery.conflict
     )
       return;
     create.mutate({
@@ -166,6 +201,7 @@ export function DossierCreateForm() {
       visibility: values.visibility,
       dossierTypeVersionId,
       formData,
+      ...(recovery.revision ? { preparationRevision: recovery.revision } : {}),
     });
   });
 
@@ -199,12 +235,32 @@ export function DossierCreateForm() {
     setPrepareStep(3);
   };
 
+  if (!recovery.ready)
+    return (
+      <section
+        className="rounded-lg border border-[var(--theme-border)] p-5"
+        role="status"
+      >
+        <p>{recovery.error || "Đang kiểm tra dữ liệu hồ sơ đang chuẩn bị…"}</p>
+        {recovery.error ? (
+          <button
+            type="button"
+            className="mt-3 min-h-11 font-bold underline"
+            onClick={recovery.retryLoad}
+          >
+            Thử khôi phục lại
+          </button>
+        ) : null}
+      </section>
+    );
+
   return (
     <form
       className="dossier-create-form space-y-5 sm:space-y-6"
       onSubmit={submit}
       ref={formRef}
     >
+      {user ? <PreparationRecoveryNotice recovery={recovery} /> : null}
       <nav aria-label="Các bước chuẩn bị hồ sơ nháp">
         <ol
           className={`dossier-journey grid grid-cols-2 gap-2 ${hasTypeSpecificFields ? "sm:grid-cols-4" : "dossier-journey--three sm:grid-cols-3"}`}
@@ -958,7 +1014,12 @@ export function DossierCreateForm() {
           ) : (
             <Button
               className="min-w-44"
-              disabled={create.isPending}
+              disabled={
+                create.isPending ||
+                recovery.dirty ||
+                recovery.saving ||
+                Boolean(recovery.conflict)
+              }
               type="submit"
             >
               <FilePlus2 aria-hidden="true" className="size-4" />

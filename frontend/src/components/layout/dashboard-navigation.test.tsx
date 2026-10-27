@@ -156,7 +156,9 @@ describe("DashboardNavigation work-allocation migration", () => {
     expect(
       screen.getByRole("link", { name: "Việc thẩm định" }).getAttribute("href"),
     ).toBe("/reviews");
-    expect(screen.queryByRole("link", { name: "Chấm công" })).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Chấm công" }).getAttribute("href"),
+    ).toBe("/attendance");
     expect(screen.queryByRole("link", { name: "Nghỉ phép" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Tăng ca" })).toBeNull();
   });

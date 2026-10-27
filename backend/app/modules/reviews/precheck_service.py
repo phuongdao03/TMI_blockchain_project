@@ -116,6 +116,13 @@ class PrecheckService:
             dossier = await self._dossiers.get_by_id(dossier_id, for_update=True)
             if dossier is None:
                 raise DossierNotFoundError()
+            if (
+                dossier.submission_fee_required
+                and dossier.submission_fee_paid_at is None
+            ):
+                raise DossierInvalidStateError(
+                    "The submission fee must be paid before review."
+                )
             if dossier.status not in allowed_sources:
                 raise DossierInvalidStateError(
                     f"Transition from {dossier.status.value} to "

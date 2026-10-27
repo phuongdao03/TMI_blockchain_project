@@ -50,7 +50,7 @@ from app.modules.council.types import (
     CouncilVoteView,
 )
 from app.modules.dossiers.canonical import snapshot_sha256
-from app.modules.dossiers.models import DossierStatus, DossierVersion
+from app.modules.dossiers.models import Dossier, DossierStatus, DossierVersion
 from app.modules.dossiers.provenance import version_has_trusted_provenance
 from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.workflow import DossierWorkflowService
@@ -69,6 +69,21 @@ DECISION_TARGETS = {
 
 
 class CouncilService:
+    def _complete_prepaid_approval(self, dossier: Dossier, actor_user_id: UUID) -> None:
+        if not dossier.submission_fee_required:
+            return
+        if dossier.submission_fee_paid_at is None:
+            raise CouncilConflictError(
+                "The submission fee must be paid before approval."
+            )
+        self._workflow.transition(
+            dossier,
+            target=DossierStatus.PAID,
+            actor_user_id=actor_user_id,
+            allowed_sources={DossierStatus.APPROVED},
+            reason_code="PREPAID_SUBMISSION_APPROVED",
+        )
+
     def __init__(
         self,
         *,
@@ -369,6 +384,7 @@ class CouncilService:
             )
             if decision is CouncilCaseDecision.APPROVE:
                 dossier.approved_at = now
+                self._complete_prepaid_approval(dossier, principal.user_id)
                 await reset_content_draft(
                     self._session, dossier.id, version.snapshot_json
                 )
@@ -642,6 +658,7 @@ class CouncilService:
                     )
                     if result.decision is CouncilCaseDecision.APPROVE:
                         dossier.approved_at = self._clock()
+                        self._complete_prepaid_approval(dossier, principal.user_id)
                     self._add_decision_event(council_case, result.decision)
             council_session.status = CouncilSessionStatus.CLOSED
             council_session.closed_at = self._clock()

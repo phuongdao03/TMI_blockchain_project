@@ -34,7 +34,10 @@ from app.modules.dossiers.schemas import (
     EvidenceData,
     PatchDossierRequest,
     PatchEvidenceRequest,
+    PreparationStateData,
+    PreparationWriteData,
     SubmissionData,
+    SubmissionFeeQuoteData,
 )
 from app.modules.dossiers.types import (
     CreateDossier,
@@ -72,6 +75,89 @@ PRIVATE_RESPONSES: dict[int | str, dict[str, Any]] = {
 
 def _dossier_data(view: DossierView) -> DossierData:
     return DossierData.model_validate(view)
+
+
+@router.get(
+    "/preparation",
+    response_model=SuccessEnvelope[PreparationStateData],
+    responses=PRIVATE_RESPONSES,
+)
+async def get_preparation(
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: DossierServiceDependency,
+) -> SuccessEnvelope[PreparationStateData]:
+    state = await service.get_preparation(principal)
+    return SuccessEnvelope(
+        data=PreparationStateData.model_validate(state),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.put(
+    "/preparation",
+    response_model=SuccessEnvelope[PreparationStateData],
+    responses=PRIVATE_RESPONSES,
+)
+async def save_preparation(
+    payload: PreparationWriteData,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: DossierServiceDependency,
+) -> SuccessEnvelope[PreparationStateData]:
+    state = await service.save_preparation(
+        principal,
+        owner_user_id=payload.owner_user_id,
+        expected_revision=payload.expected_revision,
+        payload=payload.payload.model_dump(mode="json", by_alias=True),
+    )
+    return SuccessEnvelope(
+        data=PreparationStateData.model_validate(state),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
+    "/{dossier_id}/submission-fee",
+    response_model=SuccessEnvelope[SubmissionFeeQuoteData],
+    responses=PRIVATE_RESPONSES,
+)
+async def submission_fee_quote(
+    dossier_id: UUID,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: DossierServiceDependency,
+) -> SuccessEnvelope[SubmissionFeeQuoteData]:
+    quote = await service.submission_fee_quote(principal, dossier_id)
+    return SuccessEnvelope(
+        data=SubmissionFeeQuoteData.model_validate(
+            {key: quote[key] for key in ("amountMinor", "currency", "description")}
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/{dossier_id}/submission-payment",
+    response_model=SuccessEnvelope[dict[str, UUID]],
+    responses=PRIVATE_RESPONSES,
+)
+async def retry_submission_payment(
+    dossier_id: UUID,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: DossierServiceDependency,
+    idempotency_key: Annotated[
+        str, Header(alias="Idempotency-Key", min_length=1, max_length=128)
+    ],
+) -> SuccessEnvelope[dict[str, UUID]]:
+    order_id = await service.retry_submission_payment(
+        principal, dossier_id, key=idempotency_key
+    )
+    return SuccessEnvelope(
+        data={"paymentOrderId": order_id},
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
 
 
 def _dossier_type_data(view: DossierTypeView) -> DossierTypeData:
@@ -160,6 +246,7 @@ async def create_dossier(
             visibility=payload.visibility,
             dossier_type_version_id=payload.dossier_type_version_id,
             form_data=payload.form_data,
+            preparation_revision=payload.preparation_revision,
         ),
     )
     return SuccessEnvelope(

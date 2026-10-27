@@ -1,3 +1,4 @@
+import json
 import re
 from collections.abc import Callable, Mapping
 from copy import deepcopy
@@ -5,15 +6,17 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.outbox import OutboxEvent
 from app.modules.audit.service import AuditService
 from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
-from app.modules.auth.models import AccountType
+from app.modules.auth.models import AccountType, User
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.billing.submission import SubmissionFeeService
 from app.modules.dossiers.canonical import (
     content_fingerprint,
     normalized_identity_text,
@@ -39,6 +42,7 @@ from app.modules.dossiers.errors import (
     DossierForbiddenError,
     DossierInvalidStateError,
     DossierNotFoundError,
+    DossierPreparationConflictError,
     DossierValidationError,
 )
 from app.modules.dossiers.models import (
@@ -46,6 +50,7 @@ from app.modules.dossiers.models import (
     Dossier,
     DossierContentClaim,
     DossierEvidence,
+    DossierPreparation,
     DossierStatus,
     DossierStatusHistory,
     DossierType,
@@ -112,6 +117,7 @@ class DossierService:
         uuid_factory: Callable[[], UUID] | None = None,
         enqueue_similarity_detection: Callable[[UUID], None] | None = None,
         payload_cipher: OutboxPayloadCipher | None = None,
+        submission_fee_amount_minor: int | None = None,
     ) -> None:
         self._session = session
         self._repository = DossierRepository(session)
@@ -126,6 +132,101 @@ class DossierService:
         self._uuid_factory = uuid_factory or uuid4
         self._enqueue_similarity_detection = enqueue_similarity_detection
         self._payload_cipher = payload_cipher
+        self._submission_fee_amount_minor = submission_fee_amount_minor
+
+    async def _lock_preparation_owner(self, owner_id: UUID) -> None:
+        if (
+            await self._session.scalar(
+                select(User.id).where(User.id == owner_id).with_for_update()
+            )
+            is None
+        ):
+            raise DossierForbiddenError()
+
+    @staticmethod
+    def _preparation_state(
+        row: DossierPreparation | None, owner_id: UUID
+    ) -> dict[str, Any]:
+        return {
+            "ownerUserId": owner_id,
+            "revision": row.revision if row else 0,
+            "payload": row.payload_json if row else None,
+            "updatedAt": row.updated_at if row else None,
+        }
+
+    async def get_preparation(self, principal: AuthPrincipal) -> dict[str, Any]:
+        self._require_mutation_role(principal)
+        async with self._session.begin():
+            return self._preparation_state(
+                await self._session.get(
+                    DossierPreparation, principal.user_id, populate_existing=True
+                ),
+                principal.user_id,
+            )
+
+    async def save_preparation(
+        self,
+        principal: AuthPrincipal,
+        *,
+        owner_user_id: UUID,
+        expected_revision: int,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        self._require_mutation_role(principal)
+        if owner_user_id != principal.user_id:
+            raise DossierForbiddenError()
+        try:
+            encoded = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode(
+                "utf-8"
+            )
+        except (ValueError, TypeError) as exc:
+            raise DossierValidationError(
+                "Preparation must contain valid JSON data."
+            ) from exc
+        if expected_revision < 0 or len(encoded) > 65_536:
+            raise DossierValidationError(
+                "Preparation is too large or its revision is invalid."
+            )
+        async with self._session.begin():
+            await self._lock_preparation_owner(principal.user_id)
+            row = await self._session.get(
+                DossierPreparation, principal.user_id, populate_existing=True
+            )
+            if (row.revision if row else 0) != expected_revision:
+                raise DossierPreparationConflictError(
+                    "Preparation changed on another device. "
+                    "Reload or resolve the conflict."
+                )
+            if row is None:
+                row = DossierPreparation(
+                    owner_user_id=principal.user_id, revision=1, payload_json=payload
+                )
+                self._session.add(row)
+            else:
+                row.revision += 1
+                row.payload_json = payload
+            await self._session.flush()
+            await self._session.refresh(row)
+            return self._preparation_state(row, principal.user_id)
+
+    @staticmethod
+    def _preparation_creation_fingerprint(payload: CreateDossier, title: str) -> str:
+        return snapshot_sha256(
+            {
+                "categoryId": str(payload.category_id),
+                "title": title,
+                "organizationId": str(payload.organization_id)
+                if payload.organization_id
+                else None,
+                "dossierTypeVersionId": str(payload.dossier_type_version_id)
+                if payload.dossier_type_version_id
+                else None,
+                "summary": payload.summary,
+                "slug": payload.slug,
+                "visibility": payload.visibility.value,
+                "formData": payload.form_data or {},
+            }
+        )
 
     async def create_dossier(
         self,
@@ -135,6 +236,41 @@ class DossierService:
         self._require_mutation_role(principal)
         title = self._required_title(payload.title)
         async with self._session.begin():
+            preparation = None
+            fingerprint = None
+            if payload.preparation_revision is not None:
+                fingerprint = self._preparation_creation_fingerprint(payload, title)
+                await self._lock_preparation_owner(principal.user_id)
+                preparation = await self._session.get(
+                    DossierPreparation, principal.user_id, populate_existing=True
+                )
+                if (
+                    preparation is not None
+                    and preparation.consumed_revision == payload.preparation_revision
+                ):
+                    if (
+                        preparation.creation_fingerprint != fingerprint
+                        or preparation.created_dossier_id is None
+                    ):
+                        raise DossierPreparationConflictError(
+                            "Preparation revision was already used "
+                            "for another creation request."
+                        )
+                    existing = await self._owned_or_scoped(
+                        principal, preparation.created_dossier_id
+                    )
+                    return self._view(
+                        existing, can_edit=await self._can_mutate(principal, existing)
+                    )
+                if (
+                    preparation is None
+                    or preparation.revision != payload.preparation_revision
+                    or preparation.payload_json is None
+                ):
+                    raise DossierPreparationConflictError(
+                        "Preparation changed on another device. "
+                        "Reload before creating a dossier."
+                    )
             await self._require_applicant_profile(principal)
             await self._require_category(payload.category_id)
             dossier_type: DossierType | None = None
@@ -190,9 +326,16 @@ class DossierService:
                 slug=self._optional_text(payload.slug),
                 summary=self._optional_text(payload.summary),
                 visibility=payload.visibility,
+                submission_fee_required=self._submission_fee_amount_minor is not None,
             )
             self._repository.add(dossier)
             await self._session.flush()
+            if preparation is not None:
+                preparation.consumed_revision = preparation.revision
+                preparation.revision += 1
+                preparation.created_dossier_id = dossier.id
+                preparation.creation_fingerprint = fingerprint
+                preparation.payload_json = None
             view = self._view(dossier, can_edit=True)
             self._audit("dossier.created", principal.user_id, dossier.id)
         return view
@@ -703,7 +846,8 @@ class DossierService:
             )
             await self._require_mutation_scope(principal, dossier)
             if (
-                dossier.status is DossierStatus.SUBMITTED
+                dossier.status
+                in {DossierStatus.SUBMITTED, DossierStatus.PAYMENT_PENDING}
                 and dossier.current_version_no > 0
             ):
                 current = await self._repository.get_version(
@@ -795,6 +939,20 @@ class DossierService:
                 )
                 dossier.current_version_no = version_no
                 dossier.submitted_at = submitted_at
+                if (
+                    dossier.submission_fee_required
+                    and dossier.submission_fee_paid_at is None
+                ):
+                    await self._submission_fees().reserve(
+                        dossier, actor=principal.user_id, key=f"submission:{dossier.id}"
+                    )
+                    self._workflow.transition(
+                        dossier,
+                        target=DossierStatus.PAYMENT_PENDING,
+                        actor_user_id=principal.user_id,
+                        allowed_sources={DossierStatus.SUBMITTED},
+                        reason_code="SUBMISSION_FEE_REQUIRED",
+                    )
                 await self._session.flush()
                 await self._session.refresh(
                     dossier,
@@ -818,6 +976,48 @@ class DossierService:
         ):
             self._enqueue_similarity_detection(similarity_version_id)
         return result
+
+    def _submission_fees(self) -> SubmissionFeeService:
+        if self._submission_fee_amount_minor is None:
+            raise DossierInvalidStateError("Submission fees are not configured.")
+        return SubmissionFeeService(
+            self._session,
+            fallback_amount=self._submission_fee_amount_minor,
+            now=self._clock(),
+        )
+
+    async def submission_fee_quote(
+        self, principal: AuthPrincipal, dossier_id: UUID
+    ) -> dict[str, object]:
+        async with self._session.begin():
+            dossier = await self._owned_or_scoped(principal, dossier_id)
+            if not dossier.submission_fee_required:
+                raise DossierInvalidStateError(
+                    "This dossier uses the legacy fee policy."
+                )
+            return await self._submission_fees().quote(dossier)
+
+    async def retry_submission_payment(
+        self, principal: AuthPrincipal, dossier_id: UUID, *, key: str
+    ) -> UUID:
+        self._require_mutation_role(principal)
+        async with self._session.begin():
+            dossier = await self._owned_or_scoped(
+                principal, dossier_id, for_update=True
+            )
+            if dossier.owner_user_id != principal.user_id:
+                raise DossierForbiddenError()
+            if dossier.status is not DossierStatus.PAYMENT_PENDING:
+                raise DossierInvalidStateError(
+                    "This dossier is not awaiting a submission payment."
+                )
+            order = await self._submission_fees().reserve(
+                dossier, actor=principal.user_id, key=self._idempotency_key(key)
+            )
+            self._audit(
+                "dossier.submission_payment.reserved", principal.user_id, dossier.id
+            )
+            return order.id
 
     def _add_submitted_event(
         self,
@@ -1401,6 +1601,8 @@ class DossierService:
             created_at=dossier.created_at,
             updated_at=dossier.updated_at,
             can_edit=can_edit,
+            submission_fee_required=dossier.submission_fee_required,
+            submission_fee_paid_at=dossier.submission_fee_paid_at,
         )
 
     @staticmethod

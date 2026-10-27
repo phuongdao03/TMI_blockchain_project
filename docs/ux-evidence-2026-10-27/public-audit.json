@@ -1,0 +1,702 @@
+[
+  {
+    "target": "live",
+    "route": "/",
+    "width": 360,
+    "scroll": 360,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Suy tôn trí tuệ. Lưu truyền di sản."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/",
+    "width": 375,
+    "scroll": 375,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Suy tôn trí tuệ. Lưu truyền di sản."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/",
+    "width": 390,
+    "scroll": 390,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Suy tôn trí tuệ. Lưu truyền di sản."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/",
+    "width": 430,
+    "scroll": 430,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Suy tôn trí tuệ. Lưu truyền di sản."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/",
+    "width": 768,
+    "scroll": 768,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Suy tôn trí tuệ. Lưu truyền di sản."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/",
+    "width": 1024,
+    "scroll": 1024,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Suy tôn trí tuệ. Lưu truyền di sản."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/",
+    "width": 1440,
+    "scroll": 1440,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Suy tôn trí tuệ. Lưu truyền di sản."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/works",
+    "width": 360,
+    "scroll": 360,
+    "title": "Danh sách đề cử | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Thư viện đề cử"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/works",
+    "width": 375,
+    "scroll": 375,
+    "title": "Danh sách đề cử | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Thư viện đề cử"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/works",
+    "width": 390,
+    "scroll": 390,
+    "title": "Danh sách đề cử | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Thư viện đề cử"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/works",
+    "width": 430,
+    "scroll": 430,
+    "title": "Danh sách đề cử | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Thư viện đề cử"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/works",
+    "width": 768,
+    "scroll": 768,
+    "title": "Danh sách đề cử | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Thư viện đề cử"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/works",
+    "width": 1024,
+    "scroll": 1024,
+    "title": "Danh sách đề cử | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Thư viện đề cử"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/works",
+    "width": 1440,
+    "scroll": 1440,
+    "title": "Danh sách đề cử | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Thư viện đề cử"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/process",
+    "width": 360,
+    "scroll": 360,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Hành trình hồ sơ, rõ ràng từ đầu đến cuối."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/process",
+    "width": 375,
+    "scroll": 375,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Hành trình hồ sơ, rõ ràng từ đầu đến cuối."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/process",
+    "width": 390,
+    "scroll": 390,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Hành trình hồ sơ, rõ ràng từ đầu đến cuối."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/process",
+    "width": 430,
+    "scroll": 430,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Hành trình hồ sơ, rõ ràng từ đầu đến cuối."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/process",
+    "width": 768,
+    "scroll": 768,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Hành trình hồ sơ, rõ ràng từ đầu đến cuối."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/process",
+    "width": 1024,
+    "scroll": 1024,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Hành trình hồ sơ, rõ ràng từ đầu đến cuối."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/process",
+    "width": 1440,
+    "scroll": 1440,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Hành trình hồ sơ, rõ ràng từ đầu đến cuối."
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/verify",
+    "width": 360,
+    "scroll": 360,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Kiểm tra bằng xác lập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/verify",
+    "width": 375,
+    "scroll": 375,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Kiểm tra bằng xác lập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/verify",
+    "width": 390,
+    "scroll": 390,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Kiểm tra bằng xác lập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/verify",
+    "width": 430,
+    "scroll": 430,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Kiểm tra bằng xác lập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/verify",
+    "width": 768,
+    "scroll": 768,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Kiểm tra bằng xác lập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/verify",
+    "width": 1024,
+    "scroll": 1024,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Kiểm tra bằng xác lập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/verify",
+    "width": 1440,
+    "scroll": 1440,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Kiểm tra bằng xác lập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/login",
+    "width": 360,
+    "scroll": 360,
+    "title": "Đăng nhập | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Đăng nhập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/login",
+    "width": 375,
+    "scroll": 375,
+    "title": "Đăng nhập | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Đăng nhập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/login",
+    "width": 390,
+    "scroll": 390,
+    "title": "Đăng nhập | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Đăng nhập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/login",
+    "width": 430,
+    "scroll": 430,
+    "title": "Đăng nhập | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Đăng nhập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/login",
+    "width": 768,
+    "scroll": 768,
+    "title": "Đăng nhập | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Đăng nhập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/login",
+    "width": 1024,
+    "scroll": 1024,
+    "title": "Đăng nhập | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Đăng nhập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/login",
+    "width": 1440,
+    "scroll": 1440,
+    "title": "Đăng nhập | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Đăng nhập"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/register",
+    "width": 360,
+    "scroll": 360,
+    "title": "Tạo tài khoản | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tạo tài khoản"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/register",
+    "width": 375,
+    "scroll": 375,
+    "title": "Tạo tài khoản | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tạo tài khoản"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/register",
+    "width": 390,
+    "scroll": 390,
+    "title": "Tạo tài khoản | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tạo tài khoản"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/register",
+    "width": 430,
+    "scroll": 430,
+    "title": "Tạo tài khoản | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tạo tài khoản"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/register",
+    "width": 768,
+    "scroll": 768,
+    "title": "Tạo tài khoản | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tạo tài khoản"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/register",
+    "width": 1024,
+    "scroll": 1024,
+    "title": "Tạo tài khoản | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tạo tài khoản"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/register",
+    "width": 1440,
+    "scroll": 1440,
+    "title": "Tạo tài khoản | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tạo tài khoản"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/community",
+    "width": 360,
+    "scroll": 360,
+    "title": "Cộng đồng | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Cộng đồng"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/community",
+    "width": 375,
+    "scroll": 375,
+    "title": "Cộng đồng | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Cộng đồng"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/community",
+    "width": 390,
+    "scroll": 390,
+    "title": "Cộng đồng | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Cộng đồng"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/community",
+    "width": 430,
+    "scroll": 430,
+    "title": "Cộng đồng | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Cộng đồng"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/community",
+    "width": 768,
+    "scroll": 768,
+    "title": "Cộng đồng | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Cộng đồng"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/community",
+    "width": 1024,
+    "scroll": 1024,
+    "title": "Cộng đồng | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Cộng đồng"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/community",
+    "width": 1440,
+    "scroll": 1440,
+    "title": "Cộng đồng | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Cộng đồng"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/cong-dong/hoi-vien",
+    "width": 360,
+    "scroll": 360,
+    "title": "Hội viên Tinh Hoa Việt | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "HỘI VIÊN TINH HOA VIỆT"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/cong-dong/hoi-vien",
+    "width": 375,
+    "scroll": 375,
+    "title": "Hội viên Tinh Hoa Việt | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "HỘI VIÊN TINH HOA VIỆT"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/cong-dong/hoi-vien",
+    "width": 390,
+    "scroll": 390,
+    "title": "Hội viên Tinh Hoa Việt | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "HỘI VIÊN TINH HOA VIỆT"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/cong-dong/hoi-vien",
+    "width": 430,
+    "scroll": 430,
+    "title": "Hội viên Tinh Hoa Việt | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "HỘI VIÊN TINH HOA VIỆT"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/cong-dong/hoi-vien",
+    "width": 768,
+    "scroll": 768,
+    "title": "Hội viên Tinh Hoa Việt | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "HỘI VIÊN TINH HOA VIỆT"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/cong-dong/hoi-vien",
+    "width": 1024,
+    "scroll": 1024,
+    "title": "Hội viên Tinh Hoa Việt | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "HỘI VIÊN TINH HOA VIỆT"
+    ],
+    "errors": []
+  },
+  {
+    "target": "live",
+    "route": "/cong-dong/hoi-vien",
+    "width": 1440,
+    "scroll": 1440,
+    "title": "Hội viên Tinh Hoa Việt | Đề cử Tinh Hoa Việt",
+    "headings": [
+      "HỘI VIÊN TINH HOA VIỆT"
+    ],
+    "errors": []
+  },
+  {
+    "target": "local",
+    "route": "/dashboard",
+    "width": 360,
+    "scroll": 360,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tổng quan",
+      "Việc cần làm"
+    ],
+    "errors": []
+  },
+  {
+    "target": "local",
+    "route": "/dashboard",
+    "width": 375,
+    "scroll": 375,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tổng quan",
+      "Việc cần làm"
+    ],
+    "errors": []
+  },
+  {
+    "target": "local",
+    "route": "/dashboard",
+    "width": 390,
+    "scroll": 390,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tổng quan",
+      "Việc cần làm"
+    ],
+    "errors": []
+  },
+  {
+    "target": "local",
+    "route": "/dashboard",
+    "width": 430,
+    "scroll": 430,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tổng quan",
+      "Việc cần làm"
+    ],
+    "errors": []
+  },
+  {
+    "target": "local",
+    "route": "/dashboard",
+    "width": 768,
+    "scroll": 768,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tổng quan",
+      "Việc cần làm"
+    ],
+    "errors": []
+  },
+  {
+    "target": "local",
+    "route": "/dashboard",
+    "width": 1024,
+    "scroll": 1024,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tổng quan",
+      "Việc cần làm"
+    ],
+    "errors": []
+  },
+  {
+    "target": "local",
+    "route": "/dashboard",
+    "width": 1440,
+    "scroll": 1440,
+    "title": "Đề cử Tinh Hoa Việt",
+    "headings": [
+      "Tổng quan",
+      "Việc cần làm"
+    ],
+    "errors": []
+  }
+]
