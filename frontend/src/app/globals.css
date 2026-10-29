@@ -13029,6 +13029,9 @@ html[data-theme="dark"] .confirmation-dialog__surface {
   .public-home .registry-heritage {
     height: clamp(12rem, 55vw, 16rem);
   }
+  .public-home .registry-heritage__logo-frame {
+    width: min(82%, clamp(12rem, 55vw, 16rem));
+  }
   .voucher-dialog {
     max-height: calc(100dvh - 1.5rem);
     width: calc(100% - 1.5rem);
