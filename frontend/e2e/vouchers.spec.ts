@@ -42,7 +42,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     });
     await page.goto("/login?accountType=INDIVIDUAL_APPLICANT");
     await page
-      .getByRole("textbox", { name: "Email" })
+      .getByRole("textbox", { name: /^Email/ })
       .fill("applicant@tinhhoaviet.org.vn");
     await page
       .getByLabel("Mật khẩu", { exact: true })

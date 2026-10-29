@@ -3,7 +3,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FilePlus2, FolderKanban, LoaderCircle } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 
 import {
   ApplicantTasks,
@@ -21,7 +20,6 @@ import { ApplicantAccountSummary } from "./applicant-account-summary";
 export function DashboardOverview() {
   const user = useAuthUser();
   const queryClient = useQueryClient();
-  const [upgradeCompleted, setUpgradeCompleted] = useState(false);
   const persona = resolveWorkspacePersona(user?.roles ?? []);
   const isUser = persona === "USER";
   const filters = { page: 1, pageSize: 5 } as const;
@@ -37,7 +35,6 @@ export function DashboardOverview() {
         accountType={user?.accountType}
         onUpgraded={(upgradedUser) => {
           queryClient.setQueryData(["auth", "me"], upgradedUser);
-          setUpgradeCompleted(true);
         }}
         persona={persona}
       />
@@ -84,19 +81,7 @@ export function DashboardOverview() {
         ) : null}
       </header>
 
-      {upgradeCompleted ? (
-        <div
-          className="dashboard-success-state rounded-xl border px-5 py-4 text-sm"
-          role="status"
-        >
-          <p className="font-bold">Bạn đã có thể bắt đầu hồ sơ.</p>
-          <p className="mt-1">
-            Hoàn thiện thông tin liên hệ trước khi tải tài liệu lên.
-          </p>
-        </div>
-      ) : null}
-
-      <ApplicantTasks />
+      <ApplicantTasks enabled={Boolean(dossiers.data?.meta.total)} />
       {user?.id ? <ApplicantAccountSummary userId={user.id} /> : null}
       {canCreateFirstDossier ? (
         <Link

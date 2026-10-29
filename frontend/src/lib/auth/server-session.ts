@@ -28,6 +28,7 @@ export const getServerAuthState = cache(async (): Promise<ServerAuthState> => {
     const response = await fetch(`${apiBaseUrl}/api/v1/auth/me`, {
       headers: { cookie: cookieHeader },
       cache: "no-store",
+      signal: AbortSignal.timeout(4_000),
     });
     if (!response.ok) {
       return { user: null, hasRefreshCookie, hasSessionCookie };

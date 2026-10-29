@@ -3787,10 +3787,14 @@ const server = createServer(async (request, response) => {
     send(response, 200, envelope(members));
     return;
   }
-  if (request.method === "POST" && path === "/api/v1/auth/login") {
+  if (
+    request.method === "POST" &&
+    ["/api/v1/auth/login", "/api/v1/auth/username-login"].includes(path)
+  ) {
     const credentials = await readJson(request);
     if (
-      credentials.email !== "owner@tinhhoaviet.org.vn" ||
+      (credentials.email !== "owner@tinhhoaviet.org.vn" &&
+        credentials.username !== "owner_thv") ||
       credentials.password !== "correct horse battery staple"
     ) {
       const failure = error(401, "INVALID_CREDENTIALS", "Sai thông tin.");

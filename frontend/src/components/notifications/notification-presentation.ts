@@ -13,6 +13,16 @@ const EVENT_PRESENTATION: Record<
   string,
   Omit<NotificationPresentation, "actionPath">
 > = {
+  "voucher.issued": {
+    actionLabel: "Xem voucher",
+    groupLabel: "Ưu đãi của bạn",
+    tone: "success",
+  },
+  "voucher.expiring": {
+    actionLabel: "Xem voucher sắp hết hạn",
+    groupLabel: "Ưu đãi sắp hết hạn",
+    tone: "warning",
+  },
   "admin.announcement": {
     actionLabel: "Xem thông báo",
     groupLabel: "Từ quản trị hệ thống",

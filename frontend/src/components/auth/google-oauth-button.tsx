@@ -86,10 +86,12 @@ export function GoogleOAuthButton({
   accountType,
   next,
   label = "Tiếp tục với Google",
+  disabled = false,
 }: {
   accountType: AccountType;
   next?: string;
   label?: string;
+  disabled?: boolean;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -213,7 +215,7 @@ export function GoogleOAuthButton({
       ) : null}
       <button
         className="auth-google-button auth-submit-button flex min-h-12 w-full items-center justify-center gap-3 rounded-md border border-[#ad8883]/45 bg-[#171717] px-4 text-sm font-bold text-[#e5e2e1] transition-colors hover:border-[#ffb4aa] hover:bg-[#242222] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffb4aa] disabled:pointer-events-none disabled:opacity-60"
-        disabled={isPending || !popupReady}
+        disabled={disabled || isPending || !popupReady}
         onClick={startGoogleOAuth}
         type="button"
       >

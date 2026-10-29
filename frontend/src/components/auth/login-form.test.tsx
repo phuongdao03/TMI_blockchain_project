@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginForm } from "@/components/auth/login-form";
-import { authApi } from "@/lib/api/client";
+import { ApiError, authApi } from "@/lib/api/client";
 
 const replace = vi.fn();
 const refresh = vi.fn();
@@ -70,7 +70,9 @@ describe("LoginForm", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
 
-    expect(await screen.findByText("Vui lòng nhập email.")).toBeDefined();
+    expect(
+      await screen.findByText("Vui lòng nhập email hoặc tên đăng nhập."),
+    ).toBeDefined();
     expect(screen.getByText("Vui lòng nhập mật khẩu.")).toBeDefined();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -116,7 +118,7 @@ describe("LoginForm", () => {
     render(<LoginForm next="/dashboard" />, { wrapper: Wrapper });
 
     await userEvent.type(
-      screen.getByRole("textbox", { name: "Email" }),
+      screen.getByRole("textbox", { name: /^Email/ }),
       "owner@cnsgroup.vn",
     );
     await userEvent.type(
@@ -172,7 +174,7 @@ describe("LoginForm", () => {
     render(<LoginForm />, { wrapper: Wrapper });
 
     await userEvent.type(
-      screen.getByRole("textbox", { name: "Email" }),
+      screen.getByRole("textbox", { name: /^Email/ }),
       "admin@example.com",
     );
     await userEvent.type(
@@ -198,7 +200,7 @@ describe("LoginForm", () => {
     render(<LoginForm />, { wrapper: Wrapper });
 
     await userEvent.type(
-      screen.getByRole("textbox", { name: "Email" }),
+      screen.getByRole("textbox", { name: /^Email/ }),
       "blockchainadmin@gmail.com",
     );
     await userEvent.type(screen.getByLabelText("Mật khẩu"), "valid password");
@@ -215,25 +217,30 @@ describe("LoginForm", () => {
   });
 
   it("turns backend credential details into an actionable user message", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const legacyLogin = vi
+      .spyOn(authApi, "loginWithEmail")
+      .mockRejectedValue(
+        new ApiError("Invalid credentials", "INVALID_CREDENTIALS", 401),
+      );
     signInWithEmailAndPassword.mockRejectedValue({
       code: "auth/invalid-credential",
     });
     render(<LoginForm />, { wrapper: Wrapper });
 
     await userEvent.type(
-      screen.getByRole("textbox", { name: "Email" }),
+      screen.getByRole("textbox", { name: /^Email/ }),
       "owner@cnsgroup.vn",
     );
     await userEvent.type(screen.getByLabelText("Mật khẩu"), "wrong password");
     await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
 
     expect(
-      await screen.findByText(
-        "Email hoặc mật khẩu chưa đúng. Vui lòng kiểm tra lại.",
-      ),
+      await screen.findByText("Email/tên đăng nhập hoặc mật khẩu chưa đúng."),
     ).toBeDefined();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(legacyLogin).toHaveBeenCalledWith(
+      "owner@cnsgroup.vn",
+      "wrong password",
+    );
   });
 
   it("explains when Firebase email sign-in is disabled", async () => {
@@ -243,7 +250,7 @@ describe("LoginForm", () => {
     render(<LoginForm />, { wrapper: Wrapper });
 
     await userEvent.type(
-      screen.getByRole("textbox", { name: "Email" }),
+      screen.getByRole("textbox", { name: /^Email/ }),
       "owner@cnsgroup.vn",
     );
     await userEvent.type(screen.getByLabelText("Mật khẩu"), "valid password");
@@ -277,7 +284,7 @@ describe("LoginForm", () => {
     render(<LoginForm />, { wrapper: Wrapper });
 
     await userEvent.type(
-      screen.getByRole("textbox", { name: "Email" }),
+      screen.getByRole("textbox", { name: /^Email/ }),
       "admin@example.vn",
     );
     await userEvent.type(screen.getByLabelText("Mật khẩu"), "valid password");
@@ -313,7 +320,7 @@ describe("LoginForm", () => {
     render(<LoginForm />, { wrapper: Wrapper });
 
     await userEvent.type(
-      screen.getByRole("textbox", { name: "Email" }),
+      screen.getByRole("textbox", { name: /^Email/ }),
       "admin@example.vn",
     );
     await userEvent.type(screen.getByLabelText("Mật khẩu"), "valid password");

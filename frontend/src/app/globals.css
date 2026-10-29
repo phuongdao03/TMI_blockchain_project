@@ -2284,17 +2284,17 @@ body {
   width: 2.75rem;
   height: 2.75rem;
   place-items: center;
-  border: 1px solid var(--theme-line);
+  border: 1px solid var(--theme-border);
   border-radius: 999px;
-  color: var(--theme-ink);
+  color: var(--theme-text);
   background: var(--theme-surface);
   transition:
     border-color 160ms ease,
     background 160ms ease;
 }
 .notification-bell__trigger:hover {
-  border-color: var(--thv-red);
-  background: color-mix(in srgb, var(--theme-ink) 4%, var(--theme-surface));
+  border-color: var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-text) 4%, var(--theme-surface));
 }
 .notification-bell__trigger:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--thv-gold) 42%, transparent);
@@ -2324,7 +2324,7 @@ body {
   z-index: 80;
   width: min(25rem, calc(100vw - 2rem));
   overflow: hidden;
-  border: 1px solid var(--theme-line);
+  border: 1px solid var(--theme-border);
   border-radius: 1.25rem;
   background: var(--theme-surface);
   box-shadow: 0 24px 70px rgb(20 5 5 / 22%);
@@ -2335,7 +2335,7 @@ body {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.125rem;
-  border-bottom: 1px solid var(--theme-line);
+  border-bottom: 1px solid var(--theme-border);
 }
 .notification-panel__header p,
 .notification-center__eyebrow {
@@ -2347,7 +2347,7 @@ body {
 }
 .notification-panel__header h2 {
   margin-top: 0.15rem;
-  color: var(--theme-ink);
+  color: var(--theme-text);
   font-size: 1.15rem;
   font-weight: 750;
 }
@@ -2356,7 +2356,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  color: var(--thv-red);
+  color: var(--theme-accent);
   font-size: 0.75rem;
   font-weight: 750;
 }
@@ -2370,12 +2370,12 @@ body {
   width: 2.75rem;
   height: 2.75rem;
   place-items: center;
-  border: 1px solid var(--theme-line);
+  border: 1px solid var(--theme-border);
   border-radius: 999px;
-  color: var(--theme-ink);
+  color: var(--theme-text);
 }
 .notification-panel__header .notification-panel__close:hover {
-  background: color-mix(in srgb, var(--theme-ink) 6%, var(--theme-surface));
+  background: color-mix(in srgb, var(--theme-text) 6%, var(--theme-surface));
 }
 .notification-panel__list {
   max-height: min(29rem, calc(100vh - 12rem));
@@ -2387,12 +2387,12 @@ body {
   align-items: center;
   gap: 0.75rem;
   padding: 0.9rem 1.125rem;
-  border-bottom: 1px solid var(--theme-line);
-  color: var(--theme-ink);
+  border-bottom: 1px solid var(--theme-border);
+  color: var(--theme-text);
   text-align: left;
 }
 .notification-panel__item:hover {
-  background: color-mix(in srgb, var(--theme-ink) 4%, var(--theme-surface));
+  background: color-mix(in srgb, var(--theme-text) 4%, var(--theme-surface));
 }
 .notification-panel__item.is-unread {
   background: color-mix(in srgb, var(--thv-gold) 8%, var(--theme-surface));
@@ -2454,7 +2454,7 @@ body {
   justify-content: center;
   gap: 0.35rem;
   padding: 0.9rem;
-  color: var(--thv-red);
+  color: var(--theme-accent);
   font-size: 0.8rem;
   font-weight: 800;
 }
@@ -2469,7 +2469,7 @@ body {
   justify-content: space-between;
   gap: 2rem;
   padding: clamp(1.5rem, 4vw, 3rem);
-  border: 1px solid var(--theme-line);
+  border: 1px solid var(--theme-border);
   border-radius: 1.75rem 1.75rem 0 0;
   background: var(--theme-surface);
 }
@@ -2480,7 +2480,7 @@ body {
 }
 .notification-center__hero h1 {
   margin-top: 0.7rem;
-  color: var(--theme-ink);
+  color: var(--theme-text);
   font-size: clamp(1.5rem, 2.4vw + 0.5rem, 2rem);
   font-weight: 650;
   letter-spacing: -0.045em;
@@ -2495,14 +2495,14 @@ body {
 .notification-center__summary {
   min-width: 7rem;
   padding-left: 1.5rem;
-  border-left: 1px solid var(--theme-line);
+  border-left: 1px solid var(--theme-border);
 }
 .notification-center__summary strong,
 .notification-center__summary span {
   display: block;
 }
 .notification-center__summary strong {
-  color: var(--thv-red);
+  color: var(--theme-accent);
   font-size: 2.5rem;
   line-height: 1;
 }
@@ -2516,7 +2516,7 @@ body {
 }
 .notification-center__workspace {
   overflow: hidden;
-  border: 1px solid var(--theme-line);
+  border: 1px solid var(--theme-border);
   border-top: 0;
   border-radius: 0 0 1.75rem 1.75rem;
   background: var(--theme-surface);
@@ -2528,15 +2528,15 @@ body {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--theme-line);
+  border-bottom: 1px solid var(--theme-border);
 }
 .notification-center__filters {
   display: flex;
   gap: 0.3rem;
   padding: 0.25rem;
-  border: 1px solid var(--theme-line);
+  border: 1px solid var(--theme-border);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--theme-ink) 4%, var(--theme-surface));
+  background: color-mix(in srgb, var(--theme-text) 4%, var(--theme-surface));
 }
 .notification-center__filters button {
   display: inline-flex;
@@ -2560,7 +2560,7 @@ body {
   place-items: center;
   padding: 0 0.2rem;
   border-radius: 999px;
-  color: var(--thv-red-deep);
+  color: var(--theme-accent);
   background: var(--thv-gold);
   font-size: 0.62rem;
 }
@@ -2574,12 +2574,12 @@ body {
   align-items: center;
   gap: 1rem;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--theme-line);
-  color: var(--theme-ink);
+  border-bottom: 1px solid var(--theme-border);
+  color: var(--theme-text);
   text-align: left;
 }
 .notification-center__item:hover {
-  background: color-mix(in srgb, var(--theme-ink) 4%, var(--theme-surface));
+  background: color-mix(in srgb, var(--theme-text) 4%, var(--theme-surface));
 }
 .notification-center__item.is-unread {
   background: color-mix(in srgb, var(--thv-gold) 7%, var(--theme-surface));
@@ -2605,7 +2605,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  color: var(--thv-red);
+  color: var(--theme-accent);
   font-size: 0.78rem;
   font-weight: 800;
 }
@@ -2622,16 +2622,16 @@ body {
 .notification-center__state > svg {
   width: 2rem;
   height: 2rem;
-  color: var(--thv-red);
+  color: var(--theme-accent);
 }
 .notification-center__state h2 {
-  color: var(--theme-ink);
+  color: var(--theme-text);
   font-size: 1.1rem;
   font-weight: 750;
 }
 .notification-center__state button {
   margin-top: 0.5rem;
-  color: var(--thv-red);
+  color: var(--theme-accent);
   font-weight: 750;
 }
 .notification-center__pagination {
@@ -2646,7 +2646,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  color: var(--theme-ink);
+  color: var(--theme-text);
   font-weight: 750;
 }
 .notification-center__pagination button:disabled {
@@ -13045,5 +13045,79 @@ html[data-theme="dark"] .confirmation-dialog__surface {
   }
   .voucher-dialog__body h2 {
     font-size: 1.375rem;
+  }
+}
+
+.profile-name-reminder {
+  margin: 0.75rem clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid var(--theme-border);
+  border-radius: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+.notification-panel__footer,
+.notification-center__summary strong {
+  color: var(--theme-accent);
+}
+.auth-registration-result {
+  border-color: var(--theme-border);
+  background: var(--theme-surface-soft, var(--theme-surface));
+  color: var(--theme-text);
+}
+.notification-center__feedback {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--theme-border);
+  color: var(--theme-text);
+  font-size: 0.875rem;
+}
+.notification-panel__header-actions button {
+  min-height: 2.75rem;
+  color: var(--theme-accent);
+}
+.notification-panel__list {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.notification-center__content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 48rem) {
+  .profile-name-reminder > div {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding-right: 2rem;
+    gap: 0.5rem;
+  }
+  .profile-name-reminder > div > button {
+    position: absolute;
+    top: -0.5rem;
+    right: -0.75rem;
+  }
+  .profile-name-reminder a {
+    justify-self: start;
+  }
+  .registry-heritage__glint::before {
+    animation: none;
+    will-change: auto;
+  }
+  .site-mobile-navigation {
+    backdrop-filter: none;
+  }
+  .notification-panel {
+    max-height: calc(100dvh - 11rem);
+    display: flex;
+    flex-direction: column;
+  }
+  .notification-panel__list {
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+  }
+  .notification-panel__header,
+  .notification-panel__footer {
+    flex-shrink: 0;
   }
 }

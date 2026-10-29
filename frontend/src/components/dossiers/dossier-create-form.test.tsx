@@ -33,7 +33,7 @@ describe("DossierCreateForm", () => {
       </QueryClientProvider>,
     );
 
-    const activeStep = screen.getByText("Chọn loại").closest("li");
+    const activeStep = screen.getAllByText("Loại hồ sơ")[0]?.closest("li");
     expect(activeStep?.getAttribute("aria-current")).toBe("step");
     expect(activeStep?.className).toContain("dossier-journey__item--active");
     expect(activeStep?.className).not.toContain("bg-primary-50");
@@ -165,9 +165,7 @@ describe("DossierCreateForm", () => {
       "Tác phẩm được sáng tạo và lưu hồ sơ theo từng phiên bản.",
     );
     expect(screen.getByText("2/2 thông tin đã hoàn tất")).toBeDefined();
-    await user.click(
-      screen.getByRole("button", { name: "Kiểm tra thông tin" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Xem lại bản nháp" }));
     expect(
       screen.getByText("Tạo bản nháp trước khi tải tài liệu"),
     ).toBeDefined();
@@ -226,9 +224,7 @@ describe("DossierCreateForm", () => {
       screen.getByLabelText("Tên tài sản hoặc tác phẩm"),
       "Hồ sơ thử nghiệm",
     );
-    await user.click(
-      screen.getByRole("button", { name: "Kiểm tra thông tin" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Xem lại bản nháp" }));
     expect(
       screen.getByText("Tạo bản nháp trước khi tải tài liệu"),
     ).toBeDefined();
@@ -282,9 +278,7 @@ describe("DossierCreateForm", () => {
     await user.click(
       screen.getByRole("button", { name: "Tiếp tục thông tin theo loại" }),
     );
-    await user.click(
-      screen.getByRole("button", { name: "Kiểm tra thông tin" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Xem lại bản nháp" }));
     expect(screen.getByRole("alert").textContent).toContain("Nguồn gốc");
     expect(createMock).not.toHaveBeenCalled();
 
@@ -292,9 +286,7 @@ describe("DossierCreateForm", () => {
       screen.getByLabelText("Nguồn gốc *"),
       "Lưu trữ tại tác giả",
     );
-    await user.click(
-      screen.getByRole("button", { name: "Kiểm tra thông tin" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Xem lại bản nháp" }));
     expect(
       screen.getByText("Tạo bản nháp trước khi tải tài liệu"),
     ).toBeDefined();

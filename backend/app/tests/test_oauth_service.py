@@ -23,6 +23,7 @@ from app.modules.auth.models import (
 from app.modules.auth.oauth import OAuthAttempt
 from app.modules.auth.oauth_service import OAuthCompletion, OAuthService
 from app.modules.auth.session_service import ClientMetadata, IssuedSession
+from app.modules.users.models import UserProfile
 
 NOW = datetime(2026, 8, 4, 8, tzinfo=UTC)
 
@@ -97,6 +98,8 @@ def test_oauth_signup_collision_and_existing_identity_are_safe(tmp_path: Path) -
             assert user is not None and user.status is UserStatus.ACTIVE
             assert user.password_hash is None
             assert user.email_verified_at is not None
+            profile = await session.get(UserProfile, user.id)
+            assert profile is not None and profile.display_name == "Viewer"
             assert issuer.user_id == user.id
             role = await session.scalar(select(Role).where(Role.code == "USER"))
             assert role is not None

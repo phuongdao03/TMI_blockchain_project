@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { notificationApi } from "@/lib/api/client";
 import type { NotificationItem } from "@/lib/api/types";
 import { useAuthUser } from "@/lib/auth/user-context";
+import { notificationKeys } from "@/lib/notification-query-keys";
 
 import {
   formatNotificationTime,
@@ -73,16 +74,17 @@ export function NotificationBell() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const unread = useQuery({
-    queryKey: ["notifications", "unread-count"],
+    queryKey: notificationKeys.unread(user?.id),
     queryFn: notificationApi.unreadCount,
     refetchInterval: 45_000,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
   const recent = useQuery({
-    queryKey: ["notifications", "recent"],
+    queryKey: notificationKeys.recent(user?.id),
     queryFn: () => notificationApi.list(1, 5),
     enabled: open,
+    staleTime: 30_000,
   });
   const markRead = useMutation({
     mutationFn: notificationApi.markRead,
@@ -217,6 +219,11 @@ export function NotificationBell() {
             </div>
           </header>
           <div className="notification-panel__list">
+            {(markRead.isError || markAllRead.isError) && (
+              <p className="notification-panel__state" role="alert">
+                Chưa cập nhật được trạng thái đã đọc. Vui lòng thử lại.
+              </p>
+            )}
             {recent.isPending ? (
               <p className="notification-panel__state" role="status">
                 Đang tải thông báo…
@@ -224,7 +231,14 @@ export function NotificationBell() {
             ) : null}
             {recent.isError ? (
               <p className="notification-panel__state" role="alert">
-                Chưa thể tải thông báo. Vui lòng thử lại.
+                Chưa thể tải thông báo.{" "}
+                <button
+                  type="button"
+                  className="min-h-11 font-semibold underline"
+                  onClick={() => void recent.refetch()}
+                >
+                  Thử lại
+                </button>
               </p>
             ) : null}
             {recent.data?.data.length === 0 ? (

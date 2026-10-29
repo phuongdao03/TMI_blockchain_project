@@ -17,7 +17,7 @@ test("preview public home keeps submission closed and hides internal language", 
     page.getByRole("link", { name: "Khám phá đề cử", exact: true }),
   ).toHaveAttribute("href", "/works");
   await expect(
-    page.getByRole("button", { name: "Gửi tác phẩm hoặc hồ sơ" }),
+    page.getByRole("button", { name: "Bắt đầu hồ sơ đề cử" }),
   ).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Tạo hồ sơ mới" })).toHaveCount(
     0,

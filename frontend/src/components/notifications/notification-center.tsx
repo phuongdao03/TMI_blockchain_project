@@ -1,6 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   Bell,
   CheckCheck,
@@ -9,7 +14,7 @@ import {
   Inbox,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 import {
   ApiError,
@@ -18,6 +23,7 @@ import {
 } from "@/lib/api/client";
 import type { NotificationItem } from "@/lib/api/types";
 import { useAuthUser } from "@/lib/auth/user-context";
+import { notificationKeys } from "@/lib/notification-query-keys";
 
 import {
   formatNotificationTime,
@@ -25,19 +31,42 @@ import {
 } from "./notification-presentation";
 
 const PAGE_SIZE = 12;
+const subscribeToHydration = () => () => undefined;
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 
 export function NotificationCenter() {
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    clientSnapshot,
+    serverSnapshot,
+  );
+  // The header may have cached counts before this streamed page hydrates.
+  // Render the same loading state on the server and first client render.
+  if (!hydrated)
+    return (
+      <section role="status" className="p-6" aria-label="Đang tải thông báo">
+        Đang tải thông báo…
+      </section>
+    );
+  return <NotificationInbox />;
+}
+
+function NotificationInbox() {
   const user = useAuthUser();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const notifications = useQuery({
-    queryKey: ["notifications", "list", page, unreadOnly],
+    queryKey: notificationKeys.list(user?.id, page, unreadOnly),
     queryFn: () => notificationApi.list(page, PAGE_SIZE, unreadOnly),
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
   });
   const unread = useQuery({
-    queryKey: ["notifications", "unread-count"],
+    queryKey: notificationKeys.unread(user?.id),
     queryFn: notificationApi.unreadCount,
+    staleTime: 30_000,
   });
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["notifications"] });
@@ -102,20 +131,31 @@ export function NotificationCenter() {
           </p>
           <h1>Thông báo của bạn</h1>
           <p>
-            Theo dõi hồ sơ, công việc thẩm định và các tác vụ cần xử lý trong
-            một luồng thống nhất.
+            Cập nhật về hồ sơ, ưu đãi và các hoạt động liên quan đến tài khoản
+            của bạn.
           </p>
         </div>
         <div
           className="notification-center__summary"
           aria-label="Tóm tắt thông báo"
         >
-          <strong>{unread.data?.unreadCount ?? 0}</strong>
+          <strong>
+            {unread.isPending ? "—" : (unread.data?.unreadCount ?? 0)}
+          </strong>
           <span>chưa đọc</span>
         </div>
       </header>
 
-      <section className="notification-center__workspace">
+      <section
+        className="notification-center__workspace"
+        aria-busy={notifications.isFetching}
+      >
+        {(markRead.isError || markAllRead.isError) && (
+          <p role="alert" className="notification-center__feedback">
+            Chưa cập nhật được trạng thái đã đọc. Bạn có thể thử lại; thông báo
+            vẫn được giữ nguyên.
+          </p>
+        )}
         <div className="notification-center__toolbar">
           <div
             aria-label="Lọc thông báo"

@@ -77,9 +77,9 @@ export function RoleDashboardOverview({
     persona === "VIEWER" || persona === "USER"
       ? undefined
       : staffWorkspaces[persona];
-  const title = workspace?.title ?? "Tra cứu đề cử và bằng xác lập";
+  const title = workspace?.title ?? "Chào mừng bạn đến Tinh Hoa Việt";
   const description = isViewer
-    ? "Tài khoản tra cứu đã sẵn sàng. Tìm nội dung công khai hoặc kiểm tra trạng thái bằng xác lập bằng mã được cung cấp."
+    ? "Bạn có thể khám phá đề cử, tham gia cộng đồng hoặc bắt đầu hồ sơ của mình. Khi gửi hồ sơ, hãy chọn tư cách cá nhân hoặc đại diện tổ chức."
     : (workspace?.description ?? "");
   const primaryAction = workspace?.primaryAction ?? publicAction;
   const staffShortcuts =
@@ -99,7 +99,7 @@ export function RoleDashboardOverview({
     <div className="mx-auto max-w-7xl space-y-8">
       <header>
         <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-primary-700">
-          {isViewer ? "Không gian tra cứu" : "Công việc hôm nay"}
+          {isViewer ? "Không gian cá nhân" : "Công việc hôm nay"}
         </p>
         <h1 className="mt-3 text-3xl font-bold tracking-[-0.04em] sm:text-4xl">
           {title}
@@ -119,6 +119,12 @@ export function RoleDashboardOverview({
           className="flex flex-wrap gap-3"
         >
           <Link
+            className="inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold"
+            href="/works"
+          >
+            Thư viện đề cử
+          </Link>
+          <Link
             className="inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm font-bold text-[var(--theme-text)]"
             href="/verify"
           >
@@ -133,7 +139,7 @@ export function RoleDashboardOverview({
         </nav>
       ) : null}
 
-      {primaryAction ? (
+      {primaryAction && !isViewer ? (
         <section className="hero-grid-surface relative overflow-hidden rounded-2xl bg-neutral-950 px-6 py-8 text-white shadow-[0_24px_70px_rgb(15_15_15/0.16)] sm:px-8 lg:grid lg:min-h-72 lg:grid-cols-[1fr_auto] lg:items-end lg:px-10 lg:py-10">
           <div className="relative z-10 max-w-2xl">
             <span className="grid size-11 place-items-center rounded-lg border border-gold-300/30 bg-gold-300/10 text-gold-300">

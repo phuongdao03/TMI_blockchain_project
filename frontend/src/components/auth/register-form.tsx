@@ -10,7 +10,7 @@ import { AuthCard, AuthLink } from "@/components/auth/auth-card";
 import { FormField } from "@/components/auth/form-field";
 import { GoogleOAuthButton } from "@/components/auth/google-oauth-button";
 import { Button } from "@/components/ui/button";
-import { authApi } from "@/lib/api/client";
+import { deliverVerificationEmail } from "@/lib/auth/verification-email";
 import { safeLocalDestination } from "@/lib/auth/safe-destination";
 import { registerSchema, type RegisterValues } from "@/lib/auth/schemas";
 import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
@@ -22,6 +22,10 @@ export function RegisterForm({ next }: { next?: string }) {
     : "/login";
   const [submitError, setSubmitError] = useState<string>();
   const [acceptedEmail, setAcceptedEmail] = useState<string>();
+  const [emailStatus, setEmailStatus] = useState<
+    "sending" | "sent" | "pending"
+  >("sending");
+  const [attempt, setAttempt] = useState(0);
   const [submitPhase, setSubmitPhase] = useState<"creating" | "sending">();
   const {
     register,
@@ -38,6 +42,7 @@ export function RegisterForm({ next }: { next?: string }) {
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(undefined);
+    setAttempt((value) => value + 1);
     setSubmitPhase("creating");
     let accountCreated = false;
     try {
@@ -53,22 +58,30 @@ export function RegisterForm({ next }: { next?: string }) {
         values.password,
       );
       accountCreated = true;
+      setAcceptedEmail(values.email.trim());
+      setEmailStatus("sending");
       setSubmitPhase("sending");
       try {
-        await authApi.sendFirebaseVerificationEmail(
-          await credential.user.getIdToken(),
-        );
+        await deliverVerificationEmail(credential.user);
+        setEmailStatus("sent");
       } finally {
         await signOut(auth).catch(() => undefined);
       }
-      setAcceptedEmail(values.email.trim());
-    } catch {
+    } catch (error) {
+      if (accountCreated) setEmailStatus("pending");
+      const code = (error as { code?: string } | null)?.code;
       setSubmitError(
         accountCreated
           ? "Tài khoản đã được tạo nhưng chưa gửi được email xác minh. Hãy đăng nhập bằng email và mật khẩu vừa tạo để gửi lại liên kết."
           : typeof navigator !== "undefined" && !navigator.onLine
             ? "Bạn đang ngoại tuyến. Hãy kiểm tra kết nối mạng rồi thử lại."
-            : "Không thể đăng ký lúc này. Vui lòng thử lại.",
+            : code === "auth/email-already-in-use"
+              ? "Email này đã được sử dụng. Hãy đăng nhập hoặc đặt lại mật khẩu nếu bạn đã có tài khoản."
+              : code === "auth/operation-not-allowed"
+                ? "Đăng ký bằng email đang tạm thời gián đoạn. Bạn có thể tiếp tục với Google hoặc thử lại sau."
+                : code === "auth/weak-password"
+                  ? "Mật khẩu chưa đáp ứng yêu cầu bảo mật. Vui lòng chọn mật khẩu mạnh hơn."
+                  : "Chưa thể tạo tài khoản. Kiểm tra kết nối rồi thử lại; nếu bạn đã nhận email xác minh, hãy chuyển sang đăng nhập.",
       );
     } finally {
       setSubmitPhase(undefined);
@@ -87,18 +100,39 @@ export function RegisterForm({ next }: { next?: string }) {
     >
       {acceptedEmail ? (
         <div
-          className="rounded-lg border border-success bg-green-50 p-4 text-sm text-green-800"
+          className="auth-registration-result rounded-lg border p-4 text-sm"
           role="status"
         >
-          <p className="font-semibold">Kiểm tra email để hoàn tất đăng ký</p>
+          <p className="font-semibold">Tài khoản đã được tạo</p>
+          {emailStatus === "sending" ? (
+            <p className="mt-2 flex items-center gap-2">
+              <LoaderCircle
+                aria-hidden="true"
+                className="size-4 animate-spin"
+              />
+              Đang gửi liên kết xác minh tới {acceptedEmail}…
+            </p>
+          ) : null}
+          {emailStatus === "sent" ? (
+            <>
+              <p className="mt-3 font-semibold">
+                Kiểm tra email để hoàn tất đăng ký
+              </p>
+              <p className="mt-2">
+                Chúng tôi đã gửi liên kết xác minh tới{" "}
+                <strong>{acceptedEmail}</strong>. Hãy mở Hộp thư đến hoặc thư
+                rác, chọn “Xác minh email”, rồi quay lại đăng nhập.
+              </p>
+            </>
+          ) : null}
+          {emailStatus === "pending" && (
+            <p className="mt-3" role="alert">
+              {submitError}
+            </p>
+          )}
           <p className="mt-2">
-            Chúng tôi đã gửi liên kết xác minh tới{" "}
-            <strong>{acceptedEmail}</strong>. Hãy mở Hộp thư đến hoặc thư rác,
-            chọn “Xác minh email”, rồi quay lại đăng nhập.
-          </p>
-          <p className="mt-2">
-            Sau khi đăng nhập, hãy cài đặt tên hiển thị để mọi người nhận ra bạn
-            trong cộng đồng.
+            Bạn có thể bổ sung tên hiển thị và thông tin liên hệ trong mục Tài
+            khoản sau khi đăng nhập.
           </p>
           <p className="mt-3">
             <AuthLink href={loginHref}>Đăng nhập để tiếp tục</AuthLink>
@@ -174,7 +208,12 @@ export function RegisterForm({ next }: { next?: string }) {
             </span>
             <span className="h-px flex-1 bg-white/10" />
           </div>
-          <GoogleOAuthButton accountType="PUBLIC_USER" next={safeNext} />
+          <GoogleOAuthButton
+            key={attempt}
+            accountType="PUBLIC_USER"
+            next={safeNext}
+            disabled={isSubmitting}
+          />
         </div>
       )}
     </AuthCard>

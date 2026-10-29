@@ -37,6 +37,19 @@ describe("DashboardOverview", () => {
     listDossiers.mockReset();
   });
 
+  it("skips priority queries when a new account has no dossiers", async () => {
+    listDossiers.mockResolvedValue({
+      data: [],
+      meta: { page: 1, pageSize: 5, total: 0 },
+    });
+    renderDashboard();
+    await screen.findByRole("link", { name: /Tạo hồ sơ mới/ });
+    expect(listDossiers).toHaveBeenCalledTimes(1);
+    expect(listDossiers).toHaveBeenCalledWith(
+      expect.not.objectContaining({ status: expect.anything() }),
+    );
+  });
+
   it("finds older tasks outside the recent page and prioritizes supplementation", async () => {
     const dossier = (id: string, status: string) => ({
       id,

@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { OrganizationPanel } from "@/components/account/organization-panel";
 import { ProfileForm } from "@/components/account/profile-form";
+import { UsernameSettings } from "@/components/account/username-settings";
 import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
 import {
   Card,
@@ -114,6 +115,7 @@ export function AccountSettings() {
         </nav>
 
         <div className="min-w-0 space-y-4">
+          {tab === "profile" && <UsernameSettings />}
           {queryError ? (
             <p
               className="flex items-center gap-2 rounded-xl border border-error bg-primary-50 p-4 text-sm font-medium text-error"

@@ -8,7 +8,14 @@ from pathlib import Path
 from typing import Annotated, Literal, Self
 from urllib.parse import urlsplit
 
-from pydantic import Field, SecretStr, ValidationInfo, field_validator, model_validator
+from pydantic import (
+    AliasChoices,
+    Field,
+    SecretStr,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -117,6 +124,15 @@ class Settings(BaseSettings):
         le=86_400,
     )
     firebase_project_id: str = Field(default="", max_length=255)
+    firebase_web_api_key: str = Field(
+        default="",
+        max_length=512,
+        validation_alias=AliasChoices(
+            "FIREBASE_WEB_API_KEY",
+            "NEXT_PUBLIC_FIREBASE_API_KEY",
+            "firebase_web_api_key",
+        ),
+    )
     stadia_maps_api_key: SecretStr | None = None
     firebase_auth_emulator_host: str = Field(default="", max_length=255)
     firebase_jwks_uri: str = Field(

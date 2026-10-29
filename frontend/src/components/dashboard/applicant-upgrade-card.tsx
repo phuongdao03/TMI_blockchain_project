@@ -8,6 +8,8 @@ import {
   UserRound,
 } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { authApi, ApiError } from "@/lib/api/client";
 import type { AuthUser } from "@/lib/api/types";
@@ -17,16 +19,19 @@ type ApplicantAccountType = "INDIVIDUAL_APPLICANT" | "ORGANIZATION_APPLICANT";
 
 export function ApplicantUpgradeCard({
   onUpgraded,
+  startChoosing = false,
 }: {
   onUpgraded?: (user: AuthUser) => void;
+  startChoosing?: boolean;
 }) {
+  const router = useRouter();
   const [accountType, setAccountType] = useState<ApplicantAccountType>(
     "INDIVIDUAL_APPLICANT",
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [completed, setCompleted] = useState(false);
-  const [isChoosing, setIsChoosing] = useState(false);
+  const [isChoosing, setIsChoosing] = useState(startChoosing);
 
   const upgrade = async () => {
     setError(undefined);
@@ -35,6 +40,7 @@ export function ApplicantUpgradeCard({
       const user = await authApi.upgradeToApplicant(accountType);
       setCompleted(true);
       onUpgraded?.(user);
+      router.push("/dossiers/new");
     } catch (reason) {
       setError(
         reason instanceof ApiError && reason.status === 401
@@ -57,7 +63,7 @@ export function ApplicantUpgradeCard({
             Bắt đầu khi bạn sẵn sàng
           </p>
           <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-neutral-950 sm:text-3xl">
-            Gửi tác phẩm hoặc hồ sơ
+            Bắt đầu hồ sơ đề cử
           </h2>
           <p className="mt-3 text-sm leading-6 text-neutral-600">
             Chuẩn bị thông tin, tải tài liệu lên và theo dõi tiến độ tại một
@@ -70,7 +76,7 @@ export function ApplicantUpgradeCard({
             onClick={() => setIsChoosing(true)}
             type="button"
           >
-            Gửi tác phẩm hoặc hồ sơ
+            Bắt đầu hồ sơ đề cử
             <ArrowRight aria-hidden="true" className="size-4" />
           </Button>
         ) : null}
@@ -85,9 +91,12 @@ export function ApplicantUpgradeCard({
           <p className="mt-1">
             Hoàn thiện thông tin liên hệ trước khi tải tài liệu lên.
           </p>
-          <a className="mt-3 inline-block font-bold underline" href="/account">
-            Tiếp tục thiết lập
-          </a>
+          <Link
+            className="mt-3 inline-block font-bold underline"
+            href="/dossiers/new"
+          >
+            Mở bước chuẩn bị hồ sơ
+          </Link>
         </div>
       ) : isChoosing ? (
         <>

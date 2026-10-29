@@ -14,10 +14,11 @@ import { FormField } from "@/components/auth/form-field";
 import { GoogleOAuthButton } from "@/components/auth/google-oauth-button";
 import { Button } from "@/components/ui/button";
 import { ApiError, authApi } from "@/lib/api/client";
-import type { AccountType } from "@/lib/api/types";
+import type { AccountType, AuthUser } from "@/lib/api/types";
 import { loginSchema, type LoginValues } from "@/lib/auth/schemas";
 import { safeLocalDestination } from "@/lib/auth/safe-destination";
 import { broadcastAuthSessionChange } from "@/lib/auth/session-sync";
+import { deliverVerificationEmail } from "@/lib/auth/verification-email";
 import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
 
 export function LoginForm({
@@ -48,7 +49,14 @@ export function LoginForm({
       accountType,
       destination,
     );
-    queryClient.setQueryData(["auth", "me"], result.user);
+    enterWorkspace(result.user, destination);
+  }
+
+  function enterWorkspace(
+    user: AuthUser,
+    destination = safeLocalDestination(next, "/workspace"),
+  ) {
+    queryClient.setQueryData(["auth", "me"], user);
     broadcastAuthSessionChange();
     setNavigating(true);
     router.replace(destination);
@@ -56,6 +64,13 @@ export function LoginForm({
   }
 
   function loginErrorMessage(error: unknown): string {
+    if (
+      error instanceof ApiError &&
+      error.status === 401 &&
+      error.code !== "OAUTH_IDENTITY_INVALID" &&
+      error.code !== "ACCOUNT_INACTIVE"
+    )
+      return "Email/tên đăng nhập hoặc mật khẩu chưa đúng.";
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       return "Bạn đang ngoại tuyến. Hãy kiểm tra kết nối mạng rồi thử lại.";
     }
@@ -112,20 +127,45 @@ export function LoginForm({
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(undefined);
     try {
+      if (!values.email.includes("@")) {
+        const result = await authApi.loginWithUsername(
+          values.email,
+          values.password,
+        );
+        enterWorkspace(result.user);
+        return;
+      }
       if (!firebaseConfigured())
         throw new Error("FIREBASE_CLIENT_NOT_CONFIGURED");
       const auth = getFirebaseAuth();
       auth.languageCode = "vi";
-      const credential = await signInWithEmailAndPassword(
-        auth,
-        values.email,
-        values.password,
-      );
+      let credential;
+      try {
+        credential = await signInWithEmailAndPassword(
+          auth,
+          values.email,
+          values.password,
+        );
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (
+          ![
+            "auth/invalid-credential",
+            "auth/user-not-found",
+            "auth/wrong-password",
+          ].includes(code ?? "")
+        )
+          throw error;
+        const result = await authApi.loginWithEmail(
+          values.email,
+          values.password,
+        );
+        enterWorkspace(result.user);
+        return;
+      }
       if (!credential.user.emailVerified) {
         try {
-          await authApi.sendFirebaseVerificationEmail(
-            await credential.user.getIdToken(),
-          );
+          await deliverVerificationEmail(credential.user);
           setSubmitError(
             "Email chưa được xác minh. Chúng tôi đã gửi lại liên kết xác minh; hãy mở email rồi đăng nhập lại.",
           );
@@ -176,10 +216,13 @@ export function LoginForm({
             </p>
           ) : null}
           <FormField
-            autoComplete="email"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
             error={errors.email?.message}
-            label="Email"
-            type="email"
+            label="Email hoặc tên đăng nhập"
+            hint="Dùng email hoặc username đã đặt trong Tài khoản; tên hiển thị không dùng để đăng nhập."
+            type="text"
             {...register("email")}
           />
           <div className="space-y-2">

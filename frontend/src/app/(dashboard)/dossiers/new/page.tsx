@@ -2,11 +2,11 @@ import { ArrowLeft, FilePlus2 } from "lucide-react";
 import Link from "next/link";
 
 import { DossierCreateForm } from "@/components/dossiers/dossier-create-form";
-import { RoleGate } from "@/components/auth/role-gate";
+import { ApplicantEntryGate } from "@/components/dossiers/applicant-entry-gate";
 
 export default function CreateDossierPage() {
   return (
-    <RoleGate allowed={["USER"]}>
+    <ApplicantEntryGate>
       <div className="mx-auto max-w-4xl space-y-7">
         <div>
           <div className="flex flex-wrap items-center gap-3">
@@ -23,16 +23,15 @@ export default function CreateDossierPage() {
             </p>
           </div>
           <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] sm:text-4xl">
-            <span className="sm:hidden">Tạo hồ sơ mới</span>
-            <span className="hidden sm:inline">Khởi tạo hồ sơ xác lập</span>
+            Chuẩn bị hồ sơ đề cử
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
-            Bắt đầu với thông tin cốt lõi. Bạn có thể tiếp tục bổ sung bằng
-            chứng và chỉnh sửa trước khi nộp.
+            Chọn biểu mẫu và điền thông tin để tạo bản nháp. Sau đó bạn sẽ bổ
+            sung tài liệu và gửi hồ sơ để được xem xét.
           </p>
         </div>
         <DossierCreateForm />
       </div>
-    </RoleGate>
+    </ApplicantEntryGate>
   );
 }

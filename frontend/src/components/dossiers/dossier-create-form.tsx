@@ -106,6 +106,7 @@ export function DossierCreateForm() {
   const dossierTypes = useQuery({
     queryKey: dossierKeys.types(),
     queryFn: dossierApi.listTypes,
+    staleTime: 60_000,
   });
   const values = useWatch({ control: form.control });
   const title = values.title ?? "";
@@ -267,15 +268,15 @@ export function DossierCreateForm() {
         >
           {(
             [
-              [0, "01", "Chọn loại", "Chọn hồ sơ phù hợp"],
-              [1, "02", "Cơ bản", "Tên và mô tả"],
+              [0, "01", "Loại hồ sơ", "Chọn biểu mẫu phù hợp"],
+              [1, "02", "Thông tin hồ sơ", "Tên và giới thiệu hồ sơ"],
               ...(hasTypeSpecificFields
-                ? [[2, "03", "Theo loại", "Thông tin riêng"]]
+                ? [[2, "03", "Thông tin bổ sung", "Nội dung theo biểu mẫu"]]
                 : []),
               [
                 3,
                 hasTypeSpecificFields ? "04" : "03",
-                "Kiểm tra",
+                "Xem lại & tạo nháp",
                 "Lưu bản nháp",
               ],
             ] as Array<[number, string, string, string]>
@@ -840,7 +841,7 @@ export function DossierCreateForm() {
           aria-labelledby="draft-review-title"
         >
           <h2 className="text-xl font-bold" id="draft-review-title">
-            Kiểm tra thông tin
+            Xem lại bản nháp
           </h2>
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             <div>
@@ -1003,12 +1004,12 @@ export function DossierCreateForm() {
             <Button onClick={() => void reviewCoreInformation()} type="button">
               {hasTypeSpecificFields
                 ? "Tiếp tục thông tin theo loại"
-                : "Kiểm tra thông tin"}{" "}
+                : "Xem lại bản nháp"}{" "}
               <ArrowRight aria-hidden="true" className="size-4" />
             </Button>
           ) : prepareStep === 2 ? (
             <Button onClick={reviewAdditionalInformation} type="button">
-              Kiểm tra thông tin{" "}
+              Xem lại bản nháp{" "}
               <ArrowRight aria-hidden="true" className="size-4" />
             </Button>
           ) : (

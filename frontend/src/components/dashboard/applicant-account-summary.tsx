@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { notificationKeys } from "@/lib/notification-query-keys";
 import Link from "next/link";
 import { notificationApi, walletApi } from "@/lib/api/client";
 import { formatVnd, walletKey } from "@/lib/wallet/summary";
@@ -12,7 +13,7 @@ export function ApplicantAccountSummary({ userId }: { userId: string }) {
     staleTime: 30_000,
   });
   const unread = useQuery({
-    queryKey: ["notifications", "unread-count", userId],
+    queryKey: notificationKeys.unread(userId),
     queryFn: () => notificationApi.unreadCount(),
     staleTime: 30_000,
     refetchInterval: 45_000,

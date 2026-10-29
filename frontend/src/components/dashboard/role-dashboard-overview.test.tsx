@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { RoleDashboardOverview } from "@/components/dashboard/role-dashboard-overview";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 describe("RoleDashboardOverview", () => {
   it("renders browse-only discovery actions for a public user", () => {
@@ -15,7 +17,7 @@ describe("RoleDashboardOverview", () => {
         .getAttribute("href"),
     ).toBe("/works");
     expect(
-      screen.getByRole("button", { name: /Gửi tác phẩm hoặc hồ sơ/i }),
+      screen.getByRole("button", { name: /Bắt đầu hồ sơ đề cử/i }),
     ).toBeDefined();
     expect(screen.queryByRole("link", { name: /Tạo hồ sơ mới/i })).toBeNull();
     expect(screen.queryByText(/đăng ký đúng loại tài khoản/i)).toBeNull();

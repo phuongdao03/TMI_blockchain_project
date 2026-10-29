@@ -309,16 +309,30 @@ async function requestEnvelope<Data>(
     }
   }
 
-  const response = await fetch(`${API_ROOT}${path}`, {
-    ...init,
-    credentials: "include",
-    headers,
-  });
+  const signal =
+    init.signal ?? (method === "GET" ? AbortSignal.timeout(10_000) : undefined);
+  let response: Response;
+  try {
+    response = await fetch(`${API_ROOT}${path}`, {
+      ...init,
+      signal,
+      credentials: "include",
+      headers,
+    });
+  } catch (error) {
+    if (signal?.aborted && !init.signal)
+      throw new ApiError(
+        "Máy chủ phản hồi chậm. Vui lòng thử tải lại.",
+        "REQUEST_TIMEOUT",
+        408,
+      );
+    throw error;
+  }
   const refreshable =
     response.status === 401 &&
     allowRefresh &&
     Boolean(readCookie(CSRF_COOKIE_NAME)) &&
-    !["/auth/login", "/auth/refresh"].includes(path);
+    !["/auth/login", "/auth/username-login", "/auth/refresh"].includes(path);
   if (refreshable) {
     try {
       await refreshSession();
@@ -386,6 +400,20 @@ async function requestBlob(path: string, allowRefresh = true): Promise<Blob> {
 }
 
 export const authApi = {
+  loginWithEmail(email: string, password: string) {
+    return request<LoginData>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  },
+  loginWithUsername(username: string, password: string) {
+    return request<LoginData>("/auth/username-login", {
+      method: "POST",
+      body: JSON.stringify({ username: username.trim(), password }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  },
   recordActivity() {
     return request<{ status: "active" }>("/auth/activity", {
       method: "POST",
@@ -395,6 +423,7 @@ export const authApi = {
     return request<{ message: string }>("/auth/firebase/verification-email", {
       method: "POST",
       body: JSON.stringify({ idToken }),
+      signal: AbortSignal.timeout(12_000),
     });
   },
   exchangeFirebaseToken(

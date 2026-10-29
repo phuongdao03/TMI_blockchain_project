@@ -12,7 +12,18 @@ const password = z
   .max(128, "Mật khẩu không được vượt quá 128 ký tự.");
 
 export const loginSchema = z.object({
-  email,
+  email: z
+    .string()
+    .trim()
+    .min(1, "Vui lòng nhập email hoặc tên đăng nhập.")
+    .max(254)
+    .refine(
+      (value) =>
+        value.includes("@")
+          ? email.safeParse(value).success
+          : /^[A-Za-z0-9_-]{3,64}$/.test(value),
+      "Nhập email hợp lệ hoặc tên đăng nhập gồm chữ, số, dấu gạch ngang/gạch dưới.",
+    ),
   password: z.string().min(1, "Vui lòng nhập mật khẩu.").max(128),
 });
 

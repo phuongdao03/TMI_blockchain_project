@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Annotated
 
+import httpx
 from fastapi import Depends, Request
 from redis.asyncio import Redis
 from sqlalchemy import select
@@ -34,6 +35,10 @@ from app.modules.auth.services import RegistrationService
 from app.modules.auth.session_service import AuthPrincipal, SessionService
 from app.modules.auth.staff_invitation_service import StaffInvitationService
 from app.modules.auth.tokens import AccessTokenManager, CsrfTokenManager
+from app.modules.auth.username_login import (
+    FirebasePasswordGateway,
+    UsernameLoginService,
+)
 from app.modules.hr.models import Employee
 from app.modules.notifications.email import SmtpEmailGateway
 
@@ -217,6 +222,45 @@ async def get_firebase_auth_runtime(
 FirebaseAuthRuntimeDependency = Annotated[
     FirebaseAuthRuntime,
     Depends(get_firebase_auth_runtime),
+]
+
+
+async def get_username_login_service(
+    session: SessionDependency,
+    sessions: SessionServiceDependency,
+    settings: SettingsDependency,
+    runtime: FirebaseAuthRuntimeDependency,
+) -> AsyncIterator[UsernameLoginService]:
+    redis_client: Redis = Redis.from_url(
+        settings.redis_url,
+        socket_connect_timeout=settings.readiness_timeout_seconds,
+        socket_timeout=settings.readiness_timeout_seconds,
+    )
+    try:
+        async with httpx.AsyncClient() as client:
+            yield UsernameLoginService(
+                session=session,
+                sessions=sessions,
+                verifier=runtime.verifier,
+                passwords=FirebasePasswordGateway(
+                    client=client,
+                    api_key=settings.firebase_web_api_key,
+                    timeout_seconds=settings.firebase_timeout_seconds,
+                ),
+                rate_limiter=RedisAuthRateLimiter(
+                    redis_client,
+                    scope="username-login",
+                    ip_attempts=settings.auth_login_ip_limit,
+                    email_attempts=settings.auth_login_email_limit,
+                    window_seconds=settings.auth_login_rate_window_seconds,
+                ),
+            )
+    finally:
+        await redis_client.aclose()
+
+
+UsernameLoginServiceDependency = Annotated[
+    UsernameLoginService, Depends(get_username_login_service)
 ]
 
 

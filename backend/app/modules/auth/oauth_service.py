@@ -32,6 +32,7 @@ from app.modules.auth.roles import (
 )
 from app.modules.auth.schemas import INTERNAL_MANAGED_ROLES
 from app.modules.auth.session_service import ClientMetadata, IssuedSession
+from app.modules.users.models import UserProfile
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +185,10 @@ class OAuthService:
         )
         self._repository.add_user(user)
         await self._session.flush()
+        if claims.name and claims.name.strip():
+            self._session.add(
+                UserProfile(user_id=user.id, display_name=claims.name.strip()[:120])
+            )
         role_code = (
             VIEWER_REGISTRATION_ROLE
             if account_type is AccountType.PUBLIC_USER

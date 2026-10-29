@@ -11,6 +11,8 @@ vi.mock("@/lib/api/client", () => ({
   authApi: { upgradeToApplicant },
 }));
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 describe("ApplicantUpgradeCard", () => {
   beforeEach(() => {
     upgradeToApplicant.mockReset();
@@ -30,7 +32,7 @@ describe("ApplicantUpgradeCard", () => {
 
     expect(screen.queryByLabelText(/Cá nhân/i)).toBeNull();
     fireEvent.click(
-      screen.getByRole("button", { name: /Gửi tác phẩm hoặc hồ sơ/i }),
+      screen.getByRole("button", { name: /Bắt đầu hồ sơ đề cử/i }),
     );
     expect(screen.getByLabelText(/Cá nhân/i)).toBeDefined();
     fireEvent.click(screen.getByLabelText(/Cá nhân/i));

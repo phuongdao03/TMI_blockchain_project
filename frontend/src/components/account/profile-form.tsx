@@ -170,6 +170,7 @@ export function ProfileForm({
           error={errors.displayName?.message}
           hint="Tên này hiển thị trong bài viết và bình luận cộng đồng."
           label="Tên hiển thị công khai"
+          id="display-name"
           placeholder="Minh Anh"
           {...register("displayName")}
         />

@@ -20,6 +20,7 @@ from app.modules.auth.dependencies import (
     SessionServiceDependency,
     SettingsDependency,
     StaffInvitationServiceDependency,
+    UsernameLoginServiceDependency,
 )
 from app.modules.auth.errors import UnauthenticatedError
 from app.modules.auth.oauth import create_oauth_attempt
@@ -42,6 +43,7 @@ from app.modules.auth.schemas import (
     StaffInvitationAcceptedData,
     StaffInvitationAcceptRequest,
     StaffInvitationDecisionData,
+    UsernameLoginRequest,
     VerifyEmailRequest,
 )
 from app.modules.auth.session_service import ClientMetadata, IssuedSession
@@ -275,6 +277,40 @@ async def exchange_firebase_token(
         completion.issued.access_token
     )
     _set_auth_cookies(response, completion.issued, settings)
+    return SuccessEnvelope(
+        data=LoginData(
+            user=AuthUserData(
+                id=principal.user_id,
+                email=principal.email,
+                roles=principal.roles,
+                permissions=principal.permissions,
+                accountType=principal.account_type,
+            )
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/username-login",
+    response_model=SuccessEnvelope[LoginData],
+    responses=OAUTH_ERROR_RESPONSES,
+)
+async def username_login(
+    payload: UsernameLoginRequest,
+    request: Request,
+    response: Response,
+    service: UsernameLoginServiceDependency,
+    sessions: SessionServiceDependency,
+    settings: SettingsDependency,
+) -> SuccessEnvelope[LoginData]:
+    issued = await service.login(
+        username=payload.username,
+        password=payload.password.get_secret_value(),
+        metadata=_client_metadata(request, "Username"),
+    )
+    principal = await sessions.authenticate_access(issued.access_token)
+    _set_auth_cookies(response, issued, settings)
     return SuccessEnvelope(
         data=LoginData(
             user=AuthUserData(

@@ -99,6 +99,7 @@ function AccountVoucher({ userId }: { userId: string }) {
     .join("")}`;
 
   useEffect(() => {
+    if (!available || criticalPath) return;
     const check = () => {
       const anotherModal = [
         ...document.querySelectorAll(
@@ -113,9 +114,22 @@ function AccountVoucher({ userId }: { userId: string }) {
       setMayOpen(!criticalPath && !anotherModal && !editing);
     };
     check();
-    const timer = window.setInterval(check, 750);
-    return () => window.clearInterval(timer);
-  }, [criticalPath]);
+    const observer = new MutationObserver(check);
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["open", "aria-modal"],
+    });
+    const onFocus = () => queueMicrotask(check);
+    document.addEventListener("focusin", onFocus);
+    document.addEventListener("focusout", onFocus);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("focusin", onFocus);
+      document.removeEventListener("focusout", onFocus);
+    };
+  }, [available, criticalPath]);
 
   function dismiss() {
     if (available) {

@@ -18,6 +18,14 @@ const base: NotificationItem = {
 };
 
 describe("notification presentation", () => {
+  it("identifies new vouchers and approaching expiry", () => {
+    expect(
+      presentNotification({ ...base, type: "voucher.issued" }),
+    ).toMatchObject({ groupLabel: "Ưu đãi của bạn", tone: "success" });
+    expect(
+      presentNotification({ ...base, type: "voucher.expiring" }),
+    ).toMatchObject({ groupLabel: "Ưu đãi sắp hết hạn", tone: "warning" });
+  });
   it("routes existing submitted-dossier notifications to the admin queue", () => {
     expect(
       presentNotification(

@@ -2,13 +2,47 @@ import { expect, test } from "@playwright/test";
 
 const password = "correct horse battery staple";
 
+test("username login issues a private session without disclosing email lookup", async ({
+  page,
+  context,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/login");
+  await page.getByRole("textbox", { name: /^Email/ }).fill("owner_thv");
+  await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Đăng nhập" }).click();
+  await expect(page).toHaveURL(/\/workspace$/);
+  expect(
+    (await context.cookies()).find(({ name }) => name === "cns_access")
+      ?.httpOnly,
+  ).toBe(true);
+  expect(
+    await page.evaluate(() => localStorage.getItem("access_token")),
+  ).toBeNull();
+  await page.goto("/notifications");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Thông báo của bạn" }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Thông báo của bạn" }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
+
 test("applicant signs in with Firebase email and securely signs out", async ({
   page,
   context,
 }, testInfo) => {
   await page.goto("/login?accountType=INDIVIDUAL_APPLICANT");
   await page
-    .getByRole("textbox", { name: "Email" })
+    .getByRole("textbox", { name: /^Email/ })
     .fill("applicant@tinhhoaviet.org.vn");
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
@@ -62,17 +96,17 @@ test("a public account can choose an applicant profile without a false expired-s
 }) => {
   await page.goto("/login");
   await page
-    .getByRole("textbox", { name: "Email" })
+    .getByRole("textbox", { name: /^Email/ })
     .fill("applicant@tinhhoaviet.org.vn");
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
 
-  await expect(page).toHaveURL(/\/workspace$/);
-  await page.getByRole("button", { name: "Gửi tác phẩm hoặc hồ sơ" }).click();
-  await page.getByLabel("Cá nhân").check();
+  await expect(page).toHaveURL(/\/workspace$/, { timeout: 30_000 });
+  await page.getByRole("button", { name: "Bắt đầu hồ sơ đề cử" }).click();
+  await page.getByRole("radio", { name: "Cá nhân", exact: true }).check();
   await page.getByRole("button", { name: "Tiếp tục" }).click();
 
-  await expect(page.getByText("Bạn đã có thể bắt đầu hồ sơ.")).toBeVisible();
+  await expect(page).toHaveURL(/\/dossiers\/new$/);
   await expect(page.locator("body")).not.toContainText(
     "Phiên đăng nhập đã hết hạn",
   );
@@ -83,7 +117,7 @@ test("email signup sends branded verification without exposing internal access",
 }) => {
   await page.goto("/register");
   await page
-    .getByRole("textbox", { name: "Email" })
+    .getByRole("textbox", { name: /^Email/ })
     .fill("new-applicant@tinhhoaviet.org.vn");
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await page.getByLabel("Xác nhận mật khẩu").fill(password);
@@ -103,7 +137,7 @@ test("password recovery uses Firebase one-time action code", async ({
 }) => {
   await page.goto("/forgot-password");
   await page
-    .getByRole("textbox", { name: "Email" })
+    .getByRole("textbox", { name: /^Email/ })
     .fill("applicant@tinhhoaviet.org.vn");
   await page.getByRole("button", { name: "Gửi hướng dẫn" }).click();
   await expect(page.getByRole("status")).toContainText(

@@ -36,7 +36,7 @@ test("reviewer signs in to the workspace after Firebase authentication", async (
   test.setTimeout(120_000);
   await page.goto("/login");
   await page
-    .getByRole("textbox", { name: "Email" })
+    .getByRole("textbox", { name: /^Email/ })
     .fill("reviewer@tinhhoaviet.org.vn");
   await page
     .getByLabel("Mật khẩu", { exact: true })

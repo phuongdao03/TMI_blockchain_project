@@ -54,7 +54,7 @@ test("an applicant selects a dossier type and creates a draft", async ({
     .getByLabel("Chủ sở hữu hoặc tác giả")
     .fill("Trung tâm an ninh công nghệ số - THV");
   await page.getByLabel("Loại hình tác phẩm").selectOption("VISUAL_IDENTITY");
-  await page.getByRole("button", { name: "Kiểm tra thông tin" }).click();
+  await page.getByRole("button", { name: "Xem lại bản nháp" }).click();
   await page.getByRole("button", { name: "Tạo hồ sơ nháp" }).click();
 
   await expect(page).toHaveURL(

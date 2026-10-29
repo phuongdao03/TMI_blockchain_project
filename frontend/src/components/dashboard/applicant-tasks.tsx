@@ -22,7 +22,7 @@ export function dossierNextAction(status: DossierStatus) {
   return "Xem tiến độ hồ sơ";
 }
 
-export function ApplicantTasks() {
+export function ApplicantTasks({ enabled = true }: { enabled?: boolean }) {
   const queries = useQueries({
     queries: priorities.map((status) => {
       const filters = { page: 1, pageSize: 3, status };
@@ -30,6 +30,7 @@ export function ApplicantTasks() {
         queryKey: dossierKeys.list(filters),
         queryFn: () => dossierApi.list(filters),
         staleTime: 30_000,
+        enabled,
       };
     }),
   });
@@ -42,6 +43,8 @@ export function ApplicantTasks() {
       (task, index, all) => all.findIndex(({ id }) => id === task.id) === index,
     )
     .slice(0, 3);
+
+  if (!enabled) return null;
 
   if (pending)
     return (

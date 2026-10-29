@@ -193,6 +193,12 @@ class AuthUserData(BaseModel):
     is_employee: bool = Field(default=False, alias="isEmployee")
 
 
+class UsernameLoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    username: str = Field(min_length=3, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+    password: SecretStr = Field(min_length=1, max_length=128)
+
+
 class LoginData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
