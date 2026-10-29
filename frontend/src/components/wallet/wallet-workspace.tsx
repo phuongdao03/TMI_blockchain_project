@@ -36,11 +36,24 @@ export function WalletWorkspace({
   const [amount, setAmount] = useState("");
   const [key, setKey] = useState(() => crypto.randomUUID());
   const [activeTopup, setActiveTopup] = useState<WalletTopup | null>(null);
+  const [qrImageFailed, setQrImageFailed] = useState(false);
+  const resume = useMutation({
+    mutationFn: walletApi.resume,
+    onSuccess: (result) => {
+      setQrImageFailed(false);
+      setActiveTopup(result.status === "PAID" ? null : result);
+      void client.invalidateQueries({ queryKey });
+    },
+  });
   const topup = useMutation({
     mutationFn: () => walletApi.topup(Number(amount), key),
     onSuccess: (result) => {
+      setQrImageFailed(false);
       setActiveTopup(result.status === "PAID" ? null : result);
       void client.invalidateQueries({ queryKey });
+      if (result.status !== "PAID" && !result.qrPayload) {
+        resume.mutate(result.id);
+      }
     },
   });
   const reconcile = useMutation({
@@ -49,13 +62,6 @@ export function WalletWorkspace({
       if (result.status === "PAID" && activeTopup?.id === result.id) {
         setActiveTopup(null);
       }
-      void client.invalidateQueries({ queryKey });
-    },
-  });
-  const resume = useMutation({
-    mutationFn: walletApi.resume,
-    onSuccess: (result) => {
-      setActiveTopup(result.status === "PAID" ? null : result);
       void client.invalidateQueries({ queryKey });
     },
   });
@@ -206,6 +212,10 @@ export function WalletWorkspace({
                 Mã giao dịch {activeTopup.orderCode} · Hạn đến{" "}
                 {new Date(activeTopup.expiresAt).toLocaleString("vi-VN")}
               </p>
+              <p className="mt-2 text-sm text-[var(--theme-muted)]">
+                Quét mã bằng ứng dụng ngân hàng. Trang này sẽ tự cập nhật khi
+                thanh toán được xác nhận.
+              </p>
             </div>
             <Button
               variant="outline"
@@ -216,21 +226,39 @@ export function WalletWorkspace({
             </Button>
           </div>
           <div className="mt-6 grid gap-6 sm:grid-cols-[15rem_minmax(0,1fr)] sm:items-center">
-            {activeTopup.qrPayload ? (
+            {activeTopup.qrPayload && !qrImageFailed ? (
               <Image
                 alt={`Mã QR thanh toán ${formatVnd(activeTopup.amountMinor)}`}
-                className="mx-auto rounded-xl border border-[var(--theme-border)] bg-white p-2"
+                className="mx-auto h-auto w-full max-w-60 rounded-xl border border-[var(--theme-border)] bg-white p-2"
                 height={240}
+                onError={() => setQrImageFailed(true)}
                 src={`/api/v1/wallet/topups/${encodeURIComponent(activeTopup.id)}/qr`}
                 unoptimized
                 width={240}
               />
             ) : (
-              <p className="rounded-xl bg-[var(--theme-elevated)] p-4 text-sm text-[var(--theme-muted)]">
-                Mã QR chưa sẵn sàng. Vui lòng dùng thông tin chuyển khoản hoặc
-                thử khôi phục giao dịch.
-              </p>
+              <div className="grid justify-items-center gap-3 rounded-xl bg-[var(--theme-elevated)] p-4 text-center">
+                <p className="text-sm text-[var(--theme-muted)]">
+                  Chưa tải được mã QR. Hãy lấy lại thông tin thanh toán cho giao
+                  dịch này; bạn không cần tạo giao dịch mới hay rời khỏi trang.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={resume.isPending}
+                  onClick={() => resume.mutate(activeTopup.id)}
+                >
+                  {resume.isPending ? "Đang khôi phục mã…" : "Khôi phục mã QR"}
+                </Button>
+              </div>
             )}
+            {(resume.isError || qrImageFailed) &&
+              (!activeTopup.qrPayload || qrImageFailed) && (
+                <p className="mt-3 text-sm text-red-700" role="alert">
+                  Chưa khôi phục được mã. Hãy thử lại sau ít giây hoặc dùng
+                  thông tin chuyển khoản hiển thị trên trang này.
+                </p>
+              )}
             <dl className="grid gap-3 text-sm sm:grid-cols-2">
               {activeTopup.bankAccountName && (
                 <div>
