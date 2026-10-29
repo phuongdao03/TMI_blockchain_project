@@ -15,6 +15,7 @@ import { useEffect, useState, type ChangeEvent } from "react";
 import { formatVnd, walletKey } from "@/components/wallet/wallet-workspace";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { CheckoutVoucherSelector } from "@/components/vouchers/checkout-voucher-selector";
 import { advertisingApi, ApiError, walletApi } from "@/lib/api/client";
 import type {
   AdvertisingAvailability,
@@ -175,6 +176,7 @@ export function AdvertisingBookingPanel({
     useState<AdvertisingReservationCheckout | null>(null);
   const [confirmPayment, setConfirmPayment] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [selectedVoucher, setSelectedVoucher] = useState<string | null>(null);
   const startAt = isoValue(startLocal);
   const wallet = useQuery({
     queryKey: walletKey(user?.id),
@@ -234,7 +236,7 @@ export function AdvertisingBookingPanel({
     mutationFn: () => {
       if (!startAt) throw new Error("Ngày bắt đầu không hợp lệ.");
       const key = `ad-hold-${campaign.id}-${startAt}`;
-      return advertisingApi.reserve(campaign.id, startAt, key);
+      return advertisingApi.reserve(campaign.id, startAt, `${key}${selectedVoucher ? `-${selectedVoucher}` : ""}`, selectedVoucher);
     },
     onSuccess: (result) => {
       window.sessionStorage.setItem(storageKey, result.reservation.id);
@@ -435,12 +437,15 @@ export function AdvertisingBookingPanel({
                   : "Xác nhận lịch thay thế"}
               </Button>
             ) : (
+              <div className="space-y-3">
+              <CheckoutVoucherSelector serviceCode="ADVERTISING" resourceId={campaign.packageId} selectedId={selectedVoucher} onSelect={setSelectedVoucher} />
               <Button
                 disabled={reserve.isPending}
                 onClick={() => reserve.mutate()}
               >
                 {reserve.isPending ? "Đang giữ chỗ…" : "Giữ lịch 15 phút"}
               </Button>
+              </div>
             )
           ) : null}
         </div>

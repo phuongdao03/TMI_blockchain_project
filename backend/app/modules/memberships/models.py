@@ -63,7 +63,7 @@ class UserMembership(Base):
 class MembershipPurchase(Base):
     __tablename__ = "membership_purchases"
     __table_args__ = (
-        CheckConstraint("amount_minor > 0", name="positive_amount"),
+        CheckConstraint("amount_minor >= 0", name="positive_amount"),
         CheckConstraint(
             "list_price_minor >= amount_minor AND credit_minor >= 0",
             name="valid_price_snapshot",
@@ -75,8 +75,9 @@ class MembershipPurchase(Base):
             "expires_at",
         ),
     )
-    id: Mapped[UUID] = mapped_column(
-        Uuid, ForeignKey("wallet_journals.id", ondelete="RESTRICT"), primary_key=True
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    wallet_journal_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("wallet_journals.id", ondelete="RESTRICT")
     )
     user_id: Mapped[UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="RESTRICT"), index=True

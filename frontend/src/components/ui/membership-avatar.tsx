@@ -20,10 +20,13 @@ export function MembershipAvatar({
   className?: string;
 }) {
   const avatarSize = Math.round(size * 0.72);
-  const compact = size < 36;
 
   return (
     <span
+      aria-label={
+        showFrame ? `Hạng ${membershipTierPalette[tier].name}` : undefined
+      }
+      role={showFrame ? "group" : undefined}
       className={cn(
         "relative inline-grid shrink-0 place-items-center rounded-full",
         className,
@@ -31,14 +34,10 @@ export function MembershipAvatar({
       style={{
         height: size,
         width: size,
-        boxShadow:
-          showFrame && compact
-            ? `0 0 0 2px ${membershipTierPalette[tier].accent}`
-            : undefined,
       }}
     >
       <UserAvatar {...avatarProps} className="border-0" size={avatarSize} />
-      {showFrame && !compact ? (
+      {showFrame ? (
         <Image
           alt=""
           aria-hidden="true"

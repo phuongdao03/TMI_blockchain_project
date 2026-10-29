@@ -13,6 +13,8 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    promotion_media_max_bytes: int = Field(default=5_242_880, ge=1024, le=52_428_800)
+    promotion_media_max_pixels: int = Field(default=24_000_000, ge=1024, le=100_000_000)
     # Source: https://pydantic.dev/docs/validation/latest/concepts/pydantic_settings/
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -115,6 +115,22 @@ write_release_tag() {
   mv "$temporary_file" "$destination"
 }
 
+collect_release_diagnostics() {
+  release_error "Collecting failed release diagnostics before rollback"
+  compose_command ps -a >&2 || true
+  compose_command logs --no-color --tail 100 backend >&2 || true
+  compose_command exec -T backend python -c '
+import urllib.request, urllib.error
+try:
+    response = urllib.request.urlopen("http://127.0.0.1:8000/ready", timeout=10)
+    print("Backend readiness:", response.read().decode())
+except urllib.error.HTTPError as error:
+    print("Backend readiness:", error.code, error.read().decode())
+except Exception as error:
+    print("Backend readiness unavailable:", type(error).__name__, str(error))
+' >&2 || true
+}
+
 wait_for_release() {
   compose_command up -d --remove-orphans --wait --wait-timeout "$DEPLOY_HEALTH_TIMEOUT_SECONDS" || return $?
   verify_public_health

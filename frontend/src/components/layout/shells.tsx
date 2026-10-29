@@ -29,6 +29,7 @@ import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { VoucherSummaryBanner } from "@/components/vouchers/voucher-summary-banner";
 import { DisplayNameSetupNotice } from "@/components/account/display-name-setup-notice";
 import {
   CommunityRoleBadge,
@@ -59,6 +60,7 @@ const publicLinks = [...publicPrimaryLinks, ...publicUtilityLinks];
 
 function isWorkspacePath(pathname: string) {
   return [
+    "/vouchers",
     "/workspace",
     "/dashboard",
     "/account",
@@ -279,7 +281,7 @@ export function PublicShell({ children }: PropsWithChildren) {
                 <MembershipAccountAvatar
                   className="public-user-menu__avatar"
                   displayName={accountIdentity.displayName}
-                  size={32}
+                  size={40}
                   src={accountAvatarUrl}
                   user={activeUser}
                 />
@@ -300,6 +302,7 @@ export function PublicShell({ children }: PropsWithChildren) {
                 <Link href="/workspace">Không gian cá nhân</Link>
                 <Link href="/community/mine">Bài viết của tôi</Link>
                 <Link href="/notifications">Thông báo</Link>
+                <Link href="/vouchers">Voucher của tôi</Link>
                 {adminEntryPoint ? (
                   <Link href={adminEntryPoint.href}>
                     {adminEntryPoint.label}
@@ -779,6 +782,12 @@ export function DashboardShell({ children }: PropsWithChildren) {
           onOpenNavigation={() => openNavigation(navigationButtonRef.current)}
           user={user}
         />
+        {!adminArea &&
+          ["/workspace", "/dashboard"].includes(pathname) &&
+          user &&
+          user.roles.length === 1 &&
+          user.roles[0] === "USER" &&
+          !user.isEmployee && <VoucherSummaryBanner userId={user.id} />}
         <DisplayNameSetupNotice />
         <main className="dashboard-main" id="main-content">
           <div className="dashboard-page-stage" key={pathname}>

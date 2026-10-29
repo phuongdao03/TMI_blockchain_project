@@ -13,6 +13,7 @@ import {
 import { authApi } from "@/lib/api/client";
 import type { AuthUser } from "@/lib/api/types";
 import { SessionActivityMonitor } from "@/components/auth/session-activity-monitor";
+import { LoginVoucher } from "@/components/vouchers/login-voucher";
 import { subscribeToAuthSessionChanges } from "@/lib/auth/session-sync";
 
 const AuthUserContext = createContext<AuthUser | null>(null);
@@ -123,6 +124,11 @@ export function PublicAuthProvider({
     <AuthStatusContext.Provider value={status}>
       <AuthUserContext.Provider value={user}>
         <SessionActivityMonitor enabled={Boolean(user)} />
+        <LoginVoucher
+          userId={status === "authenticated" ? (user?.id ?? null) : null}
+          roles={user?.roles ?? []}
+          isEmployee={user?.isEmployee}
+        />
         {children}
       </AuthUserContext.Provider>
     </AuthStatusContext.Provider>

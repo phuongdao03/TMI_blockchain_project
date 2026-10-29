@@ -9,6 +9,25 @@ describe("MembershipAvatar", () => {
     ["SILVER", "silver"],
     ["COMPANION", "gold"],
     ["PRESTIGE", "diamond"],
+  ] as const)(
+    "preserves the actual %s frame on compact header avatars",
+    (tier, frame) => {
+      render(
+        <MembershipAvatar displayName="Lan Nguyễn" size={28} tier={tier} />,
+      );
+      const image = [...document.querySelectorAll("img")].find((element) =>
+        decodeURIComponent(element.getAttribute("src") ?? "").includes(
+          `/avatar-frames/${frame}.png`,
+        ),
+      );
+      expect(image).toBeTruthy();
+    },
+  );
+  it.each([
+    ["MEMBER", "bronze"],
+    ["SILVER", "silver"],
+    ["COMPANION", "gold"],
+    ["PRESTIGE", "diamond"],
   ] as const)("shows the %s frame for %s membership", (tier, frame) => {
     render(<MembershipAvatar displayName="Lan Nguyễn" size={64} tier={tier} />);
 

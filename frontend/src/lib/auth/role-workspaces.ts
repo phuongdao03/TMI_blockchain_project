@@ -16,6 +16,8 @@ type AdminEntryPoint = readonly [
 ];
 
 const ADMIN_ENTRY_POINTS: readonly AdminEntryPoint[] = [
+  ["promotions.manage", "/admin/promotions"],
+  ["promotions.read", "/admin/promotions"],
   ["review.assign", "/admin/reviews", ["SUPER_ADMIN"]],
   ["work.allocations.manage", "/admin/work-allocations", ["SUPER_ADMIN"]],
   ["hr.overtime.read", "/admin/overtime"],

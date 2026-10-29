@@ -235,9 +235,37 @@ class MembershipService:
         plan_id: UUID,
         *,
         renewal_opt_in: bool = False,
+        voucher_id: UUID | None = None,
     ) -> dict[str, object]:
         async with self.session.begin():
-            return await self._quote(user_id, plan_id, renewal_opt_in=renewal_opt_in)
+            quote = await self._quote(user_id, plan_id, renewal_opt_in=renewal_opt_in)
+            if voucher_id is not None:
+                from app.modules.promotions.checkout import PromotionCheckout
+
+                offers = await PromotionCheckout(self.session).quote(
+                    user_id,
+                    "MEMBERSHIP",
+                    int(str(quote["amount_due_minor"])),
+                    product_id=str(plan_id),
+                )
+                options = offers["vouchers"]
+                assert isinstance(options, list)
+                chosen = next(
+                    (item for item in options if item["voucher_id"] == str(voucher_id)),
+                    None,
+                )
+                if chosen is None:
+                    raise PaymentConflictError(
+                        "Voucher không áp dụng cho gói thành viên này."
+                    )
+                quote = {
+                    **quote,
+                    "promotion_original_vnd": quote["amount_due_minor"],
+                    "discount_vnd": chosen["discount_vnd"],
+                    "voucher_id": voucher_id,
+                    "amount_due_minor": chosen["payable_vnd"],
+                }
+            return quote
 
     async def _quote(
         self,
@@ -371,6 +399,7 @@ class MembershipService:
         *,
         expected_amount_minor: int,
         renewal_opt_in: bool = False,
+        voucher_id: UUID | None = None,
     ) -> dict[str, object]:
         key = valid_key(key)
         if type(expected_amount_minor) is not int or expected_amount_minor < 0:
@@ -378,6 +407,21 @@ class MembershipService:
         reference = f"membership:{user_id}:{sha256(key.encode()).hexdigest()}"
         async with self.session.begin():
             await WalletLedger(self.session).lock(user_id)
+            from app.modules.promotions.checkout import PromotionCheckout
+
+            checkout = PromotionCheckout(self.session)
+            promotion = checkout if voucher_id is not None else None
+            replay_promotion = await checkout.active(reference)
+            if replay_promotion is not None and replay_promotion.status == "REDEEMED":
+                if (
+                    replay_promotion.voucher_id != voucher_id
+                    or replay_promotion.product_id != str(plan_id)
+                    or replay_promotion.payable_vnd != expected_amount_minor
+                ):
+                    raise PaymentConflictError(
+                        "Idempotency key already belongs to a different purchase."
+                    )
+                return await self.current(user_id)
             replay = await self.session.scalar(
                 select(WalletJournal).where(
                     WalletJournal.user_id == user_id,
@@ -405,6 +449,17 @@ class MembershipService:
             quote = await self._quote(user_id, plan_id, renewal_opt_in=renewal_opt_in)
             if quote["approval_required"]:
                 raise PaymentForbiddenError()
+            if promotion is not None and voucher_id is not None:
+                held = await promotion.reserve(
+                    user_id,
+                    voucher_id,
+                    order_reference=reference,
+                    service_code="MEMBERSHIP",
+                    original_vnd=int(str(quote["amount_due_minor"])),
+                    product_id=str(plan_id),
+                    expires_at=now + timedelta(minutes=15),
+                )
+                quote["amount_due_minor"] = held.payable_vnd
             if expected_amount_minor != quote["amount_due_minor"]:
                 raise PaymentConflictError(
                     "Báo giá đã thay đổi; vui lòng xác nhận lại."
@@ -419,14 +474,23 @@ class MembershipService:
             assert isinstance(credit_value, int)
             amount_due = amount_due_value
             credit_minor = credit_value
-            posting = await WalletLedger(self.session).post(
-                user_id=user_id,
-                delta=-amount_due,
-                kind="PAYMENT",
-                key=key,
-                reference=reference,
-                description=f"Thẻ thành viên: {plan.name}",
+            posting = None
+            if amount_due > 0:
+                posting = await WalletLedger(self.session).post(
+                    user_id=user_id,
+                    delta=-amount_due,
+                    kind="PAYMENT",
+                    key=key,
+                    reference=reference,
+                    description=f"Thẻ thành viên: {plan.name}",
+                )
+            from uuid import NAMESPACE_URL, uuid5
+
+            purchase_id = (
+                posting.id if posting is not None else uuid5(NAMESPACE_URL, reference)
             )
+            if promotion is not None:
+                await promotion.redeem(reference)
             if membership is None:
                 membership = UserMembership(
                     user_id=user_id, plan_id=plan.id, tier=plan.tier, expires_at=expiry
@@ -440,7 +504,8 @@ class MembershipService:
                 )
             self.session.add(
                 MembershipPurchase(
-                    id=posting.id,
+                    id=purchase_id,
+                    wallet_journal_id=posting.id if posting is not None else None,
                     user_id=user_id,
                     plan_id=plan.id,
                     tier=plan.tier,
@@ -453,7 +518,7 @@ class MembershipService:
             self.session.add(
                 Notification(
                     user_id=user_id,
-                    source_event_id=posting.id,
+                    source_event_id=purchase_id,
                     type="MEMBERSHIP_PURCHASED",
                     title="Thẻ thành viên đã được cập nhật",
                     body=f"Gói {plan.name} có hiệu lực đến {expiry:%d/%m/%Y}.",

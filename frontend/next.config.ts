@@ -76,6 +76,10 @@ const nextConfig: NextConfig = {
   images: {
     localPatterns: [
       {
+        pathname: "/images/promotions/**",
+        search: "",
+      },
+      {
         pathname: "/assets/brand/**",
         search: "",
       },

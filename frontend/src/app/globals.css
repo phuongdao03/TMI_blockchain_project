@@ -1491,6 +1491,24 @@ html[data-theme="dark"] .auth-shell {
   color: var(--theme-muted, var(--color-neutral-700));
 }
 
+/* This art-directed light dialog can sit outside every shell, including in
+   the native top layer. Keep its controls readable in either site theme. */
+.voucher-dialog {
+  color-scheme: light;
+  --theme-accent: #9d0000;
+  --theme-accent-contrast: #ffffff;
+  --theme-text: #671b16;
+  --theme-muted: #805b39;
+  --theme-border: #dfc7a2;
+  --theme-elevated: #fff9ed;
+  --theme-shadow-color: rgb(71 0 0 / 10%);
+}
+
+.voucher-dialog .ui-button--primary:hover:not(:disabled) {
+  border-color: var(--voucher-hover-color, #7a0000);
+  background: var(--voucher-hover-color, #7a0000);
+}
+
 .ui-card {
   border-color: var(--theme-border, var(--color-neutral-200));
   background: var(--theme-elevated, var(--color-surface));
@@ -12946,4 +12964,15 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
     border-inline: 0;
     border-radius: 0;
   }
+}
+
+.voucher-dialog::backdrop {
+  background: rgb(0 0 0 / var(--voucher-overlay, 0.7));
+}
+.voucher-dialog[data-template="PREMIUM"] {
+  border: 3px double #b88b35;
+}
+.voucher-dialog[data-template="LIMITED"] h2 {
+  border-bottom: 2px solid currentColor;
+  padding-bottom: 0.75rem;
 }

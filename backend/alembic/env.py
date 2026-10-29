@@ -23,6 +23,10 @@ from app.modules.memberships import models as membership_models  # noqa: F401
 from app.modules.operations import job_models as operations_job_models  # noqa: F401
 from app.modules.organizations import models as organization_models  # noqa: F401
 from app.modules.payments import models as payment_models  # noqa: F401
+from app.modules.promotions import models as promotion_models  # noqa: F401
+from app.modules.promotions import checkout_models as promotion_checkout_models  # noqa: F401
+from app.modules.promotions import distribution_models as promotion_distribution_models  # noqa: F401
+from app.modules.promotions import media_models as promotion_media_models  # noqa: F401
 from app.modules.public import models as public_models  # noqa: F401
 from app.modules.ranking import models as ranking_models  # noqa: F401
 from app.modules.ranking import trending_models as trending_models  # noqa: F401

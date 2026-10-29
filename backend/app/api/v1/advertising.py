@@ -277,6 +277,7 @@ async def create_reservation(
         campaign_id=payload.campaign_id,
         start_at=payload.start_at,
         idempotency_key=idempotency_key,
+        voucher_id=payload.voucher_id,
     )
     order = await session.scalar(
         select(AdvertisingOrder).where(

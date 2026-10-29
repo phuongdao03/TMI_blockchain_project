@@ -11,6 +11,7 @@ import { safeLocalDestination } from "@/lib/auth/safe-destination";
 import type { AuthUser } from "@/lib/api/types";
 import { AuthUserProvider } from "@/lib/auth/user-context";
 import { SessionActivityMonitor } from "@/components/auth/session-activity-monitor";
+import { LoginVoucher } from "@/components/vouchers/login-voucher";
 
 export function DashboardAuthGuard({
   children,
@@ -77,6 +78,11 @@ export function DashboardAuthGuard({
   return (
     <AuthUserProvider user={effectiveUser}>
       <SessionActivityMonitor />
+      <LoginVoucher
+        userId={effectiveUser.id}
+        roles={effectiveUser.roles}
+        isEmployee={effectiveUser.isEmployee}
+      />
       {children}
     </AuthUserProvider>
   );

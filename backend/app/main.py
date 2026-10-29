@@ -37,6 +37,12 @@ from app.api.v1.hr import self_router as my_hr_router
 from app.api.v1.media import router as media_router
 from app.api.v1.memberships import router as memberships_router
 from app.api.v1.notifications import router as notifications_router
+from app.api.v1.admin_promotions import router as admin_promotions_router
+from app.api.v1.checkout_vouchers import router as checkout_vouchers_router
+from app.api.v1.promotion_distribution import router as promotion_distribution_router
+from app.api.v1.promotion_media import router as promotion_media_router
+from app.api.v1.promotion_media import public_router as promotion_media_public_router
+from app.api.v1.vouchers import router as vouchers_router
 from app.api.v1.operations import router as operations_router
 from app.api.v1.organizations import router as organizations_router
 from app.api.v1.payments import router as payments_router
@@ -291,6 +297,12 @@ def create_application(
     app.include_router(media_router)
     app.include_router(organizations_router)
     app.include_router(notifications_router)
+    app.include_router(admin_promotions_router)
+    app.include_router(checkout_vouchers_router)
+    app.include_router(promotion_distribution_router)
+    app.include_router(promotion_media_router)
+    app.include_router(promotion_media_public_router)
+    app.include_router(vouchers_router)
     app.include_router(admin_notifications_router)
     app.include_router(operations_router)
     app.include_router(payments_router)

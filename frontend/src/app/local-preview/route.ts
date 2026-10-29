@@ -21,6 +21,7 @@ const screens = {
     path: "/reviews?status=IN_PROGRESS",
   },
   "admin-portal": { persona: "super-admin", path: "/admin" },
+  "admin-promotions": { persona: "super-admin", path: "/admin/promotions" },
   "admin-home": { persona: "super-admin", path: "/admin/dashboard" },
   "admin-reviews": { persona: "super-admin", path: "/admin/reviews" },
   "admin-certificates": { persona: "super-admin", path: "/admin/certificates" },

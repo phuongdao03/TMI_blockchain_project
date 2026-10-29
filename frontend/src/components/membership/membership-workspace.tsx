@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { CheckoutVoucherSelector } from "@/components/vouchers/checkout-voucher-selector";
 import { formatVnd, walletKey } from "@/components/wallet/wallet-workspace";
 import {
   ApiError,
@@ -79,6 +80,7 @@ export function MembershipWorkspace({
     renewalOptIn: boolean;
   } | null>(null);
   const [applicationStatement, setApplicationStatement] = useState("");
+  const [selectedVoucher, setSelectedVoucher] = useState<string | null>(null);
   const attemptKeys = useRef(new Map<string, string>());
   const quote = useQuery({
     queryKey: [
@@ -86,9 +88,10 @@ export function MembershipWorkspace({
       user?.id,
       selection?.plan.id,
       selection?.renewalOptIn,
+      selectedVoucher,
     ],
     queryFn: () =>
-      membershipApi.quote(selection!.plan.id, selection!.renewalOptIn),
+      selectedVoucher ? membershipApi.quote(selection!.plan.id, selection!.renewalOptIn, selectedVoucher) : membershipApi.quote(selection!.plan.id, selection!.renewalOptIn),
     enabled: selection !== null && canManagePersonalMembership,
     retry: false,
   });
@@ -124,6 +127,7 @@ export function MembershipWorkspace({
       membershipApi.purchase(attempt.plan.id, attempt.key, {
         expectedAmountMinor: attempt.quote.amountDueMinor,
         renewalOptIn: attempt.renewalOptIn,
+        ...(selectedVoucher ? { voucherId: selectedVoucher } : {}),
       }),
     onSuccess: async (_result, attempt) => {
       attemptKeys.current.delete(attempt.plan.id);
@@ -322,6 +326,7 @@ export function MembershipWorkspace({
                           const renewalOptIn =
                             current.status === "ACTIVE" &&
                             current.tier === tier;
+                          setSelectedVoucher(null);
                           setSelection({ plan, key, renewalOptIn });
                         }}
                       >
@@ -388,6 +393,7 @@ export function MembershipWorkspace({
         }
         isPending={buy.isPending}
       >
+        {selection && <CheckoutVoucherSelector serviceCode="MEMBERSHIP" resourceId={selection.plan.id} renewalOptIn={selection.renewalOptIn} selectedId={selectedVoucher} onSelect={setSelectedVoucher} />}
         {quote.isPending ? (
           <p role="status" className="mb-3">
             Đang tính báo giá…

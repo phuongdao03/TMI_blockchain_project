@@ -25,6 +25,7 @@ celery_app = Celery(
         "app.workers.attendance_location_tasks",
         "app.workers.community_retention_tasks",
         "app.workers.advertising_tasks",
+        "app.workers.promotion_tasks",
     ],
 )
 celery_app.conf.update(
@@ -35,6 +36,14 @@ celery_app.conf.update(
     task_serializer="json",
     timezone="UTC",
     beat_schedule={
+        "resume-promotion-distribution": {
+            "task": "app.workers.promotion_tasks.distribute_promotions",
+            "schedule": 30.0,
+        },
+        "notify-expiring-promotions": {
+            "task": "app.workers.promotion_tasks.notify_expiring_promotions",
+            "schedule": 3600.0,
+        },
         "reconcile-blockchain-transactions": {
             "task": "app.workers.proof_registry_tasks.reconcile_proof_registry_transactions",  # noqa: E501
             "schedule": 30.0,

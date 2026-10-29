@@ -25,6 +25,7 @@ import {
   Wallet,
   CreditCard,
   Megaphone,
+  Ticket,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -63,6 +64,7 @@ const discoveryItems: NavigationItem[] = [
 ];
 
 const personalItems: NavigationItem[] = [
+  { href: "/vouchers", label: "Voucher của tôi", icon: Ticket },
   {
     href: "/advertising",
     label: "Quảng cáo của tôi",
@@ -108,6 +110,7 @@ const reviewerItems: NavigationItem[] = [
 const employeeItems: NavigationItem[] = reviewerItems.slice(2);
 
 const adminItems: NavigationItem[] = [
+  { href: "/admin/promotions", label: "Marketing & Khuyến mại", icon: Ticket, permissions: ["promotions.manage", "promotions.read"] },
   {
     href: "/admin/advertising",
     label: "Quản trị quảng cáo",
@@ -254,6 +257,7 @@ const blockchainSignerItems: NavigationItem[] = [
 ];
 
 const adminNavigationGroups = [
+  { label: "Marketing & Khuyến mại", hrefs: ["/admin/promotions"] },
   {
     label: "Hồ sơ & thẩm định",
     hrefs: ["/admin/reviews", "/admin/work-allocations", "/admin/certificates"],

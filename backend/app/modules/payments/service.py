@@ -157,16 +157,17 @@ class PaymentService:
                 )
             if self._utc(order.expires_at) <= self._clock():
                 raise PaymentConflictError("Yêu cầu thanh toán đã hết hạn.")
-            await WalletLedger(self._session).post(
-                user_id=principal.user_id,
-                delta=-order.amount_minor,
-                kind="PAYMENT",
-                key=key,
-                reference=f"payment:{order.id}",
-                description=str(
-                    order.metadata_json.get("description") or "Phí xác lập hồ sơ"
-                ),
-            )
+            if order.amount_minor > 0:
+                await WalletLedger(self._session).post(
+                    user_id=principal.user_id,
+                    delta=-order.amount_minor,
+                    kind="PAYMENT",
+                    key=key,
+                    reference=f"payment:{order.id}",
+                    description=str(
+                        order.metadata_json.get("description") or "Phí xác lập hồ sơ"
+                    ),
+                )
             self._workflow.transition(
                 dossier,
                 target=self._confirmed_dossier_status(dossier),
@@ -389,7 +390,7 @@ class PaymentService:
                 expired_order = await self._required_order(
                     expired_order_id, for_update=True
                 )
-                self._expire_if_needed(expired_order)
+                await self._expire_if_needed(expired_order)
         async with self._session.begin():
             obligation = await self._billing.obligation_by_id(
                 obligation_id, for_update=True
@@ -411,7 +412,7 @@ class PaymentService:
                 raise PaymentConflictError("Dossier is not awaiting payment.")
             active = await self._payments.get_active_for_obligation(obligation.id)
             if active is not None:
-                self._expire_if_needed(active)
+                await self._expire_if_needed(active)
                 if active.status in {
                     PaymentStatus.PENDING,
                     PaymentStatus.PROCESSING,
@@ -646,6 +647,7 @@ class PaymentService:
         self._require_role(principal, PAYMENT_ROLES)
         newly_started = False
         expired = False
+        zero_checkout = False
         result: PaymentOrderView | None = None
         async with self._session.begin():
             order = await self._required_order(order_id, for_update=True)
@@ -655,7 +657,7 @@ class PaymentService:
                 raise PaymentConflictError(
                     "This payment request uses the personal wallet."
                 )
-            self._expire_if_needed(order)
+            await self._expire_if_needed(order)
             if order.status is PaymentStatus.EXPIRED:
                 expired = True
             elif (
@@ -663,6 +665,8 @@ class PaymentService:
                 or order.status is PaymentStatus.PAID
             ):
                 result = self._view(order)
+            elif order.amount_minor == 0 and order.status is PaymentStatus.PENDING:
+                zero_checkout = True
             elif order.status not in {
                 PaymentStatus.PENDING,
                 PaymentStatus.PROCESSING,
@@ -701,6 +705,8 @@ class PaymentService:
             raise PaymentConflictError("This payment request has expired.")
         if result is not None:
             return result
+        if zero_checkout:
+            return await self.pay_with_wallet(principal, order_id, idempotency_key=f"promotion-zero-{order_id}")
         return await self._ensure_checkout(
             order_id,
             newly_reserved=newly_started,
@@ -1003,7 +1009,7 @@ class PaymentService:
             order = await self._required_order(order_id)
             dossier = await self._required_dossier(order.dossier_id)
             await self._require_access(principal, dossier)
-            self._expire_if_needed(order)
+            await self._expire_if_needed(order)
             result = self._view(order)
         return result
 
@@ -1024,7 +1030,7 @@ class PaymentService:
                 raise PaymentNotFoundError()
             dossier = await self._required_dossier(order.dossier_id)
             await self._require_access(principal, dossier)
-            self._expire_if_needed(order)
+            await self._expire_if_needed(order)
             return self._view(order)
 
     async def get_active_order_for_dossier(
@@ -1038,7 +1044,7 @@ class PaymentService:
             order = await self._payments.get_active_for_dossier(dossier_id)
             if order is None:
                 raise PaymentNotFoundError()
-            self._expire_if_needed(order)
+            await self._expire_if_needed(order)
             return self._view(order)
 
     async def cancel_order(
@@ -1092,6 +1098,7 @@ class PaymentService:
                     source="CANCELLED_BY_USER",
                     actor=principal.user_id,
                 )
+                await self._release_voucher(order, normalized_reason)
                 order.metadata_json = {
                     **order.metadata_json,
                     "cancellation_reason": normalized_reason,
@@ -1147,6 +1154,7 @@ class PaymentService:
                 source="CANCELLED_BY_USER",
                 actor=principal.user_id,
             )
+            await self._release_voucher(order, normalized_reason)
             order.metadata_json = {
                 **order.metadata_json,
                 "cancellation_reason": normalized_reason,
@@ -1293,6 +1301,7 @@ class PaymentService:
                     self._transition_status(
                         order, PaymentStatus.FAILED, source="WEBHOOK"
                     )
+                    await self._release_voucher(order, "Verified payment failure")
                 payment_event.processed_at = self._clock()
             else:
                 if order.status in {
@@ -1497,6 +1506,7 @@ class PaymentService:
                     source="RECONCILIATION",
                     actor=user_id,
                 )
+                await self._release_voucher(order, "Provider confirmed cancellation")
             elif provider_order.status == PaymentStatus.PROCESSING.value:
                 self._transition_status(
                     order,
@@ -1518,7 +1528,8 @@ class PaymentService:
                     source="RECONCILIATION",
                     actor=user_id,
                 )
-            self._expire_if_needed(order)
+                await self._release_voucher(order, "Provider confirmed failure")
+            await self._expire_if_needed(order)
             await self._session.flush()
             await self._session.refresh(order)
             result = self._view(order)
@@ -1647,7 +1658,7 @@ class PaymentService:
             principal, requirement, PaymentForbiddenError
         )
 
-    def _expire_if_needed(self, order: PaymentOrder) -> None:
+    async def _expire_if_needed(self, order: PaymentOrder) -> None:
         expires_at = order.expires_at
         if expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=UTC)
@@ -1655,7 +1666,17 @@ class PaymentService:
             order.status in {PaymentStatus.PENDING, PaymentStatus.PROCESSING}
             and expires_at <= self._clock()
         ):
+            # A provider-backed timeout is ambiguous and must stay held until
+            # reconciliation. A never-started local request has no external payer.
+            never_started = (
+                order.provider_order_id is None
+                and order.status is PaymentStatus.PENDING
+            )
             self._transition_status(order, PaymentStatus.EXPIRED, source="EXPIRY")
+            if never_started:
+                await self._release_voucher(
+                    order, "Local checkout expired before provider initialization"
+                )
 
     def _record_initial_status(
         self,
@@ -1880,7 +1901,21 @@ class PaymentService:
                 )
             )
 
+    async def _release_voucher(self, order: PaymentOrder, reason: str) -> None:
+        if order.metadata_json.get("voucher_id"):
+            from app.modules.promotions.checkout import PromotionCheckout
+
+            await PromotionCheckout(self._session, now=self._clock()).release(
+                f"payment:{order.id}", reason=reason
+            )
+
     async def _settle_fee_obligation(self, order: PaymentOrder) -> None:
+        if order.metadata_json.get("voucher_id"):
+            from app.modules.promotions.checkout import PromotionCheckout
+
+            await PromotionCheckout(self._session, now=self._clock()).redeem(
+                f"payment:{order.id}"
+            )
         if order.fee_obligation_id is None:
             return
         obligation = await self._billing.obligation_by_id(

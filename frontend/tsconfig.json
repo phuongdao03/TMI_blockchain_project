@@ -6,7 +6,11 @@
     "incremental": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,
@@ -14,7 +18,9 @@
     "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     },
     "plugins": [
       {
@@ -118,7 +124,16 @@
     ".next-e2e-public-theme-fix/types/**/*.ts",
     ".next-e2e-public-theme-fix/dev/types/**/*.ts",
     ".next-guide-live/types/**/*.ts",
-    ".next-guide-live/dev/types/**/*.ts"
+    ".next-guide-live/dev/types/**/*.ts",
+    ".next-e2e-refresh-check/types/**/*.ts",
+    ".next-e2e-refresh-check/dev/types/**/*.ts",
+    ".next-e2e-vouchers-manual/types/**/*.ts",
+    ".next-e2e-vouchers-manual/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".next-*", "playwright-report", "test-results"]
+  "exclude": [
+    "node_modules",
+    ".next-*",
+    "playwright-report",
+    "test-results"
+  ]
 }

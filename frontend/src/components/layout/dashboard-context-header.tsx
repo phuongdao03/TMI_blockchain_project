@@ -18,6 +18,8 @@ import { profileApi } from "@/lib/api/client";
 import type { AuthUser } from "@/lib/api/types";
 
 const pageTitles: Record<string, string> = {
+  "/admin/promotions": "Marketing & Khuyến mại",
+  "/vouchers": "Voucher của tôi",
   "/workspace": "Không gian cá nhân",
   "/dashboard": "Tổng quan",
   "/account": "Tài khoản",
@@ -122,7 +124,7 @@ export function DashboardContextHeader({
           <div className="hidden max-w-64 items-center gap-2 md:flex">
             <MembershipAccountAvatar
               displayName={identity.displayName}
-              size={28}
+              size={44}
               src={avatarUrl}
               user={user}
             />

@@ -37,7 +37,7 @@ PAYMENT_JSON = JSONB().with_variant(JSON(), "sqlite")
 class PaymentOrder(UtcTimestampMixin, Base):
     __tablename__ = "payment_orders"
     __table_args__ = (
-        CheckConstraint("amount_minor > 0", name="amount_minor_positive"),
+        CheckConstraint("amount_minor >= 0", name="amount_minor_positive"),
         CheckConstraint("length(currency) = 3", name="currency_length"),
         Index("ix_payment_orders_dossier_status", "dossier_id", "status"),
         Index(

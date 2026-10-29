@@ -132,9 +132,13 @@ class ChatMessagePageData(PaymentSchema):
 
 class QuoteRequest(PaymentSchema):
     renewal_opt_in: bool = False
+    voucher_id: UUID | None = None
 
 
 class QuoteData(PaymentSchema):
+    voucher_id: UUID | None = None
+    promotion_original_vnd: int | None = None
+    discount_vnd: int = 0
     plan_id: UUID
     name: str
     tier: Literal["SILVER", "COMPANION", "PRESTIGE"]
@@ -150,6 +154,7 @@ class QuoteData(PaymentSchema):
 
 
 class PurchaseRequest(PaymentSchema):
+    voucher_id: UUID | None = None
     expected_amount_minor: Annotated[int, Field(strict=True, ge=0, le=1_000_000_000)]
     renewal_opt_in: bool = False
 
@@ -323,6 +328,7 @@ async def buy_membership(
         idempotency_key,
         expected_amount_minor=payload.expected_amount_minor,
         renewal_opt_in=payload.renewal_opt_in,
+        voucher_id=payload.voucher_id,
     )
     return SuccessEnvelope(
         data=MembershipData.model_validate(result),
@@ -346,6 +352,7 @@ async def quote_membership(
         principal.user_id,
         plan_id,
         renewal_opt_in=payload.renewal_opt_in,
+        voucher_id=payload.voucher_id,
     )
     return SuccessEnvelope(
         data=QuoteData.model_validate(result),

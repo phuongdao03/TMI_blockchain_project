@@ -74,6 +74,7 @@ deploy_release() {
 
 if ! deploy_release; then
   release_error "release $release_tag failed health validation"
+  collect_release_diagnostics
   if [[ "$AUTO_ROLLBACK_ON_FAILURE" == "true" && -n "$previous_tag" && "$previous_tag" != "$release_tag" ]]; then
     release_error "restoring previous application images: $previous_tag"
     export IMAGE_TAG="$previous_tag"

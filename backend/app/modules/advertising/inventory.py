@@ -1210,6 +1210,7 @@ class AdvertisingInventoryService:
         campaign_id: UUID,
         start_at: datetime,
         idempotency_key: str,
+        voucher_id: UUID | None = None,
     ) -> AdvertisingReservation:
         start = _utc(start_at)
         key = idempotency_key.strip()
@@ -1244,6 +1245,17 @@ class AdvertisingInventoryService:
                     raise AdvertisingConflictError(
                         "Lượt giữ chỗ đã hết hạn. Vui lòng kiểm tra lại lịch."
                     )
+                saved_order = await self.session.scalar(
+                    select(AdvertisingOrder).where(
+                        AdvertisingOrder.reservation_id == replay.id
+                    )
+                )
+                if saved_order is not None and saved_order.pricing_snapshot.get(
+                    "voucherId"
+                ) != (str(voucher_id) if voucher_id else None):
+                    raise AdvertisingConflictError(
+                        "Idempotency key belongs to a different voucher selection."
+                    )
                 return replay
 
             campaign = await self._campaign(campaign_id)
@@ -1274,6 +1286,17 @@ class AdvertisingInventoryService:
                 ):
                     raise AdvertisingConflictError(
                         "Lượt giữ chỗ đã hết hạn. Vui lòng kiểm tra lại lịch."
+                    )
+                saved_order = await self.session.scalar(
+                    select(AdvertisingOrder).where(
+                        AdvertisingOrder.reservation_id == replay.id
+                    )
+                )
+                if saved_order is not None and saved_order.pricing_snapshot.get(
+                    "voucherId"
+                ) != (str(voucher_id) if voucher_id else None):
+                    raise AdvertisingConflictError(
+                        "Idempotency key belongs to a different voucher selection."
                     )
                 return replay
             campaign = await self._campaign(campaign_id, for_update=True)
@@ -1381,6 +1404,29 @@ class AdvertisingInventoryService:
             )
             self.session.add(order)
             await self.session.flush()
+            if voucher_id is not None:
+                from app.modules.promotions.checkout import PromotionCheckout
+
+                held = await PromotionCheckout(self.session, now=now).reserve(
+                    principal.user_id,
+                    voucher_id,
+                    order_reference=f"advertising:{order.id}",
+                    service_code="ADVERTISING",
+                    original_vnd=order.base_amount_vnd,
+                    membership_discount_vnd=order.discount_amount_vnd,
+                    product_id=str(package.id),
+                    expires_at=reservation.expires_at,
+                )
+                order.discount_amount_vnd = held.discount_vnd
+                order.payable_amount_vnd = held.payable_vnd
+                order.pricing_snapshot = {
+                    **order.pricing_snapshot,
+                    "voucherId": str(voucher_id),
+                    "voucherDiscountVnd": held.discount_vnd,
+                    "membershipDiscountAppliedVnd": 0,
+                    "discountAmountVnd": held.discount_vnd,
+                    "payableAmountVnd": held.payable_vnd,
+                }
             self._audit(
                 actor_id=principal.user_id,
                 entity_type="reservation",
@@ -1552,6 +1598,12 @@ class AdvertisingInventoryService:
             order.payment_idempotency_key = key
             order.wallet_transaction_id = posting.id if posting is not None else None
             order.paid_at = now
+            if order.pricing_snapshot.get("voucherId"):
+                from app.modules.promotions.checkout import PromotionCheckout
+
+                await PromotionCheckout(self.session, now=now).redeem(
+                    f"advertising:{order.id}"
+                )
             booking = AdvertisingBooking(
                 campaign_id=campaign.id,
                 placement_id=placement.id,
@@ -1669,6 +1721,13 @@ class AdvertisingInventoryService:
             )
             if order is not None:
                 order.payment_status = "EXPIRED"
+                if order.pricing_snapshot.get("voucherId"):
+                    from app.modules.promotions.checkout import PromotionCheckout
+
+                    await PromotionCheckout(self.session, now=now).release(
+                        f"advertising:{order.id}",
+                        reason="Unpaid advertising hold expired",
+                    )
             campaign = await self._campaign(reservation.campaign_id, for_update=True)
             if campaign.status == "PENDING_PAYMENT":
                 campaign.status = "APPROVED"
@@ -1751,7 +1810,7 @@ class AdvertisingInventoryService:
             )
         now = _utc(self.clock())
         spent_rows = await self.session.scalars(
-            select(AdvertisingOrder.discount_amount_vnd).where(
+            select(AdvertisingOrder).where(
                 AdvertisingOrder.user_id == user_id,
                 AdvertisingOrder.membership_tier == tier,
                 AdvertisingOrder.membership_cycle_start == cycle_start,
@@ -1764,7 +1823,10 @@ class AdvertisingInventoryService:
                 ),
             )
         )
-        spent = sum(spent_rows)
+        spent = sum(
+            0 if row.pricing_snapshot.get("voucherId") else row.discount_amount_vnd
+            for row in spent_rows
+        )
         allowance = policy.annual_allowance_vnd if policy.active else 0
         remaining_allowance = max(allowance - spent, 0)
         rate = policy.rate_basis_points if policy.active else 0

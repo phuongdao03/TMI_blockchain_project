@@ -26,7 +26,7 @@ function mount(user: {
 }
 
 describe("membership account avatar", () => {
-  it("shows the matching membership color in an outer account header", async () => {
+  it("shows the actual matching rank frame in an outer account header", async () => {
     api.overview.mockResolvedValue({ tier: "SILVER" });
     const { container } = mount({
       id: "member-1",
@@ -36,11 +36,14 @@ describe("membership account avatar", () => {
     });
 
     await screen.findByRole("img", { name: "Ảnh đại diện của Lan Nguyen" });
-    await waitFor(() =>
+    await waitFor(() => {
+      const frames = [...container.querySelectorAll("img")];
       expect(
-        (container.firstElementChild as HTMLElement).style.boxShadow,
-      ).toContain("#87939b"),
-    );
+        frames.some((image) =>
+          decodeURIComponent(image.src).includes("/avatar-frames/silver.png"),
+        ),
+      ).toBe(true);
+    });
   });
 
   it.each([

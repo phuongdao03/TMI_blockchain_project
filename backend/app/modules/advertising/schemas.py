@@ -255,6 +255,7 @@ class AvailabilityData(AdvertisingSchema):
 class CreateReservationRequest(AdvertisingSchema):
     campaign_id: UUID
     start_at: datetime
+    voucher_id: UUID | None = None
 
     @field_validator("start_at")
     @classmethod

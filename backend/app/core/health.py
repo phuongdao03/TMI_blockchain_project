@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections.abc import Mapping
 from typing import Literal, Protocol
 
@@ -10,6 +11,7 @@ class DependencyProbe(Protocol):
 
 
 DependencyState = Literal["up", "down"]
+logger = logging.getLogger(__name__)
 
 
 class HealthService:
@@ -21,10 +23,13 @@ class HealthService:
         results = await asyncio.gather(
             *(self._safe_check(self._probes[name]) for name in names)
         )
-        return {
+        states: dict[str, DependencyState] = {
             name: "up" if is_available else "down"
             for name, is_available in zip(names, results, strict=True)
         }
+        if "down" in states.values():
+            logger.warning("readiness_dependencies_unavailable dependencies=%s", states)
+        return states
 
     async def close(self) -> None:
         await asyncio.gather(*(probe.close() for probe in self._probes.values()))
