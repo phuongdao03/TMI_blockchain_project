@@ -1,4 +1,3 @@
-from app.modules.auth.models import Permission, UserPermission, RolePermission
 import asyncio
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -10,7 +9,15 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.core.errors import DomainError
 from app.db.base import Base
 from app.modules.audit.models import AuditLog
-from app.modules.auth.models import Role, User, UserRole, UserStatus
+from app.modules.auth.models import (
+    Permission,
+    Role,
+    RolePermission,
+    User,
+    UserPermission,
+    UserRole,
+    UserStatus,
+)
 from app.modules.hr.models import Department, Employee
 from app.modules.notifications.models import Notification
 from app.modules.promotions.distribution import PromotionDistributionService

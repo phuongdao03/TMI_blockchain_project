@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 from app.api.v1.admin_notifications import router as admin_notifications_router
+from app.api.v1.admin_promotions import router as admin_promotions_router
 from app.api.v1.admin_users import router as admin_users_router
 from app.api.v1.advertising import router as advertising_router
 from app.api.v1.audit import router as audit_router
@@ -19,6 +20,7 @@ from app.api.v1.certificate_version_requests import (
     router as certificate_version_requests_router,
 )
 from app.api.v1.certificates import router as certificates_router
+from app.api.v1.checkout_vouchers import router as checkout_vouchers_router
 from app.api.v1.cms import router as cms_router
 from app.api.v1.community import moderation_router as community_moderation_router
 from app.api.v1.community import router as community_router
@@ -37,15 +39,12 @@ from app.api.v1.hr import self_router as my_hr_router
 from app.api.v1.media import router as media_router
 from app.api.v1.memberships import router as memberships_router
 from app.api.v1.notifications import router as notifications_router
-from app.api.v1.admin_promotions import router as admin_promotions_router
-from app.api.v1.checkout_vouchers import router as checkout_vouchers_router
-from app.api.v1.promotion_distribution import router as promotion_distribution_router
-from app.api.v1.promotion_media import router as promotion_media_router
-from app.api.v1.promotion_media import public_router as promotion_media_public_router
-from app.api.v1.vouchers import router as vouchers_router
 from app.api.v1.operations import router as operations_router
 from app.api.v1.organizations import router as organizations_router
 from app.api.v1.payments import router as payments_router
+from app.api.v1.promotion_distribution import router as promotion_distribution_router
+from app.api.v1.promotion_media import public_router as promotion_media_public_router
+from app.api.v1.promotion_media import router as promotion_media_router
 from app.api.v1.proof_registry import router as proof_registry_router
 from app.api.v1.public import router as public_router
 from app.api.v1.public_works_admin import router as public_works_admin_router
@@ -60,6 +59,7 @@ from app.api.v1.staff_invitations import router as staff_invitations_router
 from app.api.v1.tasks import my_router as my_tasks_router
 from app.api.v1.tasks import router as tasks_router
 from app.api.v1.users import router as users_router
+from app.api.v1.vouchers import router as vouchers_router
 from app.api.v1.wallet import router as wallet_router
 from app.api.v1.work_allocations import router as work_allocations_router
 from app.api.v1.work_allocations import self_router as my_work_allocations_router

@@ -1,4 +1,3 @@
-from app.modules.auth.models import Permission, UserPermission, RolePermission
 import asyncio
 import importlib.util
 from datetime import UTC, datetime, timedelta
@@ -24,7 +23,15 @@ from app.modules.auth.dependencies import (
     get_employee_profile_link_status,
 )
 from app.modules.auth.errors import UnauthenticatedError
-from app.modules.auth.models import Role, User, UserRole, UserStatus
+from app.modules.auth.models import (
+    Permission,
+    Role,
+    RolePermission,
+    User,
+    UserPermission,
+    UserRole,
+    UserStatus,
+)
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.auth.tokens import CsrfTokenManager
 from app.modules.hr.models import Department, Employee

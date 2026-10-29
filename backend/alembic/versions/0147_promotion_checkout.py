@@ -1,6 +1,7 @@
 """Atomic voucher reservations and append-only financial adjustments."""
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0147_promotion_checkout"
@@ -49,7 +50,8 @@ def upgrade() -> None:
             server_default=sa.func.now(),
         ),
         sa.CheckConstraint(
-            "discount_vnd > 0 AND original_vnd >= discount_vnd AND payable_vnd = original_vnd - discount_vnd",
+            "discount_vnd > 0 AND original_vnd >= discount_vnd AND "
+            "payable_vnd = original_vnd - discount_vnd",
             name="balanced_amounts",
         ),
         sa.CheckConstraint(

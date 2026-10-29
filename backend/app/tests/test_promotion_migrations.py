@@ -4,8 +4,9 @@ from pathlib import Path
 import sqlalchemy as sa
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
-from app.db.base import Base, NAMING_CONVENTION
-from app.modules.auth.models import User, Permission
+
+from app.db.base import NAMING_CONVENTION, Base
+from app.modules.auth.models import Permission, User
 
 
 def test_promotion_upgrade_chain_preserves_draft_seed_and_round_trips():
@@ -60,7 +61,8 @@ def test_promotion_upgrade_chain_preserves_draft_seed_and_round_trips():
                 modules.append(module)
             seed = connection.execute(
                 sa.text(
-                    "SELECT status,active,program_type FROM voucher_campaigns WHERE code='EARLY_MEMBER_2026'"
+                    "SELECT status,active,program_type FROM voucher_campaigns "
+                    "WHERE code='EARLY_MEMBER_2026'"
                 )
             ).one()
             assert (
@@ -71,7 +73,8 @@ def test_promotion_upgrade_chain_preserves_draft_seed_and_round_trips():
             assert (
                 connection.scalar(
                     sa.text(
-                        "SELECT count(*) FROM permissions WHERE code LIKE 'promotions.%'"
+                        "SELECT count(*) FROM permissions "
+                        "WHERE code LIKE 'promotions.%'"
                     )
                 )
                 == 2

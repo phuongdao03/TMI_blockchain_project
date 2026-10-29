@@ -1,6 +1,7 @@
 """Versioned promotion policies, history-safe claims and popup states."""
 
 from uuid import uuid4
+
 import sqlalchemy as sa
 
 from alembic import op
@@ -112,7 +113,8 @@ def upgrade() -> None:
     op.execute(sa.text("UPDATE voucher_campaigns SET name = title"))
     op.execute(
         sa.text(
-            "UPDATE voucher_campaigns SET status='DRAFT', active=false, program_type='AUTO' WHERE code='EARLY_MEMBER_2026'"
+            "UPDATE voucher_campaigns SET status='DRAFT', active=false, "
+            "program_type='AUTO' WHERE code='EARLY_MEMBER_2026'"
         )
     )
 
