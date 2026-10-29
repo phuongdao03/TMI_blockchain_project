@@ -91,7 +91,13 @@ export function MembershipWorkspace({
       selectedVoucher,
     ],
     queryFn: () =>
-      selectedVoucher ? membershipApi.quote(selection!.plan.id, selection!.renewalOptIn, selectedVoucher) : membershipApi.quote(selection!.plan.id, selection!.renewalOptIn),
+      selectedVoucher
+        ? membershipApi.quote(
+            selection!.plan.id,
+            selection!.renewalOptIn,
+            selectedVoucher,
+          )
+        : membershipApi.quote(selection!.plan.id, selection!.renewalOptIn),
     enabled: selection !== null && canManagePersonalMembership,
     retry: false,
   });
@@ -393,7 +399,15 @@ export function MembershipWorkspace({
         }
         isPending={buy.isPending}
       >
-        {selection && <CheckoutVoucherSelector serviceCode="MEMBERSHIP" resourceId={selection.plan.id} renewalOptIn={selection.renewalOptIn} selectedId={selectedVoucher} onSelect={setSelectedVoucher} />}
+        {selection && (
+          <CheckoutVoucherSelector
+            serviceCode="MEMBERSHIP"
+            resourceId={selection.plan.id}
+            renewalOptIn={selection.renewalOptIn}
+            selectedId={selectedVoucher}
+            onSelect={setSelectedVoucher}
+          />
+        )}
         {quote.isPending ? (
           <p role="status" className="mb-3">
             Đang tính báo giá…

@@ -706,7 +706,9 @@ class PaymentService:
         if result is not None:
             return result
         if zero_checkout:
-            return await self.pay_with_wallet(principal, order_id, idempotency_key=f"promotion-zero-{order_id}")
+            return await self.pay_with_wallet(
+                principal, order_id, idempotency_key=f"promotion-zero-{order_id}"
+            )
         return await self._ensure_checkout(
             order_id,
             newly_reserved=newly_started,

@@ -13,8 +13,18 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "promotion_expiry_reminders",
-        sa.Column("voucher_id", sa.Uuid(), sa.ForeignKey("voucher_claims.id", ondelete="RESTRICT"), primary_key=True),
-        sa.Column("notified_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "voucher_id",
+            sa.Uuid(),
+            sa.ForeignKey("voucher_claims.id", ondelete="RESTRICT"),
+            primary_key=True,
+        ),
+        sa.Column(
+            "notified_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
     )
     op.create_table(
         "promotion_media_assets",

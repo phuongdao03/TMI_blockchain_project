@@ -29,7 +29,10 @@ async def _fixture():
                 c,
                 tables=[
                     User.__table__,
-                    Role.__table__, Permission.__table__, UserPermission.__table__, RolePermission.__table__,
+                    Role.__table__,
+                    Permission.__table__,
+                    UserPermission.__table__,
+                    RolePermission.__table__,
                     UserRole.__table__,
                     Department.__table__,
                     Employee.__table__,

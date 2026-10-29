@@ -152,7 +152,20 @@ function PaymentWorkspaceContent({ orderId }: { orderId: string }) {
 
         <div className="payment-workspace__layout grid gap-8 p-5 sm:p-8 lg:grid-cols-[1fr_20rem]">
           <div className="space-y-6">
-              {!paid && !stopped && !payment.providerOrderId && payment.status === "PENDING" && <CheckoutVoucherSelector order resourceId={payment.id} serviceCode={payment.purpose === "SUBMISSION_FEE" ? "DOSSIER_SUBMISSION" : "DOSSIER_APPROVAL"} />}
+            {!paid &&
+              !stopped &&
+              !payment.providerOrderId &&
+              payment.status === "PENDING" && (
+                <CheckoutVoucherSelector
+                  order
+                  resourceId={payment.id}
+                  serviceCode={
+                    payment.purpose === "SUBMISSION_FEE"
+                      ? "DOSSIER_SUBMISSION"
+                      : "DOSSIER_APPROVAL"
+                  }
+                />
+              )}
             {!paid &&
               !stopped &&
               !payment.providerOrderId &&

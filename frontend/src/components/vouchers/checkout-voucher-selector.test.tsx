@@ -26,21 +26,19 @@ function mount(order = false, onSelect = vi.fn()) {
 }
 beforeEach(() => {
   state.user = { id: "customer", roles: ["USER"], isEmployee: false };
-  state.request
-    .mockReset()
-    .mockResolvedValue({
-      originalVnd: 300000,
-      membershipDiscountVnd: 0,
-      recommendedVoucherId: "gift",
-      vouchers: [
-        {
-          voucherId: "gift",
-          title: "Gift",
-          discountVnd: 200000,
-          payableVnd: 100000,
-        },
-      ],
-    });
+  state.request.mockReset().mockResolvedValue({
+    originalVnd: 300000,
+    membershipDiscountVnd: 0,
+    recommendedVoucherId: "gift",
+    vouchers: [
+      {
+        voucherId: "gift",
+        title: "Gift",
+        discountVnd: 200000,
+        payableVnd: 100000,
+      },
+    ],
+  });
 });
 it("uses server quote and forwards only the selected voucher identifier", async () => {
   const selected = mount();

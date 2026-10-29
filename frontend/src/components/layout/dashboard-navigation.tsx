@@ -110,7 +110,12 @@ const reviewerItems: NavigationItem[] = [
 const employeeItems: NavigationItem[] = reviewerItems.slice(2);
 
 const adminItems: NavigationItem[] = [
-  { href: "/admin/promotions", label: "Marketing & Khuyến mại", icon: Ticket, permissions: ["promotions.manage", "promotions.read"] },
+  {
+    href: "/admin/promotions",
+    label: "Marketing & Khuyến mại",
+    icon: Ticket,
+    permissions: ["promotions.manage", "promotions.read"],
+  },
   {
     href: "/admin/advertising",
     label: "Quản trị quảng cáo",

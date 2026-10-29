@@ -452,13 +452,24 @@ export const authApi = {
 
 export const voucherApi = {
   detail(id: string) {
-    return request<import("./voucher-types").SavedVoucher>(`/vouchers/${encodeURIComponent(id)}`);
+    return request<import("./voucher-types").SavedVoucher>(
+      `/vouchers/${encodeURIComponent(id)}`,
+    );
   },
   redeemCode(code: string) {
-    return request<import("./voucher-types").SavedVoucher>("/vouchers/redeem-code", { method: "POST", body: JSON.stringify({ code }) });
+    return request<import("./voucher-types").SavedVoucher>(
+      "/vouchers/redeem-code",
+      { method: "POST", body: JSON.stringify({ code }) },
+    );
   },
-  presentation(campaignId: string, event: "SEEN" | "CLICKED" | "DISMISSED" | "OPT_OUT") {
-    return request<{ status: string }>(`/vouchers/${encodeURIComponent(campaignId)}/presentation`, { method: "POST", body: JSON.stringify({ event }) });
+  presentation(
+    campaignId: string,
+    event: "SEEN" | "CLICKED" | "DISMISSED" | "OPT_OUT",
+  ) {
+    return request<{ status: string }>(
+      `/vouchers/${encodeURIComponent(campaignId)}/presentation`,
+      { method: "POST", body: JSON.stringify({ event }) },
+    );
   },
   offer(trigger: "LOGIN" | "DASHBOARD" = "LOGIN") {
     return request<import("./voucher-types").VoucherOffer | null>(
@@ -480,25 +491,136 @@ export const voucherApi = {
 };
 
 export const promotionApi = {
-  searchRecipients(id: string, q: string) { return request<{items: {id: string; email: string; eligible: boolean; reason: string}[]}>(`/admin/promotions/${encodeURIComponent(id)}/recipient-search?q=${encodeURIComponent(q)}`); },
-  exportReport(parameters = "") { return requestBlob(`/admin/promotions/analytics.csv${parameters ? `?${parameters}` : ""}`); },
-  list(parameters = "") { return request<import("./promotion-types").PromotionPage<import("./promotion-types").PromotionCampaign>>(`/admin/promotions${parameters ? `?${parameters}` : ""}`); },
-  detail(id: string) { return request<import("./promotion-types").PromotionCampaign>(`/admin/promotions/${encodeURIComponent(id)}`); },
-  create(input: import("./promotion-types").CampaignInput) { return request<import("./promotion-types").PromotionCampaign>("/admin/promotions", { method: "POST", body: JSON.stringify(input) }); },
-  update(id: string, input: import("./promotion-types").CampaignInput) { return request<import("./promotion-types").PromotionCampaign>(`/admin/promotions/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) }); },
-  transition(id: string, action: "publish" | "pause" | "end" | "archive" | "copy") { return request<import("./promotion-types").PromotionCampaign>(`/admin/promotions/${encodeURIComponent(id)}/${action}`, { method: "POST" }); },
-  audience(id: string, userIds?: string[]) { return request<import("./promotion-types").AudiencePreview>(`/admin/promotions/${encodeURIComponent(id)}/audience-preview`, { method: "POST", body: JSON.stringify({ userIds }) }); },
-  issue(id: string, input: { userIds?: string[]; reason: string; idempotencyKey: string; previewToken: string }) { return request<import("./promotion-types").DistributionJob>(`/admin/promotions/${encodeURIComponent(id)}/issue`, { method: "POST", body: JSON.stringify(input) }); },
-  jobs(id: string) { return request<import("./promotion-types").PromotionPage<import("./promotion-types").DistributionJob>>(`/admin/promotions/${encodeURIComponent(id)}/distribution-jobs`); },
-  recipients(id: string) { return request<import("./promotion-types").PromotionPage<import("./voucher-types").SavedVoucher>>(`/admin/promotions/${encodeURIComponent(id)}/recipients`); },
-  stats(id?: string, parameters = "") { return request<import("./promotion-types").PromotionStats>(`/admin/promotions/${id ? `${encodeURIComponent(id)}/stats` : "analytics"}${parameters ? `?${parameters}` : ""}`); },
-  redemptions(id: string) { return request<import("./promotion-types").PromotionPage<import("./promotion-types").PromotionTransaction>>(`/admin/promotions/${encodeURIComponent(id)}/redemptions`); },
-  audit() { return request<import("./promotion-types").PromotionPage<import("./promotion-types").PromotionAudit>>("/admin/promotions/audit"); },
-  services() { return request<{ code: string; name: string }[]>("/admin/promotions/services"); },
-  settings() { return request<{ maxImageBytes: number; timezone: string; eligibleRoles: string[]; excludedEmployees: boolean }>("/admin/promotions/settings"); },
-  media(page = 1) { return request<import("./promotion-types").PromotionPage<import("./promotion-types").PromotionMedia>>(`/admin/promotion-media?page=${page}&pageSize=20`); },
-  upload(file: File, altText: string) { return request<import("./promotion-types").PromotionMedia>(`/admin/promotion-media?filename=${encodeURIComponent(file.name)}&altText=${encodeURIComponent(altText)}`, { method: "POST", body: file, headers: { "Content-Type": file.type } }); },
-  deleteMedia(id: string) { return request<{ status: string }>(`/admin/promotion-media/${encodeURIComponent(id)}`, { method: "DELETE" }); },
+  searchRecipients(id: string, q: string) {
+    return request<{
+      items: { id: string; email: string; eligible: boolean; reason: string }[];
+    }>(
+      `/admin/promotions/${encodeURIComponent(id)}/recipient-search?q=${encodeURIComponent(q)}`,
+    );
+  },
+  exportReport(parameters = "") {
+    return requestBlob(
+      `/admin/promotions/analytics.csv${parameters ? `?${parameters}` : ""}`,
+    );
+  },
+  list(parameters = "") {
+    return request<
+      import("./promotion-types").PromotionPage<
+        import("./promotion-types").PromotionCampaign
+      >
+    >(`/admin/promotions${parameters ? `?${parameters}` : ""}`);
+  },
+  detail(id: string) {
+    return request<import("./promotion-types").PromotionCampaign>(
+      `/admin/promotions/${encodeURIComponent(id)}`,
+    );
+  },
+  create(input: import("./promotion-types").CampaignInput) {
+    return request<import("./promotion-types").PromotionCampaign>(
+      "/admin/promotions",
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  update(id: string, input: import("./promotion-types").CampaignInput) {
+    return request<import("./promotion-types").PromotionCampaign>(
+      `/admin/promotions/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+  transition(
+    id: string,
+    action: "publish" | "pause" | "end" | "archive" | "copy",
+  ) {
+    return request<import("./promotion-types").PromotionCampaign>(
+      `/admin/promotions/${encodeURIComponent(id)}/${action}`,
+      { method: "POST" },
+    );
+  },
+  audience(id: string, userIds?: string[]) {
+    return request<import("./promotion-types").AudiencePreview>(
+      `/admin/promotions/${encodeURIComponent(id)}/audience-preview`,
+      { method: "POST", body: JSON.stringify({ userIds }) },
+    );
+  },
+  issue(
+    id: string,
+    input: {
+      userIds?: string[];
+      reason: string;
+      idempotencyKey: string;
+      previewToken: string;
+    },
+  ) {
+    return request<import("./promotion-types").DistributionJob>(
+      `/admin/promotions/${encodeURIComponent(id)}/issue`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  jobs(id: string) {
+    return request<
+      import("./promotion-types").PromotionPage<
+        import("./promotion-types").DistributionJob
+      >
+    >(`/admin/promotions/${encodeURIComponent(id)}/distribution-jobs`);
+  },
+  recipients(id: string) {
+    return request<
+      import("./promotion-types").PromotionPage<
+        import("./voucher-types").SavedVoucher
+      >
+    >(`/admin/promotions/${encodeURIComponent(id)}/recipients`);
+  },
+  stats(id?: string, parameters = "") {
+    return request<import("./promotion-types").PromotionStats>(
+      `/admin/promotions/${id ? `${encodeURIComponent(id)}/stats` : "analytics"}${parameters ? `?${parameters}` : ""}`,
+    );
+  },
+  redemptions(id: string) {
+    return request<
+      import("./promotion-types").PromotionPage<
+        import("./promotion-types").PromotionTransaction
+      >
+    >(`/admin/promotions/${encodeURIComponent(id)}/redemptions`);
+  },
+  audit() {
+    return request<
+      import("./promotion-types").PromotionPage<
+        import("./promotion-types").PromotionAudit
+      >
+    >("/admin/promotions/audit");
+  },
+  services() {
+    return request<{ code: string; name: string }[]>(
+      "/admin/promotions/services",
+    );
+  },
+  settings() {
+    return request<{
+      maxImageBytes: number;
+      timezone: string;
+      eligibleRoles: string[];
+      excludedEmployees: boolean;
+    }>("/admin/promotions/settings");
+  },
+  media(page = 1) {
+    return request<
+      import("./promotion-types").PromotionPage<
+        import("./promotion-types").PromotionMedia
+      >
+    >(`/admin/promotion-media?page=${page}&pageSize=20`);
+  },
+  upload(file: File, altText: string) {
+    return request<import("./promotion-types").PromotionMedia>(
+      `/admin/promotion-media?filename=${encodeURIComponent(file.name)}&altText=${encodeURIComponent(altText)}`,
+      { method: "POST", body: file, headers: { "Content-Type": file.type } },
+    );
+  },
+  deleteMedia(id: string) {
+    return request<{ status: string }>(
+      `/admin/promotion-media/${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    );
+  },
 };
 
 export const membershipApi = {
@@ -536,14 +658,21 @@ export const membershipApi = {
       `/memberships/plans/${encodeURIComponent(planId)}/quote`,
       {
         method: "POST",
-          body: JSON.stringify({ renewalOptIn, ...(voucherId ? { voucherId } : {}) }),
+        body: JSON.stringify({
+          renewalOptIn,
+          ...(voucherId ? { voucherId } : {}),
+        }),
       },
     );
   },
   purchase(
     planId: string,
     key: string,
-    input: { expectedAmountMinor: number; renewalOptIn: boolean; voucherId?: string | null },
+    input: {
+      expectedAmountMinor: number;
+      renewalOptIn: boolean;
+      voucherId?: string | null;
+    },
   ) {
     return request<import("./types").MembershipState>(
       `/memberships/plans/${encodeURIComponent(planId)}/purchases`,
@@ -1508,13 +1637,22 @@ export const advertisingApi = {
       { method: "POST" },
     );
   },
-  reserve(campaignId: string, startAt: string, idempotencyKey: string, voucherId?: string | null) {
+  reserve(
+    campaignId: string,
+    startAt: string,
+    idempotencyKey: string,
+    voucherId?: string | null,
+  ) {
     return request<AdvertisingReservationCheckout>(
       "/advertising/reservations",
       {
         method: "POST",
         headers: { "Idempotency-Key": idempotencyKey },
-          body: JSON.stringify({ campaignId, startAt, ...(voucherId ? { voucherId } : {}) }),
+        body: JSON.stringify({
+          campaignId,
+          startAt,
+          ...(voucherId ? { voucherId } : {}),
+        }),
       },
     );
   },

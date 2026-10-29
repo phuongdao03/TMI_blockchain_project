@@ -684,6 +684,14 @@ const server = createServer(async (request, response) => {
     authenticated && request.headers["x-csrf-token"] === "e2e-csrf";
   const preparationOwner =
     sessionPersona === "applicant" ? applicantUser.id : user.id;
+  if (
+    request.method === "GET" &&
+    path === "/api/v1/vouchers/offer" &&
+    authenticated
+  ) {
+    send(response, 200, envelope(null));
+    return;
+  }
   if (request.method === "POST" && path === "/api/e2e/reset-preparation") {
     dossierPreparations.clear();
     send(response, 200, envelope({ status: "reset" }));

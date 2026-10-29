@@ -46,7 +46,9 @@ def upgrade() -> None:
         for column in columns:
             batch.add_column(column)
         batch.create_index("ix_voucher_campaigns_status", ["status"])
-        batch.create_unique_constraint("uq_voucher_campaigns_public_code", ["public_code"])
+        batch.create_unique_constraint(
+            "uq_voucher_campaigns_public_code", ["public_code"]
+        )
         batch.create_check_constraint(
             "budget_nonnegative", "budget_reserved_vnd >= 0 AND budget_spent_vnd >= 0"
         )
@@ -99,9 +101,13 @@ def upgrade() -> None:
         sa.Column("opt_out", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("last_session_id", sa.Uuid()),
     )
-    permissions = sa.table("permissions", sa.column("id", sa.Uuid()), sa.column("code", sa.String()))
+    permissions = sa.table(
+        "permissions", sa.column("id", sa.Uuid()), sa.column("code", sa.String())
+    )
     for code in ("promotions.manage", "promotions.read"):
-        if not op.get_bind().scalar(sa.select(permissions.c.id).where(permissions.c.code == code)):
+        if not op.get_bind().scalar(
+            sa.select(permissions.c.id).where(permissions.c.code == code)
+        ):
             op.bulk_insert(permissions, [{"id": uuid4(), "code": code}])
     op.execute(sa.text("UPDATE voucher_campaigns SET name = title"))
     op.execute(

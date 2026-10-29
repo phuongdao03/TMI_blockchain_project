@@ -236,7 +236,12 @@ export function AdvertisingBookingPanel({
     mutationFn: () => {
       if (!startAt) throw new Error("Ngày bắt đầu không hợp lệ.");
       const key = `ad-hold-${campaign.id}-${startAt}`;
-      return advertisingApi.reserve(campaign.id, startAt, `${key}${selectedVoucher ? `-${selectedVoucher}` : ""}`, selectedVoucher);
+      return advertisingApi.reserve(
+        campaign.id,
+        startAt,
+        `${key}${selectedVoucher ? `-${selectedVoucher}` : ""}`,
+        selectedVoucher,
+      );
     },
     onSuccess: (result) => {
       window.sessionStorage.setItem(storageKey, result.reservation.id);
@@ -438,13 +443,18 @@ export function AdvertisingBookingPanel({
               </Button>
             ) : (
               <div className="space-y-3">
-              <CheckoutVoucherSelector serviceCode="ADVERTISING" resourceId={campaign.packageId} selectedId={selectedVoucher} onSelect={setSelectedVoucher} />
-              <Button
-                disabled={reserve.isPending}
-                onClick={() => reserve.mutate()}
-              >
-                {reserve.isPending ? "Đang giữ chỗ…" : "Giữ lịch 15 phút"}
-              </Button>
+                <CheckoutVoucherSelector
+                  serviceCode="ADVERTISING"
+                  resourceId={campaign.packageId}
+                  selectedId={selectedVoucher}
+                  onSelect={setSelectedVoucher}
+                />
+                <Button
+                  disabled={reserve.isPending}
+                  onClick={() => reserve.mutate()}
+                >
+                  {reserve.isPending ? "Đang giữ chỗ…" : "Giữ lịch 15 phút"}
+                </Button>
               </div>
             )
           ) : null}
