@@ -151,8 +151,13 @@ export function CampaignPolicyFields({
     return (
       <div className={styles.stack}>
         <p className={styles.muted}>
-          Chỉ khách hàng USER không có hồ sơ nhân viên. Backend sẽ kiểm tra lại
-          đối tượng khi phát và sử dụng.
+          Chỉ tài khoản khách hàng được nhận ưu đãi; nhân viên và quản trị viên
+          được loại trừ tự động.
+        </p>
+        <p className={styles.muted}>
+          Lọc theo ngày khách hàng tạo tài khoản, không phải ngày chạy chiến
+          dịch. “Từ” bao gồm thời điểm đã chọn; “trước” không bao gồm thời điểm
+          đó. Để trống cả hai để chọn mọi khách hàng. Giờ Việt Nam (UTC+7).
         </p>
         <Choice
           label="Kết hợp điều kiện"
@@ -168,7 +173,7 @@ export function CampaignPolicyFields({
         </Choice>
         <div className={styles.grid}>
           <TextField
-            label="Đăng ký trước (cutoff)"
+            label="Tài khoản được tạo trước"
             type="datetime-local"
             value={dateInput(audience.registeredBefore)}
             onChange={(e) =>
@@ -181,7 +186,7 @@ export function CampaignPolicyFields({
             }
           />
           <TextField
-            label="Đăng ký từ"
+            label="Tài khoản được tạo từ"
             type="datetime-local"
             value={dateInput(audience.registeredAfter)}
             onChange={(e) =>

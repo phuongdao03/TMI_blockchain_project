@@ -51,8 +51,6 @@ class VoucherService:
         )
         for row in campaigns:
             policy = PromotionPolicy.model_validate(row.policy_json)
-            if row.program_type in {"MANUAL", "CODE"}:
-                continue
             if not (await recipient_eligibility(self.session, user_id, policy))[0]:
                 continue
             voucher = await self.session.scalar(
@@ -60,6 +58,8 @@ class VoucherService:
                     VoucherClaim.user_id == user_id, VoucherClaim.campaign_id == row.id
                 )
             )
+            if row.program_type in {"MANUAL", "CODE"} and voucher is None:
+                continue
             if row.program_type in {"AUTO", "FIRST_ORDER"} and voucher is None:
                 try:
                     async with self.session.begin_nested():
@@ -77,7 +77,11 @@ class VoucherService:
                             )
                 except DomainError:
                     continue
-            elif voucher is not None and row.program_type == "CLAIM":
+            elif (
+                voucher is not None
+                and row.program_type == "CLAIM"
+                and voucher.issue_reason == "claim"
+            ):
                 continue
             if voucher and (
                 voucher.status in {"REDEEMED", "REVOKED"}

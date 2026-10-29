@@ -1,5 +1,15 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { LoginVoucher } from "./login-voucher";
 
@@ -18,13 +28,19 @@ function mount(
   userId: string | null = "owner",
   roles = ["USER"],
   isEmployee = false,
+  permissions: string[] = [],
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <LoginVoucher userId={userId} roles={roles} isEmployee={isEmployee} />
+      <LoginVoucher
+        userId={userId}
+        roles={roles}
+        isEmployee={isEmployee}
+        permissions={permissions}
+      />
     </QueryClientProvider>,
   );
 }
@@ -50,6 +66,13 @@ it("does not request offers for guests", () => {
   expect(api.offer).not.toHaveBeenCalled();
   expect(screen.queryByRole("dialog")).toBeNull();
 });
+it.each(["promotions.manage", "review.assign", "hr.overtime.create"])(
+  "does not request offers for USER accounts with internal permission %s",
+  (permission) => {
+    mount("manager", ["USER"], false, [permission]);
+    expect(api.offer).not.toHaveBeenCalled();
+  },
+);
 it.each<[string[], boolean]>([
   [["SUPER_ADMIN"], false],
   [["USER", "SUPER_ADMIN"], false],
@@ -125,4 +148,20 @@ it("restores focus when dismissed", async () => {
   fireEvent.click(await screen.findByRole("button", { name: "Để sau" }));
   await waitFor(() => expect(document.activeElement).toBe(trigger));
   trigger.remove();
+});
+it("keeps a displayed offer open when the customer returns to the tab", async () => {
+  api.offer.mockResolvedValueOnce(offer).mockResolvedValue(null);
+  const view = mount();
+  await screen.findByRole("dialog");
+  try {
+    await act(async () => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    expect(api.offer).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("dialog")).toBeDefined();
+  } finally {
+    view.unmount();
+    focusManager.setFocused(undefined);
+  }
 });

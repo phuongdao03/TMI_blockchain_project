@@ -32,6 +32,7 @@ export function PromotionCampaignList({
   const [status, setStatus] = useState("");
   const [sort, setSort] = useState("created_desc");
   const [page, setPage] = useState(1);
+  const [feedback, setFeedback] = useState("");
   const [action, setAction] = useState<{
     campaign: PromotionCampaign;
     action: "publish" | "pause" | "end" | "archive";
@@ -50,7 +51,20 @@ export function PromotionCampaignList({
   const transition = useMutation({
     mutationFn: () =>
       promotionApi.transition(action!.campaign.id, action!.action),
-    onSuccess: async () => {
+    onSuccess: async (campaign) => {
+      setFeedback(
+        `Đã cập nhật: ${statuses[campaign.status] ?? campaign.status}. ${
+          campaign.status === "ACTIVE"
+            ? ["MANUAL", "CODE"].includes(campaign.programType)
+              ? "Phát voucher trong mục Phân phối hoặc cung cấp mã cho khách hàng."
+              : campaign.policy.presentation.enabled
+                ? "Khách hàng phù hợp đang truy cập sẽ được kiểm tra ưu đãi trong vòng 30 giây; popup vẫn tuân theo thời điểm và tần suất đã cấu hình."
+                : "Popup đang tắt. Bật trong mục Thiết kế popup để hiển thị ưu đãi."
+            : campaign.status === "SCHEDULED"
+              ? "Ưu đãi bắt đầu theo thời gian đã đặt."
+              : ""
+        }`,
+      );
       setAction(null);
       await client.invalidateQueries({ queryKey: ["promotions"] });
     },
@@ -111,6 +125,11 @@ export function PromotionCampaignList({
           {readableError(copy.error)}
         </p>
       )}
+      {feedback && (
+        <p role="status" className={styles.success}>
+          {feedback}
+        </p>
+      )}
       <div className={`${styles.table} ${styles.campaignTable}`}>
         <table>
           <thead>
@@ -126,7 +145,7 @@ export function PromotionCampaignList({
           <tbody>
             {campaigns.data?.items.map((campaign) => (
               <tr key={campaign.id}>
-                <td>
+                <td data-label="Chiến dịch">
                   <Link
                     className="font-semibold hover:underline"
                     href={`/admin/promotions/${campaign.id}/edit`}
@@ -135,13 +154,13 @@ export function PromotionCampaignList({
                   </Link>
                   <p className={styles.muted}>{campaign.code}</p>
                 </td>
-                <td>
+                <td data-label="Ưu đãi / đối tượng">
                   {campaign.policy.discountType === "PERCENT"
                     ? `${campaign.policy.percentageBps / 100}%`
                     : `${campaign.amountVnd.toLocaleString("vi-VN")}đ`}
                   <p className={styles.muted}>{campaign.programType} · USER</p>
                 </td>
-                <td>
+                <td data-label="Thời gian">
                   <p>
                     {campaign.startsAt
                       ? new Date(campaign.startsAt).toLocaleString("vi-VN")
@@ -153,19 +172,19 @@ export function PromotionCampaignList({
                       : "Không đặt ngày kết thúc"}
                   </p>
                 </td>
-                <td>
+                <td data-label="Trạng thái">
                   <span className={styles.status}>
                     {statuses[campaign.status] ?? campaign.status}
                   </span>
                 </td>
-                <td>
+                <td data-label="Ngân sách đã dùng">
                   {campaign.budgetSpentVnd.toLocaleString("vi-VN")}đ
                   <p className={styles.muted}>
                     Đang giữ:{" "}
                     {campaign.budgetReservedVnd.toLocaleString("vi-VN")}đ
                   </p>
                 </td>
-                <td>
+                <td data-label="Thao tác">
                   <div className={styles.actions}>
                     <Link
                       className={styles.link}

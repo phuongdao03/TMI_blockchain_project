@@ -1,4 +1,5 @@
 .workspace {
+  min-width: 0;
   max-width: 88rem;
   margin-inline: auto;
   color: var(--theme-text);
@@ -49,6 +50,7 @@
   font-weight: 700;
 }
 .panel {
+  min-width: 0;
   border: 1px solid var(--theme-border);
   background: var(--theme-surface);
   border-radius: 0.75rem;
@@ -191,6 +193,7 @@
   gap: 0.4rem;
   margin-bottom: 1.5rem;
 }
+
 .steps button {
   min-height: 2.5rem;
   padding: 0.45rem 0.75rem;
@@ -266,5 +269,73 @@
     scroll-behavior: auto;
     transition: none;
     animation: none;
+  }
+}
+
+@media (max-width: 40rem) {
+  .nav {
+    margin-block: 1rem;
+    gap: 0;
+  }
+  .nav a {
+    padding: 0.75rem;
+  }
+  .steps {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.4rem;
+  }
+  .steps button {
+    flex-shrink: 0;
+    min-height: 2.75rem;
+  }
+  .two {
+    gap: 1rem;
+  }
+  .actions > :is(button, a) {
+    flex: 1 1 auto;
+  }
+  .campaignTable {
+    overflow: visible;
+  }
+  .campaignTable table,
+  .campaignTable tbody {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+  .campaignTable thead {
+    display: none;
+  }
+  .campaignTable tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--theme-border);
+  }
+  .campaignTable td {
+    display: block;
+    min-width: 0 !important;
+    padding: 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+  .campaignTable td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--theme-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  .campaignTable td:first-child,
+  .campaignTable td:last-child {
+    grid-column: 1 / -1;
+  }
+  .campaignTable .actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
   }
 }

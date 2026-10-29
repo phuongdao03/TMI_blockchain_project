@@ -40,6 +40,32 @@ function render(ui: ReactElement) {
 }
 
 describe("layout shells", () => {
+  it.each<[string[], boolean]>([
+    [["SUPER_ADMIN"], false],
+    [["USER", "SUPER_ADMIN"], false],
+    [["USER"], true],
+  ])(
+    "hides customer voucher and wallet links for internal accounts %j",
+    (roles, isEmployee) => {
+      render(
+        <AuthUserProvider
+          user={{
+            id: "internal",
+            email: "internal@example.vn",
+            roles,
+            isEmployee,
+            accountType: null,
+          }}
+        >
+          <PublicShell>
+            <h1>Home</h1>
+          </PublicShell>
+        </AuthUserProvider>,
+      );
+      expect(document.querySelector('a[href="/vouchers"]')).toBeNull();
+      expect(document.querySelector('a[href="/wallet"]')).toBeNull();
+    },
+  );
   afterEach(() => {
     vi.unstubAllEnvs();
     navigationState.pathname = "/";

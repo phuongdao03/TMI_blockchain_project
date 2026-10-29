@@ -32,6 +32,7 @@ import { usePathname } from "next/navigation";
 
 import { useAuthUser } from "@/lib/auth/user-context";
 import {
+  isCustomerAccount,
   resolveWorkspacePersona,
   resolveAdminEntryPoint,
   type WorkspacePersona,
@@ -489,6 +490,12 @@ export function DashboardNavigation({
     items: section.items.filter(
       (item) =>
         canAccess(item, effectiveRoles, effectivePermissions) &&
+        (!["/vouchers", "/wallet", "/membership"].includes(item.href) ||
+          isCustomerAccount({
+            roles: effectiveRoles,
+            permissions: effectivePermissions,
+            isEmployee,
+          })) &&
         (!preview || !isPreviewRestrictedPath(item.href)),
     ),
   }));

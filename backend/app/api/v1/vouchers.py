@@ -99,6 +99,21 @@ async def offer(
                 "expires_at": voucher.expires_at if voucher else None,
             }
         )
+        if voucher:
+            saved_policy = PromotionPolicy.model_validate(
+                voucher.policy_json or row.policy_json
+            )
+            # The design may evolve, while the granted benefit remains a snapshot.
+            saved_policy.presentation = data.policy.presentation
+            data = data.model_copy(
+                update={
+                    "title": voucher.title,
+                    "terms": voucher.terms,
+                    "image_path": voucher.image_path,
+                    "amount_vnd": voucher.amount_vnd,
+                    "policy": saved_policy,
+                }
+            )
     return SuccessEnvelope(
         data=data,
         meta=ResponseMeta(request_id=request.state.request_id),

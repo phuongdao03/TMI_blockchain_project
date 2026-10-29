@@ -117,7 +117,14 @@ function CampaignEditor({
     },
   });
   const locked = Boolean(
-    initial && !["DRAFT", "SCHEDULED"].includes(initial.status),
+    initial && ["ENDED", "ARCHIVED"].includes(initial.status),
+  );
+  const audience = value.policy.audience;
+  const invalidAudiencePeriod = Boolean(
+    audience.registeredAfter &&
+      audience.registeredBefore &&
+      Date.parse(audience.registeredAfter) >=
+        Date.parse(audience.registeredBefore),
   );
   return (
     <div className={styles.two}>
@@ -137,20 +144,34 @@ function CampaignEditor({
             ))}
           </nav>
         )}
-        {locked && step < 6 && (
+        {initial && !locked && initial.status !== "DRAFT" && (
           <p className={styles.muted}>
-            Chiến dịch đã xuất bản: điều kiện cốt lõi được giữ nguyên để bảo vệ
-            voucher đã cấp. Sao chép chiến dịch để tạo chính sách mới.
+            Bạn có thể chỉnh sửa chiến dịch đã xuất bản. Thay đổi áp dụng cho
+            voucher cấp từ lần lưu tiếp theo; voucher đã cấp giữ nguyên giá trị,
+            điều kiện và hạn sử dụng. Mã chiến dịch được giữ cố định; ngân sách
+            không được giảm sau khi đã cấp voucher.
           </p>
         )}
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            save.mutate();
+            if (!locked && !invalidAudiencePeriod) save.mutate();
           }}
           className={styles.stack}
         >
-          <fieldset disabled={locked && step < 6} className={styles.stack}>
+          {locked && (
+            <p className={styles.muted}>
+              Chiến dịch đã kết thúc hoặc lưu trữ. Hãy sao chép để tạo chiến
+              dịch mới.
+            </p>
+          )}
+          {invalidAudiencePeriod && (
+            <p role="alert" className={styles.error}>
+              Khoảng ngày tạo tài khoản không hợp lệ: mốc “từ” phải sớm hơn mốc
+              “trước”. Để trống cả hai nếu áp dụng cho mọi khách hàng.
+            </p>
+          )}
+          <fieldset disabled={locked} className={styles.stack}>
             {step === 0 && (
               <>
                 <TextField
@@ -162,6 +183,7 @@ function CampaignEditor({
                 />
                 <TextField
                   label="Mã chiến dịch"
+                  disabled={Boolean(initial && initial.status !== "DRAFT")}
                   required
                   pattern={"[A-Z0-9_\\-]+"}
                   maxLength={64}
@@ -330,7 +352,10 @@ function CampaignEditor({
                 Tiếp theo
               </Button>
             )}
-            <Button type="submit" disabled={save.isPending}>
+            <Button
+              type="submit"
+              disabled={save.isPending || locked || invalidAudiencePeriod}
+            >
               {save.isPending
                 ? "Đang lưu…"
                 : initial

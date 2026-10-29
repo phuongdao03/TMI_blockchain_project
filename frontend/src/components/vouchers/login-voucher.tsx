@@ -8,18 +8,20 @@ import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { voucherApi } from "@/lib/api/client";
+import { isCustomerAccount } from "@/lib/auth/role-workspaces";
 
 export function LoginVoucher({
   userId,
   roles,
   isEmployee = false,
+  permissions = [],
 }: {
   userId: string | null;
   roles: readonly string[];
   isEmployee?: boolean;
+  permissions?: readonly string[];
 }) {
-  const eligible =
-    roles.length > 0 && roles.every((role) => role === "USER") && !isEmployee;
+  const eligible = isCustomerAccount({ roles, isEmployee, permissions });
   return userId && eligible ? (
     <AccountVoucher key={userId} userId={userId} />
   ) : null;
@@ -36,7 +38,7 @@ function AccountVoucher({ userId }: { userId: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descriptionId = useId();
-  const trigger = ["/dashboard", "/workspace"].includes(pathname)
+  const trigger = ["/", "/dashboard", "/workspace"].includes(pathname)
     ? "DASHBOARD"
     : "LOGIN";
   const offerKey = ["vouchers", "offer", userId, trigger];
@@ -57,17 +59,26 @@ function AccountVoucher({ userId }: { userId: string }) {
       return available;
     },
     staleTime: 60_000,
+    refetchInterval: (query) => (query.state.data ? false : 30_000),
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: (query) => (query.state.data ? false : "always"),
     retry: false,
   });
   const claim = useMutation({
     mutationFn: (campaignId: string) => voucherApi.claim(campaignId),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["vouchers", "mine", userId] });
+      void client.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
   const available = offer.data;
   const display = available?.policy?.presentation;
   const issuedId = available?.claimedVoucherId;
+  useEffect(() => {
+    if (!issuedId) return;
+    void client.invalidateQueries({ queryKey: ["vouchers", "mine", userId] });
+    void client.invalidateQueries({ queryKey: ["notifications"] });
+  }, [client, issuedId, userId]);
   const destination = available?.policy?.serviceCodes.includes("MEMBERSHIP")
     ? "/membership"
     : available?.policy?.serviceCodes.includes("ADVERTISING")
@@ -184,7 +195,7 @@ function AccountVoucher({ userId }: { userId: string }) {
           <X aria-hidden="true" className="size-5" />
         </button>
         {display?.template !== "MINIMAL" && (
-          <div className="flex items-center justify-center bg-[#f4dfb5]">
+          <div className="voucher-dialog__image flex items-center justify-center bg-[#f4dfb5]">
             <picture className="w-full">
               {display?.mobileImageAssetId && (
                 <source
@@ -218,8 +229,8 @@ function AccountVoucher({ userId }: { userId: string }) {
             </picture>
           </div>
         )}
-        <div className="flex flex-col justify-center gap-4 p-5 sm:p-8 sm:pt-14">
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#8c581d]">
+        <div className="voucher-dialog__body flex flex-col justify-center gap-4 p-5 sm:p-8 sm:pt-14">
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest opacity-80">
             <Gift aria-hidden="true" className="size-4" />{" "}
             {display?.subtitle || "Món quà tri ân"}
           </p>
@@ -234,9 +245,11 @@ function AccountVoucher({ userId }: { userId: string }) {
               ? "Voucher đã được lưu vào tài khoản của bạn. Bạn có thể xem lại bất cứ lúc nào."
               : available.description}
           </p>
-          <p className="text-sm leading-6 text-[#805b39]">{available.terms}</p>
-          <p className="text-xs text-[#805b39]">
-            Hiệu lực {available.validityDays} ngày kể từ khi nhận.
+          <p className="text-sm leading-6 opacity-85">{available.terms}</p>
+          <p className="text-xs opacity-85">
+            {issuedId && available.expiresAt
+              ? `Sử dụng đến ${new Date(available.expiresAt).toLocaleDateString("vi-VN")}.`
+              : `Hiệu lực ${available.validityDays} ngày kể từ khi nhận.`}
           </p>
           {claim.isError && (
             <p role="alert" className="text-sm font-medium text-red-800">
@@ -275,6 +288,7 @@ function AccountVoucher({ userId }: { userId: string }) {
             <>
               <Button
                 data-voucher-claim
+                style={{ backgroundColor: ctaColor, color: ctaText }}
                 disabled={claim.isPending}
                 onClick={() => {
                   void voucherApi

@@ -81,6 +81,7 @@ export function DashboardAuthGuard({
       <LoginVoucher
         userId={effectiveUser.id}
         roles={effectiveUser.roles}
+        permissions={effectiveUser.permissions}
         isEmployee={effectiveUser.isEmployee}
       />
       {children}

@@ -9,6 +9,31 @@ export function hasAnyRole(
   return allowed.some((role) => roles.includes(role));
 }
 
+export function isCustomerAccount(
+  user:
+    | {
+        roles: readonly string[];
+        permissions?: readonly string[];
+        isEmployee?: boolean;
+      }
+    | null
+    | undefined,
+): boolean {
+  return Boolean(
+    user &&
+      user.roles.length > 0 &&
+      user.roles.every((role) => role === "USER") &&
+      !user.isEmployee &&
+      !user.permissions?.some(
+        (permission) =>
+          permission.startsWith("hr.") ||
+          ADMIN_ENTRY_POINTS.some(
+            ([internalPermission]) => internalPermission === permission,
+          ),
+      ),
+  );
+}
+
 type AdminEntryPoint = readonly [
   permission: string,
   href: string,

@@ -37,7 +37,10 @@ import {
 } from "@/components/community/community-user-identity";
 import { MembershipAccountAvatar } from "@/components/membership/membership-account-avatar";
 import { profileApi } from "@/lib/api/client";
-import { resolveAdminEntryPoint } from "@/lib/auth/role-workspaces";
+import {
+  isCustomerAccount,
+  resolveAdminEntryPoint,
+} from "@/lib/auth/role-workspaces";
 import { safeLocalDestination } from "@/lib/auth/safe-destination";
 import { useAuthStatus, useAuthUser } from "@/lib/auth/user-context";
 
@@ -142,6 +145,7 @@ export function PublicShell({ children }: PropsWithChildren) {
   const contextUser = useAuthUser();
   const authStatus = useAuthStatus();
   const activeUser = authStatus === "authenticated" ? contextUser : null;
+  const customer = isCustomerAccount(activeUser);
   const profile = useQuery({
     queryKey: ["profile"],
     queryFn: profileApi.get,
@@ -302,15 +306,15 @@ export function PublicShell({ children }: PropsWithChildren) {
                 <Link href="/workspace">Không gian cá nhân</Link>
                 <Link href="/community/mine">Bài viết của tôi</Link>
                 <Link href="/notifications">Thông báo</Link>
-                <Link href="/vouchers">Voucher của tôi</Link>
+                {customer && <Link href="/vouchers">Voucher của tôi</Link>}
                 {adminEntryPoint ? (
                   <Link href={adminEntryPoint.href}>
                     {adminEntryPoint.label}
                   </Link>
                 ) : null}
                 <Link href="/account">Tài khoản</Link>
-                <Link href="/membership">Thẻ thành viên</Link>
-                <Link href="/wallet">Ví của tôi</Link>
+                {customer && <Link href="/membership">Thẻ thành viên</Link>}
+                {customer && <Link href="/wallet">Ví của tôi</Link>}
                 <LogoutButton />
               </nav>
             </details>
@@ -785,9 +789,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
         {!adminArea &&
           ["/workspace", "/dashboard"].includes(pathname) &&
           user &&
-          user.roles.length === 1 &&
-          user.roles[0] === "USER" &&
-          !user.isEmployee && <VoucherSummaryBanner userId={user.id} />}
+          isCustomerAccount(user) && <VoucherSummaryBanner userId={user.id} />}
         <DisplayNameSetupNotice />
         <main className="dashboard-main" id="main-content">
           <div className="dashboard-page-stage" key={pathname}>

@@ -43,6 +43,35 @@ def campaign_transition(status: str, action: str, *, scheduled: bool) -> str:
     return allowed[action][1]
 
 
+def validate_audience_period(policy: PromotionPolicy) -> None:
+    rule = policy.audience
+    if (
+        rule.registered_after is not None
+        and rule.registered_before is not None
+        and rule.registered_after >= rule.registered_before
+    ):
+        raise failure(
+            "PROMOTION_AUDIENCE_PERIOD_INVALID",
+            "Mốc tạo tài khoản từ phải sớm hơn mốc tạo tài khoản trước.",
+            422,
+        )
+
+
+def validate_publication(
+    code: str, ends_at: datetime | None, policy: PromotionPolicy, now: datetime
+) -> None:
+    validate_audience_period(policy)
+    if ends_at and utc(ends_at) <= now:
+        raise failure("PROMOTION_EXPIRED", "Chiến dịch đã hết thời gian hiệu lực.")
+    if code == "EARLY_MEMBER_2026" and policy.audience.registered_before is None:
+        raise failure(
+            "PROMOTION_CUTOFF_REQUIRED",
+            "Hãy chọn mốc tạo tài khoản trước và xem trước đối tượng.",
+        )
+    if policy.fixed_expires_at and policy.fixed_expires_at <= now:
+        raise failure("PROMOTION_EXPIRED", "Ngày hết hạn voucher phải ở tương lai.")
+
+
 def campaign_data(row: VoucherCampaign) -> CampaignData:
     return CampaignData(
         id=row.id,
@@ -79,7 +108,7 @@ class CampaignService:
     ) -> VoucherCampaign:
         query = select(VoucherCampaign).where(VoucherCampaign.id == campaign_id)
         if lock:
-            query = query.with_for_update()
+            query = query.with_for_update().execution_options(populate_existing=True)
         row = await self.session.scalar(query)
         if row is None:
             raise failure("PROMOTION_NOT_FOUND", "Không tìm thấy chiến dịch.", 404)
@@ -103,6 +132,9 @@ class CampaignService:
                 "status": row.status,
                 "policyVersion": row.policy_version,
                 "policy": row.policy_json,
+                "amountVnd": row.amount_vnd,
+                "validityDays": row.validity_days,
+                "title": row.title,
             },
         )
 
@@ -114,6 +146,7 @@ class CampaignService:
         )
         if existing and existing.id != campaign_id:
             raise failure("PROMOTION_CODE_EXISTS", "Mã chiến dịch đã tồn tại.")
+        validate_audience_period(payload.policy)
         new_policy = payload.policy.model_dump(mode="json", by_alias=False)
         if payload.policy.public_code:
             campaigns = await self.session.scalars(
@@ -135,46 +168,41 @@ class CampaignService:
                 raise failure(
                     "PROMOTION_READ_ONLY", "Chiến dịch đã kết thúc chỉ có thể sao chép."
                 )
+            if row.status in {"ACTIVE", "SCHEDULED"}:
+                validate_publication(
+                    payload.code, payload.ends_at, payload.policy, datetime.now(UTC)
+                )
             before = {
                 "policy": row.policy_json,
                 "title": row.title,
                 "imagePath": row.image_path,
+                "amountVnd": row.amount_vnd,
+                "validityDays": row.validity_days,
             }
             issued = await self.session.scalar(
                 select(VoucherClaim.id)
                 .where(VoucherClaim.campaign_id == row.id)
                 .limit(1)
             )
+            if issued and row.code != payload.code:
+                raise failure(
+                    "PROMOTION_CODE_LOCKED",
+                    "Không đổi mã chiến dịch sau khi đã cấp voucher.",
+                )
             if issued:
-                old_policy = PromotionPolicy.model_validate(row.policy_json)
-                core_old = old_policy.model_dump(
-                    mode="json", exclude={"presentation", "budget_vnd"}
-                )
-                core_new = payload.policy.model_dump(
-                    mode="json", exclude={"presentation", "budget_vnd"}
-                )
-                if (
-                    core_old != core_new
-                    or row.amount_vnd != payload.amount_vnd
-                    or row.validity_days != payload.validity_days
-                    or row.program_type != payload.program_type
-                    or row.code != payload.code
-                ):
-                    raise failure(
-                        "PROMOTION_POLICY_LOCKED",
-                        (
-                            "Chiến dịch đã cấp voucher: hãy sao chép "
-                            "để đổi điều kiện cốt lõi."
-                        ),
-                    )
-                if old_policy.budget_vnd is not None and (
-                    payload.policy.budget_vnd is None
-                    or payload.policy.budget_vnd < old_policy.budget_vnd
+                previous_budget = PromotionPolicy.model_validate(
+                    row.policy_json
+                ).budget_vnd
+                next_budget = payload.policy.budget_vnd
+                if next_budget is not None and (
+                    previous_budget is None or next_budget < previous_budget
                 ):
                     raise failure(
                         "PROMOTION_POLICY_LOCKED",
                         "Không giảm ngân sách đã công bố sau khi cấp voucher.",
                     )
+            # Issued claims already carry their own policy, value and expiry.
+            # A new version affects future grants without rewriting those snapshots.
             row.policy_version += 1
         else:
             row = VoucherCampaign(
@@ -191,6 +219,12 @@ class CampaignService:
         ).items():
             setattr(row, key, value)
         row.policy_json = new_policy
+        if row.status in {"ACTIVE", "SCHEDULED"}:
+            row.status = (
+                "SCHEDULED"
+                if row.starts_at and utc(row.starts_at) > datetime.now(UTC)
+                else "ACTIVE"
+            )
         row.public_code = payload.policy.public_code
         committed = (row.budget_reserved_vnd or 0) + (row.budget_spent_vnd or 0)
         if (
@@ -219,22 +253,7 @@ class CampaignService:
         now = datetime.now(UTC)
         policy = PromotionPolicy.model_validate(row.policy_json)
         if action == "publish":
-            if row.ends_at and utc(row.ends_at) <= now:
-                raise failure(
-                    "PROMOTION_EXPIRED", "Chiến dịch đã hết thời gian hiệu lực."
-                )
-            if (
-                row.code == "EARLY_MEMBER_2026"
-                and policy.audience.registered_before is None
-            ):
-                raise failure(
-                    "PROMOTION_CUTOFF_REQUIRED",
-                    "Hãy chọn thời điểm cutoff và xem trước đối tượng.",
-                )
-            if policy.fixed_expires_at and policy.fixed_expires_at <= now:
-                raise failure(
-                    "PROMOTION_EXPIRED", "Ngày hết hạn voucher phải ở tương lai."
-                )
+            validate_publication(row.code, row.ends_at, policy, now)
         before = {"status": row.status}
         row.status = campaign_transition(
             row.status,

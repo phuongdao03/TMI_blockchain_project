@@ -1,4 +1,5 @@
 import asyncio
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -96,14 +97,83 @@ def test_campaign_admin_publishes_issues_and_preserves_historical_policy():
                 await session.scalar(select(func.count()).select_from(VoucherClaim))
                 == 3
             )
-            with pytest.raises(DomainError, match="cốt lõi"):
-                await manager.save(
-                    payload.model_copy(update={"amount_vnd": 100000}), admin, row.id
-                )
-            await session.rollback()
+            old_policy = dict(claim.policy_json)
+            payload.policy.minimum_order_vnd = 1000
+            updated = await manager.save(
+                payload.model_copy(update={"amount_vnd": 100000}), admin, row.id
+            )
+            assert updated.status == "ACTIVE"
+            assert updated.policy_version == 2
+            await session.refresh(claim)
+            assert claim.amount_vnd == 200000
+            assert claim.policy_json == old_policy
+            assert claim.policy_version == 1
+            newcomer = uuid4()
+            session.add(
+                User(id=newcomer, email="new@example.vn", status=UserStatus.ACTIVE)
+            )
+            await session.flush()
+            session.add(UserRole(user_id=newcomer, role_id=role.id))
+            await session.commit()
+            new_claim = await VoucherService(session).claim(newcomer, campaign_id)
+            assert new_claim.amount_vnd == 100000
+            assert new_claim.policy_json["minimum_order_vnd"] == 1000
+            assert new_claim.policy_version == 2
             row = await manager.required(campaign_id)
             copied = await manager.copy(row.id, admin)
             assert copied.status == "DRAFT" and copied.code != row.code
+            # Publishing a manual campaign alone does not grant anything, but
+            # its recipients must see the popup after actual distribution.
+            manual = await manager.save(
+                payload.model_copy(
+                    update={"code": "MANUAL_TEST", "program_type": "MANUAL"}
+                ),
+                admin,
+            )
+            await manager.transition(manual.id, "publish", admin)
+            service = VoucherService(session)
+            assert await service.offer(owner) is None
+            await service.issue(owner, manual.id, reason="manual distribution")
+            assert (await service.offer(owner)).id == manual.id
+        await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_campaign_rejects_empty_registration_interval_on_save_and_publish():
+    async def scenario():
+        engine = create_async_engine("sqlite+aiosqlite://")
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+            admin = uuid4()
+            session.add(
+                User(id=admin, email="dates@example.vn", status=UserStatus.ACTIVE)
+            )
+            await session.commit()
+            manager = CampaignService(session)
+            payload = CampaignInput(
+                code="DATES",
+                name="Dates",
+                title="Gift",
+                description="Gift",
+                terms="Terms",
+            )
+            campaign = await manager.save(payload, admin)
+            point = datetime(2026, 8, 1, tzinfo=UTC)
+            payload.policy.audience.registered_after = point
+            payload.policy.audience.registered_before = point
+            with pytest.raises(DomainError) as error:
+                await manager.save(payload, admin, campaign.id)
+            assert error.value.code == "PROMOTION_AUDIENCE_PERIOD_INVALID"
+            # Old campaigns with invalid intervals remain readable for repair.
+            campaign.policy_json = payload.policy.model_dump(
+                mode="json", by_alias=False
+            )
+            await session.commit()
+            with pytest.raises(DomainError) as error:
+                await manager.transition(campaign.id, "publish", admin)
+            assert error.value.code == "PROMOTION_AUDIENCE_PERIOD_INVALID"
         await engine.dispose()
 
     asyncio.run(scenario())

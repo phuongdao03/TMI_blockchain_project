@@ -127,6 +127,7 @@ export function PublicAuthProvider({
         <LoginVoucher
           userId={status === "authenticated" ? (user?.id ?? null) : null}
           roles={user?.roles ?? []}
+          permissions={user?.permissions}
           isEmployee={user?.isEmployee}
         />
         {children}

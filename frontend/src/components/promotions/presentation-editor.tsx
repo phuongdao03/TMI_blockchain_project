@@ -157,7 +157,7 @@ export function PresentationEditor({
       >
         {[
           ["LOGIN", "Sau đăng nhập"],
-          ["DASHBOARD", "Vào không gian cá nhân"],
+          ["DASHBOARD", "Trang chủ / không gian cá nhân"],
           ["ISSUED", "Vừa được cấp voucher"],
           ["CHECKOUT", "Thanh toán đủ điều kiện"],
           ["NOTIFICATION", "Mở thông báo"],

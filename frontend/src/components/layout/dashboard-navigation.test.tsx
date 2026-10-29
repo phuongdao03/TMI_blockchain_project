@@ -10,6 +10,31 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("DashboardNavigation work-allocation migration", () => {
+  it.each<[string[], boolean]>([
+    [["SUPER_ADMIN"], false],
+    [["USER", "SUPER_ADMIN"], false],
+    [["USER"], true],
+  ])(
+    "hides customer-only navigation for internal accounts %j",
+    (roles, isEmployee) => {
+      const view = render(
+        <AuthUserProvider
+          user={{
+            id: "internal",
+            email: "internal@example.vn",
+            roles,
+            isEmployee,
+            accountType: null,
+          }}
+        >
+          <DashboardNavigation area="workspace" showQuickNavigation={false} />
+        </AuthUserProvider>,
+      );
+      expect(view.container.querySelector('a[href="/vouchers"]')).toBeNull();
+      expect(view.container.querySelector('a[href="/wallet"]')).toBeNull();
+      expect(view.container.querySelector('a[href="/membership"]')).toBeNull();
+    },
+  );
   it("shows community moderation only to users with its explicit capability", () => {
     render(
       <AuthUserProvider

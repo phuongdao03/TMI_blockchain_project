@@ -13,6 +13,11 @@ export function PromotionPreview({
 }) {
   const display = campaign.policy.presentation;
   const compact = display.template === "MINIMAL";
+  const [red = 0, green = 0, blue = 0] = [1, 3, 5].map((start) =>
+    parseInt(display.ctaColor.slice(start, start + 2), 16),
+  );
+  const ctaText =
+    (red * 299 + green * 587 + blue * 114) / 1000 > 145 ? "#241515" : "#ffffff";
   const assetId =
     mobile && display.mobileImageAssetId
       ? display.mobileImageAssetId
@@ -31,7 +36,7 @@ export function PromotionPreview({
         borderRadius: display.borderRadius,
       }}
     >
-      <div className={mobile || compact ? "grid" : "grid grid-cols-2"}>
+      <div className={mobile || compact ? "grid" : "grid sm:grid-cols-2"}>
         {!compact && image && (
           <div className="flex items-center justify-center bg-black/5">
             <Image
@@ -74,7 +79,7 @@ export function PromotionPreview({
           </p>
           <span
             className="block rounded-lg px-4 py-3 text-center text-sm font-semibold text-white"
-            style={{ backgroundColor: display.ctaColor }}
+            style={{ backgroundColor: display.ctaColor, color: ctaText }}
           >
             {display.primaryCta}
           </span>
