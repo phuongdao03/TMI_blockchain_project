@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 
 import { ReviewReportDetails } from "@/components/admin/review-report-details";
+import { SupplementRequestsPanel } from "@/components/supplements/supplement-requests-panel";
 import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
 
 import { adminReviewApi, staffAccountsApi } from "@/lib/api/client";
@@ -439,6 +440,14 @@ export function ReviewLifecyclePanel({
 
   return (
     <div className="space-y-5">
+      <SupplementRequestsPanel
+        dossierId={dossier.dossierId}
+        mode="reviewer"
+        versionId={dossier.assignments[0]?.assignment.dossierVersionId}
+        criteria={
+          dossier.snapshotJson.dossier.dossierType?.reviewRubric?.criteria ?? []
+        }
+      />
       {!decisionSucceeded ? (
         <WorkflowNextStep
           action={

@@ -227,6 +227,18 @@ class Dossier(UtcTimestampMixin, Base):
         default=dict,
         server_default=text("'{}'"),
     )
+    claims_json: Mapped[list[dict[str, object]]] = mapped_column(
+        JSONB().with_variant(JSON(), "sqlite"),
+        nullable=False,
+        default=list,
+        server_default=text("'[]'"),
+    )
+    claims_revision: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str | None] = mapped_column(String(280), unique=True)
     summary: Mapped[str | None] = mapped_column(Text)

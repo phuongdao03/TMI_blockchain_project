@@ -109,6 +109,20 @@ class PatchDossierRequest(DossierSchema):
         return self
 
 
+class DossierClaimData(DossierSchema):
+    id: UUID
+    criterion_key: Annotated[str, Field(min_length=1, max_length=64)]
+    statement: Annotated[str, Field(min_length=1, max_length=2_000)]
+    evidence_media_ids: Annotated[list[UUID], Field(max_length=20)] = Field(
+        default_factory=list
+    )
+
+
+class ReplaceDossierClaimsRequest(DossierSchema):
+    expected_revision: Annotated[int, Field(ge=0)]
+    claims: Annotated[list[DossierClaimData], Field(max_length=50)]
+
+
 class DossierData(DossierSchema):
     id: UUID
     code: str
@@ -130,6 +144,8 @@ class DossierData(DossierSchema):
     can_edit: bool
     submission_fee_required: bool = False
     submission_fee_paid_at: datetime | None = None
+    claims: tuple[DossierClaimData, ...] = ()
+    claims_revision: int = 0
 
 
 class SubmissionFeeQuoteData(DossierSchema):
@@ -266,6 +282,7 @@ class DocumentRuleData(DossierSchema):
 
 
 class DossierDetailData(DossierData):
+    claim_criteria: tuple[dict[str, str], ...] = ()
     evidences: tuple[EvidenceData, ...]
     document_rules: tuple[DocumentRuleData, ...]
 

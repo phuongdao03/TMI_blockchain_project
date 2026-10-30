@@ -27,6 +27,8 @@ import {
   DossierStatusBadge,
 } from "@/components/dossiers/dossier-status";
 import { DossierWorkflowTimeline } from "@/components/dossiers/dossier-workflow-timeline";
+import { DossierClaimsEditor } from "@/components/dossiers/dossier-claims-editor";
+import { SupplementRequestsPanel } from "@/components/supplements/supplement-requests-panel";
 import { FileUploader } from "@/components/media/file-uploader";
 import { DossierPaymentAction } from "@/components/payments/dossier-payment-action";
 import { PrivateDocumentVerification } from "@/components/documents/private-document-verification";
@@ -407,6 +409,8 @@ export function DossierWorkspace({
   const [evidenceType, setEvidenceType] = useState("OWNERSHIP_DOCUMENT");
   const [queueLocked, setQueueLocked] = useState(false);
   const [informationUnsaved, setInformationUnsaved] = useState(false);
+  const [claimsUnsaved, setClaimsUnsaved] = useState(false);
+  const [supplementsOpen, setSupplementsOpen] = useState(false);
   const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: dossierKeys.detail(dossierId),
@@ -519,7 +523,16 @@ export function DossierWorkspace({
   const selectedRuleAtCapacity = Boolean(
     selectedRule && selectedRuleCount >= selectedRule.maxCount,
   );
+  const claimsReady = (dossier.claims ?? []).every(
+    (claim) =>
+      claim.statement.trim().length >= 20 &&
+      claim.evidenceMediaIds.length > 0 &&
+      claim.evidenceMediaIds.every((id) =>
+        dossier.evidences.some((evidence) => evidence.mediaAssetId === id),
+      ),
+  );
   const isComplete =
+    claimsReady &&
     dossier.title.length >= 3 &&
     (documentRules.length
       ? missingRequiredRules.length === 0
@@ -533,7 +546,7 @@ export function DossierWorkspace({
   ).length;
   const nextPreparationStep: Step = !informationReady
     ? "information"
-    : !evidenceReady
+    : !evidenceReady || !claimsReady
       ? "evidence"
       : "review";
   return (
@@ -671,6 +684,7 @@ export function DossierWorkspace({
                 <Button
                   className="mt-4"
                   disabled={
+                    (claimsUnsaved && nextPreparationStep !== "evidence") ||
                     (queueLocked && nextPreparationStep !== "evidence") ||
                     (step === "information" &&
                       informationUnsaved &&
@@ -725,8 +739,29 @@ export function DossierWorkspace({
         submissionFeeRequired={dossier.submissionFeeRequired}
         submissionFeePaidAt={dossier.submissionFeePaidAt}
       />
+      {dossier.currentVersionNo > 0 ? (
+        <SupplementRequestsPanel
+          dossierId={dossier.id}
+          mode="applicant"
+          canRespond={dossier.status === "NEEDS_SUPPLEMENT"}
+          onOpenChange={setSupplementsOpen}
+        />
+      ) : null}
 
       <div className="space-y-4">
+        <div className={step === "information" ? "hidden" : undefined}>
+          <DossierClaimsEditor
+            key={`${dossier.id}-${dossier.status}`}
+            dossierId={dossier.id}
+            initialClaims={dossier.claims}
+            initialRevision={dossier.claimsRevision}
+            criteria={dossier.claimCriteria ?? []}
+            evidences={dossier.evidences}
+            readOnly={!dossier.canEdit || step === "review"}
+            onSaved={() => void refresh()}
+            onUnsavedChange={setClaimsUnsaved}
+          />
+        </div>
         <nav
           aria-label="Các bước hoàn thiện hồ sơ"
           className="grid gap-2 sm:grid-cols-3"
@@ -739,6 +774,7 @@ export function DossierWorkspace({
               <button
                 aria-current={active ? "step" : undefined}
                 disabled={
+                  (claimsUnsaved && item.id !== "evidence") ||
                   (queueLocked && item.id !== "evidence") ||
                   (step === "information" &&
                     informationUnsaved &&
@@ -1031,6 +1067,15 @@ export function DossierWorkspace({
 
           {step === "review" ? (
             <section className="space-y-6">
+              {!claimsReady ? (
+                <p
+                  className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+                  role="alert"
+                >
+                  Nhận định đã lưu còn thiếu nội dung hoặc minh chứng. Quay lại
+                  bước Tài liệu để hoàn thiện trước khi nộp.
+                </p>
+              ) : null}
               <div>
                 <h2 className="text-xl font-bold tracking-tight">
                   Kiểm tra & nộp
@@ -1143,6 +1188,8 @@ export function DossierWorkspace({
                     className="mt-5 w-full sm:w-auto"
                     disabled={
                       !isComplete ||
+                      claimsUnsaved ||
+                      supplementsOpen ||
                       submit.isPending ||
                       submissionComplete ||
                       Boolean(

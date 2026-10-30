@@ -65,6 +65,7 @@ from app.modules.dossiers.types import (
     DocumentHashAdjudicationView,
     DocumentRuleView,
     DossierChanges,
+    DossierClaim,
     DossierDetailView,
     DossierPage,
     DossierStatusHistoryView,
@@ -86,6 +87,7 @@ from app.modules.organizations.models import (
     OrganizationStatus,
 )
 from app.modules.organizations.repository import OrganizationRepository
+from app.modules.supplements.service import require_answered
 from app.modules.users.repository import UserProfileRepository
 
 EDITABLE_STATUSES = frozenset({DossierStatus.DRAFT, DossierStatus.NEEDS_SUPPLEMENT})
@@ -351,6 +353,23 @@ class DossierService:
                 self._dossier_type_view(item, version) for item, version in rows
             )
 
+    async def get_active_dossier_type_version(
+        self,
+        principal: AuthPrincipal,
+        version_id: UUID,
+    ) -> DossierTypeVersionView:
+        self._require_mutation_role(principal)
+        async with self._session.begin():
+            version = await self._repository.get_dossier_type_version(version_id)
+            dossier_type = (
+                await self._repository.get_dossier_type(version.dossier_type_id)
+                if version
+                else None
+            )
+            if version is None or dossier_type is None or not dossier_type.is_active:
+                raise DossierNotFoundError("Dossier type version is unavailable.")
+            return self._dossier_type_version_view(version)
+
     async def create_dossier_type(
         self,
         principal: AuthPrincipal,
@@ -550,6 +569,7 @@ class DossierService:
                 version_id=version_id,
             )
             document_rules = await self._document_rules_for(dossier)
+            schema = await self._dossier_type_schema_for(dossier)
             return DossierDetailView(
                 dossier=self._view(dossier, can_edit=can_edit),
                 evidences=tuple(
@@ -558,7 +578,115 @@ class DossierService:
                 document_rules=tuple(
                     self._document_rule_view(rule) for rule in document_rules
                 ),
+                claim_criteria=self._claim_criteria(schema),
             )
+
+    @staticmethod
+    def _claim_criteria(schema: Mapping[str, Any] | None) -> tuple[dict[str, str], ...]:
+        rubric = schema.get("reviewRubric") if schema else None
+        criteria = rubric.get("criteria", []) if isinstance(rubric, Mapping) else []
+        return tuple(
+            {"key": str(item["key"]), "label": str(item.get("label", item["key"]))}
+            for item in criteria
+            if isinstance(item, Mapping) and "key" in item
+        )
+
+    @staticmethod
+    def _claims_from_json(values: list[dict[str, object]]) -> tuple[DossierClaim, ...]:
+        result: list[DossierClaim] = []
+        for value in values:
+            raw_ids = value.get("evidenceMediaIds", [])
+            if not isinstance(raw_ids, list):
+                raise DossierValidationError("Stored claim evidence is invalid.")
+            result.append(
+                DossierClaim(
+                    id=UUID(str(value["id"])),
+                    criterion_key=str(value["criterionKey"]),
+                    statement=str(value["statement"]),
+                    evidence_media_ids=tuple(UUID(str(item)) for item in raw_ids),
+                )
+            )
+        return tuple(result)
+
+    @classmethod
+    def _validated_claims(
+        cls,
+        claims: tuple[DossierClaim, ...],
+        *,
+        schema: Mapping[str, Any] | None,
+        evidence_ids: set[UUID],
+        complete: bool = False,
+    ) -> list[dict[str, object]]:
+        if len(claims) > 50 or len({claim.id for claim in claims}) != len(claims):
+            raise DossierValidationError(
+                "Claims must have unique identifiers, at most 50."
+            )
+        criteria = {item["key"] for item in cls._claim_criteria(schema)}
+        result: list[dict[str, object]] = []
+        for claim in claims:
+            statement = claim.statement.strip()
+            if not isinstance(claim.id, UUID) or claim.criterion_key not in criteria:
+                raise DossierValidationError(
+                    "Claim criterion must belong to the selected dossier type."
+                )
+            if not 1 <= len(statement) <= 2_000:
+                raise DossierValidationError(
+                    "Claim statement must contain 1 to 2000 characters."
+                )
+            linked = claim.evidence_media_ids
+            if (
+                len(linked) > 20
+                or len(set(linked)) != len(linked)
+                or not set(linked).issubset(evidence_ids)
+            ):
+                raise DossierValidationError(
+                    "Claim evidence must belong to the current dossier draft."
+                )
+            if complete and (len(statement) < 20 or not linked):
+                raise DossierValidationError(
+                    "Complete each claim statement and link supporting evidence "
+                    "before submission."
+                )
+            result.append(
+                {
+                    "id": str(claim.id),
+                    "criterionKey": claim.criterion_key,
+                    "statement": statement,
+                    "evidenceMediaIds": [str(item) for item in linked],
+                }
+            )
+        return result
+
+    async def replace_claims(
+        self,
+        principal: AuthPrincipal,
+        dossier_id: UUID,
+        *,
+        expected_revision: int,
+        claims: tuple[DossierClaim, ...],
+    ) -> DossierView:
+        self._require_mutation_role(principal)
+        async with self._session.begin():
+            dossier = await self._owned_or_scoped(
+                principal, dossier_id, for_update=True
+            )
+            await self._require_mutation_scope(principal, dossier)
+            self._require_editable(dossier)
+            if expected_revision != dossier.claims_revision:
+                raise DossierInvalidStateError(
+                    "Claims changed in another session. Reload before saving."
+                )
+            rows = await self._repository.list_draft_evidences(dossier.id)
+            dossier.claims_json = self._validated_claims(
+                claims,
+                schema=await self._dossier_type_schema_for(dossier),
+                evidence_ids={media.id for _, media in rows},
+            )
+            dossier.claims_revision += 1
+            await self._session.flush()
+            await self._session.refresh(dossier, attribute_names=["updated_at"])
+            self._audit("dossier.claims.updated", principal.user_id, dossier.id)
+            return self._view(dossier, can_edit=True)
 
     async def update_dossier(
         self,
@@ -869,6 +997,8 @@ class DossierService:
                 if category is None:
                     raise DossierValidationError("Dossier category is not active.")
                 evidence_rows = await self._repository.list_draft_evidences(dossier.id)
+                if expected_status is DossierStatus.NEEDS_SUPPLEMENT:
+                    await require_answered(self._session, dossier.id)
                 dossier_type_schema = await self._dossier_type_schema_for(dossier)
                 dossier_type_identity = await self._dossier_type_snapshot_identity_for(
                     dossier
@@ -884,6 +1014,12 @@ class DossierService:
                 self._validate_submission_evidence(
                     evidence_rows,
                     rules=document_rules,
+                )
+                self._validated_claims(
+                    self._claims_from_json(dossier.claims_json or []),
+                    schema=dossier_type_schema,
+                    evidence_ids={media.id for _, media in evidence_rows},
+                    complete=True,
                 )
                 submitted_at = self._clock()
                 version_no = dossier.current_version_no + 1
@@ -1169,6 +1305,9 @@ class DossierService:
             "summary": dossier.summary,
             "visibility": dossier.visibility.value,
         }
+        if dossier.claims_json:
+            dossier_snapshot["claims"] = deepcopy(dossier.claims_json)
+            dossier_snapshot["claimsRevision"] = dossier.claims_revision
         if (
             dossier.dossier_type_id is not None
             and dossier.dossier_type_version_id is not None
@@ -1603,6 +1742,8 @@ class DossierService:
             can_edit=can_edit,
             submission_fee_required=dossier.submission_fee_required,
             submission_fee_paid_at=dossier.submission_fee_paid_at,
+            claims=DossierService._claims_from_json(dossier.claims_json or []),
+            claims_revision=dossier.claims_revision or 0,
         )
 
     @staticmethod

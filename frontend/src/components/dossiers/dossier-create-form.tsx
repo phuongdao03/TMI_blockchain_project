@@ -129,9 +129,31 @@ export function DossierCreateForm() {
       setPrepareStep(payload.step);
     },
   });
-  const dossierType = dossierTypes.data?.find(
+  const currentDossierType = dossierTypes.data?.find(
     (item) => item.currentVersion.id === dossierTypeVersionId,
   );
+  const needsPinnedVersion =
+    Boolean(dossierTypeVersionId) && !currentDossierType;
+  const pinnedVersion = useQuery({
+    queryKey: [
+      ...dossierKeys.types(),
+      "version",
+      user?.id,
+      dossierTypeVersionId,
+    ],
+    queryFn: () => dossierApi.getTypeVersion(dossierTypeVersionId),
+    enabled: recovery.ready && needsPinnedVersion && dossierTypes.isSuccess,
+    retry: false,
+  });
+  const pinnedType = dossierTypes.data?.find(
+    (item) =>
+      item.id === pinnedVersion.data?.dossierTypeId && item.isActive !== false,
+  );
+  const dossierType =
+    currentDossierType ??
+    (pinnedType && pinnedVersion.data?.id === dossierTypeVersionId
+      ? { ...pinnedType, currentVersion: pinnedVersion.data }
+      : undefined);
   const hasDossierTypes = (dossierTypes.data?.length ?? 0) > 0;
   const normalizedTypeQuery = normalizeSearchText(typeQuery.trim());
   const visibleDossierTypes = dossierTypes.data?.filter((item) =>
@@ -255,6 +277,35 @@ export function DossierCreateForm() {
       </section>
     );
 
+  if (needsPinnedVersion && !dossierType) {
+    const unavailable =
+      dossierTypes.isError || pinnedVersion.isError || pinnedVersion.isSuccess;
+    return (
+      <section
+        className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 text-sm text-[var(--theme-text)]"
+        role={unavailable ? "alert" : "status"}
+      >
+        <p>
+          {unavailable
+            ? "Chưa thể khôi phục biểu mẫu đã lưu. Dữ liệu đã nhập được giữ nguyên; biểu mẫu có thể tạm ngừng tiếp nhận hoặc kết nối bị gián đoạn."
+            : "Đang tải đúng phiên bản biểu mẫu đã lưu…"}
+        </p>
+        {unavailable ? (
+          <Button
+            className="mt-3"
+            onClick={() =>
+              void dossierTypes.refetch().then(() => pinnedVersion.refetch())
+            }
+            type="button"
+            variant="outline"
+          >
+            Thử tải lại biểu mẫu
+          </Button>
+        ) : null}
+      </section>
+    );
+  }
+
   return (
     <form
       className="dossier-create-form space-y-5 sm:space-y-6"
@@ -262,6 +313,16 @@ export function DossierCreateForm() {
       ref={formRef}
     >
       {user ? <PreparationRecoveryNotice recovery={recovery} /> : null}
+      {needsPinnedVersion && dossierType ? (
+        <p
+          className="rounded-lg border border-[var(--theme-border)] p-3 text-sm text-[var(--theme-muted)]"
+          role="status"
+        >
+          Đang tiếp tục biểu mẫu phiên bản{" "}
+          {dossierType.currentVersion.versionNo}. Nội dung đã nhập được giữ
+          nguyên theo phiên bản này.
+        </p>
+      ) : null}
       <nav aria-label="Các bước chuẩn bị hồ sơ nháp">
         <ol
           className={`dossier-journey grid grid-cols-2 gap-2 ${hasTypeSpecificFields ? "sm:grid-cols-4" : "dossier-journey--three sm:grid-cols-3"}`}
@@ -352,7 +413,7 @@ export function DossierCreateForm() {
                     <p>{visibleDossierTypes?.length ?? 0} loại phù hợp</p>
                     {dossierType &&
                     !visibleDossierTypes?.some(
-                      (item) => item.currentVersion.id === dossierTypeVersionId,
+                      (item) => item.id === dossierType.id,
                     ) ? (
                       <p className="mt-1 font-semibold text-[var(--theme-text)]">
                         Đang chọn: {dossierType.name}
@@ -462,7 +523,11 @@ export function DossierCreateForm() {
               </section>
             ) : null}
             <div className="mt-3 grid gap-2.5 sm:grid-cols-2 sm:gap-3">
-              {visibleDossierTypes?.map((item) => {
+              {visibleDossierTypes?.map((catalogItem) => {
+                const item =
+                  dossierType?.id === catalogItem.id
+                    ? dossierType
+                    : catalogItem;
                 const selected =
                   item.currentVersion.id === dossierTypeVersionId;
                 const description = item.currentVersion.schema.description;

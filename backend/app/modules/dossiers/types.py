@@ -36,6 +36,14 @@ class DossierChanges:
 
 
 @dataclass(frozen=True, slots=True)
+class DossierClaim:
+    id: UUID
+    criterion_key: str
+    statement: str
+    evidence_media_ids: tuple[UUID, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class DossierView:
     id: UUID
     code: str
@@ -57,6 +65,8 @@ class DossierView:
     can_edit: bool
     submission_fee_required: bool = False
     submission_fee_paid_at: datetime | None = None
+    claims: tuple[DossierClaim, ...] = ()
+    claims_revision: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -183,3 +193,4 @@ class DossierDetailView:
     dossier: DossierView
     evidences: tuple[EvidenceView, ...]
     document_rules: tuple[DocumentRuleView, ...]
+    claim_criteria: tuple[dict[str, str], ...] = ()

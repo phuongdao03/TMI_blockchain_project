@@ -37,6 +37,7 @@ from app.modules.ranking import trending_models as trending_models  # noqa: F401
 from app.modules.reviews import models as review_models  # noqa: F401
 from app.modules.search import discovery_models as search_discovery_models  # noqa: F401
 from app.modules.search import history_models as search_history_models  # noqa: F401
+from app.modules.supplements import models as supplement_models  # noqa: F401
 from app.modules.tasks import models as task_models  # noqa: F401
 from app.modules.users import models as user_models  # noqa: F401
 from app.modules.voting import models as voting_models  # noqa: F401

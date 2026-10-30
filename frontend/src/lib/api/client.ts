@@ -116,6 +116,7 @@ import type {
   ContentReportStatus,
   Dossier,
   DossierDetail,
+  DossierClaim,
   DossierEvidence,
   DocumentVerification,
   DossierInput,
@@ -1554,6 +1555,21 @@ export const dossierApi = {
   },
   listTypes() {
     return request<DossierType[]>("/dossiers/types");
+  },
+  getTypeVersion(versionId: string) {
+    return request<DossierType["currentVersion"]>(
+      `/dossier-type-versions/${versionId}`,
+    );
+  },
+  saveClaims(
+    dossierId: string,
+    expectedRevision: number,
+    claims: DossierClaim[],
+  ) {
+    return request<Dossier>(`/dossiers/${dossierId}/claims`, {
+      method: "PUT",
+      body: JSON.stringify({ expectedRevision, claims }),
+    });
   },
   update(dossierId: string, dossier: DossierPatch) {
     return request<Dossier>(`/dossiers/${dossierId}`, {

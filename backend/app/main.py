@@ -30,6 +30,7 @@ from app.api.v1.community_engagement import router as community_engagement_route
 from app.api.v1.content_reports import router as content_reports_router
 from app.api.v1.council import router as council_router
 from app.api.v1.dossiers import router as dossiers_router
+from app.api.v1.dossiers import type_versions_router
 from app.api.v1.engagement import router as engagement_router
 from app.api.v1.events import admin_router as events_admin_router
 from app.api.v1.events import router as events_router
@@ -56,6 +57,7 @@ from app.api.v1.share_redirect import router as share_redirect_router
 from app.api.v1.staff_accounts import router as staff_accounts_router
 from app.api.v1.staff_invitations import employee_router as employee_invitations_router
 from app.api.v1.staff_invitations import router as staff_invitations_router
+from app.api.v1.supplements import router as supplements_router
 from app.api.v1.tasks import my_router as my_tasks_router
 from app.api.v1.tasks import router as tasks_router
 from app.api.v1.users import router as users_router
@@ -290,6 +292,8 @@ def create_application(
     app.include_router(certificate_revocations_router)
     app.include_router(content_reports_router)
     app.include_router(dossiers_router)
+    app.include_router(type_versions_router)
+    app.include_router(supplements_router)
     app.include_router(advertising_router)
     app.include_router(engagement_router)
     app.include_router(events_router)

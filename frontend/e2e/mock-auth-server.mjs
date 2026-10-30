@@ -2554,6 +2554,14 @@ const server = createServer(async (request, response) => {
     response.end("Mock payment checkout");
     return;
   }
+  if (
+    request.method === "GET" &&
+    path === `/api/v1/dossiers/${dossierId}/supplement-requests` &&
+    request.headers.cookie?.includes("cns_access=e2e-access")
+  ) {
+    send(response, 200, envelope([]));
+    return;
+  }
   const reviewAssignment = {
     id: reviewAssignmentId,
     dossierId,

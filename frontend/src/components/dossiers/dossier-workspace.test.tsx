@@ -120,6 +120,39 @@ describe("DossierWorkspace", () => {
     vi.clearAllMocks();
   });
 
+  it("blocks submission when a saved claim still lacks supporting evidence", async () => {
+    const user = userEvent.setup();
+    api.get.mockResolvedValue({
+      ...dossier,
+      claims: [
+        {
+          id: "claim-1",
+          criterionKey: "origin",
+          statement: "Nguồn gốc còn cần bổ sung căn cứ độc lập.",
+          evidenceMediaIds: [],
+        },
+      ],
+      claimsRevision: 1,
+      claimCriteria: [{ key: "origin", label: "Nguồn gốc" }],
+    });
+    api.versions.mockResolvedValue([]);
+    api.timeline.mockResolvedValue([]);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <DossierWorkspace dossierId={dossier.id} />
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("heading", { level: 1, name: dossier.title });
+    await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Nhận định đã lưu còn thiếu",
+    );
+    expect(screen.getByRole("button", { name: "Nộp hồ sơ" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
   it("confirms a newly created draft and opens the evidence step", async () => {
     api.get.mockResolvedValue({ ...dossier, evidences: [] });
     api.versions.mockResolvedValue([]);

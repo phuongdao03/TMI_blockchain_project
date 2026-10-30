@@ -36,6 +36,7 @@ from app.modules.dossiers.schemas import (
     PatchEvidenceRequest,
     PreparationStateData,
     PreparationWriteData,
+    ReplaceDossierClaimsRequest,
     SubmissionData,
     SubmissionFeeQuoteData,
 )
@@ -45,6 +46,7 @@ from app.modules.dossiers.types import (
     DocumentHashAdjudicationView,
     DocumentRuleView,
     DossierChanges,
+    DossierClaim,
     DossierDetailView,
     DossierStatusHistoryView,
     DossierTypeVersionView,
@@ -57,6 +59,9 @@ from app.modules.dossiers.types import (
 )
 
 router = APIRouter(prefix="/api/v1/dossiers", tags=["dossiers"])
+type_versions_router = APIRouter(
+    prefix="/api/v1/dossier-type-versions", tags=["dossiers"]
+)
 
 PRIVATE_RESPONSES: dict[int | str, dict[str, Any]] = {
     401: {"description": "Authentication is required.", "model": ErrorEnvelope},
@@ -170,6 +175,22 @@ def _dossier_type_version_data(
     return DossierTypeVersionData.model_validate(view)
 
 
+@type_versions_router.get(
+    "/{version_id}", response_model=SuccessEnvelope[DossierTypeVersionData]
+)
+async def get_dossier_type_version(
+    version_id: UUID,
+    request: Request,
+    principal: CurrentPrincipalDependency,
+    service: DossierServiceDependency,
+) -> SuccessEnvelope[DossierTypeVersionData]:
+    result = await service.get_active_dossier_type_version(principal, version_id)
+    return SuccessEnvelope(
+        data=_dossier_type_version_data(result),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
 def _evidence_data(view: EvidenceView) -> EvidenceData:
     return EvidenceData.model_validate(view)
 
@@ -205,6 +226,7 @@ def _dossier_detail_data(view: DossierDetailView) -> DossierDetailData:
         **dossier.model_dump(),
         evidences=tuple(_evidence_data(item) for item in view.evidences),
         document_rules=tuple(_document_rule_data(item) for item in view.document_rules),
+        claim_criteria=view.claim_criteria,
     )
 
 
@@ -399,6 +421,38 @@ async def patch_dossier(
     )
     return SuccessEnvelope(
         data=_dossier_data(dossier),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.put(
+    "/{dossier_id}/claims",
+    response_model=SuccessEnvelope[DossierData],
+    responses=PRIVATE_RESPONSES,
+)
+async def replace_dossier_claims(
+    dossier_id: UUID,
+    payload: ReplaceDossierClaimsRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: DossierServiceDependency,
+) -> SuccessEnvelope[DossierData]:
+    result = await service.replace_claims(
+        principal,
+        dossier_id,
+        expected_revision=payload.expected_revision,
+        claims=tuple(
+            DossierClaim(
+                id=item.id,
+                criterion_key=item.criterion_key,
+                statement=item.statement,
+                evidence_media_ids=tuple(item.evidence_media_ids),
+            )
+            for item in payload.claims
+        ),
+    )
+    return SuccessEnvelope(
+        data=_dossier_data(result),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 
