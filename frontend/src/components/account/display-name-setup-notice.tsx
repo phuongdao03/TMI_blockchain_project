@@ -47,12 +47,14 @@ function NameReminder({ userId }: { userId: string }) {
 
   return (
     <aside
-      className="profile-name-reminder"
-      role="note"
       aria-label="Hoàn thiện hồ sơ cá nhân"
+      className="profile-name-reminder"
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5 text-sm text-[var(--theme-text)]">
+        <div
+          className="flex min-w-0 items-center gap-2.5 text-sm text-[var(--theme-text)]"
+          role="status"
+        >
           <UserRound
             aria-hidden="true"
             className="size-4 shrink-0 text-[var(--theme-accent)]"

@@ -33,7 +33,11 @@ describe("DisplayNameSetupNotice", () => {
       location.path = path;
       render(<DisplayNameSetupNotice />, { wrapper });
       expect(api.get).not.toHaveBeenCalled();
-      expect(screen.queryByRole("note")).toBeNull();
+      expect(
+        screen.queryByRole("complementary", {
+          name: "Hoàn thiện hồ sơ cá nhân",
+        }),
+      ).toBeNull();
     },
   );
 
@@ -41,7 +45,11 @@ describe("DisplayNameSetupNotice", () => {
     api.get.mockResolvedValue({ displayName: null });
     render(<DisplayNameSetupNotice />, { wrapper });
     fireEvent.click(await screen.findByRole("button", { name: "Để sau" }));
-    expect(screen.queryByRole("note")).toBeNull();
+    expect(
+      screen.queryByRole("complementary", {
+        name: "Hoàn thiện hồ sơ cá nhân",
+      }),
+    ).toBeNull();
     expect(sessionStorage.getItem("display-name-reminder:member-1")).toBe(
       "later",
     );
@@ -50,8 +58,13 @@ describe("DisplayNameSetupNotice", () => {
     api.get.mockResolvedValue({ displayName: null });
     render(<DisplayNameSetupNotice />, { wrapper });
 
-    const status = await screen.findByRole("note");
-    expect(status.tagName).toBe("ASIDE");
+    const status = await screen.findByRole("status");
+    expect(status.tagName).toBe("DIV");
+    expect(
+      screen.getByRole("complementary", {
+        name: "Hoàn thiện hồ sơ cá nhân",
+      }),
+    ).toBeDefined();
     expect(
       screen.getByRole("link", { name: "Thêm tên" }).getAttribute("href"),
     ).toBe("/account#display-name");
@@ -62,6 +75,10 @@ describe("DisplayNameSetupNotice", () => {
     render(<DisplayNameSetupNotice />, { wrapper });
 
     await vi.waitFor(() => expect(api.get).toHaveBeenCalledTimes(1));
-    expect(screen.queryByRole("note")).toBeNull();
+    expect(
+      screen.queryByRole("complementary", {
+        name: "Hoàn thiện hồ sơ cá nhân",
+      }),
+    ).toBeNull();
   });
 });

@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import CreateDossierPage from "@/app/(dashboard)/dossiers/new/page";
 
-vi.mock("@/components/auth/role-gate", () => ({
-  RoleGate: ({ children }: { children: React.ReactNode }) => children,
+vi.mock("@/components/dossiers/applicant-entry-gate", () => ({
+  ApplicantEntryGate: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock("@/components/dossiers/dossier-create-form", () => ({

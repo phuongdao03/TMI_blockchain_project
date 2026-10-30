@@ -110,7 +110,7 @@ test("applicant dashboard keeps one clear next action at every breakpoint", asyn
   }
 });
 
-test("viewer dashboard keeps public discovery as its primary action", async ({
+test("viewer dashboard welcomes members and keeps public discovery available", async ({
   context,
   page,
 }, testInfo) => {
@@ -121,10 +121,10 @@ test("viewer dashboard keeps public discovery as its primary action", async ({
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Tra cứu đề cử và bằng xác lập",
+      name: "Chào mừng bạn đến Tinh Hoa Việt",
     }),
   ).toBeVisible();
-  await expect(page.getByText("Không gian tra cứu")).toBeVisible();
+  await expect(page.getByText("Không gian cá nhân")).toBeVisible();
   await expect(
     page.getByRole("main").getByRole("link", { name: "Thư viện đề cử" }),
   ).toHaveAttribute("href", "/works");

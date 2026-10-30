@@ -16,6 +16,10 @@ vi.mock("@/lib/api/client", () => ({
   workAllocationSelfApi: { list: allocationsMock },
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 describe("dashboard overview", () => {
   beforeEach(() => {
     listMock.mockReset();
@@ -256,7 +260,7 @@ describe("dashboard overview", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Tra cứu đề cử và bằng xác lập",
+        name: "Chào mừng bạn đến Tinh Hoa Việt",
       }),
     ).toBeDefined();
     expect(screen.queryByRole("link", { name: "Tạo hồ sơ mới" })).toBeNull();
