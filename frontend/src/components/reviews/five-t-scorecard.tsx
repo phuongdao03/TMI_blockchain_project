@@ -18,6 +18,7 @@ import {
 } from "@/components/reviews/review-completion-checklist";
 import { ReviewEvidenceSelect } from "@/components/reviews/review-evidence-select";
 import { ReviewEvidenceAssessments } from "@/components/reviews/review-evidence-assessments";
+import { verificationComplete } from "@/components/reviews/review-evidence-policy";
 import { ReviewFindingsEditor } from "@/components/reviews/review-findings-editor";
 import { useReviewAutosave } from "@/components/reviews/use-review-autosave";
 import { VerdictReviewForm } from "@/components/reviews/verdict-review-form";
@@ -35,6 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import type {
+  DossierClaim,
   EvidenceAssessment,
   ReviewData,
   ReviewDraft,
@@ -172,7 +174,9 @@ function specialistComplete(
   if (!rubric) return true;
   const answersComplete =
     rubric.gates.every(
-      ({ key }) => (gateAnswers[key]?.rationale.trim().length ?? 0) >= 20,
+      ({ key }) =>
+        gateAnswers[key]?.outcome !== "UNASSESSED" &&
+        (gateAnswers[key]?.rationale.trim().length ?? 0) >= 20,
     ) &&
     rubric.criteria.every(
       ({ key }) =>
@@ -234,11 +238,13 @@ function complete(
             assessment.note.trim().length >= 10)
         );
       })) &&
+    Object.values(evidenceAssessments).every(verificationComplete) &&
     gate.valid
   );
 }
 
 export function FiveTScorecard(props: {
+  claims?: DossierClaim[];
   evidences: ReviewEvidenceSnapshot[];
   initialReview: ReviewData | null;
   isSaving: boolean;

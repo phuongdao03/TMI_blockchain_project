@@ -16,6 +16,7 @@ import { useState } from "react";
 import { EvidenceViewer } from "@/components/reviews/evidence-viewer";
 import { FiveTScorecard } from "@/components/reviews/five-t-scorecard";
 import { ReviewAssistancePanel } from "@/components/reviews/review-assistance-panel";
+import { SupplementRequestsPanel } from "@/components/supplements/supplement-requests-panel";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
@@ -361,7 +362,17 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
             </details>
           </aside>
           <div className="min-w-0 scroll-mt-24" id="review-scorecard">
+            <SupplementRequestsPanel
+              dossierId={detail.assignment.dossierId}
+              mode="reviewer"
+              versionId={detail.assignment.dossierVersionId}
+              criteria={
+                detail.snapshotJson.dossier.dossierType?.reviewRubric
+                  ?.criteria ?? []
+              }
+            />
             <FiveTScorecard
+              claims={detail.snapshotJson.dossier.claims ?? []}
               evidences={detail.snapshotJson.evidences ?? []}
               initialReview={detail.review}
               isSaving={save.isPending}

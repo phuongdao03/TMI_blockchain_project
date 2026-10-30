@@ -15,6 +15,7 @@ from app.modules.council.models import (
     CouncilVote,
 )
 from app.modules.dossiers.models import Dossier, DossierVersion
+from app.modules.reviews.models import Review, ReviewAssignment, ReviewAssignmentStatus
 
 
 class CouncilRepository:
@@ -35,6 +36,42 @@ class CouncilRepository:
 
     def add_vote(self, vote: CouncilVote) -> None:
         self._session.add(vote)
+
+    async def conflicted_reviewer_ids(
+        self, dossier_version_id: UUID
+    ) -> frozenset[UUID]:
+        return frozenset(
+            await self._session.scalars(
+                select(ReviewAssignment.reviewer_user_id).where(
+                    ReviewAssignment.dossier_version_id == dossier_version_id,
+                    ReviewAssignment.status == ReviewAssignmentStatus.CONFLICTED,
+                )
+            )
+        )
+
+    async def submitted_review_reports(
+        self, dossier_version_id: UUID
+    ) -> tuple[tuple[UUID, Review], ...]:
+        # Review submission locks its assignment. Serialize the report/count
+        # checks with that write so a newly submitted disagreement cannot be
+        # missed between the two reads. Approval callers also lock the dossier.
+        await self._session.execute(
+            select(ReviewAssignment.id)
+            .where(ReviewAssignment.dossier_version_id == dossier_version_id)
+            .order_by(ReviewAssignment.id)
+            .with_for_update()
+        )
+        rows = await self._session.execute(
+            select(ReviewAssignment.reviewer_user_id, Review)
+            .join(Review, Review.assignment_id == ReviewAssignment.id)
+            .where(
+                ReviewAssignment.dossier_version_id == dossier_version_id,
+                ReviewAssignment.status == ReviewAssignmentStatus.SUBMITTED,
+                Review.submitted_at.is_not(None),
+            )
+            .execution_options(populate_existing=True)
+        )
+        return tuple((reviewer_id, review) for reviewer_id, review in rows)
 
     async def get_active_member(self, user_id: UUID) -> User | None:
         return cast(

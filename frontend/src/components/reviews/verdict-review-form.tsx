@@ -10,6 +10,13 @@ import {
 import { useCallback, useMemo, useState } from "react";
 
 import { ReviewEvidenceAssessments } from "@/components/reviews/review-evidence-assessments";
+import {
+  criterionEvidenceIssue,
+  criterionRequiresEvidence,
+  duplicateApprovalRationales,
+  hasRelevantContradiction,
+  verificationComplete,
+} from "@/components/reviews/review-evidence-policy";
 import { ReviewEvidenceSelect } from "@/components/reviews/review-evidence-select";
 import { useReviewAutosave } from "@/components/reviews/use-review-autosave";
 import { Button } from "@/components/ui/button";
@@ -17,6 +24,7 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import type {
   CriterionVerdict,
   CriterionVerdictOutcome,
+  DossierClaim,
   EvidenceAssessment,
   ReviewData,
   ReviewDraft,
@@ -62,6 +70,14 @@ const outcomeOptions: Array<{
     markerClass: "bg-red-600",
   },
   {
+    value: "INSUFFICIENT_BASIS",
+    label: "Chưa đủ căn cứ",
+    note: "Có thông tin nhưng chưa đủ nguồn để kết luận",
+    selectedClass:
+      "border-amber-600 bg-amber-50 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100",
+    markerClass: "bg-amber-600",
+  },
+  {
     value: "NOT_APPLICABLE",
     label: "Không áp dụng",
     note: "Tiêu chí không phù hợp hồ sơ",
@@ -77,6 +93,12 @@ function recommendationFor(
   gates: Record<string, ReviewGateAnswer>,
 ): ReviewRecommendation | null {
   if (rubric.criteria.some(({ key }) => !verdicts[key]?.outcome)) return null;
+  if (
+    rubric.gates.some(
+      ({ key }) => !gates[key] || gates[key].outcome === "UNASSESSED",
+    )
+  )
+    return null;
   const requiredGateFailed = rubric.gates.some(
     ({ key, required }) =>
       required !== false &&
@@ -85,7 +107,11 @@ function recommendationFor(
   );
   const outcomes = rubric.criteria.map(({ key }) => verdicts[key]!.outcome);
   if (requiredGateFailed || outcomes.includes("DOES_NOT_MEET")) return "REJECT";
-  if (outcomes.includes("NEEDS_CLARIFICATION")) return "SUPPLEMENT";
+  if (
+    outcomes.includes("NEEDS_CLARIFICATION") ||
+    outcomes.includes("INSUFFICIENT_BASIS")
+  )
+    return "SUPPLEMENT";
   if (outcomes.every((outcome) => outcome === "NOT_APPLICABLE")) return null;
   return "APPROVE";
 }
@@ -98,6 +124,7 @@ function resultLabel(value: ReviewRecommendation | null) {
 }
 
 export function VerdictReviewForm({
+  claims = [],
   evidences,
   initialReview,
   isSaving,
@@ -109,6 +136,7 @@ export function VerdictReviewForm({
   rubric,
   saveError,
 }: {
+  claims?: DossierClaim[];
   evidences: ReviewEvidenceSnapshot[];
   initialReview: ReviewData | null;
   isSaving: boolean;
@@ -146,6 +174,13 @@ export function VerdictReviewForm({
     [gates, rubric, verdicts],
   );
 
+  const repeatedRationales = useMemo(
+    () =>
+      rubric.evidencePolicyVersion === "2026.1"
+        ? duplicateApprovalRationales(verdicts)
+        : new Set<string>(),
+    [rubric.evidencePolicyVersion, verdicts],
+  );
   const validationIssues = useMemo(() => {
     const issues: string[] = [];
     for (const criterion of rubric.criteria) {
@@ -154,19 +189,34 @@ export function VerdictReviewForm({
         issues.push(`${criterion.label}: chưa chọn kết luận.`);
         continue;
       }
+      if (repeatedRationales.has(criterion.key)) {
+        issues.push(
+          `${criterion.label}: cần nhận định riêng cho tiêu chí, không lặp lại đoạn nhận định chung.`,
+        );
+      }
       if (answer.rationale.trim().length < 20) {
         issues.push(
           `${criterion.label}: nhận định cần ít nhất 20 ký tự (hiện có ${answer.rationale.trim().length}).`,
         );
       }
       if (
-        answer.outcome !== "NOT_APPLICABLE" &&
+        criterionRequiresEvidence(answer.outcome) &&
         answer.evidenceMediaIds.length === 0
       ) {
         issues.push(`${criterion.label}: chưa chọn tài liệu dẫn chiếu.`);
       }
+      const evidenceIssue = criterionEvidenceIssue(
+        rubric,
+        criterion,
+        answer as CriterionVerdict,
+        assessments,
+      );
+      if (evidenceIssue) issues.push(`${criterion.label}: ${evidenceIssue}`);
     }
     for (const gate of rubric.gates) {
+      if (!gates[gate.key] || gates[gate.key]?.outcome === "UNASSESSED") {
+        issues.push(`${gate.label}: chưa đánh giá điều kiện tiếp nhận.`);
+      }
       const rationaleLength = gates[gate.key]?.rationale.trim().length ?? 0;
       if (rationaleLength < 20) {
         issues.push(
@@ -180,7 +230,30 @@ export function VerdictReviewForm({
         if (!assessment || assessment.status === "UNREVIEWED") {
           issues.push(`${evidence.title}: chưa ghi nhận kết quả kiểm tra tệp.`);
         }
+        if (
+          assessment?.status === "NEEDS_CLARIFICATION" &&
+          assessment.note.trim().length < 10
+        ) {
+          issues.push(`${evidence.title}: cần ghi nội dung yêu cầu làm rõ.`);
+        }
       }
+    }
+    for (const evidence of evidences) {
+      const assessment = assessments[evidence.mediaAssetId];
+      if (assessment && !verificationComplete(assessment)) {
+        issues.push(
+          `${evidence.title}: cần ghi phương pháp, nguồn, phạm vi và giới hạn kiểm chứng.`,
+        );
+      }
+    }
+    if (
+      rubric.evidencePolicyVersion === "2026.1" &&
+      recommendation === "APPROVE" &&
+      hasRelevantContradiction(assessments)
+    ) {
+      issues.push(
+        "Còn mâu thuẫn minh chứng liên quan cần giải quyết trước khi đề nghị phê duyệt.",
+      );
     }
     if (recommendation === null && issues.length === 0) {
       issues.push("Cần có ít nhất một tiêu chí áp dụng cho hồ sơ.");
@@ -201,9 +274,9 @@ export function VerdictReviewForm({
     evidences,
     gates,
     recommendation,
+    repeatedRationales,
     requireEvidenceAssessments,
-    rubric.criteria,
-    rubric.gates,
+    rubric,
     verdicts,
   ]);
 
@@ -250,25 +323,34 @@ export function VerdictReviewForm({
       assessments[evidence.mediaAssetId]?.status &&
       assessments[evidence.mediaAssetId]?.status !== "UNREVIEWED",
   ).length;
-  const completedCriteria = rubric.criteria.filter(({ key }) => {
-    const answer = verdicts[key];
+  const completedCriteria = rubric.criteria.filter((criterion) => {
+    const answer = verdicts[criterion.key];
     return (
       answer?.outcome &&
+      !repeatedRationales.has(criterion.key) &&
       answer.rationale.trim().length >= 20 &&
-      (answer.outcome === "NOT_APPLICABLE" ||
-        answer.evidenceMediaIds.length > 0)
+      (!criterionRequiresEvidence(answer.outcome) ||
+        answer.evidenceMediaIds.length > 0) &&
+      !criterionEvidenceIssue(
+        rubric,
+        criterion,
+        answer as CriterionVerdict,
+        assessments,
+      )
     );
   }).length;
 
   const firstInvalidFieldId = useMemo(() => {
     for (const criterion of rubric.criteria) {
       const answer = verdicts[criterion.key];
+      if (repeatedRationales.has(criterion.key))
+        return `verdict-rationale-${criterion.key}`;
       if (!answer?.outcome) return `verdict-outcome-${criterion.key}`;
       if (answer.rationale.trim().length < 20) {
         return `verdict-rationale-${criterion.key}`;
       }
       if (
-        answer.outcome !== "NOT_APPLICABLE" &&
+        criterionRequiresEvidence(answer.outcome) &&
         answer.evidenceMediaIds.length === 0
       ) {
         return `verdict-outcome-${criterion.key}`;
@@ -292,6 +374,7 @@ export function VerdictReviewForm({
     gates,
     recommendation,
     rubric.criteria,
+    repeatedRationales,
     rubric.gates,
     verdicts,
   ]);
@@ -382,7 +465,7 @@ export function VerdictReviewForm({
               <div className="space-y-3">
                 {rubric.gates.map((gate) => {
                   const answer = gates[gate.key] ?? {
-                    outcome: "PASS" as const,
+                    outcome: "UNASSESSED" as const,
                     rationale: "",
                     evidenceMediaIds: [],
                   };
@@ -412,6 +495,7 @@ export function VerdictReviewForm({
                           }
                           value={answer.outcome}
                         >
+                          <option value="UNASSESSED">Chưa đánh giá</option>
                           <option value="PASS">Đáp ứng</option>
                           <option value="FAIL">Không đáp ứng</option>
                           <option value="NOT_APPLICABLE">Không áp dụng</option>
@@ -477,9 +561,16 @@ export function VerdictReviewForm({
                 const answer = verdicts[criterion.key];
                 const isComplete = Boolean(
                   answer?.outcome &&
+                    !repeatedRationales.has(criterion.key) &&
                     answer.rationale.trim().length >= 20 &&
-                    (answer.outcome === "NOT_APPLICABLE" ||
-                      answer.evidenceMediaIds.length > 0),
+                    (!criterionRequiresEvidence(answer.outcome) ||
+                      answer.evidenceMediaIds.length > 0) &&
+                    !criterionEvidenceIssue(
+                      rubric,
+                      criterion,
+                      answer as CriterionVerdict,
+                      assessments,
+                    ),
                 );
                 return (
                   <a
@@ -524,67 +615,107 @@ export function VerdictReviewForm({
                     <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
                       {criterion.description}
                     </p>
+                    {claims
+                      .filter((claim) => claim.criterionKey === criterion.key)
+                      .map((claim) => (
+                        <div
+                          className="mt-3 border-l-2 border-[var(--theme-accent)] bg-[var(--theme-elevated)] p-3 text-sm"
+                          key={claim.id}
+                        >
+                          <p className="font-semibold">
+                            Nhận định do người nộp khai báo
+                          </p>
+                          <p className="mt-1 whitespace-pre-wrap break-words leading-6">
+                            {claim.statement}
+                          </p>
+                          <p className="mt-2 text-xs text-[var(--theme-muted)]">
+                            {claim.evidenceMediaIds.length} tài liệu hỗ trợ. Nội
+                            dung tự khai cần được đối chiếu độc lập.
+                          </p>
+                          {claim.evidenceMediaIds.length ? (
+                            <ul className="mt-2 space-y-1">
+                              {claim.evidenceMediaIds.map((id) => (
+                                <li className="break-words" key={id}>
+                                  {evidences.find(
+                                    (file) => file.mediaAssetId === id,
+                                  )?.title ??
+                                    "Tài liệu không có trong phiên bản đã khóa"}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </div>
+                      ))}
                     <fieldset className="mt-4" disabled={readOnly}>
                       <legend className="text-sm font-bold">
                         Chọn kết luận
                       </legend>
                       <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                        {outcomeOptions.map((option, optionIndex) => {
-                          const selected = answer.outcome === option.value;
-                          return (
-                            <label
-                              className={[
-                                "flex min-h-14 items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--theme-accent)]",
-                                selected
-                                  ? option.selectedClass
-                                  : "border-[var(--theme-border)] bg-[var(--theme-elevated)] hover:border-[var(--theme-accent)]",
-                                readOnly ? "cursor-default" : "cursor-pointer",
-                              ].join(" ")}
-                              key={option.value}
-                            >
-                              <input
-                                aria-label={`${criterion.label}: ${option.label}`}
-                                checked={selected}
-                                className="sr-only"
-                                disabled={readOnly}
-                                id={
-                                  optionIndex === 0
-                                    ? `verdict-outcome-${criterion.key}`
-                                    : undefined
-                                }
-                                name={`verdict-outcome-${criterion.key}`}
-                                onChange={() =>
-                                  setVerdicts((current) => ({
-                                    ...current,
-                                    [criterion.key]: {
-                                      ...answer,
-                                      outcome: option.value,
-                                    },
-                                  }))
-                                }
-                                type="radio"
-                                value={option.value}
-                              />
-                              <span
-                                aria-hidden="true"
+                        {outcomeOptions
+                          .filter(
+                            (option) =>
+                              option.value !== "NOT_APPLICABLE" ||
+                              rubric.evidencePolicyVersion !== "2026.1" ||
+                              criterion.allowNotApplicable,
+                          )
+                          .map((option, optionIndex) => {
+                            const selected = answer.outcome === option.value;
+                            return (
+                              <label
                                 className={[
-                                  "mt-1.5 size-2 shrink-0 rounded-full",
+                                  "flex min-h-14 items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--theme-accent)]",
                                   selected
-                                    ? option.markerClass
-                                    : "bg-[var(--theme-muted)]",
+                                    ? option.selectedClass
+                                    : "border-[var(--theme-border)] bg-[var(--theme-elevated)] hover:border-[var(--theme-accent)]",
+                                  readOnly
+                                    ? "cursor-default"
+                                    : "cursor-pointer",
                                 ].join(" ")}
-                              />
-                              <span>
-                                <span className="block text-sm font-bold">
-                                  {option.label}
+                                key={option.value}
+                              >
+                                <input
+                                  aria-label={`${criterion.label}: ${option.label}`}
+                                  checked={selected}
+                                  className="sr-only"
+                                  disabled={readOnly}
+                                  id={
+                                    optionIndex === 0
+                                      ? `verdict-outcome-${criterion.key}`
+                                      : undefined
+                                  }
+                                  name={`verdict-outcome-${criterion.key}`}
+                                  onChange={() =>
+                                    setVerdicts((current) => ({
+                                      ...current,
+                                      [criterion.key]: {
+                                        ...answer,
+                                        outcome: option.value,
+                                      },
+                                    }))
+                                  }
+                                  type="radio"
+                                  value={option.value}
+                                />
+                                <span
+                                  aria-hidden="true"
+                                  className={[
+                                    "mt-1.5 size-2 shrink-0 rounded-full",
+                                    selected
+                                      ? option.markerClass
+                                      : "bg-[var(--theme-muted)]",
+                                  ].join(" ")}
+                                />
+                                <span>
+                                  <span className="block text-sm font-bold">
+                                    {option.label}
+                                  </span>
+                                  <span className="mt-0.5 block text-xs leading-4 opacity-75">
+                                    {option.note}
+                                  </span>
                                 </span>
-                                <span className="mt-0.5 block text-xs leading-4 opacity-75">
-                                  {option.note}
-                                </span>
-                              </span>
-                            </label>
-                          );
-                        })}
+                              </label>
+                            );
+                          })}
                       </div>
                     </fieldset>
                     <div className="mt-4">

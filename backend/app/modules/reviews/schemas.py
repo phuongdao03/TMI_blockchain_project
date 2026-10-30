@@ -125,7 +125,7 @@ class ReviewFindingData(ReviewSchema):
 
 
 class ReviewGateAnswerData(ReviewSchema):
-    outcome: Literal["PASS", "FAIL", "NOT_APPLICABLE"]
+    outcome: Literal["UNASSESSED", "PASS", "FAIL", "NOT_APPLICABLE"]
     rationale: Annotated[str, Field(max_length=2_000)]
     evidence_media_ids: Annotated[list[UUID], Field(max_length=10)] = Field(
         default_factory=list
@@ -139,16 +139,41 @@ class SpecialistCriterionAnswerData(ReviewSchema):
 
 
 class CriterionVerdictData(ReviewSchema):
-    outcome: Literal["MEETS", "NEEDS_CLARIFICATION", "DOES_NOT_MEET", "NOT_APPLICABLE"]
+    outcome: Literal[
+        "MEETS",
+        "NEEDS_CLARIFICATION",
+        "DOES_NOT_MEET",
+        "NOT_APPLICABLE",
+        "INSUFFICIENT_BASIS",
+    ]
     rationale: Annotated[str, Field(max_length=2_000)] = ""
     evidence_media_ids: Annotated[list[UUID], Field(max_length=10)] = Field(
         default_factory=list
     )
 
 
+class EvidenceVerificationData(ReviewSchema):
+    outcome: Literal[
+        "UNVERIFIED",
+        "VERIFIED",
+        "PARTIAL",
+        "INSUFFICIENT",
+        "CONTRADICTED",
+        "UNVERIFIABLE",
+    ] = "UNVERIFIED"
+    method: Annotated[str, Field(max_length=1_000)] = ""
+    source: Annotated[str, Field(max_length=1_000)] = ""
+    scope: Annotated[str, Field(max_length=1_000)] = ""
+    limitations: Annotated[str, Field(max_length=1_000)] = ""
+    # Accepted on round trips; the service ignores client attribution.
+    verified_by: UUID | None = None
+    verified_at: Annotated[str | None, Field(max_length=64)] = None
+
+
 class EvidenceAssessmentData(ReviewSchema):
     status: Literal["UNREVIEWED", "VALID", "NEEDS_CLARIFICATION", "NOT_RELEVANT"]
     note: Annotated[str, Field(max_length=1_000)] = ""
+    verification: EvidenceVerificationData | None = None
 
 
 class ReviewDraftRequest(ReviewSchema):

@@ -179,6 +179,30 @@ def _validate_review_rubric(rubric: object, errors: list[dict[str, str]]) -> Non
             "Must be SCORED or VERDICT.",
         )
     is_verdict = assessment_method == "VERDICT"
+    policy = rubric.get("evidencePolicyVersion")
+    minimum_reviews = rubric.get("minimumIndependentReviews")
+    if minimum_reviews is not None and policy != "2026.1":
+        _append_error(
+            errors,
+            f"{path}.minimumIndependentReviews",
+            "Requires evidencePolicyVersion 2026.1.",
+        )
+    if minimum_reviews is not None and (
+        not isinstance(minimum_reviews, int)
+        or isinstance(minimum_reviews, bool)
+        or not 1 <= minimum_reviews <= 10
+    ):
+        _append_error(
+            errors,
+            f"{path}.minimumIndependentReviews",
+            "Must be an integer from 1 to 10.",
+        )
+    if policy is not None and (policy != "2026.1" or not is_verdict):
+        _append_error(
+            errors,
+            f"{path}.evidencePolicyVersion",
+            "Only 2026.1 on a VERDICT rubric is supported.",
+        )
 
     gates = rubric.get("gates", [])
     _validate_keyed_items(gates, f"{path}.gates", errors)
@@ -211,6 +235,15 @@ def _validate_review_rubric(rubric: object, errors: list[dict[str, str]]) -> Non
                 value = criterion.get(text_key)
                 if not isinstance(value, str) or not value.strip():
                     _append_error(errors, f"{item_path}.{text_key}", "Is required.")
+            for flag in ("allowNotApplicable", "verificationRequired"):
+                if flag in criterion and policy != "2026.1":
+                    _append_error(
+                        errors,
+                        f"{item_path}.{flag}",
+                        "Requires evidencePolicyVersion 2026.1.",
+                    )
+                if flag in criterion and not isinstance(criterion[flag], bool):
+                    _append_error(errors, f"{item_path}.{flag}", "Must be a boolean.")
             if not is_verdict:
                 weight = criterion.get("weight")
                 if (

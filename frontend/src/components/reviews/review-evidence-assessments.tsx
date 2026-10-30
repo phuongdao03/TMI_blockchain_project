@@ -6,6 +6,7 @@ import { formatEvidenceMimeType } from "@/components/reviews/review-evidence-for
 import type {
   EvidenceAssessment,
   EvidenceAssessmentStatus,
+  EvidenceVerification,
   ReviewEvidenceSnapshot,
 } from "@/lib/api/types";
 
@@ -18,6 +19,25 @@ const statusOptions: Array<{
   { value: "NEEDS_CLARIFICATION", label: "Cần làm rõ" },
   { value: "NOT_RELEVANT", label: "Không liên quan" },
 ];
+
+const verificationOptions: Array<{
+  value: EvidenceVerification["outcome"];
+  label: string;
+}> = [
+  { value: "UNVERIFIED", label: "Chưa kiểm chứng" },
+  { value: "VERIFIED", label: "Đã đối chiếu trong phạm vi kiểm tra" },
+  { value: "PARTIAL", label: "Đã đối chiếu một phần" },
+  { value: "INSUFFICIENT", label: "Chưa đủ căn cứ" },
+  { value: "CONTRADICTED", label: "Có mâu thuẫn" },
+  { value: "UNVERIFIABLE", label: "Không thể xác minh với nguồn hiện có" },
+];
+
+const verificationFields = [
+  ["method", "Phương pháp đối chiếu"],
+  ["source", "Nguồn đối chiếu"],
+  ["scope", "Phạm vi đã kiểm tra"],
+  ["limitations", "Giới hạn kiểm chứng"],
+] as const;
 
 export function ReviewEvidenceAssessments({
   assessments,
@@ -58,7 +78,9 @@ export function ReviewEvidenceAssessments({
             Kết quả kiểm tra từng tệp
           </h3>
           <p className="mt-1 text-sm text-[var(--theme-muted)]">
-            Ghi nhận tệp phù hợp, cần làm rõ hoặc không liên quan.
+            Đánh giá sự liên quan và kiểm chứng nội dung riêng. Tệp tải lên
+            thành công hoặc có mã hash không đồng nghĩa nội dung đã được xác
+            nhận.
           </p>
         </div>
         <span className="rounded-full bg-[var(--theme-surface)] px-3 py-1 text-xs font-bold text-[var(--theme-text)]">
@@ -71,6 +93,14 @@ export function ReviewEvidenceAssessments({
             status: "UNREVIEWED" as const,
             note: "",
           };
+          const verification: EvidenceVerification =
+            assessment.verification ?? {
+              outcome: "UNVERIFIED",
+              method: "",
+              source: "",
+              scope: "",
+              limitations: "",
+            };
           return (
             <article
               className="grid gap-3 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:grid-cols-[minmax(0,1fr)_13rem] sm:items-center"
@@ -124,6 +154,69 @@ export function ReviewEvidenceAssessments({
                   />
                 </label>
               ) : null}
+              <fieldset
+                className="min-w-0 space-y-3 sm:col-span-2"
+                disabled={readOnly}
+              >
+                <legend className="mb-2 text-sm font-semibold">
+                  Kiểm chứng nội dung
+                </legend>
+                <select
+                  aria-label={`Kiểm chứng nội dung ${evidence.title}`}
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm"
+                  onChange={(event) =>
+                    update(evidence.mediaAssetId, {
+                      ...assessment,
+                      verification: {
+                        ...verification,
+                        outcome: event.target
+                          .value as EvidenceVerification["outcome"],
+                      },
+                    })
+                  }
+                  value={verification.outcome}
+                >
+                  {verificationOptions.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                {verification.outcome !== "UNVERIFIED" ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {verificationFields.map(([key, label]) => (
+                      <label
+                        className="min-w-0 text-sm font-semibold"
+                        key={key}
+                      >
+                        {label}
+                        <textarea
+                          aria-label={`${label} — ${evidence.title}`}
+                          className="mt-1 min-h-24 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 font-normal"
+                          disabled={readOnly}
+                          maxLength={1_000}
+                          onChange={(event) =>
+                            update(evidence.mediaAssetId, {
+                              ...assessment,
+                              verification: {
+                                ...verification,
+                                [key]: event.target.value,
+                              },
+                            })
+                          }
+                          value={verification[key]}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+                {verification.verifiedAt ? (
+                  <p className="break-words text-xs text-[var(--theme-muted)]">
+                    Ghi nhận đối chiếu:{" "}
+                    {new Date(verification.verifiedAt).toLocaleString("vi-VN")}.
+                  </p>
+                ) : null}
+              </fieldset>
             </article>
           );
         })}

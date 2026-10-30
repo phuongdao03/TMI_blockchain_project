@@ -22,6 +22,68 @@ const evidence = {
 };
 
 describe("ReviewEvidenceAssessments", () => {
+  it("keeps relevance separate from content verification without preset success", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <ReviewEvidenceAssessments
+        assessments={{}}
+        evidences={[evidence]}
+        onChange={onChange}
+      />,
+    );
+    const verification = screen.getByRole("combobox", {
+      name: "Kiểm chứng nội dung Video giới thiệu tác phẩm",
+    });
+    expect(verification).toHaveProperty("value", "UNVERIFIED");
+    await user.selectOptions(verification, "PARTIAL");
+    expect(onChange.mock.calls.at(-1)?.[0]["media-1"]).toMatchObject({
+      status: "UNREVIEWED",
+      verification: {
+        outcome: "PARTIAL",
+        method: "",
+        source: "",
+        scope: "",
+        limitations: "",
+      },
+    });
+  });
+
+  it("shows incomplete verification fields and locks them for submitted reports", () => {
+    render(
+      <ReviewEvidenceAssessments
+        assessments={{
+          "media-1": {
+            status: "VALID",
+            note: "",
+            verification: {
+              outcome: "PARTIAL",
+              method: "",
+              source: "",
+              scope: "",
+              limitations: "",
+            },
+          },
+        }}
+        evidences={[evidence]}
+        onChange={vi.fn()}
+        readOnly
+      />,
+    );
+    for (const label of [
+      "Phương pháp đối chiếu",
+      "Nguồn đối chiếu",
+      "Phạm vi đã kiểm tra",
+      "Giới hạn kiểm chứng",
+    ]) {
+      expect(
+        screen.getByRole("textbox", {
+          name: `${label} — Video giới thiệu tác phẩm`,
+        }),
+      ).toHaveProperty("disabled", true);
+    }
+  });
+
   it("records a clear status for each frozen file", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

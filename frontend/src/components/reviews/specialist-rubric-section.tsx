@@ -111,7 +111,7 @@ export function SpecialistRubricSection({
           <h4 className="font-bold">A. Điều kiện bắt buộc</h4>
           {rubric.gates.map((gate) => {
             const answer = gateAnswers[gate.key] ?? {
-              outcome: "PASS",
+              outcome: "UNASSESSED",
               rationale: "",
               evidenceMediaIds: [],
             };
@@ -144,6 +144,7 @@ export function SpecialistRubricSection({
                     }
                     value={answer.outcome}
                   >
+                    <option value="UNASSESSED">Chưa đánh giá</option>
                     <option value="PASS">Đạt</option>
                     <option value="FAIL">Không đạt</option>
                     <option value="NOT_APPLICABLE">Không áp dụng</option>

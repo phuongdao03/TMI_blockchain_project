@@ -1,5 +1,5 @@
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -54,7 +54,11 @@ from app.modules.dossiers.models import Dossier, DossierStatus, DossierVersion
 from app.modules.dossiers.provenance import version_has_trusted_provenance
 from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.workflow import DossierWorkflowService
+from app.modules.reviews.errors import ReviewValidationError
+from app.modules.reviews.models import ReviewRecommendation
 from app.modules.reviews.repository import ReviewRepository
+from app.modules.reviews.service import ReviewService
+from app.modules.supplements.service import require_resolved
 
 COUNCIL_OPERATOR_ROLE = "SUPER_ADMIN"
 SECRETARY_ROLES = frozenset({COUNCIL_OPERATOR_ROLE})
@@ -293,6 +297,12 @@ class CouncilService:
             )
             if version is None:
                 raise CouncilConflictError("The current dossier version was not found.")
+            await self._validate_policy_decision(
+                dossier,
+                version,
+                actor_ids=(principal.user_id,),
+                approve=decision is CouncilCaseDecision.APPROVE,
+            )
             (
                 submitted_reviews,
                 unfinished_assignments,
@@ -579,6 +589,20 @@ class CouncilService:
                     principal.user_id,
                 ):
                     raise CouncilConflictError("A member may vote only once.")
+                version = await self._session.get(
+                    DossierVersion, council_case.dossier_version_id
+                )
+                dossier = await self._dossiers.get_by_id(council_case.dossier_id)
+                if version is None or dossier is None:
+                    raise CouncilConflictError(
+                        "The council dossier version was not found."
+                    )
+                await self._validate_policy_decision(
+                    dossier,
+                    version,
+                    actor_ids=(principal.user_id,),
+                    approve=choice is CouncilVoteChoice.APPROVE,
+                )
                 vote = CouncilVote(
                     id=self._uuid_factory(),
                     case_id=council_case.id,
@@ -630,16 +654,33 @@ class CouncilService:
                     )
                     if dossier is None:
                         raise CouncilNotFoundError("Dossier was not found.")
-                    if result.decision is CouncilCaseDecision.APPROVE:
-                        version = await self._session.get(
-                            DossierVersion,
-                            council_case.dossier_version_id,
+                    version = await self._session.get(
+                        DossierVersion, council_case.dossier_version_id
+                    )
+                    if version is None:
+                        raise CouncilConflictError(
+                            "The council dossier version was not found."
                         )
+                    deciding_actors = (
+                        principal.user_id,
+                        *(
+                            vote.member_user_id
+                            for vote in votes_by_case.get(council_case.id, ())
+                            if vote.choice is not CouncilVoteChoice.ABSTAIN
+                        ),
+                    )
+                    await self._validate_policy_decision(
+                        dossier,
+                        version,
+                        actor_ids=deciding_actors,
+                        approve=result.decision is CouncilCaseDecision.APPROVE,
+                    )
+                    if result.decision is CouncilCaseDecision.APPROVE:
                         evidence_rows = await self._dossiers.list_evidences(
                             council_case.dossier_id,
                             version_id=council_case.dossier_version_id,
                         )
-                        if version is None or not version_has_trusted_provenance(
+                        if not version_has_trusted_provenance(
                             version,
                             evidence_rows,
                         ):
@@ -681,6 +722,73 @@ class CouncilService:
                 session_id,
             )
         return result_view
+
+    async def _validate_policy_decision(
+        self,
+        dossier: Dossier,
+        version: DossierVersion,
+        *,
+        actor_ids: tuple[UUID, ...],
+        approve: bool,
+    ) -> None:
+        if approve:
+            await require_resolved(self._session, dossier.id)
+        raw_dossier = version.snapshot_json.get("dossier")
+        raw_type = (
+            raw_dossier.get("dossierType") if isinstance(raw_dossier, Mapping) else None
+        )
+        rubric = raw_type.get("reviewRubric") if isinstance(raw_type, Mapping) else None
+        if (
+            not isinstance(rubric, Mapping)
+            or rubric.get("evidencePolicyVersion") != "2026.1"
+        ):
+            return
+        if dossier.current_version_no != version.version_no:
+            raise CouncilConflictError(
+                "The council case refers to a stale dossier version."
+            )
+        reports = await self._council.submitted_review_reports(version.id)
+        reviewers = {reviewer_id for reviewer_id, _ in reports}
+        conflicted_reviewers = await self._council.conflicted_reviewer_ids(version.id)
+        if any(
+            actor_id == dossier.owner_user_id
+            or actor_id in reviewers
+            or actor_id in conflicted_reviewers
+            for actor_id in actor_ids
+        ):
+            raise CouncilConflictError(
+                "A decision must be independent; dossier owners, submitted "
+                "reviewers and unresolved conflicts are excluded."
+            )
+        if not approve:
+            return
+        minimum = rubric.get("minimumIndependentReviews", 1)
+        if (
+            not isinstance(minimum, int)
+            or isinstance(minimum, bool)
+            or not 1 <= minimum <= 10
+        ):
+            raise CouncilConflictError(
+                "The frozen independent-review policy is invalid."
+            )
+        if dossier.owner_user_id in reviewers or len(reviewers) < minimum:
+            raise CouncilConflictError(
+                "The required independent reviews are not complete."
+            )
+        _, unfinished = await self._reviews.get_council_review_gate(version.id)
+        if unfinished:
+            raise CouncilConflictError("There are unresolved reviewer assignments.")
+        for _, review in reports:
+            if review.recommendation is not ReviewRecommendation.APPROVE:
+                raise CouncilConflictError(
+                    "There are unresolved expert recommendations."
+                )
+            try:
+                ReviewService.validate_approval_review(review, version.snapshot_json)
+            except ReviewValidationError as exc:
+                raise CouncilConflictError(
+                    "There are unresolved expert assessment or evidence issues."
+                ) from exc
 
     async def get_minutes(
         self,

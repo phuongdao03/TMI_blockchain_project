@@ -240,7 +240,7 @@ describe("FiveTScorecard", () => {
           expect.objectContaining({
             gateAnswers: {
               eligibility: expect.objectContaining({
-                outcome: "PASS",
+                outcome: "UNASSESSED",
                 rationale: "Đang xem",
               }),
             },

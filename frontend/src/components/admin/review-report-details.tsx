@@ -9,10 +9,12 @@ const verdictLabels: Record<CriterionVerdictOutcome, string> = {
   MEETS: "Đáp ứng",
   NEEDS_CLARIFICATION: "Cần làm rõ hoặc bổ sung",
   DOES_NOT_MEET: "Không đáp ứng",
+  INSUFFICIENT_BASIS: "Chưa đủ căn cứ",
   NOT_APPLICABLE: "Không áp dụng",
 };
 
 const gateLabels = {
+  UNASSESSED: "Chưa đánh giá",
   PASS: "Đáp ứng",
   FAIL: "Không đáp ứng",
   NOT_APPLICABLE: "Không áp dụng",

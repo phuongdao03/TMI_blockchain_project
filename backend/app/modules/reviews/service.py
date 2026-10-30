@@ -602,7 +602,11 @@ class ReviewService:
                     assignment_id=assignment.id,
                 )
                 self._reviews.add_review(review)
+            previous_assessments = review.evidence_assessments or {}
             self._apply_draft(review, validated)
+            self._attribute_verifications(
+                review, previous_assessments, principal.user_id
+            )
             rubric = self._rubric_from_snapshot(version.snapshot_json)
             review.rubric_version = (
                 str(rubric["version"]) if rubric is not None else None
@@ -647,6 +651,11 @@ class ReviewService:
             if version is None:
                 raise ReviewNotFoundError()
             self._validate_complete_evidence_assessments(review, version.snapshot_json)
+            if any(
+                answer.get("outcome") == "UNASSESSED"
+                for answer in (review.gate_answers or {}).values()
+            ):
+                raise ReviewValidationError("Every rubric gate requires an assessment.")
             rubric = self._rubric_from_snapshot(version.snapshot_json)
             if rubric is not None and self._is_verdict_rubric(rubric):
                 self._validate_verdict_decision(review, rubric)
@@ -937,7 +946,72 @@ class ReviewService:
                     "Evidence assessment note cannot exceed 1000 characters."
                 )
             result[media_id] = {"status": status, "note": normalized_note}
+            raw_verification = assessment.get("verification")
+            if raw_verification is not None:
+                if not isinstance(raw_verification, Mapping):
+                    raise ReviewValidationError("Evidence verification is invalid.")
+                outcome = raw_verification.get("outcome", "UNVERIFIED")
+                if outcome not in {
+                    "UNVERIFIED",
+                    "VERIFIED",
+                    "PARTIAL",
+                    "INSUFFICIENT",
+                    "CONTRADICTED",
+                    "UNVERIFIABLE",
+                }:
+                    raise ReviewValidationError(
+                        "Evidence verification outcome is invalid."
+                    )
+                verification: dict[str, object] = {"outcome": outcome}
+                for key in ("method", "source", "scope", "limitations"):
+                    value = raw_verification.get(key, "")
+                    if not isinstance(value, str) or len(value.strip()) > 1_000:
+                        raise ReviewValidationError(
+                            "Evidence verification text must be at most "
+                            "1000 characters."
+                        )
+                    verification[key] = value.strip()
+                result[media_id]["verification"] = verification
         return result
+
+    def _attribute_verifications(
+        self,
+        review: Review,
+        previous: Mapping[str, Mapping[str, object]],
+        actor_id: UUID,
+    ) -> None:
+        for media_id, old_assessment in previous.items():
+            if media_id not in review.evidence_assessments and isinstance(
+                old_assessment.get("verification"), Mapping
+            ):
+                review.evidence_assessments[media_id] = dict(old_assessment)
+        for media_id, assessment in review.evidence_assessments.items():
+            verification = assessment.get("verification")
+            old = previous.get(media_id, {}).get("verification")
+            if not isinstance(verification, dict):
+                # Older clients may still save relevance-only records.
+                if isinstance(old, Mapping):
+                    assessment["verification"] = dict(old)
+                continue
+            keys = ("outcome", "method", "source", "scope", "limitations")
+            if isinstance(old, Mapping) and all(
+                old.get(key) == verification.get(key) for key in keys
+            ):
+                verification["verified_by"] = old.get("verified_by")
+                verification["verified_at"] = old.get("verified_at")
+            else:
+                verification["verified_by"] = str(actor_id)
+                verification["verified_at"] = self._clock().isoformat()
+                self._audit_service.record(
+                    actor_user_id=actor_id,
+                    action="review.evidence_verification_changed",
+                    resource_type="review_assignment",
+                    resource_id=str(review.assignment_id),
+                    before={"outcome": old.get("outcome")}
+                    if isinstance(old, Mapping)
+                    else None,
+                    after={"media_id": media_id, "outcome": verification["outcome"]},
+                )
 
     @staticmethod
     def _validated_verdict_map(
@@ -950,6 +1024,7 @@ class ReviewService:
             "NEEDS_CLARIFICATION",
             "DOES_NOT_MEET",
             "NOT_APPLICABLE",
+            "INSUFFICIENT_BASIS",
         }
         result: dict[str, dict[str, object]] = {}
         for key, answer in answers.items():
@@ -1034,7 +1109,7 @@ class ReviewService:
                 normalized["score"] = score
             else:
                 outcome = answer.get("outcome")
-                if outcome not in {"PASS", "FAIL", "NOT_APPLICABLE"}:
+                if outcome not in {"UNASSESSED", "PASS", "FAIL", "NOT_APPLICABLE"}:
                     raise ReviewValidationError("Gate outcome is invalid.")
                 normalized["outcome"] = outcome
             result[key] = normalized
@@ -1125,6 +1200,20 @@ class ReviewService:
         review: Review,
         snapshot: Mapping[str, object],
     ) -> None:
+        assessments = review.evidence_assessments or {}
+        for assessment in assessments.values():
+            verification = assessment.get("verification")
+            if not isinstance(verification, Mapping):
+                continue
+            if verification.get("outcome") != "UNVERIFIED" and any(
+                not isinstance(verification.get(key), str)
+                or not str(verification[key]).strip()
+                for key in ("method", "source", "scope", "limitations")
+            ):
+                raise ReviewValidationError(
+                    "Content verification requires method, source, scope "
+                    "and limitations."
+                )
         if snapshot.get("schemaVersion") != 2:
             return
         raw_evidences = snapshot.get("evidences")
@@ -1136,7 +1225,6 @@ class ReviewService:
             if isinstance(evidence, Mapping)
             and isinstance(evidence.get("mediaAssetId"), str)
         }
-        assessments = review.evidence_assessments or {}
         assessed = {
             media_id
             for media_id, assessment in assessments.items()
@@ -1324,6 +1412,21 @@ class ReviewService:
                     "Specialist score is below the approval threshold."
                 )
 
+    @classmethod
+    def validate_approval_review(
+        cls, review: Review, snapshot: Mapping[str, object]
+    ) -> None:
+        """Recheck a frozen verdict before council approval, including imported rows."""
+        rubric = cls._rubric_from_snapshot(snapshot)
+        if rubric is None or not cls._is_verdict_rubric(rubric):
+            raise ReviewValidationError("A frozen verdict rubric is required.")
+        if review.recommendation is not ReviewRecommendation.APPROVE:
+            raise ReviewValidationError(
+                "The submitted review does not recommend approval."
+            )
+        cls._validate_complete_evidence_assessments(review, snapshot)
+        cls._validate_verdict_decision(review, rubric)
+
     @staticmethod
     def _validate_verdict_decision(
         review: Review, rubric: Mapping[str, object]
@@ -1338,20 +1441,74 @@ class ReviewService:
         criterion_verdicts = review.criterion_verdicts or {}
         if set(criterion_verdicts) != criterion_keys:
             raise ReviewValidationError("Every rubric criterion requires a conclusion.")
-        for answer in criterion_verdicts.values():
+        policy_enabled = rubric.get("evidencePolicyVersion") == "2026.1"
+        criteria_by_key = {
+            str(item["key"]): item for item in raw_criteria if isinstance(item, Mapping)
+        }
+        approval_rationales: set[str] = set()
+        for key, answer in criterion_verdicts.items():
             if not isinstance(answer, Mapping):
                 raise ReviewValidationError("Stored criterion conclusion is invalid.")
             rationale = answer.get("rationale")
             evidence_ids = answer.get("evidence_media_ids", [])
+            if not isinstance(evidence_ids, (list, tuple)):
+                raise ReviewValidationError("Stored criterion evidence is invalid.")
             outcome = answer.get("outcome")
             if not isinstance(rationale, str) or len(rationale.strip()) < 20:
                 raise ReviewValidationError(
                     "Every rubric criterion requires a clear rationale."
                 )
-            if outcome != "NOT_APPLICABLE" and not evidence_ids:
+            if (
+                outcome not in {"NOT_APPLICABLE", "INSUFFICIENT_BASIS"}
+                and not evidence_ids
+            ):
                 raise ReviewValidationError(
                     "Every applicable rubric criterion requires evidence."
                 )
+            if policy_enabled:
+                if outcome == "MEETS":
+                    normalized = " ".join(rationale.split()).casefold()
+                    if normalized in approval_rationales:
+                        raise ReviewValidationError(
+                            "Approval requires criterion-specific rationales, "
+                            "not repeated boilerplate."
+                        )
+                    approval_rationales.add(normalized)
+                criterion = criteria_by_key[key]
+                if outcome == "NOT_APPLICABLE" and not criterion.get(
+                    "allowNotApplicable", False
+                ):
+                    raise ReviewValidationError(
+                        "This criterion does not permit not applicable."
+                    )
+                if outcome == "MEETS":
+                    for media_id in evidence_ids:
+                        assessment = (review.evidence_assessments or {}).get(
+                            str(media_id), {}
+                        )
+                        if assessment.get("status") != "VALID":
+                            raise ReviewValidationError(
+                                "MEETS requires relevant evidence without "
+                                "open clarification."
+                            )
+                        verification = assessment.get("verification")
+                        verified_outcome = (
+                            verification.get("outcome")
+                            if isinstance(verification, Mapping)
+                            else "UNVERIFIED"
+                        )
+                        if verified_outcome in {
+                            "INSUFFICIENT",
+                            "CONTRADICTED",
+                            "UNVERIFIABLE",
+                        } or (
+                            criterion.get("verificationRequired") is True
+                            and verified_outcome != "VERIFIED"
+                        ):
+                            raise ReviewValidationError(
+                                "MEETS cannot bypass required or unresolved "
+                                "content verification."
+                            )
         outcomes = {
             str(value.get("outcome"))
             for value in criterion_verdicts.values()
@@ -1363,6 +1520,12 @@ class ReviewService:
         gate_answers = review.gate_answers or {}
         if set(gate_answers) != gate_keys:
             raise ReviewValidationError("All mandatory rubric gates are required.")
+        if any(
+            answer.get("outcome") not in {"PASS", "FAIL", "NOT_APPLICABLE"}
+            for answer in gate_answers.values()
+            if isinstance(answer, Mapping)
+        ):
+            raise ReviewValidationError("Every rubric gate requires an assessment.")
         if any(
             not isinstance(answer, Mapping)
             or len(str(answer.get("rationale", "")).strip()) < 20
@@ -1378,12 +1541,23 @@ class ReviewService:
         expected = ReviewRecommendation.APPROVE
         if required_gate_failed or "DOES_NOT_MEET" in outcomes:
             expected = ReviewRecommendation.REJECT
-        elif "NEEDS_CLARIFICATION" in outcomes:
+        elif outcomes & {"NEEDS_CLARIFICATION", "INSUFFICIENT_BASIS"}:
             expected = ReviewRecommendation.SUPPLEMENT
         if review.recommendation is not expected:
             raise ReviewValidationError(
                 f"Criterion conclusions require recommendation {expected.value}."
             )
+        if policy_enabled and expected is ReviewRecommendation.APPROVE:
+            for assessment in (review.evidence_assessments or {}).values():
+                verification = assessment.get("verification")
+                if (
+                    assessment.get("status") != "NOT_RELEVANT"
+                    and isinstance(verification, Mapping)
+                    and verification.get("outcome") == "CONTRADICTED"
+                ):
+                    raise ReviewValidationError(
+                        "Resolve the relevant evidence contradiction before approval."
+                    )
         if expected in {
             ReviewRecommendation.SUPPLEMENT,
             ReviewRecommendation.REJECT,

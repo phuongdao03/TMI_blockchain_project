@@ -1911,6 +1911,8 @@ export type EvidenceAccessScope =
   | "PUBLIC";
 
 export interface Dossier {
+  claims?: DossierClaim[];
+  claimsRevision?: number;
   submissionFeeRequired?: boolean;
   submissionFeePaidAt?: string | null;
   id: string;
@@ -1963,8 +1965,16 @@ export interface DossierDocumentRule {
 }
 
 export interface DossierDetail extends Dossier {
+  claimCriteria?: Array<{ key: string; label: string }>;
   evidences: DossierEvidence[];
   documentRules: DossierDocumentRule[];
+}
+
+export interface DossierClaim {
+  id: string;
+  criterionKey: string;
+  statement: string;
+  evidenceMediaIds: string[];
 }
 
 export interface DossierInput {
@@ -2303,9 +2313,11 @@ export interface ReviewEvidenceSnapshot {
 }
 
 export interface ReviewRubric {
+  minimumIndependentReviews?: number;
   version: string;
   title: string;
   assessmentMethod?: "SCORED" | "VERDICT";
+  evidencePolicyVersion?: "2026.1";
   gates: Array<{
     key: string;
     label: string;
@@ -2317,12 +2329,14 @@ export interface ReviewRubric {
     label: string;
     description: string;
     weight?: number;
+    allowNotApplicable?: boolean;
+    verificationRequired?: boolean;
   }>;
   thresholds?: { approveMin: number; rejectBelow: number };
 }
 
 export interface ReviewGateAnswer {
-  outcome: "PASS" | "FAIL" | "NOT_APPLICABLE";
+  outcome: "UNASSESSED" | "PASS" | "FAIL" | "NOT_APPLICABLE";
   rationale: string;
   evidenceMediaIds: string[];
 }
@@ -2337,6 +2351,7 @@ export type CriterionVerdictOutcome =
   | "MEETS"
   | "NEEDS_CLARIFICATION"
   | "DOES_NOT_MEET"
+  | "INSUFFICIENT_BASIS"
   | "NOT_APPLICABLE";
 
 export interface CriterionVerdict {
@@ -2348,6 +2363,7 @@ export interface CriterionVerdict {
 export interface ReviewSnapshot {
   schemaVersion: number;
   dossier: {
+    claims?: DossierClaim[];
     id: string;
     code: string;
     title: string;
@@ -2391,6 +2407,23 @@ export type EvidenceAssessmentStatus =
 export interface EvidenceAssessment {
   status: EvidenceAssessmentStatus;
   note: string;
+  verification?: EvidenceVerification | null;
+}
+
+export interface EvidenceVerification {
+  outcome:
+    | "UNVERIFIED"
+    | "VERIFIED"
+    | "PARTIAL"
+    | "INSUFFICIENT"
+    | "CONTRADICTED"
+    | "UNVERIFIABLE";
+  method: string;
+  source: string;
+  scope: string;
+  limitations: string;
+  verifiedBy?: string | null;
+  verifiedAt?: string | null;
 }
 
 export interface ReviewData extends ReviewDraft {
