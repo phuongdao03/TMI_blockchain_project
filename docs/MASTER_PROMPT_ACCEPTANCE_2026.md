@@ -1,5 +1,9 @@
 # Master prompt acceptance — 2026-10-27
 
+The separate dossier/evidence/review upgrade dated 2026-10-30 is tracked in
+[its implementation handoff](handoffs/structured-dossier-review-2026.md).
+This document continues to describe the earlier UX brief.
+
 This is an evidence inventory, not a declaration of full acceptance. The source
 brief is the supplied “TINH HOA VIỆT UX/UI TRANSFORMATION 2026” attachment.
 Preserve the existing app and the confirmed replacement submission-fee policy.
