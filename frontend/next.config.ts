@@ -70,6 +70,7 @@ const qrRedirectHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  ...(process.env.CI === "true" ? { devIndicators: false } : {}),
   allowedDevOrigins: ["127.0.0.1"],
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   output: "standalone",

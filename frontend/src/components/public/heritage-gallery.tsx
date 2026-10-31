@@ -151,6 +151,7 @@ export function HeritageGallery() {
                 key={`${photo.file}-${retry}`}
                 onError={() => setFailedFile(photo.file)}
                 onLoad={() => setLoadedFile(photo.file)}
+                loading={photo.file === photos[0]?.file ? "eager" : "lazy"}
                 sizes="(max-width: 48rem) 100vw, 1280px"
                 src={`/assets/institution/${photo.file}`}
               />

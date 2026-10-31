@@ -107,9 +107,6 @@
   color: var(--theme-muted);
   font-size: 0.875rem;
 }
-.home-editorial .registry-hero__document-link[href="/process"] {
-  display: none;
-}
 .home-editorial .registry-hero__discover {
   margin: 0;
 }

@@ -121,7 +121,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       "Thông tin nhất quán",
       "Đủ căn cứ xác minh",
     ];
-    for (const criterion of criteria) {
+    for (const [index, criterion] of criteria.entries()) {
       const meetsCriterion = page.getByRole("radio", {
         name: `${criterion}: Đáp ứng`,
       });
@@ -131,11 +131,12 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       await page
         .getByLabel(`Nhận định ${criterion}`)
         .fill(`Đã đối chiếu tài liệu và xác nhận ${criterion.toLowerCase()}.`);
-    }
-    const checklist = page.getByRole("checkbox");
-    await expect(checklist).toHaveCount(criteria.length);
-    for (let index = 0; index < criteria.length; index += 1) {
-      await checklist.nth(index).check();
+      const evidence = page.getByRole("checkbox");
+      await expect(evidence).toHaveCount(1);
+      await evidence.check();
+      if (index < criteria.length - 1) {
+        await page.getByRole("button", { name: "Tiêu chí tiếp theo" }).click();
+      }
     }
     await expect(
       page.locator("#review-final-result").getByText("Đề nghị phê duyệt"),

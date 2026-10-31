@@ -34,7 +34,7 @@ test("admin can preview and send to one active account", async ({ page }) => {
   await page.getByRole("button", { name: /Nguyễn Văn An/ }).click();
   await page.getByLabel("Tiêu đề").fill("Lịch làm việc mới");
   await page
-    .getByLabel("Nội dung")
+    .getByRole("textbox", { name: "Nội dung", exact: true })
     .fill("Vui lòng kiểm tra lịch làm việc tuần tới.");
   await page.getByRole("button", { name: "Xem số người nhận" }).click();
   await expect(page.getByText("1 tài khoản sẽ nhận thông báo.")).toBeVisible();

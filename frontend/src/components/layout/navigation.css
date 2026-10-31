@@ -267,7 +267,8 @@
   .site-mobile-navigation__item > span {
     overflow: visible;
     text-overflow: clip;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
   .public-shell {
     padding-bottom: var(--mobile-navigation-inset);
