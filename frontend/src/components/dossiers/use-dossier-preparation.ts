@@ -266,6 +266,45 @@ export function useDossierPreparation({
     return () => window.removeEventListener("beforeunload", prevent);
   }, [dirty]);
 
+  useEffect(() => {
+    if (!dirty || !storageError) return;
+    // Successful local recovery is sufficient for internal navigation. Warn only
+    // when both the server revision and the browser backup are still unavailable.
+    const protect = (event: MouseEvent) => {
+      const anchor =
+        event.target instanceof Element
+          ? event.target.closest<HTMLAnchorElement>("a[href]")
+          : null;
+      if (
+        !anchor ||
+        event.defaultPrevented ||
+        anchor.hasAttribute("download") ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        event.button !== 0
+      )
+        return;
+      const next = new URL(anchor.href, window.location.href);
+      if (
+        next.pathname === window.location.pathname &&
+        next.search === window.location.search
+      )
+        return;
+      if (
+        !window.confirm(
+          "Nội dung chưa được lưu và chưa thể sao lưu trên thiết bị. Bạn có muốn rời trang?",
+        )
+      ) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    };
+    document.addEventListener("click", protect, true);
+    return () => document.removeEventListener("click", protect, true);
+  }, [dirty, storageError]);
+
   const useServer = () => {
     if (!conflict || !userId) return;
     revision.current = conflict.revision;

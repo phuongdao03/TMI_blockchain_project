@@ -23,6 +23,14 @@ const backupSchema = z.object({
   }),
 });
 const key = (owner: string) => `thv:dossier-preparation:${owner}`;
+// Survives client-side back/forward when browser storage is unavailable.
+// Owner matching and the existing logout cleanup also apply to this fallback.
+let volatileBackup: {
+  owner: string;
+  revision: number;
+  savedAt: number;
+  payload: DossierPreparationPayload;
+} | null = null;
 
 export function serializePreparation(value: DossierPreparationPayload | null) {
   return JSON.stringify(value, (_name, item: unknown) =>
@@ -34,19 +42,26 @@ export function serializePreparation(value: DossierPreparationPayload | null) {
   );
 }
 export function readPreparationBackup(owner: string) {
+  const memory =
+    volatileBackup?.owner === owner &&
+    Date.now() - volatileBackup.savedAt <= 86_400_000
+      ? volatileBackup
+      : null;
   try {
     const raw = sessionStorage.getItem(key(owner));
-    if (!raw || raw.length > 131072) return null;
+    if (!raw || raw.length > 131072) return memory;
     const parsed = backupSchema.safeParse(JSON.parse(raw));
     if (
       !parsed.success ||
       parsed.data.owner !== owner ||
       Date.now() - parsed.data.savedAt > 86_400_000
     )
-      return null;
-    return parsed.data;
+      return memory;
+    return memory && memory.savedAt >= parsed.data.savedAt
+      ? memory
+      : parsed.data;
   } catch {
-    return null;
+    return memory;
   }
 }
 export function writePreparationBackup(
@@ -54,17 +69,17 @@ export function writePreparationBackup(
   revision: number,
   payload: DossierPreparationPayload,
 ) {
+  const backup = { owner, revision, payload, savedAt: Date.now() };
+  volatileBackup = structuredClone(backup);
   try {
-    sessionStorage.setItem(
-      key(owner),
-      JSON.stringify({ owner, revision, payload, savedAt: Date.now() }),
-    );
+    sessionStorage.setItem(key(owner), JSON.stringify(backup));
     return true;
   } catch {
     return false;
   }
 }
 export function clearPreparationBackup(owner: string) {
+  if (volatileBackup?.owner === owner) volatileBackup = null;
   try {
     sessionStorage.removeItem(key(owner));
   } catch {

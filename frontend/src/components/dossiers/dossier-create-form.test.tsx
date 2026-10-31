@@ -17,6 +17,71 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 describe("DossierCreateForm", () => {
+  it("explains organization registration and allows reviewing a draft without it", async () => {
+    const user = userEvent.setup();
+    listTypesMock.mockResolvedValue([
+      {
+        id: "organization",
+        name: "Tổ chức, doanh nghiệp",
+        code: "ORGANIZATION",
+        currentVersion: {
+          id: "org-v1",
+          versionNo: 1,
+          schema: {
+            fields: [
+              {
+                key: "legalRepresentative",
+                type: "text",
+                label: "Người đại diện",
+                required: true,
+              },
+              {
+                key: "registrationNumber",
+                type: "text",
+                label: "Mã số đăng ký",
+                required: false,
+              },
+            ],
+          },
+        },
+      },
+    ]);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <DossierCreateForm />
+      </QueryClientProvider>,
+    );
+    await user.click(
+      await screen.findByRole("radio", { name: /Tổ chức, doanh nghiệp/ }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Tiếp tục nhập thông tin" }),
+    );
+    await user.type(
+      screen.getByLabelText("Tên tài sản hoặc tác phẩm"),
+      "Tổ chức Văn hóa Việt",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Tiếp tục thông tin theo loại" }),
+    );
+    const registration = screen.getByLabelText(
+      "Số đăng ký của tổ chức/doanh nghiệp (không bắt buộc)",
+    );
+    expect(registration).toHaveProperty("required", false);
+    expect(registration).toHaveProperty("value", "");
+    expect(registration.getAttribute("aria-describedby")).toBe(
+      "field-registrationNumber-help",
+    );
+    expect(screen.getByText(/Không phải mã hồ sơ/)).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Xem lại bản nháp" }));
+    expect(screen.getByRole("alert").textContent).toContain("Người đại diện");
+    await user.type(screen.getByLabelText("Người đại diện *"), "Nguyễn Văn An");
+    await user.click(screen.getByRole("button", { name: "Xem lại bản nháp" }));
+    expect(
+      screen.getByRole("button", { name: "Tạo hồ sơ nháp" }),
+    ).toBeDefined();
+    expect(createMock).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     createMock.mockReset();
     listTypesMock.mockReset();

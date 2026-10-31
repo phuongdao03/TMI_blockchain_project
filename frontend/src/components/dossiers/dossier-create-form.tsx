@@ -61,7 +61,25 @@ function displayFieldValue(value: unknown): string {
 }
 
 function displayFieldLabel(label: string | undefined, key: string): string {
+  if (key === "registrationNumber" && (!label || label === "Mã số đăng ký")) {
+    return "Số đăng ký của tổ chức/doanh nghiệp";
+  }
   return label === "Tác giả sáng kiến" ? "Tác giả" : label || key;
+}
+
+function displayFieldHelp(
+  key: string,
+  helpText?: string,
+  required = false,
+): string | undefined {
+  if (helpText) return helpText;
+  if (key === "registrationNumber") {
+    return (
+      "Số ghi trên giấy tờ đăng ký của tổ chức/doanh nghiệp. Không phải mã hồ sơ do hệ thống cấp." +
+      (required ? "" : " Chưa có số này, bạn có thể để trống.")
+    );
+  }
+  return undefined;
 }
 
 function normalizeSearchText(value: string): string {
@@ -726,11 +744,22 @@ export function DossierCreateForm() {
                       htmlFor={`field-${field.key}`}
                     >
                       {displayFieldLabel(field.label, field.key)}
-                      {field.required ? " *" : ""}
+                      {field.required ? " *" : " (không bắt buộc)"}
                     </label>
-                    {field.helpText ? (
-                      <p className="mt-1 text-xs leading-5 text-neutral-500">
-                        {field.helpText}
+                    {displayFieldHelp(
+                      field.key,
+                      field.helpText,
+                      field.required,
+                    ) ? (
+                      <p
+                        id={`field-${field.key}-help`}
+                        className="mt-1 text-sm leading-6 text-[var(--theme-muted)]"
+                      >
+                        {displayFieldHelp(
+                          field.key,
+                          field.helpText,
+                          field.required,
+                        )}
                       </p>
                     ) : null}
                     {field.type === "textarea" ? (
@@ -857,6 +886,15 @@ export function DossierCreateForm() {
                     ) : (
                       <input
                         className="mt-2 min-h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm"
+                        aria-describedby={
+                          displayFieldHelp(
+                            field.key,
+                            field.helpText,
+                            field.required,
+                          )
+                            ? `field-${field.key}-help`
+                            : undefined
+                        }
                         id={`field-${field.key}`}
                         onChange={(event) =>
                           setFormData((current) => ({
@@ -1035,7 +1073,7 @@ export function DossierCreateForm() {
         </p>
       ) : null}
       {hasDossierTypes ? (
-        <div className="flex flex-wrap justify-end gap-3">
+        <div className="dossier-create-actions flex flex-wrap justify-end gap-3">
           {prepareStep > 0 ? (
             <Button
               onClick={() => {

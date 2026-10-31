@@ -38,6 +38,16 @@ function renderWorkspace() {
 }
 
 describe("WalletWorkspace", () => {
+  it("keeps the wallet title and recovery action when loading fails", async () => {
+    api.summary.mockRejectedValue(new Error("Unavailable"));
+    renderWorkspace();
+    expect(await screen.findByRole("alert")).toBeDefined();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Ví của tôi" }),
+    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "Thử lại" })).toBeDefined();
+    expect(screen.queryByRole("region", { name: "Số dư ví" })).toBeNull();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     auth.user = { id: "member-1", roles: ["USER"] };

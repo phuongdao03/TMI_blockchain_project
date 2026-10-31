@@ -148,6 +148,24 @@ export function VerdictReviewForm({
   rubric: ReviewRubric;
   saveError?: Error | null;
 }) {
+  const [selectedCriterion, setSelectedCriterion] = useState(
+    rubric.criteria[0]?.key ?? "",
+  );
+  const activeCriterionIndex = Math.max(
+    0,
+    rubric.criteria.findIndex(({ key }) => key === selectedCriterion),
+  );
+  const activeCriterionKey = rubric.criteria[activeCriterionIndex]?.key;
+
+  function selectCriterion(key: string, focus = false) {
+    setSelectedCriterion(key);
+    if (focus) {
+      requestAnimationFrame(() =>
+        document.getElementById(`review-criterion-${key}`)?.focus(),
+      );
+    }
+  }
+
   const [verdicts, setVerdicts] = useState<Record<string, LocalVerdict>>(() =>
     Object.fromEntries(
       Object.entries(initialReview?.criterionVerdicts ?? {}).map(
@@ -383,7 +401,19 @@ export function VerdictReviewForm({
     if (!complete) {
       setError(validationIssues[0] ?? "Phiếu còn nội dung cần hoàn tất.");
       if (firstInvalidFieldId) {
-        document.getElementById(firstInvalidFieldId)?.focus();
+        const criterion = rubric.criteria.find(
+          ({ key }) =>
+            firstInvalidFieldId === `verdict-rationale-${key}` ||
+            firstInvalidFieldId === `verdict-outcome-${key}`,
+        );
+        if (criterion && criterion.key !== activeCriterionKey) {
+          setSelectedCriterion(criterion.key);
+          requestAnimationFrame(() =>
+            document.getElementById(firstInvalidFieldId)?.focus(),
+          );
+        } else {
+          document.getElementById(firstInvalidFieldId)?.focus();
+        }
       }
       return;
     }
@@ -544,18 +574,22 @@ export function VerdictReviewForm({
             </section>
           ) : null}
 
-          <section className="space-y-3" aria-labelledby="review-verdicts">
-            <div>
+          <section
+            className="grid min-w-0 gap-4 lg:grid-cols-[minmax(12rem,0.3fr)_minmax(0,1fr)]"
+            aria-labelledby="review-verdicts"
+          >
+            <div className="lg:col-span-2">
               <h3 className="text-lg font-bold" id="review-verdicts">
                 Kết luận từng tiêu chí
               </h3>
               <p className="mt-1 text-sm text-[var(--theme-muted)]">
-                Đánh giá dựa trên tài liệu thực tế của hồ sơ.
+                Chọn một tiêu chí để đối chiếu minh chứng và ghi nhận định. Nội
+                dung đã nhập được giữ khi chuyển tiêu chí.
               </p>
             </div>
             <nav
               aria-label="Tiến độ từng tiêu chí"
-              className="flex flex-wrap gap-2"
+              className="flex min-w-0 flex-wrap content-start gap-2 lg:sticky lg:top-24 lg:flex-col lg:self-start"
             >
               {rubric.criteria.map((criterion, index) => {
                 const answer = verdicts[criterion.key];
@@ -573,14 +607,20 @@ export function VerdictReviewForm({
                     ),
                 );
                 return (
-                  <a
+                  <button
+                    aria-pressed={criterion.key === activeCriterionKey}
+                    aria-controls={`review-criterion-${criterion.key}`}
                     className={[
-                      "inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]",
+                      "inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]",
+                      criterion.key === activeCriterionKey
+                        ? "border-[var(--theme-accent)]"
+                        : "border-transparent",
                       isComplete
                         ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100"
                         : "bg-[var(--theme-elevated)] text-[var(--theme-text)] hover:bg-[var(--theme-border)]",
                     ].join(" ")}
-                    href={`#review-criterion-${criterion.key}`}
+                    onClick={() => selectCriterion(criterion.key)}
+                    type="button"
                     key={criterion.key}
                   >
                     <span className="font-mono text-xs">{index + 1}</span>
@@ -588,11 +628,11 @@ export function VerdictReviewForm({
                     <span className="text-xs opacity-75">
                       {isComplete ? "Đã xong" : "Cần làm"}
                     </span>
-                  </a>
+                  </button>
                 );
               })}
             </nav>
-            <div className="space-y-3">
+            <div className="min-w-0 space-y-3">
               {rubric.criteria.map((criterion, index) => {
                 const answer = verdicts[criterion.key] ?? {
                   outcome: "",
@@ -601,6 +641,8 @@ export function VerdictReviewForm({
                 };
                 return (
                   <fieldset
+                    hidden={criterion.key !== activeCriterionKey}
+                    tabIndex={-1}
                     className="min-w-0 scroll-mt-28 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5"
                     disabled={readOnly}
                     id={`review-criterion-${criterion.key}`}
@@ -763,6 +805,44 @@ export function VerdictReviewForm({
                   </fieldset>
                 );
               })}
+              {rubric.criteria.length > 1 ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--theme-border)] pt-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={activeCriterionIndex === 0}
+                    onClick={() =>
+                      selectCriterion(
+                        rubric.criteria[activeCriterionIndex - 1]!.key,
+                        true,
+                      )
+                    }
+                  >
+                    Tiêu chí trước
+                  </Button>
+                  <span
+                    className="text-sm text-[var(--theme-muted)]"
+                    role="status"
+                  >
+                    Tiêu chí {activeCriterionIndex + 1}/{rubric.criteria.length}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={
+                      activeCriterionIndex === rubric.criteria.length - 1
+                    }
+                    onClick={() =>
+                      selectCriterion(
+                        rubric.criteria[activeCriterionIndex + 1]!.key,
+                        true,
+                      )
+                    }
+                  >
+                    Tiêu chí tiếp theo
+                  </Button>
+                </div>
+              ) : null}
             </div>
           </section>
 
@@ -825,7 +905,7 @@ export function VerdictReviewForm({
               {error}
             </p>
           ) : null}
-          <div className="sticky bottom-0 z-20 -mx-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-t-xl bg-[var(--theme-surface)]/95 px-4 py-2 shadow-[0_-8px_24px_rgb(15_23_42_/_10%)] backdrop-blur sm:-mx-5 sm:px-5">
+          <div className="review-submit-bar sticky bottom-0 z-20 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-t-xl bg-[var(--theme-surface)]/95 px-4 py-2 shadow-[0_-8px_24px_rgb(15_23_42_/_10%)] backdrop-blur sm:px-5">
             <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
               <p
                 aria-live="polite"

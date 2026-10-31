@@ -92,7 +92,7 @@ export function PrivateDocumentVerification({ mediaId }: { mediaId: string }) {
             type="file"
           />
         </label>
-        <span className="text-xs text-neutral-500">
+        <span className="text-xs text-[var(--theme-muted)]">
           Tệp chỉ được đọc để đối chiếu và không được lưu lại.
         </span>
       </div>
@@ -115,7 +115,7 @@ export function PrivateDocumentVerification({ mediaId }: { mediaId: string }) {
             <p className="flex items-center gap-2 font-bold">
               <FileCheck2 aria-hidden="true" className="size-4" /> {copy.title}
             </p>
-            <p className="mt-1 text-neutral-500">{copy.detail}</p>
+            <p className="mt-1 text-[var(--theme-muted)]">{copy.detail}</p>
           </div>
         ) : null}
       </div>

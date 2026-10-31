@@ -6,11 +6,13 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { useState } from "react";
+import Link from "next/link";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/client";
 import type { DossierPreparationPayload } from "@/lib/api/types";
 import { useDossierPreparation } from "./use-dossier-preparation";
 import { broadcastAuthSessionChange } from "@/lib/auth/session-sync";
+import { clearPreparationBackup } from "./preparation-recovery-storage";
 
 const api = vi.hoisted(() => ({
   getPreparation: vi.fn(),
@@ -61,11 +63,14 @@ function Harness({ owner = "owner-1" }: { owner?: string }) {
       <button onClick={recovery.keepLocal}>Keep local</button>
       <button onClick={recovery.useServer}>Use server</button>
       <button onClick={() => void recovery.flush()}>Retry</button>
+      <Link href="/works">Leave preparation</Link>
       <span>{recovery.error}</span>
     </>
   );
 }
 beforeEach(() => {
+  clearPreparationBackup("owner-1");
+  clearPreparationBackup("owner-2");
   sessionStorage.clear();
   api.getPreparation.mockReset();
   api.savePreparation.mockReset();
@@ -259,6 +264,42 @@ it("does not apply an old account's in-flight response to the next account", asy
   expect(
     api.savePreparation.mock.calls.every(([owner]) => owner === "owner-1"),
   ).toBe(true);
+});
+
+it("warns on unsafe navigation and recovers a draft across remounts without browser storage", async () => {
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new Error("blocked");
+  });
+  api.savePreparation.mockRejectedValue(new Error("offline"));
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  const view = render(<Harness />);
+  fireEvent.change(await screen.findByLabelText("Title"), {
+    target: { value: "Keep on back" },
+  });
+  await screen.findByText(/Chưa đồng bộ được/);
+  expect(
+    fireEvent.click(screen.getByRole("link", { name: "Leave preparation" })),
+  ).toBe(false);
+  expect(confirm).toHaveBeenCalledTimes(1);
+  view.unmount();
+  render(<Harness />);
+  await screen.findByDisplayValue("Keep on back");
+});
+
+it("does not warn for internal navigation when a local draft backup exists", async () => {
+  api.savePreparation.mockRejectedValue(new Error("offline"));
+  const confirm = vi.spyOn(window, "confirm");
+  render(<Harness />);
+  fireEvent.change(await screen.findByLabelText("Title"), {
+    target: { value: "Local recovery" },
+  });
+  await screen.findByText(/Chưa đồng bộ được/);
+  const link = screen.getByRole("link", { name: "Leave preparation" });
+  link.addEventListener("click", (event) => event.preventDefault(), {
+    once: true,
+  });
+  fireEvent.click(link);
+  expect(confirm).not.toHaveBeenCalled();
 });
 
 it("can save to the server when browser recovery storage is unavailable", async () => {

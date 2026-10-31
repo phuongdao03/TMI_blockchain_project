@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { selectWorkspaceTheme } from "./workspace-theme";
+import { expectDocumentToFit } from "./responsive-layout";
 
 const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
 
@@ -43,6 +44,37 @@ test.beforeEach(async ({ context, request }) => {
       sameSite: "Lax",
     },
   ]);
+});
+
+test("reviewer criteria and action bar fit every target viewport in both themes", async ({
+  page,
+}) => {
+  await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
+  await expect(
+    page.getByRole("heading", { name: "Kết luận theo tiêu chí" }),
+  ).toBeVisible();
+  for (const theme of ["Giao diện sáng", "Giao diện tối"] as const) {
+    await selectWorkspaceTheme(page, theme);
+    for (const width of [320, 360, 375, 390, 414, 430, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await expectDocumentToFit(page, `${theme} at ${width}px`);
+      await expect(
+        page.locator('fieldset[id^="review-criterion-"]:visible'),
+      ).toHaveCount(1);
+      if (width < 1024) {
+        await page
+          .getByRole("button", { name: "Gửi kết quả thẩm định" })
+          .scrollIntoViewIfNeeded();
+        const actions = await page.locator(".review-submit-bar").boundingBox();
+        const navigation = await page
+          .locator(".site-mobile-navigation")
+          .boundingBox();
+        expect(actions!.y + actions!.height).toBeLessThanOrEqual(
+          navigation!.y + 1,
+        );
+      }
+    }
+  }
 });
 
 test("reviewer reviews each document and submits a criteria verdict", async ({
@@ -104,7 +136,14 @@ test("reviewer reviews each document and submits a criteria verdict", async ({
     "Thông tin nhất quán",
     "Đủ căn cứ xác minh",
   ];
+  await expect(
+    page.locator('fieldset[id^="review-criterion-"]:visible'),
+  ).toHaveCount(1);
   for (const criterion of criteria) {
+    await page
+      .getByRole("navigation", { name: "Tiến độ từng tiêu chí" })
+      .getByRole("button", { name: new RegExp(criterion) })
+      .click();
     const meetsCriterion = page.getByRole("radio", {
       name: `${criterion}: Đáp ứng`,
     });
@@ -114,12 +153,23 @@ test("reviewer reviews each document and submits a criteria verdict", async ({
     await page
       .getByLabel(`Nhận định ${criterion}`)
       .fill(`Đã đối chiếu tài liệu và xác nhận ${criterion.toLowerCase()}.`);
+    await page
+      .locator('fieldset[id^="review-criterion-"]:visible')
+      .getByRole("checkbox")
+      .check();
   }
-  const checklist = page.getByRole("checkbox");
-  await expect(checklist).toHaveCount(criteria.length);
-  for (let index = 0; index < criteria.length; index += 1) {
-    await checklist.nth(index).check();
-  }
+  await page
+    .getByRole("navigation", { name: "Tiến độ từng tiêu chí" })
+    .getByRole("button", { name: new RegExp(criteria[0]!) })
+    .click();
+  await expect(page.getByLabel(`Nhận định ${criteria[0]}`)).toHaveValue(
+    `Đã đối chiếu tài liệu và xác nhận ${criteria[0]!.toLowerCase()}.`,
+  );
+  await expect(
+    page
+      .locator('fieldset[id^="review-criterion-"]:visible')
+      .getByRole("checkbox"),
+  ).toBeChecked();
   await expect(
     page.locator("#review-final-result").getByText("Đề nghị phê duyệt"),
   ).toBeVisible();

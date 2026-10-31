@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 
@@ -19,6 +19,61 @@ const rubric: ReviewRubric = {
     },
   ],
 };
+
+it("focuses one criterion and preserves edits when moving between criteria", async () => {
+  const user = userEvent.setup();
+  const save = vi.fn().mockResolvedValue(undefined);
+  const submit = vi.fn().mockResolvedValue(undefined);
+  render(
+    <VerdictReviewForm
+      rubric={{
+        ...rubric,
+        criteria: [
+          ...rubric.criteria,
+          { key: "value", label: "Giá trị", description: "Đối chiếu giá trị" },
+        ],
+      }}
+      evidences={[]}
+      initialReview={null}
+      isSaving={false}
+      isSubmitting={false}
+      onSave={save}
+      onSubmit={submit}
+      readOnly={false}
+      requireEvidenceAssessments={false}
+    />,
+  );
+  expect(screen.queryByRole("radio", { name: "Giá trị: Đáp ứng" })).toBeNull();
+  await user.type(
+    screen.getByLabelText("Nhận định Nguồn gốc"),
+    "Nguồn được đối chiếu độc lập.",
+  );
+  await user.click(
+    screen.getByRole("radio", { name: "Nguồn gốc: Chưa đủ căn cứ" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Tiêu chí tiếp theo" }));
+  expect(screen.getByRole("radio", { name: "Giá trị: Đáp ứng" })).toBeDefined();
+  expect(
+    screen.queryByRole("radio", { name: "Nguồn gốc: Đáp ứng" }),
+  ).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Tiêu chí trước" }));
+  expect(screen.getByLabelText("Nhận định Nguồn gốc")).toHaveProperty(
+    "value",
+    "Nguồn được đối chiếu độc lập.",
+  );
+  expect(
+    screen.getByRole("radio", { name: "Nguồn gốc: Chưa đủ căn cứ" }),
+  ).toHaveProperty("checked", true);
+  await user.click(
+    screen.getByRole("button", { name: "Gửi kết quả thẩm định" }),
+  );
+  await waitFor(() =>
+    expect(screen.getByRole("radio", { name: "Giá trị: Đáp ứng" })).toBe(
+      document.activeElement,
+    ),
+  );
+  expect(submit).not.toHaveBeenCalled();
+});
 
 it("can request sources for insufficient basis without manufacturing an evidence link", async () => {
   const user = userEvent.setup();

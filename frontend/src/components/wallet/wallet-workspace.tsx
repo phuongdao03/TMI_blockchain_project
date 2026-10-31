@@ -65,12 +65,29 @@ export function WalletWorkspace({
       void client.invalidateQueries({ queryKey });
     },
   });
-  if (wallet.isPending) return <p role="status">Đang tải ví của bạn…</p>;
-  if (!wallet.data)
+  const header = (
+    <header>
+      <p className="text-sm text-[var(--theme-muted)]">
+        Tài khoản Tinh Hoa Việt
+      </p>
+      <h1 className="mt-2 text-3xl font-bold">Ví của tôi</h1>
+      <p className="mt-3 text-[var(--theme-muted)]">
+        Nạp tiền và thanh toán các dịch vụ trong cộng đồng.
+      </p>
+    </header>
+  );
+  if (wallet.isPending || !wallet.data)
     return (
-      <div role="alert">
-        <p>Chưa thể tải ví. Vui lòng thử lại.</p>
-        <Button onClick={() => void wallet.refetch()}>Thử lại</Button>
+      <div className="mx-auto max-w-4xl space-y-8 pb-8">
+        {header}
+        {wallet.isPending ? (
+          <p role="status">Đang tải ví của bạn…</p>
+        ) : (
+          <div role="alert" className="space-y-3">
+            <p>Chưa thể tải ví. Vui lòng thử lại.</p>
+            <Button onClick={() => void wallet.refetch()}>Thử lại</Button>
+          </div>
+        )}
       </div>
     );
   const data = wallet.data;
@@ -84,15 +101,7 @@ export function WalletWorkspace({
   );
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-8">
-      <header>
-        <p className="text-sm text-[var(--theme-muted)]">
-          Tài khoản Tinh Hoa Việt
-        </p>
-        <h1 className="mt-2 text-3xl font-bold">Ví của tôi</h1>
-        <p className="mt-3 text-[var(--theme-muted)]">
-          Nạp tiền và thanh toán các dịch vụ trong cộng đồng.
-        </p>
-      </header>
+      {header}
       {returnTo && (
         <Link
           className="inline-flex min-h-11 items-center font-semibold underline"
