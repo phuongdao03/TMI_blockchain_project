@@ -14,7 +14,9 @@ test("preview public home keeps submission closed and hides internal language", 
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Khám phá đề cử", exact: true }),
+    page
+      .getByRole("navigation", { name: "Điều hướng chính" })
+      .getByRole("link", { name: "Khám phá đề cử", exact: true }),
   ).toHaveAttribute("href", "/works");
   await expect(
     page.getByRole("button", { name: "Bắt đầu hồ sơ đề cử" }),
