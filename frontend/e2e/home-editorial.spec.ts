@@ -222,13 +222,24 @@ test("PDF failure offers recovery without trapping the visitor", async ({
 });
 
 test("gallery image failure can retry the real image", async ({ page }) => {
+  await page.goto("/");
+  await expect
+    .poll(() =>
+      page
+        .locator(".heritage-gallery__stage img")
+        .evaluate(
+          (image) =>
+            (image as HTMLImageElement).complete &&
+            (image as HTMLImageElement).naturalWidth > 0,
+        ),
+    )
+    .toBe(true);
   await page.route("**/_next/image**", (route) => {
     const source = new URL(route.request().url()).searchParams.get("url") ?? "";
     return source.includes("gallery-")
       ? route.fulfill({ status: 503, body: "Unavailable" })
       : route.continue();
   });
-  await page.goto("/");
   if (await page.getByLabel("Chọn bộ ảnh").isVisible())
     await page.getByLabel("Chọn bộ ảnh").selectOption("Văn hóa & đời sống");
   else await page.getByRole("button", { name: /Văn hóa & đời sống/ }).click();

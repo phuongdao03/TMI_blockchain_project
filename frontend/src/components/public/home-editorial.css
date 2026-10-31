@@ -59,7 +59,7 @@
   color: var(--theme-accent);
 }
 .public-home.home-editorial .registry-hero__copy--desktop {
-  display: block;
+  display: none;
   margin: 1rem 0 0;
   max-width: 39rem;
   color: var(--theme-muted);
@@ -72,7 +72,6 @@
   font-size: 1rem;
   line-height: 1.6;
 }
-.home-editorial .registry-hero__copy--compact,
 .home-editorial .registry-hero__summary,
 .home-editorial .registry-hero__provenance,
 .home-editorial .registry-hero__desktop-search,
@@ -647,6 +646,12 @@ html[data-theme="dark"] .public-media-dialog {
 @media (min-width: 48rem) {
   .home-intro__extended {
     display: inline;
+  }
+  .public-home.home-editorial .registry-hero__copy--compact {
+    display: none;
+  }
+  .public-home.home-editorial .registry-hero__copy--desktop {
+    display: block;
   }
   .public-home.home-editorial .registry-hero__layout {
     padding-block: 3.5rem;

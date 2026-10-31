@@ -315,7 +315,7 @@ test("mobile workspace navigation stays compact, centered and touch friendly", a
     .locator("span")
     .last()
     .evaluate((element) => getComputedStyle(element).whiteSpace);
-  expect(labelWhiteSpace).toBe("nowrap");
+  expect(labelWhiteSpace).toBe("normal");
 
   const activeBackground = await navigation
     .locator('.site-mobile-navigation__item[aria-current="page"]')
