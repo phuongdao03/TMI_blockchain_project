@@ -105,6 +105,28 @@ spacing:
 
 ## Brand & Style
 
+### Current application contract — 2026-10-30
+
+The deployed application has evolved beyond the initial concept above. For
+implementation, use the semantic `--theme-*` tokens in
+`frontend/src/app/globals.css`: warm paper `#fff9f3`, ruby `#9d0000`, ink
+`#241515`, muted `#6b5656`; dark surfaces `#1a0b0b` / `#261111` / `#321717`,
+text `#fff9f3`, muted `#e4c9c2`. Preserve the supplied official logo and
+wordmark. Do not restore the original black command-center/glass concept.
+
+Use existing Vietnamese-capable font configuration and shared button/input
+primitives. Marketing spacing does not apply to operational forms: 16–20px panel
+padding and 12–16px gaps keep evidence and decisions together. Criterion
+navigation and the selected editor use two columns only when width permits;
+phones use one column. Interactive targets are at least 44px in new controls.
+Desktop sidebar supports a compact icon rail with accessible names and native
+title tooltips; mobile retains the existing drawer and bottom navigation.
+
+Use `--theme-muted` for secondary document text in both themes, rather than the
+lower-contrast generic neutral-500 token. Status labels remain explicit; brand
+ruby is not a substitute for all status colors. Scope changes to existing
+surfaces and preserve the application's reduced-motion handling.
+
 The design system is engineered to evoke **authority, security, and timeless value**. As a digital certificate platform, it must transcend the fleeting nature of the web, presenting documents as immutable assets. The target audience includes academic institutions, luxury brands, and government agencies who require a platform that feels as prestigious as a physical parchment but as advanced as the blockchain technology powering it.
 
 The visual style is **Corporate / Modern** with **Glassmorphic** accents. It utilizes a deep, multi-layered dark aesthetic to create a "command center" feel. Subtle technical motifs—such as thin grid lines, node-and-link patterns, and microscopic data points—reinforce the blockchain narrative without cluttering the interface. The emotional response should be one of absolute trust and high-end exclusivity.

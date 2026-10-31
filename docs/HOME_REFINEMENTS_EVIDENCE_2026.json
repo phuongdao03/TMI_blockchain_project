@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-31",
+  "viewports": [320, 360, 375, 390, 414, 430, 768, 1024, 1440],
+  "themes": ["light", "dark"],
+  "environment": "Local Next + mock API; Chrome emulation. Final gallery interaction run waits for hydrated thumbnails and disables trace recording.",
+  "passed": 7,
+  "skipped": 1,
+  "failed": 0,
+  "tests": [
+    {
+      "test": "gallery filters, swipes, zooms and restores focus without losing its selection",
+      "project": "desktop-chrome",
+      "status": "expected"
+    },
+    {
+      "test": "proposal reads inline and preserves its existing reader controls",
+      "project": "desktop-chrome",
+      "status": "expected"
+    },
+    {
+      "test": "gallery image failure can retry the real image",
+      "project": "desktop-chrome",
+      "status": "expected"
+    },
+    {
+      "test": "gallery filters, swipes, zooms and restores focus without losing its selection",
+      "project": "mobile-chrome",
+      "status": "expected"
+    },
+    {
+      "test": "proposal reads inline and preserves its existing reader controls",
+      "project": "mobile-chrome",
+      "status": "expected"
+    },
+    {
+      "test": "gallery image failure can retry the real image",
+      "project": "mobile-chrome",
+      "status": "expected"
+    },
+    {
+      "test": "inline reading and compact home sections work across widths and themes",
+      "project": "desktop-chrome",
+      "status": "expected"
+    },
+    {
+      "test": "inline reading and compact home sections work across widths and themes",
+      "project": "mobile-chrome",
+      "status": "skipped"
+    }
+  ]
+}

@@ -1,0 +1,181 @@
+{
+  "date": "2026-10-31",
+  "environment": "Local Next 3197 + mock API 4097; Chrome emulation, no staging or physical-device claim",
+  "viewports": [320, 360, 375, 390, 414, 430, 768, 1024, 1440],
+  "themes": ["light", "dark"],
+  "browserPersonas": ["guest", "applicant", "reviewer", "super-admin"],
+  "multiRoleAndCapabilityCoverage": "Unit tests; not a live multi-role browser fixture",
+  "passed": 24,
+  "skipped": 4,
+  "failed": 0,
+  "tests": [
+    {
+      "test": "desktop introduction dropdown supports keyboard navigation",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/targeted-final.json"
+    },
+    {
+      "test": "navigation fits nine widths in two themes with working grouped drawers",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "anchors, back, forward, focus trap and search stay usable on mobile",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "workspaces preserve applicant reviewer and administrator entry points",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "desktop introduction dropdown supports keyboard navigation",
+      "project": "mobile-chrome",
+      "status": "skipped",
+      "evidence": "tmp/navigation-20261031/targeted-final.json"
+    },
+    {
+      "test": "navigation fits nine widths in two themes with working grouped drawers",
+      "project": "mobile-chrome",
+      "status": "skipped",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "anchors, back, forward, focus trap and search stay usable on mobile",
+      "project": "mobile-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "workspaces preserve applicant reviewer and administrator entry points",
+      "project": "mobile-chrome",
+      "status": "skipped",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "guest account actions resolve at every requested viewport",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/targeted-final.json"
+    },
+    {
+      "test": "public account survives reload and returns to guest after logout",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/targeted-final.json"
+    },
+    {
+      "test": "public home recovers a refresh-only session",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/targeted-final.json"
+    },
+    {
+      "test": "logout updates another already-open public tab",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/targeted-final.json"
+    },
+    {
+      "test": "guest account actions resolve at every requested viewport",
+      "project": "mobile-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/targeted-final.json"
+    },
+    {
+      "test": "public account survives reload and returns to guest after logout",
+      "project": "mobile-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/targeted-final.json"
+    },
+    {
+      "test": "public home recovers a refresh-only session",
+      "project": "mobile-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/targeted-final.json"
+    },
+    {
+      "test": "logout updates another already-open public tab",
+      "project": "mobile-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/targeted-final.json"
+    },
+    {
+      "test": "reviewer criteria and action bar fit every target viewport in both themes",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "reviewer reviews each document and submits a criteria verdict",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "retired similarity route returns reviewer to the main queue",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "reviewer form fits tablet width",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "reviewer assessment remains legible in dark mode",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "reviewer criteria and action bar fit every target viewport in both themes",
+      "project": "mobile-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "reviewer reviews each document and submits a criteria verdict",
+      "project": "mobile-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "retired similarity route returns reviewer to the main queue",
+      "project": "mobile-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "reviewer form fits tablet width",
+      "project": "mobile-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "reviewer assessment remains legible in dark mode",
+      "project": "mobile-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/e2e.json"
+    },
+    {
+      "test": "search overlay respects both themes at phone and desktop widths",
+      "project": "desktop-chrome",
+      "status": "expected",
+      "evidence": "tmp/navigation-20261031/targeted-final.json"
+    },
+    {
+      "test": "search overlay respects both themes at phone and desktop widths",
+      "project": "mobile-chrome",
+      "status": "skipped",
+      "evidence": "tmp/navigation-20261031/targeted-final.json"
+    }
+  ]
+}

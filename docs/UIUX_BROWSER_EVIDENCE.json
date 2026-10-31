@@ -1,0 +1,188 @@
+{
+  "date": "2026-10-30",
+  "environment": "local mock API; Chrome; reduced motion",
+  "widths": [320, 360, 390, 428, 768, 1024, 1280, 1440],
+  "themes": ["light", "dark"],
+  "routes": [
+    {
+      "role": "guest",
+      "route": "/",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 0,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "guest",
+      "route": "/works",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 0,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "guest",
+      "route": "/process",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 0,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "guest",
+      "route": "/verify",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 0,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "guest",
+      "route": "/cong-dong/hoi-vien",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 0,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "guest",
+      "route": "/community",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 0,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "guest",
+      "route": "/login",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 0,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "applicant",
+      "route": "/workspace",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 5,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "applicant",
+      "route": "/dossiers",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 0,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "applicant",
+      "route": "/dossiers/new",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 0,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "applicant",
+      "route": "/wallet",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 4,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "applicant",
+      "route": "/membership",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 0,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "applicant",
+      "route": "/advertising",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 0,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "reviewer",
+      "route": "/reviews",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 4,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "reviewer",
+      "route": "/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 4,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "super-admin",
+      "route": "/admin",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 4,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "super-admin",
+      "route": "/admin/reviews",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 0,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    },
+    {
+      "role": "super-admin",
+      "route": "/admin/payments",
+      "measurements": 16,
+      "overflows": 0,
+      "axeScans": 0,
+      "violations": 0,
+      "pageErrors": [],
+      "failure": null
+    }
+  ]
+}

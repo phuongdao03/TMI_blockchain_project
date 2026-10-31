@@ -1,0 +1,34 @@
+[
+  {
+    "label": "header-light",
+    "violations": []
+  },
+  {
+    "label": "guest-drawer-light",
+    "violations": []
+  },
+  {
+    "label": "header-dark",
+    "violations": []
+  },
+  {
+    "label": "guest-drawer-dark",
+    "violations": []
+  },
+  {
+    "label": "reviewer-drawer-light",
+    "violations": []
+  },
+  {
+    "label": "reviewer-drawer-dark",
+    "violations": []
+  },
+  {
+    "label": "super-admin-drawer-light",
+    "violations": []
+  },
+  {
+    "label": "super-admin-drawer-dark",
+    "violations": []
+  }
+]

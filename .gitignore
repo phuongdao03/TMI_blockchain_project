@@ -67,6 +67,9 @@ docs/handoffs/
 docs/handoffs/*
 !docs/handoffs/community-mobile-identity-and-deletion.md
 !docs/handoffs/ux-task-first-2026-10-27.md
+!docs/handoffs/uiux-redesign-2026-10-30.md
+!docs/handoffs/navigation-2026-10-31.md
+!docs/handoffs/home-refinements-2026-10-31.md
 docs/decisions/
 docs/release/
 docs/security/
@@ -81,3 +84,6 @@ docs/specs/*
 !docs/handoffs/council-evidence-policy-guards.md
 !docs/handoffs/structured-dossier-review-2026.md
 CONTEXT.md
+
+# Local UI audits, logs and diagnostic scripts
+/tmp/
