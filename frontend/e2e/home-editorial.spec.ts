@@ -243,6 +243,7 @@ test("gallery image failure can retry the real image", async ({ page }) => {
   if (await page.getByLabel("Chọn bộ ảnh").isVisible())
     await page.getByLabel("Chọn bộ ảnh").selectOption("Văn hóa & đời sống");
   else await page.getByRole("button", { name: /Văn hóa & đời sống/ }).click();
+  await page.locator(".heritage-gallery__stage").scrollIntoViewIfNeeded();
   await expect(page.locator(".heritage-gallery__error")).toContainText(
     "Chưa thể tải ảnh",
   );
