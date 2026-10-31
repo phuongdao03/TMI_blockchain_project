@@ -3,10 +3,9 @@
 import {
   BadgeCheck,
   BookOpen,
-  ChevronRight,
-  CircleHelp,
-  Download,
-  Gem,
+  FilePlus2,
+  Bell,
+  ClipboardCheck,
   House,
   LogIn,
   Menu,
@@ -14,7 +13,8 @@ import {
   MapPin,
   Music2,
   Phone,
-  Route,
+  PanelLeftClose,
+  PanelLeftOpen,
   UserPlus,
   UserRound,
   UsersRound,
@@ -47,19 +47,18 @@ import { useAuthStatus, useAuthUser } from "@/lib/auth/user-context";
 import { BrandMark } from "./brand-mark";
 import { DashboardContextHeader } from "./dashboard-context-header";
 import { DashboardNavigation } from "./dashboard-navigation";
+import { navigationGroups, activeNavigationHref } from "./navigation-config";
+import { useNavigationOverlay } from "./use-navigation-overlay";
+import { useNavigationAnchor } from "./use-navigation-anchor";
+import { NavigationSearch } from "./navigation-search";
+import { NavigationBreadcrumb } from "./navigation-breadcrumb";
+import { isPreviewRelease, isPreviewRestrictedPath } from "@/lib/release-mode";
+import "./navigation.css";
 
-const publicPrimaryLinks = [
-  { href: "/", label: "Trang chủ", icon: House },
-  { href: "/works", label: "Danh sách đề cử", icon: BookOpen },
-  { href: "/community", label: "Cộng đồng", icon: UsersRound },
-  { href: "/cong-dong/hoi-vien", label: "Hội viên", icon: Gem },
-  { href: "/process", label: "Quy trình", icon: Route },
-];
-const publicUtilityLinks = [
-  { href: "/verify", label: "Tra cứu bằng xác lập", icon: BadgeCheck },
-  { href: "/guide", label: "Hướng dẫn", icon: CircleHelp },
-];
-const publicLinks = [...publicPrimaryLinks, ...publicUtilityLinks];
+const publicLinks = navigationGroups.flatMap((group) => group.items);
+const desktopLinks = publicLinks.filter((item) =>
+  ["/", "/works", "/community", "/process", "/verify"].includes(item.href),
+);
 
 function isWorkspacePath(pathname: string) {
   return [
@@ -89,52 +88,68 @@ function isWorkspacePath(pathname: string) {
 function SiteMobileNavigation({
   pathname,
   personalHref,
-  onMore,
-  moreExpanded = false,
+  canSubmit,
+  reviewer = false,
 }: {
   pathname: string;
   personalHref: string;
-  onMore: (trigger: HTMLButtonElement) => void;
-  moreExpanded?: boolean;
+  canSubmit: boolean;
+  reviewer?: boolean;
 }) {
-  const items = [
-    { href: "/", label: "Trang chủ", icon: House },
-    { href: "/works", label: "Đề cử", icon: BookOpen },
-    { href: "/community", label: "Cộng đồng", icon: UsersRound },
-    { href: personalHref, label: "Cá nhân", icon: UserRound },
-  ];
-
+  const submission = pathname === "/dossiers/new";
+  const items = (
+    reviewer
+      ? [
+          { href: "/reviews", label: "Thẩm định", icon: ClipboardCheck },
+          { href: "/work-allocations", label: "Công việc", icon: BookOpen },
+          { href: "/notifications", label: "Thông báo", icon: Bell },
+          { href: "/account", label: "Tài khoản", icon: UserRound },
+        ]
+      : [
+          { href: "/", label: "Trang chủ", icon: House },
+          { href: "/works", label: "Khám phá", icon: BookOpen },
+          ...(canSubmit && !isPreviewRelease()
+            ? [{ href: "/dossiers/new", label: "Gửi hồ sơ", icon: FilePlus2 }]
+            : []),
+          { href: "/community", label: "Cộng đồng", icon: UsersRound },
+          { href: personalHref, label: "Cá nhân", icon: UserRound },
+        ]
+  ).filter(
+    (item) => !isPreviewRelease() || !isPreviewRestrictedPath(item.href),
+  );
+  const activeHref = reviewer
+    ? activeNavigationHref(
+        pathname,
+        items.map((item) => item.href),
+      )
+    : undefined;
   return (
-    <nav aria-label="Điều hướng di động" className="site-mobile-navigation">
+    <nav
+      aria-label={reviewer ? "Điều hướng công việc" : "Điều hướng di động"}
+      className="site-mobile-navigation"
+      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+    >
       {items.map(({ href, label, icon: Icon }) => {
-        const active =
-          label === "Trang chủ"
-            ? pathname === "/"
-            : label === "Cá nhân"
-              ? isWorkspacePath(pathname)
+        const active = reviewer
+          ? href === activeHref
+          : label === "Cá nhân"
+            ? isWorkspacePath(pathname) &&
+              !(submission && canSubmit && !isPreviewRelease())
+            : href === "/"
+              ? pathname === "/"
               : pathname === href || pathname.startsWith(`${href}/`);
         return (
           <Link
             aria-current={active ? "page" : undefined}
             className="site-mobile-navigation__item"
             href={href}
-            key={label}
+            key={href}
           >
             <Icon aria-hidden="true" className="site-mobile-navigation__icon" />
             <span>{label}</span>
           </Link>
         );
       })}
-      <button
-        aria-expanded={moreExpanded}
-        aria-label="Mở thêm mục điều hướng"
-        className="site-mobile-navigation__item"
-        onClick={(event) => onMore(event.currentTarget)}
-        type="button"
-      >
-        <Menu aria-hidden="true" className="site-mobile-navigation__icon" />
-        <span>Thêm</span>
-      </button>
     </nav>
   );
 }
@@ -174,7 +189,25 @@ export function PublicShell({ children }: PropsWithChildren) {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const menuReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const mobileNavigationRef = useRef<HTMLElement>(null);
-  const firstMobileLinkRef = useRef<HTMLAnchorElement>(null);
+  const hash = useNavigationAnchor(pathname, query);
+  const headerRef = useRef<HTMLElement>(null);
+  const canSubmit =
+    authStatus === "unauthenticated" ||
+    Boolean(activeUser?.roles.includes("USER"));
+  const visibleGroups = navigationGroups.map((group) => ({
+    ...group,
+    label: group.label === "Khám phá" ? "Tra cứu" : group.label,
+    items: group.items.filter(
+      (item) =>
+        (group.label !== "Khám phá" || item.href === "/verify") &&
+        item.href !== "/dossiers/new",
+    ),
+  }));
+  const activePublicHref = activeNavigationHref(
+    pathname,
+    publicLinks.map((item) => item.href),
+    hash,
+  );
 
   const closeMenu = (restoreFocus = true) => {
     setMenuOpen(false);
@@ -186,65 +219,60 @@ export function PublicShell({ children }: PropsWithChildren) {
   };
 
   const renderMobileLink = (item: (typeof publicLinks)[number]) => {
-    const active =
-      item.href === "/"
-        ? pathname === item.href
-        : pathname === item.href || pathname.startsWith(`${item.href}/`);
+    const active = item.href === activePublicHref;
     const Icon = item.icon;
     return (
       <Link
         aria-current={active ? "page" : undefined}
         className="public-mobile-nav__link"
         key={item.href}
-        ref={item.href === "/" ? firstMobileLinkRef : undefined}
         href={item.href}
         onClick={() => closeMenu(false)}
       >
         <Icon aria-hidden="true" className="public-mobile-nav__icon" />
         <span>{item.label}</span>
-        <ChevronRight
-          aria-hidden="true"
-          className="public-mobile-nav__chevron"
-        />
       </Link>
     );
   };
 
+  useNavigationOverlay(
+    menuOpen,
+    mobileNavigationRef,
+    closeMenu,
+    `${authStatus}:${activeUser?.id ?? ""}:${activeUser?.roles.join(",") ?? ""}:${activeUser?.permissions?.join(",") ?? ""}`,
+  );
   useEffect(() => {
-    if (!menuOpen) return;
-
-    const handleDrawerKeyboard = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeMenu();
-        return;
-      }
-      if (event.key !== "Tab") return;
-
-      const focusable = Array.from(
-        mobileNavigationRef.current?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ) ?? [],
-      );
-      const first = focusable[0];
-      const last = focusable.at(-1);
-      if (!first || !last) return;
-
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
+    const closeDetails = (event: Event) => {
+      const target = event.target;
+      headerRef.current
+        ?.querySelectorAll<HTMLDetailsElement>("details[open]")
+        .forEach((details) => {
+          if (event instanceof KeyboardEvent && event.key === "Escape") {
+            details.open = false;
+            details.querySelector("summary")?.focus();
+          } else if (
+            event.type === "click" &&
+            target instanceof Node &&
+            (!details.contains(target) ||
+              (target instanceof Element && target.closest("a,button")))
+          )
+            details.open = false;
+        });
     };
-
-    document.addEventListener("keydown", handleDrawerKeyboard);
-    firstMobileLinkRef.current?.focus();
-
+    document.addEventListener("click", closeDetails);
+    document.addEventListener("keydown", closeDetails);
     return () => {
-      document.removeEventListener("keydown", handleDrawerKeyboard);
+      document.removeEventListener("click", closeDetails);
+      document.removeEventListener("keydown", closeDetails);
     };
-  }, [menuOpen]);
+  }, []);
+  useEffect(() => {
+    headerRef.current
+      ?.querySelectorAll<HTMLDetailsElement>("details[open]")
+      .forEach((details) => {
+        details.open = false;
+      });
+  }, [pathname, query, authStatus, activeUser?.id]);
 
   return (
     <div
@@ -255,15 +283,11 @@ export function PublicShell({ children }: PropsWithChildren) {
       <a className="skip-link" href="#main-content">
         Chuyển đến nội dung chính
       </a>
-      <header className="public-header">
+      <header className="public-header" ref={headerRef}>
         <BrandMark />
         <nav className="public-nav" aria-label="Điều hướng chính">
-          {publicLinks.map((item) => {
-            const active =
-              item.href === "/"
-                ? pathname === item.href
-                : pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`);
+          {desktopLinks.map((item) => {
+            const active = item.href === activePublicHref;
             return (
               <Link
                 aria-current={active ? "page" : undefined}
@@ -277,6 +301,9 @@ export function PublicShell({ children }: PropsWithChildren) {
           })}
         </nav>
         <div className="public-header__actions">
+          <NavigationSearch
+            identity={`${authStatus}:${activeUser?.id ?? ""}`}
+          />
           <PwaInstallButton />
           <ThemeToggle />
           {activeUser ? (
@@ -304,17 +331,28 @@ export function PublicShell({ children }: PropsWithChildren) {
                 className="public-user-menu__panel"
               >
                 <Link href="/workspace">Không gian cá nhân</Link>
+                {activeUser.roles.includes("USER") && !isPreviewRelease() && (
+                  <Link href="/dossiers">Hồ sơ của tôi</Link>
+                )}
+                {activeUser.roles.includes("MODERATOR") &&
+                  !isPreviewRelease() && (
+                    <Link href="/reviews">Không gian thẩm định</Link>
+                  )}
                 <Link href="/community/mine">Bài viết của tôi</Link>
-                <Link href="/notifications">Thông báo</Link>
+                {!isPreviewRelease() && (
+                  <Link href="/notifications">Thông báo</Link>
+                )}
                 {customer && <Link href="/vouchers">Voucher của tôi</Link>}
-                {adminEntryPoint ? (
+                {adminEntryPoint && !isPreviewRelease() ? (
                   <Link href={adminEntryPoint.href}>
                     {adminEntryPoint.label}
                   </Link>
                 ) : null}
                 <Link href="/account">Tài khoản</Link>
                 {customer && <Link href="/membership">Thẻ thành viên</Link>}
-                {customer && <Link href="/wallet">Ví của tôi</Link>}
+                {customer && !isPreviewRelease() && (
+                  <Link href="/wallet">Ví của tôi</Link>
+                )}
                 <LogoutButton />
               </nav>
             </details>
@@ -346,7 +384,7 @@ export function PublicShell({ children }: PropsWithChildren) {
             ref={menuButtonRef}
             type="button"
             className="public-header__menu"
-            aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
+            aria-label="Mở menu"
             aria-expanded={menuOpen}
             aria-controls="public-mobile-navigation"
             onClick={(event) => {
@@ -379,45 +417,66 @@ export function PublicShell({ children }: PropsWithChildren) {
             id="public-mobile-navigation"
             className="public-mobile-nav"
             aria-label="Menu công khai"
+            role="dialog"
+            aria-modal="true"
           >
-            <div
-              aria-label="Khám phá"
-              className="public-mobile-nav__section"
-              role="group"
-            >
-              <span className="public-mobile-nav__section-label">Khám phá</span>
-              {publicPrimaryLinks.map(renderMobileLink)}
-            </div>
-            <div
-              aria-label="Tiện ích"
-              className="public-mobile-nav__section public-mobile-nav__section--secondary"
-              role="group"
-            >
-              <span className="public-mobile-nav__section-label">Tiện ích</span>
-              {publicUtilityLinks.map(renderMobileLink)}
-              <Link
-                aria-current={pathname === "/install" ? "page" : undefined}
-                className="public-mobile-nav__link"
-                href="/install"
-                onClick={() => closeMenu(false)}
+            <div className="navigation-drawer-heading">
+              <h2>Menu</h2>
+              <button
+                aria-label="Đóng menu"
+                className="navigation-icon-button"
+                type="button"
+                onClick={() => closeMenu()}
               >
-                <Download
-                  aria-hidden="true"
-                  className="public-mobile-nav__icon"
-                />
-                <span>Cài ứng dụng</span>
-                <ChevronRight
-                  aria-hidden="true"
-                  className="public-mobile-nav__chevron"
-                />
-              </Link>
+                <X aria-hidden="true" />
+              </button>
             </div>
+            {visibleGroups.map((group) => (
+              <div
+                key={group.label}
+                aria-label={group.label}
+                className="public-mobile-nav__section"
+                role="group"
+              >
+                <span className="public-mobile-nav__section-label">
+                  {group.label}
+                </span>
+                {group.items.map(renderMobileLink)}
+              </div>
+            ))}
             <div className="public-mobile-nav__theme">
               <span>Giao diện</span>
               <ThemeToggle />
             </div>
             {activeUser ? (
               <div className="public-mobile-nav__account-links">
+                {activeUser.roles.includes("USER") && !isPreviewRelease() && (
+                  <Link
+                    className="public-mobile-nav__link"
+                    href="/dossiers"
+                    onClick={() => closeMenu(false)}
+                  >
+                    <BookOpen
+                      aria-hidden="true"
+                      className="public-mobile-nav__icon"
+                    />
+                    <span>Hồ sơ của tôi</span>
+                  </Link>
+                )}
+                {activeUser.roles.includes("MODERATOR") &&
+                  !isPreviewRelease() && (
+                    <Link
+                      className="public-mobile-nav__link"
+                      href="/reviews"
+                      onClick={() => closeMenu(false)}
+                    >
+                      <ClipboardCheck
+                        aria-hidden="true"
+                        className="public-mobile-nav__icon"
+                      />
+                      <span>Không gian thẩm định</span>
+                    </Link>
+                  )}
                 <Link
                   className="public-mobile-nav__link"
                   href="/workspace"
@@ -428,10 +487,6 @@ export function PublicShell({ children }: PropsWithChildren) {
                     className="public-mobile-nav__icon"
                   />
                   <span>Không gian cá nhân</span>
-                  <ChevronRight
-                    aria-hidden="true"
-                    className="public-mobile-nav__chevron"
-                  />
                 </Link>
                 <Link
                   className="public-mobile-nav__link"
@@ -443,27 +498,21 @@ export function PublicShell({ children }: PropsWithChildren) {
                     className="public-mobile-nav__icon"
                   />
                   <span>Bài viết của tôi</span>
-                  <ChevronRight
-                    aria-hidden="true"
-                    className="public-mobile-nav__chevron"
-                  />
                 </Link>
-                <Link
-                  className="public-mobile-nav__link"
-                  href="/notifications"
-                  onClick={() => closeMenu(false)}
-                >
-                  <Mail
-                    aria-hidden="true"
-                    className="public-mobile-nav__icon"
-                  />
-                  <span>Thông báo</span>
-                  <ChevronRight
-                    aria-hidden="true"
-                    className="public-mobile-nav__chevron"
-                  />
-                </Link>
-                {adminEntryPoint ? (
+                {!isPreviewRelease() && (
+                  <Link
+                    className="public-mobile-nav__link"
+                    href="/notifications"
+                    onClick={() => closeMenu(false)}
+                  >
+                    <Mail
+                      aria-hidden="true"
+                      className="public-mobile-nav__icon"
+                    />
+                    <span>Thông báo</span>
+                  </Link>
+                )}
+                {adminEntryPoint && !isPreviewRelease() ? (
                   <Link
                     className="public-mobile-nav__link"
                     href={adminEntryPoint.href}
@@ -474,10 +523,6 @@ export function PublicShell({ children }: PropsWithChildren) {
                       className="public-mobile-nav__icon"
                     />
                     <span>{adminEntryPoint.label}</span>
-                    <ChevronRight
-                      aria-hidden="true"
-                      className="public-mobile-nav__chevron"
-                    />
                   </Link>
                 ) : null}
                 <Link
@@ -490,10 +535,6 @@ export function PublicShell({ children }: PropsWithChildren) {
                     className="public-mobile-nav__icon"
                   />
                   <span>Tài khoản</span>
-                  <ChevronRight
-                    aria-hidden="true"
-                    className="public-mobile-nav__chevron"
-                  />
                 </Link>
                 <LogoutButton />
               </div>
@@ -531,17 +572,16 @@ export function PublicShell({ children }: PropsWithChildren) {
         </div>
       ) : null}
       <DisplayNameSetupNotice />
-      <main id="main-content">{children}</main>
+      <main id="main-content">
+        <NavigationBreadcrumb />
+        {children}
+      </main>
       <SiteMobileNavigation
         pathname={pathname}
-        personalHref={activeUser ? "/workspace" : loginHref}
-        moreExpanded={menuOpen}
-        onMore={(trigger) => {
-          menuReturnFocusRef.current = trigger;
-          setMenuOpen(true);
-        }}
+        personalHref={activeUser ? "/workspace" : "/login?next=%2Fworkspace"}
+        canSubmit={canSubmit}
       />
-      <footer className="public-footer public-footer--legal">
+      <footer id="lien-he" className="public-footer public-footer--legal">
         <div className="public-footer__inner">
           <div className="public-footer__identity">
             <BrandMark variant="public-seal" />
@@ -707,6 +747,12 @@ export function DashboardShell({ children }: PropsWithChildren) {
   const user = useAuthUser();
   const roles = user?.roles ?? [];
   const [navigationOpen, setNavigationOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<
+    Record<string, boolean>
+  >({});
+  const toggleGroup = (label: string, collapsed: boolean) =>
+    setCollapsedGroups((groups) => ({ ...groups, [label]: collapsed }));
   const navigationButtonRef = useRef<HTMLButtonElement>(null);
   const navigationPanelRef = useRef<HTMLDivElement>(null);
   const navigationReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -725,55 +771,51 @@ export function DashboardShell({ children }: PropsWithChildren) {
     }
   }
 
-  useEffect(() => {
-    if (!navigationOpen) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    navigationPanelRef.current
-      ?.querySelector<HTMLElement>("a, button")
-      ?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") closeNavigation();
-      if (event.key !== "Tab") return;
-
-      const focusable = Array.from(
-        navigationPanelRef.current?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ) ?? [],
-      );
-      if (focusable.length === 0) return;
-
-      const first = focusable[0]!;
-      const last = focusable.at(-1);
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last?.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [navigationOpen]);
+  useNavigationOverlay(
+    navigationOpen,
+    navigationPanelRef,
+    (restoreFocus = true) => closeNavigation({ restoreFocus }),
+    `${user?.id ?? ""}:${roles.join(",")}:${user?.permissions?.join(",") ?? ""}`,
+  );
 
   return (
     <div
-      className={
+      className={[
         adminArea
           ? "dashboard-shell dashboard-shell--admin"
-          : "dashboard-shell dashboard-shell--workspace"
-      }
+          : "dashboard-shell dashboard-shell--workspace",
+        sidebarCollapsed ? "dashboard-shell--collapsed" : "",
+      ].join(" ")}
     >
       <aside className="dashboard-sidebar">
-        <BrandMark compact />
+        <div className="dashboard-sidebar__header">
+          <BrandMark compact />
+          <button
+            aria-label={
+              sidebarCollapsed
+                ? "Mở rộng thanh điều hướng"
+                : "Thu gọn thanh điều hướng"
+            }
+            aria-expanded={!sidebarCollapsed}
+            className="dashboard-sidebar__toggle"
+            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+            title={
+              sidebarCollapsed
+                ? "Mở rộng thanh điều hướng"
+                : "Thu gọn thanh điều hướng"
+            }
+            type="button"
+          >
+            {sidebarCollapsed ? (
+              <PanelLeftOpen aria-hidden="true" size={20} />
+            ) : (
+              <PanelLeftClose aria-hidden="true" size={20} />
+            )}
+          </button>
+        </div>
         <DashboardNavigation
+          collapsedGroups={collapsedGroups}
+          onToggleGroup={toggleGroup}
           area={adminArea ? "admin" : "workspace"}
           roles={roles}
           showQuickNavigation={false}
@@ -792,23 +834,18 @@ export function DashboardShell({ children }: PropsWithChildren) {
           isCustomerAccount(user) && <VoucherSummaryBanner userId={user.id} />}
         <DisplayNameSetupNotice />
         <main className="dashboard-main" id="main-content">
+          <NavigationBreadcrumb />
           <div className="dashboard-page-stage" key={pathname}>
             {children}
           </div>
         </main>
       </div>
-      <DashboardNavigation
-        onOpenMenu={(trigger) => openNavigation(trigger)}
-        roles={roles}
-        showPrimaryNavigation={false}
-        showQuickNavigation={false}
-      />
       {!adminArea ? (
         <SiteMobileNavigation
           pathname={pathname}
           personalHref="/workspace"
-          onMore={(trigger) => openNavigation(trigger)}
-          moreExpanded={navigationOpen}
+          canSubmit={roles.includes("USER")}
+          reviewer={roles.includes("MODERATOR")}
         />
       ) : null}
       {navigationOpen ? (
@@ -848,6 +885,8 @@ export function DashboardShell({ children }: PropsWithChildren) {
               </button>
             </div>
             <DashboardNavigation
+              collapsedGroups={collapsedGroups}
+              onToggleGroup={toggleGroup}
               area={adminArea ? "admin" : "workspace"}
               onNavigate={() => closeNavigation({ restoreFocus: false })}
               roles={roles}

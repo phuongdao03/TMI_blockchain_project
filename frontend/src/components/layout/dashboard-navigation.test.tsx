@@ -1,15 +1,109 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { AuthUserProvider } from "@/lib/auth/user-context";
 
 import { DashboardNavigation } from "./dashboard-navigation";
+import userEvent from "@testing-library/user-event";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
 }));
 
+const expandedAdminGroups = Object.fromEntries(
+  [
+    "Marketing & Khuyến mại",
+    "Hồ sơ & thẩm định",
+    "Cộng đồng & chương trình",
+    "Tài chính & vận hành",
+    "Nhân sự",
+    "Nội dung & hệ thống",
+  ].map((label) => [label, false]),
+);
+
 describe("DashboardNavigation work-allocation migration", () => {
+  it("keeps all authorized contexts for a multi-role account", () => {
+    render(
+      <DashboardNavigation
+        roles={["USER", "MODERATOR", "SUPER_ADMIN"]}
+        showQuickNavigation={false}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Việc thẩm định" })).toBeDefined();
+    expect(screen.getByRole("link", { name: "Hồ sơ của tôi" })).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Khu vực quản trị" }),
+    ).toBeDefined();
+  });
+  it("starts inactive admin groups collapsed and lets users open them", async () => {
+    const user = userEvent.setup();
+    render(
+      <DashboardNavigation
+        roles={["SUPER_ADMIN"]}
+        area="admin"
+        showQuickNavigation={false}
+      />,
+    );
+    const toggle = screen.getByRole("button", { name: "Nhân sự" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("link", { name: "Nhân sự" })).toBeNull();
+    await user.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    await user.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  });
+  it("opens the active ancestor even when its group was collapsed", () => {
+    render(
+      <DashboardNavigation
+        roles={["SUPER_ADMIN"]}
+        area="admin"
+        previewRole="SUPER_ADMIN"
+        previewPathname="/admin/users"
+        showQuickNavigation={false}
+      />,
+    );
+    expect(
+      screen
+        .getByRole("button", { name: "Nội dung & hệ thống" })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
+    expect(screen.getByRole("link", { name: "Người dùng" })).toBeDefined();
+  });
+
+  it("separates reviewer HR from assessment and exposes account tasks", () => {
+    render(
+      <DashboardNavigation roles={["MODERATOR"]} showQuickNavigation={false} />,
+    );
+    const reviewSection = screen.getByText("Thẩm định").closest("section")!;
+    expect(
+      within(reviewSection).queryByRole("link", { name: "Chấm công" }),
+    ).toBeNull();
+    expect(screen.getByRole("link", { name: "Chấm công" })).toBeDefined();
+    expect(screen.getByRole("link", { name: "Thông báo" })).toHaveProperty(
+      "href",
+      expect.stringContaining("/notifications"),
+    );
+    expect(screen.getByRole("link", { name: "Tài khoản" })).toBeDefined();
+  });
+
+  it("puts applicant dossiers before discovery and separates account from services", () => {
+    render(
+      <DashboardNavigation roles={["USER"]} showQuickNavigation={false} />,
+    );
+    const navigation = screen.getByRole("navigation", { name: "Điều hướng" });
+    const links = within(navigation).getAllByRole("link");
+    expect(
+      links.findIndex((link) => link.getAttribute("href") === "/dossiers"),
+    ).toBeLessThan(
+      links.findIndex((link) => link.getAttribute("href") === "/works"),
+    );
+    const accountSection = screen
+      .getByRole("link", { name: "Tài khoản" })
+      .closest("section")!;
+    expect(
+      within(accountSection).queryByRole("link", { name: "Ví của tôi" }),
+    ).toBeNull();
+  });
   it.each<[string[], boolean]>([
     [["SUPER_ADMIN"], false],
     [["USER", "SUPER_ADMIN"], false],
@@ -49,6 +143,7 @@ describe("DashboardNavigation work-allocation migration", () => {
       >
         <DashboardNavigation
           area="admin"
+          collapsedGroups={expandedAdminGroups}
           roles={["MODERATOR"]}
           showQuickNavigation={false}
         />
@@ -76,6 +171,7 @@ describe("DashboardNavigation work-allocation migration", () => {
       >
         <DashboardNavigation
           area="admin"
+          collapsedGroups={expandedAdminGroups}
           roles={["MODERATOR"]}
           showQuickNavigation={false}
         />
@@ -99,7 +195,11 @@ describe("DashboardNavigation work-allocation migration", () => {
           accountType: null,
         }}
       >
-        <DashboardNavigation area="admin" showQuickNavigation={false} />
+        <DashboardNavigation
+          area="admin"
+          collapsedGroups={expandedAdminGroups}
+          showQuickNavigation={false}
+        />
       </AuthUserProvider>,
     );
 
@@ -135,6 +235,7 @@ describe("DashboardNavigation work-allocation migration", () => {
     render(
       <DashboardNavigation
         area="admin"
+        collapsedGroups={expandedAdminGroups}
         roles={["SUPER_ADMIN"]}
         showQuickNavigation={false}
       />,
@@ -221,6 +322,7 @@ describe("DashboardNavigation work-allocation migration", () => {
     render(
       <DashboardNavigation
         area="admin"
+        collapsedGroups={expandedAdminGroups}
         roles={["SUPER_ADMIN"]}
         showQuickNavigation={false}
       />,

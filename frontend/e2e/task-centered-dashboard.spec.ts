@@ -288,7 +288,7 @@ test("mobile workspace navigation stays compact, centered and touch friendly", a
 
   const controls = navigation.locator(".site-mobile-navigation__item");
   await expect(
-    navigation.getByRole("link", { name: "Đề cử", exact: true }),
+    navigation.getByRole("link", { name: "Khám phá", exact: true }),
   ).toBeVisible();
   await expect(
     navigation.getByRole("link", { name: "Cộng đồng", exact: true }),

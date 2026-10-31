@@ -50,10 +50,10 @@ async function authenticate(
 async function setTheme(page: Page, workspace: boolean, theme: "sáng" | "tối") {
   const label = `Giao diện ${theme}` as const;
   if (workspace) await selectWorkspaceTheme(page, label);
-  else if ((page.viewportSize()?.width ?? 1440) <= 608) {
+  else if ((page.viewportSize()?.width ?? 1440) < 1024) {
     await page.getByRole("button", { name: "Mở menu" }).click();
     await page
-      .getByRole("navigation", { name: "Menu công khai" })
+      .getByRole("dialog", { name: "Menu công khai" })
       .getByRole("group", { name: "Chọn giao diện" })
       .getByRole("button", { name: label })
       .click();

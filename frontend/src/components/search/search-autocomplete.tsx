@@ -1,8 +1,8 @@
 "use client";
 
-import { FolderTree, Search, Tag } from "lucide-react";
+import { FolderTree, Search, Tag, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { startNavigationFeedback } from "@/components/ui/navigation-loading";
 import { publicApi } from "@/lib/api/client";
@@ -16,11 +16,16 @@ const DEBOUNCE_MS = 250;
 export function SearchAutocomplete({
   defaultValue = "",
   name = "query",
+  autoFocus = false,
+  showClear = false,
 }: {
   defaultValue?: string;
   name?: string;
+  autoFocus?: boolean;
+  showClear?: boolean;
 }) {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
   const [query, setQuery] = useState(defaultValue);
   const [suggestions, setSuggestions] = useState<
@@ -109,6 +114,8 @@ export function SearchAutocomplete({
         className="pointer-events-none absolute top-4 left-4 z-10 size-4 text-slate-500"
       />
       <input
+        ref={inputRef}
+        autoFocus={autoFocus}
         aria-activedescendant={
           activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined
         }
@@ -139,6 +146,23 @@ export function SearchAutocomplete({
         type="search"
         value={query}
       />
+      {showClear && query && (
+        <button
+          aria-label="Xóa nội dung tìm kiếm"
+          className="navigation-search-clear"
+          type="button"
+          onClick={() => {
+            setQuery("");
+            setSuggestions([]);
+            setOpen(false);
+            setLoading(false);
+            setFailed(false);
+            inputRef.current?.focus();
+          }}
+        >
+          <X aria-hidden="true" size={18} />
+        </button>
+      )}
       <span aria-live="polite" className="sr-only">
         {loading
           ? "Đang tìm gợi ý"

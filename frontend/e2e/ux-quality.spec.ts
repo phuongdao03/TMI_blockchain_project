@@ -131,12 +131,12 @@ test("public navigation and primary actions remain keyboard accessible", async (
   page,
 }) => {
   await page.goto("/");
-  if ((page.viewportSize()?.width ?? 1280) <= 608) {
+  if ((page.viewportSize()?.width ?? 1280) < 1024) {
     await page.getByRole("button", { name: "Mở menu" }).focus();
     await page.keyboard.press("Enter");
     await expect(
       page
-        .getByRole("navigation", { name: "Menu công khai" })
+        .getByRole("dialog", { name: "Menu công khai" })
         .getByRole("group", { name: "Chọn giao diện" })
         .getByRole("button", { name: "Theo thiết bị" }),
     ).toBeEnabled();

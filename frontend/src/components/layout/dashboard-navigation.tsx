@@ -15,7 +15,6 @@ import {
   House,
   History,
   LayoutDashboard,
-  Menu,
   Settings,
   ShieldCheck,
   Signature,
@@ -26,9 +25,11 @@ import {
   CreditCard,
   Megaphone,
   Ticket,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useId, useState } from "react";
 
 import { useAuthUser } from "@/lib/auth/user-context";
 import {
@@ -368,6 +369,18 @@ function sectionsFor(
             : []),
           { href: "/", label: "Website", icon: House },
           { href: "/community", label: "Cộng đồng", icon: UsersRound },
+          ...(roles.includes("MODERATOR")
+            ? [
+                {
+                  href: "/reviews",
+                  label: "Không gian thẩm định",
+                  icon: ClipboardCheck,
+                },
+              ]
+            : []),
+          ...(roles.includes("USER")
+            ? [{ href: "/dossiers", label: "Hồ sơ cá nhân", icon: FileText }]
+            : []),
         ],
       },
       ...operationalSections,
@@ -378,28 +391,57 @@ function sectionsFor(
     ];
   }
 
-  if (persona === "MODERATOR") {
+  if (roles.includes("MODERATOR")) {
     return [
-      { label: "Thẩm định", items: reviewerItems.slice(0, 3) },
-      ...(isEmployee
-        ? [{ label: "Nhân sự", items: employeeItems.slice(1) }]
+      { label: "Thẩm định", items: reviewerItems.slice(0, 2) },
+      ...(roles.includes("USER")
+        ? [{ label: "Hồ sơ cá nhân", items: userItems }]
         : []),
+      {
+        label: "Nhân sự",
+        items: isEmployee ? employeeItems : employeeItems.slice(0, 1),
+      },
       { label: "Khám phá", items: discoveryItems },
-      { label: "Cá nhân", items: personalItems.slice(0, 2) },
+      { label: "Tài chính & dịch vụ", items: personalItems.slice(0, 2) },
+      {
+        label: "Tài khoản",
+        items: personalItems.filter((item) =>
+          ["/notifications", "/account", "/activity"].includes(item.href),
+        ),
+      },
       ...(adminEntryItems.length
         ? [{ label: "Quản trị", items: adminEntryItems }]
+        : []),
+      ...(canAccess(blockchainSignerItems[0]!, roles, permissions)
+        ? [{ label: "Xác lập", items: blockchainSignerItems }]
         : []),
       { label: "Hỗ trợ", items: [publicSupportItem] },
     ];
   }
 
   return [
-    { label: "Khám phá", items: discoveryItems },
-    ...(persona === "USER" ? [{ label: "Hồ sơ", items: userItems }] : []),
-    ...(persona === "USER" && isEmployee
+    { label: "Tổng quan", items: discoveryItems.slice(0, 1) },
+    ...(roles.includes("USER")
+      ? [{ label: "Hồ sơ & xác lập", items: userItems }]
+      : []),
+    ...(roles.includes("USER") && isEmployee
       ? [{ label: "Nhân sự", items: employeeItems }]
       : []),
-    { label: "Cá nhân", items: personalItems },
+    {
+      label: "Tài chính & dịch vụ",
+      items: personalItems.filter((item) =>
+        ["/vouchers", "/advertising", "/membership", "/wallet"].includes(
+          item.href,
+        ),
+      ),
+    },
+    {
+      label: "Tài khoản",
+      items: personalItems.filter((item) =>
+        ["/notifications", "/account", "/activity"].includes(item.href),
+      ),
+    },
+    { label: "Khám phá", items: discoveryItems.slice(1) },
     ...(adminEntryItems.length
       ? [{ label: "Quản trị", items: adminEntryItems }]
       : []),
@@ -454,7 +496,8 @@ export function DashboardNavigation({
   previewRole,
   previewPathname,
   onNavigate,
-  onOpenMenu,
+  collapsedGroups,
+  onToggleGroup,
 }: {
   roles?: readonly string[];
   area?: "workspace" | "admin";
@@ -466,7 +509,21 @@ export function DashboardNavigation({
   previewPathname?: string;
   onNavigate?: () => void;
   onOpenMenu?: (trigger: HTMLButtonElement) => void;
+  collapsedGroups?: Record<string, boolean>;
+  onToggleGroup?: (label: string, collapsed: boolean) => void;
 }) {
+  const groupId = useId();
+  const [localCollapsedGroups, setLocalCollapsedGroups] = useState<
+    Record<string, boolean>
+  >({});
+  const groups = collapsedGroups ?? localCollapsedGroups;
+  const toggleGroup =
+    onToggleGroup ??
+    ((label: string, collapsed: boolean) =>
+      setLocalCollapsedGroups((previous) => ({
+        ...previous,
+        [label]: collapsed,
+      })));
   const pathname = usePathname();
   const activePathname = previewRole ? (previewPathname ?? pathname) : pathname;
   const authUser = useAuthUser();
@@ -508,10 +565,6 @@ export function DashboardNavigation({
     navigationArea === "admin"
       ? []
       : mobileItemsFor(persona, allNavigationItems);
-  const mobileHrefs = new Set(mobileItems.map((item) => item.href));
-  const mobileMenuContainsActiveItem = allNavigationItems
-    .filter((item) => !mobileHrefs.has(item.href))
-    .some((item) => item.href === activeHref);
 
   return (
     <>
@@ -520,14 +573,44 @@ export function DashboardNavigation({
           className={cn("dashboard-navigation", className)}
           aria-label="Điều hướng"
         >
-          {sections.map((section) =>
-            section.items.length ? (
+          {sections.map((section, index) => {
+            const collapsed =
+              groups[section.label] ??
+              adminNavigationGroups.some(
+                (group) => group.label === section.label,
+              );
+            const containsActive = section.items.some(
+              (item) => item.href === activeHref,
+            );
+            return section.items.length ? (
               <section
                 className="dashboard-navigation__section"
                 key={section.label}
               >
-                <p className="dashboard-navigation__label">{section.label}</p>
-                <div className="dashboard-navigation__links">
+                {navigationArea === "admin" ? (
+                  <button
+                    aria-label={section.label}
+                    aria-controls={`${groupId}-${index}`}
+                    className="dashboard-navigation__group-toggle"
+                    type="button"
+                    aria-expanded={!collapsed || containsActive}
+                    onClick={() => toggleGroup(section.label, !collapsed)}
+                  >
+                    <span className="dashboard-navigation__label">
+                      {section.label}
+                    </span>
+                    <ChevronDown aria-hidden="true" size={16} />
+                  </button>
+                ) : (
+                  <p className="dashboard-navigation__label">{section.label}</p>
+                )}
+                <div
+                  id={`${groupId}-${index}`}
+                  className="dashboard-navigation__links"
+                  hidden={
+                    navigationArea === "admin" && collapsed && !containsActive
+                  }
+                >
                   {section.items.map((item) => {
                     const Icon = item.icon;
                     const active = item.href === activeHref;
@@ -543,6 +626,8 @@ export function DashboardNavigation({
                     );
                     return (
                       <Link
+                        title={item.label}
+                        aria-label={item.label}
                         aria-current={active ? "page" : undefined}
                         className={cn(
                           "dashboard-navigation__link",
@@ -562,8 +647,8 @@ export function DashboardNavigation({
                   })}
                 </div>
               </section>
-            ) : null,
-          )}
+            ) : null;
+          })}
         </nav>
       ) : null}
 
@@ -607,28 +692,6 @@ export function DashboardNavigation({
               </Link>
             );
           })}
-          {!previewRole ? (
-            <button
-              aria-current={mobileMenuContainsActiveItem ? "page" : undefined}
-              aria-label="Mở tất cả chức năng"
-              className={cn(
-                "dashboard-mobile-navigation__link",
-                "dashboard-mobile-navigation__more",
-                mobileMenuContainsActiveItem &&
-                  "dashboard-mobile-navigation__link--active",
-              )}
-              onClick={(event) => onOpenMenu?.(event.currentTarget)}
-              type="button"
-            >
-              <IconFrame
-                className="dashboard-mobile-navigation__icon"
-                icon={Menu}
-                size="sm"
-                tone={mobileMenuContainsActiveItem ? "brand" : "neutral"}
-              />
-              <span className="dashboard-mobile-navigation__label">Thêm</span>
-            </button>
-          ) : null}
         </nav>
       ) : null}
     </>

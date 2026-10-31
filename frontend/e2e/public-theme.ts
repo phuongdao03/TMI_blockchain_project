@@ -4,10 +4,10 @@ export async function selectPublicTheme(
   page: Page,
   label: "Giao diện sáng" | "Giao diện tối",
 ) {
-  if ((page.viewportSize()?.width ?? 1280) <= 608) {
+  if ((page.viewportSize()?.width ?? 1280) < 1024) {
     await page.getByRole("button", { name: "Mở menu" }).click();
     await page
-      .getByRole("navigation", { name: "Menu công khai" })
+      .getByRole("dialog", { name: "Menu công khai" })
       .getByRole("group", { name: "Chọn giao diện" })
       .getByRole("button", { name: label })
       .click();

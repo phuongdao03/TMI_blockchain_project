@@ -17,11 +17,9 @@ test("exposes an installable PWA shell", async ({ page, request }) => {
   } else {
     await page.getByRole("button", { name: "Mở menu" }).click();
     await expect(
-      page
-        .getByRole("navigation", { name: "Menu công khai" })
-        .getByRole("link", {
-          name: "Cài ứng dụng",
-        }),
+      page.getByRole("dialog", { name: "Menu công khai" }).getByRole("link", {
+        name: "Cài ứng dụng",
+      }),
     ).toHaveAttribute("href", "/install");
   }
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(

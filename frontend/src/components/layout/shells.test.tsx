@@ -10,8 +10,14 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const navigationState = vi.hoisted(() => ({ pathname: "/", search: "" }));
+window.matchMedia = vi.fn().mockImplementation(() => ({
+  matches: false,
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+}));
 
 vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
   usePathname: () => navigationState.pathname,
   useSearchParams: () => new URLSearchParams(navigationState.search),
 }));
@@ -40,6 +46,32 @@ function render(ui: ReactElement) {
 }
 
 describe("layout shells", () => {
+  it("lets users collapse and expand the desktop navigation", async () => {
+    navigationState.pathname = "/workspace";
+    const user = userEvent.setup();
+    const view = render(
+      <DashboardShell>
+        <p>Workspace</p>
+      </DashboardShell>,
+    );
+    const collapse = screen.getByRole("button", {
+      name: "Thu gọn thanh điều hướng",
+    });
+    expect(collapse.textContent).toBe("");
+    expect(collapse.closest(".dashboard-sidebar__header")).not.toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Thu gọn thanh điều hướng" }),
+    );
+    expect(
+      view.container.querySelector(".dashboard-shell--collapsed"),
+    ).not.toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Mở rộng thanh điều hướng" }),
+    );
+    expect(
+      view.container.querySelector(".dashboard-shell--collapsed"),
+    ).toBeNull();
+  });
   it.each<[string[], boolean]>([
     [["SUPER_ADMIN"], false],
     [["USER", "SUPER_ADMIN"], false],
@@ -81,7 +113,7 @@ describe("layout shells", () => {
     );
 
     expect(
-      screen.getAllByRole("link", { name: "Danh sách đề cử" }),
+      screen.getAllByRole("link", { name: "Khám phá đề cử" }),
     ).toHaveLength(1);
     expect(screen.queryByRole("link", { name: /Bình chọn/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /Gửi đề cử/ })).toBeNull();
@@ -108,7 +140,7 @@ describe("layout shells", () => {
         .getByRole("link", { name: "Cộng đồng" })
         .getAttribute("href"),
     ).toBe("/community");
-    expect(screen.getAllByRole("link", { name: "Hướng dẫn" })).toHaveLength(1);
+    expect(screen.queryByRole("link", { name: "Hướng dẫn" })).toBeNull();
     expect(
       screen.queryByRole("complementary", {
         name: "Điều hướng công khai",
@@ -126,9 +158,7 @@ describe("layout shells", () => {
     expect(
       screen
         .getByRole("navigation", { name: "Điều hướng di động" })
-        .querySelector(
-          'a[href="/login?next=%2Fworks%2Fpublished-work%3Fcategory%3Dhistory"]',
-        ),
+        .querySelector('a[href="/login?next=%2Fworkspace"]'),
     ).not.toBeNull();
     expect(loginLink.classList.contains("public-header__auth-link")).toBe(true);
     expect(registerLink.classList.contains("public-header__auth-link")).toBe(
@@ -146,12 +176,12 @@ describe("layout shells", () => {
     ).toBeNull();
     expect(
       screen
-        .getByRole("link", { name: "Danh sách đề cử" })
+        .getAllByRole("link", { name: "Khám phá đề cử" })[0]!
         .getAttribute("aria-current"),
     ).toBe("page");
   });
 
-  it("shows a dedicated membership tab in the public navigation", async () => {
+  it("keeps membership in the participation group", async () => {
     navigationState.pathname = "/cong-dong/hoi-vien";
     render(
       <PublicShell>
@@ -159,21 +189,11 @@ describe("layout shells", () => {
       </PublicShell>,
     );
 
-    const primaryNavigation = screen.getByRole("navigation", {
-      name: "Điều hướng chính",
-    });
-    const membershipLink = within(primaryNavigation).getByRole("link", {
-      name: "Hội viên",
-    });
-
-    expect(membershipLink.getAttribute("href")).toBe("/cong-dong/hoi-vien");
-    expect(membershipLink.getAttribute("aria-current")).toBe("page");
-
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Mở menu" }));
     expect(
-      within(screen.getByRole("navigation", { name: "Menu công khai" }))
-        .getByRole("link", { name: "Hội viên" })
+      within(screen.getByRole("dialog", { name: "Menu công khai" }))
+        .getByRole("link", { name: "Cộng đồng hội viên" })
         .getAttribute("href"),
     ).toBe("/cong-dong/hoi-vien");
   });
@@ -307,13 +327,13 @@ describe("layout shells", () => {
     const trigger = screen.getByRole("button", { name: /menu/i });
     const originalOverflow = document.body.style.overflow;
     await user.click(trigger);
-    expect(document.body.style.overflow).toBe(originalOverflow);
+    expect(document.body.style.overflow).toBe("hidden");
     expect(screen.getAllByRole("button", { name: "Đóng menu" })).toHaveLength(
       1,
     );
 
     const navigation = screen
-      .getAllByRole("navigation")
+      .getAllByRole("dialog")
       .find((element) => element.classList.contains("public-mobile-nav"));
     expect(navigation).toBeDefined();
     if (!navigation) throw new Error("Mobile navigation was not rendered");
@@ -329,16 +349,19 @@ describe("layout shells", () => {
     expect(
       within(navigation).getByRole("link", { name: "Đăng ký" }),
     ).toBeDefined();
-    const homeLink = within(navigation).getByRole("link", { name: /trang/i });
+    const homeLink = within(navigation).getByRole("button", {
+      name: "Đóng menu",
+    });
     await waitFor(() => expect(document.activeElement).toBe(homeLink));
 
     await user.click(trigger);
     expect(
       screen
-        .queryAllByRole("navigation")
+        .queryAllByRole("dialog")
         .find((element) => element.classList.contains("public-mobile-nav")),
     ).toBeUndefined();
     await waitFor(() => expect(document.activeElement).toBe(trigger));
+    expect(document.body.style.overflow).toBe(originalOverflow);
   });
 
   it("traps keyboard focus inside the public mobile drawer", async () => {
@@ -350,10 +373,12 @@ describe("layout shells", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Mở menu" }));
-    const navigation = screen.getByRole("navigation", {
+    const navigation = screen.getByRole("dialog", {
       name: "Menu công khai",
     });
-    const links = within(navigation).getAllByRole("link");
+    const links = Array.from(
+      navigation.querySelectorAll<HTMLElement>("button, a[href]"),
+    );
 
     await waitFor(() => expect(document.activeElement).toBe(links[0]));
     await user.keyboard("{Shift>}{Tab}{/Shift}");
@@ -413,13 +438,13 @@ describe("layout shells", () => {
       screen.getByRole("navigation", { name: "Điều hướng" }),
     ).toBeDefined();
     expect(screen.queryByText("Mở điều hướng")).toBeNull();
-    expect(screen.getByText("Khám phá")).toBeDefined();
+    expect(screen.getAllByText("Khám phá").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Tổng quan" })).toHaveLength(1);
     expect(screen.queryByText("Việc cần làm")).toBeNull();
     const mobileNavigation = screen.getByRole("navigation", {
       name: "Điều hướng di động",
     });
-    expect(within(mobileNavigation).getAllByRole("link")).toHaveLength(4);
+    expect(within(mobileNavigation).getAllByRole("link")).toHaveLength(5);
     for (const href of ["/", "/works", "/community", "/workspace"]) {
       expect(
         mobileNavigation.querySelector(`a[href="${href}"]`),
@@ -484,7 +509,7 @@ describe("layout shells", () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
-  it("opens the workspace drawer from the shared mobile More destination", async () => {
+  it("opens the workspace drawer from the header menu", async () => {
     const user = userEvent.setup();
     render(
       <AuthUserProvider
@@ -504,7 +529,7 @@ describe("layout shells", () => {
     const quickNavigation = screen.getByRole("navigation", {
       name: "Điều hướng di động",
     });
-    expect(within(quickNavigation).getAllByRole("link")).toHaveLength(4);
+    expect(within(quickNavigation).getAllByRole("link")).toHaveLength(5);
     expect(
       within(quickNavigation)
         .getByRole("link", { name: "Cá nhân" })
@@ -516,8 +541,8 @@ describe("layout shells", () => {
         .getAttribute("href"),
     ).toBe("/community");
 
-    const moreButton = within(quickNavigation).getByRole("button", {
-      name: "Mở thêm mục điều hướng",
+    const moreButton = screen.getByRole("button", {
+      name: "Mở điều hướng workspace",
     });
     await user.click(moreButton);
 
@@ -734,7 +759,7 @@ describe("layout shells", () => {
     expect(screen.queryByRole("link", { name: "Ký blockchain" })).toBeNull();
   });
 
-  it("shows admin work allocation links in the admin area", () => {
+  it("shows admin work allocation links in the admin area", async () => {
     navigationState.pathname = "/admin";
     render(
       <AuthUserProvider
@@ -751,6 +776,9 @@ describe("layout shells", () => {
       </AuthUserProvider>,
     );
 
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Hồ sơ & thẩm định" }));
     expect(
       screen.getAllByRole("link", { name: "Phân công công việc" }).length,
     ).toBeGreaterThan(0);
@@ -869,17 +897,17 @@ describe("layout shells", () => {
     });
     expect(
       within(quickNavigation)
-        .getByRole("link", { name: "Đề cử" })
+        .getByRole("link", { name: "Khám phá" })
         .getAttribute("aria-current"),
     ).toBe("page");
     expect(
       within(quickNavigation)
-        .getByRole("link", { name: "Đề cử" })
+        .getByRole("link", { name: "Khám phá" })
         .getAttribute("href"),
     ).toBe("/works");
   });
 
-  it("marks public mobile destinations and restores focus after More", async () => {
+  it("marks public mobile destinations and restores focus after the header menu", async () => {
     const user = userEvent.setup();
     navigationState.pathname = "/works";
     render(
@@ -901,7 +929,7 @@ describe("layout shells", () => {
     });
     expect(
       within(quickNavigation)
-        .getByRole("link", { name: "Đề cử" })
+        .getByRole("link", { name: "Khám phá" })
         .getAttribute("aria-current"),
     ).toBe("page");
     expect(
@@ -909,9 +937,7 @@ describe("layout shells", () => {
         .getByRole("link", { name: "Cá nhân" })
         .getAttribute("href"),
     ).toBe("/workspace");
-    const moreButton = within(quickNavigation).getByRole("button", {
-      name: "Mở thêm mục điều hướng",
-    });
+    const moreButton = screen.getByRole("button", { name: "Mở menu" });
     await user.click(moreButton);
     await user.keyboard("{Escape}");
     await waitFor(() => expect(document.activeElement).toBe(moreButton));
