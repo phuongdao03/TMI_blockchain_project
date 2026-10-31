@@ -10,7 +10,7 @@ vi.mock("@/components/public/proposal-viewer", () => ({
 describe("DeferredProposalViewer", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("loads the heavy reader only when its section approaches the viewport", async () => {
+  it("loads the inline reader when the section approaches the viewport", async () => {
     let notify: IntersectionObserverCallback = () => {};
     const disconnect = vi.fn();
     vi.stubGlobal(
@@ -25,7 +25,6 @@ describe("DeferredProposalViewer", () => {
     );
 
     render(<DeferredProposalViewer />);
-    expect(screen.getByText("Đang chuẩn bị trình đọc tài liệu…")).toBeDefined();
     expect(screen.queryByText("Trình đọc proposal đã sẵn sàng")).toBeNull();
 
     act(() =>
@@ -37,6 +36,6 @@ describe("DeferredProposalViewer", () => {
     await waitFor(() =>
       expect(screen.getByText("Trình đọc proposal đã sẵn sàng")).toBeDefined(),
     );
-    expect(disconnect).toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

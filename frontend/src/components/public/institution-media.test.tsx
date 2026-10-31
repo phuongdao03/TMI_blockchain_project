@@ -13,7 +13,7 @@ describe("institution media", () => {
 
     expect(
       screen.getByRole("link", {
-        name: "Quyết định thành lập PDF · 2 trang, mở văn bản gốc trong tab mới",
+        name: "Mở PDF bằng trình duyệt",
       }),
     ).toBeDefined();
   });

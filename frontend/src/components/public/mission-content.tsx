@@ -50,38 +50,44 @@ export function MissionContent() {
           </h2>
           <p className="mission-section__lead">
             Tinh Hoa Việt là chương trình hướng tới việc tìm kiếm, ghi nhận và
-            lan tỏa những giá trị Việt có chiều sâu. Từ con người, tổ chức và
-            sản phẩm đến tri thức, văn hóa và sáng tạo, mỗi giá trị được tiếp
-            cận bằng tinh thần khoa học, minh bạch và tôn trọng. Chương trình
-            mong muốn kết nối những đóng góp ấy với cộng đồng và tạo điều kiện
-            để chúng tiếp tục được gìn giữ, phát huy theo thời gian.
+            lan tỏa những giá trị Việt có chiều sâu.
           </p>
           <figure className="mission-section__seal">
             <Image
               alt=""
               height={256}
-              loading="eager"
+              loading="lazy"
               sizes="(max-width: 48rem) 176px, 112px"
               src="/assets/brand/logo-tinh-hoa-viet.png"
               width={256}
             />
           </figure>
           <div className="mission-section__invitation">
-            <p className="mission-section__eyebrow">Lời mời đồng hành</p>
-            <p>
-              Chúng tôi trân trọng mời Quý Doanh nghiệp cùng xây dựng không gian
-              nhận diện, chia sẻ và lưu giữ những giá trị Việt có chiều sâu. Sự
-              đồng hành góp phần phát triển hạ tầng, mở rộng kết nối và duy trì
-              những hoạt động tiếp nối của chương trình.
-            </p>
-            <p className="mission-section__principle">
-              Quyền lợi đồng hành được công bố minh bạch. Việc tài trợ không
-              trao quyền can thiệp vào kết quả đề cử, thẩm định hoặc xác lập;
-              Hội đồng xem xét kết quả chuyên môn theo quy trình đã phê duyệt.
-              Chương trình không cam kết thay cho thị trường hay quyết định của
-              Hội đồng. Chúng tôi cam kết triển khai nghiêm túc và trân trọng
-              từng đóng góp.
-            </p>
+            <details>
+              <summary>Tìm hiểu chương trình và nguyên tắc đồng hành</summary>
+              <p>
+                Từ con người, tổ chức và sản phẩm đến tri thức, văn hóa và sáng
+                tạo, mỗi giá trị được tiếp cận bằng tinh thần khoa học, minh
+                bạch và tôn trọng. Chương trình mong muốn kết nối những đóng góp
+                ấy với cộng đồng và tạo điều kiện để chúng tiếp tục được gìn
+                giữ, phát huy theo thời gian.
+              </p>
+              <p className="mission-section__eyebrow">Lời mời đồng hành</p>
+              <p>
+                Chúng tôi trân trọng mời Quý Doanh nghiệp cùng xây dựng không
+                gian nhận diện, chia sẻ và lưu giữ những giá trị Việt có chiều
+                sâu. Sự đồng hành góp phần phát triển hạ tầng, mở rộng kết nối
+                và duy trì những hoạt động tiếp nối của chương trình.
+              </p>
+              <p className="mission-section__principle">
+                Quyền lợi đồng hành được công bố minh bạch. Việc tài trợ không
+                trao quyền can thiệp vào kết quả đề cử, thẩm định hoặc xác lập;
+                Hội đồng xem xét kết quả chuyên môn theo quy trình đã phê duyệt.
+                Chương trình không cam kết thay cho thị trường hay quyết định
+                của Hội đồng. Chúng tôi cam kết triển khai nghiêm túc và trân
+                trọng từng đóng góp.
+              </p>
+            </details>
           </div>
         </div>
 
@@ -97,8 +103,12 @@ export function MissionContent() {
                   {objective.number}
                 </span>
                 <div>
-                  <h4>{objective.title}</h4>
-                  <p>{objective.detail}</p>
+                  <details>
+                    <summary>
+                      <h4>{objective.title}</h4>
+                    </summary>
+                    <p>{objective.detail}</p>
+                  </details>
                 </div>
               </li>
             ))}

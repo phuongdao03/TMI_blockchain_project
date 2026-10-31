@@ -12,7 +12,8 @@ export function FeaturedAssets() {
   const [nearViewport, setNearViewport] = useState(false);
 
   useEffect(() => {
-    const section = sectionRef.current;
+    const section =
+      sectionRef.current?.closest(".home-featured") ?? sectionRef.current;
     if (!section) return;
     if (!("IntersectionObserver" in window)) {
       queueMicrotask(() => setNearViewport(true));

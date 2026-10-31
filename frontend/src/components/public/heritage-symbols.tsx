@@ -8,7 +8,7 @@ export function HeritageSymbols() {
           alt="Biểu trưng Trung tâm Xác lập Tinh Hoa Việt"
           className="registry-heritage__logo"
           height={512}
-          loading="eager"
+          loading="lazy"
           sizes="(max-width: 48rem) 280px, 440px"
           src="/assets/brand/logo-tinh-hoa-viet.png"
           width={512}

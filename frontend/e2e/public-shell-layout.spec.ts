@@ -6,10 +6,10 @@ test("mobile home shows the brand logo and primary actions without opening the m
   test.skip(testInfo.project.name !== "mobile-chrome");
   await page.goto("/");
 
-  const story = page.locator(".registry-heritage");
+  const story = page.locator(".public-header .brand-mark");
   await expect(story).toBeVisible();
-  const logo = story.locator(".registry-heritage__logo");
-  await expect(story.locator("img")).toHaveCount(1);
+  const logo = story.locator(".brand-mark__official-logo");
+  await expect(story.locator("img")).toHaveCount(2);
   await expect(logo).toBeVisible();
   await expect(
     story.locator(
@@ -18,7 +18,7 @@ test("mobile home shows the brand logo and primary actions without opening the m
   ).toHaveCount(0);
   await expect(story).toHaveCSS("border-top-width", "0px");
   await expect(story).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  await expect(story).toHaveCSS("overflow", "visible");
+  expect((await story.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await expect
     .poll(() =>
       logo.evaluate((image) => (image as HTMLImageElement).naturalWidth > 0),
@@ -55,29 +55,26 @@ test("heritage logo fits without covering actions across mobile and tablet width
     await page.setViewportSize({ width, height: 1024 });
     await expect(heroLocator).toBeVisible();
     const hero = await heroLocator.boundingBox();
-    const figure = await page.locator(".registry-heritage").boundingBox();
-    const logo = await page.locator(".registry-heritage__logo").boundingBox();
+    const logo = await page
+      .locator(
+        width < 768
+          ? ".public-header .brand-mark__official-logo"
+          : ".registry-heritage__logo",
+      )
+      .boundingBox();
     const actions = await page.locator(".registry-hero__actions").boundingBox();
     expect(hero).not.toBeNull();
-    expect(figure).not.toBeNull();
     expect(logo, `${width}px logo is visible`).not.toBeNull();
     expect(actions).not.toBeNull();
 
     expect(
       logo!.x,
       `${width}px logo is cut on the left`,
-    ).toBeGreaterThanOrEqual(figure!.x - 1);
+    ).toBeGreaterThanOrEqual(0);
     expect(
       logo!.x + logo!.width,
       `${width}px logo is cut on the right`,
-    ).toBeLessThanOrEqual(figure!.x + figure!.width + 1);
-    expect(logo!.y, `${width}px logo is cut at the top`).toBeGreaterThanOrEqual(
-      figure!.y - 1,
-    );
-    expect(
-      logo!.y + logo!.height,
-      `${width}px logo is cut at the bottom`,
-    ).toBeLessThanOrEqual(figure!.y + figure!.height + 1);
+    ).toBeLessThanOrEqual(width);
 
     const overlapsActions =
       logo!.x < actions!.x + actions!.width &&
@@ -211,7 +208,7 @@ test("compact public shell keeps the account entry in its drawer and uses a full
 
   await menuButton.click();
   await expect(
-    page.getByRole("navigation", { name: "Menu công khai" }).getByRole("link", {
+    page.getByRole("dialog", { name: "Menu công khai" }).getByRole("link", {
       name: "Không gian cá nhân",
     }),
   ).toBeVisible();
@@ -254,12 +251,12 @@ test("signed-in mobile visitor keeps primary navigation across discovery pages",
     name: "Điều hướng di động",
   });
   await mobileNavigation
-    .getByRole("link", { name: "Đề cử", exact: true })
+    .getByRole("link", { name: "Khám phá", exact: true })
     .click();
   await expect(page).toHaveURL(/\/works$/);
 
   await expect(
-    mobileNavigation.getByRole("link", { name: "Đề cử", exact: true }),
+    mobileNavigation.getByRole("link", { name: "Khám phá", exact: true }),
   ).toHaveAttribute("aria-current", "page");
   await expect(
     mobileNavigation.getByRole("link", { name: "Cá nhân", exact: true }),

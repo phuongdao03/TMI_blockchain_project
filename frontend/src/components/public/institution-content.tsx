@@ -1,12 +1,8 @@
-import Image from "next/image";
-import { Download, FileText } from "lucide-react";
-
 import { HeritageGallery } from "./heritage-gallery";
 import { DeferredProposalViewer } from "./deferred-proposal-viewer";
+import { InstitutionDocumentPreview } from "./institution-document-preview";
 import { WelcomeMusic } from "./welcome-music";
-
-const decision = "/assets/institution/decision.pdf";
-const proposal = "/assets/institution/proposal-2026.pdf";
+import proposalPages from "./proposal-page-text.json";
 
 export function InstitutionContent() {
   return (
@@ -17,7 +13,7 @@ export function InstitutionContent() {
         id="van-ban-thanh-lap"
       >
         <div className="institution-section__inner institution-decision">
-          <div className="institution-decision__copy">
+          <header className="institution-decision__heading">
             <p className="institution-eyebrow">Văn bản thành lập</p>
             <h2 id="institution-title">
               Trung tâm Xác lập <span>Tinh Hoa Việt.</span>
@@ -28,6 +24,9 @@ export function InstitutionContent() {
               công bố để người đọc trực tiếp đối chiếu thông tin về đơn vị ban
               hành và căn cứ thành lập.
             </p>
+          </header>
+          <InstitutionDocumentPreview />
+          <div className="institution-decision__details">
             <dl className="institution-facts">
               <div>
                 <dt>Văn bản</dt>
@@ -42,76 +41,49 @@ export function InstitutionContent() {
                 <dd>Viện Những Vấn đề Phát triển (VIDS)</dd>
               </div>
             </dl>
-            <div className="institution-actions">
-              <a
-                className="institution-button institution-button--primary"
-                href={decision}
-                rel="noopener"
-                target="_blank"
-              >
-                <FileText aria-hidden="true" size={18} /> Xem quyết định
-              </a>
-              <a className="institution-button" download href={decision}>
-                <Download aria-hidden="true" size={18} /> Tải PDF · 2 trang
-              </a>
-            </div>
             <WelcomeMusic />
           </div>
-          <a
-            aria-label="Quyết định thành lập PDF · 2 trang, mở văn bản gốc trong tab mới"
-            className="institution-decision__preview"
-            href={decision}
-            rel="noopener"
-            target="_blank"
-          >
-            <Image
-              alt="Trang đầu Quyết định số 55 về việc thành lập Trung tâm Xác lập Tinh Hoa Việt"
-              height={982}
-              sizes="(max-width: 48rem) 100vw, 30vw"
-              src="/assets/institution/decision-preview.jpg"
-              width={700}
-            />
-            <span>
-              <FileText aria-hidden="true" size={17} /> Quyết định thành lập{" "}
-              <small>PDF · 2 trang</small>
-            </span>
-          </a>
         </div>
       </section>
-
       <HeritageGallery />
-
-      <section
-        aria-labelledby="proposal-title"
-        className="institution-section institution-section--proposal"
-        id="ho-so-2026"
-      >
-        <div className="institution-section__inner">
-          <div className="institution-section__heading">
-            <div>
-              <p className="institution-eyebrow">Hồ sơ trực tuyến · Kỳ 2026</p>
-              <h2 id="proposal-title">
-                Mở từng trang. <span>Hiểu trọn hành trình.</span>
-              </h2>
-            </div>
-            <div className="institution-section__summary">
-              <p>
-                Proposal Lễ Công bố Đề cử và Xác lập Tinh Hoa Việt. Kế hoạch tổ
-                chức, thông điệp và quyền lợi đồng hành trong 53 trang tài liệu.
-              </p>
-              <div className="institution-section__summary-actions">
-                <span className="institution-document-badge">
-                  53 trang · Bản cập nhật
-                </span>
-                <a className="institution-button" download href={proposal}>
-                  <Download aria-hidden="true" size={18} /> Tải proposal PDF
-                </a>
-              </div>
-            </div>
-          </div>
-          <DeferredProposalViewer />
-        </div>
-      </section>
     </>
+  );
+}
+
+export function ProposalSection() {
+  return (
+    <section
+      aria-labelledby="proposal-title"
+      className="institution-section institution-section--proposal"
+      id="ho-so-2026"
+    >
+      <div className="institution-section__inner proposal-introduction">
+        <div>
+          <p className="institution-eyebrow">Tài liệu giới thiệu · Kỳ 2026</p>
+          <h2 id="proposal-title">
+            Mở từng trang. <span>Hiểu trọn hành trình.</span>
+          </h2>
+          <p className="institution-lead">
+            Proposal Lễ Công bố Đề cử và Xác lập Tinh Hoa Việt. Kế hoạch tổ
+            chức, thông điệp và quyền lợi đồng hành trong {proposalPages.length}{" "}
+            trang tài liệu.
+          </p>
+          <p className="proposal-introduction__pages">
+            {proposalPages.length} trang · Bản cập nhật
+          </p>
+          <p className="institution-lead">
+            Đọc ngay bên dưới, chuyển trang hoặc mở toàn màn hình để xem rõ hơn.
+          </p>
+        </div>
+        <DeferredProposalViewer />
+        <a
+          className="proposal-download"
+          download
+          href="/assets/institution/proposal-2026.pdf"
+        >
+          Tải bản PDF để lưu hoặc chia sẻ
+        </a>
+      </div>
+    </section>
   );
 }

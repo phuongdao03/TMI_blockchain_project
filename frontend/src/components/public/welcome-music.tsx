@@ -1,12 +1,18 @@
 "use client";
 
 import { Music2, Pause, Play } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function WelcomeMusic() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.5);
+  useEffect(() => {
+    const audio = audioRef.current;
+    return () => {
+      if (audio && !audio.paused) audio.pause();
+    };
+  }, []);
 
   function togglePlayback() {
     const audio = audioRef.current;

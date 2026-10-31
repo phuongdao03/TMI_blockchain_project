@@ -160,7 +160,7 @@ describe("HomePage", () => {
     ).toHaveLength(3);
   });
 
-  it("keeps the original introduction, institution, process and featured order", () => {
+  it("puts establishment evidence and gallery immediately after the hero", () => {
     render(<HomePage />);
     const sections = [...document.querySelectorAll(".public-home > section")];
     const position = (className: string) =>
@@ -176,14 +176,14 @@ describe("HomePage", () => {
       expect(position(className)).toBeGreaterThan(0);
     }
 
-    expect(position("mission-section")).toBeLessThan(
-      position("institution-section"),
-    );
+    expect(sections[0]?.classList.contains("registry-hero")).toBe(true);
+    expect(sections[1]?.id).toBe("van-ban-thanh-lap");
+    expect(sections[2]?.id).toBe("thu-vien-anh");
+    expect(position("mission-section")).toBeGreaterThan(2);
     expect(position("institution-section")).toBeLessThan(
       position("home-journey"),
     );
-    expect(position("home-journey")).toBeLessThan(position("home-audiences"));
-    expect(position("home-audiences")).toBeLessThan(position("home-featured"));
+    expect(position("home-featured")).toBeLessThan(position("home-journey"));
   });
 
   it("publishes establishment evidence and the 2026 event dossier", () => {
@@ -198,13 +198,16 @@ describe("HomePage", () => {
     expect(screen.getByText("Quyết định số 55")).toBeDefined();
     expect(screen.getByText("02/01/2026")).toBeDefined();
     expect(
-      screen.getByRole("link", { name: "Xem quyết định" }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: "Mở PDF bằng trình duyệt" })
+        .getAttribute("href"),
     ).toBe("/assets/institution/decision.pdf");
     expect(
       screen
-        .getByRole("link", { name: "Tải proposal PDF" })
+        .getByRole("link", { name: "Tải bản PDF để lưu hoặc chia sẻ" })
         .getAttribute("href"),
     ).toBe("/assets/institution/proposal-2026.pdf");
-    expect(screen.getByText("Đang chuẩn bị trình đọc tài liệu…")).toBeDefined();
+    expect(document.querySelector(".proposal-inline")).toBeDefined();
+    expect(screen.queryByText("Đang chuẩn bị trình đọc tài liệu…")).toBeNull();
   });
 });
