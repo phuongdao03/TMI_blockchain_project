@@ -759,7 +759,7 @@ describe("layout shells", () => {
     expect(screen.queryByRole("link", { name: "Ký blockchain" })).toBeNull();
   });
 
-  it("shows admin work allocation links in the admin area", async () => {
+  it("shows admin work allocation links in the admin area", () => {
     navigationState.pathname = "/admin";
     render(
       <AuthUserProvider
@@ -776,9 +776,9 @@ describe("layout shells", () => {
       </AuthUserProvider>,
     );
 
-    await userEvent
-      .setup()
-      .click(screen.getByRole("button", { name: "Hồ sơ & thẩm định" }));
+    expect(
+      screen.queryByRole("button", { name: "Hồ sơ & thẩm định" }),
+    ).toBeNull();
     expect(
       screen.getAllByRole("link", { name: "Phân công công việc" }).length,
     ).toBeGreaterThan(0);
