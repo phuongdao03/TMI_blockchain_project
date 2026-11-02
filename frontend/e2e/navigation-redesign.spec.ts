@@ -252,20 +252,18 @@ test("workspaces preserve applicant reviewer and administrator entry points", as
       const drawer = page.getByRole("dialog");
       await expect(drawer).toBeVisible();
       if (persona === "super-admin") {
-        const group = drawer.getByRole("button", {
+        const staffLink = drawer.getByRole("link", {
           name: "Nhân sự",
           exact: true,
         });
-        if ((await group.getAttribute("aria-expanded")) === "true")
-          await group.click();
-        await expect(group).toHaveAttribute("aria-expanded", "false");
+        await expect(staffLink).toBeVisible();
         await page.keyboard.press("Escape");
         await page
           .getByRole("button", { name: "Mở điều hướng quản trị" })
           .click();
         await expect(
-          drawer.getByRole("button", { name: "Nhân sự", exact: true }),
-        ).toHaveAttribute("aria-expanded", "false");
+          drawer.getByRole("link", { name: "Nhân sự", exact: true }),
+        ).toBeVisible();
       }
       await page.screenshot({
         animations: "disabled",

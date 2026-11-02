@@ -177,10 +177,7 @@ describe("DashboardNavigation work-allocation migration", () => {
           accountType: null,
         }}
       >
-        <DashboardNavigation
-          area="admin"
-          showQuickNavigation={false}
-        />
+        <DashboardNavigation area="admin" showQuickNavigation={false} />
       </AuthUserProvider>,
     );
 

@@ -95,7 +95,9 @@ export function ApplicantTasks({ enabled = true }: { enabled?: boolean }) {
               href={`/dossiers/${task.id}`}
             >
               <div className="min-w-0">
-                <p className="break-words font-semibold">{task.title}</p>
+                <p className="break-words font-semibold text-[var(--theme-text)]">
+                  {task.title}
+                </p>
                 <p className="mt-1 text-sm text-[var(--theme-muted)]">
                   {task.code}
                 </p>
