@@ -4,22 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 import { AuthUserProvider } from "@/lib/auth/user-context";
 
 import { DashboardNavigation } from "./dashboard-navigation";
-import userEvent from "@testing-library/user-event";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
 }));
-
-const expandedAdminGroups = Object.fromEntries(
-  [
-    "Marketing & Khuyến mại",
-    "Hồ sơ & thẩm định",
-    "Cộng đồng & chương trình",
-    "Tài chính & vận hành",
-    "Nhân sự",
-    "Nội dung & hệ thống",
-  ].map((label) => [label, false]),
-);
 
 describe("DashboardNavigation work-allocation migration", () => {
   it("keeps all authorized contexts for a multi-role account", () => {
@@ -35,8 +23,7 @@ describe("DashboardNavigation work-allocation migration", () => {
       screen.getByRole("link", { name: "Khu vực quản trị" }),
     ).toBeDefined();
   });
-  it("starts inactive admin groups collapsed and lets users open them", async () => {
-    const user = userEvent.setup();
+  it("keeps admin navigation groups and links visible", () => {
     render(
       <DashboardNavigation
         roles={["SUPER_ADMIN"]}
@@ -44,15 +31,10 @@ describe("DashboardNavigation work-allocation migration", () => {
         showQuickNavigation={false}
       />,
     );
-    const toggle = screen.getByRole("button", { name: "Nhân sự" });
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(screen.queryByRole("link", { name: "Nhân sự" })).toBeNull();
-    await user.click(toggle);
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    await user.click(toggle);
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("button", { name: "Nhân sự" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Duyệt tăng ca" })).toBeDefined();
   });
-  it("opens the active ancestor even when its group was collapsed", () => {
+  it("keeps inactive admin group links visible and marks the active page", () => {
     render(
       <DashboardNavigation
         roles={["SUPER_ADMIN"]}
@@ -63,11 +45,13 @@ describe("DashboardNavigation work-allocation migration", () => {
       />,
     );
     expect(
+      screen.getByRole("link", { name: "Kiểm duyệt cộng đồng" }),
+    ).toBeDefined();
+    expect(
       screen
-        .getByRole("button", { name: "Nội dung & hệ thống" })
-        .getAttribute("aria-expanded"),
-    ).toBe("true");
-    expect(screen.getByRole("link", { name: "Người dùng" })).toBeDefined();
+        .getByRole("link", { name: "Người dùng" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
   });
 
   it("separates reviewer HR from assessment and exposes account tasks", () => {
@@ -143,7 +127,6 @@ describe("DashboardNavigation work-allocation migration", () => {
       >
         <DashboardNavigation
           area="admin"
-          collapsedGroups={expandedAdminGroups}
           roles={["MODERATOR"]}
           showQuickNavigation={false}
         />
@@ -171,7 +154,6 @@ describe("DashboardNavigation work-allocation migration", () => {
       >
         <DashboardNavigation
           area="admin"
-          collapsedGroups={expandedAdminGroups}
           roles={["MODERATOR"]}
           showQuickNavigation={false}
         />
@@ -197,7 +179,6 @@ describe("DashboardNavigation work-allocation migration", () => {
       >
         <DashboardNavigation
           area="admin"
-          collapsedGroups={expandedAdminGroups}
           showQuickNavigation={false}
         />
       </AuthUserProvider>,
@@ -235,7 +216,6 @@ describe("DashboardNavigation work-allocation migration", () => {
     render(
       <DashboardNavigation
         area="admin"
-        collapsedGroups={expandedAdminGroups}
         roles={["SUPER_ADMIN"]}
         showQuickNavigation={false}
       />,
@@ -322,7 +302,6 @@ describe("DashboardNavigation work-allocation migration", () => {
     render(
       <DashboardNavigation
         area="admin"
-        collapsedGroups={expandedAdminGroups}
         roles={["SUPER_ADMIN"]}
         showQuickNavigation={false}
       />,

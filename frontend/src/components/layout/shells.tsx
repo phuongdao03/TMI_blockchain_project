@@ -748,11 +748,6 @@ export function DashboardShell({ children }: PropsWithChildren) {
   const roles = user?.roles ?? [];
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<
-    Record<string, boolean>
-  >({});
-  const toggleGroup = (label: string, collapsed: boolean) =>
-    setCollapsedGroups((groups) => ({ ...groups, [label]: collapsed }));
   const navigationButtonRef = useRef<HTMLButtonElement>(null);
   const navigationPanelRef = useRef<HTMLDivElement>(null);
   const navigationReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -814,8 +809,6 @@ export function DashboardShell({ children }: PropsWithChildren) {
           </button>
         </div>
         <DashboardNavigation
-          collapsedGroups={collapsedGroups}
-          onToggleGroup={toggleGroup}
           area={adminArea ? "admin" : "workspace"}
           roles={roles}
           showQuickNavigation={false}
@@ -885,8 +878,6 @@ export function DashboardShell({ children }: PropsWithChildren) {
               </button>
             </div>
             <DashboardNavigation
-              collapsedGroups={collapsedGroups}
-              onToggleGroup={toggleGroup}
               area={adminArea ? "admin" : "workspace"}
               onNavigate={() => closeNavigation({ restoreFocus: false })}
               roles={roles}

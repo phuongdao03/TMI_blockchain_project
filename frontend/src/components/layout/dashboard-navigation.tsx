@@ -25,11 +25,9 @@ import {
   CreditCard,
   Megaphone,
   Ticket,
-  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useId, useState } from "react";
 
 import { useAuthUser } from "@/lib/auth/user-context";
 import {
@@ -496,8 +494,6 @@ export function DashboardNavigation({
   previewRole,
   previewPathname,
   onNavigate,
-  collapsedGroups,
-  onToggleGroup,
 }: {
   roles?: readonly string[];
   area?: "workspace" | "admin";
@@ -509,21 +505,7 @@ export function DashboardNavigation({
   previewPathname?: string;
   onNavigate?: () => void;
   onOpenMenu?: (trigger: HTMLButtonElement) => void;
-  collapsedGroups?: Record<string, boolean>;
-  onToggleGroup?: (label: string, collapsed: boolean) => void;
 }) {
-  const groupId = useId();
-  const [localCollapsedGroups, setLocalCollapsedGroups] = useState<
-    Record<string, boolean>
-  >({});
-  const groups = collapsedGroups ?? localCollapsedGroups;
-  const toggleGroup =
-    onToggleGroup ??
-    ((label: string, collapsed: boolean) =>
-      setLocalCollapsedGroups((previous) => ({
-        ...previous,
-        [label]: collapsed,
-      })));
   const pathname = usePathname();
   const activePathname = previewRole ? (previewPathname ?? pathname) : pathname;
   const authUser = useAuthUser();
@@ -573,44 +555,14 @@ export function DashboardNavigation({
           className={cn("dashboard-navigation", className)}
           aria-label="Điều hướng"
         >
-          {sections.map((section, index) => {
-            const collapsed =
-              groups[section.label] ??
-              adminNavigationGroups.some(
-                (group) => group.label === section.label,
-              );
-            const containsActive = section.items.some(
-              (item) => item.href === activeHref,
-            );
-            return section.items.length ? (
+          {sections.map((section) =>
+            section.items.length ? (
               <section
                 className="dashboard-navigation__section"
                 key={section.label}
               >
-                {navigationArea === "admin" ? (
-                  <button
-                    aria-label={section.label}
-                    aria-controls={`${groupId}-${index}`}
-                    className="dashboard-navigation__group-toggle"
-                    type="button"
-                    aria-expanded={!collapsed || containsActive}
-                    onClick={() => toggleGroup(section.label, !collapsed)}
-                  >
-                    <span className="dashboard-navigation__label">
-                      {section.label}
-                    </span>
-                    <ChevronDown aria-hidden="true" size={16} />
-                  </button>
-                ) : (
-                  <p className="dashboard-navigation__label">{section.label}</p>
-                )}
-                <div
-                  id={`${groupId}-${index}`}
-                  className="dashboard-navigation__links"
-                  hidden={
-                    navigationArea === "admin" && collapsed && !containsActive
-                  }
-                >
+                <p className="dashboard-navigation__label">{section.label}</p>
+                <div className="dashboard-navigation__links">
                   {section.items.map((item) => {
                     const Icon = item.icon;
                     const active = item.href === activeHref;
@@ -647,8 +599,8 @@ export function DashboardNavigation({
                   })}
                 </div>
               </section>
-            ) : null;
-          })}
+            ) : null,
+          )}
         </nav>
       ) : null}
 
