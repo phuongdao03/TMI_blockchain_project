@@ -118,7 +118,7 @@ write_release_tag() {
 collect_release_diagnostics() {
   release_error "Collecting failed release diagnostics before rollback"
   compose_command ps -a >&2 || true
-  compose_command logs --no-color --tail 100 backend >&2 || true
+  compose_command logs --no-color --tail 100 backend worker scheduler >&2 || true
   compose_command exec -T backend python -c '
 import urllib.request, urllib.error
 try:
