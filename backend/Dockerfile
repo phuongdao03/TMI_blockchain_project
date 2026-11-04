@@ -17,10 +17,22 @@ FROM python:3.12.13-alpine3.24@sha256:6d43704baacd1bfbe7c295d7f13079d5d8104ed335
 # one JPEG. The distro package pulls in unrelated GUI/audio codec dependencies.
 RUN apk add --no-cache build-base nasm curl xz
 WORKDIR /build/ffmpeg
-RUN curl --fail --show-error --location --retry 3 \
-        https://ffmpeg.org/releases/ffmpeg-8.0.3.tar.xz -o source.tar.xz \
-    && echo '6136812ea6d4e68bdba27e33c2a94382711cdf4f8602ffef056ff792bd6f9818  source.tar.xz' | sha256sum -c - \
-    && tar -xJf source.tar.xz --strip-components=1 \
+RUN set -eu; \
+    if curl --fail --show-error --location --retry 2 --retry-all-errors \
+        --retry-delay 1 --connect-timeout 15 --max-time 60 \
+        https://ffmpeg.org/releases/ffmpeg-8.0.3.tar.xz -o source.tar.xz; then \
+        echo '6136812ea6d4e68bdba27e33c2a94382711cdf4f8602ffef056ff792bd6f9818  source.tar.xz' | sha256sum -c -; \
+        tar -xJf source.tar.xz --strip-components=1; \
+    else \
+        echo 'FFmpeg release host unavailable; using pinned FFmpeg GitHub mirror archive.' >&2; \
+        rm -f source.tar.xz; \
+        curl --fail --show-error --location --retry 3 --retry-all-errors \
+            --retry-delay 2 --connect-timeout 15 --max-time 180 \
+            https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/refs/tags/n8.0.3 \
+            -o source.tar.gz; \
+        echo '672183051a9ad4881a8a49311f76bd2f45fd560e836456d8b3c08e3d525baea7  source.tar.gz' | sha256sum -c -; \
+        tar -xzf source.tar.gz --strip-components=1; \
+    fi \
     && ./configure \
         --prefix=/opt/poster \
         --disable-autodetect --disable-everything \
