@@ -2,6 +2,7 @@
 
 import { ArrowLeft, ArrowRight, Maximize2 } from "lucide-react";
 import Image from "next/image";
+import type { TouchEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import { ImageLoadingStatus } from "@/components/media/image-loading-status";
@@ -77,6 +78,7 @@ export function HeritageGallery() {
   const [retry, setRetry] = useState(0);
   const [nearViewport, setNearViewport] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const visible =
     category === "Tất cả"
       ? photos
@@ -118,6 +120,30 @@ export function HeritageGallery() {
       (current) => (current + direction + visible.length) % visible.length,
     );
   }
+
+  function startSwipe(event: TouchEvent<HTMLButtonElement>) {
+    if (event.touches.length !== 1) {
+      swipeStartRef.current = null;
+      return;
+    }
+    const touch = event.touches[0];
+    if (!touch) return;
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }
+
+  function endSwipe(event: TouchEvent<HTMLButtonElement>) {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    const touch = event.changedTouches[0];
+    if (!start || !touch) return;
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (Math.abs(deltaX) < 55 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.3)
+      return;
+    event.preventDefault();
+    move(deltaX < 0 ? 1 : -1);
+  }
   return (
     <section
       aria-labelledby="heritage-gallery-title"
@@ -141,8 +167,14 @@ export function HeritageGallery() {
           <div className="heritage-gallery__stage" ref={stageRef}>
             <button
               className="heritage-gallery__open-image"
+              data-image-loaded={loadedFile === photo.file}
               aria-label={`Xem ảnh: ${photo.title}`}
               onClick={() => setExpanded(true)}
+              onTouchCancel={() => {
+                swipeStartRef.current = null;
+              }}
+              onTouchEnd={endSwipe}
+              onTouchStart={startSwipe}
               type="button"
             >
               <Image

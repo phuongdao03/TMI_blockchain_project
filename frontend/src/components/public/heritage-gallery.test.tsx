@@ -50,13 +50,63 @@ it("shows loading feedback while a gallery image changes", async () => {
   render(<HeritageGallery />);
 
   expect(await screen.findByText("Đang tải hình ảnh…")).toBeDefined();
-  fireEvent.load(screen.getByAltText("Lễ công bố và trao quyết định xác lập"));
+  const firstImage = screen.getByAltText(
+    "Lễ công bố và trao quyết định xác lập",
+  );
+  const trigger = screen.getByRole("button", {
+    name: "Xem ảnh: Lễ công bố và trao quyết định xác lập",
+  });
+  expect(trigger.getAttribute("data-image-loaded")).toBe("false");
+  fireEvent.load(firstImage);
   await waitFor(() =>
     expect(screen.queryByText("Đang tải hình ảnh…")).toBeNull(),
   );
+  expect(trigger.getAttribute("data-image-loaded")).toBe("true");
 
   fireEvent.click(screen.getByRole("button", { name: "Ảnh tiếp theo" }));
   expect(screen.getByText("Đang tải hình ảnh…")).toBeDefined();
+});
+
+it("advances the inline gallery on a horizontal swipe", () => {
+  render(<HeritageGallery />);
+  const image = screen.getByRole("button", {
+    name: "Xem ảnh: Lễ công bố và trao quyết định xác lập",
+  });
+
+  fireEvent.touchStart(image, {
+    touches: [{ clientX: 180, clientY: 100 }],
+  });
+  fireEvent.touchEnd(image, {
+    changedTouches: [{ clientX: 100, clientY: 108 }],
+  });
+
+  expect(
+    screen.getByRole("button", {
+      name: "Xem ảnh: Trao quyết định trên sân khấu",
+    }),
+  ).toBeDefined();
+  expect(screen.getByText("02 / 38")).toBeDefined();
+});
+
+it("does not advance the inline gallery on a vertical gesture", () => {
+  render(<HeritageGallery />);
+  const image = screen.getByRole("button", {
+    name: "Xem ảnh: Lễ công bố và trao quyết định xác lập",
+  });
+
+  fireEvent.touchStart(image, {
+    touches: [{ clientX: 150, clientY: 100 }],
+  });
+  fireEvent.touchEnd(image, {
+    changedTouches: [{ clientX: 158, clientY: 20 }],
+  });
+
+  expect(
+    screen.getByRole("button", {
+      name: "Xem ảnh: Lễ công bố và trao quyết định xác lập",
+    }),
+  ).toBeDefined();
+  expect(screen.getByText("01 / 38")).toBeDefined();
 });
 
 it("keeps keyboard navigation, zoom, body scroll and focus coherent in the lightbox", async () => {

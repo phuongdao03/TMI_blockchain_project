@@ -6,19 +6,10 @@ import Link from "next/link";
 import { resolveDefaultWorkspace } from "@/lib/auth/role-workspaces";
 import { useAuthStatus, useAuthUser } from "@/lib/auth/user-context";
 
-export function HomeHeroAccountMessage() {
-  const authStatus = useAuthStatus();
-  const user = useAuthUser();
-  const message =
-    authStatus === "unauthenticated"
-      ? "Tạo tài khoản để gửi hồ sơ và theo dõi hành trình xác lập."
-      : authStatus === "authenticated" && user
-        ? "Theo dõi hồ sơ, phản hồi và thông tin của bạn trong không gian cá nhân."
-        : "Đang xác minh phiên đăng nhập.";
-
+export function HomeHeroPurposeMessage() {
   return (
     <p className="registry-hero__copy--compact mt-5 max-w-[41rem] text-[0.95rem] leading-7 text-slate-300 sm:mt-8 sm:text-lg sm:leading-8">
-      {message}
+      Khám phá đề cử có căn cứ, theo dõi hành trình xác lập giá trị Việt.
     </p>
   );
 }

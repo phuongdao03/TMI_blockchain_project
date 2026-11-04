@@ -14,7 +14,7 @@ import Image from "next/image";
 import {
   HomeClosingAccountCta,
   HomeHeroAccountActions,
-  HomeHeroAccountMessage,
+  HomeHeroPurposeMessage,
 } from "@/components/public/home-account-experience";
 import { FeaturedAssets } from "@/components/public/featured-assets";
 import {
@@ -103,7 +103,7 @@ export default function HomePage() {
               Suy tôn trí tuệ.{" "}
               <span className="text-gold-300">Lưu truyền di sản.</span>
             </h1>
-            <HomeHeroAccountMessage />
+            <HomeHeroPurposeMessage />
             <p className="registry-hero__copy--desktop mt-5 max-w-[41rem] text-[0.95rem] leading-7 text-slate-300 sm:mt-8 sm:text-lg sm:leading-8">
               Tinh Hoa Việt giới thiệu những giá trị tiêu biểu của con người, tổ
               chức, tri thức, văn hóa và sáng tạo Việt Nam qua hồ sơ có căn cứ.

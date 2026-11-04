@@ -227,10 +227,6 @@
     z-index: 2;
     background: var(--theme-surface);
   }
-  .public-mobile-nav,
-  .public-mobile-drawer__backdrop {
-    animation: none;
-  }
   .public-mobile-nav__link {
     min-height: 44px;
   }
@@ -268,5 +264,42 @@
     position: relative;
     top: auto;
     margin-top: 8px;
+  }
+}
+
+@media (max-width: 63.99rem) and (prefers-reduced-motion: no-preference) {
+  @keyframes public-mobile-drawer-enter {
+    from {
+      opacity: 0;
+      transform: translateX(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes public-mobile-backdrop-enter {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .public-shell .public-mobile-nav {
+    animation: public-mobile-drawer-enter 180ms var(--ease-standard) both;
+  }
+
+  .public-shell .public-mobile-drawer__backdrop {
+    animation: public-mobile-backdrop-enter 150ms ease-out both;
+  }
+}
+
+@media (max-width: 63.99rem) and (prefers-reduced-motion: reduce) {
+  .public-shell .public-mobile-nav,
+  .public-shell .public-mobile-drawer__backdrop {
+    animation: none;
   }
 }

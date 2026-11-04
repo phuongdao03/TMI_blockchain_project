@@ -93,7 +93,7 @@ describe("HomePage", () => {
     ).toBeNull();
     expect(
       screen.getByText(
-        "Tạo tài khoản để gửi hồ sơ, nhận phản hồi và quản lý thông tin của bạn.",
+        "Khám phá đề cử có căn cứ, theo dõi hành trình xác lập giá trị Việt.",
       ),
     ).toBeDefined();
   });
@@ -120,10 +120,10 @@ describe("HomePage", () => {
     );
     expect(screen.queryByRole("link", { name: "Tạo tài khoản" })).toBeNull();
     expect(
-      screen.queryByText(
-        "Tạo tài khoản để gửi hồ sơ, nhận phản hồi và quản lý thông tin của bạn.",
+      screen.getByText(
+        "Khám phá đề cử có căn cứ, theo dõi hành trình xác lập giá trị Việt.",
       ),
-    ).toBeNull();
+    ).toBeDefined();
   });
 
   it("explains the public journey with three concrete verification steps", () => {

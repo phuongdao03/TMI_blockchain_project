@@ -11647,7 +11647,18 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
   }
 }
 
-@media (hover: none) and (pointer: coarse) {
+@media (hover: none) and (pointer: coarse) and (prefers-reduced-motion: no-preference) {
+  .public-shell
+    :is(
+      .registry-button,
+      .catalog-work-card__link,
+      .public-mobile-nav__link,
+      .public-header__menu
+    ) {
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
+  }
+
   .public-shell
     :is(
       .registry-button,
@@ -11655,7 +11666,15 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
       .public-mobile-nav__link,
       .public-header__menu
     ):active {
-    transform: scale(0.985);
+    transform: scale(0.96);
+  }
+
+  .site-mobile-navigation__item {
+    transition: transform 150ms ease-out;
+  }
+
+  .site-mobile-navigation__item:active {
+    transform: scale(0.96);
   }
 }
 
@@ -11669,7 +11688,16 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
   .public-shell
     :is(.registry-button, .catalog-work-card__link, .public-mobile-nav__link),
   .public-header__menu {
-    transition: none;
+    transition-property: color, background-color, border-color, opacity !important;
+    transition-duration: 120ms !important;
+    transition-timing-function: ease-out !important;
+  }
+
+  .public-shell
+    :is(.registry-button, .catalog-work-card__link, .public-mobile-nav__link):active,
+  .public-header__menu:active,
+  .public-shell .theme-toggle-option:active {
+    transform: none !important;
   }
 }
 
