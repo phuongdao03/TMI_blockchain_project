@@ -92,8 +92,13 @@
   display: contents;
   margin: 0;
 }
-.public-home.home-editorial .registry-hero__action-row .registry-hero__buttons > *,
-.public-home.home-editorial .registry-hero__action-row .registry-hero__discover {
+.public-home.home-editorial
+  .registry-hero__action-row
+  .registry-hero__buttons
+  > *,
+.public-home.home-editorial
+  .registry-hero__action-row
+  .registry-hero__discover {
   grid-column: 1 / -1;
 }
 .home-editorial .registry-button {
@@ -772,7 +777,8 @@ html[data-theme="dark"] .public-media-dialog {
 
   .home-editorial :is(a, button),
   .public-media-dialog :is(a, button) {
-    transition-property: color, background-color, border-color, opacity !important;
+    transition-property:
+      color, background-color, border-color, opacity !important;
     transition-duration: 120ms !important;
     transition-timing-function: ease-out !important;
   }

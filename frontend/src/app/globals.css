@@ -11688,13 +11688,18 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
   .public-shell
     :is(.registry-button, .catalog-work-card__link, .public-mobile-nav__link),
   .public-header__menu {
-    transition-property: color, background-color, border-color, opacity !important;
+    transition-property:
+      color, background-color, border-color, opacity !important;
     transition-duration: 120ms !important;
     transition-timing-function: ease-out !important;
   }
 
   .public-shell
-    :is(.registry-button, .catalog-work-card__link, .public-mobile-nav__link):active,
+    :is(
+      .registry-button,
+      .catalog-work-card__link,
+      .public-mobile-nav__link
+    ):active,
   .public-header__menu:active,
   .public-shell .theme-toggle-option:active {
     transform: none !important;

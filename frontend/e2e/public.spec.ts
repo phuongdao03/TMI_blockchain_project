@@ -35,7 +35,7 @@ test("public portal is professional, responsive and verifiable", async ({
   await expect(
     page.getByText(
       testInfo.project.name === "mobile-chrome"
-        ? /Tạo tài khoản để gửi hồ sơ và theo dõi hành trình xác lập/
+        ? /Khám phá đề cử có căn cứ, theo dõi hành trình xác lập giá trị Việt/
         : /Tinh Hoa Việt giới thiệu những giá trị tiêu biểu/,
     ),
   ).toBeVisible();

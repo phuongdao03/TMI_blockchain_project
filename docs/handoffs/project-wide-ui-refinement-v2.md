@@ -33,6 +33,12 @@
   `tsc --noEmit` form cannot write its incremental metadata in this workspace.
 - Full frontend ESLint passed with 0 errors and 4 existing warnings in
   `membership-chat-access-admin.tsx`.
+- Root format check passed: Prettier and backend Ruff. Prettier adjusted 16
+  lines in the two CSS files.
+- Updated the mobile copy assertion in `frontend/e2e/public.spec.ts`; the
+  isolated mobile public-portal E2E test passed. The full Actions log was not
+  accessible in this session, so the exact original failure line was not
+  confirmed from GitHub.
 - Browser checked at 320, 360, 375, 390, 430, 768, 1024, and 1440 CSS px;
   `scrollWidth` did not exceed `clientWidth`. Browser checks covered dark/light
   themes, reduced motion, menu Escape/focus restore, establishment evidence,
@@ -40,8 +46,7 @@
   home page tests.
 - Vite config bundling is blocked by a Windows `EPERM` under
   `frontend/node_modules/.vite-temp`; using `--configLoader runner` avoids that
-  write and tests pass. CSS Prettier warnings also reproduce on the baseline
-  versions of both touched CSS files; no broad reformat was applied.
+  write and tests pass.
 - Build was not run because the existing local development server uses the
   shared `.next` directory.
 
