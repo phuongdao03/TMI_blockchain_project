@@ -11388,10 +11388,6 @@ html[data-theme="dark"] .dashboard-main .hr-worksite-card {
     font-size: 0.75rem;
     line-height: 1.5;
   }
-
-  .public-home .registry-visual--heritage {
-    display: none;
-  }
 }
 
 @media (min-width: 48.01rem) and (max-width: 63.99rem) {
@@ -13230,10 +13226,6 @@ html[data-theme="dark"] .confirmation-dialog__surface {
   }
   .profile-name-reminder a {
     justify-self: start;
-  }
-  .registry-heritage__glint::before {
-    animation: none;
-    will-change: auto;
   }
   .site-mobile-navigation {
     backdrop-filter: none;

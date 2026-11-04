@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { ArrowDown } from "lucide-react";
-
 import {
   type CatalogParameters,
   PublicLibrary,
@@ -85,12 +83,6 @@ export default async function LibraryPage({
               cộng đồng.
             </p>
           </div>
-          <a
-            className="inline-flex min-h-11 shrink-0 items-center gap-2 self-start rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] transition-colors hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] sm:self-auto"
-            href="#catalog-search"
-          >
-            Tìm đề cử <ArrowDown aria-hidden="true" className="size-4" />
-          </a>
         </header>
         <div className={embedded ? "mt-5 sm:mt-8" : "mt-6 sm:mt-9"}>
           <PublicLibrary {...parameters} initialData={initialData} />

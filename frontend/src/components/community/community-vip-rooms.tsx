@@ -55,7 +55,7 @@ export function CommunityVipRooms() {
           </p>
         </div>
         <Link
-          className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold underline"
+          className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-[var(--theme-border)] px-4 text-sm font-semibold"
           href="/cong-dong/hoi-vien"
         >
           Quyền lợi
@@ -78,7 +78,7 @@ export function CommunityVipRooms() {
               />
               <div>
                 <h3 className="font-bold">{room.title}</h3>
-                <p className="mt-1 text-sm text-[var(--theme-muted)]">
+                <p className="member-room-entry__access">
                   {checking
                     ? "Đang kiểm tra quyền…"
                     : access?.isError
@@ -86,6 +86,9 @@ export function CommunityVipRooms() {
                       : allowed
                         ? "Bạn có thể tham gia"
                         : room.accessLabel}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--theme-muted)]">
+                  {room.summary}
                 </p>
               </div>
               {checking ? (

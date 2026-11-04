@@ -174,7 +174,7 @@ export function PublicLibrary({
       <section aria-labelledby="catalog-results-heading" id="catalog-search">
         <div className="border-y border-white/10 py-5">
           <form
-            className="flex flex-col gap-3 lg:flex-row"
+            className="grid grid-cols-2 gap-2 sm:gap-3 lg:flex"
             method="get"
             onSubmit={() =>
               trackPublicCatalog({
@@ -186,8 +186,16 @@ export function PublicLibrary({
               })
             }
           >
-            <SearchAutocomplete defaultValue={parameters.query} />
-            <label className="min-w-48">
+            <div className="col-span-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2 lg:contents">
+              <SearchAutocomplete defaultValue={parameters.query} />
+              <Button
+                className="min-h-12 shrink-0 px-3 sm:px-4 lg:px-6"
+                type="submit"
+              >
+                <Search aria-hidden="true" className="size-4" /> Tìm kiếm
+              </Button>
+            </div>
+            <label className="col-span-1 min-w-0 lg:min-w-48">
               <span className="sr-only">Sắp xếp</span>
               <select
                 className={controlClass}
@@ -215,11 +223,8 @@ export function PublicLibrary({
               type="hidden"
               value={parameters.publishedTo ?? ""}
             />
-            <Button className="lg:px-6" type="submit">
-              <Search className="size-4" /> Tìm kiếm
-            </Button>
             <Button
-              className="lg:hidden"
+              className="col-span-1 min-h-12 w-full lg:hidden"
               onClick={() => setFilterOpen(true)}
               ref={filterTrigger}
               variant="outline"

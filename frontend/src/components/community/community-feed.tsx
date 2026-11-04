@@ -84,7 +84,7 @@ export function CommunityFeed({
 
   return (
     <div className="public-theme-surface min-h-[calc(100dvh-5rem)]">
-      <div className="mx-auto max-w-6xl px-5 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+      <div className="mx-auto max-w-7xl px-5 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <header className="flex flex-col gap-4 pb-5 sm:flex-row sm:items-center sm:justify-between sm:border-b sm:border-[var(--theme-border)]">
           <div className="min-w-0">
             <p className="hidden text-[0.68rem] font-bold tracking-[0.16em] text-[var(--theme-accent)] uppercase sm:block">
@@ -122,13 +122,16 @@ export function CommunityFeed({
         </header>
 
         {authStatus === "unauthenticated" ? (
-          <p className="mt-3 border-l-2 border-[var(--theme-border)] pl-3 text-sm text-[var(--theme-muted)]">
+          <p className="mt-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 text-sm leading-6 text-[var(--theme-muted)]">
             Bạn đang ở chế độ chỉ đọc. Đăng nhập để đăng bài, bình luận và tương
             tác.
           </p>
         ) : null}
         {authStatus === "error" ? (
-          <p className="mt-3 text-sm text-[var(--theme-muted)]" role="alert">
+          <p
+            className="mt-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 text-sm leading-6 text-[var(--theme-muted)]"
+            role="alert"
+          >
             Không thể xác minh phiên. Nội dung vẫn ở chế độ đọc cho đến khi xác
             minh thành công.
           </p>
@@ -152,14 +155,14 @@ export function CommunityFeed({
         <form
           action="/community"
           aria-label="Tìm kiếm và lọc bài viết"
-          className="mb-3 grid grid-cols-2 gap-2 sm:my-4 sm:grid-cols-[minmax(12rem,1fr)_minmax(10rem,15rem)_minmax(9rem,12rem)] sm:border-b sm:border-[var(--theme-border)] sm:pb-4"
+          className="mb-6 mt-5 grid grid-cols-2 gap-2 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:my-6 sm:grid-cols-[minmax(12rem,1fr)_minmax(10rem,15rem)_minmax(9rem,12rem)] sm:gap-3 sm:p-4"
           onSubmit={handleFilterSubmit}
           role="search"
         >
           <label className="relative col-span-2 flex min-w-0 items-center sm:col-span-1">
             <span className="sr-only">Tìm kiếm bài viết</span>
             <input
-              className="min-h-11 min-w-0 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] py-2 pr-12 pl-3 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
+              className="min-h-12 min-w-0 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-bg)] py-2 pr-12 pl-4 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
               defaultValue={q ?? ""}
               maxLength={120}
               name="q"
@@ -168,7 +171,7 @@ export function CommunityFeed({
             />
             <button
               aria-label="Tìm bài viết"
-              className="absolute right-1 inline-grid size-9 place-items-center rounded-md text-[var(--theme-muted)] hover:bg-[var(--theme-elevated)] hover:text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+              className="absolute right-1 inline-grid size-10 place-items-center rounded-lg text-[var(--theme-muted)] hover:bg-[var(--theme-elevated)] hover:text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
               type="submit"
             >
               <Search aria-hidden="true" className="size-4" />
@@ -178,7 +181,7 @@ export function CommunityFeed({
             Chuyên mục
           </label>
           <select
-            className="min-h-11 min-w-0 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-2 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20 sm:px-3"
+            className="min-h-12 min-w-0 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-bg)] px-3 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
             key={`${category ?? ""}:${sort}:${categories.data ? "ready" : "loading"}`}
             id="community-category-filter"
             name="category"
@@ -196,7 +199,7 @@ export function CommunityFeed({
             Sắp xếp
           </label>
           <select
-            className="min-h-11 min-w-0 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-2 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20 sm:px-3"
+            className="min-h-12 min-w-0 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-bg)] px-3 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
             key={`${category ?? ""}:${sort}`}
             id="community-sort-filter"
             name="sort"
