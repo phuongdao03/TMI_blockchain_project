@@ -515,6 +515,25 @@ class MembershipService:
                     expires_at=expiry,
                 )
             )
+            if amount_due > 0:
+                from app.core.config import get_settings
+                from app.modules.affiliate.service import AffiliateService
+
+                settings = get_settings()
+                await AffiliateService(
+                    self.session,
+                    affiliate_enabled=settings.affiliate_enabled,
+                    direct_commission_enabled=(
+                        settings.affiliate_direct_commission_enabled
+                    ),
+                    clock=lambda: now,
+                ).record_commission_in_current_transaction(
+                    source_reference=f"membership:{purchase_id}",
+                    referred_user_id=user_id,
+                    service_code="MEMBERSHIP",
+                    amount_minor=amount_due,
+                    earned_at=now,
+                )
             self.session.add(
                 Notification(
                     user_id=user_id,

@@ -11,6 +11,8 @@ from app.api.v1.admin_notifications import router as admin_notifications_router
 from app.api.v1.admin_promotions import router as admin_promotions_router
 from app.api.v1.admin_users import router as admin_users_router
 from app.api.v1.advertising import router as advertising_router
+from app.api.v1.affiliate import admin_router as admin_affiliate_router
+from app.api.v1.affiliate import router as affiliate_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.blockchain import router as blockchain_router
@@ -63,6 +65,7 @@ from app.api.v1.tasks import router as tasks_router
 from app.api.v1.users import router as users_router
 from app.api.v1.vouchers import router as vouchers_router
 from app.api.v1.wallet import router as wallet_router
+from app.api.v1.wallet_withdrawals import router as wallet_withdrawals_router
 from app.api.v1.work_allocations import router as work_allocations_router
 from app.api.v1.work_allocations import self_router as my_work_allocations_router
 from app.core.config import Settings, get_settings
@@ -311,6 +314,9 @@ def create_application(
     app.include_router(operations_router)
     app.include_router(payments_router)
     app.include_router(wallet_router)
+    app.include_router(wallet_withdrawals_router)
+    app.include_router(affiliate_router)
+    app.include_router(admin_affiliate_router)
     app.include_router(memberships_router)
     app.include_router(public_router)
     app.include_router(public_works_admin_router)

@@ -81,6 +81,7 @@ describe("DashboardNavigation work-allocation migration", () => {
     ).toBeLessThan(
       links.findIndex((link) => link.getAttribute("href") === "/works"),
     );
+    expect(navigation.querySelector('a[href="/affiliate"]')).not.toBeNull();
     const accountSection = screen
       .getByRole("link", { name: "Tài khoản" })
       .closest("section")!;
@@ -111,6 +112,7 @@ describe("DashboardNavigation work-allocation migration", () => {
       expect(view.container.querySelector('a[href="/vouchers"]')).toBeNull();
       expect(view.container.querySelector('a[href="/wallet"]')).toBeNull();
       expect(view.container.querySelector('a[href="/membership"]')).toBeNull();
+      expect(view.container.querySelector('a[href="/affiliate"]')).toBeNull();
     },
   );
   it("shows community moderation only to users with its explicit capability", () => {
@@ -138,6 +140,25 @@ describe("DashboardNavigation work-allocation migration", () => {
         .getByRole("link", { name: "Kiểm duyệt cộng đồng" })
         .getAttribute("href"),
     ).toBe("/admin/community");
+  });
+
+  it("shows affiliate administration only with an affiliate capability", () => {
+    const view = render(
+      <AuthUserProvider
+        user={{
+          id: "affiliate-manager",
+          email: "manager@example.com",
+          roles: ["MODERATOR"],
+          permissions: ["affiliate.profiles.manage"],
+          isEmployee: false,
+          accountType: null,
+        }}
+      >
+        <DashboardNavigation area="admin" showQuickNavigation={false} />
+      </AuthUserProvider>,
+    );
+
+    expect(view.container.querySelector('a[href="/admin/affiliate"]')).not.toBeNull();
   });
 
   it("does not show community moderation to a moderator without the capability", () => {

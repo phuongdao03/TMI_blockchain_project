@@ -52,7 +52,12 @@ from app.modules.payments.types import (
     PaymentStatusHistoryView,
     PaymentWaiverView,
 )
-from app.modules.wallet.service import WalletLedger, WalletService, valid_key
+from app.modules.wallet.service import (
+    WALLET_TOPUP_TTL_SECONDS,
+    WalletLedger,
+    WalletService,
+    valid_key,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +131,7 @@ class PaymentService:
             session=self._session,
             gateway=self._gateway,
             provider=self._provider_name,
-            ttl_seconds=int(self._order_ttl.total_seconds()),
+            ttl_seconds=WALLET_TOPUP_TTL_SECONDS,
         )
 
     async def pay_with_wallet(
@@ -1933,6 +1938,28 @@ class PaymentService:
             raise PaymentConflictError("Linked fee obligation is not payable.")
         obligation.status = FeeObligationStatus.PAID
         obligation.paid_at = order.paid_at
+        if order.amount_minor > 0 and order.currency.upper() == "VND":
+            from app.core.config import get_settings
+            from app.modules.affiliate.service import AffiliateService
+
+            settings = get_settings()
+            commission_service_code = obligation.service_code.upper()
+            if commission_service_code == "STANDARD":
+                commission_service_code = "DOSSIER_SUBMISSION"
+            await AffiliateService(
+                self._session,
+                affiliate_enabled=settings.affiliate_enabled,
+                direct_commission_enabled=(
+                    settings.affiliate_direct_commission_enabled
+                ),
+                clock=self._clock,
+            ).record_commission_in_current_transaction(
+                source_reference=f"payment-order:{order.id}",
+                referred_user_id=obligation.owner_user_id,
+                service_code=commission_service_code,
+                amount_minor=order.amount_minor,
+                earned_at=order.paid_at,
+            )
 
     def _audit(
         self,

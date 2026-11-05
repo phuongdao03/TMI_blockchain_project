@@ -172,6 +172,8 @@ async def register(
         password=payload.password.get_secret_value(),
         client_ip=client_ip,
         account_type=payload.account_type,
+        referral_code=payload.referral_code,
+        referral_click_id=payload.referral_click_id,
     )
     return SuccessEnvelope(
         data=RegistrationAcceptedData(
@@ -272,6 +274,8 @@ async def exchange_firebase_token(
         claims=claims,
         attempt=attempt,
         metadata=_client_metadata(request, "Firebase"),
+        referral_code=payload.referral_code,
+        referral_click_id=payload.referral_click_id,
     )
     principal = await session_service.authenticate_access(
         completion.issued.access_token

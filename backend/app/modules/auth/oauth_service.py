@@ -58,11 +58,15 @@ class OAuthService:
         *,
         session: AsyncSession,
         session_issuer: OAuthSessionIssuer,
+        auto_create_affiliate_profiles: bool = False,
+        affiliate_enabled: bool = False,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._session = session
         self._repository = AuthRepository(session)
         self._session_issuer = session_issuer
+        self._affiliate_profile_auto_create = auto_create_affiliate_profiles
+        self._affiliate_enabled = affiliate_enabled
         self._clock = clock or (lambda: datetime.now(UTC))
 
     async def complete(
@@ -71,6 +75,8 @@ class OAuthService:
         claims: FirebaseClaims,
         attempt: OAuthAttempt,
         metadata: ClientMetadata,
+        referral_code: str | None = None,
+        referral_click_id: UUID | None = None,
     ) -> OAuthCompletion:
         provider = AuthProvider.FIREBASE
         try:
@@ -93,6 +99,8 @@ class OAuthService:
                     attempt=attempt,
                     now=now,
                     provider=provider,
+                    referral_code=referral_code,
+                    referral_click_id=referral_click_id,
                 )
                 user.last_login_at = now
         except OAuthAccountLinkRequiredError:
@@ -127,6 +135,8 @@ class OAuthService:
         attempt: OAuthAttempt,
         now: datetime,
         provider: AuthProvider,
+        referral_code: str | None,
+        referral_click_id: UUID | None,
     ) -> tuple[User, str]:
         identity = await self._repository.get_identity(
             provider=provider,
@@ -200,6 +210,34 @@ class OAuthService:
             self._repository.add_role(role)
             await self._session.flush()
         self._repository.add_user_role(UserRole(user_id=user.id, role_id=role.id))
+        await self._session.flush()
+        if role_code == USER_REGISTRATION_ROLE:
+            from app.core.errors import DomainError
+            from app.modules.affiliate.service import AffiliateService
+
+            affiliate = AffiliateService(
+                self._session,
+                affiliate_enabled=self._affiliate_enabled,
+            )
+            if self._affiliate_profile_auto_create:
+                try:
+                    await affiliate.ensure_profile_in_current_transaction(
+                        user.id,
+                        allow_pending=False,
+                    )
+                except DomainError as exc:
+                    if exc.status_code != 403:
+                        raise
+            if self._affiliate_enabled and referral_code:
+                try:
+                    await affiliate.capture_signup_referral_in_current_transaction(
+                        referred_user_id=user.id,
+                        referral_code=referral_code,
+                        click_id=referral_click_id,
+                    )
+                except DomainError as exc:
+                    if exc.status_code >= 500:
+                        raise
         self._repository.add_identity(
             AuthIdentity(
                 user_id=user.id,

@@ -80,7 +80,7 @@ describe("RegisterForm", () => {
 
     expect(
       screen.getByText(
-        "Tạo tài khoản để gửi hồ sơ, lưu bản nháp và theo dõi quá trình xử lý.",
+        "Tạo tài khoản để gửi hồ sơ, lưu bản nháp và theo dõi tiến độ.",
       ),
     ).toBeDefined();
   });
@@ -189,7 +189,7 @@ describe("RegisterForm", () => {
 
     expect(
       screen.getByText(
-        "Tạo tài khoản để gửi hồ sơ, lưu bản nháp và theo dõi quá trình xử lý.",
+        "Tạo tài khoản để gửi hồ sơ, lưu bản nháp và theo dõi tiến độ.",
       ),
     ).toBeDefined();
     expect(screen.queryByRole("radio")).toBeNull();

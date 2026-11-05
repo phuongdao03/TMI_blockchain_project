@@ -5,6 +5,7 @@ import { Suspense, type ReactNode, useState } from "react";
 
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { NavigationLoading } from "@/components/ui/navigation-loading";
+import { ReferralAttributionCapture } from "@/components/auth/referral-attribution-capture";
 import { ApiError } from "@/lib/api/client";
 
 export function AppProviders({ children }: { children: ReactNode }) {
@@ -28,6 +29,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
       <ServiceWorkerRegistration
         forceEnable={process.env.NEXT_PUBLIC_ENABLE_PWA === "true"}
       />
+      <ReferralAttributionCapture />
       <Suspense fallback={null}>
         <NavigationLoading />
       </Suspense>

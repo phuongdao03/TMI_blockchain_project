@@ -47,6 +47,7 @@ type NavigationItem = {
   permission?: string;
   permissions?: readonly string[];
   allowedRoles?: readonly string[];
+  excludedRoles?: readonly string[];
 };
 
 type NavigationSection = {
@@ -56,7 +57,7 @@ type NavigationSection = {
 
 const discoveryItems: NavigationItem[] = [
   { href: "/workspace", label: "Tổng quan", icon: LayoutDashboard },
-  { href: "/", label: "Website", icon: House },
+  { href: "/", label: "Trang chủ", icon: House },
   { href: "/works", label: "Thư viện đề cử", icon: BookOpen },
   { href: "/community", label: "Cộng đồng", icon: UsersRound },
   { href: "/events", label: "Sự kiện", icon: CalendarDays },
@@ -64,7 +65,7 @@ const discoveryItems: NavigationItem[] = [
 ];
 
 const personalItems: NavigationItem[] = [
-  { href: "/vouchers", label: "Voucher của tôi", icon: Ticket },
+  { href: "/vouchers", label: "Ưu đãi của tôi", icon: Ticket },
   {
     href: "/advertising",
     label: "Quảng cáo của tôi",
@@ -77,6 +78,14 @@ const personalItems: NavigationItem[] = [
   { href: "/membership", label: "Thẻ thành viên", icon: CreditCard },
   { href: "/wallet", label: "Ví của tôi", icon: Wallet },
 ];
+
+const affiliateItem: NavigationItem = {
+  href: "/affiliate",
+  label: "Tiếp thị liên kết",
+  icon: UsersRound,
+  allowedRoles: ["USER"],
+  excludedRoles: ["MODERATOR", "SUPER_ADMIN"],
+};
 
 const publicSupportItem: NavigationItem = {
   href: "/help",
@@ -112,7 +121,7 @@ const employeeItems: NavigationItem[] = reviewerItems.slice(2);
 const adminItems: NavigationItem[] = [
   {
     href: "/admin/promotions",
-    label: "Marketing & Khuyến mại",
+    label: "Tiếp thị & khuyến mại",
     icon: Ticket,
     permissions: ["promotions.manage", "promotions.read"],
   },
@@ -203,6 +212,22 @@ const adminItems: NavigationItem[] = [
     permission: "payments.read",
   },
   {
+    href: "/admin/withdrawals",
+    label: "Duyệt yêu cầu rút",
+    icon: Wallet,
+    permission: "finance.read",
+  },
+  {
+    href: "/admin/affiliate",
+    label: "Tiếp thị liên kết",
+    icon: UsersRound,
+    permissions: [
+      "affiliate.profiles.manage",
+      "affiliate.commissions.approve",
+      "affiliate.rules.manage",
+    ],
+  },
+  {
     href: "/admin/dashboard",
     label: "Tổng quan vận hành",
     icon: Gauge,
@@ -262,7 +287,7 @@ const blockchainSignerItems: NavigationItem[] = [
 ];
 
 const adminNavigationGroups = [
-  { label: "Marketing & Khuyến mại", hrefs: ["/admin/promotions"] },
+  { label: "Tiếp thị & khuyến mại", hrefs: ["/admin/promotions"] },
   {
     label: "Hồ sơ & thẩm định",
     hrefs: ["/admin/reviews", "/admin/work-allocations", "/admin/certificates"],
@@ -282,6 +307,8 @@ const adminNavigationGroups = [
       "/admin/dashboard",
       "/admin/payments",
       "/admin/payments/history",
+      "/admin/withdrawals",
+      "/admin/affiliate",
       "/admin/reports",
     ],
   },
@@ -316,6 +343,8 @@ function canAccess(
   return (
     (!item.allowedRoles ||
       item.allowedRoles.some((role) => roles.includes(role))) &&
+    (!item.excludedRoles ||
+      !item.excludedRoles.some((role) => roles.includes(role))) &&
     (!item.permission ||
       roles.includes("SUPER_ADMIN") ||
       permissions.includes(item.permission)) &&
@@ -365,7 +394,7 @@ function sectionsFor(
           ...(roles.includes("SUPER_ADMIN")
             ? [{ href: "/admin", label: "Tổng quan quản trị", icon: Gauge }]
             : []),
-          { href: "/", label: "Website", icon: House },
+          { href: "/", label: "Trang chủ", icon: House },
           { href: "/community", label: "Cộng đồng", icon: UsersRound },
           ...(roles.includes("MODERATOR")
             ? [
@@ -427,8 +456,8 @@ function sectionsFor(
       : []),
     {
       label: "Tài chính & dịch vụ",
-      items: personalItems.filter((item) =>
-        ["/vouchers", "/advertising", "/membership", "/wallet"].includes(
+      items: [...personalItems, affiliateItem].filter((item) =>
+        ["/vouchers", "/advertising", "/membership", "/wallet", "/affiliate"].includes(
           item.href,
         ),
       ),
@@ -529,7 +558,7 @@ export function DashboardNavigation({
     items: section.items.filter(
       (item) =>
         canAccess(item, effectiveRoles, effectivePermissions) &&
-        (!["/vouchers", "/wallet", "/membership"].includes(item.href) ||
+        (!["/vouchers", "/wallet", "/membership", "/affiliate"].includes(item.href) ||
           isCustomerAccount({
             roles: effectiveRoles,
             permissions: effectivePermissions,

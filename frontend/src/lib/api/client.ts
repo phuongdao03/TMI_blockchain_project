@@ -323,7 +323,7 @@ async function requestEnvelope<Data>(
   } catch (error) {
     if (signal?.aborted && !init.signal)
       throw new ApiError(
-        "Máy chủ phản hồi chậm. Vui lòng thử tải lại.",
+        "Chưa nhận được phản hồi. Hãy kiểm tra trạng thái trước khi thử lại.",
         "REQUEST_TIMEOUT",
         408,
       );
@@ -431,6 +431,7 @@ export const authApi = {
     idToken: string,
     accountType: AccountType,
     next?: string,
+    referral?: { referralCode: string; referralClickId?: string },
   ) {
     return request<LoginData>("/auth/firebase/exchange", {
       method: "POST",
@@ -438,6 +439,10 @@ export const authApi = {
         idToken,
         accountType,
         ...(next ? { next } : {}),
+        ...(referral ? { referralCode: referral.referralCode } : {}),
+        ...(referral?.referralClickId
+          ? { referralClickId: referral.referralClickId }
+          : {}),
       }),
     });
   },
@@ -943,6 +948,270 @@ export const walletApi = {
     return request<PaymentOrder>(
       `/payment-orders/${encodeURIComponent(orderId)}/wallet-payment`,
       { method: "POST", headers: { "Idempotency-Key": key } },
+    );
+  },
+};
+
+export const withdrawalApi = {
+  banks() {
+    return request<import("./types").WalletBank[]>("/wallet/banks");
+  },
+  bankAccounts() {
+    return request<import("./types").WalletBankAccount[]>(
+      "/wallet/bank-accounts",
+      { cache: "no-store" },
+    );
+  },
+  addBankAccount(input: {
+    bankBin: string;
+    accountNumber: string;
+    accountName: string;
+    isDefault: boolean;
+  }) {
+    return request<import("./types").WalletBankAccount>(
+      "/wallet/bank-accounts",
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  setDefaultBankAccount(id: string) {
+    return request<import("./types").WalletBankAccount>(
+      `/wallet/bank-accounts/${encodeURIComponent(id)}/default`,
+      { method: "PATCH" },
+    );
+  },
+  disableBankAccount(id: string) {
+    return request<import("./types").WalletBankAccount>(
+      `/wallet/bank-accounts/${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    );
+  },
+  settings() {
+    return request<import("./types").WalletWithdrawalSettings>(
+      "/wallet/withdrawal-settings",
+      { cache: "no-store" },
+    );
+  },
+  list() {
+    return request<import("./types").WalletWithdrawal[]>(
+      "/wallet/withdrawals?limit=50&offset=0",
+      { cache: "no-store" },
+    );
+  },
+  create(bankAccountId: string, amountMinor: number, key: string) {
+    return request<import("./types").WalletWithdrawal>("/wallet/withdrawals", {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify({ bankAccountId, amountMinor }),
+    });
+  },
+  cancel(id: string) {
+    return request<import("./types").WalletWithdrawal>(
+      `/wallet/withdrawals/${encodeURIComponent(id)}/cancel`,
+      { method: "POST" },
+    );
+  },
+};
+
+export const affiliateApi = {
+  me() {
+    return request<import("./types").AffiliateSummary>("/affiliate/me", {
+      cache: "no-store",
+    });
+  },
+  referrals() {
+    return request<import("./types").AffiliateReferral[]>(
+      "/affiliate/me/referrals?limit=50&offset=0",
+      { cache: "no-store" },
+    );
+  },
+  commissions() {
+    return request<import("./types").AffiliateCommission[]>(
+      "/affiliate/me/commissions?limit=50",
+      { cache: "no-store" },
+    );
+  },
+  recordReferralClick(referralCode: string, eventId: string) {
+    return request<{ id: string; createdAt: string }>(
+      "/affiliate/referral-clicks",
+      { method: "POST", body: JSON.stringify({ referralCode, eventId }) },
+    );
+  },
+  claimReferral(referralCode: string, clickId?: string) {
+    return request<{
+      id: string;
+      affiliateUserId: string;
+      referredUserId: string;
+      referralCodeSnapshot: string;
+      attributedAt: string;
+      expiresAt: string;
+    }>("/affiliate/referrals/claim", {
+      method: "POST",
+      body: JSON.stringify({ referralCode, ...(clickId ? { clickId } : {}) }),
+    });
+  },
+};
+
+export const adminAffiliateApi = {
+  profiles(filters: { search?: string; status?: string; offset?: number } = {}) {
+    const parameters = new URLSearchParams({
+      limit: "50",
+      offset: String(filters.offset ?? 0),
+    });
+    if (filters.search) parameters.set("search", filters.search);
+    if (filters.status) parameters.set("status", filters.status);
+    return request<import("./types").AdminAffiliateProfile[]>(
+      `/admin/affiliate/profiles?${parameters.toString()}`,
+      { cache: "no-store" },
+    );
+  },
+  profile(userId: string) {
+    return request<import("./types").AdminAffiliateProfile>(
+      `/admin/affiliate/profiles/${encodeURIComponent(userId)}`,
+      { cache: "no-store" },
+    );
+  },
+  profileReferrals(userId: string) {
+    return request<import("./types").AffiliateReferral[]>(
+      `/admin/affiliate/profiles/${encodeURIComponent(userId)}/referrals?limit=50&offset=0`,
+      { cache: "no-store" },
+    );
+  },
+  suspend(userId: string, reason: string) {
+    return request<import("./types").AdminAffiliateProfile>(
+      `/admin/affiliate/profiles/${encodeURIComponent(userId)}/suspend`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+  },
+  restore(userId: string, reason: string) {
+    return request<import("./types").AdminAffiliateProfile>(
+      `/admin/affiliate/profiles/${encodeURIComponent(userId)}/restore`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+  },
+  commissions(filters: { status?: string; affiliateUserId?: string } = {}) {
+    const parameters = new URLSearchParams({ limit: "50" });
+    if (filters.status) parameters.set("status", filters.status);
+    if (filters.affiliateUserId)
+      parameters.set("affiliateUserId", filters.affiliateUserId);
+    return request<import("./types").AdminAffiliateCommission[]>(
+      `/admin/affiliate/commissions?${parameters.toString()}`,
+      { cache: "no-store" },
+    );
+  },
+  approveCommission(commissionId: string) {
+    return request<import("./types").AdminAffiliateCommission>(
+      `/admin/affiliate/commissions/${encodeURIComponent(commissionId)}/approve`,
+      { method: "POST" },
+    );
+  },
+  rejectCommission(commissionId: string, reason: string) {
+    return request<import("./types").AdminAffiliateCommission>(
+      `/admin/affiliate/commissions/${encodeURIComponent(commissionId)}/reject`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+  },
+  reverseCommission(commissionId: string, reason: string) {
+    return request<import("./types").AdminAffiliateCommission>(
+      `/admin/affiliate/commissions/${encodeURIComponent(commissionId)}/reverse`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+  },
+  commissionRules() {
+    return request<import("./types").AffiliateCommissionRuleSet[]>(
+      "/admin/affiliate/commission-rules",
+      { cache: "no-store" },
+    );
+  },
+  createCommissionRules(input: import("./types").AffiliateCommissionRuleSetInput) {
+    return request<import("./types").AffiliateCommissionRuleSet>(
+      "/admin/affiliate/commission-rules",
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  publishCommissionRules(ruleSetId: string) {
+    return request<import("./types").AffiliateCommissionRuleSet>(
+      `/admin/affiliate/commission-rules/${encodeURIComponent(ruleSetId)}/publish`,
+      { method: "POST" },
+    );
+  },
+};
+
+export const adminWithdrawalApi = {
+  list(status = "PENDING_REVIEW") {
+    return request<import("./types").WalletWithdrawal[]>(
+      `/admin/withdrawals?status=${encodeURIComponent(status)}&limit=50&offset=0`,
+      { cache: "no-store" },
+    );
+  },
+  detail(id: string) {
+    return request<import("./types").AdminWalletWithdrawal>(
+      `/admin/withdrawals/${encodeURIComponent(id)}`,
+      { cache: "no-store" },
+    );
+  },
+  approve(id: string) {
+    return request<import("./types").WalletWithdrawal>(
+      `/admin/withdrawals/${encodeURIComponent(id)}/approve`,
+      { method: "POST" },
+    );
+  },
+  dispatchPayout(id: string) {
+    return request<import("./types").WalletWithdrawal>(
+      `/admin/withdrawals/${encodeURIComponent(id)}/payout`,
+      { method: "POST" },
+    );
+  },
+  verifyBank(id: string, evidenceReference: string) {
+    return request<import("./types").WalletBankAccount>(
+      `/admin/withdrawals/${encodeURIComponent(id)}/verify-bank`,
+      { method: "POST", body: JSON.stringify({ evidenceReference }) },
+    );
+  },
+  reviewIdentity(
+    userId: string,
+    input: { status: "VERIFIED" | "REJECTED"; evidenceReference: string; reason: string },
+  ) {
+    return request<import("./types").FinancialIdentityReview>(
+      `/admin/finance/users/${encodeURIComponent(userId)}/identity-verification`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  reject(id: string, reason: string) {
+    return request<import("./types").WalletWithdrawal>(
+      `/admin/withdrawals/${encodeURIComponent(id)}/reject`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+  },
+};
+
+export const adminFinanceApi = {
+  settings() {
+    return request<import("./types").WalletWithdrawalSettings>(
+      "/admin/finance/settings",
+      { cache: "no-store" },
+    );
+  },
+  updateSettings(input: import("./types").FinanceSettingsUpdateInput) {
+    return request<import("./types").WalletWithdrawalSettings>(
+      "/admin/finance/settings",
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+  saveBank(input: {
+    bankBin: string;
+    bankName: string;
+    sourceReference: string;
+    isEnabled: boolean;
+  }) {
+    return request<import("./types").WalletBank>("/admin/finance/banks", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  reconciliation() {
+    return request<import("./types").FinanceReconciliation>(
+      "/admin/payouts/reconciliation",
+      { cache: "no-store" },
     );
   },
 };

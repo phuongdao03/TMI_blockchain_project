@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; ref?: string }>;
 }) {
-  const { next } = await searchParams;
-  return <RegisterForm next={next} />;
+  const { next, ref } = await searchParams;
+  return <RegisterForm next={next} referralCode={ref} />;
 }

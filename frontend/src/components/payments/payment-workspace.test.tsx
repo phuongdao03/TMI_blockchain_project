@@ -241,11 +241,11 @@ describe("PaymentWorkspace", () => {
       </QueryClientProvider>
     );
     const { rerender } = render(view());
-    expect(await screen.findByText(/tối đa 5 phút/)).toBeTruthy();
+    expect(await screen.findByText(/Giao dịch đang chờ xác nhận/)).toBeTruthy();
 
     now.mockReturnValue(300_001);
     rerender(view());
-    expect(screen.getByText(/tối đa 5 phút/)).toBeTruthy();
+    expect(screen.getByText(/Nếu tiền đã bị trừ/)).toBeTruthy();
     await userEvent.click(
       screen.getByRole("button", { name: "Kiểm tra trạng thái ngay" }),
     );
@@ -289,7 +289,7 @@ describe("PaymentWorkspace", () => {
     ).toBe("/api/v1/payment-orders/payment-qr/qr");
     expect(
       screen.getByText(
-        /Qu\u00E9t m\u00E3 b\u1EB1ng \u1EE9ng d\u1EE5ng ng\u00E2n h\u00E0ng/,
+        /M\u1EDF \u1EE9ng d\u1EE5ng ng\u00E2n h\u00E0ng v\u00E0 qu\u00E9t m\u00E3 QR/,
       ),
     ).toBeTruthy();
     expect(

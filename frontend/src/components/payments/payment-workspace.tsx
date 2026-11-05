@@ -140,7 +140,7 @@ function PaymentWorkspaceContent({ orderId }: { orderId: string }) {
                 {paid
                   ? "Thanh toán thành công"
                   : stopped
-                    ? "Lệnh thanh toán đã dừng"
+                    ? "Lần thanh toán chưa hoàn tất"
                     : "Xác nhận phí xác lập"}
               </h1>
             </div>
@@ -239,8 +239,8 @@ function PaymentWorkspaceContent({ orderId }: { orderId: string }) {
                 <div>
                   <h2 className="font-bold">Đang chờ xác nhận</h2>
                   <p className="mt-1 text-sm leading-6 text-amber-800">
-                    Trang tự kiểm tra trạng thái mỗi 3 giây trong tối đa 5 phút.
-                    Hệ thống vẫn tiếp tục đối soát thanh toán ở nền.
+                    Giao dịch đang chờ xác nhận. Nếu tiền đã bị trừ, đừng thanh toán
+                    lần nữa; hãy kiểm tra trạng thái tại đây trước khi bắt đầu lần mới.
                   </p>
                   <button
                     className="mt-3 min-h-11 text-sm font-bold underline underline-offset-4"
@@ -270,10 +270,9 @@ function PaymentWorkspaceContent({ orderId }: { orderId: string }) {
                     aria-hidden="true"
                     className="size-10 text-neutral-900"
                   />
-                  <h2 className="mt-4 font-bold">Thanh toán bằng VietQR</h2>
+                  <h2 className="mt-4 font-bold">Chuyển khoản bằng mã QR</h2>
                   <p className="mt-2 text-sm leading-6 text-neutral-500">
-                    Quét mã bằng ứng dụng ngân hàng để thanh toán ngay trên
-                    trang này.
+                    Mở ứng dụng ngân hàng và quét mã QR để chuyển khoản.
                   </p>
                   <div className="mt-4 flex justify-center rounded-xl bg-white p-4">
                     <Image

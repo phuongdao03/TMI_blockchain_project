@@ -13,6 +13,8 @@ celery_app = Celery(
         "app.workers.certificate_tasks",
         "app.workers.notification_tasks",
         "app.workers.payment_tasks",
+        "app.workers.affiliate_tasks",
+        "app.workers.payout_tasks",
         "app.workers.media_inspection_tasks",
         "app.workers.similarity_tasks",
         "app.workers.public_work_tasks",
@@ -59,6 +61,18 @@ celery_app.conf.update(
         "reconcile-pending-payments": {
             "task": "app.workers.payment_tasks.reconcile_pending_payments_scheduled",
             "schedule": 60.0,
+        },
+        "reconcile-payouts": {
+            "task": "app.workers.payout_tasks.reconcile_payouts",
+            "schedule": 60.0,
+        },
+        "release-matured-affiliate-commissions": {
+            "task": "app.workers.affiliate_tasks.release_matured_commissions",
+            "schedule": 60.0,
+        },
+        "process-approved-payouts": {
+            "task": "app.workers.payout_tasks.process_queued_payouts",
+            "schedule": 30.0,
         },
         "expire-advertising-reservations": {
             "task": "app.workers.advertising_tasks.expire_advertising_reservations",

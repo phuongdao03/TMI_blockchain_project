@@ -26,7 +26,7 @@ router = APIRouter(prefix="/api/v1", tags=["wallet"])
 
 
 class TopupRequest(PaymentSchema):
-    amount_minor: Annotated[int, Field(strict=True, ge=1000, le=1_000_000_000)]
+    amount_minor: Annotated[int, Field(strict=True, ge=5000)]
 
 
 class TopupData(PaymentSchema):

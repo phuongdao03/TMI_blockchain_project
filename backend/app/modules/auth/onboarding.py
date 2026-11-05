@@ -23,10 +23,16 @@ class ApplicantUpgradeResult:
 
 
 class ApplicantUpgradeService:
-    def __init__(self, *, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        *,
+        session: AsyncSession,
+        auto_create_affiliate_profiles: bool = False,
+    ) -> None:
         self._session = session
         self._repository = AuthRepository(session)
         self._audit_service = AuditService(session)
+        self._affiliate_profile_auto_create = auto_create_affiliate_profiles
 
     async def upgrade(
         self,
@@ -91,4 +97,21 @@ class ApplicantUpgradeService:
                     resource_id=str(user.id),
                     after={"account_type": account_type.value},
                 )
+            if (
+                self._affiliate_profile_auto_create
+                and set(result.roles) == {"USER"}
+            ):
+                from app.core.errors import DomainError
+                from app.modules.affiliate.service import AffiliateService
+
+                try:
+                    await AffiliateService(
+                        self._session
+                    ).ensure_profile_in_current_transaction(
+                        user.id,
+                        allow_pending=False,
+                    )
+                except DomainError as exc:
+                    if exc.status_code != 403:
+                        raise
         return result

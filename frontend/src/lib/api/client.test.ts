@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  adminAffiliateApi,
   adminReviewApi,
   adminUsersApi,
   auditApi,
   authApi,
+  affiliateApi,
   dossierApi,
   employeeInvitationsApi,
   hrAdminAttendanceApi,
@@ -171,6 +173,65 @@ describe("auth API client", () => {
   beforeEach(() => {
     document.cookie = "cns_csrf=csrf-value";
     vi.restoreAllMocks();
+  });
+
+  it("passes affiliate attribution into Firebase exchange", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      response({
+        success: true,
+        data: {},
+        meta: { request_id: "affiliate-exchange" },
+      }),
+    );
+
+    await authApi.exchangeFirebaseToken(
+      "x".repeat(100),
+      "PUBLIC_USER",
+      "/workspace",
+      {
+        referralCode: "THV-ABC123",
+        referralClickId: "0d7f1d18-e455-4a7a-9df0-fce15fc9223a",
+      },
+    );
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/auth/firebase/exchange");
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(
+      JSON.stringify({
+        idToken: "x".repeat(100),
+        accountType: "PUBLIC_USER",
+        next: "/workspace",
+        referralCode: "THV-ABC123",
+        referralClickId: "0d7f1d18-e455-4a7a-9df0-fce15fc9223a",
+      }),
+    );
+  });
+
+  it("records referral clicks with the stable client event id", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      response({
+        success: true,
+        data: {
+          id: "0d7f1d18-e455-4a7a-9df0-fce15fc9223a",
+          createdAt: "2026-11-05T00:00:00Z",
+        },
+        meta: { request_id: "referral-click" },
+      }),
+    );
+
+    await affiliateApi.recordReferralClick(
+      "THV-ABC123",
+      "7b6257d9-c9d3-4461-8805-4b88cfaea282",
+    );
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/v1/affiliate/referral-clicks",
+    );
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(
+      JSON.stringify({
+        referralCode: "THV-ABC123",
+        eventId: "7b6257d9-c9d3-4461-8805-4b88cfaea282",
+      }),
+    );
   });
 
   it("rotates once on an expired access cookie and retries /me", async () => {
@@ -349,6 +410,103 @@ describe("auth API client", () => {
       JSON.stringify({ accountType: "INDIVIDUAL_APPLICANT" }),
     );
     expect(new Headers(init?.headers).get("X-CSRF-Token")).toBe("csrf-value");
+  });
+});
+
+describe("affiliate API client", () => {
+  beforeEach(() => {
+    document.cookie = "cns_csrf=csrf-value";
+    vi.restoreAllMocks();
+  });
+
+  it("uses the privacy-safe affiliate history routes", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    for (const requestId of ["affiliate-referrals", "affiliate-commissions"]) {
+      fetchMock.mockResolvedValueOnce(
+        response({
+        success: true,
+        data: [],
+          meta: { request_id: requestId },
+        }),
+      );
+    }
+
+    await affiliateApi.referrals();
+    await affiliateApi.commissions();
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/v1/affiliate/me/referrals?limit=50&offset=0",
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/v1/affiliate/me/commissions?limit=50",
+    );
+  });
+});
+
+describe("admin affiliate API client", () => {
+  beforeEach(() => {
+    document.cookie = "cns_csrf=csrf-value";
+    vi.restoreAllMocks();
+  });
+
+  it("maps profile, commission review, and rule actions to supported routes", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () =>
+        response({ success: true, data: {}, meta: { request_id: "admin-affiliate" } }),
+      );
+
+    await adminAffiliateApi.profiles({
+      search: "THV-ABC123",
+      status: "SUSPENDED",
+      offset: 50,
+    });
+    await adminAffiliateApi.suspend("user/1", "Confirmed policy abuse");
+    await adminAffiliateApi.restore("user/1", "Appeal accepted after review");
+    await adminAffiliateApi.commissions({
+      status: "ON_HOLD",
+      affiliateUserId: "affiliate-1",
+    });
+    await adminAffiliateApi.approveCommission("commission-1");
+    await adminAffiliateApi.rejectCommission("commission-2", "Invalid transaction source");
+    await adminAffiliateApi.reverseCommission("commission-3", "Chargeback confirmed");
+    await adminAffiliateApi.commissionRules();
+    await adminAffiliateApi.createCommissionRules({
+      enabled: false,
+      attributionWindowDays: 30,
+      holdDays: 30,
+      rates: [{ serviceCode: "MEMBERSHIP", directRateBasisPoints: 500 }],
+    });
+    await adminAffiliateApi.publishCommissionRules("rule-1");
+    await adminAffiliateApi.profileReferrals("user/1");
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/admin/affiliate/profiles?limit=50&offset=50&search=THV-ABC123&status=SUSPENDED",
+      "/api/v1/admin/affiliate/profiles/user%2F1/suspend",
+      "/api/v1/admin/affiliate/profiles/user%2F1/restore",
+      "/api/v1/admin/affiliate/commissions?limit=50&status=ON_HOLD&affiliateUserId=affiliate-1",
+      "/api/v1/admin/affiliate/commissions/commission-1/approve",
+      "/api/v1/admin/affiliate/commissions/commission-2/reject",
+      "/api/v1/admin/affiliate/commissions/commission-3/reverse",
+      "/api/v1/admin/affiliate/commission-rules",
+      "/api/v1/admin/affiliate/commission-rules",
+      "/api/v1/admin/affiliate/commission-rules/rule-1/publish",
+      "/api/v1/admin/affiliate/profiles/user%2F1/referrals?limit=50&offset=0",
+    ]);
+    expect(fetchMock.mock.calls[1]?.[1]?.body).toBe(
+      JSON.stringify({ reason: "Confirmed policy abuse" }),
+    );
+    expect(fetchMock.mock.calls[5]?.[1]?.body).toBe(
+      JSON.stringify({ reason: "Invalid transaction source" }),
+    );
+    expect(fetchMock.mock.calls[8]?.[1]?.body).toBe(
+      JSON.stringify({
+        enabled: false,
+        attributionWindowDays: 30,
+        holdDays: 30,
+        rates: [{ serviceCode: "MEMBERSHIP", directRateBasisPoints: 500 }],
+      }),
+    );
   });
 });
 

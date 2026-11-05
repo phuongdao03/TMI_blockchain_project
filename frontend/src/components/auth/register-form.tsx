@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { LoaderCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { AuthCard, AuthLink } from "@/components/auth/auth-card";
@@ -14,8 +14,15 @@ import { deliverVerificationEmail } from "@/lib/auth/verification-email";
 import { safeLocalDestination } from "@/lib/auth/safe-destination";
 import { registerSchema, type RegisterValues } from "@/lib/auth/schemas";
 import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
+import { ensureReferralAttribution } from "@/lib/auth/referral-attribution";
 
-export function RegisterForm({ next }: { next?: string }) {
+export function RegisterForm({
+  next,
+  referralCode,
+}: {
+  next?: string;
+  referralCode?: string;
+}) {
   const safeNext = next ? safeLocalDestination(next, "/workspace") : undefined;
   const loginHref = safeNext
     ? `/login?next=${encodeURIComponent(safeNext)}`
@@ -27,6 +34,9 @@ export function RegisterForm({ next }: { next?: string }) {
   >("sending");
   const [attempt, setAttempt] = useState(0);
   const [submitPhase, setSubmitPhase] = useState<"creating" | "sending">();
+  useEffect(() => {
+    void ensureReferralAttribution(referralCode);
+  }, [referralCode]);
   const {
     register,
     handleSubmit,
@@ -90,7 +100,7 @@ export function RegisterForm({ next }: { next?: string }) {
 
   return (
     <AuthCard
-      description="Tạo tài khoản để gửi hồ sơ, lưu bản nháp và theo dõi quá trình xử lý."
+      description="Tạo tài khoản để gửi hồ sơ, lưu bản nháp và theo dõi tiến độ."
       footer={
         <>
           Đã có tài khoản? <AuthLink href={loginHref}>Đăng nhập</AuthLink>

@@ -13,6 +13,11 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: Annotated[SecretStr, Field(min_length=12, max_length=128)]
     account_type: AccountType = Field(alias="accountType")
+    referral_code: Annotated[
+        str | None,
+        Field(alias="referralCode", min_length=8, max_length=32),
+    ] = None
+    referral_click_id: UUID | None = Field(default=None, alias="referralClickId")
 
 
 INTERNAL_ACCOUNT_ROLES = ("MODERATOR",)
@@ -217,6 +222,11 @@ class FirebaseExchangeRequest(BaseModel):
         str | None,
         Field(alias="next", max_length=512),
     ] = None
+    referral_code: Annotated[
+        str | None,
+        Field(alias="referralCode", min_length=8, max_length=32),
+    ] = None
+    referral_click_id: UUID | None = Field(default=None, alias="referralClickId")
 
 
 class FirebaseVerificationEmailRequest(BaseModel):

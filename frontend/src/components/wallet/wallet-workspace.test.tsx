@@ -4,17 +4,29 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WalletWorkspace } from "./wallet-workspace";
 
-const { api, auth } = vi.hoisted(() => ({
+const { api, affiliateApi, withdrawalApi, auth } = vi.hoisted(() => ({
   api: {
     summary: vi.fn(),
     topup: vi.fn(),
     reconcile: vi.fn(),
     resume: vi.fn(),
   },
+  affiliateApi: { me: vi.fn() },
+  withdrawalApi: {
+    banks: vi.fn(),
+    bankAccounts: vi.fn(),
+    addBankAccount: vi.fn(),
+    setDefaultBankAccount: vi.fn(),
+    disableBankAccount: vi.fn(),
+    settings: vi.fn(),
+    list: vi.fn(),
+    create: vi.fn(),
+    cancel: vi.fn(),
+  },
   auth: { user: null as { id: string; roles: string[] } | null },
 }));
 
-vi.mock("@/lib/api/client", () => ({ walletApi: api }));
+vi.mock("@/lib/api/client", () => ({ walletApi: api, affiliateApi, withdrawalApi }));
 vi.mock("@/lib/auth/user-context", () => ({ useAuthUser: () => auth.user }));
 
 const summary = {
@@ -45,13 +57,39 @@ describe("WalletWorkspace", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Ví của tôi" }),
     ).toBeDefined();
-    expect(screen.getByRole("button", { name: "Thử lại" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Tải lại ví" })).toBeDefined();
     expect(screen.queryByRole("region", { name: "Số dư ví" })).toBeNull();
   });
   beforeEach(() => {
     vi.clearAllMocks();
     auth.user = { id: "member-1", roles: ["USER"] };
     api.summary.mockResolvedValue(summary);
+    affiliateApi.me.mockResolvedValue({
+      referralCode: "THV-ABC123",
+      referralUrl: "https://example.test/r/THV-ABC123",
+      status: "ACTIVE",
+      clickCount: 0,
+      attributedUserCount: 0,
+      pendingCommissionMinor: 0,
+      onHoldCommissionMinor: 0,
+      availableBalanceMinor: 0,
+      reservedBalanceMinor: 0,
+      lifetimeEarnedMinor: 0,
+      totalWithdrawnMinor: 0,
+      totalReversedMinor: 0,
+    });
+    withdrawalApi.banks.mockResolvedValue([]);
+    withdrawalApi.bankAccounts.mockResolvedValue([]);
+    withdrawalApi.settings.mockResolvedValue({
+      enabled: false,
+      minimumAmountMinor: 10_000,
+      maximumAmountMinor: 100_000_000,
+      dailyLimitMinor: 100_000_000,
+      manualApprovalRequired: true,
+      twoPersonThresholdMinor: null,
+      payoutLiveEnabled: false,
+    });
+    withdrawalApi.list.mockResolvedValue([]);
   });
 
   it("shows the payment QR and bank details inside the wallet page", async () => {
@@ -72,7 +110,7 @@ describe("WalletWorkspace", () => {
     });
 
     renderWorkspace();
-    fireEvent.change(await screen.findByLabelText("Số tiền (VNĐ)"), {
+    fireEvent.change(await screen.findByLabelText(/Số tiền cần nạp/), {
       target: { value: "10000" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Nạp tiền" }));

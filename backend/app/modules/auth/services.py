@@ -1,6 +1,7 @@
 import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,6 +44,8 @@ class RegistrationService:
         payload_cipher: OutboxPayloadCipher,
         rate_limiter: RegistrationRateLimiter,
         verification_ttl: timedelta,
+        auto_create_affiliate_profiles: bool = False,
+        affiliate_enabled: bool = False,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._session = session
@@ -52,6 +55,8 @@ class RegistrationService:
         self._payload_cipher = payload_cipher
         self._rate_limiter = rate_limiter
         self._verification_ttl = verification_ttl
+        self._affiliate_profile_auto_create = auto_create_affiliate_profiles
+        self._affiliate_enabled = affiliate_enabled
         self._clock = clock or (lambda: datetime.now(UTC))
 
     @staticmethod
@@ -65,6 +70,8 @@ class RegistrationService:
         password: str,
         client_ip: str,
         account_type: AccountType = AccountType.INDIVIDUAL_APPLICANT,
+        referral_code: str | None = None,
+        referral_click_id: UUID | None = None,
     ) -> None:
         normalized_email = self._normalize_email(email)
         await self._rate_limiter.check(
@@ -82,11 +89,17 @@ class RegistrationService:
                     is not None
                 ):
                     return
-                await self._persist_registration(
+                user = await self._persist_registration(
                     email=normalized_email,
                     password_hash=password_hash,
                     account_type=account_type,
                 )
+                if self._affiliate_enabled and referral_code:
+                    await self._capture_signup_referral(
+                        user_id=user.id,
+                        referral_code=referral_code,
+                        click_id=referral_click_id,
+                    )
         except IntegrityError:
             await self._session.rollback()
             async with self._session.begin():
@@ -102,7 +115,7 @@ class RegistrationService:
         email: str,
         password_hash: str,
         account_type: AccountType,
-    ) -> None:
+    ) -> User:
         now = self._clock()
         user = User(
             email=email,
@@ -156,6 +169,28 @@ class RegistrationService:
                 occurred_at=now,
             )
         )
+        return user
+
+    async def _capture_signup_referral(
+        self, *, user_id: UUID, referral_code: str, click_id: UUID | None
+    ) -> None:
+        from app.core.errors import DomainError
+        from app.modules.affiliate.service import AffiliateService
+
+        try:
+            await AffiliateService(
+                self._session,
+                affiliate_enabled=self._affiliate_enabled,
+                clock=self._clock,
+            ).capture_signup_referral_in_current_transaction(
+                referred_user_id=user_id,
+                referral_code=referral_code,
+                click_id=click_id,
+            )
+        except DomainError as exc:
+            # Invalid/expired referral data must not prevent account registration.
+            if exc.status_code >= 500:
+                raise
 
     async def verify_email(self, token: str) -> None:
         now = self._clock()
@@ -180,6 +215,25 @@ class RegistrationService:
             verification.consumed_at = now
             user.email_verified_at = now
             user.status = UserStatus.ACTIVE
+            if self._affiliate_profile_auto_create:
+                role_codes = await self._auth_repository.get_role_codes(user.id)
+                if set(role_codes) == {"USER"}:
+                    await self._ensure_affiliate_profile(user.id)
+
+    async def _ensure_affiliate_profile(self, user_id: UUID) -> None:
+        from app.core.errors import DomainError
+        from app.modules.affiliate.service import AffiliateService
+
+        try:
+            await AffiliateService(
+                self._session
+            ).ensure_profile_in_current_transaction(
+                user_id,
+                allow_pending=False,
+            )
+        except DomainError as exc:
+            if exc.status_code != 403:
+                raise
 
     @staticmethod
     def _as_utc(value: datetime) -> datetime:

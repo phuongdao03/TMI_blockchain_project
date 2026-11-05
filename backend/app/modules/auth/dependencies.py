@@ -93,6 +93,8 @@ async def get_registration_service(
             window_seconds=settings.auth_registration_rate_window_seconds,
         ),
         verification_ttl=timedelta(seconds=settings.auth_verification_ttl_seconds),
+        auto_create_affiliate_profiles=settings.affiliate_auto_create_for_users,
+        affiliate_enabled=settings.affiliate_enabled,
     )
     try:
         yield service
@@ -108,8 +110,12 @@ RegistrationServiceDependency = Annotated[
 
 async def get_applicant_upgrade_service(
     session: SessionDependency,
+    settings: SettingsDependency,
 ) -> AsyncIterator[ApplicantUpgradeService]:
-    yield ApplicantUpgradeService(session=session)
+    yield ApplicantUpgradeService(
+        session=session,
+        auto_create_affiliate_profiles=settings.affiliate_auto_create_for_users,
+    )
 
 
 ApplicantUpgradeServiceDependency = Annotated[
@@ -204,6 +210,8 @@ async def get_firebase_auth_runtime(
         account_service=OAuthService(
             session=session,
             session_issuer=session_service,
+            auto_create_affiliate_profiles=settings.affiliate_auto_create_for_users,
+            affiliate_enabled=settings.affiliate_enabled,
         ),
         verifier=verifier,
         rate_limiter=RedisOAuthRateLimiter(

@@ -183,6 +183,26 @@ class Settings(BaseSettings):
     media_upload_signature_rate_limit: int = Field(default=20, ge=1, le=1_000)
     media_upload_signature_rate_window_seconds: int = Field(default=60, ge=1, le=3_600)
     payment_provider: str = Field(default="mock", min_length=1, max_length=32)
+    wallet_withdrawal_enabled: bool = False
+    payout_live_enabled: bool = False
+    affiliate_enabled: bool = False
+    affiliate_auto_create_for_users: bool = True
+    affiliate_excluded_roles: str = "SUPER_ADMIN,MODERATOR"
+    affiliate_attribution_window_days: int = Field(default=30, ge=1, le=365)
+    commission_auto_approval: bool = False
+    affiliate_direct_commission_enabled: bool = False
+    affiliate_level2_commission_enabled: bool = False
+    affiliate_commission_hold_days: int = Field(default=30, ge=0, le=365)
+    payos_payout_provider: Literal["disabled", "payos"] = "disabled"
+    payos_payout_base_url: str = Field(
+        default="https://api-merchant.payos.vn",
+        min_length=1,
+        max_length=2_048,
+    )
+    payos_payout_client_id: SecretStr | None = None
+    payos_payout_api_key: SecretStr | None = None
+    payos_payout_checksum_key: SecretStr | None = None
+    payos_payout_timeout_seconds: float = Field(default=8.0, gt=0, le=30)
     payment_amount_minor: int = Field(default=1_000_000, gt=0)
     submission_fee_amount_minor: int = Field(default=5_000_000, gt=0)
     payment_currency: str = Field(

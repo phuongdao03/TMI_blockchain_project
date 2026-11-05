@@ -4,7 +4,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
@@ -378,6 +378,7 @@ def test_redis_rate_limit_uses_hashed_dimensions_and_enforces_threshold() -> Non
 class StubRegistrationService:
     def __init__(self) -> None:
         self.registration: tuple[str, str, str] | None = None
+        self.referral: tuple[str | None, UUID | None] | None = None
         self.verification_token: str | None = None
 
     async def register(
@@ -387,8 +388,11 @@ class StubRegistrationService:
         password: str,
         client_ip: str,
         account_type: AccountType,
+        referral_code: str | None = None,
+        referral_click_id: UUID | None = None,
     ) -> None:
         self.registration = (email, password, client_ip)
+        self.referral = (referral_code, referral_click_id)
 
     async def verify_email(self, token: str) -> None:
         self.verification_token = token
@@ -439,6 +443,28 @@ def test_registration_api_returns_generic_accepted_response() -> None:
         "correct horse battery staple",
         "127.0.0.1",
     )
+    assert service.referral == (None, None)
+
+
+def test_registration_api_passes_optional_referral_attribution() -> None:
+    service = StubRegistrationService()
+    click_id = uuid4()
+    response = asyncio.run(
+        _post(
+            "/api/v1/auth/register",
+            {
+                "email": "owner@example.com",
+                "password": "correct horse battery staple",
+                "accountType": "INDIVIDUAL_APPLICANT",
+                "referralCode": "THVABC123456",
+                "referralClickId": str(click_id),
+            },
+            service,
+        )
+    )
+
+    assert response.status_code == 202, response.text
+    assert service.referral == ("THVABC123456", click_id)
 
 
 def test_verify_email_api_consumes_token() -> None:

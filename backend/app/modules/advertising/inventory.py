@@ -1598,6 +1598,25 @@ class AdvertisingInventoryService:
             order.payment_idempotency_key = key
             order.wallet_transaction_id = posting.id if posting is not None else None
             order.paid_at = now
+            if order.payable_amount_vnd > 0:
+                from app.core.config import get_settings
+                from app.modules.affiliate.service import AffiliateService
+
+                settings = get_settings()
+                await AffiliateService(
+                    self.session,
+                    affiliate_enabled=settings.affiliate_enabled,
+                    direct_commission_enabled=(
+                        settings.affiliate_direct_commission_enabled
+                    ),
+                    clock=lambda: now,
+                ).record_commission_in_current_transaction(
+                    source_reference=f"advertising-order:{order.id}",
+                    referred_user_id=principal.user_id,
+                    service_code="ADVERTISING",
+                    amount_minor=order.payable_amount_vnd,
+                    earned_at=now,
+                )
             if order.pricing_snapshot.get("voucherId"):
                 from app.modules.promotions.checkout import PromotionCheckout
 

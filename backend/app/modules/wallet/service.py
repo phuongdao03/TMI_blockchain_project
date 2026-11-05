@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,11 +22,16 @@ from app.modules.payments.gateway import (
     VerifiedPaymentEvent,
 )
 from app.modules.wallet.models import (
+    FinanceAccount,
+    FinanceEntry,
+    FinanceJournal,
     Wallet,
     WalletJournal,
     WalletTopup,
     WalletTopupEvent,
 )
+
+WALLET_TOPUP_TTL_SECONDS = 10 * 60
 
 
 def valid_key(key: str) -> str:
@@ -167,7 +172,7 @@ class WalletService:
         session: AsyncSession,
         gateway: PaymentGateway,
         provider: str,
-        ttl_seconds: int = 1800,
+        ttl_seconds: int = WALLET_TOPUP_TTL_SECONDS,
     ):
         self.session = session
         self.gateway = gateway
@@ -188,9 +193,7 @@ class WalletService:
                     await self.session.execute(
                         select(WalletTopup.user_id, WalletTopup.id, WalletTopup.status)
                         .where(
-                            WalletTopup.status != "PAID",
-                            WalletTopup.created_at
-                            >= datetime.now(UTC) - timedelta(days=7),
+                            WalletTopup.status.in_(("PENDING", "PROCESSING")),
                         )
                         .order_by(WalletTopup.updated_at)
                         .limit(limit)
@@ -264,7 +267,7 @@ class WalletService:
 
     async def topup(self, user_id: UUID, amount: int, key: str) -> WalletTopup:
         key = valid_key(key)
-        if type(amount) is not int or not 1000 <= amount <= 1_000_000_000:
+        if type(amount) is not int:
             raise PaymentConflictError("Số tiền nạp không hợp lệ.")
         async with self.session.begin():
             await self.ledger.lock(user_id)
@@ -278,6 +281,8 @@ class WalletService:
                     "Khóa giao dịch đã được sử dụng cho số tiền khác."
                 )
             if order is None:
+                if amount < 5_000:
+                    raise PaymentConflictError("Số tiền nạp tối thiểu là 5.000 đồng.")
                 identifier = uuid4()
                 # Top-up code space is disjoint from legacy <= 2^31 order codes.
                 code = str(2_147_483_648 + identifier.int % (2**53 - 2_147_483_649))
@@ -447,14 +452,28 @@ class WalletService:
             order = await self._required(identifier, user_id)
             if order.status == "PAID":
                 return order
-            code, amount, provider_id = (
+            code, amount, provider_id, expires_at = (
                 order.order_code,
                 order.amount_minor,
                 order.provider_order_id,
+                order.expires_at,
             )
+        expired_by_policy = False
         try:
             result = await self.gateway.get_order(provider_id or code)
             self._validate(result, code, amount)
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=UTC)
+            if (
+                result.status in {"PENDING", "PROCESSING"}
+                and expires_at <= datetime.now(UTC)
+            ):
+                result = await self.gateway.cancel_order(
+                    provider_id or code,
+                    reason="Lệnh nạp đã hết hạn.",
+                )
+                self._validate(result, code, amount)
+                expired_by_policy = result.status == "CANCELLED"
         except PaymentGatewayError as exc:
             raise PaymentProviderError() from exc
         async with self.session.begin():
@@ -477,7 +496,193 @@ class WalletService:
                 "CANCELLED",
                 "EXPIRED",
             }:
-                order.status = result.status
+                order.status = (
+                    "EXPIRED"
+                    if expired_by_policy and result.status == "CANCELLED"
+                    else result.status
+                )
             await self.session.flush()
             await self.session.refresh(order)
             return order
+
+
+class FinanceLedger:
+    """Append-only commission and payout ledger, separate from prepaid wallet."""
+
+    _TRANSFER_TYPES = {
+        "COMMISSION_CREDIT": ("COMMISSION_EXPENSE", "COMMISSION_AVAILABLE"),
+        "WITHDRAWAL_RESERVE": (
+            "COMMISSION_AVAILABLE",
+            "COMMISSION_RESERVED",
+        ),
+        "WITHDRAWAL_RELEASE": (
+            "COMMISSION_RESERVED",
+            "COMMISSION_AVAILABLE",
+        ),
+        "PAYOUT_SETTLEMENT": ("COMMISSION_RESERVED", "PAYOUT_SETTLEMENT"),
+        "WITHDRAWAL_FEE": (
+            "COMMISSION_RESERVED",
+            "WITHDRAWAL_FEE_REVENUE",
+        ),
+        "COMMISSION_REVERSAL": ("COMMISSION_AVAILABLE", "COMMISSION_EXPENSE"),
+    }
+    _CUSTOMER_BALANCE_TYPES = frozenset({"COMMISSION_AVAILABLE", "COMMISSION_RESERVED"})
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def user_accounts(
+        self, user_id: UUID
+    ) -> tuple[FinanceAccount, FinanceAccount]:
+        available = await self._account("COMMISSION_AVAILABLE", user_id)
+        reserved = await self._account("COMMISSION_RESERVED", user_id)
+        return available, reserved
+
+    async def platform_account(self, account_type: str) -> FinanceAccount:
+        if account_type not in {
+            "COMMISSION_EXPENSE",
+            "PAYOUT_SETTLEMENT",
+            "WITHDRAWAL_FEE_REVENUE",
+        }:
+            raise ValueError("Unsupported platform finance account type.")
+        return await self._account(account_type, None)
+
+    async def _account(
+        self, account_type: str, owner_user_id: UUID | None
+    ) -> FinanceAccount:
+        code = (
+            f"affiliate:{account_type.lower()}:{owner_user_id}"
+            if owner_user_id is not None
+            else f"platform:{account_type.lower()}"
+        )
+        dialect = self.session.get_bind().dialect.name
+        insert = sqlite_insert if dialect == "sqlite" else pg_insert
+        await self.session.execute(
+            insert(FinanceAccount)
+            .values(
+                owner_user_id=owner_user_id,
+                account_type=account_type,
+                account_code=code,
+                currency="VND",
+            )
+            .on_conflict_do_nothing(index_elements=["account_code"])
+        )
+        account = await self.session.scalar(
+            select(FinanceAccount)
+            .where(FinanceAccount.account_code == code)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if account is None or account.account_type != account_type:
+            raise RuntimeError("Finance account could not be initialized safely.")
+        return account
+
+    async def balance(self, account_id: UUID) -> int:
+        result = await self.session.scalar(
+            select(func.coalesce(func.sum(FinanceEntry.amount_minor), 0)).where(
+                FinanceEntry.account_id == account_id
+            )
+        )
+        return int(result or 0)
+
+    async def transfer(
+        self,
+        *,
+        source_account_id: UUID,
+        target_account_id: UUID,
+        amount_minor: int,
+        transaction_type: str,
+        idempotency_key: str,
+        source_reference: str,
+        description: str,
+        actor_user_id: UUID | None = None,
+    ) -> FinanceJournal:
+        if type(amount_minor) is not int or amount_minor <= 0:
+            raise ValueError("Finance transfers require positive integer VND.")
+        if source_account_id == target_account_id:
+            raise ValueError("Finance transfer accounts must be distinct.")
+        idempotency_key = valid_key(idempotency_key)
+        source_reference = source_reference.strip()
+        if not source_reference or len(source_reference) > 160:
+            raise ValueError("Finance source reference is invalid.")
+        pair = self._TRANSFER_TYPES.get(transaction_type)
+        if pair is None:
+            raise ValueError("Unsupported finance transaction type.")
+
+        account_ids = sorted((source_account_id, target_account_id), key=str)
+        accounts = list(
+            await self.session.scalars(
+                select(FinanceAccount)
+                .where(FinanceAccount.id.in_(account_ids))
+                .order_by(FinanceAccount.id)
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+        )
+        by_id = {account.id: account for account in accounts}
+        source = by_id.get(source_account_id)
+        target = by_id.get(target_account_id)
+        if source is None or target is None or source.currency != target.currency:
+            raise ValueError("Finance transfer accounts are invalid.")
+        if (source.account_type, target.account_type) != pair:
+            raise ValueError("Finance transaction does not match its account types.")
+
+        replay = await self.session.scalar(
+            select(FinanceJournal).where(
+                FinanceJournal.idempotency_key == idempotency_key
+            )
+        )
+        if replay is not None:
+            entries = list(
+                await self.session.scalars(
+                    select(FinanceEntry).where(FinanceEntry.journal_id == replay.id)
+                )
+            )
+            expected = {
+                source_account_id: -amount_minor,
+                target_account_id: amount_minor,
+            }
+            actual = {entry.account_id: entry.amount_minor for entry in entries}
+            if (
+                replay.transaction_type != transaction_type
+                or replay.source_reference != source_reference
+                or actual != expected
+            ):
+                raise PaymentConflictError(
+                    "KhÃ³a giao dá»‹ch Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng cho khoáº£n khÃ¡c."
+                )
+            return replay
+
+        if source.account_type in self._CUSTOMER_BALANCE_TYPES:
+            if await self.balance(source.id) < amount_minor:
+                raise DomainError(
+                    code="WALLET_INSUFFICIENT_FUNDS",
+                    message="Sá»‘ dÆ° hoa há»“ng kháº£ dá»¥ng khÃ´ng Ä‘á»§.",
+                    status_code=409,
+                )
+
+        journal = FinanceJournal(
+            transaction_type=transaction_type,
+            idempotency_key=idempotency_key,
+            source_reference=source_reference,
+            description=description.strip()[:255] or transaction_type,
+            actor_user_id=actor_user_id,
+        )
+        self.session.add(journal)
+        await self.session.flush()
+        self.session.add_all(
+            [
+                FinanceEntry(
+                    journal_id=journal.id,
+                    account_id=source.id,
+                    amount_minor=-amount_minor,
+                ),
+                FinanceEntry(
+                    journal_id=journal.id,
+                    account_id=target.id,
+                    amount_minor=amount_minor,
+                ),
+            ]
+        )
+        await self.session.flush()
+        return journal
