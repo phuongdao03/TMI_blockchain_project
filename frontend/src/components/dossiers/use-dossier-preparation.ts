@@ -225,7 +225,7 @@ export function useDossierPreparation({
           }
         } else
           setError(
-            "Chưa đồng bộ được. Nội dung đang nhập vẫn được giữ; vui lòng thử lưu lại.",
+            "Chưa lưu thay đổi lên tài khoản. Nội dung đang nhập vẫn còn; hãy thử lưu lại.",
           );
       } finally {
         if (current.active && !current.completed) setSaving(false);

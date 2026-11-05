@@ -21,10 +21,10 @@ export function PresentationEditor({
             })
           }
         >
-          <option value="GIFT">Gift Celebration — Quà tri ân</option>
-          <option value="PREMIUM">Premium Voucher — Phiếu ưu đãi</option>
-          <option value="MINIMAL">Minimal Offer — Tối giản</option>
-          <option value="LIMITED">Limited Time — Có thời hạn</option>
+          <option value="GIFT">Quà tri ân</option>
+          <option value="PREMIUM">Ưu đãi cao cấp</option>
+          <option value="MINIMAL">Tối giản</option>
+          <option value="LIMITED">Ưu đãi có thời hạn</option>
         </Choice>
         <Choice
           label="Nhận diện"
@@ -158,7 +158,7 @@ export function PresentationEditor({
         {[
           ["LOGIN", "Sau đăng nhập"],
           ["DASHBOARD", "Trang chủ / không gian cá nhân"],
-          ["ISSUED", "Vừa được cấp voucher"],
+          ["ISSUED", "Vừa được cấp ưu đãi"],
           ["CHECKOUT", "Thanh toán đủ điều kiện"],
           ["NOTIFICATION", "Mở thông báo"],
           ["BANNER", "Banner cố định"],

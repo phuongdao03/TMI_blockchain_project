@@ -23,13 +23,16 @@ const article: CmsGuideArticle = {
   updatedAt: "2026-10-18T00:00:00Z",
 };
 
-function renderReader(scope: "public" | "account" = "public") {
+function renderReader(
+  scope: "public" | "account" = "public",
+  slug = article.slug,
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <GuideArticleReader scope={scope} slug={article.slug} />
+      <GuideArticleReader scope={scope} slug={slug} />
     </QueryClientProvider>,
   );
 }
@@ -56,6 +59,41 @@ describe("GuideArticleReader", () => {
     expect(document.querySelector("h2#mo-thu-vien")).not.toBeNull();
     expect(document.querySelector('a[href="/works"]')).not.toBeNull();
   });
+
+  it.each(["public", "account"] as const)(
+    "keeps obsolete CMS top-up copy out of the %s guide",
+    async (scope) => {
+      const topupArticle = {
+        ...article,
+        title: "Hướng dẫn nạp tiền từ thư viện",
+        slug: "huong-dan-nap-tien-vao-vi",
+        bodyHtml:
+          "<h2>Thanh toán</h2><ol><li>Nhập số tiền cần nạp. Mức tối thiểu là 5.000 đồng; dấu chấm phân cách hàng nghìn được hiển thị tự động.</li></ol><p>Yêu cầu có hiệu lực trong 10 phút.</p>",
+      };
+      vi.spyOn(guideApi, "publicArticle").mockResolvedValue(topupArticle);
+      if (scope === "account") {
+        vi.spyOn(guideApi, "accessibleArticle").mockResolvedValue(topupArticle);
+        vi.spyOn(guideApi, "accessibleList").mockResolvedValue({
+          success: true,
+          data: [topupArticle],
+          meta: { page: 1, pageSize: 100, total: 1 },
+        });
+      }
+
+      renderReader(scope, topupArticle.slug);
+      await screen.findByRole("heading", {
+        level: 1,
+        name: topupArticle.title,
+      });
+      expect(
+        screen.getByText("Nhập số tiền muốn nạp, tối thiểu 5.000đ."),
+      ).toBeDefined();
+      expect(screen.queryByText(/dấu chấm phân cách/i)).toBeNull();
+      expect(
+        screen.getByText("Yêu cầu có hiệu lực trong 10 phút."),
+      ).toBeDefined();
+    },
+  );
 
   it.each([
     ["public", "/guide"],

@@ -63,7 +63,7 @@ it.each([["SUPER_ADMIN"], ["USER", "ADMIN"]])(
     expect(screen.queryByRole("combobox")).toBeNull();
   },
 );
-it("persists payment-order selection and exposes backend rejection", async () => {
+it("persists payment-order selection and shows a localized rejection", async () => {
   mount(true);
   await screen.findByRole("option", { name: /Gift/ });
   state.request.mockRejectedValueOnce(new Error("Voucher unavailable"));
@@ -75,6 +75,6 @@ it("persists payment-order selection and exposes backend rejection", async () =>
     }),
   );
   expect((await screen.findByRole("alert")).textContent).toContain(
-    "Voucher unavailable",
+    "Chưa thể kiểm tra hoặc áp dụng ưu đãi.",
   );
 });

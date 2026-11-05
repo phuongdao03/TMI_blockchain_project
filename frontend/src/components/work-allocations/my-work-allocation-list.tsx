@@ -125,7 +125,7 @@ export function MyWorkAllocationList() {
           role="alert"
           className="rounded-xl border border-red-200 p-4 text-sm text-red-800"
         >
-          Chưa tải được hồ sơ thẩm định. Mở hàng đợi để kiểm tra trực tiếp.
+          Chưa tải được hồ sơ thẩm định. Mở danh sách hồ sơ được giao để kiểm tra lại.
         </p>
       ) : null}
       {allocations.data &&
@@ -180,7 +180,7 @@ export function MyWorkAllocationList() {
                 className="font-semibold text-[var(--theme-accent)] underline"
                 href="/reviews"
               >
-                Xem toàn bộ hàng đợi
+                Xem toàn bộ hồ sơ
               </Link>
             </p>
           ) : null}
@@ -308,7 +308,7 @@ export function MyWorkAllocationList() {
                     className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-sm font-bold text-neutral-800 transition hover:border-primary-400 hover:text-primary-700 dark:border-neutral-700 dark:text-neutral-100 dark:hover:border-primary-400 dark:hover:text-primary-200"
                     href="/reviews"
                   >
-                    Mở hàng đợi thẩm định{" "}
+                    Mở danh sách thẩm định{" "}
                     <ArrowRight aria-hidden="true" className="size-4" />
                   </Link>
                 ) : null}

@@ -85,7 +85,7 @@ export function ModeratorHrDashboardSummary() {
           Chưa liên kết hồ sơ nhân sự
         </h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
-          Super Admin cần liên kết hồ sơ nhân sự với tài khoản này trước khi bạn
+          Quản trị viên cấp cao cần liên kết hồ sơ nhân sự với tài khoản này trước khi bạn
           có thể sử dụng chấm công, nghỉ phép và tăng ca.
         </p>
         <Link

@@ -53,7 +53,7 @@ export function ComingSoonFeature({
         </div>
         <p className="mt-10 flex items-center gap-2 text-sm text-neutral-600">
           <BellRing aria-hidden="true" className="size-4 text-primary-700" />
-          Thông tin mở tính năng sẽ được công bố trên website.
+          Thông tin mở tính năng sẽ được công bố trên trang web.
         </p>
       </div>
     </section>

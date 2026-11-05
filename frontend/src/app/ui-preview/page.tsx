@@ -14,8 +14,8 @@ const roles = new Set<WorkspacePersona>([
 const roleLabels: Record<WorkspacePersona, string> = {
   VIEWER: "Khách xem",
   USER: "Người dùng",
-  MODERATOR: "Moderator",
-  SUPER_ADMIN: "Super Admin",
+  MODERATOR: "Người kiểm duyệt",
+  SUPER_ADMIN: "Quản trị viên cấp cao",
 };
 
 function resolveRole(requestedRole: string | string[] | undefined) {

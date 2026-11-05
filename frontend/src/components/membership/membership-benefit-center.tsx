@@ -118,8 +118,8 @@ export function MembershipBenefitCenter({ tier }: { tier: MembershipTier }) {
           Gửi yêu cầu quyền lợi
         </h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--theme-muted)]">
-          Yêu cầu được lưu theo chu kỳ hội viên và chuyển vào hàng đợi quản trị.
-          Quyền lợi có hạn mức được kiểm tra ở máy chủ.
+          Yêu cầu được xét theo chu kỳ hội viên. Bộ phận quản trị sẽ kiểm tra
+          quyền lợi có hạn mức.
         </p>
       </header>
 
@@ -186,7 +186,7 @@ export function MembershipBenefitCenter({ tier }: { tier: MembershipTier }) {
         ) : null}
         {submit.isSuccess ? (
           <p className="text-sm text-emerald-700 sm:col-span-2" role="status">
-            Yêu cầu đã được gửi vào hàng đợi xử lý.
+            Đã gửi yêu cầu. Bạn có thể theo dõi trạng thái tại mục Yêu cầu của tôi.
           </p>
         ) : null}
       </form>

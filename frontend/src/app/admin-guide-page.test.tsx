@@ -44,7 +44,7 @@ describe("AdminGuidePage", () => {
     ).toBe("/help");
     expect(
       screen
-        .getByRole("link", { name: "Mở hàng đợi thẩm định" })
+        .getByRole("link", { name: "Mở danh sách hồ sơ chờ thẩm định" })
         .getAttribute("href"),
     ).toBe("/admin/reviews");
     expect(

@@ -360,12 +360,12 @@ export function OperationsDashboard({
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-neutral-500">
-                  Hệ thống nền
+                  Tác vụ hệ thống
                 </p>
-                <h2 className="mt-2 text-xl font-bold">Sức khỏe tác vụ</h2>
+                <h2 className="mt-2 text-xl font-bold">Tình trạng tác vụ</h2>
               </div>
               <p className="text-xs text-neutral-500">
-                Hàng đợi lâu nhất:{" "}
+                Tác vụ chờ lâu nhất:{" "}
                 {Math.round(metrics.data.oldestQueuedJobAgeSeconds / 60)} phút
               </p>
             </div>

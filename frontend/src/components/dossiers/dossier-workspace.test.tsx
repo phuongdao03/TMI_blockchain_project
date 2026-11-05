@@ -431,7 +431,7 @@ describe("DossierWorkspace", () => {
     );
 
     expect(
-      await screen.findByText("Hồ sơ đã nộp và đang ở chế độ chỉ đọc."),
+      await screen.findByText("Hồ sơ đã được gửi."),
     ).toBeDefined();
     expect(
       document.querySelector(".dossier-state-summary")?.className,

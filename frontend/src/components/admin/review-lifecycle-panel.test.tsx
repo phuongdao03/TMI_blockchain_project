@@ -123,7 +123,7 @@ describe("ReviewLifecyclePanel", () => {
     expect(
       await screen.findByText("Đã giao hồ sơ cho người kiểm duyệt"),
     ).toBeTruthy();
-    expect(screen.getByText(/sẽ nhận phân công trong hàng đợi/)).toBeTruthy();
+    expect(screen.getByText(/thấy phân công trong danh sách công việc/)).toBeTruthy();
     expect(
       screen
         .getByRole("link", { name: "Theo dõi thẩm định" })
@@ -247,7 +247,7 @@ describe("ReviewLifecyclePanel", () => {
     expect(screen.getByText(/Người gửi cần bổ sung hồ sơ/)).toBeTruthy();
     expect(
       screen
-        .getByRole("link", { name: "Về hàng chờ hồ sơ" })
+        .getByRole("link", { name: "Về danh sách hồ sơ" })
         .getAttribute("href"),
     ).toBe("/admin/reviews");
   });
@@ -289,7 +289,7 @@ describe("ReviewLifecyclePanel", () => {
     );
 
     const approve = await screen.findByRole("button", {
-      name: "Thêm 1 moderator",
+      name: "Thêm 1 người thẩm định",
     });
     expect((approve as HTMLButtonElement).disabled).toBe(true);
 

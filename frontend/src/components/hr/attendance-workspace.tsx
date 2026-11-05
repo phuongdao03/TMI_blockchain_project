@@ -112,8 +112,8 @@ export function AttendanceWorkspace() {
     onSuccess: (record) => {
       setNotice(
         record.status === "PENDING"
-          ? "Yêu cầu chấm công vào đã được ghi nhận và đang chờ Super Admin xét duyệt vị trí."
-          : "Chấm công vào thành công. Thời gian máy chủ và vị trí đã được lưu an toàn.",
+          ? "Đã gửi yêu cầu chấm công vào. Vị trí đang chờ quản lý duyệt."
+          : "Đã chấm công vào. Thời điểm và vị trí đã được ghi nhận.",
       );
       void refresh();
     },
@@ -123,7 +123,7 @@ export function AttendanceWorkspace() {
     onSuccess: (record) => {
       setNotice(
         record.status === "PENDING"
-          ? "Yêu cầu chấm công ra đã được ghi nhận và đang chờ Super Admin xét duyệt vị trí."
+          ? "Đã gửi yêu cầu chấm công ra. Vị trí đang chờ quản lý duyệt."
           : record.status === "INCOMPLETE"
             ? "Đã ghi nhận giờ ra. Thời gian làm việc chưa đủ để tự tính công; hãy liên hệ quản trị viên nếu cần điều chỉnh."
             : record.status === "HALF_DAY"
@@ -163,7 +163,7 @@ export function AttendanceWorkspace() {
                 : "Chưa có ngày công được cấu hình"}
           </p>
         }
-        description="Ghi nhận giờ vào và ra bằng thời gian máy chủ. Ca làm, ngày lễ và quy tắc đi muộn sẽ được áp dụng sau khi được cấu hình."
+        description="Ghi nhận giờ vào, giờ ra và vị trí. Lịch làm, ngày lễ và quy tắc đi muộn được áp dụng khi đơn vị đã cấu hình."
         icon={Clock3}
         id="attendance-title"
         section="Thời gian làm việc"
@@ -177,7 +177,7 @@ export function AttendanceWorkspace() {
         <ol className="mt-3 list-decimal space-y-2 pl-5 leading-6 text-[var(--theme-muted)]">
           <li>
             Bật vị trí trên điện thoại và cho phép Chrome hoặc Safari dùng vị
-            trí khi mở website HTTPS.
+            trí khi mở trang qua kết nối an toàn (HTTPS).
           </li>
           <li>
             Đến điểm làm việc được phân công, bấm Chấm công vào hoặc Chấm công
@@ -272,7 +272,7 @@ export function AttendanceWorkspace() {
                 </p>
                 <p className="mt-1 text-sm leading-6 text-neutral-700">
                   {!hasActiveWorkday
-                    ? "Admin cần cấu hình địa điểm làm việc trước khi bạn có thể chấm công."
+                    ? "Quản trị viên cần thiết lập địa điểm làm việc trước khi bạn có thể chấm công."
                     : today?.checkOutAt
                       ? "Giờ vào và giờ ra hôm nay đã được ghi nhận."
                       : today
@@ -341,9 +341,8 @@ export function AttendanceWorkspace() {
                   className="mt-0.5 size-4 shrink-0 text-red-800"
                 />
                 <p>
-                  Không thể xác định ngày công theo địa điểm làm việc. Vui lòng
-                  thử lại hoặc liên hệ Super Admin; hệ thống chưa tự suy đoán
-                  ngày từ trình duyệt.
+                  Chưa xác định được ngày công tại địa điểm làm việc. Hãy thử
+                  lại hoặc liên hệ quản trị viên cấp cao.
                 </p>
               </aside>
             ) : null}
@@ -358,7 +357,7 @@ export function AttendanceWorkspace() {
                 />
                 <p>
                   Chưa có địa điểm làm việc và chính sách chấm công hiệu lực.
-                  Bạn chưa thể ghi nhận chấm công; hãy liên hệ Super Admin.
+                  Bạn chưa thể chấm công. Hãy liên hệ quản trị viên cấp cao.
                 </p>
               </aside>
             ) : null}
@@ -368,9 +367,9 @@ export function AttendanceWorkspace() {
                 className="mt-0.5 size-4 shrink-0 text-primary-700"
               />
               <p>
-                Vị trí thiết bị là bắt buộc khi chấm công vào hoặc ra. Hệ thống
-                chỉ lấy một mẫu sau khi bạn bấm nút, không theo dõi liên tục và
-                luôn ghi nhận độ chính xác do thiết bị cung cấp.
+                Vị trí thiết bị là bắt buộc khi chấm công vào hoặc ra. Ứng dụng
+                chỉ ghi nhận vị trí khi bạn bấm nút chấm công, không theo dõi
+                liên tục. Độ chính xác phụ thuộc vào thiết bị.
               </p>
             </aside>
             {today?.status === "PENDING" ? (
@@ -383,7 +382,7 @@ export function AttendanceWorkspace() {
                   className="mt-0.5 size-4 shrink-0 text-amber-800"
                 />
                 <p>
-                  Vị trí đang chờ Super Admin duyệt. Lượt chấm công này chưa
+                  Vị trí đang chờ quản lý duyệt. Lượt chấm công này chưa
                   được tính công hoặc lương.
                 </p>
               </aside>

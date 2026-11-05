@@ -400,9 +400,9 @@ export function AdminEventsWorkspace() {
             }}
           >
             <option value="">Không áp dụng</option>
-            <option value="TALK">Talk</option>
-            <option value="CONNECT">Connect</option>
-            <option value="CIRCLE">Circle</option>
+            <option value="TALK">Thảo luận</option>
+            <option value="CONNECT">Kết nối</option>
+            <option value="CIRCLE">Gặp gỡ theo nhóm</option>
           </select>
         </label>
         <label className="text-sm font-semibold">

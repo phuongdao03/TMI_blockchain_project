@@ -917,7 +917,7 @@ export function BlockchainSigningWorkspace() {
           </p>
         ) : null}
         {wallet.data && queue.isPending ? (
-          <p className="p-6 text-sm text-neutral-600">Đang tải hàng đợi…</p>
+          <p className="p-6 text-sm text-neutral-600">Đang tải giao dịch chờ ký…</p>
         ) : null}
         {wallet.data && queue.error ? (
           <p className="p-6 text-sm text-rose-700">
@@ -1040,8 +1040,8 @@ export function BlockchainSigningWorkspace() {
                 displayedSelected.txHash)) &&
             !transactionStatus.error ? (
               <p className="mt-1 text-sm text-neutral-600">
-                Hệ thống đối soát kết quả; bạn có thể kiểm tra lại bất kỳ lúc
-                nào. Trạng thái sẽ chuyển thành “Đã ghi nhận” sau khi hoàn tất.
+                Bạn có thể kiểm tra lại trạng thái bất cứ lúc nào. Khi giao dịch
+                được xác nhận, trạng thái sẽ chuyển thành “Đã ghi nhận”.
               </p>
             ) : null}
           </div>

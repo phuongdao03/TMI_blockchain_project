@@ -11,9 +11,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { authApi, ApiError } from "@/lib/api/client";
+import { affiliateApi, authApi, ApiError } from "@/lib/api/client";
 import type { AuthUser } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
+import {
+  clearReferralAttribution,
+  getReferralAttribution,
+} from "@/lib/auth/referral-attribution";
 
 type ApplicantAccountType = "INDIVIDUAL_APPLICANT" | "ORGANIZATION_APPLICANT";
 
@@ -38,6 +42,15 @@ export function ApplicantUpgradeCard({
     setIsSubmitting(true);
     try {
       const user = await authApi.upgradeToApplicant(accountType);
+      const referral = getReferralAttribution();
+      if (referral) {
+        try {
+          await affiliateApi.claimReferral(referral.referralCode, referral.clickId);
+          clearReferralAttribution();
+        } catch {
+          // Keep applicant onboarding successful if an optional referral claim fails.
+        }
+      }
       setCompleted(true);
       onUpgraded?.(user);
       router.push("/dossiers/new");

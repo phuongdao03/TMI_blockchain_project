@@ -147,9 +147,9 @@ function CampaignEditor({
         {initial && !locked && initial.status !== "DRAFT" && (
           <p className={styles.muted}>
             Bạn có thể chỉnh sửa chiến dịch đã xuất bản. Thay đổi áp dụng cho
-            voucher cấp từ lần lưu tiếp theo; voucher đã cấp giữ nguyên giá trị,
-            điều kiện và hạn sử dụng. Mã chiến dịch được giữ cố định; ngân sách
-            không được giảm sau khi đã cấp voucher.
+            ưu đãi cấp từ lần lưu tiếp theo sẽ theo thay đổi này; ưu đãi đã cấp
+            giữ nguyên giá trị, điều kiện và hạn sử dụng. Mã chiến dịch được giữ
+            cố định; ngân sách không được giảm sau khi đã cấp ưu đãi.
           </p>
         )}
         <form
@@ -234,7 +234,7 @@ function CampaignEditor({
                   <option value="CLAIM">Khách hàng tự nhận</option>
                   <option value="AUTO">Tự động cho người đủ điều kiện</option>
                   <option value="CODE">Nhập mã khuyến mại</option>
-                  <option value="MANUAL">Admin phát thủ công</option>
+                  <option value="MANUAL">Quản trị viên phát thủ công</option>
                   <option value="FIRST_ORDER">Ưu đãi đơn đầu tiên</option>
                 </Choice>
                 {value.programType === "CODE" && (
@@ -278,7 +278,7 @@ function CampaignEditor({
                 >
                   <option value="imageAssetId">Popup desktop</option>
                   <option value="mobileImageAssetId">Popup mobile</option>
-                  <option value="cardImageAssetId">Thẻ voucher</option>
+                  <option value="cardImageAssetId">Thẻ ưu đãi</option>
                   <option value="thumbnailAssetId">Ảnh thu nhỏ</option>
                 </Choice>
                 <PromotionMediaLibrary
@@ -324,9 +324,8 @@ function CampaignEditor({
                   </dd>
                 </dl>
                 <p className={styles.muted}>
-                  Lưu chiến dịch trước, sau đó dùng nút Xuất bản trong danh
-                  sách. Hệ thống sẽ kiểm tra điều kiện, ngày cutoff và ngân sách
-                  trên backend.
+                  Lưu chiến dịch trước, sau đó chọn Xuất bản trong danh sách.
+                  Hệ thống sẽ kiểm tra điều kiện, mốc thời gian và ngân sách.
                 </p>
               </div>
             )}

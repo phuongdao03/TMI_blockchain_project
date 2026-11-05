@@ -91,7 +91,7 @@ export function AdminOvertimeWorkspace() {
     const label = target.action === "approve" ? "duyệt" : "từ chối";
     if (
       window.confirm(
-        `Xác nhận ${label} yêu cầu tăng ca của ${target.request.employeeName}? Thay đổi sẽ được ghi vào audit log.`,
+        `Xác nhận ${label} yêu cầu tăng ca của ${target.request.employeeName}? Thay đổi sẽ được ghi vào lịch sử thao tác.`,
       )
     )
       decide.mutate(target);
@@ -103,7 +103,7 @@ export function AdminOvertimeWorkspace() {
       className="workspace-screen mx-auto max-w-7xl space-y-6 pb-12"
     >
       <WorkspacePageHeader
-        description="Rà soát yêu cầu theo thời gian thực tế. Mọi quyết định có audit và thông báo trong ứng dụng; chưa tự suy diễn rate hoặc compensation."
+        description="Kiểm tra giờ tăng ca và duyệt hoặc từ chối từng yêu cầu. Quyết định được lưu trong lịch sử và gửi qua thông báo."
         icon={UsersRound}
         id="admin-overtime-title"
         section="Điều hành nhân sự"

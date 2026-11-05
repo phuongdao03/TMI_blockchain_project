@@ -73,7 +73,7 @@ describe("HrDashboardSummary", () => {
     render(<HrDashboardSummary />, { wrapper: Wrapper });
 
     expect(
-      await screen.findByText("Không có hàng đợi nhân sự cần xử lý."),
+      await screen.findByText("Không có yêu cầu nhân sự nào cần xử lý."),
     ).toBeDefined();
   });
 
@@ -85,7 +85,7 @@ describe("HrDashboardSummary", () => {
     render(<HrDashboardSummary />, { wrapper: Wrapper });
 
     await user.click(
-      await screen.findByRole("button", { name: "Thử tải lại hàng đợi" }),
+      await screen.findByRole("button", { name: "Thử lại" }),
     );
     expect(
       await screen.findByRole("link", { name: /nhân viên đang hoạt động/i }),

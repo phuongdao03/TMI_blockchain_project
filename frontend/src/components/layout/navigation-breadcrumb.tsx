@@ -25,7 +25,7 @@ const pageLabels: Record<string, string> = {
   users: "Tài khoản",
   employees: "Nhân sự",
   departments: "Phòng ban",
-  promotions: "Marketing & Khuyến mại",
+  promotions: "Tiếp thị & khuyến mại",
   memberships: "Gói thành viên",
   advertising: "Quảng cáo",
   dashboard: "Tổng quan vận hành",

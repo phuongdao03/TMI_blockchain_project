@@ -133,10 +133,10 @@ export function PayrollWorkspace() {
               aria-hidden="true"
               className="mt-0.5 size-4 shrink-0 text-emerald-700"
             />
-            Chỉ Super Admin được xem và thao tác dữ liệu lương.
+            Chỉ quản trị viên cấp cao được xem và xử lý dữ liệu lương.
           </p>
         }
-        description="Quản lý kỳ lương theo địa điểm làm việc, với VND, đầu vào có kiểm soát và trạng thái không thể đảo ngược."
+        description="Quản lý kỳ lương theo địa điểm làm việc. Kiểm tra kỹ trước khi chốt vì kỳ lương đã xác nhận không thể hoàn tác."
         icon={Banknote}
         id="payroll-title"
         section="Quản trị tài chính"

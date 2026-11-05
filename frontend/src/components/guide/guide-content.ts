@@ -34,6 +34,10 @@ export function prepareGuideArticleBody(bodyHtml: string): {
   const headings: GuideHeading[] = [];
   const customerFacingBody = bodyHtml
     .replace(
+      /Nhập số tiền (?:cần nạp\.\s*Mức tối thiểu là 5\.000 đồng;|muốn nạp, tối thiểu 5\.000đ\.)\s*Dấu chấm phân cách hàng nghìn (?:được|sẽ) hiển thị tự động\./gi,
+      "Nhập số tiền muốn nạp, tối thiểu 5.000đ.",
+    )
+    .replace(
       /Người đánh giá gửi kết quả cho quản trị viên xem xét\.\s*Việc gửi kết quả thẩm định không tự quyết định hồ sơ được duyệt hay công bố\./gi,
       "Sau khi gửi, kết quả thẩm định được ghi nhận. Việc gửi kết quả chưa đồng nghĩa hồ sơ đã được duyệt hoặc công bố.",
     )

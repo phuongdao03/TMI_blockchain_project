@@ -6,7 +6,7 @@ import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
 it("announces completed work and provides a real next destination", () => {
   render(
     <WorkflowNextStep
-      action={{ href: "/reviews", label: "Xem hàng đợi" }}
+      action={{ href: "/reviews", label: "Xem danh sách hồ sơ" }}
       description="Admin sẽ xem báo cáo trước khi ra quyết định."
       title="Đã gửi báo cáo"
       tone="success"
@@ -18,7 +18,7 @@ it("announces completed work and provides a real next destination", () => {
     "Admin sẽ xem báo cáo",
   );
   expect(
-    screen.getByRole("link", { name: "Xem hàng đợi" }).getAttribute("href"),
+    screen.getByRole("link", { name: "Xem danh sách hồ sơ" }).getAttribute("href"),
   ).toBe("/reviews");
 });
 

@@ -46,7 +46,7 @@ export function CampaignPolicyFields({
         </Choice>
         <div className={styles.grid}>
           <TextField
-            label="Giá trị danh nghĩa / giảm cố định (VND)"
+            label="Giá trị danh nghĩa / giảm cố định (đồng)"
             type="number"
             min={1}
             required
@@ -69,7 +69,7 @@ export function CampaignPolicyFields({
                 }
               />
               <TextField
-                label="Giảm tối đa (VND)"
+                label="Giảm tối đa (đồng)"
                 type="number"
                 min={1}
                 value={rule.discountCapVnd ?? ""}
@@ -80,7 +80,7 @@ export function CampaignPolicyFields({
             </>
           )}
           <TextField
-            label="Đơn tối thiểu (VND)"
+            label="Đơn tối thiểu (đồng)"
             type="number"
             min={0}
             value={rule.minimumOrderVnd}
@@ -291,12 +291,12 @@ export function CampaignPolicyFields({
           />
         </div>
         <Check
-          label="Voucher đã cấp còn dùng được sau khi ngừng phát"
+          label="Ưu đãi đã cấp vẫn dùng được sau khi ngừng phát"
           checked={rule.allowUseAfterEnd}
           onChange={(checked) => policy({ allowUseAfterEnd: checked })}
         />
         <Check
-          label="Cho phép khôi phục voucher khi hoàn tiền theo chính sách"
+          label="Cho phép khôi phục ưu đãi khi hoàn tiền theo chính sách"
           checked={rule.restoreOnRefund}
           onChange={(checked) => policy({ restoreOnRefund: checked })}
         />
@@ -307,11 +307,11 @@ export function CampaignPolicyFields({
       <div className={styles.grid}>
         {(
           [
-            ["budgetVnd", "Ngân sách tối đa (VND)"],
-            ["issuanceLimit", "Tổng số voucher được cấp"],
+            ["budgetVnd", "Ngân sách tối đa (đồng)"],
+            ["issuanceLimit", "Tổng số ưu đãi được cấp"],
             ["redemptionLimit", "Tổng lượt sử dụng"],
             ["dailyLimit", "Lượt sử dụng tối đa mỗi ngày"],
-            ["userDiscountLimitVnd", "Giảm tối đa mỗi người (VND)"],
+            ["userDiscountLimitVnd", "Giảm tối đa mỗi người (đồng)"],
           ] as const
         ).map(([key, label]) => (
           <TextField
@@ -324,7 +324,7 @@ export function CampaignPolicyFields({
           />
         ))}
         <TextField
-          label="Số voucher mỗi tài khoản"
+          label="Số ưu đãi mỗi tài khoản"
           type="number"
           min={1}
           max={100}
@@ -332,7 +332,7 @@ export function CampaignPolicyFields({
           onChange={(e) => policy({ vouchersPerUser: Number(e.target.value) })}
         />
         <TextField
-          label="Số lần sử dụng mỗi voucher"
+          label="Số lần sử dụng mỗi ưu đãi"
           type="number"
           min={1}
           max={100}
@@ -354,7 +354,7 @@ export function CampaignPolicyFields({
         <option value="MEMBERSHIP_FIRST">Ưu tiên ưu đãi hội viên</option>
       </Choice>
       <p className={styles.muted}>
-        Mỗi đơn chỉ dùng một voucher. Giá trị đã cấp, khoản đang giữ và giảm giá
+        Mỗi đơn chỉ dùng một ưu đãi. Giá trị đã cấp, khoản đang giữ và mức giảm
         đã sử dụng được theo dõi riêng.
       </p>
     </div>

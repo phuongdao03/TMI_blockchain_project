@@ -67,11 +67,11 @@ export function HrDashboardSummary() {
   if (summary.isPending) {
     return (
       <section
-        aria-label="Đang tải hàng đợi nhân sự"
+        aria-label="Đang tải danh sách yêu cầu nhân sự"
         className="mx-auto max-w-7xl"
         role="status"
       >
-        <span className="sr-only">Đang tải hàng đợi nhân sự.</span>
+        <span className="sr-only">Đang tải danh sách yêu cầu nhân sự.</span>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }, (_, index) => (
             <span
@@ -96,10 +96,10 @@ export function HrDashboardSummary() {
           className="font-bold text-[var(--theme-text)]"
           id="hr-dashboard-summary-title"
         >
-          Chưa tải được hàng đợi nhân sự
+          Chưa tải được danh sách yêu cầu nhân sự
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
-          Dữ liệu chưa bị thay đổi. Hãy thử kết nối lại với dịch vụ nhân sự.
+          Dữ liệu chưa bị thay đổi. Hãy kiểm tra kết nối rồi thử lại.
         </p>
         <button
           className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary-700 px-4 text-sm font-bold text-white hover:bg-primary-800 disabled:opacity-60"
@@ -111,7 +111,7 @@ export function HrDashboardSummary() {
             aria-hidden="true"
             className={`size-4 ${summary.isFetching ? "animate-spin" : ""}`}
           />
-          {summary.isFetching ? "Đang tải lại" : "Thử tải lại hàng đợi"}
+          {summary.isFetching ? "Đang tải lại" : "Thử lại"}
         </button>
       </section>
     );
@@ -135,7 +135,7 @@ export function HrDashboardSummary() {
             className="mt-2 text-2xl font-bold tracking-[-0.03em] text-[var(--theme-text)] sm:text-3xl"
             id="hr-dashboard-summary-title"
           >
-            Hàng đợi cần xử lý
+            Yêu cầu cần xử lý
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
             Chỉ số tổng hợp để điều phối. Màn hình này không hiển thị vị trí, lý
@@ -147,7 +147,7 @@ export function HrDashboardSummary() {
 
       {totalPending === 0 ? (
         <p className="mt-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900">
-          Không có hàng đợi nhân sự cần xử lý.
+          Không có yêu cầu nhân sự nào cần xử lý.
         </p>
       ) : null}
 

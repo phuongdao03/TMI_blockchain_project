@@ -244,7 +244,7 @@ export function WorkAllocationWorkspace() {
           }
           description={
             completedKind === "DOSSIER_REVIEW"
-              ? "Người kiểm duyệt sẽ nhận hồ sơ trong hàng đợi. Theo dõi báo cáo trước khi ra quyết định cuối."
+              ? "Hồ sơ sẽ xuất hiện trong danh sách công việc của người kiểm duyệt. Theo dõi báo cáo trước khi ra quyết định cuối."
               : "Nhân viên sẽ thấy phân công trong không gian làm việc của họ. Theo dõi trạng thái và thời hạn trong danh sách bên dưới."
           }
           title={

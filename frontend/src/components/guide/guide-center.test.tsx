@@ -134,7 +134,7 @@ describe("GuideCenter", () => {
       await screen.findByRole("option", { name: "Hồ sơ đề cử" }),
     ).toBeDefined();
     expect(
-      screen.getByRole("option", { name: "Câu hỏi thường gặp" }),
+      await screen.findByRole("option", { name: "Câu hỏi thường gặp" }),
     ).toBeDefined();
     expect(screen.queryByRole("option", { name: "Quản trị" })).toBeNull();
     expect(screen.queryByRole("option", { name: "Nhân sự" })).toBeNull();
@@ -163,7 +163,12 @@ describe("GuideCenter", () => {
       target: { value: "Nạp tiền" },
     });
 
-    expect(await screen.findByText(/Không tìm thấy hướng dẫn/)).toBeDefined();
+    expect(
+      await screen.findByText(/Hướng dẫn phù hợp đã có ở phía trên/),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("heading", { name: /Nạp tiền/ }),
+    ).toBeDefined();
     expect(screen.queryByRole("link", { name: /Tìm và xem đề cử/ })).toBeNull();
   });
 

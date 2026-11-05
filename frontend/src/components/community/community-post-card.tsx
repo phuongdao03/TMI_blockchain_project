@@ -98,7 +98,7 @@ function CommunityPostCardContent({
 
   const postHref = `/community/posts/${encodeURIComponent(post.slug)}`;
   return (
-    <article className="py-5 sm:py-7">
+    <article className="overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs font-semibold text-[var(--theme-muted)]">
         <CommunityUserIdentity size={36} user={post.author} />
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -137,11 +137,12 @@ function CommunityPostCardContent({
         images={post.images ?? []}
         postSlug={post.slug}
         postTitle={post.title}
+        presentation="feed"
       />
       <CommunityRelatedWorkLink work={post.relatedWork} />
       <div
         aria-label="Tương tác bài viết"
-        className="mt-3 flex flex-wrap items-center gap-1.5 sm:mt-4 sm:gap-2 sm:border-t sm:border-[var(--theme-border)] sm:pt-3"
+        className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-[var(--theme-border)] pt-3 sm:mt-5 sm:gap-2"
       >
         {authenticated ? (
           <>

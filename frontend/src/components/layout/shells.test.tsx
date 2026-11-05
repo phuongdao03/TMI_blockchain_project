@@ -190,9 +190,9 @@ describe("layout shells", () => {
     );
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Mở menu" }));
+    await user.click(screen.getByRole("button", { name: "Mở điều hướng" }));
     expect(
-      within(screen.getByRole("dialog", { name: "Menu công khai" }))
+      within(screen.getByRole("dialog", { name: "Điều hướng công khai" }))
         .getByRole("link", { name: "Cộng đồng hội viên" })
         .getAttribute("href"),
     ).toBe("/cong-dong/hoi-vien");
@@ -324,11 +324,11 @@ describe("layout shells", () => {
       </PublicShell>,
     );
 
-    const trigger = screen.getByRole("button", { name: /menu/i });
+    const trigger = screen.getByRole("button", { name: /điều hướng/i });
     const originalOverflow = document.body.style.overflow;
     await user.click(trigger);
     expect(document.body.style.overflow).toBe("hidden");
-    expect(screen.getAllByRole("button", { name: "Đóng menu" })).toHaveLength(
+    expect(screen.getAllByRole("button", { name: "Đóng điều hướng" })).toHaveLength(
       1,
     );
 
@@ -350,7 +350,7 @@ describe("layout shells", () => {
       within(navigation).getByRole("link", { name: "Đăng ký" }),
     ).toBeDefined();
     const homeLink = within(navigation).getByRole("button", {
-      name: "Đóng menu",
+      name: "Đóng điều hướng",
     });
     await waitFor(() => expect(document.activeElement).toBe(homeLink));
 
@@ -372,9 +372,9 @@ describe("layout shells", () => {
       </PublicShell>,
     );
 
-    await user.click(screen.getByRole("button", { name: "Mở menu" }));
+    await user.click(screen.getByRole("button", { name: "Mở điều hướng" }));
     const navigation = screen.getByRole("dialog", {
-      name: "Menu công khai",
+      name: "Điều hướng công khai",
     });
     const links = Array.from(
       navigation.querySelectorAll<HTMLElement>("button, a[href]"),
@@ -594,7 +594,7 @@ describe("layout shells", () => {
     ).toBe("/workspace");
     expect(
       within(drawer)
-        .getByRole("link", { name: "Website" })
+        .getByRole("link", { name: "Trang chủ" })
         .getAttribute("href"),
     ).toBe("/");
     expect(
@@ -690,9 +690,9 @@ describe("layout shells", () => {
     expect(screen.queryByText("reviewer@cnsgroup.vn")).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng nhập" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Đăng ký" })).toBeNull();
-    await user.click(screen.getByLabelText("Mở menu tài khoản"));
+    await user.click(screen.getByLabelText("Mở điều hướng tài khoản"));
     const accountMenu = screen.getByRole("navigation", {
-      name: "Menu tài khoản",
+      name: "Điều hướng tài khoản",
     });
     expect(
       within(accountMenu)
@@ -717,7 +717,7 @@ describe("layout shells", () => {
         }}
       >
         <DashboardShell>
-          <h1>Hàng đợi thẩm định</h1>
+          <h1>Hồ sơ chờ thẩm định</h1>
         </DashboardShell>
       </AuthUserProvider>,
     );
@@ -834,8 +834,8 @@ describe("layout shells", () => {
       </AuthUserProvider>,
     );
 
-    await user.click(screen.getByLabelText("Mở menu tài khoản"));
-    const menu = screen.getByRole("navigation", { name: "Menu tài khoản" });
+    await user.click(screen.getByLabelText("Mở điều hướng tài khoản"));
+    const menu = screen.getByRole("navigation", { name: "Điều hướng tài khoản" });
     expect(
       within(menu)
         .getByRole("link", { name: "Không gian cá nhân" })
@@ -937,7 +937,7 @@ describe("layout shells", () => {
         .getByRole("link", { name: "Cá nhân" })
         .getAttribute("href"),
     ).toBe("/workspace");
-    const moreButton = screen.getByRole("button", { name: "Mở menu" });
+    const moreButton = screen.getByRole("button", { name: "Mở điều hướng" });
     await user.click(moreButton);
     await user.keyboard("{Escape}");
     await waitFor(() => expect(document.activeElement).toBe(moreButton));

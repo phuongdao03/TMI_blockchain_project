@@ -39,7 +39,7 @@ export function PromotionAdminWorkspace({
   if (!read)
     return (
       <p role="alert" className={styles.error}>
-        Bạn chưa có quyền truy cập Marketing & Khuyến mại.
+        Bạn chưa có quyền truy cập mục Tiếp thị & khuyến mại.
       </p>
     );
   return <PromotionAdminContent section={section} canManage={manage} />;
@@ -78,7 +78,7 @@ function PromotionAdminContent({
     content = canManage ? (
       <PromotionDistribution initialId={initialId} />
     ) : (
-      <p role="alert">Bạn cần quyền quản lý để phát voucher.</p>
+      <p role="alert">Bạn cần quyền quản lý để cấp ưu đãi.</p>
     );
   else if (area === "reports" || area === "history")
     content = (
@@ -92,7 +92,7 @@ function PromotionAdminContent({
       <header className={styles.heading}>
         <div>
           <p className={styles.eyebrow}>Trung tâm ưu đãi</p>
-          <h1>Marketing & Khuyến mại</h1>
+          <h1>Tiếp thị & khuyến mại</h1>
           <p className={styles.muted}>
             Thiết kế, phân phối và theo dõi ưu đãi trên cùng một hệ thống.
           </p>
@@ -141,7 +141,7 @@ function PromotionOverview() {
         <p className={styles.muted}>
           Tạo chiến dịch → chọn đối tượng → xem trước → xuất bản → phân phối →
           theo dõi thanh toán. Chiến dịch tri ân thành viên sớm luôn cần ngày
-          cutoff được Admin xác nhận.
+          thời hạn được quản trị viên xác nhận.
         </p>
         <div className={`${styles.actions} mt-4`}>
           <Link className={styles.link} href="/admin/promotions/campaigns">

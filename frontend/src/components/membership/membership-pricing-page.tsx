@@ -57,7 +57,7 @@ const faqs = [
   {
     question: "Tôi có thể gia hạn bằng ví không?",
     answer:
-      "Có. Bạn chủ động chọn gói, xem giá và xác nhận thanh toán bằng số dư ví nội bộ. Gói không tự động gia hạn và hệ thống không tự động trừ tiền.",
+      "Có. Bạn chủ động chọn gói, xem giá và xác nhận thanh toán bằng số dư trong ví. Gói không tự động gia hạn và không tự động trừ tiền.",
   },
   {
     question: "Nếu đã mua Vàng, muốn lên Kim cương sẽ tính phí thế nào?",

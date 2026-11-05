@@ -88,7 +88,7 @@ export function PromotionMediaLibrary({
           <p className={styles.muted}>
             {file
               ? `${file.name} · ${Math.ceil(file.size / 1024)} KB`
-              : "JPG, PNG, WebP · Tối đa 5 MB. Ảnh sẽ được kiểm tra và loại bỏ metadata trên máy chủ."}
+              : "Chọn ảnh JPG, PNG hoặc WebP, dung lượng tối đa 5 MB."}
           </p>
           <TextField
             label="Mô tả ảnh (Alt text)"

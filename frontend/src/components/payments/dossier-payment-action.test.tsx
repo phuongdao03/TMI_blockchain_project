@@ -77,7 +77,7 @@ describe("DossierPaymentAction", () => {
     });
     renderAction("PAYMENT_PENDING");
 
-    expect(await screen.findByText(/1\.500\.000 VND/)).toBeTruthy();
+    expect(await screen.findByText(/1\.500\.000\s+đồng/)).toBeTruthy();
     expect(
       screen
         .getByRole("link", { name: "Xem khoản phí và thanh toán" })

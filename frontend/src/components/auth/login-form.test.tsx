@@ -82,7 +82,7 @@ describe("LoginForm", () => {
 
     expect(
       screen.getByText(
-        "Truy cập không gian hồ sơ để theo dõi tiến trình, phản hồi và bằng xác lập của bạn.",
+        "Đăng nhập để theo dõi hồ sơ, phản hồi yêu cầu bổ sung và xem bằng xác lập.",
       ),
     ).toBeDefined();
     expect(screen.queryByText(/một tài khoản cho mọi hành trình/i)).toBeNull();
@@ -257,7 +257,7 @@ describe("LoginForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
 
     expect((await screen.findByRole("alert")).textContent).toContain(
-      "Đăng nhập bằng email chưa được cấu hình",
+      "Đăng nhập bằng email hiện chưa khả dụng",
     );
   });
 
@@ -292,7 +292,7 @@ describe("LoginForm", () => {
 
     expect(
       await screen.findByText(
-        "Tài khoản chưa được liên kết hoàn tất. Vui lòng liên hệ quản trị hệ thống.",
+        "Tài khoản này chưa thể dùng để đăng nhập. Vui lòng liên hệ bộ phận hỗ trợ.",
       ),
     ).toBeDefined();
   });
@@ -327,7 +327,7 @@ describe("LoginForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
 
     expect((await screen.findByRole("alert")).textContent).toContain(
-      "Không thể xác minh phiên đăng nhập",
+      "Không xác minh được tài khoản",
     );
     expect(screen.getByRole("alert").textContent).not.toContain("Firebase");
   });

@@ -73,7 +73,7 @@ describe("PWA installation", () => {
     );
 
     expect(
-      await screen.findByRole("link", { name: "Cách cài ứng dụng" }),
+      await screen.findByRole("link", { name: "Cài ứng dụng" }),
     ).toBeDefined();
   });
 
@@ -99,8 +99,13 @@ describe("PWA installation", () => {
       "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/125 Mobile",
     );
     render(<PwaInstallAction />);
-    expect(await screen.findByText(/Chrome trên Android/)).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Cài ứng dụng" })).toBeNull();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Cài ứng dụng" }),
+    );
+    expect(
+      await screen.findByText(/Trình duyệt chưa mở được cửa sổ cài đặt tự động/),
+    ).toBeDefined();
     expect(
       screen
         .getByRole("link", { name: "Xem các bước trên Android" })
@@ -151,7 +156,7 @@ describe("PWA installation", () => {
     render(<PwaInstallButton />);
     await waitFor(() =>
       expect(
-        screen.queryByRole("link", { name: "Cách cài ứng dụng" }),
+        screen.queryByRole("link", { name: "Cài ứng dụng" }),
       ).toBeNull(),
     );
   });

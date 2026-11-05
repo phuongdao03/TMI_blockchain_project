@@ -52,10 +52,10 @@ export function PreparationRecoveryNotice({
         {recovery.saving
           ? "Đang lưu lên tài khoản…"
           : recovery.dirty
-            ? "Chưa đồng bộ hết thay đổi."
+            ? "Một số thay đổi chưa được lưu."
             : recovery.revision
-              ? "Đã lưu dữ liệu chuẩn bị trên tài khoản."
-              : "Dữ liệu chuẩn bị sẽ tự động lưu theo tài khoản."}
+              ? "Đã lưu phần chuẩn bị trên tài khoản."
+              : "Phần chuẩn bị sẽ được lưu vào tài khoản."}
       </p>
       {recovery.recovered ? (
         <p className="mt-1">
@@ -76,8 +76,8 @@ export function PreparationRecoveryNotice({
       ) : null}
       {recovery.storageError ? (
         <p className="mt-2">
-          Trình duyệt chưa lưu được bản khôi phục tạm. Hãy chờ đồng bộ trên tài
-          khoản trước khi đóng trang.
+          Trình duyệt chưa lưu được bản nháp tạm. Hãy chờ lưu lên tài khoản
+          trước khi đóng trang.
         </p>
       ) : null}
     </div>

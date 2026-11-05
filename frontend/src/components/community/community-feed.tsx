@@ -94,8 +94,7 @@ export function CommunityFeed({
               Cộng đồng
             </h1>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--theme-muted)] sm:mt-2">
-              Nơi chia sẻ, trao đổi và kết nối những người quan tâm đến giá trị
-              Việt.
+              Cùng chia sẻ kiến thức, đặt câu hỏi và kết nối với cộng đồng.
             </p>
           </div>
           {authStatus === "authenticated" ? (
@@ -123,8 +122,8 @@ export function CommunityFeed({
 
         {authStatus === "unauthenticated" ? (
           <p className="mt-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 text-sm leading-6 text-[var(--theme-muted)]">
-            Bạn đang ở chế độ chỉ đọc. Đăng nhập để đăng bài, bình luận và tương
-            tác.
+            Bạn có thể xem nội dung công khai khi chưa đăng nhập. Đăng nhập để
+            viết bài, bình luận hoặc theo dõi nội dung.
           </p>
         ) : null}
         {authStatus === "error" ? (
@@ -132,8 +131,8 @@ export function CommunityFeed({
             className="mt-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 text-sm leading-6 text-[var(--theme-muted)]"
             role="alert"
           >
-            Không thể xác minh phiên. Nội dung vẫn ở chế độ đọc cho đến khi xác
-            minh thành công.
+            Chưa thể xác minh trạng thái đăng nhập. Hãy tải lại trang để tiếp
+            tục viết bài hoặc bình luận.
           </p>
         ) : null}
 
@@ -177,41 +176,45 @@ export function CommunityFeed({
               <Search aria-hidden="true" className="size-4" />
             </button>
           </label>
-          <label className="sr-only" htmlFor="community-category-filter">
-            Chuyên mục
+          <label className="min-w-0 space-y-1.5">
+            <span className="text-xs font-semibold text-[var(--theme-muted)]">
+              Chuyên mục
+            </span>
+            <select
+              className="min-h-12 min-w-0 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-bg)] px-3 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
+              key={`${category ?? ""}:${sort}:${categories.data ? "ready" : "loading"}`}
+              id="community-category-filter"
+              name="category"
+              defaultValue={category ?? ""}
+              onChange={(event) => event.currentTarget.form?.requestSubmit()}
+            >
+              <option value="">Mọi chuyên mục</option>
+              {categories.data?.map((item) => (
+                <option key={item.id} value={item.slug}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
           </label>
-          <select
-            className="min-h-12 min-w-0 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-bg)] px-3 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
-            key={`${category ?? ""}:${sort}:${categories.data ? "ready" : "loading"}`}
-            id="community-category-filter"
-            name="category"
-            defaultValue={category ?? ""}
-            onChange={(event) => event.currentTarget.form?.requestSubmit()}
-          >
-            <option value="">Mọi chuyên mục</option>
-            {categories.data?.map((item) => (
-              <option key={item.id} value={item.slug}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-          <label className="sr-only" htmlFor="community-sort-filter">
-            Sắp xếp
+          <label className="min-w-0 space-y-1.5">
+            <span className="text-xs font-semibold text-[var(--theme-muted)]">
+              Sắp xếp
+            </span>
+            <select
+              className="min-h-12 min-w-0 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-bg)] px-3 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
+              key={`${category ?? ""}:${sort}`}
+              id="community-sort-filter"
+              name="sort"
+              defaultValue={sort}
+              onChange={(event) => event.currentTarget.form?.requestSubmit()}
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
-          <select
-            className="min-h-12 min-w-0 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-bg)] px-3 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
-            key={`${category ?? ""}:${sort}`}
-            id="community-sort-filter"
-            name="sort"
-            defaultValue={sort}
-            onChange={(event) => event.currentTarget.form?.requestSubmit()}
-          >
-            {sortOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
           {relatedWorkId ? (
             <input name="relatedWorkId" type="hidden" value={relatedWorkId} />
           ) : null}
@@ -253,7 +256,7 @@ export function CommunityFeed({
             <FeedSkeleton />
           ) : null}
           {!needsFollowingLogin && !needsAuthCheck && posts.isError ? (
-            <div className="my-5 bg-[var(--theme-surface)] px-4 py-5 sm:px-6">
+            <div className="mx-auto my-5 max-w-4xl rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6">
               <p className="font-bold text-[var(--theme-text)]">
                 Chưa thể tải bài viết cộng đồng.
               </p>
@@ -272,7 +275,7 @@ export function CommunityFeed({
           {!needsFollowingLogin &&
           !needsAuthCheck &&
           posts.data?.data.length === 0 ? (
-            <div className="my-5 rounded-xl bg-[var(--theme-surface)] px-4 py-8 text-center sm:py-10">
+            <div className="mx-auto my-5 max-w-4xl rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-5 py-8 text-center sm:py-10">
               <h2 className="text-xl font-bold text-[var(--theme-text)]">
                 {category
                   ? "Chưa có bài viết trong chuyên mục này."
@@ -302,7 +305,7 @@ export function CommunityFeed({
           !needsAuthCheck &&
           posts.data?.data.length ? (
             <>
-              <div className="divide-y divide-[var(--theme-border)]">
+              <div className="mx-auto mt-5 max-w-4xl space-y-4 sm:mt-6">
                 {posts.data.data.map((post) => (
                   <CommunityPostCard key={post.id} post={post} />
                 ))}
@@ -367,18 +370,21 @@ function FeedSkeleton() {
   return (
     <div
       aria-label="Đang tải bài viết cộng đồng"
-      className="py-4"
+      className="mx-auto max-w-4xl space-y-4 py-4"
       role="status"
     >
       {Array.from({ length: 3 }, (_, index) => (
         <div
           aria-hidden="true"
-          className="animate-pulse border-b border-[var(--theme-border)] py-7"
+          className="animate-pulse rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
           key={index}
         >
           <div className="h-3 w-40 rounded bg-[var(--theme-elevated)]" />
           <div className="mt-4 h-6 w-3/4 rounded bg-[var(--theme-elevated)]" />
           <div className="mt-3 h-4 w-full max-w-2xl rounded bg-[var(--theme-elevated)]" />
+          {index === 0 ? (
+            <div className="mt-4 aspect-[4/3] rounded-xl bg-[var(--theme-elevated)]" />
+          ) : null}
         </div>
       ))}
       <span className="sr-only">

@@ -276,7 +276,7 @@ it("warns on unsafe navigation and recovers a draft across remounts without brow
   fireEvent.change(await screen.findByLabelText("Title"), {
     target: { value: "Keep on back" },
   });
-  await screen.findByText(/Chưa đồng bộ được/);
+  await screen.findByText(/Chưa lưu thay đổi lên tài khoản/);
   expect(
     fireEvent.click(screen.getByRole("link", { name: "Leave preparation" })),
   ).toBe(false);
@@ -293,7 +293,7 @@ it("does not warn for internal navigation when a local draft backup exists", asy
   fireEvent.change(await screen.findByLabelText("Title"), {
     target: { value: "Local recovery" },
   });
-  await screen.findByText(/Chưa đồng bộ được/);
+  await screen.findByText(/Chưa lưu thay đổi lên tài khoản/);
   const link = screen.getByRole("link", { name: "Leave preparation" });
   link.addEventListener("click", (event) => event.preventDefault(), {
     once: true,

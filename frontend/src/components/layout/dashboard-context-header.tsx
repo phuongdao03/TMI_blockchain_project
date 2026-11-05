@@ -18,8 +18,8 @@ import { profileApi } from "@/lib/api/client";
 import type { AuthUser } from "@/lib/api/types";
 
 const pageTitles: Record<string, string> = {
-  "/admin/promotions": "Marketing & Khuyến mại",
-  "/vouchers": "Voucher của tôi",
+  "/admin/promotions": "Tiếp thị & khuyến mại",
+  "/vouchers": "Ưu đãi của tôi",
   "/workspace": "Không gian cá nhân",
   "/dashboard": "Tổng quan",
   "/account": "Tài khoản",
@@ -30,7 +30,7 @@ const pageTitles: Record<string, string> = {
   "/dossiers": "Hồ sơ của tôi",
   "/notifications": "Thông báo",
   "/work-allocations": "Công việc được giao",
-  "/reviews": "Hàng đợi thẩm định",
+  "/reviews": "Việc thẩm định",
   "/admin": "Quản trị hệ thống",
   "/admin/dashboard": "Tổng quan vận hành",
   "/admin/memberships": "Gói thành viên",

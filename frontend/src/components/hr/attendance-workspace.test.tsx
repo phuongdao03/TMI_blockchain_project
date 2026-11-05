@@ -121,7 +121,7 @@ describe("AttendanceWorkspace", () => {
     });
     expect(
       await screen.findByText(
-        "Chấm công vào thành công. Thời gian máy chủ và vị trí đã được lưu an toàn.",
+        "Đã chấm công vào. Thời điểm và vị trí đã được ghi nhận.",
       ),
     ).toBeDefined();
     expect(screen.queryByText(/sai số báo cáo/i)).toBeNull();

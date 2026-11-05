@@ -7,6 +7,10 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { guideApi } from "@/lib/api/client";
 import type { CmsGuideArticle, CmsGuideAudience } from "@/lib/api/types";
+import {
+  matchesStarterGuide,
+  STARTER_GUIDES,
+} from "@/components/guide/guide-fallback-content";
 import { useAuthUser } from "@/lib/auth/user-context";
 import { getHighlightedSegments } from "@/components/guide/guide-search";
 
@@ -23,8 +27,12 @@ const CATEGORY_LABELS: Record<string, string> = {
   reviews: "Thẩm định",
   "review-workflows": "Thẩm định",
   "employee-workflows": "Nhân sự",
-  verification: "Xác minh",
+  verification: "Tra cứu bằng xác lập",
   administration: "Quản trị",
+  wallet: "Ví của tôi",
+  community: "Cộng đồng",
+  install: "Cài ứng dụng",
+  security: "An toàn tài khoản",
 };
 
 const AUDIENCE_LABELS: Record<CmsGuideAudience, string> = {
@@ -95,16 +103,27 @@ export function GuideCenter({ scope }: { scope: "public" | "account" }) {
   const catalogArticles = catalog.data?.data ?? EMPTY_ARTICLES;
   const categoryOptions = useMemo(
     () =>
-      [...new Set(catalogArticles.map((article) => article.category))].sort(
-        (left, right) =>
-          guideCategoryLabel(left).localeCompare(
-            guideCategoryLabel(right),
-            "vi",
-          ),
+      [
+        ...new Set([
+          ...STARTER_GUIDES.map((article) => article.category),
+          ...catalogArticles.map((article) => article.category),
+        ]),
+      ].sort((left, right) =>
+        guideCategoryLabel(left).localeCompare(guideCategoryLabel(right), "vi"),
       ),
     [catalogArticles],
   );
   const activeCategory = categoryOptions.includes(category) ? category : "";
+  const quickGuides = useMemo(() => {
+    const catalogBySlug = new Map(
+      catalogArticles.map((article) => [article.slug, article] as const),
+    );
+    return STARTER_GUIDES.filter((article) => {
+      if (!matchesStarterGuide(article, query, activeCategory)) return false;
+      const published = catalogBySlug.get(article.slug);
+      return !published || !matchesStarterGuide(published, query, activeCategory);
+    });
+  }, [activeCategory, catalogArticles, query]);
   const listing = useQuery({
     queryKey: ["guide-center", scope, accessKey, query, activeCategory, page],
     queryFn: () => {
@@ -175,6 +194,34 @@ export function GuideCenter({ scope }: { scope: "public" | "account" }) {
         </form>
       </header>
 
+      {quickGuides.length > 0 && (
+        <section
+          aria-labelledby="guide-quick-heading"
+          className="mt-7 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
+        >
+          <div className="max-w-2xl">
+            <h2 className="text-xl font-bold" id="guide-quick-heading">
+              Hướng dẫn thiết yếu
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
+              Các bước thường dùng luôn sẵn có, kể cả khi chưa tải được thư viện
+              bài viết.
+            </p>
+          </div>
+          <ul className="mt-3 divide-y divide-[var(--theme-border)]">
+            {quickGuides.map((article) => (
+              <li key={article.id}>
+                <GuideTeaser
+                  article={article}
+                  href={hrefFor(article)}
+                  query={query}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section
         aria-labelledby="guide-results-heading"
         className="mt-7"
@@ -193,13 +240,17 @@ export function GuideCenter({ scope }: { scope: "public" | "account" }) {
               aria-live="polite"
               className="mt-1 text-sm text-[var(--theme-muted)]"
             >
-              {listing.isPending ? "Đang tải hướng dẫn…" : `${total} bài viết`}
+              {listing.isPending
+                ? "Đang tải hướng dẫn…"
+                : `${total} bài trong thư viện`}
             </p>
           </div>
           <label className="flex items-center gap-3 text-sm font-semibold text-[var(--theme-muted)]">
             <span>Chủ đề</span>
             <select
               className="min-h-10 min-w-40 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]"
+              id="guide-category"
+              name="topic"
               onChange={(event) => selectTopic(event.target.value)}
               value={activeCategory}
             >
@@ -215,10 +266,20 @@ export function GuideCenter({ scope }: { scope: "public" | "account" }) {
 
         {listing.isError && (
           <div
-            className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800"
+            className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between"
             role="alert"
           >
-            Không tải được hướng dẫn. Vui lòng tải lại trang hoặc thử lại sau.
+            <p>
+              Chưa tải được thư viện bài viết. Các hướng dẫn thiết yếu phía trên
+              vẫn dùng được.
+            </p>
+            <button
+              className="min-h-10 shrink-0 rounded-lg border border-amber-800/30 px-3 font-semibold hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800"
+              onClick={() => void listing.refetch()}
+              type="button"
+            >
+              Tải lại thư viện
+            </button>
           </div>
         )}
         {listing.isPending && (
@@ -226,14 +287,20 @@ export function GuideCenter({ scope }: { scope: "public" | "account" }) {
             aria-live="polite"
             className="border-y border-[var(--theme-border)] py-6 text-sm text-[var(--theme-muted)]"
           >
-            Đang tải các bài hướng dẫn…
+            Đang tải bài hướng dẫn…
           </p>
         )}
         {!listing.isPending && !listing.isError && articles.length === 0 && (
           <div className="border-y border-[var(--theme-border)] py-7">
-            <h3 className="font-semibold">Không tìm thấy hướng dẫn</h3>
+            <h3 className="font-semibold">
+              {quickGuides.length > 0
+                ? "Hướng dẫn phù hợp đã có ở phía trên"
+                : "Không tìm thấy hướng dẫn"}
+            </h3>
             <p className="mt-1 text-sm text-[var(--theme-muted)]">
-              Thử từ khóa khác hoặc chọn một chủ đề khác.
+              {quickGuides.length > 0
+                ? "Thư viện hiện chưa có thêm bài phù hợp với lựa chọn của bạn."
+                : "Thử từ khóa khác hoặc chọn một chủ đề khác."}
             </p>
             {(query || activeCategory) && (
               <button

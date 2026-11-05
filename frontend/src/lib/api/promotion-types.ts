@@ -209,7 +209,7 @@ export const newCampaign = (): CampaignInput => ({
       subtitle: "Món quà tri ân",
       primaryCta: "Sử dụng ưu đãi",
       secondaryCta: "Để sau",
-      altText: "Voucher Tinh Hoa Việt",
+      altText: "Ưu đãi Tinh Hoa Việt",
       imageAssetId: null,
       mobileImageAssetId: null,
       cardImageAssetId: null,

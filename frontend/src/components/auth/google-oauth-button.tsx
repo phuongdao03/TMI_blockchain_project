@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ApiError, authApi } from "@/lib/api/client";
 import { safeLocalDestination } from "@/lib/auth/safe-destination";
+import { ensureReferralAttribution } from "@/lib/auth/referral-attribution";
 import { broadcastAuthSessionChange } from "@/lib/auth/session-sync";
 import {
   getFirebaseAuth,
@@ -104,10 +105,17 @@ export function GoogleOAuthButton({
     async (user: User) => {
       const idToken = await user.getIdToken(true);
       const destination = safeLocalDestination(next, "/workspace");
+      const referral = await ensureReferralAttribution();
       const result = await authApi.exchangeFirebaseToken(
         idToken,
         accountType,
         destination,
+        referral
+          ? {
+              referralCode: referral.referralCode,
+              referralClickId: referral.clickId,
+            }
+          : undefined,
       );
       queryClient.setQueryData(["auth", "me"], result.user);
       broadcastAuthSessionChange();

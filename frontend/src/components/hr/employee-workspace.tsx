@@ -674,8 +674,8 @@ export function EmployeeWorkspace({
                 </select>
               </label>
               <p className="mt-2 text-xs text-neutral-600">
-                Email hồ sơ sẽ được đồng bộ với tài khoản đã xác minh. Không thể
-                chuyển liên kết sang tài khoản khác sau khi lưu.
+                Địa chỉ email trong hồ sơ sẽ khớp với tài khoản đã xác minh. Sau
+                khi lưu, không thể liên kết hồ sơ với tài khoản khác.
               </p>
             </div>
           ) : null}
@@ -686,7 +686,7 @@ export function EmployeeWorkspace({
               </h2>
               <p className="mt-1 text-sm text-neutral-600">
                 {editing.employeeCode} · Các thay đổi quan trọng được ghi vào
-                audit log.
+                lịch sử thao tác.
               </p>
             </div>
             <button

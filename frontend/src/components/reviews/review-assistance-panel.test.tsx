@@ -39,7 +39,7 @@ describe("ReviewAssistancePanel", () => {
     await user.click(screen.getByText("Gửi yêu cầu hỗ trợ"));
     expect(disclosure?.open).toBe(true);
 
-    const send = screen.getByRole("button", { name: "Gửi Admin" });
+    const send = screen.getByRole("button", { name: "Gửi quản trị viên" });
     expect((send as HTMLButtonElement).disabled).toBe(true);
 
     await user.type(
@@ -47,7 +47,7 @@ describe("ReviewAssistancePanel", () => {
       "Cần chuyên gia cùng đối chiếu các bằng chứng chuyên ngành phức tạp.",
     );
     await user.selectOptions(
-      screen.getByLabelText("Số moderator cần thêm"),
+      screen.getByLabelText("Số người thẩm định cần thêm"),
       "2",
     );
     await user.click(send);
@@ -58,8 +58,8 @@ describe("ReviewAssistancePanel", () => {
       requestedReviewerCount: 2,
     });
     expect(
-      await screen.findByText("Đã gửi yêu cầu hỗ trợ cho Admin"),
+      await screen.findByText("Đã gửi yêu cầu hỗ trợ cho quản trị viên"),
     ).toBeTruthy();
-    expect(screen.getByText(/Tiếp tục kiểm tra hồ sơ/)).toBeTruthy();
+    expect(screen.getByText(/tiếp tục thẩm định hồ sơ/)).toBeTruthy();
   });
 });

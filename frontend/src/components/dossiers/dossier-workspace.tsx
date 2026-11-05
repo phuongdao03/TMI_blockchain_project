@@ -724,10 +724,10 @@ export function DossierWorkspace({
         <section className="dossier-readonly-notice flex items-start gap-3 rounded-2xl p-4 text-sm">
           <LockKeyhole aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
           <div>
-            <p className="font-bold">Hồ sơ đã nộp và đang ở chế độ chỉ đọc.</p>
+            <p className="font-bold">Hồ sơ đã được gửi.</p>
             <p className="mt-1 leading-6 text-blue-800">
-              Bạn vẫn có thể xem phiên bản và lịch sử. Chỉnh sửa chỉ mở lại khi
-              hồ sơ được yêu cầu bổ sung.
+              Bạn có thể xem hồ sơ và lịch sử. Chỉnh sửa sẽ mở khi có yêu cầu bổ
+              sung.
             </p>
           </div>
         </section>

@@ -181,9 +181,9 @@ describe("notification presentation", () => {
         data: { actionPath: "/blockchain" },
       }),
     ).toMatchObject({
-      actionLabel: "Mở hàng đợi ký",
+      actionLabel: "Xem bằng xác lập cần ký",
       actionPath: "/blockchain",
-      groupLabel: "Blockchain",
+      groupLabel: "Bằng xác lập",
       tone: "action",
     });
   });

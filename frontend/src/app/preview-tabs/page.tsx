@@ -13,12 +13,12 @@ const rolePreviews = [
     description: "Theo dõi hồ sơ và bằng xác lập của mình.",
   },
   {
-    label: "Moderator",
+    label: "Người kiểm duyệt",
     role: "MODERATOR",
-    description: "Xem hàng đợi và công việc thẩm định.",
+    description: "Xem hồ sơ chờ thẩm định và công việc được giao.",
   },
   {
-    label: "Super Admin",
+    label: "Quản trị viên cấp cao",
     role: "SUPER_ADMIN",
     description: "Xem bảng điều hành và quản trị hệ thống.",
   },
@@ -54,9 +54,9 @@ const sections = [
   },
   {
     title: "Người thẩm định",
-    description: "Xem hàng đợi và bộ lọc công việc đã được phân công.",
+    description: "Xem hồ sơ chờ thẩm định và lọc công việc được phân công.",
     links: [
-      { label: "Hàng đợi thẩm định", screen: "reviewer-queue" },
+      { label: "Hồ sơ chờ thẩm định", screen: "reviewer-queue" },
       { label: "Công việc được giao", screen: "reviewer-work" },
     ],
   },

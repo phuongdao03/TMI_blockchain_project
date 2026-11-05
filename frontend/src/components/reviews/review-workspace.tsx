@@ -142,7 +142,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           href="/reviews"
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
-          Hàng đợi
+          Về danh sách hồ sơ
         </Link>
         <header className="mt-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
           <div className="min-w-0">
@@ -218,8 +218,8 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
 
       {detail.assignment.status === "SUBMITTED" ? (
         <WorkflowNextStep
-          action={{ href: "/reviews", label: "Về hàng đợi" }}
-          description="Bạn có thể tiếp tục công việc khác trong hàng đợi."
+          action={{ href: "/reviews", label: "Về danh sách" }}
+          description="Bạn có thể tiếp tục xử lý hồ sơ khác trong danh sách."
           title="Đã gửi báo cáo thẩm định"
           tone="success"
           variant="inline"
@@ -291,7 +291,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
         </div>
       ) : detail.assignment.status === "CONFLICTED" ? (
         <WorkflowNextStep
-          action={{ href: "/reviews", label: "Về hàng đợi" }}
+          action={{ href: "/reviews", label: "Về danh sách" }}
           description="Phân công này đã kết thúc."
           title="Đã ghi nhận xung đột lợi ích"
           tone="success"

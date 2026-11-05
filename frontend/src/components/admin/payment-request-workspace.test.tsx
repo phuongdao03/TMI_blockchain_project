@@ -113,7 +113,7 @@ describe("PaymentRequestWorkspace", () => {
   it("does not submit an unknown dossier from the URL", async () => {
     renderWorkspace("unknown-dossier");
     await screen.findByRole("option", { name: /CNS-2026-C53E911EDDDA/ });
-    fireEvent.change(screen.getByLabelText("Số phí cần thu (VND)"), {
+    fireEvent.change(screen.getByLabelText("Số phí cần thu (đồng)"), {
       target: { value: "1500000" },
     });
     expect(
@@ -139,7 +139,7 @@ describe("PaymentRequestWorkspace", () => {
     fireEvent.change(await screen.findByLabelText("Hồ sơ đã phê duyệt"), {
       target: { value: "9155dbf5-bb3e-449d-8bf0-9572cc642cac" },
     });
-    fireEvent.change(screen.getByLabelText("Số phí cần thu (VND)"), {
+    fireEvent.change(screen.getByLabelText("Số phí cần thu (đồng)"), {
       target: { value: "1500000" },
     });
     await waitFor(() =>
@@ -176,7 +176,7 @@ describe("PaymentRequestWorkspace", () => {
     renderWorkspace("9155dbf5-bb3e-449d-8bf0-9572cc642cac");
 
     await screen.findByRole("option", { name: /CNS-2026-C53E911EDDDA/ });
-    fireEvent.change(screen.getByLabelText("Số phí cần thu (VND)"), {
+    fireEvent.change(screen.getByLabelText("Số phí cần thu (đồng)"), {
       target: { value: "1500000" },
     });
     fireEvent.click(
@@ -235,7 +235,7 @@ describe("PaymentRequestWorkspace", () => {
     fireEvent.change(await screen.findByLabelText("Hồ sơ đã phê duyệt"), {
       target: { value: "9155dbf5-bb3e-449d-8bf0-9572cc642cac" },
     });
-    fireEvent.change(screen.getByLabelText("Số phí cần thu (VND)"), {
+    fireEvent.change(screen.getByLabelText("Số phí cần thu (đồng)"), {
       target: { value: "1500000" },
     });
     await waitFor(() =>

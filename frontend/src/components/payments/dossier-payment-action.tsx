@@ -110,7 +110,7 @@ export function DossierPaymentAction({
                 {new Intl.NumberFormat("vi-VN").format(
                   activeOrder.data.amountMinor,
                 )}{" "}
-                VND
+                đồng
                 {activeOrder.data.description
                   ? ` · ${activeOrder.data.description}`
                   : ""}

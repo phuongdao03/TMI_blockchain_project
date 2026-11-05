@@ -27,7 +27,7 @@ export function PromotionPreview({
     : campaign.imagePath;
   return (
     <article
-      aria-label="Xem trước thông báo voucher"
+      aria-label="Xem trước thông báo ưu đãi"
       className="mx-auto w-full overflow-hidden border border-black/10 shadow-sm"
       style={{
         maxWidth: mobile ? 375 : 760,
@@ -41,7 +41,7 @@ export function PromotionPreview({
           <div className="flex items-center justify-center bg-black/5">
             <Image
               src={image}
-              alt={display.altText || "Voucher Tinh Hoa Việt"}
+              alt={display.altText || "Ưu đãi Tinh Hoa Việt"}
               width={640}
               height={800}
               unoptimized={image.startsWith("/api/")}

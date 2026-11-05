@@ -85,7 +85,7 @@ export function ReviewAssignmentList({
       >
         <span className="flex items-center gap-3 text-sm font-semibold text-[var(--theme-muted)]">
           <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
-          Đang tải hàng đợi thẩm định…
+          Đang tải hồ sơ thẩm định…
         </span>
       </div>
     );
@@ -96,7 +96,7 @@ export function ReviewAssignmentList({
         className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-semibold text-red-800"
         role="alert"
       >
-        <p>Không thể tải hàng đợi thẩm định. Vui lòng thử lại.</p>
+        <p>Chưa tải được hồ sơ thẩm định. Vui lòng thử lại.</p>
         <button
           className="mt-3 min-h-11 rounded-lg border border-red-300 px-4"
           disabled={isFetching}
@@ -116,7 +116,7 @@ export function ReviewAssignmentList({
         </span>
         <h2 className="mt-5 text-xl font-bold">Không có hồ sơ phù hợp</h2>
         <p className="mt-2 text-sm text-[var(--theme-muted)]">
-          Hàng đợi sẽ cập nhật khi bạn được phân công hồ sơ mới.
+          Danh sách sẽ có hồ sơ mới khi bạn được phân công.
         </p>
       </div>
     );
@@ -146,14 +146,14 @@ export function ReviewAssignmentList({
       <header className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--theme-border)] pb-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-accent)]">
-            Hàng đợi cá nhân
+            Hồ sơ được giao
           </p>
           <h2 className="mt-1 text-xl font-bold" id="review-work-title">
             Công việc cần xử lý
           </h2>
         </div>
         <p className="text-sm font-semibold text-[var(--theme-muted)]">
-          {data.meta.total} hồ sơ trong hàng đợi
+          {data.meta.total} hồ sơ được giao
         </p>
       </header>
       <p className="text-xs text-[var(--theme-muted)]">

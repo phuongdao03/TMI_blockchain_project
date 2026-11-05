@@ -29,8 +29,8 @@ const roleOptions: ReadonlyArray<{
 }> = [
   { role: "VIEWER", label: "Khách xem", home: "/dashboard" },
   { role: "USER", label: "Người dùng", home: "/dashboard" },
-  { role: "MODERATOR", label: "Moderator", home: "/work-allocations" },
-  { role: "SUPER_ADMIN", label: "Super Admin", home: "/admin" },
+  { role: "MODERATOR", label: "Người kiểm duyệt", home: "/work-allocations" },
+  { role: "SUPER_ADMIN", label: "Quản trị viên cấp cao", home: "/admin" },
 ];
 
 const roleTitles: Record<WorkspacePersona, string> = {
@@ -179,7 +179,7 @@ function RoleHome({ role }: { role: WorkspacePersona }) {
       <>
         <PageHeading
           eyebrow="Công việc hôm nay"
-          title="Hàng đợi thẩm định"
+          title="Hồ sơ chờ thẩm định"
           description="Tập trung vào hồ sơ được phân công, tiêu chí đánh giá và thời hạn xử lý."
         />
         <section

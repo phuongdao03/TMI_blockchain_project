@@ -60,14 +60,14 @@ export function ContentReportWorkspace() {
       <header className="grid gap-6 border-b border-neutral-200 pb-8 lg:grid-cols-[1fr_auto] lg:items-end">
         <div>
           <p className="flex items-center gap-2 text-sm font-bold text-primary-700">
-            <Flag className="size-4" /> Trust &amp; Safety
+            <Flag className="size-4" /> An toàn nội dung
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-950 sm:text-4xl">
-            Hàng đợi báo cáo nội dung
+            Báo cáo nội dung cần xử lý
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
-            Tiếp nhận, phân loại và xử lý phản ánh công khai. Thông tin liên hệ
-            được mã hóa và không hiển thị trong hàng đợi.
+            Tiếp nhận, phân loại và xử lý phản ánh về nội dung công khai. Thông
+            tin liên hệ được bảo vệ và không hiển thị trong danh sách này.
           </p>
         </div>
         <label className="text-sm font-semibold text-neutral-700">
@@ -92,7 +92,7 @@ export function ContentReportWorkspace() {
       {reports.isError ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">
           <AlertTriangle className="size-6" />
-          <p className="mt-2 font-bold">Không thể tải hàng đợi báo cáo.</p>
+          <p className="mt-2 font-bold">Không thể tải báo cáo nội dung.</p>
           <Button
             className="mt-4"
             onClick={() => reports.refetch()}
@@ -109,7 +109,7 @@ export function ContentReportWorkspace() {
             Không có báo cáo trong trạng thái này
           </h2>
           <p className="mt-2 text-sm text-neutral-500">
-            Hàng đợi hiện đã được xử lý sạch.
+            Không còn báo cáo cần xử lý ở trạng thái này.
           </p>
         </div>
       ) : null}

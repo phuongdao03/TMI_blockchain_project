@@ -24,7 +24,7 @@ describe("RoleDashboardOverview", () => {
   });
 
   it.each([
-    ["MODERATOR", "Hàng đợi thẩm định", "Mở hàng đợi thẩm định"],
+    ["MODERATOR", "Hồ sơ chờ thẩm định", "Mở danh sách hồ sơ chờ thẩm định"],
     ["SUPER_ADMIN", "Điều hành toàn hệ thống", "Mở bảng điều hành"],
   ] as const)(
     "renders the permitted landing actions for %s",

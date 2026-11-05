@@ -47,7 +47,7 @@ const modules = [
   },
   {
     href: "/reviews",
-    title: "Hàng đợi thẩm định",
+    title: "Hồ sơ chờ thẩm định",
     description: "Xem hồ sơ được giao và tiếp tục các phiếu đánh giá còn lại.",
     icon: ClipboardCheck,
     tone: "bg-sky-50 text-sky-700",

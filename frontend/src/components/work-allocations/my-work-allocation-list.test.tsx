@@ -227,7 +227,7 @@ describe("MyWorkAllocationList", () => {
     expect(screen.getByText("Thẩm định hồ sơ HS-2026-01")).toBeDefined();
     expect(
       screen
-        .getByRole("link", { name: "Mở hàng đợi thẩm định" })
+        .getByRole("link", { name: "Mở danh sách thẩm định" })
         .getAttribute("href"),
     ).toBe("/reviews");
   });

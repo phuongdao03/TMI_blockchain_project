@@ -92,7 +92,7 @@ describe("ReviewAssignmentList", () => {
     expect(await screen.findByText("Hồ sơ thương hiệu CNS")).toBeDefined();
     expect(screen.getByText("Đang thẩm định")).toBeDefined();
     expect(screen.getByText("Công việc cần xử lý")).toBeDefined();
-    expect(screen.getByText("1 hồ sơ trong hàng đợi")).toBeDefined();
+    expect(screen.getByText("1 hồ sơ được giao")).toBeDefined();
     expect(screen.queryByText(/Bước tiếp theo:/)).toBeNull();
     expect(screen.queryByText(/xung đột lợi ích/i)).toBeNull();
     expect(

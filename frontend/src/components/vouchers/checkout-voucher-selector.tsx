@@ -89,7 +89,7 @@ export function CheckoutVoucherSelector({
       <label className="grid gap-2 font-semibold">
         Ưu đãi có thể sử dụng
         <select
-          aria-label="Chọn voucher thanh toán"
+          aria-label="Chọn ưu đãi thanh toán"
           value={value}
           disabled={!quote.data || apply.isPending}
           className="min-h-11 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-[var(--theme-text)]"
@@ -99,7 +99,7 @@ export function CheckoutVoucherSelector({
             else onSelect?.(id);
           }}
         >
-          <option value="">Không sử dụng voucher</option>
+          <option value="">Không sử dụng ưu đãi</option>
           {quote.data?.vouchers.map((voucher) => (
             <option key={voucher.voucherId} value={voucher.voucherId}>
               {voucher.title} · giảm {formatVnd(voucher.discountVnd)}
@@ -111,27 +111,26 @@ export function CheckoutVoucherSelector({
           {order &&
             value &&
             !quote.data?.vouchers.some((item) => item.voucherId === value) && (
-              <option value={value}>Voucher đang được giữ cho đơn này</option>
+              <option value={value}>Ưu đãi đang được áp dụng cho đơn này</option>
             )}
         </select>
       </label>
       {quote.isPending && <p role="status">Đang tìm ưu đãi phù hợp…</p>}
       {(quote.isError || apply.isError) && (
         <p role="alert">
-          {(apply.error ?? quote.error) instanceof Error
-            ? (apply.error ?? quote.error)?.message
-            : "Chưa thể kiểm tra ưu đãi. Vui lòng thử lại."}
+          Chưa thể kiểm tra hoặc áp dụng ưu đãi. Vui lòng tải lại trang rồi thử
+          lại.
         </p>
       )}
       {quote.data && !quote.data.vouchers.length && !value && (
         <p className="text-[var(--theme-muted)]">
-          Chưa có voucher phù hợp với dịch vụ và điều kiện đơn hàng này.
+          Chưa có ưu đãi phù hợp với dịch vụ và điều kiện đơn hàng này.
         </p>
       )}
       {quote.data && (
         <p className="text-[var(--theme-muted)]">
-          Giá và mức giảm được kiểm tra bởi hệ thống khi thanh toán. Voucher
-          không cộng dồn với voucher khác.
+          Giá và mức giảm được kiểm tra khi thanh toán. Không thể áp dụng nhiều
+          ưu đãi cho cùng một đơn.
         </p>
       )}
     </section>

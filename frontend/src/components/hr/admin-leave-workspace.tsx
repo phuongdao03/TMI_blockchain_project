@@ -134,7 +134,7 @@ export function AdminLeaveWorkspace() {
       decisionTarget.action === "approve" ? "duyệt" : "từ chối";
     if (
       window.confirm(
-        `Xác nhận ${actionLabel} đơn nghỉ của ${decisionTarget.request.employeeName}? Thay đổi sẽ được ghi vào audit log.`,
+        `Xác nhận ${actionLabel} đơn nghỉ của ${decisionTarget.request.employeeName}? Thay đổi sẽ được ghi vào lịch sử thao tác.`,
       )
     ) {
       decide.mutate(decisionTarget);
@@ -485,7 +485,7 @@ function DecisionForm({
           />
         </label>
         <p className="mt-3 text-xs leading-5 text-neutral-600">
-          Lý do nghỉ và ghi chú quyết định không được sao chép vào audit log;
+          Lý do nghỉ và ghi chú quyết định không được sao chép vào lịch sử thao tác;
           nhân viên sẽ nhận thông báo kết quả trong ứng dụng.
         </p>
       </div>

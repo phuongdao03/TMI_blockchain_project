@@ -231,7 +231,7 @@ export function PaymentRequestWorkspace({
           {mode === "PAID" ? (
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-bold">
-                Số phí cần thu (VND)
+                Số phí cần thu (đồng)
                 <input
                   className={`${controlClass} text-lg font-bold tabular-nums`}
                   inputMode="numeric"
@@ -362,7 +362,7 @@ export function PaymentRequestWorkspace({
               </h2>
               <p className="mt-1 text-sm">
                 {mode === "PAID" && "amountMinor" in success
-                  ? `${new Intl.NumberFormat("vi-VN").format(success.amountMinor)} VND · ${issue.data?.status === "PAID" ? "đã thanh toán bằng ví" : "đang chờ người nộp thanh toán bằng ví"}`
+                  ? `${new Intl.NumberFormat("vi-VN").format(success.amountMinor)}đ · ${issue.data?.status === "PAID" ? "đã thanh toán bằng ví" : "đang chờ người nộp thanh toán bằng ví"}`
                   : "Đã ghi nhận miễn phí và chuyển hồ sơ sang bước ghi nhận."}
               </p>
             </div>

@@ -18,7 +18,7 @@ export function VoucherDetail({ id }: { id: string }) {
         className="text-sm font-semibold text-[var(--theme-text)]"
         href="/vouchers"
       >
-        ← Voucher của tôi
+        ← Ưu đãi của tôi
       </Link>
       {voucher.isPending && <p role="status">Đang tải ưu đãi…</p>}
       {voucher.isError && (

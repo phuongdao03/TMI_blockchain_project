@@ -33,8 +33,8 @@ export default async function ReviewQueuePage({
           Công việc kiểm duyệt
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
-          Làm việc trên các hồ sơ được Admin phân công, đối chiếu bằng chứng và
-          gửi báo cáo độc lập để Admin ra quyết định cuối.
+          Thẩm định hồ sơ được phân công, đối chiếu bằng chứng và gửi báo cáo để
+          quản trị viên đưa ra quyết định cuối.
         </p>
       </header>
       <details className="review-queue__filters rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)]">

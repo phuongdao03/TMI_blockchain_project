@@ -215,7 +215,7 @@ export function AdminAttendanceWorkspace() {
     setFormError(null);
     if (
       window.confirm(
-        "Xác nhận điều chỉnh bản ghi chấm công? Thay đổi sẽ được lưu vào audit log.",
+        "Xác nhận điều chỉnh bản ghi chấm công? Thay đổi sẽ được lưu vào lịch sử thao tác.",
       )
     ) {
       updateAttendance.mutate();
@@ -594,8 +594,8 @@ function EditAttendanceForm({
             {attendance.employeeName} · {formatDate(attendance.workDate)}
           </h2>
           <p className="mt-1 text-sm text-neutral-600">
-            Chỉ lưu dữ liệu cần thiết vào audit log; nội dung ghi chú không được
-            sao chép vào log.
+            Chỉ lưu dữ liệu cần thiết vào lịch sử thao tác; nội dung ghi chú
+            không được ghi lại.
           </p>
         </div>
         <button

@@ -77,7 +77,7 @@ it("lets admins configure percentage discounts and multiple grants per account",
   ).toBeDefined();
   fireEvent.click(screen.getByRole("button", { name: "6. Giới hạn" }));
   const grants = screen.getByRole("spinbutton", {
-    name: "Số voucher mỗi tài khoản",
+    name: "Số ưu đãi mỗi tài khoản",
   });
   fireEvent.change(grants, { target: { value: "3" } });
   expect((grants as HTMLInputElement).value).toBe("3");

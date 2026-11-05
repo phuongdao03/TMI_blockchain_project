@@ -10,11 +10,13 @@ export function CommunityPostImages({
   postSlug,
   postTitle,
   priority = false,
+  presentation = "detail",
 }: {
   images: readonly CommunityPostImage[];
   postSlug: string;
   postTitle: string;
   priority?: boolean;
+  presentation?: "detail" | "feed";
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [selected, setSelected] = useState(0);
@@ -27,30 +29,44 @@ export function CommunityPostImages({
 
   return (
     <>
-      <label className="mt-4 flex items-center gap-3 text-sm">
-        Kích thước hiển thị ảnh
-        <select
-          aria-label="Kích thước hiển thị ảnh"
-          value={imageSize}
-          onChange={(event) => setImageSize(event.target.value)}
-          className="rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-2"
-        >
-          <option value="full">Đầy đủ ảnh</option>
-          <option value="compact">Thu gọn</option>
-        </select>
-      </label>
+      {presentation === "detail" ? (
+        <label className="mt-4 flex items-center gap-3 text-sm">
+          Kích thước hiển thị ảnh
+          <select
+            aria-label="Kích thước hiển thị ảnh"
+            value={imageSize}
+            onChange={(event) => setImageSize(event.target.value)}
+            className="rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-2"
+          >
+            <option value="full">Đầy đủ ảnh</option>
+            <option value="compact">Thu gọn</option>
+          </select>
+        </label>
+      ) : null}
       <ul
         aria-label="Ảnh đính kèm bài viết"
-        className="mt-5 grid grid-cols-1 gap-3 sm:gap-4"
+        className={
+          presentation === "feed"
+            ? "mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-4"
+            : "mt-5 grid grid-cols-1 gap-3 sm:gap-4"
+        }
       >
         {safeImages.map((image, index) => (
           <li
-            className="overflow-hidden rounded-xl bg-[var(--theme-elevated)]"
+            className={
+              presentation === "feed"
+                ? `overflow-hidden rounded-xl border border-[var(--theme-border)] bg-[var(--theme-bg)] ${safeImages.length === 1 || index === 0 ? "col-span-2" : ""}`
+                : "overflow-hidden rounded-xl bg-[var(--theme-elevated)]"
+            }
             key={image.id}
           >
             <button
               type="button"
-              className="block w-full cursor-zoom-in"
+              className={
+                presentation === "feed"
+                  ? "group block aspect-[4/3] w-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                  : "block w-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+              }
               aria-label={`Xem lớn ảnh ${index + 1}`}
               onClick={() => {
                 setSelected(index);
@@ -60,9 +76,11 @@ export function CommunityPostImages({
               <Image
                 alt={`${postTitle} — ảnh đính kèm ${index + 1}`}
                 className={
-                  imageSize === "compact"
-                    ? "max-h-80 w-full object-contain"
-                    : "h-auto w-full object-contain"
+                  presentation === "feed"
+                    ? "h-full w-full object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+                    : imageSize === "compact"
+                      ? "max-h-80 w-full object-contain"
+                      : "h-auto w-full object-contain"
                 }
                 width={960}
                 height={720}

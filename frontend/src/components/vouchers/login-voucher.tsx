@@ -202,7 +202,7 @@ function AccountVoucher({ userId }: { userId: string }) {
         className={`relative grid ${display?.template === "MINIMAL" ? "" : "sm:grid-cols-2"}`}
       >
         <button
-          aria-label="Đóng thông báo voucher"
+          aria-label="Đóng thông báo ưu đãi"
           className="absolute right-2 top-2 z-10 grid size-11 place-items-center rounded-full bg-[#fff9ed] text-[#671b16] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
           onClick={dismiss}
         >
@@ -233,7 +233,7 @@ function AccountVoucher({ userId }: { userId: string }) {
                 }}
                 alt={
                   display?.altText ||
-                  "Voucher vàng Tinh Hoa Việt — Tri ân thành viên"
+                  "Ưu đãi vàng Tinh Hoa Việt — Tri ân thành viên"
                 }
                 width={1122}
                 height={1402}
@@ -252,11 +252,11 @@ function AccountVoucher({ userId }: { userId: string }) {
             id={titleId}
             className="text-2xl font-bold leading-tight sm:text-3xl"
           >
-            {claim.isSuccess ? "Đã nhận voucher!" : available.title}
+            {claim.isSuccess ? "Đã nhận ưu đãi!" : available.title}
           </h2>
           <p id={descriptionId} className="text-sm leading-6">
             {claim.isSuccess
-              ? "Voucher đã được lưu vào tài khoản của bạn. Bạn có thể xem lại bất cứ lúc nào."
+              ? "Ưu đãi đã được lưu vào tài khoản của bạn. Bạn có thể xem lại bất cứ lúc nào."
               : available.description}
           </p>
           <p className="text-sm leading-6 opacity-85">{available.terms}</p>
@@ -267,7 +267,7 @@ function AccountVoucher({ userId }: { userId: string }) {
           </p>
           {claim.isError && (
             <p role="alert" className="text-sm font-medium text-red-800">
-              Chưa nhận được voucher. Vui lòng thử lại.
+              Chưa nhận được ưu đãi. Vui lòng thử lại.
             </p>
           )}
           {claim.isSuccess || issuedId ? (
@@ -292,7 +292,7 @@ function AccountVoucher({ userId }: { userId: string }) {
               >
                 {issuedId
                   ? display?.primaryCta || "Sử dụng ưu đãi"
-                  : "Xem voucher của tôi"}
+                  : "Xem ưu đãi của tôi"}
               </Link>
               <Button variant="ghost" onClick={dismiss}>
                 Tiếp tục khám phá
@@ -312,8 +312,8 @@ function AccountVoucher({ userId }: { userId: string }) {
                 }}
               >
                 {claim.isPending
-                  ? "Đang nhận voucher…"
-                  : display?.primaryCta || "Nhận voucher ngay"}
+                  ? "Đang nhận ưu đãi…"
+                  : display?.primaryCta || "Nhận ưu đãi ngay"}
               </Button>
               <Button variant="ghost" onClick={dismiss}>
                 {display?.secondaryCta || "Để sau"}

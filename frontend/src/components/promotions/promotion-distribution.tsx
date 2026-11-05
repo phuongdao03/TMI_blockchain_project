@@ -27,6 +27,24 @@ export function parseRecipientList(value: string) {
     invalid: tokens.filter((token) => !valid.includes(token)),
   };
 }
+
+const distributionStatusLabels: Record<string, string> = {
+  PENDING: "Chờ cấp",
+  RUNNING: "Đang cấp ưu đãi",
+  COMPLETED: "Đã hoàn tất",
+  FAILED: "Chưa hoàn tất",
+  PAUSED: "Tạm dừng",
+};
+
+const campaignStatusLabels: Record<string, string> = {
+  DRAFT: "Bản nháp",
+  SCHEDULED: "Đã lên lịch",
+  ACTIVE: "Đang chạy",
+  PAUSED: "Tạm dừng",
+  ENDED: "Đã kết thúc",
+  ARCHIVED: "Đã lưu trữ",
+};
+
 export function PromotionDistribution({ initialId }: { initialId?: string }) {
   const client = useQueryClient();
   const campaigns = useQuery({
@@ -84,7 +102,7 @@ export function PromotionDistribution({ initialId }: { initialId?: string }) {
   return (
     <div className={styles.two}>
       <section className={`${styles.panel} ${styles.stack}`}>
-        <h2>Chọn đối tượng & phát voucher</h2>
+        <h2>Chọn người nhận và cấp ưu đãi</h2>
         <Choice
           label="Chiến dịch"
           value={id}
@@ -96,7 +114,7 @@ export function PromotionDistribution({ initialId }: { initialId?: string }) {
           <option value="">Chọn chiến dịch</option>
           {campaigns.data?.items.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name} · {c.status}
+              {c.name} · {campaignStatusLabels[c.status] ?? "Trạng thái khác"}
             </option>
           ))}
         </Choice>
@@ -104,7 +122,7 @@ export function PromotionDistribution({ initialId }: { initialId?: string }) {
           Để trống danh sách để dùng bộ điều kiện đã lưu của chiến dịch. Nhân
           viên và tài khoản nội bộ luôn bị loại.
         </p>
-        <Field label="Tìm khách hàng theo email hoặc ID">
+        <Field label="Tìm khách hàng theo email hoặc mã tài khoản">
           <div className="flex gap-2">
             <input
               value={search}
@@ -217,7 +235,7 @@ export function PromotionDistribution({ initialId }: { initialId?: string }) {
             </dl>
             <p className={styles.muted}>
               Giá trị danh nghĩa không phải ngân sách đã chi. Đối tượng được
-              kiểm tra lại tại backend trước khi cấp.
+              Danh sách người nhận được kiểm tra lại trước khi cấp ưu đãi.
             </p>
             <ul className="space-y-1 text-sm">
               {Object.entries(preview.exclusionReasons).map(
@@ -250,7 +268,7 @@ export function PromotionDistribution({ initialId }: { initialId?: string }) {
               disabled={!preview.eligibleCount || reason.trim().length < 5}
               onClick={() => setConfirmed(true)}
             >
-              Xác nhận phát voucher
+              Xác nhận cấp ưu đãi
             </Button>
           </div>
         )}
@@ -263,12 +281,14 @@ export function PromotionDistribution({ initialId }: { initialId?: string }) {
         )}
         {jobs.data?.items.map((job) => (
           <article key={job.id} className={styles.panel}>
-            <p className="font-semibold">{job.status}</p>
+            <p className="font-semibold">
+              {distributionStatusLabels[job.status] ?? "Chưa xác định trạng thái"}
+            </p>
             <progress
               className="my-3 w-full"
               value={job.processed}
               max={Math.max(1, job.total)}
-              aria-label="Tiến độ phát voucher"
+              aria-label="Tiến độ cấp ưu đãi"
             />
             <p className={styles.muted}>
               {job.processed}/{job.total} đã xử lý · {job.issued} đã cấp ·{" "}
@@ -284,8 +304,8 @@ export function PromotionDistribution({ initialId }: { initialId?: string }) {
       </section>
       <ConfirmationDialog
         open={confirmed}
-        title="Phát voucher cho danh sách đã xem trước?"
-        description={`Dự kiến ${preview?.eligibleCount ?? 0} người đủ điều kiện. Backend sẽ kiểm tra lại và tránh cấp trùng kể cả khi thử lại.`}
+        title="Cấp ưu đãi cho danh sách đã xem trước?"
+        description={`Dự kiến ${preview?.eligibleCount ?? 0} người đủ điều kiện. Danh sách sẽ được kiểm tra lại để tránh phát trùng nếu bạn cần thử lại.`}
         confirmLabel="Bắt đầu phân phối"
         isPending={issue.isPending}
         onCancel={() => setConfirmed(false)}

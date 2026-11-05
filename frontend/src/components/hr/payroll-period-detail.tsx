@@ -139,7 +139,7 @@ function EntryAdjustmentForm({
           </p>
         </div>
         <span className="text-xs font-semibold text-neutral-600">
-          Đơn vị VND
+          Đơn vị: đồng
         </span>
       </div>
       <div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -497,7 +497,7 @@ export function PayrollPeriodDetail({
             <dt className="text-xs font-bold uppercase tracking-wide text-neutral-500">
               Đơn vị tiền
             </dt>
-            <dd className="mt-2 text-xl font-bold text-neutral-950">VND</dd>
+            <dd className="mt-2 text-xl font-bold text-neutral-950">đồng</dd>
           </div>
         </dl>
         {editable && !period.calculatedAt ? (
@@ -589,7 +589,7 @@ export function PayrollPeriodDetail({
               Chi tiết nhân viên
             </h3>
             <p className="mt-1 text-sm text-neutral-600">
-              Kết quả được làm tròn đến 1 VND.
+              Kết quả được làm tròn đến 1 đồng.
             </p>
           </div>
           <ReceiptText aria-hidden="true" className="size-5 text-neutral-400" />

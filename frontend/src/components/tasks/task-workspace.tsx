@@ -144,7 +144,7 @@ export function TaskWorkspace() {
   function transitionTask(task: WorkTask, nextStatus: WorkTaskStatus) {
     if (
       window.confirm(
-        `Xác nhận chuyển “${task.title}” sang ${statusLabels[nextStatus].toLowerCase()}? Thay đổi sẽ được ghi vào audit log.`,
+        `Xác nhận chuyển “${task.title}” sang ${statusLabels[nextStatus].toLowerCase()}? Thay đổi sẽ được ghi vào lịch sử thao tác.`,
       )
     ) {
       transition.mutate({ taskId: task.id, nextStatus });
@@ -170,8 +170,7 @@ export function TaskWorkspace() {
               Công việc trọng tâm
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
-              Tạo, theo dõi và chuyển trạng thái công việc trong một không gian
-              rõ ràng, có kiểm soát và audit.
+              Giao việc, theo dõi tiến độ và xem lịch sử thay đổi.
             </p>
           </div>
           <span className="rounded-full border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-neutral-100">

@@ -489,7 +489,7 @@ export function AdvertisingBookingPanel({
 
       <ConfirmationDialog
         confirmLabel="Xác nhận trừ ví"
-        description={`Hệ thống sẽ trừ ${checkout ? formatVnd(checkout.order.payableAmountVnd) : "số tiền của đơn"} từ ví nội bộ để xác nhận lịch quảng cáo.`}
+        description={`Khoản thanh toán ${checkout ? formatVnd(checkout.order.payableAmountVnd) : "của đơn"} sẽ được trừ từ ví của bạn để xác nhận lịch quảng cáo.`}
         isPending={pay.isPending}
         onCancel={() => setConfirmPayment(false)}
         onConfirm={() => pay.mutate()}

@@ -8,6 +8,10 @@ import { useEffect, useMemo, useState } from "react";
 import { guideApi } from "@/lib/api/client";
 import { guideCategoryLabel } from "@/components/guide/guide-center";
 import { prepareGuideArticleBody } from "@/components/guide/guide-content";
+import {
+  getStarterGuide,
+  STARTER_GUIDES,
+} from "@/components/guide/guide-fallback-content";
 import { useAuthUser } from "@/lib/auth/user-context";
 
 export function GuideArticleReader({
@@ -38,9 +42,11 @@ export function GuideArticleReader({
         : guideApi.accessibleList({ page: 1, pageSize: 100 }),
   });
   const loadedArticle = articleQuery.data;
+  const fallbackArticle = getStarterGuide(slug);
+  const article = loadedArticle ?? fallbackArticle;
   const content = useMemo(
-    () => prepareGuideArticleBody(loadedArticle?.bodyHtml ?? ""),
-    [loadedArticle?.bodyHtml],
+    () => prepareGuideArticleBody(article?.bodyHtml ?? ""),
+    [article?.bodyHtml],
   );
   useEffect(() => {
     if (!content.headings.length || !("IntersectionObserver" in window)) return;
@@ -64,7 +70,7 @@ export function GuideArticleReader({
     return () => observer.disconnect();
   }, [content.headings]);
 
-  if (articleQuery.isPending) {
+  if (articleQuery.isPending && !fallbackArticle) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-12" aria-live="polite">
         <p className="rounded-xl border border-[var(--theme-border)] p-6 text-sm text-[var(--theme-muted)]">
@@ -73,7 +79,7 @@ export function GuideArticleReader({
       </div>
     );
   }
-  if (articleQuery.isError || !loadedArticle) {
+  if (!article || (articleQuery.isError && !fallbackArticle)) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-12">
         <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-7">
@@ -96,8 +102,16 @@ export function GuideArticleReader({
     );
   }
 
-  const article = loadedArticle;
-  const visibleArticles = listQuery.data?.data ?? [];
+  const articleIsFallback = !loadedArticle && Boolean(fallbackArticle);
+  const articlesBySlug = new Map(
+    STARTER_GUIDES.map((item) => [item.slug, item] as const),
+  );
+  for (const item of listQuery.data?.data ?? []) {
+    articlesBySlug.set(item.slug, item);
+  }
+  const visibleArticles = [...articlesBySlug.values()].sort(
+    (left, right) => left.sortOrder - right.sortOrder,
+  );
   const categoryArticles = visibleArticles.filter(
     (item) => item.category === article.category,
   );
@@ -169,7 +183,7 @@ export function GuideArticleReader({
           dangerouslySetInnerHTML={{ __html: content.html }}
         />
 
-        {article.audiences.includes("PUBLIC") && (
+        {!articleIsFallback && article.audiences.includes("PUBLIC") && (
           <GuideFeedback slug={article.slug} />
         )}
 

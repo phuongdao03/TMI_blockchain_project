@@ -40,6 +40,12 @@ const assignmentLabels = {
   CANCELLED: "Đã hủy",
 } as const;
 
+const assistanceStatusLabels: Record<string, string> = {
+  PENDING: "Chờ xét duyệt",
+  APPROVED: "Đã chấp thuận",
+  DECLINED: "Không chấp thuận",
+};
+
 const routingReason = "Hệ thống chuyển hồ sơ đến người kiểm duyệt.";
 
 function decisionErrorMessage(error: unknown): string {
@@ -142,7 +148,7 @@ function ReviewReport({
         </>
       ) : (
         <p className="mt-4 text-sm text-neutral-500">
-          Reviewer chưa gửi báo cáo. Admin sẽ nhận thông báo ngay khi hoàn tất.
+          Người thẩm định chưa gửi báo cáo. Quản trị viên sẽ nhận thông báo khi báo cáo hoàn tất.
         </p>
       )}
     </article>
@@ -206,8 +212,8 @@ function AssistanceRequestResolution({
         <div>
           <p className="font-bold text-neutral-900">{item.requesterEmail}</p>
           <p className="mt-1 text-xs font-bold uppercase tracking-wide text-primary-700">
-            Cần thêm {request.requestedReviewerCount} moderator ·{" "}
-            {request.status}
+            Cần thêm {request.requestedReviewerCount} người thẩm định ·{" "}
+            {assistanceStatusLabels[request.status] ?? "Đang cập nhật"}
           </p>
         </div>
         <time className="text-xs text-neutral-500" dateTime={request.createdAt}>
@@ -222,7 +228,7 @@ function AssistanceRequestResolution({
         <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_13rem]">
           <fieldset disabled={isBusy}>
             <legend className="text-sm font-bold text-neutral-800">
-              Chọn đúng {request.requestedReviewerCount} moderator để bổ sung
+              Chọn đúng {request.requestedReviewerCount} người thẩm định để bổ sung
             </legend>
             {availableReviewers.length > 0 ? (
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -252,7 +258,7 @@ function AssistanceRequestResolution({
               </div>
             ) : (
               <p className="mt-3 rounded-lg border border-dashed border-[var(--theme-border)] p-3 text-sm text-neutral-500">
-                Không còn moderator phù hợp để bổ sung cho hồ sơ này.
+                Không còn người thẩm định phù hợp để bổ sung cho hồ sơ này.
               </p>
             )}
           </fieldset>
@@ -281,7 +287,7 @@ function AssistanceRequestResolution({
               ) : (
                 <UserRoundPlus aria-hidden="true" className="size-4" />
               )}
-              Thêm {request.requestedReviewerCount} moderator
+              Thêm {request.requestedReviewerCount} người thẩm định
             </button>
           </div>
           <label className="lg:col-span-2">
@@ -293,7 +299,7 @@ function AssistanceRequestResolution({
               disabled={isBusy}
               maxLength={2000}
               onChange={(event) => setDeclineReason(event.target.value)}
-              placeholder="Nêu rõ lý do để moderator có thể tiếp tục xử lý hồ sơ…"
+              placeholder="Nêu rõ lý do để người thẩm định có thể tiếp tục xử lý hồ sơ…"
               value={declineReason}
             />
           </label>
@@ -314,7 +320,7 @@ function AssistanceRequestResolution({
             action={{ href: "/admin/reviews", label: "Theo dõi thẩm định" }}
             description={
               approve.isSuccess
-                ? "Người được bổ sung sẽ nhận việc trong hàng đợi. Theo dõi báo cáo trước khi ra quyết định cuối."
+                ? "Người được bổ sung sẽ thấy hồ sơ trong danh sách việc cần xử lý. Theo dõi báo cáo trước khi ra quyết định cuối."
                 : "Người kiểm duyệt hiện tại tiếp tục xử lý hồ sơ. Theo dõi báo cáo hoặc phân công lại khi cần."
             }
             title={
@@ -460,7 +466,7 @@ export function ReviewLifecyclePanel({
           description={
             needsReviewer
               ? dossier.assignments.length === 0
-                ? "Chọn người kiểm duyệt đang hoạt động và giao hồ sơ. Người được giao sẽ nhận việc trong hàng đợi của họ."
+                ? "Chọn người kiểm duyệt đang hoạt động và giao hồ sơ. Người được giao sẽ thấy hồ sơ trong danh sách công việc của họ."
                 : "Chưa có báo cáo hợp lệ và các phân công trước đã kết thúc. Chọn người kiểm duyệt khác để tiếp tục."
               : isDecisionReady
                 ? "Các báo cáo cần thiết đã hoàn tất. Đọc kết luận, ghi căn cứ và chọn quyết định cuối."
@@ -542,7 +548,7 @@ export function ReviewLifecyclePanel({
           <div className="mt-4">
             <WorkflowNextStep
               action={{ href: "/admin/reviews", label: "Theo dõi thẩm định" }}
-              description="Người kiểm duyệt sẽ nhận phân công trong hàng đợi. Theo dõi báo cáo của họ trước khi ra quyết định cuối."
+              description="Người kiểm duyệt sẽ thấy phân công trong danh sách công việc. Theo dõi báo cáo của họ trước khi ra quyết định cuối."
               title="Đã giao hồ sơ cho người kiểm duyệt"
               tone="success"
             />
@@ -559,7 +565,7 @@ export function ReviewLifecyclePanel({
             <div>
               <h2 className="text-xl font-bold">Yêu cầu phối hợp thẩm định</h2>
               <p className="mt-1 text-sm leading-6 text-neutral-500">
-                Moderator không tự thêm người. Super Admin xem lý do, chọn đúng
+                Người kiểm duyệt không tự thêm người. Quản trị viên cấp cao xem lý do, chọn đúng
                 số người được yêu cầu và ghi nhận quyết định.
               </p>
             </div>
@@ -596,7 +602,7 @@ export function ReviewLifecyclePanel({
             <div>
               <h2 className="text-xl font-bold">Báo cáo kiểm duyệt</h2>
               <p className="mt-1 text-sm text-neutral-500">
-                Admin xem kết luận của người kiểm duyệt trước khi quyết định
+                Quản trị viên xem kết luận của người thẩm định trước khi quyết định
                 cuối.
               </p>
             </div>
@@ -629,7 +635,7 @@ export function ReviewLifecyclePanel({
             </span>
             <div>
               <h2 className="text-lg font-bold sm:text-xl">
-                Quyết định cuối của Admin
+                Quyết định cuối của quản trị viên
               </h2>
               <p className="mt-1 text-sm leading-6 text-neutral-500">
                 Đọc báo cáo của người kiểm duyệt, ghi rõ căn cứ và chọn quyết
@@ -763,14 +769,14 @@ export function ReviewLifecyclePanel({
                         href: `/admin/payments?dossierId=${encodeURIComponent(dossier.dossierId)}`,
                         label: "Quyết định phí hồ sơ",
                       }
-                    : { href: "/admin/reviews", label: "Về hàng chờ hồ sơ" }
+                    : { href: "/admin/reviews", label: "Về danh sách hồ sơ" }
                 }
                 description={
                   activeDecision === "APPROVE"
                     ? "Hồ sơ đã được phê duyệt. Chọn thu phí hoặc miễn phí cho hồ sơ trước khi chuyển sang bước ký xác lập."
                     : activeDecision === "REQUEST_MORE_INFO"
-                      ? "Người gửi cần bổ sung hồ sơ. Theo dõi phiên bản nộp lại trong hàng chờ."
-                      : "Kết quả từ chối đã được ghi nhận. Tiếp tục xử lý các hồ sơ khác trong hàng chờ."
+                      ? "Người gửi cần bổ sung hồ sơ. Theo dõi phiên bản mới trong danh sách hồ sơ chờ thẩm định."
+                      : "Kết quả từ chối đã được ghi nhận. Tiếp tục xử lý hồ sơ khác trong danh sách chờ thẩm định."
                 }
                 title={
                   activeDecision === "APPROVE"

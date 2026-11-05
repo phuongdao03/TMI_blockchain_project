@@ -436,7 +436,7 @@ export function MembershipAdminWorkspace() {
           </p>
         ) : benefitRequests.isError ? (
           <p className="mt-3 text-sm text-red-700" role="alert">
-            Chưa thể tải hàng đợi quyền lợi.
+            Chưa tải được danh sách yêu cầu quyền lợi.
           </p>
         ) : benefitRequests.data.requests.length ? (
           <ul className="mt-4 divide-y divide-[var(--theme-border)]">

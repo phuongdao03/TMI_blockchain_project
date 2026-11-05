@@ -124,14 +124,14 @@ export function ReviewAssignmentQueue({
       {dossiers.isPending ? (
         <div className="grid min-h-56 place-items-center" role="status">
           <LoaderCircle className="size-7 animate-spin" />
-          <span className="sr-only">Đang tải hàng chờ</span>
+          <span className="sr-only">Đang tải danh sách phân công</span>
         </div>
       ) : dossiers.isError ? (
         <div
           className="rounded-2xl border border-red-200 bg-red-50 p-6 font-semibold text-red-800"
           role="alert"
         >
-          <p>Chưa thể tải hàng chờ phân công.</p>
+          <p>Chưa thể tải danh sách phân công.</p>
           <button
             className="mt-3 min-h-11 rounded-lg border border-red-300 px-4 text-sm"
             disabled={dossiers.isFetching}

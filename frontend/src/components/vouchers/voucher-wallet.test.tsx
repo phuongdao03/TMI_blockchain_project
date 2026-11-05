@@ -3,8 +3,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { VoucherWallet } from "./voucher-wallet";
 
-const mine = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/api/client", () => ({ voucherApi: { mine } }));
+const api = vi.hoisted(() => ({ mine: vi.fn(), redeemCode: vi.fn() }));
+vi.mock("@/lib/api/client", () => ({ voucherApi: api }));
 vi.mock("@/lib/auth/user-context", () => ({
   useAuthUser: () => ({ id: "owner" }),
 }));
@@ -20,15 +20,16 @@ function mount() {
   );
 }
 beforeEach(() => {
-  mine.mockReset();
+  api.mine.mockReset();
+  api.redeemCode.mockReset();
 });
 it("shows empty state for an account with no saved vouchers", async () => {
-  mine.mockResolvedValue([]);
+  api.mine.mockResolvedValue([]);
   mount();
-  await screen.findByText("Bạn chưa nhận voucher nào.");
+  await screen.findByText("Bạn chưa nhận ưu đãi nào.");
 });
 it("shows persisted value, terms, expiry and server expiry status", async () => {
-  mine.mockResolvedValue([
+  api.mine.mockResolvedValue([
     {
       id: "claim",
       title: "Quà tri ân",
@@ -46,9 +47,23 @@ it("shows persisted value, terms, expiry and server expiry status", async () => 
   expect(document.querySelector("time")?.dateTime).toBe("2026-12-28T00:00:00Z");
 });
 it("can retry a failed load", async () => {
-  mine.mockRejectedValueOnce(new Error("offline")).mockResolvedValue([]);
+  api.mine.mockRejectedValueOnce(new Error("offline")).mockResolvedValue([]);
   mount();
   await screen.findByRole("alert");
   fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
-  await screen.findByText("Bạn chưa nhận voucher nào.");
+  await screen.findByText("Bạn chưa nhận ưu đãi nào.");
+});
+
+it("keeps an English server error out of the user-facing message", async () => {
+  api.mine.mockResolvedValue([]);
+  api.redeemCode.mockRejectedValueOnce(new Error("Voucher unavailable"));
+  mount();
+  fireEvent.change(await screen.findByLabelText("Mã khuyến mại"), {
+    target: { value: "GIFT123" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Nhận bằng mã" }));
+  await screen.findByText(
+    "Không thể nhận ưu đãi bằng mã này. Hãy kiểm tra lại mã và điều kiện áp dụng rồi thử lại.",
+  );
+  expect(screen.queryByText("Voucher unavailable")).toBeNull();
 });

@@ -25,6 +25,9 @@ export default function InstallPage() {
             Cài ứng dụng trên Android hoặc máy tính bằng Chrome hoặc Edge. Trên
             điện thoại iOS, thêm ứng dụng vào Màn hình chính từ Safari.
           </p>
+          <div className="mt-5">
+            <PwaInstallAction />
+          </div>
         </header>
 
         <section className="mt-7 grid overflow-hidden border-y border-[var(--theme-border)] lg:grid-cols-2">
@@ -35,7 +38,7 @@ export default function InstallPage() {
             <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--theme-muted)]">
               {[
                 "Mở trang bằng Chrome hoặc Edge trên chính thiết bị muốn cài, không dùng chế độ ẩn danh.",
-                "Khi thấy nút Cài ứng dụng, nhấn để mở cửa sổ cài đặt của trình duyệt.",
+                "Nhấn nút Cài ứng dụng ở đầu trang. Khi trình duyệt hỗ trợ, xác nhận lời mời; nếu chưa có lời mời, làm theo cách cài thủ công bên cạnh.",
                 "Trên điện thoại iOS, làm theo các bước trong Safari bên cạnh.",
               ].map((item) => (
                 <li className="flex gap-3" key={item}>
@@ -44,9 +47,6 @@ export default function InstallPage() {
                 </li>
               ))}
             </ul>
-            <div className="mt-6 border-t border-[var(--theme-border)] pt-5">
-              <PwaInstallAction />
-            </div>
           </div>
 
           <div
@@ -58,7 +58,7 @@ export default function InstallPage() {
             </h2>
             <ol className="mt-6 space-y-6">
               <InstallStep icon={Share} title="Điện thoại iOS">
-                Mở website trong Safari, chạm Chia sẻ, chọn Thêm vào Màn hình
+                Mở trang web trong Safari, chạm Chia sẻ, chọn Thêm vào Màn hình
                 chính, bật Mở dưới dạng ứng dụng nếu có, rồi chạm Thêm.
               </InstallStep>
               <InstallStep icon={SquarePlus} title="Điện thoại Android">

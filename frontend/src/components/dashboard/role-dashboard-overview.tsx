@@ -38,12 +38,12 @@ const staffWorkspaces: Record<
 > = {
   MODERATOR: {
     eyebrow: "Khu vực thẩm định",
-    title: "Hàng đợi thẩm định",
+    title: "Hồ sơ chờ thẩm định",
     description:
-      "Tập trung vào hồ sơ được phân công, tiêu chí 5T và các mốc SLA cần xử lý.",
+      "Tập trung vào hồ sơ được phân công, tiêu chí 5T và những thời hạn cần ưu tiên.",
     primaryAction: {
       href: "/reviews",
-      label: "Mở hàng đợi thẩm định",
+      label: "Mở danh sách hồ sơ chờ thẩm định",
       detail: "Xem phân công và tiếp tục phiên đánh giá.",
       icon: ClipboardCheck,
     },

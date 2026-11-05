@@ -491,6 +491,13 @@ function ProofPanel({
   );
 }
 
+const verificationStatusLabels: Record<string, string> = {
+  MISMATCH: "Thông tin chưa khớp",
+  REVOKED: "Bằng đã bị thu hồi",
+  EXPIRED: "Bằng đã hết hạn",
+  NOT_FOUND: "Không tìm thấy bằng",
+};
+
 function verificationState(
   proof: PublicWorkDetail["proof"],
   verification: Verification | undefined,
@@ -527,7 +534,7 @@ function verificationState(
       icon: <ShieldCheck className="size-5 text-emerald-300" />,
     };
   return {
-    label: `Cần kiểm tra: ${verification.status}`,
+    label: `Cần kiểm tra: ${verificationStatusLabels[verification.status] ?? "trạng thái chưa xác định"}`,
     description:
       "Trạng thái hiện tại chưa đủ điều kiện xác nhận. Vui lòng kiểm tra lại trước khi sử dụng thông tin.",
     color: "text-red-300",

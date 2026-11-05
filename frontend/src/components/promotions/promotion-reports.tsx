@@ -14,7 +14,7 @@ export function PromotionMetrics({ data }: { data: PromotionStats }) {
       {[
         ["Chiến dịch", data.campaignCount],
         ["Đang hoạt động", data.activeCampaignCount],
-        ["Voucher đã cấp", data.issuedCount],
+        ["Ưu đãi đã cấp", data.issuedCount],
         ["Còn hiệu lực", data.availableCount],
         ["Đã sử dụng", data.redeemedCount],
         ["Đã hết hạn", data.expiredCount],
@@ -45,7 +45,7 @@ function downloadReport(blob: Blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "bao-cao-voucher.csv";
+  link.download = "bao-cao-uu-dai.csv";
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -153,7 +153,7 @@ export function PromotionReports({
             </div>
             <p className={styles.muted}>
               Theo ngày: số cấp / số sử dụng. Doanh thu liên quan không đồng
-              nghĩa toàn bộ doanh thu tăng thêm do voucher.
+              nghĩa toàn bộ doanh thu tăng thêm nhờ ưu đãi.
             </p>
           </section>
         </>
@@ -163,7 +163,7 @@ export function PromotionReports({
       )}
       <section className={styles.panel}>
         <div className={styles.heading}>
-          <h2>Giao dịch sử dụng voucher</h2>
+          <h2>Giao dịch sử dụng ưu đãi</h2>
           <button
             className={styles.link}
             disabled={!rows.length || exportReport.isPending}
@@ -189,7 +189,7 @@ export function PromotionReports({
                   <td className="break-all">{row.orderId}</td>
                   <td>{formatVnd(row.discountVnd)}</td>
                   <td>{formatVnd(row.revenueVnd ?? 0)}</td>
-                  <td>{row.status}</td>
+                  <td>Đã sử dụng</td>
                   <td>
                     {row.redeemedAt
                       ? new Date(row.redeemedAt).toLocaleString("vi-VN")

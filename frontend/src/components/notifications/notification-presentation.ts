@@ -14,12 +14,12 @@ const EVENT_PRESENTATION: Record<
   Omit<NotificationPresentation, "actionPath">
 > = {
   "voucher.issued": {
-    actionLabel: "Xem voucher",
+    actionLabel: "Xem ưu đãi",
     groupLabel: "Ưu đãi của bạn",
     tone: "success",
   },
   "voucher.expiring": {
-    actionLabel: "Xem voucher sắp hết hạn",
+    actionLabel: "Xem ưu đãi sắp hết hạn",
     groupLabel: "Ưu đãi sắp hết hạn",
     tone: "warning",
   },
@@ -80,7 +80,7 @@ const EVENT_PRESENTATION: Record<
   },
   "blockchain.anchored": {
     actionLabel: "Xem xác lập",
-    groupLabel: "Blockchain",
+    groupLabel: "Bằng xác lập",
     tone: "success",
   },
   "content_report.created": {
@@ -109,12 +109,12 @@ const EVENT_PRESENTATION: Record<
     tone: "success",
   },
   DOSSIER_READY_FOR_BLOCKCHAIN: {
-    actionLabel: "Mở hàng đợi ký",
-    groupLabel: "Blockchain",
+    actionLabel: "Xem bằng xác lập cần ký",
+    groupLabel: "Bằng xác lập",
     tone: "action",
   },
   HR_ATTENDANCE_LOCATION_REVIEW_REQUIRED: {
-    actionLabel: "Mở hàng chờ xác minh",
+    actionLabel: "Xem yêu cầu xác minh vị trí",
     groupLabel: "Chấm công",
     tone: "warning",
   },

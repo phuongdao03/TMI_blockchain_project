@@ -175,7 +175,7 @@ export function AdvertisingCampaignList({
                 ) : null}
                 {campaign.paymentStatus === "PAID" ? (
                   <p className="mt-3 text-xs font-medium text-emerald-800">
-                    Đã thanh toán bằng ví nội bộ
+                    Đã thanh toán bằng số dư trong ví
                   </p>
                 ) : hasBooking ? (
                   <p className="mt-3 text-xs font-medium text-amber-800">

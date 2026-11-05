@@ -76,7 +76,7 @@ export function AdminAttendanceLocationEvidence({
             Vị trí chấm công · {employeeName}
           </h3>
           <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-300">
-            Chỉ Super Admin xem được bằng chứng GPS trên bản đồ. Dữ liệu vị trí
+            Chỉ quản trị viên cấp cao xem được vị trí GPS trên bản đồ. Dữ liệu vị trí
             được xóa sau 24 tháng theo chính sách lưu giữ.
           </p>
         </div>

@@ -308,7 +308,7 @@ export function PublicShell({ children }: PropsWithChildren) {
           <ThemeToggle />
           {activeUser ? (
             <details className="public-user-menu">
-              <summary aria-label="Mở menu tài khoản">
+              <summary aria-label="Mở điều hướng tài khoản">
                 <MembershipAccountAvatar
                   className="public-user-menu__avatar"
                   displayName={accountIdentity.displayName}
@@ -327,7 +327,7 @@ export function PublicShell({ children }: PropsWithChildren) {
                 </span>
               </summary>
               <nav
-                aria-label="Menu tài khoản"
+                aria-label="Điều hướng tài khoản"
                 className="public-user-menu__panel"
               >
                 <Link href="/workspace">Không gian cá nhân</Link>
@@ -342,7 +342,7 @@ export function PublicShell({ children }: PropsWithChildren) {
                 {!isPreviewRelease() && (
                   <Link href="/notifications">Thông báo</Link>
                 )}
-                {customer && <Link href="/vouchers">Voucher của tôi</Link>}
+                {customer && <Link href="/vouchers">Ưu đãi của tôi</Link>}
                 {adminEntryPoint && !isPreviewRelease() ? (
                   <Link href={adminEntryPoint.href}>
                     {adminEntryPoint.label}
@@ -384,7 +384,7 @@ export function PublicShell({ children }: PropsWithChildren) {
             ref={menuButtonRef}
             type="button"
             className="public-header__menu"
-            aria-label="Mở menu"
+            aria-label="Mở điều hướng"
             aria-expanded={menuOpen}
             aria-controls="public-mobile-navigation"
             onClick={(event) => {
@@ -416,14 +416,14 @@ export function PublicShell({ children }: PropsWithChildren) {
             ref={mobileNavigationRef}
             id="public-mobile-navigation"
             className="public-mobile-nav"
-            aria-label="Menu công khai"
+            aria-label="Điều hướng công khai"
             role="dialog"
             aria-modal="true"
           >
             <div className="navigation-drawer-heading">
-              <h2>Menu</h2>
+              <h2>Điều hướng</h2>
               <button
-                aria-label="Đóng menu"
+                aria-label="Đóng điều hướng"
                 className="navigation-icon-button"
                 type="button"
                 onClick={() => closeMenu()}

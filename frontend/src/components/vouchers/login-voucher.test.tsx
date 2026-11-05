@@ -91,13 +91,13 @@ it.each<[string[], boolean]>([
 it("claims on click and shows success only after persistence", async () => {
   mount();
   fireEvent.click(
-    await screen.findByRole("button", { name: "Nhận voucher ngay" }),
+    await screen.findByRole("button", { name: "Nhận ưu đãi ngay" }),
   );
-  await screen.findByText("Đã nhận voucher!");
+  await screen.findByText("Đã nhận ưu đãi!");
   expect(api.claim).toHaveBeenCalledWith("campaign-1");
   expect(
     screen
-      .getByRole("link", { name: "Xem voucher của tôi" })
+      .getByRole("link", { name: "Xem ưu đãi của tôi" })
       .getAttribute("href"),
   ).toBe("/vouchers");
 });
@@ -105,12 +105,12 @@ it("shows retryable error without claiming success", async () => {
   api.claim.mockRejectedValueOnce(new Error("offline"));
   mount();
   fireEvent.click(
-    await screen.findByRole("button", { name: "Nhận voucher ngay" }),
+    await screen.findByRole("button", { name: "Nhận ưu đãi ngay" }),
   );
   await screen.findByRole("alert");
-  expect(screen.queryByText("Đã nhận voucher!")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Nhận voucher ngay" }));
-  await screen.findByText("Đã nhận voucher!");
+  expect(screen.queryByText("Đã nhận ưu đãi!")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Nhận ưu đãi ngay" }));
+  await screen.findByText("Đã nhận ưu đãi!");
 });
 it("dismisses with Escape and remembers dismissal in this tab", async () => {
   const view = mount();
@@ -132,10 +132,10 @@ it("prevents repeated clicks while a claim is pending", async () => {
   api.claim.mockReturnValue(new Promise(() => {}));
   mount();
   fireEvent.click(
-    await screen.findByRole("button", { name: "Nhận voucher ngay" }),
+    await screen.findByRole("button", { name: "Nhận ưu đãi ngay" }),
   );
   const pending = await screen.findByRole("button", {
-    name: "Đang nhận voucher…",
+    name: "Đang nhận ưu đãi…",
   });
   fireEvent.click(pending);
   expect(api.claim).toHaveBeenCalledTimes(1);

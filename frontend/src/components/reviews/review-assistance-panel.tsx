@@ -10,7 +10,7 @@ import type { ReviewAssistanceRequest } from "@/lib/api/types";
 import { reviewKeys } from "@/lib/reviews/query-keys";
 
 const assistanceStatus = {
-  PENDING: "Đang chờ Admin xử lý",
+  PENDING: "Đang chờ quản trị viên xử lý",
   APPROVED: "Đã bổ sung người thẩm định",
   DECLINED: "Chưa được phê duyệt",
 } as const;
@@ -73,7 +73,7 @@ export function ReviewAssistancePanel({
             </h2>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--theme-muted)]">
               Với hồ sơ phức tạp, hãy nêu rõ phần việc cần thêm chuyên môn.
-              Super Admin sẽ cân nhắc và chỉ định moderator phù hợp.
+              Quản trị viên cấp cao sẽ xem xét và chỉ định người kiểm duyệt phù hợp.
             </p>
           </div>
         </div>
@@ -83,8 +83,8 @@ export function ReviewAssistancePanel({
         {requestHelp.isSuccess ? (
           <WorkflowNextStep
             action={{ href: "#review-form", label: "Tiếp tục báo cáo" }}
-            description="Tiếp tục kiểm tra hồ sơ trong lúc Admin xem yêu cầu và chỉ định thêm người kiểm duyệt. Trạng thái sẽ cập nhật tại đây."
-            title="Đã gửi yêu cầu hỗ trợ cho Admin"
+            description="Bạn có thể tiếp tục thẩm định hồ sơ trong lúc quản trị viên xem yêu cầu và chỉ định thêm người kiểm duyệt. Trạng thái sẽ cập nhật tại đây."
+            title="Đã gửi yêu cầu hỗ trợ cho quản trị viên"
             tone="success"
           />
         ) : null}
@@ -102,7 +102,7 @@ export function ReviewAssistancePanel({
                     </p>
                     <p className="mt-1 text-xs text-[var(--theme-muted)]">
                       {requestDate(item.createdAt)} · cần thêm{" "}
-                      {item.requestedReviewerCount} moderator
+                      {item.requestedReviewerCount} người thẩm định
                     </p>
                   </div>
                 </div>
@@ -155,7 +155,7 @@ export function ReviewAssistancePanel({
               </label>
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <label className="text-sm font-semibold" htmlFor={countId}>
-                  Số moderator cần thêm
+                  Số người thẩm định cần thêm
                   <select
                     className="mt-2 block min-h-11 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 font-medium outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100"
                     disabled={requestHelp.isPending}
@@ -187,7 +187,7 @@ export function ReviewAssistancePanel({
                   ) : (
                     <Send aria-hidden="true" className="size-4" />
                   )}
-                  Gửi Admin
+                  Gửi quản trị viên
                 </button>
               </div>
               <p className="text-xs leading-5 text-[var(--theme-muted)]">

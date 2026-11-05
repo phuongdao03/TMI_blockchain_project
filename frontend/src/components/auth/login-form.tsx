@@ -20,6 +20,7 @@ import { safeLocalDestination } from "@/lib/auth/safe-destination";
 import { broadcastAuthSessionChange } from "@/lib/auth/session-sync";
 import { deliverVerificationEmail } from "@/lib/auth/verification-email";
 import { firebaseConfigured, getFirebaseAuth } from "@/lib/firebase/client";
+import { ensureReferralAttribution } from "@/lib/auth/referral-attribution";
 
 export function LoginForm({
   next,
@@ -44,10 +45,17 @@ export function LoginForm({
   async function finishSignIn(user: User) {
     const idToken = await user.getIdToken(true);
     const destination = safeLocalDestination(next, "/workspace");
+    const referral = await ensureReferralAttribution();
     const result = await authApi.exchangeFirebaseToken(
       idToken,
       accountType,
       destination,
+      referral
+        ? {
+            referralCode: referral.referralCode,
+            referralClickId: referral.clickId,
+          }
+        : undefined,
     );
     enterWorkspace(result.user, destination);
   }
@@ -88,7 +96,7 @@ export function LoginForm({
       return "Bạn đã thử quá nhiều lần. Vui lòng chờ một lát rồi thử lại.";
     }
     if (code === "auth/operation-not-allowed") {
-      return "Đăng nhập bằng email chưa được cấu hình. Vui lòng liên hệ quản trị hệ thống.";
+      return "Đăng nhập bằng email hiện chưa khả dụng. Vui lòng liên hệ bộ phận hỗ trợ.";
     }
     if (
       [
@@ -98,10 +106,10 @@ export function LoginForm({
       ].includes(code ?? "") ||
       (error as Error | null)?.message === "FIREBASE_CLIENT_NOT_CONFIGURED"
     ) {
-      return "Dịch vụ đăng nhập chưa được cấu hình đúng. Vui lòng liên hệ quản trị hệ thống.";
+      return "Chưa thể đăng nhập bằng email lúc này. Vui lòng liên hệ bộ phận hỗ trợ.";
     }
     if (code === "auth/network-request-failed") {
-      return "Không thể kết nối dịch vụ đăng nhập. Vui lòng kiểm tra mạng rồi thử lại.";
+      return "Không thể kết nối để đăng nhập. Hãy kiểm tra mạng rồi thử lại.";
     }
     if (error instanceof ApiError && error.status === 429) {
       return "Bạn đã thử quá nhiều lần. Vui lòng chờ một lát rồi thử lại.";
@@ -110,16 +118,16 @@ export function LoginForm({
       error instanceof ApiError &&
       error.code === "OAUTH_ACCOUNT_LINK_REQUIRED"
     ) {
-      return "Tài khoản chưa được liên kết hoàn tất. Vui lòng liên hệ quản trị hệ thống.";
+      return "Tài khoản này chưa thể dùng để đăng nhập. Vui lòng liên hệ bộ phận hỗ trợ.";
     }
     if (error instanceof ApiError && error.code === "OAUTH_IDENTITY_INVALID") {
-      return "Không thể xác minh phiên đăng nhập. Hãy đăng xuất, đăng nhập lại; nếu lỗi vẫn tiếp diễn, vui lòng liên hệ quản trị hệ thống.";
+      return "Không xác minh được tài khoản. Hãy đăng xuất rồi đăng nhập lại. Nếu vẫn gặp lỗi, liên hệ bộ phận hỗ trợ.";
     }
     if (error instanceof ApiError && error.code === "ACCOUNT_INACTIVE") {
-      return "Tài khoản chưa hoạt động hoặc quyền truy cập không còn hiệu lực. Vui lòng liên hệ quản trị hệ thống.";
+      return "Tài khoản chưa được kích hoạt hoặc quyền truy cập đã hết hiệu lực. Vui lòng liên hệ bộ phận hỗ trợ.";
     }
     if (error instanceof ApiError && error.status >= 500) {
-      return "Dịch vụ tài khoản đang tạm gián đoạn. Vui lòng thử lại sau ít phút.";
+      return "Đăng nhập đang tạm gián đoạn. Hãy thử lại sau.";
     }
     return "Không thể đăng nhập lúc này. Vui lòng thử lại.";
   }
@@ -187,7 +195,7 @@ export function LoginForm({
 
   return (
     <AuthCard
-      description="Truy cập không gian hồ sơ để theo dõi tiến trình, phản hồi và bằng xác lập của bạn."
+      description="Đăng nhập để theo dõi hồ sơ, phản hồi yêu cầu bổ sung và xem bằng xác lập."
       footer={
         <>
           Chưa có tài khoản?{" "}
@@ -221,7 +229,7 @@ export function LoginForm({
             autoCorrect="off"
             error={errors.email?.message}
             label="Email hoặc tên đăng nhập"
-            hint="Dùng email hoặc username đã đặt trong Tài khoản; tên hiển thị không dùng để đăng nhập."
+            hint="Dùng email hoặc tên đăng nhập đã đăng ký. Tên hiển thị không dùng để đăng nhập."
             type="text"
             {...register("email")}
           />

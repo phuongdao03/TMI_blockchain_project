@@ -95,7 +95,7 @@ function overallStatus(
   if (count > 0 && status === "selected") {
     return `${count} tệp · Sẵn sàng tải lên.`;
   }
-  return "Đang xử lý hàng đợi tải tệp.";
+  return "Đang tải và kiểm tra tệp…";
 }
 
 export function FileUploader({

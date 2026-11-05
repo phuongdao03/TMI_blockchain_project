@@ -4,8 +4,38 @@ import {
   getGuideFaqItems,
   prepareGuideArticleBody,
 } from "@/components/guide/guide-content";
+import { getStarterGuide } from "@/components/guide/guide-fallback-content";
 
 describe("guide article content", () => {
+  it("keeps the built-in top-up instructions focused on payment requirements", () => {
+    const guide = getStarterGuide("huong-dan-nap-tien-vao-vi");
+
+    expect(guide?.bodyHtml).toContain(
+      "<li>Nhập số tiền muốn nạp, tối thiểu 5.000đ.</li>",
+    );
+    expect(guide?.bodyHtml).not.toMatch(/dấu chấm|hiển thị tự động/i);
+    expect(guide?.bodyHtml).toContain("10 phút");
+    expect(guide?.bodyHtml).toContain("giữ nguyên nội dung chuyển khoản");
+    expect(guide?.bodyHtml).toContain("đừng thanh toán lần nữa");
+  });
+
+  it.each([
+    "Nhập số tiền cần nạp. Mức tối thiểu là 5.000 đồng; dấu chấm phân cách hàng nghìn được hiển thị tự động.",
+    "Nhập số tiền muốn nạp, tối thiểu 5.000đ. Dấu chấm phân cách hàng nghìn sẽ hiển thị tự động.",
+  ])("edits obsolete top-up guidance received from the CMS: %s", (step) => {
+    const result = prepareGuideArticleBody(
+      `<ol><li>${step}</li></ol><p>Yêu cầu có hiệu lực trong 10 phút. Giữ nguyên nội dung chuyển khoản.</p>`,
+    );
+
+    expect(result.html).toContain(
+      "<li>Nhập số tiền muốn nạp, tối thiểu 5.000đ.</li>",
+    );
+    expect(result.html).not.toMatch(/dấu chấm|hiển thị tự động/i);
+    expect(result.html).toContain(
+      "Yêu cầu có hiệu lực trong 10 phút. Giữ nguyên nội dung chuyển khoản.",
+    );
+  });
+
   it("builds a linked contents list from heading markup", () => {
     const result = prepareGuideArticleBody(
       "<h2>Tạo hồ sơ</h2><p>Điền thông tin.</p><h3>Tạo hồ sơ</h3>",

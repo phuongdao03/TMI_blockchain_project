@@ -53,10 +53,10 @@ export function PromotionCampaignList({
       promotionApi.transition(action!.campaign.id, action!.action),
     onSuccess: async (campaign) => {
       setFeedback(
-        `Đã cập nhật: ${statuses[campaign.status] ?? campaign.status}. ${
+        `Đã cập nhật: ${statuses[campaign.status] ?? "Trạng thái khác"}. ${
           campaign.status === "ACTIVE"
             ? ["MANUAL", "CODE"].includes(campaign.programType)
-              ? "Phát voucher trong mục Phân phối hoặc cung cấp mã cho khách hàng."
+              ? "Cấp ưu đãi trong mục Phân phối hoặc cung cấp mã cho khách hàng."
               : campaign.policy.presentation.enabled
                 ? "Khách hàng phù hợp đang truy cập sẽ được kiểm tra ưu đãi trong vòng 30 giây; popup vẫn tuân theo thời điểm và tần suất đã cấu hình."
                 : "Popup đang tắt. Bật trong mục Thiết kế popup để hiển thị ưu đãi."
@@ -174,7 +174,7 @@ export function PromotionCampaignList({
                 </td>
                 <td data-label="Trạng thái">
                   <span className={styles.status}>
-                    {statuses[campaign.status] ?? campaign.status}
+                    {statuses[campaign.status] ?? "Trạng thái khác"}
                   </span>
                 </td>
                 <td data-label="Ngân sách đã dùng">
@@ -293,8 +293,8 @@ export function PromotionCampaignList({
         title={`${action?.action === "publish" ? "Xuất bản" : action?.action === "pause" ? "Tạm dừng" : action?.action === "end" ? "Kết thúc" : "Lưu trữ"} chiến dịch?`}
         description={
           action?.action === "publish"
-            ? "Kiểm tra đối tượng, thời gian, ngân sách và nội dung trước khi xuất bản. Backend sẽ kiểm tra toàn bộ điều kiện; đối tượng chỉ gồm khách hàng hợp lệ."
-            : "Lịch sử voucher và giao dịch đã phát sinh được giữ nguyên. Chính sách quyền lợi đã cam kết vẫn được áp dụng."
+            ? "Kiểm tra đối tượng, thời gian, ngân sách và nội dung trước khi xuất bản. Chỉ khách hàng đáp ứng điều kiện mới nhận ưu đãi."
+              : "Lịch sử ưu đãi và giao dịch đã phát sinh được giữ nguyên. Chính sách quyền lợi đã cam kết vẫn được áp dụng."
         }
         confirmLabel="Xác nhận"
         isPending={transition.isPending}

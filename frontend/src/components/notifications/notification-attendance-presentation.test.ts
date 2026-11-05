@@ -20,7 +20,7 @@ describe("attendance notification presentation", () => {
     };
 
     expect(presentNotification(item)).toMatchObject({
-      actionLabel: "Mở hàng chờ xác minh",
+      actionLabel: "Xem yêu cầu xác minh vị trí",
       actionPath: "/admin/attendance",
       groupLabel: "Chấm công",
       tone: "warning",

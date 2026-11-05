@@ -28,6 +28,22 @@ type PendingDecision = {
 const inputClassName =
   "min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-500";
 
+const inventoryStatusLabels: Record<string, string> = {
+  CONFIRMED: "Đã xác nhận",
+  COMPLETED: "Đã hoàn tất",
+  CANCELLED: "Đã hủy",
+  HELD: "Đang giữ chỗ",
+  EXPIRED: "Đã hết hạn",
+  PAYMENT_PROCESSING: "Đang xử lý thanh toán",
+};
+
+const paymentStatusLabels: Record<string, string> = {
+  PAID: "Đã thanh toán",
+  PENDING_PAYMENT: "Chờ thanh toán",
+  EXPIRED: "Đã hết hạn",
+  REFUNDED: "Đã hoàn tiền",
+};
+
 function localDate(value: Date): string {
   const date = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
   return date.toISOString().slice(0, 10);
@@ -358,7 +374,7 @@ export function AdvertisingAdminWorkspace() {
       ) : null}
 
       {tab === "review" ? (
-        <section aria-label="Hàng chờ duyệt" className="space-y-4">
+        <section aria-label="Nội dung chờ duyệt" className="space-y-4">
           {queue.isPending ? (
             <p
               className="rounded-xl bg-[var(--theme-surface)] p-5 text-sm"
@@ -369,7 +385,7 @@ export function AdvertisingAdminWorkspace() {
           ) : null}
           {queue.isError ? (
             <Button onClick={() => void queue.refetch()} variant="outline">
-              Tải lại hàng chờ
+              Tải lại nội dung chờ duyệt
             </Button>
           ) : null}
           {queue.data?.length === 0 ? (
@@ -470,9 +486,9 @@ export function AdvertisingAdminWorkspace() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="rounded-full bg-[var(--theme-elevated)] px-3 py-1 text-xs">
-                          {entry.status}
+                          {inventoryStatusLabels[entry.status] ?? "Đang cập nhật"}
                           {entry.paymentStatus
-                            ? ` · ${entry.paymentStatus}`
+                            ? ` · ${paymentStatusLabels[entry.paymentStatus] ?? "Đang cập nhật"}`
                             : ""}
                         </span>
                         {entry.status === "CONFIRMED" &&
@@ -725,7 +741,7 @@ export function AdvertisingAdminWorkspace() {
                   />
                 </label>
                 <label className="block space-y-1 text-sm">
-                  Giá (VND)
+                  Giá (đồng)
                   <input
                     className={inputClassName}
                     min={0}
@@ -841,7 +857,7 @@ export function AdvertisingAdminWorkspace() {
                       </p>
                     </div>
                     <label className="text-xs">
-                      Giá (VND)
+                      Giá (đồng)
                       <input
                         className={inputClassName}
                         min={0}

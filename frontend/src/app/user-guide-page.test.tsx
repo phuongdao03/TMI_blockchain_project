@@ -27,7 +27,7 @@ function renderPage() {
 describe("public guide page", () => {
   beforeEach(() => vi.restoreAllMocks());
 
-  it("provides public documentation browsing and an empty state", async () => {
+  it("keeps essential instructions available while browsing public guides", async () => {
     renderPage();
     expect(
       await screen.findByRole("heading", {
@@ -36,6 +36,17 @@ describe("public guide page", () => {
       }),
     ).toBeDefined();
     expect(screen.getByLabelText("Tìm trong hướng dẫn")).toBeDefined();
-    expect(await screen.findByText("Không tìm thấy hướng dẫn")).toBeDefined();
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "Hướng dẫn thiết yếu",
+      }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("heading", {
+        level: 3,
+        name: "Tạo tài khoản và bắt đầu sử dụng",
+      }),
+    ).toBeDefined();
   });
 });

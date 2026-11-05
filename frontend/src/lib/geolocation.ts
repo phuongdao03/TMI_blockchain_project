@@ -30,7 +30,7 @@ function locationError(error: GeolocationPositionError): LocationCaptureError {
     case 1:
       return new LocationCaptureError(
         "LOCATION_PERMISSION_DENIED",
-        "Trình duyệt hoặc thiết bị từ chối cung cấp vị trí. Kiểm tra quyền vị trí của website, quyền vị trí của trình duyệt trong hệ điều hành rồi thử lại.",
+        "Trình duyệt hoặc thiết bị từ chối cung cấp vị trí. Kiểm tra quyền vị trí của trang web và quyền vị trí của trình duyệt trong hệ điều hành rồi thử lại.",
       );
     case 3:
       return new LocationCaptureError(
@@ -73,14 +73,14 @@ async function locationPermissionState(): Promise<PermissionState | null> {
 function blockedLocationError(): LocationCaptureError {
   return new LocationCaptureError(
     "LOCATION_ACCESS_BLOCKED",
-    "Quyền vị trí của website đã bật, nhưng trình duyệt hoặc thiết bị vẫn chặn lấy vị trí. Kiểm tra dịch vụ định vị của hệ điều hành và quyền vị trí của trình duyệt, rồi mở lại trang để thử.",
+    "Quyền vị trí của trang web đã bật nhưng trình duyệt hoặc thiết bị vẫn chặn lấy vị trí. Kiểm tra dịch vụ định vị của hệ điều hành và quyền vị trí của trình duyệt, rồi mở lại trang để thử.",
   );
 }
 
 function policyLocationError(): LocationCaptureError {
   return new LocationCaptureError(
     "LOCATION_POLICY_BLOCKED",
-    "Trang hiện tại bị chính sách bảo mật chặn lấy vị trí. Hãy mở trực tiếp website chấm công hoặc liên hệ quản trị viên để kiểm tra cấu hình.",
+    "Trang hiện tại bị chính sách bảo mật chặn lấy vị trí. Hãy mở trực tiếp trang chấm công hoặc liên hệ quản trị viên để kiểm tra cấu hình.",
   );
 }
 

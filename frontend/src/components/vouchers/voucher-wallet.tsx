@@ -48,11 +48,11 @@ export function VoucherWallet() {
           Ưu đãi dành cho bạn
         </p>
         <h1 className="mt-2 text-2xl font-bold text-[var(--theme-text)]">
-          Voucher của tôi
+          Ưu đãi của tôi
         </h1>
         <p className="mt-2 text-sm text-[var(--theme-muted)]">
-          Mỗi ưu đãi được lưu theo tài khoản. Voucher không phải số dư ví và
-          không quy đổi thành tiền mặt.
+          Ưu đãi được lưu theo tài khoản, không phải số dư ví và không quy đổi
+          thành tiền mặt.
         </p>
       </header>
       <form
@@ -83,9 +83,8 @@ export function VoucherWallet() {
       </form>
       {redeem.isError && (
         <p role="alert" className="text-sm text-red-700">
-          {redeem.error instanceof Error
-            ? redeem.error.message
-            : "Không thể nhận mã. Vui lòng kiểm tra điều kiện."}
+          Không thể nhận ưu đãi bằng mã này. Hãy kiểm tra lại mã và điều kiện
+          áp dụng rồi thử lại.
         </p>
       )}
       {redeem.isSuccess && (
@@ -95,7 +94,7 @@ export function VoucherWallet() {
       )}
       <div
         role="tablist"
-        aria-label="Trạng thái voucher"
+        aria-label="Trạng thái ưu đãi"
         className="flex gap-2 overflow-x-auto border-b border-[var(--theme-border)] pb-2"
       >
         {(
@@ -121,10 +120,10 @@ export function VoucherWallet() {
           </button>
         ))}
       </div>
-      {vouchers.isPending && <p role="status">Đang tải voucher…</p>}
+      {vouchers.isPending && <p role="status">Đang tải ưu đãi…</p>}
       {vouchers.isError && (
         <div role="alert">
-          <p>Không thể tải voucher. Vui lòng thử lại.</p>
+          <p>Không thể tải ưu đãi. Vui lòng thử lại.</p>
           <Button variant="outline" onClick={() => void vouchers.refetch()}>
             Thử lại
           </Button>
@@ -132,13 +131,13 @@ export function VoucherWallet() {
       )}
       {vouchers.data?.length === 0 ? (
         <p className="rounded-xl border border-[var(--theme-border)] p-6">
-          Bạn chưa nhận voucher nào.
+          Bạn chưa nhận ưu đãi nào.
         </p>
       ) : (
         !selected.length &&
         !vouchers.isPending && (
           <p className="py-8 text-center text-sm text-[var(--theme-muted)]">
-            Chưa có voucher trong nhóm này.
+            Chưa có ưu đãi trong nhóm này.
           </p>
         )
       )}
