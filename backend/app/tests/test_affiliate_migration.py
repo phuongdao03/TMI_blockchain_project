@@ -1,15 +1,27 @@
 import hashlib
+import runpy
 import sqlite3
 from pathlib import Path
 from uuid import uuid4
 
 from alembic.config import Config
+from sqlalchemy.dialects import postgresql
 
 from alembic import command
 from app.core.config import get_settings
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 REVISION = "0156_affiliate_foundation"
+
+
+def test_affiliate_backfill_binds_active_status_as_postgresql_enum() -> None:
+    migration = runpy.run_path(
+        str(BACKEND_ROOT / "alembic" / "versions" / f"{REVISION}.py")
+    )
+    statement = migration["_eligible_active_ordinary_users_statement"]()
+    compiled = statement.compile(dialect=postgresql.asyncpg.dialect())
+
+    assert "users.status = $1::user_status" in str(compiled)
 
 
 def test_affiliate_migration_backfills_only_active_ordinary_users(

@@ -5,6 +5,7 @@ from hashlib import sha256
 from uuid import NAMESPACE_URL, uuid5
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -12,6 +13,61 @@ revision = "0156_affiliate_foundation"
 down_revision = "0155_finance_permissions"
 branch_labels = None
 depends_on = None
+
+# Match the database enum so asyncpg binds the status predicate as user_status.
+POSTGRES_USER_STATUS = postgresql.ENUM(
+    "PENDING",
+    "ACTIVE",
+    "SUSPENDED",
+    "DELETED",
+    name="user_status",
+    create_type=False,
+)
+
+
+def _eligible_active_ordinary_users_statement():
+    users = sa.table(
+        "users",
+        sa.column("id", sa.Uuid()),
+        sa.column("status", POSTGRES_USER_STATUS),
+        sa.column("disabled_at", sa.DateTime(timezone=True)),
+        sa.column("deleted_at", sa.DateTime(timezone=True)),
+    )
+    roles = sa.table(
+        "roles", sa.column("id", sa.Uuid()), sa.column("code", sa.String())
+    )
+    user_roles = sa.table(
+        "user_roles",
+        sa.column("user_id", sa.Uuid()),
+        sa.column("role_id", sa.Uuid()),
+    )
+    employees = sa.table("employees", sa.column("user_id", sa.Uuid()))
+    user_role_join = user_roles.join(roles, user_roles.c.role_id == roles.c.id)
+
+    return sa.select(users.c.id).where(
+        users.c.status == "ACTIVE",
+        users.c.disabled_at.is_(None),
+        users.c.deleted_at.is_(None),
+        sa.exists(
+            sa.select(1)
+            .select_from(user_role_join)
+            .where(
+                user_roles.c.user_id == users.c.id,
+                roles.c.code == "USER",
+            )
+        ),
+        ~sa.exists(
+            sa.select(1)
+            .select_from(user_role_join)
+            .where(
+                user_roles.c.user_id == users.c.id,
+                roles.c.code != "USER",
+            )
+        ),
+        ~sa.exists(
+            sa.select(1).select_from(employees).where(employees.c.user_id == users.c.id)
+        ),
+    )
 
 
 def upgrade() -> None:
@@ -309,50 +365,8 @@ def upgrade() -> None:
     )
 
     bind = op.get_bind()
-    users = sa.table(
-        "users",
-        sa.column("id", sa.Uuid()),
-        sa.column("status", sa.String()),
-        sa.column("disabled_at", sa.DateTime(timezone=True)),
-        sa.column("deleted_at", sa.DateTime(timezone=True)),
-    )
-    roles = sa.table(
-        "roles", sa.column("id", sa.Uuid()), sa.column("code", sa.String())
-    )
-    user_roles = sa.table(
-        "user_roles",
-        sa.column("user_id", sa.Uuid()),
-        sa.column("role_id", sa.Uuid()),
-    )
-    employees = sa.table("employees", sa.column("user_id", sa.Uuid()))
-    user_role_join = user_roles.join(roles, user_roles.c.role_id == roles.c.id)
     eligible_user_ids = bind.execute(
-        sa.select(users.c.id).where(
-            users.c.status == "ACTIVE",
-            users.c.disabled_at.is_(None),
-            users.c.deleted_at.is_(None),
-            sa.exists(
-                sa.select(1)
-                .select_from(user_role_join)
-                .where(
-                    user_roles.c.user_id == users.c.id,
-                    roles.c.code == "USER",
-                )
-            ),
-            ~sa.exists(
-                sa.select(1)
-                .select_from(user_role_join)
-                .where(
-                    user_roles.c.user_id == users.c.id,
-                    roles.c.code != "USER",
-                )
-            ),
-            ~sa.exists(
-                sa.select(1)
-                .select_from(employees)
-                .where(employees.c.user_id == users.c.id)
-            ),
-        )
+        _eligible_active_ordinary_users_statement()
     ).scalars()
     profiles = sa.table(
         "affiliate_profiles",
