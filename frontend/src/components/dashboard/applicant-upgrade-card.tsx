@@ -45,7 +45,10 @@ export function ApplicantUpgradeCard({
       const referral = getReferralAttribution();
       if (referral) {
         try {
-          await affiliateApi.claimReferral(referral.referralCode, referral.clickId);
+          await affiliateApi.claimReferral(
+            referral.referralCode,
+            referral.clickId,
+          );
           clearReferralAttribution();
         } catch {
           // Keep applicant onboarding successful if an optional referral claim fails.

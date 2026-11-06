@@ -100,9 +100,7 @@ def test_referral_click_and_attribution_are_idempotent_and_first_touch_wins() ->
 
             async with sessions() as session:
                 service = AffiliateService(session, affiliate_enabled=True)
-                affiliate = await service.ensure_profile(
-                    principal.user_id
-                )
+                affiliate = await service.ensure_profile(principal.user_id)
                 click_id = uuid4()
                 click = await service.record_click(
                     referral_code=affiliate.referral_code,
@@ -307,15 +305,15 @@ def test_signup_attribution_accepts_pending_user_and_locks_first_touch() -> None
                 async with session.begin():
                     attribution = (
                         await service.capture_signup_referral_in_current_transaction(
-                        referred_user_id=pending_id,
-                        referral_code=referrer.referral_code,
+                            referred_user_id=pending_id,
+                            referral_code=referrer.referral_code,
                         )
                     )
                 async with session.begin():
                     replay = (
                         await service.capture_signup_referral_in_current_transaction(
-                        referred_user_id=pending_id,
-                        referral_code=referrer.referral_code,
+                            referred_user_id=pending_id,
+                            referral_code=referrer.referral_code,
                         )
                     )
                 assert attribution.id == replay.id

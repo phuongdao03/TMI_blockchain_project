@@ -46,9 +46,7 @@ def upgrade() -> None:
             name="ck_affiliate_profiles_valid_status",
         ),
     )
-    op.create_index(
-        "ix_affiliate_profiles_status", "affiliate_profiles", ["status"]
-    )
+    op.create_index("ix_affiliate_profiles_status", "affiliate_profiles", ["status"])
     op.create_table(
         "affiliate_referral_clicks",
         sa.Column("id", sa.Uuid(), primary_key=True),
@@ -94,9 +92,7 @@ def upgrade() -> None:
         sa.Column("referral_code_snapshot", sa.String(32), nullable=False),
         sa.Column("attributed_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint(
-            "referred_user_id", name="uq_affiliate_attributions_user"
-        ),
+        sa.UniqueConstraint("referred_user_id", name="uq_affiliate_attributions_user"),
         sa.CheckConstraint(
             "affiliate_user_id != referred_user_id",
             name="ck_affiliate_attributions_not_self_referred",
@@ -448,9 +444,9 @@ def downgrade() -> None:
     )
     # Only the safe, disabled seed is disposable; admin-authored versions are not.
     non_seed_count = bind.scalar(
-        sa.select(sa.func.count()).select_from(rule_sets).where(
-            rule_sets.c.id != uuid5(NAMESPACE_URL, "affiliate-commission-rules-v1")
-        )
+        sa.select(sa.func.count())
+        .select_from(rule_sets)
+        .where(rule_sets.c.id != uuid5(NAMESPACE_URL, "affiliate-commission-rules-v1"))
     )
     if non_seed_count:
         raise RuntimeError(

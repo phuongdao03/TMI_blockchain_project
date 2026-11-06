@@ -146,10 +146,10 @@ function CampaignEditor({
         )}
         {initial && !locked && initial.status !== "DRAFT" && (
           <p className={styles.muted}>
-            Bạn có thể chỉnh sửa chiến dịch đã xuất bản. Thay đổi áp dụng cho
-            ưu đãi cấp từ lần lưu tiếp theo sẽ theo thay đổi này; ưu đãi đã cấp
-            giữ nguyên giá trị, điều kiện và hạn sử dụng. Mã chiến dịch được giữ
-            cố định; ngân sách không được giảm sau khi đã cấp ưu đãi.
+            Bạn có thể chỉnh sửa chiến dịch đã xuất bản. Thay đổi áp dụng cho ưu
+            đãi cấp từ lần lưu tiếp theo sẽ theo thay đổi này; ưu đãi đã cấp giữ
+            nguyên giá trị, điều kiện và hạn sử dụng. Mã chiến dịch được giữ cố
+            định; ngân sách không được giảm sau khi đã cấp ưu đãi.
           </p>
         )}
         <form
@@ -324,8 +324,8 @@ function CampaignEditor({
                   </dd>
                 </dl>
                 <p className={styles.muted}>
-                  Lưu chiến dịch trước, sau đó chọn Xuất bản trong danh sách.
-                  Hệ thống sẽ kiểm tra điều kiện, mốc thời gian và ngân sách.
+                  Lưu chiến dịch trước, sau đó chọn Xuất bản trong danh sách. Hệ
+                  thống sẽ kiểm tra điều kiện, mốc thời gian và ngân sách.
                 </p>
               </div>
             )}

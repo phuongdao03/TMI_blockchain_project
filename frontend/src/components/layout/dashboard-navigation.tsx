@@ -457,9 +457,13 @@ function sectionsFor(
     {
       label: "Tài chính & dịch vụ",
       items: [...personalItems, affiliateItem].filter((item) =>
-        ["/vouchers", "/advertising", "/membership", "/wallet", "/affiliate"].includes(
-          item.href,
-        ),
+        [
+          "/vouchers",
+          "/advertising",
+          "/membership",
+          "/wallet",
+          "/affiliate",
+        ].includes(item.href),
       ),
     },
     {
@@ -558,7 +562,9 @@ export function DashboardNavigation({
     items: section.items.filter(
       (item) =>
         canAccess(item, effectiveRoles, effectivePermissions) &&
-        (!["/vouchers", "/wallet", "/membership", "/affiliate"].includes(item.href) ||
+        (!["/vouchers", "/wallet", "/membership", "/affiliate"].includes(
+          item.href,
+        ) ||
           isCustomerAccount({
             roles: effectiveRoles,
             permissions: effectivePermissions,

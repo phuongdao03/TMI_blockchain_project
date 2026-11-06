@@ -117,9 +117,7 @@ class AffiliateService:
             available_balance = await ledger.balance(available_account.id)
             reserved_balance = await ledger.balance(reserved_account.id)
             withdrawn = await self.session.scalar(
-                select(
-                    func.coalesce(func.sum(-FinanceEntry.amount_minor), 0)
-                )
+                select(func.coalesce(func.sum(-FinanceEntry.amount_minor), 0))
                 .join(FinanceJournal, FinanceJournal.id == FinanceEntry.journal_id)
                 .join(
                     FinanceAccount,
@@ -392,9 +390,7 @@ class AffiliateService:
                 and existing.amount_minor == amount_minor
             ):
                 return existing
-            raise _conflict(
-                "Giao dịch nguồn đã được gắn với hoa hồng khác."
-            ) from exc
+            raise _conflict("Giao dịch nguồn đã được gắn với hoa hồng khác.") from exc
 
         self.session.add(
             AuditLog(
@@ -1007,9 +1003,7 @@ class AffiliateService:
             )
             if existing is not None and existing.affiliate_user_id == referrer.user_id:
                 return existing
-            raise _conflict(
-                "Tài khoản đã được gắn với mã giới thiệu khác."
-            ) from exc
+            raise _conflict("Tài khoản đã được gắn với mã giới thiệu khác.") from exc
         return attribution
 
     async def current_rules(self) -> CommissionRuleSetView | None:

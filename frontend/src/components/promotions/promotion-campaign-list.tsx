@@ -294,7 +294,7 @@ export function PromotionCampaignList({
         description={
           action?.action === "publish"
             ? "Kiểm tra đối tượng, thời gian, ngân sách và nội dung trước khi xuất bản. Chỉ khách hàng đáp ứng điều kiện mới nhận ưu đãi."
-              : "Lịch sử ưu đãi và giao dịch đã phát sinh được giữ nguyên. Chính sách quyền lợi đã cam kết vẫn được áp dụng."
+            : "Lịch sử ưu đãi và giao dịch đã phát sinh được giữ nguyên. Chính sách quyền lợi đã cam kết vẫn được áp dụng."
         }
         confirmLabel="Xác nhận"
         isPending={transition.isPending}

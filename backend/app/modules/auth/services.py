@@ -225,9 +225,7 @@ class RegistrationService:
         from app.modules.affiliate.service import AffiliateService
 
         try:
-            await AffiliateService(
-                self._session
-            ).ensure_profile_in_current_transaction(
+            await AffiliateService(self._session).ensure_profile_in_current_transaction(
                 user_id,
                 allow_pending=False,
             )

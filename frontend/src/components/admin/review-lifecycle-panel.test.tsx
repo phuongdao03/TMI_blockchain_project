@@ -123,7 +123,9 @@ describe("ReviewLifecyclePanel", () => {
     expect(
       await screen.findByText("Đã giao hồ sơ cho người kiểm duyệt"),
     ).toBeTruthy();
-    expect(screen.getByText(/thấy phân công trong danh sách công việc/)).toBeTruthy();
+    expect(
+      screen.getByText(/thấy phân công trong danh sách công việc/),
+    ).toBeTruthy();
     expect(
       screen
         .getByRole("link", { name: "Theo dõi thẩm định" })

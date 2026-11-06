@@ -328,9 +328,9 @@ describe("layout shells", () => {
     const originalOverflow = document.body.style.overflow;
     await user.click(trigger);
     expect(document.body.style.overflow).toBe("hidden");
-    expect(screen.getAllByRole("button", { name: "Đóng điều hướng" })).toHaveLength(
-      1,
-    );
+    expect(
+      screen.getAllByRole("button", { name: "Đóng điều hướng" }),
+    ).toHaveLength(1);
 
     const navigation = screen
       .getAllByRole("dialog")
@@ -835,7 +835,9 @@ describe("layout shells", () => {
     );
 
     await user.click(screen.getByLabelText("Mở điều hướng tài khoản"));
-    const menu = screen.getByRole("navigation", { name: "Điều hướng tài khoản" });
+    const menu = screen.getByRole("navigation", {
+      name: "Điều hướng tài khoản",
+    });
     expect(
       within(menu)
         .getByRole("link", { name: "Không gian cá nhân" })

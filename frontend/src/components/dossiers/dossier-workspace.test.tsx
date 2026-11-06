@@ -430,9 +430,7 @@ describe("DossierWorkspace", () => {
       </QueryClientProvider>,
     );
 
-    expect(
-      await screen.findByText("Hồ sơ đã được gửi."),
-    ).toBeDefined();
+    expect(await screen.findByText("Hồ sơ đã được gửi.")).toBeDefined();
     expect(
       document.querySelector(".dossier-state-summary")?.className,
     ).not.toContain("bg-[var(--theme-elevated)]");

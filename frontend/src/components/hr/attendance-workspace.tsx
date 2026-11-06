@@ -382,8 +382,8 @@ export function AttendanceWorkspace() {
                   className="mt-0.5 size-4 shrink-0 text-amber-800"
                 />
                 <p>
-                  Vị trí đang chờ quản lý duyệt. Lượt chấm công này chưa
-                  được tính công hoặc lương.
+                  Vị trí đang chờ quản lý duyệt. Lượt chấm công này chưa được
+                  tính công hoặc lương.
                 </p>
               </aside>
             ) : null}

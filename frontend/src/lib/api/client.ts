@@ -1052,7 +1052,9 @@ export const affiliateApi = {
 };
 
 export const adminAffiliateApi = {
-  profiles(filters: { search?: string; status?: string; offset?: number } = {}) {
+  profiles(
+    filters: { search?: string; status?: string; offset?: number } = {},
+  ) {
     const parameters = new URLSearchParams({
       limit: "50",
       offset: String(filters.offset ?? 0),
@@ -1122,7 +1124,9 @@ export const adminAffiliateApi = {
       { cache: "no-store" },
     );
   },
-  createCommissionRules(input: import("./types").AffiliateCommissionRuleSetInput) {
+  createCommissionRules(
+    input: import("./types").AffiliateCommissionRuleSetInput,
+  ) {
     return request<import("./types").AffiliateCommissionRuleSet>(
       "/admin/affiliate/commission-rules",
       { method: "POST", body: JSON.stringify(input) },
@@ -1169,7 +1173,11 @@ export const adminWithdrawalApi = {
   },
   reviewIdentity(
     userId: string,
-    input: { status: "VERIFIED" | "REJECTED"; evidenceReference: string; reason: string },
+    input: {
+      status: "VERIFIED" | "REJECTED";
+      evidenceReference: string;
+      reason: string;
+    },
   ) {
     return request<import("./types").FinancialIdentityReview>(
       `/admin/finance/users/${encodeURIComponent(userId)}/identity-verification`,

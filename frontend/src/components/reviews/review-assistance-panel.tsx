@@ -72,8 +72,8 @@ export function ReviewAssistancePanel({
               Phối hợp thẩm định
             </h2>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--theme-muted)]">
-              Với hồ sơ phức tạp, hãy nêu rõ phần việc cần thêm chuyên môn.
-              Quản trị viên cấp cao sẽ xem xét và chỉ định người kiểm duyệt phù hợp.
+              Với hồ sơ phức tạp, hãy nêu rõ phần việc cần thêm chuyên môn. Quản
+              trị viên cấp cao sẽ xem xét và chỉ định người kiểm duyệt phù hợp.
             </p>
           </div>
         </div>

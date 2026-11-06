@@ -239,8 +239,9 @@ function PaymentWorkspaceContent({ orderId }: { orderId: string }) {
                 <div>
                   <h2 className="font-bold">Đang chờ xác nhận</h2>
                   <p className="mt-1 text-sm leading-6 text-amber-800">
-                    Giao dịch đang chờ xác nhận. Nếu tiền đã bị trừ, đừng thanh toán
-                    lần nữa; hãy kiểm tra trạng thái tại đây trước khi bắt đầu lần mới.
+                    Giao dịch đang chờ xác nhận. Nếu tiền đã bị trừ, đừng thanh
+                    toán lần nữa; hãy kiểm tra trạng thái tại đây trước khi bắt
+                    đầu lần mới.
                   </p>
                   <button
                     className="mt-3 min-h-11 text-sm font-bold underline underline-offset-4"

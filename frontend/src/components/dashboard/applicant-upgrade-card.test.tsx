@@ -77,6 +77,8 @@ describe("ApplicantUpgradeCard", () => {
         "0d7f1d18-e455-4a7a-9df0-fce15fc9223a",
       );
     });
-    expect(localStorage.getItem("thv.affiliate.referral-attribution")).toBeNull();
+    expect(
+      localStorage.getItem("thv.affiliate.referral-attribution"),
+    ).toBeNull();
   });
 });

@@ -5,7 +5,10 @@ import { Check, Copy, UsersRound } from "lucide-react";
 import { useState } from "react";
 
 import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
-import { affiliateServiceLabel, commissionStatusLabel } from "@/lib/affiliate-presentation";
+import {
+  affiliateServiceLabel,
+  commissionStatusLabel,
+} from "@/lib/affiliate-presentation";
 import { affiliateApi } from "@/lib/api/client";
 import type { AffiliateCommission, AffiliateReferral } from "@/lib/api/types";
 import { useAuthUser } from "@/lib/auth/user-context";
@@ -39,7 +42,13 @@ function referralLink(value: string, referralCode: string) {
   }
 }
 
-function MetricCard({ label, value }: { label: string; value: string | number }) {
+function MetricCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
   return (
     <div className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
       <p className="text-xs font-bold text-[var(--theme-muted)]">{label}</p>
@@ -54,13 +63,29 @@ function ReferralRow({ item }: { item: AffiliateReferral }) {
       <div>
         <p className="font-semibold">Người được giới thiệu</p>
         <p className="text-xs text-[var(--theme-muted)]">
-          Ghi nhận {new Date(item.attributedAt).toLocaleDateString("vi-VN")} · hết hạn {new Date(item.expiresAt).toLocaleDateString("vi-VN")}
+          Ghi nhận {new Date(item.attributedAt).toLocaleDateString("vi-VN")} ·
+          hết hạn {new Date(item.expiresAt).toLocaleDateString("vi-VN")}
         </p>
       </div>
       <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3 sm:text-right">
-        <p><span className="block text-xs text-[var(--theme-muted)]">Giao dịch phát sinh</span><strong>{item.conversionCount}</strong></p>
-        <p><span className="block text-xs text-[var(--theme-muted)]">Doanh thu</span><strong>{formatVnd(item.revenueMinor)}</strong></p>
-        <p><span className="block text-xs text-[var(--theme-muted)]">Hoa hồng</span><strong>{formatVnd(item.commissionAmountMinor)}</strong></p>
+        <p>
+          <span className="block text-xs text-[var(--theme-muted)]">
+            Giao dịch phát sinh
+          </span>
+          <strong>{item.conversionCount}</strong>
+        </p>
+        <p>
+          <span className="block text-xs text-[var(--theme-muted)]">
+            Doanh thu
+          </span>
+          <strong>{formatVnd(item.revenueMinor)}</strong>
+        </p>
+        <p>
+          <span className="block text-xs text-[var(--theme-muted)]">
+            Hoa hồng
+          </span>
+          <strong>{formatVnd(item.commissionAmountMinor)}</strong>
+        </p>
       </div>
     </li>
   );
@@ -70,7 +95,9 @@ function CommissionRow({ item }: { item: AffiliateCommission }) {
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 py-3">
       <div>
-        <p className="font-semibold">{affiliateServiceLabel(item.serviceCode)}</p>
+        <p className="font-semibold">
+          {affiliateServiceLabel(item.serviceCode)}
+        </p>
         <p className="text-xs text-[var(--theme-muted)]">
           {new Date(item.earnedAt).toLocaleDateString("vi-VN")}
         </p>
@@ -118,7 +145,10 @@ export function AffiliateWorkspace() {
           section="Tiếp thị liên kết"
           title="Tiếp thị liên kết"
         />
-        <p role="status" className="rounded-xl border border-[var(--theme-border)] p-4 text-sm">
+        <p
+          role="status"
+          className="rounded-xl border border-[var(--theme-border)] p-4 text-sm"
+        >
           Chương trình tiếp thị liên kết dành cho tài khoản người dùng.
         </p>
       </main>
@@ -135,7 +165,7 @@ export function AffiliateWorkspace() {
         description="Chia sẻ liên kết giới thiệu để theo dõi lượt đăng ký và hoa hồng."
         icon={UsersRound}
         section="Tiếp thị liên kết"
-          title="Tiếp thị liên kết"
+        title="Tiếp thị liên kết"
       />
 
       {me.isPending ? (
@@ -202,12 +232,16 @@ export function AffiliateWorkspace() {
             </button>
             {copyError ? (
               <p role="alert" className="text-sm text-red-700 sm:col-span-2">
-                Không sao chép được liên kết. Hãy chọn và sao chép nội dung trong ô liên kết.
+                Không sao chép được liên kết. Hãy chọn và sao chép nội dung
+                trong ô liên kết.
               </p>
             ) : null}
           </section>
 
-          <section aria-label="Thống kê giới thiệu" className="grid gap-3 sm:grid-cols-3">
+          <section
+            aria-label="Thống kê giới thiệu"
+            className="grid gap-3 sm:grid-cols-3"
+          >
             {metricCards.map(([key, label]) => (
               <MetricCard key={key} label={label} value={data[key]} />
             ))}
@@ -234,8 +268,14 @@ export function AffiliateWorkspace() {
         </>
       )}
 
-      <section aria-labelledby="referral-history-title" className="space-y-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5">
-        <h2 id="referral-history-title" className="text-lg font-bold sm:text-xl">
+      <section
+        aria-labelledby="referral-history-title"
+        className="space-y-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5"
+      >
+        <h2
+          id="referral-history-title"
+          className="text-lg font-bold sm:text-xl"
+        >
           Lượt giới thiệu gần đây
         </h2>
         {referrals.isPending ? (
@@ -243,9 +283,20 @@ export function AffiliateWorkspace() {
             Đang tải lượt giới thiệu…
           </p>
         ) : referrals.isError ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4" role="alert">
-            <p className="text-sm text-red-700">Chưa tải được lịch sử giới thiệu.</p>
-            <button className="min-h-10 font-bold underline" onClick={() => void referrals.refetch()} type="button">Tải lại</button>
+          <div
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4"
+            role="alert"
+          >
+            <p className="text-sm text-red-700">
+              Chưa tải được lịch sử giới thiệu.
+            </p>
+            <button
+              className="min-h-10 font-bold underline"
+              onClick={() => void referrals.refetch()}
+              type="button"
+            >
+              Tải lại
+            </button>
           </div>
         ) : referrals.data?.length ? (
           <ul className="mt-2 divide-y divide-[var(--theme-border)]">
@@ -260,8 +311,14 @@ export function AffiliateWorkspace() {
         )}
       </section>
 
-      <section aria-labelledby="commission-history-title" className="space-y-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5">
-        <h2 id="commission-history-title" className="text-lg font-bold sm:text-xl">
+      <section
+        aria-labelledby="commission-history-title"
+        className="space-y-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5"
+      >
+        <h2
+          id="commission-history-title"
+          className="text-lg font-bold sm:text-xl"
+        >
           Lịch sử hoa hồng
         </h2>
         {commissions.isPending ? (
@@ -269,9 +326,20 @@ export function AffiliateWorkspace() {
             Đang tải lịch sử hoa hồng…
           </p>
         ) : commissions.isError ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4" role="alert">
-            <p className="text-sm text-red-700">Chưa tải được lịch sử hoa hồng.</p>
-            <button className="min-h-10 font-bold underline" onClick={() => void commissions.refetch()} type="button">Tải lại</button>
+          <div
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4"
+            role="alert"
+          >
+            <p className="text-sm text-red-700">
+              Chưa tải được lịch sử hoa hồng.
+            </p>
+            <button
+              className="min-h-10 font-bold underline"
+              onClick={() => void commissions.refetch()}
+              type="button"
+            >
+              Tải lại
+            </button>
           </div>
         ) : commissions.data?.length ? (
           <ul className="mt-2 divide-y divide-[var(--theme-border)]">

@@ -193,6 +193,8 @@ async def list_my_commissions(
         data=[AffiliateCommissionData.model_validate(row) for row in rows],
         meta=ResponseMeta(request_id=request.state.request_id),
     )
+
+
 @router.get(
     "/me/referrals",
     response_model=SuccessEnvelope[list[AffiliateReferralSummaryData]],

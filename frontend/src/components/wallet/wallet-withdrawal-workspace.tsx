@@ -37,7 +37,9 @@ function WithdrawalRow({
             {new Date(item.createdAt).toLocaleString("vi-VN")}
           </p>
           {item.rejectionReason ? (
-            <p className="text-sm text-red-700">Lý do: {item.rejectionReason}</p>
+            <p className="text-sm text-red-700">
+              Lý do: {item.rejectionReason}
+            </p>
           ) : null}
         </div>
         <div className="flex items-center gap-2">
@@ -58,7 +60,8 @@ function WithdrawalRow({
         </div>
       </article>
       <p className="mt-2 text-xs text-[var(--theme-muted)]">
-        Phí {formatVnd(item.feeMinor)} · dự kiến nhận {formatVnd(item.netAmountMinor)}
+        Phí {formatVnd(item.feeMinor)} · dự kiến nhận{" "}
+        {formatVnd(item.netAmountMinor)}
       </p>
     </li>
   );
@@ -174,13 +177,17 @@ export function WalletWithdrawalWorkspace() {
         onRetry={() => void Promise.all([accounts.refetch(), banks.refetch()])}
       />
 
-      <section aria-labelledby="withdrawal-request-title" className="space-y-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
+      <section
+        aria-labelledby="withdrawal-request-title"
+        className="space-y-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
+      >
         <div>
           <h2 id="withdrawal-request-title" className="text-xl font-bold">
             Yêu cầu rút hoa hồng
           </h2>
           <p className="mt-1 text-sm text-[var(--theme-muted)]">
-            Yêu cầu sẽ chờ quản trị viên kiểm tra. Gửi yêu cầu không tự động chuyển tiền.
+            Yêu cầu sẽ chờ quản trị viên kiểm tra. Gửi yêu cầu không tự động
+            chuyển tiền.
           </p>
         </div>
         {loading ? (
@@ -188,14 +195,31 @@ export function WalletWithdrawalWorkspace() {
             Đang tải điều kiện rút…
           </p>
         ) : settings.isError || affiliate.isError ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4" role="alert">
-            <p className="text-sm text-red-700">Chưa tải được điều kiện rút. Vui lòng thử lại.</p>
-            <Button className="min-h-10" onClick={() => void Promise.all([settings.refetch(), affiliate.refetch()])} type="button" variant="outline">Tải lại</Button>
+          <div
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4"
+            role="alert"
+          >
+            <p className="text-sm text-red-700">
+              Chưa tải được điều kiện rút. Vui lòng thử lại.
+            </p>
+            <Button
+              className="min-h-10"
+              onClick={() =>
+                void Promise.all([settings.refetch(), affiliate.refetch()])
+              }
+              type="button"
+              variant="outline"
+            >
+              Tải lại
+            </Button>
           </div>
         ) : unavailable ? (
-          <p className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950" role="status">
-            Chức năng rút tiền hiện chưa được mở. Bạn vẫn có thể xem lịch sử
-            yêu cầu rút.
+          <p
+            className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+            role="status"
+          >
+            Chức năng rút tiền hiện chưa được mở. Bạn vẫn có thể xem lịch sử yêu
+            cầu rút.
           </p>
         ) : (
           <form
@@ -269,14 +293,24 @@ export function WalletWithdrawalWorkspace() {
         )}
       </section>
 
-      <section aria-labelledby="withdrawal-history-title" className="space-y-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5">
-        <h2 id="withdrawal-history-title" className="text-lg font-bold sm:text-xl">
+      <section
+        aria-labelledby="withdrawal-history-title"
+        className="space-y-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5"
+      >
+        <h2
+          id="withdrawal-history-title"
+          className="text-lg font-bold sm:text-xl"
+        >
           Lịch sử yêu cầu rút
         </h2>
         {create.data ? (
-          <p role="status" className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-950">
-            Mã yêu cầu {create.data.providerReference}: {withdrawalStatusLabel(create.data.status)}.
-            Gửi yêu cầu không tự động chuyển tiền.
+          <p
+            role="status"
+            className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-950"
+          >
+            Mã yêu cầu {create.data.providerReference}:{" "}
+            {withdrawalStatusLabel(create.data.status)}. Gửi yêu cầu không tự
+            động chuyển tiền.
           </p>
         ) : null}
         {withdrawals.isPending ? (
@@ -284,9 +318,21 @@ export function WalletWithdrawalWorkspace() {
             Đang tải lịch sử…
           </p>
         ) : withdrawals.isError ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4" role="alert">
-            <p className="text-sm text-red-700">Chưa tải được lịch sử yêu cầu rút.</p>
-            <Button className="min-h-10" onClick={() => void withdrawals.refetch()} type="button" variant="outline">Tải lại</Button>
+          <div
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4"
+            role="alert"
+          >
+            <p className="text-sm text-red-700">
+              Chưa tải được lịch sử yêu cầu rút.
+            </p>
+            <Button
+              className="min-h-10"
+              onClick={() => void withdrawals.refetch()}
+              type="button"
+              variant="outline"
+            >
+              Tải lại
+            </Button>
           </div>
         ) : withdrawals.data?.length ? (
           <ul className="mt-2 divide-y divide-[var(--theme-border)]">
@@ -304,7 +350,11 @@ export function WalletWithdrawalWorkspace() {
             Chưa có yêu cầu rút nào.
           </p>
         )}
-        {cancel.isError ? <p role="alert" className="text-sm text-red-700">Không hủy được yêu cầu. Vui lòng tải lại trạng thái rồi thử lại.</p> : null}
+        {cancel.isError ? (
+          <p role="alert" className="text-sm text-red-700">
+            Không hủy được yêu cầu. Vui lòng tải lại trạng thái rồi thử lại.
+          </p>
+        ) : null}
       </section>
     </div>
   );

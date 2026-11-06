@@ -486,7 +486,8 @@ export function AdvertisingAdminWorkspace() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="rounded-full bg-[var(--theme-elevated)] px-3 py-1 text-xs">
-                          {inventoryStatusLabels[entry.status] ?? "Đang cập nhật"}
+                          {inventoryStatusLabels[entry.status] ??
+                            "Đang cập nhật"}
                           {entry.paymentStatus
                             ? ` · ${paymentStatusLabels[entry.paymentStatus] ?? "Đang cập nhật"}`
                             : ""}

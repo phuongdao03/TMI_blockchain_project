@@ -1363,7 +1363,13 @@ export interface AdminAffiliateCommission {
   commissionAmountMinor: number;
   rateBasisPoints: number;
   currency: string;
-  status: "PENDING" | "ON_HOLD" | "AVAILABLE" | "REJECTED" | "REVERSED" | "SUPPRESSED";
+  status:
+    | "PENDING"
+    | "ON_HOLD"
+    | "AVAILABLE"
+    | "REJECTED"
+    | "REVERSED"
+    | "SUPPRESSED";
   earnedAt: string;
   holdUntil: string;
   approvedAt: string | null;

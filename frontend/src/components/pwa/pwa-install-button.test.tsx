@@ -104,7 +104,9 @@ describe("PWA installation", () => {
       await screen.findByRole("button", { name: "Cài ứng dụng" }),
     );
     expect(
-      await screen.findByText(/Trình duyệt chưa mở được cửa sổ cài đặt tự động/),
+      await screen.findByText(
+        /Trình duyệt chưa mở được cửa sổ cài đặt tự động/,
+      ),
     ).toBeDefined();
     expect(
       screen
@@ -155,9 +157,7 @@ describe("PWA installation", () => {
     });
     render(<PwaInstallButton />);
     await waitFor(() =>
-      expect(
-        screen.queryByRole("link", { name: "Cài ứng dụng" }),
-      ).toBeNull(),
+      expect(screen.queryByRole("link", { name: "Cài ứng dụng" })).toBeNull(),
     );
   });
 });

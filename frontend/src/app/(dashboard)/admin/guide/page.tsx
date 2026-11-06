@@ -296,7 +296,9 @@ export default function AdminGuidePage() {
                 liệu theo loại đã khai báo và ghi rõ căn cứ cho kết luận.
               </p>
               <Steps>
-                <li>Mở danh sách hồ sơ chờ thẩm định và phân công người phù hợp.</li>
+                <li>
+                  Mở danh sách hồ sơ chờ thẩm định và phân công người phù hợp.
+                </li>
                 <li>
                   Kiểm tra tiến độ; bảo đảm kết luận áp dụng cho đúng phiên bản
                   tài liệu.
@@ -427,9 +429,9 @@ export default function AdminGuidePage() {
                   động.
                 </li>
                 <li>
-                  Trong danh sách kiểm duyệt, hãy phân công hồ sơ phù hợp hoặc giao đầu việc.
-                  Chỉ cấp vai trò không tự sinh công việc trong tài khoản của
-                  người kiểm duyệt.
+                  Trong danh sách kiểm duyệt, hãy phân công hồ sơ phù hợp hoặc
+                  giao đầu việc. Chỉ cấp vai trò không tự sinh công việc trong
+                  tài khoản của người kiểm duyệt.
                 </li>
                 <li>
                   Nếu người đó cần chấm công, chuyển sang Hồ sơ nhân viên, tạo
@@ -498,8 +500,8 @@ export default function AdminGuidePage() {
                     GPS không lấy được hoặc tọa độ đã lưu bị sai
                   </summary>
                   <p className="mt-2">
-                    Kiểm tra HTTPS, quyền vị trí của trang web và dịch vụ định vị
-                    của thiết bị; thử lại tại văn phòng. Nếu vẫn lỗi, tìm địa
+                    Kiểm tra HTTPS, quyền vị trí của trang web và dịch vụ định
+                    vị của thiết bị; thử lại tại văn phòng. Nếu vẫn lỗi, tìm địa
                     chỉ hoặc nhập tọa độ đã xác minh. Với chính sách đang dùng,
                     bấm Sửa vị trí đã lưu, nhập lý do và kiểm tra lại tâm vùng
                     sau khi lưu.

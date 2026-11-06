@@ -58,7 +58,8 @@ export function CertificateVersionQueue() {
     return (
       <div className="grid min-h-72 place-items-center" role="status">
         <span className="flex items-center gap-2 text-sm font-bold text-neutral-600">
-          <LoaderCircle className="size-5 animate-spin" /> Đang tải yêu cầu cập nhật bằng…
+          <LoaderCircle className="size-5 animate-spin" /> Đang tải yêu cầu cập
+          nhật bằng…
         </span>
       </div>
     );
@@ -109,7 +110,9 @@ export function CertificateVersionQueue() {
       {queue.data.data.length === 0 ? (
         <section className="border border-dashed border-neutral-300 bg-white px-6 py-16 text-center">
           <Check className="mx-auto size-10 text-emerald-600" />
-          <h2 className="mt-4 text-xl font-bold">Không còn yêu cầu cần xử lý</h2>
+          <h2 className="mt-4 text-xl font-bold">
+            Không còn yêu cầu cần xử lý
+          </h2>
           <p className="mt-2 text-sm text-neutral-500">
             Chưa có yêu cầu cập nhật bằng xác lập cần xem xét.
           </p>
@@ -196,7 +199,8 @@ export function CertificateVersionQueue() {
 
       {decision.error ? (
         <Feedback title="Chưa thể lưu quyết định" tone="error">
-          Yêu cầu có thể đã được người khác xử lý. Hãy tải lại danh sách để xem trạng thái mới.
+          Yêu cầu có thể đã được người khác xử lý. Hãy tải lại danh sách để xem
+          trạng thái mới.
         </Feedback>
       ) : null}
 

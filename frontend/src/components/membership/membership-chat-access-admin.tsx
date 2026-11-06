@@ -131,8 +131,8 @@ export function MembershipChatAccessAdmin() {
           </div>
         </div>
         <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-emerald-700/20 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
-          <ShieldCheck aria-hidden="true" className="size-4" /> Quản trị viên có quyền truy cập
-          mọi phòng
+          <ShieldCheck aria-hidden="true" className="size-4" /> Quản trị viên có
+          quyền truy cập mọi phòng
         </span>
       </header>
 

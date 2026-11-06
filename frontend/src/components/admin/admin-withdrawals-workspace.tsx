@@ -9,7 +9,10 @@ import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
 import { adminWithdrawalApi, withdrawalApi } from "@/lib/api/client";
 import type { WalletWithdrawalStatus } from "@/lib/api/types";
 import { useAuthUser } from "@/lib/auth/user-context";
-import { payoutAttemptStatusLabel, withdrawalStatusLabel } from "@/lib/wallet-presentation";
+import {
+  payoutAttemptStatusLabel,
+  withdrawalStatusLabel,
+} from "@/lib/wallet-presentation";
 import { formatVnd } from "@/lib/wallet/summary";
 
 import { FinanceControlsPanel } from "./finance-controls-panel";
@@ -21,7 +24,8 @@ const inputClass =
 export function AdminWithdrawalsWorkspace() {
   const user = useAuthUser();
   const client = useQueryClient();
-  const [status, setStatus] = useState<WalletWithdrawalStatus>("PENDING_REVIEW");
+  const [status, setStatus] =
+    useState<WalletWithdrawalStatus>("PENDING_REVIEW");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [actionNotice, setActionNotice] = useState("");
@@ -29,7 +33,8 @@ export function AdminWithdrawalsWorkspace() {
   const [confirmPayout, setConfirmPayout] = useState(false);
   const roles = user?.roles ?? [];
   const permissions = user?.permissions ?? [];
-  const canRead = roles.includes("SUPER_ADMIN") || permissions.includes("finance.read");
+  const canRead =
+    roles.includes("SUPER_ADMIN") || permissions.includes("finance.read");
   const canApprove =
     roles.includes("SUPER_ADMIN") ||
     permissions.includes("finance.withdrawals.approve");
@@ -90,7 +95,9 @@ export function AdminWithdrawalsWorkspace() {
     mutationFn: adminWithdrawalApi.dispatchPayout,
     onSuccess: async () => {
       setActionError(false);
-      setActionNotice("Đã gửi lệnh chi trả. Theo dõi trạng thái yêu cầu tại đây.");
+      setActionNotice(
+        "Đã gửi lệnh chi trả. Theo dõi trạng thái yêu cầu tại đây.",
+      );
       setConfirmPayout(false);
       await refresh();
     },
@@ -122,29 +129,41 @@ export function AdminWithdrawalsWorkspace() {
         title="Yêu cầu rút tiền"
       />
       {!canRead ? (
-        <p role="alert" className="rounded-xl border border-red-300 p-4 text-sm text-red-700">
+        <p
+          role="alert"
+          className="rounded-xl border border-red-300 p-4 text-sm text-red-700"
+        >
           Bạn không có quyền xem yêu cầu rút tiền.
         </p>
       ) : (
         <>
-          <section aria-label="Bộ lọc và danh sách yêu cầu rút" className="space-y-5 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
+          <section
+            aria-label="Bộ lọc và danh sách yêu cầu rút"
+            className="space-y-5 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
+          >
             <p className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
-              Phê duyệt ghi nhận quyết định quản trị; thao tác này không tự động chuyển tiền.
+              Phê duyệt ghi nhận quyết định quản trị; thao tác này không tự động
+              chuyển tiền.
             </p>
             <p className="text-sm text-[var(--theme-muted)]">
-              Trạng thái chi trả tự động: <span className="font-semibold text-[var(--theme-foreground)]">{withdrawalSettings.isPending
-                ? "đang kiểm tra"
-                : withdrawalSettings.isError
-                  ? "chưa xác định"
-                  : withdrawalSettings.data?.payoutLiveEnabled
-                    ? "đang bật"
-                    : "đang tắt"}</span>
+              Trạng thái chi trả tự động:{" "}
+              <span className="font-semibold text-[var(--theme-foreground)]">
+                {withdrawalSettings.isPending
+                  ? "đang kiểm tra"
+                  : withdrawalSettings.isError
+                    ? "chưa xác định"
+                    : withdrawalSettings.data?.payoutLiveEnabled
+                      ? "đang bật"
+                      : "đang tắt"}
+              </span>
             </p>
             <label className="grid max-w-xs gap-1 text-sm font-semibold">
               Lọc theo trạng thái
               <select
                 className={inputClass}
-                onChange={(event) => setStatus(event.target.value as WalletWithdrawalStatus)}
+                onChange={(event) =>
+                  setStatus(event.target.value as WalletWithdrawalStatus)
+                }
                 value={status}
               >
                 {[
@@ -166,13 +185,29 @@ export function AdminWithdrawalsWorkspace() {
             </label>
 
             {list.isPending ? (
-              <p aria-busy="true" className="py-8 text-center text-sm" role="status">
+              <p
+                aria-busy="true"
+                className="py-8 text-center text-sm"
+                role="status"
+              >
                 Đang tải yêu cầu rút…
               </p>
             ) : list.isError ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4" role="alert">
-                <p className="text-sm text-red-700">Chưa tải được yêu cầu rút.</p>
-                <Button className="min-h-10" onClick={() => void list.refetch()} type="button" variant="outline">Tải lại</Button>
+              <div
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4"
+                role="alert"
+              >
+                <p className="text-sm text-red-700">
+                  Chưa tải được yêu cầu rút.
+                </p>
+                <Button
+                  className="min-h-10"
+                  onClick={() => void list.refetch()}
+                  type="button"
+                  variant="outline"
+                >
+                  Tải lại
+                </Button>
               </div>
             ) : list.data?.length ? (
               <ul className="divide-y divide-[var(--theme-border)] rounded-xl border border-[var(--theme-border)] px-4">
@@ -180,12 +215,19 @@ export function AdminWithdrawalsWorkspace() {
                   <li className="py-4" key={item.id}>
                     <article className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                       <div className="min-w-0 space-y-1">
-                        <p className="text-xs text-[var(--theme-muted)]">Mã yêu cầu <span className="font-mono font-semibold text-[var(--theme-foreground)]">{item.providerReference}</span></p>
+                        <p className="text-xs text-[var(--theme-muted)]">
+                          Mã yêu cầu{" "}
+                          <span className="font-mono font-semibold text-[var(--theme-foreground)]">
+                            {item.providerReference}
+                          </span>
+                        </p>
                         <p className="font-semibold">
                           {item.bankNameSnapshot} · {item.accountNumberMasked}
                         </p>
                         <p className="text-sm text-[var(--theme-muted)]">
-                          {formatVnd(item.amountMinor)} · Phí {formatVnd(item.feeMinor)} · Thực nhận {formatVnd(item.netAmountMinor)}
+                          {formatVnd(item.amountMinor)} · Phí{" "}
+                          {formatVnd(item.feeMinor)} · Thực nhận{" "}
+                          {formatVnd(item.netAmountMinor)}
                         </p>
                         <p className="text-xs text-[var(--theme-muted)]">
                           {new Date(item.createdAt).toLocaleString("vi-VN")}
@@ -245,34 +287,63 @@ export function AdminWithdrawalsWorkspace() {
                   Đang tải chi tiết…
                 </p>
               ) : detail.isError || !detail.data ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4" role="alert">
-                  <p className="text-sm text-red-700">Chưa tải được chi tiết yêu cầu.</p>
-                  <Button className="min-h-10" onClick={() => void detail.refetch()} type="button" variant="outline">Tải lại</Button>
+                <div
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4"
+                  role="alert"
+                >
+                  <p className="text-sm text-red-700">
+                    Chưa tải được chi tiết yêu cầu.
+                  </p>
+                  <Button
+                    className="min-h-10"
+                    onClick={() => void detail.refetch()}
+                    type="button"
+                    variant="outline"
+                  >
+                    Tải lại
+                  </Button>
                 </div>
               ) : (
                 <>
                   <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
                     <div>
-                      <dt className="text-[var(--theme-muted)]">Mã người dùng</dt>
-                      <dd className="mt-1 break-all font-mono">{detail.data.userId}</dd>
+                      <dt className="text-[var(--theme-muted)]">
+                        Mã người dùng
+                      </dt>
+                      <dd className="mt-1 break-all font-mono">
+                        {detail.data.userId}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-[var(--theme-muted)]">Ngân hàng</dt>
                       <dd className="mt-1 font-semibold">
-                        {detail.data.bankNameSnapshot} · {detail.data.bankBinSnapshot}
+                        {detail.data.bankNameSnapshot} ·{" "}
+                        {detail.data.bankBinSnapshot}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[var(--theme-muted)]">Chủ tài khoản</dt>
-                      <dd className="mt-1 font-semibold">{detail.data.accountName}</dd>
+                      <dt className="text-[var(--theme-muted)]">
+                        Chủ tài khoản
+                      </dt>
+                      <dd className="mt-1 font-semibold">
+                        {detail.data.accountName}
+                      </dd>
                     </div>
                     <div>
-                      <dt className="text-[var(--theme-muted)]">Số tài khoản</dt>
-                      <dd className="mt-1 font-mono font-semibold">{detail.data.accountNumber}</dd>
+                      <dt className="text-[var(--theme-muted)]">
+                        Số tài khoản
+                      </dt>
+                      <dd className="mt-1 font-mono font-semibold">
+                        {detail.data.accountNumber}
+                      </dd>
                     </div>
                     <div>
-                      <dt className="text-[var(--theme-muted)]">Số tiền yêu cầu</dt>
-                      <dd className="mt-1 font-semibold">{formatVnd(detail.data.amountMinor)}</dd>
+                      <dt className="text-[var(--theme-muted)]">
+                        Số tiền yêu cầu
+                      </dt>
+                      <dd className="mt-1 font-semibold">
+                        {formatVnd(detail.data.amountMinor)}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-[var(--theme-muted)]">Trạng thái</dt>
@@ -295,14 +366,31 @@ export function AdminWithdrawalsWorkspace() {
                     />
                   ) : null}
                   {detail.data.payoutAttempts.length ? (
-                    <section aria-labelledby="payout-attempts-title" className="border-t border-[var(--theme-border)] pt-4">
-                      <h3 id="payout-attempts-title" className="font-bold">Lịch sử chi trả</h3>
+                    <section
+                      aria-labelledby="payout-attempts-title"
+                      className="border-t border-[var(--theme-border)] pt-4"
+                    >
+                      <h3 id="payout-attempts-title" className="font-bold">
+                        Lịch sử chi trả
+                      </h3>
                       <ul className="mt-2 divide-y divide-[var(--theme-border)]">
                         {detail.data.payoutAttempts.map((attempt) => (
-                          <li className="flex flex-wrap justify-between gap-2 py-2 text-sm" key={attempt.id}>
-                            <span className="font-mono">{attempt.referenceId}</span>
-                            <span>{payoutAttemptStatusLabel(attempt.status)} · {attempt.attemptCount} lần thử</span>
-                            {attempt.providerErrorCode ? <span className="text-red-700">Mã lỗi: {attempt.providerErrorCode}</span> : null}
+                          <li
+                            className="flex flex-wrap justify-between gap-2 py-2 text-sm"
+                            key={attempt.id}
+                          >
+                            <span className="font-mono">
+                              {attempt.referenceId}
+                            </span>
+                            <span>
+                              {payoutAttemptStatusLabel(attempt.status)} ·{" "}
+                              {attempt.attemptCount} lần thử
+                            </span>
+                            {attempt.providerErrorCode ? (
+                              <span className="text-red-700">
+                                Mã lỗi: {attempt.providerErrorCode}
+                              </span>
+                            ) : null}
                           </li>
                         ))}
                       </ul>
@@ -328,13 +416,14 @@ export function AdminWithdrawalsWorkspace() {
                       <Button
                         className="min-h-11"
                         disabled={
-                          approve.isPending ||
-                          detail.data.userId === user?.id
+                          approve.isPending || detail.data.userId === user?.id
                         }
                         onClick={() => approve.mutate(selectedId)}
                         type="button"
                       >
-                        {approve.isPending ? "Đang ghi nhận…" : "Ghi nhận phê duyệt"}
+                        {approve.isPending
+                          ? "Đang ghi nhận…"
+                          : "Ghi nhận phê duyệt"}
                       </Button>
                       <Button
                         className="min-h-11"
@@ -350,18 +439,25 @@ export function AdminWithdrawalsWorkspace() {
                   {canExecutePayout && detail.data.status === "APPROVED" ? (
                     <div className="space-y-3 border-t border-red-300 pt-4">
                       <div>
-                        <h3 className="font-bold text-red-900">Gửi lệnh chi trả</h3>
+                        <h3 className="font-bold text-red-900">
+                          Gửi lệnh chi trả
+                        </h3>
                         <p className="mt-1 text-sm text-[var(--theme-muted)]">
-                          Đây là bước riêng sau khi phê duyệt. Khi cấu hình và thông tin payOS hợp lệ, lệnh này có thể chuyển tiền thật.
+                          Đây là bước riêng sau khi phê duyệt. Khi cấu hình và
+                          thông tin payOS hợp lệ, lệnh này có thể chuyển tiền
+                          thật.
                         </p>
                       </div>
                       <label className="flex items-start gap-2 text-sm font-semibold">
                         <input
                           checked={confirmPayout}
-                          onChange={(event) => setConfirmPayout(event.target.checked)}
+                          onChange={(event) =>
+                            setConfirmPayout(event.target.checked)
+                          }
                           type="checkbox"
                         />
-                        Tôi đã đối chiếu người nhận và số tiền, xác nhận gửi lệnh chi trả.
+                        Tôi đã đối chiếu người nhận và số tiền, xác nhận gửi
+                        lệnh chi trả.
                       </label>
                       <Button
                         className="min-h-11"
@@ -373,23 +469,30 @@ export function AdminWithdrawalsWorkspace() {
                         onClick={() => dispatchPayout.mutate(selectedId)}
                         type="button"
                       >
-                        {dispatchPayout.isPending ? "Đang gửi lệnh…" : "Gửi lệnh chi trả"}
+                        {dispatchPayout.isPending
+                          ? "Đang gửi lệnh…"
+                          : "Gửi lệnh chi trả"}
                       </Button>
                       {!withdrawalSettings.data?.payoutLiveEnabled ? (
                         <p role="status" className="text-sm text-amber-900">
-                          Chi trả tự động đang tắt hoặc chưa xác định. Chỉ bật trong cấu hình sau khi hoàn tất kiểm tra vận hành.
+                          Chi trả tự động đang tắt hoặc chưa xác định. Chỉ bật
+                          trong cấu hình sau khi hoàn tất kiểm tra vận hành.
                         </p>
                       ) : null}
                     </div>
                   ) : null}
                   {actionNotice ? (
-                    <p role="status" className="text-sm font-semibold text-emerald-800">
+                    <p
+                      role="status"
+                      className="text-sm font-semibold text-emerald-800"
+                    >
                       {actionNotice}
                     </p>
                   ) : null}
                   {actionError ? (
                     <p role="alert" className="text-sm text-red-700">
-                      Chưa nhận được kết quả chi trả. Hãy kiểm tra trạng thái yêu cầu trước khi thử lại.
+                      Chưa nhận được kết quả chi trả. Hãy kiểm tra trạng thái
+                      yêu cầu trước khi thử lại.
                     </p>
                   ) : null}
                 </>

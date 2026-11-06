@@ -24,7 +24,9 @@ export function WithdrawalVerificationPanel({
 }) {
   const client = useQueryClient();
   const [bankEvidence, setBankEvidence] = useState("");
-  const [identityStatus, setIdentityStatus] = useState<"" | "VERIFIED" | "REJECTED">("");
+  const [identityStatus, setIdentityStatus] = useState<
+    "" | "VERIFIED" | "REJECTED"
+  >("");
   const [identityEvidence, setIdentityEvidence] = useState("");
   const [identityReason, setIdentityReason] = useState("");
   const [message, setMessage] = useState("");
@@ -39,7 +41,9 @@ export function WithdrawalVerificationPanel({
     mutationFn: () =>
       adminWithdrawalApi.verifyBank(withdrawalId, bankEvidence.trim()),
     onSuccess: async (account) => {
-      setMessage(`Trạng thái xác minh ngân hàng: ${bankVerificationStatusLabel(account.verificationStatus)}.`);
+      setMessage(
+        `Trạng thái xác minh ngân hàng: ${bankVerificationStatusLabel(account.verificationStatus)}.`,
+      );
       setError(false);
       setBankEvidence("");
       await refresh();
@@ -57,7 +61,9 @@ export function WithdrawalVerificationPanel({
         reason: identityReason.trim(),
       }),
     onSuccess: async (result) => {
-      setMessage(`Kết quả xác minh danh tính: ${identityVerificationStatusLabel(result.status)}.`);
+      setMessage(
+        `Kết quả xác minh danh tính: ${identityVerificationStatusLabel(result.status)}.`,
+      );
       setError(false);
       setIdentityStatus("");
       setIdentityEvidence("");
@@ -71,13 +77,17 @@ export function WithdrawalVerificationPanel({
   });
 
   return (
-    <section aria-labelledby="verification-review-title" className="space-y-4 border-t border-[var(--theme-border)] pt-4">
+    <section
+      aria-labelledby="verification-review-title"
+      className="space-y-4 border-t border-[var(--theme-border)] pt-4"
+    >
       <div>
         <h3 id="verification-review-title" className="font-bold">
           Xác minh trước khi phê duyệt
         </h3>
         <p className="mt-1 text-sm text-[var(--theme-muted)]">
-          Ghi nhận tham chiếu bằng chứng theo hồ sơ nội bộ; không nhập dữ liệu giấy tờ nhạy cảm vào đây.
+          Ghi nhận tham chiếu bằng chứng theo hồ sơ nội bộ; không nhập dữ liệu
+          giấy tờ nhạy cảm vào đây.
         </p>
       </div>
       <form
@@ -98,7 +108,12 @@ export function WithdrawalVerificationPanel({
             value={bankEvidence}
           />
         </label>
-        <Button className="min-h-11" disabled={verifyBank.isPending} type="submit" variant="outline">
+        <Button
+          className="min-h-11"
+          disabled={verifyBank.isPending}
+          type="submit"
+          variant="outline"
+        >
           {verifyBank.isPending ? "Đang xác minh…" : "Xác nhận ngân hàng"}
         </Button>
       </form>
@@ -113,7 +128,9 @@ export function WithdrawalVerificationPanel({
           Kết quả xác minh danh tính
           <select
             className={inputClass}
-            onChange={(event) => setIdentityStatus(event.target.value as typeof identityStatus)}
+            onChange={(event) =>
+              setIdentityStatus(event.target.value as typeof identityStatus)
+            }
             required
             value={identityStatus}
           >
@@ -124,18 +141,45 @@ export function WithdrawalVerificationPanel({
         </label>
         <label className="grid gap-1 text-sm font-semibold">
           Tham chiếu bằng chứng
-          <input className={inputClass} maxLength={128} minLength={5} onChange={(event) => setIdentityEvidence(event.target.value)} required value={identityEvidence} />
+          <input
+            className={inputClass}
+            maxLength={128}
+            minLength={5}
+            onChange={(event) => setIdentityEvidence(event.target.value)}
+            required
+            value={identityEvidence}
+          />
         </label>
         <label className="grid gap-1 text-sm font-semibold sm:col-span-2">
           Lý do và ghi chú kiểm tra
-          <textarea className="min-h-20 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm" maxLength={1000} minLength={10} onChange={(event) => setIdentityReason(event.target.value)} required value={identityReason} />
+          <textarea
+            className="min-h-20 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm"
+            maxLength={1000}
+            minLength={10}
+            onChange={(event) => setIdentityReason(event.target.value)}
+            required
+            value={identityReason}
+          />
         </label>
-        <Button className="min-h-11 sm:justify-self-start" disabled={reviewIdentity.isPending || !identityStatus} type="submit">
+        <Button
+          className="min-h-11 sm:justify-self-start"
+          disabled={reviewIdentity.isPending || !identityStatus}
+          type="submit"
+        >
           {reviewIdentity.isPending ? "Đang lưu…" : "Lưu kết quả xác minh"}
         </Button>
       </form>
-      {message ? <p role="status" className="text-sm font-semibold text-emerald-800">{message}</p> : null}
-      {error ? <p role="alert" className="text-sm text-red-700">Không lưu được kết quả xác minh. Hãy kiểm tra quyền và tham chiếu bằng chứng.</p> : null}
+      {message ? (
+        <p role="status" className="text-sm font-semibold text-emerald-800">
+          {message}
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="text-sm text-red-700">
+          Không lưu được kết quả xác minh. Hãy kiểm tra quyền và tham chiếu bằng
+          chứng.
+        </p>
+      ) : null}
     </section>
   );
 }

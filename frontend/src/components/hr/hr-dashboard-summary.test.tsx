@@ -84,9 +84,7 @@ describe("HrDashboardSummary", () => {
       .mockResolvedValueOnce(payload);
     render(<HrDashboardSummary />, { wrapper: Wrapper });
 
-    await user.click(
-      await screen.findByRole("button", { name: "Thử lại" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Thử lại" }));
     expect(
       await screen.findByRole("link", { name: /nhân viên đang hoạt động/i }),
     ).toBeDefined();

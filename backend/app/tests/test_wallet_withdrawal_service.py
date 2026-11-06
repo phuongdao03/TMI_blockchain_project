@@ -299,9 +299,14 @@ def test_admin_approval_is_required_and_never_creates_a_payout_inline() -> None:
 
 def test_payout_submission_requires_gates_and_settles_reserved_ledger() -> None:
     async def exercise() -> None:
-        payment_service, sessions, engine, owner, cipher, bank_id = (
-            await _prepared_withdrawal()
-        )
+        (
+            payment_service,
+            sessions,
+            engine,
+            owner,
+            cipher,
+            bank_id,
+        ) = await _prepared_withdrawal()
         try:
             async with sessions() as session:
                 service = WalletWithdrawalService(
@@ -357,8 +362,7 @@ def test_payout_submission_requires_gates_and_settles_reserved_ledger() -> None:
                     state="UNKNOWN",
                 )
                 assert (
-                    unknown is not None
-                    and unknown.status == "RECONCILIATION_REQUIRED"
+                    unknown is not None and unknown.status == "RECONCILIATION_REQUIRED"
                 )
                 async with session.begin():
                     _available, reserved = await FinanceLedger(session).user_accounts(
@@ -395,9 +399,14 @@ def test_payout_submission_requires_gates_and_settles_reserved_ledger() -> None:
 
 def test_confirmed_payout_failure_releases_reserve_once() -> None:
     async def exercise() -> None:
-        payment_service, sessions, engine, owner, cipher, bank_id = (
-            await _prepared_withdrawal()
-        )
+        (
+            payment_service,
+            sessions,
+            engine,
+            owner,
+            cipher,
+            bank_id,
+        ) = await _prepared_withdrawal()
         try:
             async with sessions() as session:
                 service = WalletWithdrawalService(

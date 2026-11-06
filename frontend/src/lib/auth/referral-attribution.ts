@@ -47,7 +47,9 @@ export function getReferralAttribution(): ReferralAttribution | null {
   return null;
 }
 
-export function captureReferralCode(code?: string | null): ReferralAttribution | null {
+export function captureReferralCode(
+  code?: string | null,
+): ReferralAttribution | null {
   const existing = getReferralAttribution();
   if (existing) return existing;
   const referralCode = code?.trim();

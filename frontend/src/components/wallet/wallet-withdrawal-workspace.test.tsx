@@ -118,7 +118,9 @@ describe("WalletWithdrawalWorkspace", () => {
       ),
     );
     expect(await screen.findByText(/Chờ xét duyệt/)).toBeTruthy();
-    expect(screen.getAllByText(/không tự động chuyển tiền/).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/không tự động chuyển tiền/).length,
+    ).toBeGreaterThan(0);
   });
 
   it("does not allow requests while withdrawals are disabled", async () => {
@@ -137,6 +139,8 @@ describe("WalletWithdrawalWorkspace", () => {
     renderWorkspace();
 
     expect(await screen.findByText(/chưa được mở/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Gửi yêu cầu rút" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Gửi yêu cầu rút" }),
+    ).toBeNull();
   });
 });

@@ -59,9 +59,9 @@ def test_affiliate_api_exposes_real_dashboard_attribution_and_admin_rules() -> N
             app.include_router(admin_router)
             app.dependency_overrides[get_affiliate_service] = lambda: affiliate_service
             app.dependency_overrides[get_current_principal] = lambda: principal[0]
-            app.dependency_overrides[get_csrf_protected_principal] = (
-                lambda: principal[0]
-            )
+            app.dependency_overrides[get_csrf_protected_principal] = lambda: principal[
+                0
+            ]
             app.dependency_overrides[get_settings] = lambda: settings
 
             async with httpx.AsyncClient(
@@ -150,9 +150,7 @@ def test_affiliate_api_exposes_real_dashboard_attribution_and_admin_rules() -> N
                 )
                 assert restored.status_code == 200
                 assert restored.json()["data"]["status"] == "ACTIVE"
-                rule_rows = await client.get(
-                    "/api/v1/admin/affiliate/commission-rules"
-                )
+                rule_rows = await client.get("/api/v1/admin/affiliate/commission-rules")
                 assert rule_rows.status_code == 200
                 assert rule_rows.json()["data"][0]["enabled"] is False
                 admin_commissions = await client.get(

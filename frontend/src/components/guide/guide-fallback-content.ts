@@ -35,7 +35,8 @@ export const STARTER_GUIDES: CmsGuideArticle[] = [
     id: "starter:dossier-submission",
     title: "Chuẩn bị và gửi hồ sơ đề cử",
     slug: "huong-dan-gui-ho-so",
-    summary: "Chọn đúng loại hồ sơ, lưu bản nháp, kiểm tra tài liệu rồi gửi xét duyệt.",
+    summary:
+      "Chọn đúng loại hồ sơ, lưu bản nháp, kiểm tra tài liệu rồi gửi xét duyệt.",
     category: "dossiers",
     audiences: ["PUBLIC"],
     status: "PUBLISHED",
@@ -68,7 +69,8 @@ export const STARTER_GUIDES: CmsGuideArticle[] = [
     id: "starter:dossier-follow-up",
     title: "Theo dõi trạng thái và bổ sung hồ sơ",
     slug: "huong-dan-theo-doi-ho-so",
-    summary: "Đọc dòng thời gian, xử lý yêu cầu bổ sung và kiểm tra kết quả mới.",
+    summary:
+      "Đọc dòng thời gian, xử lý yêu cầu bổ sung và kiểm tra kết quả mới.",
     category: "dossiers",
     audiences: ["PUBLIC"],
     status: "PUBLISHED",
@@ -95,7 +97,8 @@ export const STARTER_GUIDES: CmsGuideArticle[] = [
     id: "starter:wallet-topup",
     title: "Nạp tiền vào ví và kiểm tra giao dịch",
     slug: "huong-dan-nap-tien-vao-vi",
-    summary: "Nạp từ 5.000đ, thanh toán bằng mã QR và kiểm tra trạng thái giao dịch.",
+    summary:
+      "Nạp từ 5.000đ, thanh toán bằng mã QR và kiểm tra trạng thái giao dịch.",
     category: "wallet",
     audiences: ["PUBLIC"],
     status: "PUBLISHED",
@@ -219,7 +222,7 @@ export function matchesStarterGuide(
   const normalizedQuery = normalizeGuideSearch(query);
   if (!normalizedQuery) return true;
   const content = article.bodyHtml.replace(/<[^>]*>/g, " ");
-  return normalizeGuideSearch(`${article.title} ${article.summary} ${content}`).includes(
-    normalizedQuery,
-  );
+  return normalizeGuideSearch(
+    `${article.title} ${article.summary} ${content}`,
+  ).includes(normalizedQuery);
 }

@@ -186,7 +186,8 @@ export function MembershipBenefitCenter({ tier }: { tier: MembershipTier }) {
         ) : null}
         {submit.isSuccess ? (
           <p className="text-sm text-emerald-700 sm:col-span-2" role="status">
-            Đã gửi yêu cầu. Bạn có thể theo dõi trạng thái tại mục Yêu cầu của tôi.
+            Đã gửi yêu cầu. Bạn có thể theo dõi trạng thái tại mục Yêu cầu của
+            tôi.
           </p>
         ) : null}
       </form>

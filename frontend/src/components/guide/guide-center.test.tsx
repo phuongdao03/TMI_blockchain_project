@@ -166,9 +166,7 @@ describe("GuideCenter", () => {
     expect(
       await screen.findByText(/Hướng dẫn phù hợp đã có ở phía trên/),
     ).toBeDefined();
-    expect(
-      screen.getByRole("heading", { name: /Nạp tiền/ }),
-    ).toBeDefined();
+    expect(screen.getByRole("heading", { name: /Nạp tiền/ })).toBeDefined();
     expect(screen.queryByRole("link", { name: /Tìm và xem đề cử/ })).toBeNull();
   });
 

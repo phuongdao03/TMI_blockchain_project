@@ -26,7 +26,11 @@ const { api, affiliateApi, withdrawalApi, auth } = vi.hoisted(() => ({
   auth: { user: null as { id: string; roles: string[] } | null },
 }));
 
-vi.mock("@/lib/api/client", () => ({ walletApi: api, affiliateApi, withdrawalApi }));
+vi.mock("@/lib/api/client", () => ({
+  walletApi: api,
+  affiliateApi,
+  withdrawalApi,
+}));
 vi.mock("@/lib/auth/user-context", () => ({ useAuthUser: () => auth.user }));
 
 const summary = {

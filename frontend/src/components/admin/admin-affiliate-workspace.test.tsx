@@ -36,7 +36,9 @@ vi.mock("@/lib/auth/user-context", () => ({
 function renderWorkspace() {
   return render(
     <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
     >
       <AdminAffiliateWorkspace />
     </QueryClientProvider>,
@@ -91,9 +93,15 @@ describe("AdminAffiliateWorkspace", () => {
         createdAt: "2026-11-02T00:00:00Z",
       },
     ]);
-    adminAffiliateApi.approveCommission.mockResolvedValue({ status: "ON_HOLD" });
-    adminAffiliateApi.rejectCommission.mockResolvedValue({ status: "REJECTED" });
-    adminAffiliateApi.reverseCommission.mockResolvedValue({ status: "REVERSED" });
+    adminAffiliateApi.approveCommission.mockResolvedValue({
+      status: "ON_HOLD",
+    });
+    adminAffiliateApi.rejectCommission.mockResolvedValue({
+      status: "REJECTED",
+    });
+    adminAffiliateApi.reverseCommission.mockResolvedValue({
+      status: "REVERSED",
+    });
     adminAffiliateApi.commissionRules.mockResolvedValue([
       {
         id: "rule-1",
@@ -111,7 +119,9 @@ describe("AdminAffiliateWorkspace", () => {
       },
     ]);
     adminAffiliateApi.createCommissionRules.mockResolvedValue({ id: "rule-2" });
-    adminAffiliateApi.publishCommissionRules.mockResolvedValue({ status: "PUBLISHED" });
+    adminAffiliateApi.publishCommissionRules.mockResolvedValue({
+      status: "PUBLISHED",
+    });
   });
 
   it("suspends an affiliate only after a reason is supplied", async () => {
@@ -136,7 +146,9 @@ describe("AdminAffiliateWorkspace", () => {
     renderWorkspace();
 
     expect(await screen.findByText("THV-ABC123")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Xem lịch sử giới thiệu" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Xem lịch sử giới thiệu" }),
+    );
 
     await waitFor(() => {
       expect(adminAffiliateApi.profileReferrals).toHaveBeenCalledWith(
@@ -153,7 +165,9 @@ describe("AdminAffiliateWorkspace", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Phê duyệt" }));
     await waitFor(() => {
-      expect(adminAffiliateApi.approveCommission.mock.calls[0]?.[0]).toBe("commission-1");
+      expect(adminAffiliateApi.approveCommission.mock.calls[0]?.[0]).toBe(
+        "commission-1",
+      );
     });
 
     fireEvent.change(screen.getByLabelText("Dịch vụ"), {
@@ -164,7 +178,9 @@ describe("AdminAffiliateWorkspace", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Tạo bản nháp" }));
     await waitFor(() => {
-      expect(adminAffiliateApi.createCommissionRules.mock.calls[0]?.[0]).toEqual({
+      expect(
+        adminAffiliateApi.createCommissionRules.mock.calls[0]?.[0],
+      ).toEqual({
         enabled: false,
         attributionWindowDays: 30,
         holdDays: 30,
@@ -172,9 +188,13 @@ describe("AdminAffiliateWorkspace", () => {
       });
     });
 
-    fireEvent.click(await screen.findByRole("button", { name: "Phát hành phiên bản" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Phát hành phiên bản" }),
+    );
     await waitFor(() => {
-      expect(adminAffiliateApi.publishCommissionRules.mock.calls[0]?.[0]).toBe("rule-1");
+      expect(adminAffiliateApi.publishCommissionRules.mock.calls[0]?.[0]).toBe(
+        "rule-1",
+      );
     });
   });
 });

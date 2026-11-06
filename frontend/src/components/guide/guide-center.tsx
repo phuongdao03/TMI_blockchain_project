@@ -121,7 +121,9 @@ export function GuideCenter({ scope }: { scope: "public" | "account" }) {
     return STARTER_GUIDES.filter((article) => {
       if (!matchesStarterGuide(article, query, activeCategory)) return false;
       const published = catalogBySlug.get(article.slug);
-      return !published || !matchesStarterGuide(published, query, activeCategory);
+      return (
+        !published || !matchesStarterGuide(published, query, activeCategory)
+      );
     });
   }, [activeCategory, catalogArticles, query]);
   const listing = useQuery({

@@ -917,7 +917,9 @@ export function BlockchainSigningWorkspace() {
           </p>
         ) : null}
         {wallet.data && queue.isPending ? (
-          <p className="p-6 text-sm text-neutral-600">Đang tải giao dịch chờ ký…</p>
+          <p className="p-6 text-sm text-neutral-600">
+            Đang tải giao dịch chờ ký…
+          </p>
         ) : null}
         {wallet.data && queue.error ? (
           <p className="p-6 text-sm text-rose-700">

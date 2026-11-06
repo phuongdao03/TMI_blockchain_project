@@ -158,7 +158,9 @@ describe("DashboardNavigation work-allocation migration", () => {
       </AuthUserProvider>,
     );
 
-    expect(view.container.querySelector('a[href="/admin/affiliate"]')).not.toBeNull();
+    expect(
+      view.container.querySelector('a[href="/admin/affiliate"]'),
+    ).not.toBeNull();
   });
 
   it("does not show community moderation to a moderator without the capability", () => {

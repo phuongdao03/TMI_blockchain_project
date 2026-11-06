@@ -148,8 +148,8 @@ export function AttendanceLocationExceptionPanel() {
             Vị trí cần xét duyệt
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-700 dark:text-neutral-300">
-            Chỉ quản trị viên cấp cao xem được vị trí GPS chính xác. Duyệt hoặc từ
-            chối tại đây để tránh điều chỉnh thủ công làm sai trạng thái chấm
+            Chỉ quản trị viên cấp cao xem được vị trí GPS chính xác. Duyệt hoặc
+            từ chối tại đây để tránh điều chỉnh thủ công làm sai trạng thái chấm
             công.
           </p>
         </div>
@@ -342,8 +342,8 @@ function EvidenceDecisionForm({
             evidence.clientCapturedAt,
             evidence.effectiveTimezone,
           )}
-          . Thời điểm ghi nhận: {" "}
-          {formatDateTime(evidence.receivedAt, "UTC")} UTC.
+          . Thời điểm ghi nhận: {formatDateTime(evidence.receivedAt, "UTC")}{" "}
+          UTC.
         </span>
       </p>
       <label

@@ -464,10 +464,10 @@ class WalletService:
             self._validate(result, code, amount)
             if expires_at.tzinfo is None:
                 expires_at = expires_at.replace(tzinfo=UTC)
-            if (
-                result.status in {"PENDING", "PROCESSING"}
-                and expires_at <= datetime.now(UTC)
-            ):
+            if result.status in {
+                "PENDING",
+                "PROCESSING",
+            } and expires_at <= datetime.now(UTC):
                 result = await self.gateway.cancel_order(
                     provider_id or code,
                     reason="Lệnh nạp đã hết hạn.",

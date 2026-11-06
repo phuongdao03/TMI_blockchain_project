@@ -111,7 +111,9 @@ export function CheckoutVoucherSelector({
           {order &&
             value &&
             !quote.data?.vouchers.some((item) => item.voucherId === value) && (
-              <option value={value}>Ưu đãi đang được áp dụng cho đơn này</option>
+              <option value={value}>
+                Ưu đãi đang được áp dụng cho đơn này
+              </option>
             )}
         </select>
       </label>

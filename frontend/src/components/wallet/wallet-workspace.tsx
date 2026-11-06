@@ -82,7 +82,13 @@ export function WalletWorkspace({
     return (
       <div className="mx-auto max-w-4xl space-y-8 pb-8">
         {header}
-        <p aria-busy="true" className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-sm" role="status">Đang tải số dư và lịch sử nạp ví…</p>
+        <p
+          aria-busy="true"
+          className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-sm"
+          role="status"
+        >
+          Đang tải số dư và lịch sử nạp ví…
+        </p>
         {!previewData ? <WalletWithdrawalWorkspace /> : null}
       </div>
     );
@@ -90,9 +96,21 @@ export function WalletWorkspace({
     return (
       <div className="mx-auto max-w-4xl space-y-5 pb-8">
         {header}
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4" role="alert">
-          <p className="text-sm text-red-700">Chưa tải được số dư trả trước và lịch sử nạp ví.</p>
-          <Button className="min-h-10" onClick={() => void wallet.refetch()} type="button" variant="outline">Tải lại ví</Button>
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4"
+          role="alert"
+        >
+          <p className="text-sm text-red-700">
+            Chưa tải được số dư trả trước và lịch sử nạp ví.
+          </p>
+          <Button
+            className="min-h-10"
+            onClick={() => void wallet.refetch()}
+            type="button"
+            variant="outline"
+          >
+            Tải lại ví
+          </Button>
         </div>
         {!previewData ? <WalletWithdrawalWorkspace /> : null}
       </div>
@@ -179,38 +197,38 @@ export function WalletWorkspace({
             >
               Số tiền cần nạp
               <span className="relative mt-2 block">
-              <input
-                ref={amountInputRef}
-                id="wallet-topup"
-                disabled={Boolean(previewData) || topup.isPending}
-                inputMode="numeric"
-                required
-                autoComplete="off"
-                aria-describedby="topup-help"
-                className="min-h-14 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] py-3 pr-16 pl-4 text-xl font-semibold tabular-nums tracking-[0.02em] outline-none transition focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/25 disabled:opacity-60"
-                type="text"
-                value={formatAmountDigits(amount)}
-                onChange={(event) => {
-                  const input = event.currentTarget;
-                  const digitCountBeforeCaret = input.value
-                    .slice(0, input.selectionStart ?? input.value.length)
-                    .replace(/\D/g, "").length;
-                  const nextAmount = input.value
-                    .replace(/\D/g, "")
-                    .replace(/^0+(?=\d)/, "");
-                  setAmount(nextAmount);
-                  setKey(crypto.randomUUID());
-                  topup.reset();
-                  window.requestAnimationFrame(() => {
-                    if (document.activeElement !== input) return;
-                    const position = caretAfterDigitCount(
-                      formatAmountDigits(nextAmount),
-                      digitCountBeforeCaret,
-                    );
-                    input.setSelectionRange(position, position);
-                  });
-                }}
-              />
+                <input
+                  ref={amountInputRef}
+                  id="wallet-topup"
+                  disabled={Boolean(previewData) || topup.isPending}
+                  inputMode="numeric"
+                  required
+                  autoComplete="off"
+                  aria-describedby="topup-help"
+                  className="min-h-14 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] py-3 pr-16 pl-4 text-xl font-semibold tabular-nums tracking-[0.02em] outline-none transition focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/25 disabled:opacity-60"
+                  type="text"
+                  value={formatAmountDigits(amount)}
+                  onChange={(event) => {
+                    const input = event.currentTarget;
+                    const digitCountBeforeCaret = input.value
+                      .slice(0, input.selectionStart ?? input.value.length)
+                      .replace(/\D/g, "").length;
+                    const nextAmount = input.value
+                      .replace(/\D/g, "")
+                      .replace(/^0+(?=\d)/, "");
+                    setAmount(nextAmount);
+                    setKey(crypto.randomUUID());
+                    topup.reset();
+                    window.requestAnimationFrame(() => {
+                      if (document.activeElement !== input) return;
+                      const position = caretAfterDigitCount(
+                        formatAmountDigits(nextAmount),
+                        digitCountBeforeCaret,
+                      );
+                      input.setSelectionRange(position, position);
+                    });
+                  }}
+                />
                 <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium text-[var(--theme-muted)]">
                   đồng
                 </span>
@@ -224,11 +242,13 @@ export function WalletWorkspace({
             </Button>
           </form>
           <p id="topup-help" className="mt-2 text-sm text-[var(--theme-muted)]">
-            Nạp tối thiểu 5.000đ. Số dư ví tăng sau khi thanh toán được xác nhận.
+            Nạp tối thiểu 5.000đ. Số dư ví tăng sau khi thanh toán được xác
+            nhận.
           </p>
           {amount && !Number.isSafeInteger(amountValue) ? (
             <p className="mt-2 text-sm text-red-700" role="alert">
-              Số tiền vượt quá giới hạn xử lý an toàn. Vui lòng nhập số tiền nhỏ hơn.
+              Số tiền vượt quá giới hạn xử lý an toàn. Vui lòng nhập số tiền nhỏ
+              hơn.
             </p>
           ) : null}
           {topup.isError && (
@@ -270,115 +290,130 @@ export function WalletWorkspace({
               </Button>
             </div>
           ) : (
-          <>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-primary-800">
-                Thanh toán qua mã QR
-              </p>
-              <h2 id="topup-payment-title" className="mt-1 text-xl font-bold">
-                Quét mã để nạp {formatVnd(currentTopup.amountMinor)}
-              </h2>
-              <p className="mt-1 text-sm text-[var(--theme-muted)]">
-                Mã yêu cầu nạp {currentTopup.orderCode} · Hết hạn lúc{" "}
-                {new Date(currentTopup.expiresAt).toLocaleString("vi-VN")}
-              </p>
-              <p className="mt-2 text-sm text-[var(--theme-muted)]">
-                Yêu cầu có hiệu lực trong 10 phút. Quét mã bằng ứng dụng ngân
-                hàng và chuyển đúng số tiền cùng nội dung bên dưới.
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => setActiveTopup(null)}
-              type="button"
-            >
-              Ẩn hướng dẫn
-            </Button>
-          </div>
-          <div className="mt-6 grid gap-6 sm:grid-cols-[15rem_minmax(0,1fr)] sm:items-center">
-            {currentTopup.qrPayload && !qrImageFailed ? (
-              <Image
-                alt={`Mã QR thanh toán ${formatVnd(currentTopup.amountMinor)}`}
-                className="mx-auto h-auto w-full max-w-60 rounded-xl border border-[var(--theme-border)] bg-white p-2"
-                height={240}
-                onError={() => setQrImageFailed(true)}
-                src={`/api/v1/wallet/topups/${encodeURIComponent(currentTopup.id)}/qr`}
-                unoptimized
-                width={240}
-              />
-            ) : (
-              <div className="grid justify-items-center gap-3 rounded-xl bg-[var(--theme-elevated)] p-4 text-center">
-                <p className="text-sm text-[var(--theme-muted)]">
-                  Chưa hiển thị được mã QR. Hãy khôi phục mã cho yêu cầu này;
-                  không cần tạo yêu cầu mới.
-                </p>
+            <>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-primary-800">
+                    Thanh toán qua mã QR
+                  </p>
+                  <h2
+                    id="topup-payment-title"
+                    className="mt-1 text-xl font-bold"
+                  >
+                    Quét mã để nạp {formatVnd(currentTopup.amountMinor)}
+                  </h2>
+                  <p className="mt-1 text-sm text-[var(--theme-muted)]">
+                    Mã yêu cầu nạp {currentTopup.orderCode} · Hết hạn lúc{" "}
+                    {new Date(currentTopup.expiresAt).toLocaleString("vi-VN")}
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--theme-muted)]">
+                    Yêu cầu có hiệu lực trong 10 phút. Quét mã bằng ứng dụng
+                    ngân hàng và chuyển đúng số tiền cùng nội dung bên dưới.
+                  </p>
+                </div>
                 <Button
-                  type="button"
                   variant="outline"
-                  disabled={resume.isPending}
-                  onClick={() => resume.mutate(currentTopup.id)}
+                  onClick={() => setActiveTopup(null)}
+                  type="button"
                 >
-                  {resume.isPending ? "Đang khôi phục mã…" : "Khôi phục mã QR"}
+                  Ẩn hướng dẫn
                 </Button>
               </div>
-            )}
-            {(resume.isError || qrImageFailed) &&
-              (!currentTopup.qrPayload || qrImageFailed) && (
-                <p className="mt-3 text-sm text-red-700" role="alert">
-                  Chưa khôi phục được mã. Hãy thử lại hoặc dùng
-                  thông tin chuyển khoản hiển thị trên trang này.
-                </p>
-              )}
-            <dl className="grid gap-3 text-sm sm:grid-cols-2">
-              {currentTopup.bankAccountName && (
-                <div>
-                  <dt className="text-[var(--theme-muted)]">Chủ tài khoản</dt>
-                  <dd className="mt-1 font-semibold">
-                    {currentTopup.bankAccountName}
-                  </dd>
-                </div>
-              )}
-              {currentTopup.bankBin && (
-                <div>
-                  <dt className="text-[var(--theme-muted)]">Mã ngân hàng</dt>
-                  <dd className="mt-1 font-semibold">{currentTopup.bankBin}</dd>
-                </div>
-              )}
-              {currentTopup.bankAccountNumber && (
-                <div>
-                  <dt className="text-[var(--theme-muted)]">Số tài khoản</dt>
-                  <dd className="mt-1 font-semibold">
-                    {currentTopup.bankAccountNumber}
-                  </dd>
-                </div>
-              )}
-              <div>
-                <dt className="text-[var(--theme-muted)]">Số tiền chuyển</dt>
-                <dd className="mt-1 font-semibold">
-                  {formatVnd(currentTopup.amountMinor)}
-                </dd>
+              <div className="mt-6 grid gap-6 sm:grid-cols-[15rem_minmax(0,1fr)] sm:items-center">
+                {currentTopup.qrPayload && !qrImageFailed ? (
+                  <Image
+                    alt={`Mã QR thanh toán ${formatVnd(currentTopup.amountMinor)}`}
+                    className="mx-auto h-auto w-full max-w-60 rounded-xl border border-[var(--theme-border)] bg-white p-2"
+                    height={240}
+                    onError={() => setQrImageFailed(true)}
+                    src={`/api/v1/wallet/topups/${encodeURIComponent(currentTopup.id)}/qr`}
+                    unoptimized
+                    width={240}
+                  />
+                ) : (
+                  <div className="grid justify-items-center gap-3 rounded-xl bg-[var(--theme-elevated)] p-4 text-center">
+                    <p className="text-sm text-[var(--theme-muted)]">
+                      Chưa hiển thị được mã QR. Hãy khôi phục mã cho yêu cầu
+                      này; không cần tạo yêu cầu mới.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={resume.isPending}
+                      onClick={() => resume.mutate(currentTopup.id)}
+                    >
+                      {resume.isPending
+                        ? "Đang khôi phục mã…"
+                        : "Khôi phục mã QR"}
+                    </Button>
+                  </div>
+                )}
+                {(resume.isError || qrImageFailed) &&
+                  (!currentTopup.qrPayload || qrImageFailed) && (
+                    <p className="mt-3 text-sm text-red-700" role="alert">
+                      Chưa khôi phục được mã. Hãy thử lại hoặc dùng thông tin
+                      chuyển khoản hiển thị trên trang này.
+                    </p>
+                  )}
+                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                  {currentTopup.bankAccountName && (
+                    <div>
+                      <dt className="text-[var(--theme-muted)]">
+                        Chủ tài khoản
+                      </dt>
+                      <dd className="mt-1 font-semibold">
+                        {currentTopup.bankAccountName}
+                      </dd>
+                    </div>
+                  )}
+                  {currentTopup.bankBin && (
+                    <div>
+                      <dt className="text-[var(--theme-muted)]">
+                        Mã ngân hàng
+                      </dt>
+                      <dd className="mt-1 font-semibold">
+                        {currentTopup.bankBin}
+                      </dd>
+                    </div>
+                  )}
+                  {currentTopup.bankAccountNumber && (
+                    <div>
+                      <dt className="text-[var(--theme-muted)]">
+                        Số tài khoản
+                      </dt>
+                      <dd className="mt-1 font-semibold">
+                        {currentTopup.bankAccountNumber}
+                      </dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt className="text-[var(--theme-muted)]">
+                      Số tiền chuyển
+                    </dt>
+                    <dd className="mt-1 font-semibold">
+                      {formatVnd(currentTopup.amountMinor)}
+                    </dd>
+                  </div>
+                  {currentTopup.transferDescription && (
+                    <div className="sm:col-span-2">
+                      <dt className="text-[var(--theme-muted)]">
+                        Nội dung chuyển khoản
+                      </dt>
+                      <dd className="mt-1 break-all rounded-lg bg-[var(--theme-elevated)] p-3 font-mono font-semibold">
+                        {currentTopup.transferDescription}
+                      </dd>
+                    </div>
+                  )}
+                  <div className="sm:col-span-2">
+                    <dt className="text-[var(--theme-muted)]">Trạng thái</dt>
+                    <dd className="mt-1 font-semibold">
+                      Đang chờ xác minh. Số dư ví chỉ tăng sau khi nhận được xác
+                      nhận thanh toán.
+                    </dd>
+                  </div>
+                </dl>
               </div>
-              {currentTopup.transferDescription && (
-                <div className="sm:col-span-2">
-                  <dt className="text-[var(--theme-muted)]">
-                    Nội dung chuyển khoản
-                  </dt>
-                  <dd className="mt-1 break-all rounded-lg bg-[var(--theme-elevated)] p-3 font-mono font-semibold">
-                    {currentTopup.transferDescription}
-                  </dd>
-                </div>
-              )}
-              <div className="sm:col-span-2">
-                <dt className="text-[var(--theme-muted)]">Trạng thái</dt>
-                <dd className="mt-1 font-semibold">
-                  Đang chờ xác minh. Số dư ví chỉ tăng sau khi nhận được xác
-                  nhận thanh toán.
-                </dd>
-              </div>
-            </dl>
-          </div>
-          </>
+            </>
           )}
         </section>
       )}

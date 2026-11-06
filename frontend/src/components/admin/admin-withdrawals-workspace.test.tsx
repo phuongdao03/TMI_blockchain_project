@@ -4,28 +4,38 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AdminWithdrawalsWorkspace } from "./admin-withdrawals-workspace";
 
-const { adminFinanceApi, adminWithdrawalApi, withdrawalApi, auth } = vi.hoisted(() => ({
-  adminFinanceApi: { reconciliation: vi.fn(), saveBank: vi.fn(), updateSettings: vi.fn() },
-  adminWithdrawalApi: {
-    list: vi.fn(),
-    detail: vi.fn(),
-    approve: vi.fn(),
-    dispatchPayout: vi.fn(),
-    verifyBank: vi.fn(),
-    reviewIdentity: vi.fn(),
-    reject: vi.fn(),
-  },
-  withdrawalApi: { settings: vi.fn(), banks: vi.fn() },
-  auth: {
-    user: {
-      id: "admin-1",
-      roles: ["SUPER_ADMIN"],
-      permissions: ["finance.read", "finance.withdrawals.approve"],
+const { adminFinanceApi, adminWithdrawalApi, withdrawalApi, auth } = vi.hoisted(
+  () => ({
+    adminFinanceApi: {
+      reconciliation: vi.fn(),
+      saveBank: vi.fn(),
+      updateSettings: vi.fn(),
     },
-  },
-}));
+    adminWithdrawalApi: {
+      list: vi.fn(),
+      detail: vi.fn(),
+      approve: vi.fn(),
+      dispatchPayout: vi.fn(),
+      verifyBank: vi.fn(),
+      reviewIdentity: vi.fn(),
+      reject: vi.fn(),
+    },
+    withdrawalApi: { settings: vi.fn(), banks: vi.fn() },
+    auth: {
+      user: {
+        id: "admin-1",
+        roles: ["SUPER_ADMIN"],
+        permissions: ["finance.read", "finance.withdrawals.approve"],
+      },
+    },
+  }),
+);
 
-vi.mock("@/lib/api/client", () => ({ adminFinanceApi, adminWithdrawalApi, withdrawalApi }));
+vi.mock("@/lib/api/client", () => ({
+  adminFinanceApi,
+  adminWithdrawalApi,
+  withdrawalApi,
+}));
 vi.mock("@/lib/auth/user-context", () => ({ useAuthUser: () => auth.user }));
 
 function renderWorkspace() {
@@ -123,7 +133,9 @@ describe("AdminWithdrawalsWorkspace", () => {
     renderWorkspace();
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Xem chi tiết yêu cầu WD-001" }),
+      await screen.findByRole("button", {
+        name: "Xem chi tiết yêu cầu WD-001",
+      }),
     );
     expect(await screen.findByText("0123456789")).toBeTruthy();
     expect(screen.getByText(/không tự động chuyển tiền/)).toBeTruthy();
@@ -140,10 +152,16 @@ describe("AdminWithdrawalsWorkspace", () => {
   it("requires a reason before rejecting", async () => {
     renderWorkspace();
     fireEvent.click(
-      await screen.findByRole("button", { name: "Xem chi tiết yêu cầu WD-001" }),
+      await screen.findByRole("button", {
+        name: "Xem chi tiết yêu cầu WD-001",
+      }),
     );
     expect(await screen.findByText("0123456789")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Từ chối yêu cầu" }).hasAttribute("disabled")).toBe(true);
+    expect(
+      screen
+        .getByRole("button", { name: "Từ chối yêu cầu" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
     fireEvent.change(screen.getByLabelText(/Lý do từ chối/), {
       target: { value: "Thông tin ngân hàng chưa khớp" },
     });
@@ -210,10 +228,14 @@ describe("AdminWithdrawalsWorkspace", () => {
     });
     renderWorkspace();
     fireEvent.click(
-      await screen.findByRole("button", { name: "Xem chi tiết yêu cầu WD-001" }),
+      await screen.findByRole("button", {
+        name: "Xem chi tiết yêu cầu WD-001",
+      }),
     );
     await screen.findByText("0123456789");
-    const queueButton = screen.getByRole("button", { name: "Gửi lệnh chi trả" });
+    const queueButton = screen.getByRole("button", {
+      name: "Gửi lệnh chi trả",
+    });
     expect(queueButton.hasAttribute("disabled")).toBe(true);
     fireEvent.click(screen.getByLabelText(/Tôi đã đối chiếu người nhận/));
     fireEvent.click(queueButton);

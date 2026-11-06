@@ -401,7 +401,8 @@ export function AdminUserWorkspace() {
                 : "Khôi phục tài khoản"}
             </h2>
             <p className="mt-2 text-sm leading-6 text-neutral-600">
-              Quyền được kiểm tra trước khi lưu thay đổi. Lịch sử thao tác sẽ được lưu lại.
+              Quyền được kiểm tra trước khi lưu thay đổi. Lịch sử thao tác sẽ
+              được lưu lại.
             </p>
             <label className="mt-5 block text-sm font-bold">
               Lý do thay đổi trạng thái

@@ -18,7 +18,9 @@ it("announces completed work and provides a real next destination", () => {
     "Admin sẽ xem báo cáo",
   );
   expect(
-    screen.getByRole("link", { name: "Xem danh sách hồ sơ" }).getAttribute("href"),
+    screen
+      .getByRole("link", { name: "Xem danh sách hồ sơ" })
+      .getAttribute("href"),
   ).toBe("/reviews");
 });
 

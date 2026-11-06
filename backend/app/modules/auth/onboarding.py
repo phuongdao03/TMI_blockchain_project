@@ -97,10 +97,7 @@ class ApplicantUpgradeService:
                     resource_id=str(user.id),
                     after={"account_type": account_type.value},
                 )
-            if (
-                self._affiliate_profile_auto_create
-                and set(result.roles) == {"USER"}
-            ):
+            if self._affiliate_profile_auto_create and set(result.roles) == {"USER"}:
                 from app.core.errors import DomainError
                 from app.modules.affiliate.service import AffiliateService
 

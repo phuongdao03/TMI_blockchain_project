@@ -76,7 +76,9 @@ it("guides the reviewer before and after submitting a report", async () => {
 
   expect(await screen.findByText("Đã gửi báo cáo thẩm định")).toBeTruthy();
   expect(
-    screen.getByRole("link", { name: "Về danh sách hồ sơ" }).getAttribute("href"),
+    screen
+      .getByRole("link", { name: "Về danh sách hồ sơ" })
+      .getAttribute("href"),
   ).toBe("/reviews");
 });
 

@@ -183,12 +183,8 @@ class AffiliateCommission(Base):
     __table_args__ = (
         UniqueConstraint("source_reference", name="uq_affiliate_commission_source"),
         CheckConstraint("amount_minor > 0", name="positive_source_amount"),
-        CheckConstraint(
-            "commission_amount_minor >= 0", name="nonnegative_commission"
-        ),
-        CheckConstraint(
-            "rate_basis_points BETWEEN 0 AND 10000", name="valid_rate"
-        ),
+        CheckConstraint("commission_amount_minor >= 0", name="nonnegative_commission"),
+        CheckConstraint("rate_basis_points BETWEEN 0 AND 10000", name="valid_rate"),
         CheckConstraint(
             "status IN ('PENDING', 'ON_HOLD', 'AVAILABLE', 'REJECTED', 'REVERSED', "
             "'SUPPRESSED')",

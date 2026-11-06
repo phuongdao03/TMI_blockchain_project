@@ -83,8 +83,8 @@ export function VoucherWallet() {
       </form>
       {redeem.isError && (
         <p role="alert" className="text-sm text-red-700">
-          Không thể nhận ưu đãi bằng mã này. Hãy kiểm tra lại mã và điều kiện
-          áp dụng rồi thử lại.
+          Không thể nhận ưu đãi bằng mã này. Hãy kiểm tra lại mã và điều kiện áp
+          dụng rồi thử lại.
         </p>
       )}
       {redeem.isSuccess && (

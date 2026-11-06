@@ -125,7 +125,8 @@ export function MyWorkAllocationList() {
           role="alert"
           className="rounded-xl border border-red-200 p-4 text-sm text-red-800"
         >
-          Chưa tải được hồ sơ thẩm định. Mở danh sách hồ sơ được giao để kiểm tra lại.
+          Chưa tải được hồ sơ thẩm định. Mở danh sách hồ sơ được giao để kiểm
+          tra lại.
         </p>
       ) : null}
       {allocations.data &&

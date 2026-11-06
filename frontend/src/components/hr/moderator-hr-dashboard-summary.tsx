@@ -85,8 +85,8 @@ export function ModeratorHrDashboardSummary() {
           Chưa liên kết hồ sơ nhân sự
         </h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
-          Quản trị viên cấp cao cần liên kết hồ sơ nhân sự với tài khoản này trước khi bạn
-          có thể sử dụng chấm công, nghỉ phép và tăng ca.
+          Quản trị viên cấp cao cần liên kết hồ sơ nhân sự với tài khoản này
+          trước khi bạn có thể sử dụng chấm công, nghỉ phép và tăng ca.
         </p>
         <Link
           className="mt-4 inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold text-[var(--theme-text)] hover:bg-[var(--theme-elevated)]"

@@ -1374,9 +1374,7 @@ class WalletWithdrawalService:
                     FinanceAccount.owner_user_id,
                     func.coalesce(func.sum(FinanceEntry.amount_minor), 0),
                 )
-                .outerjoin(
-                    FinanceEntry, FinanceEntry.account_id == FinanceAccount.id
-                )
+                .outerjoin(FinanceEntry, FinanceEntry.account_id == FinanceAccount.id)
                 .where(
                     FinanceAccount.account_type == "COMMISSION_RESERVED",
                     FinanceAccount.owner_user_id.is_not(None),

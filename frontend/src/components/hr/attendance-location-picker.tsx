@@ -530,9 +530,9 @@ export function AttendanceLocationPicker({
         </div>
       ) : null}
       <p className="mt-3 text-xs leading-5 text-neutral-500">
-        Bản đồ nền có ghi nguồn dữ liệu ngay trên bản đồ. Chỉ quản trị viên cấp cao được
-        cấu hình điểm làm việc; vị trí chấm công của nhân viên không được hiển
-        thị tại đây.
+        Bản đồ nền có ghi nguồn dữ liệu ngay trên bản đồ. Chỉ quản trị viên cấp
+        cao được cấu hình điểm làm việc; vị trí chấm công của nhân viên không
+        được hiển thị tại đây.
       </p>
     </section>
   );

@@ -264,9 +264,7 @@ async def list_bank_accounts(
     )
 
 
-@router.post(
-    "/wallet/bank-accounts", response_model=SuccessEnvelope[BankAccountData]
-)
+@router.post("/wallet/bank-accounts", response_model=SuccessEnvelope[BankAccountData])
 async def create_bank_account(
     payload: BankAccountCreateRequest,
     request: Request,
@@ -380,9 +378,7 @@ async def list_withdrawals(
     )
 
 
-@router.post(
-    "/wallet/withdrawals", response_model=SuccessEnvelope[WithdrawalData]
-)
+@router.post("/wallet/withdrawals", response_model=SuccessEnvelope[WithdrawalData])
 async def create_withdrawal(
     payload: WithdrawalCreateRequest,
     request: Request,
@@ -445,9 +441,7 @@ async def cancel_withdrawal(
     )
 
 
-@router.get(
-    "/admin/withdrawals", response_model=SuccessEnvelope[list[WithdrawalData]]
-)
+@router.get("/admin/withdrawals", response_model=SuccessEnvelope[list[WithdrawalData]])
 async def list_admin_withdrawals(
     request: Request,
     principal: CurrentPrincipalDependency,
@@ -727,9 +721,7 @@ async def update_finance_settings(
     )
 
 
-@router.post(
-    "/admin/finance/banks", response_model=SuccessEnvelope[BankData]
-)
+@router.post("/admin/finance/banks", response_model=SuccessEnvelope[BankData])
 async def update_supported_bank(
     payload: SupportedBankUpdateRequest,
     request: Request,

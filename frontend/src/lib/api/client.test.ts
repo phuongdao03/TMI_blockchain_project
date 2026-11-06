@@ -424,8 +424,8 @@ describe("affiliate API client", () => {
     for (const requestId of ["affiliate-referrals", "affiliate-commissions"]) {
       fetchMock.mockResolvedValueOnce(
         response({
-        success: true,
-        data: [],
+          success: true,
+          data: [],
           meta: { request_id: requestId },
         }),
       );
@@ -453,7 +453,11 @@ describe("admin affiliate API client", () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation(async () =>
-        response({ success: true, data: {}, meta: { request_id: "admin-affiliate" } }),
+        response({
+          success: true,
+          data: {},
+          meta: { request_id: "admin-affiliate" },
+        }),
       );
 
     await adminAffiliateApi.profiles({
@@ -468,8 +472,14 @@ describe("admin affiliate API client", () => {
       affiliateUserId: "affiliate-1",
     });
     await adminAffiliateApi.approveCommission("commission-1");
-    await adminAffiliateApi.rejectCommission("commission-2", "Invalid transaction source");
-    await adminAffiliateApi.reverseCommission("commission-3", "Chargeback confirmed");
+    await adminAffiliateApi.rejectCommission(
+      "commission-2",
+      "Invalid transaction source",
+    );
+    await adminAffiliateApi.reverseCommission(
+      "commission-3",
+      "Chargeback confirmed",
+    );
     await adminAffiliateApi.commissionRules();
     await adminAffiliateApi.createCommissionRules({
       enabled: false,

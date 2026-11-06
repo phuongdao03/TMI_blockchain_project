@@ -148,7 +148,8 @@ function ReviewReport({
         </>
       ) : (
         <p className="mt-4 text-sm text-neutral-500">
-          Người thẩm định chưa gửi báo cáo. Quản trị viên sẽ nhận thông báo khi báo cáo hoàn tất.
+          Người thẩm định chưa gửi báo cáo. Quản trị viên sẽ nhận thông báo khi
+          báo cáo hoàn tất.
         </p>
       )}
     </article>
@@ -228,7 +229,8 @@ function AssistanceRequestResolution({
         <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_13rem]">
           <fieldset disabled={isBusy}>
             <legend className="text-sm font-bold text-neutral-800">
-              Chọn đúng {request.requestedReviewerCount} người thẩm định để bổ sung
+              Chọn đúng {request.requestedReviewerCount} người thẩm định để bổ
+              sung
             </legend>
             {availableReviewers.length > 0 ? (
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -565,8 +567,8 @@ export function ReviewLifecyclePanel({
             <div>
               <h2 className="text-xl font-bold">Yêu cầu phối hợp thẩm định</h2>
               <p className="mt-1 text-sm leading-6 text-neutral-500">
-                Người kiểm duyệt không tự thêm người. Quản trị viên cấp cao xem lý do, chọn đúng
-                số người được yêu cầu và ghi nhận quyết định.
+                Người kiểm duyệt không tự thêm người. Quản trị viên cấp cao xem
+                lý do, chọn đúng số người được yêu cầu và ghi nhận quyết định.
               </p>
             </div>
           </div>
@@ -602,8 +604,8 @@ export function ReviewLifecyclePanel({
             <div>
               <h2 className="text-xl font-bold">Báo cáo kiểm duyệt</h2>
               <p className="mt-1 text-sm text-neutral-500">
-                Quản trị viên xem kết luận của người thẩm định trước khi quyết định
-                cuối.
+                Quản trị viên xem kết luận của người thẩm định trước khi quyết
+                định cuối.
               </p>
             </div>
           </div>

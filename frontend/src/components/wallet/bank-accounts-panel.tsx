@@ -57,7 +57,10 @@ export function BankAccountsPanel({
   });
 
   return (
-    <section aria-labelledby="bank-accounts-title" className="space-y-5 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
+    <section
+      aria-labelledby="bank-accounts-title"
+      className="space-y-5 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
+    >
       <div>
         <h2 id="bank-accounts-title" className="text-lg font-bold sm:text-xl">
           Tài khoản ngân hàng
@@ -71,9 +74,21 @@ export function BankAccountsPanel({
           Đang tải tài khoản ngân hàng…
         </p>
       ) : isError ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4" role="alert">
-          <p className="text-sm text-red-700">Chưa tải được thông tin ngân hàng.</p>
-          <Button className="min-h-10" onClick={onRetry} type="button" variant="outline">Tải lại</Button>
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 p-4"
+          role="alert"
+        >
+          <p className="text-sm text-red-700">
+            Chưa tải được thông tin ngân hàng.
+          </p>
+          <Button
+            className="min-h-10"
+            onClick={onRetry}
+            type="button"
+            variant="outline"
+          >
+            Tải lại
+          </Button>
         </div>
       ) : accounts.length ? (
         <ul className="divide-y divide-[var(--theme-border)] rounded-xl border border-[var(--theme-border)] px-4">
@@ -88,7 +103,8 @@ export function BankAccountsPanel({
                   {account.accountName} · {account.accountNumberMasked}
                 </p>
                 <p className="text-xs text-[var(--theme-muted)]">
-                  Trạng thái xác minh: {bankVerificationStatusLabel(account.verificationStatus)}
+                  Trạng thái xác minh:{" "}
+                  {bankVerificationStatusLabel(account.verificationStatus)}
                   {account.isDefault ? " · Mặc định" : ""}
                 </p>
               </div>
@@ -105,11 +121,12 @@ export function BankAccountsPanel({
                       Đặt mặc định
                     </Button>
                   ) : null}
-      {setDefault.isError || disable.isError ? (
-        <p role="alert" className="text-sm text-red-700">
-          Không cập nhật được trạng thái tài khoản. Vui lòng tải lại và thử lại.
-        </p>
-      ) : null}
+                  {setDefault.isError || disable.isError ? (
+                    <p role="alert" className="text-sm text-red-700">
+                      Không cập nhật được trạng thái tài khoản. Vui lòng tải lại
+                      và thử lại.
+                    </p>
+                  ) : null}
                   <Button
                     className="min-h-10"
                     disabled={disable.isPending}
@@ -186,8 +203,8 @@ export function BankAccountsPanel({
           />
         </label>
         <p className="text-xs text-[var(--theme-muted)] sm:col-span-2">
-          Tên chủ tài khoản cần trùng với thông tin ngân hàng. Tài khoản mới
-          có thể cần được xác minh trước khi quản trị viên duyệt yêu cầu rút.
+          Tên chủ tài khoản cần trùng với thông tin ngân hàng. Tài khoản mới có
+          thể cần được xác minh trước khi quản trị viên duyệt yêu cầu rút.
         </p>
         {formError ? (
           <p role="alert" className="text-sm text-red-700 sm:col-span-2">

@@ -14,9 +14,12 @@ export function AdminAffiliateWorkspace() {
   const roles = user?.roles ?? [];
   const permissions = user?.permissions ?? [];
   const isSuperAdmin = roles.includes("SUPER_ADMIN");
-  const canManageProfiles = isSuperAdmin || permissions.includes("affiliate.profiles.manage");
-  const canReviewCommissions = isSuperAdmin || permissions.includes("affiliate.commissions.approve");
-  const canManageRules = isSuperAdmin || permissions.includes("affiliate.rules.manage");
+  const canManageProfiles =
+    isSuperAdmin || permissions.includes("affiliate.profiles.manage");
+  const canReviewCommissions =
+    isSuperAdmin || permissions.includes("affiliate.commissions.approve");
+  const canManageRules =
+    isSuperAdmin || permissions.includes("affiliate.rules.manage");
   const canAccess = canManageProfiles || canReviewCommissions || canManageRules;
 
   return (
@@ -28,7 +31,10 @@ export function AdminAffiliateWorkspace() {
         title="Quản trị tiếp thị liên kết"
       />
       {!canAccess ? (
-        <p role="alert" className="rounded-xl border border-red-300 p-4 text-sm text-red-700">
+        <p
+          role="alert"
+          className="rounded-xl border border-red-300 p-4 text-sm text-red-700"
+        >
           Bạn không có quyền quản lý chương trình tiếp thị liên kết.
         </p>
       ) : (

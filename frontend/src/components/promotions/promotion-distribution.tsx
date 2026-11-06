@@ -282,7 +282,8 @@ export function PromotionDistribution({ initialId }: { initialId?: string }) {
         {jobs.data?.items.map((job) => (
           <article key={job.id} className={styles.panel}>
             <p className="font-semibold">
-              {distributionStatusLabels[job.status] ?? "Chưa xác định trạng thái"}
+              {distributionStatusLabels[job.status] ??
+                "Chưa xác định trạng thái"}
             </p>
             <progress
               className="my-3 w-full"
