@@ -3,7 +3,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CircleCheck,
-  Crown,
   KeyRound,
   LoaderCircle,
   LockKeyhole,
@@ -21,7 +20,6 @@ import type {
   CommunityChatRoomGrant,
   CommunityChatRoomUserCandidate,
 } from "@/lib/api/types";
-import { useAuthUser } from "@/lib/auth/user-context";
 
 const rooms: { id: CommunityChatRoom; name: string; access: string }[] = [
   { id: "MEMBER", name: "Sảnh cộng đồng", access: "Mọi hạng hội viên" },
@@ -30,7 +28,6 @@ const rooms: { id: CommunityChatRoom; name: string; access: string }[] = [
 ];
 
 export function MembershipChatAccessAdmin() {
-  const user = useAuthUser();
   const client = useQueryClient();
   const [room, setRoom] = useState<CommunityChatRoom>("COMPANION");
   const [search, setSearch] = useState("");
@@ -78,7 +75,7 @@ export function MembershipChatAccessAdmin() {
         revokeTarget!.room,
         revokeReason.trim(),
       ),
-    onSuccess: async (_result, _input) => {
+    onSuccess: async () => {
       const targetId = revokeTarget?.userId;
       setRevokeTarget(null);
       setRevokeReason("");

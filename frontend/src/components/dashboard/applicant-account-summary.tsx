@@ -1,15 +1,22 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { notificationKeys } from "@/lib/notification-query-keys";
 import Link from "next/link";
 import { notificationApi, walletApi } from "@/lib/api/client";
 import { formatVnd, walletKey } from "@/lib/wallet/summary";
 
+const subscribeToHydration = () => () => undefined;
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
 export function ApplicantAccountSummary({ userId }: { userId: string }) {
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    clientSnapshot,
+    serverSnapshot,
+  );
 
   const wallet = useQuery({
     queryKey: walletKey(userId),
