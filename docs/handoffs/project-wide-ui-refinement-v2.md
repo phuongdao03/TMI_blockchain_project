@@ -56,3 +56,18 @@
 dossier progress-bar width animation improvement; it remains deferred. No
 commit, push, deployment, API, authentication, or business-rule changes were
 made.
+
+## Process nomination journey
+
+- `/process` now presents preparation, submission, review, and result as four
+  selectable steps, with concise guidance and five common questions.
+- Preview mode routes users to opening information; full mode offers dossier
+  creation. Both retain the public verification route at `/verify`.
+- Submission-fee timing, supplement requests, dossier tracking, optional
+  promotion, and the non-guarantee of establishment follow the existing
+  dossier behavior. No payment or review logic changed.
+- The step line reveals when it enters view and respects reduced motion. The
+  step selector and native FAQ disclosures work at phone and desktop widths.
+- Focused check: `npm.cmd test -- src/app/process-page.test.tsx` (2 passed).
+  Targeted ESLint passed. Browser review at 1440px and 390px found no horizontal
+  overflow in dark or light mode.

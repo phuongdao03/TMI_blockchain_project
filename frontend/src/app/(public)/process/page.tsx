@@ -1,100 +1,118 @@
 import Link from "next/link";
+import { ArrowRight, Search } from "lucide-react";
 
-import {
-  AccessGuide,
-  ProcessGuide,
-} from "@/components/public/platform-guidance";
+import { ProcessJourney } from "@/components/public/process-journey";
 import { isPreviewRelease } from "@/lib/release-mode";
 
-const publicJourney = [
-  {
-    number: "01",
-    title: "Khám phá đề cử",
-    detail:
-      "Tìm hiểu những con người, tác phẩm và giá trị Việt đã được giới thiệu công khai.",
-  },
-  {
-    number: "02",
-    title: "Tìm hiểu câu chuyện",
-    detail:
-      "Xem nội dung, hình ảnh và thông tin nguồn được phép công bố cho từng đề cử.",
-  },
-  {
-    number: "03",
-    title: "Theo dõi chương trình",
-    detail:
-      "Đăng ký tài khoản để lưu hành trình và nhận thông báo khi các hoạt động mới được mở.",
-  },
-] as const;
+function ProcessHeroArtwork() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="process-hero__artwork"
+      fill="none"
+      viewBox="0 0 480 360"
+    >
+      <circle className="process-hero__ring" cx="240" cy="180" r="128" />
+      <circle className="process-hero__ring" cx="240" cy="180" r="108" />
+      <circle className="process-hero__ring process-hero__ring--fine" cx="240" cy="180" r="90" />
+      <path className="process-hero__route" d="M112 180h79l41-48 47 48h89" />
+      <path className="process-hero__route process-hero__route--vertical" d="M191 180v68m88-68v68" />
+      <circle className="process-hero__step-dot" cx="112" cy="180" r="8" />
+      <circle className="process-hero__step-dot" cx="191" cy="180" r="8" />
+      <circle className="process-hero__step-dot" cx="279" cy="180" r="8" />
+      <circle className="process-hero__step-dot" cx="368" cy="180" r="8" />
+      <path className="process-hero__document" d="M174 94h57l24 24v38h-81z" />
+      <path className="process-hero__document-line" d="M188 112h27m-27 12h46m-46 12h36" />
+      <path className="process-hero__seal" d="m269 228 10 10 20-22" />
+      <circle className="process-hero__seal-ring" cx="279" cy="228" r="25" />
+      <circle className="process-hero__ornament" cx="240" cy="180" r="145" />
+      <circle className="process-hero__ornament" cx="240" cy="180" r="154" />
+    </svg>
+  );
+}
+
+function ProcessActions({ submissionOpen }: { submissionOpen: boolean }) {
+  return (
+    <section aria-labelledby="process-next-title" className="process-next">
+      <div className="process-next__inner">
+        <div>
+          <p className="public-information-kicker">BƯỚC TIẾP THEO</p>
+          <h2 id="process-next-title">Bạn muốn bắt đầu từ đâu?</h2>
+          <p>
+            {submissionOpen
+              ? "Tạo hồ sơ để bắt đầu, hoặc tra cứu thông tin đã được công bố."
+              : "Tìm hiểu thông tin mở cổng, hoặc tra cứu bằng xác lập đã được công bố."}
+          </p>
+        </div>
+        <div className="process-next__actions">
+          {submissionOpen ? (
+            <Link className="process-next__primary" href="/dossiers/new">
+              Bắt đầu gửi hồ sơ
+            </Link>
+          ) : (
+            <Link className="process-next__primary" href="/coming-soon/submission">
+              Xem thông tin mở cổng
+            </Link>
+          )}
+          <Link className="process-next__secondary" href="/verify">
+            Tra cứu kết quả
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function ProcessPage() {
   const preview = isPreviewRelease();
 
-  if (preview) {
-    return (
-      <div className="process-page">
-        <header className="public-page-header">
-          <div className="public-page-header__content">
-            <p>CÁCH CHƯƠNG TRÌNH HOẠT ĐỘNG</p>
-            <h1>Hành trình từ một đề cử đến giá trị được lan tỏa.</h1>
-            <p>
-              Hiện tại, chương trình tập trung giúp cộng đồng khám phá nội dung
-              đã được công bố. Đề cử là bước giới thiệu giá trị; xác lập chỉ
-              được công bố sau khi hồ sơ được xem xét theo tiêu chí và quy trình
-              chuyên môn đã phê duyệt. Hoạt động gửi hồ sơ được mở theo từng
-              giai đoạn.
-            </p>
-          </div>
-        </header>
-
-        <section className="public-preview-journey">
-          <ol>
-            {publicJourney.map((step) => (
-              <li key={step.number}>
-                <span>{step.number}</span>
-                <h2>{step.title}</h2>
-                <p>{step.detail}</p>
-              </li>
-            ))}
-          </ol>
-          <aside>
-            <div>
-              <p>GIAI ĐOẠN TIẾP THEO</p>
-              <h2>Cổng gửi đề cử sắp ra mắt</h2>
-              <p>
-                Khi được mở, người tham gia sẽ có thể chuẩn bị thông tin, gửi đề
-                cử và theo dõi tiến trình ngay trong tài khoản của mình.
-              </p>
-            </div>
-            <Link href="/coming-soon/submission">Xem thông tin mở cổng</Link>
-          </aside>
-        </section>
-      </div>
-    );
-  }
-
   return (
-    <div className="process-page">
-      <header className="public-page-header">
-        <div className="public-page-header__content public-page-header__content--split">
-          <div>
-            <p>HÀNH TRÌNH GỬI HỒ SƠ</p>
-            <h1>Hành trình hồ sơ, rõ ràng từ đầu đến cuối.</h1>
-            <p>
-              Chuẩn bị thông tin, gửi hồ sơ, theo dõi phản hồi và tra cứu kết
-              quả. Đề cử không đồng nghĩa với xác lập; kết quả xác lập dựa trên
-              hồ sơ, tiêu chí và quy trình chuyên môn đã được phê duyệt, không
-              phụ thuộc vào việc đồng hành hay tài trợ.
+    <div className={`process-page${preview ? " process-page--preview" : ""}`}>
+      <header className="public-page-header process-hero">
+        <div className="process-hero__inner">
+          <div className="process-hero__copy">
+            <p className="public-information-kicker">
+              HƯỚNG DẪN GỬI HỒ SƠ ĐỀ CỬ
             </p>
+            <h1>Hành trình đề cử Tinh Hoa Việt</h1>
+            <p className="process-hero__description">
+              Tìm hiểu cách chuẩn bị, gửi và theo dõi hồ sơ của bạn qua 4 bước
+              đơn giản. Gửi đề cử không đồng nghĩa với việc chắc chắn được xác
+              lập.
+            </p>
+            <div className="process-hero__actions">
+              {preview ? (
+                <Link className="process-hero__primary" href="/coming-soon/submission">
+                  Xem thông tin mở cổng
+                  <ArrowRight aria-hidden="true" className="size-4" />
+                </Link>
+              ) : (
+                <Link className="process-hero__primary" href="/dossiers/new">
+                  Bắt đầu gửi hồ sơ
+                  <ArrowRight aria-hidden="true" className="size-4" />
+                </Link>
+              )}
+              <Link className="process-hero__secondary" href="/verify">
+                <Search aria-hidden="true" className="size-4" />
+                Tra cứu kết quả
+              </Link>
+            </div>
+            {preview ? (
+              <p className="process-hero__availability">
+                Cổng gửi hồ sơ được mở theo từng giai đoạn.
+              </p>
+            ) : null}
           </div>
-          <div className="public-page-header__action">
-            <p>Sẵn sàng bắt đầu?</p>
-            <Link href="/dossiers/new">Tạo hồ sơ mới</Link>
+          <div className="process-hero__visual">
+            <ProcessHeroArtwork />
+            <span aria-hidden="true" className="process-hero__caption">
+              TỪ HỒ SƠ ĐẾN GIÁ TRỊ ĐƯỢC LAN TỎA
+            </span>
           </div>
         </div>
       </header>
-      <ProcessGuide />
-      <AccessGuide />
+      <ProcessJourney submissionOpen={!preview} />
+      <ProcessActions submissionOpen={!preview} />
     </div>
   );
 }
