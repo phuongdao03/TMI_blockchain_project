@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +32,7 @@ from app.modules.wallet.models import (
 )
 
 WALLET_TOPUP_TTL_SECONDS = 10 * 60
+WALLET_TOPUP_LATE_PAYMENT_GRACE_SECONDS = WALLET_TOPUP_TTL_SECONDS
 
 
 def valid_key(key: str) -> str:
@@ -187,13 +188,24 @@ class WalletService:
         return await self.topup(user_id, amount, key)
 
     async def reconcile_pending(self, limit: int) -> int:
+        recent_terminal_cutoff = datetime.now(UTC) - timedelta(
+            seconds=WALLET_TOPUP_LATE_PAYMENT_GRACE_SECONDS
+        )
         async with self.session.begin():
             rows = list(
                 (
                     await self.session.execute(
                         select(WalletTopup.user_id, WalletTopup.id, WalletTopup.status)
                         .where(
-                            WalletTopup.status.in_(("PENDING", "PROCESSING")),
+                            or_(
+                                WalletTopup.status.in_(("PENDING", "PROCESSING")),
+                                and_(
+                                    WalletTopup.status.in_(
+                                        ("FAILED", "CANCELLED", "EXPIRED")
+                                    ),
+                                    WalletTopup.expires_at >= recent_terminal_cutoff,
+                                ),
+                            ),
                         )
                         .order_by(WalletTopup.updated_at)
                         .limit(limit)

@@ -1,4 +1,5 @@
 import asyncio
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -7,7 +8,10 @@ from sqlalchemy import select
 from app.core.errors import DomainError
 from app.modules.payments.errors import PaymentConflictError
 from app.modules.wallet.models import Wallet, WalletJournal
-from app.modules.wallet.service import WalletLedger
+from app.modules.wallet.service import (
+    WALLET_TOPUP_LATE_PAYMENT_GRACE_SECONDS,
+    WalletLedger,
+)
 from app.tests.test_payment_service import DOSSIER_ID, _service, _webhook
 
 
@@ -321,6 +325,32 @@ def test_reconciliation_recovers_a_late_paid_topup_after_failure() -> None:
             assert (await service.wallet_service().summary(owner.user_id))[
                 "balance_minor"
             ] == 50_000
+            assert await service.wallet_service().reconcile_pending(10) == 0
+        finally:
+            await service.close()
+            await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_reconciliation_skips_old_terminal_topups() -> None:
+    from app.modules.payments.gateway import MockPaymentGateway
+    from app.modules.wallet.models import WalletTopup
+
+    async def exercise() -> None:
+        gateway = MockPaymentGateway(webhook_secret="payment-secret")
+        service, sessions, engine, owner = await _service(gateway=gateway)
+        try:
+            topup = await service.wallet_service().topup(
+                owner.user_id, 50_000, "old-terminal-topup"
+            )
+            async with sessions() as session, session.begin():
+                saved = await session.get(WalletTopup, topup.id)
+                assert saved is not None
+                saved.status = "FAILED"
+                saved.expires_at = datetime.now(UTC) - timedelta(
+                    seconds=WALLET_TOPUP_LATE_PAYMENT_GRACE_SECONDS + 1
+                )
             assert await service.wallet_service().reconcile_pending(10) == 0
         finally:
             await service.close()
