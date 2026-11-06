@@ -56,7 +56,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     await expect
       .poll(() => image.evaluate((node: HTMLImageElement) => node.naturalWidth))
       .toBeGreaterThan(0);
-    const button = dialog.getByRole("button", { name: "Nhận voucher ngay" });
+    const button = dialog.getByRole("button", { name: "Nhận ưu đãi ngay" });
     await expect(button).toHaveCSS("background-color", "rgb(157, 0, 0)");
     await expect(button).toHaveCSS("color", "rgb(255, 255, 255)");
     if (testInfo.project.name === "desktop-chrome") {
@@ -73,14 +73,14 @@ for (const colorScheme of ["light", "dark"] as const) {
     ).toBe(true);
     await button.click();
     await expect(
-      dialog.getByRole("heading", { name: "Đã nhận voucher!" }),
+      dialog.getByRole("heading", { name: "Đã nhận ưu đãi!" }),
     ).toBeVisible();
-    await dialog.getByRole("link", { name: "Xem voucher của tôi" }).click();
+    await dialog.getByRole("link", { name: "Xem ưu đãi của tôi" }).click();
     await expect(page).toHaveURL(/\/vouchers$/);
     await expect(
       page
         .locator("#main-content")
-        .getByRole("heading", { name: "Voucher của tôi", exact: true }),
+        .getByRole("heading", { name: "Ưu đãi của tôi", exact: true }),
     ).toBeVisible();
     await expect(page.getByText(offer.title, { exact: true })).toBeVisible();
     await page.reload();

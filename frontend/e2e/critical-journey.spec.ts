@@ -96,7 +96,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       .click();
     await page.getByRole("button", { name: /Kiểm tra & nộp/ }).click();
     await page.getByRole("button", { name: "Nộp hồ sơ" }).click();
-    await expect(page.getByText(/chế độ chỉ đọc/)).toBeVisible();
+    await expect(page.getByText(/Hồ sơ đã được gửi thành công/)).toBeVisible();
   });
 
   await test.step("reviewer completes the assigned criteria review", async () => {

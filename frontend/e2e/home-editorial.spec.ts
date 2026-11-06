@@ -20,7 +20,9 @@ test("home prioritizes evidence and fits every target width in both themes", asy
         .first()
         .isVisible())
     ) {
-      await page.getByRole("button", { name: "Mở menu", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Mở điều hướng", exact: true })
+        .click();
     }
     await page
       .getByRole("button", { name: theme, exact: true })
@@ -28,7 +30,7 @@ test("home prioritizes evidence and fits every target width in both themes", asy
       .click();
     if (
       await page
-        .getByRole("button", { name: "Đóng menu", exact: true })
+        .getByRole("button", { name: "Đóng điều hướng", exact: true })
         .isVisible()
     )
       await page.keyboard.press("Escape");

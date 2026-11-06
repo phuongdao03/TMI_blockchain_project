@@ -1,12 +1,16 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { notificationKeys } from "@/lib/notification-query-keys";
 import Link from "next/link";
 import { notificationApi, walletApi } from "@/lib/api/client";
 import { formatVnd, walletKey } from "@/lib/wallet/summary";
 
 export function ApplicantAccountSummary({ userId }: { userId: string }) {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+
   const wallet = useQuery({
     queryKey: walletKey(userId),
     queryFn: () => walletApi.summary(),
@@ -27,7 +31,11 @@ export function ApplicantAccountSummary({ userId }: { userId: string }) {
         <h2 className="text-sm font-bold text-[var(--theme-muted)]">
           Số dư khả dụng
         </h2>
-        {wallet.isError ? (
+        {!hydrated ? (
+          <p role="status" className="mt-2 text-sm">
+            Đang tải số dư…
+          </p>
+        ) : wallet.isError ? (
           <div role="alert" className="mt-2 text-sm">
             <p>Chưa tải được số dư.</p>
             <button
@@ -58,7 +66,11 @@ export function ApplicantAccountSummary({ userId }: { userId: string }) {
         <h2 className="text-sm font-bold text-[var(--theme-muted)]">
           Thông báo của bạn
         </h2>
-        {unread.isError ? (
+        {!hydrated ? (
+          <p role="status" className="mt-2 text-sm">
+            Đang tải thông báo…
+          </p>
+        ) : unread.isError ? (
           <div role="alert" className="mt-2 text-sm">
             <p>Chưa tải được thông báo.</p>
             <button

@@ -105,9 +105,11 @@ test("navigation fits nine widths in two themes with working grouped drawers", a
         });
         await expect(bar.getByRole("link")).toHaveCount(5);
         await page
-          .getByRole("button", { name: "Mở menu", exact: true })
+          .getByRole("button", { name: "Mở điều hướng", exact: true })
           .click();
-        const drawer = page.getByRole("dialog", { name: "Menu công khai" });
+        const drawer = page.getByRole("dialog", {
+          name: "Điều hướng công khai",
+        });
         await expect(drawer).toBeVisible();
         await expect(
           drawer.getByRole("group", { name: "Tham gia", exact: true }),
@@ -126,7 +128,7 @@ test("navigation fits nine widths in two themes with working grouped drawers", a
         await page.keyboard.press("Escape");
         await expect(drawer).toHaveCount(0);
         await expect(
-          page.getByRole("button", { name: "Mở menu", exact: true }),
+          page.getByRole("button", { name: "Mở điều hướng", exact: true }),
         ).toBeFocused();
         expect(
           await page.evaluate(() => document.body.style.overflow),
@@ -146,10 +148,16 @@ test("anchors, back, forward, focus trap and search stay usable on mobile", asyn
 }, info) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/works");
-  const trigger = page.getByRole("button", { name: "Mở menu", exact: true });
+  const trigger = page.getByRole("button", {
+    name: "Mở điều hướng",
+    exact: true,
+  });
   await trigger.click();
-  const drawer = page.getByRole("dialog", { name: "Menu công khai" });
-  const close = drawer.getByRole("button", { name: "Đóng menu", exact: true });
+  const drawer = page.getByRole("dialog", { name: "Điều hướng công khai" });
+  const close = drawer.getByRole("button", {
+    name: "Đóng điều hướng",
+    exact: true,
+  });
   await expect(close).toBeFocused();
   await page.keyboard.press("Shift+Tab");
   await expect(

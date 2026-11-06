@@ -5,13 +5,13 @@ export async function selectPublicTheme(
   label: "Giao diện sáng" | "Giao diện tối",
 ) {
   if ((page.viewportSize()?.width ?? 1280) < 1024) {
-    await page.getByRole("button", { name: "Mở menu" }).click();
+    await page.getByRole("button", { name: "Mở điều hướng" }).click();
     await page
-      .getByRole("dialog", { name: "Menu công khai" })
+      .getByRole("dialog", { name: "Điều hướng công khai" })
       .getByRole("group", { name: "Chọn giao diện" })
       .getByRole("button", { name: label })
       .click();
-    await page.getByRole("button", { name: "Đóng menu" }).first().click();
+    await page.getByRole("button", { name: "Đóng điều hướng" }).first().click();
     return;
   }
 

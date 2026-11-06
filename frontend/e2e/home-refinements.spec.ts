@@ -85,15 +85,17 @@ test("inline reading and compact home sections work across widths and themes", a
   await expect(
     page.getByRole("button", { name: "Xem toàn màn hình", exact: true }),
   ).toBeFocused();
-  await page.getByRole("button", { name: "Mở menu", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Mở điều hướng", exact: true })
+    .click();
   await expect(
     page
-      .getByRole("dialog", { name: "Menu công khai" })
+      .getByRole("dialog", { name: "Điều hướng công khai" })
       .getByRole("link", { name: "Trang chủ", exact: true }),
   ).toHaveCount(0);
   await expect(
     page
-      .getByRole("dialog", { name: "Menu công khai" })
+      .getByRole("dialog", { name: "Điều hướng công khai" })
       .getByRole("group", { name: "Về Tinh Hoa Việt" }),
   ).toHaveCount(0);
 });

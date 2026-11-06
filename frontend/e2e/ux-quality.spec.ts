@@ -3,6 +3,8 @@ import { expect, test, type BrowserContext } from "@playwright/test";
 
 import { selectPublicTheme } from "./public-theme";
 
+const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
+
 const viewports = [
   { width: 320, height: 844 },
   { width: 768, height: 1024 },
@@ -107,7 +109,7 @@ test("applicant dossier journey stays readable at all supported widths", async (
   request,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chrome");
-  await request.post("http://127.0.0.1:4010/api/e2e/reset-needs-supplement");
+  await request.post(`${mockApiUrl}/api/e2e/reset-needs-supplement`);
   await authenticateApplicant(context);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/dossiers/9155dbf5-bb3e-449d-8bf0-9572cc642cac");
@@ -132,11 +134,11 @@ test("public navigation and primary actions remain keyboard accessible", async (
 }) => {
   await page.goto("/");
   if ((page.viewportSize()?.width ?? 1280) < 1024) {
-    await page.getByRole("button", { name: "Mở menu" }).focus();
+    await page.getByRole("button", { name: "Mở điều hướng" }).focus();
     await page.keyboard.press("Enter");
     await expect(
       page
-        .getByRole("dialog", { name: "Menu công khai" })
+        .getByRole("dialog", { name: "Điều hướng công khai" })
         .getByRole("group", { name: "Chọn giao diện" })
         .getByRole("button", { name: "Theo thiết bị" }),
     ).toBeEnabled();

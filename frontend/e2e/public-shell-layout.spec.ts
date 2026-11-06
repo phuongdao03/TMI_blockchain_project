@@ -149,7 +149,9 @@ test("public header keeps a stable desktop navigation when viewport width change
 
   await page.setViewportSize({ width: 1000, height: 900 });
   await expect(navigation).toBeHidden();
-  await expect(page.getByRole("button", { name: "Mở menu" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Mở điều hướng" }),
+  ).toBeVisible();
 });
 
 test("compact public shell keeps the account entry in its drawer and uses a full-height page frame", async ({
@@ -190,7 +192,7 @@ test("compact public shell keeps the account entry in its drawer and uses a full
   const mobileNavigation = page.getByRole("navigation", {
     name: "Điều hướng di động",
   });
-  const menuButton = page.getByRole("button", { name: "Mở menu" });
+  const menuButton = page.getByRole("button", { name: "Mở điều hướng" });
 
   await expect(header).toBeVisible();
   await expect(mobileNavigation).toBeVisible();
@@ -208,9 +210,11 @@ test("compact public shell keeps the account entry in its drawer and uses a full
 
   await menuButton.click();
   await expect(
-    page.getByRole("dialog", { name: "Menu công khai" }).getByRole("link", {
-      name: "Không gian cá nhân",
-    }),
+    page
+      .getByRole("dialog", { name: "Điều hướng công khai" })
+      .getByRole("link", {
+        name: "Không gian cá nhân",
+      }),
   ).toBeVisible();
 
   await expect(page.locator(".public-shell")).toHaveCSS("display", "flex");
@@ -305,7 +309,7 @@ test("medium desktop shell keeps direct navigation and workspace access", async 
   await accountMenu.locator("summary").click();
   await expect(
     page
-      .getByRole("navigation", { name: "Menu tài khoản" })
+      .getByRole("navigation", { name: "Điều hướng tài khoản" })
       .getByRole("link", { name: "Không gian cá nhân" }),
   ).toHaveAttribute("href", "/workspace");
   await expect(page.locator(".public-header__menu")).toBeHidden();

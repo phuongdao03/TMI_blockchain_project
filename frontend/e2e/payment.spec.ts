@@ -2,9 +2,10 @@ import { expect, test } from "@playwright/test";
 
 const dossierId = "9155dbf5-bb3e-449d-8bf0-9572cc642cac";
 const paymentOrderId = "a255dbf5-bb3e-449d-8bf0-9572cc642cac";
+const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
 
 test.beforeEach(async ({ request }) => {
-  await request.post("http://127.0.0.1:4010/api/e2e/reset-payment");
+  await request.post(`${mockApiUrl}/api/e2e/reset-payment`);
 });
 
 test("admin charges a funded wallet and applicant sees fee confirmation", async ({
@@ -45,7 +46,7 @@ test("admin charges a funded wallet and applicant sees fee confirmation", async 
   ]);
   await page.goto("/admin/payments");
   const dossierField = page.getByLabel("Hồ sơ đã phê duyệt");
-  const amountField = page.getByLabel("Số phí cần thu (VND)");
+  const amountField = page.getByLabel("Số phí cần thu (đồng)");
   await expect(dossierField).toBeVisible();
   await dossierField.selectOption(dossierId);
   await amountField.fill("1500000");
@@ -57,7 +58,7 @@ test("admin charges a funded wallet and applicant sees fee confirmation", async 
   await expect(issueFeeButton).toBeEnabled();
   await issueFeeButton.click();
   await expect(page.getByText("Đã trừ phí từ ví người nộp")).toBeVisible();
-  await expect(page.getByText(/1\.500\.000 VND/)).toBeVisible();
+  await expect(page.getByText(/1\.500\.000đ/)).toBeVisible();
 
   await page.close();
   await context.clearCookies();
@@ -106,7 +107,7 @@ test("admin charges a funded wallet and applicant sees fee confirmation", async 
   await expect(
     applicantPage.getByText("Khoản phí đã được xác nhận"),
   ).toBeVisible();
-  await expect(applicantPage.getByText("1.500.000 ₫")).toBeVisible();
+  await expect(applicantPage.getByText(/1\.500\.000\s*₫/)).toBeVisible();
   await expect(applicantPage.locator(".payment-workspace")).not.toContainText(
     /PayOS|QR/i,
   );

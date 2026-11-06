@@ -125,7 +125,7 @@ def upgrade() -> None:
             name="ck_finance_settings_fee_bps_maximum",
         ),
         sa.CheckConstraint(
-            "approval_required = 1",
+            "approval_required IS TRUE",
             name="ck_finance_settings_manual_approval_required",
         ),
         sa.CheckConstraint(

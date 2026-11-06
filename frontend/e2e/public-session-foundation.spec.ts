@@ -1,4 +1,4 @@
-﻿import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 async function seedSession(context: BrowserContext, refreshOnly = false) {
   await context.addCookies(
@@ -19,20 +19,26 @@ async function seedSession(context: BrowserContext, refreshOnly = false) {
 }
 
 async function expectAccount(page: Page) {
-  const accountMenu = page.getByLabel("Mở menu tài khoản");
+  const accountMenu = page.getByLabel("Mở điều hướng tài khoản");
   // A refresh-only session renders the loading shell before its identity arrives.
   await expect(accountMenu).toHaveCount(1);
   if (await accountMenu.isVisible()) {
     await expect(accountMenu).toBeVisible();
   } else {
-    const mobileMenu = page.getByRole("dialog", { name: "Menu công khai" });
+    const mobileMenu = page.getByRole("dialog", {
+      name: "Điều hướng công khai",
+    });
     if (!(await mobileMenu.isVisible())) {
-      await page.getByRole("button", { name: "Mở menu", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Mở điều hướng", exact: true })
+        .click();
     }
     await expect(
       mobileMenu.getByRole("link", { name: "Không gian cá nhân" }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Đóng menu", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Đóng điều hướng", exact: true })
+      .click();
   }
   await expect(
     page.getByRole("link", { name: "Đăng nhập", exact: true }),
@@ -43,20 +49,24 @@ async function expectAccount(page: Page) {
 }
 
 async function logout(page: Page) {
-  const accountMenu = page.getByLabel("Mở menu tài khoản");
+  const accountMenu = page.getByLabel("Mở điều hướng tài khoản");
   if (await accountMenu.isVisible()) {
     await accountMenu.click();
   } else {
-    const mobileMenu = page.getByRole("dialog", { name: "Menu công khai" });
+    const mobileMenu = page.getByRole("dialog", {
+      name: "Điều hướng công khai",
+    });
     if (!(await mobileMenu.isVisible())) {
-      await page.getByRole("button", { name: "Mở menu", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Mở điều hướng", exact: true })
+        .click();
     }
   }
   await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
 }
 
 async function expectGuestAfterLogout(page: Page) {
-  await expect(page.getByLabel("Mở menu tài khoản")).toHaveCount(0);
+  await expect(page.getByLabel("Mở điều hướng tài khoản")).toHaveCount(0);
   // The desktop entry remains in the DOM but is hidden on mobile.
   const loginLink = page.locator(".public-header__login");
   // The authenticated menu also disappears during the intermediate session
@@ -68,16 +78,22 @@ async function expectGuestAfterLogout(page: Page) {
   if (isDesktopHeader) {
     await expect(loginLink).toBeVisible();
   } else {
-    const mobileMenu = page.getByRole("dialog", { name: "Menu công khai" });
+    const mobileMenu = page.getByRole("dialog", {
+      name: "Điều hướng công khai",
+    });
     if (!(await mobileMenu.isVisible())) {
-      await page.getByRole("button", { name: "Mở menu", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Mở điều hướng", exact: true })
+        .click();
     }
     await expect(
       mobileMenu.getByRole("link", { name: "Đăng nhập", exact: true }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Đóng menu", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Đóng điều hướng", exact: true })
+      .click();
   }
-  await expect(page.getByLabel("Mở menu tài khoản")).toHaveCount(0);
+  await expect(page.getByLabel("Mở điều hướng tài khoản")).toHaveCount(0);
 }
 
 test("guest account actions resolve at every requested viewport", async ({
@@ -87,13 +103,13 @@ test("guest account actions resolve at every requested viewport", async ({
   for (const width of [360, 375, 390, 430, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     const menuButton = page.getByRole("button", {
-      name: "Mở menu",
+      name: "Mở điều hướng",
       exact: true,
     });
     const useMenu = await menuButton.isVisible();
     if (useMenu) await menuButton.click();
     const actions = useMenu
-      ? page.getByRole("dialog", { name: "Menu công khai" })
+      ? page.getByRole("dialog", { name: "Điều hướng công khai" })
       : page.getByRole("banner");
     await expect(
       actions.getByRole("link", { name: "Đăng nhập", exact: true }).first(),
@@ -103,7 +119,7 @@ test("guest account actions resolve at every requested viewport", async ({
     ).toBeVisible();
     if (useMenu)
       await page
-        .getByRole("button", { name: "Đóng menu", exact: true })
+        .getByRole("button", { name: "Đóng điều hướng", exact: true })
         .click();
     expect(
       await page.evaluate(

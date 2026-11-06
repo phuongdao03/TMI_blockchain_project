@@ -10,16 +10,18 @@ test("exposes an installable PWA shell", async ({ page, request }) => {
   await page.goto("/");
 
   const headerInstallLink = page.getByRole("link", {
-    name: "Cách cài ứng dụng",
+    name: "Cài ứng dụng",
   });
   if (await headerInstallLink.isVisible()) {
     await expect(headerInstallLink).toHaveAttribute("href", "/install");
   } else {
-    await page.getByRole("button", { name: "Mở menu" }).click();
+    await page.getByRole("button", { name: "Mở điều hướng" }).click();
     await expect(
-      page.getByRole("dialog", { name: "Menu công khai" }).getByRole("link", {
-        name: "Cài ứng dụng",
-      }),
+      page
+        .getByRole("dialog", { name: "Điều hướng công khai" })
+        .getByRole("link", {
+          name: "Cài ứng dụng",
+        }),
     ).toHaveAttribute("href", "/install");
   }
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(

@@ -91,9 +91,7 @@ test("applicant creates, uploads evidence and submits an immutable dossier", asy
 
   await page.getByRole("button", { name: /Kiểm tra & nộp/ }).click();
   await page.getByRole("button", { name: "Nộp hồ sơ" }).click();
-  await expect(
-    page.getByText("Hồ sơ đã nộp và đang ở chế độ chỉ đọc."),
-  ).toBeVisible();
+  await expect(page.getByText("Hồ sơ đã được gửi thành công")).toBeVisible();
   const overflow = await page.evaluate(() => {
     const width = document.documentElement.clientWidth;
     return Array.from(document.querySelectorAll<HTMLElement>("body *"))

@@ -1,12 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+const mockApiUrl = `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}`;
+
 test("preparation survives reload, another device and a conflicting edit", async ({
   page,
   context,
   browser,
   request,
 }, info) => {
-  await request.post("http://127.0.0.1:4010/api/e2e/reset-preparation");
+  await request.post(`${mockApiUrl}/api/e2e/reset-preparation`);
   await context.addCookies(
     ["cns_access", "cns_refresh", "cns_csrf"].map((name) => ({
       name,
@@ -31,7 +33,9 @@ test("preparation survives reload, another device and a conflicting edit", async
     .fill("Di sản đang chuẩn bị");
   await page.getByLabel("Mô tả ngắn").fill("Nội dung chưa hoàn tất");
   await expect(
-    page.getByRole("status").filter({ hasText: "Đã lưu dữ liệu chuẩn bị" }),
+    page
+      .getByRole("status")
+      .filter({ hasText: "Đã lưu phần chuẩn bị trên tài khoản." }),
   ).toBeVisible();
   await page.reload();
   await expect(page.getByLabel("Tên tài sản hoặc tác phẩm")).toHaveValue(
@@ -40,7 +44,9 @@ test("preparation survives reload, another device and a conflicting edit", async
   await expect(page.getByLabel("Mô tả ngắn")).toHaveValue(
     "Nội dung chưa hoàn tất",
   );
-  const other = await browser.newContext({ baseURL: "http://127.0.0.1:3100" });
+  const other = await browser.newContext({
+    baseURL: new URL(page.url()).origin,
+  });
   try {
     await other.addCookies(await context.cookies());
     const device = await other.newPage();
@@ -52,7 +58,9 @@ test("preparation survives reload, another device and a conflicting edit", async
       .getByLabel("Tên tài sản hoặc tác phẩm")
       .fill("Bản từ thiết bị thứ hai");
     await expect(
-      device.getByRole("status").filter({ hasText: "Đã lưu dữ liệu chuẩn bị" }),
+      device
+        .getByRole("status")
+        .filter({ hasText: "Đã lưu phần chuẩn bị trên tài khoản." }),
     ).toBeVisible();
     await page
       .getByLabel("Tên tài sản hoặc tác phẩm")

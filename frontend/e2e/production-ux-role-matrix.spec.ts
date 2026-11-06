@@ -51,13 +51,13 @@ async function setTheme(page: Page, workspace: boolean, theme: "sáng" | "tối"
   const label = `Giao diện ${theme}` as const;
   if (workspace) await selectWorkspaceTheme(page, label);
   else if ((page.viewportSize()?.width ?? 1440) < 1024) {
-    await page.getByRole("button", { name: "Mở menu" }).click();
+    await page.getByRole("button", { name: "Mở điều hướng" }).click();
     await page
-      .getByRole("dialog", { name: "Menu công khai" })
+      .getByRole("dialog", { name: "Điều hướng công khai" })
       .getByRole("group", { name: "Chọn giao diện" })
       .getByRole("button", { name: label })
       .click();
-    await page.getByRole("button", { name: "Đóng menu" }).click();
+    await page.getByRole("button", { name: "Đóng điều hướng" }).click();
   } else {
     await page
       .locator(".public-header__actions")

@@ -3,9 +3,25 @@ from pathlib import Path
 
 import pytest
 from alembic.config import Config
+from sqlalchemy import CheckConstraint
+from sqlalchemy.dialects import postgresql
 
 from alembic import command
 from app.core.config import get_settings
+from app.modules.wallet.models import FinanceSettings
+
+
+def test_manual_approval_constraint_compiles_for_postgresql() -> None:
+    constraint = next(
+        item
+        for item in FinanceSettings.__table__.constraints
+        if isinstance(item, CheckConstraint)
+        and "approval_required" in str(item.sqltext)
+    )
+    statement = str(constraint.sqltext.compile(dialect=postgresql.dialect()))
+
+    assert "approval_required IS TRUE" in statement
+    assert "approval_required = 1" not in statement
 
 
 def test_finance_journal_is_immutable_and_migration_refuses_data_loss(

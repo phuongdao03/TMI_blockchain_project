@@ -81,7 +81,7 @@ test("public discovery keeps account navigation available to signed in users", a
   const accountMenu = page.locator(".public-user-menu");
   await accountMenu.locator("summary").click();
   const accountNavigation = page.getByRole("navigation", {
-    name: "Menu tài khoản",
+    name: "Điều hướng tài khoản",
   });
   await expect(accountNavigation).toBeVisible();
   await expect(
@@ -103,7 +103,9 @@ test("public discovery keeps account navigation available to signed in users", a
 
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/verify");
-  await expect(page.getByRole("button", { name: "Mở menu" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Mở điều hướng" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Kiểm tra bằng xác lập" }),
   ).toBeVisible();

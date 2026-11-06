@@ -43,9 +43,7 @@ class WalletTopup(UtcTimestampMixin, Base):
         UniqueConstraint(
             "user_id", "idempotency_key", name="uq_wallet_topups_user_key"
         ),
-        CheckConstraint(
-            "amount_minor >= 1000", name="amount_range"
-        ),
+        CheckConstraint("amount_minor >= 1000", name="amount_range"),
         CheckConstraint(
             "status IN ('PENDING', 'PROCESSING', 'PAID', "
             "'FAILED', 'CANCELLED', 'EXPIRED')",
@@ -224,7 +222,7 @@ class FinanceSettings(Base):
             "two_person_threshold_minor IS NULL OR two_person_threshold_minor > 0",
             name="two_person_threshold_positive",
         ),
-        CheckConstraint("approval_required = 1", name="manual_approval_required"),
+        CheckConstraint("approval_required IS TRUE", name="manual_approval_required"),
         CheckConstraint("fee_mode IN ('NONE', 'FIXED', 'BPS')", name="valid_fee_mode"),
     )
 
