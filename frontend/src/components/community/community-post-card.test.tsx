@@ -90,8 +90,7 @@ describe("CommunityPostCard", () => {
     expect(image.className).toContain("object-cover");
     expect(image.closest("li")?.className).toContain("aspect-[16/9]");
     expect(
-      image.compareDocumentPosition(title) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      image.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 

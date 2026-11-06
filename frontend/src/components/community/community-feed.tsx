@@ -66,10 +66,7 @@ export function CommunityFeed({
     Math.ceil(total / (posts.data?.meta.pageSize || PAGE_SIZE)),
   );
   const categoryHref = (nextCategory?: string) =>
-    communityFeedHref(
-      { category: nextCategory, q, sort, relatedWorkId },
-      1,
-    );
+    communityFeedHref({ category: nextCategory, q, sort, relatedWorkId }, 1);
 
   function handleFilterSubmit(event: FormEvent<HTMLFormElement>) {
     const data = new FormData(event.currentTarget);
@@ -100,7 +97,8 @@ export function CommunityFeed({
               Cộng đồng Tinh Hoa Việt
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)] sm:text-base">
-              Nơi chia sẻ câu chuyện, kết nối con người và lan tỏa những giá trị Việt.
+              Nơi chia sẻ câu chuyện, kết nối con người và lan tỏa những giá trị
+              Việt.
             </p>
           </div>
           {authStatus === "authenticated" ? (
@@ -115,7 +113,8 @@ export function CommunityFeed({
               className="inline-flex min-h-11 w-fit shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--theme-accent)] px-5 text-sm font-semibold text-[var(--theme-accent-contrast)] transition-colors duration-150 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
               href={`/login?next=${encodeURIComponent("/community/new")}`}
             >
-              <Plus aria-hidden="true" className="size-4" /> Đăng nhập để viết bài
+              <Plus aria-hidden="true" className="size-4" /> Đăng nhập để viết
+              bài
             </Link>
           ) : (
             <p className="text-sm text-[var(--theme-muted)]" role="status">
@@ -221,7 +220,10 @@ export function CommunityFeed({
         </nav>
 
         {categories.isError ? (
-          <div className="-mt-5 mb-6 flex items-center gap-3 text-sm" role="alert">
+          <div
+            className="-mt-5 mb-6 flex items-center gap-3 text-sm"
+            role="alert"
+          >
             <p className="text-[var(--theme-muted)]">
               Chưa tải được danh sách chuyên mục.
             </p>
@@ -440,7 +442,8 @@ function FeedSkeleton() {
         </div>
       ))}
       <span className="sr-only">
-        <LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" /> Đang tải
+        <LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" />{" "}
+        Đang tải
       </span>
     </div>
   );
