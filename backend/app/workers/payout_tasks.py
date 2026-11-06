@@ -20,22 +20,24 @@ from app.workers.celery_app import celery_app
 
 def _gateway() -> PayOSPayoutGateway | None:
     settings = get_settings()
-    secrets = (
-        settings.payos_payout_client_id,
-        settings.payos_payout_api_key,
-        settings.payos_payout_checksum_key,
-    )
+    client_id = settings.payos_payout_client_id
+    api_key = settings.payos_payout_api_key
+    checksum_key = settings.payos_payout_checksum_key
     if (
         not settings.payout_live_enabled
         or settings.payos_payout_provider != "payos"
-        or any(secret is None or not secret.get_secret_value() for secret in secrets)
+        or client_id is None
+        or not client_id.get_secret_value()
+        or api_key is None
+        or not api_key.get_secret_value()
+        or checksum_key is None
+        or not checksum_key.get_secret_value()
     ):
         return None
-    assert all(secret is not None for secret in secrets)
     return PayOSPayoutGateway(
-        client_id=secrets[0].get_secret_value(),
-        api_key=secrets[1].get_secret_value(),
-        checksum_key=secrets[2].get_secret_value(),
+        client_id=client_id.get_secret_value(),
+        api_key=api_key.get_secret_value(),
+        checksum_key=checksum_key.get_secret_value(),
         base_url=settings.payos_payout_base_url,
         timeout_seconds=settings.payos_payout_timeout_seconds,
     )

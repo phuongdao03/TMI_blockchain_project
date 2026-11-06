@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, time
+from typing import TypedDict
 from uuid import UUID, uuid4
 
 from sqlalchemy import func, or_, select, update
@@ -45,6 +46,24 @@ class BankAccountView:
     verification_status: str
     is_default: bool
     is_active: bool
+
+
+class AdminWithdrawalDetail(TypedDict):
+    request: WithdrawalRequest
+    account_number: str
+    account_name: str
+    approvals: tuple[WithdrawalApproval, ...]
+    events: tuple[WithdrawalEvent, ...]
+    payout_attempts: tuple[PayoutAttempt, ...]
+
+
+class PayoutSubmission(TypedDict):
+    attempt_id: UUID
+    reference_id: str
+    idempotency_key: str
+    amount_minor: int
+    bank_bin: str
+    account_number: str
 
 
 class WalletWithdrawalService:
@@ -382,7 +401,7 @@ class WalletWithdrawalService:
                     WithdrawalRequest.idempotency_key == idempotency_key,
                 )
             )
-            if existing is not None:
+            if isinstance(existing, WithdrawalRequest):
                 if (
                     existing.amount_minor != amount_minor
                     or existing.bank_account_id != bank_account_id
@@ -422,7 +441,7 @@ class WalletWithdrawalService:
                     WithdrawalRequest.idempotency_key == idempotency_key,
                 )
             )
-            if existing is not None:
+            if isinstance(existing, WithdrawalRequest):
                 if (
                     existing.amount_minor != amount_minor
                     or existing.bank_account_id != bank_account_id
@@ -895,7 +914,9 @@ class WalletWithdrawalService:
                 )
             )
 
-    async def admin_withdrawal_detail(self, withdrawal_id: UUID) -> dict[str, object]:
+    async def admin_withdrawal_detail(
+        self, withdrawal_id: UUID
+    ) -> AdminWithdrawalDetail:
         async with self.session.begin():
             request = await self.session.get(WithdrawalRequest, withdrawal_id)
             if request is None:
@@ -1005,7 +1026,7 @@ class WalletWithdrawalService:
 
     async def begin_payout_submission(
         self, withdrawal_id: UUID
-    ) -> dict[str, object] | None:
+    ) -> PayoutSubmission | None:
         async with self.session.begin():
             request = await self._withdrawal_for_update(withdrawal_id)
             settings = await self._finance_settings(lock=True)

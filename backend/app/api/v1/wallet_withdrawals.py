@@ -487,15 +487,14 @@ async def get_admin_withdrawal(
             "account_name": result["account_name"],
             "approvals": [
                 WithdrawalApprovalData.model_validate(item)
-                for item in result["approvals"]  # type: ignore[union-attr]
+                for item in result["approvals"]
             ],
             "events": [
-                WithdrawalEventData.model_validate(item)
-                for item in result["events"]  # type: ignore[union-attr]
+                WithdrawalEventData.model_validate(item) for item in result["events"]
             ],
             "payout_attempts": [
                 PayoutAttemptData.model_validate(item)
-                for item in result["payout_attempts"]  # type: ignore[union-attr]
+                for item in result["payout_attempts"]
             ],
         }
     )

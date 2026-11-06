@@ -1,9 +1,11 @@
 import secrets
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from sqlalchemy import String, and_, case, cast, func, or_, select
+from sqlalchemy import Select, String, and_, case, cast, func, or_, select
+from sqlalchemy.engine import Row
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -71,8 +73,8 @@ class AffiliateService:
         *,
         affiliate_enabled: bool = False,
         direct_commission_enabled: bool = False,
-        clock=None,
-        code_factory=None,
+        clock: Callable[[], datetime] | None = None,
+        code_factory: Callable[[], str] | None = None,
     ) -> None:
         self.session = session
         self.affiliate_enabled = affiliate_enabled
@@ -384,7 +386,7 @@ class AffiliateService:
                 )
             )
             if (
-                existing is not None
+                isinstance(existing, AffiliateCommission)
                 and existing.referred_user_id == referred_user_id
                 and existing.service_code == service
                 and existing.amount_minor == amount_minor
@@ -438,19 +440,18 @@ class AffiliateService:
     ) -> tuple[AffiliateCommission, ...]:
         async with self.session.begin():
             await self._require_eligible_user(user_id)
+            statement = select(AffiliateCommission).where(
+                AffiliateCommission.affiliate_user_id == user_id
+            )
+            if commission_status is not None:
+                statement = statement.where(
+                    AffiliateCommission.status == commission_status
+                )
             return tuple(
                 await self.session.scalars(
-                    select(AffiliateCommission)
-                    .where(AffiliateCommission.affiliate_user_id == user_id)
-                    .where(
-                        AffiliateCommission.status == commission_status
-                        if commission_status is not None
-                        else True
-                    )
-                    .order_by(
+                    statement.order_by(
                         AffiliateCommission.created_at.desc(), AffiliateCommission.id
-                    )
-                    .limit(limit)
+                    ).limit(limit)
                 )
             )
 
@@ -614,7 +615,7 @@ class AffiliateService:
             return self._to_profile_admin_summary(row)
 
     @staticmethod
-    def _profile_admin_statement():
+    def _profile_admin_statement() -> Select[tuple[AffiliateProfile, int, int]]:
         click_count = (
             select(func.count())
             .select_from(AffiliateReferralClick)
@@ -634,7 +635,9 @@ class AffiliateService:
         )
 
     @staticmethod
-    def _to_profile_admin_summary(row) -> AffiliateProfileAdminSummary:
+    def _to_profile_admin_summary(
+        row: Row[tuple[AffiliateProfile, int, int]],
+    ) -> AffiliateProfileAdminSummary:
         profile = row[0]
         return AffiliateProfileAdminSummary(
             user_id=profile.user_id,
@@ -1001,7 +1004,10 @@ class AffiliateService:
                     AffiliateAttribution.referred_user_id == referred_user_id
                 )
             )
-            if existing is not None and existing.affiliate_user_id == referrer.user_id:
+            if (
+                isinstance(existing, AffiliateAttribution)
+                and existing.affiliate_user_id == referrer.user_id
+            ):
                 return existing
             raise _conflict("Tài khoản đã được gắn với mã giới thiệu khác.") from exc
         return attribution
