@@ -84,7 +84,11 @@ const commonQuestions = [
   },
 ] as const;
 
-function StepIllustration({ kind }: { kind: (typeof steps)[number]["illustration"] }) {
+function StepIllustration({
+  kind,
+}: {
+  kind: (typeof steps)[number]["illustration"];
+}) {
   return (
     <svg
       aria-hidden="true"
@@ -92,53 +96,131 @@ function StepIllustration({ kind }: { kind: (typeof steps)[number]["illustration
       fill="none"
       viewBox="0 0 320 240"
     >
-      <circle className="process-illustration__orbit" cx="160" cy="120" r="92" />
-      <circle className="process-illustration__orbit" cx="160" cy="120" r="76" />
+      <circle
+        className="process-illustration__orbit"
+        cx="160"
+        cy="120"
+        r="92"
+      />
+      <circle
+        className="process-illustration__orbit"
+        cx="160"
+        cy="120"
+        r="76"
+      />
       <circle className="process-illustration__sun" cx="246" cy="55" r="5" />
       <circle className="process-illustration__sun" cx="74" cy="181" r="3" />
       {kind === "documents" ? (
         <>
-          <path className="process-illustration__shadow" d="M91 61h82l34 34v91H91z" />
-          <path className="process-illustration__paper" d="M107 46h80l31 31v94h-111z" />
+          <path
+            className="process-illustration__shadow"
+            d="M91 61h82l34 34v91H91z"
+          />
+          <path
+            className="process-illustration__paper"
+            d="M107 46h80l31 31v94h-111z"
+          />
           <path className="process-illustration__fold" d="M187 46v32h31" />
-          <path className="process-illustration__line" d="M128 101h66M128 119h66M128 137h47" />
-          <path className="process-illustration__accent" d="m119 163 8 8 16-18" />
+          <path
+            className="process-illustration__line"
+            d="M128 101h66M128 119h66M128 137h47"
+          />
+          <path
+            className="process-illustration__accent"
+            d="m119 163 8 8 16-18"
+          />
         </>
       ) : null}
       {kind === "payment" ? (
         <>
-          <rect className="process-illustration__paper" height="105" rx="9" width="147" x="86" y="74" />
+          <rect
+            className="process-illustration__paper"
+            height="105"
+            rx="9"
+            width="147"
+            x="86"
+            y="74"
+          />
           <path className="process-illustration__accent" d="M87 102h145" />
-          <path className="process-illustration__line" d="M108 132h44m-44 17h27" />
-          <circle className="process-illustration__medal" cx="195" cy="151" r="23" />
-          <path className="process-illustration__accent" d="m188 151 5 5 10-12" />
+          <path
+            className="process-illustration__line"
+            d="M108 132h44m-44 17h27"
+          />
+          <circle
+            className="process-illustration__medal"
+            cx="195"
+            cy="151"
+            r="23"
+          />
+          <path
+            className="process-illustration__accent"
+            d="m188 151 5 5 10-12"
+          />
         </>
       ) : null}
       {kind === "review" ? (
         <>
-          <path className="process-illustration__paper" d="M95 61h101l25 25v99H95z" />
+          <path
+            className="process-illustration__paper"
+            d="M95 61h101l25 25v99H95z"
+          />
           <path className="process-illustration__fold" d="M196 61v26h25" />
-          <path className="process-illustration__line" d="M116 105h73m-73 17h53m-53 17h41" />
-          <circle className="process-illustration__lens" cx="190" cy="151" r="26" />
+          <path
+            className="process-illustration__line"
+            d="M116 105h73m-73 17h53m-53 17h41"
+          />
+          <circle
+            className="process-illustration__lens"
+            cx="190"
+            cy="151"
+            r="26"
+          />
           <path className="process-illustration__accent" d="m209 170 21 21" />
-          <path className="process-illustration__accent" d="m180 151 7 7 14-16" />
+          <path
+            className="process-illustration__accent"
+            d="m180 151 7 7 14-16"
+          />
         </>
       ) : null}
       {kind === "certificate" ? (
         <>
-          <path className="process-illustration__paper" d="M92 49h136v126H92z" />
-          <path className="process-illustration__ornament" d="M105 62h110v100H105z" />
-          <path className="process-illustration__accent" d="M126 88h68m-56 15h44" />
-          <circle className="process-illustration__medal" cx="160" cy="145" r="21" />
-          <path className="process-illustration__accent" d="m151 145 6 6 12-14" />
-          <path className="process-illustration__ribbon" d="m146 163-5 24 19-10 19 10-5-24" />
+          <path
+            className="process-illustration__paper"
+            d="M92 49h136v126H92z"
+          />
+          <path
+            className="process-illustration__ornament"
+            d="M105 62h110v100H105z"
+          />
+          <path
+            className="process-illustration__accent"
+            d="M126 88h68m-56 15h44"
+          />
+          <circle
+            className="process-illustration__medal"
+            cx="160"
+            cy="145"
+            r="21"
+          />
+          <path
+            className="process-illustration__accent"
+            d="m151 145 6 6 12-14"
+          />
+          <path
+            className="process-illustration__ribbon"
+            d="m146 163-5 24 19-10 19 10-5-24"
+          />
         </>
       ) : null}
     </svg>
   );
 }
 
-export function ProcessJourney({ submissionOpen = true }: { submissionOpen?: boolean }) {
+export function ProcessJourney({
+  submissionOpen = true,
+}: {
+  submissionOpen?: boolean;
+}) {
   const [activeStep, setActiveStep] = useState(0);
   const [journeyEntered, setJourneyEntered] = useState(false);
   const stepsRef = useRef<HTMLOListElement>(null);
@@ -172,9 +254,12 @@ export function ProcessJourney({ submissionOpen = true }: { submissionOpen?: boo
         <div className="process-journey__inner">
           <header className="process-journey__intro">
             <p className="public-information-kicker">4 BƯỚC ĐỀ CỬ</p>
-            <h2 id="process-journey-title">Từng bước, bạn sẽ biết mình cần làm gì.</h2>
+            <h2 id="process-journey-title">
+              Từng bước, bạn sẽ biết mình cần làm gì.
+            </h2>
             <p>
-              Chọn một bước để xem việc cần làm, tài liệu cần chuẩn bị và điều sẽ xảy ra tiếp theo.
+              Chọn một bước để xem việc cần làm, tài liệu cần chuẩn bị và điều
+              sẽ xảy ra tiếp theo.
             </p>
           </header>
 
@@ -192,7 +277,10 @@ export function ProcessJourney({ submissionOpen = true }: { submissionOpen?: boo
                   onClick={() => setActiveStep(index)}
                   type="button"
                 >
-                  <span aria-hidden="true" className="process-journey__step-icon">
+                  <span
+                    aria-hidden="true"
+                    className="process-journey__step-icon"
+                  >
                     <Icon className="size-5" strokeWidth={1.8} />
                   </span>
                   <span className="process-journey__step-copy">
@@ -200,7 +288,9 @@ export function ProcessJourney({ submissionOpen = true }: { submissionOpen?: boo
                       Bước {String(index + 1).padStart(2, "0")}
                     </span>
                     <span className="process-journey__step-title">{title}</span>
-                    <span className="process-journey__step-summary">{summary}</span>
+                    <span className="process-journey__step-summary">
+                      {summary}
+                    </span>
                   </span>
                 </button>
               </li>
@@ -217,7 +307,10 @@ export function ProcessJourney({ submissionOpen = true }: { submissionOpen?: boo
           >
             <div className="process-step-detail__copy">
               <p className="process-step-detail__eyebrow">
-                <span aria-hidden="true" className="process-step-detail__selected-icon">
+                <span
+                  aria-hidden="true"
+                  className="process-step-detail__selected-icon"
+                >
                   <StepIcon className="size-4" strokeWidth={1.8} />
                 </span>
                 <span>BƯỚC {String(activeStep + 1).padStart(2, "0")} / 04</span>
@@ -262,14 +355,19 @@ export function ProcessJourney({ submissionOpen = true }: { submissionOpen?: boo
           <header className="process-faq__intro">
             <p className="public-information-kicker">CÂU HỎI THƯỜNG GẶP</p>
             <h2 id="process-faq-title">Khi cần thêm thông tin</h2>
-            <p>Câu trả lời ngắn gọn cho những tình huống thường gặp khi gửi hồ sơ.</p>
+            <p>
+              Câu trả lời ngắn gọn cho những tình huống thường gặp khi gửi hồ
+              sơ.
+            </p>
           </header>
           <div className="process-faq__list">
             {commonQuestions.map(({ answer, question }) => (
               <details className="process-faq__item" key={question}>
                 <summary>
                   <span>{question}</span>
-                  <span aria-hidden="true" className="process-faq__toggle">+</span>
+                  <span aria-hidden="true" className="process-faq__toggle">
+                    +
+                  </span>
                 </summary>
                 <p>{answer}</p>
               </details>

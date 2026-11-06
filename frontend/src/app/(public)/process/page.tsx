@@ -14,15 +14,26 @@ function ProcessHeroArtwork() {
     >
       <circle className="process-hero__ring" cx="240" cy="180" r="128" />
       <circle className="process-hero__ring" cx="240" cy="180" r="108" />
-      <circle className="process-hero__ring process-hero__ring--fine" cx="240" cy="180" r="90" />
+      <circle
+        className="process-hero__ring process-hero__ring--fine"
+        cx="240"
+        cy="180"
+        r="90"
+      />
       <path className="process-hero__route" d="M112 180h79l41-48 47 48h89" />
-      <path className="process-hero__route process-hero__route--vertical" d="M191 180v68m88-68v68" />
+      <path
+        className="process-hero__route process-hero__route--vertical"
+        d="M191 180v68m88-68v68"
+      />
       <circle className="process-hero__step-dot" cx="112" cy="180" r="8" />
       <circle className="process-hero__step-dot" cx="191" cy="180" r="8" />
       <circle className="process-hero__step-dot" cx="279" cy="180" r="8" />
       <circle className="process-hero__step-dot" cx="368" cy="180" r="8" />
       <path className="process-hero__document" d="M174 94h57l24 24v38h-81z" />
-      <path className="process-hero__document-line" d="M188 112h27m-27 12h46m-46 12h36" />
+      <path
+        className="process-hero__document-line"
+        d="M188 112h27m-27 12h46m-46 12h36"
+      />
       <path className="process-hero__seal" d="m269 228 10 10 20-22" />
       <circle className="process-hero__seal-ring" cx="279" cy="228" r="25" />
       <circle className="process-hero__ornament" cx="240" cy="180" r="145" />
@@ -50,7 +61,10 @@ function ProcessActions({ submissionOpen }: { submissionOpen: boolean }) {
               Bắt đầu gửi hồ sơ
             </Link>
           ) : (
-            <Link className="process-next__primary" href="/coming-soon/submission">
+            <Link
+              className="process-next__primary"
+              href="/coming-soon/submission"
+            >
               Xem thông tin mở cổng
             </Link>
           )}
@@ -82,7 +96,10 @@ export default function ProcessPage() {
             </p>
             <div className="process-hero__actions">
               {preview ? (
-                <Link className="process-hero__primary" href="/coming-soon/submission">
+                <Link
+                  className="process-hero__primary"
+                  href="/coming-soon/submission"
+                >
                   Xem thông tin mở cổng
                   <ArrowRight aria-hidden="true" className="size-4" />
                 </Link>

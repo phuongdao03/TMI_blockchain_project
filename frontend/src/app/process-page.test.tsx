@@ -19,15 +19,9 @@ describe("ProcessPage", () => {
     expect(
       screen.getByRole("button", { name: /Chuẩn bị hồ sơ/ }),
     ).toBeDefined();
-    expect(
-      screen.getByRole("button", { name: /Gửi hồ sơ/ }),
-    ).toBeDefined();
-    expect(
-      screen.getByRole("button", { name: /Xem xét hồ sơ/ }),
-    ).toBeDefined();
-    expect(
-      screen.getByRole("button", { name: /Nhận kết quả/ }),
-    ).toBeDefined();
+    expect(screen.getByRole("button", { name: /Gửi hồ sơ/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Xem xét hồ sơ/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Nhận kết quả/ })).toBeDefined();
     expect(
       screen.getByText("Cổng gửi hồ sơ được mở theo từng giai đoạn."),
     ).toBeDefined();
@@ -41,11 +35,11 @@ describe("ProcessPage", () => {
       screen.queryByRole("link", { name: "Bắt đầu gửi hồ sơ" }),
     ).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Gửi hồ sơ/ }));
+    expect(screen.getAllByText(/Khi cổng gửi hồ sơ mở/)).toHaveLength(2);
     expect(
-      screen.getAllByText(/Khi cổng gửi hồ sơ mở/),
-    ).toHaveLength(2);
-    expect(
-      screen.getByText(/Gửi đề cử không đồng nghĩa với việc chắc chắn được xác lập/i),
+      screen.getByText(
+        /Gửi đề cử không đồng nghĩa với việc chắc chắn được xác lập/i,
+      ),
     ).toBeDefined();
   });
 
@@ -59,8 +53,6 @@ describe("ProcessPage", () => {
     ).toBeDefined();
 
     fireEvent.click(screen.getByText("Nếu hồ sơ còn thiếu giấy tờ thì sao?"));
-    expect(
-      screen.getByText(/nếu Trung tâm yêu cầu bổ sung/i),
-    ).toBeDefined();
+    expect(screen.getByText(/nếu Trung tâm yêu cầu bổ sung/i)).toBeDefined();
   });
 });

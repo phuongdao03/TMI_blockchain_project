@@ -4736,7 +4736,11 @@ html[data-theme="dark"] .process-page .border-neutral-300 {
   font-size: 0.9375rem;
   font-weight: 700;
   text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--theme-accent) 60%, transparent);
+  text-decoration-color: color-mix(
+    in srgb,
+    var(--theme-accent) 60%,
+    transparent
+  );
   text-underline-offset: 0.25rem;
 }
 
