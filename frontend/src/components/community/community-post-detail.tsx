@@ -34,7 +34,7 @@ export function CommunityPostDetail({ slug }: { slug: string }) {
       <div className="public-theme-surface min-h-[calc(100dvh-5rem)]">
         <div
           aria-label="Đang tải bài viết"
-          className="mx-auto max-w-4xl animate-pulse px-4 py-12 sm:px-6 lg:px-8"
+          className="mx-auto max-w-3xl motion-safe:animate-pulse px-4 py-12 sm:px-6 lg:px-8"
           role="status"
         >
           <div className="h-4 w-32 rounded bg-[var(--theme-elevated)]" />
@@ -81,7 +81,7 @@ export function CommunityPostDetail({ slug }: { slug: string }) {
   const article = post.data;
   return (
     <div className="public-theme-surface min-h-[calc(100dvh-5rem)]">
-      <article className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
+      <article className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
         <Link
           className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[var(--theme-muted)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--theme-accent)]"
           href="/community"
@@ -92,7 +92,7 @@ export function CommunityPostDetail({ slug }: { slug: string }) {
           <p className="text-xs font-bold tracking-[0.18em] text-[var(--theme-accent)] uppercase">
             {article.category.name}
           </p>
-          <h1 className="mt-3 text-3xl font-bold leading-tight tracking-[-0.035em] text-[var(--theme-text)] sm:text-5xl">
+          <h1 className="mt-3 text-3xl font-bold leading-tight tracking-[-0.035em] text-[var(--theme-text)] sm:text-4xl lg:text-5xl">
             {article.title}
           </h1>
           <div className="mt-5 flex flex-col items-start gap-3 text-sm text-[var(--theme-muted)] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">

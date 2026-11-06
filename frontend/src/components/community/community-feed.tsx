@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ArrowRight,
   LoaderCircle,
+  Plus,
   RotateCcw,
   Search,
 } from "lucide-react";
@@ -64,6 +65,11 @@ export function CommunityFeed({
     1,
     Math.ceil(total / (posts.data?.meta.pageSize || PAGE_SIZE)),
   );
+  const categoryHref = (nextCategory?: string) =>
+    communityFeedHref(
+      { category: nextCategory, q, sort, relatedWorkId },
+      1,
+    );
 
   function handleFilterSubmit(event: FormEvent<HTMLFormElement>) {
     const data = new FormData(event.currentTarget);
@@ -84,32 +90,32 @@ export function CommunityFeed({
 
   return (
     <div className="public-theme-surface min-h-[calc(100dvh-5rem)]">
-      <div className="mx-auto max-w-7xl px-5 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-        <header className="flex flex-col gap-4 pb-5 sm:flex-row sm:items-center sm:justify-between sm:border-b sm:border-[var(--theme-border)]">
+      <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-9 lg:px-8 lg:py-12">
+        <header className="flex flex-col gap-5 border-b border-[var(--theme-border)] pb-7 sm:flex-row sm:items-end sm:justify-between sm:pb-8">
           <div className="min-w-0">
-            <p className="hidden text-[0.68rem] font-bold tracking-[0.16em] text-[var(--theme-accent)] uppercase sm:block">
+            <p className="text-[0.68rem] font-bold tracking-[0.16em] text-[var(--theme-accent)] uppercase">
               Tinh Hoa Việt · Kết nối và sẻ chia
             </p>
-            <h1 className="text-2xl font-semibold tracking-[-0.025em] text-[var(--theme-text)] sm:mt-1 sm:text-4xl">
-              Cộng đồng
+            <h1 className="mt-2 text-2xl font-semibold tracking-[-0.025em] text-[var(--theme-text)] sm:text-4xl">
+              Cộng đồng Tinh Hoa Việt
             </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--theme-muted)] sm:mt-2">
-              Cùng chia sẻ kiến thức, đặt câu hỏi và kết nối với cộng đồng.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)] sm:text-base">
+              Nơi chia sẻ câu chuyện, kết nối con người và lan tỏa những giá trị Việt.
             </p>
           </div>
           {authStatus === "authenticated" ? (
             <Link
-              className="inline-flex min-h-11 w-fit shrink-0 items-center justify-center rounded-lg bg-[var(--theme-accent)] px-5 text-sm font-semibold text-[var(--theme-accent-contrast)] transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+              className="inline-flex min-h-11 w-fit shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--theme-accent)] px-5 text-sm font-semibold text-[var(--theme-accent-contrast)] transition-colors duration-150 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
               href="/community/new"
             >
-              + Viết bài
+              <Plus aria-hidden="true" className="size-4" /> Viết bài
             </Link>
           ) : authStatus === "unauthenticated" ? (
             <Link
-              className="inline-flex min-h-11 w-fit shrink-0 items-center justify-center rounded-lg bg-[var(--theme-accent)] px-5 text-sm font-semibold text-[var(--theme-accent-contrast)] transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+              className="inline-flex min-h-11 w-fit shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--theme-accent)] px-5 text-sm font-semibold text-[var(--theme-accent-contrast)] transition-colors duration-150 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
               href={`/login?next=${encodeURIComponent("/community/new")}`}
             >
-              Đăng nhập để viết bài
+              <Plus aria-hidden="true" className="size-4" /> Đăng nhập để viết bài
             </Link>
           ) : (
             <p className="text-sm text-[var(--theme-muted)]" role="status">
@@ -136,72 +142,35 @@ export function CommunityFeed({
           </p>
         ) : null}
 
-        {categories.isError ? (
-          <div className="mt-3 flex items-center gap-3 text-sm" role="alert">
-            <p className="text-[var(--theme-muted)]">
-              Chưa tải được danh sách chuyên mục.
-            </p>
-            <button
-              className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-              onClick={() => void categories.refetch()}
-              type="button"
-            >
-              <RotateCcw aria-hidden="true" className="size-4" /> Thử lại
-            </button>
-          </div>
-        ) : null}
-
         <form
           action="/community"
           aria-label="Tìm kiếm và lọc bài viết"
-          className="mb-6 mt-5 grid grid-cols-2 gap-2 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:my-6 sm:grid-cols-[minmax(12rem,1fr)_minmax(10rem,15rem)_minmax(9rem,12rem)] sm:gap-3 sm:p-4"
+          className="mt-6 flex flex-col gap-3 sm:flex-row"
           onSubmit={handleFilterSubmit}
           role="search"
         >
-          <label className="relative col-span-2 flex min-w-0 items-center sm:col-span-1">
+          <label className="relative flex min-w-0 flex-1 items-center">
             <span className="sr-only">Tìm kiếm bài viết</span>
             <input
-              className="min-h-12 min-w-0 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-bg)] py-2 pr-12 pl-4 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
+              className="min-h-12 min-w-0 w-full rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] py-2 pr-12 pl-5 text-sm text-[var(--theme-text)] outline-none placeholder:text-[var(--theme-muted)] focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
               defaultValue={q ?? ""}
               maxLength={120}
               name="q"
-              placeholder="Tìm bài viết"
+              placeholder="Tìm kiếm bài viết..."
               type="search"
             />
             <button
               aria-label="Tìm bài viết"
-              className="absolute right-1 inline-grid size-10 place-items-center rounded-lg text-[var(--theme-muted)] hover:bg-[var(--theme-elevated)] hover:text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+              className="absolute right-1 inline-grid size-10 place-items-center rounded-full text-[var(--theme-muted)] transition-colors duration-150 hover:bg-[var(--theme-elevated)] hover:text-[var(--theme-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
               type="submit"
             >
               <Search aria-hidden="true" className="size-4" />
             </button>
           </label>
-          <label className="min-w-0 space-y-1.5">
-            <span className="text-xs font-semibold text-[var(--theme-muted)]">
-              Chuyên mục
-            </span>
+          <label className="flex min-w-0 items-center sm:w-52">
+            <span className="sr-only">Sắp xếp</span>
             <select
-              className="min-h-12 min-w-0 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-bg)] px-3 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
-              key={`${category ?? ""}:${sort}:${categories.data ? "ready" : "loading"}`}
-              id="community-category-filter"
-              name="category"
-              defaultValue={category ?? ""}
-              onChange={(event) => event.currentTarget.form?.requestSubmit()}
-            >
-              <option value="">Mọi chuyên mục</option>
-              {categories.data?.map((item) => (
-                <option key={item.id} value={item.slug}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="min-w-0 space-y-1.5">
-            <span className="text-xs font-semibold text-[var(--theme-muted)]">
-              Sắp xếp
-            </span>
-            <select
-              className="min-h-12 min-w-0 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-bg)] px-3 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
+              className="min-h-12 min-w-0 w-full rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 text-sm text-[var(--theme-text)] outline-none focus-visible:border-[var(--theme-accent)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]/20"
               key={`${category ?? ""}:${sort}`}
               id="community-sort-filter"
               name="sort"
@@ -215,20 +184,77 @@ export function CommunityFeed({
               ))}
             </select>
           </label>
+          {category ? (
+            <input name="category" type="hidden" value={category} />
+          ) : null}
           {relatedWorkId ? (
             <input name="relatedWorkId" type="hidden" value={relatedWorkId} />
           ) : null}
         </form>
 
-        <CommunityVipRooms />
+        <nav
+          aria-label="Danh mục bài viết cộng đồng"
+          className="-mx-4 mb-8 overflow-x-auto overscroll-x-contain px-4 sm:mx-0 sm:mb-10 sm:px-0"
+        >
+          <ul className="flex w-max min-w-full gap-2 py-1 sm:w-auto sm:min-w-0">
+            <li className="shrink-0">
+              <Link
+                aria-current={!category ? "page" : undefined}
+                className={categoryPillClass(!category)}
+                href={categoryHref(undefined)}
+              >
+                Tất cả
+              </Link>
+            </li>
+            {categories.data?.map((item) => (
+              <li className="shrink-0" key={item.id}>
+                <Link
+                  aria-current={category === item.slug ? "page" : undefined}
+                  className={categoryPillClass(category === item.slug)}
+                  href={categoryHref(item.slug)}
+                >
+                  {item.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {categories.isError ? (
+          <div className="-mt-5 mb-6 flex items-center gap-3 text-sm" role="alert">
+            <p className="text-[var(--theme-muted)]">
+              Chưa tải được danh sách chuyên mục.
+            </p>
+            <button
+              className="inline-flex min-h-10 items-center gap-2 font-semibold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+              onClick={() => void categories.refetch()}
+              type="button"
+            >
+              <RotateCcw aria-hidden="true" className="size-4" /> Thử lại
+            </button>
+          </div>
+        ) : null}
 
         <section
-          aria-label="Bài viết cộng đồng"
+          aria-labelledby="community-posts-heading"
           aria-busy={
             needsAuthCheck || (!needsFollowingLogin && posts.isPending)
           }
           className="min-w-0"
         >
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-2">
+            <h2
+              className="text-xl font-semibold tracking-[-0.02em] text-[var(--theme-text)]"
+              id="community-posts-heading"
+            >
+              Bài viết cộng đồng
+            </h2>
+            {posts.data ? (
+              <p className="text-sm text-[var(--theme-muted)]">
+                {total.toLocaleString("vi-VN")} bài viết
+              </p>
+            ) : null}
+          </div>
           {needsAuthCheck ? (
             <p className="my-5 text-sm text-[var(--theme-muted)]" role="status">
               {authStatus === "loading"
@@ -256,7 +282,10 @@ export function CommunityFeed({
             <FeedSkeleton />
           ) : null}
           {!needsFollowingLogin && !needsAuthCheck && posts.isError ? (
-            <div className="mx-auto my-5 max-w-4xl rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6">
+            <div
+              className="mx-auto my-5 max-w-2xl rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6"
+              role="alert"
+            >
               <p className="font-bold text-[var(--theme-text)]">
                 Chưa thể tải bài viết cộng đồng.
               </p>
@@ -275,15 +304,27 @@ export function CommunityFeed({
           {!needsFollowingLogin &&
           !needsAuthCheck &&
           posts.data?.data.length === 0 ? (
-            <div className="mx-auto my-5 max-w-4xl rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-5 py-8 text-center sm:py-10">
+            <div className="mx-auto my-5 max-w-2xl rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-5 py-8 text-center sm:py-10">
               <h2 className="text-xl font-bold text-[var(--theme-text)]">
-                {category
-                  ? "Chưa có bài viết trong chuyên mục này."
-                  : "Chưa có bài viết nào."}
+                {q
+                  ? "Chưa tìm thấy bài viết phù hợp."
+                  : category
+                    ? "Chưa có bài viết trong chuyên mục này."
+                    : "Chưa có bài viết nào."}
               </h2>
               <p className="mt-2 text-sm leading-6 text-[var(--theme-muted)]">
-                Hãy bắt đầu bằng một câu chuyện hoặc ý tưởng của bạn.
+                {q
+                  ? "Thử một từ khóa khác hoặc xem lại toàn bộ bài viết."
+                  : "Hãy bắt đầu bằng một câu chuyện hoặc ý tưởng của bạn."}
               </p>
+              {q || category || relatedWorkId ? (
+                <Link
+                  className="mt-4 inline-flex min-h-11 items-center rounded-full border border-[var(--theme-border)] px-4 text-sm font-semibold text-[var(--theme-text)] transition-colors duration-150 hover:border-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                  href="/community"
+                >
+                  Xóa bộ lọc
+                </Link>
+              ) : null}
               {authStatus === "authenticated" ? (
                 <Link
                   className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-[var(--theme-accent)] px-4 text-sm font-bold text-[var(--theme-accent-contrast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
@@ -305,7 +346,7 @@ export function CommunityFeed({
           !needsAuthCheck &&
           posts.data?.data.length ? (
             <>
-              <div className="mx-auto mt-5 max-w-4xl space-y-4 sm:mt-6">
+              <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
                 {posts.data.data.map((post) => (
                   <CommunityPostCard key={post.id} post={post} />
                 ))}
@@ -313,7 +354,7 @@ export function CommunityFeed({
               {totalPages > 1 ? (
                 <nav
                   aria-label="Phân trang bài viết cộng đồng"
-                  className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--theme-border)] py-5"
+                  className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--theme-border)] py-5"
                 >
                   {page > 1 ? (
                     <Link
@@ -354,6 +395,7 @@ export function CommunityFeed({
             </>
           ) : null}
         </section>
+        <CommunityVipRooms />
       </div>
     </div>
   );
@@ -366,29 +408,39 @@ const sortOptions: { value: CommunityPostSort; label: string }[] = [
   { value: "following", label: "Đang theo dõi" },
 ];
 
+function categoryPillClass(selected: boolean): string {
+  const base =
+    "inline-flex min-h-11 items-center justify-center rounded-full px-4 text-sm font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]";
+  return selected
+    ? `${base} bg-[var(--theme-accent)] text-[var(--theme-accent-contrast)]`
+    : `${base} bg-[var(--theme-elevated)] text-[var(--theme-text)] hover:bg-[var(--theme-border)]`;
+}
+
 function FeedSkeleton() {
   return (
     <div
       aria-label="Đang tải bài viết cộng đồng"
-      className="mx-auto max-w-4xl space-y-4 py-4"
+      className="grid grid-cols-1 gap-5 py-2 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3"
       role="status"
     >
-      {Array.from({ length: 3 }, (_, index) => (
+      {Array.from({ length: 6 }, (_, index) => (
         <div
           aria-hidden="true"
-          className="animate-pulse rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
+          className="motion-safe:animate-pulse overflow-hidden rounded-[var(--radius-surface)] border border-[var(--theme-border)] bg-[var(--theme-surface)]"
           key={index}
         >
-          <div className="h-3 w-40 rounded bg-[var(--theme-elevated)]" />
-          <div className="mt-4 h-6 w-3/4 rounded bg-[var(--theme-elevated)]" />
-          <div className="mt-3 h-4 w-full max-w-2xl rounded bg-[var(--theme-elevated)]" />
-          {index === 0 ? (
-            <div className="mt-4 aspect-[4/3] rounded-xl bg-[var(--theme-elevated)]" />
-          ) : null}
+          <div className="aspect-[16/9] bg-[var(--theme-elevated)]" />
+          <div className="p-4 sm:p-5">
+            <div className="h-3 w-32 rounded bg-[var(--theme-elevated)]" />
+            <div className="mt-4 h-6 w-4/5 rounded bg-[var(--theme-elevated)]" />
+            <div className="mt-3 h-4 w-full rounded bg-[var(--theme-elevated)]" />
+            <div className="mt-2 h-4 w-3/4 rounded bg-[var(--theme-elevated)]" />
+            <div className="mt-6 h-10 rounded bg-[var(--theme-elevated)]" />
+          </div>
         </div>
       ))}
       <span className="sr-only">
-        <LoaderCircle aria-hidden="true" className="animate-spin" /> Đang tải
+        <LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" /> Đang tải
       </span>
     </div>
   );

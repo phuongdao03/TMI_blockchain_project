@@ -67,6 +67,34 @@ beforeEach(() => {
 });
 
 describe("CommunityPostCard", () => {
+  it("leads with real post media in a landscape crop", () => {
+    render(
+      <CommunityPostCard
+        post={{
+          ...post,
+          images: [
+            {
+              id: "image-1",
+              url: "/api/v1/community/posts/chuyen-lang/media/image-1",
+            },
+          ],
+        }}
+      />,
+      { wrapper },
+    );
+
+    const image = screen.getByRole("img", {
+      name: "Chuyện làng — ảnh đính kèm 1",
+    });
+    const title = screen.getByRole("heading", { name: "Chuyện làng" });
+    expect(image.className).toContain("object-cover");
+    expect(image.closest("li")?.className).toContain("aspect-[16/9]");
+    expect(
+      image.compareDocumentPosition(title) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("shows the author profile link and engagement counts with quick actions", async () => {
     const user = userEvent.setup();
     render(<CommunityPostCard post={post} />, { wrapper });

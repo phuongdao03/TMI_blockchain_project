@@ -98,145 +98,146 @@ function CommunityPostCardContent({
 
   const postHref = `/community/posts/${encodeURIComponent(post.slug)}`;
   return (
-    <article className="overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs font-semibold text-[var(--theme-muted)]">
-        <CommunityUserIdentity size={36} user={post.author} />
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-[var(--theme-accent)]">
-            {post.category.name}
-          </span>
-          <span aria-hidden="true">·</span>
-          <time dateTime={post.publishedAt}>
-            {formatPublishedDate(post.publishedAt)}
-          </time>
-        </div>
-      </div>
-      <h2 className="mt-3 text-lg font-semibold leading-snug tracking-tight text-[var(--theme-text)] sm:text-2xl">
-        <Link
-          className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--theme-accent)] hover:text-[var(--theme-accent)]"
-          href={postHref}
-        >
-          {post.title}
-        </Link>
-      </h2>
-      {post.excerpt ? (
-        <p className="mt-2 line-clamp-2 max-w-3xl whitespace-pre-wrap break-words text-sm leading-6 text-[var(--theme-muted)] sm:line-clamp-4 sm:text-base sm:leading-7">
-          {post.excerpt}
-        </p>
-      ) : null}
-      <Link
-        className="mt-1 inline-flex min-h-10 items-center text-sm font-bold text-[var(--theme-accent)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--theme-accent)]"
-        href={postHref}
-      >
-        Xem thêm{" "}
-        <span aria-hidden="true" className="ml-1">
-          →
-        </span>
-      </Link>
+    <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[var(--radius-surface)] border border-[var(--theme-border)] bg-[var(--theme-surface)] shadow-sm transition-[transform,box-shadow] duration-200 ease-out motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-reduce:transition-none">
       <CommunityPostImages
         images={post.images ?? []}
         postSlug={post.slug}
         postTitle={post.title}
         presentation="feed"
       />
-      <CommunityRelatedWorkLink work={post.relatedWork} />
-      <div
-        aria-label="Tương tác bài viết"
-        className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-[var(--theme-border)] pt-3 sm:mt-5 sm:gap-2"
-      >
-        {authenticated ? (
-          <>
-            <button
-              aria-label={`${liked ? "Bỏ thích" : "Thích"} bài viết (${likeCount})`}
-              aria-pressed={liked}
-              className={quickActionClass(liked)}
-              disabled={like.isPending || bookmark.isPending}
-              onClick={() => like.mutate()}
-              type="button"
-            >
-              <Heart
-                aria-hidden="true"
-                className={liked ? "size-4 fill-current" : "size-4"}
-              />
-              <span className="sm:hidden">{likeCount} thích</span>
-              <span className="hidden sm:inline">
-                {liked ? "Bỏ thích" : "Thích"} bài viết ({likeCount})
-              </span>
-            </button>
-            <button
-              aria-label={bookmarked ? "Đã lưu" : "Lưu bài viết"}
-              aria-pressed={bookmarked}
-              className={quickActionClass(bookmarked)}
-              disabled={like.isPending || bookmark.isPending}
-              onClick={() => bookmark.mutate()}
-              type="button"
-            >
-              <Bookmark
-                aria-hidden="true"
-                className={bookmarked ? "size-4 fill-current" : "size-4"}
-              />
-              <span className="sm:hidden">Lưu</span>
-              <span className="hidden sm:inline">
-                {bookmarked ? "Đã lưu" : "Lưu bài viết"}
-              </span>
-            </button>
-          </>
-        ) : (
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-xs font-semibold text-[var(--theme-muted)]">
+          <span className="rounded-full bg-[var(--theme-elevated)] px-2.5 py-1 text-[var(--theme-accent)]">
+            {post.category.name}
+          </span>
+          <time dateTime={post.publishedAt}>
+            {formatPublishedDate(post.publishedAt)}
+          </time>
+        </div>
+        <h2 className="mt-3 min-h-[2.75rem] line-clamp-2 break-words text-lg font-semibold leading-snug tracking-tight text-[var(--theme-text)] sm:text-xl">
           <Link
-            className={quickActionClass(false)}
-            href={`/login?next=${encodeURIComponent(postHref)}`}
+            className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--theme-accent)] hover:text-[var(--theme-accent)]"
+            href={postHref}
           >
-            Đăng nhập để tương tác
+            {post.title}
           </Link>
-        )}
+        </h2>
+        {post.excerpt ? (
+          <p className="mt-2 min-h-[2.75rem] line-clamp-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--theme-muted)]">
+            {post.excerpt}
+          </p>
+        ) : null}
         <Link
-          aria-label={`${post.commentCount} bình luận`}
-          className={quickActionClass(false)}
-          href={`${postHref}#community-comments-title`}
+          className="mt-1 inline-flex min-h-10 w-fit items-center text-sm font-bold text-[var(--theme-accent)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--theme-accent)]"
+          href={postHref}
         >
-          {post.commentCount} bình luận
+          Xem thêm{" "}
+          <span aria-hidden="true" className="ml-1">
+            →
+          </span>
         </Link>
-        <span className="hidden px-2 text-xs text-[var(--theme-muted)] sm:inline">
-          {post.viewCount} lượt xem
-        </span>
-        <button
-          aria-label="Chia sẻ bài viết"
-          className={quickActionClass(false)}
-          onClick={() => void sharePost()}
-          type="button"
+        <CommunityRelatedWorkLink work={post.relatedWork} />
+        <div className="mt-auto flex items-center gap-3 border-t border-[var(--theme-border)] pt-4">
+          <CommunityUserIdentity size={32} user={post.author} />
+        </div>
+        <div
+          aria-label="Tương tác bài viết"
+          className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-[var(--theme-border)] pt-3 sm:gap-2"
         >
-          <Share2 aria-hidden="true" className="size-4" />
-          <span className="sr-only sm:not-sr-only">Chia sẻ</span>
-        </button>
-        {shareMessage ? (
-          <span className="text-xs text-[var(--theme-muted)]" role="status">
-            {shareMessage}
-          </span>
-        ) : null}
-        {shareFallback ? (
-          <label className="basis-full text-xs text-[var(--theme-muted)]">
-            Sao chép liên kết bài viết
-            <input
-              aria-label="Liên kết bài viết"
-              className="mt-1 min-h-10 w-full rounded border border-[var(--theme-border)] bg-[var(--theme-surface)] px-2 text-[var(--theme-text)]"
-              onFocus={(event) => event.currentTarget.select()}
-              readOnly
-              value={
-                typeof window === "undefined"
-                  ? postHref
-                  : `${window.location.origin}${postHref}`
-              }
-            />
-          </label>
-        ) : null}
-        {like.isError || bookmark.isError ? (
-          <span
-            className="basis-full text-sm font-semibold text-red-700"
-            role="alert"
+          {authenticated ? (
+            <>
+              <button
+                aria-label={`${liked ? "Bỏ thích" : "Thích"} bài viết (${likeCount})`}
+                aria-pressed={liked}
+                className={quickActionClass(liked)}
+                disabled={like.isPending || bookmark.isPending}
+                onClick={() => like.mutate()}
+                type="button"
+              >
+                <Heart
+                  aria-hidden="true"
+                  className={liked ? "size-4 fill-current" : "size-4"}
+                />
+                <span className="sm:hidden">{likeCount} thích</span>
+                <span className="hidden sm:inline">
+                  {liked ? "Bỏ thích" : "Thích"} bài viết ({likeCount})
+                </span>
+              </button>
+              <button
+                aria-label={bookmarked ? "Đã lưu" : "Lưu bài viết"}
+                aria-pressed={bookmarked}
+                className={quickActionClass(bookmarked)}
+                disabled={like.isPending || bookmark.isPending}
+                onClick={() => bookmark.mutate()}
+                type="button"
+              >
+                <Bookmark
+                  aria-hidden="true"
+                  className={bookmarked ? "size-4 fill-current" : "size-4"}
+                />
+                <span className="sm:hidden">Lưu</span>
+                <span className="hidden sm:inline">
+                  {bookmarked ? "Đã lưu" : "Lưu bài viết"}
+                </span>
+              </button>
+            </>
+          ) : (
+            <Link
+              className={quickActionClass(false)}
+              href={`/login?next=${encodeURIComponent(postHref)}`}
+            >
+              Đăng nhập để tương tác
+            </Link>
+          )}
+          <Link
+            aria-label={`${post.commentCount} bình luận`}
+            className={quickActionClass(false)}
+            href={`${postHref}#community-comments-title`}
           >
-            Chưa thể cập nhật tương tác. Vui lòng thử lại.
+            {post.commentCount} bình luận
+          </Link>
+          <span className="hidden px-2 text-xs text-[var(--theme-muted)] sm:inline">
+            {post.viewCount} lượt xem
           </span>
-        ) : null}
+          <button
+            aria-label="Chia sẻ bài viết"
+            className={quickActionClass(false)}
+            onClick={() => void sharePost()}
+            type="button"
+          >
+            <Share2 aria-hidden="true" className="size-4" />
+            <span className="sr-only sm:not-sr-only">Chia sẻ</span>
+          </button>
+          {shareMessage ? (
+            <span className="text-xs text-[var(--theme-muted)]" role="status">
+              {shareMessage}
+            </span>
+          ) : null}
+          {shareFallback ? (
+            <label className="basis-full text-xs text-[var(--theme-muted)]">
+              Sao chép liên kết bài viết
+              <input
+                aria-label="Liên kết bài viết"
+                className="mt-1 min-h-10 w-full rounded border border-[var(--theme-border)] bg-[var(--theme-surface)] px-2 text-[var(--theme-text)]"
+                onFocus={(event) => event.currentTarget.select()}
+                readOnly
+                value={
+                  typeof window === "undefined"
+                    ? postHref
+                    : `${window.location.origin}${postHref}`
+                }
+              />
+            </label>
+          ) : null}
+          {like.isError || bookmark.isError ? (
+            <span
+              className="basis-full text-sm font-semibold text-red-700"
+              role="alert"
+            >
+              Chưa thể cập nhật tương tác. Vui lòng thử lại.
+            </span>
+          ) : null}
+        </div>
       </div>
     </article>
   );
@@ -275,7 +276,7 @@ function updatePostCaches(
 }
 
 function quickActionClass(active: boolean): string {
-  return `inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] disabled:opacity-60 sm:min-h-9 sm:border sm:px-2.5 ${active ? "text-[var(--theme-accent)] sm:border-[var(--theme-accent)] sm:bg-[var(--theme-accent)]/10" : "text-[var(--theme-muted)] hover:text-[var(--theme-text)] sm:border-[var(--theme-border)] sm:hover:border-[var(--theme-accent)]"}`;
+  return `inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition-[color,background-color,border-color,transform] duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)] motion-safe:enabled:active:scale-[0.96] motion-reduce:transition-none disabled:opacity-60 sm:min-h-9 sm:border sm:px-2.5 ${active ? "text-[var(--theme-accent)] sm:border-[var(--theme-accent)] sm:bg-[var(--theme-accent)]/10" : "text-[var(--theme-muted)] hover:text-[var(--theme-text)] sm:border-[var(--theme-border)] sm:hover:border-[var(--theme-accent)]"}`;
 }
 
 function formatPublishedDate(value: string): string {

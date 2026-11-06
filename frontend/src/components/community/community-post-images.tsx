@@ -47,7 +47,7 @@ export function CommunityPostImages({
         aria-label="Ảnh đính kèm bài viết"
         className={
           presentation === "feed"
-            ? "mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-4"
+            ? "mt-0 grid grid-cols-2 gap-1"
             : "mt-5 grid grid-cols-1 gap-3 sm:gap-4"
         }
       >
@@ -55,7 +55,7 @@ export function CommunityPostImages({
           <li
             className={
               presentation === "feed"
-                ? `overflow-hidden rounded-xl border border-[var(--theme-border)] bg-[var(--theme-bg)] ${safeImages.length === 1 || index === 0 ? "col-span-2" : ""}`
+                ? `overflow-hidden bg-[var(--theme-bg)] ${safeImages.length === 1 || index === 0 ? "col-span-2 aspect-[16/9]" : "aspect-square"}`
                 : "overflow-hidden rounded-xl bg-[var(--theme-elevated)]"
             }
             key={image.id}
@@ -64,7 +64,7 @@ export function CommunityPostImages({
               type="button"
               className={
                 presentation === "feed"
-                  ? "group block aspect-[4/3] w-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                  ? "group block h-full w-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
                   : "block w-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
               }
               aria-label={`Xem lớn ảnh ${index + 1}`}
@@ -77,7 +77,7 @@ export function CommunityPostImages({
                 alt={`${postTitle} — ảnh đính kèm ${index + 1}`}
                 className={
                   presentation === "feed"
-                    ? "h-full w-full object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+                    ? "h-full w-full object-cover transition-transform duration-200 motion-safe:group-hover:scale-[1.02] motion-reduce:transition-none"
                     : imageSize === "compact"
                       ? "max-h-80 w-full object-contain"
                       : "h-auto w-full object-contain"
@@ -86,7 +86,11 @@ export function CommunityPostImages({
                 height={720}
                 loading={priority && index === 0 ? "eager" : "lazy"}
                 fetchPriority={priority && index === 0 ? "high" : "auto"}
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 640px"
+                sizes={
+                  presentation === "feed"
+                    ? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    : "(max-width: 768px) 100vw, 768px"
+                }
                 src={`${image.url}?width=960`}
                 unoptimized
               />

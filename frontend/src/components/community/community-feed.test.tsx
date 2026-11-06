@@ -124,8 +124,15 @@ describe("CommunityFeed", () => {
     expect(screen.getByRole("link", { name: "Thành viên" })).toBeDefined();
     expect(screen.queryByText("Tranh dân gian")).toBeNull();
     expect(
-      (screen.getByLabelText("Chuyên mục") as HTMLSelectElement).value,
-    ).toBe("heritage-culture");
+      screen.getByRole("navigation", {
+        name: "Danh mục bài viết cộng đồng",
+      }),
+    ).toBeDefined();
+    expect(
+      screen
+        .getByRole("link", { name: "Di sản và văn hóa" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
     expect(
       screen.getByRole("link", { name: "Trang trước" }).getAttribute("href"),
     ).toBe("/community?category=heritage-culture&page=1");
@@ -150,7 +157,9 @@ describe("CommunityFeed", () => {
       { wrapper },
     );
 
-    await screen.findByRole("heading", { name: "Cộng đồng" });
+    await screen.findByRole("heading", {
+      name: "Cộng đồng Tinh Hoa Việt",
+    });
     await screen.findByRole("heading", {
       name: "Chuyện đi làng cổ <img src=x onerror=alert(1)>",
     });
@@ -171,6 +180,17 @@ describe("CommunityFeed", () => {
         }) as HTMLInputElement
       ).value,
     ).toBe("tranh Đông Hồ");
+    const selectedCategory = screen.getByRole("link", {
+      name: "Di sản và văn hóa",
+    });
+    const categoryUrl = new URL(
+      selectedCategory.getAttribute("href") ?? "",
+      "https://example.test",
+    );
+    expect(categoryUrl.searchParams.get("category")).toBe("heritage-culture");
+    expect(categoryUrl.searchParams.get("q")).toBe("tranh Đông Hồ");
+    expect(categoryUrl.searchParams.get("sort")).toBe("discussed");
+    expect(categoryUrl.searchParams.get("relatedWorkId")).toBe("work-1");
     expect((screen.getByLabelText("Sắp xếp") as HTMLSelectElement).value).toBe(
       "discussed",
     );
@@ -261,7 +281,9 @@ describe("CommunityFeed", () => {
   it("scopes personalized feed data to the current viewer", async () => {
     render(<CommunityFeed page={1} />, { wrapper });
 
-    await screen.findByRole("heading", { name: "Cộng đồng" });
+    await screen.findByRole("heading", {
+      name: "Cộng đồng Tinh Hoa Việt",
+    });
     expect(
       queryClient
         .getQueryCache()
