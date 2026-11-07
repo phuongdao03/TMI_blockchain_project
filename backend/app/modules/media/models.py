@@ -17,6 +17,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Uuid,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -104,9 +105,17 @@ class MediaAsset(UtcTimestampMixin, Base):
             "provider_asset_id",
             name="uq_media_assets_provider_asset",
         ),
+        Index(
+            "uq_media_assets_upload_session_id",
+            "upload_session_id",
+            unique=True,
+            postgresql_where=text("upload_session_id IS NOT NULL"),
+            sqlite_where=text("upload_session_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    upload_session_id: Mapped[UUID | None] = mapped_column(Uuid)
     owner_user_id: Mapped[UUID] = mapped_column(
         Uuid,
         ForeignKey("users.id", ondelete="RESTRICT"),

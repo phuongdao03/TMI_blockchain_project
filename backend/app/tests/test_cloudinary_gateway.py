@@ -7,6 +7,7 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 import pytest
 
+from app.modules.media.errors import MediaProviderUnavailableError
 from app.modules.media.gateway import CloudinaryMediaGateway, MediaContentTooLargeError
 
 
@@ -108,6 +109,54 @@ def test_metadata_uses_explicit_when_admin_api_is_rate_limited() -> None:
             )
             assert asset.bytes == 2048
             assert len(requests) == 2
+
+    asyncio.run(exercise())
+
+
+def test_find_metadata_treats_missing_asset_as_absent() -> None:
+    async def exercise() -> None:
+        requests: list[httpx.Request] = []
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(404, json={"error": {"message": "Not found"}})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            gateway = CloudinaryMediaGateway(
+                cloud_name="demo", api_key="key", api_secret="secret", client=client
+            )
+            assert (
+                await gateway.find_asset_metadata(
+                    public_id="folder/pending-upload",
+                    resource_type="image",
+                )
+                is None
+            )
+            assert len(requests) == 1
+            assert requests[0].method == "GET"
+
+    asyncio.run(exercise())
+
+
+def test_find_metadata_does_not_write_when_admin_api_is_throttled() -> None:
+    async def exercise() -> None:
+        requests: list[httpx.Request] = []
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(420, json={"error": {"message": "Rate limited"}})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            gateway = CloudinaryMediaGateway(
+                cloud_name="demo", api_key="key", api_secret="secret", client=client
+            )
+            with pytest.raises(MediaProviderUnavailableError):
+                await gateway.find_asset_metadata(
+                    public_id="folder/pending-upload",
+                    resource_type="image",
+                )
+
+        assert [request.method for request in requests] == ["GET"]
 
     asyncio.run(exercise())
 

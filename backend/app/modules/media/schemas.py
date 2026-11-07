@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
@@ -24,6 +26,7 @@ class MediaSchema(BaseModel):
 
 
 class UploadSignatureRequest(MediaSchema):
+    session_id: UUID | None = None
     purpose: MediaPurpose
     filename: Annotated[str, Field(min_length=1, max_length=255)]
     mime_type: Annotated[str, Field(min_length=3, max_length=127)]
@@ -51,17 +54,6 @@ class CompleteUploadRequest(MediaSchema):
     signature: Annotated[str, Field(pattern=r"^[a-fA-F0-9]{40}$")]
 
 
-class UploadSignatureData(MediaSchema):
-    media_id: UUID
-    public_id: str
-    upload_url: str
-    cloud_name: str
-    api_key: str
-    signature: str
-    parameters: dict[str, str]
-    expires_at: int
-
-
 class MediaAssetData(MediaSchema):
     id: UUID
     status: MediaStatus
@@ -73,6 +65,18 @@ class MediaAssetData(MediaSchema):
     inspection_attempts: int = 0
     inspection_reason_code: str | None = None
     inspected_at: datetime | None = None
+
+
+class UploadSignatureData(MediaSchema):
+    media_id: UUID
+    public_id: str
+    upload_url: str
+    cloud_name: str
+    api_key: str
+    signature: str
+    parameters: dict[str, str]
+    expires_at: int
+    existing_asset: MediaAssetData | None = None
 
 
 class SignedDeliveryData(MediaSchema):

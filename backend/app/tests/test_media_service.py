@@ -49,6 +49,7 @@ class RecordingMediaGateway:
     def __init__(self) -> None:
         self.signature_valid = True
         self.metadata: ProviderAssetMetadata | None = None
+        self.existing_metadata: ProviderAssetMetadata | None = None
         self.deleted: list[tuple[str, str]] = []
         self.delete_options: list[tuple[str | None, bool]] = []
         self.inspection_jobs: list[str] = []
@@ -95,6 +96,15 @@ class RecordingMediaGateway:
     ) -> ProviderAssetMetadata:
         assert self.metadata is not None
         return self.metadata
+
+    async def find_asset_metadata(
+        self,
+        *,
+        public_id: str,
+        resource_type: str,
+    ) -> ProviderAssetMetadata | None:
+        _ = public_id, resource_type
+        return self.existing_metadata
 
     async def download_asset(
         self,
@@ -348,6 +358,69 @@ def test_community_post_image_upload_persists_purpose_and_bounds_intent() -> Non
                 await service.create_upload_signature(owner, intent)
 
         assert len(gateway.inspection_jobs) == 0
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_upload_session_reuses_asset_and_recovers_provider_upload() -> None:
+    async def exercise() -> None:
+        service, gateway, session_factory, engine, users = await _build_service()
+        owner = _principal(users["owner"])
+        session_id = uuid4()
+        intent = UploadIntent(
+            purpose=MediaPurpose.AVATAR,
+            filename="portrait.png",
+            mime_type="image/png",
+            size=2_048,
+            session_id=session_id,
+        )
+
+        first = await service.create_upload_signature(owner, intent)
+        assert first.existing_asset is None
+        gateway.existing_metadata = ProviderAssetMetadata(
+            public_id=first.public_id,
+            version=17,
+            resource_type="image",
+            delivery_type="authenticated",
+            file_format="png",
+            bytes=2_048,
+            width=512,
+            height=512,
+            provider_asset_id="cloudinary-immutable-asset-id",
+        )
+
+        retried = await service.create_upload_signature(owner, intent)
+        assert retried.media_id == first.media_id
+        assert retried.public_id == first.public_id
+        assert retried.existing_asset is not None
+        assert retried.existing_asset.status is MediaStatus.QUARANTINED
+        assert gateway.inspection_jobs == [str(first.media_id)]
+
+        async with session_factory() as session:
+            asset = await session.get(MediaAsset, first.media_id)
+            assert asset is not None
+            assert asset.cloudinary_version == 17
+            assert asset.provider_asset_id == "cloudinary-immutable-asset-id"
+
+        with pytest.raises(MediaUploadMetadataMismatchError):
+            await service.create_upload_signature(
+                owner,
+                UploadIntent(
+                    purpose=MediaPurpose.AVATAR,
+                    filename="different.png",
+                    mime_type="image/png",
+                    size=2_048,
+                    session_id=session_id,
+                ),
+            )
+        with pytest.raises(MediaForbiddenError):
+            await service.create_upload_signature(
+                _principal(users["stranger"]),
+                intent,
+            )
+
         await service.close()
         await engine.dispose()
 

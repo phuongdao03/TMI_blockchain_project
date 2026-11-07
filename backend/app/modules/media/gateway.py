@@ -99,6 +99,13 @@ class MediaGateway(Protocol):
         resource_type: str,
     ) -> ProviderAssetMetadata: ...
 
+    async def find_asset_metadata(
+        self,
+        *,
+        public_id: str,
+        resource_type: str,
+    ) -> ProviderAssetMetadata | None: ...
+
     async def download_asset(
         self,
         *,
@@ -279,6 +286,29 @@ class CloudinaryMediaGateway:
                     "signature": self.sign_parameters(parameters),
                 },
             )
+        return self._provider_asset_metadata(payload)
+
+    async def find_asset_metadata(
+        self,
+        *,
+        public_id: str,
+        resource_type: str,
+    ) -> ProviderAssetMetadata | None:
+        url = (
+            f"https://api.cloudinary.com/v1_1/"
+            f"{quote(self._cloud_name, safe='')}/resources/{resource_type}/"
+            f"{self._DELIVERY_TYPE}/{quote(public_id, safe='')}"
+        )
+        # Reconciliation is deliberately a GET-only operation. If Admin API
+        # lookup is throttled, leave the session pending for the next retry.
+        payload = await self._request_json("GET", url, allow_not_found=True)
+        if not payload:
+            return None
+        return self._provider_asset_metadata(payload)
+
+    def _provider_asset_metadata(
+        self, payload: Mapping[str, object]
+    ) -> ProviderAssetMetadata:
         duration = self._optional_number(payload, "duration")
         sha256 = payload.get("sha256")
         if sha256 is not None and (

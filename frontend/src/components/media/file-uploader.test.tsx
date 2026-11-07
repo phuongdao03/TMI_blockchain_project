@@ -139,6 +139,9 @@ describe("FileUploader", () => {
     expect(uploadMediaMock.mock.calls[0]?.[0]).toBe(
       uploadMediaMock.mock.calls[1]?.[0],
     );
+    expect(uploadMediaMock.mock.calls[0]?.[2]?.uploadSessionId).toBe(
+      uploadMediaMock.mock.calls[1]?.[2]?.uploadSessionId,
+    );
   });
 
   it("keeps the uploaded checkpoint and explains a temporary provider failure", async () => {

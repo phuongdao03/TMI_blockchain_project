@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -29,6 +31,7 @@ class UploadIntent:
     mime_type: str
     size: int
     confidentiality: MediaConfidentiality = MediaConfidentiality.PRIVATE
+    session_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +52,7 @@ class UploadSignatureView:
     signature: str
     parameters: Mapping[str, str]
     expires_at: int
+    existing_asset: MediaAssetView | None = None
 
 
 @dataclass(frozen=True, slots=True)

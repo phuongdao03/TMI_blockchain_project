@@ -15,6 +15,7 @@ interface UploadCallbacks {
   onProgress?: (progress: number) => void;
   onStage?: (stage: UploadStage) => void;
   onTransferred?: (completion: MediaUploadCompletion) => void;
+  uploadSessionId?: string;
   resumeCompletion?: MediaUploadCompletion;
   signal?: AbortSignal;
 }
@@ -300,19 +301,23 @@ function sendUploadRequest(
   });
 }
 
-function createUploadId(): string {
+export function createMediaUploadSessionId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join(
-    "",
-  );
+  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
+  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (value) =>
+    value.toString(16).padStart(2, "0"),
+  ).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 async function sendChunkedUpload(
   file: File,
   authorization: MediaUploadAuthorization,
+  uploadId: string,
   onProgress?: (progress: number) => void,
 ): Promise<unknown> {
-  const uploadId = createUploadId();
+  const cloudinaryUploadId = uploadId.replaceAll("-", "");
   let response: unknown;
   for (let start = 0; start < file.size; start += UPLOAD_CHUNK_BYTES) {
     const endExclusive = Math.min(start + UPLOAD_CHUNK_BYTES, file.size);
@@ -330,7 +335,7 @@ async function sendChunkedUpload(
       },
       {
         "Content-Range": `bytes ${start}-${endExclusive - 1}/${file.size}`,
-        "X-Unique-Upload-Id": uploadId,
+        "X-Unique-Upload-Id": cloudinaryUploadId,
       },
     );
     onProgress?.(Math.round((endExclusive / file.size) * 100));
@@ -341,11 +346,17 @@ async function sendChunkedUpload(
 async function uploadToCloudinary(
   file: File,
   authorization: MediaUploadAuthorization,
+  uploadSessionId: string,
   onProgress?: (progress: number) => void,
 ): Promise<z.infer<typeof cloudinaryResponseSchema>> {
   const response =
     file.size > MAX_SINGLE_UPLOAD_BYTES
-      ? await sendChunkedUpload(file, authorization, onProgress)
+      ? await sendChunkedUpload(
+          file,
+          authorization,
+          uploadSessionId,
+          onProgress,
+        )
       : await sendUploadRequest(file, file.name, authorization, onProgress);
 
   const result = cloudinaryResponseSchema.safeParse(response);
@@ -364,17 +375,40 @@ export async function uploadMedia(
   validateMediaFile(file, purpose, constraints);
   let completion = callbacks.resumeCompletion;
   if (!completion) {
+    const uploadSessionId =
+      callbacks.uploadSessionId ?? createMediaUploadSessionId();
     const authorization = await mediaApi.createUploadSignature({
       confidentiality: "PRIVATE",
+      sessionId: uploadSessionId,
       purpose,
       filename: file.name,
       mimeType: file.type,
       size: file.size,
     });
+    if (authorization.existingAsset) {
+      const existing = authorization.existingAsset;
+      if (existing.status === "ACTIVE") return existing;
+      if (existing.status === "REJECTED") {
+        throw new Error(
+          "Tệp không vượt qua bước xác minh an toàn. Vui lòng chọn tệp khác.",
+        );
+      }
+      if (existing.status === "QUARANTINED") {
+        callbacks.onStage?.("verifying");
+        callbacks.onStage?.("inspecting");
+        return waitForInspection(
+          existing.id,
+          callbacks.inspectionPollIntervalMs ??
+            DEFAULT_INSPECTION_POLL_INTERVAL_MS,
+          callbacks.signal,
+        );
+      }
+    }
     callbacks.onStage?.("uploading");
     const result = await uploadToCloudinary(
       file,
       authorization,
+      uploadSessionId,
       callbacks.onProgress,
     );
     if (result.public_id !== authorization.publicId) {

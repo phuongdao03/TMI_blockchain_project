@@ -10,6 +10,7 @@ import type {
 } from "@/lib/api/types";
 import {
   type MediaFileConstraints,
+  createMediaUploadSessionId,
   uploadMedia,
   validateMediaFile,
 } from "@/lib/media/upload";
@@ -32,6 +33,7 @@ export interface UploadQueueItem {
   inspectionStartedAt: number | null;
   progress: number;
   status: Exclude<UploadStatus, "idle" | "complete">;
+  uploadSessionId: string;
 }
 
 interface UseMediaUploaderOptions {
@@ -126,6 +128,7 @@ export function useMediaUploader({
         inspectionStartedAt: null,
         progress: 0,
         status: "selected",
+        uploadSessionId: createMediaUploadSessionId(),
       }));
       setItems((current) => [...current, ...additions]);
       setSelectionError(null);
@@ -197,6 +200,7 @@ export function useMediaUploader({
               updateItem(queued.id, { completion: transferred, progress: 100 });
             },
             resumeCompletion: completion ?? undefined,
+            uploadSessionId: queued.uploadSessionId,
             signal: controller.signal,
           },
           constraints,

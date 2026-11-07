@@ -2002,6 +2002,7 @@ export type MediaStatus =
   | "DELETED";
 
 export interface MediaUploadIntent {
+  sessionId?: string;
   confidentiality: MediaConfidentiality;
   purpose: MediaPurpose;
   filename: string;
@@ -2018,6 +2019,7 @@ export interface MediaUploadAuthorization {
   signature: string;
   parameters: Record<string, string>;
   expiresAt: number;
+  existingAsset?: MediaAsset | null;
 }
 
 export interface MediaUploadCompletion {

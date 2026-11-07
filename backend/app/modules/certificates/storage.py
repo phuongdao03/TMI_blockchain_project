@@ -72,22 +72,27 @@ class CloudinaryCertificateStorage:
             f"https://api.cloudinary.com/v1_1/"
             f"{quote(self._cloud_name, safe='')}/raw/upload"
         )
-        response = await self._client.post(
-            url,
-            data={
-                **parameters,
-                "api_key": self._api_key,
-                "signature": signature,
-            },
-            files={"file": ("certificate.pdf", content, "application/pdf")},
-        )
-        response.raise_for_status()
+        try:
+            response = await self._client.post(
+                url,
+                data={
+                    **parameters,
+                    "api_key": self._api_key,
+                    "signature": signature,
+                },
+                files={"file": ("certificate.pdf", content, "application/pdf")},
+            )
+            response.raise_for_status()
+        except httpx.HTTPError:
+            recovered = await self._recover_existing_pdf(public_id, content)
+            if recovered is not None:
+                return recovered
+            raise
         payload = response.json()
         if (
             not isinstance(payload, dict)
             or not isinstance(payload.get("version"), int)
-            or not isinstance(payload.get("public_id"), str)
-            or not payload["public_id"]
+            or payload.get("public_id") != public_id
         ):
             raise RuntimeError("Cloudinary certificate response is invalid.")
         return StoredCertificate(
@@ -95,6 +100,51 @@ class CloudinaryCertificateStorage:
             version=int(payload["version"]),
             bytes=len(content),
             sha256=hashlib.sha256(content).hexdigest(),
+        )
+
+    async def _recover_existing_pdf(
+        self,
+        public_id: str,
+        content: bytes,
+    ) -> StoredCertificate | None:
+        try:
+            metadata = await self._signer.find_asset_metadata(
+                public_id=public_id,
+                resource_type="raw",
+            )
+        except Exception:
+            return None
+        if metadata is None:
+            return None
+        if (
+            metadata.public_id != public_id
+            or metadata.resource_type != "raw"
+            or metadata.delivery_type != "authenticated"
+            or metadata.file_format != "pdf"
+            or metadata.bytes != len(content)
+        ):
+            raise RuntimeError(
+                "Cloudinary certificate public ID already contains different content."
+            )
+        try:
+            stored_content = await self._signer.download_asset(
+                public_id=public_id,
+                resource_type="raw",
+                file_format="pdf",
+                max_bytes=len(content),
+            )
+        except Exception:
+            return None
+        digest = hashlib.sha256(content).hexdigest()
+        if hashlib.sha256(stored_content).hexdigest() != digest:
+            raise RuntimeError(
+                "Cloudinary certificate public ID already contains different content."
+            )
+        return StoredCertificate(
+            public_id=public_id,
+            version=metadata.version,
+            bytes=len(content),
+            sha256=digest,
         )
 
     async def close(self) -> None:

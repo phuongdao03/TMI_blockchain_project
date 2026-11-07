@@ -8,6 +8,7 @@ from typing import Protocol
 from uuid import UUID, uuid4
 
 from cryptography.exceptions import InvalidTag
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.audit.service import AuditService
@@ -206,12 +207,45 @@ class MediaService:
             raise MediaForbiddenError()
         policy = self._validate_intent(intent)
         issued_at = int(self._clock().timestamp())
-        media_id = uuid4()
-        purpose_segment = intent.purpose.value.lower().replace("_", "-")
-        public_id = (
-            f"cns/{self._environment}/owners/{principal.user_id}/uploads/"
-            f"{purpose_segment}/{media_id}"
-        )
+        created = True
+        try:
+            async with self._session.begin():
+                asset = await self._find_upload_session(intent.session_id)
+                if asset is None:
+                    asset = self._new_upload_asset(principal, intent, policy)
+                    self._repository.add(asset)
+                    self._audit(
+                        "media.upload_authorized",
+                        principal.user_id,
+                        asset.id,
+                        status=MediaStatus.PENDING,
+                    )
+                    await self._session.flush()
+                else:
+                    self._validate_reused_session(asset, principal, intent)
+                    created = False
+                media_id = asset.id
+                public_id = asset.cloudinary_public_id
+        except IntegrityError:
+            if intent.session_id is None:
+                raise
+            async with self._session.begin():
+                asset = await self._find_upload_session(intent.session_id)
+                if asset is None:
+                    raise
+                self._validate_reused_session(asset, principal, intent)
+                created = False
+                media_id = asset.id
+                public_id = asset.cloudinary_public_id
+
+        if created:
+            existing_asset = None
+        else:
+            existing_asset = await self._reconcile_retried_session(
+                principal,
+                media_id,
+                intent,
+            )
         authorization = await self._gateway.create_upload_signature(
             public_id=public_id,
             resource_type=policy.resource_type,
@@ -219,27 +253,6 @@ class MediaService:
             allowed_format=policy.file_format,
             max_bytes=intent.size,
         )
-        asset = MediaAsset(
-            id=media_id,
-            owner_user_id=principal.user_id,
-            purpose=intent.purpose.value,
-            cloudinary_public_id=public_id,
-            resource_type=policy.resource_type,
-            access_mode="authenticated",
-            original_filename=intent.filename,
-            mime_type=intent.mime_type,
-            bytes=intent.size,
-            confidentiality=intent.confidentiality,
-        )
-        async with self._session.begin():
-            self._repository.add(asset)
-            self._audit(
-                "media.upload_authorized",
-                principal.user_id,
-                media_id,
-                status=MediaStatus.PENDING,
-            )
-            await self._session.flush()
         return UploadSignatureView(
             media_id=media_id,
             public_id=public_id,
@@ -249,7 +262,106 @@ class MediaService:
             signature=authorization.signature,
             parameters=authorization.parameters,
             expires_at=issued_at + self._signature_ttl_seconds,
+            existing_asset=existing_asset,
         )
+
+    async def _find_upload_session(self, session_id: UUID | None) -> MediaAsset | None:
+        if session_id is None:
+            return None
+        return await self._repository.get_by_upload_session_id(session_id)
+
+    def _new_upload_asset(
+        self,
+        principal: AuthPrincipal,
+        intent: UploadIntent,
+        policy: _FormatPolicy,
+    ) -> MediaAsset:
+        media_id = uuid4()
+        purpose_segment = intent.purpose.value.lower().replace("_", "-")
+        return MediaAsset(
+            id=media_id,
+            upload_session_id=intent.session_id,
+            owner_user_id=principal.user_id,
+            purpose=intent.purpose.value,
+            cloudinary_public_id=(
+                f"cns/{self._environment}/owners/{principal.user_id}/uploads/"
+                f"{purpose_segment}/{media_id}"
+            ),
+            resource_type=policy.resource_type,
+            access_mode="authenticated",
+            original_filename=intent.filename,
+            mime_type=intent.mime_type,
+            bytes=intent.size,
+            confidentiality=intent.confidentiality,
+        )
+
+    @staticmethod
+    def _validate_reused_session(
+        asset: MediaAsset,
+        principal: AuthPrincipal,
+        intent: UploadIntent,
+    ) -> None:
+        if asset.owner_user_id != principal.user_id:
+            raise MediaForbiddenError()
+        if (
+            asset.purpose != intent.purpose.value
+            or asset.original_filename != intent.filename
+            or asset.mime_type != intent.mime_type
+            or asset.bytes != intent.size
+            or asset.confidentiality is not intent.confidentiality
+        ):
+            raise MediaUploadMetadataMismatchError()
+        if asset.status in {MediaStatus.REJECTED, MediaStatus.DELETED}:
+            raise MediaInvalidStateError()
+
+    async def _reconcile_retried_session(
+        self,
+        principal: AuthPrincipal,
+        media_id: UUID,
+        intent: UploadIntent,
+    ) -> MediaAssetView | None:
+        async with self._session.begin():
+            asset = await self._owned_asset(principal, media_id)
+            status = asset.status
+            public_id = asset.cloudinary_public_id
+            resource_type = asset.resource_type
+        if status in {MediaStatus.QUARANTINED, MediaStatus.ACTIVE}:
+            async with self._session.begin():
+                asset = await self._owned_asset(principal, media_id)
+                return self._view(asset)
+        finder = getattr(self._gateway, "find_asset_metadata", None)
+        if status is not MediaStatus.PENDING or finder is None:
+            return None
+        metadata = await finder(public_id=public_id, resource_type=resource_type)
+        if metadata is None:
+            return None
+        enqueue = False
+        async with self._session.begin():
+            current_asset = await self._repository.get_by_id(media_id, for_update=True)
+            if current_asset is None:
+                raise MediaNotFoundError()
+            if current_asset.owner_user_id != principal.user_id:
+                raise MediaForbiddenError()
+            if current_asset.status is MediaStatus.PENDING:
+                self._validate_reused_session(current_asset, principal, intent)
+                self._validate_provider_metadata(current_asset, metadata)
+                current_asset.cloudinary_version = metadata.version
+                current_asset.provider_asset_id = metadata.provider_asset_id
+                current_asset.width = metadata.width
+                current_asset.height = metadata.height
+                current_asset.duration_ms = metadata.duration_ms
+                current_asset.status = MediaStatus.QUARANTINED
+                self._audit(
+                    "media.upload_recovered",
+                    principal.user_id,
+                    media_id,
+                    status=current_asset.status,
+                )
+                enqueue = True
+            view = self._view(current_asset)
+        if enqueue:
+            self._enqueue_inspection(media_id)
+        return view
 
     async def complete_upload(
         self,
@@ -301,7 +413,7 @@ class MediaService:
             )
             if asset.status is not MediaStatus.PENDING:
                 raise MediaInvalidStateError()
-            self._validate_provider_metadata(asset, completion, metadata)
+            self._validate_provider_metadata(asset, metadata, completion=completion)
             asset.cloudinary_version = metadata.version
             asset.provider_asset_id = metadata.provider_asset_id
             asset.bytes = metadata.bytes
@@ -680,13 +792,14 @@ class MediaService:
     @staticmethod
     def _validate_provider_metadata(
         asset: MediaAsset,
-        completion: UploadCompletion,
         metadata: ProviderAssetMetadata,
+        *,
+        completion: UploadCompletion | None = None,
     ) -> None:
         policy = _FORMATS[asset.mime_type]
         if (
             metadata.public_id != asset.cloudinary_public_id
-            or metadata.version != completion.version
+            or (completion is not None and metadata.version != completion.version)
             or metadata.resource_type != asset.resource_type
             or metadata.delivery_type != asset.access_mode
             or metadata.file_format != policy.file_format

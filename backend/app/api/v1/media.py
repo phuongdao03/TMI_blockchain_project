@@ -57,6 +57,7 @@ async def create_upload_signature(
     issued = await service.create_upload_signature(
         principal,
         UploadIntent(
+            session_id=payload.session_id,
             purpose=payload.purpose,
             filename=payload.filename,
             mime_type=payload.mime_type,

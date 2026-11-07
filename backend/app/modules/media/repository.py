@@ -33,6 +33,21 @@ class MediaAssetRepository:
             )
         return cast(MediaAsset | None, await self._session.scalar(statement))
 
+    async def get_by_upload_session_id(
+        self,
+        upload_session_id: UUID,
+        *,
+        for_update: bool = False,
+    ) -> MediaAsset | None:
+        statement = select(MediaAsset).where(
+            MediaAsset.upload_session_id == upload_session_id
+        )
+        if for_update:
+            statement = statement.with_for_update().execution_options(
+                populate_existing=True
+            )
+        return cast(MediaAsset | None, await self._session.scalar(statement))
+
     async def list_untrusted_active_ids(self, *, limit: int) -> tuple[UUID, ...]:
         rows = await self._session.scalars(
             select(MediaAsset.id)

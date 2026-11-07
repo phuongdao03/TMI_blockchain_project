@@ -222,13 +222,18 @@ describe("uploadMedia", () => {
       }),
     ).resolves.toEqual(activeAsset);
 
-    expect(signatureSpy).toHaveBeenCalledWith({
-      confidentiality: "PRIVATE",
-      purpose: "AVATAR",
-      filename: "avatar.png",
-      mimeType: "image/png",
-      size: 2_048,
-    });
+    expect(signatureSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        confidentiality: "PRIVATE",
+        purpose: "AVATAR",
+        filename: "avatar.png",
+        mimeType: "image/png",
+        size: 2_048,
+      }),
+    );
+    expect(signatureSpy.mock.calls[0]?.[0].sessionId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
     expect(onStage.mock.calls.map(([stage]) => stage)).toEqual([
       "uploading",
       "verifying",
@@ -258,6 +263,24 @@ describe("uploadMedia", () => {
     expect(statusSpy).toHaveBeenCalledTimes(2);
   });
 
+  it("reuses a stable upload session and skips a provider transfer after recovery", async () => {
+    const sessionId = "6a0bb388-3c26-4417-aed8-3ca05c212d1f";
+    const signatureSpy = vi
+      .spyOn(mediaApi, "createUploadSignature")
+      .mockResolvedValue({ ...authorization, existingAsset: activeAsset });
+
+    await expect(
+      uploadMedia(sizedFile("avatar.png", "image/png", 2_048), "AVATAR", {
+        uploadSessionId: sessionId,
+      }),
+    ).resolves.toEqual(activeAsset);
+
+    expect(signatureSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId }),
+    );
+    expect(FakeXMLHttpRequest.instances).toHaveLength(0);
+  });
+
   it("uses the community post purpose and waits for ACTIVE inspection", async () => {
     const signatureSpy = vi
       .spyOn(mediaApi, "createUploadSignature")
@@ -275,13 +298,15 @@ describe("uploadMedia", () => {
       ),
     ).resolves.toEqual(activeAsset);
 
-    expect(signatureSpy).toHaveBeenCalledWith({
-      confidentiality: "PRIVATE",
-      purpose: "COMMUNITY_POST",
-      filename: "community.png",
-      mimeType: "image/png",
-      size: 2_048,
-    });
+    expect(signatureSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        confidentiality: "PRIVATE",
+        purpose: "COMMUNITY_POST",
+        filename: "community.png",
+        mimeType: "image/png",
+        size: 2_048,
+      }),
+    );
   });
 
   it("uploads supported 50 MB video evidence in a single request", async () => {
@@ -402,8 +427,11 @@ describe("uploadMedia", () => {
       "video/mp4",
       120 * 1024 * 1024,
     );
+    const sessionId = "6a0bb388-3c26-4417-aed8-3ca05c212d1f";
 
-    await uploadMedia(file, "DOSSIER_EVIDENCE");
+    await uploadMedia(file, "DOSSIER_EVIDENCE", {
+      uploadSessionId: sessionId,
+    });
 
     expect(FakeXMLHttpRequest.instances).toHaveLength(6);
     const ranges = FakeXMLHttpRequest.instances.map(
@@ -427,6 +455,7 @@ describe("uploadMedia", () => {
         )?.[1],
     );
     expect(new Set(uploadIds).size).toBe(1);
+    expect(uploadIds[0]).toBe(sessionId.replaceAll("-", ""));
   });
 
   it("keeps waiting for large video inspection beyond the former one-minute limit", async () => {
