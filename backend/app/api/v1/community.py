@@ -239,7 +239,14 @@ async def list_posts(
         str | None,
         Query(alias="q", min_length=1, max_length=120, pattern=r".*\S.*"),
     ] = None,
-    sort: Literal["recent", "popular", "discussed", "following"] = "recent",
+    sort: Literal[
+        "recent",
+        "popular",
+        "discussed",
+        "following",
+        "topics_following",
+        "unanswered",
+    ] = "recent",
 ) -> PaginatedSuccessEnvelope[list[CommunityPostData]]:
     result = await service.list_public_posts(
         category_slug=category,

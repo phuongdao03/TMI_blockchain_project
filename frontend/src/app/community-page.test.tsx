@@ -37,4 +37,15 @@ describe("CommunityPage query state", () => {
 
     expect(page.props.sort).toBe("recent");
   });
+
+  it.each(["topics_following", "unanswered"])(
+    "keeps the %s discovery filter in the route state",
+    async (sort) => {
+      const page = await CommunityPage({
+        searchParams: Promise.resolve({ sort }),
+      });
+
+      expect(page.props.sort).toBe(sort);
+    },
+  );
 });

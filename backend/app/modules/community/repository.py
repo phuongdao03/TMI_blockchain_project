@@ -27,6 +27,7 @@ from app.modules.community.models import (
     CommunityModerationEvent,
     CommunityModerationLog,
     CommunityPost,
+    CommunityPostFollow,
     CommunityPostMedia,
     CommunityPostStatus,
     CommunityPostTag,
@@ -186,12 +187,15 @@ class CommunityRepository:
         query: str | None = None,
         sort: str = "recent",
         following_user_id: UUID | None = None,
+        followed_by_user_id: UUID | None = None,
         author_user_id: UUID | None = None,
         viewer_user_id: UUID | None = None,
         offset: int,
         limit: int,
     ) -> tuple[tuple[CommunityPostRow, ...], int]:
         filters = self._public_filters()
+        if sort == "unanswered":
+            filters.append(self._comment_count_expression() == 0)
         if category_slug is not None:
             filters.append(CommunityCategory.slug == category_slug)
         if tag_slug is not None:
@@ -242,6 +246,15 @@ class CommunityRepository:
                     )
                 )
             )
+        if followed_by_user_id is not None:
+            filters.append(
+                exists(
+                    select(CommunityPostFollow.id).where(
+                        CommunityPostFollow.post_id == CommunityPost.id,
+                        CommunityPostFollow.user_id == followed_by_user_id,
+                    )
+                )
+            )
         if author_user_id is not None:
             filters.append(CommunityPost.author_user_id == author_user_id)
         count_result = await self._session.execute(
@@ -269,6 +282,11 @@ class CommunityRepository:
                 CommunityPost.id.desc(),
             ),
             "following": (CommunityPost.published_at.desc(), CommunityPost.id.desc()),
+            "topics_following": (
+                CommunityPost.published_at.desc(),
+                CommunityPost.id.desc(),
+            ),
+            "unanswered": (CommunityPost.published_at.desc(), CommunityPost.id.desc()),
         }[sort]
         result = await self._session.execute(
             self._post_rows_statement(viewer_user_id=viewer_user_id)

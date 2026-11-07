@@ -70,6 +70,7 @@ docs/handoffs/*
 !docs/handoffs/uiux-redesign-2026-10-30.md
 !docs/handoffs/navigation-2026-10-31.md
 !docs/handoffs/home-refinements-2026-10-31.md
+!docs/handoffs/community-forum-v1.md
 docs/decisions/
 docs/release/
 docs/security/

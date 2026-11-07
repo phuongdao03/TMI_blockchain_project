@@ -649,6 +649,31 @@ class CommunityFollow(UtcTimestampMixin, Base):
     )
 
 
+class CommunityPostFollow(UtcTimestampMixin, Base):
+    __tablename__ = "community_post_follows"
+    __table_args__ = (
+        UniqueConstraint(
+            "post_id",
+            "user_id",
+            name="uq_community_post_follows_post_user",
+        ),
+        Index("ix_community_post_follows_user_created", "user_id", "created_at"),
+        Index("ix_community_post_follows_post", "post_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    post_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("community_posts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+
 class CommunityCommentLike(UtcTimestampMixin, Base):
     __tablename__ = "community_comment_likes"
     __table_args__ = (

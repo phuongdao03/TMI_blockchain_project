@@ -231,6 +231,39 @@ describe("CommunityFeed", () => {
     expect(api.posts).not.toHaveBeenCalled();
   });
 
+  it("requires the platform session for the followed-topic feed", async () => {
+    auth.user = null;
+    auth.status = "unauthenticated";
+    render(<CommunityFeed page={1} sort="topics_following" />, { wrapper });
+
+    expect(
+      await screen.findByText("Đăng nhập để xem chủ đề bạn đang theo dõi."),
+    ).toBeDefined();
+    expect(api.posts).not.toHaveBeenCalled();
+  });
+
+  it("passes unanswered sorting to the community API", async () => {
+    render(<CommunityFeed page={1} sort="unanswered" />, { wrapper });
+
+    await screen.findByRole("heading", { name: "Cộng đồng Tinh Hoa Việt" });
+    expect(api.posts).toHaveBeenCalledWith(
+      expect.objectContaining({ sort: "unanswered" }),
+      expect.any(AbortSignal),
+    );
+    expect(
+      (screen.getByLabelText("Sắp xếp") as HTMLSelectElement).value,
+    ).toBe("unanswered");
+  });
+
+  it("wraps category navigation without horizontal scrolling", async () => {
+    render(<CommunityFeed page={1} />, { wrapper });
+    const navigation = await screen.findByRole("navigation", {
+      name: "Danh mục bài viết cộng đồng",
+    });
+
+    expect(navigation.className).not.toMatch(/overflow-x-auto/);
+  });
+
   it("does not render an image URL unless it matches the backend community delivery path", async () => {
     api.posts.mockResolvedValueOnce({
       success: true,

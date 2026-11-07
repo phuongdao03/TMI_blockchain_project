@@ -14,12 +14,14 @@ const api = vi.hoisted(() => ({
   bookmarkPost: vi.fn(),
   unbookmarkPost: vi.fn(),
   recordPostView: vi.fn(),
+  postFollowState: vi.fn(),
 }));
 
 vi.mock("@/lib/api/client", () => ({ communityApi: api }));
 const auth = vi.hoisted(() => ({ user: { id: "viewer-detail" } }));
 vi.mock("@/lib/auth/user-context", () => ({
   useAuthUser: () => auth.user,
+  useAuthStatus: () => (auth.user ? "authenticated" : "unauthenticated"),
 }));
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -69,6 +71,7 @@ describe("CommunityPostDetail", () => {
       meta: { requestId: "comments-empty", page: 1, pageSize: 20, total: 0 },
     });
     api.recordPostView.mockResolvedValue(undefined);
+    api.postFollowState.mockResolvedValue({ postId: "post-1", isFollowing: false });
   });
 
   it("shows published content as text and uses the safe author fallback", async () => {

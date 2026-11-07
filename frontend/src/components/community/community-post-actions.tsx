@@ -5,6 +5,7 @@ import { Bookmark, Heart } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { CommunityPostFollowAction } from "@/components/community/community-post-follow-action";
 import { CommunityReportAction } from "@/components/community/community-report-action";
 import { communityApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
@@ -70,7 +71,7 @@ export function CommunityPostActions({
     return (
       <div className="mt-7 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
         <p className="text-sm text-[var(--theme-muted)]">
-          Đăng nhập để thích bài viết, lưu lại và tham gia thảo luận.
+          Đăng nhập để thích, lưu và theo dõi chủ đề hoặc tham gia thảo luận.
         </p>
         <Link
           className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-[var(--theme-accent)] px-4 text-sm font-bold text-[var(--theme-accent-contrast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
@@ -91,6 +92,7 @@ export function CommunityPostActions({
 
   return (
     <div className="mt-7 flex flex-wrap items-center gap-3 border-y border-[var(--theme-border)] py-4">
+      <CommunityPostFollowAction postId={post.id} slug={post.slug} />
       <button
         aria-pressed={isLiked}
         className={actionClass(isLiked)}

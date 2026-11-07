@@ -15,6 +15,7 @@ const api = vi.hoisted(() => ({
   unlikePost: vi.fn(),
   bookmarkPost: vi.fn(),
   unbookmarkPost: vi.fn(),
+  postFollowState: vi.fn(),
 }));
 const auth = vi.hoisted(() => ({
   user: { id: "viewer-1" } as { id: string } | null,
@@ -23,6 +24,7 @@ const auth = vi.hoisted(() => ({
 vi.mock("@/lib/api/client", () => ({ communityApi: api }));
 vi.mock("@/lib/auth/user-context", () => ({
   useAuthUser: () => auth.user,
+  useAuthStatus: () => (auth.user ? "authenticated" : "unauthenticated"),
 }));
 
 const commentThread = {
@@ -119,6 +121,7 @@ beforeEach(() => {
     isLiked: false,
   });
   api.bookmarkPost.mockResolvedValue({ postId: "post-1", isBookmarked: true });
+  api.postFollowState.mockResolvedValue({ postId: "post-1", isFollowing: false });
   api.unbookmarkPost.mockResolvedValue({
     postId: "post-1",
     isBookmarked: false,

@@ -231,4 +231,73 @@ describe("CommunityCommentThreads", () => {
     );
     expect(await screen.findByText("Third reply")).toBeDefined();
   });
+
+  it("prefills a bounded text quote and links back to its source reply", async () => {
+    const user = userEvent.setup();
+    const quotedContent = `<script>${"văn bản ".repeat(45)}</script>`;
+    api.comments.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: "comment-quote-source",
+          parentId: null,
+          content: quotedContent,
+          isDeleted: false,
+          createdAt: "2026-10-14T10:00:00Z",
+          likeCount: 0,
+          viewerHasLiked: false,
+          author: {
+            id: "author-1",
+            username: "lan-anh",
+            displayName: "Lan Anh",
+            avatarUrl: null,
+          },
+          replies: [],
+        },
+      ],
+      meta: { requestId: "comments", page: 1, pageSize: 20, total: 1 },
+    });
+    api.createComment.mockResolvedValue({
+      id: "comment-quote-reply",
+      postId: "post-1",
+      parentId: "comment-quote-source",
+      content: "Quoted response",
+      author: {
+        id: "viewer-1",
+        username: "viewer",
+        displayName: "Reader",
+        avatarUrl: null,
+      },
+      isDeleted: false,
+      createdAt: "2026-10-14T10:03:00Z",
+      likeCount: 0,
+      viewerHasLiked: false,
+    });
+    render(<CommunityCommentThreads postId="post-1" commentCount={1} />, {
+      wrapper,
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "Trích dẫn Lan Anh" }),
+    );
+    const editor = screen.getByLabelText(
+      "Nội dung trả lời",
+    ) as HTMLTextAreaElement;
+    expect(editor.value.startsWith("> Lan Anh đã viết:\n> <script>")).toBe(true);
+    expect(Array.from(editor.value).length).toBeLessThan(330);
+    expect(
+      screen.getByRole("link", { name: "Xem câu trả lời được trích dẫn" })
+        .getAttribute("href"),
+    ).toBe("#comment-comment-quote-source");
+
+    await user.clear(editor);
+    await user.type(editor, "Quoted response");
+    await user.click(screen.getByRole("button", { name: "Gửi trả lời" }));
+    await waitFor(() =>
+      expect(api.createComment).toHaveBeenCalledWith(
+        "post-1",
+        expect.objectContaining({ parentId: "comment-quote-source" }),
+      ),
+    );
+  });
 });

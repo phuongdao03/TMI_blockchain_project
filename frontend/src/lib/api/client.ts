@@ -96,6 +96,7 @@ import type {
   CommunityReportSubmissionResult,
   CommunityPostBookmarkResult,
   CommunityPostDetail,
+  CommunityPostFollowResult,
   CommunityPostInput,
   CommunityPostFilters,
   CommunityPostLikeResult,
@@ -3739,6 +3740,24 @@ export const communityApi = {
   unbookmarkPost(postId: string) {
     return request<CommunityPostBookmarkResult>(
       `/community/posts/${encodeURIComponent(postId)}/bookmark`,
+      { method: "DELETE" },
+    );
+  },
+  postFollowState(postId: string, signal?: AbortSignal) {
+    return request<CommunityPostFollowResult>(
+      `/community/posts/${encodeURIComponent(postId)}/follow`,
+      { signal },
+    );
+  },
+  followPost(postId: string) {
+    return request<CommunityPostFollowResult>(
+      `/community/posts/${encodeURIComponent(postId)}/follow`,
+      { method: "PUT" },
+    );
+  },
+  unfollowPost(postId: string) {
+    return request<CommunityPostFollowResult>(
+      `/community/posts/${encodeURIComponent(postId)}/follow`,
       { method: "DELETE" },
     );
   },

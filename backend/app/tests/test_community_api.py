@@ -1153,6 +1153,176 @@ def test_likes_bookmarks_follows_and_member_reads_use_safe_profiles(
         test_app.close()
 
 
+def test_topic_follows_are_idempotent_and_feed_only_published_followed_topics(
+    tmp_path: Path,
+) -> None:
+    test_app = CommunityTestApp(tmp_path)
+    try:
+        older_id = _insert_post(
+            test_app,
+            slug="followed-topic-older",
+            status=CommunityPostStatus.PUBLISHED,
+            published_at=NOW - timedelta(days=1),
+        )
+        newer_id = _insert_post(
+            test_app,
+            slug="followed-topic-newer",
+            status=CommunityPostStatus.PUBLISHED,
+            published_at=NOW,
+        )
+        _insert_post(
+            test_app,
+            slug="unfollowed-topic",
+            status=CommunityPostStatus.PUBLISHED,
+            published_at=NOW,
+        )
+        _insert_post(
+            test_app,
+            slug="unpublished-followed-topic",
+            status=CommunityPostStatus.DRAFT,
+        )
+
+        test_app.set_principal(OTHER_ID)
+        first_follow = test_app.client.put(
+            f"/api/v1/community/posts/{older_id}/follow"
+        )
+        assert first_follow.status_code == 200, first_follow.text
+        assert first_follow.json()["data"] == {
+            "postId": str(older_id),
+            "isFollowing": True,
+        }
+        test_app.client.put(f"/api/v1/community/posts/{newer_id}/follow")
+        repeated_follow = test_app.client.put(
+            f"/api/v1/community/posts/{older_id}/follow"
+        )
+        assert repeated_follow.json()["data"]["isFollowing"] is True
+
+        test_app.viewer_principal = _principal(OTHER_ID)
+        followed_feed = test_app.client.get(
+            "/api/v1/community/posts?sort=topics_following&page=1&pageSize=1"
+        )
+        assert followed_feed.status_code == 200, followed_feed.text
+        assert followed_feed.json()["meta"]["total"] == 2
+        assert followed_feed.json()["data"][0]["id"] == str(newer_id)
+        second_page = test_app.client.get(
+            "/api/v1/community/posts?sort=topics_following&page=2&pageSize=1"
+        )
+        assert second_page.json()["data"][0]["id"] == str(older_id)
+        follow_state = test_app.client.get(
+            f"/api/v1/community/posts/{older_id}/follow"
+        )
+        assert follow_state.json()["data"]["isFollowing"] is True
+
+        test_app.viewer_principal = None
+        unauthenticated_feed = test_app.client.get(
+            "/api/v1/community/posts?sort=topics_following"
+        )
+        assert unauthenticated_feed.status_code == 401
+
+        test_app.set_principal(OTHER_ID)
+        unfollow = test_app.client.delete(
+            f"/api/v1/community/posts/{older_id}/follow"
+        )
+        assert unfollow.status_code == 200
+        assert unfollow.json()["data"]["isFollowing"] is False
+        repeated_unfollow = test_app.client.delete(
+            f"/api/v1/community/posts/{older_id}/follow"
+        )
+        assert repeated_unfollow.json()["data"]["isFollowing"] is False
+    finally:
+        test_app.close()
+
+
+def test_followed_topic_reply_sends_one_linked_notification(
+    tmp_path: Path,
+) -> None:
+    test_app = CommunityTestApp(tmp_path)
+    try:
+        post_id = _insert_post(
+            test_app,
+            slug="followed-topic-replies",
+            status=CommunityPostStatus.PUBLISHED,
+            published_at=NOW,
+        )
+        root = test_app.client.post(
+            f"/api/v1/community/posts/{post_id}/comments",
+            json={"content": "A question in the topic."},
+        )
+        assert root.status_code == 201, root.text
+
+        test_app.set_principal(OTHER_ID)
+        followed = test_app.client.put(
+            f"/api/v1/community/posts/{post_id}/follow"
+        )
+        assert followed.status_code == 200, followed.text
+
+        test_app.set_principal(OWNER_ID)
+        reply = test_app.client.post(
+            f"/api/v1/community/posts/{post_id}/comments",
+            json={
+                "content": "A response for the followed topic.",
+                "parentId": root.json()["data"]["id"],
+            },
+        )
+        assert reply.status_code == 201, reply.text
+
+        test_app.set_principal(OTHER_ID)
+        notifications = test_app.client.get(
+            "/api/v1/notifications?page=1&pageSize=50"
+        ).json()["data"]
+        assert len(notifications) == 1
+        assert notifications[0]["type"] == "COMMUNITY_REPLY"
+        assert notifications[0]["data"]["actionPath"] == (
+            "/community/posts/followed-topic-replies"
+            f"#comment-{reply.json()['data']['id']}"
+        )
+    finally:
+        test_app.close()
+
+
+def test_unanswered_sort_uses_valid_reply_count_and_stable_pagination(
+    tmp_path: Path,
+) -> None:
+    test_app = CommunityTestApp(tmp_path)
+    try:
+        older_id = _insert_post(
+            test_app,
+            slug="unanswered-older",
+            status=CommunityPostStatus.PUBLISHED,
+            published_at=NOW - timedelta(days=1),
+        )
+        newer_id = _insert_post(
+            test_app,
+            slug="unanswered-newer",
+            status=CommunityPostStatus.PUBLISHED,
+            published_at=NOW,
+        )
+        replied_id = _insert_post(
+            test_app,
+            slug="already-answered",
+            status=CommunityPostStatus.PUBLISHED,
+            published_at=NOW + timedelta(hours=1),
+        )
+        answer = test_app.client.post(
+            f"/api/v1/community/posts/{replied_id}/comments",
+            json={"content": "This topic already has a reply."},
+        )
+        assert answer.status_code == 201
+
+        first_page = test_app.client.get(
+            "/api/v1/community/posts?sort=unanswered&page=1&pageSize=1"
+        )
+        assert first_page.status_code == 200, first_page.text
+        assert first_page.json()["meta"]["total"] == 2
+        assert first_page.json()["data"][0]["id"] == str(newer_id)
+        second_page = test_app.client.get(
+            "/api/v1/community/posts?sort=unanswered&page=2&pageSize=1"
+        )
+        assert second_page.json()["data"][0]["id"] == str(older_id)
+    finally:
+        test_app.close()
+
+
 def test_public_author_identity_uses_shared_profile_and_persisted_role(
     tmp_path: Path,
 ) -> None:
@@ -1352,7 +1522,8 @@ def test_community_notifications_cover_events_without_self_or_duplicate_alerts(
         ).json()["data"]
         assert [item["type"] for item in author_notifications] == ["COMMUNITY_REPLY"]
         reply_action_path = (
-            "/community/posts/community-notification-post#community-comments-title"
+            "/community/posts/community-notification-post"
+            f"#comment-{reply.json()['data']['id']}"
         )
         assert author_notifications[0]["data"] == {"actionPath": reply_action_path}
 

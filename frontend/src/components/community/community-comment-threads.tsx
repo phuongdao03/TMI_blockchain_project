@@ -1,11 +1,12 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle, RotateCcw, Send } from "lucide-react";
+import { LoaderCircle, Quote, RotateCcw, Send } from "lucide-react";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { CommunityReportAction } from "@/components/community/community-report-action";
+import { communityReplyQuote } from "@/components/community/community-quote";
 import {
   CommunityMembershipBadge,
   CommunityRoleBadge,
@@ -40,6 +41,7 @@ export function CommunityCommentThreads({
   const [commentDraft, setCommentDraft] = useState("");
   const [replyDraft, setReplyDraft] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [quotedReplyId, setQuotedReplyId] = useState<string | null>(null);
   const [sort, setSort] = useState<CommunityCommentSort>("oldest");
   const commentsKey = ["community", "comments", postId, page, sort] as const;
   const comments = useQuery({
@@ -62,6 +64,7 @@ export function CommunityCommentThreads({
       if (input.parentId) {
         setReplyDraft("");
         setReplyingTo(null);
+        setQuotedReplyId(null);
       } else {
         setCommentDraft("");
       }
@@ -264,11 +267,21 @@ export function CommunityCommentThreads({
             <CommentThread
               key={thread.id}
               onReply={(commentId) => {
-                setReplyingTo((current) =>
-                  current === commentId ? null : commentId,
-                );
+                if (replyingTo === commentId) {
+                  setReplyingTo(null);
+                  setQuotedReplyId(null);
+                } else {
+                  setReplyingTo(commentId);
+                  setQuotedReplyId(null);
+                }
                 setReplyDraft("");
               }}
+              onQuote={(commentId, authorName, content) => {
+                setReplyingTo(commentId);
+                setReplyDraft(communityReplyQuote(authorName, content));
+                setQuotedReplyId(commentId);
+              }}
+              quotedReplyId={quotedReplyId}
               onReplyDraftChange={setReplyDraft}
               onDeleteComment={(commentId) =>
                 deleteComment.mutateAsync(commentId)
@@ -328,6 +341,7 @@ export function CommunityCommentThreads({
 function CommentThread({
   canReply,
   onReply,
+  onQuote,
   onReplyDraftChange,
   onDeleteComment,
   onToggleLike,
@@ -335,6 +349,7 @@ function CommentThread({
   onSubmitReply,
   replyDraft,
   replyingTo,
+  quotedReplyId,
   submitting,
   thread,
   userId,
@@ -342,6 +357,7 @@ function CommentThread({
 }: {
   canReply: boolean;
   onReply: (commentId: string) => void;
+  onQuote: (commentId: string, authorName: string, content: string) => void;
   onReplyDraftChange: (value: string) => void;
   onDeleteComment: (commentId: string) => Promise<void>;
   onToggleLike: (commentId: string, liked: boolean) => Promise<unknown>;
@@ -349,6 +365,7 @@ function CommentThread({
   onSubmitReply: (event: FormEvent<HTMLFormElement>) => void;
   replyDraft: string;
   replyingTo: string | null;
+  quotedReplyId: string | null;
   submitting: boolean;
   thread: CommunityCommentThread;
   userId?: string;
@@ -398,7 +415,13 @@ function CommentThread({
               >
                 {reply.parentId !== thread.id ? (
                   <p className="mb-1 text-xs text-[var(--theme-muted)]">
-                    Trả lời {replyTargetName}
+                    Trả lời{" "}
+                    <Link
+                      className="underline underline-offset-2 hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                      href={`#comment-${reply.parentId}`}
+                    >
+                      {replyTargetName}
+                    </Link>
                   </p>
                 ) : null}
                 <CommentBody
@@ -416,14 +439,29 @@ function CommentThread({
                   likeCount={reply.likeCount}
                 />
                 {canReply ? (
-                  <button
-                    aria-label={`Trả lời ${replyAuthorName}`}
-                    className="mt-2 inline-flex min-h-9 items-center rounded-lg px-3 text-sm font-semibold text-[var(--theme-accent)] hover:bg-[var(--theme-surface)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-                    onClick={() => onReply(reply.id)}
-                    type="button"
-                  >
-                    Trả lời
-                  </button>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    <button
+                      aria-label={`Trả lời ${replyAuthorName}`}
+                      className="inline-flex min-h-9 items-center rounded-lg px-3 text-sm font-semibold text-[var(--theme-accent)] hover:bg-[var(--theme-surface)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                      onClick={() => onReply(reply.id)}
+                      type="button"
+                    >
+                      Trả lời
+                    </button>
+                    {!reply.isDeleted ? (
+                      <button
+                        aria-label={`Trích dẫn ${replyAuthorName}`}
+                        className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[var(--theme-accent)] hover:bg-[var(--theme-surface)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+                        onClick={() =>
+                          onQuote(reply.id, replyAuthorName, reply.content)
+                        }
+                        type="button"
+                      >
+                        <Quote aria-hidden="true" className="size-4" />
+                        Trích dẫn
+                      </button>
+                    ) : null}
+                  </div>
                 ) : null}
                 {replyingTo === reply.id ? (
                   <ReplyComposer
@@ -433,6 +471,9 @@ function CommentThread({
                     draft={replyDraft}
                     submitting={submitting}
                     targetName={replyAuthorName}
+                    quotedCommentId={
+                      quotedReplyId === reply.id ? reply.id : null
+                    }
                   />
                 ) : null}
               </div>
@@ -441,14 +482,27 @@ function CommentThread({
         </div>
       ) : null}
       {canReply ? (
-        <button
-          aria-label={`Trả lời ${authorName}`}
-          className="mt-2 inline-flex min-h-9 items-center rounded-lg px-3 text-sm font-semibold text-[var(--theme-accent)] hover:bg-[var(--theme-elevated)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-          onClick={() => onReply(thread.id)}
-          type="button"
-        >
-          Trả lời
-        </button>
+        <div className="mt-2 flex flex-wrap gap-1">
+          <button
+            aria-label={`Trả lời ${authorName}`}
+            className="inline-flex min-h-9 items-center rounded-lg px-3 text-sm font-semibold text-[var(--theme-accent)] hover:bg-[var(--theme-elevated)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+            onClick={() => onReply(thread.id)}
+            type="button"
+          >
+            Trả lời
+          </button>
+          {!thread.isDeleted ? (
+            <button
+              aria-label={`Trích dẫn ${authorName}`}
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[var(--theme-accent)] hover:bg-[var(--theme-elevated)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+              onClick={() => onQuote(thread.id, authorName, thread.content)}
+              type="button"
+            >
+              <Quote aria-hidden="true" className="size-4" />
+              Trích dẫn
+            </button>
+          ) : null}
+        </div>
       ) : null}
       {replyingTo === thread.id ? (
         <ReplyComposer
@@ -458,6 +512,7 @@ function CommentThread({
           draft={replyDraft}
           submitting={submitting}
           targetName={authorName}
+          quotedCommentId={quotedReplyId === thread.id ? thread.id : null}
         />
       ) : null}
     </article>
@@ -466,6 +521,7 @@ function CommentThread({
 
 function ReplyComposer({
   commentId,
+  quotedCommentId,
   onDraftChange,
   onSubmit,
   draft,
@@ -473,6 +529,7 @@ function ReplyComposer({
   targetName,
 }: {
   commentId: string;
+  quotedCommentId: string | null;
   onDraftChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   draft: string;
@@ -487,6 +544,14 @@ function ReplyComposer({
       <p className="mb-2 text-xs text-[var(--theme-muted)]">
         Trả lời {targetName}
       </p>
+      {quotedCommentId ? (
+        <Link
+          className="mb-2 inline-flex min-h-9 items-center rounded-lg px-2 text-sm font-semibold text-[var(--theme-accent)] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+          href={`#comment-${quotedCommentId}`}
+        >
+          Xem câu trả lời được trích dẫn
+        </Link>
+      ) : null}
       <label
         className="block text-sm font-semibold text-[var(--theme-text)]"
         htmlFor={`community-reply-${commentId}`}

@@ -240,6 +240,11 @@ class CommunityFollowStateData(CommunitySchema):
     follower_count: int
 
 
+class CommunityPostFollowStateData(CommunitySchema):
+    post_id: UUID
+    is_following: bool
+
+
 class CommunityCommentLikeStateData(CommunitySchema):
     comment_id: UUID
     like_count: int

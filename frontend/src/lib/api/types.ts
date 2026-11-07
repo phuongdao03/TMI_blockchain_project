@@ -780,6 +780,11 @@ export interface CommunityPostBookmarkResult {
   isBookmarked: boolean;
 }
 
+export interface CommunityPostFollowResult {
+  postId: string;
+  isFollowing: boolean;
+}
+
 export interface CommunityMemberProfile {
   id: string;
   username: string;
@@ -873,7 +878,9 @@ export type CommunityPostSort =
   | "recent"
   | "popular"
   | "discussed"
-  | "following";
+  | "following"
+  | "topics_following"
+  | "unanswered";
 
 export interface CommunityPostFilters {
   page?: number;

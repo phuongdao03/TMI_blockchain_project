@@ -39,6 +39,7 @@ from app.modules.community.engagement_schemas import (
     CommunityMemberDirectoryPageData,
     CommunityMemberListItemData,
     CommunityMemberProfileEditRequest,
+    CommunityPostFollowStateData,
 )
 from app.modules.community.engagement_service import (
     CommunityEngagementService,
@@ -593,6 +594,81 @@ async def unlike_post(
             post_id=post_id,
             like_count=count,
             is_liked=liked,
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.get(
+    "/posts/{post_id}/follow",
+    response_model=SuccessEnvelope[CommunityPostFollowStateData],
+)
+async def post_follow_state(
+    post_id: UUID,
+    request: Request,
+    principal: OptionalCurrentPrincipalDependency,
+    service: CommunityEngagementServiceDependency,
+) -> SuccessEnvelope[CommunityPostFollowStateData]:
+    is_following = await service.post_follow_state(
+        post_id,
+        viewer_user_id=principal.user_id if principal is not None else None,
+    )
+    return SuccessEnvelope(
+        data=CommunityPostFollowStateData(
+            post_id=post_id,
+            is_following=is_following,
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.put(
+    "/posts/{post_id}/follow",
+    dependencies=[Depends(enforce_community_engagement_write_rate_limit)],
+    response_model=SuccessEnvelope[CommunityPostFollowStateData],
+    responses=PRIVATE_RESPONSES,
+)
+async def follow_post(
+    post_id: UUID,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: CommunityEngagementServiceDependency,
+) -> SuccessEnvelope[CommunityPostFollowStateData]:
+    is_following = await service.set_post_follow(
+        principal,
+        post_id,
+        is_following=True,
+    )
+    return SuccessEnvelope(
+        data=CommunityPostFollowStateData(
+            post_id=post_id,
+            is_following=is_following,
+        ),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.delete(
+    "/posts/{post_id}/follow",
+    dependencies=[Depends(enforce_community_engagement_write_rate_limit)],
+    response_model=SuccessEnvelope[CommunityPostFollowStateData],
+    responses=PRIVATE_RESPONSES,
+)
+async def unfollow_post(
+    post_id: UUID,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: CommunityEngagementServiceDependency,
+) -> SuccessEnvelope[CommunityPostFollowStateData]:
+    is_following = await service.set_post_follow(
+        principal,
+        post_id,
+        is_following=False,
+    )
+    return SuccessEnvelope(
+        data=CommunityPostFollowStateData(
+            post_id=post_id,
+            is_following=is_following,
         ),
         meta=ResponseMeta(request_id=request.state.request_id),
     )

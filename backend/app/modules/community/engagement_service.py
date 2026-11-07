@@ -36,6 +36,7 @@ from app.modules.community.models import (
     CommunityFollow,
     CommunityLike,
     CommunityMemberRestriction,
+    CommunityPostFollow,
     CommunityProfile,
 )
 from app.modules.community.service import CommunityPostPage
@@ -134,15 +135,36 @@ class CommunityEngagementService:
                 and recipient_id not in mentioned_user_ids
             ):
                 is_reply = payload.parent_id is not None
-                action_path = f"/community/posts/{quote(post.post.slug, safe='-._~')}"
-                if is_reply:
-                    action_path += "#community-comments-title"
+                action_path = (
+                    f"/community/posts/{quote(post.post.slug, safe='-._~')}"
+                    f"#comment-{comment.id}"
+                )
                 await NotificationService(self._session).consume_in_transaction(
                     event_id=comment.id,
                     user_id=recipient_id,
                     event_type=("COMMUNITY_REPLY" if is_reply else "COMMUNITY_COMMENT"),
                     title="Có phản hồi mới" if is_reply else "Có bình luận mới",
                     body=f"Có hoạt động mới trong bài viết “{post.post.title}”.",
+                    data={"actionPath": action_path},
+                )
+            else:
+                action_path = (
+                    f"/community/posts/{quote(post.post.slug, safe='-._~')}"
+                    f"#comment-{comment.id}"
+                )
+            for follower_id in await self._repository.list_post_followers(post_id):
+                if (
+                    follower_id == principal.user_id
+                    or follower_id == recipient_id
+                    or follower_id in mentioned_user_ids
+                ):
+                    continue
+                await NotificationService(self._session).consume_in_transaction(
+                    event_id=comment.id,
+                    user_id=follower_id,
+                    event_type="COMMUNITY_REPLY",
+                    title="Có trao đổi mới trong chủ đề bạn theo dõi",
+                    body=f"Có phản hồi mới trong chủ đề “{post.post.title}”.",
                     data={"actionPath": action_path},
                 )
             for mentioned_user_id in mentioned_user_ids:
@@ -592,6 +614,52 @@ class CommunityEngagementService:
                 await self._session.delete(relation)
                 await self._session.flush()
             return await self._repository.follower_count(member_id)
+
+    async def post_follow_state(
+        self,
+        post_id: UUID,
+        *,
+        viewer_user_id: UUID | None,
+    ) -> bool:
+        async with self._session.begin():
+            if await self._repository.get_public_post(post_id) is None:
+                raise CommunityNotFoundError()
+            if viewer_user_id is None:
+                return False
+            return (
+                await self._repository.get_post_follow(post_id, viewer_user_id)
+                is not None
+            )
+
+    async def set_post_follow(
+        self,
+        principal: AuthPrincipal,
+        post_id: UUID,
+        *,
+        is_following: bool,
+    ) -> bool:
+        async with self._session.begin():
+            if await self._repository.get_public_post(post_id) is None:
+                raise CommunityNotFoundError()
+            relation = await self._repository.get_post_follow(
+                post_id,
+                principal.user_id,
+            )
+            if is_following and relation is None:
+                follow = CommunityPostFollow(
+                    id=uuid4(),
+                    post_id=post_id,
+                    user_id=principal.user_id,
+                )
+                await self._insert_if_absent(
+                    follow,
+                    self._repository.add_post_follow,
+                )
+                return True
+            if not is_following and relation is not None:
+                await self._session.delete(relation)
+                await self._session.flush()
+            return is_following
 
     async def _member_view(
         self,

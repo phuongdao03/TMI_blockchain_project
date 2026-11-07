@@ -86,7 +86,7 @@ class CommunityService:
         page_size: int,
         viewer_user_id: UUID | None = None,
     ) -> CommunityPostPage:
-        if sort == "following" and viewer_user_id is None:
+        if sort in {"following", "topics_following"} and viewer_user_id is None:
             raise UnauthenticatedError()
         if query is not None:
             query = query.strip()
@@ -100,6 +100,9 @@ class CommunityService:
                 query=query,
                 sort=sort,
                 following_user_id=(viewer_user_id if sort == "following" else None),
+                followed_by_user_id=(
+                    viewer_user_id if sort == "topics_following" else None
+                ),
                 viewer_user_id=viewer_user_id,
                 offset=(page - 1) * page_size,
                 limit=page_size,

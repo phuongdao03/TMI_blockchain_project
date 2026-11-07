@@ -1,4 +1,12 @@
+import re
 from collections.abc import Mapping
+
+_COMMUNITY_POST_PATH = re.compile(
+    r"/community/posts/(?:[A-Za-z0-9._~-]|%[0-9A-Fa-f]{2})+"
+)
+_COMMUNITY_COMMENT_FRAGMENT = re.compile(
+    r"comment-[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}"
+)
 
 SAFE_NOTIFICATION_DATA_KEYS = frozenset(
     {
@@ -29,12 +37,20 @@ def redact_notification_data(data: Mapping[str, object]) -> dict[str, object]:
         if key == "actionPath":
             if not isinstance(value, str):
                 continue
-            _, separator, fragment = value.partition("#")
+            path, separator, fragment = value.partition("#")
+            is_comment_target = (
+                _COMMUNITY_POST_PATH.fullmatch(path) is not None
+                and _COMMUNITY_COMMENT_FRAGMENT.fullmatch(fragment) is not None
+            )
             if (
                 not value.startswith("/")
                 or value.startswith("//")
                 or "?" in value
-                or (separator and fragment != "community-comments-title")
+                or (
+                    separator
+                    and fragment != "community-comments-title"
+                    and not is_comment_target
+                )
             ):
                 continue
         elif not isinstance(value, (str, int, bool)):

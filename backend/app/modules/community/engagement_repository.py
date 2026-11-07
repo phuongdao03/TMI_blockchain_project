@@ -19,6 +19,7 @@ from app.modules.community.models import (
     CommunityFollow,
     CommunityLike,
     CommunityPost,
+    CommunityPostFollow,
     CommunityPostStatus,
     CommunityProfile,
 )
@@ -625,6 +626,30 @@ class CommunityEngagementRepository:
         )
         return result
 
+    async def get_post_follow(
+        self, post_id: UUID, user_id: UUID
+    ) -> CommunityPostFollow | None:
+        return cast(
+            CommunityPostFollow | None,
+            await self._session.scalar(
+                select(CommunityPostFollow).where(
+                    CommunityPostFollow.post_id == post_id,
+                    CommunityPostFollow.user_id == user_id,
+                )
+            ),
+        )
+
+    async def list_post_followers(self, post_id: UUID) -> tuple[UUID, ...]:
+        result = await self._session.scalars(
+            select(CommunityPostFollow.user_id)
+            .join(User, User.id == CommunityPostFollow.user_id)
+            .where(
+                CommunityPostFollow.post_id == post_id,
+                User.status == UserStatus.ACTIVE,
+            )
+        )
+        return tuple(result.all())
+
     def add_comment(self, comment: CommunityComment) -> None:
         self._session.add(comment)
 
@@ -690,6 +715,9 @@ class CommunityEngagementRepository:
         self._session.add(bookmark)
 
     def add_follow(self, follow: CommunityFollow) -> None:
+        self._session.add(follow)
+
+    def add_post_follow(self, follow: CommunityPostFollow) -> None:
         self._session.add(follow)
 
     async def like_count(self, post_id: UUID) -> int:

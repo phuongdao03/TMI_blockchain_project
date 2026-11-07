@@ -38,6 +38,8 @@ export function CommunityFeed({
   const router = useRouter();
   const user = useAuthUser();
   const authStatus = useAuthStatus();
+  const isPersonalizedFeed =
+    sort === "following" || sort === "topics_following";
   const viewerKey = user?.id ?? "anonymous";
   const categories = useQuery({
     queryKey: ["community", "categories"],
@@ -53,12 +55,12 @@ export function CommunityFeed({
     queryFn: ({ signal }) =>
       communityApi.posts({ page, category, q, sort, relatedWorkId }, signal),
     staleTime: 30_000,
-    enabled: !(sort === "following" && authStatus !== "authenticated"),
+    enabled: !(isPersonalizedFeed && authStatus !== "authenticated"),
   });
   const needsFollowingLogin =
-    sort === "following" && authStatus === "unauthenticated";
+    isPersonalizedFeed && authStatus === "unauthenticated";
   const needsAuthCheck =
-    sort === "following" &&
+    isPersonalizedFeed &&
     (authStatus === "loading" || authStatus === "error");
   const total = posts.data?.meta.total ?? 0;
   const totalPages = Math.max(
@@ -70,13 +72,17 @@ export function CommunityFeed({
 
   function handleFilterSubmit(event: FormEvent<HTMLFormElement>) {
     const data = new FormData(event.currentTarget);
-    if (data.get("sort") === "following" && authStatus === "unauthenticated") {
+    const selectedSort = data.get("sort");
+    if (
+      (selectedSort === "following" || selectedSort === "topics_following") &&
+      authStatus === "unauthenticated"
+    ) {
       event.preventDefault();
       const href = communityFeedHref(
         {
           category: String(data.get("category") || "") || undefined,
           q: String(data.get("q") || "") || undefined,
-          sort: "following",
+          sort: selectedSort,
           relatedWorkId,
         },
         1,
@@ -193,9 +199,9 @@ export function CommunityFeed({
 
         <nav
           aria-label="Danh mục bài viết cộng đồng"
-          className="-mx-4 mb-8 overflow-x-auto overscroll-x-contain px-4 sm:mx-0 sm:mb-10 sm:px-0"
+          className="mb-8 sm:mb-10"
         >
-          <ul className="flex w-max min-w-full gap-2 py-1 sm:w-auto sm:min-w-0">
+          <ul className="flex flex-wrap gap-2 py-1">
             <li className="shrink-0">
               <Link
                 aria-current={!category ? "page" : undefined}
@@ -270,7 +276,9 @@ export function CommunityFeed({
               role="status"
             >
               <p className="font-bold text-[var(--theme-text)]">
-                Đăng nhập để xem bài viết từ người bạn theo dõi.
+                {sort === "topics_following"
+                  ? "Đăng nhập để xem chủ đề bạn đang theo dõi."
+                  : "Đăng nhập để xem bài viết từ người bạn theo dõi."}
               </p>
               <Link
                 className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-[var(--theme-accent)] px-4 text-sm font-bold text-[var(--theme-accent-contrast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
@@ -405,9 +413,11 @@ export function CommunityFeed({
 
 const sortOptions: { value: CommunityPostSort; label: string }[] = [
   { value: "recent", label: "Mới nhất" },
-  { value: "popular", label: "Nổi bật" },
+  { value: "popular", label: "Sôi nổi" },
+  { value: "unanswered", label: "Chưa có trả lời" },
   { value: "discussed", label: "Thảo luận nhiều" },
-  { value: "following", label: "Đang theo dõi" },
+  { value: "following", label: "Bài từ người bạn theo dõi" },
+  { value: "topics_following", label: "Chủ đề đang theo dõi" },
 ];
 
 function categoryPillClass(selected: boolean): string {
