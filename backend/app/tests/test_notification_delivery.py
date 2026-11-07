@@ -85,7 +85,9 @@ def test_notification_redaction_allows_reply_anchors_only_for_community_posts() 
     assert (
         redact_notification_data(
             {
-                "actionPath": "/notifications#comment-123e4567-e89b-12d3-a456-426614174000"
+                "actionPath": (
+                    "/notifications#comment-123e4567-e89b-12d3-a456-426614174000"
+                )
             }
         )
         == {}
