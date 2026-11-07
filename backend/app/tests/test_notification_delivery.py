@@ -82,12 +82,20 @@ def test_notification_redaction_allows_reply_anchors_only_for_community_posts() 
     assert redact_notification_data({"actionPath": action_path}) == {
         "actionPath": action_path,
     }
-    assert redact_notification_data(
-        {"actionPath": "/notifications#comment-123e4567-e89b-12d3-a456-426614174000"}
-    ) == {}
-    assert redact_notification_data(
-        {"actionPath": "/community/posts/a-story#comment-not-a-uuid"}
-    ) == {}
+    assert (
+        redact_notification_data(
+            {
+                "actionPath": "/notifications#comment-123e4567-e89b-12d3-a456-426614174000"
+            }
+        )
+        == {}
+    )
+    assert (
+        redact_notification_data(
+            {"actionPath": "/community/posts/a-story#comment-not-a-uuid"}
+        )
+        == {}
+    )
 
 
 def test_notification_api_data_redacts_legacy_sensitive_metadata() -> None:

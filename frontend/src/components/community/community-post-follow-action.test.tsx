@@ -28,7 +28,9 @@ vi.mock("@/lib/auth/user-context", () => ({
 let queryClient: QueryClient;
 
 function wrapper({ children }: { children: ReactNode }) {
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
 }
 
 beforeEach(() => {
@@ -81,7 +83,8 @@ describe("CommunityPostFollowAction", () => {
     );
 
     expect(
-      screen.getByRole("link", { name: "Đăng nhập để theo dõi chủ đề" })
+      screen
+        .getByRole("link", { name: "Đăng nhập để theo dõi chủ đề" })
         .getAttribute("href"),
     ).toBe("/login?next=%2Fcommunity%2Fposts%2Fheritage-story");
   });

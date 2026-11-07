@@ -60,8 +60,7 @@ export function CommunityFeed({
   const needsFollowingLogin =
     isPersonalizedFeed && authStatus === "unauthenticated";
   const needsAuthCheck =
-    isPersonalizedFeed &&
-    (authStatus === "loading" || authStatus === "error");
+    isPersonalizedFeed && (authStatus === "loading" || authStatus === "error");
   const total = posts.data?.meta.total ?? 0;
   const totalPages = Math.max(
     1,
@@ -197,10 +196,7 @@ export function CommunityFeed({
           ) : null}
         </form>
 
-        <nav
-          aria-label="Danh mục bài viết cộng đồng"
-          className="mb-8 sm:mb-10"
-        >
+        <nav aria-label="Danh mục bài viết cộng đồng" className="mb-8 sm:mb-10">
           <ul className="flex flex-wrap gap-2 py-1">
             <li className="shrink-0">
               <Link

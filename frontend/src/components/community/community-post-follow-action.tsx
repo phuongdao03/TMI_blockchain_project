@@ -17,7 +17,12 @@ export function CommunityPostFollowAction({
   const user = useAuthUser();
   const authStatus = useAuthStatus();
   const queryClient = useQueryClient();
-  const queryKey = ["community", "post-follow", postId, user?.id ?? "anonymous"];
+  const queryKey = [
+    "community",
+    "post-follow",
+    postId,
+    user?.id ?? "anonymous",
+  ];
   const state = useQuery({
     queryKey,
     queryFn: ({ signal }) => communityApi.postFollowState(postId, signal),
@@ -68,8 +73,14 @@ export function CommunityPostFollowAction({
 
   if (state.isPending) {
     return (
-      <p className="inline-flex min-h-10 items-center gap-2 text-sm text-[var(--theme-muted)]" role="status">
-        <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />
+      <p
+        className="inline-flex min-h-10 items-center gap-2 text-sm text-[var(--theme-muted)]"
+        role="status"
+      >
+        <LoaderCircle
+          aria-hidden="true"
+          className="size-4 motion-safe:animate-spin"
+        />
         Đang tải trạng thái theo dõi…
       </p>
     );
@@ -103,7 +114,10 @@ export function CommunityPostFollowAction({
         type="button"
       >
         {updateFollow.isPending ? (
-          <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />
+          <LoaderCircle
+            aria-hidden="true"
+            className="size-4 motion-safe:animate-spin"
+          />
         ) : isFollowing ? (
           <BellRing aria-hidden="true" className="size-4" />
         ) : (

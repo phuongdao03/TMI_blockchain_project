@@ -250,9 +250,9 @@ describe("CommunityFeed", () => {
       expect.objectContaining({ sort: "unanswered" }),
       expect.any(AbortSignal),
     );
-    expect(
-      (screen.getByLabelText("Sắp xếp") as HTMLSelectElement).value,
-    ).toBe("unanswered");
+    expect((screen.getByLabelText("Sắp xếp") as HTMLSelectElement).value).toBe(
+      "unanswered",
+    );
   });
 
   it("wraps category navigation without horizontal scrolling", async () => {

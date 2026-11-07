@@ -71,7 +71,10 @@ describe("CommunityPostDetail", () => {
       meta: { requestId: "comments-empty", page: 1, pageSize: 20, total: 0 },
     });
     api.recordPostView.mockResolvedValue(undefined);
-    api.postFollowState.mockResolvedValue({ postId: "post-1", isFollowing: false });
+    api.postFollowState.mockResolvedValue({
+      postId: "post-1",
+      isFollowing: false,
+    });
   });
 
   it("shows published content as text and uses the safe author fallback", async () => {

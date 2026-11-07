@@ -121,7 +121,10 @@ beforeEach(() => {
     isLiked: false,
   });
   api.bookmarkPost.mockResolvedValue({ postId: "post-1", isBookmarked: true });
-  api.postFollowState.mockResolvedValue({ postId: "post-1", isFollowing: false });
+  api.postFollowState.mockResolvedValue({
+    postId: "post-1",
+    isFollowing: false,
+  });
   api.unbookmarkPost.mockResolvedValue({
     postId: "post-1",
     isBookmarked: false,

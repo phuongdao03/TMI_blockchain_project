@@ -54,9 +54,7 @@ def test_community_topic_follow_migration_is_additive_and_reversible(
             unique_columns = {
                 tuple(
                     item[2]
-                    for item in connection.execute(
-                        f'PRAGMA index_info("{index_name}")'
-                    )
+                    for item in connection.execute(f'PRAGMA index_info("{index_name}")')
                 )
                 for index_name in unique_indexes
             }

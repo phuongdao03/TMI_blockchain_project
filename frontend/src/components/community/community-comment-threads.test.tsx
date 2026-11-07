@@ -283,10 +283,13 @@ describe("CommunityCommentThreads", () => {
     const editor = screen.getByLabelText(
       "Nội dung trả lời",
     ) as HTMLTextAreaElement;
-    expect(editor.value.startsWith("> Lan Anh đã viết:\n> <script>")).toBe(true);
+    expect(editor.value.startsWith("> Lan Anh đã viết:\n> <script>")).toBe(
+      true,
+    );
     expect(Array.from(editor.value).length).toBeLessThan(330);
     expect(
-      screen.getByRole("link", { name: "Xem câu trả lời được trích dẫn" })
+      screen
+        .getByRole("link", { name: "Xem câu trả lời được trích dẫn" })
         .getAttribute("href"),
     ).toBe("#comment-comment-quote-source");
 

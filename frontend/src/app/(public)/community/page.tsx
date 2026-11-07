@@ -63,8 +63,8 @@ function isCommunityPostSort(
     value === "recent" ||
     value === "popular" ||
     value === "discussed" ||
-      value === "following" ||
-      value === "topics_following" ||
-      value === "unanswered"
+    value === "following" ||
+    value === "topics_following" ||
+    value === "unanswered"
   );
 }

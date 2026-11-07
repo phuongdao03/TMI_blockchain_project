@@ -1183,9 +1183,7 @@ def test_topic_follows_are_idempotent_and_feed_only_published_followed_topics(
         )
 
         test_app.set_principal(OTHER_ID)
-        first_follow = test_app.client.put(
-            f"/api/v1/community/posts/{older_id}/follow"
-        )
+        first_follow = test_app.client.put(f"/api/v1/community/posts/{older_id}/follow")
         assert first_follow.status_code == 200, first_follow.text
         assert first_follow.json()["data"] == {
             "postId": str(older_id),
@@ -1208,9 +1206,7 @@ def test_topic_follows_are_idempotent_and_feed_only_published_followed_topics(
             "/api/v1/community/posts?sort=topics_following&page=2&pageSize=1"
         )
         assert second_page.json()["data"][0]["id"] == str(older_id)
-        follow_state = test_app.client.get(
-            f"/api/v1/community/posts/{older_id}/follow"
-        )
+        follow_state = test_app.client.get(f"/api/v1/community/posts/{older_id}/follow")
         assert follow_state.json()["data"]["isFollowing"] is True
 
         test_app.viewer_principal = None
@@ -1220,9 +1216,7 @@ def test_topic_follows_are_idempotent_and_feed_only_published_followed_topics(
         assert unauthenticated_feed.status_code == 401
 
         test_app.set_principal(OTHER_ID)
-        unfollow = test_app.client.delete(
-            f"/api/v1/community/posts/{older_id}/follow"
-        )
+        unfollow = test_app.client.delete(f"/api/v1/community/posts/{older_id}/follow")
         assert unfollow.status_code == 200
         assert unfollow.json()["data"]["isFollowing"] is False
         repeated_unfollow = test_app.client.delete(
@@ -1251,9 +1245,7 @@ def test_followed_topic_reply_sends_one_linked_notification(
         assert root.status_code == 201, root.text
 
         test_app.set_principal(OTHER_ID)
-        followed = test_app.client.put(
-            f"/api/v1/community/posts/{post_id}/follow"
-        )
+        followed = test_app.client.put(f"/api/v1/community/posts/{post_id}/follow")
         assert followed.status_code == 200, followed.text
 
         test_app.set_principal(OWNER_ID)
