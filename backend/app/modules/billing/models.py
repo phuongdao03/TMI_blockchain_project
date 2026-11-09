@@ -15,6 +15,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -35,6 +36,22 @@ class FeeObligationStatus(StrEnum):
     PAID = "PAID"
     WAIVED = "WAIVED"
     CANCELLED = "CANCELLED"
+
+
+class FeePolicyStatus(StrEnum):
+    DRAFT = "DRAFT"
+    SCHEDULED = "SCHEDULED"
+    ACTIVE = "ACTIVE"
+    EXPIRED = "EXPIRED"
+    CANCELLED = "CANCELLED"
+
+
+class FeeWaiverStatus(StrEnum):
+    REQUESTED = "REQUESTED"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    REDEEMED = "REDEEMED"
+    EXPIRED = "EXPIRED"
 
 
 class PriceCatalogVersion(UtcTimestampMixin, Base):
@@ -120,10 +137,141 @@ class PriceCatalogEntry(Base):
     )
 
 
+class FeePolicy(UtcTimestampMixin, Base):
+    __tablename__ = "fee_policies"
+    __table_args__ = (
+        CheckConstraint("version_no > 0", name="version_no_positive"),
+        CheckConstraint("amount_minor > 0", name="amount_minor_positive"),
+        CheckConstraint("currency = 'VND'", name="currency_vnd"),
+        CheckConstraint(
+            "ends_at IS NULL OR ends_at > starts_at", name="effective_interval_valid"
+        ),
+        CheckConstraint(
+            "status IN ('DRAFT', 'CANCELLED') OR approved_at IS NOT NULL",
+            name="approved_policy_has_timestamp",
+        ),
+        UniqueConstraint(
+            "fee_type", "dossier_type_id", "version_no", name="uq_fee_policy_version"
+        ),
+        Index(
+            "ix_fee_policies_scope_effective",
+            "fee_type",
+            "dossier_type_id",
+            "status",
+            "starts_at",
+            "ends_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    fee_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    dossier_type_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey(DossierType.id, ondelete="RESTRICT"), nullable=False
+    )
+    version_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    currency: Mapped[str] = mapped_column(
+        String(3), nullable=False, server_default="VND"
+    )
+    display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason: Mapped[str] = mapped_column(String(1000), nullable=False)
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[FeePolicyStatus] = mapped_column(
+        Enum(
+            FeePolicyStatus,
+            name="fee_policy_status",
+            values_callable=lambda values: [value.value for value in values],
+            validate_strings=True,
+            native_enum=False,
+            create_constraint=True,
+        ),
+        nullable=False,
+        default=FeePolicyStatus.DRAFT,
+        server_default=FeePolicyStatus.DRAFT.value,
+    )
+    created_by_user_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    approved_by_user_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT")
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class FeePolicyEvent(Base):
+    __tablename__ = "fee_policy_events"
+    __table_args__ = (
+        Index("ix_fee_policy_events_policy_created", "policy_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    policy_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey(FeePolicy.id, ondelete="RESTRICT"), nullable=False
+    )
+    actor_user_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    before_json: Mapped[dict[str, object] | None] = mapped_column(
+        JSONB().with_variant(JSON(), "sqlite")
+    )
+    after_json: Mapped[dict[str, object] | None] = mapped_column(
+        JSONB().with_variant(JSON(), "sqlite")
+    )
+    reason: Mapped[str] = mapped_column(String(1000), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class FeeWaiver(UtcTimestampMixin, Base):
+    __tablename__ = "fee_waivers"
+    __table_args__ = (
+        CheckConstraint("amount_minor > 0", name="amount_minor_positive"),
+        UniqueConstraint("dossier_id", "fee_type", name="uq_fee_waiver_scope"),
+        Index("ix_fee_waivers_status_expires", "status", "expires_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    dossier_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("dossiers.id", ondelete="RESTRICT"), nullable=False
+    )
+    fee_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    currency: Mapped[str] = mapped_column(
+        String(3), nullable=False, server_default="VND"
+    )
+    reason: Mapped[str] = mapped_column(String(1000), nullable=False)
+    status: Mapped[FeeWaiverStatus] = mapped_column(
+        Enum(
+            FeeWaiverStatus,
+            name="fee_waiver_status",
+            values_callable=lambda values: [value.value for value in values],
+            validate_strings=True,
+            native_enum=False,
+            create_constraint=True,
+        ),
+        nullable=False,
+        default=FeeWaiverStatus.REQUESTED,
+        server_default=FeeWaiverStatus.REQUESTED.value,
+    )
+    requested_by_user_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    approved_by_user_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT")
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    redeemed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
 class FeeObligation(UtcTimestampMixin, Base):
     __tablename__ = "fee_obligations"
     __table_args__ = (
-        CheckConstraint("amount_minor > 0", name="amount_minor_positive"),
         CheckConstraint("length(currency) = 3", name="currency_length"),
         Index(
             "ix_fee_obligations_owner_status_due",
@@ -131,6 +279,22 @@ class FeeObligation(UtcTimestampMixin, Base):
             "status",
             "due_at",
         ),
+        Index(
+            "uq_fee_obligations_dossier_fee_type",
+            "dossier_id",
+            "fee_type",
+            unique=True,
+            postgresql_where=text("fee_type IS NOT NULL"),
+            sqlite_where=text("fee_type IS NOT NULL"),
+        ),
+        Index(
+            "uq_fee_obligations_legacy_dossier_id",
+            "dossier_id",
+            unique=True,
+            postgresql_where=text("fee_type IS NULL"),
+            sqlite_where=text("fee_type IS NULL"),
+        ),
+        CheckConstraint("amount_minor >= 0", name="amount_minor_non_negative"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
@@ -138,22 +302,21 @@ class FeeObligation(UtcTimestampMixin, Base):
         Uuid,
         ForeignKey("dossiers.id", ondelete="RESTRICT"),
         nullable=False,
-        unique=True,
     )
     owner_user_id: Mapped[UUID] = mapped_column(
         Uuid,
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    price_catalog_version_id: Mapped[UUID] = mapped_column(
+    price_catalog_version_id: Mapped[UUID | None] = mapped_column(
         Uuid,
         ForeignKey(PriceCatalogVersion.id, ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
-    price_catalog_entry_id: Mapped[UUID] = mapped_column(
+    price_catalog_entry_id: Mapped[UUID | None] = mapped_column(
         Uuid,
         ForeignKey(PriceCatalogEntry.id, ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
     service_code: Mapped[str] = mapped_column(String(64), nullable=False)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -178,3 +341,10 @@ class FeeObligation(UtcTimestampMixin, Base):
     price_snapshot_json: Mapped[dict[str, object]] = mapped_column(
         JSONB().with_variant(JSON(), "sqlite"), nullable=False
     )
+    fee_type: Mapped[str | None] = mapped_column(String(64))
+    fee_policy_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey(FeePolicy.id, ondelete="RESTRICT")
+    )
+    fee_policy_version_no: Mapped[int | None] = mapped_column(Integer)
+    gross_amount_minor: Mapped[int | None] = mapped_column(BigInteger)
+    waiver_amount_minor: Mapped[int | None] = mapped_column(BigInteger)
