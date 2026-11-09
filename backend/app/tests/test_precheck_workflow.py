@@ -24,6 +24,7 @@ from app.modules.dossiers.errors import (
 )
 from app.modules.dossiers.models import (
     Category,
+    Dossier,
     DossierEvidence,
     DossierStatus,
     DossierStatusHistory,
@@ -119,6 +120,12 @@ async def _setup() -> tuple[
             title="Chứng cứ quyền sở hữu",
         ),
     )
+    async with session_factory() as session:
+        stored = await session.get(Dossier, dossier.id)
+        assert stored is not None
+        # These tests cover legacy review behavior, not dynamic fee setup.
+        stored.submission_fee_policy_mode = "LEGACY"
+        await session.commit()
     await dossier_service.submit_dossier(
         applicant,
         dossier.id,

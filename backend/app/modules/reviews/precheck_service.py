@@ -119,6 +119,7 @@ class PrecheckService:
             if (
                 dossier.submission_fee_required
                 and dossier.submission_fee_paid_at is None
+                and dossier.submission_fee_waived_at is None
             ):
                 raise DossierInvalidStateError(
                     "The submission fee must be paid before review."

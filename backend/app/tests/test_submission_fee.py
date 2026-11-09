@@ -7,12 +7,10 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import func, select
 
+from app.modules.auth.models import User, UserStatus
 from app.modules.auth.security import OutboxPayloadCipher
-from app.modules.billing.models import (
-    PriceCatalogEntry,
-    PriceCatalogStatus,
-    PriceCatalogVersion,
-)
+from app.modules.billing.fees import FeePolicyService
+from app.modules.billing.models import FeeObligation, FeePolicy
 from app.modules.dossiers.errors import DossierForbiddenError, DossierInvalidStateError
 from app.modules.dossiers.models import Dossier, DossierStatus, DossierType
 from app.modules.dossiers.types import CreateEvidence
@@ -30,15 +28,54 @@ from app.tests.test_dossier_submission import (
 )
 
 
+async def _install_policy(service, sessions, owner, dossier_id, amount_minor):
+    async with sessions() as session:
+        dossier = await session.get(Dossier, dossier_id)
+        assert dossier is not None
+        category_id = dossier.category_id
+    approver = User(
+        id=uuid4(),
+        email=f"fee-approver-{uuid4().hex}@example.test",
+        password_hash="not-used",
+        status=UserStatus.ACTIVE,
+    )
+    dossier_type = DossierType(
+        id=uuid4(),
+        category_id=category_id,
+        code=f"FEE-{uuid4().hex[:8].upper()}",
+        name="Submission fee test",
+    )
+    async with sessions() as session:
+        dossier = await session.get(Dossier, dossier_id)
+        session.add_all([approver, dossier_type])
+        assert dossier is not None
+        dossier.dossier_type_id = dossier_type.id
+        await session.commit()
+    async with sessions() as session:
+        policies = FeePolicyService(session, clock=lambda: service._clock())
+        draft = await policies.create_draft(
+            actor_user_id=owner.id,
+            fee_type="DOSSIER_SUBMISSION",
+            dossier_type_id=dossier_type.id,
+            amount_minor=amount_minor,
+            starts_at=NOW,
+            ends_at=None,
+            reason="Test fee policy",
+        )
+        return await policies.approve(draft.id, actor_user_id=approver.id)
+
+
 def test_submission_charge_is_once_and_payment_enters_review_not_issuance() -> None:
     async def exercise() -> None:
-        service, sessions, engine, owner, media = await _build_service(
-            submission_fee_amount_minor=5_000_000
-        )
+        service, sessions, engine, owner, media = await _build_service()
         principal = _principal(owner)
         draft, _ = await _draft_with_evidence(service, principal, media)
+        policy = await _install_policy(service, sessions, owner, draft.id, 5_000_000)
         submitted = await service.submit_dossier(
-            principal, draft.id, idempotency_key="submit-once"
+            principal,
+            draft.id,
+            idempotency_key="submit-once",
+            accepted_fee_policy_version=policy.version_no,
         )
         replay = await service.submit_dossier(
             principal, draft.id, idempotency_key="submit-once"
@@ -123,57 +160,24 @@ def test_submission_charge_is_once_and_payment_enters_review_not_issuance() -> N
 
 def test_catalog_price_is_snapshotted_and_another_owner_cannot_retry() -> None:
     async def exercise() -> None:
-        service, sessions, engine, owner, media = await _build_service(
-            submission_fee_amount_minor=5_000_000
-        )
+        service, sessions, engine, owner, media = await _build_service()
         principal = _principal(owner)
         draft, _ = await _draft_with_evidence(service, principal, media)
-        type_id, catalog_id, price_id = uuid4(), uuid4(), uuid4()
-        async with sessions() as session:
-            stored = await session.get(Dossier, draft.id)
-            assert stored is not None
-            session.add(
-                DossierType(
-                    id=type_id,
-                    category_id=stored.category_id,
-                    code="FEE-TEST",
-                    name="Fee test",
-                )
-            )
-            session.add(
-                PriceCatalogVersion(
-                    id=catalog_id,
-                    version_no=1,
-                    status=PriceCatalogStatus.PUBLISHED,
-                    effective_from=NOW - timedelta(days=1),
-                    published_at=NOW - timedelta(days=1),
-                )
-            )
-            await session.flush()
-            session.add(
-                PriceCatalogEntry(
-                    id=price_id,
-                    catalog_version_id=catalog_id,
-                    dossier_type_id=type_id,
-                    service_code="STANDARD",
-                    display_name="Configured fee",
-                    amount_minor=6_000_000,
-                    currency="VND",
-                    tax_mode="UNSPECIFIED",
-                )
-            )
-            stored.dossier_type_id = type_id
-            await session.commit()
+        policy = await _install_policy(service, sessions, owner, draft.id, 6_000_000)
         quote = await service.submission_fee_quote(principal, draft.id)
         assert quote["amountMinor"] == 6_000_000
         await service.submit_dossier(
-            principal, draft.id, idempotency_key="submit-priced"
+            principal,
+            draft.id,
+            idempotency_key="submit-priced",
+            accepted_fee_policy_version=policy.version_no,
         )
         async with sessions() as session:
-            price = await session.get(PriceCatalogEntry, price_id)
-            assert price is not None
-            price.amount_minor = 7_000_000
-            await session.commit()
+            obligation = await session.scalar(select(FeeObligation))
+            assert obligation is not None
+            assert obligation.gross_amount_minor == 6_000_000
+            policy_row = await session.get(FeePolicy, policy.id)
+            assert policy_row is not None and policy_row.amount_minor == 6_000_000
         assert (await service.submission_fee_quote(principal, draft.id))[
             "amountMinor"
         ] == 6_000_000
@@ -191,12 +195,16 @@ def test_catalog_price_is_snapshotted_and_another_owner_cannot_retry() -> None:
 
 def test_cancel_and_expiry_keep_review_locked_and_retry_preserves_price() -> None:
     async def exercise() -> None:
-        service, sessions, engine, owner, media = await _build_service(
-            submission_fee_amount_minor=5_000_000
-        )
+        service, sessions, engine, owner, media = await _build_service()
         principal = _principal(owner)
         draft, _ = await _draft_with_evidence(service, principal, media)
-        await service.submit_dossier(principal, draft.id, idempotency_key="submit")
+        policy = await _install_policy(service, sessions, owner, draft.id, 5_000_000)
+        await service.submit_dossier(
+            principal,
+            draft.id,
+            idempotency_key="submit",
+            accepted_fee_policy_version=policy.version_no,
+        )
         async with sessions() as session:
             order = await session.scalar(select(PaymentOrder))
             assert order is not None

@@ -19,6 +19,7 @@ from app.modules.audit.models import AuditLog
 from app.modules.auth.models import User, UserStatus
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.blockchain.models import Certificate  # noqa: F401
 from app.modules.dossiers.canonical import canonical_json_bytes, snapshot_sha256
 from app.modules.dossiers.errors import (
     DossierDuplicateContentError,
@@ -48,6 +49,7 @@ from app.modules.dossiers.types import (
 )
 from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.media.provenance import CURRENT_INSPECTION_POLICY_VERSION
+from app.modules.public.models import PublicWork  # noqa: F401
 
 CATEGORY_ID = UUID("4d28db19-1507-5a45-a50d-cd0aa83029ec")
 NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
@@ -56,7 +58,6 @@ NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
 async def _build_service(
     enqueue_similarity_detection: Callable[[UUID], None] | None = None,
     payload_cipher: OutboxPayloadCipher | None = None,
-    submission_fee_amount_minor: int | None = None,
 ) -> tuple[
     DossierService,
     async_sessionmaker[AsyncSession],
@@ -125,7 +126,6 @@ async def _build_service(
         uuid_factory=lambda: next(generated_ids),
         enqueue_similarity_detection=enqueue_similarity_detection,
         payload_cipher=payload_cipher,
-        submission_fee_amount_minor=submission_fee_amount_minor,
     )
     return service, session_factory, engine, user, media
 

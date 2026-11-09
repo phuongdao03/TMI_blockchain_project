@@ -16,7 +16,7 @@ from app.modules.auth.models import AccountType, User
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
-from app.modules.billing.submission import SubmissionFeeService
+from app.modules.billing.submission_policy import SubmissionFeeService
 from app.modules.dossiers.canonical import (
     content_fingerprint,
     normalized_identity_text,
@@ -119,7 +119,6 @@ class DossierService:
         uuid_factory: Callable[[], UUID] | None = None,
         enqueue_similarity_detection: Callable[[UUID], None] | None = None,
         payload_cipher: OutboxPayloadCipher | None = None,
-        submission_fee_amount_minor: int | None = None,
     ) -> None:
         self._session = session
         self._repository = DossierRepository(session)
@@ -134,7 +133,6 @@ class DossierService:
         self._uuid_factory = uuid_factory or uuid4
         self._enqueue_similarity_detection = enqueue_similarity_detection
         self._payload_cipher = payload_cipher
-        self._submission_fee_amount_minor = submission_fee_amount_minor
 
     async def _lock_preparation_owner(self, owner_id: UUID) -> None:
         if (
@@ -328,7 +326,8 @@ class DossierService:
                 slug=self._optional_text(payload.slug),
                 summary=self._optional_text(payload.summary),
                 visibility=payload.visibility,
-                submission_fee_required=self._submission_fee_amount_minor is not None,
+                submission_fee_required=False,
+                submission_fee_policy_mode="DYNAMIC",
             )
             self._repository.add(dossier)
             await self._session.flush()
@@ -910,11 +909,13 @@ class DossierService:
         dossier_id: UUID,
         *,
         idempotency_key: str,
+        accepted_fee_policy_version: int | None = None,
     ) -> SubmissionView:
         return await self._submit(
             principal,
             dossier_id,
             idempotency_key=idempotency_key,
+            accepted_fee_policy_version=accepted_fee_policy_version,
             expected_status=DossierStatus.DRAFT,
             reason_code="APPLICANT_SUBMIT",
         )
@@ -925,11 +926,13 @@ class DossierService:
         dossier_id: UUID,
         *,
         idempotency_key: str,
+        accepted_fee_policy_version: int | None = None,
     ) -> SubmissionView:
         return await self._submit(
             principal,
             dossier_id,
             idempotency_key=idempotency_key,
+            accepted_fee_policy_version=accepted_fee_policy_version,
             expected_status=DossierStatus.NEEDS_SUPPLEMENT,
             reason_code="APPLICANT_RESUBMIT",
         )
@@ -960,6 +963,7 @@ class DossierService:
         dossier_id: UUID,
         *,
         idempotency_key: str,
+        accepted_fee_policy_version: int | None,
         expected_status: DossierStatus,
         reason_code: str,
     ) -> SubmissionView:
@@ -1076,12 +1080,19 @@ class DossierService:
                 dossier.current_version_no = version_no
                 dossier.submitted_at = submitted_at
                 if (
-                    dossier.submission_fee_required
+                    expected_status is DossierStatus.DRAFT
                     and dossier.submission_fee_paid_at is None
+                    and dossier.submission_fee_waived_at is None
                 ):
-                    await self._submission_fees().reserve(
-                        dossier, actor=principal.user_id, key=f"submission:{dossier.id}"
+                    order = await self._submission_fees().reserve(
+                        dossier,
+                        actor=principal.user_id,
+                        key=f"submission:{dossier.id}",
+                        accepted_policy_version=accepted_fee_policy_version,
                     )
+                else:
+                    order = None
+                if order is not None:
                     self._workflow.transition(
                         dossier,
                         target=DossierStatus.PAYMENT_PENDING,
@@ -1114,11 +1125,8 @@ class DossierService:
         return result
 
     def _submission_fees(self) -> SubmissionFeeService:
-        if self._submission_fee_amount_minor is None:
-            raise DossierInvalidStateError("Submission fees are not configured.")
         return SubmissionFeeService(
             self._session,
-            fallback_amount=self._submission_fee_amount_minor,
             now=self._clock(),
         )
 
@@ -1127,10 +1135,6 @@ class DossierService:
     ) -> dict[str, object]:
         async with self._session.begin():
             dossier = await self._owned_or_scoped(principal, dossier_id)
-            if not dossier.submission_fee_required:
-                raise DossierInvalidStateError(
-                    "This dossier uses the legacy fee policy."
-                )
             return await self._submission_fees().quote(dossier)
 
     async def retry_submission_payment(
@@ -1148,8 +1152,15 @@ class DossierService:
                     "This dossier is not awaiting a submission payment."
                 )
             order = await self._submission_fees().reserve(
-                dossier, actor=principal.user_id, key=self._idempotency_key(key)
+                dossier,
+                actor=principal.user_id,
+                key=self._idempotency_key(key),
+                accepted_policy_version=None,
             )
+            if order is None:
+                raise DossierInvalidStateError(
+                    "This dossier has no payable submission fee."
+                )
             self._audit(
                 "dossier.submission_payment.reserved", principal.user_id, dossier.id
             )
@@ -1742,6 +1753,7 @@ class DossierService:
             can_edit=can_edit,
             submission_fee_required=dossier.submission_fee_required,
             submission_fee_paid_at=dossier.submission_fee_paid_at,
+            submission_fee_waived_at=dossier.submission_fee_waived_at,
             claims=DossierService._claims_from_json(dossier.claims_json or []),
             claims_revision=dossier.claims_revision or 0,
         )

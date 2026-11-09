@@ -135,9 +135,7 @@ async def submission_fee_quote(
 ) -> SuccessEnvelope[SubmissionFeeQuoteData]:
     quote = await service.submission_fee_quote(principal, dossier_id)
     return SuccessEnvelope(
-        data=SubmissionFeeQuoteData.model_validate(
-            {key: quote[key] for key in ("amountMinor", "currency", "description")}
-        ),
+        data=SubmissionFeeQuoteData.model_validate(quote),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
 
@@ -602,11 +600,15 @@ async def submit_dossier(
         str,
         Header(alias="Idempotency-Key", min_length=1, max_length=128),
     ],
+    accepted_fee_policy_version: Annotated[
+        int | None, Header(alias="X-Fee-Policy-Version", ge=1)
+    ] = None,
 ) -> SuccessEnvelope[SubmissionData]:
     result = await service.submit_dossier(
         principal,
         dossier_id,
         idempotency_key=idempotency_key,
+        accepted_fee_policy_version=accepted_fee_policy_version,
     )
     return SuccessEnvelope(
         data=_submission_data(result),
@@ -628,11 +630,15 @@ async def resubmit_dossier(
         str,
         Header(alias="Idempotency-Key", min_length=1, max_length=128),
     ],
+    accepted_fee_policy_version: Annotated[
+        int | None, Header(alias="X-Fee-Policy-Version", ge=1)
+    ] = None,
 ) -> SuccessEnvelope[SubmissionData]:
     result = await service.resubmit_dossier(
         principal,
         dossier_id,
         idempotency_key=idempotency_key,
+        accepted_fee_policy_version=accepted_fee_policy_version,
     )
     return SuccessEnvelope(
         data=_submission_data(result),

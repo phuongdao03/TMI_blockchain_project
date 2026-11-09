@@ -62,10 +62,11 @@ class BillingRepository:
             )
         return cast(FeeObligation | None, await self._session.scalar(statement))
 
-    async def obligation_for_dossier(self, dossier_id: UUID) -> FeeObligation | None:
-        return cast(
-            FeeObligation | None,
-            await self._session.scalar(
-                select(FeeObligation).where(FeeObligation.dossier_id == dossier_id)
-            ),
-        )
+    async def obligation_for_dossier(
+        self, dossier_id: UUID, *, fee_type: str | None = None
+    ) -> FeeObligation | None:
+        statement = select(FeeObligation).where(FeeObligation.dossier_id == dossier_id)
+        if fee_type is not None:
+            statement = statement.where(FeeObligation.fee_type == fee_type)
+        statement = statement.order_by(FeeObligation.created_at.desc())
+        return cast(FeeObligation | None, await self._session.scalar(statement))

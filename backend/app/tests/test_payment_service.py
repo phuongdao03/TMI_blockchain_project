@@ -1072,6 +1072,16 @@ def test_admin_payment_list_includes_status_and_dossier_context() -> None:
         assert rows[0].order.status is PaymentStatus.PENDING
         assert rows[0].dossier_code == "DOS-PAYABLE"
         assert rows[0].dossier_title == "Approved dossier"
+        reconciler = AuthPrincipal(
+            user_id=applicant.user_id,
+            session_id=applicant.session_id,
+            email=applicant.email,
+            roles=("VIEWER",),
+            permissions=("payments.reconcile",),
+        )
+        assert (
+            len(await service.list_admin_orders(reconciler, status=None, limit=50)) == 1
+        )
         await service.close()
         await engine.dispose()
 

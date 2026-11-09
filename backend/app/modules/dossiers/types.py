@@ -65,6 +65,7 @@ class DossierView:
     can_edit: bool
     submission_fee_required: bool = False
     submission_fee_paid_at: datetime | None = None
+    submission_fee_waived_at: datetime | None = None
     claims: tuple[DossierClaim, ...] = ()
     claims_revision: int = 0
 

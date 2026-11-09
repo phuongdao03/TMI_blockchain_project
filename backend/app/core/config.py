@@ -204,7 +204,6 @@ class Settings(BaseSettings):
     payos_payout_checksum_key: SecretStr | None = None
     payos_payout_timeout_seconds: float = Field(default=8.0, gt=0, le=30)
     payment_amount_minor: int = Field(default=1_000_000, gt=0)
-    submission_fee_amount_minor: int = Field(default=5_000_000, gt=0)
     payment_currency: str = Field(
         default="VND",
         min_length=3,

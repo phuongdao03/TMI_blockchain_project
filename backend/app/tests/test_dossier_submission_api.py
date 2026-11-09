@@ -30,6 +30,7 @@ class StubSubmissionService:
         self.dossier_id = uuid4()
         self.version_id = uuid4()
         self.keys: list[str] = []
+        self.accepted_fee_versions: list[int | None] = []
 
     def _dossier(self) -> DossierView:
         return DossierView(
@@ -70,8 +71,10 @@ class StubSubmissionService:
         dossier_id: UUID,
         *,
         idempotency_key: str,
+        accepted_fee_policy_version: int | None = None,
     ) -> SubmissionView:
         self.keys.append(idempotency_key)
+        self.accepted_fee_versions.append(accepted_fee_policy_version)
         return SubmissionView(dossier=self._dossier(), version=self._version())
 
     async def resubmit_dossier(
@@ -80,8 +83,10 @@ class StubSubmissionService:
         dossier_id: UUID,
         *,
         idempotency_key: str,
+        accepted_fee_policy_version: int | None = None,
     ) -> SubmissionView:
         self.keys.append(idempotency_key)
+        self.accepted_fee_versions.append(accepted_fee_policy_version)
         return SubmissionView(dossier=self._dossier(), version=self._version())
 
     async def list_versions(
@@ -143,7 +148,10 @@ def test_submission_version_and_timeline_contract() -> None:
     )
     service = StubSubmissionService(principal)
     base = f"/api/v1/dossiers/{service.dossier_id}"
-    headers = {"Idempotency-Key": "browser-submit-1"}
+    headers = {
+        "Idempotency-Key": "browser-submit-1",
+        "X-Fee-Policy-Version": "4",
+    }
 
     submitted = asyncio.run(
         _request("POST", f"{base}/submit", service, principal, headers=headers)
@@ -161,3 +169,4 @@ def test_submission_version_and_timeline_contract() -> None:
     assert timeline.json()["data"][0]["toStatus"] == "SUBMITTED"
     assert missing_key.status_code == 422
     assert service.keys == ["browser-submit-1", "browser-submit-1"]
+    assert service.accepted_fee_versions == [4, 4]

@@ -265,10 +265,16 @@ class Dossier(UtcTimestampMixin, Base):
     submission_fee_required: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=false()
     )
+    submission_fee_policy_mode: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="LEGACY", server_default="LEGACY"
+    )
     submission_fee_snapshot: Mapped[dict[str, object] | None] = mapped_column(
         JSONB().with_variant(JSON(), "sqlite")
     )
     submission_fee_paid_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    submission_fee_waived_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

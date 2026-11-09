@@ -76,7 +76,10 @@ class CouncilService:
     def _complete_prepaid_approval(self, dossier: Dossier, actor_user_id: UUID) -> None:
         if not dossier.submission_fee_required:
             return
-        if dossier.submission_fee_paid_at is None:
+        if (
+            dossier.submission_fee_paid_at is None
+            and dossier.submission_fee_waived_at is None
+        ):
             raise CouncilConflictError(
                 "The submission fee must be paid before approval."
             )

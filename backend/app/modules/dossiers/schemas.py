@@ -144,14 +144,19 @@ class DossierData(DossierSchema):
     can_edit: bool
     submission_fee_required: bool = False
     submission_fee_paid_at: datetime | None = None
+    submission_fee_waived_at: datetime | None = None
     claims: tuple[DossierClaimData, ...] = ()
     claims_revision: int = 0
 
 
 class SubmissionFeeQuoteData(DossierSchema):
+    fee_required: bool
+    fee_available: bool = True
     amount_minor: int
     currency: str
     description: str
+    policy_id: UUID | None = None
+    policy_version_no: int | None = None
 
 
 class DossierTypeVersionData(DossierSchema):

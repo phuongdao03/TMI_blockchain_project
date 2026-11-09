@@ -96,6 +96,9 @@ class AdminPaymentHistoryDetailData(PaymentSchema):
 class FeeObligationData(PaymentSchema):
     id: UUID
     dossier_id: UUID
+    owner_user_id: UUID
+    price_catalog_version_id: UUID | None = None
+    price_catalog_entry_id: UUID | None = None
     service_code: str
     description: str
     amount_minor: int
@@ -104,6 +107,11 @@ class FeeObligationData(PaymentSchema):
     status: FeeObligationStatus
     due_at: datetime
     paid_at: datetime | None
+    fee_type: str | None = None
+    fee_policy_id: UUID | None = None
+    fee_policy_version_no: int | None = None
+    gross_amount_minor: int | None = None
+    waiver_amount_minor: int | None = None
 
 
 class IssuePaymentOrderRequest(PaymentSchema):

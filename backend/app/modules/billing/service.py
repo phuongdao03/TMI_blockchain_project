@@ -72,8 +72,8 @@ class FeeObligationView:
     id: UUID
     dossier_id: UUID
     owner_user_id: UUID
-    price_catalog_version_id: UUID
-    price_catalog_entry_id: UUID
+    price_catalog_version_id: UUID | None
+    price_catalog_entry_id: UUID | None
     service_code: str
     description: str
     amount_minor: int
@@ -82,6 +82,11 @@ class FeeObligationView:
     status: FeeObligationStatus
     due_at: datetime
     paid_at: datetime | None
+    fee_type: str | None = None
+    fee_policy_id: UUID | None = None
+    fee_policy_version_no: int | None = None
+    gross_amount_minor: int | None = None
+    waiver_amount_minor: int | None = None
 
 
 class BillingService:
@@ -202,4 +207,9 @@ class BillingService:
             status=obligation.status,
             due_at=obligation.due_at,
             paid_at=obligation.paid_at,
+            fee_type=obligation.fee_type,
+            fee_policy_id=obligation.fee_policy_id,
+            fee_policy_version_no=obligation.fee_policy_version_no,
+            gross_amount_minor=obligation.gross_amount_minor,
+            waiver_amount_minor=obligation.waiver_amount_minor,
         )

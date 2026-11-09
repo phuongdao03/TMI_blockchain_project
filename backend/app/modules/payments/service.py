@@ -759,9 +759,15 @@ class PaymentService:
         status: PaymentStatus | None,
         limit: int = 50,
     ) -> tuple[AdminPaymentOrderView, ...]:
-        AuthorizationPolicy.require_capability(
-            principal, PAYMENT_HISTORY_READ_REQUIREMENT, PaymentForbiddenError
-        )
+        if not (
+            AuthorizationPolicy.allows_capability(
+                principal, PAYMENT_HISTORY_READ_REQUIREMENT
+            )
+            or AuthorizationPolicy.allows_capability(
+                principal, RECONCILIATION_REQUIREMENT
+            )
+        ):
+            raise PaymentForbiddenError()
         if not 1 <= limit <= 100:
             raise ValueError("Payment order list limit is invalid.")
         async with self._session.begin():
@@ -1203,6 +1209,11 @@ class PaymentService:
                 status=obligation.status,
                 due_at=obligation.due_at,
                 paid_at=obligation.paid_at,
+                fee_type=obligation.fee_type,
+                fee_policy_id=obligation.fee_policy_id,
+                fee_policy_version_no=obligation.fee_policy_version_no,
+                gross_amount_minor=obligation.gross_amount_minor,
+                waiver_amount_minor=obligation.waiver_amount_minor,
             )
 
     async def process_webhook(
@@ -1938,7 +1949,11 @@ class PaymentService:
             raise PaymentConflictError("Linked fee obligation is not payable.")
         obligation.status = FeeObligationStatus.PAID
         obligation.paid_at = order.paid_at
-        if order.amount_minor > 0 and order.currency.upper() == "VND":
+        if (
+            order.amount_minor > 0
+            and order.currency.upper() == "VND"
+            and obligation.fee_type != "DOSSIER_SUBMISSION"
+        ):
             from app.core.config import get_settings
             from app.modules.affiliate.service import AffiliateService
 
