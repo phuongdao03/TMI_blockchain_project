@@ -206,7 +206,7 @@ export function FeeManagementWorkspace({
 
   if (tabs.length === 0) {
     return (
-      <main className="workspace-screen mx-auto max-w-6xl pb-12">
+      <div className="workspace-screen mx-auto max-w-6xl pb-12">
         <WorkspacePageHeader
           description="Quản lý giao dịch, miễn giảm, chính sách và đối soát phí hồ sơ."
           section="Tài chính"
@@ -218,7 +218,7 @@ export function FeeManagementWorkspace({
         >
           Tài khoản chưa được cấp quyền quản lý phí hồ sơ.
         </p>
-      </main>
+      </div>
     );
   }
 
@@ -249,7 +249,7 @@ export function FeeManagementWorkspace({
   };
 
   return (
-    <main className="workspace-screen mx-auto max-w-7xl space-y-6 pb-12">
+    <div className="workspace-screen mx-auto max-w-7xl space-y-6 pb-12">
       <WorkspacePageHeader
         description="Quản lý giao dịch, miễn giảm có phê duyệt kép, chính sách phí theo thời hạn và đối soát."
         section="Tài chính"
@@ -663,6 +663,6 @@ export function FeeManagementWorkspace({
           {actionError}
         </p>
       ) : null}
-    </main>
+    </div>
   );
 }

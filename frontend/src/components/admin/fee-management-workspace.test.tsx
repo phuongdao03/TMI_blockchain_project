@@ -72,7 +72,9 @@ describe("FeeManagementWorkspace", () => {
   });
 
   it("offers the four fee operations and keeps reconciliation separate", () => {
-    renderWorkspace();
+    const { container } = renderWorkspace();
+
+    expect(container.querySelector("main")).toBeNull();
 
     expect(screen.getByRole("tab", { name: "Giao dịch" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Miễn giảm" })).toBeTruthy();

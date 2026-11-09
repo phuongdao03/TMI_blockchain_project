@@ -3165,6 +3165,27 @@ const server = createServer(async (request, response) => {
   }
   if (
     request.method === "GET" &&
+    path === `/api/v1/dossiers/${dossierId}/submission-fee` &&
+    request.headers.cookie?.includes("cns_access=e2e-access") &&
+    dossier?.status === "DRAFT"
+  ) {
+    send(
+      response,
+      200,
+      envelope({
+        feeRequired: true,
+        feeAvailable: true,
+        amountMinor: 5_000_000,
+        currency: "VND",
+        description: "Phí nộp hồ sơ kiểm thử",
+        policyId: "b4d28db1-1507-5a45-a50d-cd0aa83029ec",
+        policyVersionNo: 1,
+      }),
+    );
+    return;
+  }
+  if (
+    request.method === "GET" &&
     path === `/api/v1/dossiers/${dossierId}` &&
     request.headers.cookie?.includes("cns_access=e2e-access") &&
     dossier
@@ -3219,6 +3240,7 @@ const server = createServer(async (request, response) => {
     path === `/api/v1/dossiers/${dossierId}/submit` &&
     request.headers.cookie?.includes("cns_access=e2e-access") &&
     request.headers["x-csrf-token"] === "e2e-csrf" &&
+    request.headers["x-fee-policy-version"] === "1" &&
     request.headers["idempotency-key"] &&
     dossier
   ) {

@@ -95,7 +95,13 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
       .getByRole("button", { name: "Tải lên 1 tệp", exact: true })
       .click();
     await page.getByRole("button", { name: /Kiểm tra & nộp/ }).click();
-    await page.getByRole("button", { name: "Nộp hồ sơ" }).click();
+    const submit = page.getByRole("button", { name: "Nộp hồ sơ" });
+    await expect(submit).toBeDisabled();
+    await page
+      .getByRole("checkbox", { name: /Tôi đồng ý với mức phí hiện tại/ })
+      .check();
+    await expect(submit).toBeEnabled();
+    await submit.click();
     await expect(page.getByText(/Hồ sơ đã được gửi thành công/)).toBeVisible();
   });
 

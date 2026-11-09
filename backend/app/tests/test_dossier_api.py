@@ -64,10 +64,13 @@ class StubDossierService:
     ) -> dict[str, object]:
         self._require_access()
         return {
+            "feeRequired": True,
+            "feeAvailable": True,
             "amountMinor": 5_000_000,
             "currency": "VND",
             "description": "Phí nộp hồ sơ",
-            "entryId": "internal",
+            "policyId": "a4d28db1-1507-5a45-a50d-cd0aa83029ec",
+            "policyVersionNo": 1,
         }
 
     async def retry_submission_payment(
@@ -262,9 +265,13 @@ def test_submission_fee_quote_and_retry_contract() -> None:
     quote = asyncio.run(_request("GET", f"{base}/submission-fee", service, principal))
     assert quote.status_code == 200
     assert quote.json()["data"] == {
+        "feeRequired": True,
+        "feeAvailable": True,
         "amountMinor": 5_000_000,
         "currency": "VND",
         "description": "Phí nộp hồ sơ",
+        "policyId": "a4d28db1-1507-5a45-a50d-cd0aa83029ec",
+        "policyVersionNo": 1,
     }
     missing_key = asyncio.run(
         _request("POST", f"{base}/submission-payment", service, principal)

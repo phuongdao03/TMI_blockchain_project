@@ -52,9 +52,13 @@ test("submission fee checkout can resume and payment leads to review", async ({
   await page.route(`**/api/v1/dossiers/${id}/submission-fee`, (route) =>
     route.fulfill({
       json: envelope({
+        feeRequired: true,
+        feeAvailable: true,
         amountMinor: 5_000_000,
         currency: "VND",
         description: "Phí nộp hồ sơ đề cử",
+        policyId: "b4d28db1-1507-5a45-a50d-cd0aa83029ec",
+        policyVersionNo: 1,
       }),
     }),
   );

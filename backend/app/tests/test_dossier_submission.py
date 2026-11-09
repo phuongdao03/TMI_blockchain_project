@@ -152,6 +152,7 @@ async def _draft_with_evidence(
             summary="Bản mô tả tác phẩm.",
         ),
     )
+    await _use_legacy_submission_fee(service, dossier.id)
     evidence = await service.attach_evidence(
         principal,
         dossier.id,
@@ -163,6 +164,14 @@ async def _draft_with_evidence(
         ),
     )
     return dossier, evidence
+
+
+async def _use_legacy_submission_fee(service: DossierService, dossier_id: UUID) -> None:
+    """Keep domain workflow tests independent of configured fee policies."""
+    async with service._session.begin():
+        row = await service._session.get(Dossier, dossier_id)
+        assert row is not None
+        row.submission_fee_policy_mode = "LEGACY"
 
 
 def test_submit_is_atomic_idempotent_and_locks_canonical_snapshot() -> None:
@@ -375,6 +384,7 @@ def test_submitted_dynamic_dossier_freezes_only_explicit_public_fields() -> None
                 },
             ),
         )
+        await _use_legacy_submission_fee(service, dossier.id)
         await service.attach_evidence(
             principal,
             dossier.id,

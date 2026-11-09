@@ -54,6 +54,7 @@ def test_claims_are_revision_checked_bound_to_evidence_and_frozen() -> None:
             row = await session.get(Dossier, dossier.id)
             row.dossier_type_id = type_id
             row.dossier_type_version_id = version_id
+            row.submission_fee_policy_mode = "LEGACY"
             await session.commit()
         await service.attach_evidence(
             principal,
