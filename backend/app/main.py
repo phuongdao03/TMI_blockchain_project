@@ -15,6 +15,7 @@ from app.api.v1.affiliate import admin_router as admin_affiliate_router
 from app.api.v1.affiliate import router as affiliate_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.auth import router as auth_router
+from app.api.v1.billing import router as billing_router
 from app.api.v1.blockchain import router as blockchain_router
 from app.api.v1.blockchain_signing import router as blockchain_signing_router
 from app.api.v1.certificate_revocations import router as certificate_revocations_router
@@ -313,6 +314,7 @@ def create_application(
     app.include_router(admin_notifications_router)
     app.include_router(operations_router)
     app.include_router(payments_router)
+    app.include_router(billing_router)
     app.include_router(wallet_router)
     app.include_router(wallet_withdrawals_router)
     app.include_router(affiliate_router)
