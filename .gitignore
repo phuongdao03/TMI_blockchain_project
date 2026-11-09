@@ -71,6 +71,7 @@ docs/handoffs/*
 !docs/handoffs/navigation-2026-10-31.md
 !docs/handoffs/home-refinements-2026-10-31.md
 !docs/handoffs/community-forum-v1.md
+!docs/handoffs/dynamic-dossier-fee-management.md
 docs/decisions/
 docs/release/
 docs/security/
@@ -81,6 +82,7 @@ docs/specs/*
 !docs/specs/structured-supplements.md
 !docs/specs/dossier-applicant-claims.md
 !docs/specs/council-evidence-policy-guards.md
+!docs/specs/dynamic-dossier-fee-management.md
 !docs/handoffs/dossier-applicant-claims.md
 !docs/handoffs/council-evidence-policy-guards.md
 !docs/handoffs/structured-dossier-review-2026.md
