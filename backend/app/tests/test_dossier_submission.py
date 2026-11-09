@@ -143,6 +143,8 @@ async def _draft_with_evidence(
     service: DossierService,
     principal: AuthPrincipal,
     media: MediaAsset,
+    *,
+    fee_policy_mode: str = "LEGACY",
 ) -> tuple[DossierView, EvidenceView]:
     dossier = await service.create_dossier(
         principal,
@@ -152,7 +154,7 @@ async def _draft_with_evidence(
             summary="Bản mô tả tác phẩm.",
         ),
     )
-    await _use_legacy_submission_fee(service, dossier.id)
+    await _set_submission_fee_policy_mode(service, dossier.id, mode=fee_policy_mode)
     evidence = await service.attach_evidence(
         principal,
         dossier.id,
@@ -168,10 +170,16 @@ async def _draft_with_evidence(
 
 async def _use_legacy_submission_fee(service: DossierService, dossier_id: UUID) -> None:
     """Keep domain workflow tests independent of configured fee policies."""
+    await _set_submission_fee_policy_mode(service, dossier_id, mode="LEGACY")
+
+
+async def _set_submission_fee_policy_mode(
+    service: DossierService, dossier_id: UUID, *, mode: str
+) -> None:
     async with service._session.begin():
         row = await service._session.get(Dossier, dossier_id)
         assert row is not None
-        row.submission_fee_policy_mode = "LEGACY"
+        row.submission_fee_policy_mode = mode
 
 
 def test_submit_is_atomic_idempotent_and_locks_canonical_snapshot() -> None:

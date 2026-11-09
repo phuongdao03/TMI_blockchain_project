@@ -69,7 +69,9 @@ def test_submission_charge_is_once_and_payment_enters_review_not_issuance() -> N
     async def exercise() -> None:
         service, sessions, engine, owner, media = await _build_service()
         principal = _principal(owner)
-        draft, _ = await _draft_with_evidence(service, principal, media)
+        draft, _ = await _draft_with_evidence(
+            service, principal, media, fee_policy_mode="DYNAMIC"
+        )
         policy = await _install_policy(service, sessions, owner, draft.id, 5_000_000)
         submitted = await service.submit_dossier(
             principal,
@@ -162,7 +164,9 @@ def test_catalog_price_is_snapshotted_and_another_owner_cannot_retry() -> None:
     async def exercise() -> None:
         service, sessions, engine, owner, media = await _build_service()
         principal = _principal(owner)
-        draft, _ = await _draft_with_evidence(service, principal, media)
+        draft, _ = await _draft_with_evidence(
+            service, principal, media, fee_policy_mode="DYNAMIC"
+        )
         policy = await _install_policy(service, sessions, owner, draft.id, 6_000_000)
         quote = await service.submission_fee_quote(principal, draft.id)
         assert quote["amountMinor"] == 6_000_000
@@ -197,7 +201,9 @@ def test_cancel_and_expiry_keep_review_locked_and_retry_preserves_price() -> Non
     async def exercise() -> None:
         service, sessions, engine, owner, media = await _build_service()
         principal = _principal(owner)
-        draft, _ = await _draft_with_evidence(service, principal, media)
+        draft, _ = await _draft_with_evidence(
+            service, principal, media, fee_policy_mode="DYNAMIC"
+        )
         policy = await _install_policy(service, sessions, owner, draft.id, 5_000_000)
         await service.submit_dossier(
             principal,

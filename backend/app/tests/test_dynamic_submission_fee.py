@@ -67,7 +67,9 @@ def test_quote_is_read_only_and_submit_requires_current_policy_consent() -> None
     async def exercise() -> None:
         service, sessions, engine, owner, media = await _build_service()
         principal = _principal(owner)
-        draft, _ = await _draft_with_evidence(service, principal, media)
+        draft, _ = await _draft_with_evidence(
+            service, principal, media, fee_policy_mode="DYNAMIC"
+        )
         _, _, policy = await _install_policy(
             service, sessions, owner, draft.id, amount_minor=5_000_000
         )
@@ -116,7 +118,9 @@ def test_missing_policy_fails_closed_without_free_submission() -> None:
     async def exercise() -> None:
         service, sessions, engine, owner, media = await _build_service()
         principal = _principal(owner)
-        draft, _ = await _draft_with_evidence(service, principal, media)
+        draft, _ = await _draft_with_evidence(
+            service, principal, media, fee_policy_mode="DYNAMIC"
+        )
         async with sessions() as session:
             stored = await session.get(Dossier, draft.id)
             assert stored is not None
@@ -157,7 +161,9 @@ def test_stale_preview_requotes_without_changing_old_obligation_amount() -> None
     async def exercise() -> None:
         service, sessions, engine, owner, media = await _build_service()
         principal = _principal(owner)
-        draft, _ = await _draft_with_evidence(service, principal, media)
+        draft, _ = await _draft_with_evidence(
+            service, principal, media, fee_policy_mode="DYNAMIC"
+        )
         admin, dossier_type, first = await _install_policy(
             service, sessions, owner, draft.id, amount_minor=5_000_000
         )
@@ -204,7 +210,9 @@ def test_full_waiver_is_approved_separately_and_redeemed_once() -> None:
     async def exercise() -> None:
         service, sessions, engine, owner, media = await _build_service()
         principal = _principal(owner)
-        draft, _ = await _draft_with_evidence(service, principal, media)
+        draft, _ = await _draft_with_evidence(
+            service, principal, media, fee_policy_mode="DYNAMIC"
+        )
         admin, _, policy = await _install_policy(
             service, sessions, owner, draft.id, amount_minor=5_000_000
         )
