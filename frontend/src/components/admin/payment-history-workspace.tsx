@@ -124,7 +124,7 @@ export function PaymentHistoryWorkspace() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 pb-12">
+    <div className="mx-auto max-w-7xl space-y-6 pb-12">
       <header>
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
           Tài chính
@@ -392,7 +392,7 @@ export function PaymentHistoryWorkspace() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 

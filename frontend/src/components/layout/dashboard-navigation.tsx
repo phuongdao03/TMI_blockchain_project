@@ -201,9 +201,19 @@ const adminItems: NavigationItem[] = [
   },
   {
     href: "/admin/payments",
-    label: "Thu phí",
+    label: "Quản lý phí hồ sơ",
     icon: BadgeDollarSign,
-    permission: "payments.read",
+    permissions: [
+      "billing.fees.read",
+      "billing.fees.policies.create",
+      "billing.fees.policies.approve",
+      "billing.fees.policies.cancel",
+      "billing.fees.waivers.request",
+      "billing.fees.waivers.approve",
+      "payments.read",
+      "payments.issue",
+      "payments.reconcile",
+    ],
   },
   {
     href: "/admin/payments/history",

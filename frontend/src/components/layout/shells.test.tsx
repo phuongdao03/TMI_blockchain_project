@@ -750,7 +750,7 @@ describe("layout shells", () => {
     );
 
     expect(
-      screen.getAllByRole("link", { name: "Thu phí" }).length,
+      screen.getAllByRole("link", { name: "Quản lý phí hồ sơ" }).length,
     ).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "Người dùng" })).toBeNull();
     expect(

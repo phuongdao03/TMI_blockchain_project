@@ -5,6 +5,7 @@ import { CheckCircle2, CircleAlert, Clock3, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { paymentApi } from "@/lib/api/client";
+import { useAuthUser } from "@/lib/auth/user-context";
 import type { AdminPaymentOrder, PaymentStatus } from "@/lib/api/types";
 
 const paymentListKey = ["admin", "payment-orders"] as const;
@@ -36,6 +37,10 @@ function formatTime(value: string) {
 }
 
 export function PaymentOrderReconciliation() {
+  const user = useAuthUser();
+  const canUseReconciliation =
+    user?.roles.includes("SUPER_ADMIN") ||
+    user?.permissions?.includes("payments.reconcile");
   const queryClient = useQueryClient();
   const orders = useQuery({
     queryKey: paymentListKey,
@@ -145,7 +150,7 @@ export function PaymentOrderReconciliation() {
                     ) : null}
                     {statusLabels[order.status]}
                   </span>
-                  {canReconcile ? (
+                  {canUseReconciliation && canReconcile ? (
                     <Button
                       className="min-h-10 px-3 text-sm"
                       disabled={reconcile.isPending}

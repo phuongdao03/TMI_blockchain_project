@@ -13,7 +13,7 @@ const parents: Record<string, string> = {
   "/admin/reviews": "Tiếp nhận hồ sơ",
   "/admin/work-allocations": "Phân công công việc",
   "/admin/attendance": "Chấm công",
-  "/admin/payments": "Thanh toán",
+  "/admin/payments": "Quản lý phí hồ sơ",
   "/admin": "Quản trị",
 };
 const pageLabels: Record<string, string> = {

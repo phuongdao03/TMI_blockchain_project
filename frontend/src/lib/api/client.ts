@@ -1797,9 +1797,13 @@ export const dossierApi = {
   },
   submissionFee(dossierId: string) {
     return request<{
+      feeRequired: boolean;
+      feeAvailable: boolean;
       amountMinor: number;
       currency: string;
       description: string;
+      policyId: string | null;
+      policyVersionNo: number | null;
     }>(`/dossiers/${encodeURIComponent(dossierId)}/submission-fee`);
   },
   retrySubmissionPayment(dossierId: string, key: string) {
@@ -1872,16 +1876,34 @@ export const dossierApi = {
       { method: "DELETE" },
     );
   },
-  submit(dossierId: string, idempotencyKey: string) {
+  submit(
+    dossierId: string,
+    idempotencyKey: string,
+    acceptedFeePolicyVersion?: number | null,
+  ) {
     return request<DossierSubmission>(`/dossiers/${dossierId}/submit`, {
       method: "POST",
-      headers: { "Idempotency-Key": idempotencyKey },
+      headers: {
+        "Idempotency-Key": idempotencyKey,
+        ...(acceptedFeePolicyVersion == null
+          ? {}
+          : { "X-Fee-Policy-Version": String(acceptedFeePolicyVersion) }),
+      },
     });
   },
-  resubmit(dossierId: string, idempotencyKey: string) {
+  resubmit(
+    dossierId: string,
+    idempotencyKey: string,
+    acceptedFeePolicyVersion?: number | null,
+  ) {
     return request<DossierSubmission>(`/dossiers/${dossierId}/resubmit`, {
       method: "POST",
-      headers: { "Idempotency-Key": idempotencyKey },
+      headers: {
+        "Idempotency-Key": idempotencyKey,
+        ...(acceptedFeePolicyVersion == null
+          ? {}
+          : { "X-Fee-Policy-Version": String(acceptedFeePolicyVersion) }),
+      },
     });
   },
   versions(dossierId: string) {
@@ -2196,6 +2218,63 @@ export const paymentApi = {
     return request<PaymentOrder>(`/admin/payment-orders/${orderId}/reconcile`, {
       method: "POST",
     });
+  },
+};
+
+export const feeApi = {
+  listPolicies() {
+    return request<import("./types").AdminFeePolicy[]>(
+      "/admin/fee-policies?limit=100",
+    );
+  },
+  createPolicy(input: {
+    feeType: string;
+    dossierTypeId: string;
+    amountMinor: number;
+    startsAt: string;
+    endsAt?: string | null;
+    displayName?: string;
+    reason: string;
+  }) {
+    return request<import("./types").AdminFeePolicy>("/admin/fee-policies", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  approvePolicy(policyId: string) {
+    return request<import("./types").AdminFeePolicy>(
+      `/admin/fee-policies/${encodeURIComponent(policyId)}/approve`,
+      { method: "POST" },
+    );
+  },
+  cancelPolicy(policyId: string, reason: string) {
+    return request<import("./types").AdminFeePolicy>(
+      `/admin/fee-policies/${encodeURIComponent(policyId)}/cancel`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+  },
+  listWaivers() {
+    return request<import("./types").AdminFeeWaiver[]>(
+      "/admin/fee-waivers?limit=100",
+    );
+  },
+  requestWaiver(input: {
+    dossierId: string;
+    feeType: string;
+    amountMinor: number;
+    reason: string;
+  }) {
+    return request<import("./types").AdminFeeWaiver>("/admin/fee-waivers", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  decideWaiver(waiverId: string, approve: boolean, reason: string) {
+    const decision = approve ? "approve" : "reject";
+    return request<import("./types").AdminFeeWaiver>(
+      `/admin/fee-waivers/${encodeURIComponent(waiverId)}/${decision}`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
   },
 };
 

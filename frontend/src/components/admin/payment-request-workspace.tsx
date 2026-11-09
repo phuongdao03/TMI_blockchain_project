@@ -33,8 +33,10 @@ const controlClass =
 
 export function PaymentRequestWorkspace({
   initialDossierId = "",
+  showReconciliation = true,
 }: {
   initialDossierId?: string;
+  showReconciliation?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [dossierId, setDossierId] = useState(initialDossierId);
@@ -339,7 +341,7 @@ export function PaymentRequestWorkspace({
         </aside>
       </section>
 
-      <PaymentOrderReconciliation />
+      {showReconciliation ? <PaymentOrderReconciliation /> : null}
 
       {success ? (
         <section
