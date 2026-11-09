@@ -411,6 +411,9 @@ export function DossierWorkspace({
   const [informationUnsaved, setInformationUnsaved] = useState(false);
   const [claimsUnsaved, setClaimsUnsaved] = useState(false);
   const [supplementsOpen, setSupplementsOpen] = useState(false);
+  const [acceptedFeePolicyVersion, setAcceptedFeePolicyVersion] = useState<
+    number | null
+  >(null);
   const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: dossierKeys.detail(dossierId),
@@ -428,9 +431,7 @@ export function DossierWorkspace({
   const submissionFee = useQuery({
     queryKey: ["submission-fee", dossierId],
     queryFn: () => dossierApi.submissionFee(dossierId),
-    enabled: Boolean(
-      detail.data?.submissionFeeRequired && !detail.data?.submissionFeePaidAt,
-    ),
+    enabled: Boolean(detail.data?.canEdit),
     retry: false,
   });
   const selectedRule =
@@ -479,8 +480,9 @@ export function DossierWorkspace({
       const key = newIdempotencyKey();
       return detail.data?.status === "NEEDS_SUPPLEMENT"
         ? dossierApi.resubmit(dossierId, key)
-        : dossierApi.submit(dossierId, key);
+        : dossierApi.submit(dossierId, key, acceptedFeePolicyVersion);
     },
+    onError: () => void submissionFee.refetch(),
     onSuccess: refresh,
   });
 
@@ -738,6 +740,7 @@ export function DossierWorkspace({
         dossierStatus={dossier.status}
         submissionFeeRequired={dossier.submissionFeeRequired}
         submissionFeePaidAt={dossier.submissionFeePaidAt}
+        submissionFeeWaivedAt={dossier.submissionFeeWaivedAt}
       />
       {dossier.currentVersionNo > 0 ? (
         <SupplementRequestsPanel
@@ -1192,11 +1195,13 @@ export function DossierWorkspace({
                       supplementsOpen ||
                       submit.isPending ||
                       submissionComplete ||
-                      Boolean(
-                        dossier.submissionFeeRequired &&
-                          !dossier.submissionFeePaidAt &&
-                          !submissionFee.data,
-                      )
+                      (dossier.status === "DRAFT" &&
+                        (submissionFee.isPending ||
+                          submissionFee.isError ||
+                          submissionFee.data?.feeAvailable === false ||
+                          (submissionFee.data?.feeRequired === true &&
+                            acceptedFeePolicyVersion !==
+                              submissionFee.data.policyVersionNo)))
                     }
                     onClick={() => submit.mutate()}
                   >
@@ -1207,13 +1212,17 @@ export function DossierWorkspace({
                         ? "Nộp lại hồ sơ"
                         : "Nộp hồ sơ"}
                   </Button>
-                  {dossier.submissionFeeRequired &&
-                  !dossier.submissionFeePaidAt ? (
+                  {dossier.status === "DRAFT" ? (
                     <div
                       className="mt-4 border-t border-[var(--theme-border)] pt-4 text-sm"
-                      role="status"
+                      aria-live="polite"
                     >
-                      {submissionFee.data ? (
+                      {submissionFee.data?.feeAvailable === false ? (
+                        <p className="font-semibold text-amber-700">
+                          {submissionFee.data.description} Vui lÃ²ng liÃªn há»‡
+                          quáº£n trá»‹ viÃªn trÆ°á»›c khi ná»™p.
+                        </p>
+                      ) : submissionFee.data?.feeRequired ? (
                         <>
                           <p className="font-bold">
                             Phí nộp hồ sơ:{" "}
@@ -1222,12 +1231,38 @@ export function DossierWorkspace({
                             )}{" "}
                             {submissionFee.data.currency}
                           </p>
+                          <label className="mt-3 flex items-start gap-3 leading-6">
+                            <input
+                              checked={
+                                acceptedFeePolicyVersion ===
+                                submissionFee.data.policyVersionNo
+                              }
+                              className="mt-1 size-4 accent-[var(--theme-accent)]"
+                              onChange={(event) =>
+                                setAcceptedFeePolicyVersion(
+                                  event.target.checked
+                                    ? submissionFee.data.policyVersionNo
+                                    : null,
+                                )
+                              }
+                              type="checkbox"
+                            />
+                            <span>
+                              Tôi đồng ý với mức phí hiện tại. Nếu phí thay đổi
+                              trước khi nộp, hệ thống sẽ yêu cầu tôi xác nhận
+                              lại.
+                            </span>
+                          </label>
                           <p className="mt-2">
                             Thanh toán bằng ví sau khi nộp, trước khi thẩm định.
                             Bổ sung hoặc phê duyệt không thu lại khoản phí này.
                             Việc nộp phí không bảo đảm hồ sơ được phê duyệt.
                           </p>
                         </>
+                      ) : submissionFee.data ? (
+                        <p className="text-[var(--theme-muted)]">
+                          {submissionFee.data.description}
+                        </p>
                       ) : submissionFee.isError ? (
                         <>
                           <p>

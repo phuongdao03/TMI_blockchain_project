@@ -19,11 +19,13 @@ export function DossierPaymentAction({
   dossierStatus,
   submissionFeeRequired = false,
   submissionFeePaidAt,
+  submissionFeeWaivedAt,
 }: {
   dossierId: string;
   dossierStatus: DossierStatus;
   submissionFeeRequired?: boolean;
   submissionFeePaidAt?: string | null;
+  submissionFeeWaivedAt?: string | null;
 }) {
   const router = useRouter();
   const shouldLoadPayment = dossierStatus === "PAYMENT_PENDING";
@@ -55,6 +57,17 @@ export function DossierPaymentAction({
       router.push(`/payments/${result.paymentOrderId}`);
     },
   });
+
+  if (submissionFeeRequired && submissionFeeWaivedAt) {
+    return (
+      <section className="dossier-payment-notice dossier-payment-notice--success rounded-2xl p-5">
+        <h2 className="font-bold">Đã áp dụng miễn giảm phí nộp hồ sơ</h2>
+        <p className="mt-1 text-sm">
+          Khoản miễn giảm được áp dụng một lần cho hồ sơ này.
+        </p>
+      </section>
+    );
+  }
 
   if (
     submissionFeeRequired &&

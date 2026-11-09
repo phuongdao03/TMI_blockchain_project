@@ -102,14 +102,19 @@ describe("DossierWorkspace", () => {
       true,
     );
     api.submissionFee.mockResolvedValue({
+      feeRequired: true,
+      feeAvailable: true,
       amountMinor: 5_000_000,
       currency: "VND",
+      policyId: "policy-1",
+      policyVersionNo: 1,
       description: "Phí nộp hồ sơ",
     });
     await user.click(screen.getByRole("button", { name: "Tải lại phí nộp" }));
     expect(
       await screen.findByText(/Phí nộp hồ sơ: 5.000.000 VND/),
     ).toBeDefined();
+    await user.click(screen.getByRole("checkbox"));
     expect(screen.getByRole("button", { name: "Nộp hồ sơ" })).toHaveProperty(
       "disabled",
       false,
@@ -118,6 +123,15 @@ describe("DossierWorkspace", () => {
   });
   beforeEach(() => {
     vi.clearAllMocks();
+    api.submissionFee.mockResolvedValue({
+      feeRequired: false,
+      feeAvailable: true,
+      amountMinor: 0,
+      currency: "VND",
+      description: "No fee applies to this legacy fixture.",
+      policyId: null,
+      policyVersionNo: null,
+    });
   });
 
   it("blocks submission when a saved claim still lacks supporting evidence", async () => {
