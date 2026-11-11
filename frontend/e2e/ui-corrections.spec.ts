@@ -93,13 +93,18 @@ test("Admin module icons stay compact within a rounded section", async ({
   expect(layout.iconHeight).toBeLessThan(60);
   expect(layout.rowHeight).toBeGreaterThan(layout.iconHeight);
   expect(layout.overflow).toBe(false);
-  await moduleList.locator("a").first().hover();
-  expect(
-    await moduleList
-      .locator("a")
-      .first()
-      .evaluate((row) => getComputedStyle(row).backgroundColor),
-  ).not.toBe("rgba(0, 0, 0, 0)");
+  const firstModule = moduleList.locator("a").first();
+  await firstModule.hover();
+  await expect
+    .poll(
+      () =>
+        firstModule.evaluate((row) => getComputedStyle(row).backgroundColor),
+      {
+        message: "hovering an admin module should reveal its hover surface",
+        timeout: 2_000,
+      },
+    )
+    .not.toBe("rgba(0, 0, 0, 0)");
 });
 
 test("leave workspace keeps its surfaces restrained", async ({
