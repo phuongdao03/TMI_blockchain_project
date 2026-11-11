@@ -19,7 +19,7 @@ import type {
   CommunityChatRoom,
   CommunityChatRoomGrant,
   CommunityChatRoomUserCandidate,
-} from "@/lib/api/types";
+} from "@/lib/api/community-types";
 
 const rooms: { id: CommunityChatRoom; name: string; access: string }[] = [
   { id: "MEMBER", name: "Sảnh cộng đồng", access: "Mọi hạng hội viên" },

@@ -13,7 +13,7 @@ import type {
   CommunityModerationTargetType,
   CommunityReport,
   CommunityReportReason,
-} from "@/lib/api/types";
+} from "@/lib/api/community-types";
 
 const PAGE_SIZE = 20;
 

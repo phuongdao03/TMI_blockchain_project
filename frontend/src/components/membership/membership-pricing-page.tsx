@@ -10,7 +10,7 @@ import type {
   MembershipPlan,
   MembershipPlanCatalog,
   MembershipTier,
-} from "@/lib/api/types";
+} from "@/lib/api/membership-types";
 
 const tiers: {
   code: MembershipTier;

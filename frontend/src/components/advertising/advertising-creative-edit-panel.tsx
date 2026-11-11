@@ -5,7 +5,7 @@ import { ArrowRight, CircleAlert, LoaderCircle, Megaphone } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { advertisingApi } from "@/lib/api/client";
-import type { AdvertisingCampaignSummary } from "@/lib/api/types";
+import type { AdvertisingCampaignSummary } from "@/lib/api/advertising-types";
 import { Button } from "@/components/ui/button";
 
 const inputClassName =

@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { SuccessEnvelope } from "@/lib/api/types";
+import type { SuccessEnvelope } from "@/lib/api/api-contract-types";
 import { resolveServerApiBaseUrl } from "@/lib/api/server-base-url";
 import type { SitemapEntry } from "@/lib/seo";
 

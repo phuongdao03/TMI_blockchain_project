@@ -37,5 +37,5 @@ flows. AUTO grants are persisted before presentation and survive dismissal.
 and links to voucher details. The account overview includes an available-voucher
 banner. Header avatars use the existing membership frame assets.
 
-See [engine](PROMOTION_ENGINE.md), [operations](VOUCHER_ADMIN_GUIDE.md),
+See [engine](PROMOTION_ENGINE.md), [operations](guides/voucher-administration.md),
 [payments](VOUCHER_PAYMENT_INTEGRATION.md) and [verification](VOUCHER_TEST_PLAN.md).

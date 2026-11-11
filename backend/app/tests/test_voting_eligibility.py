@@ -9,12 +9,11 @@ from app.modules.auth.models import UserStatus
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.voting.dependencies import get_voting_eligibility_service
 from app.modules.voting.eligibility import (
-    EligibilitySnapshot,
     VotingEligibilityDecision,
     VotingEligibilityEngine,
 )
 from app.modules.voting.models import CampaignStatus
-from app.modules.voting.types import EligibilityReason
+from app.modules.voting.types import EligibilityReason, EligibilitySnapshot
 
 NOW = datetime(2026, 8, 3, 8, tzinfo=UTC)
 

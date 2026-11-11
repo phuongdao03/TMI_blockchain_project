@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import type {
   AdvertisingCampaignStatus,
   AdvertisingCampaignSummary,
-} from "@/lib/api/types";
+} from "@/lib/api/advertising-types";
 
 type AdvertisingCampaignListProps = {
   campaigns: AdvertisingCampaignSummary[];

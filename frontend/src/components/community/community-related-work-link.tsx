@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import type { CommunityRelatedWork } from "@/lib/api/types";
+import type { CommunityRelatedWork } from "@/lib/api/community-types";
 
 export function CommunityRelatedWorkLink({
   work,

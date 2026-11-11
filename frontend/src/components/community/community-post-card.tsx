@@ -13,7 +13,7 @@ import { useAuthUser } from "@/lib/auth/user-context";
 import type {
   CommunityPageResponse,
   CommunityPostSummary,
-} from "@/lib/api/types";
+} from "@/lib/api/community-types";
 
 export function CommunityPostCard(props: { post: CommunityPostSummary }) {
   const user = useAuthUser();

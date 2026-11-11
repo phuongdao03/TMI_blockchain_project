@@ -52,8 +52,9 @@
 
 ## Follow-up
 
-`animation-plans/003-dossier-progress-transform.md` records the separate
-dossier progress-bar width animation improvement; it remains deferred. No
+The [dossier progress transform plan](../dossier-progress-transform-plan.md)
+records a separate dossier progress-bar width animation improvement; it
+remains deferred. No
 commit, push, deployment, API, authentication, or business-rule changes were
 made.
 

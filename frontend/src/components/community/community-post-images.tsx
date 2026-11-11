@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 
-import type { CommunityPostImage } from "@/lib/api/types";
+import type { CommunityPostImage } from "@/lib/api/community-types";
 
 export function CommunityPostImages({
   images,

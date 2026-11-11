@@ -2,7 +2,10 @@ import { Award, BadgeCheck, Gem, HeartHandshake, Sprout } from "lucide-react";
 import Image from "next/image";
 
 import { MembershipAvatar } from "@/components/ui/membership-avatar";
-import type { MembershipState, MembershipTier } from "@/lib/api/types";
+import type {
+  MembershipState,
+  MembershipTier,
+} from "@/lib/api/membership-types";
 import styles from "./member-card.module.css";
 import {
   membershipTierPalette,

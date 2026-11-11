@@ -19,7 +19,7 @@ import { mediaPolicies, uploadMedia } from "@/lib/media/upload";
 import type {
   CommunityMemberCard,
   CommunityMemberProfile as MemberProfile,
-} from "@/lib/api/types";
+} from "@/lib/api/community-types";
 
 const PAGE_SIZE = 20;
 const profileTierRank = {

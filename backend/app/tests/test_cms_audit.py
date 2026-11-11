@@ -12,7 +12,8 @@ from app.modules.audit.service import AuditService
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.cms.errors import CmsSlugConflictError
 from app.modules.cms.models import CmsContentStatus, CmsPost
-from app.modules.cms.service import CmsPostInput, CmsService
+from app.modules.cms.service import CmsService
+from app.modules.cms.types import CmsPostInput
 
 
 def _principal(*roles: str) -> AuthPrincipal:

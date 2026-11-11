@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { formatVnd } from "@/components/wallet/wallet-workspace";
 import { advertisingApi } from "@/lib/api/client";
-import type { AdvertisingReviewQueueItem } from "@/lib/api/types";
+import type { AdvertisingReviewQueueItem } from "@/lib/api/advertising-types";
 
 type AdminTab = "review" | "inventory" | "reports" | "catalog";
 type Decision = "APPROVE" | "REJECT" | "CHANGES_REQUESTED" | "PAUSE";

@@ -13,7 +13,7 @@ from app.modules.auth.dependencies import (
 from app.modules.auth.errors import CsrfValidationError, UnauthenticatedError
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.users.dependencies import get_user_profile_service
-from app.modules.users.service import ProfileChanges, ProfileView
+from app.modules.users.types import ProfileChanges, ProfileView
 
 
 class StubUserProfileService:

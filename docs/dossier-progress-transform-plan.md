@@ -1,4 +1,4 @@
-# 003 — Avoid width animation for dossier progress
+# Dossier progress transform plan
 
 - **Status**: Deferred
 - **Commit**: `1b99685`

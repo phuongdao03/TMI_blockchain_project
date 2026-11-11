@@ -18,7 +18,7 @@ import { communityFeedHref } from "@/components/community/community-feed-url";
 import { CommunityVipRooms } from "@/components/community/community-vip-rooms";
 import { communityApi } from "@/lib/api/client";
 import { useAuthStatus, useAuthUser } from "@/lib/auth/user-context";
-import type { CommunityPostSort } from "@/lib/api/types";
+import type { CommunityPostSort } from "@/lib/api/community-types";
 
 const PAGE_SIZE = 20;
 

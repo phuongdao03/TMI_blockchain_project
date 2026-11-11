@@ -1,6 +1,6 @@
 import { Megaphone } from "lucide-react";
 
-import type { AdvertisingPlacement } from "@/lib/api/types";
+import type { AdvertisingPlacement } from "@/lib/api/advertising-types";
 
 type PreviewLayout =
   | "featured-dossier"

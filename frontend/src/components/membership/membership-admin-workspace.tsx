@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ApiError, membershipApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
 import { formatVnd } from "@/components/wallet/wallet-workspace";
-import type { MembershipBenefitRequest } from "@/lib/api/types";
+import type { MembershipBenefitRequest } from "@/lib/api/membership-types";
 import { membershipTiers } from "./member-card";
 import { benefitLabel } from "./membership-benefit-center";
 import { MembershipChatAccessAdmin } from "./membership-chat-access-admin";

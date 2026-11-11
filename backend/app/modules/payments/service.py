@@ -14,7 +14,7 @@ from app.modules.auth.repositories import AuthRepository
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.billing.models import FeeObligationStatus
 from app.modules.billing.repository import BillingRepository
-from app.modules.billing.service import FeeObligationView
+from app.modules.billing.types import FeeObligationView
 from app.modules.dossiers.models import Dossier, DossierStatus, DossierStatusHistory
 from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.workflow import DossierWorkflowService

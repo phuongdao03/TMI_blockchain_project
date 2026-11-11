@@ -22,7 +22,7 @@ import type {
   AdvertisingCampaignSummary,
   AdvertisingPackage,
   AdvertisingReservationCheckout,
-} from "@/lib/api/types";
+} from "@/lib/api/advertising-types";
 import { useAuthUser } from "@/lib/auth/user-context";
 
 const fieldClassName =

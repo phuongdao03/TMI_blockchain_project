@@ -20,7 +20,7 @@ Date: 2026-10-15. No production change has been made.
 ## Rollback
 
 - First disable community entry points using the documented release configuration if the frontend/API must be rolled back independently.
-- Roll back application artifacts using `docs/runbooks/deployment-and-rollback.md`.
+- Roll back application artifacts using `deployment-and-rollback.md`.
 - Downgrade the community migration only after confirming no retained community content must be exported; downgrade removes community-owned data. Do not drop or alter existing users, media, public works, notifications, or other application tables.
 - A targeted rollback from migration `0109_community_admin_workspaces` to `0108_community_interactions` removes the new restriction table and post/comment columns but deliberately preserves the expanded moderation-event CHECK constraints. They must remain widened so retained COM012 audit rows stay valid; a full community teardown may remove the event table with the rest of community data.
 - If content must be preserved, roll back code while leaving additive community tables in place, then repair forward.

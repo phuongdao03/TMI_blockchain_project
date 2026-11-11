@@ -26,7 +26,7 @@ import type {
   MembershipPlan,
   MembershipQuote,
   MembershipTier,
-} from "@/lib/api/types";
+} from "@/lib/api/membership-types";
 import { useAuthUser } from "@/lib/auth/user-context";
 import { CommunityChat, type CommunityChatRoom } from "./community-chat";
 import { canUsePersonalMembership } from "./membership-access";

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { guideApi } from "@/lib/api/client";
-import type { CmsGuideArticle, CmsGuideAudience } from "@/lib/api/types";
+import type { CmsGuideArticle, CmsGuideAudience } from "@/lib/api/cms-types";
 import {
   matchesStarterGuide,
   STARTER_GUIDES,

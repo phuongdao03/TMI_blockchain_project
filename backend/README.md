@@ -1,25 +1,32 @@
 # Backend
 
-This root will contain the FastAPI modular monolith, Celery workers, and Alembic
+This directory contains the FastAPI application, Celery workers, and Alembic
 migrations.
 
-The approved module shape is:
+The current application layout is:
 
 ```text
 app/
   api/v1/
   core/
   db/
-  modules/
+  modules/<domain>/
   workers/
   tests/
-alembic/
+  main.py
+alembic/versions/
+alembic.ini
 ```
 
-Each business module owns its models, schemas, repository, service, router,
-exceptions, and tests. Routers validate and translate HTTP requests;
-repositories exclusively handle database access; services orchestrate
-transactions and business rules.
+`app/main.py` registers the HTTP routers from `app/api/v1/`. Domain code lives
+under `app/modules/<domain>/`; each module keeps only the layers its behavior
+needs. Tests are centralized under `app/tests/`, and the ordered migration
+history lives under `alembic/versions/`. Preserve those boundaries instead of
+creating empty router, repository, service, or test files to match a template.
+
+Routers validate and translate HTTP requests. Keep business rules in their
+existing domain modules, and preserve transaction ownership in domain services.
+Database dependencies use the shared session setup in `app/db/session.py`.
 
 ## Runtime
 

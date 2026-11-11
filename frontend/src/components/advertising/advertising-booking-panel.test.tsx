@@ -7,7 +7,7 @@ import type {
   AdvertisingCampaignSummary,
   AdvertisingPackage,
   AdvertisingReservationCheckout,
-} from "@/lib/api/types";
+} from "@/lib/api/advertising-types";
 import { AdvertisingBookingPanel } from "./advertising-booking-panel";
 
 const api = vi.hoisted(() => ({

@@ -11,7 +11,7 @@ import { useAuthUser } from "@/lib/auth/user-context";
 import type {
   CommunityPageResponse,
   CommunityPostSummary,
-} from "@/lib/api/types";
+} from "@/lib/api/community-types";
 
 const PAGE_SIZE = 20;
 

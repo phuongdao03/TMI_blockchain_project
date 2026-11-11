@@ -80,4 +80,4 @@ exist before activation.
 
 See [Admin Approval Workflow](ADMIN_APPROVAL_WORKFLOW.md),
 [payOS Payout Integration](PAYOS_PAYOUT_INTEGRATION.md), and
-[Deployment and Rollback](DEPLOYMENT_AND_ROLLBACK.md).
+[Deployment and Rollback](runbooks/wallet-affiliate-deployment-and-rollback.md).

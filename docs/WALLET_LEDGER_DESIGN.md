@@ -70,7 +70,7 @@ WalletWithdrawalService.reconciliation_summary checks journal pair count/sum
 and compares each user's reserved ledger total to open withdrawal requests.
 GET /api/v1/admin/payouts/reconciliation requires finance.read. It is internal
 ledger reconciliation, not a provider report. Celery polls known provider IDs
-separately. See FINANCIAL_RECONCILIATION_RUNBOOK.md.
+separately. See the [financial reconciliation runbook](runbooks/financial-reconciliation.md).
 
 ## Source files
 

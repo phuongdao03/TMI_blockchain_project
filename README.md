@@ -45,6 +45,10 @@ flowchart LR
 The browser communicates only with the backend API. Database, provider and
 blockchain access are enforced behind backend service boundaries.
 
+Repository boundaries, verified audit findings, and deferred migration decisions
+are recorded in the
+[repository standardization handoff](docs/handoffs/repository-standardization-audit.md).
+
 Admin P0 permissions, API contracts, deployment, rollback, and verification
 evidence are recorded in
 [the admin dashboard handoff](docs/handoffs/admin-dashboard-p0.md).

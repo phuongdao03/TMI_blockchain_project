@@ -3,7 +3,7 @@ import Image from "next/image";
 import { membershipTierPalette } from "@/components/membership/membership-tier-palette";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
-import type { MembershipTier } from "@/lib/api/types";
+import type { MembershipTier } from "@/lib/api/membership-types";
 
 export function MembershipAvatar({
   tier,

@@ -33,7 +33,7 @@ from app.modules.cms.schemas import (
     CmsPostRequest,
     CmsStatusRequest,
 )
-from app.modules.cms.service import (
+from app.modules.cms.types import (
     CmsBannerInput,
     CmsCategoryInput,
     CmsGuideArticleInput,

@@ -11,7 +11,7 @@ import {
 } from "@/components/guide/guide-center";
 import { AuthUserProvider } from "@/lib/auth/user-context";
 import { guideApi } from "@/lib/api/client";
-import type { CmsGuideArticle } from "@/lib/api/types";
+import type { CmsGuideArticle } from "@/lib/api/cms-types";
 
 const article: CmsGuideArticle = {
   id: "guide-1",

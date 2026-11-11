@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import type { AdvertisingCampaignSummary } from "@/lib/api/types";
+import type { AdvertisingCampaignSummary } from "@/lib/api/advertising-types";
 import { AdvertisingCampaignList } from "./advertising-campaign-list";
 
 const campaign = {

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, cast
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -26,9 +26,7 @@ from app.modules.voting.models import (
     VoteStatus,
     VotingCampaign,
 )
-
-if TYPE_CHECKING:
-    from app.modules.voting.eligibility import EligibilitySnapshot
+from app.modules.voting.types import EligibilitySnapshot
 
 
 class VotingEligibilityRepository:
@@ -44,9 +42,7 @@ class VotingEligibilityRepository:
         work_id: UUID | None,
         for_update: bool,
         exclude_vote_id: UUID | None = None,
-    ) -> "EligibilitySnapshot | None":
-        from app.modules.voting.eligibility import EligibilitySnapshot
-
+    ) -> EligibilitySnapshot | None:
         campaign_statement = select(VotingCampaign).where(
             VotingCampaign.id == campaign_id
         )

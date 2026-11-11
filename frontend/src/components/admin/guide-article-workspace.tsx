@@ -15,7 +15,7 @@ import type {
   CmsGuideArticleInput,
   CmsGuideAudience,
   CmsGuideStatus,
-} from "@/lib/api/types";
+} from "@/lib/api/cms-types";
 
 const AUDIENCES: CmsGuideAudience[] = [
   "PUBLIC",

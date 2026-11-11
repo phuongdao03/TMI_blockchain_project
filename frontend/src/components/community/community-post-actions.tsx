@@ -13,7 +13,7 @@ import type {
   CommunityPageResponse,
   CommunityPostDetail,
   CommunityPostSummary,
-} from "@/lib/api/types";
+} from "@/lib/api/community-types";
 
 export interface CommunityInteractionPost {
   id: string;

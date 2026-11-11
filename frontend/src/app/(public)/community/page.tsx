@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { CommunityFeed } from "@/components/community/community-feed";
-import type { CommunityPostSort } from "@/lib/api/types";
+import type { CommunityPostSort } from "@/lib/api/community-types";
 
 export const metadata: Metadata = {
   title: "Cộng đồng",

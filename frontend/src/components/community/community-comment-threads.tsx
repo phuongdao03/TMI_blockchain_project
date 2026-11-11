@@ -23,7 +23,7 @@ import type {
   CommunityCommentSort,
   CommunityCommentThread,
   CommunityPageResponse,
-} from "@/lib/api/types";
+} from "@/lib/api/community-types";
 
 const PAGE_SIZE = 20;
 

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { CommunityMinePosts } from "@/components/community/community-mine-posts";
 import { getServerAuthState } from "@/lib/auth/server-session";
-import type { CommunityOwnerPostStatus } from "@/lib/api/types";
+import type { CommunityOwnerPostStatus } from "@/lib/api/community-types";
 
 export const metadata: Metadata = {
   title: "Bài viết của tôi · Cộng đồng",

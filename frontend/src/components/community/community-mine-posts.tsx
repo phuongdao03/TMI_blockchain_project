@@ -7,7 +7,7 @@ import { useState } from "react";
 
 import { communityApi, communityMemberApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
-import type { CommunityOwnerPostStatus } from "@/lib/api/types";
+import type { CommunityOwnerPostStatus } from "@/lib/api/community-types";
 
 const PAGE_SIZE = 20;
 const statusFilters: { value?: CommunityOwnerPostStatus; label: string }[] = [

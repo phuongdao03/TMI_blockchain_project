@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-import type { MembershipTier } from "@/lib/api/types";
+import type { MembershipTier } from "@/lib/api/membership-types";
 
 export const membershipTierPalette: Record<
   MembershipTier,

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import test from "node:test";
 
 /** @param {string} path */
@@ -11,6 +12,111 @@ const sourceFiles = (root) =>
     .filter((entry) => entry.isFile())
     .map((entry) => `${entry.parentPath}/${entry.name}`.replaceAll("\\", "/"))
     .filter((path) => /\.(py|ts|tsx)$/.test(path));
+
+const approvedRootEntries = new Set([
+  ".editorconfig",
+  ".env.example",
+  ".firebaserc.example",
+  ".gitattributes",
+  ".github",
+  ".gitignore",
+  ".gitleaks.toml",
+  ".node-version",
+  ".npmrc",
+  ".nvmrc",
+  ".prettierignore",
+  ".prettierrc.json",
+  ".python-version",
+  "AGENTS.md",
+  "README.md",
+  "SECURITY.md",
+  "backend",
+  "compose.yaml",
+  "contracts",
+  "docs",
+  "frontend",
+  "infrastructure",
+  "package-lock.json",
+  "package.json",
+  "tests",
+  "vercel.json",
+]);
+const generatedDirectoryNames = new Set([
+  "__pycache__",
+  ".mypy_cache",
+  ".next",
+  ".pytest_cache",
+  ".ruff_cache",
+  "coverage",
+  "node_modules",
+  "playwright-report",
+  "test-results",
+]);
+const isGeneratedDirectoryName = (segment) =>
+  generatedDirectoryNames.has(segment) ||
+  /^\.next(?:[-_]|$)/i.test(segment) ||
+  /^\.pytest(?:[-_]|$)/i.test(segment) ||
+  /^\.mypy(?:[-_]|$)/i.test(segment) ||
+  /^\.ruff(?:[-_]|$)/i.test(segment) ||
+  /^\.tmp(?:[-_]|$)/i.test(segment) ||
+  segment === ".runtime";
+const largeFileReviewLimit = 25 * 1024 * 1024;
+const largeFileAllowlist = new Set([
+  // Retained as source media; this file is not copied into the frontend image.
+  "docs/design/source-assets/tinh-hoa-viet-15-year-intro.mp4",
+]);
+const validAmbiguousFilenameAllowlist = new Set([
+  "infrastructure/scripts/validate-backup.sh",
+]);
+
+/** @returns {string[]} */
+const repositoryPaths = () =>
+  execFileSync(
+    "git",
+    ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+    { encoding: "utf8" },
+  )
+    .split("\0")
+    .filter((path) => path && existsSync(path))
+    .map((path) => path.replaceAll("\\", "/"));
+
+/** @param {string[]} paths */
+const repositoryHygieneViolations = (paths) =>
+  paths.flatMap((path) => {
+    const segments = path.split("/");
+    const filename = segments.at(-1) ?? path;
+    const stem = filename.replace(/\.[^.]+$/, "");
+    const violations = [];
+
+    if (
+      segments.length === 1 &&
+      /\.(avif|gif|jpe?g|png|svg|webp|mp4|mov|webm|woff2?|ttf|otf|eot)$/i.test(
+        filename,
+      )
+    ) {
+      violations.push(`${path}: runtime or design asset at repository root`);
+    }
+    if (!approvedRootEntries.has(segments[0])) {
+      violations.push(`${path}: root entry ${segments[0]} is not allowlisted`);
+    }
+    if (segments.some(isGeneratedDirectoryName)) {
+      violations.push(`${path}: generated output or cache is tracked`);
+    }
+    if (/^ChatGPT Image\s/i.test(filename)) {
+      violations.push(`${path}: default image-generator filename`);
+    }
+    if (
+      !validAmbiguousFilenameAllowlist.has(path) &&
+      /(?:^|[-_. ])(?:final|copy|backup|temp|tmp)\d*$/i.test(stem)
+    ) {
+      violations.push(`${path}: temporary or ambiguous filename suffix`);
+    }
+    if (/\.(log|pyc|pyo)$/i.test(filename)) {
+      violations.push(`${path}: generated log or bytecode file`);
+    }
+
+    return violations;
+  });
 
 test("defines the required monorepo roots", () => {
   for (const directory of [
@@ -160,5 +266,71 @@ test("production runtime is THVProofRegistry-only", () => {
       /CertificateRegistry|test:provenance|smoke-anvil/,
       `${path} builds or exercises the archived registry`,
     );
+  }
+});
+
+test("repository hygiene reports root clutter and generated artifacts", () => {
+  const paths = [
+    "logo.png",
+    "animation-plans/scroll.md",
+    "docs/ChatGPT Image Source.png",
+    "frontend/test-results/.last-run.json",
+    "frontend/.next-community-preview/cache.js",
+    "src/banner-final2.svg",
+    "backend/tmp/worker.log",
+  ];
+  const violations = repositoryHygieneViolations(paths);
+
+  for (const path of paths) {
+    assert.ok(violations.some((violation) => violation.startsWith(`${path}:`)));
+  }
+  assert.deepEqual(
+    repositoryHygieneViolations(["infrastructure/scripts/validate-backup.sh"]),
+    [],
+  );
+});
+
+test("tracked and unignored repository files satisfy hygiene rules", () => {
+  const paths = repositoryPaths();
+  const violations = repositoryHygieneViolations(paths);
+  const unreviewedLargeFiles = paths.filter(
+    (path) =>
+      statSync(path).size > largeFileReviewLimit &&
+      !largeFileAllowlist.has(path),
+  );
+  const missingLargeFileReviews = [...largeFileAllowlist].filter(
+    (path) => !paths.includes(path),
+  );
+
+  assert.deepEqual(violations, [], violations.join("\n"));
+  assert.deepEqual(unreviewedLargeFiles, [], unreviewedLargeFiles.join("\n"));
+  assert.deepEqual(missingLargeFileReviews, []);
+});
+
+test("Delivery runs the root repository checks on pull requests", () => {
+  const workflow = readFileSync(".github/workflows/delivery.yml", "utf8");
+
+  assert.match(workflow, /^  pull_request:/m);
+  assert.match(workflow, /node --test tests\/\*\.test\.mjs/);
+});
+
+test("canonical runtime brand, voucher, rank, and PDF assets remain present", () => {
+  for (const path of [
+    "frontend/public/assets/brand/chim-lac.jpg",
+    "frontend/public/assets/brand/logo-tinh-hoa-viet.png",
+    "frontend/public/assets/brand/trong-dong.png",
+    "frontend/public/images/promotions/golden-voucher.png",
+    "frontend/public/assets/membership/pricing/bronze.png",
+    "frontend/public/assets/membership/pricing/silver.png",
+    "frontend/public/assets/membership/pricing/gold.png",
+    "frontend/public/assets/membership/pricing/diamond.png",
+    "frontend/public/assets/membership/avatar-frames/bronze.png",
+    "frontend/public/assets/membership/avatar-frames/silver.png",
+    "frontend/public/assets/membership/avatar-frames/gold.png",
+    "frontend/public/assets/membership/avatar-frames/diamond.png",
+    "backend/app/assets/images/logo-tinh-hoa-viet.png",
+    "backend/app/assets/images/trong-dong.png",
+  ]) {
+    assert.equal(existsSync(path), true, `${path} must remain available`);
   }
 });

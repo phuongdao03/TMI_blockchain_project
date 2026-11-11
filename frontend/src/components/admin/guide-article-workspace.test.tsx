@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GuideArticleWorkspace } from "@/components/admin/guide-article-workspace";
 import { guideApi } from "@/lib/api/client";
-import type { CmsGuideArticle } from "@/lib/api/types";
+import type { CmsGuideArticle } from "@/lib/api/cms-types";
 
 const article: CmsGuideArticle = {
   id: "guide-1",

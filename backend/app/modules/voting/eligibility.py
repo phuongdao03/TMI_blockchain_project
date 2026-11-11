@@ -7,29 +7,12 @@ from app.modules.auth.models import UserStatus
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.voting.errors import VotingCampaignNotFoundError
 from app.modules.voting.models import CampaignStatus
-from app.modules.voting.types import EligibilityAction, EligibilityReason
+from app.modules.voting.types import (
+    EligibilityAction,
+    EligibilityReason,
+    EligibilitySnapshot,
+)
 from app.modules.voting.vote_repository import VotingEligibilityRepository
-
-
-@dataclass(frozen=True, slots=True)
-class EligibilitySnapshot:
-    user_status: UserStatus
-    email_verified_at: datetime | None
-    account_created_at: datetime
-    roles: tuple[str, ...]
-    organization_ids: tuple[UUID, ...]
-    campaign_status: CampaignStatus
-    start_at: datetime
-    end_at: datetime
-    require_verified_email: bool
-    min_account_age_hours: int
-    allowed_roles: tuple[str, ...]
-    allowed_organization_ids: tuple[UUID, ...]
-    participant_eligible: bool | None
-    effective_vote_count: int
-    already_voted: bool
-    max_votes_per_user: int
-    rule_version: int
 
 
 @dataclass(frozen=True, slots=True)

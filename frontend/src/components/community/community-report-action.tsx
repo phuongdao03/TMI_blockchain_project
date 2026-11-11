@@ -9,7 +9,7 @@ import { communityReportApi } from "@/lib/api/client";
 import type {
   CommunityReportReason,
   CommunityTargetType,
-} from "@/lib/api/types";
+} from "@/lib/api/community-types";
 import { useAuthUser } from "@/lib/auth/user-context";
 
 const reasons: { value: CommunityReportReason; label: string }[] = [

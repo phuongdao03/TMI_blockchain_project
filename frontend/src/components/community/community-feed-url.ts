@@ -1,4 +1,4 @@
-import type { CommunityPostFilters } from "@/lib/api/types";
+import type { CommunityPostFilters } from "@/lib/api/community-types";
 
 export function communityFeedHref(
   filters: CommunityPostFilters,

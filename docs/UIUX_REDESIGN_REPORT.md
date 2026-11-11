@@ -28,7 +28,7 @@ new dependency, migration, production transaction, push, merge or deployment.
 
 [Audit and all 97 page entry points](UIUX_AUDIT.md).
 [Before/after information architecture and implementation criteria](UIUX_INFORMATION_ARCHITECTURE.md).
-[Current design contract](../DESIGN.md).
+[Current design system](thv-design-system.md).
 
 Existing dossier creation, recovery, evidence upload, submission review,
 dashboard task priority, membership, community, advertising and admin flows were
@@ -98,12 +98,12 @@ covered by existing component tests; provider acceptance remains external.
 
 Local artifacts (not committed binary assets):
 
-- [Before, desktop](../tmp/uiux-20261030/before-review-1440.png)
-- [Before, mobile](../tmp/uiux-20261030/before-review-390.png)
-- [After, light desktop](../tmp/uiux-20261030/after-review-light-1440.png)
-- [After, dark mobile](../tmp/uiux-20261030/after-review-dark-390.png)
-- [Compact sidebar](../tmp/uiux-20261030/after-sidebar-collapsed.png)
-- [Machine-readable audit](../tmp/uiux-20261030/audit.json)
+- Before, desktop: `../tmp/uiux-20261030/before-review-1440.png`
+- Before, mobile: `../tmp/uiux-20261030/before-review-390.png`
+- After, light desktop: `../tmp/uiux-20261030/after-review-light-1440.png`
+- After, dark mobile: `../tmp/uiux-20261030/after-review-dark-390.png`
+- Compact sidebar: `../tmp/uiux-20261030/after-sidebar-collapsed.png`
+- Local machine-readable audit: `../tmp/uiux-20261030/audit.json`
 
 [Versioned per-route measurement summary](UIUX_BROWSER_EVIDENCE.json).
 

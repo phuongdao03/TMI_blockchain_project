@@ -16,7 +16,8 @@ from app.modules.auth.dependencies import (
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.cms.dependencies import get_cms_service
 from app.modules.cms.models import CmsContentStatus
-from app.modules.cms.service import CmsGuideArticleInput, CmsService
+from app.modules.cms.service import CmsService
+from app.modules.cms.types import CmsGuideArticleInput
 from app.modules.engagement.errors import EngagementRateLimitedError
 from app.modules.public.dependencies import enforce_public_engagement_rate_limit
 

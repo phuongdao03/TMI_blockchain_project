@@ -6,7 +6,10 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { ApiError, communityMemberApi, membershipApi } from "@/lib/api/client";
-import type { MembershipBenefitCode, MembershipTier } from "@/lib/api/types";
+import type {
+  MembershipBenefitCode,
+  MembershipTier,
+} from "@/lib/api/membership-types";
 
 const tierRank: Record<MembershipTier, number> = {
   MEMBER: 0,

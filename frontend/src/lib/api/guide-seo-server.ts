@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { CmsGuideArticle } from "@/lib/api/types";
+import type { CmsGuideArticle } from "@/lib/api/cms-types";
 import { resolveServerApiBaseUrl } from "@/lib/api/server-base-url";
 import type { SitemapEntry } from "@/lib/seo";
 

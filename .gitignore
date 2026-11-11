@@ -38,7 +38,9 @@ htmlcov/
 .pytest-tmp-*/
 .runtime/
 .tmp/
-.mypy_cache/
+.mypy_cache*/
+.mypy-*/
+.tmp-mypy*/
 .ruff_cache/
 backend/.pytest-notification-tmp/
 backend/.pytest-notification-tmp-final/
@@ -86,7 +88,13 @@ docs/specs/*
 !docs/handoffs/dossier-applicant-claims.md
 !docs/handoffs/council-evidence-policy-guards.md
 !docs/handoffs/structured-dossier-review-2026.md
+!docs/handoffs/admin-dashboard-p0.md
+!docs/handoffs/payment-qr-and-admin-history.md
+!docs/handoffs/repository-standardization-audit.md
+!docs/handoffs/ux-copy-topup-regression.md
 CONTEXT.md
 
 # Local UI audits, logs and diagnostic scripts
 /tmp/
+.tmp-quality-*/
+.tmp-playwright-*/

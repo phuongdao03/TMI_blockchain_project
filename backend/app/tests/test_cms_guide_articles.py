@@ -18,7 +18,8 @@ from app.modules.cms.errors import (
     CmsNotFoundError,
 )
 from app.modules.cms.models import CmsContentStatus, CmsGuideFeedback
-from app.modules.cms.service import CmsGuideArticleInput, CmsService
+from app.modules.cms.service import CmsService
+from app.modules.cms.types import CmsGuideArticleInput
 from app.modules.memberships.models import MembershipPlan, UserMembership
 
 

@@ -18,7 +18,8 @@ from app.modules.media.models import MediaAsset, MediaStatus
 from app.modules.users.models import UserProfile
 from app.modules.users.schemas import UserProfileData
 from app.modules.users.security import SensitiveFieldCipher
-from app.modules.users.service import ProfileChanges, UserProfileService
+from app.modules.users.service import UserProfileService
+from app.modules.users.types import ProfileChanges
 
 
 async def _build_service() -> tuple[

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.billing.errors import PriceCatalogConflictError
 from app.modules.billing.models import FeeObligation, FeeObligationStatus
 from app.modules.billing.repository import BillingRepository, PriceCatalogRepository
+from app.modules.billing.types import FeeObligationView
 from app.modules.dossiers.models import DossierStatus
 from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.workflow import DossierWorkflowService
@@ -65,28 +66,6 @@ class PriceCatalogService:
             currency=entry.currency,
             tax_mode=entry.tax_mode,
         )
-
-
-@dataclass(frozen=True, slots=True)
-class FeeObligationView:
-    id: UUID
-    dossier_id: UUID
-    owner_user_id: UUID
-    price_catalog_version_id: UUID | None
-    price_catalog_entry_id: UUID | None
-    service_code: str
-    description: str
-    amount_minor: int
-    currency: str
-    tax_mode: str
-    status: FeeObligationStatus
-    due_at: datetime
-    paid_at: datetime | None
-    fee_type: str | None = None
-    fee_policy_id: UUID | None = None
-    fee_policy_version_no: int | None = None
-    gross_amount_minor: int | None = None
-    waiver_amount_minor: int | None = None
 
 
 class BillingService:

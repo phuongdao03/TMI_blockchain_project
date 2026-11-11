@@ -48,18 +48,6 @@ import type {
   THVProofRegistryIntent,
   THVProofRegistryQueueItem,
   AuthUser,
-  CmsBanner,
-  CmsCategory,
-  CmsGuideAdminFilters,
-  CmsGuideArticle,
-  CmsGuideArticleInput,
-  CmsGuideFeedback,
-  CmsGuideAudience,
-  CmsGuideListFilters,
-  CmsGuideStatus,
-  CmsPage,
-  CmsPost,
-  CmsPostInput,
   CommunityCategory,
   CommunityAdminComment,
   CommunityAdminCommentResult,
@@ -221,6 +209,20 @@ import type {
   SimilarityCaseDisposition,
   SimilarityCaseFilters,
 } from "@/lib/api/types";
+import type {
+  CmsBanner,
+  CmsCategory,
+  CmsGuideAdminFilters,
+  CmsGuideArticle,
+  CmsGuideArticleInput,
+  CmsGuideFeedback,
+  CmsGuideAudience,
+  CmsGuideListFilters,
+  CmsGuideStatus,
+  CmsPage,
+  CmsPost,
+  CmsPostInput,
+} from "@/lib/api/cms-types";
 
 const API_ROOT = "/api/v1";
 const CSRF_COOKIE_NAME = "cns_csrf";

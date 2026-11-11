@@ -13,7 +13,7 @@ from app.modules.users.schemas import (
     PatchUserProfileRequest,
     UserProfileData,
 )
-from app.modules.users.service import ProfileChanges, ProfileView
+from app.modules.users.types import ProfileChanges, ProfileView
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 

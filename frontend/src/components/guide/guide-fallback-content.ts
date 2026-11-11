@@ -1,4 +1,4 @@
-import type { CmsGuideArticle } from "@/lib/api/types";
+import type { CmsGuideArticle } from "@/lib/api/cms-types";
 import { normalizeGuideSearch } from "@/components/guide/guide-search";
 
 const CONTENT_DATE = "2026-11-05T00:00:00.000Z";

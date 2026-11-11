@@ -4,10 +4,15 @@
 
 Apply the approved red-and-gold identity of **Trung tâm Đề cử Tinh Hoa Việt** across the existing THV product without changing business logic, RBAC, dossier, QR, upload, certificate, or blockchain flows.
 
-## Approved sources
+## Approved brand assets
 
-- `ChatGPT Image Aug 22, 2026, 11_44_01 AM.png`: official emblem.
-- `ChatGPT Image Aug 24, 2026, 08_54_19 AM.png`: official gold wordmark.
+- [`thv-brand-emblem.png`](../frontend/public/assets/brand/thv-brand-emblem.png): official emblem.
+- [`thv-brand-wordmark.png`](../frontend/public/assets/brand/thv-brand-wordmark.png): official gold wordmark.
+
+## Supporting design sources
+
+- [`diamond-avatar-frame-concept.png`](design/source-assets/diamond-avatar-frame-concept.png) is an unapproved avatar-frame variant retained for design review; it is not a runtime asset.
+- [`tinh-hoa-viet-15-year-intro.mp4`](design/source-assets/tinh-hoa-viet-15-year-intro.mp4) is the 15-year introduction video retained as source media; no runtime references were found.
 
 ## Brand tokens
 

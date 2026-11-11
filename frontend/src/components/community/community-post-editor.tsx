@@ -38,7 +38,7 @@ import type {
   CommunityPostInput,
   CommunityRelatedWork,
   CommunityPostWriteResult,
-} from "@/lib/api/types";
+} from "@/lib/api/community-types";
 
 export function CommunityPostEditor({
   postId,
