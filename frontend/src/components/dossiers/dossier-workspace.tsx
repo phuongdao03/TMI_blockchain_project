@@ -153,9 +153,12 @@ const dossierGuidance: Record<
 };
 
 function formatBytes(bytes: number) {
-  return new Intl.NumberFormat("vi-VN", {
+  const megabytes = bytes >= 1_048_576;
+  const value = megabytes ? bytes / 1_048_576 : bytes / 1_024;
+  const formatted = new Intl.NumberFormat("vi-VN", {
     maximumFractionDigits: 1,
-  }).format(bytes / 1024);
+  }).format(value);
+  return `${formatted} ${megabytes ? "MB" : "KB"}`;
 }
 
 function newIdempotencyKey() {
@@ -202,7 +205,18 @@ function EvidenceItem({
           {evidence.title}
         </h3>
         <p className="mt-1 text-xs text-neutral-500">
-          {evidence.mimeType} · {formatBytes(evidence.bytes)} KB
+          <span
+            className="block break-all"
+            title={evidence.filename ?? evidence.title}
+          >
+            {evidence.filename ?? evidence.title}
+          </span>
+          <span className="mt-1 block">
+            {evidence.mimeType} · {formatBytes(evidence.bytes)}
+          </span>
+        </p>
+        <p className="mt-1 text-xs font-medium text-emerald-700">
+          Đã tải lên · đã kiểm tra an toàn
         </p>
         <p className="mt-1 text-xs font-medium text-neutral-500">
           {evidenceScopeLabel(evidence.accessScope)}
@@ -1202,32 +1216,6 @@ export function DossierWorkspace({
                       </p>
                     </div>
                   </div>
-                  <Button
-                    className="mt-5 w-full sm:w-auto"
-                    disabled={
-                      !isComplete ||
-                      claimsUnsaved ||
-                      supplementsOpen ||
-                      submit.isPending ||
-                      submissionComplete ||
-                      (dossier.status === "DRAFT" &&
-                        (!user?.isTestAccount || testPaymentMode === "MOCK") &&
-                        (submissionFee.isPending ||
-                          submissionFee.isError ||
-                          submissionFee.data?.feeAvailable === false ||
-                          (submissionFee.data?.feeRequired === true &&
-                            acceptedFeePolicyVersion !==
-                              submissionFee.data.policyVersionNo)))
-                    }
-                    onClick={() => submit.mutate()}
-                  >
-                    <Send aria-hidden="true" className="size-4" />
-                    {submit.isPending
-                      ? "Đang tạo phiên bản…"
-                      : dossier.status === "NEEDS_SUPPLEMENT"
-                        ? "Nộp lại hồ sơ"
-                        : "Nộp hồ sơ"}
-                  </Button>
                   {dossier.status === "DRAFT" && user?.isTestAccount ? (
                     <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
                       <label className="grid max-w-sm gap-2 text-sm font-semibold">
@@ -1263,8 +1251,8 @@ export function DossierWorkspace({
                     >
                       {submissionFee.data?.feeAvailable === false ? (
                         <p className="font-semibold text-amber-700">
-                          {submissionFee.data.description} Vui lÃ²ng liÃªn há»‡
-                          quáº£n trá»‹ viÃªn trÆ°á»›c khi ná»™p.
+                          {submissionFee.data.description} Vui lòng liên hệ quản
+                          trị viên trước khi nộp.
                         </p>
                       ) : submissionFee.data?.feeRequired ? (
                         <>
@@ -1325,6 +1313,32 @@ export function DossierWorkspace({
                       )}
                     </div>
                   ) : null}
+                  <Button
+                    className="mt-5 w-full sm:w-auto"
+                    disabled={
+                      !isComplete ||
+                      claimsUnsaved ||
+                      supplementsOpen ||
+                      submit.isPending ||
+                      submissionComplete ||
+                      (dossier.status === "DRAFT" &&
+                        (!user?.isTestAccount || testPaymentMode === "MOCK") &&
+                        (submissionFee.isPending ||
+                          submissionFee.isError ||
+                          submissionFee.data?.feeAvailable === false ||
+                          (submissionFee.data?.feeRequired === true &&
+                            acceptedFeePolicyVersion !==
+                              submissionFee.data.policyVersionNo)))
+                    }
+                    onClick={() => submit.mutate()}
+                  >
+                    <Send aria-hidden="true" className="size-4" />
+                    {submit.isPending
+                      ? "Đang tạo phiên bản…"
+                      : dossier.status === "NEEDS_SUPPLEMENT"
+                        ? "Nộp lại hồ sơ"
+                        : "Nộp hồ sơ"}
+                  </Button>
                 </div>
               ) : null}
               {submit.error ? (

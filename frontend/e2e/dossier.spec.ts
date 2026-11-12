@@ -87,7 +87,9 @@ test("applicant creates, uploads evidence and submits an immutable dossier", asy
   await page
     .getByRole("button", { name: "Tải lên 1 tệp", exact: true })
     .click();
-  await expect(page.getByText("Bản gốc nhận diện")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Bản gốc nhận diện" }),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: /Kiểm tra & nộp/ }).click();
   const submit = page.getByRole("button", { name: "Nộp hồ sơ" });

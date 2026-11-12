@@ -55,6 +55,7 @@ const dossier = {
       issuedAt: null,
       displayOrder: 0,
       isPublic: false,
+      filename: "quyen-su-dung.pdf",
       mimeType: "application/pdf",
       bytes: 2048,
       sha256: "a".repeat(64),
@@ -75,6 +76,31 @@ const dossier = {
 };
 
 describe("DossierWorkspace", () => {
+  it("shows the uploaded file name and safety-check status", async () => {
+    const user = userEvent.setup();
+    api.get.mockResolvedValue(dossier);
+    api.versions.mockResolvedValue([]);
+    api.timeline.mockResolvedValue([]);
+    api.submissionFee.mockResolvedValue({
+      feeAvailable: true,
+      feeRequired: false,
+    });
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <DossierWorkspace dossierId={dossier.id} />
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("heading", { level: 1, name: dossier.title });
+    await user.click(screen.getByRole("button", { name: /Tài liệu/ }));
+
+    expect(await screen.findByText("quyen-su-dung.pdf")).toBeDefined();
+    expect(screen.getByText("Đã tải lên · đã kiểm tra an toàn")).toBeDefined();
+  });
+
   it("blocks submission while fee lookup fails and preserves the draft for retry", async () => {
     const user = userEvent.setup();
     api.get.mockResolvedValue({ ...dossier, submissionFeeRequired: true });

@@ -1757,6 +1757,7 @@ class DossierService:
             issued_at=evidence.issued_at,
             display_order=evidence.display_order,
             is_public=evidence.is_public,
+            filename=media.original_filename,
             mime_type=media.mime_type,
             bytes=media.bytes,
             sha256=media.sha256,

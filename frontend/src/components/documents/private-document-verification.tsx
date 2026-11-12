@@ -73,9 +73,9 @@ export function PrivateDocumentVerification({ mediaId }: { mediaId: string }) {
       <div className="flex flex-wrap items-center gap-3 border-t border-neutral-100 pt-3">
         <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-lg border border-neutral-200 px-3 text-xs font-bold text-neutral-700 hover:bg-neutral-50">
           <ShieldCheck aria-hidden="true" className="size-4" />
-          Kiểm tra bản lưu
+          Đối chiếu tệp đã gửi
           <input
-            aria-label="Chọn bản tài liệu để kiểm tra"
+            aria-label="Chọn tệp đã gửi để đối chiếu"
             className="sr-only"
             onChange={(event) => {
               const file = event.target.files?.[0];
@@ -93,7 +93,8 @@ export function PrivateDocumentVerification({ mediaId }: { mediaId: string }) {
           />
         </label>
         <span className="text-xs text-[var(--theme-muted)]">
-          Tệp chỉ được đọc để đối chiếu và không được lưu lại.
+          Chọn đúng tệp đã gửi để đối chiếu với bằng chứng đã lưu. Tệp chỉ được
+          đọc, không tải lên hay lưu lại.
         </span>
       </div>
       <div aria-live="polite" className="mt-2 text-xs">

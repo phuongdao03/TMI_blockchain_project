@@ -135,6 +135,7 @@ class EvidenceView:
     issued_at: datetime | None
     display_order: int
     is_public: bool
+    filename: str
     mime_type: str
     bytes: int
     sha256: str

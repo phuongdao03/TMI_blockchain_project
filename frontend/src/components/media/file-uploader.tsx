@@ -85,8 +85,8 @@ function overallStatus(
 ): string {
   if (status === "complete") {
     return completedCount === 1
-      ? "Tệp đã được tải lên và xác minh."
-      : `Đã tải lên và xác minh ${completedCount} tệp.`;
+      ? "Tệp đã tải lên và được kiểm tra an toàn."
+      : `Đã tải lên và kiểm tra an toàn ${completedCount} tệp.`;
   }
   if (status === "failed") {
     return "Có tệp chưa tải thành công. Bạn có thể thử lại hoặc xóa tệp đó.";

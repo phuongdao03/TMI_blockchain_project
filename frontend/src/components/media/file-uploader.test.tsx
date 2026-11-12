@@ -100,7 +100,7 @@ describe("FileUploader", () => {
     finishUpload?.(activeAsset);
     await vi.waitFor(() => {
       expect(screen.getByRole("status").textContent).toContain(
-        "Tệp đã được tải lên và xác minh.",
+        "Tệp đã tải lên và được kiểm tra an toàn.",
       );
     });
     expect(onComplete).toHaveBeenCalledWith(activeAsset, 0);
@@ -132,7 +132,7 @@ describe("FileUploader", () => {
 
     await vi.waitFor(() => {
       expect(screen.getByRole("status").textContent).toContain(
-        "Tệp đã được tải lên và xác minh.",
+        "Tệp đã tải lên và được kiểm tra an toàn.",
       );
     });
     expect(uploadMediaMock).toHaveBeenCalledTimes(2);

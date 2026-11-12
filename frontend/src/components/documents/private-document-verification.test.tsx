@@ -42,7 +42,7 @@ describe("PrivateDocumentVerification", () => {
     renderVerification("media-id");
 
     await userEvent.upload(
-      screen.getByLabelText("Chọn bản tài liệu để kiểm tra"),
+      screen.getByLabelText("Chọn tệp đã gửi để đối chiếu"),
       new File(["hello"], "private.pdf"),
     );
 
@@ -64,7 +64,7 @@ describe("PrivateDocumentVerification", () => {
       });
     const { rerender } = renderVerification("pending-id");
     await userEvent.upload(
-      screen.getByLabelText("Chọn bản tài liệu để kiểm tra"),
+      screen.getByLabelText("Chọn tệp đã gửi để đối chiếu"),
       new File(["hello"], "private.pdf"),
     );
     expect(
@@ -80,7 +80,7 @@ describe("PrivateDocumentVerification", () => {
       </QueryClientProvider>,
     );
     await userEvent.upload(
-      screen.getByLabelText("Chọn bản tài liệu để kiểm tra"),
+      screen.getByLabelText("Chọn tệp đã gửi để đối chiếu"),
       new File(["hello"], "private.pdf"),
     );
     expect(

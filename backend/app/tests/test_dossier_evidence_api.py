@@ -36,6 +36,7 @@ class StubEvidenceService:
             evidence_role="OWNERSHIP_DOCUMENT",
             access_scope=EvidenceVisibility.PRIVATE,
             title="Giấy xác nhận",
+            filename="ownership-proof.pdf",
             description=None,
             issued_at=NOW,
             display_order=0,
@@ -145,6 +146,7 @@ def test_evidence_attachment_api_contract() -> None:
     assert created.status_code == 201
     assert created.json()["data"]["sha256"] == "a" * 64
     assert created.json()["data"]["accessScope"] == "PRIVATE"
+    assert created.json()["data"]["filename"] == "ownership-proof.pdf"
     assert updated.status_code == 200
     assert removed.json()["data"] == {"status": "removed"}
     assert service.created is not None

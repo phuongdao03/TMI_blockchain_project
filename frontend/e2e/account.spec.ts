@@ -53,7 +53,7 @@ test("account page presents profile and permission-aware organization UI", async
   await page.getByRole("button", { name: "Tải lên 1 tệp" }).click();
   await expect(page.getByText("Ảnh đại diện đã được liên kết")).toBeVisible();
   await expect(
-    page.getByText("Tệp đã được tải lên và xác minh."),
+    page.getByText("Tệp đã tải lên và được kiểm tra an toàn."),
   ).toBeVisible();
   await page.getByRole("tab", { name: "Tổ chức" }).click();
   await expect(page.getByLabel("Tên hiển thị")).toHaveValue("THV Lab");
